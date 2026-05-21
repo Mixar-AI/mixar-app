@@ -1,0 +1,358 @@
+# SPDX-FileCopyrightText: 2026 Mixar Authors
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Onboarding Card Modal Operator
+
+The single operator that drives every step of the onboarding tour.
+Replaces the old ``invoke_props_dialog``-based welcome / info-step /
+completion operators because Blender's built-in dialogs anchor at
+the cursor with hidden offsets, which made precise centring and
+proximity-positioning impossible.
+
+How it works:
+
+1. Driver invokes ``MIXAR_OT_onboarding_card`` with ``step_id``.
+2. ``invoke()`` resolves the host area type for the step (MIXIE for
+   every step in the new UI — the chat step's card sits in the
+   MIXIE area because the Agent Bubble is a separate OS-level
+   window), attaches a POST_PIXEL draw handler to that space type,
+   computes the card layout, and adds itself to the modal handler
+   stack.
+3. ``modal()`` translates window-space mouse coords to region coords
+   using the host region origin, runs hit-test, updates hover state,
+   and dispatches Primary / Skip / Esc actions.
+4. Cleanup removes the draw handler and asks the state machine to
+   advance / skip / stay put.
+
+The card's content (progress text, title, body, primary label) is
+resolved per step via :func:`card_config.step_card_config`.
+"""
+
+import bpy
+from bpy.props import StringProperty
+from bpy.types import Operator
+
+from mixar.config.logging_config import get_logger
+from mixar.modules.onboarding.constants import (
+    CARD_POS_NEAR_BUBBLE,
+    CARD_POS_WINDOW_CENTER,
+    CARD_SCALE_DEFAULT,
+    OP_CARD_MODAL,
+    STEP_ADVANCE_DEFER_SECONDS,
+)
+from mixar.modules.onboarding.core import card as card_pkg
+from mixar.modules.onboarding.ui.operators.card_config import step_card_config
+from mixar.modules.onboarding.ui.operators.host_resolver import (
+    bubble_anchor_in_region,
+    find_host,
+    find_largest_window_region,
+    fit_scale_for_region,
+    reserved_space_for_position,
+    space_type_for_area_type,
+)
+
+logger = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# State machine helpers — defer the transition through a timer so the
+# modal cleanly returns FINISHED before the next dialog opens.
+# ---------------------------------------------------------------------------
+
+def _advance_deferred():
+    from mixar.modules.onboarding.core import state
+    state.advance()
+    return None
+
+
+def _skip_deferred():
+    from mixar.modules.onboarding.core import state
+    state.skip_tour()
+    return None
+
+
+# ---------------------------------------------------------------------------
+# The modal operator.
+# ---------------------------------------------------------------------------
+
+class MIXAR_OT_onboarding_card(Operator):
+    """Render and drive a single onboarding tour card.
+
+    Spec:
+
+    * Renders to the WINDOW region of the step's host area type
+      (MIXIE for most steps, MIXIE_CHAT for the chat step).
+    * Captures all mouse + key events while running so the user
+      can't accidentally interact with the dim editor underneath
+      until they make a choice (Next / Skip / Esc).
+    """
+
+    bl_idname = OP_CARD_MODAL
+    bl_label = "Onboarding Card"
+    bl_description = "Show the next onboarding card"
+    bl_options = {"REGISTER", "INTERNAL"}
+
+    step_id: StringProperty(default="")
+
+    # Per-instance state — set in invoke, cleared in cancel/finish.
+    _draw_handle = None
+    _host_space_cls = None
+    _host_region_id = None  # ARegion C-pointer for the *primary* host
+    _host_region_origin = (0, 0)
+    _window_size = (0, 0)
+    _layout = None
+    _hover = None
+    _config = None
+    _multi_handles = ()
+
+    def invoke(self, context, event):
+        self._config = step_card_config(self.step_id)
+        if not self._config:
+            logger.warning("Onboarding card: unknown step %r", self.step_id)
+            return {"CANCELLED"}
+
+        if self._config["position"] == CARD_POS_WINDOW_CENTER:
+            window, area, region = find_largest_window_region()
+            if window is None:
+                logger.warning(
+                    "Onboarding card: no WINDOW region available"
+                )
+                return {"CANCELLED"}
+        else:
+            host_area_type = self._config["host_area"]
+            window, area, region = find_host(host_area_type)
+            if window is None or area is None or region is None:
+                logger.warning(
+                    "Onboarding card: no host area found for %s",
+                    host_area_type,
+                )
+                return {"CANCELLED"}
+
+        from mixar.modules.onboarding.constants import (
+            CARD_MIN_HEIGHT,
+            CARD_WIDTH,
+        )
+        target_scale = self._config.get("scale", CARD_SCALE_DEFAULT)
+        reserved_w, reserved_h = reserved_space_for_position(
+            self._config["position"],
+        )
+        self._config["scale"] = fit_scale_for_region(
+            region, target_scale, CARD_WIDTH, CARD_MIN_HEIGHT,
+            reserved_w=reserved_w, reserved_h=reserved_h,
+        )
+
+        space_cls = space_type_for_area_type(area.type)
+        if space_cls is None or not hasattr(space_cls, "draw_handler_add"):
+            space_cls = type(area.spaces.active)
+            if space_cls is None or not hasattr(space_cls, "draw_handler_add"):
+                logger.warning(
+                    "Onboarding card: cannot attach draw handler to %s",
+                    area.type,
+                )
+                return {"CANCELLED"}
+
+        self._host_space_cls = space_cls
+        self._host_region_id = region.as_pointer()
+        self._host_region_origin = (region.x, region.y)
+        self._window_size = (window.width, window.height)
+        self._host_window_origin = (window.x, window.y)
+        self._layout = self._build_layout(region.width, region.height)
+        self._hover = None
+
+        self._draw_handle = space_cls.draw_handler_add(
+            self._draw_callback, (), "WINDOW", "POST_PIXEL",
+        )
+        self._multi_handles = ()
+
+        if self._config["position"] == CARD_POS_WINDOW_CENTER:
+            logger.info(
+                "Onboarding welcome: window=%dx%d host=%s region=(%d,%d %dx%d) "
+                "card-pos=(%d,%d) size=%dx%d",
+                window.width, window.height, area.type,
+                region.x, region.y, region.width, region.height,
+                self._layout.x, self._layout.y,
+                self._layout.w, self._layout.h,
+            )
+
+        area.tag_redraw()
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+
+    # -- drawing -----------------------------------------------------------
+
+    def _build_layout(self, region_w: int, region_h: int):
+        cfg = self._config
+        win_w, win_h = self._window_size
+        rx, ry = self._host_region_origin
+        bubble_anchor = None
+        if cfg["position"] == CARD_POS_NEAR_BUBBLE:
+            bubble_anchor = bubble_anchor_in_region(
+                self._host_window_origin, (rx, ry),
+            )
+        return card_pkg.compute_layout(
+            title_text=cfg["title"],
+            body_lines=cfg["body_lines"],
+            primary_label=cfg["primary_label"],
+            skip_label=cfg["skip_label"],
+            pos_kind=cfg["position"],
+            area_w=region_w,
+            area_h=region_h,
+            icon_id=cfg.get("icon_id", ""),
+            dots_current=cfg.get("dots_current", 0),
+            dots_total=cfg.get("dots_total", 0),
+            skip_visible=cfg.get("skip_visible", True),
+            scale=cfg.get("scale", CARD_SCALE_DEFAULT),
+            window_w=win_w,
+            window_h=win_h,
+            region_x=rx,
+            region_y=ry,
+            bubble_anchor=bubble_anchor,
+        )
+
+    def _draw_callback(self):
+        """Single-region POST_PIXEL draw — only fire on the host region."""
+        try:
+            region = bpy.context.region
+            if region is None or region.as_pointer() != self._host_region_id:
+                return
+            self._layout = self._build_layout(region.width, region.height)
+            card_pkg.draw_card(self._layout, self._hover)
+        except Exception as exc:
+            logger.warning(
+                "Onboarding card draw failed: %s", exc, exc_info=True,
+            )
+
+    # -- modal -------------------------------------------------------------
+
+    def modal(self, context, event):
+        if self._layout is None:
+            self._cleanup()
+            return {"CANCELLED"}
+
+        if event.type == "MOUSEMOVE":
+            new_hover = self._hit_test_event(event)
+            if new_hover != self._hover:
+                self._hover = new_hover
+                self._tag_host_redraw()
+            return {"PASS_THROUGH"}
+
+        if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            target = self._hit_test_event(event)
+            if target == "primary":
+                return self._on_primary(context)
+            if target == "skip":
+                return self._on_skip(context)
+            if target == "card":
+                return {"RUNNING_MODAL"}
+            return {"RUNNING_MODAL"}
+
+        if event.type in {"RET", "NUMPAD_ENTER"} and event.value == "PRESS":
+            return self._on_primary(context)
+
+        if event.type == "ESC" and event.value == "PRESS":
+            self._cleanup()
+            return {"CANCELLED"}
+
+        return {"PASS_THROUGH"}
+
+    # -- event helpers -----------------------------------------------------
+
+    def _hit_test_event(self, event):
+        if self._layout is not None and self._layout.is_window_coords:
+            return card_pkg.hit_test(
+                self._layout, event.mouse_x, event.mouse_y,
+            )
+        ox, oy = self._host_region_origin
+        return card_pkg.hit_test(
+            self._layout,
+            event.mouse_x - ox,
+            event.mouse_y - oy,
+        )
+
+    def _tag_host_redraw(self):
+        try:
+            windows = bpy.data.window_managers[0].windows
+            for window in windows:
+                if window.screen is None:
+                    continue
+                if self._multi_handles:
+                    for area in window.screen.areas:
+                        area.tag_redraw()
+                    return
+                for area in window.screen.areas:
+                    for region in area.regions:
+                        if region.as_pointer() == self._host_region_id:
+                            area.tag_redraw()
+                            return
+        except Exception:
+            pass
+
+    # -- actions -----------------------------------------------------------
+
+    def _on_primary(self, context):
+        self._cleanup()
+        bpy.app.timers.register(
+            _advance_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
+        )
+        return {"FINISHED"}
+
+    def _on_skip(self, context):
+        self._cleanup()
+        bpy.app.timers.register(
+            _skip_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
+        )
+        return {"FINISHED"}
+
+    # -- cleanup -----------------------------------------------------------
+
+    def _cleanup(self):
+        if self._draw_handle is not None and self._host_space_cls is not None:
+            try:
+                self._host_space_cls.draw_handler_remove(
+                    self._draw_handle, "WINDOW",
+                )
+            except Exception as exc:
+                logger.debug(
+                    "Onboarding card: draw handler remove failed: %s", exc,
+                )
+        self._draw_handle = None
+        self._host_space_cls = None
+        for cls, region_type, handle in self._multi_handles:
+            try:
+                cls.draw_handler_remove(handle, region_type)
+            except Exception as exc:
+                logger.debug(
+                    "Onboarding card: multi-region remove failed: %s", exc,
+                )
+        self._multi_handles = ()
+        try:
+            windows = bpy.data.window_managers[0].windows
+            for window in windows:
+                if window.screen is None:
+                    continue
+                for area in window.screen.areas:
+                    area.tag_redraw()
+        except Exception:
+            pass
+
+    def cancel(self, context):
+        self._cleanup()
+
+
+classes = (MIXAR_OT_onboarding_card,)
+
+
+def register():
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)
+
+
+def unregister():
+    from bpy.utils import unregister_class
+    for cls in reversed(classes):
+        unregister_class(cls)

@@ -1,0 +1,431 @@
+# SPDX-FileCopyrightText: 2025 Mixar Authors
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Sidebar Tab Drawers — Segment to 3D, Mesh Segment & Hunyuan
+
+Inline drawer functions for tabs that were previously popup-only or
+lived in a separate space. Called from sidebar panel drawers.
+"""
+
+from mixar.modules.hunyuan.constants import LIMITS
+from .sidebar_ui_helpers import (
+    draw_section_box, draw_section_separator, draw_prompt_section,
+    draw_hint, draw_moodboard_image_toggle, draw_mesh_info,
+    draw_generate_footer, draw_hunyuan_generate_footer,
+    get_selected_moodboard_image, draw_dropdown, draw_toggle,
+    draw_status_badge, draw_image_info_card,
+)
+from mixar.modules.moodboard.constants import SEP_INTRA, GENERATE_BUTTON_SCALE_Y
+
+
+# ---------------------------------------------------------------------------
+# Segment to 3D
+# ---------------------------------------------------------------------------
+
+def _draw_segment_to_3d(layout, context):
+    """Draw Segment to 3D tab — inline version of the popup dialog."""
+    scene = context.scene
+    state = scene.mixie_edit_tool_state
+
+    # Find first selected moodboard image
+    selected_idx = -1
+    selected_item = None
+    if hasattr(scene, 'mixie_moodboard_images'):
+        for i, img_item in enumerate(scene.mixie_moodboard_images):
+            if img_item.selected and img_item.image:
+                selected_idx = i
+                selected_item = img_item
+                break
+
+    if selected_idx < 0 or not selected_item:
+        box = layout.box()
+        box.label(text="No image selected", icon='INFO')
+        return
+
+    # Source image
+    draw_image_info_card(layout, selected_item.image)
+
+    # Box Select SAM section
+    if state.box_select_has_selection or state.box_select_pending:
+        sam_box = layout.box()
+        sam_box.label(text="Box Selection:", icon='SELECT_SET')
+        if state.box_select_pending:
+            draw_status_badge(sam_box, "Processing...", 'GENERATING')
+        else:
+            row = sam_box.row()
+            row.scale_y = GENERATE_BUTTON_SCALE_Y
+            row.operator("mixie.box_select_sam", text="Identify and select", icon='MOD_MASK')
+
+    # Lasso Select SAM section
+    if state.lasso_select_has_selection or state.lasso_select_pending:
+        sam_box = layout.box()
+        sam_box.label(text="Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
+        if state.lasso_select_pending:
+            draw_status_badge(sam_box, "Refining...", 'GENERATING')
+        else:
+            row = sam_box.row()
+            row.scale_y = GENERATE_BUTTON_SCALE_Y
+            row.operator("mixie.lasso_select_sam", text="Refine selection", icon='MOD_MASK')
+
+    draw_section_separator(layout)
+
+    # Segments list
+    num_segments = len(selected_item.segments)
+    if num_segments == 0:
+        box = layout.box()
+        box.label(text="No segments yet", icon='INFO')
+        box.label(text="Use selection tools to create segments")
+    else:
+        col = draw_section_box(layout, f"Segments ({num_segments})", icon='MOD_MASK')
+        for i, segment in enumerate(selected_item.segments):
+            row = col.row(align=True)
+            icon = 'CHECKBOX_HLT' if segment.active else 'CHECKBOX_DEHLT'
+            op = row.operator("mixie.toggle_segment", text="", icon=icon, emboss=False)
+            op.image_index = selected_idx
+            op.segment_index = i
+            row.label(text=segment.name)
+            op = row.operator("mixie.delete_segment", text="", icon='X')
+            op.image_index = selected_idx
+            op.segment_index = i
+
+        active_count = sum(1 for s in selected_item.segments if s.active)
+        if active_count > 0:
+            col.separator(factor=SEP_INTRA)
+            draw_status_badge(col, f"{active_count} segment(s) active", 'DONE')
+
+    draw_generate_footer(layout, context, "mixie.generate_scene", "segment_to_3d",
+                         cancel_op="mixie.cancel_segment_to_3d")
+
+
+# ---------------------------------------------------------------------------
+# Mesh Segment
+# ---------------------------------------------------------------------------
+
+def _draw_mesh_segment(layout, context):
+    """Draw Mesh Segment tab — inline version of the popup dialog."""
+    tab = context.scene.mixie_moodboard_sidebar.tab_mesh_segment
+
+    draw_prompt_section(layout, tab, label="Description")
+    draw_section_separator(layout)
+
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col.prop(tab, "expected_parts", text="Expected Parts")
+
+    draw_generate_footer(
+        layout, context, "mixie.mesh_segment_submit", "mesh_segment",
+        gen_flag_attr='mixie_mesh_segment_is_processing',
+        cancel_op="mixie.mesh_segment_cancel",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Hunyuan shared input drawers
+# ---------------------------------------------------------------------------
+
+def _draw_hunyuan_rapid(layout, rapid, context=None):
+    """Draw Rapid mode inputs."""
+    # --- Input (prompt + image source) ---
+    col = draw_prompt_section(layout, rapid)
+    draw_hint(col, "Max 200 characters")
+    col.separator(factor=SEP_INTRA)
+
+    if context and hasattr(rapid, 'use_selected_image'):
+        draw_moodboard_image_toggle(col, rapid, context)
+    if not getattr(rapid, 'use_selected_image', False):
+        if rapid.image:
+            draw_image_info_card(col, rapid.image)
+        row = col.row(align=True)
+        row.prop(rapid, "image", text="Image")
+        row.operator("mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
+        draw_hint(col, "Max 6MB (jpg/png/jpeg/webp)")
+
+    draw_section_separator(layout)
+
+    # --- Settings ---
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col.use_property_split = True
+    col.use_property_decorate = False
+    draw_dropdown(col, rapid, "result_format", text="Format")
+    draw_toggle(col, rapid, "enable_pbr", text="Enable PBR")
+    draw_toggle(col, rapid, "enable_geometry", text="Geometry Only")
+
+
+def _draw_hunyuan_pro(layout, pro, context=None):
+    """Draw Pro mode inputs."""
+    # --- Prompt ---
+    draw_prompt_section(layout, pro)
+    draw_section_separator(layout)
+
+    # --- Input image ---
+    col = draw_section_box(
+        layout,
+        "Input Image",
+        icon='IMAGE_DATA',
+        action_op="mixie.hunyuan_load_image",
+    )
+
+    if context and hasattr(pro, 'use_selected_image'):
+        draw_moodboard_image_toggle(col, pro, context, multi=True)
+
+    if not getattr(pro, 'use_selected_image', False):
+        for i, entry in enumerate(pro.uploaded_images):
+            if entry.image:
+                draw_image_info_card(
+                    col, entry.image,
+                    remove_op="mixie.hunyuan_remove_uploaded_image",
+                    remove_op_props={"index": i},
+                )
+
+    draw_section_separator(layout)
+
+    col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
+    for i, mv in enumerate(pro.multi_views):
+        row = col.row(align=True)
+        draw_dropdown(row, mv, "view_type", text="")
+        row.prop(mv, "image", text="")
+        op_load = row.operator("mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
+        op_load.target = "multi_view"
+        op_load.multi_view_index = i
+        op_rm = row.operator("mixie.hunyuan_remove_multi_view", text="", icon='X')
+        op_rm.index = i
+    col.operator("mixie.hunyuan_add_multi_view", text="Add View", icon='ADD')
+    draw_hint(col, "Max 8MB each")
+
+    draw_section_separator(layout)
+
+    # --- Settings ---
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col.use_property_split = True
+    col.use_property_decorate = False
+    draw_dropdown(col, pro, "model_version", text="Model")
+    draw_dropdown(col, pro, "generate_type", text="Type")
+    draw_toggle(col, pro, "enable_pbr", text="Enable PBR")
+    col.prop(pro, "face_count", text="Face Count", slider=True)
+    draw_hint(col, "Range: 40,000 - 1,500,000")
+    if pro.generate_type == 'LowPoly':
+        draw_dropdown(col, pro, "polygon_type", text="Polygon Type")
+
+
+# ---------------------------------------------------------------------------
+# Hunyuan popup helpers (still used by VIEW_3D N-panel drawers)
+# ---------------------------------------------------------------------------
+
+def _draw_hunyuan_mesh_info(layout, context, max_faces=None, max_mb=None):
+    """Show selected mesh info with limit warnings."""
+    obj = context.active_object
+    if obj and obj.type == 'MESH':
+        face_count = len(obj.data.polygons)
+        layout.label(text=f"Mesh: {obj.name} ({face_count:,} faces)")
+
+        limits_parts = []
+        if max_faces:
+            limits_parts.append(f"{max_faces:,} faces")
+        if max_mb:
+            limits_parts.append(f"{max_mb}MB")
+        if limits_parts:
+            layout.label(text=f"Limits: {' / '.join(limits_parts)}", icon='INFO')
+
+        if max_faces and face_count > max_faces:
+            layout.label(
+                text=f"Warning: {face_count:,} faces exceeds {max_faces:,} limit",
+                icon='ERROR',
+            )
+    else:
+        layout.label(text="No mesh selected", icon='ERROR')
+
+
+def _draw_hunyuan_part(layout, part, context):
+    """Draw Part mode inputs."""
+    _draw_hunyuan_mesh_info(layout, context, max_faces=30000, max_mb=100)
+    layout.prop(part, "export_format", text="Format")
+
+
+def _draw_hunyuan_topology(layout, topo, context):
+    """Draw Topology mode inputs."""
+    _draw_hunyuan_mesh_info(layout, context, max_mb=200)
+    layout.prop(topo, "export_format", text="Format")
+    layout.prop(topo, "polygon_type", text="Polygon Type")
+    layout.prop(topo, "face_level", text="Face Level")
+    layout.prop(topo, "post_process", text="Post-Processing")
+
+
+def _draw_hunyuan_uv(layout, uv, context):
+    """Draw UV mode inputs (still used by VIEW_3D N-panel)."""
+    _draw_hunyuan_mesh_info(layout, context, max_faces=30000, max_mb=100)
+    layout.prop(uv, "export_format", text="Format")
+
+
+def _mesh_can_generate(context, mode):
+    """Check if a mesh-based Hunyuan mode can generate."""
+    selected_meshes = [o for o in context.selected_objects if o.type == 'MESH']
+    if not selected_meshes:
+        return False
+    if mode in LIMITS:
+        max_faces = LIMITS[mode].get('max_faces')
+        if max_faces:
+            total_faces = sum(len(o.data.polygons) for o in selected_meshes)
+            if total_faces > max_faces:
+                return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# UV Unwrap (standalone tab)
+# ---------------------------------------------------------------------------
+
+def _draw_uv_unwrap(layout, context):
+    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties."""
+    if not hasattr(context.scene, 'hunyuan'):
+        layout.label(text="Hunyuan not initialized", icon='ERROR')
+        return
+
+    props = context.scene.hunyuan
+    uv = props.uv
+    job = uv.job
+
+    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    draw_mesh_info(col, context, max_faces=30000, max_mb=100)
+    draw_section_separator(layout)
+
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    draw_dropdown(col, uv, "export_format", text="Format")
+
+    draw_hunyuan_generate_footer(
+        layout, context, job, 'UV',
+        lambda: _mesh_can_generate(context, 'UV'),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Retopology (standalone tab)
+# ---------------------------------------------------------------------------
+
+def _draw_retopology(layout, context):
+    """Draw standalone Retopology tab — uses scene.hunyuan.topology properties.
+
+    Retopology is queue-driven (one job per selected mesh), so the
+    standard hunyuan generate footer is replaced with the queue footer
+    and a collapsible "Generation Queue" panel is appended.
+    """
+    if not hasattr(context.scene, 'hunyuan'):
+        layout.label(text="Hunyuan not initialized", icon='ERROR')
+        return
+
+    props = context.scene.hunyuan
+    topo = props.topology
+
+    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    draw_mesh_info(col, context, max_mb=200)
+    draw_hint(layout, "Select the objects you want to retopologize", icon='INFO')
+    draw_section_separator(layout)
+
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col.use_property_split = True
+    col.use_property_decorate = False
+    draw_dropdown(col, topo, "polygon_type", text="Polygon Type")
+    draw_dropdown(col, topo, "face_level", text="Face Level")
+    col.prop(topo, "post_process", text="Post-Processing")
+
+    from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
+    from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
+        draw_queue_generate_footer,
+    )
+
+    draw_queue_generate_footer(
+        layout, context, FEATURE_RETOPOLOGY,
+        lambda: _mesh_can_generate(context, 'TOPOLOGY'),
+        mode_override='TOPOLOGY',
+        progress_attr='mixie_retopology_generate_progress',
+    )
+
+
+# ---------------------------------------------------------------------------
+# Part Segmentation (standalone tab)
+# ---------------------------------------------------------------------------
+
+def _draw_part_segment(layout, context):
+    """Draw standalone Part Segmentation tab — uses scene.hunyuan.part properties."""
+    if not hasattr(context.scene, 'hunyuan'):
+        layout.label(text="Hunyuan not initialized", icon='ERROR')
+        return
+
+    props = context.scene.hunyuan
+    part = props.part
+    job = part.job
+
+    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    draw_mesh_info(col, context, max_faces=30000, max_mb=100)
+    draw_section_separator(layout)
+
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    draw_dropdown(col, part, "export_format", text="Format")
+
+    draw_hunyuan_generate_footer(
+        layout, context, job, 'PART',
+        lambda: _mesh_can_generate(context, 'PART'),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Image to 3D — Rapid subtab
+# ---------------------------------------------------------------------------
+
+def _draw_image_to_3d_rapid(layout, context):
+    """Draw Rapid subtab inside Image to 3D — uses scene.hunyuan.rapid."""
+    if not hasattr(context.scene, 'hunyuan'):
+        layout.label(text="Hunyuan not initialized", icon='ERROR')
+        return
+
+    rapid = context.scene.hunyuan.rapid
+    job = rapid.job
+
+    _draw_hunyuan_rapid(layout, rapid, context)
+
+    def _can_gen():
+        if getattr(rapid, 'use_selected_image', False):
+            return get_selected_moodboard_image(context) is not None
+        return bool(rapid.prompt.strip()) or (rapid.image is not None)
+
+    draw_hunyuan_generate_footer(layout, context, job, 'RAPID', _can_gen)
+
+
+# ---------------------------------------------------------------------------
+# Image to 3D — Pro subtab
+# ---------------------------------------------------------------------------
+
+def _draw_image_to_3d_pro(layout, context):
+    """Draw Pro subtab inside Image to 3D — uses scene.hunyuan.pro.
+
+    Pro mode is queue-driven (not via the singleton ``pro.job``), so the
+    standard hunyuan generate footer is replaced with the queue footer
+    and a collapsible "Generation Queue" panel is appended.
+    """
+    if not hasattr(context.scene, 'hunyuan'):
+        layout.label(text="Hunyuan not initialized", icon='ERROR')
+        return
+
+    pro = context.scene.hunyuan.pro
+    _draw_hunyuan_pro(layout, pro, context)
+
+    def _can_gen():
+        if getattr(pro, 'use_selected_image', False):
+            return get_selected_moodboard_image(context) is not None
+        return (
+            bool(pro.prompt.strip())
+            or any(e.image for e in pro.uploaded_images)
+            or any(mv.image for mv in pro.multi_views)
+        )
+
+    from mixar.modules.common.job_queue.constants import (
+        FEATURE_IMAGE_TO_3D_PRO,
+    )
+    from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
+        draw_queue_generate_footer,
+    )
+
+    draw_queue_generate_footer(
+        layout, context, FEATURE_IMAGE_TO_3D_PRO, _can_gen,
+    )

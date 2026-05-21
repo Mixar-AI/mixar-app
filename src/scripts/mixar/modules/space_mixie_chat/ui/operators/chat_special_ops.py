@@ -1,0 +1,292 @@
+# SPDX-FileCopyrightText: 2025 Mixar Authors
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Mixie Chat Special Message Operators
+
+Slot action button click handler.
+"""
+
+import bpy
+from bpy.types import Operator
+from bpy.props import StringProperty
+
+from mixar.config.logging_config import get_logger
+
+from ...core.ui_utils import redraw_chat_areas
+
+logger = get_logger(__name__)
+
+
+def _deferred_send_message():
+    """Execute send_message via timer to avoid calling bpy.ops in operator exec."""
+    try:
+        if hasattr(bpy.ops.mixie_chat, 'send_message'):
+            bpy.ops.mixie_chat.send_message()
+    except Exception as e:
+        logger.error(f"Deferred send_message failed: {e}")
+
+
+class MIXIE_CHAT_OT_select_slot_action(Operator):
+    """Handle slot action button click"""
+    bl_idname = "mixie_chat.select_slot_action"
+    bl_label = "Select Slot Action"
+    bl_options = {'REGISTER'}
+
+    bubble_id: StringProperty(
+        name="Bubble ID",
+        description="ID of the bubble containing the action",
+        default=""
+    )
+    action_value: StringProperty(
+        name="Action Value",
+        description="Value of the selected action",
+        default=""
+    )
+
+    @classmethod
+    def poll(cls, context):
+        """Allow button clicks whenever action buttons are visible.
+
+        Previously required session.is_connected, but that caused buttons
+        to silently fail if the connection dropped after they were displayed.
+        The execute() method handles connection state internally.
+        """
+        return True
+
+    def execute(self, context):
+        logger.warning(
+            f"[SLOT ACTION] execute called: bubble_id='{self.bubble_id}', "
+            f"value='{self.action_value}'"
+        )
+
+        if not self.bubble_id or not self.action_value:
+            logger.warning("[SLOT ACTION] CANCELLED: Missing bubble_id or action_value")
+            self.report({'WARNING'}, "Missing bubble_id or action_value")
+            return {'CANCELLED'}
+
+        # Check connection before dispatching
+        from ...core import get_session_manager
+        session = get_session_manager()
+        if not session.is_connected(context.scene):
+            logger.warning("[SLOT ACTION] CANCELLED: Not connected to server")
+            self.report({'WARNING'}, "Not connected to server. Please reconnect.")
+            return {'CANCELLED'}
+
+        logger.info(
+            f"Slot action selected: bubble_id={self.bubble_id}, "
+            f"value={self.action_value}"
+        )
+
+        scene = context.scene
+
+        # Find the bubble by bubble_id and get the action label for user message
+        action_label = self.action_value
+        for msg in scene.mixie_chat_messages:
+            if hasattr(msg, 'bubble_id') and msg.bubble_id == self.bubble_id:
+                for action_item in msg.action_items:
+                    if action_item.value == self.action_value:
+                        action_label = action_item.label
+                        break
+                # Clear action items from the bubble
+                msg.action_items.clear()
+                break
+
+        # Dispatch action
+        try:
+            from ...constants import SessionState
+            from ...core.queue_processor import (
+                queue_sse_event,
+                queue_sse_error,
+                queue_sse_complete,
+            )
+            from ...core.sse_handler import create_sse_handler
+            from mixar.config.config import get_server_url
+
+            # Handle modify action specially - user needs to type feedback first
+            if self.action_value == "modify":
+                session.set_state(scene, SessionState.MODIFYING)
+
+                # Add hint instead of "Modify" user message
+                hint_msg = scene.mixie_chat_messages.add()
+                hint_msg.sender = 'AGENT'
+                hint_msg.text = "Type your feedback below and press Enter to modify the plan."
+
+                logger.info("Switched to MODIFYING state via slot action")
+                self.report({'INFO'}, "Enter your feedback in the chat input")
+            else:
+                # Add user message showing the selected action
+                user_msg = scene.mixie_chat_messages.add()
+                user_msg.sender = 'USER'
+                user_msg.text = action_label
+
+                base_url = get_server_url()
+                target_scene_name = scene.name
+                sse_handler = create_sse_handler(
+                    scene_name=target_scene_name,
+                    host=base_url,
+                    on_event=lambda event: queue_sse_event(event, target_scene_name),
+                    on_error=lambda error: queue_sse_error(error, target_scene_name),
+                    on_complete=lambda: queue_sse_complete(target_scene_name),
+                )
+
+                # Get auth token
+                try:
+                    from mixar.modules.auth.core.auth import get_access_token
+                    auth_token = get_access_token() or ""
+                except Exception:
+                    auth_token = ""
+
+                success = sse_handler.start_input_stream(
+                    session_id=session.get_session_id(scene),
+                    action=self.action_value,
+                    auth_token=auth_token,
+                )
+
+                if success:
+                    session.set_state(scene, SessionState.BUSY)
+                    session.clear_streaming()
+                else:
+                    logger.error("Failed to start input stream for slot action")
+                    self.report({'ERROR'}, "Failed to send action")
+
+        except Exception as e:
+            logger.error(f"Error dispatching slot action: {e}")
+            self.report({'ERROR'}, f"Error: {e}")
+
+        # Trigger redraw
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE_CHAT':
+                    area.tag_redraw()
+
+        return {'FINISHED'}
+
+
+class MIXIE_CHAT_OT_insert_prompt_text(Operator):
+    """Insert prompt text into chat input and auto-submit"""
+    bl_idname = "mixie_chat.insert_prompt_text"
+    bl_label = "Insert Prompt Text"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    text: StringProperty(
+        name="Text",
+        description="The prompt text to insert into the chat input",
+        default="",
+    )
+
+    mode: StringProperty(
+        name="Mode",
+        description="The chat mode to switch to (AGENT, GENERATE, ASK)",
+        default="",
+    )
+
+    generate_type: StringProperty(
+        name="Generate Type",
+        description="The generate sub-type (IMAGE_GEN, IMAGE_TO_3D, LOOKDEV, LOOKDEV_360)",
+        default="",
+    )
+
+    def execute(self, context):
+        if not self.text:
+            return {'CANCELLED'}
+
+        # Set the chat mode if provided
+        if self.mode and self.mode in {'AGENT', 'GENERATE', 'ASK'}:
+            context.scene.mixie_chat_mode = self.mode
+
+        # Set the generate type if provided (only applies when mode is GENERATE)
+        if self.generate_type and self.generate_type in {'IMAGE_GEN', 'IMAGE_TO_3D', 'LOOKDEV', 'LOOKDEV_360', 'SCENE_RECON'}:
+            context.scene.mixie_chat_generate_type = self.generate_type
+
+        # Set the chat input to the prompt text
+        context.scene.mixie_chat_input = self.text
+
+        # Auto-submit: defer send to timer (same mechanism as Enter key submit)
+        bpy.app.timers.register(
+            lambda: _deferred_send_message() or None,
+            first_interval=0.01,
+        )
+
+        redraw_chat_areas()
+
+        logger.debug(f"Inserted and submitting: {self.text[:50]}... mode={self.mode}")
+        return {'FINISHED'}
+
+
+class MIXIE_CHAT_OT_toggle_plan_mode(Operator):
+    """Plan Mode enables extensive thinking for the agent. This also lets you review and modify the plan before the agent executes it"""
+    bl_idname = "mixie_chat.toggle_plan_mode"
+    bl_label = "Toggle Plan Mode"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    def execute(self, context):
+        scene = context.scene
+        scene.mixie_chat_plan_enabled = not scene.mixie_chat_plan_enabled
+
+        for area in context.screen.areas:
+            if area.type == 'MIXIE_CHAT':
+                area.tag_redraw()
+        return {'FINISHED'}
+
+
+class MIXIE_CHAT_OT_cancel_generation(Operator):
+    """Cancel the active generation"""
+    bl_idname = "mixie_chat.cancel_generation"
+    bl_label = "Cancel Generation"
+    bl_description = "Stop the current generation"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    # Map of generate type -> (is_generating attr, error attr)
+    _GEN_FLAGS = {
+        'LOOKDEV':     ('mixie_lookdev_is_generating',     'mixie_lookdev_error'),
+        'LOOKDEV_360': ('mixie_lookdev360_is_generating',  'mixie_lookdev360_error'),
+        'IMAGE_TO_3D': ('mixie_image_to_3d_is_generating', 'mixie_image_to_3d_error'),
+        'IMAGE_GEN':   ('mixie_imagegen_is_generating',    'mixie_imagegen_error'),
+        'SCENE_RECON': ('mixie_scene_recon_is_generating', 'mixie_scene_recon_error'),
+    }
+
+    def execute(self, context):
+        scene = context.scene
+        gen_type = getattr(scene, 'mixie_chat_generate_type', '')
+
+        # Cancel the specific generation type
+        flag_info = self._GEN_FLAGS.get(gen_type)
+        if flag_info:
+            gen_attr, err_attr = flag_info
+            if getattr(scene, gen_attr, False):
+                setattr(scene, gen_attr, False)
+                if hasattr(scene, err_attr):
+                    setattr(scene, err_attr, "Cancelled by user")
+
+        # Also reset progress
+        try:
+            from mixar.modules.moodboard.core.generate_progress import reset_progress
+            progress_key = {
+                'LOOKDEV': 'lookdev',
+                'LOOKDEV_360': 'lookdev360',
+                'IMAGE_TO_3D': 'image_to_3d',
+                'IMAGE_GEN': 'imagegen',
+                'SCENE_RECON': 'scene_recon',
+            }.get(gen_type)
+            if progress_key:
+                reset_progress(progress_key)
+        except Exception:
+            pass
+
+        # Redraw
+        for area in context.screen.areas:
+            if area.type in ('MIXIE_CHAT', 'MIXIE'):
+                area.tag_redraw()
+
+        return {'FINISHED'}
+
+
+classes = (
+    MIXIE_CHAT_OT_select_slot_action,
+    MIXIE_CHAT_OT_insert_prompt_text,
+    MIXIE_CHAT_OT_toggle_plan_mode,
+    MIXIE_CHAT_OT_cancel_generation,
+)

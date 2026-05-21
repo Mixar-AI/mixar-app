@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Mixar App Authors
+#
+# Individuals who have contributed code, documentation, or build/release
+# infrastructure to this repository on behalf of Adeveda Enterprises
+# Private Limited. Listed alphabetically by first name. Commit count is
+# not used for ordering and does not imply seniority.
+#
+# Copyright in contributions is held by Adeveda Enterprises Private
+# Limited (see NOTICE.md for the corporate-structure statement). This
+# file records authorship; per-file copyright is declared via SPDX
+# headers as required by REUSE (see REUSE.toml).
+#
+# Upstream Blender contributors are credited in the Blender source tree
+# under `upstream/` and in their inline SPDX headers; they are not
+# duplicated here.
+#
+# Third-party project acknowledgements (ucupaint, Blender, others) are
+# in NOTICE.md.
+#
+# To propose a correction or add a new contributor, see CONTRIBUTING.md.
+
+Rahul Mehta    @rahul237
+Raj Sahani     @Raj-Mixar
+Satyam Kumar   @satyam-fp
+Chirag Singh   @chiragmixar
+Naman Bhargava @nbhargava18
+Pradyum Goyal  @pradyum-mixar 

@@ -1,0 +1,394 @@
+# SPDX-FileCopyrightText: 2025 Mixar Authors
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Moodboard Tab Property Definitions
+
+PropertyGroup classes for sidebar tabs: ImageGen, Lookdev, Lookdev360,
+Image to 3D, Scene Reconstruction, UV Unwrap, Retopology, Segmentation,
+and the parent sidebar container.
+"""
+
+import bpy
+from bpy.types import PropertyGroup
+from bpy.props import (
+    PointerProperty,
+    CollectionProperty,
+    IntProperty,
+    BoolProperty,
+    StringProperty,
+    EnumProperty,
+)
+
+from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
+# Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
+# from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
+#     MixieSceneGenExpBBox,
+#     MixieSceneGenExpLabelObject,
+#     MixieMoodboardTabSceneGenExpProps,
+# )
+
+from .moodboard_enum_callbacks import (
+    _get_imagegen_model_items,
+    _get_imagegen_style_items,
+    _get_imagegen_aspect_ratio_items,
+    _get_imagegen_resolution_items,
+    _on_model_changed,
+    _get_model_3d_items,
+)
+
+
+class MixieMoodboardTabLookdev360Props(PropertyGroup):
+    """Properties for Lookdev360 tab - PBR texture generation from mesh"""
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Description for PBR texture generation",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    image_type: EnumProperty(
+        name="Image Type",
+        description="Type of image input for generation",
+        items=[
+            ('STYLE', "Style", "Style transfer image - applies artistic style to the generated textures", 0),
+            ('REFERENCE', "Reference", "Reference image - directly drives texture generation (prompt ignored)", 1),
+        ],
+        default='STYLE'
+    )
+
+    style_only: BoolProperty(
+        name="Use Image Style Only",
+        description="When enabled, only the image's artistic style is transferred "
+                    "(prompt still applies). When disabled, the image directly "
+                    "drives texture generation",
+        default=False
+    )
+
+    resolution: EnumProperty(
+        name="Resolution",
+        description="Output texture resolution in pixels",
+        items=[
+            ('512', "512", "512px - Preview/draft quality", 0),
+            ('1024', "1024", "1024px - Standard quality", 1),
+            ('2048', "2048", "2048px - High quality", 2),
+        ],
+        default='1024'
+    )
+
+    # Reference image (max 1) - stored as pointer to Image
+    reference_image: PointerProperty(
+        type=bpy.types.Image,
+        name="Reference Image",
+        description="Style reference image for texture generation"
+    )
+
+    has_applied_materials: BoolProperty(
+        name="Has Applied Materials",
+        description="Whether materials have been applied (for restore button)",
+        default=False
+    )
+
+    use_selected_image: BoolProperty(
+        name="Use Selected Moodboard Image",
+        description="ON: Use currently selected moodboard image. "
+                    "OFF: Use uploaded image",
+        default=True
+    )
+
+
+class MixieMoodboardTabLookdevProps(PropertyGroup):
+    """Properties for Lookdev tab - uses generate-from-depth API"""
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Description for material/texture generation",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    fast_mode: BoolProperty(
+        name="Fast Mode",
+        description="Enable fast depth map generation (lower quality, ~4x faster)",
+        default=False
+    )
+
+
+class MixieMoodboardReferenceImage(PropertyGroup):
+    """Reference image for ImageGen - stores direct image pointer"""
+
+    image: PointerProperty(
+        type=bpy.types.Image,
+        name="Image",
+        description="Direct reference to the image (preferred over moodboard_index)"
+    )
+
+    moodboard_index: IntProperty(
+        name="Moodboard Index",
+        description="Index into scene.mixie_moodboard_images (for C++ UI display)",
+        default=-1
+    )
+
+    # Cached display info (updated when image is added)
+    display_name: StringProperty(
+        name="Display Name",
+        description="Image name for display",
+        default=""
+    )
+
+    display_resolution: StringProperty(
+        name="Display Resolution",
+        description="Resolution string for display (e.g., '1024x768')",
+        default=""
+    )
+
+    display_path: StringProperty(
+        name="Display Path",
+        description="File path for display",
+        default=""
+    )
+
+
+class MixieMoodboardTabImageGenProps(PropertyGroup):
+    """Properties for ImageGen tab"""
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Description for image generation",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    # Dynamic enum properties from cache
+    model: EnumProperty(
+        name="Model",
+        description="AI model for image generation",
+        items=_get_imagegen_model_items,
+        update=_on_model_changed,
+    )
+
+    style: EnumProperty(
+        name="Style",
+        description="Style preset for image generation",
+        items=_get_imagegen_style_items,
+    )
+
+    aspect_ratio: EnumProperty(
+        name="Aspect Ratio",
+        description="Aspect ratio for generated images",
+        items=_get_imagegen_aspect_ratio_items,
+    )
+
+    resolution: EnumProperty(
+        name="Resolution",
+        description="Output resolution for generated images",
+        items=_get_imagegen_resolution_items,
+    )
+
+    # Toggle between uploaded images (OFF) and selected moodboard images (ON)
+    use_reference_images: BoolProperty(
+        name="Use Selected Moodboard Images",
+        description="ON: Use currently selected moodboard images as references. "
+                    "OFF: Use images you've added via the + button",
+        default=True
+    )
+
+    # Collection of uploaded reference images added via the + button (used when toggle is OFF)
+    reference_images: CollectionProperty(
+        type=MixieMoodboardReferenceImage,
+        name="Uploaded Reference Images",
+        description="Images added via the + button for generation (used when toggle is OFF)"
+    )
+
+
+class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
+    """Properties for Mesh Segment tab"""
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Description of what to segment (e.g., 'head, torso, arms, legs')",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    expected_parts: StringProperty(
+        name="Expected Parts",
+        description="Expected number or description of parts",
+        default="",
+        maxlen=256
+    )
+
+    is_processing: BoolProperty(
+        name="Is Processing",
+        description="Whether segmentation is currently in progress",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+
+
+class MixieMoodboardTabImageTo3DProps(PropertyGroup):
+    """Properties for Image to 3D tab"""
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Description for 3D model generation from image (optional)",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    # Toggle between uploaded image (OFF) and selected moodboard image (ON)
+    use_selected_image: BoolProperty(
+        name="Use Selected Moodboard Image",
+        description="ON: Use currently selected moodboard image. "
+                    "OFF: Use uploaded image",
+        default=True
+    )
+
+    # Input image - stored as pointer to Image (used when toggle is OFF)
+    reference_image: PointerProperty(
+        type=bpy.types.Image,
+        name="Input Image",
+        description="Uploaded image for 3D model generation (used when toggle is OFF)"
+    )
+
+    # Dynamic model enum from cache
+    model: EnumProperty(
+        name="Model",
+        description="AI model for 3D generation",
+        items=_get_model_3d_items,
+    )
+
+
+class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
+    """Properties for Segment to 3D tab"""
+
+    selected_image_index: IntProperty(
+        name="Selected Image Index",
+        description="Index of selected moodboard image with segments",
+        default=-1
+    )
+
+    selected_image_name: StringProperty(
+        name="Selected Image Name",
+        description="Name of the selected image (for display)",
+        default=""
+    )
+
+    active_segment_count: IntProperty(
+        name="Active Segment Count",
+        description="Number of active segments selected",
+        default=0,
+        min=0
+    )
+
+
+class MixieMoodboardSidebarProperties(PropertyGroup):
+    """Properties for moodboard sidebar state"""
+
+    active_tab: EnumProperty(
+        name="Active Tab",
+        description="Currently active sidebar tab",
+        items=[
+            ('IMAGEGEN', "Generate Image", "Generate AI images", 'IMAGE', 0),
+            ('LOOKDEV', "Blockout to Render", "Generate materials/textures", 'MATERIAL', 1),
+            ('LOOKDEV360', "Generate PBR Maps", "Generate PBR maps for selected mesh", 'WORLD', 2),
+            ('IMAGE_TO_3D', "Image to 3D", "Convert image to 3D model", 'VIEW3D', 3),
+            ('SEGMENT_TO_3D', "Segmentation", "Generate 3D scene from segments", 'MOD_MASK', 4),
+            ('MESH_SEGMENT', "Segmentation", "Segment 3D mesh", 'MESH_DATA', 5),
+            ('SCENE_RECON', "Generate Scene", "Reconstruct 3D scene from image", 'SCENE_DATA', 6),
+            ('HUNYUAN', "Image to 3D", "Hunyuan 3D generation", 'MESH_DATA', 7),
+            ('UV_UNWRAP', "UV Unwrap", "AI UV unwrapping", 'UV', 8),
+            ('RETOPOLOGY', "Retopology", "AI retopology for selected mesh", 'MOD_REMESH', 9),
+            ('PART_SEGMENT', "Segmentation", "AI part segmentation for selected mesh", 'MOD_EXPLODE', 10),
+            ('SEGMENTATION', "Segmentation", "AI segmentation tools", 'MOD_MASK', 11),
+            ('BLOCKOUT_TO_RENDER', "Blockout to Render", "Generate render from blockout/depth", 'SHADING_RENDERED', 12),
+            # ('SCENE_GEN_EXP', "Scene Gen Experimental", "Experimental image-to-scene features", 'EXPERIMENTAL', 13),
+        ],
+        default='IMAGEGEN'
+    )
+
+    imagegen_subtab: EnumProperty(
+        name="ImageGen Subtab",
+        items=[
+            ('BASIC', "Basic", "Standard image generation", 0),
+            ('FROM_DEPTH', "From Depth", "Generate from depth maps", 1),
+        ],
+        default='BASIC'
+    )
+
+    image_to_3d_subtab: EnumProperty(
+        name="Image to 3D Subtab",
+        items=[
+            ('BASIC', "Basic", "Standard image-to-3D generation", 0),
+            ('RAPID', "Rapid", "Fast 3D generation with Hunyuan Rapid", 1),
+            ('PRO', "Pro", "High-quality 3D generation with Hunyuan Pro", 2),
+        ],
+        default='BASIC'
+    )
+
+    segmentation_subtab: EnumProperty(
+        name="Segmentation Subtab",
+        items=[
+            ('SEGMENT_TO_3D', "Segment to 3D",    "Generate 3D objects from image segments", 0),
+            ('PART_SEGMENT',  "Part Segmentation", "AI part segmentation for selected mesh", 1),
+        ],
+        default='SEGMENT_TO_3D'
+    )
+
+    # Nested property groups for each tab
+    tab_lookdev360: PointerProperty(
+        type=MixieMoodboardTabLookdev360Props,
+        name="Lookdev360 Tab",
+        description="Properties for Lookdev360 tab"
+    )
+
+    tab_lookdev: PointerProperty(
+        type=MixieMoodboardTabLookdevProps,
+        name="Lookdev Tab",
+        description="Properties for Lookdev tab"
+    )
+
+    tab_imagegen: PointerProperty(
+        type=MixieMoodboardTabImageGenProps,
+        name="ImageGen Tab",
+        description="Properties for ImageGen tab"
+    )
+
+    tab_mesh_segment: PointerProperty(
+        type=MixieMoodboardTabMeshSegmentProps,
+        name="Mesh Segment Tab",
+        description="Properties for Mesh Segment tab"
+    )
+
+    tab_image_to_3d: PointerProperty(
+        type=MixieMoodboardTabImageTo3DProps,
+        name="Image to 3D Tab",
+        description="Properties for Image to 3D tab"
+    )
+
+    tab_segment_to_3d: PointerProperty(
+        type=MixieMoodboardTabSegmentTo3DProps,
+        name="Segment to 3D Tab",
+        description="Properties for Segment to 3D tab"
+    )
+
+    tab_scene_recon: PointerProperty(
+        type=MixieMoodboardTabSceneReconProps,
+        name="Scene Recon Tab",
+        description="Properties for Scene Reconstruction tab"
+    )
+
+    # Scene Gen Experimental disabled — pointer intentionally not registered.
+    # tab_scene_gen_exp: PointerProperty(
+    #     type=MixieMoodboardTabSceneGenExpProps,
+    #     name="Scene Gen Experimental Tab",
+    #     description="Properties for Scene Gen Experimental tab"
+    # )

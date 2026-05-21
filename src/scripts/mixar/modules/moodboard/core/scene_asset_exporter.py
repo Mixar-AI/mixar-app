@@ -1,0 +1,207 @@
+# SPDX-FileCopyrightText: 2025 Mixar Authors
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Scene Asset Exporter
+
+Exports scene reconstruction meshes to a Blender asset library so they
+can be discovered by the Asset Browser and the asset-fill system.
+"""
+
+import os
+import re
+import uuid
+
+import bpy
+from mathutils import Matrix, Vector
+
+from mixar.config.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+def _slugify(text):
+    """Convert label to a filesystem-safe slug: lowercase, hyphens, no specials."""
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9\s-]", "", text)
+    text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"-+", "-", text)
+    return text.strip("-") or "object"
+
+
+def _ensure_catalog_entry(library_path, label):
+    """Ensure a catalog entry exists in blender_assets.cats.txt.
+
+    Returns the catalog UUID string for the entry.
+    If the label already exists, reuses its UUID; otherwise appends a new line.
+    """
+    cats_path = os.path.join(library_path, "blender_assets.cats.txt")
+    catalog_path = label.title()
+
+    # Parse existing file
+    lines = []
+    existing_uuid = None
+    if os.path.isfile(cats_path):
+        with open(cats_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped or line_stripped.startswith("#") or line_stripped.startswith("VERSION"):
+                continue
+            parts = line_stripped.split(":", 2)
+            if len(parts) >= 2 and parts[1].strip() == catalog_path:
+                existing_uuid = parts[0].strip()
+                break
+
+    if existing_uuid:
+        return existing_uuid
+
+    # Generate new entry
+    cat_uuid = str(uuid.uuid4())
+    new_line = f"{cat_uuid}:{catalog_path}:{catalog_path}\n"
+
+    if not lines:
+        # Create file from scratch
+        with open(cats_path, "w", encoding="utf-8") as f:
+            f.write("# This is an Asset Catalog Definition file for Blender.\n")
+            f.write("VERSION 1\n\n")
+            f.write(new_line)
+    else:
+        with open(cats_path, "a", encoding="utf-8") as f:
+            f.write(new_line)
+
+    return cat_uuid
+
+
+def _create_clean_copy(obj):
+    """Create a clean standalone mesh copy for asset export.
+
+    - Bakes the full world transform into mesh vertices
+    - No parent-child relationships
+    - Centered at bounding-box center with identity transform
+    - Materials and textures preserved
+
+    Returns the temporary object (caller must clean up via _remove_temp).
+    """
+    # Deep copy mesh data (preserves materials, UVs, vertex colors)
+    clean_mesh = obj.data.copy()
+
+    # Bake world transform into vertices
+    clean_mesh.transform(obj.matrix_world)
+
+    # Center geometry at origin
+    verts = clean_mesh.vertices
+    if len(verts) > 0:
+        coords = [v.co for v in verts]
+        bbox_min = Vector((
+            min(c.x for c in coords),
+            min(c.y for c in coords),
+            min(c.z for c in coords),
+        ))
+        bbox_max = Vector((
+            max(c.x for c in coords),
+            max(c.y for c in coords),
+            max(c.z for c in coords),
+        ))
+        center = (bbox_min + bbox_max) / 2
+        clean_mesh.transform(Matrix.Translation(-center))
+
+    # Create standalone object at origin with identity transform
+    clean_obj = bpy.data.objects.new(obj.name, clean_mesh)
+    return clean_obj
+
+
+def _remove_temp(clean_obj):
+    """Remove the temporary object and its mesh data from bpy.data."""
+    mesh = clean_obj.data
+    bpy.data.objects.remove(clean_obj, do_unlink=True)
+    if mesh and mesh.users == 0:
+        bpy.data.meshes.remove(mesh)
+
+
+def _collect_datablocks(clean_obj):
+    """Collect datablocks from a single clean mesh object."""
+    blocks = {clean_obj, clean_obj.data}
+
+    for mat in clean_obj.data.materials:
+        if not mat:
+            continue
+        blocks.add(mat)
+        if not mat.use_nodes or not mat.node_tree:
+            continue
+        for node in mat.node_tree.nodes:
+            if node.type == "TEX_IMAGE" and node.image:
+                blocks.add(node.image)
+
+    return blocks
+
+
+def export_object_to_asset_library(obj, label, library_path):
+    """Export a Blender object to an asset library as a clean .blend file.
+
+    The exported asset is a flat mesh (no hierarchy, no empties) with its
+    world transform baked into the vertices and centered at the origin.
+
+    Args:
+        obj: The Blender object to export (must be MESH type).
+        label: Human-readable label for the asset (e.g. "wooden table").
+        library_path: Root directory of the asset library.
+
+    Returns:
+        True on success, False on failure.
+    """
+    if not obj or not label or not library_path:
+        return False
+
+    if obj.type != "MESH":
+        logger.debug("[AssetExporter] Skipping non-mesh object '%s' (type=%s)", obj.name, obj.type)
+        return False
+
+    library_path = bpy.path.abspath(library_path)
+    if not os.path.isdir(library_path):
+        logger.error("[AssetExporter] Library path does not exist")
+        return False
+
+    slug = _slugify(label)
+    unique_dir = f"{slug}_{uuid.uuid4().hex[:8]}"
+    asset_dir = os.path.join(library_path, "assets", "models", unique_dir)
+
+    try:
+        os.makedirs(asset_dir, exist_ok=True)
+    except OSError as e:
+        logger.error("[AssetExporter] Failed to create directory: %s", e)
+        return False
+
+    # Ensure catalog entry
+    try:
+        catalog_id = _ensure_catalog_entry(library_path, label)
+    except Exception as e:
+        logger.error("[AssetExporter] Catalog error: %s", e)
+        catalog_id = None
+
+    # Create a clean, flat copy (no hierarchy, baked transform, at origin)
+    clean_obj = _create_clean_copy(obj)
+
+    # Mark the clean copy as asset
+    clean_obj.asset_mark()
+    if catalog_id and clean_obj.asset_data:
+        clean_obj.asset_data.catalog_id = catalog_id
+
+    # Collect datablocks from the clean copy only
+    datablocks = _collect_datablocks(clean_obj)
+
+    # Write .blend file
+    blend_path = os.path.join(asset_dir, f"{slug}.blend")
+    try:
+        bpy.data.libraries.write(blend_path, datablocks, fake_user=True)
+        logger.debug("[AssetExporter] Saved asset '%s'", label)
+    except Exception as e:
+        logger.error("[AssetExporter] Failed to write asset: %s", e)
+        _remove_temp(clean_obj)
+        return False
+
+    # Clean up temporary object
+    _remove_temp(clean_obj)
+    return True

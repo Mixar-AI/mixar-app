@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+Mixar Brand Assets License
+Copyright (c) 2026 Adeveda Enterprises Private Limited. All rights reserved.
+
+This license applies only to files explicitly tagged with
+"SPDX-License-Identifier: LicenseRef-Mixar-Brand" in this repository
+(typically Mixar logo, icon, wordmark, and other brand-identity assets).
+
+These files are NOT covered by the GPL-3.0-or-later source code license that
+applies to the rest of this repository. The GPL-3.0-or-later source license
+grants no rights in Mixar's names, logos, icons, or other brand-identity
+assets.
+
+1. Reservation Of Rights
+   All rights in the Mixar brand assets, including without limitation
+   copyright, trademark, and trade-dress rights (whether registered or
+   unregistered), are reserved by Adeveda Enterprises Private Limited.
+
+2. Permitted Uses (Without Separate Permission)
+   You may, without seeking separate permission from Adeveda Enterprises Private Limited:
+
+   a. Build, run, and distribute unmodified copies of Mixar App
+      that include these brand assets in the form Adeveda Enterprises Private Limited ships them,
+      provided you do not imply Adeveda Enterprises Private Limited's endorsement of, or
+      affiliation with, any modified version.
+
+   b. Display these brand assets, unmodified, for the purpose of
+      referring to Adeveda Enterprises Private Limited, Mixar App, or Mixie in news reporting,
+      reviews, academic work, and similar nominative-fair-use contexts,
+      provided such use does not suggest endorsement or affiliation.
+
+3. Prohibited Uses (Without Prior Written Permission From Adeveda Enterprises Private Limited)
+   You may not, without prior written permission from Adeveda Enterprises Private Limited:
+
+   a. Modify, recolor, redraw, re-render, animate, or create derivative
+      works of these brand assets, including stylized variants and
+      icon adaptations.
+
+   b. Redistribute modified versions of these brand assets, including
+      as part of a fork, redistribution, or repackaging of Mixar App.
+
+   c. Use these brand assets, or any confusingly similar mark, in the
+      name, logo, icon, product identity, marketing, advertising,
+      domain name, social media handle, or store listing of any
+      product, service, or organization other than Adeveda Enterprises Private Limited's own.
+
+   d. Use these brand assets in a manner that implies sponsorship,
+      endorsement, certification, partnership, or affiliation with
+      Adeveda Enterprises Private Limited where none exists.
+
+   e. Sell merchandise bearing these brand assets, or otherwise
+      commercialize the brand assets.
+
+4. Forks And Redistributions
+   If you fork or redistribute Mixar App source code (as permitted by
+   the GPL-3.0-or-later license that governs the source), you must remove
+   or replace the Mixar brand assets in any built artifacts you
+   distribute. The source code license permits redistribution of the
+   code; this license does not permit redistribution of the brand
+   assets in modified form or under another product identity.
+
+5. Trademark Status
+   Mixar, the Mixar logo, Mixie, and related brand assets are
+   trademarks or pending trademarks of Adeveda Enterprises Private Limited. Trademark protection
+   exists independently of, and in addition to, this copyright license.
+   See TRADEMARKS.md.
+
+6. Requesting Permission
+   For any use outside Sections 2's permitted uses, contact Adeveda Enterprises Private Limited
+   in writing before use.
+
+7. No Warranty
+   The brand assets are provided "as is" without warranty of any kind.
+
+8. Severability
+   If any provision of this license is held unenforceable, the
+   remaining provisions remain in effect.

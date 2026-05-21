@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+#
+# Install with: pip install pre-commit && pre-commit install
+# Run manually:  pre-commit run --all-files
+#
+# Hooks:
+#   1. reuse: full REUSE 3.3 compliance check using the upstream
+#      reuse-tool hooks. Blocks the commit if any file lacks copyright
+#      or license information (inline header or REUSE.toml entry).
+#
+# Note: SPDX headers are added automatically by the internal
+# spdx-auto-fix CI workflow on every pull request — no local pre-commit
+# hook is required for that.
+
+repos:
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.2.0
+    hooks:
+      - id: reuse

@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version = 1
+
+[[annotations]]
+path = [
+  ".env.example",
+  ".gitignore",
+  ".gitmodules",
+  ".publicignore",
+  ".serena/.gitignore",
+  "Makefile",
+  "VERSION",
+  "scripts/windows/codesign-tools/.gitignore",
+  "scripts/windows/codesign-tools/metadata.json",
+  "src/build_files/windows/*.cmd",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = "src/release/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "Open-source contributors"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+  "src/scripts/mixar/modules/onboarding/assets/**",
+  "src/scripts/mixar/modules/paint/procedural_materials/**/*.json",
+  "src/scripts/mixar/modules/paint/procedural_materials/**/*.png",
+  "src/scripts/mixar/modules/testing/*.json",
+  "src/scripts/mixar/modules/texel_density/texel/*.json",
+  "src/scripts/startup/bl_app_templates_system/**/*.blend",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "Open-source contributors"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# Files derived from ucupaint (https://github.com/ucupumar/ucupaint, GPL-3.0-or-later).
+# lib.blend was originally based on ucupaint's lib_281.blend; the Python files
+# listed below adapt ucupaint patterns for layer/channel handling and UI.
+# Distributed under GPL-3.0-or-later to remain compatible with the upstream
+# license. See NOTICE.md and SOURCE_CORRESPONDENCE.md for full attribution.
+[[annotations]]
+path = [
+  "src/scripts/mixar/modules/paint/core/lib/lib.blend",
+  "src/scripts/mixar/modules/paint/core/io/connections/layer_connections_blend.py",
+  "src/scripts/mixar/modules/paint/core/io/connections/layer_connections_height.py",
+  "src/scripts/mixar/modules/paint/core/io/connections/layer_connections_main.py",
+  "src/scripts/mixar/modules/paint/core/io/connections/layer_connections_normal.py",
+  "src/scripts/mixar/modules/paint/core/io/connections/layer_connections_normal_height.py",
+  "src/scripts/mixar/modules/paint/core/layer/create_channels.py",
+  "src/scripts/mixar/modules/paint/ui/lists/channel_uilist.py",
+  "src/scripts/mixar/modules/paint/ui/utils/ui_helpers_texture_sets_channels.py",
+]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "ucupumar (https://github.com/ucupumar)",
+  "2026 Adeveda Enterprises Private Limited",
+]
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Mixar brand assets (logos, icons, wordmarks). These are NOT under the
+# GPL-3.0-or-later source license. They are governed by the separate
+# LicenseRef-Mixar-Brand terms in LICENSES/LicenseRef-Mixar-Brand.txt.
+# Forks redistributing Mixar App source must remove or replace these
+# assets in any built artifacts. See TRADEMARKS.md.
+[[annotations]]
+path = [
+  "src/release/darwin/Mixar.app/Contents/Resources/Mixar_Legacy_Document_Icon.icns",
+  "src/release/darwin/Mixar.app/Contents/Resources/mixar_icon.icns",
+  "src/release/datafiles/blender_icons16/icon16_mixar_icon.dat",
+  "src/release/datafiles/blender_icons32/icon32_mixar_icon.dat",
+  "src/release/datafiles/icons_svg/mixar_icon.svg",
+  "src/release/datafiles/mixar_icons.svg",
+  "src/release/freedesktop/icons/scalable/apps/mixar.svg",
+  "src/release/freedesktop/icons/symbolic/apps/mixar-symbolic.svg",
+  "src/release/windows/icons/winmixar.ico",
+  "src/release/windows/icons/winmixarfile.ico",
+  "src/scripts/mixar/modules/onboarding/assets/mixar_logo.png",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "LicenseRef-Mixar-Brand"
+
+[[annotations]]
+path = [
+  "docs/open-source/asset-provenance-review.csv",
+  "docs/open-source/audit/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"

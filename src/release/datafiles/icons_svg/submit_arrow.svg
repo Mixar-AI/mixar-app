@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+<svg
+   width="1600"
+   height="1600"
+   viewBox="0 0 1600 1600"
+   version="1.1"
+   id="svg2"
+   xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs2">
+    <!-- Gradient definition with blender_ IDs for theme integration - Diagonal -->
+    <linearGradient
+       id="send_icon_gradient"
+       x1="0"
+       y1="0"
+       x2="1600"
+       y2="1600"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0%"
+         id="blender_send_icon_gradient_start"
+         style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop
+         offset="100%"
+         id="blender_send_icon_gradient_end"
+         style="stop-color:#357ABD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circular background with gradient -->
+  <circle
+     cx="800"
+     cy="800"
+     r="800"
+     fill="url(#send_icon_gradient)"
+     id="gradient_circle" />
+
+  <!-- Arrow group with theme-configurable color -->
+  <g id="blender_send_arrow_color">
+    <!-- Vertical arrow shaft -->
+    <path
+       d="M 751.004,1284.336 V 319.71467 c 0,-27.05867 21.936,-48.99734 48.9974,-48.99734 27.0586,0 48.9946,21.93867 48.9946,48.99734 V 1284.336 c 0,27.06133 -21.936,48.99733 -48.9946,48.99733 -27.0614,0 -48.9974,-21.936 -48.9974,-48.99733 z"
+       fill="#ffffff"
+       id="path1" />
+    <!-- Arrow head pointing up -->
+    <path
+       d="M 1185.5583,635.992 c 19.136,19.13333 19.136,50.149333 0,69.285333 -19.136,19.125334 -50.152,19.130667 -69.2853,0 L 827.71303,416.71467 c -15.3067,-15.30667 -40.1254,-15.30667 -55.432,0 L 483.72103,705.27734 c -19.136,19.13333 -50.152,19.13333 -69.2854,0 -19.1253,-19.136 -19.1306,-50.15467 0,-69.285333 L 772.2814,278.14667 c 15.3066,-15.30694 40.1253,-15.30694 55.432,0 z"
+       fill="#ffffff"
+       id="path2" />
+  </g>
+</svg>

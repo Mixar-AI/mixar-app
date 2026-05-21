@@ -1,0 +1,301 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Update Check Trigger
+
+Reusable orchestration for triggering an update check from any context
+(startup timer, WebSocket notification, manual user action).
+
+All heavy work runs on the main thread via ``bpy.app.timers``, so
+``trigger_update_check()`` is safe to call from **any** thread.
+"""
+
+import threading
+
+import bpy
+
+from mixar.config.logging_config import get_logger
+
+from ...updates.constants import UpdateState
+
+logger = get_logger(__name__)
+
+# States that indicate an update flow is already active.
+_ACTIVE_STATES = frozenset({
+    UpdateState.CHECKING,
+    UpdateState.DOWNLOADING,
+    UpdateState.READY,
+    UpdateState.INSTALLING,
+})
+
+
+# ============================================================================
+# Public entry point
+# ============================================================================
+
+
+def trigger_update_check() -> bool:
+    """Trigger an update check if one is not already in progress.
+
+    Safe to call from **any** thread.  Bounces work to the main thread
+    via ``bpy.app.timers.register``.
+
+    Returns:
+        ``True`` if a check was scheduled, ``False`` if skipped because
+        an update flow is already active.
+    """
+    from .state import get_update_state
+
+    state = get_update_state()
+    if state.state in _ACTIVE_STATES:
+        logger.debug(
+            "Skipping update check — already in state %s", state.state.value,
+        )
+        return False
+
+    bpy.app.timers.register(_do_update_check, first_interval=0.0)
+    logger.info("Update check scheduled on main thread")
+    return True
+
+
+# ============================================================================
+# Main-thread timer callback
+# ============================================================================
+
+
+def _do_update_check() -> None:
+    """Gather parameters and fire the async API call.
+
+    Runs on the **main thread** (timer callback).  Returns ``None`` so
+    the timer does not repeat.
+    """
+    try:
+        from mixar.config.config import get_config
+        from mixar.modules.common.api.services.update_service import (
+            get_update_service,
+        )
+
+        from .state import get_update_state
+        from .update_checker import (
+            get_current_version,
+            get_or_create_install_id,
+            get_platform_key,
+        )
+
+        state = get_update_state()
+
+        # Double-check guard (race window between scheduling and execution)
+        if state.state in _ACTIVE_STATES:
+            return None
+
+        state.set_checking()
+
+        platform = get_platform_key()
+        version = get_current_version()
+        config = get_config()
+        channel = config.get("updates", {}).get("channel", "stable")
+        install_id = get_or_create_install_id()
+
+        logger.info(
+            "Checking for updates: platform=%s, version=%s, channel=%s",
+            platform,
+            version,
+            channel,
+        )
+
+        service = get_update_service()
+        service.check_async(
+            platform=platform,
+            current_version=version,
+            channel=channel,
+            install_id=install_id,
+            on_success=_on_check_success,
+            on_error=_on_check_error,
+        )
+
+    except Exception as e:
+        logger.error("Update check init failed: %s", e, exc_info=True)
+
+    return None
+
+
+# ============================================================================
+# API callbacks (run on main thread via APIQueueProcessor)
+# ============================================================================
+
+
+def _on_check_success(response) -> None:
+    """Handle the API response from the update check."""
+    from mixar.config.config import get_config
+
+    from .downloader import get_cached_installer
+    from .state import get_update_state
+    from .update_checker import get_skipped_version, parse_update_response
+
+    state = get_update_state()
+
+    try:
+        data = response.data if hasattr(response, "data") else {}
+        info = parse_update_response(data)
+
+        if info is None:
+            logger.info("No update available")
+            state.set_idle()
+            return
+
+        # Skip check (unless forced)
+        if not info.force_update:
+            skipped = get_skipped_version()
+            if skipped and skipped == info.latest_version:
+                logger.info("Version %s was skipped by user", info.latest_version)
+                state.set_idle()
+                return
+
+        logger.info(
+            "Update available: %s -> %s (severity=%s, force=%s)",
+            info.current_version,
+            info.latest_version,
+            info.severity,
+            info.force_update,
+        )
+
+        # Store update info in state
+        with state._lock:
+            state._update_info = info
+
+        # Check cache first
+        cached = get_cached_installer(info)
+        if cached:
+            logger.info("Installer already cached: %s", cached)
+            state.set_ready(cached)
+            _push_ready_toast(info)
+            return
+
+        # Auto-download if enabled
+        config = get_config()
+        auto_download = config.get("updates", {}).get("auto_download", True)
+
+        if auto_download and info.download_url:
+            _start_background_download(info)
+        else:
+            _push_update_available_toast(info)
+
+    except Exception as e:
+        logger.error("Failed to process update response: %s", e, exc_info=True)
+        state.set_error(str(e))
+
+
+def _on_check_error(error: Exception) -> None:
+    """Handle update check failure — silent, no UI."""
+    from .state import get_update_state
+
+    logger.debug("Update check failed (silent): %s", error)
+    get_update_state().set_idle()
+
+
+# ============================================================================
+# Background download
+# ============================================================================
+
+
+def _start_background_download(info) -> None:
+    """Kick off a daemon thread to download the installer."""
+    from .state import get_update_state
+
+    state = get_update_state()
+    state.set_downloading(info)
+
+    def _run():
+        from .downloader import download_update
+
+        path = download_update(info)
+        if path:
+            state.set_ready(path)
+            bpy.app.timers.register(
+                lambda: _push_ready_toast(info), first_interval=0.0,
+            )
+        else:
+            if not state.cancel_requested:
+                state.set_error("Download failed")
+                logger.warning(
+                    "Installer download failed for %s", info.latest_version,
+                )
+
+    thread = threading.Thread(
+        target=_run, daemon=True, name="MixarUpdateDownload",
+    )
+    state.set_download_thread(thread)
+    thread.start()
+    logger.info("Background download started for %s", info.latest_version)
+
+
+# ============================================================================
+# Toast helpers
+# ============================================================================
+
+
+def _push_ready_toast(info) -> None:
+    """Push a sticky toast telling the user the update is ready to install."""
+    from ...notifications.store import NotificationAction, get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+
+    body = f"Version {info.latest_version} is ready to install."
+    if info.changelog_summary:
+        body += f"\n{info.changelog_summary}"
+
+    get_notification_store().push(
+        type_str="update",
+        title="Mixar Update Ready",
+        body=body,
+        priority="high",
+        actions=[
+            NotificationAction(
+                label="Skip",
+                operator="mixar.dismiss_update",
+                style="secondary",
+            ),
+            NotificationAction(
+                label="Install Update",
+                operator="mixar.install_update",
+                style="primary",
+            ),
+        ],
+        ttl_ms=0,
+        id=UPDATE_NOTIFICATION_ID,
+    )
+    logger.info("Pushed 'ready to install' toast for v%s", info.latest_version)
+    return None  # For use as timer callback
+
+
+def _push_update_available_toast(info) -> None:
+    """Push a toast notifying that an update exists (no auto-download)."""
+    from ...notifications.store import NotificationAction, get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+
+    body = f"Version {info.latest_version} is available."
+    if info.changelog_summary:
+        body += f"\n{info.changelog_summary}"
+
+    get_notification_store().push(
+        type_str="update",
+        title="Mixar Update Available",
+        body=body,
+        priority="normal",
+        actions=[
+            NotificationAction(
+                label="Skip",
+                operator="mixar.dismiss_update",
+                style="secondary",
+            ),
+            NotificationAction(
+                label="Install Update",
+                operator="mixar.install_update",
+                style="primary",
+            ),
+        ],
+        ttl_ms=0,
+        id=UPDATE_NOTIFICATION_ID,
+    )
+    logger.info("Pushed 'update available' toast for v%s", info.latest_version)
