@@ -82,9 +82,6 @@ class StepDef:
     category: Optional[str] = None  # sidebar tab to auto-switch to
     continue_step: str = STEP_DONE
     skip_step: str = STEP_DONE
-    # Step to return to when the user clicks Back. Empty string means
-    # "no previous step" (the welcome card, which hides its Back link).
-    back_step: str = ""
     invoke_op: str = ""
 
 
@@ -105,7 +102,6 @@ _STEPS: dict = {
         # No sidebar switch — the moodboard is the whole MIXIE space.
         category=None,
         continue_step=STEP_INFO_IMAGEGEN,
-        back_step=STEP_WELCOME,
         invoke_op=OP_STEP_INFO_MOODBOARD,
     ),
     STEP_INFO_IMAGEGEN: StepDef(
@@ -116,7 +112,6 @@ _STEPS: dict = {
         body_lines=(INFO_IMAGEGEN_BODY_1, INFO_IMAGEGEN_BODY_2),
         category=CATEGORY_IMAGE_GEN,
         continue_step=STEP_INFO_IMAGE_TO_3D,
-        back_step=STEP_INFO_MOODBOARD,
         invoke_op=OP_STEP_INFO_IMAGEGEN,
     ),
     STEP_INFO_IMAGE_TO_3D: StepDef(
@@ -127,7 +122,6 @@ _STEPS: dict = {
         body_lines=(INFO_IMAGE_TO_3D_BODY_1, INFO_IMAGE_TO_3D_BODY_2),
         category=CATEGORY_IMAGE_TO_3D,
         continue_step=STEP_INFO_RETOPOLOGY,
-        back_step=STEP_INFO_IMAGEGEN,
         invoke_op=OP_STEP_INFO_IMAGE_TO_3D,
     ),
     STEP_INFO_RETOPOLOGY: StepDef(
@@ -138,7 +132,6 @@ _STEPS: dict = {
         body_lines=(INFO_RETOPOLOGY_BODY_1, INFO_RETOPOLOGY_BODY_2),
         category=CATEGORY_RETOPOLOGY,
         continue_step=STEP_INFO_MIXIE_CHAT,
-        back_step=STEP_INFO_IMAGE_TO_3D,
         invoke_op=OP_STEP_INFO_RETOPOLOGY,
     ),
     STEP_INFO_MIXIE_CHAT: StepDef(
@@ -155,7 +148,6 @@ _STEPS: dict = {
         # No sidebar — the chat is its own space (MIXIE_CHAT).
         category=None,
         continue_step=STEP_INFO_ENGINE_MODE,
-        back_step=STEP_INFO_RETOPOLOGY,
         invoke_op=OP_STEP_INFO_MIXIE_CHAT,
     ),
     STEP_INFO_ENGINE_MODE: StepDef(
@@ -170,7 +162,6 @@ _STEPS: dict = {
         ),
         category=None,
         continue_step=STEP_COMPLETION,
-        back_step=STEP_INFO_MIXIE_CHAT,
         invoke_op=OP_STEP_INFO_ENGINE_MODE,
     ),
     STEP_COMPLETION: StepDef(
@@ -178,7 +169,6 @@ _STEPS: dict = {
         kind=KIND_MODAL,
         # Copy lives in completion_ops.draw().
         continue_step=STEP_DONE,
-        back_step=STEP_INFO_ENGINE_MODE,
         invoke_op=OP_COMPLETION,
     ),
     STEP_DONE: StepDef(

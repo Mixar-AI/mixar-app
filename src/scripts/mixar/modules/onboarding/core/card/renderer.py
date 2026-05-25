@@ -51,10 +51,6 @@ from mixar.modules.onboarding.constants import (
     CARD_TITLE_COLOR,
     CARD_TITLE_SHADOW_COLOR,
     CARD_TITLE_SHADOW_OFFSET,
-    OVERLAY_HINT_BOTTOM_GAP,
-    OVERLAY_HINT_COLOR,
-    OVERLAY_HINT_FONT,
-    OVERLAY_HINT_TEXT,
 )
 
 from . import icons
@@ -219,17 +215,6 @@ def _draw_skip_link(rect: tuple, label: str, font_size: int,
                   (*color[:3], color[3] * 0.6))
 
 
-def draw_dismiss_hint(region_w: int, region_h: int) -> None:
-    """Paint a small centred hint near the bottom of the host region
-    telling the user the tour is escapable. Drawn on the dim film
-    (not the card) so it never affects card geometry/placement."""
-    blf.size(_FONT_ID, OVERLAY_HINT_FONT)
-    tw, _th = blf.dimensions(_FONT_ID, OVERLAY_HINT_TEXT)
-    x = int((region_w - tw) * 0.5)
-    y = int(OVERLAY_HINT_BOTTOM_GAP)
-    _draw_text(x, y, OVERLAY_HINT_TEXT, OVERLAY_HINT_FONT, OVERLAY_HINT_COLOR)
-
-
 def draw_card(layout, hover_target: str,
               x_offset: int = 0, y_offset: int = 0) -> None:
     """Paint the card. ``hover_target`` is one of ``"primary"``,
@@ -291,13 +276,4 @@ def draw_card(layout, hover_target: str,
             (sx + ox, sy + oy, sw, sh), layout.skip_label,
             layout.button_font,
             hover=(hover_target == "skip"),
-        )
-
-    # Back link — same discreet styling as Skip.
-    if layout.back_visible:
-        bx, by, bw, bh = layout.back_rect
-        _draw_skip_link(
-            (bx + ox, by + oy, bw, bh), layout.back_label,
-            layout.button_font,
-            hover=(hover_target == "back"),
         )

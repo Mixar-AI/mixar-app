@@ -118,7 +118,6 @@ def _draw_mesh_segment(layout, context):
         layout, context, "mixie.mesh_segment_submit", "mesh_segment",
         gen_flag_attr='mixie_mesh_segment_is_processing',
         cancel_op="mixie.mesh_segment_cancel",
-        feature_key="mesh_segment",
     )
 
 
@@ -339,6 +338,7 @@ def _draw_retopology(layout, context):
         layout, context, FEATURE_RETOPOLOGY,
         lambda: _mesh_can_generate(context, 'TOPOLOGY'),
         mode_override='TOPOLOGY',
+        progress_attr='mixie_retopology_generate_progress',
     )
 
 
