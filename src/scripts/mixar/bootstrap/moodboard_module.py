@@ -81,22 +81,12 @@ def _clear_all_managers() -> None:
 
 
 def register() -> None:
-    """Start the moodboard-selection → chat-attachment sync poll."""
-    try:
-        from mixar.modules.moodboard.core import chat_sync
-        chat_sync.register()
-    except Exception as exc:
-        logger.warning("Moodboard chat_sync register failed: %s", exc)
+    """Nothing to register at startup — teardown only."""
+    pass
 
 
 def unregister() -> None:
     """Drain moodboard managers and release every moodboard image datablock."""
-    try:
-        from mixar.modules.moodboard.core import chat_sync
-        chat_sync.unregister()
-    except Exception as exc:
-        logger.debug("Moodboard chat_sync unregister error: %s", exc)
-
     try:
         _clear_all_managers()
     except Exception as exc:
