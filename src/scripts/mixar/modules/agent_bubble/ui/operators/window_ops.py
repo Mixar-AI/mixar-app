@@ -58,6 +58,13 @@ class MIXAR_OT_agent_bubble_open_window(Operator):
         except Exception:  # noqa: BLE001 — never break the open path
             pass
 
+        scene = getattr(context, "scene", None)
+        if scene is not None and hasattr(scene, "mixie_chat_mode"):
+            try:
+                scene.mixie_chat_mode = 'AGENT'
+            except Exception:  # noqa: BLE001 — never block the open path
+                pass
+
         # Restore from the minimised pill state first. ``bubble_restore``
         # is a no-op when the bubble isn't minimised, so calling it
         # unconditionally is safe and covers the "only pill is showing"
