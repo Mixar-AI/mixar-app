@@ -104,6 +104,12 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
 
+        # Mark the user as engaged so the "Hi I'm Mixie" greeting
+        # stops re-appearing whenever the message list transiently
+        # empties (e.g. moodboard sync growing the bubble past the
+        # empty-state height threshold). Resets on new_session.
+        scene.mixie_chat_user_has_engaged = True
+
         # Security: Validate message length to prevent memory/performance issues
         if len(message_text) > MAX_MESSAGE_LENGTH:
             self.report(
@@ -334,9 +340,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 deselect_all_moodboard_origin_attachments,
             )
             deselect_all_moodboard_origin_attachments(scene)
-        except Exception:
+        except Exception as e:  # noqa: BLE001
             # Moodboard module may not be loaded — never block the send.
-            pass
+            logger.debug(
+                "moodboard deselect on send skipped: %s", e, exc_info=True
+            )
 
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()

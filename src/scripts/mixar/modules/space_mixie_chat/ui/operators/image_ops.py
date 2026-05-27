@@ -237,10 +237,15 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
                     deselect_moodboard_image_by_name,
                 )
                 deselect_moodboard_image_by_name(context.scene, image_path)
-            except Exception:
+            except Exception as e:  # noqa: BLE001
                 # Never block the remove if the moodboard module isn't
                 # loaded — fall through to the standard remove path.
-                pass
+                # Logged at DEBUG so it's discoverable but doesn't spam
+                # the console on every X-click in a no-moodboard setup.
+                import logging
+                logging.getLogger(__name__).debug(
+                    "moodboard deselect skipped: %s", e, exc_info=True
+                )
 
         attachments.remove(self.index)
         if image_source == 'FILE':

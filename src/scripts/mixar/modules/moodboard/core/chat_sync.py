@@ -123,8 +123,9 @@ def _compute_selection_signature(scene) -> tuple:
 # ----------------------------------------------------------------- #
 def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     """Make the moodboard-origin attachments in ``pending_attachments``
-    exactly equal to ``target_names``. Single pass so a mid-iteration
-    RNA failure can't leave the collection half-reconciled.
+    exactly equal to ``target_names``, subject to the per-message
+    attachment cap. Single pass so a mid-iteration RNA failure can't
+    leave the collection half-reconciled.
 
     Manually-added attachments (FILE / non-moodboard BLEND_DATA) are
     never touched. Also de-dupes against existing non-moodboard
@@ -132,7 +133,22 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     attached the same image, we don't add a moodboard copy on top of
     it. This handles the post-reload case where SKIP_SAVE wiped the
     is_moodboard flag on a previously-mirrored attachment.
+
+    The total attachment count is capped at MAX_ATTACHMENTS_PER_MESSAGE
+    (matches the backend's per-turn limit) — once the collection is
+    at the cap, additional selected moodboard images stay queued but
+    don't get attached. When the user deselects or removes a slot,
+    the next poll picks them up.
     """
+    # Lazy import to keep moodboard from carrying a hard dep on chat
+    # module loading order.
+    try:
+        from mixar.modules.space_mixie_chat.constants import (
+            MAX_ATTACHMENTS_PER_MESSAGE,
+        )
+    except Exception:  # noqa: BLE001
+        MAX_ATTACHMENTS_PER_MESSAGE = 5  # safe default matching the C++ side
+
     attachments = getattr(scene, "mixie_chat_pending_attachments", None)
     if attachments is None:
         return
@@ -178,13 +194,26 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     for i in sorted(to_remove, reverse=True):
         attachments.remove(i)
 
-    for name in to_add:
-        att = attachments.add()
-        att.image_path = name
-        att.image_source = 'BLEND_DATA'
-        att.display_name = name
-        att.is_moodboard = True
+    # Cap adds so total pending_attachments never exceeds the per-
+    # message limit. The order in to_add is whatever set() iteration
+    # gives us (insertion order in CPython 3.7+); selected names came
+    # from a sorted list so this is deterministic enough that users
+    # won't see attachments jump around.
+    remaining_slots = MAX_ATTACHMENTS_PER_MESSAGE - len(attachments)
+    if remaining_slots > 0:
+        for name in to_add[:remaining_slots]:
+            att = attachments.add()
+            att.image_path = name
+            att.image_source = 'BLEND_DATA'
+            att.display_name = name
+            att.is_moodboard = True
 
+    # Tag chat + bubble areas for a repaint. No forced bubble resize
+    # — earlier we tried a rising-edge force_attachment_height to
+    # auto-grow the bubble for new thumbnails, but it produced a
+    # visible flash on every first-of-a-batch selection. The
+    # composer's own draw pipeline handles attachment layout within
+    # whatever bubble size the user has chosen.
     _redraw_chat_areas()
 
 
@@ -249,6 +278,7 @@ def deselect_moodboard_image_by_name(scene, image_name: str) -> bool:
             changed = True
     if changed:
         force_resync(scene)
+        _redraw_moodboard_areas()
     return changed
 
 
@@ -295,23 +325,37 @@ def deselect_all_moodboard_origin_attachments(scene) -> int:
 
     if count:
         force_resync(scene)
+        _redraw_moodboard_areas()
     return count
 
 
 # ----------------------------------------------------------------- #
 # UI redraw — tag only, never resize the bubble
 # ----------------------------------------------------------------- #
-def _redraw_chat_areas() -> None:
-    """Tag MIXIE_CHAT + AGENT_BUBBLE areas only — no bubble resize.
+def _redraw_moodboard_areas() -> None:
+    """Tag MIXIE moodboard areas for redraw. Used when we mutate
+    moodboard selection from a chat-side path (X-button on a pill,
+    send completion) — without this, the moodboard's GPU-drawn
+    selection rectangles keep showing the now-deselected image as
+    selected until some other event (mouse move, typing into the
+    composer, etc.) triggers a draw cycle."""
+    try:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE':
+                    area.tag_redraw()
+                    for region in area.regions:
+                        region.tag_redraw()
+    except Exception as e:  # noqa: BLE001
+        _logger.debug("moodboard redraw failed: %s", e, exc_info=True)
 
-    Earlier this called sync_bubble_attachment_size_deferred which
-    forced the bubble to grow whenever an attachment changed. That
-    caused visible flashing during box-select bursts and pushed the
-    bubble above the empty-state's height threshold, so deselecting
-    an image left the bubble grown and the "Hi I'm Mixie" greeting
-    visible again. The composer's own draw pipeline handles
-    attachment layout within the user's chosen bubble size; we just
-    need to ask for a repaint.
+
+def _redraw_chat_areas() -> None:
+    """Tag MIXIE_CHAT + AGENT_BUBBLE areas for redraw — no bubble
+    resize. Forcing the bubble to grow on the rising edge of a
+    selection caused a visible flash on every first-of-a-batch
+    moodboard select; the composer's own draw pipeline already
+    lays attachments out within the user's chosen bubble size.
     """
     try:
         for window in bpy.context.window_manager.windows:
