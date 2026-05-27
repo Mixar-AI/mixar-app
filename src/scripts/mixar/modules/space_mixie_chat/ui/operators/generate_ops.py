@@ -22,6 +22,20 @@ from ...core.ui_utils import redraw_chat_areas
 logger = get_logger(__name__)
 
 
+def _deselect_moodboard_origin(scene) -> None:
+    """Deselect moodboard images for any is_moodboard attachments in
+    pending so the moodboard sync doesn't re-add them on the next poll
+    after we clear pending_attachments. Lazy import so the chat module
+    doesn't carry a hard dep on moodboard at load time."""
+    try:
+        from mixar.modules.moodboard.core.chat_sync import (
+            deselect_all_moodboard_origin_attachments,
+        )
+        deselect_all_moodboard_origin_attachments(scene)
+    except Exception:  # noqa: BLE001 — never block the send path
+        pass
+
+
 def execute_generate_mode(operator, context):
     """Handle message sending in Generate mode - routes to sub-type handler.
 
@@ -172,6 +186,7 @@ def _handle_image_to_3d(operator, context, prompt, pending_attachments):
 
     scene.mixie_chat_input = ""
     if used_attachment:
+        _deselect_moodboard_origin(scene)
         pending_attachments.clear()
     redraw_chat_areas()
     return {'FINISHED'}
@@ -214,6 +229,7 @@ def _handle_image_gen(operator, context, prompt, pending_attachments):
 
     scene.mixie_chat_input = ""
     if used_attachment:
+        _deselect_moodboard_origin(scene)
         pending_attachments.clear()
     redraw_chat_areas()
     return {'FINISHED'}
@@ -267,6 +283,7 @@ def _handle_scene_recon(operator, context, prompt, pending_attachments):
 
     scene.mixie_chat_input = ""
     if has_image:
+        _deselect_moodboard_origin(scene)
         pending_attachments.clear()
     redraw_chat_areas()
     return {'FINISHED'}
