@@ -128,7 +128,10 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
         available_slots = MAX_ATTACHMENTS_PER_MESSAGE - current_count
 
         if available_slots <= 0:
-            self.report({'WARNING'}, "Already at maximum attachments (5)")
+            self.report(
+                {'WARNING'},
+                f"Already at maximum attachments ({MAX_ATTACHMENTS_PER_MESSAGE})",
+            )
             return {'CANCELLED'}
 
         # Check for duplicates and add images
@@ -187,7 +190,9 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
         if added_count < len(selected_images):
             remaining = len(selected_images) - added_count - duplicate_count
             if remaining > 0:
-                message_parts.append("limit reached (max 5)")
+                message_parts.append(
+                    f"limit reached (max {MAX_ATTACHMENTS_PER_MESSAGE})"
+                )
 
         message = ", ".join(message_parts)
 
