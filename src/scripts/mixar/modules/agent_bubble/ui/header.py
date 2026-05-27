@@ -33,8 +33,12 @@ from mixar.modules.agent_bubble.core.pill_icons import (
 )
 
 
-# Session-state values that mean the agent is actively doing something.
-_RUNNING_STATES = {"BUSY", "MODIFYING", "AWAITING_INPUT"}
+# Session-state values that mean the agent is actively working — these
+# get the green pulsing-dot label. AWAITING_INPUT is intentionally NOT
+# here: when the agent pauses to ask the user a question it has stopped
+# running, so the "Running…" animation would lie about activity and
+# read as "the agent is stuck."
+_RUNNING_STATES = {"BUSY", "MODIFYING"}
 
 _IS_WINDOWS = sys.platform == "win32"
 
@@ -48,6 +52,8 @@ def _get_status(scene) -> tuple[str, str, str]:
         return "Connecting", "blue", 'SORTTIME'
     if state in _RUNNING_STATES:
         return "Running", "green", 'RECORD_ON'
+    if state == "AWAITING_INPUT":
+        return "Awaiting input", "yellow", 'QUESTION'
     return "Idle", "grey", 'RECORD_OFF'
 
 
