@@ -29,16 +29,11 @@ from bpy.types import Header
 
 from mixar.modules.agent_bubble.core.pill_icons import (
     get_pill_icon_id_named,
-    get_running_text_suffix,
 )
 
 
-# Session-state values that mean the agent is actively working — these
-# get the green pulsing-dot label. AWAITING_INPUT is intentionally NOT
-# here: when the agent pauses to ask the user a question it has stopped
-# running, so the "Running…" animation would lie about activity and
-# read as "the agent is stuck."
-_RUNNING_STATES = {"BUSY", "MODIFYING"}
+# Session-state values that mean the agent is actively doing something.
+_RUNNING_STATES = {"BUSY", "MODIFYING", "AWAITING_INPUT"}
 
 _IS_WINDOWS = sys.platform == "win32"
 
@@ -52,12 +47,6 @@ def _get_status(scene) -> tuple[str, str, str]:
         return "Connecting", "blue", 'SORTTIME'
     if state in _RUNNING_STATES:
         return "Running", "green", 'RECORD_ON'
-    if state == "AWAITING_INPUT":
-        # Blue instead of yellow — yellow is already the macOS close
-        # traffic-light button. CONNECTING and AWAITING_INPUT can't be
-        # active simultaneously, so reusing the same blue is safe and
-        # avoids the visual collision.
-        return "Awaiting input", "blue", 'QUESTION'
     return "Idle", "grey", 'RECORD_OFF'
 
 
@@ -78,8 +67,6 @@ def _is_pill_window(context) -> bool:
 def _draw_status(layout, scene) -> None:
     """Render the connection / activity status pill (icon + text)."""
     label, icon_name, fallback_icon = _get_status(scene)
-    if icon_name == "green":
-        label = label + get_running_text_suffix()
     icon_id = get_pill_icon_id_named(icon_name)
     if icon_id:
         layout.label(text=label, icon_value=icon_id)
@@ -131,8 +118,6 @@ class AGENT_BUBBLE_HT_header(Header):
             # LARGE pill via context.window.height — SMALL is 28 px,
             # LARGE is 44 px, so any height ≥ 36 is the LARGE state.
             label, icon_name, fallback_icon = _get_status(scene)
-            if icon_name == "green":
-                label = label + get_running_text_suffix()
             icon_id = get_pill_icon_id_named(icon_name)
 
             # Centre the operator in the header.  separator_spacer()
