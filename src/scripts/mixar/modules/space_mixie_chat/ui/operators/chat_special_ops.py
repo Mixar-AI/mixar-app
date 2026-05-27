@@ -156,7 +156,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             logger.error(f"Error dispatching slot action: {e}")
             self.report({'ERROR'}, f"Error: {e}")
 
-        redraw_chat_areas()
+        # Trigger redraw
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE_CHAT':
+                    area.tag_redraw()
+
         return {'FINISHED'}
 
 
