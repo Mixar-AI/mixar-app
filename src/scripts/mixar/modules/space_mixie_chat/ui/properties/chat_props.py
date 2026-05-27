@@ -371,6 +371,21 @@ def register():
         options={'SKIP_SAVE'},  # Never persist — always False on startup
     )
 
+    # Tracks whether the user has engaged with the chat composer this
+    # session. The C++ message renderer gates the "Hi I'm Mixie"
+    # empty-state greeting on this so the greeting only shows for a
+    # truly fresh chat. Without this, anything that grew the bubble
+    # (attachment, moodboard sync, screenshot) could push the bubble
+    # past the height threshold and pop the greeting back into view.
+    # SKIP_SAVE — every Blender launch starts with the greeting
+    # available; new_session resets it back to False.
+    bpy.types.Scene.mixie_chat_user_has_engaged = BoolProperty(
+        name="User Has Engaged",
+        description="True once the user has sent a message or otherwise interacted",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+
     bpy.types.Scene.mixie_chat_state = EnumProperty(
         name="Session State",
         description="Current agent session state for this scene",
