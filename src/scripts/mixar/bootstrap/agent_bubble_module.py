@@ -89,11 +89,8 @@ from mixar.modules.agent_bubble.ui.panels.history_panel import (
 
 logger = get_logger(__name__)
 
-# Streaming redraws — states that need the fast 0.1 s redraw tick
-# because content is actively changing. AWAITING_INPUT is excluded:
-# the agent has paused for the user, nothing is streaming, so the
-# slower 0.25 s tick is plenty.
-_STREAMING_STATES = {"BUSY", "MODIFYING", "CONNECTING"}
+# Streaming redraws
+_STREAMING_STATES = {"BUSY", "MODIFYING", "AWAITING_INPUT", "CONNECTING"}
 _STREAMING_TICK_BUSY = 0.1
 _STREAMING_TICK_ACTIVE = 0.25
 _STREAMING_TICK_IDLE = 1.0
