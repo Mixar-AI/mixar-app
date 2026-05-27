@@ -32,8 +32,11 @@ def _deselect_moodboard_origin(scene) -> None:
             deselect_all_moodboard_origin_attachments,
         )
         deselect_all_moodboard_origin_attachments(scene)
-    except Exception:  # noqa: BLE001 — never block the send path
-        pass
+    except Exception as e:  # noqa: BLE001 — never block the send path
+        logger.debug(
+            "moodboard deselect on generate send skipped: %s",
+            e, exc_info=True,
+        )
 
 
 def execute_generate_mode(operator, context):
