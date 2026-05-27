@@ -53,7 +53,11 @@ def _get_status(scene) -> tuple[str, str, str]:
     if state in _RUNNING_STATES:
         return "Running", "green", 'RECORD_ON'
     if state == "AWAITING_INPUT":
-        return "Awaiting input", "yellow", 'QUESTION'
+        # Blue instead of yellow — yellow is already the macOS close
+        # traffic-light button. CONNECTING and AWAITING_INPUT can't be
+        # active simultaneously, so reusing the same blue is safe and
+        # avoids the visual collision.
+        return "Awaiting input", "blue", 'QUESTION'
     return "Idle", "grey", 'RECORD_OFF'
 
 

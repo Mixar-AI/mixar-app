@@ -158,6 +158,10 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             self.report({'ERROR'}, "Mixie Chat is not ready to receive messages")
             return {'CANCELLED'}
 
+        # Mark the user as engaged so the "Hi I'm Mixie" greeting
+        # doesn't reappear later — same flag the regular send path sets.
+        scene.mixie_chat_user_has_engaged = True
+
         # Apply quick prompt mode to scene (so message uses correct mode)
         scene.mixie_chat_mode = wm.mixie_chat_quick_prompt_mode
         if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
@@ -183,8 +187,11 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
                 deselect_all_moodboard_origin_attachments,
             )
             deselect_all_moodboard_origin_attachments(scene)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            logger.debug(
+                "moodboard deselect on quick-prompt send skipped: %s",
+                e, exc_info=True,
+            )
 
         # Clear pending attachments after copying
         scene.mixie_chat_pending_attachments.clear()
