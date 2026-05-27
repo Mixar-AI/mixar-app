@@ -180,7 +180,7 @@ MAX_IMAGE_SIZE_MB = 10
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif'}
 THUMBNAIL_SIZE = (128, 128)
-MAX_ATTACHMENTS_PER_MESSAGE = 5
+MAX_ATTACHMENTS_PER_MESSAGE = 20
 
 # Security: Maximum image dimensions to prevent memory exhaustion attacks
 # 16384x16384 is a reasonable max (common GPU texture limit)

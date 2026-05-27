@@ -175,6 +175,17 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             msg_att.image_source = pending_att.image_source
             msg_att.display_name = pending_att.display_name
 
+        # Deselect moodboard images whose attachments we're about to
+        # drop, so the moodboard sync doesn't re-attach them on the
+        # next poll. See chat_ops.send_message for the rationale.
+        try:
+            from mixar.modules.moodboard.core.chat_sync import (
+                deselect_all_moodboard_origin_attachments,
+            )
+            deselect_all_moodboard_origin_attachments(scene)
+        except Exception:
+            pass
+
         # Clear pending attachments after copying
         scene.mixie_chat_pending_attachments.clear()
 

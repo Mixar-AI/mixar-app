@@ -321,6 +321,23 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         metrics.stop_timer('sse_start')
 
+        # Drop the moodboard selection for any images we just sent.
+        # Without this the moodboard's polling sync would re-add them
+        # to pending_attachments on the next tick, making it look like
+        # the user is still queueing the same images for the next
+        # message. The moodboard is the source of truth — once a
+        # message goes out, those moodboard images have served their
+        # purpose for *this* turn. Must run BEFORE the clear() below
+        # so we can still see which attachments were moodboard-origin.
+        try:
+            from mixar.modules.moodboard.core.chat_sync import (
+                deselect_all_moodboard_origin_attachments,
+            )
+            deselect_all_moodboard_origin_attachments(scene)
+        except Exception:
+            # Moodboard module may not be loaded — never block the send.
+            pass
+
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()
 
