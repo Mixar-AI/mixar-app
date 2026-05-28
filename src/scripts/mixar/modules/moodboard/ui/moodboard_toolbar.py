@@ -179,19 +179,11 @@ class MIXIE_PT_moodboard_toolbar(Panel):
             icon='FONT_DATA'
         )
 
-        col.separator(factor=1.5)
-
-        # ── Send to Mixie Chat ─────────────────────────────────────────
-        chat_available = hasattr(scene, 'mixie_chat_pending_attachments')
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image and chat_available
-        row.operator(
-            "mixie.moodboard_send_to_chat",
-            text="",
-            icon='EXPORT'
-        )
+        # "Send to Mixie Chat" toolbar button removed — moodboard
+        # selection auto-mirrors into the chat composer's attachments
+        # via the polling sync in moodboard.core.chat_sync. The
+        # operator and ``P`` keymap remain for muscle memory but the
+        # toolbar entry was redundant and confusing.
 
         layout.separator(factor=0.5)
 
