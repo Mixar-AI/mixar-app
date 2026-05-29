@@ -22,12 +22,20 @@ _EXECUTING_STATES = {"BUSY", "MODIFYING"}
 
 
 def is_agent_executing(scene=None) -> bool:
-    """True when the agent is mid-execution on the given scene (or the
-    context scene if none passed). Never raises."""
+    """True when the AGENT-mode agent is mid-execution on the given
+    scene (or the context scene if none passed). Never raises.
+
+    Gated on ``mixie_chat_mode == 'AGENT'`` so the halo + input lock
+    only appear for autonomous agent runs — not for Ask (Q&A) or
+    Generate (image/3D generation) turns, which also go BUSY but don't
+    edit the viewport out from under the user.
+    """
     try:
         if scene is None:
             scene = bpy.context.scene
         if scene is None:
+            return False
+        if (getattr(scene, "mixie_chat_mode", "") or "") != "AGENT":
             return False
         state = getattr(scene, "mixie_chat_state", "") or ""
         return state in _EXECUTING_STATES
