@@ -32,6 +32,9 @@ class MIXAR_LAYERS_HT_header(Header):
         layout = self.layout
         wm = context.window_manager
 
+        # Editor-type switch dropdown (consistent with the other texturing spaces)
+        layout.template_header()
+
         # Title on the left
         layout.label(text="Layers")
 
