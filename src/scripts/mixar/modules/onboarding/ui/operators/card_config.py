@@ -76,7 +76,6 @@ def step_card_config(step_id: str) -> dict:
             "icon_id": ICON_WELCOME,
             "dots_current": 0,
             "dots_total": 0,
-            "back_visible": False,  # first step — nowhere to go back
         }
 
     if step_id == STEP_COMPLETION:
@@ -92,7 +91,6 @@ def step_card_config(step_id: str) -> dict:
             "icon_id": ICON_CHECKMARK,
             "dots_current": 0,
             "dots_total": 0,
-            "back_visible": True,  # let users step back to review
         }
 
     step = get_step(step_id)
@@ -126,14 +124,9 @@ def step_card_config(step_id: str) -> dict:
         "body_lines": step.body_lines,
         "primary_label": TOUR_DIALOG_CONFIRM_NEXT,
         "skip_label": _SKIP_LABEL_DEFAULT,
-        # Skip link removed from the row to declutter — skipping is
-        # handled by clicking outside the card or pressing Esc (the
-        # on-screen hint communicates this). Back is the only secondary
-        # control since no other gesture covers going back a step.
-        "skip_visible": False,
+        "skip_visible": True,
         "scale": scale,
         "icon_id": info_icon.get(step_id, ICON_WELCOME),
         "dots_current": current,
         "dots_total": total,
-        "back_visible": True,
     }
