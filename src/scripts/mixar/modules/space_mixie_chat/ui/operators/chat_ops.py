@@ -104,12 +104,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
 
-        # Mark the user as engaged so the "Hi I'm Mixie" greeting
-        # stops re-appearing whenever the message list transiently
-        # empties (e.g. moodboard sync growing the bubble past the
-        # empty-state height threshold). Resets on new_session.
-        scene.mixie_chat_user_has_engaged = True
-
         # Security: Validate message length to prevent memory/performance issues
         if len(message_text) > MAX_MESSAGE_LENGTH:
             self.report(
@@ -326,25 +320,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 return {'CANCELLED'}
 
         metrics.stop_timer('sse_start')
-
-        # Drop the moodboard selection for any images we just sent.
-        # Without this the moodboard's polling sync would re-add them
-        # to pending_attachments on the next tick, making it look like
-        # the user is still queueing the same images for the next
-        # message. The moodboard is the source of truth — once a
-        # message goes out, those moodboard images have served their
-        # purpose for *this* turn. Must run BEFORE the clear() below
-        # so we can still see which attachments were moodboard-origin.
-        try:
-            from mixar.modules.moodboard.core.chat_sync import (
-                deselect_all_moodboard_origin_attachments,
-            )
-            deselect_all_moodboard_origin_attachments(scene)
-        except Exception as e:  # noqa: BLE001
-            # Moodboard module may not be loaded — never block the send.
-            logger.debug(
-                "moodboard deselect on send skipped: %s", e, exc_info=True
-            )
 
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()
