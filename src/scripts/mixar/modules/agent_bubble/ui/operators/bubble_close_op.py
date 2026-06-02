@@ -78,59 +78,6 @@ class MIXAR_OT_bubble_restore_user(Operator):
             return {'CANCELLED'}
 
 
-class MIXAR_OT_bubble_toggle_minimise(Operator):
-    """Toggle the Agent Bubble between the full window and the floating pill.
-
-    This is the keyboard-shortcut entry point (Cmd/Ctrl+Shift+B). Unlike
-    mixar.bubble_close / mixar.bubble_restore_user — which poll for
-    AGENT_BUBBLE focus and so only fire while the bubble itself is active —
-    this operator has no space restriction, so it works from any editor
-    (e.g. while painting in the viewport).
-
-    It drives the raw C++ minimise/restore operators (which have no poll and
-    act on the global bubble window handles) and records the user-minimise
-    intent so the workspace-change autoshow respects the user's choice, the
-    same way the ESC / close-button path does.
-    """
-
-    bl_idname = "mixar.bubble_toggle_minimise"
-    bl_label = "Toggle Agent Bubble"
-    bl_description = "Minimise the Agent Bubble to its pill, or restore it"
-    bl_options = {'REGISTER', 'INTERNAL'}
-
-    def execute(self, context):
-        # bubble_minimise returns FINISHED when it actually minimises, and
-        # CANCELLED when there is no bubble or it is already a pill.
-        try:
-            result = bpy.ops.mixar.bubble_minimise()
-        except RuntimeError:
-            result = {'CANCELLED'}
-
-        if result == {'FINISHED'}:
-            self._mark(closed=True)
-            return {'FINISHED'}
-
-        # Already minimised (or no bubble): restore. bubble_restore is a safe
-        # no-op when the bubble isn't minimised.
-        try:
-            bpy.ops.mixar.bubble_restore()
-        except RuntimeError:
-            return {'CANCELLED'}
-        self._mark(closed=False)
-        return {'FINISHED'}
-
-    @staticmethod
-    def _mark(*, closed: bool) -> None:
-        try:
-            from mixar.bootstrap import agent_bubble_module
-            if closed:
-                agent_bubble_module.mark_user_closed()
-            else:
-                agent_bubble_module.mark_user_opened()
-        except Exception:  # noqa: BLE001 — never break the toggle path
-            pass
-
-
 class MIXAR_OT_bubble_block_context_menu(Operator):
     """Consume right-clicks in the bubble/pill without opening UI menus."""
 
@@ -154,6 +101,5 @@ class MIXAR_OT_bubble_block_context_menu(Operator):
 classes = (
     MIXAR_OT_bubble_close,
     MIXAR_OT_bubble_restore_user,
-    MIXAR_OT_bubble_toggle_minimise,
     MIXAR_OT_bubble_block_context_menu,
 )
