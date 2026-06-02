@@ -10,7 +10,7 @@ Panel definition for the Mixar Properties workspace space.
 Shows CHANNELS/BRUSH tabs with active layer/mask properties.
 """
 
-from bpy.types import Header, Panel
+from bpy.types import Panel
 
 from ..utils.ui_helpers import draw_layer_settings
 from ..utils.ui_helpers_mask import draw_mask_settings
@@ -18,15 +18,6 @@ from ..utils.ui_helpers_unified_transform import draw_unified_transform_panel
 from ..utils.ui_refresh import update_mixar_ui
 from ..utils.ui_brush_panels import draw_brush_tab, _draw_brush_texture_generation
 from ..utils.ui_channel_panels import draw_channels_tab
-
-
-class MIXAR_PROPERTIES_HT_header(Header):
-    """Header for the Mixar Properties space (hosts the space-switch dropdown)."""
-    bl_space_type = 'MIXAR_PROPERTIES'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.template_header()
 
 
 class MIXAR_PROPERTIES_PT_main(Panel):
@@ -192,6 +183,5 @@ class MIXAR_PROPERTIES_PT_main(Panel):
 
 
 classes = (
-    MIXAR_PROPERTIES_HT_header,
     MIXAR_PROPERTIES_PT_main,
 )

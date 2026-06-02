@@ -37,6 +37,8 @@ Python addon. So by the time anything in this file runs, bpy.ops.mixie_chat
 .agent_bubble_show is callable.
 """
 
+import sys
+
 import bpy
 from bpy.app.handlers import persistent
 
@@ -234,8 +236,29 @@ def _register_bubble_keymap() -> None:
             "agent_bubble: header-drag keymap bind failed: %s", e
         )
 
+    # Cmd+Shift+B (macOS) / Ctrl+Shift+B (Windows/Linux) → toggle the bubble
+    # between the full window and the floating pill. Global (space_type
+    # EMPTY) and the operator has no space poll, so it works from any editor.
+    try:
+        is_macos = sys.platform == 'darwin'
+        km = kc.keymaps.new(name="Window", space_type='EMPTY')
+        kmi = km.keymap_items.new(
+            idname="mixar.bubble_toggle_minimise",
+            type='B',
+            value='PRESS',
+            shift=True,
+            oskey=is_macos,
+            ctrl=not is_macos,
+        )
+        _keymap_items.append((km, kmi))
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "agent_bubble: minimise-toggle keymap bind failed: %s", e
+        )
+
     logger.info(
-        "agent_bubble: keymaps registered (ESC + RMB block + header drag): %d items",
+        "agent_bubble: keymaps registered "
+        "(ESC + RMB block + header drag + minimise toggle): %d items",
         len(_keymap_items),
     )
 
