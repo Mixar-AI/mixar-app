@@ -25,22 +25,6 @@ from . import bubble_state as _st
 logger = get_logger(__name__)
 
 
-def _is_app_exiting() -> bool:
-    """Best-effort check for Blender shutting down.
-
-    Blender has no ``bpy.app.is_quitting`` flag, so we probe the window
-    manager instead.  If it is gone, unreachable, or empty the app is
-    tearing down and no window operations should be attempted.
-    """
-    try:
-        wm = bpy.context.window_manager
-        if wm is None or not wm.windows:
-            return True
-    except Exception:  # noqa: BLE001
-        return True
-    return False
-
-
 def is_agent_bubble_window(window) -> bool:
     """Return True when a Blender window contains the runtime bubble UI."""
     try:
@@ -115,9 +99,6 @@ def close_restored_agent_bubble_windows() -> int:
 
 def reset_restored_bubbles_after_load():
     """One-shot load-post timer: purge saved bubble windows, then autoshow."""
-    if _is_app_exiting():
-        return None
-
     # Import from the actual definition site, not bootstrap (avoids circular ref).
     from mixar.modules.agent_bubble.core.bubble_autoshow import autoshow_bubble
 
@@ -149,10 +130,6 @@ def load_autoshow_tick():
 
 
 def _load_autoshow_tick_inner():
-    if _is_app_exiting():
-        _st.load_autoshow_attempts = 0
-        return None
-
     from mixar.modules.agent_bubble.core.bubble_autoshow import try_invoke_bubble as _try_invoke_bubble
 
     _st.load_autoshow_attempts += 1
@@ -201,8 +178,6 @@ def on_save_pre(_dummy_arg) -> None:
 def restore_bubble_after_save():
     """One-shot timer used after save so the overlay returns cleanly."""
     _st.closed_for_save = False
-    if _is_app_exiting():
-        return None
     pill_icons.refresh()
     _st.load_autoshow_attempts = 0
     if not bpy.app.timers.is_registered(load_autoshow_tick):

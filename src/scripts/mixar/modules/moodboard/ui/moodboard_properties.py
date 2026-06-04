@@ -134,12 +134,7 @@ class MixieMoodboardImage(PropertyGroup):
     selected: BoolProperty(
         name="Selected",
         description="Whether this image is currently selected",
-        default=False,
-        # Note: a property update= callback was tried for chat-sync but
-        # doesn't fire from the C++ select/box-select operators (they
-        # call RNA_property_boolean_set without RNA_property_update).
-        # Sync is driven by a polling tick instead — see
-        # moodboard.core.chat_sync.
+        default=False
     )
     generation_prompt: StringProperty(
         name="Generation Prompt",

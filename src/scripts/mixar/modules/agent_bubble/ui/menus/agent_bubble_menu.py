@@ -46,10 +46,8 @@ _MD_CODE_INLINE_RE = re.compile(r"`(.+?)`")
 _MD_LINK_RE = re.compile(r"\[(.+?)\]\((.+?)\)")
 
 # Session states that mean the agent is actively doing something. Used
-# by the inline status pill to flip between Idle/Running. AWAITING_INPUT
-# is intentionally excluded — the agent has paused for the user, not
-# running.
-_RUNNING_STATES = {"BUSY", "MODIFYING"}
+# by the inline status pill to flip between Idle/Running.
+_RUNNING_STATES = {"BUSY", "MODIFYING", "AWAITING_INPUT"}
 
 
 def _get_status(scene) -> tuple[str, str]:
@@ -60,8 +58,6 @@ def _get_status(scene) -> tuple[str, str]:
         return "Connecting", 'SORTTIME'
     if state in _RUNNING_STATES:
         return "Running", 'RECORD_ON'
-    if state == "AWAITING_INPUT":
-        return "Awaiting input", 'QUESTION'
     return "Idle", 'RECORD_OFF'
 
 

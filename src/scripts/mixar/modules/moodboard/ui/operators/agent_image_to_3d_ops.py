@@ -137,11 +137,6 @@ class MIXIE_OT_agent_image_to_3d(Operator):
     def execute(self, context):
         scene = context.scene
 
-        # Guard: prevent duplicate generation while one is already in progress
-        if getattr(scene, 'mixie_image_to_3d_is_generating', False):
-            self.report({"WARNING"}, "Generation already in progress")
-            return {"CANCELLED"}
-
         # Validate image_name
         if not self.image_name or not self.image_name.strip():
             self.report({"ERROR"}, "image_name is required")
