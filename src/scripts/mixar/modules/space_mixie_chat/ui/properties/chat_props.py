@@ -52,6 +52,17 @@ class MixieChatAttachment(PropertyGroup):
         description="Display name for the attachment",
         default=""
     )
+    # Marks attachments that were auto-added by the moodboard selection sync.
+    # The sync code uses this flag to know which pending attachments it owns
+    # — manually added FILE / BLEND_DATA attachments are never touched.
+    # SKIP_SAVE because the moodboard selection drives this; persisting it
+    # across save/load would just go stale.
+    is_moodboard: BoolProperty(
+        name="From Moodboard",
+        description="True when this attachment is mirrored from a selected moodboard image",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
 
 
 class MixieChatMessage(PropertyGroup):
@@ -320,10 +331,19 @@ def register():
         description="Collection of chat messages"
     )
 
+    # Pending attachments are inherently ephemeral — they describe the
+    # in-flight composer state, not a property of the saved scene.
+    # Persisting them caused duplication on reload when combined with
+    # moodboard sync (the rehydrated attachments lost their is_moodboard
+    # flag and the next poll added a second copy of each) and orphan
+    # moodboard attachments whose X-button no longer routed through
+    # the moodboard deselect path. SKIP_SAVE makes the collection
+    # start empty on every file load.
     bpy.types.Scene.mixie_chat_pending_attachments = CollectionProperty(
         type=MixieChatAttachment,
         name="Pending Attachments",
-        description="Attachments for the message being composed"
+        description="Attachments for the message being composed",
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_mode = EnumProperty(
@@ -349,6 +369,21 @@ def register():
         description="True when the agent is processing a request (BUSY state)",
         default=False,
         options={'SKIP_SAVE'},  # Never persist — always False on startup
+    )
+
+    # Tracks whether the user has engaged with the chat composer this
+    # session. The C++ message renderer gates the "Hi I'm Mixie"
+    # empty-state greeting on this so the greeting only shows for a
+    # truly fresh chat. Without this, anything that grew the bubble
+    # (attachment, moodboard sync, screenshot) could push the bubble
+    # past the height threshold and pop the greeting back into view.
+    # SKIP_SAVE — every Blender launch starts with the greeting
+    # available; new_session resets it back to False.
+    bpy.types.Scene.mixie_chat_user_has_engaged = BoolProperty(
+        name="User Has Engaged",
+        description="True once the user has sent a message or otherwise interacted",
+        default=False,
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_state = EnumProperty(

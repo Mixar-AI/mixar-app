@@ -74,6 +74,12 @@ def _skip_deferred():
     return None
 
 
+def _back_deferred():
+    from mixar.modules.onboarding.core import state
+    state.go_back()
+    return None
+
+
 # ---------------------------------------------------------------------------
 # The modal operator.
 # ---------------------------------------------------------------------------
@@ -211,6 +217,7 @@ class MIXAR_OT_onboarding_card(Operator):
             region_x=rx,
             region_y=ry,
             bubble_anchor=bubble_anchor,
+            back_visible=cfg.get("back_visible", False),
         )
 
     def _draw_callback(self):
@@ -221,6 +228,10 @@ class MIXAR_OT_onboarding_card(Operator):
                 return
             self._layout = self._build_layout(region.width, region.height)
             card_pkg.draw_card(self._layout, self._hover)
+            # Escape-hint on the dim film, below the card. Drawn here
+            # (not in the card layout) so it never affects card size
+            # or placement.
+            card_pkg.draw_dismiss_hint(region.width, region.height)
         except Exception as exc:
             logger.warning(
                 "Onboarding card draw failed: %s", exc, exc_info=True,
@@ -244,11 +255,20 @@ class MIXAR_OT_onboarding_card(Operator):
             target = self._hit_test_event(event)
             if target == "primary":
                 return self._on_primary(context)
+            if target == "back":
+                return self._on_back(context)
             if target == "skip":
                 return self._on_skip(context)
             if target == "card":
+                # Clicks on the card body itself do nothing (so users
+                # don't dismiss the tour while reading) — swallow them.
                 return {"RUNNING_MODAL"}
-            return {"RUNNING_MODAL"}
+            # Click anywhere OUTSIDE the card dismisses the whole tour.
+            # Previously this silently swallowed the click, which made
+            # the dimmed screen feel frozen. Now an off-card click is
+            # an explicit, immediate "skip" — the same path as the
+            # Skip control — so the app is one click away from usable.
+            return self._on_skip(context)
 
         if event.type in {"RET", "NUMPAD_ENTER"} and event.value == "PRESS":
             return self._on_primary(context)
@@ -297,6 +317,13 @@ class MIXAR_OT_onboarding_card(Operator):
         self._cleanup()
         bpy.app.timers.register(
             _advance_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
+        )
+        return {"FINISHED"}
+
+    def _on_back(self, context):
+        self._cleanup()
+        bpy.app.timers.register(
+            _back_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
         )
         return {"FINISHED"}
 

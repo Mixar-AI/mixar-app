@@ -28,7 +28,7 @@ from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_defe
 
 
 class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
-    """Add image attachment(s) from file — supports multi-select (max 5 images)"""
+    """Add image attachment(s) from file — supports multi-select up to the per-message cap"""
     bl_idname = "mixie_chat.add_image_from_file"
     bl_label = "Add Image"
     bl_options = {'REGISTER'}
@@ -220,9 +220,33 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
             self.report({'ERROR'}, "Invalid attachment index")
             return {'CANCELLED'}
 
-        name = attachments[self.index].display_name
-        image_path = attachments[self.index].image_path
-        image_source = attachments[self.index].image_source
+        att = attachments[self.index]
+        name = att.display_name
+        image_path = att.image_path
+        image_source = att.image_source
+        is_moodboard = getattr(att, "is_moodboard", False)
+
+        # For moodboard-origin attachments, deselect the source image
+        # FIRST. Otherwise the moodboard polling tick (~200 ms) re-adds
+        # the attachment immediately and the X-click appears to do
+        # nothing. Doing this before the remove() also keeps the
+        # polling signature consistent.
+        if is_moodboard:
+            try:
+                from mixar.modules.moodboard.core.chat_sync import (
+                    deselect_moodboard_image_by_name,
+                )
+                deselect_moodboard_image_by_name(context.scene, image_path)
+            except Exception as e:  # noqa: BLE001
+                # Never block the remove if the moodboard module isn't
+                # loaded — fall through to the standard remove path.
+                # Logged at DEBUG so it's discoverable but doesn't spam
+                # the console on every X-click in a no-moodboard setup.
+                import logging
+                logging.getLogger(__name__).debug(
+                    "moodboard deselect skipped: %s", e, exc_info=True
+                )
+
         attachments.remove(self.index)
         if image_source == 'FILE':
             cleanup_loaded_file_image(image_path)
