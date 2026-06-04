@@ -37,8 +37,6 @@ Python addon. So by the time anything in this file runs, bpy.ops.mixie_chat
 .agent_bubble_show is callable.
 """
 
-import sys
-
 import bpy
 from bpy.app.handlers import persistent
 
@@ -91,11 +89,8 @@ from mixar.modules.agent_bubble.ui.panels.history_panel import (
 
 logger = get_logger(__name__)
 
-# Streaming redraws — states that need the fast 0.1 s redraw tick
-# because content is actively changing. AWAITING_INPUT is excluded:
-# the agent has paused for the user, nothing is streaming, so the
-# slower 0.25 s tick is plenty.
-_STREAMING_STATES = {"BUSY", "MODIFYING", "CONNECTING"}
+# Streaming redraws
+_STREAMING_STATES = {"BUSY", "MODIFYING", "AWAITING_INPUT", "CONNECTING"}
 _STREAMING_TICK_BUSY = 0.1
 _STREAMING_TICK_ACTIVE = 0.25
 _STREAMING_TICK_IDLE = 1.0
@@ -239,29 +234,8 @@ def _register_bubble_keymap() -> None:
             "agent_bubble: header-drag keymap bind failed: %s", e
         )
 
-    # Cmd+Shift+B (macOS) / Ctrl+Shift+B (Windows/Linux) → toggle the bubble
-    # between the full window and the floating pill. Global (space_type
-    # EMPTY) and the operator has no space poll, so it works from any editor.
-    try:
-        is_macos = sys.platform == 'darwin'
-        km = kc.keymaps.new(name="Window", space_type='EMPTY')
-        kmi = km.keymap_items.new(
-            idname="mixar.bubble_toggle_minimise",
-            type='B',
-            value='PRESS',
-            shift=True,
-            oskey=is_macos,
-            ctrl=not is_macos,
-        )
-        _keymap_items.append((km, kmi))
-    except Exception as e:  # noqa: BLE001
-        logger.warning(
-            "agent_bubble: minimise-toggle keymap bind failed: %s", e
-        )
-
     logger.info(
-        "agent_bubble: keymaps registered "
-        "(ESC + RMB block + header drag + minimise toggle): %d items",
+        "agent_bubble: keymaps registered (ESC + RMB block + header drag): %d items",
         len(_keymap_items),
     )
 

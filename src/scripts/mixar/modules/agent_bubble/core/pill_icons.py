@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-import time
 
 import bpy
 import bpy.utils.previews
@@ -53,12 +52,6 @@ _PILL_PALETTE = {
     "yellow": _PILL_YELLOW,
     "red": _PILL_RED,
 }
-
-# "Running" label animation: trailing dots cycle through 4 states on a
-# ~2 s period so users see the agent is actively working. The dot icon
-# itself stays static — animating the icon was too distracting.
-_PULSE_PERIOD_S = 2.0
-_PULSE_TEXT_STATES = 4
 
 
 # bpy.utils.previews collection — populated by register(), torn down
@@ -144,16 +137,6 @@ def get_pill_icon_id_named(color_name: str) -> int:
     if _pcoll is None or color_name not in _pcoll:
         return 0
     return _pcoll[color_name].icon_id
-
-
-def get_running_text_suffix() -> str:
-    """Trailing-dot animation for the "Running" label. Right-padded
-    with spaces so the label's rendered width stays constant —
-    otherwise the centred pill would jiggle horizontally each cycle."""
-    phase = (time.monotonic() % _PULSE_PERIOD_S) / _PULSE_PERIOD_S
-    step = int(phase * _PULSE_TEXT_STATES) % _PULSE_TEXT_STATES
-    max_dots = _PULSE_TEXT_STATES - 1
-    return ("." * step).ljust(max_dots)
 
 
 def register():

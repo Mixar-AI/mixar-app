@@ -25,8 +25,6 @@ from mixar.modules.onboarding.core.card.text_utils import (
 )
 from mixar.modules.onboarding.constants import (
     CARD_AREA_MARGIN,
-    CARD_BACK_GAP,
-    CARD_BACK_LABEL,
     CARD_BODY_DOTS_GAP,
     CARD_BODY_LINE_SPACING,
     CARD_BTN_HEIGHT,
@@ -121,14 +119,6 @@ class CardLayout:
     skip_label: str = "Skip tour"
     skip_rect: tuple = (0, 0, 0, 0)
     skip_visible: bool = True
-
-    # Back link rect — sits in the bottom row to the right of Skip
-    # (or at the left edge when Skip is hidden). Laid out only when
-    # ``back_visible``; occupies previously-empty bottom-row space so
-    # it never changes the card's measured size.
-    back_label: str = ""
-    back_rect: tuple = (0, 0, 0, 0)
-    back_visible: bool = False
 
     # Coord system: True if all positions (x/y, baselines, rects)
     # are in **window** coords (used for CARD_POS_WINDOW_CENTER, where
@@ -340,7 +330,6 @@ def compute_layout(
     region_x: int = 0,
     region_y: int = 0,
     bubble_anchor: tuple = None,
-    back_visible: bool = False,
 ) -> CardLayout:
     """Build a :class:`CardLayout` for the Apple-style vertical
     layout — icon at top, centred title, centred body, optional
@@ -391,8 +380,6 @@ def compute_layout(
         dots_current=dots_current,
         dots_total=dots_total,
         dot_radius=dot_radius,
-        back_label=CARD_BACK_LABEL,
-        back_visible=back_visible,
         # The card is always drawn in single-region mode now. The
         # WINDOW_CENTER position kind selects a *host area* big enough
         # for the card; layout coords are always region-local.
@@ -469,26 +456,11 @@ def compute_layout(
     skip_y = btn_y + (btn_h - skip_h) // 2
     layout.skip_rect = (skip_x, skip_y, skip_w, skip_h)
 
-    # Back link — bottom row, to the right of Skip (or at the left
-    # edge when Skip is hidden). Lives in the previously-empty middle
-    # of the button row, so it never changes the card's measured size
-    # or anchor. Vertically aligned with the Skip link.
-    back_gap = _scaled_int(CARD_BACK_GAP, scale)
-    back_w = _measure_text_w(button_font, layout.back_label)
-    back_h = skip_h
-    if skip_visible:
-        back_x = skip_x + skip_w + back_gap
-    else:
-        back_x = skip_x
-    back_y = skip_y
-    layout.back_rect = (back_x, back_y, back_w, back_h)
-
     return layout
 
 
 def hit_test(layout: CardLayout, region_x: int, region_y: int):
-    """Return ``"primary"``, ``"back"``, ``"skip"``, ``"card"``, or
-    ``None``.
+    """Return ``"primary"``, ``"skip"``, ``"card"``, or ``None``.
 
     ``"card"`` means inside the card body but not on a button — the
     modal uses this to swallow stray clicks so the click doesn't fall
@@ -497,13 +469,6 @@ def hit_test(layout: CardLayout, region_x: int, region_y: int):
     px, py, pw, ph = layout.primary_rect
     if px <= region_x <= px + pw and py <= region_y <= py + ph:
         return "primary"
-
-    if layout.back_visible:
-        bx, by, bw, bh = layout.back_rect
-        pad = 6
-        if (bx - pad) <= region_x <= (bx + bw + pad) and \
-           (by - pad) <= region_y <= (by + bh + pad):
-            return "back"
 
     if layout.skip_visible:
         sx, sy, sw, sh = layout.skip_rect

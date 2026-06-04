@@ -146,11 +146,6 @@ class MIXIE_OT_scene_recon_generate(Operator):
     def execute(self, context):
         scene = context.scene
 
-        # Check not already generating
-        if hasattr(scene, 'mixie_scene_recon_is_generating') and scene.mixie_scene_recon_is_generating:
-            self.report({"WARNING"}, "Generation already in progress")
-            return {"CANCELLED"}
-
         # Chat context
         if self.from_chat:
             prompt = self.chat_prompt.strip()
@@ -236,7 +231,10 @@ class MIXIE_OT_scene_recon_generate(Operator):
             self.report({"WARNING"}, "Failed to submit job (already generating?)")
             return {"CANCELLED"}
 
-        self.report({"INFO"}, "Scene reconstruction started...")
+        from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        mark_enqueued(FEATURE_SCENE_RECON)
+        self.report({"INFO"}, "Added to queue")
         return {"FINISHED"}
 
     def _start_from_prompt(self, scene, sidebar_tab, prompt):
@@ -384,7 +382,10 @@ class MIXIE_OT_scene_recon_generate(Operator):
             self.report({"ERROR"}, f"Failed to start image generation: {e}")
             return {"CANCELLED"}
 
-        self.report({"INFO"}, "Generating scene image from description...")
+        from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        mark_enqueued(FEATURE_SCENE_RECON)
+        self.report({"INFO"}, "Added to queue")
         return {"FINISHED"}
 
     def _start_from_image_chat(self, scene, image_name, prompt=""):
@@ -570,15 +571,17 @@ class MIXIE_OT_scene_recon_cancel(Operator):
 
     def execute(self, context):
         try:
-            from mixar.modules.moodboard.core.scene_recon_manager import get_scene_recon_manager
-        except ImportError as e:
-            self.report({"ERROR"}, f"Scene recon manager not available: {e}")
-            return {"CANCELLED"}
+            from mixar.modules.common.job_queue.core.queue_manager import get_queue
+            from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
 
-        manager = get_scene_recon_manager()
-        if manager.cancel_job():
-            self.report({"INFO"}, "Scene reconstruction cancelled")
-            return {"FINISHED"}
+            queue = get_queue(FEATURE_SCENE_RECON)
+            if queue.has_active_work():
+                queue.cancel_all()
+                self.report({"INFO"}, "Scene reconstruction cancelled")
+                return {"FINISHED"}
+        except ImportError as e:
+            self.report({"ERROR"}, f"Queue system not available: {e}")
+            return {"CANCELLED"}
 
         self.report({"WARNING"}, "No active job to cancel")
         return {"CANCELLED"}

@@ -158,10 +158,6 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             self.report({'ERROR'}, "Mixie Chat is not ready to receive messages")
             return {'CANCELLED'}
 
-        # Mark the user as engaged so the "Hi I'm Mixie" greeting
-        # doesn't reappear later — same flag the regular send path sets.
-        scene.mixie_chat_user_has_engaged = True
-
         # Apply quick prompt mode to scene (so message uses correct mode)
         scene.mixie_chat_mode = wm.mixie_chat_quick_prompt_mode
         if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
@@ -178,20 +174,6 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             msg_att.image_path = pending_att.image_path
             msg_att.image_source = pending_att.image_source
             msg_att.display_name = pending_att.display_name
-
-        # Deselect moodboard images whose attachments we're about to
-        # drop, so the moodboard sync doesn't re-attach them on the
-        # next poll. See chat_ops.send_message for the rationale.
-        try:
-            from mixar.modules.moodboard.core.chat_sync import (
-                deselect_all_moodboard_origin_attachments,
-            )
-            deselect_all_moodboard_origin_attachments(scene)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(
-                "moodboard deselect on quick-prompt send skipped: %s",
-                e, exc_info=True,
-            )
 
         # Clear pending attachments after copying
         scene.mixie_chat_pending_attachments.clear()
