@@ -15,6 +15,7 @@ See: mixar-backend/docs/superpowers/specs/2026-06-04-headless-sandbox-create-mod
 
 import os
 import subprocess
+import tempfile
 import threading
 
 import bpy
@@ -25,7 +26,14 @@ logger = get_logger(__name__)
 
 # connection_id -> subprocess.Popen
 _children: dict = {}
+# connection_id -> open log file handle (child stdout/stderr)
+_child_logs: dict = {}
 _lock = threading.Lock()
+
+
+def _child_log_path(connection_id: str) -> str:
+    safe = connection_id.replace("/", "_")
+    return os.path.join(tempfile.gettempdir(), "mixar_sandbox_{}.log".format(safe))
 
 
 def _headless_main_path() -> str:
@@ -59,16 +67,28 @@ def spawn_sandbox(connection_id: str) -> dict:
             bpy.app.binary_path, "--background", "-noaudio",
             "--python", _headless_main_path(),
         ]
+        # Capture the child's stdout/stderr to a log file (NOT DEVNULL) so a
+        # child that crashes or fails to connect can actually be diagnosed.
+        log_path = _child_log_path(connection_id)
+        try:
+            logf = open(log_path, "w")
+        except Exception:
+            logf = None
         try:
             proc = subprocess.Popen(
                 argv, env=env, start_new_session=True,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdout=(logf or subprocess.DEVNULL),
+                stderr=subprocess.STDOUT if logf else subprocess.DEVNULL,
             )
         except Exception as e:
             logger.error("Failed to spawn sandbox %s: %s", connection_id, e, exc_info=True)
+            if logf:
+                logf.close()
             return {"success": False, "error": str(e), "pid": None}
         _children[connection_id] = proc
-        logger.info("Sandbox spawned pid=%s id=%s", proc.pid, connection_id)
+        if logf:
+            _child_logs[connection_id] = logf
+        logger.info("Sandbox spawned pid=%s id=%s log=%s", proc.pid, connection_id, log_path)
         return {"success": True, "pid": proc.pid}
 
 
@@ -81,6 +101,12 @@ def shutdown_sandbox(connection_id: str | None = None) -> dict:
             if proc and proc.poll() is None:
                 try:
                     proc.terminate()
+                except Exception:
+                    pass
+            logf = _child_logs.pop(cid, None)
+            if logf:
+                try:
+                    logf.close()
                 except Exception:
                     pass
         return {"success": True}
