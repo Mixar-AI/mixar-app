@@ -20,11 +20,12 @@ Public surface:
 """
 
 from .layout import CardLayout, compute_layout, hit_test
-from .renderer import draw_card
+from .renderer import draw_card, draw_dismiss_hint
 
 __all__ = (
     "CardLayout",
     "compute_layout",
     "draw_card",
+    "draw_dismiss_hint",
     "hit_test",
 )
