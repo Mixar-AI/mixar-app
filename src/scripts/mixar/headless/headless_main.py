@@ -45,6 +45,9 @@ def _run() -> None:
     parent_iid = os.environ.get("MIXAR_SANDBOX_PARENT_INSTANCE_ID", "")
     parent_pid = int(os.environ.get("MIXAR_SANDBOX_PARENT_PID", "0") or 0)
     watchdog_s = float(os.environ.get("MIXAR_SANDBOX_PARENT_WATCHDOG_S", "60") or 60)
+    # Self-terminate after this many seconds with no build, so a finished
+    # session's warm sandbox is reaped. 0 disables (stay until parent quits).
+    idle_ttl = float(os.environ.get("MIXAR_SANDBOX_IDLE_TTL_S", "0") or 0)
 
     from mixar.modules.space_mixie_chat.core import jsonrpc_client as jc
     from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
@@ -69,6 +72,7 @@ def _run() -> None:
     logger.info("headless sandbox %s connecting to %s", conn_id, backend)
 
     last_connected = time.monotonic()
+    last_activity = time.monotonic()
     while True:
         if not _pid_alive(parent_pid):
             logger.info("parent pid %s gone; exiting", parent_pid)
@@ -78,6 +82,9 @@ def _run() -> None:
         elif time.monotonic() - last_connected > watchdog_s:
             logger.info("disconnected > %.0fs; exiting", watchdog_s)
             break
+        if idle_ttl > 0 and time.monotonic() - last_activity > idle_ttl:
+            logger.info("idle > %.0fs with no build; exiting", idle_ttl)
+            break
 
         # MANUAL PUMP — timers do not fire in --background.
         try:
@@ -86,6 +93,7 @@ def _run() -> None:
             time.sleep(0.05)
             continue
 
+        last_activity = time.monotonic()  # received work — reset the idle timer
         executor = get_executor()
         try:
             result = executor.execute(script)
@@ -94,6 +102,7 @@ def _run() -> None:
             rd = {"success": False, "error": "{}: {}".format(type(e).__name__, e)}
         if client.is_connected:
             client.queue_response(request_id, rd)
+        last_activity = time.monotonic()  # finished — idle window starts now
 
     try:
         client.disconnect()

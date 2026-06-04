@@ -45,12 +45,22 @@ def _parent_instance_from(connection_id: str) -> str:
     return connection_id[:-4] if connection_id.endswith("-sbx") else connection_id
 
 
-def spawn_sandbox(connection_id: str) -> dict:
+def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None) -> dict:
     """Launch (or reuse) the headless sandbox child for `connection_id`."""
     with _lock:
         proc = _children.get(connection_id)
         if proc and proc.poll() is None:
             return {"success": True, "pid": proc.pid}  # idempotent — already warm
+        # A previous child for this id exited (e.g. idle self-terminate): drop its
+        # stale handle + log file before re-spawning.
+        if proc is not None:
+            _children.pop(connection_id, None)
+            old_log = _child_logs.pop(connection_id, None)
+            if old_log:
+                try:
+                    old_log.close()
+                except Exception:
+                    pass
 
         from mixar.modules.auth.core.auth import get_access_token
         from mixar.config.config import get_server_url
@@ -63,6 +73,8 @@ def spawn_sandbox(connection_id: str) -> dict:
             "MIXAR_SANDBOX_PARENT_INSTANCE_ID": _parent_instance_from(connection_id),
             "MIXAR_SANDBOX_PARENT_PID": str(os.getpid()),
         })
+        if idle_ttl_s:
+            env["MIXAR_SANDBOX_IDLE_TTL_S"] = str(idle_ttl_s)
         argv = [
             bpy.app.binary_path, "--background", "-noaudio",
             "--python", _headless_main_path(),
@@ -116,7 +128,7 @@ def handle_sandbox_control(params: dict) -> dict:
     """Dispatch an agent.sandbox_control request from the backend."""
     action = params.get("action")
     if action == "spawn":
-        return spawn_sandbox(params["connection_id"])
+        return spawn_sandbox(params["connection_id"], params.get("idle_ttl_s"))
     if action == "shutdown":
         return shutdown_sandbox(params.get("connection_id"))
     if action == "refresh_token":
