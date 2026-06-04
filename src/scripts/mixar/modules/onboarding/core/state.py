@@ -100,6 +100,19 @@ def advance(context=None) -> None:
     transition_to(next_id, context)
 
 
+def go_back(context=None) -> None:
+    """Return from the current step to its declared previous step."""
+    current = get_step_id(context)
+    step = get_step(current)
+    if step is None:
+        logger.warning("Onboarding: go_back() from unknown step %r", current)
+        return
+    prev_id = step.back_step
+    if not prev_id or prev_id == current:
+        return
+    transition_to(prev_id, context)
+
+
 def skip_tour(context=None) -> None:
     """Mark opted-out and park at DONE for the rest of the session."""
     set_opted_out(True, context)

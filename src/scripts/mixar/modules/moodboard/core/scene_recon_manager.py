@@ -23,7 +23,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from ...common.api.services.generation_queue_service import get_generation_queue_service
+from ...common.api.services.scene_recon_service import get_scene_recon_service
 from ...common.api.response import APIResponse
 from .scene_recon_constants import (
     POLL_INTERVAL_PHASE1,
@@ -140,37 +140,36 @@ class SceneReconManager(SceneReconPollerMixin, SceneReconDownloaderMixin):
         self._consecutive_poll_failures = 0
         self._current_poll_interval = POLL_INTERVAL_PHASE1
 
-        import base64 as _b64
+        def submit_api_call():
+            try:
+                service = get_scene_recon_service()
+                response = service.submit_job(
+                    image_bytes=image_bytes,
+                    generate_mesh=generate_mesh,
+                    min_mask_pixels=min_mask_pixels,
+                    mesh_postprocess=mesh_postprocess,
+                    texture_baking=texture_baking,
+                    vertex_color=vertex_color,
+                )
 
-        payload = {
-            "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
-            "generate_mesh": generate_mesh,
-            "min_mask_pixels": min_mask_pixels,
-            "mesh_postprocess": mesh_postprocess,
-            "texture_baking": texture_baking,
-            "vertex_color": vertex_color,
-        }
+                def handle_response():
+                    self._handle_submit_response(response)
+                    return None
 
-        def on_submit_success(response):
-            self._handle_submit_response(response)
+                bpy.app.timers.register(handle_response, first_interval=0.0)
 
-        def on_submit_error(error):
-            error_msg = str(error)
-            logger.error("[SceneRecon] Submit failed: %s", error_msg)
-            self._set_error(error_msg)
+            except Exception as e:
+                error_msg = str(e)
 
-        try:
-            service = get_generation_queue_service()
-            service.enqueue(
-                job_type="scene_reconstruction",
-                model="sam3d",
-                payload=payload,
-                on_success=on_submit_success,
-                on_error=on_submit_error,
-            )
-        except Exception as e:
-            self._set_error(str(e))
-            return False
+                def report_error():
+                    logger.error("[SceneRecon] Submit failed: %s", error_msg)
+                    self._set_error(error_msg)
+                    return None
+
+                bpy.app.timers.register(report_error, first_interval=0.0)
+
+        thread = threading.Thread(target=submit_api_call, daemon=True)
+        thread.start()
 
         # Set generating state
         self._set_generating(True)
@@ -249,8 +248,8 @@ class SceneReconManager(SceneReconPollerMixin, SceneReconDownloaderMixin):
         # Cancel on server
         def cancel_call():
             try:
-                service = get_generation_queue_service()
-                service.cancel_job(job_id)
+                service = get_scene_recon_service()
+                service.delete_job(job_id)
                 logger.debug("[SceneRecon] Cancelled job")
             except Exception as e:
                 logger.error("[SceneRecon] Cancel failed: %s", e)
