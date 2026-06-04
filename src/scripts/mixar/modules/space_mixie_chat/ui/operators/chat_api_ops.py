@@ -84,6 +84,9 @@ class MIXIE_CHAT_OT_clear_messages(Operator):
             paths.extend(collect_message_file_image_paths(msg))
         scene.mixie_chat_messages.clear()
         cleanup_loaded_file_images(paths)
+        # Re-arm the empty-state greeting now that the chat is empty.
+        if hasattr(scene, "mixie_chat_user_has_engaged"):
+            scene.mixie_chat_user_has_engaged = False
 
         # Clear incremental markdown cache (prevents unbounded growth)
         from ...core.markdown_parser import clear_incremental_cache
