@@ -11,18 +11,9 @@ Includes channel baking, mesh map generation, and preview functionality.
 """
 
 import bpy
-from bpy.types import Header, Panel
+from bpy.types import Panel
 
 from ...core.node.get_nodes import get_layer_source
-
-
-class BAKING_HT_header(Header):
-    """Header for the Baking space (hosts the space-switch dropdown)."""
-    bl_space_type = 'BAKING'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.template_header()
 
 
 def is_baked_to_layer_type(layer, mp):
@@ -723,7 +714,6 @@ class BAKING_PT_main(Panel):
 
 
 classes = (
-    BAKING_HT_header,
     BAKING_MT_material_category,
     BAKING_OT_set_material_category,
     BAKING_PT_main,

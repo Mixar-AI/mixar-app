@@ -13,7 +13,7 @@ import bpy
 from mixar.modules.moodboard.constants import SEP_INTRA
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_dropdown,
-    draw_toggle, draw_status_badge, draw_styled_progress,
+    draw_toggle, draw_status_badge,
 )
 
 
@@ -101,24 +101,17 @@ def draw_step3_hp(layout, context, tab):
         icon='MESH_DATA',
     )
 
-    # Queue panel + progress
+    # Queue panel
     hp_generating = getattr(scene, 'mixie_scene_gen_hp_is_generating', False)
-    wm = context.window_manager
-    progress = getattr(wm, 'mixie_scene_gen_hp_generate_progress', 0.0)
 
     if hp_generating:
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_HP
-        from mixar.modules.common.job_queue.core.queue_manager import get_queue
-        queue = get_queue(FEATURE_SCENE_GEN_HP)
         cancel_row = step3.row(align=True)
         cancel_row.scale_x = 0.6
         c_op = cancel_row.operator(
             "mixie.queue_cancel_all", text="Cancel All", icon='CANCEL',
         )
         c_op.feature_key = FEATURE_SCENE_GEN_HP
-
-    if hp_generating or progress > 0.0:
-        draw_styled_progress(step3, wm, 'mixie_scene_gen_hp_generate_progress')
 
     # Queue list
     from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_HP
@@ -168,10 +161,8 @@ def draw_step4_lp(layout, context, tab):
         icon='MOD_REMESH',
     )
 
-    # Queue panel + progress
+    # Queue panel
     lp_generating = getattr(scene, 'mixie_scene_gen_lp_is_generating', False)
-    wm = context.window_manager
-    progress = getattr(wm, 'mixie_scene_gen_lp_generate_progress', 0.0)
 
     if lp_generating:
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_LP
@@ -181,9 +172,6 @@ def draw_step4_lp(layout, context, tab):
             "mixie.queue_cancel_all", text="Cancel All", icon='CANCEL',
         )
         c_op.feature_key = FEATURE_SCENE_GEN_LP
-
-    if lp_generating or progress > 0.0:
-        draw_styled_progress(step4, wm, 'mixie_scene_gen_lp_generate_progress')
 
     # Queue list
     from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_LP

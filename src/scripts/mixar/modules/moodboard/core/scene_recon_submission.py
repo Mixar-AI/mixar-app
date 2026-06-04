@@ -28,9 +28,10 @@ def on_prompt_error(scene, sidebar_tab, message):
             from .generate_progress import reset_progress
             reset_progress('scene_recon')
             scene.mixie_scene_recon_is_generating = False
-            sidebar_tab.error_text = message
-            sidebar_tab.stage_name = ""
-            sidebar_tab.stage_detail = ""
+            if sidebar_tab:
+                sidebar_tab.error_text = message
+                sidebar_tab.stage_name = ""
+                sidebar_tab.stage_detail = ""
 
             for window in bpy.context.window_manager.windows:
                 for area in window.screen.areas:
@@ -65,13 +66,11 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
         True if the job was submitted, False otherwise.
     """
     try:
-        from mixar.modules.moodboard.core.scene_recon_manager import get_scene_recon_manager
+        from mixar.modules.moodboard.core.scene_recon_queue import enqueue_scene_recon_job
         from mixar.modules.moodboard.core import scene_importer
     except ImportError as e:
-        on_prompt_error(scene, sidebar_tab, f"Scene recon manager not available: {e}")
+        on_prompt_error(scene, sidebar_tab, f"Scene recon queue not available: {e}")
         return False
-
-    manager = get_scene_recon_manager()
 
     job_suffix = datetime.datetime.now().strftime("%H%M%S")
     scene_importer.init_scene(
@@ -159,21 +158,22 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
     def on_download_failed(index, label, error):
         logger.error("Object %s ('%s') download failed: %s", index, label, error)
 
-    success = manager.submit_job(
+    job = enqueue_scene_recon_job(
         image_bytes=image_bytes,
-        on_complete=on_complete,
-        on_error=on_error,
-        on_object_ready=on_object_ready,
-        on_download_failed=on_download_failed,
-        on_bbox_ready=on_bbox_ready,
         generate_mesh=generate_mesh,
         min_mask_pixels=min_mask_pixels,
         mesh_postprocess=mesh_postprocess,
         texture_baking=texture_baking,
         vertex_color=vertex_color,
+        on_object_ready=on_object_ready,
+        on_download_failed=on_download_failed,
+        on_bbox_ready=on_bbox_ready,
+        on_complete=on_complete,
+        on_error=on_error,
     )
 
-    if not success:
+    if not job:
         on_prompt_error(scene, sidebar_tab, "Failed to submit reconstruction job")
+        return False
 
-    return success
+    return True
