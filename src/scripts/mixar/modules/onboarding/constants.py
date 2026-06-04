@@ -96,17 +96,7 @@ OP_STEP_INFO_ENGINE_MODE = "mixar.onboarding_info_engine_mode"
 # Background dim film — semi-transparent black drawn behind the
 # floating dialogs to make them stand out.
 # ---------------------------------------------------------------------------
-# Dim film opacity. Dropped from 0.82 → 0.62 so the editor underneath
-# stays clearly visible — the screen reads as "guided / paused", not
-# "crashed". Still dark enough to push focus onto the card.
-OVERLAY_DIM_COLOR = (0.0, 0.0, 0.0, 0.62)
-
-# Dismiss hint shown under the card on the dim film. Tells the user
-# the tour is escapable so the dimmed screen never feels like a trap.
-OVERLAY_HINT_TEXT = "Press Esc or click outside the card to skip"
-OVERLAY_HINT_FONT = 16
-OVERLAY_HINT_COLOR = (0.78, 0.80, 0.83, 0.85)
-OVERLAY_HINT_BOTTOM_GAP = 40  # px from the bottom of the host region
+OVERLAY_DIM_COLOR = (0.0, 0.0, 0.0, 0.82)
 
 # ---------------------------------------------------------------------------
 # Welcome dialog copy.
@@ -263,14 +253,6 @@ CARD_BTN_PADDING_X = 42
 
 # Skip-tour link gap from the primary button (horizontal).
 CARD_SKIP_GAP = 28
-
-# Back link — sits in the bottom button row to the right of Skip
-# (or at the left edge when Skip is hidden). Rendered like the Skip
-# link so it doesn't compete with the green Continue button. The
-# label carries a leading chevron to read as "go back".
-CARD_BACK_LABEL = "‹ Back"
-# Horizontal gap between the Skip link and the Back link.
-CARD_BACK_GAP = 24
 
 # Font sizes (BLF points). Title is rendered with a 1-px double-draw
 # offset (renderer-side) for a subtle bold look without needing a

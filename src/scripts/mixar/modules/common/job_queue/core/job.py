@@ -46,6 +46,7 @@ class Job:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     state: JobState = JobState.PENDING
     error: str = ""
+    user_message: str = ""
     created_at: float = field(default_factory=time.time)
 
     # Backend tracking
@@ -86,6 +87,28 @@ class Job:
         """Optional hook called after a successful import on the main thread."""
         self.imported_object_names = object_names
 
+    def should_skip_poll(self) -> bool:
+        """Return True if the submit response already contains the result.
+
+        Sync-type jobs (ImageGen, Lookdev360) may receive inline results in the
+        submit response.  When that happens, polling would hit an empty
+        ``backend_job_id`` and 404.  Override this to short-circuit straight to
+        the download/handle_result phase.
+        """
+        return False
+
+    def handle_result(self, result_files, on_done, on_error):
+        """Override for non-standard results (images, textures, inline data).
+
+        Return True = job handles it (MUST call on_done or on_error).
+        Return False = use standard GLB download/import.
+        """
+        return False
+
+    def get_poll_interval(self):
+        """Override to customize poll interval (seconds). Return 0 for default."""
+        return 0.0
+
     # ------------------------------------------------------------------ #
     # UI helpers
     # ------------------------------------------------------------------ #
@@ -111,8 +134,7 @@ class Job:
         if st == JobState.SUCCESS:
             return f"Done: {self.imported_object_names}" if self.imported_object_names else "Done"
         if st == JobState.FAILED:
-            msg = self.error or "Failed"
-            return msg if len(msg) <= 60 else msg[:57] + "…"
+            return "Failed"
         if st == JobState.CANCELLED:
             return "Cancelled"
         if st == JobState.PAUSED_AUTH:

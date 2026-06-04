@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-Mesh Segment Manager Module.
+Mesh Segment Manager Module (DEPRECATED).
 
-Handles mesh segment job state, polling, and result processing.
+Superseded by ``mesh_segment_queue.py`` which uses the unified FeatureQueue
+framework. This module is kept for reference; new code should use
+``enqueue_mesh_segment_job()`` from ``mesh_segment_queue`` instead.
 """
 
 import bpy
@@ -13,7 +15,7 @@ import threading
 from typing import Callable, Dict, Optional
 
 from mixar.config.logging_config import get_logger
-from ...common.api import get_mesh_segment_service
+from ...common.api.services.generation_queue_service import get_generation_queue_service
 from .mesh_labeler import apply_labels_to_mesh
 
 logger = get_logger(__name__)
@@ -86,25 +88,41 @@ class MeshSegmentManager:
         self._on_complete = on_complete
         self._on_error = on_error
 
-        service = get_mesh_segment_service()
+        import base64 as _b64
 
         try:
-            response = service.submit_job(
-                mesh_file=mesh_file_path,
-                description=description,
-                expected_parts=expected_parts,
+            with open(mesh_file_path, "rb") as f:
+                mesh_bytes = f.read()
+        except Exception as e:
+            self._handle_error(f"Failed to read mesh file: {e}")
+            return False
+
+        payload = {
+            "mesh_file_bytes_b64": _b64.b64encode(mesh_bytes).decode(),
+            "mesh_filename": "mesh.obj",
+            "description": description,
+            "expected_parts": expected_parts,
+        }
+
+        try:
+            service = get_generation_queue_service()
+            submit_response = service.post(
+                "enqueue",
+                json={
+                    "job_type": "mesh_segment",
+                    "model": "mesh_segment_v1",
+                    "payload": payload,
+                    "idempotency_key": __import__("uuid").uuid4().hex,
+                },
             )
 
-            logger.debug("[MeshSegment] Submit response - success: %s", response.success)
-
-            if not response.success:
-                self._handle_error(response.message or "Failed to submit job")
+            if not submit_response.success:
+                self._handle_error(submit_response.message or "Failed to submit job")
                 return False
 
-            data = response.data or {}
-            # Response structure: {status, message, data: {job_id, ...}}
+            data = submit_response.data or {}
             inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
-            self._job_id = inner_data.get("job_id") or data.get("job_id") or data.get("id")
+            self._job_id = inner_data.get("job_id") or data.get("job_id")
 
             if not self._job_id:
                 self._handle_error(f"No job_id in response: {data}")
@@ -112,17 +130,15 @@ class MeshSegmentManager:
 
             logger.debug("[MeshSegment] Job submitted: %s", self._job_id)
 
-            # Update scene properties
             scene = bpy.context.scene
             scene.mixie_mesh_segment_job_id = self._job_id
-            scene.mixie_mesh_segment_status = data.get("status", "pending")
+            scene.mixie_mesh_segment_status = "pending"
             scene.mixie_mesh_segment_is_processing = True
             scene.mixie_mesh_segment_error = ""
 
             from mixar.modules.moodboard.core.generate_progress import start_progress
             start_progress('mesh_segment')
 
-            # Start polling
             self._start_polling()
             return True
 
@@ -150,10 +166,10 @@ class MeshSegmentManager:
             pass
 
     def _poll_status_thread(self, job_id: str) -> None:
-        """Background thread to call status API."""
+        """Background thread to call status API via generation queue."""
         try:
-            service = get_mesh_segment_service()
-            response = service.get_status(job_id)
+            service = get_generation_queue_service()
+            response = service.get_job_status_sync(job_id)
             self._poll_result = {"done": True, "response": response, "error": None}
         except Exception as e:
             self._poll_result = {"done": True, "response": None, "error": str(e)}
@@ -194,7 +210,7 @@ class MeshSegmentManager:
         """Process the result from the background poll thread. Returns None to stop polling."""
         if self._poll_result["error"]:
             logger.error("[MeshSegment] Poll error: %s", self._poll_result['error'])
-            return self.POLL_INTERVAL  # Continue polling despite errors
+            return self.POLL_INTERVAL
 
         response = self._poll_result["response"]
         if not response:
@@ -205,96 +221,102 @@ class MeshSegmentManager:
             return self.POLL_INTERVAL
 
         data = response.data or {}
-        # Response may have nested data structure
-        inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
-        status = inner_data.get("status") or data.get("status", "unknown")
-        progress = inner_data.get("progress") or data.get("progress", 0.0) or 0.0
-        current_step = inner_data.get("current_step") or data.get("current_step", "")
+        inner_data = data.get("data", data) if isinstance(data, dict) else {}
+        if not isinstance(inner_data, dict):
+            return self.POLL_INTERVAL
 
-        logger.debug("[MeshSegment] Status: %s, progress: %s", status, progress)
+        # Map generation queue statuses
+        gq_status = inner_data.get("status", "")
+        result = inner_data.get("result") or {}
 
-        # Update scene properties
+        # Map to mesh segment status
+        if gq_status == "PENDING":
+            status = "pending"
+            progress = 0.0
+            current_step = "Queued"
+        elif gq_status in ("SUBMITTED", "POLLING"):
+            status = "processing"
+            progress = inner_data.get("progress", 0.5) or 0.5
+            current_step = "Processing..."
+        elif gq_status == "DONE":
+            status = "completed"
+            progress = 1.0
+            current_step = "Complete"
+        elif gq_status == "FAILED":
+            status = "failed"
+            progress = 0.0
+            current_step = ""
+        else:
+            status = "pending"
+            progress = 0.0
+            current_step = ""
+
+        logger.debug("[MeshSegment] Status: %s (gq: %s)", status, gq_status)
+
         scene = bpy.context.scene
         scene.mixie_mesh_segment_status = status
         scene.mixie_mesh_segment_progress = progress
         scene.mixie_mesh_segment_current_step = current_step
 
-        # Notify callback
         if self._on_status_update:
             self._on_status_update(status, progress, current_step)
 
-        # Check for completion
         if status == "completed":
-            self._fetch_result()
-            return None  # Stop polling
+            # Extract result directly from poll response (no separate fetch)
+            self._handle_inline_result(result)
+            return None
         elif status == "failed":
-            error_msg = inner_data.get("error") or data.get("error", "Mesh segment job failed")
+            error_msg = inner_data.get("error", "Mesh segment job failed")
             self._handle_error(error_msg)
-            return None  # Stop polling
+            return None
 
-        # Force UI redraw
         for area in bpy.context.screen.areas:
             if area.type == 'MIXIE':
                 area.tag_redraw()
 
         return self.POLL_INTERVAL
 
-    def _fetch_result(self) -> None:
-        """Fetch the job result (synchronous)."""
-        if not self._job_id:
-            return
-
+    def _handle_inline_result(self, result: Dict) -> None:
+        """Handle result extracted inline from the generation queue poll response."""
         self._stop_polling()
 
-        service = get_mesh_segment_service()
+        island_labels = result.get("island_labels", {})
+        if not island_labels:
+            self._handle_error("No island labels in result")
+            return
 
-        try:
-            response = service.get_result(self._job_id)
+        logger.debug("[MeshSegment] Result received with %d island labels", len(island_labels))
 
-            if not response.success:
-                self._handle_error(response.message or "Failed to get result")
-                return
+        # Apply labels to mesh
+        if self._mesh_object:
+            try:
+                count, labels = apply_labels_to_mesh(self._mesh_object, island_labels)
+                logger.debug("[MeshSegment] Applied %d vertex groups to mesh", count)
+            except Exception as e:
+                logger.error("[MeshSegment] Error applying labels: %s", e)
 
-            data = response.data or {}
-            # Response may have nested data structure
-            inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
-            island_labels = inner_data.get("island_labels") or data.get("island_labels", {})
+        # Update scene properties
+        scene = bpy.context.scene
+        scene.mixie_mesh_segment_is_processing = False
+        scene.mixie_mesh_segment_status = "completed"
 
-            logger.debug("[MeshSegment] Result received with %d island labels", len(island_labels))
+        from mixar.modules.moodboard.core.generate_progress import complete_progress
+        complete_progress('mesh_segment')
 
-            # Apply labels to mesh
-            if self._mesh_object and island_labels:
-                try:
-                    count, labels = apply_labels_to_mesh(self._mesh_object, island_labels)
-                    logger.debug("[MeshSegment] Applied %d vertex groups to mesh", count)
-                except Exception as e:
-                    logger.error("[MeshSegment] Error applying labels: %s", e)
+        # Store result for UI display
+        scene.mixie_mesh_segment_result = str(island_labels)
 
-            # Update scene properties
-            scene = bpy.context.scene
-            scene.mixie_mesh_segment_is_processing = False
-            scene.mixie_mesh_segment_status = "completed"
+        # Notify callback
+        if self._on_complete:
+            self._on_complete(result)
 
-            from mixar.modules.moodboard.core.generate_progress import complete_progress
-            complete_progress('mesh_segment')
+        # Cleanup
+        self._cleanup()
 
-            # Store result for UI display
-            scene.mixie_mesh_segment_result = str(island_labels)
-
-            # Notify callback
-            if self._on_complete:
-                self._on_complete(data)
-
-            # Cleanup
-            self._cleanup()
-
-            # Force UI redraw
-            for area in bpy.context.screen.areas:
-                if area.type == 'MIXIE':
-                    area.tag_redraw()
-
-        except Exception as e:
-            self._handle_error(f"Failed to get result: {e}")
+        # Force UI redraw
+        for area in bpy.context.screen.areas:
+            if area.type == 'MIXIE':
+                area.tag_redraw()
 
     def _handle_error(self, message: str) -> None:
         """Handle error and cleanup."""
@@ -339,9 +361,9 @@ class MeshSegmentManager:
         job_id = self._job_id
         self._stop_polling()
 
-        service = get_mesh_segment_service()
+        service = get_generation_queue_service()
         try:
-            service.delete_job(job_id)
+            service.cancel_job(job_id)
             logger.debug("[MeshSegment] Job %s cancelled", job_id)
         except Exception as e:
             logger.error("[MeshSegment] Cancel error: %s", e)

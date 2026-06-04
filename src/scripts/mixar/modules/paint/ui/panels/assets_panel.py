@@ -10,16 +10,7 @@ Panel definition for the Mixar Assets workspace space.
 Shows procedural materials and other assets from the paint backend.
 """
 
-from bpy.types import Header, Panel
-
-
-class MIXAR_ASSETS_HT_header(Header):
-    """Header for the Mixar Assets space (hosts the space-switch dropdown)."""
-    bl_space_type = 'MIXAR_ASSETS'
-
-    def draw(self, context):
-        layout = self.layout
-        layout.template_header()
+from bpy.types import Panel
 
 
 class MIXAR_ASSETS_PT_main(Panel):
@@ -93,6 +84,5 @@ class MIXAR_ASSETS_PT_main(Panel):
 
 
 classes = (
-    MIXAR_ASSETS_HT_header,
     MIXAR_ASSETS_PT_main,
 )
