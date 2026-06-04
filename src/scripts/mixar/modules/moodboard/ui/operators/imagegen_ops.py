@@ -9,11 +9,19 @@ Image Gen Operators
 Operators for AI image generation using the dynamic v2 API.
 """
 
+import time
+
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.common.utils.image_utils import compress_for_service
+from mixar.modules.common.utils.image_utils import (
+    add_image_to_moodboard,
+    compress_for_service,
+    load_image_from_url,
+)
+from mixar.modules.common.utils.mixie_space_utils import show_generation_error
 from mixar.config.logging_config import get_logger
+from ...core.generate_progress import start_progress, complete_progress, reset_progress
 
 logger = get_logger(__name__)
 
@@ -221,56 +229,210 @@ class MIXIE_OT_imagegen_generate(Operator):
                 except Exception as e:
                     logger.error("Error getting reference images: %s", e)
 
-        # Collect style/aspect/resolution params
-        if self.from_chat:
-            style = "none"
-            aspect_ratio = "1:1"
-            resolution = "1K"
-            negative_prompt = None
-        elif use_sidebar_props:
-            style = getattr(sidebar_tab, 'style', 'REALISTIC')
-            aspect_ratio = getattr(sidebar_tab, 'aspect_ratio', '1_1')
-            resolution = getattr(sidebar_tab, 'resolution', '1024')
-            negative_prompt = None
-        else:
-            style = scene.mixie_imagegen_style
-            aspect_ratio = scene.mixie_imagegen_aspect_ratio
-            resolution = getattr(scene, "mixie_imagegen_resolution", "1K")
-            negative_prompt = scene.mixie_imagegen_negative_prompt or None
+        # Import API service
+        try:
+            from mixar.modules.common.api import get_imagegen_service
+        except ImportError as e:
+            self.report({"ERROR"}, f"ImageGen API service not available: {e}")
+            return {"CANCELLED"}
 
+        service = get_imagegen_service()
+
+        # Set generating flag and clear previous error
+        scene.mixie_imagegen_is_generating = True
+        scene.mixie_imagegen_error = ""
+        start_progress('imagegen')
+        _completed = False
+
+        # Store values for callback
         stored_prompt = prompt.strip()
         stored_num_images = getattr(scene, "mixie_imagegen_num_images", 1)
 
-        # Submit via FeatureQueue
-        try:
-            import base64 as _b64
-            from mixar.modules.moodboard.core.imagegen_queue import enqueue_imagegen_job
-
-            ref_b64 = []
-            if reference_image_bytes:
-                ref_b64 = [_b64.b64encode(img).decode() for img in reference_image_bytes]
-
-            job = enqueue_imagegen_job(
-                prompt=stored_prompt,
-                model=model,
-                style=style,
-                aspect_ratio=aspect_ratio,
-                resolution=resolution,
-                num_images=stored_num_images,
-                negative_prompt=negative_prompt,
-                reference_images_b64=ref_b64,
+        def show_error(message: str):
+            show_generation_error(
+                scene, "Generate Image", message,
+                "mixie_imagegen_is_generating", "mixie_imagegen_error",
             )
-            if not job:
-                self.report({"WARNING"}, "A duplicate image generation is already queued")
-                return {"CANCELLED"}
+
+        def on_success(response):
+            """Handle successful generation response."""
+            nonlocal _completed
+            _completed = True
+
+            # Bail out if user cancelled
+            if not getattr(scene, 'mixie_imagegen_is_generating', False):
+                logger.info("ImageGen cancelled, ignoring response")
+                return
+
+            logger.info("Generation complete")
+
+            try:
+                if not response.success:
+                    error_msg = getattr(response, "error", None) or "Generation failed"
+                    show_error(f"API Error: {error_msg}")
+                    return
+
+                data = response.data
+                if not data:
+                    show_error("No data received from server")
+                    return
+
+                # Check for failure status
+                if isinstance(data, dict):
+                    status = data.get("status", "").lower()
+                    if status in ("failure", "error"):
+                        error_message = data.get("message", "Unknown error from server")
+                        show_error(f"Server Error: {error_message}")
+                        return
+
+                    # Handle nested data structure
+                    if "data" in data and isinstance(data["data"], dict):
+                        data = data["data"]
+
+                # Extract images from response (v2 API returns array)
+                images = []
+                if isinstance(data, dict):
+                    images_list = data.get("images", [])
+                    for img_item in images_list:
+                        if isinstance(img_item, dict) and "url" in img_item:
+                            images.append(img_item["url"])
+                        elif isinstance(img_item, str):
+                            images.append(img_item)
+
+                    # Fallback to single image_url if no images array
+                    if not images:
+                        single_url = data.get("image_url")
+                        if single_url:
+                            images.append(single_url)
+
+                if not images:
+                    show_error("No image URLs in server response")
+                    return
+
+                logger.info("Received %s image(s)", len(images))
+
+                # Download and add images to moodboard
+                added_count = 0
+                for i, image_url in enumerate(images):
+                    try:
+                        timestamp = int(time.time())
+                        name = f"imagegen_{timestamp}_{i}"
+                        img = load_image_from_url(image_url, name)
+                        add_image_to_moodboard(img, stored_prompt)
+                        added_count += 1
+                        logger.info("Added generated image: %s", img.name)
+                    except Exception as e:
+                        logger.error("Failed to download image %s: %s", i, e)
+
+                scene.mixie_imagegen_is_generating = False
+                complete_progress('imagegen')
+
+                if added_count > 0:
+                    bpy.ops.ed.undo_push(message="Generate Image")
+
+                for area in bpy.context.screen.areas:
+                    if area.type == "MIXIE":
+                        area.tag_redraw()
+
+                if added_count > 0:
+
+                    def draw_success(self, context):
+                        if added_count == 1:
+                            self.layout.label(text="Image generated successfully!")
+                        else:
+                            self.layout.label(
+                                text=f"{added_count} images generated successfully!"
+                            )
+
+                    bpy.context.window_manager.popup_menu(
+                        draw_success, title="Generate Image", icon="CHECKMARK"
+                    )
+                else:
+                    show_error("Failed to download generated images")
+
+            except Exception as e:
+                logger.error("Error processing response: %s", e, exc_info=True)
+                show_error(f"Error processing response: {e}")
+
+        def on_error(error):
+            """Handle generation error."""
+            nonlocal _completed
+            _completed = True
+            if not getattr(scene, 'mixie_imagegen_is_generating', False):
+                return
+            error_str = str(error) if error else "Unknown error"
+            reset_progress('imagegen')
+            show_error(f"Request failed: {error_str}")
+
+        def on_complete(async_response):
+            """Handle completion."""
+            if not getattr(scene, 'mixie_imagegen_is_generating', False):
+                return
+            if not _completed:
+                error = getattr(async_response, "error", None)
+                response = getattr(async_response, "response", None)
+
+                if error:
+                    show_error(f"Request failed: {error}")
+                elif response and not response.success:
+                    error_msg = getattr(response, "error", None)
+                    if not error_msg and response.data:
+                        error_msg = response.data.get("message", "Unknown error")
+                    show_error(f"Server error: {error_msg or 'Unknown error'}")
+                else:
+                    scene.mixie_imagegen_is_generating = False
+                    complete_progress('imagegen')
+                    for area in bpy.context.screen.areas:
+                        if area.type == "MIXIE":
+                            area.tag_redraw()
+
+        # Call v2 async API
+        try:
+            if self.from_chat:
+                # Chat context: send prompt, model, and any attached reference images
+                service.generate_async(
+                    prompt=stored_prompt,
+                    model=model,
+                    reference_images=reference_image_bytes if reference_image_bytes else None,
+                    on_success=on_success,
+                    on_error=on_error,
+                    on_complete=on_complete,
+                )
+            else:
+                # UI context: send all properties from appropriate source
+                if use_sidebar_props:
+                    # Get properties from sidebar tab
+                    style = getattr(sidebar_tab, 'style', 'REALISTIC')
+                    aspect_ratio = getattr(sidebar_tab, 'aspect_ratio', '1_1')
+                    resolution = getattr(sidebar_tab, 'resolution', '1024')
+                    negative_prompt = None  # Sidebar doesn't have negative prompt yet
+                else:
+                    # Get properties from global scene properties
+                    style = scene.mixie_imagegen_style
+                    aspect_ratio = scene.mixie_imagegen_aspect_ratio
+                    resolution = getattr(scene, "mixie_imagegen_resolution", "1K")
+                    negative_prompt = scene.mixie_imagegen_negative_prompt or None
+
+                service.generate_async(
+                    prompt=stored_prompt,
+                    model=model,
+                    style=style,
+                    aspect_ratio=aspect_ratio,
+                    resolution=resolution,
+                    number_of_images=stored_num_images,
+                    negative_prompt=negative_prompt,
+                    reference_images=reference_image_bytes if reference_image_bytes else None,
+                    on_success=on_success,
+                    on_error=on_error,
+                    on_complete=on_complete,
+                )
         except Exception as e:
+            scene.mixie_imagegen_is_generating = False
+            reset_progress('imagegen')
             self.report({"ERROR"}, f"Failed to start generation: {e}")
             return {"CANCELLED"}
 
-        from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-        mark_enqueued(FEATURE_IMAGEGEN)
-        self.report({"INFO"}, "Added to queue")
+        self.report({"INFO"}, "Image generation started...")
         return {"FINISHED"}
 
 

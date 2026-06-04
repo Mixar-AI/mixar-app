@@ -10,8 +10,8 @@ Lifecycle (per job, all callbacks fire on the main thread via api/processor):
                        │              │               │
                        └──── FAILED / CANCELLED / PAUSED_AUTH
 
-All pending jobs are submitted immediately (the backend handles concurrency
-and queue limits). Each job owns its own poll-tick closure registered
+All pending jobs are submitted immediately (no client-side concurrency
+limit — the backend handles scheduling). Each job owns its own poll-tick closure registered
 with ``bpy.app.timers``; download runs on a daemon thread that schedules
 the import callback back on the main thread.
 """
@@ -36,7 +36,6 @@ from ..constants import (
     MAX_CONSECUTIVE_POLL_ERRORS,
     MAX_POLL_DURATION,
 )
-from .error_helpers import classify_error
 from .job import Job, JobState, RUNNING_STATES, TERMINAL_STATES
 
 logger = get_logger(__name__)
@@ -170,7 +169,6 @@ class FeatureQueue:
             if job.state == JobState.PAUSED_AUTH:
                 job.state = JobState.PENDING
                 job.error = ""
-                job.user_message = ""
                 job.backend_job_id = ""
                 job.backend_api_type = ""
                 job.poll_count = 0
@@ -236,7 +234,6 @@ class FeatureQueue:
     def _start_job(self, job: Job) -> None:
         job.state = JobState.RUNNING_SUBMIT
         job.error = ""
-        job.user_message = ""
         self._notify()
 
         def on_submit_success(response):
@@ -259,18 +256,8 @@ class FeatureQueue:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Failed to parse submit response: {e}"
-            job.user_message = "Failed to process server response"
             self._notify()
             self._pump()
-            return
-
-        # Sync-type jobs may already have the result inline in the submit
-        # response (e.g. ImageGen, Lookdev360).  Skip polling to avoid
-        # hitting GET /jobs/<empty> → 404.
-        if job.should_skip_poll():
-            job.state = JobState.RUNNING_DOWNLOAD
-            self._notify()
-            self._begin_download(job, [])
             return
 
         job.state = JobState.RUNNING_POLL
@@ -285,19 +272,15 @@ class FeatureQueue:
             return
         job.state = JobState.FAILED
         job.error = str(error)
-        job.user_message = classify_error(error) or "Submission failed"
         self._notify()
         self._pump()
 
     def _schedule_poll(self, job: Job, interval: float) -> None:
         # Capture job by closure; the tick is a no-op if state changed.
-        custom = job.get_poll_interval()
-        actual_interval = custom if custom > 0 else interval
-
         def tick():
             return self._poll_tick(job)
 
-        bpy.app.timers.register(tick, first_interval=actual_interval)
+        bpy.app.timers.register(tick, first_interval=interval)
 
     def _poll_tick(self, job: Job):
         if job.state != JobState.RUNNING_POLL:
@@ -309,7 +292,6 @@ class FeatureQueue:
                 self._cancel_on_backend(job.backend_job_id)
             job.state = JobState.FAILED
             job.error = "Job timed out after 20 minutes"
-            job.user_message = "Generation timed out — please try again"
             self._notify()
             self._pump()
             return None
@@ -327,8 +309,7 @@ class FeatureQueue:
         except Exception as e:
             self._on_poll_error(job, e)
 
-        custom = job.get_poll_interval()
-        return custom if custom > 0 else get_poll_interval(job.poll_count)
+        return get_poll_interval(job.poll_count)
 
     def _on_poll_success(self, job: Job, response) -> None:
         if job.state != JobState.RUNNING_POLL:
@@ -339,7 +320,6 @@ class FeatureQueue:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Error parsing poll response: {e}"
-            job.user_message = "Failed to process server response"
             self._notify()
             self._pump()
             return
@@ -356,8 +336,6 @@ class FeatureQueue:
             job.state = JobState.FAILED
             if not job.error:
                 job.error = "Job failed on backend"
-            if not job.user_message:
-                job.user_message = "Generation failed"
             self._notify()
             self._pump()
             return
@@ -373,7 +351,6 @@ class FeatureQueue:
         if status_code == 404:
             job.state = JobState.FAILED
             job.error = "Job result expired — please retry"
-            job.user_message = "Job result expired — please retry"
             self._notify()
             self._pump()
             return
@@ -392,7 +369,6 @@ class FeatureQueue:
                 f"Failed after {MAX_CONSECUTIVE_POLL_ERRORS} "
                 f"consecutive poll errors: {error}"
             )
-            job.user_message = classify_error(error) or "Generation failed — please retry"
             self._notify()
             self._pump()
 
@@ -400,27 +376,7 @@ class FeatureQueue:
     # Download / import
     # ------------------------------------------------------------------ #
 
-    def _finish_custom_success(self, job: Job, object_names=""):
-        if job.state == JobState.CANCELLED:
-            self._pump()
-            return None
-        job.imported_object_names = object_names
-        job.state = JobState.SUCCESS
-        self._notify()
-        self._pump()
-        return None
-
     def _begin_download(self, job: Job, result_files: list) -> None:
-        # Hook: let the job handle non-standard results (images, textures, etc.)
-        def _custom_done(names=""):
-            return self._finish_custom_success(job, names)
-
-        def _custom_error(msg):
-            return self._finish_failed(job, msg)
-
-        if job.handle_result(result_files, _custom_done, _custom_error):
-            return  # Job takes responsibility
-
         # Pick best file (GLB > OBJ > FBX)
         preferred_order = ["GLB", "OBJ", "FBX"]
         chosen = None
@@ -437,7 +393,6 @@ class FeatureQueue:
         if not chosen or not chosen.get("url"):
             job.state = JobState.FAILED
             job.error = "No downloadable result file"
-            job.user_message = "No result available — please retry"
             self._notify()
             self._pump()
             return
@@ -455,10 +410,9 @@ class FeatureQueue:
                 # Capture error message now — Python 3 deletes `e` when
                 # the except block exits, so the closure can't reference it.
                 err_msg = f"Download failed: {e}"
-                friendly = classify_error(e) or "Download failed — please retry"
 
                 def _fail_cb():
-                    return self._finish_failed(job, err_msg, friendly)
+                    return self._finish_failed(job, err_msg)
 
                 bpy.app.timers.register(_fail_cb, first_interval=0.0)
                 return
@@ -487,20 +441,17 @@ class FeatureQueue:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
-            job.user_message = "Failed to import the generated model"
 
         self._notify()
         self._pump()
         return None  # one-shot
 
-    def _finish_failed(self, job: Job, message: str, user_message: str = ""):
+    def _finish_failed(self, job: Job, message: str):
         if job.state == JobState.CANCELLED:
             self._pump()
             return None
         job.state = JobState.FAILED
         job.error = message
-        if user_message:
-            job.user_message = user_message
         self._notify()
         self._pump()
         return None  # one-shot
