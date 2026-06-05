@@ -397,8 +397,6 @@ class MIXIE_OT_mesh_segment_submit_and_close(Operator):
         if not obj or obj.type != 'MESH':
             return False
         scene = context.scene
-        if getattr(scene, 'mixie_mesh_segment_is_processing', False):
-            return False
         if not getattr(scene, 'mixie_mesh_segment_description', '').strip():
             return False
         if not getattr(scene, 'mixie_mesh_segment_expected_parts', '').strip():
