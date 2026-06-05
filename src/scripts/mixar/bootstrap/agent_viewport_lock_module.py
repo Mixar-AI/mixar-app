@@ -24,6 +24,7 @@ blocked.
 from __future__ import annotations
 
 import bpy
+from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.agent_viewport_lock.constants import (
@@ -56,8 +57,23 @@ def _ensure_modal_running() -> None:
     if op is None:
         return
 
+    # Attach the modal to a window that actually contains a 3D viewport.
+    # A modal operator only receives events for the window it's added to,
+    # and the block only consumes input over a VIEW_3D region — so binding
+    # to a viewport-less window (e.g. the agent bubble) would let clicks
+    # through. Falls back to the first window if none has a viewport.
     wm = bpy.context.window_manager
-    win = wm.windows[0] if (wm and wm.windows) else None
+    win = None
+    if wm and wm.windows:
+        for candidate in wm.windows:
+            screen = candidate.screen
+            if screen is not None and any(
+                area.type == 'VIEW_3D' for area in screen.areas
+            ):
+                win = candidate
+                break
+        if win is None:
+            win = wm.windows[0]
     if win is None:
         return
     try:
@@ -80,17 +96,51 @@ def _lock_tick():
     return HALO_TICK_IDLE_S
 
 
+@persistent
+def _on_load_post(_dummy_arg) -> None:
+    """Re-arm the lock after open / new-file.
+
+    A .blend load tears down the running block modal (modal operators
+    never survive a file load) while the halo draw handler — registered
+    on the SpaceView3D class — keeps rendering. That mismatch is the
+    "halo shows but clicks aren't blocked on a new file" bug. Reset the
+    stale running guard so the tick re-invokes the modal, and make sure
+    the tick timer is alive (belt-and-suspenders — it's registered
+    persistent below, but re-register defensively if it ever isn't)."""
+    try:
+        from mixar.modules.agent_viewport_lock.ui.operators.viewport_block_op import (
+            reset_running_guard,
+        )
+        reset_running_guard()
+    except Exception as exc:  # noqa: BLE001 — never break file load
+        logger.debug("agent_viewport_lock: guard reset failed: %s", exc)
+    if not bpy.app.timers.is_registered(_lock_tick):
+        try:
+            bpy.app.timers.register(_lock_tick, first_interval=1.0, persistent=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("agent_viewport_lock: timer re-register failed: %s", exc)
+
+
 def register() -> None:
     logger.info("agent_viewport_lock: register()")
     halo_renderer.install_draw_handler()
     if not bpy.app.timers.is_registered(_lock_tick):
         # Slight delay so the UI loader has registered the block
         # operator before the first tick tries to invoke it.
-        bpy.app.timers.register(_lock_tick, first_interval=1.0)
+        # persistent=True so the tick keeps running across file loads —
+        # otherwise the lock never re-arms on a newly-opened file.
+        bpy.app.timers.register(_lock_tick, first_interval=1.0, persistent=True)
+    if _on_load_post not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_on_load_post)
 
 
 def unregister() -> None:
     halo_renderer.remove_draw_handler()
+    if _on_load_post in bpy.app.handlers.load_post:
+        try:
+            bpy.app.handlers.load_post.remove(_on_load_post)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("agent_viewport_lock: load handler remove failed: %s", exc)
     if bpy.app.timers.is_registered(_lock_tick):
         try:
             bpy.app.timers.unregister(_lock_tick)
