@@ -45,7 +45,8 @@ def _parent_instance_from(connection_id: str) -> str:
     return connection_id[:-4] if connection_id.endswith("-sbx") else connection_id
 
 
-def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None) -> dict:
+def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
+                  parent_instance_id: str | None = None) -> dict:
     """Launch (or reuse) the headless sandbox child for `connection_id`."""
     with _lock:
         proc = _children.get(connection_id)
@@ -70,7 +71,8 @@ def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None) -> dict:
             "MIXAR_SANDBOX_ACCESS_TOKEN": get_access_token() or "",
             "MIXAR_BACKEND_URL": get_server_url(),
             "MIXAR_SANDBOX_CONNECTION_ID": connection_id,
-            "MIXAR_SANDBOX_PARENT_INSTANCE_ID": _parent_instance_from(connection_id),
+            "MIXAR_SANDBOX_PARENT_INSTANCE_ID":
+                parent_instance_id or _parent_instance_from(connection_id),
             "MIXAR_SANDBOX_PARENT_PID": str(os.getpid()),
         })
         if idle_ttl_s:
@@ -128,7 +130,10 @@ def handle_sandbox_control(params: dict) -> dict:
     """Dispatch an agent.sandbox_control request from the backend."""
     action = params.get("action")
     if action == "spawn":
-        return spawn_sandbox(params["connection_id"], params.get("idle_ttl_s"))
+        return spawn_sandbox(
+            params["connection_id"], params.get("idle_ttl_s"),
+            params.get("parent_instance_id"),
+        )
     if action == "shutdown":
         return shutdown_sandbox(params.get("connection_id"))
     if action == "refresh_token":
