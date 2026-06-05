@@ -20,7 +20,18 @@ import bpy
 from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
-from ...core.hunyuan_helpers import _redraw_3d_views
+from ...constants import (
+    LIMITS,
+    MAX_FILE_SIZE_PART,
+    MAX_FILE_SIZE_UV,
+)
+from ...core.hunyuan_callbacks import _on_submit_error, _on_submit_success, _MODE_PROGRESS_PREFIX
+from mixar.modules.moodboard.core.generate_progress import start_progress, reset_progress
+from ...core.hunyuan_helpers import (
+    _get_total_face_count,
+    _redraw_3d_views,
+    export_selected_mesh,
+)
 from mixar.modules.common.utils.mixie_space_utils import (
     get_first_selected_moodboard_image,
 )
@@ -174,10 +185,14 @@ class MIXIE_OT_hunyuan_generate(Operator):
         return hasattr(context.scene, 'hunyuan')
 
     def execute(self, context):
+        from mixar.modules.common.api import get_hunyuan_service
         from mixar.modules.common.utils.image_utils import compress_image_for_upload
 
         props = context.scene.hunyuan
         mode = self.mode_override or props.active_mode
+        mode_props = getattr(props, mode.lower())
+        job = mode_props.job
+        service = get_hunyuan_service()
 
         # Early check: mesh-based modes require a selected mesh
         if mode in ('TOPOLOGY', 'PART', 'UV'):
@@ -186,10 +201,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 self.report({'WARNING'}, "No mesh selected")
                 return {'CANCELLED'}
 
-        # PRO mode — generation queue
+        # PRO mode is fully driven by the generation queue. Skip the
+        # singleton job-state setup and dispatch directly to the queue.
         if mode == 'PRO':
-            from mixar.modules.common.api import get_hunyuan_service
-            service = get_hunyuan_service()
             try:
                 self._submit_pro(
                     context, props.pro, service,
@@ -204,7 +218,8 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # TOPOLOGY — generation queue with per-object fan-out
+        # TOPOLOGY (retopology) is also queue-driven, with per-object
+        # fan-out from the current selection.
         if mode == 'TOPOLOGY':
             try:
                 self._submit_topology_queue(context, props.topology)
@@ -217,49 +232,56 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # RAPID — generation queue
-        if mode == 'RAPID':
-            try:
-                self._submit_rapid_queue(context, props.rapid, compress_image_for_upload)
-            except Exception as e:
-                self.report({'ERROR'}, str(e))
-                return {'CANCELLED'}
-            from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
-            from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-            mark_enqueued(FEATURE_HUNYUAN_RAPID)
-            self.report({'INFO'}, "Added to queue")
-            return {'FINISHED'}
+        # Reset job state (non-PRO modes only)
+        job.status = 'SUBMITTING'
+        job.progress = 0.1
+        job.progress_label = "Submitting..."
+        job.error_message = ""
+        job.imported_object_name = ""
+        job.result_files_json = ""
+        job.poll_count = 0
+        job.poll_start_time = 0.0
+        _redraw_3d_views()
 
-        # PART — generation queue
-        if mode == 'PART':
-            try:
-                from ...core.part_queue import enqueue_part_job
-                enqueue_part_job(context=context, operator=self)
-            except Exception as e:
-                self.report({'ERROR'}, str(e))
-                return {'CANCELLED'}
-            from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_PART
-            from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-            mark_enqueued(FEATURE_HUNYUAN_PART)
-            self.report({'INFO'}, "Added to queue")
-            return {'FINISHED'}
+        # Start header progress animation
+        prefix = _MODE_PROGRESS_PREFIX.get(mode)
+        if prefix:
+            start_progress(prefix)
 
-        # UV — generation queue
-        if mode == 'UV':
-            try:
-                from ...core.uv_queue import enqueue_uv_job
-                enqueue_uv_job(context=context, operator=self)
-            except Exception as e:
-                self.report({'ERROR'}, str(e))
-                return {'CANCELLED'}
-            from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_UV
-            from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-            mark_enqueued(FEATURE_HUNYUAN_UV)
-            self.report({'INFO'}, "Added to queue")
-            return {'FINISHED'}
+        # Capture mode key for callbacks
+        stored_mode = mode
 
-        self.report({'WARNING'}, f"Unknown mode: {mode}")
-        return {'CANCELLED'}
+        def on_success(response):
+            _on_submit_success(stored_mode, response)
+
+        def on_error(error):
+            _on_submit_error(stored_mode, error)
+
+        try:
+            if mode == 'RAPID':
+                self._submit_rapid(
+                    context, props.rapid, service,
+                    on_success, on_error, compress_image_for_upload,
+                )
+            elif mode == 'PART':
+                self._submit_part(
+                    context, props.part, service, on_success, on_error,
+                )
+            elif mode == 'UV':
+                self._submit_uv(
+                    context, props.uv, service, on_success, on_error,
+                )
+        except Exception as e:
+            job.status = 'FAILED'
+            job.error_message = str(e)
+            job.progress = 0.0
+            if prefix:
+                reset_progress(prefix)
+            _redraw_3d_views()
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
 
     # ------------------------------------------------------------------ #
     # Per-mode submit helpers
@@ -339,13 +361,15 @@ class MIXIE_OT_hunyuan_generate(Operator):
             multi_views=mv_list,
         )
 
-    def _submit_rapid_queue(self, context, rapid, compress_image_for_upload):
-        """Validate and enqueue a Rapid generation job via FeatureQueue."""
-        from ...core.rapid_queue import enqueue_rapid_job
-
+    def _submit_rapid(
+        self, context, rapid, service,
+        on_success, on_error, compress_image_for_upload,
+    ):
+        """Validate and submit a Rapid generation job."""
         has_prompt = bool(rapid.prompt.strip())
         has_image = rapid.image is not None
 
+        # Moodboard image override: image takes priority, prompt ignored
         use_moodboard = getattr(rapid, 'use_selected_image', False)
         mb_img = None
         if use_moodboard:
@@ -353,22 +377,59 @@ class MIXIE_OT_hunyuan_generate(Operator):
             if not mb_img:
                 raise ValueError("No image selected in moodboard")
             has_image = True
-            has_prompt = False
+            has_prompt = False  # image takes priority over prompt for rapid
 
-        image_bytes = b""
-        if has_image:
-            if use_moodboard and mb_img:
-                image_bytes = compress_image_for_upload(mb_img)
-            elif rapid.image:
-                image_bytes = compress_image_for_upload(rapid.image)
+        if not has_prompt and not has_image:
+            raise ValueError("Provide either a prompt or an image")
+        if has_prompt and has_image:
+            raise ValueError("Prompt and image are mutually exclusive")
 
-        enqueue_rapid_job(
-            prompt=rapid.prompt.strip() if has_prompt else "",
-            image_bytes=image_bytes,
-            image_filename="image.png",
-            result_format=rapid.result_format,
+        kwargs = dict(
+            result_format=(
+                rapid.result_format if rapid.result_format != 'glb' else None
+            ),
             enable_pbr=rapid.enable_pbr,
             enable_geometry=rapid.enable_geometry,
+            on_success=on_success,
+            on_error=on_error,
+        )
+
+        if has_prompt:
+            kwargs["prompt"] = rapid.prompt.strip()
+        if has_image:
+            if use_moodboard:
+                if mb_img:
+                    kwargs["image_bytes"] = compress_image_for_upload(mb_img)
+                    kwargs["image_filename"] = "image.png"
+                else:
+                    raise ValueError("No image selected in moodboard")
+            else:
+                kwargs["image_bytes"] = compress_image_for_upload(rapid.image)
+                kwargs["image_filename"] = "image.png"
+
+        service.submit_3d_rapid_async(**kwargs)
+
+    def _submit_part(self, context, part, service, on_success, on_error):
+        """Validate and submit a Part decomposition job."""
+        max_faces = LIMITS['PART']['max_faces']
+        face_count = _get_total_face_count(context)
+        if face_count > max_faces:
+            raise ValueError(
+                f"Selected mesh has {face_count:,} faces (max {max_faces:,})",
+            )
+
+        file_bytes, filename = export_selected_mesh(
+            context, part.export_format,
+        )
+        if len(file_bytes) > MAX_FILE_SIZE_PART:
+            size_mb = len(file_bytes) / (1024 * 1024)
+            raise ValueError(f"Exported file is {size_mb:.1f}MB (max 100MB)")
+
+        service.submit_3d_part_async(
+            file_bytes=file_bytes,
+            file_filename=filename,
+            on_success=on_success,
+            on_error=on_error,
         )
 
     def _submit_topology_queue(self, context, topo):
@@ -399,6 +460,29 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 "No objects could be enqueued (all skipped or failed export)",
             )
 
+    def _submit_uv(self, context, uv, service, on_success, on_error):
+        """Validate and submit a UV unwrapping job."""
+        max_faces = LIMITS['UV']['max_faces']
+        face_count = _get_total_face_count(context)
+        if face_count > max_faces:
+            raise ValueError(
+                f"Selected mesh has {face_count:,} faces (max {max_faces:,})",
+            )
+
+        file_bytes, filename = export_selected_mesh(
+            context, uv.export_format,
+        )
+        if len(file_bytes) > MAX_FILE_SIZE_UV:
+            size_mb = len(file_bytes) / (1024 * 1024)
+            raise ValueError(f"Exported file is {size_mb:.1f}MB (max 100MB)")
+
+        service.submit_3d_uv_async(
+            file_bytes=file_bytes,
+            file_filename=filename,
+            on_success=on_success,
+            on_error=on_error,
+        )
+
 
 # ============================================================================
 # OPERATORS -- Cancel
@@ -414,40 +498,38 @@ class MIXIE_OT_hunyuan_cancel(Operator):
 
     mode_override: StringProperty(default="")
 
-    # Map queue-driven modes to their feature keys
-    _QUEUE_FEATURE_KEYS = {
-        'PRO': 'image_to_3d_pro',
-        'TOPOLOGY': 'retopology',
-        'RAPID': 'hunyuan_rapid',
-        'PART': 'hunyuan_part',
-        'UV': 'hunyuan_uv',
-    }
-
     @classmethod
     def poll(cls, context):
         if not hasattr(context.scene, 'hunyuan'):
             return False
-        # Check if any queue has active work
-        from mixar.modules.common.job_queue import get_queue
-        for feature_key in cls._QUEUE_FEATURE_KEYS.values():
-            try:
-                queue = get_queue(feature_key)
-                if queue.has_active_work():
+        props = context.scene.hunyuan
+        # Check all modes — the sidebar may show a different mode than active_mode
+        for mode_key in ('pro', 'rapid', 'part', 'topology', 'uv'):
+            mode_props = getattr(props, mode_key, None)
+            if mode_props and hasattr(mode_props, 'job'):
+                if mode_props.job.status in ('SUBMITTING', 'POLLING', 'DOWNLOADING'):
                     return True
-            except Exception:
-                pass
         return False
 
     def execute(self, context):
         props = context.scene.hunyuan
         mode = self.mode_override or props.active_mode
+        try:
+            mode_props = getattr(props, mode.lower())
+        except AttributeError:
+            logger.warning("hunyuan_cancel: unknown mode '%s'", mode)
+            return {'CANCELLED'}
+        job = mode_props.job
 
-        # Cancel via FeatureQueue for all modes
-        feature_key = self._QUEUE_FEATURE_KEYS.get(mode)
-        if feature_key:
-            from mixar.modules.common.job_queue import get_queue
-            queue = get_queue(feature_key)
-            queue.cancel_all()
+        job.status = 'IDLE'
+        job.progress = 0.0
+        job.progress_label = ""
+        job.error_message = ""
+        job.job_id = ""
+
+        prefix = _MODE_PROGRESS_PREFIX.get(mode)
+        if prefix:
+            reset_progress(prefix)
 
         _redraw_3d_views()
         return {'FINISHED'}

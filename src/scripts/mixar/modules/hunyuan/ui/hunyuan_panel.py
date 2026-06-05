@@ -84,11 +84,10 @@ class MIXIE_PT_hunyuan(Panel):
 
         # -- Error (FAILED) --
         if job.status == 'FAILED':
-            from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
             box = layout.box()
             box.label(text="Error:", icon='ERROR')
             # Word-wrap long error messages
-            words = sanitize_message(job.error_message).split()
+            words = job.error_message.split()
             line = ""
             for w in words:
                 if len(line) + len(w) > 40:
