@@ -263,6 +263,14 @@ class MIXIE_OT_scene_gen_exp_clear(Operator):
             self.report({"WARNING"}, "Cannot clear while generating images")
             return {"CANCELLED"}
 
+        # Cancel any pending labels queue jobs
+        try:
+            from mixar.modules.common.job_queue import get_queue
+            from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABELS
+            get_queue(FEATURE_SCENE_GEN_EXP_LABELS).clear_completed()
+        except Exception:
+            pass
+
         # Reset all tab state
         tab.objects.clear()
         tab.has_result = False
