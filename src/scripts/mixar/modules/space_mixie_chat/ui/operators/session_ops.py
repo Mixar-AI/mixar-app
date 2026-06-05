@@ -139,6 +139,9 @@ class MIXIE_CHAT_OT_new_session(Operator):
         # Clear messages and incremental markdown cache
         scene.mixie_chat_messages.clear()
         scene.mixie_chat_input = ""
+        # Re-arm the "Hi I'm Mixie" greeting for the fresh chat.
+        if hasattr(scene, "mixie_chat_user_has_engaged"):
+            scene.mixie_chat_user_has_engaged = False
         from ...core.markdown_parser import clear_incremental_cache
         clear_incremental_cache()
 

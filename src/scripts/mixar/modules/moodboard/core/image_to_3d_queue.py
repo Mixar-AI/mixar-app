@@ -22,6 +22,9 @@ from mixar.modules.common.job_queue.constants import FEATURE_IMAGE_TO_3D_PRO
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 from mixar.modules.common.utils.image_utils import compress_image_for_upload
 from mixar.modules.hunyuan.constants import DEFAULT_FACE_COUNT
+from mixar.modules.moodboard.core.generate_progress import (
+    complete_progress, reset_progress, start_progress,
+)
 
 logger = get_logger(__name__)
 
@@ -131,8 +134,8 @@ class ImageTo3DProJob(Job):
         if status == "FAILED":
             error = inner.get("error", "")
             if error:
+                # Store error for display, then signal FAIL
                 self.error = error
-            self.user_message = inner.get("user_message", "") or "Image to 3D failed"
             return ("FAIL", [])
         return ("WAIT", [])
 
@@ -239,6 +242,7 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
             scene.mixie_image_to_3d_is_generating = True
         except (AttributeError, TypeError):
             pass
+        start_progress("image_to_3d")
         return
 
     if not has_work and was_generating:
@@ -251,6 +255,11 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
         succeeded = sum(1 for j in snapshot if j.state == JobState.SUCCESS)
         failed = sum(1 for j in snapshot if j.state == JobState.FAILED)
         cancelled = sum(1 for j in snapshot if j.state == JobState.CANCELLED)
+
+        if succeeded > 0:
+            complete_progress("image_to_3d")
+        else:
+            reset_progress("image_to_3d")
 
         if (succeeded + failed + cancelled) > 0:
             _show_batch_summary_popup(succeeded, failed, cancelled)
