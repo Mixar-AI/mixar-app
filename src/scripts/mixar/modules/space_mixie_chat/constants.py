@@ -86,8 +86,6 @@ class JSONRPCMethod:
 
     # Server -> Client (requests - expect response)
     BLENDER_EXECUTE_SCRIPT = "blender.execute_script"
-    # Server -> Client (request - sandbox lifecycle; handled by the parent only)
-    AGENT_SANDBOX_CONTROL = "agent.sandbox_control"
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"

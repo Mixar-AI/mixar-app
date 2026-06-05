@@ -2,13 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""ImageGen generation queue: concrete Job + enqueue helpers.
+"""Lookdev (depth-to-image) generation queue: concrete Job + enqueue helper.
 
-Wires the generic ``FeatureQueue`` framework to the image generation
-service. All params are snapshotted at enqueue time so the job is fully
-decoupled from moodboard UI state once queued.
+Wires the generic ``FeatureQueue`` framework to the depth-to-image
+service via the unified generation queue.  The depth map bytes are
+base64-encoded at enqueue time and uploaded to S3 by the backend
+router before the handler runs.
 """
 
+import base64 as _b64
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -24,7 +26,7 @@ from mixar.modules.common.job_queue import (
     extract_image_urls,
     download_images_to_moodboard,
 )
-from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
+from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
@@ -36,18 +38,13 @@ logger = get_logger(__name__)
 
 
 @dataclass
-class ImageGenJob(Job):
-    """Concrete Job for AI image generation (sync type — result inline)."""
+class LookdevJob(Job):
+    """Concrete Job for depth-to-image generation (sync type — result inline)."""
 
     # Submission payload (snapshotted at enqueue time)
     prompt: str = ""
-    model: str = ""
-    style: str = "none"
-    aspect_ratio: str = "1:1"
-    resolution: str = "1K"
-    num_images: int = 1
-    negative_prompt: Optional[str] = None
-    reference_images_b64: List[str] = field(default_factory=list)
+    model: str = "flux-depth-dev"
+    depth_map_b64: str = ""
 
     # Internal state (populated during parse_poll_response)
     _image_urls: List[str] = field(default_factory=list, repr=False)
@@ -60,20 +57,11 @@ class ImageGenJob(Job):
         service = get_generation_queue_service()
         payload = {
             "prompt": self.prompt,
-            "params": {
-                "style": self.style,
-                "aspect_ratio": self.aspect_ratio,
-                "resolution": self.resolution,
-                "number_of_images": self.num_images,
-            },
+            "depth_map_bytes_b64": self.depth_map_b64,
+            "params": {},
         }
-        if self.negative_prompt:
-            payload["params"]["negative_prompt"] = self.negative_prompt
-        if self.reference_images_b64:
-            payload["reference_images_b64"] = self.reference_images_b64
-
         service.enqueue(
-            job_type="image_gen",
+            job_type="depth_to_image",
             model=self.model,
             payload=payload,
             on_success=on_success,
@@ -93,7 +81,7 @@ class ImageGenJob(Job):
             raise ValueError("Enqueue response missing job_id")
 
         # Release large payload memory after successful submission
-        self.reference_images_b64 = []
+        self.depth_map_b64 = ""
 
     def should_skip_poll(self) -> bool:
         return bool(self._image_urls)
@@ -113,8 +101,10 @@ class ImageGenJob(Job):
                 self._image_urls = extract_image_urls(result)
             return ("DONE", [])
         if status == "FAILED":
-            self.error = inner.get("error", "Image generation failed")
-            self.user_message = inner.get("user_message", "") or "Image generation failed"
+            self.error = inner.get("error", "Lookdev generation failed")
+            self.user_message = (
+                inner.get("user_message", "") or "Lookdev generation failed"
+            )
             return ("FAIL", [])
         return ("WAIT", [])
 
@@ -126,12 +116,12 @@ class ImageGenJob(Job):
 
         download_images_to_moodboard(
             urls=list(self._image_urls),
-            name_prefix="imagegen",
+            name_prefix="lookdev",
             prompt=self.prompt,
             job_id=self.id,
             on_done=on_done,
             on_error=on_error,
-            undo_message="Generate Image",
+            undo_message="Blockout to Render",
         )
         return True
 
@@ -140,48 +130,38 @@ class ImageGenJob(Job):
 
 
 # ---------------------------------------------------------------------------
-# Enqueue helpers
+# Enqueue helper
 # ---------------------------------------------------------------------------
 
 
-def enqueue_imagegen_job(
+def enqueue_lookdev_job(
     *,
     prompt: str,
-    model: str,
-    style: str = "none",
-    aspect_ratio: str = "1:1",
-    resolution: str = "1K",
-    num_images: int = 1,
-    negative_prompt: Optional[str] = None,
-    reference_images_b64: Optional[List[str]] = None,
-) -> Optional[ImageGenJob]:
-    """Build an ``ImageGenJob`` and submit it to the queue."""
-    job = ImageGenJob(
-        feature_key=FEATURE_IMAGEGEN,
-        label=f"ImageGen: {prompt[:40]}",
+    depth_map_bytes: bytes,
+    model: str = "flux-depth-dev",
+) -> Optional[LookdevJob]:
+    """Build a ``LookdevJob`` and submit it to the queue."""
+    job = LookdevJob(
+        feature_key=FEATURE_LOOKDEV,
+        label=f"Lookdev: {prompt[:40]}",
         prompt=prompt,
         model=model,
-        style=style,
-        aspect_ratio=aspect_ratio,
-        resolution=resolution,
-        num_images=num_images,
-        negative_prompt=negative_prompt,
-        reference_images_b64=reference_images_b64 or [],
+        depth_map_b64=_b64.b64encode(depth_map_bytes).decode(),
     )
-    queue = _get_imagegen_queue()
+    queue = _get_lookdev_queue()
     if not queue.submit(job):
-        logger.warning("[ImageGen] duplicate job rejected: %s", job.label)
+        logger.warning("[Lookdev] duplicate job rejected: %s", job.label)
         return None
     return job
 
 
 # ---------------------------------------------------------------------------
-# Queue listener: drives progress bar + is_generating scene flag
+# Queue listener: drives is_generating scene flag
 # ---------------------------------------------------------------------------
 
 
 def _on_queue_changed(queue: FeatureQueue) -> None:
-    """Sync imagegen progress bar to queue activity."""
+    """Sync lookdev generating flag to queue activity."""
     try:
         scene = bpy.context.scene
     except Exception:
@@ -190,29 +170,34 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
         return
 
     has_work = queue.has_active_work()
-    was_generating = bool(getattr(scene, "mixie_imagegen_is_generating", False))
+    was_generating = bool(getattr(scene, "mixie_lookdev_is_generating", False))
 
     if has_work and not was_generating:
         try:
-            scene.mixie_imagegen_is_generating = True
-            scene.mixie_imagegen_error = ""
+            scene.mixie_lookdev_is_generating = True
+            if hasattr(scene, "mixie_lookdev_error"):
+                scene.mixie_lookdev_error = ""
         except (AttributeError, TypeError):
             pass
+        from ...core.generate_progress import start_progress
+        start_progress("lookdev")
         return
 
     if not has_work and was_generating:
         try:
-            scene.mixie_imagegen_is_generating = False
+            scene.mixie_lookdev_is_generating = False
         except (AttributeError, TypeError):
             pass
+        from ...core.generate_progress import complete_progress
+        complete_progress("lookdev")
 
         try:
-            for area in bpy.context.screen.areas:
-                if area.type == 'MIXIE':
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
                     area.tag_redraw()
         except Exception:
             pass
 
 
-def _get_imagegen_queue():
-    return get_queue_with_listener(FEATURE_IMAGEGEN, _on_queue_changed)
+def _get_lookdev_queue():
+    return get_queue_with_listener(FEATURE_LOOKDEV, _on_queue_changed)
