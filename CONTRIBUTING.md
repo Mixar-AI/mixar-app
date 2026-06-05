@@ -52,7 +52,9 @@ For source files, add an inline SPDX header. For binary assets or formats that c
 
 ### How SPDX Headers Get Added
 
-You can add headers manually using the commands below, or install [pre-commit](https://pre-commit.com/) to have them added at commit time. CI runs `reuse lint` on every PR and will fail the build if any file lacks copyright or license information.
+Add the SPDX header to each new file yourself (see existing files for the
+format). CI runs `reuse lint` on every PR and will fail the build if any file
+lacks copyright or license information.
 
 ### Optional: Local Pre-Commit Hook
 
@@ -61,25 +63,17 @@ pip install pre-commit
 pre-commit install
 ```
 
-Configured hooks live in `.pre-commit-config.yaml`. This is purely a developer convenience and is not required.
+This runs the same `reuse` compliance check locally before each commit so you
+catch missing headers early. It is purely a developer convenience and is not
+required. Configured hooks live in `.pre-commit-config.yaml`.
 
 ### Manual Commands
 
 ```bash
-# Add headers in place to a specific file
-python3 scripts/open_source/apply_spdx_headers.py --write path/to/file.py
-
-# Apply across all changed files using sibling-license inference
-python3 scripts/open_source/apply_spdx_headers.py --write --infer-from-siblings $(git diff --name-only)
-
 # Full REUSE compliance check (same as CI)
 reuse --no-multiprocessing lint
 ```
 
-## Audit Checks
-
-For open-source publication checks, use:
-
-```bash
-scripts/open_source/run_phase1_audit.sh
-```
+If `reuse lint` reports a file missing copyright or license info, add an SPDX
+header to the top of the file (see existing files for the format) or record it
+in `REUSE.toml`.
