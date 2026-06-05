@@ -311,9 +311,12 @@ def _fetch_data_sync() -> None:
             logger.debug("Skipping ImageGen config fetch: not authenticated")
             _skipped = True
         else:
-            from mixar.modules.common.api import get_imagegen_service
+            from mixar.modules.common.api.services.generation_metadata_service import (
+                get_generation_metadata_service,
+            )
+            from mixar.modules.common.api.constants import APIModule
 
-            service = get_imagegen_service()
+            service = get_generation_metadata_service(APIModule.IMAGEGEN)
 
             # Fetch models
             try:
