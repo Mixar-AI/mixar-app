@@ -91,7 +91,6 @@ SPDX-License-Identifier = "LicenseRef-Mixar-Brand"
 path = [
   "docs/open-source/asset-provenance-review.csv",
   "docs/open-source/audit/**",
-  "scripts/open_source/__pycache__/**",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
