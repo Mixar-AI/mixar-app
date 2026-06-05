@@ -46,20 +46,6 @@ def is_running() -> bool:
     return _running
 
 
-def reset_running_guard() -> None:
-    """Clear the running guard.
-
-    Modal operators never survive a .blend load — Blender tears the
-    running instance down when it rebuilds the screens, but our
-    module-level ``_running`` flag (Python module state, which DOES
-    survive a file load) can be left stuck at True if cancel() wasn't
-    called. That stale flag then blocks the bootstrap tick from ever
-    re-invoking the modal on the new file. The load_post handler calls
-    this so the lock re-arms after open/new-file."""
-    global _running
-    _running = False
-
-
 class MIXAR_OT_agent_viewport_block(Operator):
     """Block 3D-viewport editing while the agent is running.
 
