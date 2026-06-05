@@ -16,8 +16,8 @@ from typing import Callable, Dict, List, Optional, Set
 import bpy
 import requests as requests_lib
 
-from ...common.api.exceptions import NotFoundError
 from mixar.config.logging_config import get_logger
+from ...common.api.services.generation_queue_service import get_generation_queue_service
 from ...common.api.services.scene_gen_service import get_scene_gen_service
 from ...common.api.response import APIResponse
 
@@ -110,37 +110,35 @@ class SceneGenManager:
             logger.warning("[SceneGen] Image '%s' already has an active job", image_name)
             return False
 
-        # Submit job in background thread
-        def submit_api_call():
-            try:
-                service = get_scene_gen_service()
-                response = service.generate(
-                    image_bytes=image_bytes,
-                    mask_bytes_list=mask_bytes_list,
-                    texture_size=texture_size,
-                    simplify=simplify,
-                )
+        import base64 as _b64
 
-                # Schedule response handling on main thread
-                def handle_submit_response():
-                    self._handle_submit_response(
-                        response, img_item, image_name, on_object_ready, on_download_failed
-                    )
-                    return None
+        payload = {
+            "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
+            "mask_bytes_list_b64": [_b64.b64encode(m).decode() for m in mask_bytes_list],
+            "texture_size": texture_size,
+            "simplify": simplify,
+        }
 
-                bpy.app.timers.register(handle_submit_response, first_interval=0.0)
+        def on_submit_success(response):
+            self._handle_submit_response(
+                response, img_item, image_name, on_object_ready, on_download_failed
+            )
 
-            except Exception as e:
-                error_msg = str(e)
+        def on_submit_error(error):
+            logger.error("[SceneGen] Job submission failed: %s", error)
 
-                def report_error():
-                    logger.error("[SceneGen] Job submission failed: %s", error_msg)
-                    return None
-
-                bpy.app.timers.register(report_error, first_interval=0.0)
-
-        thread = threading.Thread(target=submit_api_call, daemon=True)
-        thread.start()
+        try:
+            service = get_generation_queue_service()
+            service.enqueue(
+                job_type="scene_gen",
+                model="scene_gen_v1",
+                payload=payload,
+                on_success=on_submit_success,
+                on_error=on_submit_error,
+            )
+        except Exception as e:
+            logger.error("[SceneGen] Job submission failed: %s", e)
+            return False
 
         logger.debug("[SceneGen] Submitting job for '%s'...", image_name)
         return True
@@ -226,19 +224,19 @@ class SceneGenManager:
         # Poll in background thread
         def fetch_status():
             try:
-                service = get_scene_gen_service()
-                response = service.get_job_status(job_id)
+                service = get_generation_queue_service()
+                response = service.get_job_status_sync(job_id)
 
                 def handle_status():
-                    self._handle_status_response(job_id, response)
+                    self._handle_gq_status_response(job_id, response)
                     return None
 
                 bpy.app.timers.register(handle_status, first_interval=0.0)
 
             except Exception as e:
                 error_msg = str(e)
-                # Stop polling on 404 (job not found) — retrying won't help
-                if isinstance(e, NotFoundError):
+                is_not_found = "not found" in error_msg.lower() or "404" in error_msg
+                if is_not_found:
                     self._polling_jobs[job_id] = False
 
                 def report_error():
@@ -252,6 +250,56 @@ class SceneGenManager:
 
         # Continue polling
         return 1.0
+
+    # Generation queue status → scene gen status mapping
+    _GQ_STATUS_MAP = {
+        "PENDING": "pending",
+        "SUBMITTED": "processing",
+        "POLLING": "processing",
+        "DONE": "completed",
+        "FAILED": "failed",
+        "CANCELLED": "cancelled",
+    }
+
+    def _handle_gq_status_response(self, job_id: str, response: APIResponse):
+        """Unwrap generation queue envelope and delegate to status handler."""
+        if not response.success:
+            logger.warning("[SceneGen] Status check failed: %s", response.message)
+            return
+
+        data = response.data or {}
+        inner = data.get("data", data) if isinstance(data, dict) else {}
+        if not isinstance(inner, dict):
+            return
+
+        gq_status = inner.get("status", "")
+        result = inner.get("result") or {}
+
+        if gq_status == "DONE" and isinstance(result, dict):
+            # Pass through the scene gen result data
+            mapped = dict(result)
+            if "status" not in mapped:
+                mapped["status"] = "completed"
+            unwrapped = APIResponse(
+                success=True, status_code=response.status_code,
+                message=response.message, data=mapped,
+            )
+        elif gq_status == "FAILED":
+            error = inner.get("error", "Job failed")
+            unwrapped = APIResponse(
+                success=True, status_code=response.status_code,
+                message=response.message,
+                data={"status": "failed", "error": error},
+            )
+        else:
+            mapped_status = self._GQ_STATUS_MAP.get(gq_status, "pending")
+            unwrapped = APIResponse(
+                success=True, status_code=response.status_code,
+                message=response.message,
+                data={"status": mapped_status},
+            )
+
+        self._handle_status_response(job_id, unwrapped)
 
     def _handle_status_response(self, job_id: str, response: APIResponse):
         """Handle job status response on main thread."""
@@ -627,8 +675,8 @@ class SceneGenManager:
         # Cancel on server in background
         def cancel_api_call():
             try:
-                service = get_scene_gen_service()
-                service.delete_job(job_id)
+                service = get_generation_queue_service()
+                service.cancel_job(job_id)
                 logger.debug("[SceneGen] Cancelled job")
             except Exception as e:
                 logger.error("[SceneGen] Failed to cancel job: %s", e)
