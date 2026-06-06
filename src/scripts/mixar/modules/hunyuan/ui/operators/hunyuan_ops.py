@@ -188,9 +188,12 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
         # PRO mode — generation queue
         if mode == 'PRO':
+            from mixar.modules.common.api import get_hunyuan_service
+            service = get_hunyuan_service()
             try:
                 self._submit_pro(
-                    context, props.pro, compress_image_for_upload,
+                    context, props.pro, service,
+                    None, None, compress_image_for_upload,
                 )
             except Exception as e:
                 self.report({'ERROR'}, str(e))
@@ -263,7 +266,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # ------------------------------------------------------------------ #
 
     def _submit_pro(
-        self, context, pro, compress_image_for_upload,
+        self, context, pro, service, on_success, on_error, compress_image_for_upload,
     ):
         """Fan out a Pro generation request into the generation queue.
 

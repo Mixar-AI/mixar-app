@@ -7,24 +7,11 @@
 Public surface:
     from mixar.modules.common.job_queue import (
         Job, JobState, get_queue, TERMINAL_STATES, RUNNING_STATES,
-        # Helpers for concrete queue implementations
-        get_queue_with_listener,
-        create_scene_flag_listener,
-        show_batch_summary_popup,
-        download_images_to_moodboard,
-        extract_image_urls,
     )
 """
 
 from .core.job import Job, JobState, TERMINAL_STATES, RUNNING_STATES
 from .core.queue_manager import get_queue, FeatureQueue
-from .core.helpers import (
-    create_scene_flag_listener,
-    download_images_to_moodboard,
-    extract_image_urls,
-    get_queue_with_listener,
-    show_batch_summary_popup,
-)
 
 __all__ = (
     "Job",
@@ -33,10 +20,4 @@ __all__ = (
     "RUNNING_STATES",
     "get_queue",
     "FeatureQueue",
-    # Helpers
-    "create_scene_flag_listener",
-    "download_images_to_moodboard",
-    "extract_image_urls",
-    "get_queue_with_listener",
-    "show_batch_summary_popup",
 )

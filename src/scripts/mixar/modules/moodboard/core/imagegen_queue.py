@@ -9,6 +9,8 @@ service. All params are snapshotted at enqueue time so the job is fully
 decoupled from moodboard UI state once queued.
 """
 
+import threading
+import time
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -18,12 +20,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.api.services.generation_queue_service import (
     get_generation_queue_service,
 )
-from mixar.modules.common.job_queue import (
-    Job,
-    get_queue_with_listener,
-    extract_image_urls,
-    download_images_to_moodboard,
-)
+from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
@@ -80,14 +77,28 @@ class ImageGenJob(Job):
             on_error=on_error,
         )
 
-    def parse_submit_response(self, response) -> None:
-        inner = self._unwrap_response(response)
-        self.backend_job_id = inner.get("job_id", "") or ""
+    def poll(self, on_success, on_error) -> None:
+        service = get_generation_queue_service()
+        service.get_job_status(
+            self.backend_job_id,
+            on_success=on_success,
+            on_error=on_error,
+        )
 
+    def parse_submit_response(self, response) -> None:
+        data = getattr(response, "data", None) or {}
+        inner = data.get("data", data) if isinstance(data, dict) else {}
+        if not isinstance(inner, dict):
+            inner = {}
+
+        # Sync type: result may be inline in the submit response
+        self.backend_job_id = inner.get("job_id", "") or ""
         status = inner.get("status", "")
         result = inner.get("result") or {}
+
         if status == "DONE" and isinstance(result, dict):
-            self._image_urls = extract_image_urls(result)
+            # Extract image URLs from inline result
+            self._extract_image_urls(result)
 
         if not self.backend_job_id and not self._image_urls:
             raise ValueError("Enqueue response missing job_id")
@@ -99,7 +110,11 @@ class ImageGenJob(Job):
         return bool(self._image_urls)
 
     def parse_poll_response(self, response):
-        inner = self._unwrap_response(response)
+        data = getattr(response, "data", None) or {}
+        inner = data.get("data", data) if isinstance(data, dict) else {}
+        if not isinstance(inner, dict):
+            return ("WAIT", [])
+
         status = inner.get("status", "")
         self.backend_status = status
 
@@ -110,7 +125,7 @@ class ImageGenJob(Job):
         if status == "DONE":
             result = inner.get("result") or {}
             if isinstance(result, dict):
-                self._image_urls = extract_image_urls(result)
+                self._extract_image_urls(result)
             return ("DONE", [])
         if status == "FAILED":
             self.error = inner.get("error", "Image generation failed")
@@ -124,19 +139,88 @@ class ImageGenJob(Job):
             on_error("No image URLs in server response")
             return True
 
-        download_images_to_moodboard(
-            urls=list(self._image_urls),
-            name_prefix="imagegen",
-            prompt=self.prompt,
-            job_id=self.id,
-            on_done=on_done,
-            on_error=on_error,
-            undo_message="Generate Image",
-        )
+        urls = list(self._image_urls)
+        prompt = self.prompt
+        job_id = self.id
+
+        def _bg_download():
+            try:
+                from mixar.modules.common.utils.image_utils import (
+                    load_image_from_url,
+                )
+
+                downloaded = []
+                for i, url in enumerate(urls):
+                    try:
+                        timestamp = int(time.time())
+                        name = f"imagegen_{timestamp}_{i}"
+                        img = load_image_from_url(url, name)
+                        downloaded.append(img)
+                    except Exception as e:
+                        logger.error("Failed to download image %d: %s", i, e)
+
+                def _apply():
+                    if not downloaded:
+                        on_error("Failed to download generated images")
+                        return None
+                    from mixar.modules.common.utils.image_utils import (
+                        add_image_to_moodboard,
+                    )
+
+                    for img in downloaded:
+                        try:
+                            add_image_to_moodboard(img, prompt, job_handle=job_id)
+                        except Exception as e:
+                            logger.error("Failed to add image to moodboard: %s", e)
+
+                    names = ", ".join(img.name for img in downloaded)
+                    bpy.ops.ed.undo_push(message="Generate Image")
+                    on_done(names)
+                    return None
+
+                bpy.app.timers.register(_apply, first_interval=0.0)
+            except Exception as e:
+                err = f"Unexpected error during image download: {e}"
+                logger.error("[ImageGen] %s", err)
+
+                def _fail():
+                    on_error(err)
+                    return None
+
+                bpy.app.timers.register(_fail, first_interval=0.0)
+
+        threading.Thread(target=_bg_download, daemon=True).start()
         return True
 
     def get_poll_interval(self):
         return 3.0
+
+    # ------------------------------------------------------------------ #
+    # Helpers
+    # ------------------------------------------------------------------ #
+
+    def _extract_image_urls(self, result: dict) -> None:
+        """Extract image URLs from the result dict."""
+        # Unwrap nested data/result
+        data = result
+        if "data" in data and isinstance(data["data"], dict):
+            data = data["data"]
+        if "result" in data and isinstance(data["result"], dict):
+            data = data["result"]
+
+        images = []
+        for img_item in data.get("images", []):
+            if isinstance(img_item, dict) and "url" in img_item:
+                images.append(img_item["url"])
+            elif isinstance(img_item, str):
+                images.append(img_item)
+
+        if not images:
+            single_url = data.get("image_url")
+            if single_url:
+                images.append(single_url)
+
+        self._image_urls = images
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +264,9 @@ def enqueue_imagegen_job(
 # ---------------------------------------------------------------------------
 
 
+_listener_attached = False
+
+
 def _on_queue_changed(queue: FeatureQueue) -> None:
     """Sync imagegen progress bar to queue activity."""
     try:
@@ -206,6 +293,7 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
         except (AttributeError, TypeError):
             pass
 
+        # Redraw MIXIE sidebar so new images / error state are visible
         try:
             for area in bpy.context.screen.areas:
                 if area.type == 'MIXIE':
@@ -214,5 +302,10 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
             pass
 
 
-def _get_imagegen_queue():
-    return get_queue_with_listener(FEATURE_IMAGEGEN, _on_queue_changed)
+def _get_imagegen_queue() -> FeatureQueue:
+    global _listener_attached
+    queue = get_queue(FEATURE_IMAGEGEN)
+    if not _listener_attached:
+        queue.add_listener(_on_queue_changed)
+        _listener_attached = True
+    return queue
