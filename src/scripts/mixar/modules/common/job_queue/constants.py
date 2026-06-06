@@ -27,9 +27,6 @@ FEATURE_LOOKDEV360 = "lookdev360"
 FEATURE_MESH_SEGMENT = "mesh_segment"
 FEATURE_SCENE_RECON = "scene_recon"
 FEATURE_MATGEN = "matgen"
-FEATURE_BRUSH_GEN = "brush_gen"
-FEATURE_LOOKDEV = "lookdev"
-FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
 
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
@@ -51,8 +48,5 @@ __all__ = (
     "FEATURE_MESH_SEGMENT",
     "FEATURE_SCENE_RECON",
     "FEATURE_MATGEN",
-    "FEATURE_BRUSH_GEN",
-    "FEATURE_LOOKDEV",
-    "FEATURE_SCENE_GEN_EXP_LABELS",
     "LOG_PREFIX",
 )
