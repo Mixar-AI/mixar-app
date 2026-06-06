@@ -16,7 +16,7 @@ from typing import Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from ...common.api.services.scene_recon_service import get_scene_recon_service
+from ...common.api.services.generation_queue_service import get_generation_queue_service
 from ...common.api.response import APIResponse
 from .scene_recon_constants import (
     TERMINAL_JOB_STATUSES,
@@ -24,6 +24,73 @@ from .scene_recon_constants import (
 )
 
 logger = get_logger(__name__)
+
+# Generation queue status → scene recon status mapping
+_GQ_STATUS_MAP = {
+    "PENDING": "queued",
+    "SUBMITTED": "in-progress",
+    "POLLING": "in-progress",
+    "DONE": "completed",
+    "FAILED": "failed",
+    "CANCELLED": "cancelled",
+}
+
+
+def _unwrap_gen_queue_response(response: APIResponse) -> APIResponse:
+    """Unwrap generation queue envelope into scene-recon-style response.
+
+    The generation queue wraps results as:
+        {data: {status, result: {<scene_recon_data>}, error}}
+
+    The existing _handle_status_response expects the scene recon data
+    directly in response.data. This function maps between the two.
+    """
+    if not response.success:
+        return response
+
+    data = response.data or {}
+    inner = data.get("data", data) if isinstance(data, dict) else {}
+    if not isinstance(inner, dict):
+        return response
+
+    gq_status = inner.get("status", "")
+    result = inner.get("result") or {}
+
+    # For DONE, the actual scene recon data is inside result
+    if gq_status == "DONE" and isinstance(result, dict):
+        # Pass through the scene recon data as the response data
+        mapped = dict(result)
+        # Ensure status field reflects completed
+        if "status" not in mapped:
+            mapped["status"] = "completed"
+        return APIResponse(
+            success=True,
+            status_code=response.status_code,
+            message=response.message,
+            data=mapped,
+        )
+
+    if gq_status == "FAILED":
+        error = inner.get("error", "Job failed")
+        return APIResponse(
+            success=True,
+            status_code=response.status_code,
+            message=response.message,
+            data={"status": "failed", "error": error},
+        )
+
+    # For PENDING/SUBMITTED/POLLING, map to scene recon in-progress statuses.
+    # Pass through intermediate result (phase/objects) for progressive delivery.
+    mapped_status = _GQ_STATUS_MAP.get(gq_status, "in-progress")
+    mapped_data: dict = {"status": mapped_status}
+    if isinstance(result, dict) and result:
+        mapped_data.update(result)
+    return APIResponse(
+        success=True,
+        status_code=response.status_code,
+        message=response.message,
+        data=mapped_data,
+    )
 
 
 class SceneReconPollerMixin:
@@ -41,8 +108,11 @@ class SceneReconPollerMixin:
 
         def fetch_status():
             try:
-                service = get_scene_recon_service()
-                response = service.get_job_status(job_id)
+                service = get_generation_queue_service()
+                raw_response = service.get_job_status_sync(job_id)
+                # Unwrap generation queue envelope into the format
+                # _handle_status_response expects
+                response = _unwrap_gen_queue_response(raw_response)
 
                 def handle_status():
                     self._handle_status_response(response)
@@ -130,8 +200,8 @@ class SceneReconPollerMixin:
         import time
         phase = data.get("phase", "")
         job_status = data.get("status", "")
-        total = data.get("total_objects", 0)
-        completed = data.get("completed_objects", 0)
+        total = data.get("total_objects", 0) or data.get("total", 0)
+        completed = data.get("completed_objects", 0) or data.get("completed", 0)
         elapsed = data.get("elapsed_seconds", 0.0)
         objects = data.get("objects", [])
         error = data.get("error")
