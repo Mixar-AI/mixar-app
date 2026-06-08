@@ -109,6 +109,25 @@ def _redraw_ui(_context=None):
         pass
 
 
+_brush_gen_listener = None
+
+
+def _get_brush_gen_listener():
+    """Lazily create the brush gen queue listener (cached singleton).
+
+    Replicates old brush_gen_queue.py: redraw all areas on every change.
+    """
+    global _brush_gen_listener
+    if _brush_gen_listener is not None:
+        return _brush_gen_listener
+
+    def _on_queue_changed(_queue):
+        _redraw_ui()
+
+    _brush_gen_listener = _on_queue_changed
+    return _brush_gen_listener
+
+
 def _get_ref_image_bytes(mixar_ui):
     """Get reference image bytes from the UI state, or None."""
     ref_name = mixar_ui.brush_gen_ref_image
@@ -159,12 +178,25 @@ class MGenerateBrushTexture(Operator):
         model_name = mixar_ui.brush_gen_model
         reference_image = _get_ref_image_bytes(mixar_ui)
 
-        from mixar.modules.paint.core.brush_gen_queue import enqueue_brush_gen_job
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_BRUSH_GEN
 
-        job = enqueue_brush_gen_job(
-            prompt=prompt,
+        payload = {"prompt": prompt}
+        if reference_image:
+            payload["reference_image_bytes_b64"] = _b64.b64encode(reference_image).decode()
+
+        job = enqueue_generation(
+            kind="image",
+            feature_key=FEATURE_BRUSH_GEN,
+            job_type="brush_gen",
             model=model_name,
-            reference_image_bytes=reference_image,
+            payload=payload,
+            label=f"Brush: {prompt[:40]}",
+            fail_message="Brush generation failed",
+            name_prefix="brush_gen",
+            prompt_text=prompt,
+            listener=_get_brush_gen_listener(),
         )
 
         if not job:

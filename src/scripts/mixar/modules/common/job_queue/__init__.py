@@ -18,6 +18,8 @@ Public surface:
 
 from .core.job import Job, JobState, TERMINAL_STATES, RUNNING_STATES
 from .core.queue_manager import get_queue, FeatureQueue
+from .core.generic_jobs import AsyncGLBJob, SyncImageJob
+from .core.enqueue import enqueue_generation
 from .core.helpers import (
     create_scene_flag_listener,
     download_images_to_moodboard,
@@ -33,6 +35,10 @@ __all__ = (
     "RUNNING_STATES",
     "get_queue",
     "FeatureQueue",
+    # Generic jobs
+    "AsyncGLBJob",
+    "SyncImageJob",
+    "enqueue_generation",
     # Helpers
     "create_scene_flag_listener",
     "download_images_to_moodboard",
