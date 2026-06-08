@@ -49,12 +49,21 @@ def create_scene_flag_listener(
     property_name: str,
     *,
     batch_popup_title: str = "",
+    on_start=None,
+    on_finish=None,
 ):
     """Create a queue listener that syncs a scene bool property.
 
     Sets ``scene.<property_name> = True`` when work starts, ``False``
     when it finishes.  If ``batch_popup_title`` is provided, fires a
     one-shot batch summary popup at the active→idle transition.
+
+    Parameters
+    ----------
+    on_start : callable(scene) | None
+        Called on the idle→active transition, *after* the flag is set.
+    on_finish : callable(scene) | None
+        Called on the active→idle transition, *after* the flag is cleared.
     """
 
     def _on_queue_changed(queue: FeatureQueue) -> None:
@@ -73,6 +82,11 @@ def create_scene_flag_listener(
                 setattr(scene, property_name, True)
             except (AttributeError, TypeError):
                 pass
+            if on_start is not None:
+                try:
+                    on_start(scene)
+                except Exception:
+                    pass
             return
 
         if not has_work and was_active:
@@ -80,6 +94,12 @@ def create_scene_flag_listener(
                 setattr(scene, property_name, False)
             except (AttributeError, TypeError):
                 pass
+
+            if on_finish is not None:
+                try:
+                    on_finish(scene)
+                except Exception:
+                    pass
 
             if batch_popup_title:
                 snapshot = queue.snapshot()

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Bridge: ImageGenJob subclass that chains into scene reconstruction.
+"""Bridge: SyncImageJob subclass that chains into scene reconstruction.
 
 When scene reconstruction is triggered from a text prompt (no image),
 we first generate an image via the imagegen queue, then chain straight
@@ -20,7 +20,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 from mixar.modules.common.job_queue.core.job import JobState, TERMINAL_STATES
-from mixar.modules.moodboard.core.imagegen_queue import ImageGenJob
+from mixar.modules.common.job_queue import SyncImageJob
 
 logger = get_logger(__name__)
 
@@ -31,8 +31,8 @@ logger = get_logger(__name__)
 
 
 @dataclass
-class _SceneReconImageGenJob(ImageGenJob):
-    """ImageGenJob that chains scene reconstruction after image download."""
+class _SceneReconImageGenJob(SyncImageJob):
+    """SyncImageJob that chains scene reconstruction after image download."""
 
     _stored_prompt: str = ""
     _recon_params: dict = field(default_factory=dict)
@@ -45,7 +45,7 @@ class _SceneReconImageGenJob(ImageGenJob):
             return True
 
         urls = list(self._image_urls)
-        prompt = self._stored_prompt or self.prompt
+        prompt = self._stored_prompt or self.prompt_text
         recon = dict(self._recon_params)
         sidebar_avail = self._sidebar_available
 
@@ -130,15 +130,27 @@ def enqueue_imagegen_for_recon(
     Returns:
         The enqueued job, or None if dedup rejected it.
     """
+    effective_prompt = stored_prompt or prompt
+    payload = {
+        "prompt": effective_prompt,
+        "params": {
+            "style": "none",
+            "aspect_ratio": "4:3",
+            "resolution": "1K",
+            "number_of_images": 1,
+        },
+    }
+
     job = _SceneReconImageGenJob(
         feature_key=FEATURE_IMAGEGEN,
         label=f"SceneRecon: {prompt[:40]}",
-        prompt=stored_prompt or prompt,
+        job_type="image_gen",
         model="pro",
-        aspect_ratio="4:3",
-        resolution="1K",
-        num_images=1,
-        _stored_prompt=stored_prompt or prompt,
+        payload=payload,
+        fail_message="Image generation failed",
+        name_prefix="imagegen",
+        prompt_text=effective_prompt,
+        _stored_prompt=effective_prompt,
         _recon_params=recon_params,
         _sidebar_available=sidebar_available,
     )
