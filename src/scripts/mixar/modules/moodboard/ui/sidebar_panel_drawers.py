@@ -84,8 +84,7 @@ def _draw_imagegen(layout, context):
     draw_dropdown(col, tab, "resolution", text="Resolution")
 
     # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.imagegen_generate", "imagegen",
-                         feature_key="imagegen")
+    draw_generate_footer(layout, context, "mixie.imagegen_generate", "imagegen")
 
 
 # ---------------------------------------------------------------------------
@@ -154,8 +153,7 @@ def _draw_lookdev360(layout, context):
         )
 
     # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.lookdev360_generate", "lookdev360",
-                         feature_key="lookdev360")
+    draw_generate_footer(layout, context, "mixie.lookdev360_generate", "lookdev360")
 
 
 # ---------------------------------------------------------------------------
@@ -217,8 +215,7 @@ def _draw_image_to_3d_basic(layout, context):
     row.operator("mixie.image_to_3d_refresh_models", text="", icon='FILE_REFRESH')
 
     # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.image_to_3d_generate", "image_to_3d",
-                         feature_key="model_3d")
+    draw_generate_footer(layout, context, "mixie.image_to_3d_generate", "image_to_3d")
 
 
 # ---------------------------------------------------------------------------
@@ -275,8 +272,7 @@ def _draw_scene_recon(layout, context):
 
     # --- Generate ---
     draw_generate_footer(layout, context, "mixie.scene_recon_generate", "scene_recon",
-                         cancel_op="mixie.scene_recon_cancel",
-                         feature_key="scene_recon")
+                         cancel_op="mixie.scene_recon_cancel")
 
 
 # ---------------------------------------------------------------------------
@@ -439,34 +435,18 @@ def _draw_queue(layout, context):
         return
 
     from mixar.modules.common.job_queue.constants import (
-        FEATURE_HUNYUAN_PART,
-        FEATURE_HUNYUAN_RAPID,
-        FEATURE_HUNYUAN_UV,
         FEATURE_IMAGE_TO_3D_PRO,
-        FEATURE_IMAGEGEN,
-        FEATURE_LOOKDEV360,
-        FEATURE_MESH_SEGMENT,
-        FEATURE_MODEL_3D,
         FEATURE_RETOPOLOGY,
         FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP,
-        FEATURE_SCENE_RECON,
     )
     from mixar.modules.common.job_queue.ui.lists.queue_uilist import draw_queue_panel
 
     _FEATURES = (
         (FEATURE_IMAGE_TO_3D_PRO, "image_to_3d_pro", "Image to 3D Pro"),
-        (FEATURE_MODEL_3D, "model_3d", "Image to 3D Basic"),
         (FEATURE_RETOPOLOGY, "retopology", "Retopology"),
         (FEATURE_SCENE_GEN_HP, "scene_gen_hp", "Scene Gen HP"),
         (FEATURE_SCENE_GEN_LP, "scene_gen_lp", "Scene Gen LP"),
-        (FEATURE_HUNYUAN_RAPID, "hunyuan_rapid", "Hunyuan Rapid"),
-        (FEATURE_HUNYUAN_PART, "hunyuan_part", "Hunyuan Part"),
-        (FEATURE_HUNYUAN_UV, "hunyuan_uv", "Hunyuan UV"),
-        (FEATURE_IMAGEGEN, "imagegen", "Image Generation"),
-        (FEATURE_LOOKDEV360, "lookdev360", "Lookdev360 PBR"),
-        (FEATURE_MESH_SEGMENT, "mesh_segment", "Mesh Segmentation"),
-        (FEATURE_SCENE_RECON, "scene_recon", "Scene Reconstruction"),
     )
 
     terminal = {JobState.SUCCESS.value, JobState.FAILED.value, JobState.CANCELLED.value}
