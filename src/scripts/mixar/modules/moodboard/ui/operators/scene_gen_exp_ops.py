@@ -410,7 +410,7 @@ class MIXIE_OT_scene_gen_exp_generate_hp(Operator):
             "polygon_type": tab.hp_polygon_type,
         }
 
-        from mixar.modules.moodboard.core.scene_gen_hp_queue import (
+        from mixar.modules.moodboard.core.generation_enqueue import (
             enqueue_scene_gen_hp_jobs,
         )
         enqueued = enqueue_scene_gen_hp_jobs(
@@ -490,7 +490,7 @@ class MIXIE_OT_scene_gen_exp_generate_lp(Operator):
             "post_process": tab.lp_post_process,
         }
 
-        from mixar.modules.moodboard.core.scene_gen_lp_queue import (
+        from mixar.modules.moodboard.core.generation_enqueue import (
             enqueue_scene_gen_lp_jobs,
         )
         enqueued = enqueue_scene_gen_lp_jobs(

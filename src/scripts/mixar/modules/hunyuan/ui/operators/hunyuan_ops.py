@@ -230,7 +230,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # PART — generation queue
         if mode == 'PART':
             try:
-                from ...core.part_queue import enqueue_part_job
+                from ...core.part_enqueue import enqueue_part_job
                 enqueue_part_job(context=context, operator=self)
             except Exception as e:
                 self.report({'ERROR'}, str(e))
@@ -244,7 +244,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # UV — generation queue
         if mode == 'UV':
             try:
-                from ...core.uv_queue import enqueue_uv_job
+                from ...core.uv_enqueue import enqueue_uv_job
                 enqueue_uv_job(context=context, operator=self)
             except Exception as e:
                 self.report({'ERROR'}, str(e))
@@ -272,7 +272,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         - Otherwise a single job is enqueued, optionally with multi-view
           images and the uploaded reference image.
         """
-        from mixar.modules.moodboard.core.image_to_3d_queue import (
+        from mixar.modules.moodboard.core.generation_enqueue import (
             enqueue_pro_job, snapshot_shared_params,
         )
 
@@ -338,7 +338,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
     def _submit_rapid_queue(self, context, rapid, compress_image_for_upload):
         """Validate and enqueue a Rapid generation job via FeatureQueue."""
-        from ...core.rapid_queue import enqueue_rapid_job
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
 
         has_prompt = bool(rapid.prompt.strip())
         has_image = rapid.image is not None
@@ -352,6 +354,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
             has_image = True
             has_prompt = False
 
+        if not has_prompt and not has_image:
+            raise ValueError("Provide either a prompt or an image")
+        if has_prompt and has_image:
+            raise ValueError("Prompt and image are mutually exclusive")
+
         image_bytes = b""
         if has_image:
             if use_moodboard and mb_img:
@@ -359,13 +366,32 @@ class MIXIE_OT_hunyuan_generate(Operator):
             elif rapid.image:
                 image_bytes = compress_image_for_upload(rapid.image)
 
-        enqueue_rapid_job(
-            prompt=rapid.prompt.strip() if has_prompt else "",
-            image_bytes=image_bytes,
-            image_filename="image.png",
-            result_format=rapid.result_format,
-            enable_pbr=rapid.enable_pbr,
-            enable_geometry=rapid.enable_geometry,
+        sdk_params = {
+            "EnablePBR": rapid.enable_pbr,
+            "EnableGeometry": rapid.enable_geometry,
+        }
+        result_format = rapid.result_format
+        if result_format and result_format != "glb":
+            sdk_params["ResultFormat"] = result_format
+        prompt_str = rapid.prompt.strip() if has_prompt else ""
+        if prompt_str:
+            sdk_params["Prompt"] = prompt_str
+
+        payload = {"sdk_params": sdk_params}
+        if image_bytes:
+            payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
+            payload["image_filename"] = "image.png"
+
+        label = prompt_str[:40] if has_prompt else "image.png"
+
+        enqueue_generation(
+            kind="glb",
+            feature_key=FEATURE_HUNYUAN_RAPID,
+            job_type="hunyuan_rapid",
+            model="hunyuan_rapid",
+            payload=payload,
+            label=label,
+            scene_flag="mixie_hunyuan_rapid_is_generating",
         )
 
     def _submit_topology_queue(self, context, topo):
@@ -374,7 +400,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         Each selected mesh becomes its own job (per-object fan-out, Q1).
         Files exceeding the size limit are skipped with a warning.
         """
-        from mixar.modules.hunyuan.core.retopology_queue import (
+        from mixar.modules.hunyuan.core.retopology_enqueue import (
             enqueue_retopology_jobs, snapshot_shared_params,
         )
 
