@@ -12,13 +12,12 @@ time so the queue is decoupled from the user's selection state.
 from dataclasses import dataclass
 from typing import Optional
 
-import bpy
-
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.api.services.generation_queue_service import get_generation_queue_service
-from mixar.modules.common.job_queue import Job, JobState, get_queue
+from mixar.modules.common.job_queue import (
+    Job, get_queue_with_listener, create_scene_flag_listener,
+)
 from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
-from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 from ..constants import MAX_FILE_SIZE_TOPOLOGY
 from .hunyuan_helpers import export_selected_mesh
 
@@ -40,10 +39,6 @@ class RetopologyJob(Job):
     polygon_type: Optional[str] = None
     face_level: Optional[str] = None
     post_process: bool = True
-
-    # ------------------------------------------------------------------ #
-    # Job interface
-    # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
         service = get_generation_queue_service()
@@ -69,47 +64,11 @@ class RetopologyJob(Job):
             on_error=on_error,
         )
 
-    def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
-        service.get_job_status(
-            self.backend_job_id,
-            on_success=on_success,
-            on_error=on_error,
-        )
-
     def parse_submit_response(self, response) -> None:
-        data = getattr(response, "data", None) or {}
-        inner = data.get("data", data) if isinstance(data, dict) else {}
-        self.backend_job_id = inner.get("job_id", "") if isinstance(inner, dict) else ""
-        if not self.backend_job_id:
-            raise ValueError("Enqueue response missing job_id")
+        self._parse_standard_submit(response)
 
     def parse_poll_response(self, response):
-        data = getattr(response, "data", None) or {}
-        inner = data.get("data", data) if isinstance(data, dict) else {}
-        if not isinstance(inner, dict):
-            return ("WAIT", [])
-        status = inner.get("status", "") or ""
-        self.backend_status = status
-        self.queue_position = inner.get("queue_position") or 0
-        if status == "PENDING":
-            return ("WAIT", [])
-        if status in ("SUBMITTED", "POLLING"):
-            if not self._processing_started:
-                self._processing_started = True
-                self.poll_start_time = __import__("time").time()
-            return ("RUN", [])
-        if status == "DONE":
-            result = inner.get("result") or {}
-            result_files = result.get("result_files", []) if isinstance(result, dict) else []
-            return ("DONE", result_files)
-        if status == "FAILED":
-            error = inner.get("error", "")
-            if error:
-                self.error = error
-            self.user_message = inner.get("user_message", "") or "Retopology failed"
-            return ("FAIL", [])
-        return ("WAIT", [])
+        return self._parse_standard_poll(response, fail_message="Retopology failed")
 
     def on_imported(self, object_names: str) -> None:
         """Handle imported retopo mesh.
@@ -124,10 +83,6 @@ class RetopologyJob(Job):
         """
         super().on_imported(object_names)
 
-        # Detect if post-processing was applied: a processed mesh will
-        # already be named ``{base}_low`` and have UV layers with baked
-        # textures.  An unprocessed Hunyuan result won't have ``_low``
-        # in any imported object name.
         names = [n.strip() for n in object_names.split(",") if n.strip()]
         has_low_suffix = any("_low" in n for n in names)
 
@@ -135,7 +90,6 @@ class RetopologyJob(Job):
             logger.info("[Retopology] Post-processed mesh detected, skipping client-side cleanup")
             return
 
-        # Fallback: post-processing was not applied — do client-side cleanup
         logger.warning("[Retopology] Unprocessed mesh detected, applying client-side fallback")
         import os
         name = os.path.splitext(self.label)[0] if "." in self.label else self.label
@@ -258,84 +212,14 @@ def enqueue_retopology_jobs(
 
 
 # ---------------------------------------------------------------------------
-# Queue listener: drives shared progress bar + is_generating scene flag
+# Queue listener
 # ---------------------------------------------------------------------------
 
-
-_listener_attached = False
-
-
-def _on_queue_changed(queue: FeatureQueue) -> None:
-    """Sync the moodboard ``retopology`` progress bar to queue activity.
-
-    Also fires the one-shot batch completion popup at the active→idle
-    transition.
-    """
-    try:
-        scene = bpy.context.scene
-    except Exception:
-        return
-    if scene is None:
-        return
-
-    has_work = queue.has_active_work()
-    was_generating = bool(getattr(scene, "mixie_retopology_is_generating", False))
-
-    if has_work and not was_generating:
-        try:
-            scene.mixie_retopology_is_generating = True
-        except (AttributeError, TypeError):
-            pass
-        return
-
-    if not has_work and was_generating:
-        try:
-            scene.mixie_retopology_is_generating = False
-        except (AttributeError, TypeError):
-            pass
-
-        snapshot = queue.snapshot()
-        succeeded = sum(1 for j in snapshot if j.state == JobState.SUCCESS)
-        failed = sum(1 for j in snapshot if j.state == JobState.FAILED)
-        cancelled = sum(1 for j in snapshot if j.state == JobState.CANCELLED)
-
-        if (succeeded + failed + cancelled) > 0:
-            _show_batch_summary_popup(succeeded, failed, cancelled)
+_listener = create_scene_flag_listener(
+    "mixie_retopology_is_generating",
+    batch_popup_title="Retopology batch complete",
+)
 
 
-def _show_batch_summary_popup(succeeded: int, failed: int, cancelled: int) -> None:
-    """Schedule a one-shot popup summarising the just-completed batch."""
-
-    def _draw(self_menu, context):
-        layout = self_menu.layout
-        layout.label(text=f"Succeeded: {succeeded}", icon='CHECKMARK')
-        if failed:
-            layout.label(text=f"Failed: {failed}", icon='ERROR')
-        if cancelled:
-            layout.label(text=f"Cancelled: {cancelled}", icon='CANCEL')
-
-    def _popup():
-        try:
-            wm = bpy.context.window_manager
-            wm.popup_menu(
-                _draw,
-                title="Retopology batch complete",
-                icon='INFO',
-            )
-        except Exception as e:
-            logger.debug("Batch summary popup failed: %s", e)
-        return None  # one-shot
-
-    try:
-        bpy.app.timers.register(_popup, first_interval=0.0)
-    except Exception as e:
-        logger.debug("Could not schedule batch summary popup: %s", e)
-
-
-def _get_retopology_queue() -> FeatureQueue:
-    global _listener_attached
-    queue = get_queue(FEATURE_RETOPOLOGY)
-    if not _listener_attached:
-        queue.add_listener(_on_queue_changed)
-        _listener_attached = True
-    return queue
+def _get_retopology_queue():
+    return get_queue_with_listener(FEATURE_RETOPOLOGY, _listener)
