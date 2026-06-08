@@ -20,7 +20,6 @@ This approach is non-blocking and prevents UI freezes by:
 from collections.abc import Callable
 from mixar.config.logging_config import get_logger
 import queue
-import threading
 import time
 from typing import Optional
 
@@ -34,14 +33,8 @@ logger = get_logger(__name__)
 # Request queue: (request_id, script, tool_name, session_id) from WebSocket thread
 _request_queue: queue.Queue = queue.Queue(maxsize=1000)
 
-# Timer state. _timer_active is read/written from both the WebSocket thread
-# (queue_script_request) and the main thread (_process_one_request); every
-# access must hold _timer_lock — an unsynchronized check-then-clear can
-# strand a queued script, and its unsent tool response then hangs the
-# backend's agent turn until timeout.
-_timer_lock = threading.Lock()
+# Timer state
 _timer_active = False
-_timer_fn = None  # the closure currently registered with bpy.app.timers
 _shutdown_requested = False
 
 # Execution gate: defer script running so the chat UI can render planning text
@@ -64,12 +57,7 @@ def queue_script_request(script: str, request_id: str, tool_name: str = "unknown
     """
     global _execution_gate_until
     if _shutdown_requested:
-        # Warning, not debug: if this fires outside real shutdown the backend
-        # will time out waiting for the never-sent response.
-        logger.warning(
-            "Dropping script request during shutdown (%s, id: %s)",
-            tool_name, request_id,
-        )
+        logger.debug("Dropping script request during shutdown")
         return
 
     # Gate: give SSE events (planning text) time to arrive before execution
@@ -101,51 +89,19 @@ def gate_execution(delay: float = 0.05) -> None:
 
 
 def _ensure_timer_running() -> None:
-    """Ensure the execution timer is running.
-
-    A fresh closure is registered per start (instead of _process_one_request
-    itself): bpy timers are keyed by the callback object, so re-registering
-    the same function while a previous registration is still completing its
-    final ``return None`` can be silently dropped — stranding the queued
-    request and never sending its tool response.
-    """
-    global _timer_active, _timer_fn
+    """Ensure the execution timer is running."""
+    global _timer_active
     if _shutdown_requested:
         return
 
-    with _timer_lock:
-        if _timer_active:
-            return
-
-        def _tick():
-            return _process_one_request()
-
+    if not _timer_active:
         try:
-            bpy.app.timers.register(_tick, first_interval=0.01)
-            _timer_fn = _tick
-            _timer_active = True
-            logger.debug("Script execution timer started")
+            if not bpy.app.timers.is_registered(_process_one_request):
+                bpy.app.timers.register(_process_one_request, first_interval=0.01)
+                _timer_active = True
+                logger.debug("Script execution timer started")
         except Exception as e:
-            _timer_active = False
             logger.error(f"Failed to start timer: {e}")
-
-
-def _stop_timer_if_idle() -> Optional[float]:
-    """Atomically stop the timer when the queue is empty.
-
-    The emptiness check and the flag clear must happen under _timer_lock so
-    a producer enqueueing at the same instant either sees the flag already
-    cleared (and re-arms the timer) or is seen by this check.
-
-    Returns:
-        None to stop the timer, or the next interval if work arrived.
-    """
-    global _timer_active
-    with _timer_lock:
-        if not _request_queue.empty():
-            return TIMER_INTERVAL
-        _timer_active = False
-        return None
 
 
 def _process_one_request() -> Optional[float]:
@@ -158,10 +114,11 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call (0.20s) if more requests, None to stop timer
     """
+    global _timer_active
+
     if _request_queue.empty():
-        stop = _stop_timer_if_idle()
-        if stop is None:
-            return None  # No more requests, stop timer
+        _timer_active = False
+        return None  # No more requests, stop timer
 
     # Drain pending SSE events so planning text is finalized before
     # script execution blocks the main thread.
@@ -176,7 +133,8 @@ def _process_one_request() -> Optional[float]:
     try:
         request_id, script, tool_name, session_id = _request_queue.get_nowait()
     except queue.Empty:
-        return _stop_timer_if_idle()
+        _timer_active = False
+        return None
 
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window). If the session is no longer
@@ -192,7 +150,10 @@ def _process_one_request() -> Optional[float]:
         client = get_jsonrpc_client()
         if client and client.is_connected and request_id != "notification":
             client.queue_response(request_id, {"success": False, "error": "Agent session not active"})
-        return _stop_timer_if_idle()
+        if not _request_queue.empty():
+            return TIMER_INTERVAL
+        _timer_active = False
+        return None
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
 
@@ -232,26 +193,6 @@ def _process_one_request() -> Optional[float]:
             logger.error(f"Script execution failed: {e}")
             result_dict = {"success": False, "error": str(e)}
 
-    # --- Operation history: archive every agent script/tool execution ---
-    try:
-        from mixar.modules.operation_history.constants import HISTORY_SCRIPT_MARKER, HISTORY_TOOLS
-        from mixar.modules.operation_history.core import store as _op_store
-        from mixar.modules.operation_history.core.record import build_agent_record
-        from mixar.modules.operation_history.core.scene_key import get_scene_history_id
-        if tool_name not in HISTORY_TOOLS and HISTORY_SCRIPT_MARKER not in script:
-            _hist_scene = target_scene if target_scene is not None else (
-                bpy.context.window.scene if bpy.context.window else None)
-            _hist_sid = get_scene_history_id(_hist_scene)
-            _wm = getattr(bpy.context, "window_manager", None)
-            _iid = getattr(_wm, "mixie_instance_id", "") if _wm else ""
-            _op_store.append_operation(
-                build_agent_record(tool_name=tool_name, result_dict=result_dict,
-                                   session_id=_hist_sid, instance_id=_iid, request_id=request_id),
-                script_text=script,
-            )
-    except Exception as _op_exc:  # never break execution/response on history failure
-        logger.debug("operation_history: failed to record agent op: %s", _op_exc)
-
     # Restore original scene after execution
     if original_scene is not None and bpy.context.window:
         try:
@@ -272,7 +213,8 @@ def _process_one_request() -> Optional[float]:
     if not _request_queue.empty():
         return 0.50  # 500ms between executions (safe for edit mode operations)
 
-    return _stop_timer_if_idle()  # Stop timer when queue empty
+    _timer_active = False
+    return None  # Stop timer when queue empty
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> None:
@@ -301,43 +243,24 @@ def run_on_main_thread(fn: Callable[[], None]) -> None:
         logger.warning(f"run_on_main_thread: failed to register timer: {e}")
 
 
-def resume() -> None:
-    """Re-arm the executor after a ``cleanup(shutdown=True)``.
-
-    ``cleanup(shutdown=True)`` runs when the agent connection is torn down
-    via bootstrap unregister (Blender exit, but also "Reload Scripts").
-    Module state survives the subsequent re-register, so without clearing
-    the flag every later script request is silently dropped — no tool
-    response is ever sent and the backend times out on EVERY command until
-    Blender is fully restarted. ConnectionManager.connect() calls this so a
-    new connection always starts with a live executor.
-    """
-    global _shutdown_requested
-    _shutdown_requested = False
-
-
 def cleanup(shutdown: bool = False) -> None:
     """
     Clean up executor state.
 
     Call on addon unregister or disconnect to clean up pending requests.
     """
-    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested
+    global _timer_active, _execution_gate_until, _shutdown_requested
 
     if shutdown:
         _shutdown_requested = True
 
-    with _timer_lock:
-        timer_fn = _timer_fn
-        _timer_fn = None
-        _timer_active = False
-
     try:
-        if timer_fn is not None and bpy.app.timers.is_registered(timer_fn):
-            bpy.app.timers.unregister(timer_fn)
+        if bpy.app.timers.is_registered(_process_one_request):
+            bpy.app.timers.unregister(_process_one_request)
     except Exception:
         pass
 
+    _timer_active = False
     _execution_gate_until = 0.0
 
     # Clear request queue

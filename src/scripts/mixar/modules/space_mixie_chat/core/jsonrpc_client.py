@@ -57,7 +57,6 @@ class JSONRPCWebSocketClient:
         on_connected: Optional[Callable[[], None]] = None,
         on_disconnected: Optional[Callable[[str], None]] = None,
         on_notification: Optional[Callable[[dict], None]] = None,
-        on_job_update: Optional[Callable[[dict], None]] = None,
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
@@ -79,7 +78,6 @@ class JSONRPCWebSocketClient:
         self._on_connected = on_connected
         self._on_disconnected = on_disconnected
         self._on_notification = on_notification
-        self._on_job_update = on_job_update
         self._on_sandbox_control = on_sandbox_control
         self._role = role
         self._parent_instance_id = parent_instance_id
@@ -229,12 +227,10 @@ class JSONRPCWebSocketClient:
                 self.ws_url, timeout=10, header=headers
             )
             self._connected = True
+            self._current_delay = self._reconnect_delay
+            self._auth.reset()
 
-            # Perform handshake. The backoff delay and auth-failure counter
-            # are only reset AFTER the handshake succeeds: resetting them on
-            # bare TCP/WS connect meant a server that accepts the upgrade but
-            # rejects the token was retried in a tight ~1s loop forever
-            # (failure count wiped each cycle, so max_failures never tripped).
+            # Perform handshake
             if not self._perform_handshake():
                 # Handshake failure right after connect likely means auth rejection
                 # (server accepted WS upgrade but closed on token validation)
@@ -247,8 +243,6 @@ class JSONRPCWebSocketClient:
                 return False
 
             self._handshake_complete = True
-            self._current_delay = self._reconnect_delay
-            self._auth.reset()
             self._last_ping_time = time.time()
 
             if self._on_connected:
@@ -469,13 +463,6 @@ class JSONRPCWebSocketClient:
                     self._on_notification(params)
                 except Exception as e:
                     logger.error(f"Error in on_notification callback: {e}")
-
-        elif method == JSONRPCMethod.JOB_UPDATE:
-            if self._on_job_update:
-                try:
-                    self._on_job_update(params)
-                except Exception as e:
-                    logger.error(f"Error in on_job_update callback: {e}")
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")

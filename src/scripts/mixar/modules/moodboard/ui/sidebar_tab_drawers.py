@@ -96,10 +96,8 @@ def _draw_segment_to_3d(layout, context):
             col.separator(factor=SEP_INTRA)
             draw_status_badge(col, f"{active_count} segment(s) active", 'DONE')
 
-    from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
     draw_generate_footer(layout, context, "mixie.generate_scene", "segment_to_3d",
-                         cancel_op="mixie.cancel_segment_to_3d",
-                         feature_key=FEATURE_SCENE_GEN)
+                         cancel_op="mixie.cancel_segment_to_3d")
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +118,6 @@ def _draw_mesh_segment(layout, context):
         layout, context, "mixie.mesh_segment_submit", "mesh_segment",
         gen_flag_attr='mixie_mesh_segment_is_processing',
         cancel_op="mixie.mesh_segment_cancel",
-        feature_key="mesh_segment",
     )
 
 
@@ -319,33 +316,18 @@ def _draw_retopology(layout, context):
 
     props = context.scene.hunyuan
     topo = props.topology
-    is_tripo = topo.model == 'tripo'
 
     col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
-    draw_mesh_info(col, context, max_mb=150 if is_tripo else 200)
+    draw_mesh_info(col, context, max_mb=200)
     draw_hint(layout, "Select the objects you want to retopologize", icon='INFO')
     draw_section_separator(layout)
 
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
-    draw_dropdown(col, topo, "model", text="Model")
-    if is_tripo:
-        col.label(text="Algorithm: v2.0 (Smart)")
-        col.prop(topo, "tripo_face_limit", text="Face Limit", slider=True)
-        col.prop(topo, "tripo_quad", text="Quad Mesh")
-        col.prop(topo, "tripo_bake", text="Bake Textures")
-        face_range = "500-10,000 (quad)" if topo.tripo_quad else "500-20,000 (tri)"
-        info = draw_section_box(layout, "About Tripo Retopology", icon='INFO')
-        draw_hint(info, "v2.0 smart highpoly to lowpoly", icon='DOT')
-        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
-        draw_hint(info, "Formats: GLB / GLTF / FBX / OBJ / STL", icon='DOT')
-        draw_hint(info, f"Face Limit range: {face_range}", icon='DOT')
-        draw_hint(info, "Bake transfers textures to the low-poly", icon='DOT')
-    else:
-        draw_dropdown(col, topo, "polygon_type", text="Polygon Type")
-        draw_dropdown(col, topo, "face_level", text="Face Level")
-        col.prop(topo, "post_process", text="Post-Processing")
+    draw_dropdown(col, topo, "polygon_type", text="Polygon Type")
+    draw_dropdown(col, topo, "face_level", text="Face Level")
+    col.prop(topo, "post_process", text="Post-Processing")
 
     from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
     from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
@@ -356,6 +338,7 @@ def _draw_retopology(layout, context):
         layout, context, FEATURE_RETOPOLOGY,
         lambda: _mesh_can_generate(context, 'TOPOLOGY'),
         mode_override='TOPOLOGY',
+        progress_attr='mixie_retopology_generate_progress',
     )
 
 

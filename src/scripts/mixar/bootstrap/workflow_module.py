@@ -15,13 +15,9 @@ state was saved in the startup workspace.
 """
 
 import bpy
-from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.workflow.constants import PRO_DEFAULT_WORKSPACE_NAME
-from mixar.modules.workflow.core.workspace_loader import (
-    configure_basic_workspace_chrome,
-)
 from mixar.modules.workflow.ui.headers.mode_filter_header import (
     install_topbar_filter,
     uninstall_topbar_filter,
@@ -86,24 +82,6 @@ def _schedule_object_mode_reset() -> None:
         bpy.app.timers.register(_ensure_modeling_workspace_object_mode, first_interval=0.2)
 
 
-@persistent
-def _on_load_post(_dummy_arg) -> None:
-    """Enforce Zen Mode viewport overlay defaults after every file load.
-
-    The Zen Mode workspace persists in the saved file, and entering Zen
-    Mode only re-runs configure_basic_workspace_chrome() via the explicit
-    mode-switch operator. Launching into — or opening — a file while
-    already in Zen Mode never fires that operator, so a workspace saved
-    with relationship lines / object extras on would keep showing them.
-    This handler re-applies the defaults on load. It only ever touches the
-    Zen Mode workspace's viewports, so it's a no-op in Engine mode.
-    """
-    try:
-        configure_basic_workspace_chrome()
-    except Exception as exc:  # noqa: BLE001 - load handler must never raise
-        logger.debug("workflow: zen chrome enforcement on load skipped: %s", exc)
-
-
 def _on_workspace_change() -> None:
     _schedule_object_mode_reset()
 
@@ -144,14 +122,9 @@ def register():
     _subscribe_workspace_changes()
     _schedule_object_mode_reset()
 
-    if _on_load_post not in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.append(_on_load_post)
-
 
 def unregister():
     """Unregister dual-mode operators."""
-    if _on_load_post in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(_on_load_post)
     bpy.msgbus.clear_by_owner(_OBJECT_MODE_MSGBUS_OWNER)
     if bpy.app.timers.is_registered(_ensure_modeling_workspace_object_mode):
         bpy.app.timers.unregister(_ensure_modeling_workspace_object_mode)

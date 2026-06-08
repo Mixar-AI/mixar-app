@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Operators for the job queue UIList."""
+"""Operators for the generation queue UIList."""
 
 from bpy.props import StringProperty
 from bpy.types import Operator
@@ -25,30 +25,6 @@ class MIXIE_OT_queue_cancel_job(Operator):
             return {'CANCELLED'}
         get_queue(self.feature_key).cancel(self.job_id)
         return {'FINISHED'}
-
-
-class MIXIE_OT_queue_copy_error(Operator):
-    """Copy the full error details to clipboard"""
-
-    bl_idname = "mixie.queue_copy_error"
-    bl_label = "Copy Error"
-    bl_description = "Copy full error details to clipboard"
-    bl_options = {'REGISTER'}
-
-    feature_key: StringProperty(default="")
-    job_id: StringProperty(default="")
-
-    def execute(self, context):
-        if not self.feature_key or not self.job_id:
-            return {'CANCELLED'}
-        queue = get_queue(self.feature_key)
-        for job in queue.snapshot():
-            if job.id == self.job_id:
-                context.window_manager.clipboard = job.error or "Unknown error"
-                self.report({'INFO'}, "Error copied to clipboard")
-                return {'FINISHED'}
-        self.report({'WARNING'}, "Job not found in queue")
-        return {'CANCELLED'}
 
 
 class MIXIE_OT_queue_cancel_all(Operator):
@@ -119,7 +95,6 @@ class MIXIE_OT_queue_view(Operator):
 
 classes = (
     MIXIE_OT_queue_cancel_job,
-    MIXIE_OT_queue_copy_error,
     MIXIE_OT_queue_cancel_all,
     MIXIE_OT_queue_clear_completed,
     MIXIE_OT_queue_clear_all_completed,

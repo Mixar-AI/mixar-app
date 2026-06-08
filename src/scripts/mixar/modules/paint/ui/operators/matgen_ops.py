@@ -16,13 +16,39 @@ WindowManager properties (registered manually in ui.py):
 - mixar_matgen_status     — "", "generating", "done:<name>", "error:<msg>"
 - mixar_matgen_recent     — CollectionProperty(MatGenRecentItem)
 """
+import queue
+import threading
+
 import bpy
 from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import Operator, PropertyGroup
 
 from .....config.logging_config import get_logger
+from ...procedural_materials import material_registry
+from ...procedural_materials.matgen_client import generate_async
+from ...procedural_materials.matgen_persistence import save_generated_material
 
 logger = get_logger(__name__)
+
+_POLL_INTERVAL = 0.25  # seconds
+
+
+def _get_auth_token() -> str:
+    """Return the current auth token, or empty string if unavailable."""
+    try:
+        from ....auth.core.auth import get_access_token
+        return get_access_token() or ""
+    except Exception:
+        return ""
+
+
+def _get_base_url() -> str:
+    """Return the backend server URL."""
+    try:
+        from .....config.config import get_server_url
+        return get_server_url() or ""
+    except Exception:
+        return ""
 
 
 class MatGenRecentItem(PropertyGroup):
@@ -37,25 +63,6 @@ class MATGEN_OT_GenerateMaterial(Operator):
     bl_label = "Generate"
     bl_description = "Generate a procedural material with AI"
 
-    # Direct-invocation properties (agent/chat): when `query` is set, the
-    # operator runs from these explicit params instead of the WindowManager UI
-    # state, so the agent can call it headlessly.
-    query: StringProperty(
-        name="Query",
-        description="Material description (direct invocation; overrides UI state)",
-        default="",
-    )
-    pipeline: StringProperty(
-        name="Pipeline",
-        description="Generation pipeline: 'fast' or 'detailed'",
-        default="",
-    )
-    from_chat: bpy.props.BoolProperty(
-        name="From Chat",
-        description="Called from chat/agent context",
-        default=False,
-    )
-
     @classmethod
     def poll(cls, context):
         """Disable the operator while a generation is already in flight."""
@@ -65,42 +72,43 @@ class MATGEN_OT_GenerateMaterial(Operator):
             return True
 
     def execute(self, context):
-        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
-
         wm = context.window_manager
-
-        # Direct (agent) invocation: explicit params override UI/WM state.
-        if self.query.strip():
-            query = self.query.strip()
-            pipeline = self.pipeline.strip() or "fast"
-        else:
-            query = wm.mixar_matgen_query.strip()
-            pipeline = wm.mixar_matgen_pipeline
+        query = wm.mixar_matgen_query.strip()
 
         if not query:
-            set_agent_gen_reason(context, "No material description provided")
             self.report({'WARNING'}, "Please enter a material description")
             return {'CANCELLED'}
 
+        token = _get_auth_token()
+        if not token:
+            wm.mixar_matgen_status = "error:Please log in to Mixar"
+            return {'CANCELLED'}
+
+        base_url = _get_base_url()
+        if not base_url:
+            wm.mixar_matgen_status = "error:Server URL not configured"
+            return {'CANCELLED'}
+
+        pipeline = wm.mixar_matgen_pipeline
+
+        result_queue = queue.Queue()
+
+        t = threading.Thread(
+            target=generate_async,
+            args=(query, pipeline, token, base_url, result_queue),
+            daemon=True,
+        )
+        t.start()
+
         wm.mixar_matgen_status = "generating"
+
         for area in context.screen.areas:
             area.tag_redraw()
 
-        try:
-            from ...procedural_materials.matgen_queue import enqueue_matgen_job
-
-            job = enqueue_matgen_job(
-                prompt=query,
-                pipeline=pipeline,
-            )
-            if job is None:
-                set_agent_gen_reason(context, "Material generation already queued (duplicate)")
-                wm.mixar_matgen_status = "error:Duplicate job already in queue"
-                return {'CANCELLED'}
-        except Exception as e:
-            set_agent_gen_reason(context, str(e))
-            wm.mixar_matgen_status = f"error:{e}"
-            return {'CANCELLED'}
+        bpy.app.timers.register(
+            _make_poll_fn(result_queue, query),
+            first_interval=_POLL_INTERVAL,
+        )
 
         return {'FINISHED'}
 
@@ -121,6 +129,86 @@ class MATGEN_OT_DismissRecent(Operator):
             area.tag_redraw()
         return {'FINISHED'}
 
+
+def _make_poll_fn(result_queue: queue.Queue, query: str):
+    """Return a closure used as the bpy.app.timers callback.
+
+    Returns _POLL_INTERVAL to reschedule, or None to unregister.
+    """
+    def poll_fn():
+        # Safety: if addon was unregistered while this timer was pending, bail out
+        if not hasattr(bpy.types.WindowManager, 'mixar_matgen_status'):
+            return None  # Unregister timer
+
+        try:
+            result = result_queue.get_nowait()
+        except queue.Empty:
+            return _POLL_INTERVAL
+
+        if not bpy.context or not bpy.context.window_manager:
+            return None  # Blender context unavailable (window closed etc.)
+        wm = bpy.context.window_manager
+
+        if not result.get("ok"):
+            error_msg = result.get("error", "Unknown error")
+            wm.mixar_matgen_status = f"error:{error_msg}"
+            logger.error("MatGen failed: %s", error_msg)
+        else:
+            try:
+                _on_success(result, query, wm)
+            except Exception as exc:
+                logger.error("Failed to register generated material: %s", exc)
+                wm.mixar_matgen_status = f"error:Script failed to run: {exc}"
+
+        screen = getattr(bpy.context, 'screen', None)
+        if screen:
+            for area in screen.areas:
+                area.tag_redraw()
+        return None  # Unregister timer
+
+    return poll_fn
+
+
+def _on_success(result: dict, query: str, wm) -> None:
+    """Handle a successful generation result.
+
+    1. Save script to disk + update catalog.
+    2. Register ProceduralMaterial in MaterialRegistry.
+    3. Add to wm.mixar_matgen_recent (prepend).
+    4. Update status string.
+    """
+    script = result["script"]
+    archetype = result.get("archetype", "")
+    # node_group_name from the backend tells us exactly what name the script
+    # will create in bpy.data.node_groups — avoids heuristic lookup failures.
+    node_group_name = result.get("node_group_name", "")
+
+    mat_info = save_generated_material(
+        script=script,
+        query=query,
+        archetype=archetype,
+    )
+
+    from ...procedural_materials.material_registry import ProceduralMaterial
+    proc_mat = ProceduralMaterial(
+        material_id=mat_info.material_id,
+        name=mat_info.name,
+        category="ai_generated",
+        script_path=mat_info.script_path,  # absolute path from persistence layer
+        thumbnail_path=None,
+        node_group_name=node_group_name or mat_info.name,
+    )
+    material_registry.register_material(proc_mat)
+
+    # Prepend to recent list
+    recent = wm.mixar_matgen_recent
+    new_item = recent.add()
+    new_item.material_id = mat_info.material_id
+    new_item.display_name = mat_info.name
+    recent.move(len(recent) - 1, 0)
+
+    wm.mixar_matgen_status = f"done:{mat_info.name}"
+    logger.info("AI material '%s' registered and saved to disk", mat_info.name)
 
 
 def _pipeline_items(self, context):

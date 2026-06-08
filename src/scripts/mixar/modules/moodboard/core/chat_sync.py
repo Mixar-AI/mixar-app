@@ -41,7 +41,6 @@ from __future__ import annotations
 from typing import Iterable
 
 import bpy
-from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 
@@ -370,41 +369,15 @@ def _redraw_chat_areas() -> None:
 # ----------------------------------------------------------------- #
 # Lifecycle
 # ----------------------------------------------------------------- #
-@persistent
-def _on_file_load_post(*_args) -> None:
-    """Drop stale per-scene signatures after a .blend file load.
-
-    The freshly loaded scene starts with empty (SKIP_SAVE)
-    ``pending_attachments`` but may already carry selected moodboard
-    images. A signature cached from the previous file could spuriously
-    match and suppress the first reconcile, so we clear the cache and
-    let the next poll perform a full sync.
-    """
-    _last_signatures.clear()
-
-
 def register() -> None:
-    """Start the polling tick. Idempotent — safe to call twice.
-
-    The timer is registered ``persistent=True`` so it survives .blend
-    file loads. Blender unregisters non-persistent timers on load, and
-    ``register()`` only runs once at addon startup — a non-persistent
-    tick would silently stop syncing the moment the user opens another
-    file, so moodboard selections would no longer auto-attach.
-    """
+    """Start the polling tick. Idempotent — safe to call twice."""
     _last_signatures.clear()
     if not bpy.app.timers.is_registered(_poll_tick):
-        bpy.app.timers.register(
-            _poll_tick, first_interval=_POLL_INTERVAL_S, persistent=True
-        )
-    if _on_file_load_post not in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.append(_on_file_load_post)
+        bpy.app.timers.register(_poll_tick, first_interval=_POLL_INTERVAL_S)
 
 
 def unregister() -> None:
     """Stop the polling tick. Idempotent."""
-    if _on_file_load_post in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(_on_file_load_post)
     if bpy.app.timers.is_registered(_poll_tick):
         try:
             bpy.app.timers.unregister(_poll_tick)

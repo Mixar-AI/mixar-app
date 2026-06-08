@@ -66,7 +66,6 @@ def get_safe_builtins() -> dict:
     safe_builtins['StopIteration'] = StopIteration
     safe_builtins['FileNotFoundError'] = FileNotFoundError
     safe_builtins['OSError'] = OSError
-    safe_builtins['PermissionError'] = PermissionError
 
     # __import__ is intentionally excluded from SAFE_BUILTIN_NAMES.
     # Instead, a restricted __import__ is injected in execute() that only

@@ -10,11 +10,10 @@ Lifecycle (per job, all callbacks fire on the main thread via api/processor):
                        │              │               │
                        └──── FAILED / CANCELLED / PAUSED_AUTH
 
-All pending jobs are submitted immediately (the backend handles concurrency
-and queue limits). Once submitted, jobs wait for backend ``job.update`` pushes
-over the agent WebSocket; terminal success reconciles full result data via
-``job.sync`` on that same socket. Download runs on a daemon thread that
-schedules the import callback back on the main thread.
+All pending jobs are submitted immediately (no client-side concurrency
+limit — the backend handles scheduling). Each job owns its own poll-tick closure registered
+with ``bpy.app.timers``; download runs on a daemon thread that schedules
+the import callback back on the main thread.
 """
 
 import os
@@ -24,11 +23,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.exceptions import (
-    AuthenticationError,
-    ConnectionError as APIConnectionError,
-    TimeoutError as APITimeoutError,
-)
+from mixar.modules.common.api.exceptions import AuthenticationError
 from mixar.modules.hunyuan.core.hunyuan_helpers import (
     _redraw_3d_views,
     download_file,
@@ -41,8 +36,7 @@ from ..constants import (
     MAX_CONSECUTIVE_POLL_ERRORS,
     MAX_POLL_DURATION,
 )
-from .error_helpers import classify_error
-from .job import FAILED_BACKEND_STATUSES, Job, JobState, RUNNING_STATES, TERMINAL_STATES
+from .job import Job, JobState, RUNNING_STATES, TERMINAL_STATES
 
 logger = get_logger(__name__)
 
@@ -52,16 +46,6 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _queues: dict = {}
-_SYNC_WATCHDOG_INTERVAL = 30.0
-_sync_watchdog_registered = False
-_BACKEND_SYNC_STATES = frozenset(
-    {
-        JobState.PENDING,
-        JobState.RUNNING_SUBMIT,
-        JobState.RUNNING_POLL,
-        JobState.PAUSED_AUTH,
-    }
-)
 
 
 def get_queue(feature_key: str) -> "FeatureQueue":
@@ -75,200 +59,6 @@ def get_queue(feature_key: str) -> "FeatureQueue":
 
 def all_queues() -> list:
     return list(_queues.values())
-
-
-_JOBQ_STATE_TO_STATUS = {
-    "pending": "PENDING",
-    "dispatched": "SUBMITTED",
-    "running": "POLLING",
-    "succeeded": "DONE",
-    "failed": "FAILED",
-    "dlq": "DLQ",
-    "cancelled": "CANCELLED",
-}
-
-
-def _find_by_backend_job_id(backend_job_id: str):
-    for queue in all_queues():
-        for job in queue.snapshot():
-            if job.backend_job_id == backend_job_id:
-                return queue, job
-    return None, None
-
-
-def handle_backend_job_update(payload: dict) -> bool:
-    """Apply a compact ``job.update`` push to the matching local queue job."""
-    if not isinstance(payload, dict):
-        return False
-    backend_job_id = payload.get("job_id") or payload.get("id")
-    if not backend_job_id:
-        return False
-    queue, job = _find_by_backend_job_id(str(backend_job_id))
-    if job is None:
-        return False
-
-    state = str(payload.get("state") or payload.get("status") or "").lower()
-    status = _JOBQ_STATE_TO_STATUS.get(state, "")
-    if status:
-        job.backend_status = status
-        if status in {"SUBMITTED", "POLLING"}:
-            if hasattr(job, "_processing_started") and not job._processing_started:
-                job._processing_started = True
-                job.poll_start_time = time.time()
-    if payload.get("error"):
-        job.error = str(payload.get("error"))
-    queue._notify()
-
-    if status in FAILED_BACKEND_STATUSES and job.state == JobState.RUNNING_POLL:
-        _apply_backend_snapshot(queue, job, payload)
-    elif status == "DONE" and job.state == JobState.RUNNING_POLL:
-        _request_backend_job_get(str(backend_job_id))
-    return True
-
-
-def _apply_backend_snapshot(queue: "FeatureQueue", job: Job, snapshot: dict) -> None:
-    """Feed a job-queue snapshot through the existing result parser."""
-    from mixar.modules.common.api.response import APIResponse
-    from mixar.modules.common.api.services.job_queue_service import (
-        JobQueueService,
-    )
-
-    response = APIResponse(
-        success=True,
-        status_code=200,
-        data={"status": "success", "message": "ok", "data": snapshot},
-    )
-    queue._on_poll_success(job, JobQueueService._normalize_response(response))
-
-
-def handle_backend_job_sync(result: dict) -> int:
-    """Apply full ``job.sync`` snapshots to local jobs after reconnect."""
-    if not isinstance(result, dict):
-        return 0
-    jobs = result.get("jobs", [])
-    if not isinstance(jobs, list):
-        return 0
-
-    handled = 0
-    for snapshot in jobs:
-        if not isinstance(snapshot, dict):
-            continue
-        backend_job_id = snapshot.get("job_id") or snapshot.get("id")
-        if not backend_job_id:
-            continue
-        queue, job = _find_by_backend_job_id(str(backend_job_id))
-        if job is None:
-            continue
-        _apply_backend_snapshot(queue, job, snapshot)
-        handled += 1
-    return handled
-
-
-def _request_backend_job_sync() -> bool:
-    """Ask the WebSocket transport for full job snapshots, without REST polling."""
-    try:
-        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
-        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
-            get_jsonrpc_client,
-        )
-        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
-            run_on_main_thread,
-        )
-
-        client = get_jsonrpc_client()
-        if client is None or not client.is_connected:
-            return False
-
-        def _on_sync_result(result):
-            def _apply_sync():
-                count = handle_backend_job_sync(result)
-                if count:
-                    logger.info("job.sync reconciled %d local queue jobs", count)
-
-            run_on_main_thread(_apply_sync)
-
-        client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_sync_result)
-        return True
-    except Exception as e:
-        logger.debug("%s job.sync request failed: %s", LOG_PREFIX, e)
-        return False
-
-
-def _request_backend_job_get(backend_job_id: str) -> bool:
-    """Fetch one full job snapshot after a compact terminal ``job.update``."""
-    try:
-        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
-        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
-            get_jsonrpc_client,
-        )
-        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
-            run_on_main_thread,
-        )
-
-        client = get_jsonrpc_client()
-        if client is None or not client.is_connected:
-            return False
-
-        def _on_get_result(result):
-            def _apply_get():
-                snapshot = result.get("job") if isinstance(result, dict) else None
-                if not isinstance(snapshot, dict):
-                    _request_backend_job_sync()
-                    return
-                queue, job = _find_by_backend_job_id(str(backend_job_id))
-                if job is None:
-                    return
-                _apply_backend_snapshot(queue, job, snapshot)
-                logger.info("job.get reconciled local queue job %s", backend_job_id)
-
-            run_on_main_thread(_apply_get)
-
-        client.send_request(
-            JSONRPCMethod.JOB_GET,
-            {"job_id": backend_job_id},
-            _on_get_result,
-        )
-        return True
-    except Exception as e:
-        logger.debug("%s job.get request failed: %s", LOG_PREFIX, e)
-        _request_backend_job_sync()
-        return False
-
-
-def _ensure_sync_watchdog() -> None:
-    """Keep active jobs reconciled if an at-most-once job.update push is missed."""
-    global _sync_watchdog_registered
-    if _sync_watchdog_registered:
-        return
-
-    def _tick():
-        global _sync_watchdog_registered
-        # Enforce the wall-clock deadline here: the queue is push-driven, so
-        # if the backend loses a job (or the socket stays down) no terminal
-        # ``job.update`` ever arrives and the job would sit in RUNNING_POLL
-        # forever. The watchdog is the only recurring tick that can fail it.
-        now = time.time()
-        for queue in all_queues():
-            for job in queue.snapshot():
-                if (
-                    job.state == JobState.RUNNING_POLL
-                    and job.poll_start_time > 0
-                    and now - job.poll_start_time > MAX_POLL_DURATION
-                ):
-                    queue._fail_timed_out(job)
-        needs_backend_sync = any(
-            job.state in _BACKEND_SYNC_STATES
-            for queue in all_queues()
-            for job in queue.snapshot()
-        )
-        if not needs_backend_sync:
-            _sync_watchdog_registered = False
-            return None
-        _request_backend_job_sync()
-        return _SYNC_WATCHDOG_INTERVAL
-
-    _sync_watchdog_registered = True
-    bpy.app.timers.register(_tick, first_interval=_SYNC_WATCHDOG_INTERVAL)
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +105,6 @@ class FeatureQueue:
         # Set descriptive error for in-flight jobs (backend can't cancel them)
         if job.state in RUNNING_STATES:
             job.error = "Cancelled (generation may still complete on server)"
-        job._submit_retry_scheduled = False
         job.state = JobState.CANCELLED
         if not job.error:
             job.error = "Cancelled"
@@ -327,7 +116,6 @@ class FeatureQueue:
             if job.state not in TERMINAL_STATES:
                 if job.backend_job_id:
                     self._cancel_on_backend(job.backend_job_id)
-                job._submit_retry_scheduled = False
                 job.state = JobState.CANCELLED
                 if not job.error:
                     job.error = "Cancelled"
@@ -381,11 +169,8 @@ class FeatureQueue:
             if job.state == JobState.PAUSED_AUTH:
                 job.state = JobState.PENDING
                 job.error = ""
-                job.user_message = ""
                 job.backend_job_id = ""
                 job.backend_api_type = ""
-                job.submit_attempts = 0
-                job._submit_retry_scheduled = False
                 job.poll_count = 0
                 job.poll_start_time = 0.0
                 job.consecutive_poll_errors = 0
@@ -400,10 +185,10 @@ class FeatureQueue:
     def _cancel_on_backend(backend_job_id: str) -> None:
         """Fire-and-forget cancel request to the backend queue."""
         try:
-            from mixar.modules.common.api.services.job_queue_service import (
-                get_job_queue_service,
+            from mixar.modules.common.api.services.generation_queue_service import (
+                get_generation_queue_service,
             )
-            service = get_job_queue_service()
+            service = get_generation_queue_service()
             service.cancel_job(backend_job_id)
         except Exception as e:
             # Backend may return 404 for in-flight jobs it can't cancel
@@ -449,13 +234,7 @@ class FeatureQueue:
     def _start_job(self, job: Job) -> None:
         job.state = JobState.RUNNING_SUBMIT
         job.error = ""
-        job.user_message = ""
         self._notify()
-        self._submit_job_attempt(job)
-
-    def _submit_job_attempt(self, job: Job) -> None:
-        job.submit_attempts += 1
-        job._submit_retry_scheduled = False
 
         def on_submit_success(response):
             self._on_submit_success(job, response)
@@ -472,108 +251,36 @@ class FeatureQueue:
         if job.state == JobState.CANCELLED:
             self._pump()
             return
-        job._submit_retry_scheduled = False
-        job.error = ""
-        job.user_message = ""
         try:
             job.parse_submit_response(response)
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Failed to parse submit response: {e}"
-            job.user_message = "Failed to process server response"
             self._notify()
             self._pump()
-            return
-
-        # Sync-type jobs may already have the result inline in the submit
-        # response (e.g. ImageGen, Lookdev360).  Skip polling to avoid
-        # hitting GET /jobs/<empty> → 404.
-        if job.should_skip_poll():
-            job.state = JobState.RUNNING_DOWNLOAD
-            self._notify()
-            self._begin_download(job, [])
             return
 
         job.state = JobState.RUNNING_POLL
         job.poll_count = 0
         job.poll_start_time = time.time()
-        if not job.backend_status:
-            job.backend_status = "PENDING"
         self._notify()
-        _ensure_sync_watchdog()
-        # The backend job queue is push-driven. Do not start the old REST GET
-        # polling loop here; ``job.update``/``job.sync`` will advance the job.
-        #
-        # A very fast job can emit its terminal ``job.update`` push while we
-        # are still in RUNNING_SUBMIT. handle_backend_job_update records the
-        # status but skips the transition (pushes are at-most-once), so catch
-        # up here instead of waiting for the next 30s watchdog sync.
-        if job.backend_job_id:
-            if job.backend_status == "DONE":
-                _request_backend_job_get(job.backend_job_id)
-            elif job.backend_status in FAILED_BACKEND_STATUSES:
-                _request_backend_job_sync()
+        self._schedule_poll(job, get_poll_interval(0))
 
     def _on_submit_error(self, job: Job, error) -> None:
-        if job.state != JobState.RUNNING_SUBMIT:
-            return
         if isinstance(error, AuthenticationError):
             self._enter_auth_pause(job, error)
             return
-        if isinstance(error, (APITimeoutError, APIConnectionError)):
-            if self._retry_submit_later(job, error):
-                return
         job.state = JobState.FAILED
         job.error = str(error)
-        job.user_message = classify_error(error) or "Submission failed"
         self._notify()
         self._pump()
 
-    def _retry_submit_later(self, job: Job, error) -> bool:
-        """Keep ambiguous submit failures active and retry idempotently."""
-        if job.state == JobState.CANCELLED:
-            return True
-        if job.backend_job_id:
-            return True
-
-        job.error = str(error)
-        if job.submit_attempts >= job.max_submit_attempts:
-            job.state = JobState.FAILED
-            job.user_message = classify_error(error) or "Submission failed"
-            self._notify()
-            self._pump()
-            return True
-
-        job.state = JobState.RUNNING_SUBMIT
-        job.user_message = "Submission still pending - retrying"
-        self._notify()
-
-        if job._submit_retry_scheduled:
-            return True
-        job._submit_retry_scheduled = True
-
-        def _retry():
-            job._submit_retry_scheduled = False
-            if job.state != JobState.RUNNING_SUBMIT or job.backend_job_id:
-                return None
-            job.error = ""
-            job.user_message = "Retrying submission..."
-            self._notify()
-            self._submit_job_attempt(job)
-            return None
-
-        bpy.app.timers.register(_retry, first_interval=job.submit_retry_delay_s)
-        return True
-
     def _schedule_poll(self, job: Job, interval: float) -> None:
         # Capture job by closure; the tick is a no-op if state changed.
-        custom = job.get_poll_interval()
-        actual_interval = custom if custom > 0 else interval
-
         def tick():
             return self._poll_tick(job)
 
-        bpy.app.timers.register(tick, first_interval=actual_interval)
+        bpy.app.timers.register(tick, first_interval=interval)
 
     def _poll_tick(self, job: Job):
         if job.state != JobState.RUNNING_POLL:
@@ -585,7 +292,6 @@ class FeatureQueue:
                 self._cancel_on_backend(job.backend_job_id)
             job.state = JobState.FAILED
             job.error = "Job timed out after 20 minutes"
-            job.user_message = "Generation timed out — please try again"
             self._notify()
             self._pump()
             return None
@@ -603,8 +309,7 @@ class FeatureQueue:
         except Exception as e:
             self._on_poll_error(job, e)
 
-        custom = job.get_poll_interval()
-        return custom if custom > 0 else get_poll_interval(job.poll_count)
+        return get_poll_interval(job.poll_count)
 
     def _on_poll_success(self, job: Job, response) -> None:
         if job.state != JobState.RUNNING_POLL:
@@ -615,7 +320,6 @@ class FeatureQueue:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Error parsing poll response: {e}"
-            job.user_message = "Failed to process server response"
             self._notify()
             self._pump()
             return
@@ -632,23 +336,9 @@ class FeatureQueue:
             job.state = JobState.FAILED
             if not job.error:
                 job.error = "Job failed on backend"
-            if not job.user_message:
-                job.user_message = "Generation failed"
             self._notify()
             self._pump()
             return
-
-    def _fail_timed_out(self, job: Job) -> None:
-        """Fail a job that exceeded MAX_POLL_DURATION without a terminal push."""
-        if job.state != JobState.RUNNING_POLL:
-            return
-        if job.backend_job_id:
-            self._cancel_on_backend(job.backend_job_id)
-        job.state = JobState.FAILED
-        job.error = f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
-        job.user_message = "Generation timed out — please try again"
-        self._notify()
-        self._pump()
 
     def _on_poll_error(self, job: Job, error) -> None:
         if job.state != JobState.RUNNING_POLL:
@@ -661,7 +351,6 @@ class FeatureQueue:
         if status_code == 404:
             job.state = JobState.FAILED
             job.error = "Job result expired — please retry"
-            job.user_message = "Job result expired — please retry"
             self._notify()
             self._pump()
             return
@@ -680,7 +369,6 @@ class FeatureQueue:
                 f"Failed after {MAX_CONSECUTIVE_POLL_ERRORS} "
                 f"consecutive poll errors: {error}"
             )
-            job.user_message = classify_error(error) or "Generation failed — please retry"
             self._notify()
             self._pump()
 
@@ -688,27 +376,7 @@ class FeatureQueue:
     # Download / import
     # ------------------------------------------------------------------ #
 
-    def _finish_custom_success(self, job: Job, object_names=""):
-        if job.state == JobState.CANCELLED:
-            self._pump()
-            return None
-        job.imported_object_names = object_names
-        job.state = JobState.SUCCESS
-        self._notify()
-        self._pump()
-        return None
-
     def _begin_download(self, job: Job, result_files: list) -> None:
-        # Hook: let the job handle non-standard results (images, textures, etc.)
-        def _custom_done(names=""):
-            return self._finish_custom_success(job, names)
-
-        def _custom_error(msg):
-            return self._finish_failed(job, msg)
-
-        if job.handle_result(result_files, _custom_done, _custom_error):
-            return  # Job takes responsibility
-
         # Pick best file (GLB > OBJ > FBX)
         preferred_order = ["GLB", "OBJ", "FBX"]
         chosen = None
@@ -725,7 +393,6 @@ class FeatureQueue:
         if not chosen or not chosen.get("url"):
             job.state = JobState.FAILED
             job.error = "No downloadable result file"
-            job.user_message = "No result available — please retry"
             self._notify()
             self._pump()
             return
@@ -743,10 +410,9 @@ class FeatureQueue:
                 # Capture error message now — Python 3 deletes `e` when
                 # the except block exits, so the closure can't reference it.
                 err_msg = f"Download failed: {e}"
-                friendly = classify_error(e) or "Download failed — please retry"
 
                 def _fail_cb():
-                    return self._finish_failed(job, err_msg, friendly)
+                    return self._finish_failed(job, err_msg)
 
                 bpy.app.timers.register(_fail_cb, first_interval=0.0)
                 return
@@ -775,26 +441,17 @@ class FeatureQueue:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
-            job.user_message = "Failed to import the generated model"
-            # Don't leave the downloaded temp file behind — repeated failed
-            # imports would otherwise accumulate multi-MB files in tempdir.
-            try:
-                os.remove(filepath)
-            except OSError:
-                pass
 
         self._notify()
         self._pump()
         return None  # one-shot
 
-    def _finish_failed(self, job: Job, message: str, user_message: str = ""):
+    def _finish_failed(self, job: Job, message: str):
         if job.state == JobState.CANCELLED:
             self._pump()
             return None
         job.state = JobState.FAILED
         job.error = message
-        if user_message:
-            job.user_message = user_message
         self._notify()
         self._pump()
         return None  # one-shot

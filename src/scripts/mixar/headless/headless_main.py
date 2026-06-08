@@ -28,53 +28,11 @@ from mixar.config.logging_config import get_logger
 logger = get_logger("mixar.headless")
 
 
-def _pid_alive_windows(pid: int) -> bool:
-    """Return whether *pid* is alive using Win32 process APIs.
-
-    ``os.kill(pid, 0)`` is a POSIX liveness probe. On Windows it can fail for a
-    live process, which made sandbox children exit immediately after launch.
-    """
-    import ctypes
-
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    process_query_limited_information = 0x1000
-    still_active = 259
-
-    kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_bool, ctypes.c_ulong)
-    kernel32.OpenProcess.restype = ctypes.c_void_p
-    kernel32.GetExitCodeProcess.argtypes = (ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong))
-    kernel32.GetExitCodeProcess.restype = ctypes.c_bool
-    kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
-    kernel32.CloseHandle.restype = ctypes.c_bool
-
-    handle = kernel32.OpenProcess(
-        process_query_limited_information,
-        False,
-        int(pid),
-    )
-    if not handle:
-        # If Windows refuses the query, keep running rather than killing a
-        # valid sandbox because of an access-policy false negative.
-        return ctypes.get_last_error() == 5
-
-    try:
-        exit_code = ctypes.c_ulong()
-        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
-            return True
-        return exit_code.value == still_active
-    finally:
-        kernel32.CloseHandle(handle)
-
-
 def _pid_alive(pid: int) -> bool:
     if not pid:
         return True
-    if os.name == "nt":
-        return _pid_alive_windows(pid)
     try:
         os.kill(pid, 0)
-        return True
-    except PermissionError:
         return True
     except OSError:
         return False

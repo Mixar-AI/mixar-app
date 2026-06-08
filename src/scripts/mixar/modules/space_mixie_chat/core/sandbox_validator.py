@@ -35,9 +35,6 @@ _BLOCKED_DUNDER_ATTRS = frozenset({
     '__dict__',          # Direct access to object namespaces
     '__init_subclass__', # Metaclass tricks via subclass hooks
     '__set_name__',      # Descriptor protocol abuse
-    '__closure__',       # Closure cells → reach objects captured by a function
-    '__self__',          # Bound method's instance → reach a wrapped object
-    '__func__',          # Bound method's underlying function (→ __globals__ chain)
 })
 
 
