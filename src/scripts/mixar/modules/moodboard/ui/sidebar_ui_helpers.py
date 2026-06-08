@@ -318,27 +318,13 @@ def _action_operator(layout, operator_id, text="", icon='NONE'):
 
 
 def draw_generate_footer(layout, context, operator_id, tab_prefix,
-                         gen_flag_attr=None, cancel_op=None,
-                         feature_key=""):
-    """Queue-style generate button + cancel + progress bar.
-
-    When *feature_key* is provided the footer gains a 3-second cooldown
-    flash ("Added to queue!"), a live job count, and a "View Queue"
-    shortcut — matching the pattern used by Image-to-3D Pro.
-    """
+                         gen_flag_attr=None, cancel_op=None):
+    """Queue-style generate button + cancel + progress bar."""
     scene = context.scene
+    wm = context.window_manager
     flag_attr = gen_flag_attr or f'mixie_{tab_prefix}_is_generating'
     is_gen = getattr(scene, flag_attr, False)
-
-    # Cooldown / queue awareness (when feature_key is provided)
-    cooldown = False
-    has_queue_work = False
-    if feature_key:
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import _in_cooldown
-        from mixar.modules.common.job_queue.core.queue_manager import get_queue
-        cooldown = _in_cooldown(feature_key)
-        queue = get_queue(feature_key)
-        has_queue_work = queue.has_active_work()
+    progress = getattr(wm, f'mixie_{tab_prefix}_generate_progress', 0.0)
 
     layout.separator(factor=SEP_FOOTER)
 
@@ -346,19 +332,10 @@ def draw_generate_footer(layout, context, operator_id, tab_prefix,
     row = layout.row(align=True)
     row.scale_y = GENERATE_BUTTON_SCALE_Y
     sub = row.row()
-    # When queue-aware, only the 3-second cooldown blocks the button —
-    # users can queue multiple jobs while earlier ones are still running.
-    # Without a feature_key we fall back to the legacy is_gen guard.
-    if feature_key:
-        sub.enabled = not cooldown
-    else:
-        sub.enabled = not is_gen
-    if cooldown:
-        _action_operator(sub, operator_id, text="Added to queue!", icon='CHECKMARK')
-    else:
-        _action_operator(sub, operator_id, text="Generate", icon='PLAY')
+    sub.enabled = not is_gen
+    _action_operator(sub, operator_id, text="Generate", icon='PLAY')
 
-    if is_gen or has_queue_work:
+    if is_gen:
         effective_cancel = cancel_op or "mixie.cancel_generation"
         cancel = row.row(align=True)
         cancel.scale_x = 0.6
@@ -368,24 +345,13 @@ def draw_generate_footer(layout, context, operator_id, tab_prefix,
         if hasattr(op, 'gen_flag_attr') and gen_flag_attr:
             op.gen_flag_attr = gen_flag_attr
 
-    # Queue status row
-    if feature_key and (has_queue_work or cooldown):
-        status_row = layout.row(align=True)
-        active_count = queue.running_count() + queue.pending_count()
-        if active_count:
-            status_row.label(
-                text=f"{active_count} job{'s' if active_count != 1 else ''} in queue",
-                icon='TIME',
-            )
-        view = status_row.row(align=True)
-        view.alignment = 'RIGHT'
-        view.operator("mixie.queue_view", text="View Queue", icon='FORWARD')
+    if is_gen or progress > 0.0:
+        draw_styled_progress(layout, wm, f'mixie_{tab_prefix}_generate_progress')
 
     error_attr = f'mixie_{tab_prefix}_error'
     error_msg = getattr(scene, error_attr, '')
     if error_msg:
-        from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
-        draw_status_badge(layout, f"Error: {sanitize_message(error_msg)}", 'ERROR')
+        draw_status_badge(layout, f"Error: {error_msg}", 'ERROR')
 
 
 def draw_hunyuan_generate_footer(layout, context, job, mode, can_generate_fn):
@@ -416,8 +382,7 @@ def draw_hunyuan_generate_footer(layout, context, job, mode, can_generate_fn):
         draw_status_badge(layout, f"Imported: {job.imported_object_name}", 'DONE')
 
     if job.status == 'FAILED':
-        from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
-        draw_status_badge(layout, f"Error: {sanitize_message(job.error_message)}", 'ERROR')
+        draw_status_badge(layout, f"Error: {job.error_message[:80]}", 'ERROR')
         row = layout.row()
         op = row.operator("mixie.hunyuan_dismiss_error", text="Dismiss", icon='X')
         op.mode_override = mode
