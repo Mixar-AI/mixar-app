@@ -51,8 +51,13 @@ class GenerationQueueService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
+        timeout: float = 120.0,
     ) -> str:
-        """POST /generation-queue/enqueue"""
+        """POST /generation-queue/enqueue
+
+        Args:
+            timeout: Request timeout in seconds.
+        """
         _require_auth()
         idempotency_key = str(uuid.uuid4())
         return self.post_async(
@@ -66,7 +71,7 @@ class GenerationQueueService(BaseService):
             on_success=on_success,
             on_error=on_error,
             on_complete=on_complete,
-            timeout=120.0,  # Large payloads (base64 GLB files) need longer timeout
+            timeout=timeout,
         )
 
     def get_job_status(
@@ -76,7 +81,7 @@ class GenerationQueueService(BaseService):
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
     ) -> str:
-        """GET /generation-queue/jobs/{job_id}"""
+        """GET /generation-queue/jobs/{job_id} (async)"""
         _require_auth()
         return self.get_async(
             f"jobs/{job_id}",
@@ -84,6 +89,15 @@ class GenerationQueueService(BaseService):
             on_error=on_error,
             on_complete=on_complete,
         )
+
+    def get_job_status_sync(self, job_id: str) -> "APIResponse":
+        """GET /generation-queue/jobs/{job_id} (synchronous).
+
+        Safe to call from background threads — used by managers that
+        poll from their own daemon threads.
+        """
+        _require_auth()
+        return self.get(f"jobs/{job_id}")
 
     def cancel_job(
         self,
