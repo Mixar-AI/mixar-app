@@ -124,7 +124,8 @@ class SceneGenExpManager:
         if not targets:
             return False, "No objects selected"
 
-        from .imagegen_queue import enqueue_imagegen_job
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 
         # Reset per-object state and batch counters
         tab.gen_total_count = len(targets)
@@ -150,14 +151,32 @@ class SceneGenExpManager:
             label = str(obj.label or "object")
             prompt = _IMAGEGEN_PROMPT_TEMPLATE.format(object_label=label)
 
-            job = enqueue_imagegen_job(
-                prompt=prompt,
+            payload = {
+                "prompt": prompt,
+                "params": {
+                    "style": "none",
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "number_of_images": 1,
+                },
+            }
+            if ref_b64:
+                payload["reference_images_b64"] = ref_b64
+
+            # NOTE: No scene_flag/listener here — the imagegen queue
+            # listener is already attached by imagegen_ops.py (bootstrap).
+            # Per-object tracking is handled by _attach_imagegen_listener.
+            job = enqueue_generation(
+                kind="image",
+                feature_key=FEATURE_IMAGEGEN,
+                job_type="image_gen",
                 model=model,
-                style="none",
-                aspect_ratio=aspect_ratio,
-                resolution=resolution,
-                num_images=1,
-                reference_images_b64=ref_b64,
+                payload=payload,
+                label=f"ImageGen: {prompt[:40]}",
+                fail_message="Image generation failed",
+                name_prefix="imagegen",
+                prompt_text=prompt,
+                undo_message="Generate Image",
             )
 
             if job:
