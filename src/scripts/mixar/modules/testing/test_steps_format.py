@@ -75,3 +75,57 @@ def test_normalize_handles_missing_and_none_fields():
 def test_normalize_valid_non_default_status_preserved():
     out = steps_format.normalize_step_item({"kind": "read", "status": "running"})
     assert out["status"] == "RUNNING"
+
+
+# --- apply_steps_to_bubble (duck-typed bubble, no bpy) -------------------
+
+class _FakeStep:
+    """Bare object with freely-settable attributes (like a PropertyGroup item)."""
+    pass
+
+
+class _FakeColl(list):
+    def add(self):
+        item = _FakeStep()
+        self.append(item)
+        return item
+    # list.clear() already matches Blender collection .clear()
+
+
+class _FakeBubble:
+    def __init__(self):
+        self.step_items = _FakeColl()
+        self.steps_summary = ""
+
+
+def test_apply_steps_replaces_items_and_computes_summary():
+    bubble = _FakeBubble()
+    bubble.step_items.add()  # pre-existing item that must be cleared
+
+    steps_format.apply_steps_to_bubble(bubble, {
+        "summary": "",  # empty -> compute from kinds
+        "items": [
+            {"id": "s1", "kind": "read", "label": "Read", "target": "a.py",
+             "detail": "", "status": "done"},
+            {"id": "s2", "kind": "command", "label": "Ran", "target": "pytest",
+             "detail": "3 passed", "status": "done"},
+        ],
+    })
+
+    assert len(bubble.step_items) == 2
+    assert bubble.step_items[0].item_id == "s1"
+    assert bubble.step_items[0].kind == "READ"
+    assert bubble.step_items[1].kind == "COMMAND"
+    assert bubble.step_items[1].detail == "3 passed"
+    assert bubble.steps_summary == "Read 1 file · ran 1 command"
+
+
+def test_apply_steps_uses_explicit_summary_when_given():
+    bubble = _FakeBubble()
+    steps_format.apply_steps_to_bubble(bubble, {
+        "summary": "Custom summary",
+        "items": [{"id": "s1", "kind": "tool", "label": "X", "status": "running"}],
+    })
+    assert bubble.steps_summary == "Custom summary"
+    assert bubble.step_items[0].kind == "TOOL"
+    assert bubble.step_items[0].status == "RUNNING"

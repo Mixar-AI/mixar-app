@@ -72,3 +72,34 @@ def normalize_step_item(item_data: dict) -> dict:
         "detail": item_data.get("detail") or "",
         "status": status,
     }
+
+
+def apply_steps_to_bubble(bubble, steps_data: dict) -> None:
+    """Full-replace a bubble's step rows + summary from a steps event dict.
+
+    Pure of bpy — operates on any object exposing a `step_items` collection
+    (with `.clear()` / `.add()` returning a settable item) and a writable
+    `steps_summary`. Shared by the slot processor (real data) and tests.
+
+    Args:
+        bubble: duck-typed message with `step_items` and `steps_summary`.
+        steps_data: dict with optional "summary" (str) and "items" (list of
+            dicts: id, kind, label, target, detail, status).
+    """
+    items = steps_data.get("items") or []
+    bubble.step_items.clear()
+
+    applied_kinds = []
+    for item_data in items:
+        norm = normalize_step_item(item_data)
+        row = bubble.step_items.add()
+        row.item_id = norm["item_id"]
+        row.kind = norm["kind"]
+        row.label = norm["label"]
+        row.target = norm["target"]
+        row.detail = norm["detail"]
+        row.status = norm["status"]
+        applied_kinds.append(norm["kind"])
+
+    explicit = steps_data.get("summary") or ""
+    bubble.steps_summary = explicit if explicit else format_steps_summary(applied_kinds)
