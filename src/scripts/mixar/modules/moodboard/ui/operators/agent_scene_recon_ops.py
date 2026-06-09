@@ -84,13 +84,6 @@ class MIXIE_OT_agent_scene_recon(Operator):
             )
             return {"CANCELLED"}
 
-        if (
-            hasattr(scene, "mixie_scene_recon_is_generating")
-            and scene.mixie_scene_recon_is_generating
-        ):
-            self.report({"WARNING"}, "Scene reconstruction already in progress")
-            return {"CANCELLED"}
-
         # The submission helper writes status/error onto the sidebar tab; reuse
         # the existing one so the user-facing panel reflects the agent's run.
         sidebar_tab = None
