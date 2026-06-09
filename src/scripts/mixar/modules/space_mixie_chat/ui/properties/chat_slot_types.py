@@ -123,7 +123,8 @@ class MixieChatStepItem(PropertyGroup):
     item_id: StringProperty(
         name="Item ID",
         description="Unique identifier for this step row",
-        default=""
+        default="",
+        maxlen=63
     )
     # Order MUST stay READ, WRITE, COMMAND, SEARCH, TOOL — the C++ side reads
     # this enum as an int index (RNA_property_enum_get) to pick the row icon.
