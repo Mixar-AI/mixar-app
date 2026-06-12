@@ -108,9 +108,8 @@ src/                    Mixar overlay — what gets layered on top of Blender
   source/blender/       C++ additions to Blender (Mixar editor spaces, paint kernel)
   source/creator/       Mixar startup / auth / native dialog code
 cmake/mixar_overrides.cmake  Mixar-specific CMake configuration
-scripts/unix/           macOS / Linux build and package scripts
-scripts/windows/        Windows build and package scripts
-scripts/open_source/    Open-source audit + license / SPDX tooling
+scripts/unix/           macOS / Linux build scripts
+scripts/windows/        Windows build scripts
 tests/                  Pure-pytest tests (run from repo root with bpy stubbed)
 ```
 
@@ -119,9 +118,8 @@ tests/                  Pure-pytest tests (run from repo root with bpy stubbed)
 **Included:**
 
 - All Mixar desktop-app source (Python addon + C++ overlay)
-- Build and packaging scripts for macOS, Linux, and Windows
+- Build scripts for macOS, Linux, and Windows
 - License documentation, SPDX metadata, asset provenance records
-- Audit and licensing helper tools under `scripts/open_source/`
 - Public contribution, security, and support documentation
 
 **Not included (and won't be):**
