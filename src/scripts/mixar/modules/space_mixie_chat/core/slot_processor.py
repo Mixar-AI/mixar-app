@@ -74,7 +74,6 @@ class SlotEventProcessor:
             ("content", lambda: self._apply_content_slot(bubble, event_data["content"])),
             ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"])),
             ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
-            ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"])),
             ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"])),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
         ]
@@ -315,21 +314,6 @@ class SlotEventProcessor:
         # Start animation timer if any items are in_progress
         if status_counts['IN_PROGRESS'] > 0:
             self._start_loader_timer()
-
-    def _apply_steps_slot(self, bubble: Any, steps_data: dict) -> None:
-        """
-        Apply steps slot update (full replacement of the steps block).
-
-        NOTE: real-data path. Written but NOT exercised by the dev-data mock this
-        phase (the mock writes step items directly). All branching logic lives in
-        the unit-tested steps_format.apply_steps_to_bubble; this is a thin wrapper.
-
-        Args:
-            bubble: Message PropertyGroup
-            steps_data: dict with optional "summary" and "items"
-        """
-        from .steps_format import apply_steps_to_bubble
-        apply_steps_to_bubble(bubble, steps_data)
 
     def _apply_actions_slot(self, bubble: Any, actions: list) -> None:
         """

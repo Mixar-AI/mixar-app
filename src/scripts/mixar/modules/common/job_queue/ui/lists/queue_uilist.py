@@ -8,7 +8,6 @@ import time
 
 from bpy.types import UIList
 
-from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
 from mixar.modules.common.job_queue.core.job import JobState
 from mixar.modules.common.job_queue.core.queue_manager import get_queue
 
@@ -34,8 +33,6 @@ _TERMINAL_STATE_VALUES = {
     JobState.FAILED.value,
     JobState.CANCELLED.value,
 }
-
-_BUG_REPORT_URL = "https://www.mixar.app/bug-report"
 
 
 class MIXIE_UL_generation_queue(UIList):
@@ -69,25 +66,11 @@ class MIXIE_UL_generation_queue(UIList):
             op.feature_key = self.list_id or ""
             op.job_id = item.job_id
 
-        # Error detail row for failed jobs
-        if is_failed and (item.user_message or item.error):
+        # Error row for failed jobs
+        if is_failed and item.error:
             err_row = col.row(align=True)
-            msg_col = err_row.row(align=True)
-            msg_col.active = False
-            msg = item.user_message or sanitize_message(item.error)
-            msg_col.label(text=msg, icon='BLANK1')
-            actions = err_row.row(align=True)
-            actions.alignment = 'RIGHT'
-            op = actions.operator(
-                "mixie.queue_copy_error", text="", icon='COPYDOWN',
-                emboss=False,
-            )
-            op.feature_key = self.list_id or ""
-            op.job_id = item.job_id
-            op = actions.operator(
-                "wm.url_open", text="", icon='URL', emboss=False,
-            )
-            op.url = _BUG_REPORT_URL
+            err_row.active = False
+            err_row.label(text=item.error, icon='BLANK1')
 
 
 classes = (MIXIE_UL_generation_queue,)
@@ -126,6 +109,7 @@ def _in_cooldown(feature_key: str) -> bool:
 def draw_queue_generate_footer(
     layout, context, feature_key: str, can_generate_fn,
     mode_override: str = 'PRO',
+    progress_attr: str = '',
 ):
     """Draw the queue-aware Generate / Cancel-All footer.
 
