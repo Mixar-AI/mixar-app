@@ -12,13 +12,13 @@ import base64
 from dataclasses import dataclass
 from typing import Optional
 
+import bpy
+
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.api.services.generation_queue_service import get_generation_queue_service
-from mixar.modules.common.job_queue import (
-    Job, get_queue_with_listener, create_scene_flag_listener,
-)
+from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
-
+from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 logger = get_logger(__name__)
 
 
@@ -38,6 +38,10 @@ class RapidJob(Job):
     result_format: Optional[str] = None
     enable_pbr: bool = False
     enable_geometry: bool = False
+
+    # ------------------------------------------------------------------ #
+    # Job interface
+    # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
         service = get_generation_queue_service()
@@ -64,11 +68,50 @@ class RapidJob(Job):
             on_error=on_error,
         )
 
+    def poll(self, on_success, on_error) -> None:
+        service = get_generation_queue_service()
+        service.get_job_status(
+            self.backend_job_id,
+            on_success=on_success,
+            on_error=on_error,
+        )
+
     def parse_submit_response(self, response) -> None:
-        self._parse_standard_submit(response)
+        data = getattr(response, "data", None) or {}
+        inner = data.get("data", data) if isinstance(data, dict) else {}
+        self.backend_job_id = inner.get("job_id", "") if isinstance(inner, dict) else ""
+        if not self.backend_job_id:
+            raise ValueError("Enqueue response missing job_id")
 
     def parse_poll_response(self, response):
-        return self._parse_standard_poll(response, fail_message="Generation failed")
+        data = getattr(response, "data", None) or {}
+        inner = data.get("data", data) if isinstance(data, dict) else {}
+        if not isinstance(inner, dict):
+            return ("WAIT", [])
+        status = inner.get("status", "") or ""
+        self.backend_status = status
+        self.queue_position = inner.get("queue_position") or 0
+        if status == "PENDING":
+            return ("WAIT", [])
+        if status in ("SUBMITTED", "POLLING"):
+            if not self._processing_started:
+                self._processing_started = True
+                self.poll_start_time = __import__("time").time()
+            return ("RUN", [])
+        if status == "DONE":
+            result = inner.get("result") or {}
+            result_files = result.get("result_files", []) if isinstance(result, dict) else []
+            return ("DONE", result_files)
+        if status == "FAILED":
+            error = inner.get("error", "")
+            if error:
+                self.error = error
+            self.user_message = inner.get("user_message", "") or "Generation failed"
+            return ("FAIL", [])
+        return ("WAIT", [])
+
+    def on_imported(self, object_names: str) -> None:
+        super().on_imported(object_names)
 
 
 # ---------------------------------------------------------------------------
@@ -117,8 +160,38 @@ def enqueue_rapid_job(
 # Queue listener
 # ---------------------------------------------------------------------------
 
-_listener = create_scene_flag_listener("mixie_hunyuan_rapid_is_generating")
+_listener_attached = False
 
 
-def _get_rapid_queue():
-    return get_queue_with_listener(FEATURE_HUNYUAN_RAPID, _listener)
+def _on_queue_changed(queue: FeatureQueue) -> None:
+    try:
+        scene = bpy.context.scene
+    except Exception:
+        return
+    if scene is None:
+        return
+
+    has_work = queue.has_active_work()
+    was_generating = bool(getattr(scene, "mixie_hunyuan_rapid_is_generating", False))
+
+    if has_work and not was_generating:
+        try:
+            scene.mixie_hunyuan_rapid_is_generating = True
+        except (AttributeError, TypeError):
+            pass
+        return
+
+    if not has_work and was_generating:
+        try:
+            scene.mixie_hunyuan_rapid_is_generating = False
+        except (AttributeError, TypeError):
+            pass
+
+
+def _get_rapid_queue() -> FeatureQueue:
+    global _listener_attached
+    queue = get_queue(FEATURE_HUNYUAN_RAPID)
+    if not _listener_attached:
+        queue.add_listener(_on_queue_changed)
+        _listener_attached = True
+    return queue

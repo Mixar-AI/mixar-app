@@ -165,12 +165,9 @@ def _fetch_models_sync() -> None:
             logger.debug("Skipping Model3D config fetch: not authenticated")
             _skipped = True
         else:
-            from mixar.modules.common.api.services.generation_metadata_service import (
-                get_generation_metadata_service,
-            )
-            from mixar.modules.common.api.constants import APIModule
+            from mixar.modules.common.api import get_model_3d_gen_service
 
-            service = get_generation_metadata_service(APIModule.MODEL_3D_GEN)
+            service = get_model_3d_gen_service()
             response = service.get_models()
 
             if response.success and response.data:
