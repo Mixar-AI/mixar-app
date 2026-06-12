@@ -114,7 +114,7 @@ src/
 | **texel_density** | UV texel density analysis and visualization |
 | **uv_editor** | Advanced UV editing workspace with dual-space architecture, mutually exclusive tool/header panels, annotate and UV tool sidebars, dynamic panel ordering, and toolbar auto-expand |
 | **space_texture_sets** | Texture set management |
-| **scene_grid** | "Scene Grid" editor (`SPACE_SCENE_GRID`, C++ in `src/source/blender/editors/space_scene_grid/`): live offscreen-rendered viewport tiles of ALL scenes in an auto grid, for monitoring parallel agents (one per scene). Per-tile orbit/pan/zoom, click-to-activate scene, per-scene agent busy badge (reads `mixie_chat_is_busy`). Python side: header (shading toggle) + redraw pump timer while agents are busy. |
+| **scene_grid** | "Scene Grid" editor (`SPACE_SCENE_GRID`, C++ in `src/source/blender/editors/space_scene_grid/`): live offscreen-rendered viewport tiles of ALL scenes in an auto grid, for monitoring parallel agents (one per scene). Realtime via a 0.1s TIMERNOTIFIER poll + depsgraph change detection (`DEG_get_update_count`), so tiles follow script edits to non-active scenes with no notifiers needed. Per-tile orbit/pan/zoom, click-to-activate scene, per-scene agent busy badge (reads `mixie_chat_is_busy`). Python side: header (shading toggle) only. |
 | **testing** | Pure-Python unit tests (pytest, run from repo root with bpy stubbed via root `conftest.py`) |
 
 ---
