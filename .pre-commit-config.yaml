@@ -7,42 +7,15 @@
 # Run manually:  pre-commit run --all-files
 #
 # Hooks:
-#   1. apply-spdx-headers: auto-adds SPDX-FileCopyrightText and
-#      SPDX-License-Identifier headers to files missing them, inferring
-#      the license from nearby files where possible. Runs first so the
-#      reuse check sees the fixed-up tree.
-#   2. reuse: full REUSE 3.3 compliance check using the upstream
+#   1. reuse: full REUSE 3.3 compliance check using the upstream
 #      reuse-tool hooks. Blocks the commit if any file lacks copyright
 #      or license information (inline header or REUSE.toml entry).
+#
+# Note: SPDX headers are added automatically by the internal
+# spdx-auto-fix CI workflow on every pull request — no local pre-commit
+# hook is required for that.
 
 repos:
-  - repo: local
-    hooks:
-      - id: apply-spdx-headers
-        name: Apply SPDX headers (Mixar)
-        entry: python3 scripts/open_source/apply_spdx_headers.py --write --infer-from-siblings
-        language: system
-        types_or:
-          - python
-          - c
-          - c++
-          - shell
-          - yaml
-          - markdown
-          - toml
-          - rst
-        exclude: |
-          (?x)^(
-            upstream/.*|
-            source/.*|
-            build/.*|
-            dist/.*|
-            mixar_api_out/.*|
-            output/.*|
-            report/.*|
-            .*/__pycache__/.*
-          )$
-
   - repo: https://github.com/fsfe/reuse-tool
     rev: v6.2.0
     hooks:
