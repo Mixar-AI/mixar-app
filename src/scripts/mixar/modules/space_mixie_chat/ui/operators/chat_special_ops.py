@@ -15,6 +15,7 @@ from bpy.props import StringProperty
 
 from mixar.config.logging_config import get_logger
 
+from ...core.ui_utils import bump_layout_epoch as _bump_layout_epoch
 from ...core.ui_utils import redraw_chat_areas
 
 logger = get_logger(__name__)
@@ -285,11 +286,6 @@ def _find_bubble(scene, bubble_id):
         if getattr(msg, 'bubble_id', "") == bubble_id:
             return msg
     return None
-
-
-def _bump_layout_epoch(scene):
-    """Force the C++ layout cache to rebuild on the next draw."""
-    scene.mixie_chat_layout_epoch = scene.mixie_chat_layout_epoch + 1
 
 
 class MIXIE_CHAT_OT_toggle_steps(Operator):
