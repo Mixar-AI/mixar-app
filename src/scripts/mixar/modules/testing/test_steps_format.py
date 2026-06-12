@@ -203,3 +203,18 @@ def test_finish_step_updates_most_recent_matching_row():
     assert bubble.step_items[0].status == "DONE"
     assert bubble.step_items[1].status == "FAILED"
     assert bubble.step_items[1].detail == "boom"
+
+
+def test_humanize_unknown_tool_name_falls_back():
+    assert steps_format.humanize_tool_name("unknown") == "Tool call"
+    assert steps_format.humanize_tool_name("") == "Tool call"
+
+
+def test_finish_step_strips_result_protocol_lines_from_detail():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "r1", "create_pyramid")
+    steps_format.finish_step_on_bubble(bubble, "r1", {
+        "success": True,
+        "output": 'Creating pyramid...\n__RESULT__{"created_objects": ["Pyramid"], "success": true}\nDone.',
+    })
+    assert bubble.step_items[0].detail == "Creating pyramid...\nDone."

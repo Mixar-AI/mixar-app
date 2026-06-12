@@ -95,9 +95,28 @@ def infer_step_kind(tool_name: str) -> str:
 
 
 def humanize_tool_name(tool_name: str) -> str:
-    """Turn a snake_case tool name into a row label: "create_cube" -> "Create cube"."""
+    """Turn a snake_case tool name into a row label: "create_cube" -> "Create cube".
+
+    The backend sends "unknown" when a script has no tool name — fall back to
+    a neutral label rather than showing literal "Unknown" in the UI.
+    """
     words = (tool_name or "").replace("_", " ").strip()
-    return words[:1].upper() + words[1:] if words else "Tool"
+    if not words or words.lower() == "unknown":
+        return "Tool call"
+    return words[:1].upper() + words[1:]
+
+
+def clean_step_detail(output: str) -> str:
+    """Strip protocol noise from script output before showing it as detail.
+
+    Drops `__RESULT__{...}` lines (the script->backend result channel) and
+    trailing whitespace; the remaining human-readable output is kept.
+    """
+    lines = [
+        line for line in (output or "").splitlines()
+        if not line.lstrip().startswith("__RESULT__")
+    ]
+    return "\n".join(lines).strip()
 
 
 def _refresh_summary(bubble) -> None:
@@ -145,8 +164,11 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             + list(result.get("deleted_objects") or [])
         )
         row.target = ", ".join(objects[:4])
-        detail = result.get("output") if success else result.get("error")
-        row.detail = (detail or "")[:4000]
+        if success:
+            detail = clean_step_detail(result.get("output") or "")
+        else:
+            detail = result.get("error") or ""
+        row.detail = detail[:4000]
         return True
     return False
 
