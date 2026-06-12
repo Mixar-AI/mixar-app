@@ -33,6 +33,10 @@ class MIXIE_OT_mesh_segment_submit(Operator):
         obj = context.active_object
         if not obj or obj.type != 'MESH':
             return False
+        # Must not be processing
+        scene = context.scene
+        if getattr(scene, 'mixie_mesh_segment_is_processing', False):
+            return False
         return True
 
     def _get_sidebar_tab(self, context):
@@ -117,22 +121,23 @@ class MIXIE_OT_mesh_segment_submit(Operator):
             self.report({'ERROR'}, f"Failed to export mesh: {e}")
             return {'CANCELLED'}
 
-        # Submit job via FeatureQueue
+        # Submit job via manager (synchronous)
         try:
-            from ....mesh_segment.core.mesh_segment_queue import enqueue_mesh_segment_job
+            from ....mesh_segment.core import get_mesh_segment_manager
 
-            job = enqueue_mesh_segment_job(
-                mesh_object_name=obj.name,
+            manager = get_mesh_segment_manager()
+            success = manager.submit_job(
+                mesh_object=obj,
                 mesh_file_path=obj_path,
                 description=prompt,  # 'prompt' from UI, API expects 'description'
                 expected_parts=expected_parts,
+                on_status_update=self._on_status_update,
+                on_complete=self._on_complete,
+                on_error=self._on_error,
             )
 
-            if job:
-                from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
-                from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-                mark_enqueued(FEATURE_MESH_SEGMENT)
-                self.report({'INFO'}, "Added to queue")
+            if success:
+                self.report({'INFO'}, "Mesh segment job submitted")
                 return {'FINISHED'}
             else:
                 error = context.scene.mixie_mesh_segment_error
@@ -142,6 +147,18 @@ class MIXIE_OT_mesh_segment_submit(Operator):
         except Exception as e:
             self.report({'ERROR'}, f"Failed to submit job: {e}")
             return {'CANCELLED'}
+
+    def _on_status_update(self, status: str, progress: float, current_step: str):
+        """Handle status updates."""
+        logger.debug("Status: %s, Progress: %.0f%%, Step: %s", status, progress * 100, current_step)
+
+    def _on_complete(self, result: dict):
+        """Handle job completion."""
+        logger.info("Job completed: %s", result)
+
+    def _on_error(self, message: str):
+        """Handle error."""
+        logger.error("Error: %s", message)
 
 
 class MIXIE_OT_mesh_segment_cancel(Operator):
@@ -158,10 +175,10 @@ class MIXIE_OT_mesh_segment_cancel(Operator):
 
     def execute(self, context):
         try:
-            from mixar.modules.common.job_queue.core.queue_manager import get_queue
-            from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
+            from ....mesh_segment.core import get_mesh_segment_manager
 
-            get_queue(FEATURE_MESH_SEGMENT).cancel_all()
+            manager = get_mesh_segment_manager()
+            manager.cancel_job()
 
             self.report({'INFO'}, "Mesh segment job cancelled")
             return {'FINISHED'}

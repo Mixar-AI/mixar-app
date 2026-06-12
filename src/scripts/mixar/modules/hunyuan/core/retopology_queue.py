@@ -19,6 +19,10 @@ from mixar.modules.common.api.services.generation_queue_service import get_gener
 from mixar.modules.common.job_queue import Job, JobState, get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
+from mixar.modules.moodboard.core.generate_progress import (
+    complete_progress, reset_progress, start_progress,
+)
+
 from ..constants import MAX_FILE_SIZE_TOPOLOGY
 from .hunyuan_helpers import export_selected_mesh
 
@@ -107,7 +111,6 @@ class RetopologyJob(Job):
             error = inner.get("error", "")
             if error:
                 self.error = error
-            self.user_message = inner.get("user_message", "") or "Retopology failed"
             return ("FAIL", [])
         return ("WAIT", [])
 
@@ -286,6 +289,7 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
             scene.mixie_retopology_is_generating = True
         except (AttributeError, TypeError):
             pass
+        start_progress("retopology")
         return
 
     if not has_work and was_generating:
@@ -298,6 +302,11 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
         succeeded = sum(1 for j in snapshot if j.state == JobState.SUCCESS)
         failed = sum(1 for j in snapshot if j.state == JobState.FAILED)
         cancelled = sum(1 for j in snapshot if j.state == JobState.CANCELLED)
+
+        if succeeded > 0:
+            complete_progress("retopology")
+        else:
+            reset_progress("retopology")
 
         if (succeeded + failed + cancelled) > 0:
             _show_batch_summary_popup(succeeded, failed, cancelled)
