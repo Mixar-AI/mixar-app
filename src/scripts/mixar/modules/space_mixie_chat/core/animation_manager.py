@@ -81,8 +81,18 @@ def _update_loader():
         if not is_sse_timer_active():
             for window in bpy.context.window_manager.windows:
                 for area in window.screen.areas:
+                    # The loader/spinner renders both in the MIXIE_CHAT
+                    # editor and in the floating agent bubble. Tag both (and
+                    # the bubble's regions) so the animation advances no
+                    # matter which surface is on screen — in Zen Mode only
+                    # the bubble is visible, so tagging MIXIE_CHAT alone left
+                    # the dots static until the user interacted.
                     if area.type == 'MIXIE_CHAT':
                         area.tag_redraw()
+                    elif area.type == 'AGENT_BUBBLE':
+                        area.tag_redraw()
+                        for region in area.regions:
+                            region.tag_redraw()
 
         return SPINNER_INTERVAL
 
