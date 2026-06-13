@@ -52,16 +52,23 @@ class MIXIE_OT_lookdev360_generate(Operator):
         default=False,
     )
 
+    # Direct invocation properties (used by agent scripts).
+    prompt: bpy.props.StringProperty(default="")
+    reference_image_name: bpy.props.StringProperty(default="")
+
     def execute(self, context):
         scene = context.scene
 
         # Get lookdev360 tab properties from sidebar
         props = _get_lookdev360_props(scene)
 
-        # When called from chat, skip sidebar prompt entirely — use the
-        # global property that the chat handler set so the user's chat
-        # prompt is never overridden by stale sidebar text.
-        if self.from_chat:
+        # Direct invocation: prompt property set explicitly
+        if self.prompt and self.prompt.strip():
+            prompt = self.prompt.strip()
+            reference_image = None
+            if self.reference_image_name:
+                reference_image = bpy.data.images.get(self.reference_image_name)
+        elif self.from_chat:
             prompt = getattr(scene, 'mixie_lookdev360_prompt', '')
             reference_image = None
         elif props:
