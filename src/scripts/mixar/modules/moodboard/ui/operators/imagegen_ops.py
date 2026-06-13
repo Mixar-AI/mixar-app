@@ -17,6 +17,45 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+_imagegen_listener = None
+
+
+def _get_imagegen_listener():
+    """Lazily create the imagegen queue listener (cached singleton).
+
+    Replicates the old imagegen_queue.py listener behaviour:
+    - on_start: clear ``mixie_imagegen_error``
+    - on_finish: redraw MIXIE areas
+    """
+    global _imagegen_listener
+    if _imagegen_listener is not None:
+        return _imagegen_listener
+
+    from mixar.modules.common.job_queue.core.helpers import (
+        create_scene_flag_listener,
+    )
+
+    def _on_start(scene):
+        try:
+            scene.mixie_imagegen_error = ""
+        except (AttributeError, TypeError):
+            pass
+
+    def _on_finish(scene):
+        try:
+            for area in bpy.context.screen.areas:
+                if area.type == 'MIXIE':
+                    area.tag_redraw()
+        except Exception:
+            pass
+
+    _imagegen_listener = create_scene_flag_listener(
+        "mixie_imagegen_is_generating",
+        on_start=_on_start,
+        on_finish=_on_finish,
+    )
+    return _imagegen_listener
+
 
 def _get_max_refs(model_name: str) -> int:
     """Get maximum reference images for a model."""
@@ -43,7 +82,22 @@ class MIXIE_OT_imagegen_generate(Operator):
         default=False,
     )
 
+    # Direct invocation properties (used by agent scripts).
+    # When `prompt` is non-empty, these override chat/sidebar defaults.
+    prompt: bpy.props.StringProperty(default="")
+    model: bpy.props.StringProperty(default="")
+    style: bpy.props.StringProperty(default="")
+    aspect_ratio: bpy.props.StringProperty(default="")
+    resolution: bpy.props.StringProperty(default="")
+    number_of_images: bpy.props.IntProperty(default=0, min=0, max=4)
+    negative_prompt: bpy.props.StringProperty(default="")
+    reference_image_names: bpy.props.StringProperty(default="")
+
     def execute(self, context):
+        # Direct invocation with explicit params (agent scripts)
+        if self.prompt:
+            return self._execute_direct(context)
+
         scene = context.scene
 
         # Check if called from sidebar context - prefer sidebar properties
@@ -244,21 +298,39 @@ class MIXIE_OT_imagegen_generate(Operator):
         # Submit via FeatureQueue
         try:
             import base64 as _b64
-            from mixar.modules.moodboard.core.imagegen_queue import enqueue_imagegen_job
+            from mixar.modules.common.job_queue import enqueue_generation
+            from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 
             ref_b64 = []
             if reference_image_bytes:
                 ref_b64 = [_b64.b64encode(img).decode() for img in reference_image_bytes]
 
-            job = enqueue_imagegen_job(
-                prompt=stored_prompt,
+            payload = {
+                "prompt": stored_prompt,
+                "params": {
+                    "style": style,
+                    "aspect_ratio": aspect_ratio,
+                    "resolution": resolution,
+                    "number_of_images": stored_num_images,
+                },
+            }
+            if negative_prompt:
+                payload["params"]["negative_prompt"] = negative_prompt
+            if ref_b64:
+                payload["reference_images_b64"] = ref_b64
+
+            job = enqueue_generation(
+                kind="image",
+                feature_key=FEATURE_IMAGEGEN,
+                job_type="image_gen",
                 model=model,
-                style=style,
-                aspect_ratio=aspect_ratio,
-                resolution=resolution,
-                num_images=stored_num_images,
-                negative_prompt=negative_prompt,
-                reference_images_b64=ref_b64,
+                payload=payload,
+                label=f"ImageGen: {stored_prompt[:40]}",
+                fail_message="Image generation failed",
+                name_prefix="imagegen",
+                prompt_text=stored_prompt,
+                undo_message="Generate Image",
+                listener=_get_imagegen_listener(),
             )
             if not job:
                 self.report({"WARNING"}, "A duplicate image generation is already queued")
@@ -267,7 +339,78 @@ class MIXIE_OT_imagegen_generate(Operator):
             self.report({"ERROR"}, f"Failed to start generation: {e}")
             return {"CANCELLED"}
 
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        mark_enqueued(FEATURE_IMAGEGEN)
+        self.report({"INFO"}, "Added to queue")
+        return {"FINISHED"}
+
+    def _execute_direct(self, context):
+        """Handle direct invocation with explicit params (agent scripts)."""
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
+        from mixar.modules.common.utils.image_utils import compress_image_for_upload
+
+        prompt = self.prompt.strip()
+        model = self.model
+
+        if not model:
+            try:
+                from mixar.bootstrap.imagegen_cache import get_default_model_name
+                model = get_default_model_name()
+            except ImportError:
+                pass
+        if not model:
+            self.report({"ERROR"}, "No model specified and no default available")
+            return {"CANCELLED"}
+
+        # Collect reference images by name
+        max_refs = _get_max_refs(model)
+        ref_b64 = []
+        if self.reference_image_names:
+            for name in (n.strip() for n in self.reference_image_names.split(",") if n.strip()):
+                img = bpy.data.images.get(name)
+                if img and img.has_data:
+                    try:
+                        ref_b64.append(
+                            _b64.b64encode(compress_image_for_upload(img)).decode()
+                        )
+                        if len(ref_b64) >= max_refs:
+                            break
+                    except Exception as e:
+                        logger.error("Failed to convert ref image '%s': %s", name, e)
+
+        payload = {
+            "prompt": prompt,
+            "params": {
+                "style": self.style or "none",
+                "aspect_ratio": self.aspect_ratio or "1:1",
+                "resolution": self.resolution or "1K",
+                "number_of_images": self.number_of_images or 1,
+            },
+        }
+        if self.negative_prompt and self.negative_prompt.strip():
+            payload["params"]["negative_prompt"] = self.negative_prompt.strip()
+        if ref_b64:
+            payload["reference_images_b64"] = ref_b64
+
+        job = enqueue_generation(
+            kind="image",
+            feature_key=FEATURE_IMAGEGEN,
+            job_type="image_gen",
+            model=model,
+            payload=payload,
+            label=f"ImageGen: {prompt[:40]}",
+            fail_message="Image generation failed",
+            name_prefix="imagegen",
+            prompt_text=prompt,
+            undo_message="Generate Image",
+            listener=_get_imagegen_listener(),
+        )
+        if not job:
+            self.report({"WARNING"}, "A duplicate image generation is already queued")
+            return {"CANCELLED"}
+
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
         mark_enqueued(FEATURE_IMAGEGEN)
         self.report({"INFO"}, "Added to queue")
