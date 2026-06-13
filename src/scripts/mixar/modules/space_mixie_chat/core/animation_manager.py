@@ -133,22 +133,36 @@ def cleanup():
 # events, the next draw only happens on the next timer tick (~250ms), so the
 # slide renders ~2 frames and looks stuck. This short ~60fps timer burst
 # wakes the loop for the animation window so the slide gets real frames.
+#
+# IMPORTANT: this burst must ONLY tag areas for redraw — it must NOT call
+# redraw_chat_areas(), because that also runs the agent-bubble attachment-size
+# sync (a synchronous NSWindow resize + ED_screen_refresh). Driving that heavy,
+# re-entrancy-fragile path at 60fps froze the bubble window after submit.
+# The slide needs frames, not window resizes.
 
 SLIDE_REDRAW_INTERVAL = 1.0 / 60.0
 SLIDE_REDRAW_DURATION = 0.35  # covers the 0.25s slide with margin
+# Absolute ceiling so repeated start() calls (e.g. several bubbles in a burst
+# of slot events) can never extend the timer indefinitely into a permanent
+# 60fps redraw loop.
+SLIDE_REDRAW_MAX_LIFETIME = 1.0
 _slide_burst_until = 0.0
+_slide_burst_deadline = 0.0  # hard stop regardless of extensions
 _slide_burst_active = False
 
 
 def _slide_redraw_burst():
     global _slide_burst_active
-    try:
-        from .ui_utils import redraw_chat_areas
-        redraw_chat_areas()
-    except Exception:
+    now = time.monotonic()
+    if now >= _slide_burst_until or now >= _slide_burst_deadline:
         _slide_burst_active = False
         return None
-    if time.monotonic() >= _slide_burst_until:
+    try:
+        # Lightweight: tag chat + bubble areas only. Deliberately NOT
+        # redraw_chat_areas() — see the note above.
+        from .ui_utils import _tag_chat_and_bubble_areas
+        _tag_chat_and_bubble_areas()
+    except Exception:
         _slide_burst_active = False
         return None
     return SLIDE_REDRAW_INTERVAL
@@ -156,11 +170,13 @@ def _slide_redraw_burst():
 
 def start_slide_redraw_burst():
     """Drive ~60fps chat redraws briefly after a new bubble is added."""
-    global _slide_burst_until, _slide_burst_active
-    _slide_burst_until = time.monotonic() + SLIDE_REDRAW_DURATION
+    global _slide_burst_until, _slide_burst_deadline, _slide_burst_active
+    now = time.monotonic()
+    _slide_burst_until = now + SLIDE_REDRAW_DURATION
     if _slide_burst_active:
         return
     _slide_burst_active = True
+    _slide_burst_deadline = now + SLIDE_REDRAW_MAX_LIFETIME
     try:
         bpy.app.timers.register(
             _slide_redraw_burst, first_interval=SLIDE_REDRAW_INTERVAL
