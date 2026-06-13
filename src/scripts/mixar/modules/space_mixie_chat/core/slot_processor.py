@@ -118,6 +118,11 @@ class SlotEventProcessor:
         msg.bubble_id = bubble_id
         msg.sender = 'AGENT'  # Slot events are always from agent
         msg.message_type = 'AGENT'  # Slots determine rendering, type matches sender
+
+        # Agent bubbles arrive with no input events flowing — drive redraws
+        # briefly so the C++ slide-in animation gets frames.
+        from .animation_manager import start_slide_redraw_burst
+        start_slide_redraw_burst()
         return msg
 
     def _apply_loader_slot(self, bubble: Any, loader_data: dict, scene=None) -> None:
