@@ -14,6 +14,7 @@ from bpy.props import (
     BoolProperty,
     CollectionProperty,
     EnumProperty,
+    FloatProperty,
     IntProperty,
     StringProperty,
 )
@@ -21,7 +22,12 @@ from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
 from ...core.ui_utils import redraw_chat_areas
-from .chat_slot_types import MixieChatTodoItem, MixieChatActionItem, MixieChatImageItem
+from .chat_slot_types import (
+    MixieChatTodoItem,
+    MixieChatActionItem,
+    MixieChatImageItem,
+    MixieChatStepItem,
+)
 from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN
 
 logger = get_logger(__name__)
@@ -202,6 +208,58 @@ class MixieChatMessage(PropertyGroup):
         description="Image gallery items"
     )
 
+    # -------------------------------------------------------------------------
+    # Steps block (agent tool-call activity)
+    # -------------------------------------------------------------------------
+    step_items: CollectionProperty(
+        type=MixieChatStepItem,
+        name="Step Items",
+        description="Tool-call rows shown in the collapsible steps block"
+    )
+    steps_summary: StringProperty(
+        name="Steps Summary",
+        description="One-line summary shown on the collapsed steps header",
+        default="",
+        maxlen=256
+    )
+    steps_collapsed: BoolProperty(
+        name="Steps Collapsed",
+        description="Whether the steps block is collapsed to its summary",
+        default=True
+    )
+
+    # -------------------------------------------------------------------------
+    # Thinking dropdown (finalized reasoning; live reasoning uses `ephemeral`)
+    # -------------------------------------------------------------------------
+    thinking_text: StringProperty(
+        name="Thinking Text",
+        description="Full reasoning text revealed when the dropdown is expanded",
+        default="",
+        maxlen=65536
+    )
+    thinking_active: BoolProperty(
+        name="Thinking Active",
+        description="True while reasoning streams live (uses ephemeral bubble)",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    thinking_start_time: FloatProperty(
+        name="Thinking Start Time",
+        description="Wall-clock start of reasoning (seconds); used to compute duration",
+        default=0.0,
+        options={'SKIP_SAVE'},
+    )
+    thinking_duration_ms: IntProperty(
+        name="Thinking Duration Ms",
+        description="Total reasoning duration in milliseconds (for 'Thought for Ns')",
+        default=0
+    )
+    thinking_collapsed: BoolProperty(
+        name="Thinking Collapsed",
+        description="Whether the finalized thinking dropdown is collapsed",
+        default=True
+    )
+
 
 classes = (
     MixieChatAttachment,
@@ -369,6 +427,13 @@ def register():
         description="True when the agent is processing a request (BUSY state)",
         default=False,
         options={'SKIP_SAVE'},  # Never persist — always False on startup
+    )
+
+    bpy.types.Scene.mixie_chat_layout_epoch = IntProperty(
+        name="Chat Layout Epoch",
+        description="Bumped by collapse toggles to force a C++ layout rebuild",
+        default=0,
+        options={'SKIP_SAVE'},
     )
 
     # Tracks whether the user has engaged with the chat composer this
@@ -553,6 +618,7 @@ def unregister():
 
     # Remove Scene-level properties
     for attr in (
+        'mixie_chat_layout_epoch',
         'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_mode',
