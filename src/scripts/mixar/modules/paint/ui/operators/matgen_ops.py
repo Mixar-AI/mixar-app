@@ -43,25 +43,6 @@ class MATGEN_OT_GenerateMaterial(Operator):
     bl_label = "Generate"
     bl_description = "Generate a procedural material with AI"
 
-    # Direct-invocation properties (agent/chat): when `query` is set, the
-    # operator runs from these explicit params instead of the WindowManager UI
-    # state, so the agent can call it headlessly.
-    query: StringProperty(
-        name="Query",
-        description="Material description (direct invocation; overrides UI state)",
-        default="",
-    )
-    pipeline: StringProperty(
-        name="Pipeline",
-        description="Generation pipeline: 'fast' or 'detailed'",
-        default="",
-    )
-    from_chat: bpy.props.BoolProperty(
-        name="From Chat",
-        description="Called from chat/agent context",
-        default=False,
-    )
-
     @classmethod
     def poll(cls, context):
         """Disable the operator while a generation is already in flight."""
@@ -72,19 +53,13 @@ class MATGEN_OT_GenerateMaterial(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-
-        # Direct (agent) invocation: explicit params override UI/WM state.
-        if self.query.strip():
-            query = self.query.strip()
-            pipeline = self.pipeline.strip() or "fast"
-        else:
-            query = wm.mixar_matgen_query.strip()
-            pipeline = wm.mixar_matgen_pipeline
+        query = wm.mixar_matgen_query.strip()
 
         if not query:
             self.report({'WARNING'}, "Please enter a material description")
             return {'CANCELLED'}
 
+        pipeline = wm.mixar_matgen_pipeline
         model = _PIPELINE_MODEL_MAP.get(pipeline, "claude-sonnet-4-6")
 
         wm.mixar_matgen_status = "generating"
