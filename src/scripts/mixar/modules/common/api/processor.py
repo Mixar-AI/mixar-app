@@ -172,17 +172,15 @@ class APIQueueProcessor:
         """
         self._responses_processed += 1
 
-        # Get callback if registered. Timeout notifications must not consume
-        # expired callbacks; a slow request may still complete and deliver the
-        # accepted backend job later.
+        # Get callback if registered
         callback = None
-        if response.status == ResponseStatus.TIMEOUT:
-            if response.callback_id:
-                callback = self._queues.peek_expired_callback(response.callback_id)
-            if callback is None:
-                callback = response.metadata.get("_expired_callback")
-        elif response.callback_id:
+        if response.callback_id:
             callback = self._queues.get_callback(response.callback_id)
+
+        # For timeout responses, callback was already removed by cleanup
+        # Check if it was embedded in metadata
+        if callback is None and response.status == ResponseStatus.TIMEOUT:
+            callback = response.metadata.get("_expired_callback")
 
         if callback is None:
             # Fire-and-forget request or expired callback

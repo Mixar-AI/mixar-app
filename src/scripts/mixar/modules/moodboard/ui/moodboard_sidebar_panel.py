@@ -118,8 +118,7 @@ def _draw_blockout_to_render(layout, context):
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
     col.prop(tab, "fast_mode", text="Fast Mode (~4x faster, lower quality)")
 
-    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev",
-                         feature_key="lookdev")
+    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev")
 
 
 def _draw_lookdev360(layout, context):

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Job queue UIList + footer drawer helper."""
+"""Generation queue UIList + footer drawer helper."""
 
 import time
 
@@ -38,13 +38,13 @@ _TERMINAL_STATE_VALUES = {
 _BUG_REPORT_URL = "https://www.mixar.app/bug-report"
 
 
-class MIXIE_UL_job_queue(UIList):
+class MIXIE_UL_generation_queue(UIList):
     """Render queue items as one row per job.
 
     The ``feature_key`` is passed via ``list_id``.
     """
 
-    bl_idname = "MIXIE_UL_job_queue"
+    bl_idname = "MIXIE_UL_generation_queue"
 
     def draw_item(self, context, layout, data, item, icon, active_data,
                   active_propname, index):
@@ -90,7 +90,7 @@ class MIXIE_UL_job_queue(UIList):
             op.url = _BUG_REPORT_URL
 
 
-classes = (MIXIE_UL_job_queue,)
+classes = (MIXIE_UL_generation_queue,)
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +241,7 @@ def draw_queue_panel(layout, context, feature_key: str, mirror_attr: str,
         return
 
     box.template_list(
-        "MIXIE_UL_job_queue", feature_key,
+        "MIXIE_UL_generation_queue", feature_key,
         feature_pg, "items",
         feature_pg, "active_index",
         rows=4,
