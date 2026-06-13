@@ -153,6 +153,29 @@ class MGenerateBrushTexture(Operator):
     bl_description = "Generate a brush texture from text prompt using AI"
     bl_options = {'REGISTER'}
 
+    # Direct-invocation properties (agent/chat): when `prompt` is set, the
+    # operator runs from these explicit params instead of the UI state.
+    prompt: bpy.props.StringProperty(
+        name="Prompt",
+        description="Brush texture prompt (direct invocation; overrides UI state)",
+        default="",
+    )
+    model: bpy.props.StringProperty(
+        name="Model",
+        description="Generation model (direct invocation; falls back to UI/default)",
+        default="",
+    )
+    reference_image_name: bpy.props.StringProperty(
+        name="Reference Image",
+        description="Name of a bpy.data.images entry to use as reference",
+        default="",
+    )
+    from_chat: bpy.props.BoolProperty(
+        name="From Chat",
+        description="Called from chat/agent context",
+        default=False,
+    )
+
     @classmethod
     def poll(cls, context):
         if not hasattr(context, 'tool_settings'):
@@ -170,13 +193,19 @@ class MGenerateBrushTexture(Operator):
             self.report({'WARNING'}, "Brush texture generation is already in progress")
             return {'CANCELLED'}
 
-        prompt = mixar_ui.brush_texture_prompt.strip()
+        # Direct (agent) invocation: explicit params override UI state.
+        if self.prompt.strip():
+            prompt = self.prompt.strip()
+            model_name = self.model.strip() or mixar_ui.brush_gen_model
+            reference_image = self._get_direct_ref_bytes(self.reference_image_name)
+        else:
+            prompt = mixar_ui.brush_texture_prompt.strip()
+            model_name = mixar_ui.brush_gen_model
+            reference_image = _get_ref_image_bytes(mixar_ui)
+
         if not prompt:
             self.report({'WARNING'}, "Please enter a prompt for the brush texture")
             return {'CANCELLED'}
-
-        model_name = mixar_ui.brush_gen_model
-        reference_image = _get_ref_image_bytes(mixar_ui)
 
         import base64 as _b64
         from mixar.modules.common.job_queue import enqueue_generation
@@ -210,6 +239,22 @@ class MGenerateBrushTexture(Operator):
 
         self.report({'INFO'}, "Brush texture generation started...")
         return {'FINISHED'}
+
+    @staticmethod
+    def _get_direct_ref_bytes(image_name):
+        """Get reference image bytes by bpy.data.images name, or None."""
+        if not image_name:
+            return None
+        image = bpy.data.images.get(image_name)
+        if not image:
+            return None
+        try:
+            from mixar.modules.common.utils.image_utils import image_to_png_bytes
+            return image_to_png_bytes(image)
+        except Exception as e:
+            logger.error("[BrushGen] Failed to convert reference image '%s': %s",
+                         image_name, e)
+            return None
 
 
 class MBrushGenClearReference(Operator):

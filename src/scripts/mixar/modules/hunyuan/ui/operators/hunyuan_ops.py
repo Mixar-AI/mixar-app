@@ -17,7 +17,7 @@ Operators:
 import os
 
 import bpy
-from bpy.props import IntProperty, StringProperty
+from bpy.props import BoolProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
 from ...core.hunyuan_helpers import _redraw_3d_views
@@ -169,6 +169,17 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
     mode_override: StringProperty(default="")
 
+    # Direct-invocation properties (agent/chat) for PRO mode: when `prompt` or
+    # `image_name` is set, the PRO path runs from these explicit params instead
+    # of the sidebar/moodboard UI state.
+    prompt: StringProperty(default="")
+    image_name: StringProperty(default="")
+    model_version: StringProperty(default="3.0")
+    enable_pbr: BoolProperty(default=False)
+    face_count: IntProperty(default=0)
+    polygon_type: StringProperty(default="")
+    from_chat: BoolProperty(default=False)
+
     @classmethod
     def poll(cls, context):
         return hasattr(context.scene, 'hunyuan')
@@ -189,9 +200,13 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # PRO mode — generation queue
         if mode == 'PRO':
             try:
-                self._submit_pro(
-                    context, props.pro, compress_image_for_upload,
-                )
+                # Direct (agent) invocation: explicit params bypass UI state.
+                if self.from_chat or self.prompt.strip() or self.image_name.strip():
+                    self._submit_pro_direct(context)
+                else:
+                    self._submit_pro(
+                        context, props.pro, compress_image_for_upload,
+                    )
             except Exception as e:
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
@@ -261,6 +276,36 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # ------------------------------------------------------------------ #
     # Per-mode submit helpers
     # ------------------------------------------------------------------ #
+
+    def _submit_pro_direct(self, context):
+        """Submit a single Pro (image-to-3D) job from explicit operator params.
+
+        Used by the agent/chat path: reads prompt/image_name/model_version/
+        enable_pbr/face_count/polygon_type directly instead of props.pro.
+        """
+        from mixar.modules.moodboard.core.generation_enqueue import enqueue_pro_job
+
+        image = None
+        if self.image_name.strip():
+            image = bpy.data.images.get(self.image_name.strip())
+            if image is None:
+                raise ValueError(f"Image '{self.image_name}' not found")
+
+        prompt = self.prompt.strip() or None
+        if image is None and not prompt:
+            raise ValueError("Provide at least a prompt or an image_name")
+
+        polygon_type = self.polygon_type.strip() or None
+        shared = {
+            "generate_type": "LowPoly" if polygon_type else "Normal",
+            "model_version": self.model_version.strip() or "3.0",
+            "enable_pbr": bool(self.enable_pbr),
+            "face_count": self.face_count if self.face_count > 0 else None,
+            "polygon_type": polygon_type,
+            "prompt": prompt,
+        }
+        label = image.name if image is not None else prompt
+        enqueue_pro_job(image=image, shared=shared, label=label)
 
     def _submit_pro(
         self, context, pro, compress_image_for_upload,
