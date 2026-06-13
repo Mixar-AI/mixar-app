@@ -13,8 +13,8 @@ addon disable / Blender exit reliably releases:
     compressed_image, mask_image) — these are packed at load time, so
     leaving them attached holds full RGBA bytes for the rest of the
     session.
-  * Background managers' in-flight state (scene_gen, scene_recon,
-    scene_segment, scene_gen_exp) — their long-lived dicts pin GLB /
+  * Background managers' in-flight state (scene_gen, scene_segment,
+    scene_gen_exp) — their long-lived dicts pin GLB /
     image / mask payloads that can run to tens of MB per job.
 """
 
@@ -62,14 +62,6 @@ def _clear_all_managers() -> None:
         get_scene_gen_manager().clear_all()
     except Exception as exc:
         logger.debug("scene_gen_manager.clear_all failed: %s", exc)
-
-    try:
-        from mixar.modules.moodboard.core.scene_recon_manager import (
-            get_scene_recon_manager,
-        )
-        get_scene_recon_manager().clear_all()
-    except Exception as exc:
-        logger.debug("scene_recon_manager.clear_all failed: %s", exc)
 
     try:
         from mixar.modules.moodboard.core.scene_gen_exp_manager import (
