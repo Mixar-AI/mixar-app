@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 from ..constants import SessionState, TEMP_PLACEHOLDER_PREFIX
 from .session import get_session_manager
+from .ui_utils import bump_layout_epoch as _bump_layout_epoch
 
 logger = get_logger(__name__)
 
@@ -72,8 +73,9 @@ class SlotEventProcessor:
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
             ("content", lambda: self._apply_content_slot(bubble, event_data["content"])),
-            ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"])),
+            ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
             ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
+            ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"], scene)),
             ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"])),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
         ]
@@ -116,6 +118,11 @@ class SlotEventProcessor:
         msg.bubble_id = bubble_id
         msg.sender = 'AGENT'  # Slot events are always from agent
         msg.message_type = 'AGENT'  # Slots determine rendering, type matches sender
+
+        # Agent bubbles arrive with no input events flowing — drive redraws
+        # briefly so the C++ slide-in animation gets frames.
+        from .animation_manager import start_slide_redraw_burst
+        start_slide_redraw_burst()
         return msg
 
     def _apply_loader_slot(self, bubble: Any, loader_data: dict, scene=None) -> None:
@@ -224,33 +231,29 @@ class SlotEventProcessor:
         except Exception as e:
             logger.error(f"[SLOT:CONTENT] Markdown parsing failed: {e}")
 
-    def _apply_ephemeral_slot(self, bubble: Any, ephemeral_data: dict) -> None:
+    def _apply_ephemeral_slot(self, bubble: Any, ephemeral_data: dict, scene) -> None:
         """
         Apply ephemeral slot update (temporary text with FIFO).
 
-        Ephemeral content is displayed with FIFO (last 4 lines visible)
-        and is cleared when the response completes.
+        Ephemeral content is displayed with FIFO (last 4 lines visible) and is
+        cleared when the response completes. The set/append/clear ops also
+        drive the thinking lifecycle: live reasoning marks the bubble
+        thinking_active; the closing `clear` snapshots the text into the
+        finalized "Thought for Ns" dropdown (thinking_text + duration).
 
         Args:
             bubble: Message PropertyGroup
             ephemeral_data: Dict with append/set/clear operations
+            scene: The Blender scene (for the layout-epoch bump on finalize)
         """
-        prev_len = len(bubble.ephemeral)
-        operation = "unknown"
+        import time
 
-        if ephemeral_data.get("clear"):
-            bubble.ephemeral = ""
-            operation = "clear"
-        elif "set" in ephemeral_data:
-            # Handle None values - Blender properties don't accept None
-            set_text = ephemeral_data["set"] or ""
-            bubble.ephemeral = set_text
-            operation = f"set({len(set_text)} chars)"
-        elif "append" in ephemeral_data:
-            # Handle None values
-            append_text = ephemeral_data["append"] or ""
-            bubble.ephemeral += append_text
-            operation = f"append({len(append_text)} chars)"
+        from .thinking_lifecycle import apply_ephemeral_to_bubble
+
+        finalized = apply_ephemeral_to_bubble(bubble, ephemeral_data, time.time())
+        if finalized:
+            # The dropdown is a new block — force a C++ layout rebuild.
+            _bump_layout_epoch(scene)
 
 
     def _apply_input_type_slot(self, bubble: Any, input_type: str, scene) -> None:
@@ -314,6 +317,23 @@ class SlotEventProcessor:
         # Start animation timer if any items are in_progress
         if status_counts['IN_PROGRESS'] > 0:
             self._start_loader_timer()
+
+    def _apply_steps_slot(self, bubble: Any, steps_data: dict, scene) -> None:
+        """
+        Apply steps slot update (full replacement of the steps block).
+
+        All branching logic lives in the unit-tested
+        steps_format.apply_steps_to_bubble; this is a thin wrapper.
+
+        Args:
+            bubble: Message PropertyGroup
+            steps_data: dict with optional "summary" and "items"
+            scene: The Blender scene (for the layout-epoch bump)
+        """
+        from .steps_format import apply_steps_to_bubble
+        apply_steps_to_bubble(bubble, steps_data)
+        # Row count / detail text changed the block height.
+        _bump_layout_epoch(scene)
 
     def _apply_actions_slot(self, bubble: Any, actions: list) -> None:
         """
