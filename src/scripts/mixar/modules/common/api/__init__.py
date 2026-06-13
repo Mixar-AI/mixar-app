@@ -29,6 +29,19 @@ Usage:
         get_agent_service,
         get_images_service,
     )
+
+    # Async usage (recommended for Blender operators)
+    images = get_images_service()
+    images.generate_async(
+        prompt="wooden texture",
+        on_success=lambda r: print(f"Generated: {r.data}"),
+        on_error=lambda e: print(f"Error: {e}"),
+    )
+
+    # Sync usage (blocks UI - use sparingly)
+    response = images.generate(prompt="wooden texture")
+    if response.success:
+        print(response.data)
 """
 
 # Lifecycle management
@@ -88,15 +101,29 @@ from .services import (
     AgentService,
     AuthService,
     BaseService,
-    GenerationMetadataService,
+    BrushService,
     GenerationQueueService,
+    HunyuanService,
     ImagesService,
+    ImageGenService,
+    LookdevService,
+    Lookdev360Service,
+    Lookdev3DService,
+    MeshSegmentService,
+    Model3DGenService,
     UpdateService,
     get_agent_service,
     get_auth_service,
-    get_generation_metadata_service,
+    get_brush_service,
     get_generation_queue_service,
+    get_hunyuan_service,
     get_images_service,
+    get_imagegen_service,
+    get_lookdev_service,
+    get_lookdev_360_service,
+    get_lookdev_3d_service,
+    get_mesh_segment_service,
+    get_model_3d_gen_service,
     get_update_service,
 )
 
@@ -142,10 +169,24 @@ __all__ = [
     "get_auth_service",
     "AgentService",
     "get_agent_service",
+    "BrushService",
+    "get_brush_service",
+    "HunyuanService",
+    "get_hunyuan_service",
     "ImagesService",
     "get_images_service",
-    "GenerationMetadataService",
-    "get_generation_metadata_service",
+    "ImageGenService",
+    "get_imagegen_service",
+    "LookdevService",
+    "get_lookdev_service",
+    "Lookdev360Service",
+    "get_lookdev_360_service",
+    "Lookdev3DService",
+    "get_lookdev_3d_service",
+    "MeshSegmentService",
+    "get_mesh_segment_service",
+    "Model3DGenService",
+    "get_model_3d_gen_service",
     "UpdateService",
     "get_update_service",
     "GenerationQueueService",
