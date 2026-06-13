@@ -178,6 +178,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
     enable_pbr: BoolProperty(default=False)
     face_count: IntProperty(default=0)
     polygon_type: StringProperty(default="")
+    # Retopology (TOPOLOGY) direct-invocation params
+    object_name: StringProperty(default="")
+    face_level: IntProperty(default=0)
+    post_process: BoolProperty(default=True)
     from_chat: BoolProperty(default=False)
 
     @classmethod
@@ -190,12 +194,14 @@ class MIXIE_OT_hunyuan_generate(Operator):
         props = context.scene.hunyuan
         mode = self.mode_override or props.active_mode
 
-        # Early check: mesh-based modes require a selected mesh
+        # Early check: mesh-based modes require a selected mesh — unless the
+        # agent passed an explicit object_name (direct invocation).
         if mode in ('TOPOLOGY', 'PART', 'UV'):
-            has_mesh = any(o.type == 'MESH' for o in context.selected_objects)
-            if not has_mesh:
-                self.report({'WARNING'}, "No mesh selected")
-                return {'CANCELLED'}
+            if not self.object_name.strip():
+                has_mesh = any(o.type == 'MESH' for o in context.selected_objects)
+                if not has_mesh:
+                    self.report({'WARNING'}, "No mesh selected")
+                    return {'CANCELLED'}
 
         # PRO mode — generation queue
         if mode == 'PRO':
@@ -219,7 +225,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # TOPOLOGY — generation queue with per-object fan-out
         if mode == 'TOPOLOGY':
             try:
-                self._submit_topology_queue(context, props.topology)
+                # Direct (agent) invocation: retopologize a named object.
+                if self.object_name.strip():
+                    self._submit_topology_direct(context)
+                else:
+                    self._submit_topology_queue(context, props.topology)
             except Exception as e:
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
@@ -306,6 +316,33 @@ class MIXIE_OT_hunyuan_generate(Operator):
         }
         label = image.name if image is not None else prompt
         enqueue_pro_job(image=image, shared=shared, label=label)
+
+    def _submit_topology_direct(self, context):
+        """Retopologize a single named mesh object from explicit params (agent).
+
+        Used by the agent/chat path: looks up object_name in the scene and runs
+        the queue retopology on it, bypassing the selection-based UI flow.
+        """
+        from mixar.modules.hunyuan.core.retopology_enqueue import (
+            enqueue_retopology_jobs,
+        )
+
+        obj = bpy.data.objects.get(self.object_name.strip())
+        if obj is None or obj.type != 'MESH':
+            raise ValueError(f"Mesh object '{self.object_name}' not found")
+
+        shared = {
+            "polygon_type": self.polygon_type.strip() or None,
+            "face_level": self.face_level if self.face_level > 0 else None,
+            "post_process": bool(self.post_process),
+        }
+        enqueued = enqueue_retopology_jobs(
+            context=context, objects=[obj], shared=shared, operator=self,
+        )
+        if not enqueued:
+            raise ValueError(
+                "Retopology could not be enqueued (export failed or file too large)",
+            )
 
     def _submit_pro(
         self, context, pro, compress_image_for_upload,
