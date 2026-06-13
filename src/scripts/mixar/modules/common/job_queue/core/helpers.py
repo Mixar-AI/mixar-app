@@ -198,6 +198,7 @@ def download_images_to_moodboard(
     on_done,
     on_error,
     undo_message: str = "",
+    base_name: str = "",
 ) -> None:
     """Download images from URLs in bg thread, add to moodboard on main thread.
 
@@ -228,8 +229,13 @@ def download_images_to_moodboard(
             downloaded = []
             for i, url in enumerate(urls):
                 try:
-                    timestamp = int(time.time())
-                    name = f"{name_prefix}_{timestamp}_{i}"
+                    if base_name:
+                        # Agent-chosen name. Blender auto-dedups collisions
+                        # (e.g. "dog" -> "dog.001"); index only when >1 image.
+                        name = base_name if len(urls) == 1 else f"{base_name}_{i + 1}"
+                    else:
+                        timestamp = int(time.time())
+                        name = f"{name_prefix}_{timestamp}_{i}"
                     img = load_image_from_url(url, name)
                     downloaded.append(img)
                 except Exception as e:

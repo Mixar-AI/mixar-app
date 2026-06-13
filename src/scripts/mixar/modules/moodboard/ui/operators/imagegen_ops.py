@@ -92,6 +92,9 @@ class MIXIE_OT_imagegen_generate(Operator):
     number_of_images: bpy.props.IntProperty(default=0, min=0, max=4)
     negative_prompt: bpy.props.StringProperty(default="")
     reference_image_names: bpy.props.StringProperty(default="")
+    # Agent-chosen base name for the generated moodboard image(s). Empty =
+    # auto name (imagegen_<timestamp>_N). Blender dedups collisions.
+    name: bpy.props.StringProperty(default="")
 
     def execute(self, context):
         # Direct invocation with explicit params (agent scripts)
@@ -405,6 +408,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             name_prefix="imagegen",
             prompt_text=prompt,
             undo_message="Generate Image",
+            base_name=self.name.strip(),
             listener=_get_imagegen_listener(),
         )
         if not job:

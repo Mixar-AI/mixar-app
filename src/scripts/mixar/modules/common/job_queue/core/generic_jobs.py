@@ -115,6 +115,7 @@ class SyncImageJob(Job):
     name_prefix: str = "image"
     prompt_text: str = ""
     undo_message: str = ""
+    base_name: str = ""  # agent-chosen image name (overrides name_prefix)
 
     _image_urls: List[str] = field(default_factory=list, repr=False)
 
@@ -187,6 +188,7 @@ class SyncImageJob(Job):
             on_done=on_done,
             on_error=on_error,
             undo_message=self.undo_message,
+            base_name=self.base_name,
         )
         return True
 

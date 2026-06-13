@@ -33,6 +33,7 @@ def enqueue_generation(
     name_prefix: str = "",
     prompt_text: str = "",
     undo_message: str = "",
+    base_name: str = "",
     # Listener options
     scene_flag: str = "",
     batch_popup_title: str = "",
@@ -90,6 +91,7 @@ def enqueue_generation(
             name_prefix=name_prefix,
             prompt_text=prompt_text,
             undo_message=undo_message,
+            base_name=base_name,
         )
     else:
         raise ValueError(f"Unknown enqueue_generation kind: {kind!r}")
