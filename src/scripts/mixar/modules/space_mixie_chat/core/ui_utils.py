@@ -90,19 +90,6 @@ def sync_bubble_attachment_size_deferred(force_attachment_height=False):
         logger.debug("failed to register bubble sync timer", exc_info=True)
 
 
-def bump_layout_epoch(scene) -> None:
-    """Force the C++ chat layout cache to rebuild on the next draw.
-
-    The cache only invalidates on message-count / width / stream changes, so
-    anything that changes a bubble's height in place (collapse toggles, step
-    rows appearing, thinking finalization) must bump this scene counter.
-    """
-    try:
-        scene.mixie_chat_layout_epoch = scene.mixie_chat_layout_epoch + 1
-    except Exception:
-        logger.debug("failed to bump chat layout epoch", exc_info=True)
-
-
 def redraw_chat_areas():
     """Redraw all Mixie chat surfaces across all windows.
 
