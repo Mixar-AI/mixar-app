@@ -93,16 +93,23 @@ def _update_loader():
 
 
 def start_loader_animation():
-    """Start the loader animation timer (0.5s interval)."""
+    """Start the loader animation timer (0.5s interval).
+
+    Keys off the real ``bpy.app.timers.is_registered`` state rather than
+    the ``_loader_timer`` flag. Blender silently unregisters non-persistent
+    timers on file load, which leaves ``_loader_timer`` stale-True while no
+    timer is actually running — a plain flag guard would then early-return
+    and the loader would never animate in the new file ("sometimes the
+    running animation doesn't work"). Re-deriving from is_registered makes
+    this self-healing across file loads while staying idempotent.
+    """
     global _loader_timer
 
-    if _loader_timer is not None:
-        return
-
-    _loader_timer = True
     if not bpy.app.timers.is_registered(_update_loader):
         bpy.app.timers.register(_update_loader, first_interval=SPINNER_INTERVAL)
         logger.debug("Started loader animation timer (0.5s spinner)")
+
+    _loader_timer = True
 
 
 def stop_loader_animation():

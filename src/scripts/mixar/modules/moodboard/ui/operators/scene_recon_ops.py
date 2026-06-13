@@ -12,6 +12,7 @@ Operators for scene reconstruction from images using the SAM3D pipeline.
 import os
 import subprocess
 import sys
+import time
 
 import bpy
 from bpy.types import Operator
@@ -21,27 +22,16 @@ from mixar.modules.common.utils.image_utils import (
     add_image_to_moodboard,
     compress_image_for_upload,
     compress_file_for_upload,
+    load_image_from_url,
 )
 from mixar.modules.moodboard.core.scene_recon_submission import (
     on_prompt_error as _on_prompt_error,
     submit_recon_job as _submit_recon_from_callback,
 )
 from mixar.modules.common.utils.file_select_utils import file_select_guard, mark_file_select_executed
-from mixar.modules.moodboard.core.generate_progress import start_progress, reset_progress
+from mixar.modules.moodboard.core.generate_progress import start_progress, complete_progress, reset_progress
 
 logger = get_logger(__name__)
-
-# Prompt suffix to guide image generation toward SAM3D-friendly outputs.
-_SCENE_RECON_PROMPT_SUFFIX = (
-    ", rendered as a single, cohesive 3D scene situated on a distinct"
-    " ground plane against a stark white background. Use flat, evenly"
-    " distributed diffuse lighting with absolutely no harsh, baked-in"
-    " cast shadows to ensure clear surface definition. The camera must"
-    " be a standard 50mm lens at an eye-level perspective, displaying"
-    " realistic spatial depth, clear vanishing points, and standard"
-    " 3-point perspective. STRICTLY AVOID isometric, STRICTLY AVOID orthographic,"
-    " STRICTLY AVOID sprite-sheet, STRICTLY AVOID top-down projections."
-)
 
 
 class MIXIE_OT_scene_recon_pick_image(Operator):
@@ -153,14 +143,6 @@ class MIXIE_OT_scene_recon_generate(Operator):
         default="",
     )
 
-    # Reconstruction parameters for direct invocation (agent scripts).
-    # These are used in the _start_from_image_chat path.
-    generate_mesh: bpy.props.BoolProperty(default=True)
-    min_mask_pixels: bpy.props.IntProperty(default=2000, min=0)
-    mesh_postprocess: bpy.props.BoolProperty(default=True)
-    texture_baking: bpy.props.BoolProperty(default=False)
-    vertex_color: bpy.props.BoolProperty(default=True)
-
     def execute(self, context):
         scene = context.scene
 
@@ -257,6 +239,13 @@ class MIXIE_OT_scene_recon_generate(Operator):
 
     def _start_from_prompt(self, scene, sidebar_tab, prompt):
         """Generate an image from prompt, add to moodboard, then start recon."""
+        try:
+            from mixar.modules.common.api import get_imagegen_service
+        except ImportError as e:
+            self.report({"ERROR"}, f"Image generation service not available: {e}")
+            return {"CANCELLED"}
+
+        # Set generating state to show loading UI
         scene.mixie_scene_recon_is_generating = True
         start_progress('scene_recon')
         sidebar_tab.stage_name = "Generating scene image..."
@@ -268,36 +257,129 @@ class MIXIE_OT_scene_recon_generate(Operator):
             if area.type == "MIXIE":
                 area.tag_redraw()
 
+        service = get_imagegen_service()
+
+        # Append SAM3D-aligned suffix to guide image generation
+        _SCENE_RECON_PROMPT_SUFFIX = (
+            ", rendered as a single, cohesive 3D scene situated on a distinct"
+            " ground plane against a stark white background. Use flat, evenly"
+            " distributed diffuse lighting with absolutely no harsh, baked-in"
+            " cast shadows to ensure clear surface definition. The camera must"
+            " be a standard 50mm lens at an eye-level perspective, displaying"
+            " realistic spatial depth, clear vanishing points, and standard"
+            " 3-point perspective. STRICTLY AVOID isometric, STRICTLY AVOID orthographic,"
+            " STRICTLY AVOID sprite-sheet, STRICTLY AVOID top-down projections."
+        )
         stored_prompt = prompt + _SCENE_RECON_PROMPT_SUFFIX
+        generate_mesh = getattr(sidebar_tab, 'generate_mesh', True)
+        min_mask_pixels = getattr(sidebar_tab, 'min_mask_pixels', 2000)
+        mesh_postprocess = getattr(sidebar_tab, 'mesh_postprocess', True)
+        texture_baking = getattr(sidebar_tab, 'texture_baking', False)
+        vertex_color = getattr(sidebar_tab, 'vertex_color', True)
+        save_to_lib = getattr(sidebar_tab, 'save_to_library', False)
+        lib_path = getattr(sidebar_tab, 'asset_library_path', '')
 
-        recon_params = {
-            "generate_mesh": getattr(sidebar_tab, 'generate_mesh', True),
-            "min_mask_pixels": getattr(sidebar_tab, 'min_mask_pixels', 2000),
-            "mesh_postprocess": getattr(sidebar_tab, 'mesh_postprocess', True),
-            "texture_baking": getattr(sidebar_tab, 'texture_baking', False),
-            "vertex_color": getattr(sidebar_tab, 'vertex_color', True),
-            "save_to_library": getattr(sidebar_tab, 'save_to_library', False),
-            "asset_library_path": getattr(sidebar_tab, 'asset_library_path', ''),
-        }
+        def on_imagegen_success(response):
+            try:
+                if not response.success:
+                    error_msg = (
+                        getattr(response, "error", None) or "Image generation failed"
+                    )
+                    _on_prompt_error(scene, sidebar_tab, f"API Error: {error_msg}")
+                    return
 
-        def _error_handler(msg):
-            _on_prompt_error(scene, sidebar_tab, msg)
+                data = response.data
+                if not data:
+                    _on_prompt_error(
+                        scene, sidebar_tab, "No data from image generation"
+                    )
+                    return
 
-        from mixar.modules.moodboard.core.scene_recon_imagegen_bridge import (
-            enqueue_imagegen_for_recon,
-        )
+                if isinstance(data, dict):
+                    status = data.get("status", "").lower()
+                    if status in ("failure", "error"):
+                        _on_prompt_error(
+                            scene, sidebar_tab,
+                            data.get("message", "Unknown error"),
+                        )
+                        return
+                    if "data" in data and isinstance(data["data"], dict):
+                        data = data["data"]
 
-        job = enqueue_imagegen_for_recon(
-            prompt=prompt,
-            stored_prompt=stored_prompt,
-            recon_params=recon_params,
-            sidebar_available=True,
-            on_error=_error_handler,
-        )
-        if not job:
+                # Extract first image URL
+                image_url = None
+                if isinstance(data, dict):
+                    for img_item in data.get("images", []):
+                        if isinstance(img_item, dict) and "url" in img_item:
+                            image_url = img_item["url"]
+                            break
+                        elif isinstance(img_item, str):
+                            image_url = img_item
+                            break
+                    if not image_url:
+                        image_url = data.get("image_url")
+
+                if not image_url:
+                    _on_prompt_error(
+                        scene, sidebar_tab, "No image URL in response"
+                    )
+                    return
+
+                # Download image and add to moodboard
+                timestamp = int(time.time())
+                img = load_image_from_url(image_url, f"scene_recon_{timestamp}")
+                add_image_to_moodboard(img, stored_prompt)
+                logger.info("Generated image added to moodboard: %s", img.name)
+
+                # Get image bytes for scene reconstruction
+                image_bytes = compress_image_for_upload(img)
+
+                # Update status and submit scene reconstruction
+                sidebar_tab.stage_name = "Starting reconstruction..."
+                sidebar_tab.stage_detail = ""
+                _submit_recon_from_callback(
+                    scene, sidebar_tab, image_bytes,
+                    generate_mesh, min_mask_pixels,
+                    mesh_postprocess, texture_baking, vertex_color,
+                    save_to_library=save_to_lib,
+                    asset_library_path=lib_path,
+                )
+
+            except Exception as e:
+                logger.error("Error in image generation callback", exc_info=True)
+                _on_prompt_error(scene, sidebar_tab, f"Error: {e}")
+
+        def on_imagegen_error(error):
+            _on_prompt_error(
+                scene, sidebar_tab, f"Image generation failed: {error}"
+            )
+
+        def on_imagegen_complete(async_response):
+            if scene.mixie_scene_recon_is_generating:
+                error = getattr(async_response, "error", None)
+                response = getattr(async_response, "response", None)
+                if error:
+                    _on_prompt_error(
+                        scene, sidebar_tab, f"Request failed: {error}"
+                    )
+                elif response and not response.success:
+                    pass  # on_success already handled this
+
+        try:
+            service.generate_async(
+                prompt=stored_prompt,
+                model="pro",
+                aspect_ratio="4:3",
+                resolution="1K",
+                number_of_images=1,
+                on_success=on_imagegen_success,
+                on_error=on_imagegen_error,
+                on_complete=on_imagegen_complete,
+            )
+        except Exception as e:
             scene.mixie_scene_recon_is_generating = False
             reset_progress('scene_recon')
-            self.report({"ERROR"}, "Failed to enqueue image generation")
+            self.report({"ERROR"}, f"Failed to start image generation: {e}")
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
@@ -333,11 +415,11 @@ class MIXIE_OT_scene_recon_generate(Operator):
         # Submit scene reconstruction directly
         _submit_recon_from_callback(
             scene, None, image_bytes,
-            generate_mesh=self.generate_mesh,
-            min_mask_pixels=self.min_mask_pixels,
-            mesh_postprocess=self.mesh_postprocess,
-            texture_baking=self.texture_baking,
-            vertex_color=self.vertex_color,
+            generate_mesh=True,
+            min_mask_pixels=2000,
+            mesh_postprocess=True,
+            texture_baking=True,
+            vertex_color=True,
         )
 
         self.report({"INFO"}, "Scene reconstruction started from image...")
@@ -345,6 +427,12 @@ class MIXIE_OT_scene_recon_generate(Operator):
 
     def _start_from_prompt_chat(self, scene, prompt):
         """Generate scene from prompt when called from chat."""
+        try:
+            from mixar.modules.common.api import get_imagegen_service
+        except ImportError as e:
+            self.report({"ERROR"}, f"Image generation service not available: {e}")
+            return {"CANCELLED"}
+
         scene.mixie_scene_recon_is_generating = True
         scene.mixie_scene_recon_error = ""
         start_progress('scene_recon')
@@ -353,11 +441,22 @@ class MIXIE_OT_scene_recon_generate(Operator):
             if area.type == "MIXIE":
                 area.tag_redraw()
 
+        service = get_imagegen_service()
+
+        _SCENE_RECON_PROMPT_SUFFIX = (
+            ", rendered as a single, cohesive 3D scene situated on a distinct"
+            " ground plane against a stark white background. Use flat, evenly"
+            " distributed diffuse lighting with absolutely no harsh, baked-in"
+            " cast shadows to ensure clear surface definition. The camera must"
+            " be a standard 50mm lens at an eye-level perspective, displaying"
+            " realistic spatial depth, clear vanishing points, and standard"
+            " 3-point perspective. STRICTLY AVOID isometric, STRICTLY AVOID orthographic,"
+            " STRICTLY AVOID sprite-sheet, STRICTLY AVOID top-down projections."
+        )
         stored_prompt = prompt + _SCENE_RECON_PROMPT_SUFFIX
 
         def _on_chat_error(message):
             logger.error("%s", message)
-
             def _show():
                 try:
                     reset_progress('scene_recon')
@@ -370,30 +469,92 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 except Exception:
                     pass
                 return None
-
             bpy.app.timers.register(_show, first_interval=0)
 
-        from mixar.modules.moodboard.core.scene_recon_imagegen_bridge import (
-            enqueue_imagegen_for_recon,
-        )
+        def on_imagegen_success(response):
+            try:
+                if not response.success:
+                    error_msg = getattr(response, "error", None) or "Image generation failed"
+                    _on_chat_error(f"API Error: {error_msg}")
+                    return
 
-        job = enqueue_imagegen_for_recon(
-            prompt=prompt,
-            stored_prompt=stored_prompt,
-            recon_params={
-                "generate_mesh": True,
-                "min_mask_pixels": 2000,
-                "mesh_postprocess": True,
-                "texture_baking": True,
-                "vertex_color": True,
-            },
-            sidebar_available=False,
-            on_error=_on_chat_error,
-        )
-        if not job:
+                data = response.data
+                if not data:
+                    _on_chat_error("No data from image generation")
+                    return
+
+                if isinstance(data, dict):
+                    status = data.get("status", "").lower()
+                    if status in ("failure", "error"):
+                        _on_chat_error(data.get("message", "Unknown error"))
+                        return
+                    if "data" in data and isinstance(data["data"], dict):
+                        data = data["data"]
+
+                # Extract first image URL
+                image_url = None
+                if isinstance(data, dict):
+                    for img_item in data.get("images", []):
+                        if isinstance(img_item, dict) and "url" in img_item:
+                            image_url = img_item["url"]
+                            break
+                        elif isinstance(img_item, str):
+                            image_url = img_item
+                            break
+                    if not image_url:
+                        image_url = data.get("image_url")
+
+                if not image_url:
+                    _on_chat_error("No image URL in response")
+                    return
+
+                # Download image and add to moodboard
+                timestamp = int(time.time())
+                img = load_image_from_url(image_url, f"scene_recon_{timestamp}")
+                add_image_to_moodboard(img, stored_prompt)
+                logger.info("Generated image added to moodboard: %s", img.name)
+
+                # Get image bytes for scene reconstruction
+                image_bytes = compress_image_for_upload(img)
+
+                # Submit scene reconstruction with defaults
+                _submit_recon_from_callback(
+                    scene, None, image_bytes,
+                    generate_mesh=True,
+                    min_mask_pixels=2000,
+                    mesh_postprocess=True,
+                    texture_baking=True,
+                    vertex_color=True,
+                )
+
+            except Exception as e:
+                logger.error("Error in chat scene recon callback", exc_info=True)
+                _on_chat_error(f"Error: {e}")
+
+        def on_imagegen_error(error):
+            _on_chat_error(f"Image generation failed: {error}")
+
+        def on_imagegen_complete(async_response):
+            if scene.mixie_scene_recon_is_generating:
+                error = getattr(async_response, "error", None)
+                if error:
+                    _on_chat_error(f"Request failed: {error}")
+
+        try:
+            service.generate_async(
+                prompt=stored_prompt,
+                model="pro",
+                aspect_ratio="4:3",
+                resolution="1K",
+                number_of_images=1,
+                on_success=on_imagegen_success,
+                on_error=on_imagegen_error,
+                on_complete=on_imagegen_complete,
+            )
+        except Exception as e:
             scene.mixie_scene_recon_is_generating = False
             reset_progress('scene_recon')
-            self.report({"ERROR"}, "Failed to enqueue image generation")
+            self.report({"ERROR"}, f"Failed to start image generation: {e}")
             return {"CANCELLED"}
 
         self.report({"INFO"}, "Generating scene from description...")
