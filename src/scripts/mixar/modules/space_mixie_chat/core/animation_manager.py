@@ -93,16 +93,23 @@ def _update_loader():
 
 
 def start_loader_animation():
-    """Start the loader animation timer (0.5s interval)."""
+    """Start the loader animation timer (0.5s interval).
+
+    Keys off the real ``bpy.app.timers.is_registered`` state rather than
+    the ``_loader_timer`` flag. Blender silently unregisters non-persistent
+    timers on file load, which leaves ``_loader_timer`` stale-True while no
+    timer is actually running — a plain flag guard would then early-return
+    and the loader would never animate in the new file ("sometimes the
+    running animation doesn't work"). Re-deriving from is_registered makes
+    this self-healing across file loads while staying idempotent.
+    """
     global _loader_timer
 
-    if _loader_timer is not None:
-        return
-
-    _loader_timer = True
     if not bpy.app.timers.is_registered(_update_loader):
         bpy.app.timers.register(_update_loader, first_interval=SPINNER_INTERVAL)
         logger.debug("Started loader animation timer (0.5s spinner)")
+
+    _loader_timer = True
 
 
 def stop_loader_animation():
@@ -122,64 +129,3 @@ def stop_loader_animation():
 def cleanup():
     """Clean up animation resources on module unload."""
     stop_loader_animation()
-
-
-# ---------------------------------------------------------------------------
-# Slide-in redraw burst
-# ---------------------------------------------------------------------------
-# The C++ side animates a 0.25s slide-in when a new bubble appears, advancing
-# it per draw and tagging its own region for redraw. But a tag from inside a
-# draw callback does NOT wake Blender's idle event loop — with no input
-# events, the next draw only happens on the next timer tick (~250ms), so the
-# slide renders ~2 frames and looks stuck. This short ~60fps timer burst
-# wakes the loop for the animation window so the slide gets real frames.
-#
-# IMPORTANT: this burst must ONLY tag areas for redraw — it must NOT call
-# redraw_chat_areas(), because that also runs the agent-bubble attachment-size
-# sync (a synchronous NSWindow resize + ED_screen_refresh). Driving that heavy,
-# re-entrancy-fragile path at 60fps froze the bubble window after submit.
-# The slide needs frames, not window resizes.
-
-SLIDE_REDRAW_INTERVAL = 1.0 / 60.0
-SLIDE_REDRAW_DURATION = 0.35  # covers the 0.25s slide with margin
-# Absolute ceiling so repeated start() calls (e.g. several bubbles in a burst
-# of slot events) can never extend the timer indefinitely into a permanent
-# 60fps redraw loop.
-SLIDE_REDRAW_MAX_LIFETIME = 1.0
-_slide_burst_until = 0.0
-_slide_burst_deadline = 0.0  # hard stop regardless of extensions
-_slide_burst_active = False
-
-
-def _slide_redraw_burst():
-    global _slide_burst_active
-    now = time.monotonic()
-    if now >= _slide_burst_until or now >= _slide_burst_deadline:
-        _slide_burst_active = False
-        return None
-    try:
-        # Lightweight: tag chat + bubble areas only. Deliberately NOT
-        # redraw_chat_areas() — see the note above.
-        from .ui_utils import _tag_chat_and_bubble_areas
-        _tag_chat_and_bubble_areas()
-    except Exception:
-        _slide_burst_active = False
-        return None
-    return SLIDE_REDRAW_INTERVAL
-
-
-def start_slide_redraw_burst():
-    """Drive ~60fps chat redraws briefly after a new bubble is added."""
-    global _slide_burst_until, _slide_burst_deadline, _slide_burst_active
-    now = time.monotonic()
-    _slide_burst_until = now + SLIDE_REDRAW_DURATION
-    if _slide_burst_active:
-        return
-    _slide_burst_active = True
-    _slide_burst_deadline = now + SLIDE_REDRAW_MAX_LIFETIME
-    try:
-        bpy.app.timers.register(
-            _slide_redraw_burst, first_interval=SLIDE_REDRAW_INTERVAL
-        )
-    except Exception:
-        _slide_burst_active = False
