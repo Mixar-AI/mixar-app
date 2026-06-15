@@ -199,23 +199,31 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
         from mixar.modules.common.utils.image_utils import compress_image_for_upload
+        from mixar.modules.common.utils.agent_feedback import (
+            clear_agent_gen_reason, set_agent_gen_reason,
+        )
 
+        clear_agent_gen_reason(context)
         img = bpy.data.images.get(self.image_name.strip())
         if not img:
+            set_agent_gen_reason(context, f"Image '{self.image_name}' not found in bpy.data.images")
             self.report({"ERROR"}, f"Image '{self.image_name}' not found in bpy.data.images")
             return {"CANCELLED"}
         if not img.has_data:
+            set_agent_gen_reason(context, f"Image '{self.image_name}' has no pixel data")
             self.report({"ERROR"}, f"Image '{self.image_name}' has no pixel data")
             return {"CANCELLED"}
 
         model_name = self.model.strip().lower() if self.model else "trellis-1"
         if model_name not in ("trellis-1", "rodin"):
+            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be 'trellis-1' or 'rodin'")
             self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be 'trellis-1' or 'rodin'")
             return {"CANCELLED"}
 
         try:
             image_bytes = compress_image_for_upload(img)
         except Exception as e:
+            set_agent_gen_reason(context, f"Failed to convert image: {e}")
             self.report({"ERROR"}, f"Failed to convert image: {e}")
             return {"CANCELLED"}
 
@@ -255,6 +263,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             batch_popup_title="Image to 3D batch complete",
         )
         if not job:
+            set_agent_gen_reason(context, "A duplicate 3D generation is already queued")
             self.report({"WARNING"}, "A duplicate generation is already queued")
             return {"CANCELLED"}
 

@@ -71,6 +71,8 @@ class MATGEN_OT_GenerateMaterial(Operator):
             return True
 
     def execute(self, context):
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
+
         wm = context.window_manager
 
         # Direct (agent) invocation: explicit params override UI/WM state.
@@ -82,6 +84,7 @@ class MATGEN_OT_GenerateMaterial(Operator):
             pipeline = wm.mixar_matgen_pipeline
 
         if not query:
+            set_agent_gen_reason(context, "No material description provided")
             self.report({'WARNING'}, "Please enter a material description")
             return {'CANCELLED'}
 
@@ -100,9 +103,11 @@ class MATGEN_OT_GenerateMaterial(Operator):
                 pipeline=pipeline,
             )
             if job is None:
+                set_agent_gen_reason(context, "Material generation already queued (duplicate)")
                 wm.mixar_matgen_status = "error:Duplicate job already in queue"
                 return {'CANCELLED'}
         except Exception as e:
+            set_agent_gen_reason(context, str(e))
             wm.mixar_matgen_status = f"error:{e}"
             return {'CANCELLED'}
 

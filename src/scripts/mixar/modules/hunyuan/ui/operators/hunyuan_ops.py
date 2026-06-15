@@ -190,6 +190,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
     def execute(self, context):
         from mixar.modules.common.utils.image_utils import compress_image_for_upload
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
 
         props = context.scene.hunyuan
         mode = self.mode_override or props.active_mode
@@ -214,6 +215,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                         context, props.pro, compress_image_for_upload,
                     )
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_IMAGE_TO_3D_PRO
@@ -231,6 +233,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 else:
                     self._submit_topology_queue(context, props.topology)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
@@ -244,6 +247,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             try:
                 self._submit_rapid_queue(context, props.rapid, compress_image_for_upload)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
@@ -258,6 +262,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 from ...core.part_enqueue import enqueue_part_job
                 enqueue_part_job(context=context, operator=self)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_PART
@@ -272,6 +277,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 from ...core.uv_enqueue import enqueue_uv_job
                 enqueue_uv_job(context=context, operator=self)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_UV
