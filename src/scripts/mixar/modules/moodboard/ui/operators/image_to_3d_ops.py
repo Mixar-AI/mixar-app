@@ -32,27 +32,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         default=False,
     )
 
-    # Direct invocation properties (used by agent scripts).
-    # When `image_name` is non-empty, these override UI defaults.
-    image_name: bpy.props.StringProperty(default="")
-    model: bpy.props.StringProperty(default="")
-    prompt: bpy.props.StringProperty(default="")
-
-    # Trellis-specific
-    texture_size: bpy.props.IntProperty(default=0, min=0, max=4096)
-    mesh_simplify: bpy.props.FloatProperty(default=-1.0, min=-1.0, max=1.0)
-    generate_normal: bpy.props.BoolProperty(default=True)
-    save_gaussian_ply: bpy.props.BoolProperty(default=False)
-
-    # Rodin-specific
-    quality: bpy.props.StringProperty(default="")
-    geometry_file_format: bpy.props.StringProperty(default="")
-    material: bpy.props.StringProperty(default="")
-
     def execute(self, context):
-        # Direct invocation with explicit params (agent scripts)
-        if self.image_name:
-            return self._execute_direct(context)
         scene = context.scene
 
         # Check if called from sidebar context - prefer sidebar properties
@@ -158,115 +138,18 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
         # Enqueue via generation queue
         try:
-            import base64 as _b64
-            from mixar.modules.common.job_queue import enqueue_generation
-            from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
-
-            job_label = image.name if image else model_name
-            payload = {}
-            if image_bytes:
-                payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
-                payload["image_filename"] = "image.png"
-            if prompt:
-                payload["prompt"] = prompt
-
-            job = enqueue_generation(
-                kind="glb",
-                feature_key=FEATURE_MODEL_3D,
-                job_type="model_3d",
-                model=model_name,
-                payload=payload,
-                label=job_label or "model_3d",
-                fail_message="3D model generation failed",
-                scene_flag="mixie_image_to_3d_is_generating",
-                batch_popup_title="Image to 3D batch complete",
+            from ...core.model_3d_queue import enqueue_model_3d_job
+            enqueue_model_3d_job(
+                image_bytes=image_bytes,
+                model_name=model_name,
+                prompt=prompt,
+                label=image.name if image else model_name,
             )
-            if not job:
-                self.report({"WARNING"}, "A duplicate generation is already queued")
-                return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
             return {"CANCELLED"}
 
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-        mark_enqueued(FEATURE_MODEL_3D)
-        self.report({"INFO"}, "Added to queue")
-        return {"FINISHED"}
-
-    def _execute_direct(self, context):
-        """Handle direct invocation with explicit params (agent scripts)."""
-        import base64 as _b64
-        from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
-        from mixar.modules.common.utils.image_utils import compress_image_for_upload
-        from mixar.modules.common.utils.agent_feedback import (
-            clear_agent_gen_reason, set_agent_gen_reason,
-        )
-
-        clear_agent_gen_reason(context)
-        img = bpy.data.images.get(self.image_name.strip())
-        if not img:
-            set_agent_gen_reason(context, f"Image '{self.image_name}' not found in bpy.data.images")
-            self.report({"ERROR"}, f"Image '{self.image_name}' not found in bpy.data.images")
-            return {"CANCELLED"}
-        if not img.has_data:
-            set_agent_gen_reason(context, f"Image '{self.image_name}' has no pixel data")
-            self.report({"ERROR"}, f"Image '{self.image_name}' has no pixel data")
-            return {"CANCELLED"}
-
-        model_name = self.model.strip().lower() if self.model else "trellis-1"
-        if model_name not in ("trellis-1", "rodin"):
-            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be 'trellis-1' or 'rodin'")
-            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be 'trellis-1' or 'rodin'")
-            return {"CANCELLED"}
-
-        try:
-            image_bytes = compress_image_for_upload(img)
-        except Exception as e:
-            set_agent_gen_reason(context, f"Failed to convert image: {e}")
-            self.report({"ERROR"}, f"Failed to convert image: {e}")
-            return {"CANCELLED"}
-
-        # Build model-specific parameters
-        if model_name == "trellis-1":
-            parameters = {
-                "texture_size": self.texture_size if self.texture_size > 0 else 2048,
-                "mesh_simplify": self.mesh_simplify if self.mesh_simplify >= 0 else 0.9,
-                "generate_normal": self.generate_normal,
-                "save_gaussian_ply": self.save_gaussian_ply,
-            }
-        else:
-            parameters = {
-                "quality": self.quality or "medium",
-                "geometry_file_format": self.geometry_file_format or "glb",
-                "material": self.material or "PBR",
-            }
-
-        payload = {
-            "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
-            "image_filename": "image.png",
-            "parameters": parameters,
-        }
-        prompt = self.prompt.strip() if self.prompt else None
-        if prompt:
-            payload["prompt"] = prompt
-
-        job = enqueue_generation(
-            kind="glb",
-            feature_key=FEATURE_MODEL_3D,
-            job_type="model_3d",
-            model=model_name,
-            payload=payload,
-            label=self.image_name.strip(),
-            fail_message="3D model generation failed",
-            scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
-        )
-        if not job:
-            set_agent_gen_reason(context, "A duplicate 3D generation is already queued")
-            self.report({"WARNING"}, "A duplicate generation is already queued")
-            return {"CANCELLED"}
-
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
         mark_enqueued(FEATURE_MODEL_3D)
         self.report({"INFO"}, "Added to queue")
