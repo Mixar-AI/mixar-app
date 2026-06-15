@@ -350,10 +350,15 @@ class MIXIE_OT_imagegen_generate(Operator):
     def _execute_direct(self, context):
         """Handle direct invocation with explicit params (agent scripts)."""
         import base64 as _b64
+        import uuid as _uuid
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
         from mixar.modules.common.utils.image_utils import compress_image_for_upload
+        from mixar.modules.common.utils.agent_feedback import (
+            clear_agent_gen_reason, set_agent_gen_reason,
+        )
 
+        clear_agent_gen_reason(context)
         prompt = self.prompt.strip()
         model = self.model
 
@@ -364,6 +369,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             except ImportError:
                 pass
         if not model:
+            set_agent_gen_reason(context, "No model specified and no default available")
             self.report({"ERROR"}, "No model specified and no default available")
             return {"CANCELLED"}
 
@@ -397,13 +403,16 @@ class MIXIE_OT_imagegen_generate(Operator):
         if ref_b64:
             payload["reference_images_b64"] = ref_b64
 
+        # Unique label so a batch never collides with the queue's label-based
+        # dedup (e.g. 4 images of the same prompt, or same agent-chosen name).
+        _label_base = self.name.strip() or prompt[:30] or "image"
         job = enqueue_generation(
             kind="image",
             feature_key=FEATURE_IMAGEGEN,
             job_type="image_gen",
             model=model,
             payload=payload,
-            label=f"ImageGen: {prompt[:40]}",
+            label=f"ImageGen: {_label_base} [{_uuid.uuid4().hex[:4]}]",
             fail_message="Image generation failed",
             name_prefix="imagegen",
             prompt_text=prompt,
@@ -412,6 +421,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             listener=_get_imagegen_listener(),
         )
         if not job:
+            set_agent_gen_reason(context, "A duplicate image generation is already queued")
             self.report({"WARNING"}, "A duplicate image generation is already queued")
             return {"CANCELLED"}
 

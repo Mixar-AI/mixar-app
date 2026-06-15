@@ -184,12 +184,16 @@ class MGenerateBrushTexture(Operator):
         return settings is not None and settings.brush is not None
 
     def execute(self, context):
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
+
         mixar_ui = get_mixar_ui(context)
         if not mixar_ui:
+            set_agent_gen_reason(context, "UI state not available")
             self.report({'ERROR'}, "UI state not available")
             return {'CANCELLED'}
 
         if mixar_ui.brush_gen_in_progress:
+            set_agent_gen_reason(context, "Brush texture generation is already in progress")
             self.report({'WARNING'}, "Brush texture generation is already in progress")
             return {'CANCELLED'}
 
@@ -204,6 +208,7 @@ class MGenerateBrushTexture(Operator):
             reference_image = _get_ref_image_bytes(mixar_ui)
 
         if not prompt:
+            set_agent_gen_reason(context, "No prompt provided for the brush texture")
             self.report({'WARNING'}, "Please enter a prompt for the brush texture")
             return {'CANCELLED'}
 
@@ -229,6 +234,7 @@ class MGenerateBrushTexture(Operator):
         )
 
         if not job:
+            set_agent_gen_reason(context, "Brush generation already queued (duplicate)")
             self.report({'ERROR'}, "Failed to enqueue brush generation")
             return {'CANCELLED'}
 
