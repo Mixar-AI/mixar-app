@@ -100,6 +100,8 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
     prompt: bpy.props.StringProperty(default="")
 
     def execute(self, context):
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
+
         scene = context.scene
         props = _get_lookdev_props(scene)
 
@@ -118,6 +120,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
             prompt = getattr(scene, 'mixie_lookdev_prompt', '')
 
         if not prompt or not prompt.strip():
+            set_agent_gen_reason(context, "No prompt provided for lookdev")
             self.report({'WARNING'}, "Please enter a prompt")
             return {'CANCELLED'}
 
@@ -128,6 +131,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
         depth_filepath, success = prepare_depth_render(fast_mode=fast_mode)
 
         if not success or not depth_filepath:
+            set_agent_gen_reason(context, "Failed to render a depth map (needs a scene with visible geometry)")
             self.report({'ERROR'}, "Failed to render depth map")
             return {'CANCELLED'}
 

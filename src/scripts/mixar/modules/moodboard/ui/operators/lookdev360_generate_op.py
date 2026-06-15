@@ -57,6 +57,8 @@ class MIXIE_OT_lookdev360_generate(Operator):
     reference_image_name: bpy.props.StringProperty(default="")
 
     def execute(self, context):
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
+
         scene = context.scene
 
         # Get lookdev360 tab properties from sidebar
@@ -86,12 +88,14 @@ class MIXIE_OT_lookdev360_generate(Operator):
 
         # Validate prompt
         if not prompt or not prompt.strip():
+            set_agent_gen_reason(context, "No prompt provided for PBR/lookdev360")
             self.report({'WARNING'}, "Please enter a prompt (press Enter to confirm your text)")
             return {'CANCELLED'}
 
         # Get selected mesh objects
         mesh_objects = get_selected_mesh_objects()
         if not mesh_objects:
+            set_agent_gen_reason(context, "No mesh selected — select the mesh object(s) to texture first")
             self.report({'WARNING'}, "No mesh objects selected")
             return {'CANCELLED'}
 
