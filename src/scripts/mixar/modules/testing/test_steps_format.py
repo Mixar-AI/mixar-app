@@ -241,7 +241,20 @@ def test_classify_script_action():
     assert c("bpy.ops.object.modifier_add(type='SUBSURF')") == "Added modifier"
     # A modeling script that also assigns a material is still modeling ("").
     assert c("bpy.ops.mesh.primitive_cube_add(); obj.data.materials.append(m)") == ""
+    # Read-only query → inspection.
+    assert c("objs=[o.name for o in bpy.data.objects]; print(objs)") == "Inspected scene"
     assert c("") == ""
+
+
+def test_inspected_scene_override_when_objects_change():
+    """A read-only guess that actually created objects falls back to counts."""
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(
+        bubble, "r1", "unknown", "for o in bpy.data.objects: pass")
+    assert bubble.step_items[0].label == "Inspected scene"
+    steps_format.finish_step_on_bubble(
+        bubble, "r1", {"success": True, "created_objects": ["A", "B"]})
+    assert bubble.step_items[0].label == "Created 2 objects"
 
 
 def test_begin_step_uses_script_action_when_tool_name_unknown():

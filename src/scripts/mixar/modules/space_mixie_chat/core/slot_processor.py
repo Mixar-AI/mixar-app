@@ -308,6 +308,14 @@ class SlotEventProcessor:
         # Handle None for boolean - default to False
         bubble.loader_visible = bool(loader_data.get("visible", False))
 
+        # The JSON-intent bubble's loader ("Caling Mixie…") is redundant with the
+        # response bubble's live status line, and the backend keeps re-asserting
+        # it through the turn. Force it hidden PERSISTENTLY once the bubble is
+        # classified as a JSON-intent bubble, so we never show two spinners.
+        bid = getattr(bubble, "bubble_id", "")
+        if bid and bid in _json_ephemeral_bubbles:
+            bubble.loader_visible = False
+
         texts_count = 0
         if "texts" in loader_data:
             texts = loader_data["texts"]
