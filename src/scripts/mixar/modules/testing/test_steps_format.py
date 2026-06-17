@@ -161,7 +161,8 @@ def test_finish_step_marks_done_with_count_and_no_stdout():
     """A finished step shows a clean object COUNT as target and never surfaces
     raw script stdout (the "Blender create Mesh node" log wall) as detail."""
     bubble = _FakeBubble()
-    steps_format.begin_step_on_bubble(bubble, "req-1", "create_cube")
+    # No tool name + no recognizable script → label synthesized from counts.
+    steps_format.begin_step_on_bubble(bubble, "req-1", "unknown")
     found = steps_format.finish_step_on_bubble(bubble, "req-1", {
         "success": True,
         "output": "Blender create Mesh node Cube.099\nBlender create Mesh node Cube.100",
@@ -216,11 +217,46 @@ def test_humanize_unknown_tool_name_falls_back():
     assert steps_format.humanize_tool_name("") == "Tool call"
 
 
-def test_finish_step_strips_result_protocol_lines_from_detail():
+def test_finish_step_detail_is_object_names_not_stdout():
+    """Detail holds the object names (expandable), never raw script stdout."""
     bubble = _FakeBubble()
-    steps_format.begin_step_on_bubble(bubble, "r1", "create_pyramid")
+    steps_format.begin_step_on_bubble(bubble, "r1", "unknown")
     steps_format.finish_step_on_bubble(bubble, "r1", {
         "success": True,
-        "output": 'Creating pyramid...\n__RESULT__{"created_objects": ["Pyramid"], "success": true}\nDone.',
+        "output": 'Creating pyramid...\n__RESULT__{"x": 1}\nDone.',
+        "created_objects": ["Pyramid"],
     })
-    assert bubble.step_items[0].detail == "Creating pyramid...\nDone."
+    row = bubble.step_items[0]
+    assert row.label == "Created 1 object"
+    assert row.detail == "Created: Pyramid"
+    assert "__RESULT__" not in row.detail and "Creating pyramid" not in row.detail
+
+
+def test_classify_script_action():
+    c = steps_format.classify_script_action
+    assert c("result = bpy.ops.render.render(write_still=True)") == "Rendered scene"
+    assert c("mat = bpy.data.materials.new('M'); mat.node_tree") == "Applied materials"
+    assert c("cam = bpy.data.cameras.new('Cam')") == "Set up camera"
+    assert c("l = bpy.data.lights.new('L', type='SUN')") == "Set up lighting"
+    assert c("bpy.ops.object.modifier_add(type='SUBSURF')") == "Added modifier"
+    # A modeling script that also assigns a material is still modeling ("").
+    assert c("bpy.ops.mesh.primitive_cube_add(); obj.data.materials.append(m)") == ""
+    assert c("") == ""
+
+
+def test_begin_step_uses_script_action_when_tool_name_unknown():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(
+        bubble, "r1", "unknown", "bpy.ops.render.render(write_still=True)")
+    assert bubble.step_items[0].label == "Rendered scene"
+    # The script-inferred label survives finish (counts shown as target).
+    steps_format.finish_step_on_bubble(bubble, "r1", {"success": True})
+    assert bubble.step_items[0].label == "Rendered scene"
+    assert bubble.step_items[0].target == ""
+
+
+def test_real_tool_name_takes_priority_over_script():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(
+        bubble, "r1", "apply_pbr_texture", "bpy.ops.render.render()")
+    assert bubble.step_items[0].label == "Apply pbr texture"
