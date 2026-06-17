@@ -96,18 +96,18 @@ def _split_plan_narration(content: str):
     return plan_part, narration_part
 
 
-def _hide_intent_loaders(scene, except_bid: str) -> None:
-    """Hide the loader on the intent bubble(s) — the 'Caling Mixie…' spinner
-    whose only payload was the (suppressed) JSON intent — once the response Plan
-    has started, so there is a single spinner and no leftover gap."""
+def _find_response_bubble(scene):
+    """The main turn bubble — the most recent AGENT bubble that is NOT a
+    JSON-intent scaffold — onto which working status is consolidated."""
     messages = getattr(scene, "mixie_chat_messages", None)
     if not messages:
-        return
-    for m in messages:
+        return None
+    for idx in range(len(messages) - 1, -1, -1):
+        m = messages[idx]
         bid = getattr(m, "bubble_id", "")
-        if bid and bid != except_bid and bid in _json_ephemeral_bubbles:
-            if getattr(m, "loader_visible", False):
-                m.loader_visible = False
+        if getattr(m, "sender", "") == "AGENT" and bid and bid not in _json_ephemeral_bubbles:
+            return m
+    return None
 
 
 def collapse_live_thinking(bubble, scene=None) -> None:
@@ -308,22 +308,11 @@ class SlotEventProcessor:
         # Handle None for boolean - default to False
         bubble.loader_visible = bool(loader_data.get("visible", False))
 
-        # The JSON-intent bubble's loader ("Caling Mixie…") is redundant with the
-        # response bubble's live status line, and the backend keeps re-asserting
-        # it through the turn. Force it hidden PERSISTENTLY once the bubble is
-        # classified as a JSON-intent bubble, so we never show two spinners.
-        bid = getattr(bubble, "bubble_id", "")
-        if bid and bid in _json_ephemeral_bubbles:
-            bubble.loader_visible = False
-
-        texts_count = 0
         if "texts" in loader_data:
             texts = loader_data["texts"]
-            # Handle None - default to empty list
             if texts is None:
                 texts = []
-            texts_count = len(texts) if isinstance(texts, list) else 0
-            bubble.loader_texts = json.dumps(texts)
+            bubble.loader_texts = json.dumps(texts if isinstance(texts, list) else [])
             bubble.loader_current_index = 0  # Reset on new texts
 
         if "rotate_ms" in loader_data:
@@ -331,14 +320,23 @@ class SlotEventProcessor:
             # Handle None - default to 2000
             bubble.loader_rotate_ms = int(rotate_ms) if rotate_ms is not None else 2000
 
-        # When the RESPONSE bubble starts working (its own loader becomes
-        # visible — "Executing bpy script…", etc.), retire the intent
-        # "Caling Mixie…" loader. Keeping it until now bridges the gap between
-        # the Plan and the first tool with a single spinner.
+        # The backend drives WORKING status on BOTH the JSON-intent bubble and
+        # the response bubble, and never hides one until the end (see app.log) —
+        # which doubled the spinner and, when hidden outright, left the first
+        # couple of tools with no indicator. Consolidate to ONE indicator: mirror
+        # the intent bubble's status onto the main response bubble (stable, at the
+        # bottom) and hide it on the intent bubble itself.
         bid = getattr(bubble, "bubble_id", "")
-        if (bubble.loader_visible and scene is not None and bid
-                and bid not in _json_ephemeral_bubbles):
-            _hide_intent_loaders(scene, bid)
+        if bid and bid in _json_ephemeral_bubbles and scene is not None:
+            main = _find_response_bubble(scene)
+            if (main is not None and getattr(main, "bubble_id", "") != bid
+                    and bubble.loader_visible):
+                main.loader_texts = bubble.loader_texts
+                main.loader_current_index = 0
+                if not main.loader_visible:
+                    main.loader_visible = True
+                self._start_loader_timer()  # ensure the spinner animates
+            bubble.loader_visible = False
 
         # Start/stop loader timer based on visibility change
         if bubble.loader_visible and not was_visible:
