@@ -47,14 +47,14 @@ def _find_bubble_with_step(scene, request_id: str):
     return None
 
 
-def record_step_start(scene, request_id: str, tool_name: str) -> None:
+def record_step_start(scene, request_id: str, tool_name: str, script: str = "") -> None:
     """Append a RUNNING step row for a tool call that is about to execute."""
     try:
         bubble = _find_active_agent_bubble(scene)
         if bubble is None:
             logger.debug("[STEPS] No agent bubble for %s, skipping row", tool_name)
             return
-        begin_step_on_bubble(bubble, request_id, tool_name)
+        begin_step_on_bubble(bubble, request_id, tool_name, script)
         # A new tool step starting means the agent has moved on from its current
         # reasoning — collapse the live thinking panel to "Thought for Ns" so it
         # appears progressively rather than only at the very end of the turn.

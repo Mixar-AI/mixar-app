@@ -179,7 +179,7 @@ def _process_one_request() -> Optional[float]:
     from .steps_recorder import record_step_start, record_step_end
     chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
     if chat_scene:
-        record_step_start(chat_scene, request_id, tool_name)
+        record_step_start(chat_scene, request_id, tool_name, script)
 
     executor = get_executor()
 

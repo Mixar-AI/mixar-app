@@ -106,17 +106,47 @@ def humanize_tool_name(tool_name: str) -> str:
     return words[:1].upper() + words[1:]
 
 
-def clean_step_detail(output: str) -> str:
-    """Strip protocol noise from script output before showing it as detail.
+def classify_script_action(script: str) -> str:
+    """Infer the action a Blender script performs, for a precise row label when
+    the backend sends no tool name.
 
-    Drops `__RESULT__{...}` lines (the script->backend result channel) and
-    trailing whitespace; the remaining human-readable output is kept.
+    The agent executes generated Python, so the script body IS the action. This
+    is a conservative keyword classifier — it only labels strong, distinctive
+    NON-geometry actions (render / materials / camera / lighting / modifier).
+    Scripts that create geometry return "" so the result counts label them
+    ("Created N objects"), which avoids mislabelling a modeling script that
+    happens to also assign a material.
     """
-    lines = [
-        line for line in (output or "").splitlines()
-        if not line.lstrip().startswith("__RESULT__")
-    ]
-    return "\n".join(lines).strip()
+    s = (script or "").lower()
+    if not s:
+        return ""
+    # Rendering is unmistakable and never modeling.
+    if "ops.render.render" in s or "render.render(" in s or "render_still" in s:
+        return "Rendered scene"
+    # If the script builds geometry, it's modeling — let the counts label it.
+    creates_geometry = any(k in s for k in (
+        "primitive_", "ops.mesh.", "meshes.new", "bmesh", "curves.new",
+        "metaballs.new", "object.add(", "objects.new(",
+    ))
+    if not creates_geometry:
+        if any(k in s for k in (
+                "data.materials", "material_slots", "node_tree", "principled",
+                "data.images", "image_texture", ".uv_layers", "bsdf")):
+            return "Applied materials"
+        if any(k in s for k in (
+                "data.cameras", "cameras.new", "camera_add", "scene.camera",
+                ".lens", "track_to")):
+            return "Set up camera"
+        if any(k in s for k in (
+                "data.lights", "lights.new", "light_add", "world.node_tree",
+                "environment_texture", "type='sun'", "type='area'",
+                "type='point'", "type='spot'")):
+            return "Set up lighting"
+        if "modifier_add" in s or "modifiers.new" in s:
+            return "Added modifier"
+    return ""
+
+
 
 
 def _summarize_object_counts(created: int, modified: int, deleted: int) -> str:
@@ -185,19 +215,24 @@ def _refresh_summary(bubble) -> None:
     )
 
 
-def begin_step_on_bubble(bubble, request_id: str, tool_name: str) -> None:
+def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "") -> None:
     """Append a RUNNING step row for a tool call that just started executing.
 
     Duck-typed like apply_steps_to_bubble — used by the live recorder when a
-    `blender.execute_script` request begins on the main thread.
+    `blender.execute_script` request begins on the main thread. The label
+    prefers a real backend tool name, then the script-inferred action, then a
+    generic placeholder the result counts will refine on finish.
     """
-    # New tool block starts collapsed — a clean "▸ Used N tools" one-liner the
-    # user can expand, instead of a wall of rows + logs (Cowork-style).
     was_empty = len(bubble.step_items) == 0
     row = bubble.step_items.add()
     row.item_id = request_id or ""
     row.kind = infer_step_kind(tool_name)
-    row.label = humanize_tool_name(tool_name)
+    label = humanize_tool_name(tool_name)
+    if label == "Tool call":
+        classified = classify_script_action(script)
+        if classified:
+            label = classified
+    row.label = label
     row.target = ""
     row.detail = ""
     row.status = "RUNNING"
@@ -229,10 +264,16 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
         modified = list(result.get("modified_objects") or [])
         deleted = list(result.get("deleted_objects") or [])
         if success:
-            # Label the row by what it DID (consistent, accurate), not the
-            # unrelated loader phase.
-            row.label, row.target = _result_label(
-                len(created), len(modified), len(deleted))
+            # Keep a meaningful label (real tool name or script-inferred action,
+            # set at begin) and show the object counts beside it; only synthesize
+            # a label from the counts when the row is still the generic
+            # "Tool call".
+            if getattr(row, "label", "") and row.label != "Tool call":
+                row.target = _summarize_object_counts(
+                    len(created), len(modified), len(deleted))
+            else:
+                row.label, row.target = _result_label(
+                    len(created), len(modified), len(deleted))
             # Expandable detail: the actual object NAMES. NEVER the raw script
             # stdout — that is the "Blender create Mesh node Cube.099" log wall.
             row.detail = _object_names_detail(created, modified, deleted)
