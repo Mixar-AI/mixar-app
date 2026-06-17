@@ -47,27 +47,6 @@ def _find_bubble_with_step(scene, request_id: str):
     return None
 
 
-def _current_loader_phase(bubble) -> str:
-    """The current loader phase as a clean label ("Placing object", "Validating
-    scene", …), or "" for the generic 'Executing bpy script…'. Used to give each
-    tool row a descriptive name (the backend sends no per-tool reasoning)."""
-    import json
-    raw = getattr(bubble, "loader_texts", "") or ""
-    try:
-        texts = json.loads(raw) if raw else []
-    except (ValueError, TypeError):
-        return ""
-    if not isinstance(texts, list) or not texts:
-        return ""
-    idx = getattr(bubble, "loader_current_index", 0) or 0
-    if idx < 0 or idx >= len(texts):
-        idx = 0
-    text = (texts[idx] or "").strip().rstrip("…").rstrip(".").strip()
-    if not text or text.lower().startswith("executing bpy script"):
-        return ""
-    return text
-
-
 def record_step_start(scene, request_id: str, tool_name: str) -> None:
     """Append a RUNNING step row for a tool call that is about to execute."""
     try:
@@ -76,15 +55,6 @@ def record_step_start(scene, request_id: str, tool_name: str) -> None:
             logger.debug("[STEPS] No agent bubble for %s, skipping row", tool_name)
             return
         begin_step_on_bubble(bubble, request_id, tool_name)
-        # The backend sends no per-tool reasoning, so label the row with the
-        # current loader PHASE ("Placing object", "Validating scene", …) — the
-        # best descriptive signal — instead of a generic "Tool call".
-        status = _current_loader_phase(bubble)
-        if status:
-            try:
-                bubble.step_items[-1].label = status
-            except Exception:  # noqa: BLE001
-                pass
         # A new tool step starting means the agent has moved on from its current
         # reasoning — collapse the live thinking panel to "Thought for Ns" so it
         # appears progressively rather than only at the very end of the turn.
