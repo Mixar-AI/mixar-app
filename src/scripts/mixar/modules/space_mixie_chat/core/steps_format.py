@@ -144,6 +144,16 @@ def classify_script_action(script: str) -> str:
             return "Set up lighting"
         if "modifier_add" in s or "modifiers.new" in s:
             return "Added modifier"
+        # Read-only query/inspection: reads scene data with no mutation. Many
+        # "Ran a tool" rows are these ("Getting scene state…"). If a mutation
+        # slips through, finish_step_on_bubble overrides this with the counts.
+        mutates = any(k in s for k in (
+            ".new(", "_add(", "delete", "remove(", ".append(", "ops.object",
+            "ops.transform", "ops.import", "ops.export", "= bpy.data", "link("))
+        reads = any(k in s for k in (
+            "bpy.data", "context.scene", "context.view_layer", "context.object"))
+        if reads and not mutates:
+            return "Inspected scene"
     return ""
 
 
@@ -264,16 +274,20 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
         modified = list(result.get("modified_objects") or [])
         deleted = list(result.get("deleted_objects") or [])
         if success:
+            nc, nm, nd = len(created), len(modified), len(deleted)
+            label = getattr(row, "label", "")
+            # An "Inspected scene" guess that actually changed objects was wrong
+            # — fall back to the accurate count label.
+            if label == "Inspected scene" and (nc or nm or nd):
+                label = "Tool call"
             # Keep a meaningful label (real tool name or script-inferred action,
             # set at begin) and show the object counts beside it; only synthesize
             # a label from the counts when the row is still the generic
             # "Tool call".
-            if getattr(row, "label", "") and row.label != "Tool call":
-                row.target = _summarize_object_counts(
-                    len(created), len(modified), len(deleted))
+            if label and label != "Tool call":
+                row.target = _summarize_object_counts(nc, nm, nd)
             else:
-                row.label, row.target = _result_label(
-                    len(created), len(modified), len(deleted))
+                row.label, row.target = _result_label(nc, nm, nd)
             # Expandable detail: the actual object NAMES. NEVER the raw script
             # stdout — that is the "Blender create Mesh node Cube.099" log wall.
             row.detail = _object_names_detail(created, modified, deleted)
