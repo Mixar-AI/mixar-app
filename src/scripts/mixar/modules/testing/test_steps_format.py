@@ -171,6 +171,8 @@ def test_finish_step_marks_done_with_count_and_no_stdout():
     assert found is True
     row = bubble.step_items[0]
     assert row.status == "DONE"
+    # Mixed op → labelled "Updated scene" with the breakdown as target.
+    assert row.label == "Updated scene"
     assert row.target == "1 created · 1 modified"
     # Detail holds the object NAMES (expandable), never the stdout log wall.
     assert "Cube" in row.detail and "Material.001" in row.detail

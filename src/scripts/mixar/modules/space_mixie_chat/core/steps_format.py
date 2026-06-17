@@ -158,6 +158,27 @@ def _object_names_detail(created: list, modified: list, deleted: list) -> str:
     return "\n".join(parts)
 
 
+def _result_label(created: int, modified: int, deleted: int):
+    """Describe a finished tool by WHAT IT ACTUALLY DID, from the result counts.
+
+    Returns (label, target). Self-consistent — a row never claims an action it
+    didn't take (unlike labelling by the unrelated loader phase, where a
+    "Rendering viewport" row could show created objects):
+      - one operation  -> "Created 54 objects", target=""
+      - mixed          -> "Updated scene", target="8 created · 1 modified · …"
+      - nothing        -> "Ran a tool", target=""
+    """
+    active = [(n, v) for n, v in ((created, "Created"),
+                                  (modified, "Modified"),
+                                  (deleted, "Deleted")) if n]
+    if not active:
+        return "Ran a tool", ""
+    if len(active) == 1:
+        n, verb = active[0]
+        return f"{verb} {n} object{'s' if n != 1 else ''}", ""
+    return "Updated scene", _summarize_object_counts(created, modified, deleted)
+
+
 def _refresh_summary(bubble) -> None:
     bubble.steps_summary = format_steps_summary(
         row.kind for row in bubble.step_items
@@ -207,14 +228,17 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
         created = list(result.get("created_objects") or [])
         modified = list(result.get("modified_objects") or [])
         deleted = list(result.get("deleted_objects") or [])
-        # Collapsed row: a clean object COUNT (not internal mesh names).
-        row.target = _summarize_object_counts(len(created), len(modified), len(deleted))
-        # Expandable detail: the actual object NAMES (every row is independently
-        # collapsible). NEVER the raw script stdout — that is the
-        # "Blender create Mesh node Cube.099" log wall.
         if success:
+            # Label the row by what it DID (consistent, accurate), not the
+            # unrelated loader phase.
+            row.label, row.target = _result_label(
+                len(created), len(modified), len(deleted))
+            # Expandable detail: the actual object NAMES. NEVER the raw script
+            # stdout — that is the "Blender create Mesh node Cube.099" log wall.
             row.detail = _object_names_detail(created, modified, deleted)
         else:
+            row.label = "Failed"
+            row.target = ""
             row.detail = (result.get("error") or "")[:500]
         return True
     return False
