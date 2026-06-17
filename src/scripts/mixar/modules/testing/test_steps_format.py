@@ -157,20 +157,24 @@ def test_begin_step_adds_running_row_and_updates_summary():
     assert bubble.steps_summary == "Used 1 tool"
 
 
-def test_finish_step_marks_done_with_target_and_detail():
+def test_finish_step_marks_done_with_count_and_no_stdout():
+    """A finished step shows a clean object COUNT as target and never surfaces
+    raw script stdout (the "Blender create Mesh node" log wall) as detail."""
     bubble = _FakeBubble()
     steps_format.begin_step_on_bubble(bubble, "req-1", "create_cube")
     found = steps_format.finish_step_on_bubble(bubble, "req-1", {
         "success": True,
-        "output": "cube created",
+        "output": "Blender create Mesh node Cube.099\nBlender create Mesh node Cube.100",
         "created_objects": ["Cube"],
         "modified_objects": ["Material.001"],
     })
     assert found is True
     row = bubble.step_items[0]
     assert row.status == "DONE"
-    assert row.target == "Cube, Material.001"
-    assert row.detail == "cube created"
+    assert row.target == "1 created · 1 modified"
+    # Detail holds the object NAMES (expandable), never the stdout log wall.
+    assert "Cube" in row.detail and "Material.001" in row.detail
+    assert "Blender create Mesh node" not in row.detail
 
 
 def test_finish_step_failure_sets_failed_and_error_detail():

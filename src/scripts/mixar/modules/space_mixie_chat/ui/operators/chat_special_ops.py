@@ -349,6 +349,27 @@ class MIXIE_CHAT_OT_toggle_thinking(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_dev_stream_demo(Operator):
+    """Stream a scripted demo agent turn (thinking → plan → tools → answer).
+
+    Dev/QA aid for evaluating the agent-output UI without a backend. Drives the
+    real slot pipeline so what renders here matches live streaming.
+    """
+    bl_idname = "mixie_chat.dev_stream_demo"
+    bl_label = "Dev: Stream Demo Turn"
+    bl_options = {'REGISTER'}
+
+    user_text: StringProperty(
+        name="User Text",
+        default="Make a woods scene with a cabin and an outdoor fireplace",
+    )
+
+    def execute(self, context):
+        from ...core.dev_stream import start_demo_stream
+        start_demo_stream(context.scene, self.user_text)
+        return {'FINISHED'}
+
+
 classes = (
     MIXIE_CHAT_OT_select_slot_action,
     MIXIE_CHAT_OT_insert_prompt_text,
@@ -357,4 +378,5 @@ classes = (
     MIXIE_CHAT_OT_toggle_steps,
     MIXIE_CHAT_OT_toggle_step_row,
     MIXIE_CHAT_OT_toggle_thinking,
+    MIXIE_CHAT_OT_dev_stream_demo,
 )

@@ -271,6 +271,14 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
 
+        # 4b. Settle the turn: collapse live narration -> "Thought for Ns",
+        # finalize running steps, so a retry starts from a clean transcript.
+        try:
+            from ...core.slot_processor import finalize_turn
+            finalize_turn(scene)
+        except Exception as e:
+            logger.debug(f"finalize_turn on abort skipped: {e}")
+
         # 5. Send abort to backend
         self._send_abort_request_async(session.get_session_id(scene))
 

@@ -119,6 +119,45 @@ def clean_step_detail(output: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _summarize_object_counts(created: int, modified: int, deleted: int) -> str:
+    """A clean target summary like "12 created" / "3 created · 1 deleted".
+
+    Replaces the old list of internal Blender object names so a tool row reads
+    as an action result, not a dump of mesh names.
+    """
+    parts = []
+    if created:
+        parts.append(f"{created} created")
+    if modified:
+        parts.append(f"{modified} modified")
+    if deleted:
+        parts.append(f"{deleted} deleted")
+    return " · ".join(parts)
+
+
+def _object_names_detail(created: list, modified: list, deleted: list) -> str:
+    """Expandable detail body: the object names grouped by action.
+
+    Shown only when a tool row is expanded. Capped so a 200-object build does
+    not produce an enormous block.
+    """
+    cap = 40
+
+    def fmt(names: list, verb: str) -> str:
+        if not names:
+            return ""
+        shown = names[:cap]
+        line = f"{verb}: " + ", ".join(shown)
+        if len(names) > cap:
+            line += f" … (+{len(names) - cap} more)"
+        return line
+
+    parts = [p for p in (fmt(created, "Created"),
+                         fmt(modified, "Modified"),
+                         fmt(deleted, "Deleted")) if p]
+    return "\n".join(parts)
+
+
 def _refresh_summary(bubble) -> None:
     bubble.steps_summary = format_steps_summary(
         row.kind for row in bubble.step_items
@@ -131,6 +170,9 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str) -> None:
     Duck-typed like apply_steps_to_bubble — used by the live recorder when a
     `blender.execute_script` request begins on the main thread.
     """
+    # New tool block starts collapsed — a clean "▸ Used N tools" one-liner the
+    # user can expand, instead of a wall of rows + logs (Cowork-style).
+    was_empty = len(bubble.step_items) == 0
     row = bubble.step_items.add()
     row.item_id = request_id or ""
     row.kind = infer_step_kind(tool_name)
@@ -138,6 +180,10 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str) -> None:
     row.target = ""
     row.detail = ""
     row.status = "RUNNING"
+    if was_empty and hasattr(bubble, "steps_collapsed"):
+        # Expanded by default so the per-tool notes appear progressively as the
+        # agent works; the user can collapse via the header.
+        bubble.steps_collapsed = False
     _refresh_summary(bubble)
 
 
@@ -158,17 +204,18 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             continue
         success = bool(result.get("success"))
         row.status = "DONE" if success else "FAILED"
-        objects = (
-            list(result.get("created_objects") or [])
-            + list(result.get("modified_objects") or [])
-            + list(result.get("deleted_objects") or [])
-        )
-        row.target = ", ".join(objects[:4])
+        created = list(result.get("created_objects") or [])
+        modified = list(result.get("modified_objects") or [])
+        deleted = list(result.get("deleted_objects") or [])
+        # Collapsed row: a clean object COUNT (not internal mesh names).
+        row.target = _summarize_object_counts(len(created), len(modified), len(deleted))
+        # Expandable detail: the actual object NAMES (every row is independently
+        # collapsible). NEVER the raw script stdout — that is the
+        # "Blender create Mesh node Cube.099" log wall.
         if success:
-            detail = clean_step_detail(result.get("output") or "")
+            row.detail = _object_names_detail(created, modified, deleted)
         else:
-            detail = result.get("error") or ""
-        row.detail = detail[:4000]
+            row.detail = (result.get("error") or "")[:500]
         return True
     return False
 
