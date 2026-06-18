@@ -21,10 +21,16 @@ def _mat(name, node_count):
     return SimpleNamespace(name=name, node_tree=SimpleNamespace(nodes=list(range(node_count))))
 
 
-def _obj(name, loc=(0, 0, 0), materials=()):
+def _mesh(vertices=0, edges=0, faces=0):
+    return SimpleNamespace(vertices=list(range(vertices)), edges=list(range(edges)),
+                           polygons=list(range(faces)))
+
+
+def _obj(name, loc=(0, 0, 0), materials=(), mesh=None):
     slots = [SimpleNamespace(material=m) for m in materials]
     return SimpleNamespace(name=name, type="MESH", location=list(loc),
-                           rotation_euler=[0, 0, 0], scale=[1, 1, 1], material_slots=slots)
+                           rotation_euler=[0, 0, 0], scale=[1, 1, 1],
+                           material_slots=slots, data=mesh)
 
 
 def _scene(objs):
@@ -59,3 +65,23 @@ def test_diff_detects_material_node_change():
     d = SD.diff_snapshots(before, after)
     assert d["materials_modified"] == ["Mat"]
     assert d["created"] == [] and d["modified"] == [] and d["deleted"] == []
+
+
+def test_diff_detects_mesh_topology_change():
+    before = SD.snapshot_scene(_scene([_obj("Cube", mesh=_mesh(8, 12, 6))]))
+    after = SD.snapshot_scene(_scene([_obj("Cube", mesh=_mesh(12, 16, 7))]))
+    d = SD.diff_snapshots(before, after)
+    assert d["modified"] == ["Cube"]
+    change = d["object_changes"]["Cube"]
+    assert "mesh_topology" in change["fields"]
+    assert change["mesh_delta"] == {"vertices": 4, "edges": 4, "faces": 1}
+
+
+def test_snapshot_uses_bmesh_counts_for_edit_mode(monkeypatch):
+    bm = SimpleNamespace(verts=list(range(12)), edges=list(range(16)), faces=list(range(7)))
+    monkeypatch.setitem(sys.modules, "bmesh",
+                        SimpleNamespace(from_edit_mesh=lambda _data: bm))
+    obj = _obj("Cube", mesh=_mesh(8, 12, 6))
+    obj.mode = "EDIT"
+    s = SD.snapshot_scene(_scene([obj]))
+    assert s["objects"]["Cube"]["mesh"] == {"vertices": 12, "edges": 16, "faces": 7}
