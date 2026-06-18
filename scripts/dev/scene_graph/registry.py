@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Shared node registry: one scene walk, geometry reused by every relation layer.
 
 The registry is the single source of node identity. Each node carries the

@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Assemble the layered scene graph dict from a registry + chosen relation layers."""
 
 from scene_graph.registry import NodeRegistry, round_vec

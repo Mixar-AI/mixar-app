@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """RelationLayer contract.
 
 A layer reads the shared NodeRegistry and emits relation triplets

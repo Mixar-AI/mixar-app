@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Read-only views/queries over a built scene graph.
 
 These are the primitives the agent traverses (SayPlan collapse->expand): a

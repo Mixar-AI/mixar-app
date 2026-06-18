@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Live, incrementally-maintained spatial scene graph.
 
 Keyed by object NAME (stable under deletion -- integer indices are not), so an

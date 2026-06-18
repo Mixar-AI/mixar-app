@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Convert the agent triplet graph into standard node-link JSON for visualizers.
 
 The agent graph stores relations as compact integer triplets nested under

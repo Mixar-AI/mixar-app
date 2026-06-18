@@ -1,6 +1,3 @@
-<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 # Scene Graph — Agent Tools Spec
 
 Spec for the tools the AI agent uses to read and traverse the per-scene scene

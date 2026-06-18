@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Entry point: build the live spatial scene graph inside Mixar and exercise it.
 
 Run THIS file from Mixar's Text Editor / Python console. It:

@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Agent-facing tool surface for traversing the spatial scene graph.
 
 The agent never ingests the whole graph -- it calls these tools to orient

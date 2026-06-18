@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Benchmark scene_graph build cost (run in the BUILT Mixar app).
 
 Creates UNITS x DEPTH objects nested DEPTH deep (default 5000 objects, depth 5),

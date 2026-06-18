@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Spatial relation layer: support (on-top-of) + world-axis directions.
 
 Reads geometry from the shared registry; emits compact triplets. "Nearness" is

@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """Depsgraph watcher: marks the store dirty on every add/modify/delete.
 
 Follows Mixar's handler->flag pattern. The handler does the cheapest possible
