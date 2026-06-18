@@ -4,6 +4,10 @@
 
 """Constants for the operation_history module."""
 
+# Persistent per-scene history id (Scene StringProperty, saved in the .blend so a scene's
+# operation log is continuous across saves/sessions — NOT tied to the chat session).
+SCENE_HISTORY_ID_PROP = "mixar_op_history_id"
+
 # Storage layout
 MODULE_DIR_NAME = "operation_history"
 ENV_BASE_DIR = "MIXAR_OPERATION_HISTORY_DIR"   # optional absolute base-dir override (tests/ops)

@@ -2,10 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Shallow object-level scene snapshot + diff (object set + transforms + material count).
+"""Shallow scene snapshot + diff.
 
-Mirrors space_mixie_chat.core.executor's change-detection shape but is standalone and
-pure (operates on any object with .name/.type/.location/.rotation_euler/.scale/.material_slots).
+Two layers, both standalone and pure:
+- objects: per-object (type + transform + material-slot count) — detects add/delete/move/scale.
+- materials: per-material node-tree node count — detects material edits (e.g. a node group
+  added) that don't change any object signature and would otherwise be invisible.
+
+Operates on any object with .name/.type/.location/.rotation_euler/.scale/.material_slots and
+materials with .name/.node_tree.nodes.
 """
 
 
@@ -20,21 +25,42 @@ def _obj_sig(o):
         return None
 
 
+def _mat_node_count(m):
+    try:
+        nt = getattr(m, "node_tree", None)
+        return len(nt.nodes) if nt is not None else 0
+    except Exception:
+        return 0
+
+
 def snapshot_scene(scene) -> dict:
     objs = {}
+    mats = {}
     try:
         for o in getattr(scene, "objects", []) or []:
             objs[o.name] = _obj_sig(o)
+            for slot in getattr(o, "material_slots", []) or []:
+                m = getattr(slot, "material", None)
+                if m is not None and getattr(m, "name", None):
+                    mats[m.name] = _mat_node_count(m)
     except Exception:
         pass
-    return {"objects": objs}
+    return {"objects": objs, "materials": mats}
+
+
+def _diff_maps(before: dict, after: dict):
+    bset, aset = set(before), set(after)
+    created = sorted(aset - bset)
+    deleted = sorted(bset - aset)
+    modified = sorted(n for n in (aset & bset) if before.get(n) != after.get(n))
+    return created, modified, deleted
 
 
 def diff_snapshots(before: dict, after: dict) -> dict:
-    b = (before or {}).get("objects", {})
-    a = (after or {}).get("objects", {})
-    bset, aset = set(b), set(a)
-    created = sorted(aset - bset)
-    deleted = sorted(bset - aset)
-    modified = sorted(n for n in (aset & bset) if b.get(n) != a.get(n))
-    return {"created": created, "modified": modified, "deleted": deleted}
+    created, modified, deleted = _diff_maps(
+        (before or {}).get("objects", {}), (after or {}).get("objects", {}))
+    mat_created, mat_modified, mat_deleted = _diff_maps(
+        (before or {}).get("materials", {}), (after or {}).get("materials", {}))
+    return {"created": created, "modified": modified, "deleted": deleted,
+            "materials_created": mat_created, "materials_modified": mat_modified,
+            "materials_deleted": mat_deleted}
