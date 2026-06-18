@@ -45,10 +45,10 @@ def test_should_capture_when_agent_not_busy():
     assert CS.should_capture(SessionState.IDLE) is True
     assert CS.should_capture(SessionState.OFFLINE) is True
     assert CS.should_capture(SessionState.CONNECTING) is True
+    assert CS.should_capture(SessionState.AWAITING_INPUT) is True
     # ...but never while the agent is running (those are agent ops, captured elsewhere).
     assert CS.should_capture(SessionState.BUSY) is False
     assert CS.should_capture(SessionState.MODIFYING) is False
-    assert CS.should_capture(SessionState.AWAITING_INPUT) is False
 
 
 def test_depsgraph_mesh_update_marks_capture_dirty(monkeypatch):
@@ -81,7 +81,6 @@ def test_capture_tick_records_manual_op_when_idle(monkeypatch):
 
     # Module globals are not auto-undone by monkeypatch; reset them by hand.
     CS._prev.clear()
-    CS._last_op.clear()
     # Seed a baseline with no objects so the new object reads as "created".
     CS._prev[sid] = {"objects": {}}
 
@@ -113,7 +112,6 @@ def test_capture_tick_skips_when_not_idle(monkeypatch):
     captured = []
 
     CS._prev.clear()
-    CS._last_op.clear()
     CS._prev[sid] = {"objects": {}}
 
     scene = SimpleNamespace(mixar_op_history_id=sid, objects=[_fake_obj("Cube")])
@@ -142,7 +140,6 @@ def test_offline_capture_then_read_roundtrip(monkeypatch, tmp_path):
     monkeypatch.setenv(C.ENV_BASE_DIR, str(tmp_path))
     store.reset_cache()
     CS._prev.clear()
-    CS._last_op.clear()
 
     scene = SimpleNamespace(mixar_op_history_id="", objects=[])   # no session id assigned yet
     wm = SimpleNamespace(operators=[
@@ -173,12 +170,43 @@ def test_offline_capture_then_read_roundtrip(monkeypatch, tmp_path):
     assert "Cube" in rec["scene_delta"]["created"]
 
 
+def test_awaiting_input_capture_then_read_roundtrip(monkeypatch, tmp_path):
+    """A user can edit the scene while the agent waits for confirmation; that edit is
+    manual user work and must not be silently folded into the baseline."""
+    from mixar.modules.operation_history.core import store, tools
+    from mixar.modules.operation_history import constants as C
+
+    monkeypatch.setenv(C.ENV_BASE_DIR, str(tmp_path))
+    store.reset_cache()
+    CS._prev.clear()
+
+    scene = SimpleNamespace(mixar_op_history_id="awaiting-scene", objects=[])
+    CS._prev[scene.mixar_op_history_id] = {"objects": {}, "materials": {}}
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.add", as_pointer=lambda: 9),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.AWAITING_INPUT),
+    )
+
+    scene.objects = [_fake_obj("Cube")]
+    monkeypatch.setattr(CS, "_dirty", True)
+    CS._capture_tick()
+
+    out = tools.run_tool(scene, "list_operations", {})
+    assert out["count"] == 1
+    rec = out["operations"][0]
+    assert rec["source"] == SOURCE_USER
+    assert "Cube" in rec["scene_delta"]["created"]
+
+
 def test_capture_tick_records_material_edit(monkeypatch):
     """D2: a material node-tree edit (no object change) is captured as a MATERIAL op."""
     sid = "sess-mat"
     captured = []
     CS._prev.clear()
-    CS._last_op.clear()
 
     mat = SimpleNamespace(name="Mat", node_tree=SimpleNamespace(nodes=[0, 1]))
     obj = SimpleNamespace(name="Cube", type="MESH", location=(0.0, 0.0, 0.0),
@@ -212,7 +240,6 @@ def test_capture_tick_records_extrude_like_mesh_topology_change(monkeypatch):
     sid = "sess-extrude"
     captured = []
     CS._prev.clear()
-    CS._last_op.clear()
 
     before_obj = _fake_obj("Cube", mesh=_mesh(8, 12, 6))
     scene = SimpleNamespace(mixar_op_history_id=sid, objects=[before_obj])
