@@ -90,6 +90,18 @@ def _mark_scene_dirty(monkeypatch, scene, *extra_scenes):
     CS._dirty_scene_names.add(scene.name)
 
 
+def test_prime_existing_scene_baselines(monkeypatch):
+    sid = "sess-prime"
+    CS._prev.clear()
+    scene = _fake_scene("PrimeScene", sid, [_fake_obj("Cube")])
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes=[scene]))
+
+    CS._prime_existing_scene_baselines()
+
+    assert sid in CS._prev
+    assert "Cube" in CS._prev[sid]["objects"]
+
+
 def test_capture_tick_records_manual_op_when_idle(monkeypatch):
     """Integration: dirty + IDLE + a new object → exactly one USER record."""
     sid = "sess-abc"
