@@ -30,7 +30,7 @@ def _setup(monkeypatch, tmp_path):
     store.append_operation(record.build_agent_record(
         tool_name="execute_bpy_script", result_dict={"success": True, "modified_objects": ["Cube"]},
         session_id="s1"), script_text="import bpy\n")
-    return SimpleNamespace(mixie_session_id="s1")
+    return SimpleNamespace(mixar_op_history_id="s1")
 
 
 def test_summary(monkeypatch, tmp_path):

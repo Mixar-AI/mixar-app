@@ -38,12 +38,16 @@ from mixar.modules.operation_history.core import capture_service as CS
 from mixar.modules.space_mixie_chat.constants import SessionState
 
 
-def test_should_capture_only_idle():
+def test_should_capture_when_agent_not_busy():
+    # Capture manual ops whenever the agent is NOT actively executing — including
+    # before any chat session exists (OFFLINE/CONNECTING) and when idle.
     assert CS.should_capture(SessionState.IDLE) is True
+    assert CS.should_capture(SessionState.OFFLINE) is True
+    assert CS.should_capture(SessionState.CONNECTING) is True
+    # ...but never while the agent is running (those are agent ops, captured elsewhere).
     assert CS.should_capture(SessionState.BUSY) is False
     assert CS.should_capture(SessionState.MODIFYING) is False
     assert CS.should_capture(SessionState.AWAITING_INPUT) is False
-    assert CS.should_capture(SessionState.OFFLINE) is False
 
 
 def _fake_obj(name, loc=(0.0, 0.0, 0.0)):
@@ -65,7 +69,7 @@ def test_capture_tick_records_manual_op_when_idle(monkeypatch):
     # Seed a baseline with no objects so the new object reads as "created".
     CS._prev[sid] = {"objects": {}}
 
-    scene = SimpleNamespace(mixie_session_id=sid, objects=[_fake_obj("Cube")])
+    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[_fake_obj("Cube")])
     wm = SimpleNamespace(operators=[
         SimpleNamespace(bl_idname="transform.translate", as_pointer=lambda: 42),
     ])
@@ -96,7 +100,7 @@ def test_capture_tick_skips_when_not_idle(monkeypatch):
     CS._last_op.clear()
     CS._prev[sid] = {"objects": {}}
 
-    scene = SimpleNamespace(mixie_session_id=sid, objects=[_fake_obj("Cube")])
+    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[_fake_obj("Cube")])
     wm = SimpleNamespace(operators=[])
     monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
     monkeypatch.setattr(
