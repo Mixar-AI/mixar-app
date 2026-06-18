@@ -16,8 +16,16 @@ from ..constants import (
     SOURCE_USER,
 )
 
-_EMPTY_DELTA = {"created": [], "modified": [], "deleted": []}
-_EMPTY_AFFECTED = {"objects": [], "materials": [], "layers": []}
+
+def _empty_delta() -> dict:
+    """Return a fresh empty scene delta (never share nested lists)."""
+    return {"created": [], "modified": [], "deleted": []}
+
+
+def _empty_affected() -> dict:
+    """Return a fresh empty affected map (never share nested lists)."""
+    return {"objects": [], "materials": [], "layers": []}
+
 
 # operator bl_idname prefix -> category
 _OP_PREFIX_CATEGORY = {
@@ -47,8 +55,8 @@ class OperationRecord:
     params: dict = field(default_factory=dict)
     success: bool = True
     error: Optional[str] = None
-    affected: dict = field(default_factory=lambda: dict(_EMPTY_AFFECTED))
-    scene_delta: dict = field(default_factory=lambda: dict(_EMPTY_DELTA))
+    affected: dict = field(default_factory=_empty_affected)
+    scene_delta: dict = field(default_factory=_empty_delta)
     script_file: Optional[str] = None
     seq: int = 0           # assigned by the store on append
     id: str = ""
@@ -97,7 +105,7 @@ def build_agent_record(*, tool_name, result_dict, session_id,
                        instance_id="", request_id=None, script_present=True) -> OperationRecord:
     tn = tool_name or "unknown"
     kind = derive_kind(tn)
-    delta = _delta_from_result(result_dict) if kind == KIND_OPERATION else dict(_EMPTY_DELTA)
+    delta = _delta_from_result(result_dict) if kind == KIND_OPERATION else _empty_delta()
     if kind != KIND_OPERATION:
         category = CAT_QUERY
     elif delta["created"] or delta["modified"] or delta["deleted"]:
@@ -123,6 +131,6 @@ def build_manual_record(*, scene_delta, op_idname=None, label="", category=CAT_O
         source=SOURCE_USER, kind=KIND_OPERATION, category=category,
         session_id=session_id or "", instance_id=instance_id,
         op_idname=op_idname, label=label or (op_idname or "Manual edit"),
-        affected=affected or dict(_EMPTY_AFFECTED),
-        scene_delta=scene_delta or dict(_EMPTY_DELTA),
+        affected=affected or _empty_affected(),
+        scene_delta=scene_delta or _empty_delta(),
     ).finalize()
