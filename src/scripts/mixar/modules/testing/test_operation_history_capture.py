@@ -56,9 +56,13 @@ def test_depsgraph_mesh_update_marks_capture_dirty(monkeypatch):
         def id_type_updated(self, id_type):
             return id_type == "MESH"
 
-    monkeypatch.setattr(CS, "_dirty", False)
-    CS._on_depsgraph(None, Depsgraph())
-    assert CS._dirty is True
+    scene = SimpleNamespace(name="Scene")
+    CS._dirty_scene_names.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+
+    CS._on_depsgraph(scene, Depsgraph())
+
+    assert CS._dirty_scene_names == {"Scene"}
 
 
 def _mesh(vertices=0, edges=0, faces=0):
@@ -74,6 +78,18 @@ def _fake_obj(name, loc=(0.0, 0.0, 0.0), mesh=None):
     )
 
 
+def _fake_scene(name, sid, objects):
+    return SimpleNamespace(name=name, mixar_op_history_id=sid, objects=objects)
+
+
+def _mark_scene_dirty(monkeypatch, scene, *extra_scenes):
+    CS._dirty_scene_names.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    scenes = {s.name: s for s in (scene,) + extra_scenes}
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes=scenes))
+    CS._dirty_scene_names.add(scene.name)
+
+
 def test_capture_tick_records_manual_op_when_idle(monkeypatch):
     """Integration: dirty + IDLE + a new object → exactly one USER record."""
     sid = "sess-abc"
@@ -82,9 +98,9 @@ def test_capture_tick_records_manual_op_when_idle(monkeypatch):
     # Module globals are not auto-undone by monkeypatch; reset them by hand.
     CS._prev.clear()
     # Seed a baseline with no objects so the new object reads as "created".
-    CS._prev[sid] = {"objects": {}}
+    CS._prev[sid] = {"objects": {}, "materials": {}}
 
-    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[_fake_obj("Cube")])
+    scene = _fake_scene("Scene", sid, [_fake_obj("Cube")])
     wm = SimpleNamespace(operators=[
         SimpleNamespace(bl_idname="transform.translate", as_pointer=lambda: 42),
     ])
@@ -94,7 +110,7 @@ def test_capture_tick_records_manual_op_when_idle(monkeypatch):
         lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
     )
     monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
 
     assert CS._capture_tick() == 0.5
     assert len(captured) == 1
@@ -112,9 +128,9 @@ def test_capture_tick_skips_when_not_idle(monkeypatch):
     captured = []
 
     CS._prev.clear()
-    CS._prev[sid] = {"objects": {}}
+    CS._prev[sid] = {"objects": {}, "materials": {}}
 
-    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[_fake_obj("Cube")])
+    scene = _fake_scene("Scene", sid, [_fake_obj("Cube")])
     wm = SimpleNamespace(operators=[])
     monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
     monkeypatch.setattr(
@@ -122,12 +138,41 @@ def test_capture_tick_skips_when_not_idle(monkeypatch):
         lambda: SimpleNamespace(get_state=lambda s: SessionState.BUSY),
     )
     monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
 
     assert CS._capture_tick() == 0.5
     assert captured == []
     # Baseline kept fresh so the busy-window change is not later misattributed.
     assert "Cube" in CS._prev[sid]["objects"]
+
+
+def test_capture_tick_uses_depsgraph_scene_not_context(monkeypatch):
+    """A dirty scene from the depsgraph is captured even when context.scene differs."""
+    sid = "sess-dirty-scene"
+    captured = []
+
+    CS._prev.clear()
+    CS._prev[sid] = {"objects": {}, "materials": {}}
+
+    context_scene = _fake_scene("ContextScene", "sess-context", [])
+    dirty_scene = _fake_scene("DirtyScene", sid, [_fake_obj("Cube")])
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.add", as_pointer=lambda: 71),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=context_scene, window_manager=wm))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+    _mark_scene_dirty(monkeypatch, dirty_scene, context_scene)
+
+    assert CS._capture_tick() == 0.5
+    assert len(captured) == 1
+    rec = captured[0]
+    assert rec.session_id == sid
+    assert "Cube" in rec.scene_delta["created"]
+    assert "sess-context" not in CS._prev
 
 
 def test_offline_capture_then_read_roundtrip(monkeypatch, tmp_path):
@@ -141,7 +186,7 @@ def test_offline_capture_then_read_roundtrip(monkeypatch, tmp_path):
     store.reset_cache()
     CS._prev.clear()
 
-    scene = SimpleNamespace(mixar_op_history_id="", objects=[])   # no session id assigned yet
+    scene = _fake_scene("OfflineScene", "", [])   # no session id assigned yet
     wm = SimpleNamespace(operators=[
         SimpleNamespace(bl_idname="object.add", as_pointer=lambda: 7),
     ])
@@ -153,13 +198,13 @@ def test_offline_capture_then_read_roundtrip(monkeypatch, tmp_path):
 
     # Tick 1: empty scene → establishes the baseline, records nothing (and lazily assigns
     # the scene's persistent history id).
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
     CS._capture_tick()
     assert scene.mixar_op_history_id          # id was assigned during capture
 
     # User adds a Cube while still OFFLINE (before ever opening the chat).
     scene.objects = [_fake_obj("Cube")]
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
     CS._capture_tick()
 
     # The agent later reads this scene's history — must find the manual edit.
@@ -180,7 +225,7 @@ def test_awaiting_input_capture_then_read_roundtrip(monkeypatch, tmp_path):
     store.reset_cache()
     CS._prev.clear()
 
-    scene = SimpleNamespace(mixar_op_history_id="awaiting-scene", objects=[])
+    scene = _fake_scene("AwaitingScene", "awaiting-scene", [])
     CS._prev[scene.mixar_op_history_id] = {"objects": {}, "materials": {}}
     wm = SimpleNamespace(operators=[
         SimpleNamespace(bl_idname="object.add", as_pointer=lambda: 9),
@@ -192,7 +237,7 @@ def test_awaiting_input_capture_then_read_roundtrip(monkeypatch, tmp_path):
     )
 
     scene.objects = [_fake_obj("Cube")]
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
     CS._capture_tick()
 
     out = tools.run_tool(scene, "list_operations", {})
@@ -212,7 +257,7 @@ def test_capture_tick_records_material_edit(monkeypatch):
     obj = SimpleNamespace(name="Cube", type="MESH", location=(0.0, 0.0, 0.0),
                           rotation_euler=(0.0, 0.0, 0.0), scale=(1.0, 1.0, 1.0),
                           material_slots=[SimpleNamespace(material=mat)])
-    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[obj])
+    scene = _fake_scene("MaterialScene", sid, [obj])
     CS._prev[sid] = snapshot_scene(scene)        # baseline: Mat has 2 nodes
     mat.node_tree.nodes.append(2)                # user edits the material → 3 nodes
 
@@ -223,7 +268,7 @@ def test_capture_tick_records_material_edit(monkeypatch):
         lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
     )
     monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
 
     assert CS._capture_tick() == 0.5
     assert len(captured) == 1
@@ -242,7 +287,7 @@ def test_capture_tick_records_extrude_like_mesh_topology_change(monkeypatch):
     CS._prev.clear()
 
     before_obj = _fake_obj("Cube", mesh=_mesh(8, 12, 6))
-    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[before_obj])
+    scene = _fake_scene("ExtrudeScene", sid, [before_obj])
     CS._prev[sid] = snapshot_scene(scene)
     scene.objects = [_fake_obj("Cube", mesh=_mesh(12, 16, 7))]
 
@@ -255,7 +300,7 @@ def test_capture_tick_records_extrude_like_mesh_topology_change(monkeypatch):
         lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
     )
     monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
-    monkeypatch.setattr(CS, "_dirty", True)
+    _mark_scene_dirty(monkeypatch, scene)
 
     assert CS._capture_tick() == 0.5
     assert len(captured) == 1
