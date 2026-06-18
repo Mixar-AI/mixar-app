@@ -32,7 +32,7 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.operation_history.constants import (
-    CAT_MATERIAL, CAT_TRANSFORM, SOURCE_USER,
+    CAT_MATERIAL, CAT_OBJECT, CAT_TRANSFORM, SOURCE_USER,
 )
 from mixar.modules.operation_history.core import capture_service as CS
 from mixar.modules.operation_history.core.scene_diff import snapshot_scene
@@ -51,11 +51,26 @@ def test_should_capture_when_agent_not_busy():
     assert CS.should_capture(SessionState.AWAITING_INPUT) is False
 
 
-def _fake_obj(name, loc=(0.0, 0.0, 0.0)):
+def test_depsgraph_mesh_update_marks_capture_dirty(monkeypatch):
+    class Depsgraph:
+        def id_type_updated(self, id_type):
+            return id_type == "MESH"
+
+    monkeypatch.setattr(CS, "_dirty", False)
+    CS._on_depsgraph(None, Depsgraph())
+    assert CS._dirty is True
+
+
+def _mesh(vertices=0, edges=0, faces=0):
+    return SimpleNamespace(vertices=list(range(vertices)), edges=list(range(edges)),
+                           polygons=list(range(faces)))
+
+
+def _fake_obj(name, loc=(0.0, 0.0, 0.0), mesh=None):
     return SimpleNamespace(
         name=name, type="MESH", location=loc,
         rotation_euler=(0.0, 0.0, 0.0), scale=(1.0, 1.0, 1.0),
-        material_slots=[],
+        material_slots=[], data=mesh,
     )
 
 
@@ -187,4 +202,42 @@ def test_capture_tick_records_material_edit(monkeypatch):
     rec = captured[0]
     assert rec.category == CAT_MATERIAL
     assert "Mat" in rec.affected["materials"]
+    assert rec.label == "User: edited material Mat (+1 node)"
     assert rec.scene_delta["created"] == [] and rec.scene_delta["modified"] == []
+
+
+def test_capture_tick_records_extrude_like_mesh_topology_change(monkeypatch):
+    """An edit-mode extrude may leave the last operator as transform.translate, but the
+    mesh topology delta should still produce a descriptive operation-history record."""
+    sid = "sess-extrude"
+    captured = []
+    CS._prev.clear()
+    CS._last_op.clear()
+
+    before_obj = _fake_obj("Cube", mesh=_mesh(8, 12, 6))
+    scene = SimpleNamespace(mixar_op_history_id=sid, objects=[before_obj])
+    CS._prev[sid] = snapshot_scene(scene)
+    scene.objects = [_fake_obj("Cube", mesh=_mesh(12, 16, 7))]
+
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="transform.translate", as_pointer=lambda: 11),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+    monkeypatch.setattr(CS, "_dirty", True)
+
+    assert CS._capture_tick() == 0.5
+    assert len(captured) == 1
+    rec = captured[0]
+    assert rec.category == CAT_OBJECT
+    assert rec.label == "User: extruded or added mesh geometry to Cube (+4 vertices, +4 edges, +1 face)"
+    assert rec.op_idname == "transform.translate"
+    assert rec.scene_delta["modified"] == ["Cube"]
+    assert rec.scene_delta["object_changes"]["Cube"]["mesh_delta"] == {
+        "vertices": 4, "edges": 4, "faces": 1,
+    }
+    assert "Cube" in rec.affected["objects"]

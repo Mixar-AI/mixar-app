@@ -16,7 +16,7 @@ from mixar.config.logging_config import get_logger
 
 from ...space_mixie_chat.constants import SessionState
 from ...space_mixie_chat.core.session import get_session_manager
-from ..constants import CAT_MATERIAL, CAT_UNDO
+from ..constants import CAT_MATERIAL, CAT_OBJECT, CAT_UNDO
 from . import store
 from .record import build_manual_record, category_for_operator
 from .scene_diff import diff_snapshots, snapshot_scene
@@ -40,7 +40,7 @@ def should_capture(state) -> bool:
 def _on_depsgraph(scene, depsgraph):
     global _dirty
     try:
-        if any(depsgraph.id_type_updated(t) for t in ('OBJECT', 'MATERIAL', 'NODETREE')):
+        if any(depsgraph.id_type_updated(t) for t in ('OBJECT', 'MESH', 'MATERIAL', 'NODETREE')):
             _dirty = True
     except Exception:
         _dirty = True
@@ -55,6 +55,95 @@ def _attribution():
     except Exception:
         pass
     return None, None
+
+
+def _names(names):
+    names = list(names or [])
+    if not names:
+        return ""
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return "{} and {}".format(names[0], names[1])
+    return "{}, and {} others".format(names[0], len(names) - 1)
+
+
+def _format_mesh_delta(mesh_delta):
+    labels = (("vertices", "vertex", "vertices"), ("edges", "edge", "edges"),
+              ("faces", "face", "faces"))
+    parts = []
+    for key, singular, plural in labels:
+        value = int(mesh_delta.get(key, 0) or 0)
+        if value:
+            noun = singular if abs(value) == 1 else plural
+            parts.append("{:+d} {}".format(value, noun))
+    return ", ".join(parts)
+
+
+def _mesh_change_label(delta):
+    changes = delta.get("object_changes") or {}
+    mesh_rows = []
+    for name, info in changes.items():
+        mesh_delta = (info or {}).get("mesh_delta") or {}
+        if mesh_delta:
+            mesh_rows.append((name, mesh_delta))
+    if not mesh_rows:
+        return None
+    name, mesh_delta = mesh_rows[0]
+    values = [int(v or 0) for v in mesh_delta.values()]
+    all_positive = values and all(v >= 0 for v in values) and any(v > 0 for v in values)
+    all_negative = values and all(v <= 0 for v in values) and any(v < 0 for v in values)
+    detail = _format_mesh_delta(mesh_delta)
+    suffix = " ({})".format(detail) if detail else ""
+    extra = "" if len(mesh_rows) == 1 else " and {} others".format(len(mesh_rows) - 1)
+    if all_positive:
+        return "extruded or added mesh geometry to {}{}{}".format(name, extra, suffix)
+    if all_negative:
+        return "removed mesh geometry from {}{}{}".format(name, extra, suffix)
+    return "edited mesh topology on {}{}{}".format(name, extra, suffix)
+
+
+def _material_label(delta, mats):
+    changes = delta.get("material_changes") or {}
+    if changes:
+        name = sorted(changes)[0]
+        node_delta = int((changes[name] or {}).get("nodes_delta", 0) or 0)
+        suffix = " ({:+d} node{})".format(node_delta, "" if abs(node_delta) == 1 else "s") if node_delta else ""
+        extra = "" if len(changes) == 1 else " and {} others".format(len(changes) - 1)
+        return "edited material {}{}{}".format(name, extra, suffix)
+    return "edited material {}".format(_names(mats))
+
+
+def _operator_label(idname, affected_objects):
+    name = (idname or "").lower()
+    target = _names(affected_objects)
+    if name.startswith("transform.translate"):
+        return "moved {}".format(target) if target else "moved objects"
+    if name.startswith("transform.resize"):
+        return "scaled {}".format(target) if target else "scaled objects"
+    if name.startswith("transform.rotate"):
+        return "rotated {}".format(target) if target else "rotated objects"
+    if "extrude" in name:
+        return "extruded {}".format(target) if target else "extruded mesh geometry"
+    if name.startswith("object.delete"):
+        return "deleted {}".format(target) if target else "deleted objects"
+    if name.startswith("object.") and affected_objects:
+        return "{} {}".format(name.replace("_", " "), target)
+    if idname:
+        return "{} {}".format(idname, target).strip()
+    return "manual edit {}".format(target).strip()
+
+
+def _record_delta(delta):
+    out = {"created": delta["created"], "modified": delta["modified"],
+           "deleted": delta["deleted"]}
+    if delta.get("object_changes"):
+        out["object_changes"] = delta["object_changes"]
+    for key in ("materials_created", "materials_modified", "materials_deleted",
+                "material_changes"):
+        if delta.get(key):
+            out[key] = delta[key]
+    return out
 
 
 def _capture_tick():
@@ -91,15 +180,15 @@ def _capture_tick():
             "objects": sorted(set(delta["created"]) | set(delta["modified"]) | set(delta["deleted"])),
             "materials": mats, "layers": [],
         }
+        mesh_label = _mesh_change_label(delta)
         if obj_changed:
-            category = category_for_operator(idname)
-            label = "User: {}".format(idname or "manual edit")
+            category = CAT_OBJECT if mesh_label else category_for_operator(idname)
+            label = "User: {}".format(mesh_label or _operator_label(idname, affected["objects"]))
         else:
             category = CAT_MATERIAL
-            label = "User: {}".format(idname or "material edit")
+            label = "User: {}".format(_material_label(delta, mats))
         store.append_operation(build_manual_record(
-            scene_delta={"created": delta["created"], "modified": delta["modified"],
-                         "deleted": delta["deleted"]},
+            scene_delta=_record_delta(delta),
             op_idname=idname, label=label, category=category,
             affected=affected, session_id=sid,
         ))
