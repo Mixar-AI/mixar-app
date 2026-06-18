@@ -66,3 +66,44 @@ def test_build_manual_record():
     assert rec.kind == C.KIND_OPERATION
     assert rec.op_idname == "transform.translate"
     assert rec.to_dict()["category"] == C.CAT_TRANSFORM
+
+
+def test_default_records_do_not_share_mutable_state():
+    # Two default-built records must not share nested list objects, and an
+    # in-place mutation on one must never leak into another (the audit log
+    # would be corrupted otherwise).
+    a = R.OperationRecord(source=C.SOURCE_USER)
+    b = R.OperationRecord(source=C.SOURCE_USER)
+    assert a.affected is not b.affected
+    assert a.affected["objects"] is not b.affected["objects"]
+    assert a.scene_delta is not b.scene_delta
+    assert a.scene_delta["created"] is not b.scene_delta["created"]
+
+    a.scene_delta["created"].append("X")
+    a.affected["objects"].append("Cube")
+    assert b.scene_delta == {"created": [], "modified": [], "deleted": []}
+    assert b.affected == {"objects": [], "materials": [], "layers": []}
+
+    # A freshly built default record is still pristine after the mutations above.
+    c = R.OperationRecord(source=C.SOURCE_USER)
+    assert c.scene_delta == {"created": [], "modified": [], "deleted": []}
+    assert c.affected == {"objects": [], "materials": [], "layers": []}
+
+
+def test_build_manual_record_defaults_are_independent():
+    # build_manual_record with no affected/scene_delta must mint fresh maps.
+    a = R.build_manual_record(scene_delta=None)
+    b = R.build_manual_record(scene_delta=None)
+    assert a.scene_delta is not b.scene_delta
+    assert a.affected is not b.affected
+    a.scene_delta["created"].append("X")
+    assert b.scene_delta == {"created": [], "modified": [], "deleted": []}
+
+
+def test_build_agent_record_query_delta_is_independent():
+    # Query branch deltas must be fresh per call, not a shared sentinel.
+    a = R.build_agent_record(tool_name="scene_overview", result_dict={"success": True}, session_id="s1")
+    b = R.build_agent_record(tool_name="scene_overview", result_dict={"success": True}, session_id="s1")
+    assert a.scene_delta is not b.scene_delta
+    a.scene_delta["created"].append("X")
+    assert b.scene_delta == {"created": [], "modified": [], "deleted": []}
