@@ -197,9 +197,10 @@ def _process_one_request() -> Optional[float]:
     try:
         from mixar.modules.operation_history.core import store as _op_store
         from mixar.modules.operation_history.core.record import build_agent_record
+        from mixar.modules.operation_history.core.scene_key import get_scene_history_id
         _hist_scene = target_scene if target_scene is not None else (
             bpy.context.window.scene if bpy.context.window else None)
-        _hist_sid = getattr(_hist_scene, "mixie_session_id", "") if _hist_scene else ""
+        _hist_sid = get_scene_history_id(_hist_scene)
         _wm = getattr(bpy.context, "window_manager", None)
         _iid = getattr(_wm, "mixie_instance_id", "") if _wm else ""
         _op_store.append_operation(

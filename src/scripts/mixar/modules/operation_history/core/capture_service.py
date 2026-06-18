@@ -3,8 +3,10 @@
 
 Follows the Mixar handler pattern (scene_graph/core/watcher.py + paint ui_handlers.py):
 the depsgraph handler only sets a flag; the timer does the diff + attribution + record.
-Manual ops are recorded ONLY when the session is IDLE (a live, non-agent-busy session),
-so agent operations — captured separately at the script executor — are never double-counted.
+Manual ops are recorded whenever the agent is NOT actively executing (so edits made before
+any chat session — the common "I built this, now ask the agent" flow — are captured), and
+keyed by the scene's persistent history id (not the chat session). Agent operations are
+captured separately at the script executor, so the IDLE-vs-busy gate avoids double-counting.
 """
 
 import bpy
@@ -14,27 +16,31 @@ from mixar.config.logging_config import get_logger
 
 from ...space_mixie_chat.constants import SessionState
 from ...space_mixie_chat.core.session import get_session_manager
-from ..constants import CAT_UNDO
+from ..constants import CAT_MATERIAL, CAT_UNDO
 from . import store
 from .record import build_manual_record, category_for_operator
 from .scene_diff import diff_snapshots, snapshot_scene
+from .scene_key import get_scene_history_id
 
 logger = get_logger(__name__)
 
+# Session states in which the agent itself is driving the scene; manual capture pauses then.
+_AGENT_ACTIVE = (SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT)
+
 _dirty = False
-_prev: dict = {}          # session_id -> last snapshot
-_last_op: dict = {}       # session_id -> (bl_idname, pointer)
+_prev: dict = {}          # history_id -> last snapshot
+_last_op: dict = {}       # history_id -> (bl_idname, pointer)
 
 
 def should_capture(state) -> bool:
-    return state == SessionState.IDLE
+    return state not in _AGENT_ACTIVE
 
 
 @persistent
 def _on_depsgraph(scene, depsgraph):
     global _dirty
     try:
-        if depsgraph.id_type_updated('OBJECT'):
+        if any(depsgraph.id_type_updated(t) for t in ('OBJECT', 'MATERIAL', 'NODETREE')):
             _dirty = True
     except Exception:
         _dirty = True
@@ -60,19 +66,22 @@ def _capture_tick():
         scene = getattr(bpy.context, 'scene', None)
         if scene is None:
             return 0.5
-        sid = getattr(scene, 'mixie_session_id', '') or ''
+        sid = get_scene_history_id(scene)
         snap = snapshot_scene(scene)
         state = get_session_manager().get_state(scene)
-        if not sid or not should_capture(state):
-            if sid:
-                _prev[sid] = snap        # keep baseline fresh without recording
+        if not should_capture(state):
+            _prev[sid] = snap            # keep baseline fresh without recording (agent is acting)
             return 0.5
         before = _prev.get(sid)
         _prev[sid] = snap
         if before is None:
             return 0.5
         delta = diff_snapshots(before, snap)
-        if not (delta["created"] or delta["modified"] or delta["deleted"]):
+        obj_changed = bool(delta["created"] or delta["modified"] or delta["deleted"])
+        mats = sorted(set(delta.get("materials_created", []))
+                      | set(delta.get("materials_modified", []))
+                      | set(delta.get("materials_deleted", [])))
+        if not (obj_changed or mats):
             return 0.5
         idname, ptr = _attribution()
         if idname and _last_op.get(sid) == (idname, ptr):
@@ -80,12 +89,19 @@ def _capture_tick():
         _last_op[sid] = (idname, ptr)
         affected = {
             "objects": sorted(set(delta["created"]) | set(delta["modified"]) | set(delta["deleted"])),
-            "materials": [], "layers": [],
+            "materials": mats, "layers": [],
         }
+        if obj_changed:
+            category = category_for_operator(idname)
+            label = "User: {}".format(idname or "manual edit")
+        else:
+            category = CAT_MATERIAL
+            label = "User: {}".format(idname or "material edit")
         store.append_operation(build_manual_record(
-            scene_delta=delta, op_idname=idname,
-            label="User: {}".format(idname or "manual edit"),
-            category=category_for_operator(idname), affected=affected, session_id=sid,
+            scene_delta={"created": delta["created"], "modified": delta["modified"],
+                         "deleted": delta["deleted"]},
+            op_idname=idname, label=label, category=category,
+            affected=affected, session_id=sid,
         ))
     except Exception as e:
         logger.debug("operation_history capture tick failed: %s", e)
@@ -94,8 +110,8 @@ def _capture_tick():
 
 def _record_undo(scene, idname, label):
     try:
-        sid = getattr(scene, 'mixie_session_id', '') or ''
-        if not sid or not should_capture(get_session_manager().get_state(scene)):
+        sid = get_scene_history_id(scene)
+        if not should_capture(get_session_manager().get_state(scene)):
             return
         store.append_operation(build_manual_record(
             scene_delta=None, op_idname=idname, label=label, category=CAT_UNDO, session_id=sid))
