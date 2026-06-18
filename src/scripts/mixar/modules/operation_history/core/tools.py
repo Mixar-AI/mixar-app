@@ -9,7 +9,9 @@ convention). TOOL_SPECS is ready to register in the backend tool registry. Per-s
 construction (resolved from the scene's persistent mixar_op_history_id). All output is capped.
 """
 
-from ..constants import KIND_OPERATION, MAX_LIST_RESULTS
+import os
+
+from ..constants import KIND_OPERATION, MAX_LIST_RESULTS, MAX_SCRIPT_CHARS
 from . import store
 from .scene_key import get_scene_history_id
 
@@ -76,9 +78,26 @@ def _get(scene, seq=None, op_id=None):
     for r in store.read_operations(sid, limit=0):
         if (seq is not None and r.get("seq") == seq) or (op_id is not None and r.get("id") == op_id):
             out = dict(r)
-            out["script"] = store.read_script(sid, seq=r.get("seq"), op_id=r.get("id"))
+            out["script"] = _read_record_script(sid, out)
             return out
     return {"error": "operation not found"}
+
+
+def _read_record_script(session_id: str, rec: dict):
+    script_file = rec.get("script_file")
+    if not script_file:
+        return None
+    if os.path.isabs(script_file):
+        return None
+    normalized = os.path.normpath(script_file)
+    if normalized.startswith(".."):
+        return None
+    path = os.path.join(store.session_dir(session_id), normalized)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()[:MAX_SCRIPT_CHARS]
+    except Exception:
+        return None
 
 
 def _for_object(scene, object_name=None):

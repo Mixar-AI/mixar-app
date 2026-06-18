@@ -52,9 +52,18 @@ def test_list_defaults_to_operations(monkeypatch, tmp_path):
 
 def test_get_operation_returns_script(monkeypatch, tmp_path):
     scene = _setup(monkeypatch, tmp_path)
+    calls = {"count": 0}
+    original_read_operations = store.read_operations
+
+    def counted_read_operations(*args, **kwargs):
+        calls["count"] += 1
+        return original_read_operations(*args, **kwargs)
+
+    monkeypatch.setattr(store, "read_operations", counted_read_operations)
     out = tools.run_tool(scene, "get_operation", {"seq": 3})
     assert out["tool_name"] == "execute_bpy_script"
     assert "import bpy" in out["script"]
+    assert calls["count"] == 1
 
 
 def test_operations_for_object(monkeypatch, tmp_path):

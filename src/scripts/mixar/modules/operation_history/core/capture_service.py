@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Manual user-operation capture: depsgraph -> dirty flag -> timer drain.
 
@@ -24,12 +26,12 @@ from .scene_key import get_scene_history_id
 
 logger = get_logger(__name__)
 
-# Session states in which the agent itself is driving the scene; manual capture pauses then.
-_AGENT_ACTIVE = (SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT)
+# Session states in which the agent itself is actively driving the scene; manual capture
+# pauses only then. AWAITING_INPUT is a user-facing pause, so manual edits there are recorded.
+_AGENT_ACTIVE = (SessionState.BUSY, SessionState.MODIFYING)
 
 _dirty = False
 _prev: dict = {}          # history_id -> last snapshot
-_last_op: dict = {}       # history_id -> (bl_idname, pointer)
 
 
 def should_capture(state) -> bool:
@@ -173,9 +175,7 @@ def _capture_tick():
         if not (obj_changed or mats):
             return 0.5
         idname, ptr = _attribution()
-        if idname and _last_op.get(sid) == (idname, ptr):
-            return 0.5                    # same operator invocation already recorded
-        _last_op[sid] = (idname, ptr)
+        del ptr  # attribution pointer is not stable enough to use for deduplication.
         affected = {
             "objects": sorted(set(delta["created"]) | set(delta["modified"]) | set(delta["deleted"])),
             "materials": mats, "layers": [],
@@ -224,7 +224,6 @@ def _on_load(*_args):
     global _dirty
     _dirty = False
     _prev.clear()
-    _last_op.clear()
     store.reset_cache()
 
 
