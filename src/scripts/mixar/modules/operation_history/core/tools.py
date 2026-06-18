@@ -6,11 +6,12 @@
 
 run_tool(scene, name, params) returns a JSON-serializable dict (the agent's __RESULT__
 convention). TOOL_SPECS is ready to register in the backend tool registry. Per-session by
-construction (session resolved from scene.mixie_session_id). All output is capped.
+construction (resolved from the scene's persistent mixar_op_history_id). All output is capped.
 """
 
-from ..constants import KIND_OPERATION, MAX_LIST_RESULTS, NO_SESSION
+from ..constants import KIND_OPERATION, MAX_LIST_RESULTS
 from . import store
+from .scene_key import get_scene_history_id
 
 TOOL_SPECS = [
     {"name": "operation_history_summary",
@@ -38,7 +39,10 @@ TOOL_SPECS = [
 
 
 def _session_id(scene) -> str:
-    return getattr(scene, "mixie_session_id", "") or NO_SESSION
+    # History is keyed by the scene's persistent id (not the chat session), so the agent
+    # reads the same log the capture service writes — including manual edits made before
+    # any chat session existed.
+    return get_scene_history_id(scene)
 
 
 def _summary(scene):
