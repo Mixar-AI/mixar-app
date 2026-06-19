@@ -5,9 +5,8 @@
 """Agent-facing read surface for the operation history.
 
 run_tool(scene, name, params) returns a JSON-serializable dict (the agent's __RESULT__
-convention). Backend tool definitions live in mixar-backend, mirroring the scene_graph
-query pattern. Per-session by construction (resolved from the scene's persistent
-mixar_op_history_id). All output is capped.
+convention). TOOL_SPECS is ready to register in the backend tool registry. Per-session by
+construction (resolved from the scene's persistent mixar_op_history_id). All output is capped.
 """
 
 import os
@@ -15,6 +14,30 @@ import os
 from ..constants import KIND_OPERATION, MAX_LIST_RESULTS, MAX_SCRIPT_CHARS
 from . import store
 from .scene_key import get_scene_history_id
+
+TOOL_SPECS = [
+    {"name": "operation_history_summary",
+     "description": "Counts of recorded operations by source/kind/category, time range, and "
+                    "the most recent operation labels. Call first to orient.",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "list_operations",
+     "description": "Recent operations (newest last), capped. By default returns only mutating "
+                    "operations; set include_queries=true to also include the agent's read-only "
+                    "tool calls. Filter by source ('AGENT'|'USER'), category, or since_seq.",
+     "parameters": {"type": "object", "properties": {
+         "limit": {"type": "integer"}, "include_queries": {"type": "boolean"},
+         "source": {"type": "string"}, "category": {"type": "string"},
+         "since_seq": {"type": "integer"}}}},
+    {"name": "get_operation",
+     "description": "One operation's full record including the saved script content (for agent "
+                    "executions). Identify it by seq or id.",
+     "parameters": {"type": "object", "properties": {
+         "seq": {"type": "integer"}, "op_id": {"type": "string"}}}},
+    {"name": "operations_for_object",
+     "description": "All recorded operations that created/modified/deleted or affected a given object.",
+     "parameters": {"type": "object", "properties": {"object_name": {"type": "string"}},
+                    "required": ["object_name"]}},
+]
 
 
 def _session_id(scene) -> str:
@@ -84,22 +107,17 @@ def _for_object(scene, object_name=None):
     return {"object": object_name, "operations": rows, "count": len(rows)}
 
 
-def _handlers(scene, params):
-    return {
+def run_tool(scene, name, params=None):
+    params = params or {}
+    handler = {
         "operation_history_summary": lambda: _summary(scene),
         "list_operations": lambda: _list(scene, **params),
         "get_operation": lambda: _get(scene, **params),
         "operations_for_object": lambda: _for_object(scene, **params),
-    }
-
-
-def run_tool(scene, name, params=None):
-    params = params or {}
-    handlers = _handlers(scene, params)
-    handler = handlers.get(name)
+    }.get(name)
     if handler is None:
         return {"error": "unknown tool '{}'".format(name),
-                "available": sorted(handlers)}
+                "available": [t["name"] for t in TOOL_SPECS]}
     try:
         return handler()
     except TypeError as exc:

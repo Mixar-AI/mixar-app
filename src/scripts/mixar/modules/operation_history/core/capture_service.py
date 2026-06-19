@@ -11,6 +11,8 @@ keyed by the scene's persistent history id (not the chat session). Agent operati
 captured separately at the script executor, so the IDLE-vs-busy gate avoids double-counting.
 """
 
+import time
+
 import bpy
 from bpy.app.handlers import persistent
 
@@ -31,8 +33,17 @@ logger = get_logger(__name__)
 _AGENT_ACTIVE = (SessionState.BUSY, SessionState.MODIFYING)
 
 _dirty_scene_names = set()
+_dirty_scene_deadlines: dict = {}
 _dirty_context_scene = False
+_dirty_context_deadline = 0.0
 _prev: dict = {}          # history_id -> last snapshot
+
+# Blender can emit several depsgraph waves for one user action (asset paste/import,
+# node-tree creation, linked-data resolution). Wait for a short quiet window so the
+# operation is captured once as a complete diff instead of as partial records.
+_CAPTURE_QUIET_SECONDS = 0.75
+_TICK_SECONDS = 0.5
+_MIN_TICK_SECONDS = 0.1
 
 
 def should_capture(state) -> bool:
@@ -49,7 +60,8 @@ def _on_depsgraph(scene, depsgraph):
 
 
 def _mark_dirty_scene(scene):
-    global _dirty_context_scene
+    global _dirty_context_scene, _dirty_context_deadline
+    deadline = time.monotonic() + _CAPTURE_QUIET_SECONDS
     if scene is None:
         try:
             scene = getattr(bpy.context, 'scene', None)
@@ -58,8 +70,10 @@ def _mark_dirty_scene(scene):
     name = getattr(scene, 'name', None)
     if name:
         _dirty_scene_names.add(name)
+        _dirty_scene_deadlines[name] = deadline
     else:
         _dirty_context_scene = True
+        _dirty_context_deadline = deadline
 
 
 def _context_scene():
@@ -67,35 +81,6 @@ def _context_scene():
         return getattr(bpy.context, 'scene', None)
     except Exception:
         return None
-
-
-def _iter_scenes():
-    try:
-        scenes = getattr(getattr(bpy, 'data', None), 'scenes', None)
-    except Exception:
-        scenes = None
-    if scenes is None:
-        scene = _context_scene()
-        return [scene] if scene is not None else []
-    try:
-        return [scene for scene in scenes if scene is not None]
-    except Exception:
-        scene = _context_scene()
-        return [scene] if scene is not None else []
-
-
-def _prime_scene_baseline(scene):
-    try:
-        sid = get_scene_history_id(scene)
-        if sid:
-            _prev[sid] = snapshot_scene(scene)
-    except Exception as e:
-        logger.debug("operation_history baseline prime failed: %s", e)
-
-
-def _prime_existing_scene_baselines():
-    for scene in _iter_scenes():
-        _prime_scene_baseline(scene)
 
 
 def _resolve_dirty_scene(name):
@@ -179,43 +164,6 @@ def _mesh_change_label(delta):
     return "edited mesh topology on {}{}{}".format(name, extra, suffix)
 
 
-def _rename_label(delta):
-    rows = delta.get("renamed") or []
-    if not rows:
-        return None
-    first = rows[0]
-    label = "renamed {} to {}".format(first.get("from"), first.get("to"))
-    if len(rows) > 1:
-        label += " and {} others".format(len(rows) - 1)
-    return label
-
-
-def _modifier_label(delta):
-    changes = delta.get("object_changes") or {}
-    rows = []
-    for name, info in changes.items():
-        fields = (info or {}).get("fields") or []
-        if "modifiers" in fields:
-            rows.append((name, info or {}))
-    if not rows:
-        return None
-    name, info = rows[0]
-    parts = []
-    added = info.get("modifiers_added") or []
-    removed = info.get("modifiers_removed") or []
-    modified = info.get("modifiers_modified") or []
-    if added:
-        parts.append("added {}".format(_names(added)))
-    if removed:
-        parts.append("removed {}".format(_names(removed)))
-    if modified:
-        parts.append("changed {}".format(_names(modified)))
-    detail = ", ".join(parts)
-    suffix = " ({})".format(detail) if detail else ""
-    extra = "" if len(rows) == 1 else " and {} others".format(len(rows) - 1)
-    return "edited modifiers on {}{}{}".format(name, extra, suffix)
-
-
 def _material_label(delta, mats):
     changes = delta.get("material_changes") or {}
     if changes:
@@ -250,8 +198,6 @@ def _operator_label(idname, affected_objects):
 def _record_delta(delta):
     out = {"created": delta["created"], "modified": delta["modified"],
            "deleted": delta["deleted"]}
-    if delta.get("renamed"):
-        out["renamed"] = delta["renamed"]
     if delta.get("object_changes"):
         out["object_changes"] = delta["object_changes"]
     for key in ("materials_created", "materials_modified", "materials_deleted",
@@ -285,14 +231,10 @@ def _capture_scene(scene):
         "objects": sorted(set(delta["created"]) | set(delta["modified"]) | set(delta["deleted"])),
         "materials": mats, "layers": [],
     }
-    rename_label = _rename_label(delta)
     mesh_label = _mesh_change_label(delta)
-    modifier_label = _modifier_label(delta)
     if obj_changed:
-        category = CAT_OBJECT if (rename_label or mesh_label or modifier_label) else category_for_operator(idname)
-        label = "User: {}".format(
-            rename_label or mesh_label or modifier_label or _operator_label(idname, affected["objects"])
-        )
+        category = CAT_OBJECT if mesh_label else category_for_operator(idname)
+        label = "User: {}".format(mesh_label or _operator_label(idname, affected["objects"]))
     else:
         category = CAT_MATERIAL
         label = "User: {}".format(_material_label(delta, mats))
@@ -304,13 +246,34 @@ def _capture_scene(scene):
 
 
 def _capture_tick():
-    global _dirty_context_scene
+    global _dirty_context_scene, _dirty_context_deadline
     if not _dirty_scene_names and not _dirty_context_scene:
-        return 0.5
-    dirty_names = sorted(_dirty_scene_names)
-    capture_context = _dirty_context_scene
-    _dirty_scene_names.clear()
-    _dirty_context_scene = False
+        return _TICK_SECONDS
+
+    now = time.monotonic()
+    dirty_names = []
+    for name in sorted(_dirty_scene_names):
+        if _dirty_scene_deadlines.get(name, 0.0) <= now:
+            dirty_names.append(name)
+
+    capture_context = _dirty_context_scene and _dirty_context_deadline <= now
+    if not dirty_names and not capture_context:
+        next_deadlines = [
+            _dirty_scene_deadlines.get(name, now) for name in _dirty_scene_names
+        ]
+        if _dirty_context_scene:
+            next_deadlines.append(_dirty_context_deadline)
+        if next_deadlines:
+            wait = max(_MIN_TICK_SECONDS, min(next_deadlines) - now)
+            return min(_TICK_SECONDS, wait)
+        return _TICK_SECONDS
+
+    for name in dirty_names:
+        _dirty_scene_names.discard(name)
+        _dirty_scene_deadlines.pop(name, None)
+    if capture_context:
+        _dirty_context_scene = False
+        _dirty_context_deadline = 0.0
 
     scenes = []
     for name in dirty_names:
@@ -332,7 +295,7 @@ def _capture_tick():
             _capture_scene(scene)
         except Exception as e:
             logger.debug("operation_history capture tick failed: %s", e)
-    return 0.5
+    return _TICK_SECONDS
 
 
 def _record_undo(scene, idname, label):
@@ -359,12 +322,13 @@ def _on_redo(scene):
 
 @persistent
 def _on_load(*_args):
-    global _dirty_context_scene
+    global _dirty_context_scene, _dirty_context_deadline
     _dirty_context_scene = False
+    _dirty_context_deadline = 0.0
     _dirty_scene_names.clear()
+    _dirty_scene_deadlines.clear()
     _prev.clear()
     store.reset_cache()
-    _prime_existing_scene_baselines()
 
 
 _HANDLERS = (
@@ -380,7 +344,6 @@ def register():
         hl = getter()
         if fn not in hl:
             hl.append(fn)
-    _prime_existing_scene_baselines()
     if not bpy.app.timers.is_registered(_capture_tick):
         bpy.app.timers.register(_capture_tick, first_interval=1.0, persistent=True)
 
