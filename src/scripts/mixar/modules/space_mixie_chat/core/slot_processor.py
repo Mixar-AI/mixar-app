@@ -497,6 +497,18 @@ class SlotEventProcessor:
             _json_ephemeral_bubbles.add(bid)
             bubble.ephemeral = ""
             bubble.thinking_active = False
+            # A loader can land on this intent bubble a tick BEFORE it's classified
+            # as JSON (the cute "Calling Mixie…/She's here…" texts arrive just
+            # before the suppression marker). At loader time the mirror in
+            # _apply_loader_slot couldn't fire (bid wasn't in the set yet), so the
+            # loader stayed visible and the intent scaffold renders as a tall
+            # ephemeral bubble — the big empty gap above the plan on follow-up
+            # turns. Hide it now; the real working-status loaders that follow are
+            # mirrored onto the response bubble in _apply_loader_slot.
+            if getattr(bubble, "loader_visible", False):
+                bubble.loader_visible = False
+                if scene is not None:
+                    self._stop_loader_timer_if_no_active(scene)
 
         if finalized:
             # The dropdown is a new block — force a C++ layout rebuild.
