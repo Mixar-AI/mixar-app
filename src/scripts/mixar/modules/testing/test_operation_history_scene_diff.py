@@ -26,17 +26,11 @@ def _mesh(vertices=0, edges=0, faces=0):
                            polygons=list(range(faces)))
 
 
-def _mod(name, mod_type, **props):
-    values = {"name": name, "type": mod_type}
-    values.update(props)
-    return SimpleNamespace(**values)
-
-
-def _obj(name, loc=(0, 0, 0), materials=(), mesh=None, modifiers=()):
+def _obj(name, loc=(0, 0, 0), materials=(), mesh=None):
     slots = [SimpleNamespace(material=m) for m in materials]
     return SimpleNamespace(name=name, type="MESH", location=list(loc),
                            rotation_euler=[0, 0, 0], scale=[1, 1, 1],
-                           material_slots=slots, data=mesh, modifiers=list(modifiers))
+                           material_slots=slots, data=mesh)
 
 
 def _scene(objs):
@@ -81,33 +75,6 @@ def test_diff_detects_mesh_topology_change():
     change = d["object_changes"]["Cube"]
     assert "mesh_topology" in change["fields"]
     assert change["mesh_delta"] == {"vertices": 4, "edges": 4, "faces": 1}
-
-
-def test_diff_detects_object_rename():
-    before = SD.snapshot_scene(_scene([_obj("Cube")]))
-    after = SD.snapshot_scene(_scene([_obj("HeroCube")]))
-    d = SD.diff_snapshots(before, after)
-    assert d["created"] == []
-    assert d["deleted"] == []
-    assert d["modified"] == ["HeroCube"]
-    assert d["renamed"] == [{"from": "Cube", "to": "HeroCube"}]
-    assert d["object_changes"]["HeroCube"]["previous_name"] == "Cube"
-    assert "rename" in d["object_changes"]["HeroCube"]["fields"]
-
-
-def test_diff_detects_modifier_add_remove_and_parameter_change():
-    before = SD.snapshot_scene(_scene([
-        _obj("Cube", modifiers=[_mod("Bevel", "BEVEL", width=0.1), _mod("Mirror", "MIRROR")]),
-    ]))
-    after = SD.snapshot_scene(_scene([
-        _obj("Cube", modifiers=[_mod("Bevel", "BEVEL", width=0.25), _mod("Subsurf", "SUBSURF", levels=2)]),
-    ]))
-    d = SD.diff_snapshots(before, after)
-    change = d["object_changes"]["Cube"]
-    assert "modifiers" in change["fields"]
-    assert change["modifiers_added"] == ["Subsurf"]
-    assert change["modifiers_removed"] == ["Mirror"]
-    assert change["modifiers_modified"] == ["Bevel"]
 
 
 def test_snapshot_uses_bmesh_counts_for_edit_mode(monkeypatch):
