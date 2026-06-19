@@ -15,6 +15,7 @@ DEFAULT_DATA_SUBDIR = ".mixar"                  # under the user home dir
 OPERATIONS_FILE = "operations.jsonl"
 SCRIPTS_SUBDIR = "scripts"
 NO_SESSION = "_nosession"
+CLEANUP_MAX_AGE_DAYS = 15
 
 # Record sources / kinds
 SOURCE_AGENT = "AGENT"
@@ -45,8 +46,16 @@ READ_ONLY_TOOLS = {
     "scene_overview", "get_object_details", "inspect_assembly",
     "scene_graph_query", "get_scene_state",
 }
-# History-read tools (→ kind=meta) so reading the history never pollutes/recurses the log.
-HISTORY_TOOLS = {"get_operation_history", "get_operation_detail"}
+# Backend history-read scripts/tools. These are excluded from recording so reading the
+# history does not recursively add history entries.
+HISTORY_TOOLS = {
+    "operation_history_query",
+    "operation_history_summary",
+    "list_operations",
+    "get_operation",
+    "operations_for_object",
+}
+HISTORY_SCRIPT_MARKER = "MIXAR_OPERATION_HISTORY_QUERY"
 
 # Output caps (the backend caches tool results — keep results small)
 MAX_LIST_RESULTS = 50
