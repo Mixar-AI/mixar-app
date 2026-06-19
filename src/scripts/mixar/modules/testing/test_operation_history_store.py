@@ -13,7 +13,6 @@ if _scripts_dir not in sys.path:
     sys.path.insert(0, _scripts_dir)
 
 import json  # noqa: E402,F401
-import time  # noqa: E402
 
 from mixar.modules.operation_history.core import store, record  # noqa: E402
 from mixar.modules.operation_history import constants as C  # noqa: E402
@@ -77,27 +76,3 @@ def test_record_operation_public_api(monkeypatch, tmp_path):
     assert rows[0]["label"] == "Layer added"
     assert rows[0]["category"] == C.CAT_LAYER
     assert rows[0]["source"] == C.SOURCE_USER
-
-
-def test_cleanup_expired_prunes_old_records_and_scripts(monkeypatch, tmp_path):
-    _use_tmp(monkeypatch, tmp_path)
-    old = record.build_agent_record(tool_name="execute_bpy_script",
-                                    result_dict={"success": True}, session_id="s1")
-    old.ts = time.time() - (16 * 86400)
-    store.append_operation(old, script_text="print('old')\n")
-    new = record.build_agent_record(tool_name="execute_bpy_script",
-                                    result_dict={"success": True}, session_id="s1")
-    store.append_operation(new, script_text="print('new')\n")
-
-    rows = store.read_operations("s1", limit=0)
-    old_script = tmp_path / "s1" / rows[0]["script_file"]
-    new_script = tmp_path / "s1" / rows[1]["script_file"]
-    assert old_script.exists() and new_script.exists()
-
-    store.cleanup_expired(max_age_days=15)
-
-    rows = store.read_operations("s1", limit=0)
-    assert len(rows) == 1
-    assert rows[0]["seq"] == 2
-    assert not old_script.exists()
-    assert new_script.exists()

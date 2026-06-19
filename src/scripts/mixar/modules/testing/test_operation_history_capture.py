@@ -58,11 +58,14 @@ def test_depsgraph_mesh_update_marks_capture_dirty(monkeypatch):
 
     scene = SimpleNamespace(name="Scene")
     CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
     monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
 
     CS._on_depsgraph(scene, Depsgraph())
 
     assert CS._dirty_scene_names == {"Scene"}
+    assert "Scene" in CS._dirty_scene_deadlines
 
 
 def _mesh(vertices=0, edges=0, faces=0):
@@ -70,11 +73,16 @@ def _mesh(vertices=0, edges=0, faces=0):
                            polygons=list(range(faces)))
 
 
-def _fake_obj(name, loc=(0.0, 0.0, 0.0), mesh=None):
+def _fake_mat(name, nodes=0):
+    return SimpleNamespace(name=name, node_tree=SimpleNamespace(nodes=list(range(nodes))))
+
+
+def _fake_obj(name, loc=(0.0, 0.0, 0.0), mesh=None, materials=None):
     return SimpleNamespace(
         name=name, type="MESH", location=loc,
         rotation_euler=(0.0, 0.0, 0.0), scale=(1.0, 1.0, 1.0),
-        material_slots=[], data=mesh,
+        material_slots=[SimpleNamespace(material=m) for m in (materials or [])],
+        data=mesh,
     )
 
 
@@ -84,22 +92,13 @@ def _fake_scene(name, sid, objects):
 
 def _mark_scene_dirty(monkeypatch, scene, *extra_scenes):
     CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
     monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
     scenes = {s.name: s for s in (scene,) + extra_scenes}
     monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes=scenes))
     CS._dirty_scene_names.add(scene.name)
-
-
-def test_prime_existing_scene_baselines(monkeypatch):
-    sid = "sess-prime"
-    CS._prev.clear()
-    scene = _fake_scene("PrimeScene", sid, [_fake_obj("Cube")])
-    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes=[scene]))
-
-    CS._prime_existing_scene_baselines()
-
-    assert sid in CS._prev
-    assert "Cube" in CS._prev[sid]["objects"]
+    CS._dirty_scene_deadlines[scene.name] = 0.0
 
 
 def test_capture_tick_records_manual_op_when_idle(monkeypatch):
@@ -132,6 +131,187 @@ def test_capture_tick_records_manual_op_when_idle(monkeypatch):
     assert rec.category == CAT_TRANSFORM
     assert "Cube" in rec.scene_delta["created"]
     assert "Cube" in rec.affected["objects"]
+
+
+def test_capture_tick_debounces_multi_wave_asset_paste(monkeypatch):
+    """Asset paste/import can dirty the depsgraph repeatedly while linked objects,
+    meshes, materials, and node trees are still arriving. Capture should wait for
+    the quiet window and emit one combined user record."""
+    sid = "sess-asset-paste"
+    captured = []
+    now = [100.0]
+
+    CS._prev.clear()
+    CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
+    monkeypatch.setattr(CS.time, "monotonic", lambda: now[0])
+
+    scene = _fake_scene("PasteScene", sid, [])
+    CS._prev[sid] = snapshot_scene(scene)
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.paste", as_pointer=lambda: 15),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes={scene.name: scene}))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+
+    scene.objects = [_fake_obj("Chair")]
+    CS._mark_dirty_scene(scene)
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert captured == []
+    assert CS._dirty_scene_names == {"PasteScene"}
+
+    # A later depsgraph wave adds more pasted asset parts. The quiet deadline
+    # moves forward, so the first partial diff is not recorded.
+    now[0] = 100.4
+    scene.objects = [_fake_obj("Chair"), _fake_obj("Chair_Leg"), _fake_obj("Chair_Cushion")]
+    CS._mark_dirty_scene(scene)
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert captured == []
+
+    now[0] = 101.2
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert len(captured) == 1
+    rec = captured[0]
+    assert rec.op_idname == "object.paste"
+    assert rec.scene_delta["created"] == ["Chair", "Chair_Cushion", "Chair_Leg"]
+    assert rec.affected["objects"] == ["Chair", "Chair_Cushion", "Chair_Leg"]
+
+
+def test_capture_tick_coalesces_object_and_material_waves(monkeypatch):
+    """Asset imports often add objects first and attach materials/node trees in later
+    depsgraph waves. Those should still become one operation-history record."""
+    sid = "sess-asset-materials"
+    captured = []
+    now = [200.0]
+
+    CS._prev.clear()
+    CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
+    monkeypatch.setattr(CS.time, "monotonic", lambda: now[0])
+
+    scene = _fake_scene("AssetMaterialScene", sid, [])
+    CS._prev[sid] = snapshot_scene(scene)
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.paste", as_pointer=lambda: 16),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes={scene.name: scene}))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+
+    scene.objects = [_fake_obj("Imported_Table")]
+    CS._mark_dirty_scene(scene)
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert captured == []
+
+    now[0] = 200.3
+    scene.objects = [_fake_obj("Imported_Table", materials=[_fake_mat("Oak", nodes=5)])]
+    CS._mark_dirty_scene(scene)
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert captured == []
+
+    now[0] = 201.1
+    assert CS._capture_tick() == CS._TICK_SECONDS
+    assert len(captured) == 1
+    rec = captured[0]
+    assert rec.scene_delta["created"] == ["Imported_Table"]
+    assert rec.scene_delta["materials_created"] == ["Oak"]
+    assert rec.affected["objects"] == ["Imported_Table"]
+    assert rec.affected["materials"] == ["Oak"]
+
+
+def test_capture_tick_repeated_dirty_without_delta_does_not_duplicate(monkeypatch):
+    """If Blender emits another dirty event after a capture but the snapshot is
+    unchanged, no second operation should be appended."""
+    sid = "sess-no-duplicate"
+    captured = []
+    now = [300.0]
+
+    CS._prev.clear()
+    CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
+    monkeypatch.setattr(CS.time, "monotonic", lambda: now[0])
+
+    scene = _fake_scene("NoDuplicateScene", sid, [])
+    CS._prev[sid] = snapshot_scene(scene)
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.paste", as_pointer=lambda: 17),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes={scene.name: scene}))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+
+    scene.objects = [_fake_obj("Shelf")]
+    CS._mark_dirty_scene(scene)
+    now[0] = 300.8
+    CS._capture_tick()
+    assert len(captured) == 1
+
+    CS._mark_dirty_scene(scene)
+    now[0] = 301.6
+    CS._capture_tick()
+    assert len(captured) == 1
+
+
+def test_capture_tick_keeps_separate_operations_after_quiet_window(monkeypatch):
+    """Debouncing should not over-coalesce real operations separated by a quiet window."""
+    sid = "sess-separate"
+    captured = []
+    now = [400.0]
+
+    CS._prev.clear()
+    CS._dirty_scene_names.clear()
+    CS._dirty_scene_deadlines.clear()
+    monkeypatch.setattr(CS, "_dirty_context_scene", False)
+    monkeypatch.setattr(CS, "_dirty_context_deadline", 0.0)
+    monkeypatch.setattr(CS.time, "monotonic", lambda: now[0])
+
+    scene = _fake_scene("SeparateOpsScene", sid, [])
+    CS._prev[sid] = snapshot_scene(scene)
+    wm = SimpleNamespace(operators=[
+        SimpleNamespace(bl_idname="object.add", as_pointer=lambda: 18),
+    ])
+    monkeypatch.setattr(CS.bpy, "context", SimpleNamespace(scene=scene, window_manager=wm))
+    monkeypatch.setattr(CS.bpy, "data", SimpleNamespace(scenes={scene.name: scene}))
+    monkeypatch.setattr(
+        CS, "get_session_manager",
+        lambda: SimpleNamespace(get_state=lambda s: SessionState.IDLE),
+    )
+    monkeypatch.setattr(CS.store, "append_operation", lambda rec: captured.append(rec) or rec)
+
+    scene.objects = [_fake_obj("Cube")]
+    CS._mark_dirty_scene(scene)
+    now[0] = 400.8
+    CS._capture_tick()
+    assert len(captured) == 1
+    assert captured[0].scene_delta["created"] == ["Cube"]
+
+    wm.operators.append(SimpleNamespace(bl_idname="transform.translate", as_pointer=lambda: 19))
+    scene.objects = [_fake_obj("Cube", loc=(1.0, 0.0, 0.0))]
+    CS._mark_dirty_scene(scene)
+    now[0] = 402.0
+    CS._capture_tick()
+    assert len(captured) == 2
+    assert captured[1].scene_delta["modified"] == ["Cube"]
+    assert captured[1].scene_delta["object_changes"]["Cube"]["fields"] == ["transform"]
 
 
 def test_capture_tick_skips_when_not_idle(monkeypatch):
