@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 """Live-update test for the scene_graph module (run in the BUILT Mixar app).
 
 Drives a sequence of scene edits (add / parent / rename / delete) on separate
