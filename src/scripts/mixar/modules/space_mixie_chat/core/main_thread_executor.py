@@ -195,19 +195,21 @@ def _process_one_request() -> Optional[float]:
 
     # --- Operation history: archive every agent script/tool execution ---
     try:
+        from mixar.modules.operation_history.constants import HISTORY_SCRIPT_MARKER, HISTORY_TOOLS
         from mixar.modules.operation_history.core import store as _op_store
         from mixar.modules.operation_history.core.record import build_agent_record
         from mixar.modules.operation_history.core.scene_key import get_scene_history_id
-        _hist_scene = target_scene if target_scene is not None else (
-            bpy.context.window.scene if bpy.context.window else None)
-        _hist_sid = get_scene_history_id(_hist_scene)
-        _wm = getattr(bpy.context, "window_manager", None)
-        _iid = getattr(_wm, "mixie_instance_id", "") if _wm else ""
-        _op_store.append_operation(
-            build_agent_record(tool_name=tool_name, result_dict=result_dict,
-                               session_id=_hist_sid, instance_id=_iid, request_id=request_id),
-            script_text=script,
-        )
+        if tool_name not in HISTORY_TOOLS and HISTORY_SCRIPT_MARKER not in script:
+            _hist_scene = target_scene if target_scene is not None else (
+                bpy.context.window.scene if bpy.context.window else None)
+            _hist_sid = get_scene_history_id(_hist_scene)
+            _wm = getattr(bpy.context, "window_manager", None)
+            _iid = getattr(_wm, "mixie_instance_id", "") if _wm else ""
+            _op_store.append_operation(
+                build_agent_record(tool_name=tool_name, result_dict=result_dict,
+                                   session_id=_hist_sid, instance_id=_iid, request_id=request_id),
+                script_text=script,
+            )
     except Exception as _op_exc:  # never break execution/response on history failure
         logger.debug("operation_history: failed to record agent op: %s", _op_exc)
 

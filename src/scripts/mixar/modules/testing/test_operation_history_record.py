@@ -17,7 +17,11 @@ from mixar.modules.operation_history import constants as C
 
 
 def test_derive_kind():
-    assert R.derive_kind("get_operation_history") == C.KIND_META
+    assert R.derive_kind("operation_history_query") == C.KIND_META
+    assert R.derive_kind("operation_history_summary") == C.KIND_META
+    assert R.derive_kind("list_operations") == C.KIND_META
+    assert R.derive_kind("get_operation") == C.KIND_META
+    assert R.derive_kind("operations_for_object") == C.KIND_META
     assert R.derive_kind("scene_overview") == C.KIND_QUERY
     assert R.derive_kind("execute_bpy_script") == C.KIND_OPERATION
     assert R.derive_kind("unknown") == C.KIND_OPERATION

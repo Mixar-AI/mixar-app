@@ -11,18 +11,21 @@ script execution or a UI action.
 import json
 import os
 import re
+import shutil
 import tempfile
 import threading
+import time
 from typing import Optional
 
 from ..constants import (
-    DEFAULT_DATA_SUBDIR, ENV_BASE_DIR, MAX_LIST_RESULTS, MAX_SCRIPT_CHARS,
-    MODULE_DIR_NAME, NO_SESSION, OPERATIONS_FILE, SCRIPTS_SUBDIR,
+    CLEANUP_MAX_AGE_DAYS, DEFAULT_DATA_SUBDIR, ENV_BASE_DIR, MAX_LIST_RESULTS,
+    MAX_SCRIPT_CHARS, MODULE_DIR_NAME, NO_SESSION, OPERATIONS_FILE, SCRIPTS_SUBDIR,
 )
 from .record import OperationRecord, build_manual_record
 
 _lock = threading.Lock()
 _seq_cache: dict = {}
+_last_cleanup_day: Optional[int] = None
 
 
 def _base_dir() -> str:
@@ -56,6 +59,89 @@ def _ensure_dirs(session_id: str) -> str:
     return d
 
 
+def _script_path_for_record(session_id: str, rec: dict) -> Optional[str]:
+    script_file = rec.get("script_file")
+    if not script_file or os.path.isabs(script_file):
+        return None
+    normalized = os.path.normpath(script_file)
+    if normalized == ".." or normalized.startswith(".." + os.sep):
+        return None
+    return os.path.join(session_dir(session_id), normalized)
+
+
+def _session_ids() -> list:
+    base = _base_dir()
+    if not os.path.isdir(base):
+        return []
+    try:
+        return [
+            name for name in os.listdir(base)
+            if os.path.isdir(os.path.join(base, name))
+        ]
+    except Exception:
+        return []
+
+
+def cleanup_expired(max_age_days: int = CLEANUP_MAX_AGE_DAYS, *, now: Optional[float] = None) -> None:
+    """Prune operation records and saved scripts older than ``max_age_days``.
+
+    Uses JSONL record timestamps rather than platform-specific birth times, so it behaves
+    consistently on macOS and Windows. Best-effort: failures are ignored by design.
+    """
+    if max_age_days <= 0:
+        return
+    cutoff = (time.time() if now is None else now) - (max_age_days * 86400)
+    for sid in _session_ids():
+        ops_path = _ops_path(sid)
+        if not os.path.isfile(ops_path):
+            continue
+        kept = []
+        removed_scripts = []
+        try:
+            with open(ops_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    raw = line.strip()
+                    if not raw:
+                        continue
+                    try:
+                        rec = json.loads(raw)
+                    except Exception:
+                        kept.append(raw)
+                        continue
+                    if float(rec.get("ts", 0) or 0) < cutoff:
+                        script_path = _script_path_for_record(sid, rec)
+                        if script_path:
+                            removed_scripts.append(script_path)
+                    else:
+                        kept.append(json.dumps(rec, ensure_ascii=False))
+            if kept:
+                tmp_path = ops_path + ".tmp"
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(kept) + "\n")
+                os.replace(tmp_path, ops_path)
+            else:
+                shutil.rmtree(session_dir(sid), ignore_errors=True)
+                _seq_cache.pop(sid, None)
+                continue
+            for script_path in removed_scripts:
+                try:
+                    os.remove(script_path)
+                except Exception:
+                    pass
+            _seq_cache.pop(sid, None)
+        except Exception:
+            pass
+
+
+def _cleanup_once_per_day() -> None:
+    global _last_cleanup_day
+    day = int(time.time() // 86400)
+    if _last_cleanup_day == day:
+        return
+    cleanup_expired()
+    _last_cleanup_day = day
+
+
 def _next_seq(session_id: str) -> int:
     if session_id not in _seq_cache:
         n = 0
@@ -74,6 +160,7 @@ def _next_seq(session_id: str) -> int:
 def append_operation(rec: OperationRecord, script_text: Optional[str] = None) -> OperationRecord:
     try:
         with _lock:
+            _cleanup_once_per_day()
             sid = rec.session_id or NO_SESSION
             rec.session_id = sid
             _ensure_dirs(sid)
@@ -157,4 +244,6 @@ def record_operation(session_id: str, label: str, category: str = "OTHER", *,
 
 
 def reset_cache() -> None:
+    global _last_cleanup_day
     _seq_cache.clear()
+    _last_cleanup_day = None
