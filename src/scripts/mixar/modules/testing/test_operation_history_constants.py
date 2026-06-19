@@ -26,7 +26,12 @@ def test_kinds_and_sources_defined():
 def test_read_only_and_history_tool_sets():
     assert "scene_overview" in C.READ_ONLY_TOOLS
     assert "get_scene_state" in C.READ_ONLY_TOOLS
-    assert "get_operation_history" in C.HISTORY_TOOLS
+    assert "operation_history_query" in C.HISTORY_TOOLS
+    assert "operation_history_summary" in C.HISTORY_TOOLS
+    assert "list_operations" in C.HISTORY_TOOLS
+    assert "get_operation" in C.HISTORY_TOOLS
+    assert "operations_for_object" in C.HISTORY_TOOLS
+    assert C.HISTORY_SCRIPT_MARKER
 
 
 def test_caps_are_positive_ints():
