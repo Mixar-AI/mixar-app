@@ -95,11 +95,7 @@ class AgentService(BaseService):
         model: str,
         api_key: str,
     ) -> APIResponse:
-        """PUT /agent/byok — upsert BYOK config across all agent roles.
-
-        Uses the backend's single-value BYOK wrapper, which fans one
-        provider/model/key out to the default + per-agent roles and returns
-        the same {items, byok_active} shape as GET /agent/credentials.
+        """PUT /agent/credentials/all — upsert BYOK config for all agent roles.
 
         Server validates the key with the provider (200ms–15s) before storing.
         Atomic: on any failure, previous state (if any) is preserved.
@@ -109,7 +105,7 @@ class AgentService(BaseService):
             "model": model,
             "api_key": api_key,
         }
-        return self.put("byok", json=payload)
+        return self.put("credentials/all", json=payload)
 
     def delete_credentials_all(self) -> APIResponse:
         """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
