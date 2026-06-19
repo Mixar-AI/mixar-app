@@ -34,6 +34,12 @@ _narration_bubbles: set = set()
 # duration reported on finalize.
 _narration_start: dict = {}
 
+# The scaffold's cute pre-plan spinner ("Calling Mixie…/She's here…"), captured
+# when it's hidden, to bridge onto the response bubble so the live indicator
+# stays animated from the plan until the response's own working loader arrives
+# (~2-3s later) — without it there's a dead, un-animated window.
+_bridge_loader: Optional[str] = None
+
 
 # A single empty paragraph: forces the C++ renderer onto the markdown path
 # (has_markdown_segments == true) where an empty-text segment draws nothing,
@@ -371,6 +377,20 @@ class SlotEventProcessor:
 
         bubble.text = bubble.content
 
+        # Bridge the scaffold's spinner onto the response bubble the moment the
+        # plan starts landing, so the live indicator animates continuously until
+        # this bubble's own working loader arrives (it lags the plan by ~2-3s).
+        global _bridge_loader
+        if (_bridge_loader and scene is not None and bubble_id
+                and bubble_id not in _json_ephemeral_bubbles
+                and not getattr(bubble, "loader_visible", False)
+                and getattr(bubble, "content", "")):
+            bubble.loader_texts = _bridge_loader
+            bubble.loader_current_index = 0
+            bubble.loader_visible = True
+            _bridge_loader = None
+            self._start_loader_timer()
+
         # First time the plan→narration boundary appears: keep the plan as
         # content, move the narration into the live panel, and route the rest
         # there too.
@@ -507,6 +527,11 @@ class SlotEventProcessor:
             # mirrored onto the response bubble in _apply_loader_slot.
             if getattr(bubble, "loader_visible", False):
                 bubble.loader_visible = False
+                # Keep the spinner texts to bridge onto the response bubble so the
+                # live indicator doesn't go dead between the plan and the first
+                # working loader.
+                global _bridge_loader
+                _bridge_loader = getattr(bubble, "loader_texts", "") or None
                 if scene is not None:
                     self._stop_loader_timer_if_no_active(scene)
 
