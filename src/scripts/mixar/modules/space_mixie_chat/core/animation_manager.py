@@ -81,18 +81,8 @@ def _update_loader():
         if not is_sse_timer_active():
             for window in bpy.context.window_manager.windows:
                 for area in window.screen.areas:
-                    # The loader/spinner renders both in the MIXIE_CHAT
-                    # editor and in the floating agent bubble. Tag both (and
-                    # the bubble's regions) so the animation advances no
-                    # matter which surface is on screen — in Zen Mode only
-                    # the bubble is visible, so tagging MIXIE_CHAT alone left
-                    # the dots static until the user interacted.
                     if area.type == 'MIXIE_CHAT':
                         area.tag_redraw()
-                    elif area.type == 'AGENT_BUBBLE':
-                        area.tag_redraw()
-                        for region in area.regions:
-                            region.tag_redraw()
 
         return SPINNER_INTERVAL
 
@@ -103,23 +93,16 @@ def _update_loader():
 
 
 def start_loader_animation():
-    """Start the loader animation timer (0.5s interval).
-
-    Keys off the real ``bpy.app.timers.is_registered`` state rather than
-    the ``_loader_timer`` flag. Blender silently unregisters non-persistent
-    timers on file load, which leaves ``_loader_timer`` stale-True while no
-    timer is actually running — a plain flag guard would then early-return
-    and the loader would never animate in the new file ("sometimes the
-    running animation doesn't work"). Re-deriving from is_registered makes
-    this self-healing across file loads while staying idempotent.
-    """
+    """Start the loader animation timer (0.5s interval)."""
     global _loader_timer
 
+    if _loader_timer is not None:
+        return
+
+    _loader_timer = True
     if not bpy.app.timers.is_registered(_update_loader):
         bpy.app.timers.register(_update_loader, first_interval=SPINNER_INTERVAL)
         logger.debug("Started loader animation timer (0.5s spinner)")
-
-    _loader_timer = True
 
 
 def stop_loader_animation():
