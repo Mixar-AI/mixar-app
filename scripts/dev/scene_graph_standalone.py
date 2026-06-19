@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 """Self-contained ObjectGraph (Outliner hierarchy) for Mixar.
 
 This builds the structural BACKBONE only: every scene object is a node, and the
