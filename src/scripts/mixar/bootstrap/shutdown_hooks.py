@@ -93,14 +93,6 @@ def _run_all_cleanups() -> None:
     except ImportError:
         pass
 
-    # 4. Kill any headless create_model sandbox child processes we spawned, so a
-    #    parent quit never leaves an orphaned --background Mixar running.
-    try:
-        from mixar.bootstrap.sandbox_supervisor import kill_all
-        _safe("kill_sandbox_children", kill_all)
-    except ImportError:
-        pass
-
 
 def register() -> None:
     """Register the atexit fallback so hard-exit paths still flush."""
