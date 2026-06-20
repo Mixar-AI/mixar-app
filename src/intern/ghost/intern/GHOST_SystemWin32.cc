@@ -3551,6 +3551,15 @@ extern "C" void Mixar_WindowSetHidesOnDeactivate(void *window_handle, bool hides
   (void)hides;
 }
 
+extern "C" void Mixar_WindowBindToParentSpace(void *window_handle)
+{
+  /* No-op on Win32: "Spaces" (per-monitor virtual desktops that a
+   * floating child can leak across) are a macOS concept. Windows'
+   * virtual desktops don't move an owned child window onto the active
+   * desktop the way macOS does, so there's nothing to pin here. */
+  (void)window_handle;
+}
+
 extern "C" void Mixar_WindowOrderOut(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);

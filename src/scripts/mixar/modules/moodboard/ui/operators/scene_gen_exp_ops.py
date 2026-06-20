@@ -263,14 +263,6 @@ class MIXIE_OT_scene_gen_exp_clear(Operator):
             self.report({"WARNING"}, "Cannot clear while generating images")
             return {"CANCELLED"}
 
-        # Cancel any pending labels queue jobs
-        try:
-            from mixar.modules.common.job_queue import get_queue
-            from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABELS
-            get_queue(FEATURE_SCENE_GEN_EXP_LABELS).clear_completed()
-        except Exception:
-            pass
-
         # Reset all tab state
         tab.objects.clear()
         tab.has_result = False
@@ -410,7 +402,7 @@ class MIXIE_OT_scene_gen_exp_generate_hp(Operator):
             "polygon_type": tab.hp_polygon_type,
         }
 
-        from mixar.modules.moodboard.core.generation_enqueue import (
+        from mixar.modules.moodboard.core.scene_gen_hp_queue import (
             enqueue_scene_gen_hp_jobs,
         )
         enqueued = enqueue_scene_gen_hp_jobs(
@@ -490,7 +482,7 @@ class MIXIE_OT_scene_gen_exp_generate_lp(Operator):
             "post_process": tab.lp_post_process,
         }
 
-        from mixar.modules.moodboard.core.generation_enqueue import (
+        from mixar.modules.moodboard.core.scene_gen_lp_queue import (
             enqueue_scene_gen_lp_jobs,
         )
         enqueued = enqueue_scene_gen_lp_jobs(

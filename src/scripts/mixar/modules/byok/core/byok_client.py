@@ -62,36 +62,6 @@ def _translate(response: APIResponse) -> tuple[bool, Optional[Any], Optional[str
     return False, None, message
 
 
-def _translate_exception(exc: Exception) -> tuple[bool, Optional[Any], Optional[str]]:
-    """Convert an exception raised by the HTTP layer into a (success, data, error)
-    tuple, applying the same status policy as `_translate`.
-
-    The HTTPClient raises (raise_for_status defaults to True), so non-2xx
-    responses arrive here as `HTTPClientError` subclasses rather than as an
-    APIResponse. Each carries `.status_code` and `.message`; `_map_exception`
-    has already dug the user-safe text out of the backend's
-    {"detail": {"message": ...}} envelope. We must surface that message instead
-    of collapsing everything to the generic network error.
-
-    Genuine connection/timeout failures — and retry-exhausted 5xx, which reach
-    us as a bare HTTPClientError with `status_code=None` — fall back to the
-    network message.
-    """
-    status = getattr(exc, "status_code", None)
-    message = getattr(exc, "message", None)
-
-    if status is None:
-        # Connection/timeout/retry-exhaustion — not a clean HTTP response.
-        return False, None, _NETWORK_ERROR_MSG
-    if status == 422:
-        return False, None, _VALIDATION_ERROR_MSG
-    if status >= 500 and status != 502:
-        return False, None, _GENERIC_SERVER_ERROR_MSG
-    # 400, 401, 403, 404, 429, 502 — server `message` is user-safe per the
-    # contract (e.g. "Model not available: ...", "API key rejected: ...").
-    return False, None, message or _GENERIC_SERVER_ERROR_MSG
-
-
 # ---------------------------------------------------------------------------
 # Main-thread callback marshaling
 # ---------------------------------------------------------------------------
@@ -128,7 +98,7 @@ def fetch_state(
             success, data, err = _translate(response)
         except Exception as e:
             logger.warning("BYOK fetch_state failed: %s", e)
-            success, data, err = _translate_exception(e)
+            success, data, err = False, None, _NETWORK_ERROR_MSG
         _schedule_on_main(on_done, success, data, err)
 
     threading.Thread(
@@ -142,7 +112,7 @@ def save_credentials(
     api_key: str,
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s."""
+    """PUT /agent/credentials/all — upsert BYOK config. ≤ 15 s."""
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
@@ -151,7 +121,7 @@ def save_credentials(
             success, data, err = _translate(response)
         except Exception as e:
             logger.warning("BYOK save_credentials failed: %s", e)
-            success, data, err = _translate_exception(e)
+            success, data, err = False, None, _NETWORK_ERROR_MSG
         _schedule_on_main(on_done, success, data, err)
 
     threading.Thread(
@@ -180,8 +150,7 @@ def delete_credentials(
                 _schedule_on_main(on_done, False, 0, err)
         except Exception as e:
             logger.warning("BYOK delete_credentials failed: %s", e)
-            _, _, err = _translate_exception(e)
-            _schedule_on_main(on_done, False, 0, err)
+            _schedule_on_main(on_done, False, 0, _NETWORK_ERROR_MSG)
 
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKDelete"
@@ -206,7 +175,7 @@ def fetch_models_catalog(
             success, data, err = _translate(response)
         except Exception as e:
             logger.warning("BYOK fetch_models_catalog failed: %s", e)
-            success, data, err = _translate_exception(e)
+            success, data, err = False, None, _NETWORK_ERROR_MSG
         _schedule_on_main(on_done, success, data, err)
 
     threading.Thread(
