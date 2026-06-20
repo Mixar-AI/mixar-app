@@ -247,11 +247,6 @@ class ConnectionManager:
                 id=params.get("id"),
             )
 
-        def on_sandbox_control(params: dict) -> dict:
-            """Backend asked this (parent) instance to manage its sandbox child."""
-            from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
-            return handle_sandbox_control(params)
-
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         client = create_jsonrpc_client(
@@ -267,7 +262,6 @@ class ConnectionManager:
             on_connected=on_connected,
             on_disconnected=on_disconnected,
             on_notification=on_notifications_push,
-            on_sandbox_control=on_sandbox_control,
         )
 
         # Connect
