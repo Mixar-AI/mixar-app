@@ -121,6 +121,45 @@ def _is_finished(result) -> bool:
     return result == {"FINISHED"} or "FINISHED" in set(result or ())
 
 
+def _ensure_basic_uv_map(obj) -> bool:
+    """Create a simple box-projected UV map for primitive meshes without UVs."""
+    mesh = getattr(obj, "data", None)
+    if mesh is None or getattr(obj, "type", "") != "MESH":
+        return False
+    if len(getattr(mesh, "uv_layers", [])) > 0:
+        return False
+    if not getattr(mesh, "vertices", None) or not getattr(mesh, "polygons", None):
+        return False
+
+    try:
+        uv_layer = mesh.uv_layers.new(name="UVMap")
+        coords = [vertex.co for vertex in mesh.vertices]
+        mins = [min(co[i] for co in coords) for i in range(3)]
+        maxs = [max(co[i] for co in coords) for i in range(3)]
+        spans = [max(maxs[i] - mins[i], 1e-6) for i in range(3)]
+
+        for poly in mesh.polygons:
+            dominant_axis = max(range(3), key=lambda axis: abs(poly.normal[axis]))
+            if dominant_axis == 0:
+                axis_u, axis_v = 1, 2
+            elif dominant_axis == 1:
+                axis_u, axis_v = 0, 2
+            else:
+                axis_u, axis_v = 0, 1
+            for loop_index in poly.loop_indices:
+                vertex_index = mesh.loops[loop_index].vertex_index
+                co = mesh.vertices[vertex_index].co
+                uv_layer.data[loop_index].uv = (
+                    (co[axis_u] - mins[axis_u]) / spans[axis_u],
+                    (co[axis_v] - mins[axis_v]) / spans[axis_v],
+                )
+        mesh.update()
+        return True
+    except Exception:
+        logger.debug("Could not create basic UV map for %s", getattr(obj, "name", ""), exc_info=True)
+        return False
+
+
 def _unique_layer_name(base: str, layers, current=None) -> str:
     if not base:
         return ""
@@ -837,6 +876,7 @@ def add_procedural_material_layer(
 
     try:
         for obj in targets:
+            uv_created = _ensure_basic_uv_map(obj)
             _activate_object(obj)
             node = get_active_mpaint_node()
             if not node and initialize_if_needed:
@@ -873,13 +913,29 @@ def add_procedural_material_layer(
                 if layer_name:
                     active_layer.name = _unique_layer_name(layer_name, mp.layers, active_layer)
 
+            active_layer_name = getattr(active_layer, "name", "")
+            verification = _material_application_snapshot(
+                [obj.name],
+                expected_material_id=material.material_id,
+                expected_layer_name=active_layer_name or layer_name or material.name,
+            )
+            if not verification.get("verified"):
+                errors.append({
+                    "object": obj.name,
+                    "error": "Procedural material layer was not verified after application",
+                    "verification": verification,
+                })
+                continue
+
             applied.append({
                 "object": obj.name,
                 "material_id": material.material_id,
                 "material_name": material.name,
-                "layer": getattr(active_layer, "name", ""),
+                "layer": active_layer_name,
                 "layers": len(mp.layers),
                 "channels": [channel.name for channel in mp.channels],
+                "uv_created": uv_created,
+                "verification": verification,
             })
     finally:
         _restore_selection(snapshot)
