@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Iterable
 
 import bpy
@@ -496,11 +497,33 @@ def get_prepared_scene_material_status(job_ids=None, keys=None) -> dict:
     return {"success": True, "jobs": jobs, "total": len(jobs)}
 
 
-def apply_prepared_scene_materials(assignments: list[dict]) -> dict:
+def _material_apply_budget(time_budget_s) -> float:
+    try:
+        value = float(time_budget_s)
+    except Exception:
+        value = 20.0
+    return max(5.0, min(value, 30.0))
+
+
+def _deferred_material_assignment(spec: dict, object_names: list[str], reason: str) -> dict:
+    assignment = dict(spec)
+    assignment["object_names"] = list(object_names)
+    return {
+        "key": str(spec.get("key") or "").strip(),
+        "reason": reason,
+        "object_names": list(object_names),
+        "assignment": assignment,
+    }
+
+
+def apply_prepared_scene_materials(assignments: list[dict], time_budget_s: float = 20.0) -> dict:
     """Apply prepared placeholder/direct materials or generated procedural layers."""
     if not isinstance(assignments, list):
         return {"success": False, "error": "assignments must be a list"}
 
+    budget_s = _material_apply_budget(time_budget_s)
+    started_at = time.monotonic()
+    deadline = started_at + budget_s
     applied = []
     pending = []
     errors = []
@@ -508,6 +531,15 @@ def apply_prepared_scene_materials(assignments: list[dict]) -> dict:
         if not isinstance(spec, dict):
             errors.append({"index": index, "error": "assignment must be a dict"})
             continue
+        if time.monotonic() >= deadline:
+            for remaining in assignments[index:]:
+                if isinstance(remaining, dict):
+                    names = remaining.get("object_names") or remaining.get("objects") or []
+                    pending.append(_deferred_material_assignment(remaining, _as_name_list(names), "time_budget_exhausted"))
+                else:
+                    errors.append({"index": index, "error": "assignment must be a dict"})
+            break
+
         key = str(spec.get("key") or "").strip()
         object_names = spec.get("object_names") or spec.get("objects") or []
         material_id = spec.get("material_id") or ""
@@ -539,19 +571,74 @@ def apply_prepared_scene_materials(assignments: list[dict]) -> dict:
                 placeholder_material_name=material_name,
             )
         elif material_id or material_name:
-            result = add_procedural_material_layer(
-                material_id=material_id,
-                material_name=material_name,
-                object_names=object_names,
-                layer_name=layer_name,
-                apply_to_existing=bool(spec.get("apply_to_existing", False)),
-                initialize_if_needed=True,
-            )
-            verification = _material_application_snapshot(
-                object_names,
-                expected_material_id=material_id,
-                expected_layer_name=layer_name,
-            )
+            targets, missing = _resolve_mesh_objects(object_names)
+            if not targets:
+                errors.append({"key": key, "error": "No mesh objects found for procedural material layer", "missing": missing})
+                continue
+
+            target_entries = []
+            target_errors = []
+            deferred_names: list[str] = []
+            for target_index, target in enumerate(targets):
+                # Always allow at least one target to run so repeated calls make progress.
+                if target_index > 0 and time.monotonic() >= deadline:
+                    deferred_names = [obj.name for obj in targets[target_index:]]
+                    pending_spec = {
+                        **spec,
+                        "material_id": material_id,
+                        "material_name": material_name,
+                        "layer_name": layer_name,
+                    }
+                    pending.append(_deferred_material_assignment(pending_spec, deferred_names, "time_budget_exhausted"))
+                    break
+
+                result = add_procedural_material_layer(
+                    material_id=material_id,
+                    material_name=material_name,
+                    object_names=[target.name],
+                    layer_name=layer_name,
+                    apply_to_existing=bool(spec.get("apply_to_existing", False)),
+                    initialize_if_needed=True,
+                )
+                verification = _material_application_snapshot(
+                    [target.name],
+                    expected_material_id=material_id,
+                    expected_layer_name=layer_name,
+                )
+                target_entry = {
+                    "object_names": [target.name],
+                    "result": result,
+                    "verification": verification,
+                }
+                if result.get("success") and verification.get("verified"):
+                    target_entries.append(target_entry)
+                else:
+                    target_errors.append(target_entry)
+
+            result = {
+                "success": bool(target_entries) and not target_errors,
+                "applied": [
+                    item
+                    for entry in target_entries
+                    for item in entry.get("result", {}).get("applied", [])
+                ],
+                "missing": missing,
+                "errors": target_errors,
+                "deferred": deferred_names,
+            }
+            verification_objects = [
+                item
+                for entry in target_entries
+                for item in entry.get("verification", {}).get("objects", [])
+            ]
+            verification = {
+                "verified": bool(target_entries) and not target_errors,
+                "expected_material_id": material_id,
+                "expected_layer_name": layer_name,
+                "objects": verification_objects,
+                "missing": missing,
+                "deferred": deferred_names,
+            }
         else:
             errors.append({"key": key, "error": "assignment needs job_id, material_id, or material_name"})
             continue
@@ -572,6 +659,9 @@ def apply_prepared_scene_materials(assignments: list[dict]) -> dict:
         "applied": applied,
         "pending": pending,
         "errors": errors,
+        "partial": bool(pending),
+        "time_budget_s": budget_s,
+        "elapsed_s": round(time.monotonic() - started_at, 3),
     }
 
 
