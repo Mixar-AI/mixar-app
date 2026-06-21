@@ -342,6 +342,92 @@ def _assign_placeholder_material(material_name: str, object_names=None) -> dict:
     return {"success": not errors, "applied": applied, "missing": missing, "errors": errors}
 
 
+def _find_mpaint_node_for_material(mat):
+    if mat is None or not getattr(mat, "node_tree", None):
+        return None
+    for node in getattr(mat.node_tree, "nodes", []):
+        tree = getattr(node, "node_tree", None)
+        mp = getattr(tree, "mp", None) if tree is not None else None
+        if getattr(mp, "is_mpaint_node", False):
+            return node
+    return None
+
+
+def _material_layer_snapshot(layer) -> dict:
+    return {
+        "name": getattr(layer, "name", ""),
+        "type": getattr(layer, "type", ""),
+        "source_type": getattr(layer, "source_type", ""),
+        "procedural_material_id": getattr(layer, "procedural_material_id", ""),
+    }
+
+
+def _material_application_snapshot(
+    object_names=None,
+    expected_material_id: str = "",
+    expected_layer_name: str = "",
+    placeholder_material_name: str = "",
+) -> dict:
+    """Summarize current material/layer state after an agent material pass."""
+    targets, missing = _resolve_mesh_objects(object_names)
+    expected_material_id = (expected_material_id or "").strip()
+    expected_layer_name = (expected_layer_name or "").strip()
+    placeholder_material_name = (placeholder_material_name or "").strip()
+
+    objects = []
+    for obj in targets:
+        slots = [
+            getattr(getattr(slot, "material", None), "name", "")
+            for slot in getattr(obj, "material_slots", [])
+        ]
+        mat = getattr(obj, "active_material", None)
+        node = _find_mpaint_node_for_material(mat)
+        layers = []
+        channels = []
+        if node is not None:
+            mp = node.node_tree.mp
+            layers = [_material_layer_snapshot(layer) for layer in mp.layers]
+            channels = [channel.name for channel in mp.channels]
+
+        layer_ids = {layer.get("procedural_material_id", "") for layer in layers}
+        layer_names = {layer.get("name", "") for layer in layers}
+        has_expected_procedural_layer = bool(
+            (expected_material_id and expected_material_id in layer_ids)
+            or (expected_layer_name and expected_layer_name in layer_names)
+        )
+        has_expected_placeholder = bool(
+            placeholder_material_name and placeholder_material_name in slots
+        )
+
+        objects.append({
+            "object": obj.name,
+            "active_material": getattr(mat, "name", ""),
+            "material_slots": slots,
+            "mpaint_node": getattr(node, "name", "") if node else "",
+            "layers": layers,
+            "channels": channels,
+            "has_expected_procedural_layer": has_expected_procedural_layer,
+            "has_expected_placeholder": has_expected_placeholder,
+        })
+
+    expects_procedural = bool(expected_material_id or expected_layer_name)
+    expects_placeholder = bool(placeholder_material_name)
+    verified = bool(objects) and not missing
+    if expects_procedural:
+        verified = verified and all(item["has_expected_procedural_layer"] for item in objects)
+    if expects_placeholder:
+        verified = verified and all(item["has_expected_placeholder"] for item in objects)
+
+    return {
+        "verified": verified,
+        "expected_material_id": expected_material_id,
+        "expected_layer_name": expected_layer_name,
+        "placeholder_material_name": placeholder_material_name,
+        "objects": objects,
+        "missing": missing,
+    }
+
+
 def prepare_scene_materials(materials: list[dict]) -> dict:
     """Prepare placeholders and queue detailed MatGen jobs for a planned scene."""
     if not isinstance(materials, list):
@@ -445,23 +531,38 @@ def apply_prepared_scene_materials(assignments: list[dict]) -> dict:
         if mat is not None and mat.get("mixar_scene_material_placeholder"):
             is_placeholder = True
 
+        layer_name = spec.get("layer_name") or material_name or key
         if is_placeholder:
             result = _assign_placeholder_material(material_name, object_names)
+            verification = _material_application_snapshot(
+                object_names,
+                placeholder_material_name=material_name,
+            )
         elif material_id or material_name:
             result = add_procedural_material_layer(
                 material_id=material_id,
                 material_name=material_name,
                 object_names=object_names,
-                layer_name=spec.get("layer_name") or material_name or key,
+                layer_name=layer_name,
                 apply_to_existing=bool(spec.get("apply_to_existing", False)),
                 initialize_if_needed=True,
+            )
+            verification = _material_application_snapshot(
+                object_names,
+                expected_material_id=material_id,
+                expected_layer_name=layer_name,
             )
         else:
             errors.append({"key": key, "error": "assignment needs job_id, material_id, or material_name"})
             continue
 
-        entry = {"key": key, "object_names": _as_name_list(object_names), "result": result}
-        if result.get("success"):
+        entry = {
+            "key": key,
+            "object_names": _as_name_list(object_names),
+            "result": result,
+            "verification": verification,
+        }
+        if result.get("success") and verification.get("verified"):
             applied.append(entry)
         else:
             errors.append(entry)
