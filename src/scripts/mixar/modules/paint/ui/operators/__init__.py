@@ -47,6 +47,13 @@ except Exception as e:
     create_material_op = None
 
 try:
+    from . import build_layered_material_op
+    logger.debug("[Operators] Imported build_layered_material_op")
+except Exception as e:
+    logger.error("[Operators] FAILED to import build_layered_material_op: %s", e)
+    build_layered_material_op = None
+
+try:
     from . import decal_operators
     logger.debug("[Operators] Imported decal_operators")
 except Exception as e:
@@ -81,7 +88,7 @@ except Exception as e:
     logger.error("[Operators] FAILED to import bake_to_layer_operators: %s", e)
     bake_to_layer_operators = None
 
-modules = [m for m in [channel_operators, mask_operators, layer_operators, material_ops, create_material_op, decal_operators, layer_image_import_ops, remove_channel, layer_clipboard_ops, bake_to_layer_operators] if m is not None]
+modules = [m for m in [channel_operators, mask_operators, layer_operators, material_ops, create_material_op, build_layered_material_op, decal_operators, layer_image_import_ops, remove_channel, layer_clipboard_ops, bake_to_layer_operators] if m is not None]
 
 logger.debug("[Operators] Loaded %s modules", len(modules))
 
