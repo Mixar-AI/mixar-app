@@ -274,8 +274,11 @@ class MIXAR_OT_onboarding_card(Operator):
             return self._on_primary(context)
 
         if event.type == "ESC" and event.value == "PRESS":
-            self._cleanup()
-            return {"CANCELLED"}
+            # Esc must go through the skip path, not just _cleanup():
+            # the step highlight (green border) is gated on the tour's
+            # step_id, so without transitioning to DONE it keeps
+            # drawing after the card is gone.
+            return self._on_skip(context)
 
         return {"PASS_THROUGH"}
 
