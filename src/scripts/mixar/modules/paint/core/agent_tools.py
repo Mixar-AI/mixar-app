@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Iterable, Optional
 
@@ -177,6 +178,26 @@ def _unique_layer_name(base: str, layers, current=None) -> str:
     while f"{base} ({index})" in existing:
         index += 1
     return f"{base} ({index})"
+
+
+_LAYER_COPY_SUFFIX_RE = re.compile(r"\s+\(\d+\)$")
+
+
+def _canonical_layer_name(name: str) -> str:
+    return _LAYER_COPY_SUFFIX_RE.sub("", (name or "").strip()).lower()
+
+
+def _find_existing_procedural_layer(mp, material_id: str = "", layer_name: str = ""):
+    """Return an existing matching procedural layer, if this material was already added."""
+    target_id = (material_id or "").strip()
+    target_name = _canonical_layer_name(layer_name)
+    for index, layer in enumerate(getattr(mp, "layers", [])):
+        layer_id = getattr(layer, "procedural_material_id", "")
+        if target_id and layer_id == target_id:
+            return index, layer
+        if target_name and _canonical_layer_name(getattr(layer, "name", "")) == target_name:
+            return index, layer
+    return -1, None
 
 
 def _ensure_registry_loaded() -> None:
@@ -1038,7 +1059,11 @@ def _deferred_material_assignment(spec: dict, object_names: list[str], reason: s
 
 
 def apply_prepared_scene_materials(assignments: list[dict], time_budget_s: float = 20.0) -> dict:
-    """Apply prepared placeholder/direct materials or generated procedural layers."""
+    """Apply prepared placeholder/direct materials or generated procedural layers.
+
+    Detailed procedural assignments are applied once per semantic material group,
+    not once per mesh, so matching objects share one editable texture set.
+    """
     if not isinstance(assignments, list):
         return {"success": False, "error": "assignments must be a list"}
 
@@ -1097,68 +1122,27 @@ def apply_prepared_scene_materials(assignments: list[dict], time_budget_s: float
                 errors.append({"key": key, "error": "No mesh objects found for procedural material layer", "missing": missing})
                 continue
 
-            target_entries = []
-            target_errors = []
-            deferred_names: list[str] = []
-            for target_index, target in enumerate(targets):
-                # Always allow at least one target to run so repeated calls make progress.
-                if target_index > 0 and time.monotonic() >= deadline:
-                    deferred_names = [obj.name for obj in targets[target_index:]]
-                    pending_spec = {
-                        **spec,
-                        "material_id": material_id,
-                        "material_name": material_name,
-                        "layer_name": layer_name,
-                    }
-                    pending.append(_deferred_material_assignment(pending_spec, deferred_names, "time_budget_exhausted"))
-                    break
-
-                result = add_procedural_material_layer(
-                    material_id=material_id,
-                    material_name=material_name,
-                    object_names=[target.name],
-                    layer_name=layer_name,
-                    apply_to_existing=bool(spec.get("apply_to_existing", False)),
-                    initialize_if_needed=True,
-                )
-                verification = _material_application_snapshot(
-                    [target.name],
-                    expected_material_id=material_id,
-                    expected_layer_name=layer_name,
-                )
-                target_entry = {
-                    "object_names": [target.name],
-                    "result": result,
-                    "verification": verification,
-                }
-                if result.get("success") and verification.get("verified"):
-                    target_entries.append(target_entry)
-                else:
-                    target_errors.append(target_entry)
-
-            result = {
-                "success": bool(target_entries) and not target_errors,
-                "applied": [
-                    item
-                    for entry in target_entries
-                    for item in entry.get("result", {}).get("applied", [])
-                ],
-                "missing": missing,
-                "errors": target_errors,
-                "deferred": deferred_names,
-            }
-            verification_objects = [
-                item
-                for entry in target_entries
-                for item in entry.get("verification", {}).get("objects", [])
-            ]
+            target_names = [target.name for target in targets]
+            result = add_procedural_material_layer(
+                material_id=material_id,
+                material_name=material_name,
+                object_names=target_names,
+                layer_name=layer_name,
+                apply_to_existing=bool(spec.get("apply_to_existing", False)),
+                initialize_if_needed=True,
+                shared_material=not bool(spec.get("separate_materials", False)),
+            )
+            verification = _material_application_snapshot(
+                target_names,
+                expected_material_id=material_id,
+                expected_layer_name=layer_name,
+            )
             verification = {
-                "verified": bool(target_entries) and not target_errors,
+                **verification,
+                "verified": bool(result.get("success")) and verification.get("verified", False),
                 "expected_material_id": material_id,
                 "expected_layer_name": layer_name,
-                "objects": verification_objects,
                 "missing": missing,
-                "deferred": deferred_names,
             }
         else:
             errors.append({"key": key, "error": "assignment needs job_id, material_id, or material_name"})
@@ -1360,6 +1344,59 @@ def add_procedural_material_layer(
     try:
         if shared_material and len(targets) > 1 and not apply_to_existing:
             uv_created = {obj.name: _ensure_basic_uv_map(obj) for obj in targets}
+            semantic_name = layer_name or material.name
+            for existing_obj in targets:
+                existing_node = _find_mpaint_node(existing_obj)
+                if not existing_node:
+                    continue
+                existing_index, existing_layer = _find_existing_procedural_layer(
+                    existing_node.node_tree.mp,
+                    material.material_id,
+                    semantic_name,
+                )
+                if existing_layer is None:
+                    continue
+                shared_mat = getattr(existing_obj, "active_material", None)
+                shared_name = _semanticize_shared_material(
+                    shared_mat,
+                    semantic_name,
+                    f"Procedural library material: {material.name}",
+                )
+                for obj in targets:
+                    try:
+                        _assign_material_to_object(obj, shared_mat)
+                        applied.append({
+                            "object": obj.name,
+                            "material_id": material.material_id,
+                            "material_name": material.name,
+                            "shared_material": shared_name,
+                            "layer": getattr(existing_layer, "name", "") or semantic_name,
+                            "layer_index": existing_index,
+                            "reused_existing_layer": True,
+                            "layers": len(existing_node.node_tree.mp.layers),
+                            "channels": [channel.name for channel in existing_node.node_tree.mp.channels],
+                            "uv_created": bool(uv_created.get(obj.name)),
+                        })
+                    except Exception as exc:
+                        errors.append({"object": obj.name, "error": str(exc)})
+                _sync_layer_stack_ui(existing_node, existing_node.node_tree.mp)
+                verification = _material_application_snapshot(
+                    [obj.name for obj in targets],
+                    expected_material_id=material.material_id,
+                    expected_layer_name=getattr(existing_layer, "name", "") or semantic_name,
+                )
+                return {
+                    "success": not errors and bool(applied) and verification.get("verified", False),
+                    "shared_material": shared_name,
+                    "semantic_material_name": semantic_name,
+                    "texture_set_count": 1 if applied else 0,
+                    "reused_existing_layer": True,
+                    "applied": applied,
+                    "missing": missing,
+                    "errors": errors,
+                    "verification": verification,
+                }
+
             source_obj = targets[0]
             _activate_object(source_obj)
             node = get_active_mpaint_node()
@@ -1424,7 +1461,6 @@ def add_procedural_material_layer(
                     "missing": missing,
                     "applied": [],
                 }
-            semantic_name = layer_name or material.name
             shared_name = _semanticize_shared_material(
                 shared_mat,
                 semantic_name,
@@ -1480,6 +1516,35 @@ def add_procedural_material_layer(
             if not node:
                 errors.append({"object": obj.name, "error": "No active Mixar Paint node"})
                 continue
+
+            if not apply_to_existing:
+                semantic_name = layer_name or material.name
+                existing_index, existing_layer = _find_existing_procedural_layer(
+                    node.node_tree.mp,
+                    material.material_id,
+                    semantic_name,
+                )
+                if existing_layer is not None:
+                    node.node_tree.mp.active_layer_index = existing_index
+                    verification = _material_application_snapshot(
+                        [obj.name],
+                        expected_material_id=material.material_id,
+                        expected_layer_name=getattr(existing_layer, "name", "") or semantic_name,
+                    )
+                    applied.append({
+                        "object": obj.name,
+                        "material_id": material.material_id,
+                        "material_name": material.name,
+                        "layer": getattr(existing_layer, "name", "") or semantic_name,
+                        "layer_index": existing_index,
+                        "reused_existing_layer": True,
+                        "layers": len(node.node_tree.mp.layers),
+                        "channels": [channel.name for channel in node.node_tree.mp.channels],
+                        "uv_created": uv_created,
+                        "verification": verification,
+                    })
+                    _sync_layer_stack_ui(node, node.node_tree.mp)
+                    continue
 
             try:
                 result = bpy.ops.layers.add_custom_procedural_layer(
