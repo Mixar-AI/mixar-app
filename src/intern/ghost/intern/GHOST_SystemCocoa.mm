@@ -1933,6 +1933,16 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
     @autoreleasepool {
       [NSApplication sharedApplication]; /* initializes `NSApp`. */
 
+      /* Mixar: headless sandbox children (`--background`, spawned by
+       * sandbox_supervisor) still create a Cocoa system so off-screen GPU work
+       * keeps working, but they must not show a Dock icon or app-switcher entry.
+       * Demote them to an accessory (background) app. Detected via the env var
+       * the supervisor sets only on child processes, so the user's GUI instance
+       * (which lacks it) is unaffected. */
+      if ([[NSProcessInfo processInfo].environment objectForKey:@"MIXAR_SANDBOX_CONNECTION_ID"]) {
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+      }
+
       if ([NSApp mainMenu] == nil) {
         NSMenu *mainMenubar = [[NSMenu alloc] init];
         NSMenuItem *menuItem;
