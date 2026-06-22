@@ -2440,22 +2440,27 @@ GHOST_TSuccess GHOST_SystemCocoa::handleApplicationBecomeActiveEvent()
             [nswin.identifier isEqualToString:kMixarFloatingDockIdentifier];
         if (is_floating_dock) {
           /* Auxiliary floating docks (Agent Bubble + pill) manage
-           * their own visibility, so don't make them key here — that
-           * would steal keyboard focus from the main viewport every
-           * time the user alt-tabs back to Mixar. They should only
-           * become key when the user explicitly clicks on them.
+           * their OWN visibility — do nothing here. Two reasons:
            *
-           * Crucially, do NOT resurrect a dock that is currently
-           * hidden with hidesOnDeactivate == NO. That combination
-           * means the dock was intentionally orderOut'd — the bubble
-           * is minimised to its pill. Order-fronting it here would
-           * pop the full chat window back up on app reactivation
-           * while the pill stays minimised. Only re-show docks that
-           * AppKit auto-hid on deactivate (hidesOnDeactivate == YES,
-           * e.g. the open bubble or the minimised pill). */
-          if (nswin.hidesOnDeactivate || [nswin isVisible]) {
-            [nswin orderFront:nil];
-          }
+           * 1. Space yank-back. The docks are pinned to Mixar's Space
+           *    (Mixar_WindowBindToParentSpace). hidesOnDeactivate == YES
+           *    docks (the open bubble, the minimised pill) are already
+           *    auto-restored by AppKit on activation, and AppKit does it
+           *    in a Space-aware way. Calling orderFront ourselves
+           *    overrides that and force-switches the user back to
+           *    Mixar's Space the instant they swipe to another Space —
+           *    the "swiped right but got yanked back to the leftmost
+           *    window" bug.
+           *
+           * 2. Resurrecting a minimised bubble. A dock hidden with
+           *    hidesOnDeactivate == NO was intentionally orderOut'd
+           *    (the bubble is collapsed to its pill). Order-fronting it
+           *    pops the full chat window back open while the pill stays
+           *    minimised.
+           *
+           * Their Z-order above the host is guaranteed by the
+           * addChildWindow relationship, and making them key would
+           * steal viewport focus, so there is nothing for us to do. */
           continue;
         }
         [nswin makeKeyAndOrderFront:nil];
