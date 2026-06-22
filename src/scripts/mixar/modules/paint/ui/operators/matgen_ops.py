@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 # Model mapping: pipeline name → generation queue model
 _PIPELINE_MODEL_MAP = {
     "fast": "claude-sonnet-4-6",
-    "detailed": "claude-opus-4-6",
+    "detailed": "claude-opus-4-8",
 }
 
 
