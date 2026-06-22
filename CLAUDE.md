@@ -81,7 +81,7 @@ src/
 ```
 
 ### Active Modules
-`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
+`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
 
 ---
 
@@ -98,7 +98,7 @@ src/
 
 ---
 
-## 13 Feature Modules
+## 14 Feature Modules
 
 | Module | What it does |
 |--------|-------------|
@@ -114,7 +114,29 @@ src/
 | **texel_density** | UV texel density analysis and visualization |
 | **uv_editor** | Advanced UV editing workspace with dual-space architecture, mutually exclusive tool/header panels, annotate and UV tool sidebars, dynamic panel ordering, and toolbar auto-expand |
 | **space_texture_sets** | Texture set management |
+| **operation_history** | Per-session local log (`operations.jsonl` + `scripts/`) of every agent script execution plus curated manual user ops. Agent executions captured at `space_mixie_chat/core/main_thread_executor.py`; manual ops via a depsgraph→timer capture service. Read by the agent through `operation_history/core/tools.py:run_tool`. No backend DB. |
 | **testing** | Pure-Python unit tests (pytest, run from repo root with bpy stubbed via root `conftest.py`) |
+
+---
+
+## Unified Generation Queue
+
+All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush gen, scene gen) submit through **one unified async job queue** instead of bespoke per-feature services. Lives in `modules/common/job_queue/`.
+
+**Backend contract**: `POST /generation-queue/enqueue` (job_type, model, payload) → `GET /generation-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `GenerationQueueService` wraps these.
+
+**Client architecture**:
+- **`core/job.py`** — base `Job` with shared `_unwrap_response()`, `_parse_standard_submit()`, `_parse_standard_poll()`, default `poll()`.
+- **`core/generic_jobs.py`** — two generic Job classes cover all standard features:
+  - `AsyncGLBJob` — submit → poll → download GLB → import (3D gen, retopology, UV, part, rapid, image-to-3D, scene gen HP/LP). Optional `on_imported` hook for rename/chain-id stamping.
+  - `SyncImageJob` — submit with inline result → download images to moodboard (image gen, lookdev/depth-to-image, brush gen).
+- **`core/enqueue.py`** — single `enqueue_generation(kind="glb"|"image", ...)` entry point. Builds the right Job, auto-attaches the queue listener (custom or from `scene_flag`), submits.
+- **`core/helpers.py`** — `get_queue_with_listener()`, `create_scene_flag_listener()` (with `on_start`/`on_finish` hooks), `show_batch_summary_popup()`, `extract_image_urls()`, `download_images_to_moodboard()`.
+- **`core/queue_manager.py`** — `FeatureQueue` drives Job lifecycle: PENDING → RUNNING_SUBMIT → RUNNING_POLL → RUNNING_DOWNLOAD → SUCCESS/FAILED.
+
+**Per-feature enqueue helpers** (build payloads + fan-out, then call `enqueue_generation()`): `moodboard/core/generation_enqueue.py` (Pro, scene gen HP/LP), `hunyuan/core/{retopology,uv,part}_enqueue.py`. Operators call these or `enqueue_generation()` directly — **do not** create new Job subclasses for standard features.
+
+**Genuinely unique jobs keep their own queue files** (custom polling/result handling): `lookdev360_queue.py` (PBR textures → fill layers), `scene_recon_queue.py` (progressive 2-phase), `scene_gen_exp_labels_queue.py` (label extraction), `mesh_segment_queue.py` (inline JSON → vertex groups), `matgen_queue.py` (inline script → procedural material).
 
 ---
 
