@@ -538,6 +538,63 @@ def _clean_material_name(name: str, fallback: str) -> str:
     return safe[:80]
 
 
+def _unique_material_datablock_name(base: str, current=None) -> str:
+    name = _clean_material_name(base, "Shared Material")
+    existing = bpy.data.materials.get(name)
+    if existing is None or existing == current:
+        return name
+    suffix = 2
+    while True:
+        candidate = f"{name} ({suffix})"
+        existing = bpy.data.materials.get(candidate)
+        if existing is None or existing == current:
+            return candidate
+        suffix += 1
+
+
+def _unique_node_group_name(base: str, current=None) -> str:
+    name = _clean_material_name(base, "Shared Material")
+    if not name.startswith(MP_GROUP_PREFIX):
+        name = MP_GROUP_PREFIX + name
+    existing = bpy.data.node_groups.get(name)
+    if existing is None or existing == current:
+        return name
+    suffix = 2
+    while True:
+        candidate = f"{name} ({suffix})"
+        existing = bpy.data.node_groups.get(candidate)
+        if existing is None or existing == current:
+            return candidate
+        suffix += 1
+
+
+def _assign_material_to_object(obj, mat) -> None:
+    if obj.data.materials:
+        obj.data.materials[0] = mat
+    else:
+        obj.data.materials.append(mat)
+    try:
+        obj.active_material_index = 0
+    except Exception:
+        pass
+
+
+def _semanticize_shared_material(mat, semantic_name: str, source_prompt: str = "") -> str:
+    if mat is None:
+        return ""
+    material_name = _unique_material_datablock_name(semantic_name, mat)
+    mat.name = material_name
+    mat["mixar_semantic_material_name"] = semantic_name
+    mat["mixar_shared_texture_set"] = True
+    if source_prompt:
+        mat["mixar_source_prompt"] = source_prompt
+
+    node = _find_mpaint_node_for_material(mat)
+    if node is not None and node.node_tree is not None:
+        node.node_tree.name = _unique_node_group_name(material_name, node.node_tree)
+    return mat.name
+
+
 def _color_from_spec(spec: dict) -> tuple[float, float, float, float]:
     value = spec.get("color") or spec.get("base_color")
     if isinstance(value, (list, tuple)) and len(value) >= 3:
@@ -681,15 +738,130 @@ def _assign_placeholder_material(material_name: str, object_names=None) -> dict:
     applied = []
     for obj in targets:
         try:
-            if obj.data.materials:
-                obj.data.materials[0] = mat
-            else:
-                obj.data.materials.append(mat)
+            _assign_material_to_object(obj, mat)
             applied.append({"object": obj.name, "material_name": mat.name})
         except Exception as exc:
             applied.append({"object": obj.name, "error": str(exc)})
     errors = [item for item in applied if item.get("error")]
     return {"success": not errors, "applied": applied, "missing": missing, "errors": errors}
+
+
+def apply_layered_material_manifest(
+    manifest: dict,
+    object_names=None,
+    shared_material: bool = True,
+    material_name: str = "",
+) -> dict:
+    """Build a layered manifest and apply it to targets.
+
+    By default, builds ONE semantic Mixar Paint material/texture set and assigns
+    the same Blender material datablock to every requested object. Editing that
+    material's layer stack later updates all matching objects together.
+    """
+    targets, missing = _resolve_mesh_objects(object_names)
+    if not targets:
+        return {
+            "success": False,
+            "error": "No mesh objects found for layered material",
+            "missing": missing,
+        }
+
+    from ..layered_build.builder import build_layered_material
+
+    semantic_name = _clean_material_name(
+        material_name or manifest.get("material_name") or manifest.get("source_prompt"),
+        "Layered Material",
+    )
+    source_prompt = str(manifest.get("source_prompt") or "")
+    snapshot = _selection_snapshot()
+    applied: list[dict] = []
+    errors: list[dict] = []
+
+    try:
+        if shared_material:
+            uv_created = {obj.name: _ensure_basic_uv_map(obj) for obj in targets}
+            source_obj = targets[0]
+            _activate_object(source_obj)
+            try:
+                build_result = build_layered_material(manifest, source_obj)
+            except Exception as exc:
+                return {
+                    "success": False,
+                    "error": str(exc),
+                    "missing": missing,
+                    "shared_material": "",
+                    "applied": [],
+                }
+
+            shared_mat = getattr(source_obj, "active_material", None)
+            if shared_mat is None:
+                return {
+                    "success": False,
+                    "error": "Layered material build did not leave an active material",
+                    "missing": missing,
+                    "applied": [],
+                }
+
+            shared_name = _semanticize_shared_material(shared_mat, semantic_name, source_prompt)
+            for obj in targets:
+                try:
+                    _assign_material_to_object(obj, shared_mat)
+                    applied.append({
+                        "object": obj.name,
+                        "material_name": shared_name,
+                        "shared_material": True,
+                        "uv_created": bool(uv_created.get(obj.name)),
+                    })
+                except Exception as exc:
+                    errors.append({"object": obj.name, "error": str(exc)})
+
+            node = _find_mpaint_node_for_material(shared_mat)
+            if node is not None:
+                _sync_layer_stack_ui(node, node.node_tree.mp)
+            verification = _material_application_snapshot(
+                [obj.name for obj in targets],
+                expected_layer_name="Base",
+            )
+            return {
+                "success": bool(applied) and not errors and verification.get("verified", False),
+                "shared_material": shared_name,
+                "semantic_material_name": semantic_name,
+                "texture_set_count": 1 if applied else 0,
+                "layers_built": (build_result or {}).get("layers_built", 0),
+                "manifest_material_name": manifest.get("material_name", ""),
+                "applied": applied,
+                "missing": missing,
+                "errors": errors,
+                "verification": verification,
+            }
+
+        for obj in targets:
+            uv_created = _ensure_basic_uv_map(obj)
+            _activate_object(obj)
+            try:
+                result = build_layered_material(manifest, obj)
+                mat = getattr(obj, "active_material", None)
+                applied.append({
+                    "object": obj.name,
+                    "material_name": getattr(mat, "name", ""),
+                    "shared_material": False,
+                    "uv_created": uv_created,
+                    **(result or {}),
+                })
+            except Exception as exc:
+                errors.append({"object": obj.name, "error": str(exc)})
+    finally:
+        _restore_selection(snapshot)
+
+    return {
+        "success": bool(applied) and not errors,
+        "shared_material": "",
+        "semantic_material_name": semantic_name,
+        "texture_set_count": len(applied),
+        "applied": applied,
+        "missing": missing,
+        "errors": errors,
+    }
 
 
 def _find_mpaint_node_for_material(mat):
@@ -1161,6 +1333,7 @@ def add_procedural_material_layer(
     layer_name: str = "",
     apply_to_existing: bool = False,
     initialize_if_needed: bool = True,
+    shared_material: bool = True,
 ) -> dict:
     """Add a procedural material to the Mixar Paint layer stack for targets."""
     material = find_procedural_material(material_id=material_id, material_name=material_name)
@@ -1185,6 +1358,113 @@ def add_procedural_material_layer(
     errors: list[dict] = []
 
     try:
+        if shared_material and len(targets) > 1 and not apply_to_existing:
+            uv_created = {obj.name: _ensure_basic_uv_map(obj) for obj in targets}
+            source_obj = targets[0]
+            _activate_object(source_obj)
+            node = get_active_mpaint_node()
+            if not node and initialize_if_needed:
+                init_result = initialize_layer_paint_project(
+                    [source_obj.name],
+                    material_name=layer_name or material.name,
+                )
+                if not init_result.get("success"):
+                    return {
+                        "success": False,
+                        "error": init_result.get("error") or init_result.get("errors"),
+                        "missing": missing,
+                        "applied": [],
+                    }
+                _activate_object(source_obj)
+                node = get_active_mpaint_node()
+
+            if not node:
+                return {
+                    "success": False,
+                    "error": "No active Mixar Paint node",
+                    "missing": missing,
+                    "applied": [],
+                }
+
+            try:
+                result = bpy.ops.layers.add_custom_procedural_layer(
+                    "EXEC_DEFAULT",
+                    material_id=material.material_id,
+                    apply_to_existing=False,
+                )
+            except Exception as exc:
+                return {
+                    "success": False,
+                    "error": str(exc),
+                    "missing": missing,
+                    "applied": [],
+                }
+
+            if not _is_finished(result):
+                return {
+                    "success": False,
+                    "error": f"add_custom_procedural_layer returned {result}",
+                    "missing": missing,
+                    "applied": [],
+                }
+
+            node = get_active_mpaint_node()
+            mp = node.node_tree.mp
+            active_layer = None
+            if 0 <= mp.active_layer_index < len(mp.layers):
+                active_layer = mp.layers[mp.active_layer_index]
+                if layer_name:
+                    active_layer.name = _unique_layer_name(layer_name, mp.layers, active_layer)
+
+            shared_mat = getattr(source_obj, "active_material", None)
+            if shared_mat is None:
+                return {
+                    "success": False,
+                    "error": "Procedural material layer did not leave an active material",
+                    "missing": missing,
+                    "applied": [],
+                }
+            semantic_name = layer_name or material.name
+            shared_name = _semanticize_shared_material(
+                shared_mat,
+                semantic_name,
+                f"Procedural library material: {material.name}",
+            )
+            for obj in targets:
+                try:
+                    _assign_material_to_object(obj, shared_mat)
+                    applied.append({
+                        "object": obj.name,
+                        "material_id": material.material_id,
+                        "material_name": material.name,
+                        "shared_material": shared_name,
+                        "layer": getattr(active_layer, "name", "") or layer_name or material.name,
+                        "layers": len(mp.layers),
+                        "channels": [channel.name for channel in mp.channels],
+                        "uv_created": bool(uv_created.get(obj.name)),
+                    })
+                except Exception as exc:
+                    errors.append({"object": obj.name, "error": str(exc)})
+
+            node = _find_mpaint_node_for_material(shared_mat)
+            if node is not None:
+                _sync_layer_stack_ui(node, node.node_tree.mp)
+            verification = _material_application_snapshot(
+                [obj.name for obj in targets],
+                expected_material_id=material.material_id,
+                expected_layer_name=getattr(active_layer, "name", "") or layer_name or material.name,
+            )
+            return {
+                "success": not errors and bool(applied) and verification.get("verified", False),
+                "shared_material": shared_name,
+                "semantic_material_name": semantic_name,
+                "texture_set_count": 1 if applied else 0,
+                "applied": applied,
+                "missing": missing,
+                "errors": errors,
+                "verification": verification,
+            }
+
         for obj in targets:
             uv_created = _ensure_basic_uv_map(obj)
             _activate_object(obj)
