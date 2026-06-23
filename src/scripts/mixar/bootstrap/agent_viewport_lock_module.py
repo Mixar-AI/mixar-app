@@ -83,26 +83,14 @@ def _ensure_modal_running() -> None:
         logger.debug("Agent viewport lock: modal start failed: %s", exc)
 
 
-_was_executing = False
-
-
 def _lock_tick():
     """Persistent timer: drive halo redraw + keep the block modal alive
     while the agent is executing. Must never raise."""
-    global _was_executing
     try:
         if is_agent_executing():
-            _was_executing = True
             _ensure_modal_running()
             halo_renderer.tag_view3d_redraw()
             return HALO_TICK_ACTIVE_S
-        if _was_executing:
-            # The agent just went idle. The draw callback now early-outs,
-            # but the last halo frame stays on screen until the viewport
-            # repaints — without this final tag it would only clear on
-            # user interaction (e.g. a click).
-            _was_executing = False
-            halo_renderer.tag_view3d_redraw()
     except Exception as exc:  # noqa: BLE001
         logger.debug("Agent viewport lock tick error: %s", exc)
     return HALO_TICK_IDLE_S

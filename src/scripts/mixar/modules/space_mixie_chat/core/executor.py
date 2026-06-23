@@ -90,11 +90,6 @@ class ExecutionResult:
             response["deleted_objects"] = self.deleted_objects
         if self.error:
             response["error"] = self.error
-        # Forward the traceback over the (internal) RPC so the backend can log the
-        # failing line. This is an internal channel; the backend strips tracebacks
-        # from any client-facing API response per its own contract.
-        if self.traceback:
-            response["traceback"] = self.traceback
 
         return response
 
@@ -344,10 +339,6 @@ class ScriptExecutor:
             result.success = False
             result.error = str(e)
             result.traceback = traceback.format_exc()
-            # Log the full stack: str(e) alone (e.g. a bare KeyError) is often
-            # uninformative, and to_dict() forwards the traceback to the caller so
-            # backend logs can name the failing line instead of a "Type: message".
-            logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
             self._execution_lock.release()
