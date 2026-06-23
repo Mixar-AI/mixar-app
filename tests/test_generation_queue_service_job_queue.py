@@ -140,6 +140,7 @@ class FakeQueueJob(Job):
 
 def test_feature_queue_waits_for_ws_without_rest_poll_timer(monkeypatch):
     QM._queues.clear()
+    QM._sync_watchdog_registered = False
     registered_timers = []
     monkeypatch.setattr(
         QM.bpy.app.timers,
@@ -156,11 +157,12 @@ def test_feature_queue_waits_for_ws_without_rest_poll_timer(monkeypatch):
     assert job.backend_job_id == "job-ws"
     assert job.backend_status == "PENDING"
     assert job.poll_calls == 0
-    assert registered_timers == []
+    assert registered_timers == [QM._SYNC_WATCHDOG_INTERVAL]
 
 
 def test_terminal_job_update_reconciles_with_ws_sync(monkeypatch):
     QM._queues.clear()
+    QM._sync_watchdog_registered = False
     monkeypatch.setattr(QM.bpy.app.timers, "register", lambda *args, **kwargs: None)
 
     from mixar.modules.space_mixie_chat.core import jsonrpc_client, main_thread_executor
