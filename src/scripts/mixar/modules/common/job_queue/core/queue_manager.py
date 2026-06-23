@@ -11,9 +11,10 @@ Lifecycle (per job, all callbacks fire on the main thread via api/processor):
                        └──── FAILED / CANCELLED / PAUSED_AUTH
 
 All pending jobs are submitted immediately (the backend handles concurrency
-and queue limits). Each job owns its own poll-tick closure registered
-with ``bpy.app.timers``; download runs on a daemon thread that schedules
-the import callback back on the main thread.
+and queue limits). Once submitted, jobs wait for backend ``job.update`` pushes
+over the agent WebSocket; terminal success reconciles full result data via
+``job.sync`` on that same socket. Download runs on a daemon thread that
+schedules the import callback back on the main thread.
 """
 
 import os
@@ -99,9 +100,26 @@ def handle_backend_job_update(payload: dict) -> bool:
         job.error = str(payload.get("error"))
     queue._notify()
 
-    if status in {"DONE", "FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
-        queue._schedule_poll(job, 0.0)
+    if status in {"FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
+        _apply_backend_snapshot(queue, job, payload)
+    elif status == "DONE" and job.state == JobState.RUNNING_POLL:
+        _request_backend_job_sync()
     return True
+
+
+def _apply_backend_snapshot(queue: "FeatureQueue", job: Job, snapshot: dict) -> None:
+    """Feed a job-queue snapshot through the existing result parser."""
+    from mixar.modules.common.api.response import APIResponse
+    from mixar.modules.common.api.services.generation_queue_service import (
+        GenerationQueueService,
+    )
+
+    response = APIResponse(
+        success=True,
+        status_code=200,
+        data={"status": "success", "message": "ok", "data": snapshot},
+    )
+    queue._on_poll_success(job, GenerationQueueService._normalize_response(response))
 
 
 def handle_backend_job_sync(result: dict) -> int:
@@ -113,11 +131,6 @@ def handle_backend_job_sync(result: dict) -> int:
         return 0
 
     handled = 0
-    from mixar.modules.common.api.response import APIResponse
-    from mixar.modules.common.api.services.generation_queue_service import (
-        GenerationQueueService,
-    )
-
     for snapshot in jobs:
         if not isinstance(snapshot, dict):
             continue
@@ -127,14 +140,39 @@ def handle_backend_job_sync(result: dict) -> int:
         queue, job = _find_by_backend_job_id(str(backend_job_id))
         if job is None:
             continue
-        response = APIResponse(
-            success=True,
-            status_code=200,
-            data={"status": "success", "message": "ok", "data": snapshot},
-        )
-        queue._on_poll_success(job, GenerationQueueService._normalize_response(response))
+        _apply_backend_snapshot(queue, job, snapshot)
         handled += 1
     return handled
+
+
+def _request_backend_job_sync() -> bool:
+    """Ask the WebSocket transport for full job snapshots, without REST polling."""
+    try:
+        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
+        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
+            get_jsonrpc_client,
+        )
+        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
+            run_on_main_thread,
+        )
+
+        client = get_jsonrpc_client()
+        if client is None or not client.is_connected:
+            return False
+
+        def _on_sync_result(result):
+            def _apply_sync():
+                count = handle_backend_job_sync(result)
+                if count:
+                    logger.info("job.sync reconciled %d local queue jobs", count)
+
+            run_on_main_thread(_apply_sync)
+
+        client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_sync_result)
+        return True
+    except Exception as e:
+        logger.debug("%s job.sync request failed: %s", LOG_PREFIX, e)
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -351,8 +389,11 @@ class FeatureQueue:
         job.state = JobState.RUNNING_POLL
         job.poll_count = 0
         job.poll_start_time = time.time()
+        if not job.backend_status:
+            job.backend_status = "PENDING"
         self._notify()
-        self._schedule_poll(job, get_poll_interval(0))
+        # The backend job queue is push-driven. Do not start the old REST GET
+        # polling loop here; ``job.update``/``job.sync`` will advance the job.
 
     def _on_submit_error(self, job: Job, error) -> None:
         if isinstance(error, AuthenticationError):
