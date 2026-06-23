@@ -6,9 +6,11 @@
 
 import hashlib
 import os
+import time
 import tempfile
 import urllib.parse
 import urllib.request
+from urllib.error import HTTPError, URLError
 
 import bpy
 
@@ -16,6 +18,9 @@ import bpy
 # prompts. Restrict downloads to remote http(s) assets so URLs such as
 # file:///home/user/.env cannot read local files into bpy.data.images.
 _ALLOWED_SCHEMES = ("http", "https")
+_RETRYABLE_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+_DEFAULT_ATTEMPTS = 3
+_DEFAULT_BACKOFF_SECONDS = 0.35
 
 
 def _filename_for_url(url: str) -> str:
@@ -27,7 +32,30 @@ def _filename_for_url(url: str) -> str:
     return f"{stem}_{digest}{ext}"
 
 
-def download_to_tempfile(url: str, dest_dir: str = None, timeout: float = 30.0) -> str:
+def _is_retryable_error(exc: BaseException) -> bool:
+    if isinstance(exc, HTTPError):
+        return exc.code in _RETRYABLE_HTTP_STATUS
+    if isinstance(exc, (URLError, TimeoutError, ConnectionError, OSError)):
+        return True
+    return False
+
+
+def _read_url(url: str, timeout: float) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "MixarTexturePainting/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as resp:
+        return resp.read()
+
+
+def download_to_tempfile(
+    url: str,
+    dest_dir: str = None,
+    timeout: float = 30.0,
+    attempts: int = _DEFAULT_ATTEMPTS,
+    backoff_seconds: float = _DEFAULT_BACKOFF_SECONDS,
+) -> str:
     scheme = urllib.parse.urlsplit(url).scheme.lower()
     if scheme not in _ALLOWED_SCHEMES:
         raise ValueError(
@@ -36,12 +64,30 @@ def download_to_tempfile(url: str, dest_dir: str = None, timeout: float = 30.0) 
     dest_dir = dest_dir or os.path.join(tempfile.gettempdir(), "mixar_layered_build")
     os.makedirs(dest_dir, exist_ok=True)
     path = os.path.join(dest_dir, _filename_for_url(url))
-    if not os.path.exists(path):
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
-            data = resp.read()
-        with open(path, "wb") as f:
-            f.write(data)
-    return path
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        return path
+
+    attempts = max(1, int(attempts or 1))
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        tmp_path = f"{path}.part"
+        try:
+            data = _read_url(url, timeout)
+            with open(tmp_path, "wb") as f:
+                f.write(data)
+            os.replace(tmp_path, path)
+            return path
+        except Exception as exc:
+            last_error = exc
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except OSError:
+                pass
+            if attempt >= attempts or not _is_retryable_error(exc):
+                break
+            time.sleep(backoff_seconds * attempt)
+    raise last_error
 
 
 def load_image(url: str, non_color: bool) -> "bpy.types.Image":
