@@ -124,6 +124,20 @@ def apply_layered_material_manifest(
                 })
             except Exception as exc:
                 errors.append({"object": obj.name, "error": str(exc)})
+    except Exception as exc:
+        # The post-build steps (semanticize / snapshot / UI sync) and the
+        # per-object branch sit under this try with only a finally; without this
+        # except a raise here propagates raw and the executor surfaces an opaque
+        # "Type: message". Always return a structured failure instead.
+        logger.exception("apply_layered_material_manifest failed")
+        return {
+            "success": False,
+            "error": str(exc),
+            "semantic_material_name": semantic_name,
+            "applied": applied,
+            "missing": missing,
+            "errors": errors,
+        }
     finally:
         _restore_selection(snapshot)
 
