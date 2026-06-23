@@ -62,6 +62,81 @@ def all_queues() -> list:
     return list(_queues.values())
 
 
+_JOBQ_STATE_TO_STATUS = {
+    "pending": "PENDING",
+    "dispatched": "SUBMITTED",
+    "running": "POLLING",
+    "succeeded": "DONE",
+    "failed": "FAILED",
+    "cancelled": "CANCELLED",
+}
+
+
+def _find_by_backend_job_id(backend_job_id: str):
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if job.backend_job_id == backend_job_id:
+                return queue, job
+    return None, None
+
+
+def handle_backend_job_update(payload: dict) -> bool:
+    """Apply a compact ``job.update`` push to the matching local queue job."""
+    if not isinstance(payload, dict):
+        return False
+    backend_job_id = payload.get("job_id") or payload.get("id")
+    if not backend_job_id:
+        return False
+    queue, job = _find_by_backend_job_id(str(backend_job_id))
+    if job is None:
+        return False
+
+    state = str(payload.get("state") or payload.get("status") or "").lower()
+    status = _JOBQ_STATE_TO_STATUS.get(state, "")
+    if status:
+        job.backend_status = status
+    if payload.get("error"):
+        job.error = str(payload.get("error"))
+    queue._notify()
+
+    if status in {"DONE", "FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
+        queue._schedule_poll(job, 0.0)
+    return True
+
+
+def handle_backend_job_sync(result: dict) -> int:
+    """Apply full ``job.sync`` snapshots to local jobs after reconnect."""
+    if not isinstance(result, dict):
+        return 0
+    jobs = result.get("jobs", [])
+    if not isinstance(jobs, list):
+        return 0
+
+    handled = 0
+    from mixar.modules.common.api.response import APIResponse
+    from mixar.modules.common.api.services.generation_queue_service import (
+        GenerationQueueService,
+    )
+
+    for snapshot in jobs:
+        if not isinstance(snapshot, dict):
+            continue
+        backend_job_id = snapshot.get("job_id") or snapshot.get("id")
+        if not backend_job_id:
+            continue
+        queue, job = _find_by_backend_job_id(str(backend_job_id))
+        if job is None:
+            continue
+        response = APIResponse(
+            success=True,
+            status_code=200,
+            data={"status": "success", "message": "ok", "data": snapshot},
+        )
+        queue._on_poll_success(job, GenerationQueueService._normalize_response(response))
+        handled += 1
+    return handled
+
+
 # ---------------------------------------------------------------------------
 # FeatureQueue
 # ---------------------------------------------------------------------------
