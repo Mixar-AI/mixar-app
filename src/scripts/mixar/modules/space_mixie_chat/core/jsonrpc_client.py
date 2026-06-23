@@ -57,6 +57,10 @@ class JSONRPCWebSocketClient:
         on_connected: Optional[Callable[[], None]] = None,
         on_disconnected: Optional[Callable[[str], None]] = None,
         on_notification: Optional[Callable[[dict], None]] = None,
+        on_job_update: Optional[Callable[[dict], None]] = None,
+        on_sandbox_control: Optional[Callable[[dict], dict]] = None,
+        role: Optional[str] = None,
+        parent_instance_id: Optional[str] = None,
     ):
         self._host = host
         self._connection_id = connection_id
@@ -75,6 +79,10 @@ class JSONRPCWebSocketClient:
         self._on_connected = on_connected
         self._on_disconnected = on_disconnected
         self._on_notification = on_notification
+        self._on_job_update = on_job_update
+        self._on_sandbox_control = on_sandbox_control
+        self._role = role
+        self._parent_instance_id = parent_instance_id
 
         # State
         self._ws: Optional["websocket.WebSocket"] = None
@@ -285,15 +293,21 @@ class JSONRPCWebSocketClient:
         """Send handshake request and wait for response."""
         request_id = f"handshake_{self._next_request_id()}"
 
+        params = {
+            "blender_version": self._blender_version,
+            "addon_version": self._addon_version,
+            "capabilities": ["script_execution", "notifications"],
+        }
+        # A headless sandbox identifies itself so the backend can route a
+        # create_model sub-build to it (parent_instance_id -> this connection).
+        if self._role:
+            params["role"] = self._role
+            params["parent_instance_id"] = self._parent_instance_id
         handshake = {
             "jsonrpc": "2.0",
             "method": JSONRPCMethod.SYSTEM_HANDSHAKE,
             "id": request_id,
-            "params": {
-                "blender_version": self._blender_version,
-                "addon_version": self._addon_version,
-                "capabilities": ["script_execution", "notifications"],
-            },
+            "params": params,
         }
 
         self._ws.send(json.dumps(handshake))
@@ -421,6 +435,9 @@ class JSONRPCWebSocketClient:
         if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
 
+        elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
+            self._handle_sandbox_control(params, request_id)
+
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
                 try:
@@ -448,6 +465,13 @@ class JSONRPCWebSocketClient:
                     self._on_notification(params)
                 except Exception as e:
                     logger.error(f"Error in on_notification callback: {e}")
+
+        elif method == JSONRPCMethod.JOB_UPDATE:
+            if self._on_job_update:
+                try:
+                    self._on_job_update(params)
+                except Exception as e:
+                    logger.error(f"Error in on_job_update callback: {e}")
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
@@ -488,6 +512,24 @@ class JSONRPCWebSocketClient:
                 "result": result,
             }
             self._outbound.put(json.dumps(response))
+
+    def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
+        """Handle a server-initiated agent.sandbox_control request (parent side).
+
+        Delegates to the on_sandbox_control callback (the sandbox supervisor) and
+        replies with its result so the backend can confirm spawn/shutdown.
+        """
+        result = {"success": False, "error": "no sandbox control handler"}
+        if self._on_sandbox_control:
+            try:
+                result = self._on_sandbox_control(params) or {"success": True}
+            except Exception as e:
+                logger.error(f"sandbox_control handler error: {e}")
+                result = {"success": False, "error": str(e)}
+        if request_id:
+            self._outbound.put(json.dumps({
+                "jsonrpc": "2.0", "id": request_id, "result": result,
+            }))
 
     def _send_ping(self) -> None:
         """Send ping request."""

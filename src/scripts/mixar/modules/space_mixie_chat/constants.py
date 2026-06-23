@@ -86,6 +86,8 @@ class JSONRPCMethod:
 
     # Server -> Client (requests - expect response)
     BLENDER_EXECUTE_SCRIPT = "blender.execute_script"
+    # Server -> Client (request - sandbox lifecycle; handled by the parent only)
+    AGENT_SANDBOX_CONTROL = "agent.sandbox_control"
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"
@@ -94,10 +96,12 @@ class JSONRPCMethod:
 
     # Server -> Client (notifications push)
     NOTIFICATIONS_PUSH = "notifications.push"
+    JOB_UPDATE = "job.update"
     # Client -> Server (notification RPC)
     NOTIFICATIONS_SYNC = "notifications.sync"
     NOTIFICATIONS_MARK_READ = "notifications.mark_read"
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
+    JOB_SYNC = "job.sync"
 
 
 # ============================================================================
@@ -220,4 +224,3 @@ STREAMING_BATCH_LIMIT = 8
 # Prefix for temporary placeholder bubble IDs (optimistic UI loading indicator).
 # Used in chat_ops.py (creation) and slot_processor.py (cleanup).
 TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
-

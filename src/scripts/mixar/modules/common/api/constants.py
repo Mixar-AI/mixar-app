@@ -63,7 +63,7 @@ class APIModule(Enum):
     SCENE_SEGMENT = "scene-segment"
     HUNYUAN = "hunyuan"
     UPDATES = "updates"
-    GENERATION_QUEUE = "generation-queue"
+    JOB_QUEUE = "job-queue"
 
 
 # ============================================================================

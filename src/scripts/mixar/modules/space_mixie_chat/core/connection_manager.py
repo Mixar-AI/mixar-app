@@ -21,6 +21,7 @@ from ..constants import (
     DEFAULT_MAX_RECONNECT_DELAY,
     DEFAULT_PING_INTERVAL,
     DEFAULT_RECONNECT_DELAY,
+    JSONRPCMethod,
     SessionState,
 )
 from .jsonrpc_client import (
@@ -180,6 +181,21 @@ class ConnectionManager:
 
                 client.send_request("notifications.sync", {}, _on_sync_result)
 
+                def _on_job_sync_result(result):
+                    from .main_thread_executor import run_on_main_thread
+
+                    def _apply_sync():
+                        from ...common.job_queue.core.queue_manager import (
+                            handle_backend_job_sync,
+                        )
+                        count = handle_backend_job_sync(result)
+                        if count:
+                            logger.info("job.sync reconciled %d local queue jobs", count)
+
+                    run_on_main_thread(_apply_sync)
+
+                client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
+
             # Report client version in the background (REST)
             import threading
 
@@ -247,6 +263,23 @@ class ConnectionManager:
                 id=params.get("id"),
             )
 
+        def on_job_update(params: dict):
+            """Handle job.update — reconcile the matching local queue job."""
+            from .main_thread_executor import run_on_main_thread
+
+            def _apply_update():
+                from ...common.job_queue.core.queue_manager import (
+                    handle_backend_job_update,
+                )
+                handle_backend_job_update(params)
+
+            run_on_main_thread(_apply_update)
+
+        def on_sandbox_control(params: dict) -> dict:
+            """Backend asked this (parent) instance to manage its sandbox child."""
+            from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
+            return handle_sandbox_control(params)
+
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         client = create_jsonrpc_client(
@@ -262,6 +295,8 @@ class ConnectionManager:
             on_connected=on_connected,
             on_disconnected=on_disconnected,
             on_notification=on_notifications_push,
+            on_job_update=on_job_update,
+            on_sandbox_control=on_sandbox_control,
         )
 
         # Connect
