@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 DOWNLOAD_PY = ROOT / "src/scripts/mixar/modules/paint/layered_build/download.py"
 
@@ -34,3 +36,21 @@ def test_download_to_tempfile_writes_bytes(tmp_path):
     assert os.path.exists(path)
     with open(path, "rb") as f:
         assert f.read() == b"PNGDATA"
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "file:///home/user/.env",
+        "ftp://host/secret.png",
+        "data:text/plain;base64,SGVsbG8=",
+        "/etc/passwd",
+        "FILE:///etc/passwd",
+    ],
+)
+def test_download_to_tempfile_rejects_non_http(tmp_path, bad_url):
+    """A manifest must never coax a non-http(s) URL into a local file read."""
+    with patch("urllib.request.urlopen") as uo:
+        with pytest.raises(ValueError):
+            download.download_to_tempfile(bad_url, dest_dir=str(tmp_path))
+    uo.assert_not_called()
