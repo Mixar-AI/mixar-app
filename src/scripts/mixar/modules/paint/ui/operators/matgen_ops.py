@@ -24,12 +24,6 @@ from .....config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Model mapping: pipeline name → generation queue model
-_PIPELINE_MODEL_MAP = {
-    "fast": "claude-sonnet-4-6",
-    "detailed": "claude-opus-4-8",
-}
-
 
 class MatGenRecentItem(PropertyGroup):
     """One entry in the 'Just Generated' section."""
@@ -88,8 +82,6 @@ class MATGEN_OT_GenerateMaterial(Operator):
             self.report({'WARNING'}, "Please enter a material description")
             return {'CANCELLED'}
 
-        model = _PIPELINE_MODEL_MAP.get(pipeline, "claude-sonnet-4-6")
-
         wm.mixar_matgen_status = "generating"
         for area in context.screen.areas:
             area.tag_redraw()
@@ -99,7 +91,6 @@ class MATGEN_OT_GenerateMaterial(Operator):
 
             job = enqueue_matgen_job(
                 prompt=query,
-                model=model,
                 pipeline=pipeline,
             )
             if job is None:

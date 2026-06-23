@@ -7,9 +7,15 @@
 import hashlib
 import os
 import tempfile
+import urllib.parse
 import urllib.request
 
 import bpy
+
+# Manifests are authored by the AI backend and can be influenced by user
+# prompts. Restrict downloads to remote http(s) assets so URLs such as
+# file:///home/user/.env cannot read local files into bpy.data.images.
+_ALLOWED_SCHEMES = ("http", "https")
 
 
 def _filename_for_url(url: str) -> str:
@@ -22,6 +28,11 @@ def _filename_for_url(url: str) -> str:
 
 
 def download_to_tempfile(url: str, dest_dir: str = None, timeout: float = 30.0) -> str:
+    scheme = urllib.parse.urlsplit(url).scheme.lower()
+    if scheme not in _ALLOWED_SCHEMES:
+        raise ValueError(
+            f"Refusing to download asset from non-http(s) URL (scheme={scheme!r}): {url!r}"
+        )
     dest_dir = dest_dir or os.path.join(tempfile.gettempdir(), "mixar_layered_build")
     os.makedirs(dest_dir, exist_ok=True)
     path = os.path.join(dest_dir, _filename_for_url(url))
