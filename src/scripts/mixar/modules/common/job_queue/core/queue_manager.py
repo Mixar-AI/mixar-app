@@ -48,6 +48,8 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _queues: dict = {}
+_SYNC_WATCHDOG_INTERVAL = 30.0
+_sync_watchdog_registered = False
 
 
 def get_queue(feature_key: str) -> "FeatureQueue":
@@ -173,6 +175,25 @@ def _request_backend_job_sync() -> bool:
     except Exception as e:
         logger.debug("%s job.sync request failed: %s", LOG_PREFIX, e)
         return False
+
+
+def _ensure_sync_watchdog() -> None:
+    """Keep active jobs reconciled if an at-most-once job.update push is missed."""
+    global _sync_watchdog_registered
+    if _sync_watchdog_registered:
+        return
+
+    def _tick():
+        global _sync_watchdog_registered
+        has_active = any(queue.has_active_work() for queue in all_queues())
+        if not has_active:
+            _sync_watchdog_registered = False
+            return None
+        _request_backend_job_sync()
+        return _SYNC_WATCHDOG_INTERVAL
+
+    _sync_watchdog_registered = True
+    bpy.app.timers.register(_tick, first_interval=_SYNC_WATCHDOG_INTERVAL)
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +413,7 @@ class FeatureQueue:
         if not job.backend_status:
             job.backend_status = "PENDING"
         self._notify()
+        _ensure_sync_watchdog()
         # The backend job queue is push-driven. Do not start the old REST GET
         # polling loop here; ``job.update``/``job.sync`` will advance the job.
 
