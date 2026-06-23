@@ -2,14 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Generation Queue API Service.
+"""Unified Job Queue API Service.
 
-Handles communication with the backend generation queue:
-- POST /generation-queue/enqueue:     Enqueue a new job
-- GET  /generation-queue/jobs/{id}:   Get job status
-- GET  /generation-queue/jobs:        List user's jobs
-- DELETE /generation-queue/jobs/{id}: Cancel a PENDING job
-- GET  /generation-queue/info/{type}: Queue info
+Handles communication with the backend unified job queue:
+- POST   /job-queue/jobs:       Submit a new job
+- GET    /job-queue/jobs/{id}:  Get job status/result
+- GET    /job-queue/jobs:       List user's jobs
+- DELETE /job-queue/jobs/{id}:  Cancel a job
+
+The class name stays ``GenerationQueueService`` because the feature modules
+use it as their queue facade. Responses are normalized back to the previous
+Blender-side status names so existing concrete Job classes keep working.
 """
 
 import uuid
@@ -27,6 +30,16 @@ from .base_service import BaseService
 logger = get_logger(__name__)
 
 
+_STATE_TO_STATUS = {
+    "pending": "PENDING",
+    "dispatched": "SUBMITTED",
+    "running": "POLLING",
+    "succeeded": "DONE",
+    "failed": "FAILED",
+    "cancelled": "CANCELLED",
+}
+
+
 def _require_auth() -> None:
     token = get_access_token()
     if not token:
@@ -37,11 +50,63 @@ def _require_auth() -> None:
 
 
 class GenerationQueueService(BaseService):
-    """API client for the backend generation queue."""
+    """API client for the backend unified job queue."""
 
     @property
     def module(self) -> APIModule:
-        return APIModule.GENERATION_QUEUE
+        return APIModule.JOB_QUEUE
+
+    @staticmethod
+    def _normalize_response(response: APIResponse) -> APIResponse:
+        """Adapt /job-queue response data to the old feature-queue envelope."""
+        outer = response.data if isinstance(response.data, dict) else {}
+        data = outer.get("data", outer) if isinstance(outer, dict) else {}
+        if not isinstance(data, dict):
+            return response
+
+        state = str(data.get("state") or data.get("status") or "").lower()
+        status = _STATE_TO_STATUS.get(state, data.get("status") or "")
+        error = data.get("error")
+        user_message = ""
+        if status == "CANCELLED":
+            user_message = "Generation was cancelled"
+            error = error or "Cancelled"
+        elif status == "FAILED":
+            user_message = "Generation failed — please try again"
+
+        normalized = {
+            "job_id": data.get("job_id") or data.get("id"),
+            "status": status,
+            "queue_position": data.get("queue_position"),
+            "result": data.get("result"),
+            "error": error,
+            "user_message": data.get("user_message") or user_message,
+            "version": data.get("version"),
+            "attempts": data.get("attempts"),
+            "service": data.get("service"),
+        }
+        return APIResponse(
+            success=response.success,
+            status_code=response.status_code,
+            data={
+                "status": outer.get("status", "success"),
+                "message": outer.get("message", response.message),
+                "data": normalized,
+            },
+            message=response.message,
+            headers=response.headers,
+            raw=response.raw,
+        )
+
+    @classmethod
+    def _wrap_success(cls, callback):
+        if callback is None:
+            return None
+
+        def _wrapped(response):
+            callback(cls._normalize_response(response))
+
+        return _wrapped
 
     def enqueue(
         self,
@@ -53,7 +118,7 @@ class GenerationQueueService(BaseService):
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
         timeout: float = 120.0,
     ) -> str:
-        """POST /generation-queue/enqueue
+        """POST /job-queue/jobs
 
         Args:
             timeout: Request timeout in seconds.
@@ -61,14 +126,14 @@ class GenerationQueueService(BaseService):
         _require_auth()
         idempotency_key = str(uuid.uuid4())
         return self.post_async(
-            "enqueue",
+            "jobs",
             json={
-                "job_type": job_type,
+                "service": job_type,
                 "model": model,
                 "payload": payload,
                 "idempotency_key": idempotency_key,
             },
-            on_success=on_success,
+            on_success=self._wrap_success(on_success),
             on_error=on_error,
             on_complete=on_complete,
             timeout=timeout,
@@ -81,23 +146,23 @@ class GenerationQueueService(BaseService):
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
     ) -> str:
-        """GET /generation-queue/jobs/{job_id} (async)"""
+        """GET /job-queue/jobs/{job_id} (async)"""
         _require_auth()
         return self.get_async(
             f"jobs/{job_id}",
-            on_success=on_success,
+            on_success=self._wrap_success(on_success),
             on_error=on_error,
             on_complete=on_complete,
         )
 
     def get_job_status_sync(self, job_id: str) -> "APIResponse":
-        """GET /generation-queue/jobs/{job_id} (synchronous).
+        """GET /job-queue/jobs/{job_id} (synchronous).
 
         Safe to call from background threads — used by managers that
         poll from their own daemon threads.
         """
         _require_auth()
-        return self.get(f"jobs/{job_id}")
+        return self._normalize_response(self.get(f"jobs/{job_id}"))
 
     def cancel_job(
         self,
@@ -105,11 +170,11 @@ class GenerationQueueService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
     ) -> str:
-        """DELETE /generation-queue/jobs/{job_id}"""
+        """DELETE /job-queue/jobs/{job_id}"""
         _require_auth()
         return self.delete_async(
             f"jobs/{job_id}",
-            on_success=on_success,
+            on_success=self._wrap_success(on_success),
             on_error=on_error,
         )
 
@@ -119,7 +184,7 @@ class GenerationQueueService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
     ) -> str:
-        """GET /generation-queue/info/{job_type}"""
+        """GET /job-queue/info/{job_type}"""
         _require_auth()
         return self.get_async(
             f"info/{job_type}",
