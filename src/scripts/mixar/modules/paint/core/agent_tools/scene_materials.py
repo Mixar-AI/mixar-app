@@ -290,12 +290,12 @@ def apply_prepared_scene_materials(assignments: list[dict], time_budget_s: float
             errors.append({"index": index, "error": "assignment must be a dict"})
             continue
         if time.monotonic() >= deadline:
-            for remaining in assignments[index:]:
+            for remaining_offset, remaining in enumerate(assignments[index:]):
                 if isinstance(remaining, dict):
                     names = remaining.get("object_names") or remaining.get("objects") or []
                     pending.append(_deferred_material_assignment(remaining, _as_name_list(names), "time_budget_exhausted"))
                 else:
-                    errors.append({"index": index, "error": "assignment must be a dict"})
+                    errors.append({"index": index + remaining_offset, "error": "assignment must be a dict"})
             break
 
         key = str(spec.get("key") or "").strip()
