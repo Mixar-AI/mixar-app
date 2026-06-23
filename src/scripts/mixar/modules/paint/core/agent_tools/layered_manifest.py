@@ -47,6 +47,12 @@ def apply_layered_material_manifest(
         "Layered Material",
     )
     source_prompt = str(manifest.get("source_prompt") or "")
+    # The base PBR layer is named after the manifest's index-0 layer; pbr_layer.py
+    # uses `manifest_layer.get("name") or "PBR Base"`. Mirror that exactly so the
+    # verification snapshot matches the layer actually built — a hardcoded "Base"
+    # never matches the default "PBR Base" and marked every correct build failed.
+    _base_layers = sorted(manifest.get("layers") or [], key=lambda l: l.get("index", 0))
+    expected_base_name = (_base_layers[0].get("name") if _base_layers else "") or "PBR Base"
     snapshot = _selection_snapshot()
     applied: list[dict] = []
     errors: list[dict] = []
@@ -94,7 +100,7 @@ def apply_layered_material_manifest(
                 _sync_layer_stack_ui(node, node.node_tree.mp)
             verification = _material_application_snapshot(
                 [obj.name for obj in targets],
-                expected_layer_name="Base",
+                expected_layer_name=expected_base_name,
             )
             return {
                 "success": bool(applied) and not errors and verification.get("verified", False),
