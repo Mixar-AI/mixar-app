@@ -102,6 +102,7 @@ class JSONRPCMethod:
     NOTIFICATIONS_MARK_READ = "notifications.mark_read"
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
     JOB_SYNC = "job.sync"
+    JOB_GET = "job.get"
 
 
 # ============================================================================
