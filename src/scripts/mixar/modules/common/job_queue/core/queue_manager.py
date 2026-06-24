@@ -105,7 +105,7 @@ def handle_backend_job_update(payload: dict) -> bool:
     if status in {"FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
         _apply_backend_snapshot(queue, job, payload)
     elif status == "DONE" and job.state == JobState.RUNNING_POLL:
-        _request_backend_job_sync()
+        _request_backend_job_get(str(backend_job_id))
     return True
 
 
@@ -174,6 +174,47 @@ def _request_backend_job_sync() -> bool:
         return True
     except Exception as e:
         logger.debug("%s job.sync request failed: %s", LOG_PREFIX, e)
+        return False
+
+
+def _request_backend_job_get(backend_job_id: str) -> bool:
+    """Fetch one full job snapshot after a compact terminal ``job.update``."""
+    try:
+        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
+        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
+            get_jsonrpc_client,
+        )
+        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
+            run_on_main_thread,
+        )
+
+        client = get_jsonrpc_client()
+        if client is None or not client.is_connected:
+            return False
+
+        def _on_get_result(result):
+            def _apply_get():
+                snapshot = result.get("job") if isinstance(result, dict) else None
+                if not isinstance(snapshot, dict):
+                    _request_backend_job_sync()
+                    return
+                queue, job = _find_by_backend_job_id(str(backend_job_id))
+                if job is None:
+                    return
+                _apply_backend_snapshot(queue, job, snapshot)
+                logger.info("job.get reconciled local queue job %s", backend_job_id)
+
+            run_on_main_thread(_apply_get)
+
+        client.send_request(
+            JSONRPCMethod.JOB_GET,
+            {"job_id": backend_job_id},
+            _on_get_result,
+        )
+        return True
+    except Exception as e:
+        logger.debug("%s job.get request failed: %s", LOG_PREFIX, e)
+        _request_backend_job_sync()
         return False
 
 
