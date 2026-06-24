@@ -50,6 +50,14 @@ logger = get_logger(__name__)
 _queues: dict = {}
 _SYNC_WATCHDOG_INTERVAL = 30.0
 _sync_watchdog_registered = False
+_BACKEND_SYNC_STATES = frozenset(
+    {
+        JobState.PENDING,
+        JobState.RUNNING_SUBMIT,
+        JobState.RUNNING_POLL,
+        JobState.PAUSED_AUTH,
+    }
+)
 
 
 def get_queue(feature_key: str) -> "FeatureQueue":
@@ -226,8 +234,12 @@ def _ensure_sync_watchdog() -> None:
 
     def _tick():
         global _sync_watchdog_registered
-        has_active = any(queue.has_active_work() for queue in all_queues())
-        if not has_active:
+        needs_backend_sync = any(
+            job.state in _BACKEND_SYNC_STATES
+            for queue in all_queues()
+            for job in queue.snapshot()
+        )
+        if not needs_backend_sync:
             _sync_watchdog_registered = False
             return None
         _request_backend_job_sync()
