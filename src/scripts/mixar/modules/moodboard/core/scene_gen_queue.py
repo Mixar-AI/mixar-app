@@ -14,6 +14,7 @@ import requests
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
+from ..constants import SCENE_GEN_JOB_TYPE, SCENE_GEN_MODEL
 from mixar.modules.common.job_queue.core.helpers import (
     create_scene_flag_listener,
     get_queue_with_listener,
@@ -47,8 +48,8 @@ class SceneGenQueueJob(Job):
         )
 
         get_job_queue_service().enqueue(
-            job_type="scene_gen",
-            model="scene_gen_v1",
+            job_type=SCENE_GEN_JOB_TYPE,
+            model=SCENE_GEN_MODEL,
             payload=self.payload,
             on_success=on_success,
             on_error=on_error,
