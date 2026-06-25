@@ -12,7 +12,6 @@ Consolidates patterns duplicated across 16+ queue files:
 - Queue-with-listener accessor
 """
 
-import os
 import threading
 import time
 
@@ -224,11 +223,10 @@ def download_images_to_moodboard(
     def _bg_download():
         try:
             from mixar.modules.common.utils.image_utils import (
-                download_image_to_tempfile,
+                load_image_from_url,
             )
 
-            batch_started_at = time.time()
-            downloaded_files = []
+            downloaded = []
             for i, url in enumerate(urls):
                 try:
                     if base_name:
@@ -238,55 +236,20 @@ def download_images_to_moodboard(
                     else:
                         timestamp = int(time.time())
                         name = f"{name_prefix}_{timestamp}_{i}"
-                    download_started_at = time.time()
-                    temp_path, byte_count = download_image_to_tempfile(url)
-                    logger.debug(
-                        "[Queue] image download completed job=%s index=%d bytes=%d duration=%.3fs",
-                        job_id,
-                        i,
-                        byte_count,
-                        time.time() - download_started_at,
-                    )
-                    downloaded_files.append((temp_path, name, byte_count))
+                    img = load_image_from_url(url, name)
+                    downloaded.append(img)
                 except Exception as e:
                     logger.error("Failed to download image %d: %s", i, e)
 
             def _apply():
-                if not downloaded_files:
+                if not downloaded:
                     on_error("Failed to download generated images")
                     return None
                 from mixar.modules.common.utils.image_utils import (
                     add_image_to_moodboard,
-                    load_image_from_file,
                 )
 
-                loaded_images = []
-                for temp_path, name, byte_count in downloaded_files:
-                    load_started_at = time.time()
-                    try:
-                        img = load_image_from_file(temp_path, name)
-                        logger.debug(
-                            "[Queue] image load completed job=%s image=%s bytes=%d duration=%.3fs total=%.3fs",
-                            job_id,
-                            img.name,
-                            byte_count,
-                            time.time() - load_started_at,
-                            time.time() - batch_started_at,
-                        )
-                        loaded_images.append(img)
-                    except Exception as e:
-                        logger.error("Failed to load image into Blender: %s", e)
-                    finally:
-                        try:
-                            os.unlink(temp_path)
-                        except OSError:
-                            pass
-
-                if not loaded_images:
-                    on_error("Failed to load generated images")
-                    return None
-
-                for img in loaded_images:
+                for img in downloaded:
                     try:
                         add_image_to_moodboard(
                             img, prompt, job_handle=job_id,
@@ -296,15 +259,9 @@ def download_images_to_moodboard(
                             "Failed to add image to moodboard: %s", e,
                         )
 
-                names = ", ".join(img.name for img in loaded_images)
+                names = ", ".join(img.name for img in downloaded)
                 if undo_message:
                     bpy.ops.ed.undo_push(message=undo_message)
-                logger.debug(
-                    "[Queue] image moodboard update completed job=%s count=%d total=%.3fs",
-                    job_id,
-                    len(loaded_images),
-                    time.time() - batch_started_at,
-                )
                 on_done(names)
                 return None
 
