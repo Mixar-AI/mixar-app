@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Lookdev360 PBR generation queue: concrete Job + enqueue helpers.
+"""Lookdev360 PBR job queue: concrete Job + enqueue helpers.
 
 Wires the generic ``FeatureQueue`` framework to the Lookdev360 PBR
 generation service. All params are snapshotted at enqueue time.
@@ -18,8 +18,8 @@ from typing import Dict, List, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.generation_queue_service import (
-    get_generation_queue_service,
+from mixar.modules.common.api.services.job_queue_service import (
+    get_job_queue_service,
 )
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
@@ -58,7 +58,7 @@ class Lookdev360Job(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         payload = {
             "prompt": self.prompt,
             "mesh_file_bytes_b64": self.mesh_bytes_b64,
@@ -81,7 +81,7 @@ class Lookdev360Job(Job):
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,

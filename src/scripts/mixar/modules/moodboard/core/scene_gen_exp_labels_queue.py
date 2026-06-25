@@ -19,8 +19,8 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.generation_queue_service import (
-    get_generation_queue_service,
+from mixar.modules.common.api.services.job_queue_service import (
+    get_job_queue_service,
 )
 from mixar.modules.common.job_queue import Job, JobState, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
@@ -59,7 +59,7 @@ class SceneGenExpLabelsJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         payload = {
             "image_bytes_b64": self.image_bytes_b64,
             "generate_mesh": False,
@@ -77,7 +77,7 @@ class SceneGenExpLabelsJob(Job):
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,

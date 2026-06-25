@@ -124,8 +124,8 @@ def handle_backend_job_update(payload: dict) -> bool:
 def _apply_backend_snapshot(queue: "FeatureQueue", job: Job, snapshot: dict) -> None:
     """Feed a job-queue snapshot through the existing result parser."""
     from mixar.modules.common.api.response import APIResponse
-    from mixar.modules.common.api.services.generation_queue_service import (
-        GenerationQueueService,
+    from mixar.modules.common.api.services.job_queue_service import (
+        JobQueueService,
     )
 
     response = APIResponse(
@@ -133,7 +133,7 @@ def _apply_backend_snapshot(queue: "FeatureQueue", job: Job, snapshot: dict) -> 
         status_code=200,
         data={"status": "success", "message": "ok", "data": snapshot},
     )
-    queue._on_poll_success(job, GenerationQueueService._normalize_response(response))
+    queue._on_poll_success(job, JobQueueService._normalize_response(response))
 
 
 def handle_backend_job_sync(result: dict) -> int:
@@ -378,10 +378,10 @@ class FeatureQueue:
     def _cancel_on_backend(backend_job_id: str) -> None:
         """Fire-and-forget cancel request to the backend queue."""
         try:
-            from mixar.modules.common.api.services.generation_queue_service import (
-                get_generation_queue_service,
+            from mixar.modules.common.api.services.job_queue_service import (
+                get_job_queue_service,
             )
-            service = get_generation_queue_service()
+            service = get_job_queue_service()
             service.cancel_job(backend_job_id)
         except Exception as e:
             # Backend may return 404 for in-flight jobs it can't cancel

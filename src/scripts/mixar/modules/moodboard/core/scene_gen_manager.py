@@ -17,7 +17,7 @@ import bpy
 import requests as requests_lib
 
 from mixar.config.logging_config import get_logger
-from ...common.api.services.generation_queue_service import get_generation_queue_service
+from ...common.api.services.job_queue_service import get_job_queue_service
 from ...common.api.services.scene_gen_service import get_scene_gen_service
 from ...common.api.response import APIResponse
 
@@ -220,7 +220,7 @@ class SceneGenManager:
         # Poll in background thread
         def fetch_status():
             try:
-                service = get_generation_queue_service()
+                service = get_job_queue_service()
                 response = service.get_job_status_sync(job_id)
 
                 def handle_status():
@@ -258,7 +258,7 @@ class SceneGenManager:
     }
 
     def _handle_gq_status_response(self, job_id: str, response: APIResponse):
-        """Unwrap generation queue envelope and delegate to status handler."""
+        """Unwrap job queue envelope and delegate to status handler."""
         if not response.success:
             logger.warning("[SceneGen] Status check failed: %s", response.message)
             return
@@ -681,7 +681,7 @@ class SceneGenManager:
         # Cancel on server in background
         def cancel_api_call():
             try:
-                service = get_generation_queue_service()
+                service = get_job_queue_service()
                 service.cancel_job(job_id)
                 logger.debug("[SceneGen] Cancelled job")
             except Exception as e:
