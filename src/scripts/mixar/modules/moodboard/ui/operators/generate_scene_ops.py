@@ -244,6 +244,10 @@ class MIXIE_OT_generate_scene(Operator):
             on_object_ready=import_glb_object,
         )
 
+        from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        mark_enqueued(FEATURE_SCENE_GEN)
+
         return {'FINISHED'}
 
 

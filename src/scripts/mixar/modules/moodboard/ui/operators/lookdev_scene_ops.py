@@ -177,6 +177,9 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
             self.report({'ERROR'}, "Failed to enqueue lookdev job")
             return {'CANCELLED'}
 
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        mark_enqueued(FEATURE_LOOKDEV)
+
         self.report({'INFO'}, "Depth map rendered, generation started...")
         return {'FINISHED'}
 

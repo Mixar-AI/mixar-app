@@ -37,7 +37,6 @@ from .sandbox_modules import (
     RESTRICTED_OS,
     RESTRICTED_BASE64,
     RESTRICTED_TEMPFILE,
-    RESTRICTED_URLLIB,
     restricted_open,
 )
 from .sandbox_builtins import get_safe_builtins, sanitize_value
@@ -263,7 +262,6 @@ class ScriptExecutor:
             import mathutils
             import bpy_extras
             import imbuf
-            import numpy
             import os as _real_os
             import pathlib as _real_pathlib
 
@@ -281,7 +279,6 @@ class ScriptExecutor:
                 "datetime": datetime,
                 "collections": collections,
                 "time": time,
-                "numpy": numpy,
                 # Blender modules
                 "bmesh": bmesh,
                 "mathutils": mathutils,
@@ -293,7 +290,6 @@ class ScriptExecutor:
                 "pathlib": _real_pathlib,
                 "base64": RESTRICTED_BASE64,
                 "tempfile": RESTRICTED_TEMPFILE,
-                "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,
             }
 
@@ -306,11 +302,9 @@ class ScriptExecutor:
             def _restricted_import(name, *args, **kwargs):
                 if name in _allowed:
                     return exec_namespace[name]
-                # Allow addon's own modules (e.g. mixar.modules.paint.*) and numpy's
-                # internal submodules (numpy lazily imports numpy.core._methods etc.).
-                # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
+                # Allow addon's own modules (e.g. mixar.modules.paint.*)
                 top_module = name.split(".")[0]
-                if top_module in ("mixar", "numpy"):
+                if top_module == "mixar":
                     return _real_import(name, *args, **kwargs)
                 raise ImportError(
                     f"Module '{name}' is not available. "
