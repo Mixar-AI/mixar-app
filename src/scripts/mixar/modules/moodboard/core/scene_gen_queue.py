@@ -42,11 +42,11 @@ class SceneGenQueueJob(Job):
     _processing_started: bool = False
 
     def submit(self, on_success, on_error) -> None:
-        from mixar.modules.common.api.services.generation_queue_service import (
-            get_generation_queue_service,
+        from mixar.modules.common.api.services.job_queue_service import (
+            get_job_queue_service,
         )
 
-        get_generation_queue_service().enqueue(
+        get_job_queue_service().enqueue(
             job_type="scene_gen",
             model="scene_gen_v1",
             payload=self.payload,
