@@ -16,6 +16,14 @@ limits, face count defaults, and per-mode validation limits.
 HUNYUAN_RAPID_JOB_TYPE = "hunyuan_rapid"
 HUNYUAN_RAPID_MODEL = "hunyuan_rapid"
 
+# Retopology engines. Hunyuan uses the "retopology" backend service; Tripo uses
+# its own "retopology_tripo" service (independent concurrency) with model slug
+# "tripo_v2". Both feed the same client-side retopology queue UI.
+RETOPOLOGY_HUNYUAN_SERVICE = "retopology"
+RETOPOLOGY_HUNYUAN_MODEL = "hunyuan_topology"
+RETOPOLOGY_TRIPO_SERVICE = "retopology_tripo"
+RETOPOLOGY_TRIPO_MODEL = "tripo_v2"
+
 # ============================================================================
 # POLL CONFIGURATION
 # ============================================================================
@@ -31,6 +39,7 @@ MAX_CONSECUTIVE_POLL_ERRORS = 5
 
 MAX_FILE_SIZE_PART = 100 * 1024 * 1024       # 100 MB
 MAX_FILE_SIZE_TOPOLOGY = 200 * 1024 * 1024   # 200 MB
+MAX_FILE_SIZE_TRIPO_RETOPOLOGY = 150 * 1024 * 1024  # 150 MB (Tripo mesh limit)
 MAX_FILE_SIZE_UV = 100 * 1024 * 1024         # 100 MB
 
 # ============================================================================
