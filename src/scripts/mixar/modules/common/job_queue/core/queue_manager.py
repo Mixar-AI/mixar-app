@@ -106,6 +106,10 @@ def handle_backend_job_update(payload: dict) -> bool:
     status = _JOBQ_STATE_TO_STATUS.get(state, "")
     if status:
         job.backend_status = status
+        if status in {"SUBMITTED", "POLLING"}:
+            if hasattr(job, "_processing_started") and not job._processing_started:
+                job._processing_started = True
+                job.poll_start_time = time.time()
     if payload.get("error"):
         job.error = str(payload.get("error"))
     queue._notify()
