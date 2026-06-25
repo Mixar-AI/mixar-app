@@ -6,7 +6,7 @@
 """
 Image to 3D Operators
 
-Operators for 3D model generation from images using the unified generation queue.
+Operators for 3D model generation from images using the unified job queue.
 """
 
 import bpy
@@ -156,7 +156,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         else:
             prompt = None
 
-        # Enqueue via generation queue
+        # Enqueue via job queue
         try:
             import base64 as _b64
             from mixar.modules.common.job_queue import enqueue_generation

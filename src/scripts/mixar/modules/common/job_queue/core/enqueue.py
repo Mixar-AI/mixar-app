@@ -48,7 +48,7 @@ def enqueue_generation(
     feature_key : str
         Queue feature key (e.g. ``FEATURE_IMAGEGEN``).
     job_type, model, payload : str, str, dict
-        Forwarded to ``GenerationQueueService.enqueue()``.
+        Forwarded to ``JobQueueService.enqueue()``.
     label : str
         Human-readable label for the queue UIList.
     fail_message : str

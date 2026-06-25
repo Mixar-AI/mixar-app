@@ -105,7 +105,8 @@ def _draw_blockout_to_render(layout, context):
     draw_toggle(col, tab, "fast_mode", text="Fast Mode (~4x faster)")
 
     # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev")
+    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev",
+                         feature_key="lookdev")
 
 
 # ---------------------------------------------------------------------------
@@ -444,10 +445,14 @@ def _draw_queue(layout, context):
         FEATURE_HUNYUAN_UV,
         FEATURE_IMAGE_TO_3D_PRO,
         FEATURE_IMAGEGEN,
+        FEATURE_BRUSH_GEN,
+        FEATURE_LOOKDEV,
         FEATURE_LOOKDEV360,
+        FEATURE_MATGEN,
         FEATURE_MESH_SEGMENT,
         FEATURE_MODEL_3D,
         FEATURE_RETOPOLOGY,
+        FEATURE_SCENE_GEN,
         FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP,
         FEATURE_SCENE_RECON,
@@ -464,12 +469,15 @@ def _draw_queue(layout, context):
         (FEATURE_HUNYUAN_PART, "hunyuan_part", "Hunyuan Part"),
         (FEATURE_HUNYUAN_UV, "hunyuan_uv", "Hunyuan UV"),
         (FEATURE_IMAGEGEN, "imagegen", "Image Generation"),
+        (FEATURE_BRUSH_GEN, "brush_gen", "Brush Generation"),
+        (FEATURE_LOOKDEV, "lookdev", "Blockout to Render"),
         (FEATURE_LOOKDEV360, "lookdev360", "Lookdev360 PBR"),
+        (FEATURE_MATGEN, "matgen", "Material Generation"),
         (FEATURE_MESH_SEGMENT, "mesh_segment", "Mesh Segmentation"),
+        (FEATURE_SCENE_GEN, "scene_gen", "Scene Generation"),
         (FEATURE_SCENE_RECON, "scene_recon", "Scene Reconstruction"),
     )
 
-    terminal = {JobState.SUCCESS.value, JobState.FAILED.value, JobState.CANCELLED.value}
     running_states = {
         JobState.RUNNING_SUBMIT.value,
         JobState.RUNNING_POLL.value,
@@ -490,16 +498,26 @@ def _draw_queue(layout, context):
     # Summary box
     running = sum(1 for j in all_jobs if j.state.value in running_states)
     pending = sum(1 for j in all_jobs if j.state == JobState.PENDING)
-    done = sum(1 for j in all_jobs if j.state.value in terminal)
+    succeeded = sum(1 for j in all_jobs if j.state == JobState.SUCCESS)
+    failed = sum(1 for j in all_jobs if j.state == JobState.FAILED)
+    cancelled = sum(1 for j in all_jobs if j.state == JobState.CANCELLED)
+    done = succeeded + failed + cancelled  # any terminal job (drives Clear button)
 
     summary_col = draw_section_box(layout, "Summary", icon='INFO')
-    summary_row = summary_col.row(align=True)
-    if running:
-        summary_row.label(text=f"{running} running", icon='PLAY')
-    if pending:
-        summary_row.label(text=f"{pending} pending", icon='TIME')
-    if done:
-        summary_row.label(text=f"{done} done", icon='CHECKMARK')
+
+    # Active work — always shown so "processing"/"queued" are visible at a glance.
+    active_row = summary_col.row(align=True)
+    active_row.label(text=f"{running} processing", icon='PLAY')
+    active_row.label(text=f"{pending} queued", icon='TIME')
+
+    # Outcomes — done + failed always shown; failed turns red when non-zero.
+    outcome_row = summary_col.row(align=True)
+    outcome_row.label(text=f"{succeeded} done", icon='CHECKMARK')
+    fail_cell = outcome_row.row(align=True)
+    fail_cell.alert = failed > 0
+    fail_cell.label(text=f"{failed} failed", icon='ERROR')
+    if cancelled:
+        outcome_row.label(text=f"{cancelled} cancelled", icon='CANCEL')
 
     # Per-feature collapsible sections (skip empty features)
     for feature_key, mirror_attr, label in _FEATURES:
