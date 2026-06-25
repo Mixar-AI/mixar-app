@@ -57,7 +57,6 @@ class JSONRPCWebSocketClient:
         on_connected: Optional[Callable[[], None]] = None,
         on_disconnected: Optional[Callable[[str], None]] = None,
         on_notification: Optional[Callable[[dict], None]] = None,
-        on_job_update: Optional[Callable[[dict], None]] = None,
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
@@ -79,7 +78,6 @@ class JSONRPCWebSocketClient:
         self._on_connected = on_connected
         self._on_disconnected = on_disconnected
         self._on_notification = on_notification
-        self._on_job_update = on_job_update
         self._on_sandbox_control = on_sandbox_control
         self._role = role
         self._parent_instance_id = parent_instance_id
@@ -465,13 +463,6 @@ class JSONRPCWebSocketClient:
                     self._on_notification(params)
                 except Exception as e:
                     logger.error(f"Error in on_notification callback: {e}")
-
-        elif method == JSONRPCMethod.JOB_UPDATE:
-            if self._on_job_update:
-                try:
-                    self._on_job_update(params)
-                except Exception as e:
-                    logger.error(f"Error in on_job_update callback: {e}")
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
