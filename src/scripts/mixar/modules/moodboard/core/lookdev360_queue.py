@@ -22,7 +22,6 @@ from mixar.modules.common.api.services.generation_queue_service import (
     get_generation_queue_service,
 )
 from mixar.modules.common.job_queue import Job, get_queue
-from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
@@ -130,7 +129,7 @@ class Lookdev360Job(Job):
             if isinstance(result, dict):
                 self._extract_texture_urls(result)
             return ("DONE", [])
-        if status in FAILED_BACKEND_STATUSES:
+        if status == "FAILED":
             self.error = inner.get("error", "PBR generation failed")
             self.user_message = inner.get("user_message", "") or "PBR generation failed"
             return ("FAIL", [])

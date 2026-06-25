@@ -291,12 +291,8 @@ def load_image_from_base64(data: str, name: str) -> bpy.types.Image:
             pass
 
 
-def download_image_to_tempfile(url: str, retries: int = 3) -> tuple[str, int]:
-    """Download an image URL to a temporary file.
-
-    This helper is safe to call from a background thread. Blender image loading
-    must happen later on the main thread via ``load_image_from_file``.
-    """
+def load_image_from_url(url: str, name: str, retries: int = 3) -> bpy.types.Image:
+    """Load a Blender Image from a URL with retry on timeout."""
     import urllib.request
     import time as _time
 
@@ -320,36 +316,24 @@ def download_image_to_tempfile(url: str, retries: int = 3) -> tuple[str, int]:
     if image_bytes is None:
         raise RuntimeError("Failed to download image after retries")
 
-    byte_count = len(image_bytes)
-    logger.debug("[ImageUtils] Downloaded %s bytes", byte_count)
+    logger.debug("[ImageUtils] Downloaded %s bytes", len(image_bytes))
 
     # Write to temp file
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
         f.write(image_bytes)
         temp_path = f.name
 
-    return temp_path, byte_count
-
-
-def load_image_from_file(file_path: str, name: str) -> bpy.types.Image:
-    """Load and pack a Blender Image from a local file on the main thread."""
-    img = bpy.data.images.load(file_path, check_existing=False)
-    img.name = name
-    # Keep sRGB colorspace for proper display in Image Editor and other Blender areas
-    # Moodboard rendering handles color management bypass separately
-    img.colorspace_settings.name = 'sRGB'
-    img.pack()
-    img.filepath = ""  # Clear temp path so Blender doesn't try to re-pack from deleted file
-    logger.debug("[ImageUtils] Loaded image: %s", img.name)
-    return img
-
-
-def load_image_from_url(url: str, name: str, retries: int = 3) -> bpy.types.Image:
-    """Load a Blender Image from a URL with retry on timeout."""
-    temp_path, _byte_count = download_image_to_tempfile(url, retries=retries)
-
     try:
-        return load_image_from_file(temp_path, name)
+        # Load into Blender
+        img = bpy.data.images.load(temp_path, check_existing=False)
+        img.name = name
+        # Keep sRGB colorspace for proper display in Image Editor and other Blender areas
+        # Moodboard rendering handles color management bypass separately
+        img.colorspace_settings.name = 'sRGB'
+        img.pack()
+        img.filepath = ""  # Clear temp path so Blender doesn't try to re-pack from deleted file
+        logger.debug("[ImageUtils] Loaded image: %s", img.name)
+        return img
     finally:
         # Clean up temp file
         try:

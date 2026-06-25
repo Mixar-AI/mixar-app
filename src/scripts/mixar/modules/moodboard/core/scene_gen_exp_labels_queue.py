@@ -23,7 +23,6 @@ from mixar.modules.common.api.services.generation_queue_service import (
     get_generation_queue_service,
 )
 from mixar.modules.common.job_queue import Job, JobState, get_queue
-from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABELS
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
@@ -102,7 +101,7 @@ class SceneGenExpLabelsJob(Job):
         gq_status = inner.get("status", "")
         result = inner.get("result") or {}
 
-        if gq_status in FAILED_BACKEND_STATUSES:
+        if gq_status == "FAILED":
             self.error = inner.get("error", "Label extraction failed")
             self.user_message = inner.get("user_message", "") or "Label extraction failed"
             return ("FAIL", [])

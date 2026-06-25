@@ -242,7 +242,7 @@ class MeshSegmentManager:
             status = "completed"
             progress = 1.0
             current_step = "Complete"
-        elif gq_status in ("FAILED", "CANCELLED", "DLQ"):
+        elif gq_status == "FAILED":
             status = "failed"
             progress = 0.0
             current_step = ""

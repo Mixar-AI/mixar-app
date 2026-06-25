@@ -32,8 +32,6 @@ RUNNING_STATES = frozenset(
     }
 )
 
-FAILED_BACKEND_STATUSES = frozenset({"FAILED", "CANCELLED", "DLQ"})
-
 
 @dataclass
 class Job:
@@ -175,14 +173,10 @@ class Job:
                 else []
             )
             return ("DONE", result_files)
-        if status in FAILED_BACKEND_STATUSES:
+        if status == "FAILED":
             error = inner.get("error", "")
             if error:
                 self.error = error
-            elif status == "CANCELLED":
-                self.error = "Cancelled"
-            elif status == "DLQ":
-                self.error = "Job failed permanently after retries"
             self.user_message = (
                 inner.get("user_message", "") or fail_message
             )

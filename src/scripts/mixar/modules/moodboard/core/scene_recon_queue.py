@@ -24,7 +24,6 @@ from mixar.modules.common.api.services.generation_queue_service import (
     get_generation_queue_service,
 )
 from mixar.modules.common.job_queue import Job, JobState, get_queue
-from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 from .scene_recon_constants import (
@@ -127,7 +126,7 @@ class SceneReconJob(Job):
         result = inner.get("result") or {}
 
         # Map generation queue statuses
-        if gq_status in FAILED_BACKEND_STATUSES:
+        if gq_status == "FAILED":
             self.error = inner.get("error", "Scene reconstruction failed")
             self.user_message = inner.get("user_message", "") or "Scene reconstruction failed"
             return ("FAIL", [])
