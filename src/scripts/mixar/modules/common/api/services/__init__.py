@@ -16,7 +16,7 @@ from .generation_metadata_service import GenerationMetadataService, get_generati
 from .scene_recon_service import SceneReconService, get_scene_recon_service
 from .scene_segment_service import SceneSegmentService, get_scene_segment_service
 from .update_service import UpdateService, get_update_service
-from .generation_queue_service import GenerationQueueService, get_generation_queue_service
+from .job_queue_service import JobQueueService, get_job_queue_service
 
 __all__ = [
     # Base
@@ -42,7 +42,7 @@ __all__ = [
     # Updates
     "UpdateService",
     "get_update_service",
-    # Feature Gen Queue
-    "GenerationQueueService",
-    "get_generation_queue_service",
+    # Job Queue
+    "JobQueueService",
+    "get_job_queue_service",
 ]

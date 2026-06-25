@@ -209,7 +209,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                     self.report({'WARNING'}, "No mesh selected")
                     return {'CANCELLED'}
 
-        # PRO mode — generation queue
+        # PRO mode — job queue
         if mode == 'PRO':
             try:
                 # Direct (agent) invocation: explicit params bypass UI state.
@@ -229,7 +229,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # TOPOLOGY — generation queue with per-object fan-out
+        # TOPOLOGY — job queue with per-object fan-out
         if mode == 'TOPOLOGY':
             try:
                 # Direct (agent) invocation: retopologize a named object.
@@ -247,7 +247,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # RAPID — generation queue
+        # RAPID — job queue
         if mode == 'RAPID':
             try:
                 if self.from_chat or self.prompt.strip() or self.image_name.strip():
@@ -264,7 +264,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # PART — generation queue
+        # PART — job queue
         if mode == 'PART':
             try:
                 from ...core.part_enqueue import enqueue_part_job
@@ -282,7 +282,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # UV — generation queue
+        # UV — job queue
         if mode == 'UV':
             try:
                 from ...core.uv_enqueue import enqueue_uv_job
@@ -484,7 +484,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
     def _submit_pro(
         self, context, pro, compress_image_for_upload,
     ):
-        """Fan out a Pro generation request into the generation queue.
+        """Fan out a Pro generation request into the job queue.
 
         - When ``use_selected_image`` is on, every selected moodboard
           image becomes its own queued job (multi-view ignored).
@@ -614,7 +614,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         )
 
     def _submit_topology_queue(self, context, topo):
-        """Fan out a Topology retopology request into the generation queue.
+        """Fan out a Topology retopology request into the job queue.
 
         Each selected mesh becomes its own job (per-object fan-out, Q1).
         Files exceeding the size limit are skipped with a warning.

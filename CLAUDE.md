@@ -119,11 +119,11 @@ src/
 
 ---
 
-## Unified Generation Queue
+## Unified Job Queue
 
 All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush gen, scene gen) submit through **one unified async job queue** instead of bespoke per-feature services. Lives in `modules/common/job_queue/`.
 
-**Backend contract**: `POST /generation-queue/enqueue` (job_type, model, payload) → `GET /generation-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `GenerationQueueService` wraps these.
+**Backend contract**: `POST /job-queue/jobs` (job_type, model, payload) → `GET /job-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `JobQueueService` wraps these.
 
 **Client architecture**:
 - **`core/job.py`** — base `Job` with shared `_unwrap_response()`, `_parse_standard_submit()`, `_parse_standard_poll()`, default `poll()`.

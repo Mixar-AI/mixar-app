@@ -15,7 +15,7 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.common.api.response import APIResponse
-from mixar.modules.common.api.services import generation_queue_service as GQS
+from mixar.modules.common.api.services import job_queue_service as JQS
 from mixar.modules.common.job_queue.core import queue_manager as QM
 from mixar.modules.common.job_queue.core.job import Job, JobState
 
@@ -53,10 +53,10 @@ class FakeClient:
         return "request-delete"
 
 
-def test_generation_queue_facade_posts_to_job_queue(monkeypatch):
-    monkeypatch.setattr(GQS, "get_access_token", lambda: "token")
+def test_job_queue_service_posts_to_job_queue(monkeypatch):
+    monkeypatch.setattr(JQS, "get_access_token", lambda: "token")
     client = FakeClient()
-    service = GQS.GenerationQueueService(client)
+    service = JQS.JobQueueService(client)
     received = []
 
     request_id = service.enqueue(
@@ -91,9 +91,9 @@ def test_generation_queue_facade_posts_to_job_queue(monkeypatch):
 
 
 def test_job_status_and_cancel_use_job_queue_paths(monkeypatch):
-    monkeypatch.setattr(GQS, "get_access_token", lambda: "token")
+    monkeypatch.setattr(JQS, "get_access_token", lambda: "token")
     client = FakeClient()
-    service = GQS.GenerationQueueService(client)
+    service = JQS.JobQueueService(client)
 
     service.get_job_status("job-1")
     sync_response = service.get_job_status_sync("job-1")
@@ -160,7 +160,7 @@ def test_feature_queue_waits_for_ws_without_rest_poll_timer(monkeypatch):
     assert registered_timers == [QM._SYNC_WATCHDOG_INTERVAL]
 
 
-def test_terminal_job_update_reconciles_with_ws_sync(monkeypatch):
+def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
     QM._queues.clear()
     QM._sync_watchdog_registered = False
     monkeypatch.setattr(QM.bpy.app.timers, "register", lambda *args, **kwargs: None)
@@ -180,13 +180,11 @@ def test_terminal_job_update_reconciles_with_ws_sync(monkeypatch):
             if on_result is not None:
                 on_result(
                     {
-                        "jobs": [
-                            {
-                                "job_id": "job-ws",
-                                "state": "succeeded",
-                                "result": {"result_files": []},
-                            }
-                        ]
+                        "job": {
+                            "job_id": "job-ws",
+                            "state": "succeeded",
+                            "result": {"result_files": []},
+                        }
                     }
                 )
             return "ws-request"
@@ -200,7 +198,7 @@ def test_terminal_job_update_reconciles_with_ws_sync(monkeypatch):
 
     assert QM.handle_backend_job_update({"job_id": "job-ws", "state": "succeeded"})
 
-    assert fake_client.requests == [("job.sync", {})]
+    assert fake_client.requests == [("job.get", {"job_id": "job-ws"})]
     assert job.poll_calls == 0
     assert job.handled is True
     assert job.state == JobState.SUCCESS

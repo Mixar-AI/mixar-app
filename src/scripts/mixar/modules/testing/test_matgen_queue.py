@@ -27,7 +27,7 @@ class _RecentList(list):
         return item
 
 
-def test_enqueue_matgen_job_submits_generation_queue(monkeypatch):
+def test_enqueue_matgen_job_submits_job_queue(monkeypatch):
     submitted = []
     marked = []
 
@@ -47,7 +47,7 @@ def test_enqueue_matgen_job_submits_generation_queue(monkeypatch):
     fake_queue = FakeQueue()
     monkeypatch.setattr(MQ, "_listener_attached", False)
     monkeypatch.setattr(MQ, "get_queue", lambda feature_key: fake_queue)
-    monkeypatch.setattr(MQ, "get_generation_queue_service", lambda: FakeService())
+    monkeypatch.setattr(MQ, "get_job_queue_service", lambda: FakeService())
     monkeypatch.setattr(MQ, "mark_enqueued", lambda feature_key: marked.append(feature_key))
 
     job = MQ.enqueue_matgen_job(
