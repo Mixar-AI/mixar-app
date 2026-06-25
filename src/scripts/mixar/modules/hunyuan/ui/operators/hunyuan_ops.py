@@ -184,6 +184,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
     result_format: StringProperty(default="glb")
     # Retopology (TOPOLOGY) direct-invocation params
     object_name: StringProperty(default="")
+    model: StringProperty(default="tripo")
     face_level: IntProperty(default=0)
     post_process: BoolProperty(default=True)
     # Mesh export params for direct PART/UV invocation
@@ -404,7 +405,12 @@ class MIXIE_OT_hunyuan_generate(Operator):
         if obj is None or obj.type != 'MESH':
             raise ValueError(f"Mesh object '{self.object_name}' not found")
 
+        model = (self.model or "tripo").strip().lower()
+        if model not in {"tripo", "hunyuan"}:
+            raise ValueError("model must be 'tripo' or 'hunyuan'")
+
         shared = {
+            "model": model,
             "polygon_type": self.polygon_type.strip() or None,
             "face_level": self.face_level if self.face_level > 0 else None,
             "post_process": bool(self.post_process),
