@@ -12,7 +12,7 @@ the extracted object *labels* are presented in the UI for the user to select
 which ones to use for per-object image generation.
 
 Both flows (label extraction + per-object imagegen) use the unified
-FeatureQueue / job_queue_service system.
+FeatureQueue / generation_queue_service system.
 """
 
 import base64 as _b64

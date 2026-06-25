@@ -7,7 +7,7 @@
 Replaces the per-feature services (ImageGenService, Model3DGenService, etc.)
 for the sole purpose of ``GET /models`` and ``GET /styles`` calls used by
 bootstrap caches. Actual generation work is handled by the unified
-``JobQueueService``.
+``GenerationQueueService``.
 """
 
 from typing import Optional

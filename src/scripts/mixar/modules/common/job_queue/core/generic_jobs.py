@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
-from .job import FAILED_BACKEND_STATUSES, Job
+from .job import Job
 from .helpers import download_images_to_moodboard, extract_image_urls
 
 logger = get_logger(__name__)
@@ -31,7 +31,7 @@ class AsyncGLBJob(Job):
     Fields
     ------
     job_type, model : str
-        Passed verbatim to ``JobQueueService.enqueue()``.
+        Passed verbatim to ``GenerationQueueService.enqueue()``.
     payload : dict
         Serialised payload; cleared after successful submit.
     fail_message : str
@@ -53,10 +53,10 @@ class AsyncGLBJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        from mixar.modules.common.api.services.job_queue_service import (
-            get_job_queue_service,
+        from mixar.modules.common.api.services.generation_queue_service import (
+            get_generation_queue_service,
         )
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         service.enqueue(
             job_type=self.job_type,
             model=self.model,
@@ -95,7 +95,7 @@ class SyncImageJob(Job):
     Fields
     ------
     job_type, model : str
-        Passed verbatim to ``JobQueueService.enqueue()``.
+        Passed verbatim to ``GenerationQueueService.enqueue()``.
     payload : dict
         Serialised payload; cleared after successful submit.
     fail_message : str
@@ -124,10 +124,10 @@ class SyncImageJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        from mixar.modules.common.api.services.job_queue_service import (
-            get_job_queue_service,
+        from mixar.modules.common.api.services.generation_queue_service import (
+            get_generation_queue_service,
         )
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         service.enqueue(
             job_type=self.job_type,
             model=self.model,
@@ -167,7 +167,7 @@ class SyncImageJob(Job):
             if isinstance(result, dict):
                 self._image_urls = extract_image_urls(result)
             return ("DONE", [])
-        if status in FAILED_BACKEND_STATUSES:
+        if status == "FAILED":
             self.error = inner.get("error", self.fail_message)
             self.user_message = (
                 inner.get("user_message", "") or self.fail_message
