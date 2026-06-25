@@ -10,9 +10,8 @@ Handles communication with the backend unified job queue:
 - GET    /job-queue/jobs:       List user's jobs
 - DELETE /job-queue/jobs/{id}:  Cancel a job
 
-The class name stays ``GenerationQueueService`` because the feature modules
-use it as their queue facade. Responses are normalized back to the previous
-Blender-side status names so existing concrete Job classes keep working.
+Responses are normalized to the Blender-side status names used by
+existing concrete Job classes.
 """
 
 import uuid
@@ -49,7 +48,7 @@ def _require_auth() -> None:
         )
 
 
-class GenerationQueueService(BaseService):
+class JobQueueService(BaseService):
     """API client for the backend unified job queue."""
 
     @property
@@ -58,7 +57,7 @@ class GenerationQueueService(BaseService):
 
     @staticmethod
     def _normalize_response(response: APIResponse) -> APIResponse:
-        """Adapt /job-queue response data to the old feature-queue envelope."""
+        """Adapt /job-queue response data to the job queue response envelope."""
         outer = response.data if isinstance(response.data, dict) else {}
         data = outer.get("data", outer) if isinstance(outer, dict) else {}
         if not isinstance(data, dict):
@@ -194,11 +193,11 @@ class GenerationQueueService(BaseService):
 
 
 # Singleton
-_service: Optional[GenerationQueueService] = None
+_service: Optional[JobQueueService] = None
 
 
-def get_generation_queue_service() -> GenerationQueueService:
+def get_job_queue_service() -> JobQueueService:
     global _service
     if _service is None:
-        _service = GenerationQueueService()
+        _service = JobQueueService()
     return _service

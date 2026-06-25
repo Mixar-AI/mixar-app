@@ -31,7 +31,7 @@ class AsyncGLBJob(Job):
     Fields
     ------
     job_type, model : str
-        Passed verbatim to ``GenerationQueueService.enqueue()``.
+        Passed verbatim to ``JobQueueService.enqueue()``.
     payload : dict
         Serialised payload; cleared after successful submit.
     fail_message : str
@@ -53,10 +53,10 @@ class AsyncGLBJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        from mixar.modules.common.api.services.generation_queue_service import (
-            get_generation_queue_service,
+        from mixar.modules.common.api.services.job_queue_service import (
+            get_job_queue_service,
         )
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.enqueue(
             job_type=self.job_type,
             model=self.model,
@@ -95,7 +95,7 @@ class SyncImageJob(Job):
     Fields
     ------
     job_type, model : str
-        Passed verbatim to ``GenerationQueueService.enqueue()``.
+        Passed verbatim to ``JobQueueService.enqueue()``.
     payload : dict
         Serialised payload; cleared after successful submit.
     fail_message : str
@@ -124,10 +124,10 @@ class SyncImageJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        from mixar.modules.common.api.services.generation_queue_service import (
-            get_generation_queue_service,
+        from mixar.modules.common.api.services.job_queue_service import (
+            get_job_queue_service,
         )
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.enqueue(
             job_type=self.job_type,
             model=self.model,

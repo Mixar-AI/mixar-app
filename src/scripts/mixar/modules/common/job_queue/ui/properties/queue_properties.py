@@ -77,17 +77,17 @@ class MixieQueuesPG(PropertyGroup):
 class MixieQueueUIPG(PropertyGroup):
     image_to_3d_pro_expanded: BoolProperty(
         name="Image to 3D Queue Expanded",
-        description="Show / hide the image-to-3d Pro generation queue",
+        description="Show / hide the image-to-3d Pro job queue",
         default=True,
     )
     retopology_expanded: BoolProperty(
         name="Retopology Queue Expanded",
-        description="Show / hide the retopology generation queue",
+        description="Show / hide the retopology job queue",
         default=True,
     )
     scene_gen_hp_expanded: BoolProperty(
         name="Scene Gen HP Queue Expanded",
-        description="Show / hide the scene gen HP generation queue",
+        description="Show / hide the scene gen HP job queue",
         default=True,
     )
     scene_gen_lp_expanded: BoolProperty(
@@ -97,27 +97,27 @@ class MixieQueueUIPG(PropertyGroup):
     )
     hunyuan_rapid_expanded: BoolProperty(
         name="Hunyuan Rapid Queue Expanded",
-        description="Show / hide the Hunyuan Rapid generation queue",
+        description="Show / hide the Hunyuan Rapid job queue",
         default=True,
     )
     hunyuan_part_expanded: BoolProperty(
         name="Hunyuan Part Queue Expanded",
-        description="Show / hide the Hunyuan Part generation queue",
+        description="Show / hide the Hunyuan Part job queue",
         default=True,
     )
     hunyuan_uv_expanded: BoolProperty(
         name="Hunyuan UV Queue Expanded",
-        description="Show / hide the Hunyuan UV generation queue",
+        description="Show / hide the Hunyuan UV job queue",
         default=True,
     )
     model_3d_expanded: BoolProperty(
         name="Model 3D Queue Expanded",
-        description="Show / hide the Image to 3D Basic generation queue",
+        description="Show / hide the Image to 3D Basic job queue",
         default=True,
     )
     imagegen_expanded: BoolProperty(
         name="Image Generation Queue Expanded",
-        description="Show / hide the image generation queue",
+        description="Show / hide the image job queue",
         default=True,
     )
     lookdev_expanded: BoolProperty(
@@ -127,12 +127,12 @@ class MixieQueueUIPG(PropertyGroup):
     )
     lookdev360_expanded: BoolProperty(
         name="Lookdev360 Queue Expanded",
-        description="Show / hide the Lookdev360 PBR generation queue",
+        description="Show / hide the Lookdev360 PBR job queue",
         default=True,
     )
     matgen_expanded: BoolProperty(
         name="MatGen Queue Expanded",
-        description="Show / hide the material generation queue",
+        description="Show / hide the material job queue",
         default=True,
     )
     brush_gen_expanded: BoolProperty(
@@ -147,7 +147,7 @@ class MixieQueueUIPG(PropertyGroup):
     )
     scene_gen_expanded: BoolProperty(
         name="Scene Generation Queue Expanded",
-        description="Show / hide the scene generation queue",
+        description="Show / hide the scene job queue",
         default=True,
     )
     scene_recon_expanded: BoolProperty(

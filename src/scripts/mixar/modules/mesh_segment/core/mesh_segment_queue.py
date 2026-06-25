@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Mesh Segmentation generation queue: concrete Job + enqueue helpers.
+"""Mesh Segmentation job queue: concrete Job + enqueue helpers.
 
 Wires the generic ``FeatureQueue`` framework to the mesh segmentation
 service. Async job type with inline JSON results (no file download).
@@ -15,8 +15,8 @@ from typing import Dict, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.generation_queue_service import (
-    get_generation_queue_service,
+from mixar.modules.common.api.services.job_queue_service import (
+    get_job_queue_service,
 )
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
@@ -50,7 +50,7 @@ class MeshSegmentJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         payload = {
             "mesh_file_bytes_b64": self.mesh_bytes_b64,
             "mesh_filename": self.mesh_filename,
@@ -66,7 +66,7 @@ class MeshSegmentJob(Job):
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
