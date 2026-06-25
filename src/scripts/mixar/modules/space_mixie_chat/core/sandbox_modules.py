@@ -125,27 +125,37 @@ def restricted_open(path, mode='r', *args, **kwargs):
     return builtins.open(path, mode, *args, **kwargs)
 
 
+def _close_quietly(resp):
+    try:
+        resp.close()
+    except Exception:
+        pass
+
+
 class _UrlResponse:
-    """Minimal HTTP response wrapper — only read() is exposed to sandboxed scripts."""
+    """read()-only wrapper over an HTTP response.
+
+    The raw response is captured in closures — NO instance attribute references it (so
+    ``response._resp`` etc. don't exist), and ``read`` is a plain function (no
+    ``__self__``/``__func__``). Combined with the AST validator blocking
+    ``__closure__``/``__self__``/``__func__``, a sandboxed script cannot reach the
+    underlying response (its ``headers`` / ``status`` / ``fp`` / socket). Any attribute
+    other than ``read`` falls through to ``__getattr__`` and is denied.
+    """
 
     def __init__(self, resp):
-        self._resp = resp
-
-    def read(self, *args, **kwargs):
-        return self._resp.read(*args, **kwargs)
+        self.read = lambda *a, **k: resp.read(*a, **k)
+        self.__close = lambda: _close_quietly(resp)  # name-mangled -> _UrlResponse__close
 
     def __enter__(self):
         return self
 
     def __exit__(self, *exc):
-        try:
-            self._resp.close()
-        except Exception:
-            pass
+        self.__close()
         return False
 
     def __getattr__(self, name):
-        raise AttributeError("urllib response: only read() is available in the sandbox")
+        raise PermissionError("urllib response: only read() is available in the sandbox")
 
 
 def _allowed_asset_hosts():
@@ -171,7 +181,15 @@ class RestrictedUrllib:
         self._allowed = _allowed_asset_hosts()
 
     def urlopen(self, url, timeout=120):
-        host = (self._parse(str(url)).hostname or "").lower()
+        parsed = self._parse(str(url))
+        # Restrict the TRANSPORT first: urllib's default opener includes FileHandler, so
+        # a file:// URL whose hostname satisfies the allowlist (file://amazonaws.com/etc/
+        # passwd) would otherwise read local files. Only http/https are network egress.
+        if parsed.scheme not in ("http", "https"):
+            raise PermissionError(
+                f"urllib.urlopen: scheme '{parsed.scheme}' is not allowed (http/https only)"
+            )
+        host = (parsed.hostname or "").lower()
         if not any(host == h or host.endswith("." + h) for h in self._allowed):
             raise PermissionError(
                 f"urllib.urlopen: host '{host}' is not allowed (asset hosts only: "
