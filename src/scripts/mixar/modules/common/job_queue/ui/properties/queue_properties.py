@@ -25,14 +25,11 @@ from mixar.modules.common.job_queue.constants import (
     FEATURE_HUNYUAN_UV,
     FEATURE_IMAGE_TO_3D_PRO,
     FEATURE_IMAGEGEN,
-    FEATURE_BRUSH_GEN,
-    FEATURE_LOOKDEV,
     FEATURE_LOOKDEV360,
     FEATURE_MATGEN,
     FEATURE_MESH_SEGMENT,
     FEATURE_MODEL_3D,
     FEATURE_RETOPOLOGY,
-    FEATURE_SCENE_GEN,
     FEATURE_SCENE_GEN_HP,
     FEATURE_SCENE_GEN_LP,
     FEATURE_SCENE_RECON,
@@ -65,29 +62,26 @@ class MixieQueuesPG(PropertyGroup):
     hunyuan_uv: PointerProperty(type=MixieFeatureQueuePG)
     model_3d: PointerProperty(type=MixieFeatureQueuePG)
     imagegen: PointerProperty(type=MixieFeatureQueuePG)
-    lookdev: PointerProperty(type=MixieFeatureQueuePG)
     lookdev360: PointerProperty(type=MixieFeatureQueuePG)
     matgen: PointerProperty(type=MixieFeatureQueuePG)
-    brush_gen: PointerProperty(type=MixieFeatureQueuePG)
     mesh_segment: PointerProperty(type=MixieFeatureQueuePG)
-    scene_gen: PointerProperty(type=MixieFeatureQueuePG)
     scene_recon: PointerProperty(type=MixieFeatureQueuePG)
 
 
 class MixieQueueUIPG(PropertyGroup):
     image_to_3d_pro_expanded: BoolProperty(
         name="Image to 3D Queue Expanded",
-        description="Show / hide the image-to-3d Pro job queue",
+        description="Show / hide the image-to-3d Pro generation queue",
         default=True,
     )
     retopology_expanded: BoolProperty(
         name="Retopology Queue Expanded",
-        description="Show / hide the retopology job queue",
+        description="Show / hide the retopology generation queue",
         default=True,
     )
     scene_gen_hp_expanded: BoolProperty(
         name="Scene Gen HP Queue Expanded",
-        description="Show / hide the scene gen HP job queue",
+        description="Show / hide the scene gen HP generation queue",
         default=True,
     )
     scene_gen_lp_expanded: BoolProperty(
@@ -97,57 +91,42 @@ class MixieQueueUIPG(PropertyGroup):
     )
     hunyuan_rapid_expanded: BoolProperty(
         name="Hunyuan Rapid Queue Expanded",
-        description="Show / hide the Hunyuan Rapid job queue",
+        description="Show / hide the Hunyuan Rapid generation queue",
         default=True,
     )
     hunyuan_part_expanded: BoolProperty(
         name="Hunyuan Part Queue Expanded",
-        description="Show / hide the Hunyuan Part job queue",
+        description="Show / hide the Hunyuan Part generation queue",
         default=True,
     )
     hunyuan_uv_expanded: BoolProperty(
         name="Hunyuan UV Queue Expanded",
-        description="Show / hide the Hunyuan UV job queue",
+        description="Show / hide the Hunyuan UV generation queue",
         default=True,
     )
     model_3d_expanded: BoolProperty(
         name="Model 3D Queue Expanded",
-        description="Show / hide the Image to 3D Basic job queue",
+        description="Show / hide the Image to 3D Basic generation queue",
         default=True,
     )
     imagegen_expanded: BoolProperty(
         name="Image Generation Queue Expanded",
-        description="Show / hide the image job queue",
-        default=True,
-    )
-    lookdev_expanded: BoolProperty(
-        name="Blockout to Render Queue Expanded",
-        description="Show / hide the Blockout to Render queue",
+        description="Show / hide the image generation queue",
         default=True,
     )
     lookdev360_expanded: BoolProperty(
         name="Lookdev360 Queue Expanded",
-        description="Show / hide the Lookdev360 PBR job queue",
+        description="Show / hide the Lookdev360 PBR generation queue",
         default=True,
     )
     matgen_expanded: BoolProperty(
         name="MatGen Queue Expanded",
-        description="Show / hide the material job queue",
-        default=True,
-    )
-    brush_gen_expanded: BoolProperty(
-        name="Brush Generation Queue Expanded",
-        description="Show / hide the generative brush queue",
+        description="Show / hide the material generation queue",
         default=True,
     )
     mesh_segment_expanded: BoolProperty(
         name="Mesh Segmentation Queue Expanded",
         description="Show / hide the mesh segmentation queue",
-        default=True,
-    )
-    scene_gen_expanded: BoolProperty(
-        name="Scene Generation Queue Expanded",
-        description="Show / hide the scene job queue",
         default=True,
     )
     scene_recon_expanded: BoolProperty(
@@ -179,12 +158,9 @@ _FEATURE_TO_ATTR = {
     FEATURE_HUNYUAN_UV: "hunyuan_uv",
     FEATURE_MODEL_3D: "model_3d",
     FEATURE_IMAGEGEN: "imagegen",
-    FEATURE_LOOKDEV: "lookdev",
     FEATURE_LOOKDEV360: "lookdev360",
     FEATURE_MATGEN: "matgen",
-    FEATURE_BRUSH_GEN: "brush_gen",
     FEATURE_MESH_SEGMENT: "mesh_segment",
-    FEATURE_SCENE_GEN: "scene_gen",
     FEATURE_SCENE_RECON: "scene_recon",
 }
 

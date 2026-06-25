@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Job dataclass + JobState enum for the job queue."""
+"""Job dataclass + JobState enum for the generation queue."""
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -31,8 +31,6 @@ RUNNING_STATES = frozenset(
         JobState.RUNNING_DOWNLOAD,
     }
 )
-
-FAILED_BACKEND_STATUSES = frozenset({"FAILED", "CANCELLED", "DLQ"})
 
 
 @dataclass
@@ -71,15 +69,15 @@ class Job:
         raise NotImplementedError
 
     def poll(self, on_success, on_error):
-        """Default poll: GET /jobs/{backend_job_id} via JobQueueService.
+        """Default poll: GET /jobs/{backend_job_id} via GenerationQueueService.
 
         All concrete jobs use the same poll call. Override only if your
         feature requires a different polling endpoint.
         """
-        from mixar.modules.common.api.services.job_queue_service import (
-            get_job_queue_service,
+        from mixar.modules.common.api.services.generation_queue_service import (
+            get_generation_queue_service,
         )
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
@@ -132,7 +130,7 @@ class Job:
         """Extract inner data dict from the API response envelope.
 
         Handles both ``{"data": {"data": {...}}}`` and ``{"data": {...}}``
-        formats from the job queue backend.
+        formats from the generation queue backend.
         """
         data = getattr(response, "data", None) or {}
         inner = data.get("data", data) if isinstance(data, dict) else {}
@@ -175,14 +173,10 @@ class Job:
                 else []
             )
             return ("DONE", result_files)
-        if status in FAILED_BACKEND_STATUSES:
+        if status == "FAILED":
             error = inner.get("error", "")
             if error:
                 self.error = error
-            elif status == "CANCELLED":
-                self.error = "Cancelled"
-            elif status == "DLQ":
-                self.error = "Job failed permanently after retries"
             self.user_message = (
                 inner.get("user_message", "") or fail_message
             )

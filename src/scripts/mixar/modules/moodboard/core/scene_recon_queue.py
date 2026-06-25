@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Scene Reconstruction job queue: concrete Job + enqueue helpers.
+"""Scene Reconstruction generation queue: concrete Job + enqueue helpers.
 
 Hardest migration — async type with progressive multi-object GLB delivery.
 Phase 1: GPU server scene reconstruction (SAM3D stages).
@@ -20,11 +20,10 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.job_queue_service import (
-    get_job_queue_service,
+from mixar.modules.common.api.services.generation_queue_service import (
+    get_generation_queue_service,
 )
 from mixar.modules.common.job_queue import Job, JobState, get_queue
-from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 from .scene_recon_constants import (
@@ -81,7 +80,7 @@ class SceneReconJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         payload = {
             "image_bytes_b64": self.image_bytes_b64,
             "generate_mesh": self.generate_mesh,
@@ -99,7 +98,7 @@ class SceneReconJob(Job):
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
@@ -122,12 +121,12 @@ class SceneReconJob(Job):
         if not isinstance(inner, dict):
             return ("WAIT", [])
 
-        # Unwrap job queue envelope
+        # Unwrap generation queue envelope
         gq_status = inner.get("status", "")
         result = inner.get("result") or {}
 
-        # Map job queue statuses
-        if gq_status in FAILED_BACKEND_STATUSES:
+        # Map generation queue statuses
+        if gq_status == "FAILED":
             self.error = inner.get("error", "Scene reconstruction failed")
             self.user_message = inner.get("user_message", "") or "Scene reconstruction failed"
             return ("FAIL", [])

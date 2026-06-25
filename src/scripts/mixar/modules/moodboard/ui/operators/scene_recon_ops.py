@@ -331,7 +331,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
         add_image_to_moodboard(img, prompt or image_name)
 
         # Submit scene reconstruction directly
-        success = _submit_recon_from_callback(
+        _submit_recon_from_callback(
             scene, None, image_bytes,
             generate_mesh=self.generate_mesh,
             min_mask_pixels=self.min_mask_pixels,
@@ -339,12 +339,6 @@ class MIXIE_OT_scene_recon_generate(Operator):
             texture_baking=self.texture_baking,
             vertex_color=self.vertex_color,
         )
-        if not success:
-            return {"CANCELLED"}
-
-        from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-        mark_enqueued(FEATURE_SCENE_RECON)
 
         self.report({"INFO"}, "Scene reconstruction started from image...")
         return {"FINISHED"}
