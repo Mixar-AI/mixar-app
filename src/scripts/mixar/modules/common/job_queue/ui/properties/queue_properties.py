@@ -25,11 +25,14 @@ from mixar.modules.common.job_queue.constants import (
     FEATURE_HUNYUAN_UV,
     FEATURE_IMAGE_TO_3D_PRO,
     FEATURE_IMAGEGEN,
+    FEATURE_BRUSH_GEN,
+    FEATURE_LOOKDEV,
     FEATURE_LOOKDEV360,
     FEATURE_MATGEN,
     FEATURE_MESH_SEGMENT,
     FEATURE_MODEL_3D,
     FEATURE_RETOPOLOGY,
+    FEATURE_SCENE_GEN,
     FEATURE_SCENE_GEN_HP,
     FEATURE_SCENE_GEN_LP,
     FEATURE_SCENE_RECON,
@@ -62,9 +65,12 @@ class MixieQueuesPG(PropertyGroup):
     hunyuan_uv: PointerProperty(type=MixieFeatureQueuePG)
     model_3d: PointerProperty(type=MixieFeatureQueuePG)
     imagegen: PointerProperty(type=MixieFeatureQueuePG)
+    lookdev: PointerProperty(type=MixieFeatureQueuePG)
     lookdev360: PointerProperty(type=MixieFeatureQueuePG)
     matgen: PointerProperty(type=MixieFeatureQueuePG)
+    brush_gen: PointerProperty(type=MixieFeatureQueuePG)
     mesh_segment: PointerProperty(type=MixieFeatureQueuePG)
+    scene_gen: PointerProperty(type=MixieFeatureQueuePG)
     scene_recon: PointerProperty(type=MixieFeatureQueuePG)
 
 
@@ -114,6 +120,11 @@ class MixieQueueUIPG(PropertyGroup):
         description="Show / hide the image generation queue",
         default=True,
     )
+    lookdev_expanded: BoolProperty(
+        name="Blockout to Render Queue Expanded",
+        description="Show / hide the Blockout to Render queue",
+        default=True,
+    )
     lookdev360_expanded: BoolProperty(
         name="Lookdev360 Queue Expanded",
         description="Show / hide the Lookdev360 PBR generation queue",
@@ -124,9 +135,19 @@ class MixieQueueUIPG(PropertyGroup):
         description="Show / hide the material generation queue",
         default=True,
     )
+    brush_gen_expanded: BoolProperty(
+        name="Brush Generation Queue Expanded",
+        description="Show / hide the generative brush queue",
+        default=True,
+    )
     mesh_segment_expanded: BoolProperty(
         name="Mesh Segmentation Queue Expanded",
         description="Show / hide the mesh segmentation queue",
+        default=True,
+    )
+    scene_gen_expanded: BoolProperty(
+        name="Scene Generation Queue Expanded",
+        description="Show / hide the scene generation queue",
         default=True,
     )
     scene_recon_expanded: BoolProperty(
@@ -158,9 +179,12 @@ _FEATURE_TO_ATTR = {
     FEATURE_HUNYUAN_UV: "hunyuan_uv",
     FEATURE_MODEL_3D: "model_3d",
     FEATURE_IMAGEGEN: "imagegen",
+    FEATURE_LOOKDEV: "lookdev",
     FEATURE_LOOKDEV360: "lookdev360",
     FEATURE_MATGEN: "matgen",
+    FEATURE_BRUSH_GEN: "brush_gen",
     FEATURE_MESH_SEGMENT: "mesh_segment",
+    FEATURE_SCENE_GEN: "scene_gen",
     FEATURE_SCENE_RECON: "scene_recon",
 }
 
