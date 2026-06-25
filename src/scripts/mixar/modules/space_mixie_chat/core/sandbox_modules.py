@@ -45,13 +45,10 @@ class RestrictedOs:
 
     def __init__(self):
         import os as _os
-        import os.path as _osp
         import tempfile as _tf
         self.path = _RestrictedOsPath()
         self._real_remove = _os.remove
-        # realpath so the prefix matches realpath'd targets (on macOS /var is a symlink
-        # to /private/var, so an un-normalized prefix never matches and every temp op fails)
-        self._temp_prefix = _osp.realpath(_tf.gettempdir())
+        self._temp_prefix = _tf.gettempdir()
 
     def remove(self, path: str) -> None:
         """Only allow removing files inside the system temp directory."""
@@ -113,9 +110,7 @@ def restricted_open(path, mode='r', *args, **kwargs):
 
     if is_write:
         real = _osp.realpath(str(path))
-        # realpath the prefix too: on macOS /var is a symlink to /private/var, so a
-        # realpath'd target never starts with the un-normalized gettempdir() -> blocked.
-        temp_prefix = _osp.realpath(_tf.gettempdir())
+        temp_prefix = _tf.gettempdir()
         if not real.startswith(temp_prefix):
             raise PermissionError(
                 f"open() with write mode is restricted to temp directory. "
@@ -125,87 +120,7 @@ def restricted_open(path, mode='r', *args, **kwargs):
     return builtins.open(path, mode, *args, **kwargs)
 
 
-def _close_quietly(resp):
-    try:
-        resp.close()
-    except Exception:
-        pass
-
-
-class _UrlResponse:
-    """read()-only wrapper over an HTTP response.
-
-    The raw response is captured in closures — NO instance attribute references it (so
-    ``response._resp`` etc. don't exist), and ``read`` is a plain function (no
-    ``__self__``/``__func__``). Combined with the AST validator blocking
-    ``__closure__``/``__self__``/``__func__``, a sandboxed script cannot reach the
-    underlying response (its ``headers`` / ``status`` / ``fp`` / socket). Any attribute
-    other than ``read`` falls through to ``__getattr__`` and is denied.
-    """
-
-    def __init__(self, resp):
-        self.read = lambda *a, **k: resp.read(*a, **k)
-        self.__close = lambda: _close_quietly(resp)  # name-mangled -> _UrlResponse__close
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        self.__close()
-        return False
-
-    def __getattr__(self, name):
-        raise PermissionError("urllib response: only read() is available in the sandbox")
-
-
-def _allowed_asset_hosts():
-    """Hosts a sandboxed script may GET from (asset CDNs only). Env-overridable."""
-    import os
-    raw = os.environ.get("MIXAR_ASSET_HOSTS", "amazonaws.com,cloudflarestorage.com")
-    return tuple(h.strip().lower() for h in raw.split(",") if h.strip())
-
-
-class RestrictedUrllib:
-    """Restricted urllib: ONLY `urlopen(url)` GET to allowlisted asset hosts.
-
-    This is the only network egress available to sandboxed scripts (including the
-    agent's execute_bpy_script escape hatch), so the host allowlist is the security
-    boundary — keep it to asset CDNs (S3 / R2). Returns a read()-only response.
-    """
-
-    def __init__(self):
-        import urllib.request as _req
-        from urllib.parse import urlparse as _parse
-        self._urlopen = _req.urlopen
-        self._parse = _parse
-        self._allowed = _allowed_asset_hosts()
-
-    def urlopen(self, url, timeout=120):
-        parsed = self._parse(str(url))
-        # Restrict the TRANSPORT first: urllib's default opener includes FileHandler, so
-        # a file:// URL whose hostname satisfies the allowlist (file://amazonaws.com/etc/
-        # passwd) would otherwise read local files. Only http/https are network egress.
-        if parsed.scheme not in ("http", "https"):
-            raise PermissionError(
-                f"urllib.urlopen: scheme '{parsed.scheme}' is not allowed (http/https only)"
-            )
-        host = (parsed.hostname or "").lower()
-        if not any(host == h or host.endswith("." + h) for h in self._allowed):
-            raise PermissionError(
-                f"urllib.urlopen: host '{host}' is not allowed (asset hosts only: "
-                f"{', '.join(self._allowed)})"
-            )
-        return _UrlResponse(self._urlopen(str(url), timeout=timeout))
-
-    def __getattr__(self, name):
-        raise AttributeError(
-            "urllib." + name + " is not available in the sandbox. "
-            "Allowed: urlopen(url) GET to asset hosts only"
-        )
-
-
 # Singleton instances (created once at module load)
 RESTRICTED_OS = RestrictedOs()
 RESTRICTED_TEMPFILE = RestrictedTempfile()
 RESTRICTED_BASE64 = RestrictedBase64()
-RESTRICTED_URLLIB = RestrictedUrllib()
