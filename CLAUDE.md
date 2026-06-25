@@ -81,7 +81,7 @@ src/
 ```
 
 ### Active Modules
-`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `terrain`, `texel_density`, `uv_editor`, `workflow`
+`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
 
 ---
 
@@ -98,12 +98,11 @@ src/
 
 ---
 
-## 15 Feature Modules
+## 14 Feature Modules
 
 | Module | What it does |
 |--------|-------------|
 | **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |
-| **terrain** | Native intelligent terrain + biome engine the backend agent drives via `mixie.terrain_*` operators (each prints `__RESULT__`). **Shape:** `terrain_create` / `set_inputs` / `set_material` (the `MasterTerrain` GN group: heightmap-in + procedural fBm displacement, `ter_height` zoning; `TerrainMaterial` slope/height zoning). **Hydrology:** `carve_channel` (graded streambed along a route; bakes the GN) + `set_water`. **Ecology:** `compute_masks` — per-vertex moisture (distance-to-water) / height-above-water / slope, the "semantic brain". **Vegetation:** `scatter_biome` (riparian/meadow/forest) — GN scatter of Botaniq assets, density per ecological rule (auto-computes masks). `core/`: nodegroups, hydrology, masks, biomes (rules), vegetation (asset loader), scatter. Botaniq assets load at runtime from `MIXAR_BOTANIQ_PATH` (not bundled — licence). Constants/presets in `constants.py`. |
 | **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, sandbox script execution, markdown rendering |
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
 | **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |

@@ -11,9 +11,10 @@ Lifecycle (per job, all callbacks fire on the main thread via api/processor):
                        └──── FAILED / CANCELLED / PAUSED_AUTH
 
 All pending jobs are submitted immediately (the backend handles concurrency
-and queue limits). Each job owns its own poll-tick closure registered
-with ``bpy.app.timers``; download runs on a daemon thread that schedules
-the import callback back on the main thread.
+and queue limits). Once submitted, jobs wait for backend ``job.update`` pushes
+over the agent WebSocket; terminal success reconciles full result data via
+``job.sync`` on that same socket. Download runs on a daemon thread that
+schedules the import callback back on the main thread.
 """
 
 import os
@@ -47,6 +48,16 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _queues: dict = {}
+_SYNC_WATCHDOG_INTERVAL = 30.0
+_sync_watchdog_registered = False
+_BACKEND_SYNC_STATES = frozenset(
+    {
+        JobState.PENDING,
+        JobState.RUNNING_SUBMIT,
+        JobState.RUNNING_POLL,
+        JobState.PAUSED_AUTH,
+    }
+)
 
 
 def get_queue(feature_key: str) -> "FeatureQueue":
@@ -60,6 +71,186 @@ def get_queue(feature_key: str) -> "FeatureQueue":
 
 def all_queues() -> list:
     return list(_queues.values())
+
+
+_JOBQ_STATE_TO_STATUS = {
+    "pending": "PENDING",
+    "dispatched": "SUBMITTED",
+    "running": "POLLING",
+    "succeeded": "DONE",
+    "failed": "FAILED",
+    "cancelled": "CANCELLED",
+}
+
+
+def _find_by_backend_job_id(backend_job_id: str):
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if job.backend_job_id == backend_job_id:
+                return queue, job
+    return None, None
+
+
+def handle_backend_job_update(payload: dict) -> bool:
+    """Apply a compact ``job.update`` push to the matching local queue job."""
+    if not isinstance(payload, dict):
+        return False
+    backend_job_id = payload.get("job_id") or payload.get("id")
+    if not backend_job_id:
+        return False
+    queue, job = _find_by_backend_job_id(str(backend_job_id))
+    if job is None:
+        return False
+
+    state = str(payload.get("state") or payload.get("status") or "").lower()
+    status = _JOBQ_STATE_TO_STATUS.get(state, "")
+    if status:
+        job.backend_status = status
+        if status in {"SUBMITTED", "POLLING"}:
+            if hasattr(job, "_processing_started") and not job._processing_started:
+                job._processing_started = True
+                job.poll_start_time = time.time()
+    if payload.get("error"):
+        job.error = str(payload.get("error"))
+    queue._notify()
+
+    if status in {"FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
+        _apply_backend_snapshot(queue, job, payload)
+    elif status == "DONE" and job.state == JobState.RUNNING_POLL:
+        _request_backend_job_get(str(backend_job_id))
+    return True
+
+
+def _apply_backend_snapshot(queue: "FeatureQueue", job: Job, snapshot: dict) -> None:
+    """Feed a job-queue snapshot through the existing result parser."""
+    from mixar.modules.common.api.response import APIResponse
+    from mixar.modules.common.api.services.generation_queue_service import (
+        GenerationQueueService,
+    )
+
+    response = APIResponse(
+        success=True,
+        status_code=200,
+        data={"status": "success", "message": "ok", "data": snapshot},
+    )
+    queue._on_poll_success(job, GenerationQueueService._normalize_response(response))
+
+
+def handle_backend_job_sync(result: dict) -> int:
+    """Apply full ``job.sync`` snapshots to local jobs after reconnect."""
+    if not isinstance(result, dict):
+        return 0
+    jobs = result.get("jobs", [])
+    if not isinstance(jobs, list):
+        return 0
+
+    handled = 0
+    for snapshot in jobs:
+        if not isinstance(snapshot, dict):
+            continue
+        backend_job_id = snapshot.get("job_id") or snapshot.get("id")
+        if not backend_job_id:
+            continue
+        queue, job = _find_by_backend_job_id(str(backend_job_id))
+        if job is None:
+            continue
+        _apply_backend_snapshot(queue, job, snapshot)
+        handled += 1
+    return handled
+
+
+def _request_backend_job_sync() -> bool:
+    """Ask the WebSocket transport for full job snapshots, without REST polling."""
+    try:
+        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
+        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
+            get_jsonrpc_client,
+        )
+        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
+            run_on_main_thread,
+        )
+
+        client = get_jsonrpc_client()
+        if client is None or not client.is_connected:
+            return False
+
+        def _on_sync_result(result):
+            def _apply_sync():
+                count = handle_backend_job_sync(result)
+                if count:
+                    logger.info("job.sync reconciled %d local queue jobs", count)
+
+            run_on_main_thread(_apply_sync)
+
+        client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_sync_result)
+        return True
+    except Exception as e:
+        logger.debug("%s job.sync request failed: %s", LOG_PREFIX, e)
+        return False
+
+
+def _request_backend_job_get(backend_job_id: str) -> bool:
+    """Fetch one full job snapshot after a compact terminal ``job.update``."""
+    try:
+        from mixar.modules.space_mixie_chat.constants import JSONRPCMethod
+        from mixar.modules.space_mixie_chat.core.jsonrpc_client import (
+            get_jsonrpc_client,
+        )
+        from mixar.modules.space_mixie_chat.core.main_thread_executor import (
+            run_on_main_thread,
+        )
+
+        client = get_jsonrpc_client()
+        if client is None or not client.is_connected:
+            return False
+
+        def _on_get_result(result):
+            def _apply_get():
+                snapshot = result.get("job") if isinstance(result, dict) else None
+                if not isinstance(snapshot, dict):
+                    _request_backend_job_sync()
+                    return
+                queue, job = _find_by_backend_job_id(str(backend_job_id))
+                if job is None:
+                    return
+                _apply_backend_snapshot(queue, job, snapshot)
+                logger.info("job.get reconciled local queue job %s", backend_job_id)
+
+            run_on_main_thread(_apply_get)
+
+        client.send_request(
+            JSONRPCMethod.JOB_GET,
+            {"job_id": backend_job_id},
+            _on_get_result,
+        )
+        return True
+    except Exception as e:
+        logger.debug("%s job.get request failed: %s", LOG_PREFIX, e)
+        _request_backend_job_sync()
+        return False
+
+
+def _ensure_sync_watchdog() -> None:
+    """Keep active jobs reconciled if an at-most-once job.update push is missed."""
+    global _sync_watchdog_registered
+    if _sync_watchdog_registered:
+        return
+
+    def _tick():
+        global _sync_watchdog_registered
+        needs_backend_sync = any(
+            job.state in _BACKEND_SYNC_STATES
+            for queue in all_queues()
+            for job in queue.snapshot()
+        )
+        if not needs_backend_sync:
+            _sync_watchdog_registered = False
+            return None
+        _request_backend_job_sync()
+        return _SYNC_WATCHDOG_INTERVAL
+
+    _sync_watchdog_registered = True
+    bpy.app.timers.register(_tick, first_interval=_SYNC_WATCHDOG_INTERVAL)
 
 
 # ---------------------------------------------------------------------------
@@ -276,8 +467,12 @@ class FeatureQueue:
         job.state = JobState.RUNNING_POLL
         job.poll_count = 0
         job.poll_start_time = time.time()
+        if not job.backend_status:
+            job.backend_status = "PENDING"
         self._notify()
-        self._schedule_poll(job, get_poll_interval(0))
+        _ensure_sync_watchdog()
+        # The backend job queue is push-driven. Do not start the old REST GET
+        # polling loop here; ``job.update``/``job.sync`` will advance the job.
 
     def _on_submit_error(self, job: Job, error) -> None:
         if isinstance(error, AuthenticationError):

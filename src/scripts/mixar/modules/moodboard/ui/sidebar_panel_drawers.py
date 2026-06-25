@@ -105,7 +105,8 @@ def _draw_blockout_to_render(layout, context):
     draw_toggle(col, tab, "fast_mode", text="Fast Mode (~4x faster)")
 
     # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev")
+    draw_generate_footer(layout, context, "mixie.lookdev_generate", "lookdev",
+                         feature_key="lookdev")
 
 
 # ---------------------------------------------------------------------------
@@ -444,10 +445,14 @@ def _draw_queue(layout, context):
         FEATURE_HUNYUAN_UV,
         FEATURE_IMAGE_TO_3D_PRO,
         FEATURE_IMAGEGEN,
+        FEATURE_BRUSH_GEN,
+        FEATURE_LOOKDEV,
         FEATURE_LOOKDEV360,
+        FEATURE_MATGEN,
         FEATURE_MESH_SEGMENT,
         FEATURE_MODEL_3D,
         FEATURE_RETOPOLOGY,
+        FEATURE_SCENE_GEN,
         FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP,
         FEATURE_SCENE_RECON,
@@ -464,8 +469,12 @@ def _draw_queue(layout, context):
         (FEATURE_HUNYUAN_PART, "hunyuan_part", "Hunyuan Part"),
         (FEATURE_HUNYUAN_UV, "hunyuan_uv", "Hunyuan UV"),
         (FEATURE_IMAGEGEN, "imagegen", "Image Generation"),
+        (FEATURE_BRUSH_GEN, "brush_gen", "Brush Generation"),
+        (FEATURE_LOOKDEV, "lookdev", "Blockout to Render"),
         (FEATURE_LOOKDEV360, "lookdev360", "Lookdev360 PBR"),
+        (FEATURE_MATGEN, "matgen", "Material Generation"),
         (FEATURE_MESH_SEGMENT, "mesh_segment", "Mesh Segmentation"),
+        (FEATURE_SCENE_GEN, "scene_gen", "Scene Generation"),
         (FEATURE_SCENE_RECON, "scene_recon", "Scene Reconstruction"),
     )
 
