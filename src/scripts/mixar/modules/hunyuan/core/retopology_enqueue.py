@@ -15,14 +15,7 @@ import os
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
-from ..constants import (
-    MAX_FILE_SIZE_TOPOLOGY,
-    MAX_FILE_SIZE_TRIPO_RETOPOLOGY,
-    RETOPOLOGY_HUNYUAN_MODEL,
-    RETOPOLOGY_HUNYUAN_SERVICE,
-    RETOPOLOGY_TRIPO_MODEL,
-    RETOPOLOGY_TRIPO_SERVICE,
-)
+from ..constants import MAX_FILE_SIZE_TOPOLOGY
 from .hunyuan_helpers import export_selected_mesh
 
 logger = get_logger(__name__)
@@ -36,13 +29,9 @@ logger = get_logger(__name__)
 def snapshot_shared_params(topo) -> dict:
     """Capture the Topology UI's shared params into a dict."""
     return {
-        "model": topo.model,
         "polygon_type": topo.polygon_type,
         "face_level": topo.face_level,
         "post_process": topo.post_process,
-        "tripo_face_limit": topo.tripo_face_limit,
-        "tripo_quad": topo.tripo_quad,
-        "tripo_bake": topo.tripo_bake,
     }
 
 
@@ -72,35 +61,6 @@ def _retopology_on_imported(job, object_names: str) -> None:
         post_import_rename_and_setup(object_names, target, smart_uv=True)
     except Exception as e:
         logger.warning("[Retopology] post_import_rename_and_setup failed: %s", e)
-
-
-def _strip_high_suffix(name: str) -> str:
-    """Drop a trailing ``_high`` (any case) and any file extension from a name."""
-    base = os.path.splitext(name)[0] if "." in name else name
-    for suffix in ("_high", "_High", "_HIGH"):
-        if base.endswith(suffix):
-            return base[:-len(suffix)]
-    return base
-
-
-def _make_tripo_on_imported(bake: bool):
-    """Build the Tripo retopology ``on_imported`` hook.
-
-    Tripo's decimated GLB is already a finished low-poly (no GPU post-process),
-    so we only rename to the ``*_low`` convention. We Smart-UV unwrap **only**
-    when ``bake`` is False — when baking, Tripo bakes textures onto the existing
-    UVs, so re-unwrapping would discard them.
-    """
-
-    def _on_imported(job, object_names: str) -> None:
-        target = _strip_high_suffix(job.label) + "_low"
-        try:
-            from .hunyuan_helpers import post_import_rename_and_setup
-            post_import_rename_and_setup(object_names, target, smart_uv=not bake)
-        except Exception as e:
-            logger.warning("[Retopology/Tripo] post_import_rename_and_setup failed: %s", e)
-
-    return _on_imported
 
 
 # ---------------------------------------------------------------------------
@@ -162,10 +122,6 @@ def enqueue_retopology_jobs(
     backend size limit are skipped with a warning.
     """
     enqueued: list = []
-    is_tripo = shared.get("model", "hunyuan") == "tripo"
-    max_size = (
-        MAX_FILE_SIZE_TRIPO_RETOPOLOGY if is_tripo else MAX_FILE_SIZE_TOPOLOGY
-    )
 
     for obj in objects:
         if obj.type != 'MESH':
@@ -179,90 +135,44 @@ def enqueue_retopology_jobs(
                 operator.report({'WARNING'}, msg)
             continue
 
-        if len(file_bytes) > max_size:
+        if len(file_bytes) > MAX_FILE_SIZE_TOPOLOGY:
             size_mb = len(file_bytes) / (1024 * 1024)
             msg = (
                 f"Skipping '{obj.name}': exported file is {size_mb:.1f}MB "
-                f"(max {max_size // (1024 * 1024)}MB)"
+                f"(max {MAX_FILE_SIZE_TOPOLOGY // (1024 * 1024)}MB)"
             )
             logger.warning(msg)
             if operator is not None:
                 operator.report({'WARNING'}, msg)
             continue
 
-        if is_tripo:
-            job = _enqueue_tripo(obj, shared, file_bytes, filename)
-        else:
-            job = _enqueue_hunyuan(obj, shared, file_bytes, filename)
+        sdk_params = {}
+        if shared.get("polygon_type"):
+            sdk_params["PolygonType"] = shared["polygon_type"]
+        if shared.get("face_level"):
+            sdk_params["FaceLevel"] = shared["face_level"]
+
+        payload = {
+            "sdk_params": sdk_params,
+            "input_name": obj.name,
+            "post_process": shared.get("post_process", True),
+            "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
+            "file_filename": filename,
+        }
+
+        job = enqueue_generation(
+            kind="glb",
+            feature_key=FEATURE_RETOPOLOGY,
+            job_type="retopology",
+            model="hunyuan_topology",
+            payload=payload,
+            label=obj.name,
+            fail_message="Retopology failed",
+            on_imported=_retopology_on_imported,
+            scene_flag="mixie_retopology_is_generating",
+            batch_popup_title="Retopology batch complete",
+        )
         if job is not None:
             enqueued.append(job)
 
     return enqueued
-
-
-def _enqueue_hunyuan(obj, shared, file_bytes, filename):
-    """Enqueue a Hunyuan retopology job (backend service ``retopology``)."""
-    sdk_params = {}
-    if shared.get("polygon_type"):
-        sdk_params["PolygonType"] = shared["polygon_type"]
-    if shared.get("face_level"):
-        sdk_params["FaceLevel"] = shared["face_level"]
-
-    payload = {
-        "sdk_params": sdk_params,
-        "input_name": obj.name,
-        "post_process": shared.get("post_process", True),
-        "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
-        "file_filename": filename,
-    }
-
-    return enqueue_generation(
-        kind="glb",
-        feature_key=FEATURE_RETOPOLOGY,
-        job_type=RETOPOLOGY_HUNYUAN_SERVICE,
-        model=RETOPOLOGY_HUNYUAN_MODEL,
-        payload=payload,
-        label=obj.name,
-        fail_message="Retopology failed",
-        on_imported=_retopology_on_imported,
-        scene_flag="mixie_retopology_is_generating",
-        batch_popup_title="Retopology batch complete",
-    )
-
-
-def _enqueue_tripo(obj, shared, file_bytes, filename):
-    """Enqueue a Tripo retopology job (backend service ``retopology_tripo``).
-
-    Shares the same client queue (``FEATURE_RETOPOLOGY``) as Hunyuan, but targets
-    a different backend service so its concurrency is isolated.
-    """
-    bake = bool(shared.get("tripo_bake", True))
-    quad = bool(shared.get("tripo_quad", False))
-    # Tripo v2.0 caps face_limit at 20,000 (triangle) / 10,000 (quad). The slider
-    # is bounded to the triangle range, so clamp the quad case here.
-    face_limit = max(500, min(int(shared.get("tripo_face_limit", 10000)),
-                              10000 if quad else 20000))
-    payload = {
-        "input_name": obj.name,
-        "tripo_params": {
-            "model": "v2.0",
-            "face_limit": face_limit,
-            "quad": quad,
-            "bake": bake,
-        },
-        "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
-        "file_filename": filename,
-    }
-
-    return enqueue_generation(
-        kind="glb",
-        feature_key=FEATURE_RETOPOLOGY,
-        job_type=RETOPOLOGY_TRIPO_SERVICE,
-        model=RETOPOLOGY_TRIPO_MODEL,
-        payload=payload,
-        label=obj.name,
-        fail_message="Retopology failed",
-        on_imported=_make_tripo_on_imported(bake),
-        scene_flag="mixie_retopology_is_generating",
-        batch_popup_title="Retopology batch complete",
-    )
