@@ -35,6 +35,7 @@ _STATE_TO_STATUS = {
     "running": "POLLING",
     "succeeded": "DONE",
     "failed": "FAILED",
+    "dlq": "DLQ",
     "cancelled": "CANCELLED",
 }
 
