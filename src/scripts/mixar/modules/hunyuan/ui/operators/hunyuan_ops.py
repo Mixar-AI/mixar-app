@@ -21,6 +21,7 @@ from bpy.props import BoolProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
 from ...core.hunyuan_helpers import _redraw_3d_views
+from ...constants import HUNYUAN_RAPID_JOB_TYPE, HUNYUAN_RAPID_MODEL
 from mixar.modules.common.utils.mixie_space_utils import (
     get_first_selected_moodboard_image,
 )
@@ -382,8 +383,8 @@ class MIXIE_OT_hunyuan_generate(Operator):
         enqueue_generation(
             kind="glb",
             feature_key=FEATURE_HUNYUAN_RAPID,
-            job_type="hunyuan_rapid",
-            model="hunyuan_rapid",
+            job_type=HUNYUAN_RAPID_JOB_TYPE,
+            model=HUNYUAN_RAPID_MODEL,
             payload=payload,
             label=label,
             scene_flag="mixie_hunyuan_rapid_is_generating",
@@ -606,8 +607,8 @@ class MIXIE_OT_hunyuan_generate(Operator):
         enqueue_generation(
             kind="glb",
             feature_key=FEATURE_HUNYUAN_RAPID,
-            job_type="hunyuan_rapid",
-            model="hunyuan_rapid",
+            job_type=HUNYUAN_RAPID_JOB_TYPE,
+            model=HUNYUAN_RAPID_MODEL,
             payload=payload,
             label=label,
             scene_flag="mixie_hunyuan_rapid_is_generating",
