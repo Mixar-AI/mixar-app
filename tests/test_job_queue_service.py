@@ -202,3 +202,26 @@ def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
     assert job.poll_calls == 0
     assert job.handled is True
     assert job.state == JobState.SUCCESS
+
+
+def test_dlq_job_update_fails_immediately(monkeypatch):
+    QM._queues.clear()
+    QM._sync_watchdog_registered = False
+    monkeypatch.setattr(QM.bpy.app.timers, "register", lambda *args, **kwargs: None)
+
+    queue = QM.get_queue("test_ws_dlq")
+    job = FakeQueueJob()
+    assert queue.submit(job) is True
+
+    assert QM.handle_backend_job_update(
+        {
+            "job_id": "job-ws",
+            "state": "dlq",
+            "error": "exhausted retries",
+        }
+    )
+
+    assert job.backend_status == "DLQ"
+    assert job.poll_calls == 0
+    assert job.state == JobState.FAILED
+    assert job.error == "exhausted retries"
