@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Agent-facing procedural material discovery and AI generation queueing."""
+"""Agent-facing procedural material discovery and queued AI generation."""
 
 from __future__ import annotations
 

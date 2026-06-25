@@ -7,7 +7,7 @@
 Lookdev Scene Operators
 
 Operator for generating lookdev images from a 3D viewport depth render.
-Uses the unified generation queue (depth_to_image job type).
+Uses the unified job queue (depth_to_image job type).
 """
 
 import bpy
@@ -147,7 +147,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
         if hasattr(scene, 'mixie_lookdev_error'):
             scene.mixie_lookdev_error = ""
 
-        # Enqueue via the unified generation queue
+        # Enqueue via the unified job queue
         import base64 as _b64
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV
