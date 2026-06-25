@@ -15,7 +15,7 @@ import threading
 from typing import Callable, Dict, Optional
 
 from mixar.config.logging_config import get_logger
-from ...common.api.services.generation_queue_service import get_generation_queue_service
+from ...common.api.services.job_queue_service import get_job_queue_service
 from .mesh_labeler import apply_labels_to_mesh
 
 logger = get_logger(__name__)
@@ -105,7 +105,7 @@ class MeshSegmentManager:
         }
 
         try:
-            service = get_generation_queue_service()
+            service = get_job_queue_service()
             submit_response = service.post(
                 "enqueue",
                 json={
@@ -166,9 +166,9 @@ class MeshSegmentManager:
             pass
 
     def _poll_status_thread(self, job_id: str) -> None:
-        """Background thread to call status API via generation queue."""
+        """Background thread to call status API via job queue."""
         try:
-            service = get_generation_queue_service()
+            service = get_job_queue_service()
             response = service.get_job_status_sync(job_id)
             self._poll_result = {"done": True, "response": response, "error": None}
         except Exception as e:
@@ -225,7 +225,7 @@ class MeshSegmentManager:
         if not isinstance(inner_data, dict):
             return self.POLL_INTERVAL
 
-        # Map generation queue statuses
+        # Map job queue statuses
         gq_status = inner_data.get("status", "")
         result = inner_data.get("result") or {}
 
@@ -242,7 +242,7 @@ class MeshSegmentManager:
             status = "completed"
             progress = 1.0
             current_step = "Complete"
-        elif gq_status == "FAILED":
+        elif gq_status in ("FAILED", "CANCELLED", "DLQ"):
             status = "failed"
             progress = 0.0
             current_step = ""
@@ -277,7 +277,7 @@ class MeshSegmentManager:
         return self.POLL_INTERVAL
 
     def _handle_inline_result(self, result: Dict) -> None:
-        """Handle result extracted inline from the generation queue poll response."""
+        """Handle result extracted inline from the job queue poll response."""
         self._stop_polling()
 
         island_labels = result.get("island_labels", {})
@@ -361,7 +361,7 @@ class MeshSegmentManager:
         job_id = self._job_id
         self._stop_polling()
 
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         try:
             service.cancel_job(job_id)
             logger.debug("[MeshSegment] Job %s cancelled", job_id)
