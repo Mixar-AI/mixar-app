@@ -38,7 +38,7 @@ from ..constants import (
     MAX_POLL_DURATION,
 )
 from .error_helpers import classify_error
-from .job import Job, JobState, RUNNING_STATES, TERMINAL_STATES
+from .job import FAILED_BACKEND_STATUSES, Job, JobState, RUNNING_STATES, TERMINAL_STATES
 
 logger = get_logger(__name__)
 
@@ -79,6 +79,7 @@ _JOBQ_STATE_TO_STATUS = {
     "running": "POLLING",
     "succeeded": "DONE",
     "failed": "FAILED",
+    "dlq": "DLQ",
     "cancelled": "CANCELLED",
 }
 
@@ -114,7 +115,7 @@ def handle_backend_job_update(payload: dict) -> bool:
         job.error = str(payload.get("error"))
     queue._notify()
 
-    if status in {"FAILED", "CANCELLED"} and job.state == JobState.RUNNING_POLL:
+    if status in FAILED_BACKEND_STATUSES and job.state == JobState.RUNNING_POLL:
         _apply_backend_snapshot(queue, job, payload)
     elif status == "DONE" and job.state == JobState.RUNNING_POLL:
         _request_backend_job_get(str(backend_job_id))
