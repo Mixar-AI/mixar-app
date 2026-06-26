@@ -36,7 +36,7 @@ def _pid_alive_windows(pid: int) -> bool:
     """
     import ctypes
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     process_query_limited_information = 0x1000
     still_active = 259
 
@@ -55,7 +55,7 @@ def _pid_alive_windows(pid: int) -> bool:
     if not handle:
         # If Windows refuses the query, keep running rather than killing a
         # valid sandbox because of an access-policy false negative.
-        return kernel32.GetLastError() == 5
+        return ctypes.get_last_error() == 5
 
     try:
         exit_code = ctypes.c_ulong()

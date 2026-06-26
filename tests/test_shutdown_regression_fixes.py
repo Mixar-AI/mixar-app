@@ -109,6 +109,8 @@ def test_headless_sandbox_uses_windows_parent_liveness_probe():
     source = read_src("headless/headless_main.py")
 
     assert "def _pid_alive_windows" in source
+    assert 'ctypes.WinDLL("kernel32", use_last_error=True)' in source
+    assert "ctypes.get_last_error() == 5" in source
     assert "OpenProcess" in source
     assert "GetExitCodeProcess" in source
     assert 'os.name == "nt"' in source
