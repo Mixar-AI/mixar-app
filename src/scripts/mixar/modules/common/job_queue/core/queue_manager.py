@@ -24,7 +24,11 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.exceptions import AuthenticationError
+from mixar.modules.common.api.exceptions import (
+    AuthenticationError,
+    ConnectionError as APIConnectionError,
+    TimeoutError as APITimeoutError,
+)
 from mixar.modules.hunyuan.core.hunyuan_helpers import (
     _redraw_3d_views,
     download_file,
@@ -298,6 +302,7 @@ class FeatureQueue:
         # Set descriptive error for in-flight jobs (backend can't cancel them)
         if job.state in RUNNING_STATES:
             job.error = "Cancelled (generation may still complete on server)"
+        job._submit_retry_scheduled = False
         job.state = JobState.CANCELLED
         if not job.error:
             job.error = "Cancelled"
@@ -309,6 +314,7 @@ class FeatureQueue:
             if job.state not in TERMINAL_STATES:
                 if job.backend_job_id:
                     self._cancel_on_backend(job.backend_job_id)
+                job._submit_retry_scheduled = False
                 job.state = JobState.CANCELLED
                 if not job.error:
                     job.error = "Cancelled"
@@ -365,6 +371,8 @@ class FeatureQueue:
                 job.user_message = ""
                 job.backend_job_id = ""
                 job.backend_api_type = ""
+                job.submit_attempts = 0
+                job._submit_retry_scheduled = False
                 job.poll_count = 0
                 job.poll_start_time = 0.0
                 job.consecutive_poll_errors = 0
@@ -430,6 +438,11 @@ class FeatureQueue:
         job.error = ""
         job.user_message = ""
         self._notify()
+        self._submit_job_attempt(job)
+
+    def _submit_job_attempt(self, job: Job) -> None:
+        job.submit_attempts += 1
+        job._submit_retry_scheduled = False
 
         def on_submit_success(response):
             self._on_submit_success(job, response)
@@ -446,6 +459,9 @@ class FeatureQueue:
         if job.state == JobState.CANCELLED:
             self._pump()
             return
+        job._submit_retry_scheduled = False
+        job.error = ""
+        job.user_message = ""
         try:
             job.parse_submit_response(response)
         except Exception as e:
@@ -476,14 +492,55 @@ class FeatureQueue:
         # polling loop here; ``job.update``/``job.sync`` will advance the job.
 
     def _on_submit_error(self, job: Job, error) -> None:
+        if job.state != JobState.RUNNING_SUBMIT:
+            return
         if isinstance(error, AuthenticationError):
             self._enter_auth_pause(job, error)
             return
+        if isinstance(error, (APITimeoutError, APIConnectionError)):
+            if self._retry_submit_later(job, error):
+                return
         job.state = JobState.FAILED
         job.error = str(error)
         job.user_message = classify_error(error) or "Submission failed"
         self._notify()
         self._pump()
+
+    def _retry_submit_later(self, job: Job, error) -> bool:
+        """Keep ambiguous submit failures active and retry idempotently."""
+        if job.state == JobState.CANCELLED:
+            return True
+        if job.backend_job_id:
+            return True
+
+        job.error = str(error)
+        if job.submit_attempts >= job.max_submit_attempts:
+            job.state = JobState.FAILED
+            job.user_message = classify_error(error) or "Submission failed"
+            self._notify()
+            self._pump()
+            return True
+
+        job.state = JobState.RUNNING_SUBMIT
+        job.user_message = "Submission still pending - retrying"
+        self._notify()
+
+        if job._submit_retry_scheduled:
+            return True
+        job._submit_retry_scheduled = True
+
+        def _retry():
+            job._submit_retry_scheduled = False
+            if job.state != JobState.RUNNING_SUBMIT or job.backend_job_id:
+                return None
+            job.error = ""
+            job.user_message = "Retrying submission..."
+            self._notify()
+            self._submit_job_attempt(job)
+            return None
+
+        bpy.app.timers.register(_retry, first_interval=job.submit_retry_delay_s)
+        return True
 
     def _schedule_poll(self, job: Job, interval: float) -> None:
         # Capture job by closure; the tick is a no-op if state changed.

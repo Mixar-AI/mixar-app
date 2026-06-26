@@ -75,6 +75,7 @@ class Lookdev360Job(Job):
             job_type="pbr_gen",
             model="hunyuan-pbr",
             payload=payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
             timeout=1200.0,
