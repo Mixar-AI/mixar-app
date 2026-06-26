@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Mesh Segmentation generation queue: concrete Job + enqueue helpers.
+"""Mesh Segmentation job queue: concrete Job + enqueue helpers.
 
 Wires the generic ``FeatureQueue`` framework to the mesh segmentation
 service. Async job type with inline JSON results (no file download).
@@ -15,10 +15,11 @@ from typing import Dict, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.generation_queue_service import (
-    get_generation_queue_service,
+from mixar.modules.common.api.services.job_queue_service import (
+    get_job_queue_service,
 )
 from mixar.modules.common.job_queue import Job, get_queue
+from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 logger = get_logger(__name__)
@@ -49,7 +50,7 @@ class MeshSegmentJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         payload = {
             "mesh_file_bytes_b64": self.mesh_bytes_b64,
             "mesh_filename": self.mesh_filename,
@@ -60,12 +61,13 @@ class MeshSegmentJob(Job):
             job_type="mesh_segment",
             model="mesh_segment_v1",
             payload=payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
@@ -117,7 +119,7 @@ class MeshSegmentJob(Job):
             if isinstance(result, dict):
                 self._result_data = result
             return ("DONE", [])
-        if status == "FAILED":
+        if status in FAILED_BACKEND_STATUSES:
             self.error = inner.get("error", "Mesh segmentation failed")
             self.user_message = inner.get("user_message", "") or "Mesh segmentation failed"
             return ("FAIL", [])

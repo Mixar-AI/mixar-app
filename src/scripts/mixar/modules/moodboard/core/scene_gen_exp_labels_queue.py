@@ -19,10 +19,11 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.generation_queue_service import (
-    get_generation_queue_service,
+from mixar.modules.common.api.services.job_queue_service import (
+    get_job_queue_service,
 )
 from mixar.modules.common.job_queue import Job, JobState, get_queue
+from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABELS
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
@@ -58,7 +59,7 @@ class SceneGenExpLabelsJob(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         payload = {
             "image_bytes_b64": self.image_bytes_b64,
             "generate_mesh": False,
@@ -71,12 +72,13 @@ class SceneGenExpLabelsJob(Job):
             job_type="scene_reconstruction",
             model="sam3d",
             payload=payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_generation_queue_service()
+        service = get_job_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
@@ -101,7 +103,7 @@ class SceneGenExpLabelsJob(Job):
         gq_status = inner.get("status", "")
         result = inner.get("result") or {}
 
-        if gq_status == "FAILED":
+        if gq_status in FAILED_BACKEND_STATUSES:
             self.error = inner.get("error", "Label extraction failed")
             self.user_message = inner.get("user_message", "") or "Label extraction failed"
             return ("FAIL", [])

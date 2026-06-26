@@ -106,7 +106,7 @@ src/
 | **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, sandbox script execution, markdown rendering |
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
 | **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |
-| **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping via Hunyuan models |
+| **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines via the Topology "Model" dropdown: **Hunyuan** (backend service `retopology`) and **Tripo** (v2.0 `mesh/decimate`, backend service `retopology_tripo`). Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
 | **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, updates |
 | **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
 | **asset_search** | Neural embedding-based asset library search and training |
@@ -119,11 +119,11 @@ src/
 
 ---
 
-## Unified Generation Queue
+## Unified Job Queue
 
 All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush gen, scene gen) submit through **one unified async job queue** instead of bespoke per-feature services. Lives in `modules/common/job_queue/`.
 
-**Backend contract**: `POST /generation-queue/enqueue` (job_type, model, payload) → `GET /generation-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `GenerationQueueService` wraps these.
+**Backend contract**: `POST /job-queue/jobs` (job_type, model, payload) → `GET /job-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `JobQueueService` wraps these.
 
 **Client architecture**:
 - **`core/job.py`** — base `Job` with shared `_unwrap_response()`, `_parse_standard_submit()`, `_parse_standard_poll()`, default `poll()`.
@@ -134,7 +134,7 @@ All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush ge
 - **`core/helpers.py`** — `get_queue_with_listener()`, `create_scene_flag_listener()` (with `on_start`/`on_finish` hooks), `show_batch_summary_popup()`, `extract_image_urls()`, `download_images_to_moodboard()`.
 - **`core/queue_manager.py`** — `FeatureQueue` drives Job lifecycle: PENDING → RUNNING_SUBMIT → RUNNING_POLL → RUNNING_DOWNLOAD → SUCCESS/FAILED.
 
-**Per-feature enqueue helpers** (build payloads + fan-out, then call `enqueue_generation()`): `moodboard/core/generation_enqueue.py` (Pro, scene gen HP/LP), `hunyuan/core/{retopology,uv,part}_enqueue.py`. Operators call these or `enqueue_generation()` directly — **do not** create new Job subclasses for standard features.
+**Per-feature enqueue helpers** (build payloads + fan-out, then call `enqueue_generation()`): `moodboard/core/generation_enqueue.py` (Pro, scene gen HP/LP), `hunyuan/core/{retopology,uv,part}_enqueue.py`. Operators call these or `enqueue_generation()` directly — **do not** create new Job subclasses for standard features. `retopology_enqueue.py` branches on the Topology `model` prop: Hunyuan → `service=retopology, model=hunyuan_topology`; Tripo → `service=retopology_tripo, model=tripo_v2` with a `tripo_params` payload (`face_limit`/`quad`/`bake`), a 150 MB export cap, and an import hook that renames to `*_low` and only Smart-UV-unwraps when `bake=false`.
 
 **Genuinely unique jobs keep their own queue files** (custom polling/result handling): `lookdev360_queue.py` (PBR textures → fill layers), `scene_recon_queue.py` (progressive 2-phase), `scene_gen_exp_labels_queue.py` (label extraction), `mesh_segment_queue.py` (inline JSON → vertex groups), `matgen_queue.py` (inline script → procedural material).
 

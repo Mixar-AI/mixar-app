@@ -37,6 +37,7 @@ from .sandbox_modules import (
     RESTRICTED_OS,
     RESTRICTED_BASE64,
     RESTRICTED_TEMPFILE,
+    RESTRICTED_URLLIB,
     restricted_open,
 )
 from .sandbox_builtins import get_safe_builtins, sanitize_value
@@ -90,6 +91,11 @@ class ExecutionResult:
             response["deleted_objects"] = self.deleted_objects
         if self.error:
             response["error"] = self.error
+        # Forward the traceback over the (internal) RPC so the backend can log the
+        # failing line. This is an internal channel; the backend strips tracebacks
+        # from any client-facing API response per its own contract.
+        if self.traceback:
+            response["traceback"] = self.traceback
 
         return response
 
@@ -257,6 +263,7 @@ class ScriptExecutor:
             import mathutils
             import bpy_extras
             import imbuf
+            import numpy
             import os as _real_os
             import pathlib as _real_pathlib
 
@@ -274,6 +281,7 @@ class ScriptExecutor:
                 "datetime": datetime,
                 "collections": collections,
                 "time": time,
+                "numpy": numpy,
                 # Blender modules
                 "bmesh": bmesh,
                 "mathutils": mathutils,
@@ -285,6 +293,7 @@ class ScriptExecutor:
                 "pathlib": _real_pathlib,
                 "base64": RESTRICTED_BASE64,
                 "tempfile": RESTRICTED_TEMPFILE,
+                "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,
             }
 
@@ -297,9 +306,11 @@ class ScriptExecutor:
             def _restricted_import(name, *args, **kwargs):
                 if name in _allowed:
                     return exec_namespace[name]
-                # Allow addon's own modules (e.g. mixar.modules.paint.*)
+                # Allow addon's own modules (e.g. mixar.modules.paint.*) and numpy's
+                # internal submodules (numpy lazily imports numpy.core._methods etc.).
+                # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
                 top_module = name.split(".")[0]
-                if top_module == "mixar":
+                if top_module in ("mixar", "numpy"):
                     return _real_import(name, *args, **kwargs)
                 raise ImportError(
                     f"Module '{name}' is not available. "
@@ -339,6 +350,10 @@ class ScriptExecutor:
             result.success = False
             result.error = str(e)
             result.traceback = traceback.format_exc()
+            # Log the full stack: str(e) alone (e.g. a bare KeyError) is often
+            # uninformative, and to_dict() forwards the traceback to the caller so
+            # backend logs can name the failing line instead of a "Type: message".
+            logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
             self._execution_lock.release()
