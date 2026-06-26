@@ -72,6 +72,7 @@ class SceneGenExpLabelsJob(Job):
             job_type="scene_reconstruction",
             model="sam3d",
             payload=payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )

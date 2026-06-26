@@ -61,6 +61,7 @@ class AsyncGLBJob(Job):
             job_type=self.job_type,
             model=self.model,
             payload=self.payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )
@@ -132,6 +133,7 @@ class SyncImageJob(Job):
             job_type=self.job_type,
             model=self.model,
             payload=self.payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )
