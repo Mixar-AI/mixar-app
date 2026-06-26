@@ -103,3 +103,24 @@ def test_main_thread_executor_rejects_late_timers_after_cleanup():
     assert "_shutdown_requested" in executor_source
     assert "if _shutdown_requested:" in run_on_main_thread
     assert "_shutdown_requested = True" in cleanup
+
+
+def test_headless_sandbox_uses_windows_parent_liveness_probe():
+    source = read_src("headless/headless_main.py")
+
+    assert "def _pid_alive_windows" in source
+    assert "OpenProcess" in source
+    assert "GetExitCodeProcess" in source
+    assert 'os.name == "nt"' in source
+    assert "os.kill(pid, 0)" in source
+
+
+def test_sandbox_supervisor_uses_windows_popen_flags():
+    source = read_src("bootstrap/sandbox_supervisor.py")
+
+    assert "def _sandbox_popen_kwargs" in source
+    assert "CREATE_NEW_PROCESS_GROUP" in source
+    assert "creationflags" in source
+    assert "start_new_session" in source
+    assert 'os.name == "nt"' in source
+    assert "re.sub" in source
