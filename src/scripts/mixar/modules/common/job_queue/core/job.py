@@ -60,6 +60,14 @@ class Job:
     backend_status: str = ""      # Raw status from backend (PENDING/SUBMITTED/POLLING/DONE/FAILED)
     queue_position: int = 0       # Position in backend queue (0 = not queued or unknown)
 
+    # Submit retry/idempotency tracking. A local HTTP submit timeout is
+    # ambiguous: the backend may still accept the request later.
+    submit_idempotency_key: str = field(default_factory=lambda: str(uuid.uuid4()))
+    submit_attempts: int = 0
+    max_submit_attempts: int = 3
+    submit_retry_delay_s: float = 8.0
+    _submit_retry_scheduled: bool = field(default=False, repr=False)
+
     # Result objects (populated by on_imported)
     imported_object_names: str = ""
 

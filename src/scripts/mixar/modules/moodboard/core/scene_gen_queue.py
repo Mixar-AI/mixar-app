@@ -51,6 +51,7 @@ class SceneGenQueueJob(Job):
             job_type=SCENE_GEN_JOB_TYPE,
             model=SCENE_GEN_MODEL,
             payload=self.payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )

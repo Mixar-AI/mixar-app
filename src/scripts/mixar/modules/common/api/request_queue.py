@@ -156,6 +156,15 @@ class RequestQueues:
                 return callback
             return self._expired_callbacks.pop(callback_id, None)
 
+    def peek_expired_callback(self, callback_id: str) -> Optional[PendingCallback]:
+        """Return an expired callback without consuming it.
+
+        Timeout notifications are advisory. Keeping the expired callback allows
+        the real late HTTP response to reconcile the original operation.
+        """
+        with self._callback_lock:
+            return self._expired_callbacks.get(callback_id)
+
     def cancel_callback(self, callback_id: str) -> bool:
         """Cancel a pending callback."""
         with self._callback_lock:

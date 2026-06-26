@@ -61,6 +61,7 @@ class MeshSegmentJob(Job):
             job_type="mesh_segment",
             model="mesh_segment_v1",
             payload=payload,
+            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
         )

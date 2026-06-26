@@ -113,6 +113,7 @@ class JobQueueService(BaseService):
         job_type: str,
         model: str,
         payload: dict,
+        idempotency_key: Optional[str] = None,
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
@@ -124,7 +125,7 @@ class JobQueueService(BaseService):
             timeout: Request timeout in seconds.
         """
         _require_auth()
-        idempotency_key = str(uuid.uuid4())
+        idempotency_key = idempotency_key or str(uuid.uuid4())
         return self.post_async(
             "jobs",
             json={
