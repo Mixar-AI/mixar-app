@@ -103,7 +103,7 @@ src/
 | Module | What it does |
 |--------|-------------|
 | **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |
-| **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, sandbox script execution, markdown rendering |
+| **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, supervised headless sandbox script execution with Windows-safe parent liveness checks, markdown rendering |
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
 | **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |
 | **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines via the Topology "Model" dropdown: **Hunyuan** (backend service `retopology`) and **Tripo** (v2.0 `mesh/decimate`, backend service `retopology_tripo`). Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
@@ -173,6 +173,7 @@ A sophisticated **two-phase registration system**:
 - **Singleton + daemon threads**: ConnectionManager for persistent WebSocket
 - **Handler pattern**: Depsgraph handlers set flags → timers do work (avoids blocking draw)
 - **Script communication**: `__PARAMS__` in, `print("__RESULT__" + json.dumps(...))` out
+- **Headless sandbox supervision**: Parent Mixar process spawns a background sandbox child with platform-specific process flags; Windows children use Win32 process APIs for parent liveness checks.
 - **Time-budgeted loading**: UI modules load without blocking the main loop
 
 ---
