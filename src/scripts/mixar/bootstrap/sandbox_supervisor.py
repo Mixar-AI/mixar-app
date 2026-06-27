@@ -14,6 +14,7 @@ See: mixar-backend/docs/superpowers/specs/2026-06-04-headless-sandbox-create-mod
 """
 
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -32,8 +33,26 @@ _lock = threading.Lock()
 
 
 def _child_log_path(connection_id: str) -> str:
-    safe = connection_id.replace("/", "_")
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", connection_id)
     return os.path.join(tempfile.gettempdir(), "mixar_sandbox_{}.log".format(safe))
+
+
+def _sandbox_popen_kwargs(env: dict, logf) -> dict:
+    kwargs = {
+        "env": env,
+        "stdout": (logf or subprocess.DEVNULL),
+        "stderr": subprocess.STDOUT if logf else subprocess.DEVNULL,
+        "close_fds": True,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = getattr(
+            subprocess,
+            "CREATE_NEW_PROCESS_GROUP",
+            0x00000200,
+        )
+    else:
+        kwargs["start_new_session"] = True
+    return kwargs
 
 
 def _headless_main_path() -> str:
@@ -90,9 +109,8 @@ def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
             logf = None
         try:
             proc = subprocess.Popen(
-                argv, env=env, start_new_session=True,
-                stdout=(logf or subprocess.DEVNULL),
-                stderr=subprocess.STDOUT if logf else subprocess.DEVNULL,
+                argv,
+                **_sandbox_popen_kwargs(env, logf),
             )
         except Exception as e:
             logger.error("Failed to spawn sandbox %s: %s", connection_id, e, exc_info=True)

@@ -136,10 +136,6 @@ class LayerConnectionContext:
     # Transition input (set during mask processing)
     transition_input: Any = None
 
-    # Pre-mask alpha after modifiers (set per-channel before mask processing).
-    # Kept separate from end_chain, which now carries the mask-multiplied alpha.
-    alpha_after_mod: Any = None
-
     # End chain variables (set per-channel during mask processing)
     end_chain: Any = None
     end_chain_n: Any = None
