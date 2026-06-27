@@ -311,6 +311,11 @@ def _process_single_channel(
     # Initialize end chain variables
     initialize_end_chain_variables(ctx, alpha_after_mod)
 
+    # Preserve the genuine pre-mask alpha (after modifiers, before masks) so the
+    # smooth-bump neighbor defaults can still recover it after end_chain is
+    # overwritten with the mask-multiplied alpha during mask processing.
+    ctx.alpha_after_mod = alpha_after_mod
+
     # Process mask multiplies for this channel
     alpha, transition_input = process_channel_mask_multiplies(
         ctx, i, ch, root_ch, alpha, intensity_multiplier, group_alpha
