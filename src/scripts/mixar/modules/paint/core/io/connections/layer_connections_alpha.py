@@ -58,9 +58,20 @@ def process_channel_mask_multiplies(
 
     transition_input = None
 
+    # end_chain tracks the mask-multiplied alpha at the transition bump chain
+    # boundary. It feeds height_proc's "Alpha" input for standard (non smooth)
+    # bump when write_height is off (see connect_standard_alpha /
+    # connect_transition_bump_no_crease), so it MUST include the layer's mask
+    # multiplications - otherwise masks have no effect on the normal output when
+    # write height is disabled (ucupaint pattern). It is initialised to the
+    # pre-mask alpha by initialize_end_chain_variables and is updated below as
+    # masks are mixed in.
+    end_chain = alpha
+
     # If chain is 0, apply intensity multiplier immediately
     if chain == 0 and intensity_multiplier:
         alpha = create_link(tree, alpha, intensity_multiplier.inputs[0])[0]
+        end_chain = alpha
 
     # Process each mask
     for j, mask in enumerate(layer.masks):
@@ -90,14 +101,22 @@ def process_channel_mask_multiplies(
             alpha = create_link(tree, alpha, mix_limit.inputs[0])[0]
             create_link(tree, group_alpha, mix_limit.inputs[1])
 
-        # At chain boundary, capture transition_input
+        # At chain boundary, capture transition_input and freeze end_chain
+        # (alpha after the chain masks, post intensity multiplier)
         if j == chain - 1 and intensity_multiplier:
             transition_input = alpha
             alpha = create_link(tree, alpha, intensity_multiplier.inputs[0])[0]
+            end_chain = alpha
 
-    # If no trans_bump_ch, use final alpha as transition_input
+    # If no trans_bump_ch, the whole mask stack is the chain: use the final
+    # mask-multiplied alpha for both transition_input and end_chain.
     if not trans_bump_ch:
         transition_input = alpha
+        end_chain = alpha
+
+    # Store the mask-multiplied end_chain so the height/normal processor "Alpha"
+    # connection reflects the masks when write height is off.
+    ctx.end_chain = end_chain
 
     return alpha, transition_input
 
