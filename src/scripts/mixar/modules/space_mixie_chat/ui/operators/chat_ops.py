@@ -133,6 +133,22 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
 
+        # Clear any STALE loader left by a prior turn before starting a new one.
+        # If the previous turn was cancelled or the stream was closed client-side,
+        # the backend can't emit a loader-off (you can't write to a closed stream),
+        # so a "Thinking" loader — and its ghost placeholder bubble — can spin
+        # forever. Starting a NEW turn is the reliable point to clear it. Modify /
+        # input-response turns continue an existing flow, so leave those untouched.
+        if not is_modify and not is_awaiting_input:
+            stale_placeholders = []
+            for i, m in enumerate(scene.mixie_chat_messages):
+                if getattr(m, 'loader_visible', False):
+                    m.loader_visible = False
+                if getattr(m, 'bubble_id', '').startswith(TEMP_PLACEHOLDER_PREFIX):
+                    stale_placeholders.append(i)
+            for i in reversed(stale_placeholders):
+                scene.mixie_chat_messages.remove(i)
+
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
         user_msg.sender = 'USER'
