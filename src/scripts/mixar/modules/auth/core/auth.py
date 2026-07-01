@@ -8,6 +8,8 @@ Authentication utilities for Mixar
 
 import json
 import platform
+import threading
+import time
 import urllib.parse
 import webbrowser
 
@@ -290,15 +292,45 @@ def login(username, password):
         }
 
 
+# The backend rotates refresh tokens: each successful refresh invalidates the
+# token that was sent. Concurrent refreshes (e.g. several request-pool threads
+# hitting 401 at the same expiry instant) must therefore be single-flighted —
+# a second in-flight refresh would send the now-invalidated old token, get
+# 401, and delete the freshly stored credentials, silently logging the user
+# out. Threads that arrive while/just after a refresh completes reuse its
+# result instead of rotating again.
+_refresh_lock = threading.Lock()
+_last_refresh_success = None  # (time.monotonic(), result dict)
+_REFRESH_REUSE_WINDOW = 10.0  # seconds
+
+
 def refresh_access_token():
     """
     Refresh the access token using the stored refresh token.
+
+    Thread-safe and single-flighted: concurrent callers are serialized, and
+    callers that arrive within a short window of a successful refresh get the
+    already-refreshed token back instead of triggering another rotation.
 
     Returns dict with:
         - success: bool
         - message: str
         - token: str (new access token, only if success)
     """
+    global _last_refresh_success
+    with _refresh_lock:
+        if _last_refresh_success is not None:
+            age = time.monotonic() - _last_refresh_success[0]
+            if 0 <= age < _REFRESH_REUSE_WINDOW:
+                return _last_refresh_success[1]
+        result = _refresh_access_token_locked()
+        if result.get("success"):
+            _last_refresh_success = (time.monotonic(), result)
+        return result
+
+
+def _refresh_access_token_locked():
+    """Perform the actual refresh request. Caller must hold ``_refresh_lock``."""
     refresh_token = get_refresh_token()
     if not refresh_token:
         return {
