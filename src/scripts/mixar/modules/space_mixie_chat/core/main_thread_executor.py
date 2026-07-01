@@ -26,7 +26,12 @@ from typing import Optional
 import bpy
 
 from .executor import get_executor
-from ..constants import SessionState, TIMER_INTERVAL
+from ..constants import (
+    SessionState,
+    TIMER_INTERVAL,
+    is_lane_scene,
+    is_non_scene_routing_session,
+)
 
 logger = get_logger(__name__)
 
@@ -39,6 +44,41 @@ _shutdown_requested = False
 
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
+
+# The user's genuine foreground scene — the one window.scene should return to
+# after a per-scene-routed (or lane) script flips away from it. Tracked by name
+# because Scene datablocks are not safe to hold across undo/file-load. Updated
+# only when an active-scene-follow script runs (agent:/empty session), i.e. the
+# scene the user is actually looking at (see _process_one_request).
+_user_foreground_scene_name: str = ""
+
+
+def _resolve_user_foreground_scene():
+    """The user's real (non-lane) foreground scene to restore window.scene to.
+
+    Prefers the tracked scene captured while an active-scene-follow script ran.
+    If it was deleted, falls back to any real (non-lane) scene — NEVER a lane
+    scene. Returns None only if no real scene exists (should not happen).
+    """
+    import bpy
+    tracked = bpy.data.scenes.get(_user_foreground_scene_name) if _user_foreground_scene_name else None
+    if tracked is not None and not is_lane_scene(tracked):
+        return tracked
+    for s in bpy.data.scenes:
+        if not is_lane_scene(s):
+            return s
+    return None
+
+
+def _send_error_response(request_id: str, error: str) -> None:
+    """Reply to a script request with a failure result (mirrors the stale-session
+    path). No-op for notifications or when no client is connected."""
+    if request_id == "notification":
+        return
+    from .jsonrpc_client import get_jsonrpc_client
+    client = get_jsonrpc_client()
+    if client and client.is_connected:
+        client.queue_response(request_id, {"success": False, "error": error})
 
 
 def queue_script_request(script: str, request_id: str, tool_name: str = "unknown", session_id: str = "") -> None:
@@ -158,20 +198,45 @@ def _process_one_request() -> Optional[float]:
     logger.info(f"Executing {tool_name} (id: {request_id})")
 
     # --- Scene context routing ---
-    # Find the target scene by session_id and switch context so the
-    # script executes against the correct scene's objects.
-    # The switch + execute + restore all happen within this single timer
-    # tick — Blender does not redraw, so the user sees no visual change.
-    original_scene = None
+    # A per-scene routing session (the user's main scene UUID, or an
+    # "agentlane:<parent>:<n>" lane scene) MUST resolve to a scene: switch to it,
+    # execute, restore. The constant "agent:<connection>" / empty session instead
+    # follows the user's active window scene (normal / sandbox mode).
+    # The switch + execute + restore all happen within this single timer tick —
+    # Blender does not redraw, so the user sees no visual change.
+    global _user_foreground_scene_name
+    did_switch = False
     target_scene = None
-    if session_id:
+    non_scene_routed = is_non_scene_routing_session(session_id)
+
+    if not non_scene_routed:
         for s in bpy.data.scenes:
             if getattr(s, 'mixie_session_id', '') == session_id:
                 target_scene = s
                 break
+        if target_scene is None:
+            # Bug 1: a real per-scene session with no matching scene. Running it
+            # against whatever is active would clobber the user's work in the
+            # wrong scene — hard-fail instead of the old silent fallback.
+            logger.warning(
+                "No scene for session '%s' (tool %s, id %s) — rejecting script",
+                session_id, tool_name, request_id,
+            )
+            _send_error_response(request_id, f"no scene for session {session_id}")
+            if not _request_queue.empty():
+                return TIMER_INTERVAL
+            _timer_active = False
+            return None
+    elif bpy.context.window is not None:
+        # Active-scene-follow request → this is the user's foreground scene.
+        # Remember it (unless it's a lane scene) so per-scene/lane scripts can
+        # restore window.scene back to it, not to whatever was last active.
+        active = bpy.context.window.scene
+        if active is not None and not is_lane_scene(active):
+            _user_foreground_scene_name = active.name
 
     if target_scene and bpy.context.window and bpy.context.window.scene != target_scene:
-        original_scene = bpy.context.window.scene
+        did_switch = True
         bpy.context.window.scene = target_scene
         logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
 
@@ -213,12 +278,18 @@ def _process_one_request() -> Optional[float]:
     except Exception as _op_exc:  # never break execution/response on history failure
         logger.debug("operation_history: failed to record agent op: %s", _op_exc)
 
-    # Restore original scene after execution
-    if original_scene is not None and bpy.context.window:
-        try:
-            bpy.context.window.scene = original_scene
-        except Exception:
-            pass  # Scene may have been deleted by the script
+    # Restore the user's real foreground scene after execution (Bug 2).
+    # Restore to the tracked user scene — NOT "whatever was active when this
+    # script started", which may itself be a throwaway lane scene. If that
+    # scene was deleted, _resolve_user_foreground_scene() falls back to any
+    # real (non-lane) scene, never a lane.
+    if did_switch and bpy.context.window:
+        restore_scene = _resolve_user_foreground_scene()
+        if restore_scene is not None and bpy.context.window.scene != restore_scene:
+            try:
+                bpy.context.window.scene = restore_scene
+            except Exception:
+                pass  # Scene may have been deleted by the script
 
     # Send response directly via WebSocket client (thread-safe)
     # This avoids cross-thread queue polling which caused segfaults
