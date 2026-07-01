@@ -21,6 +21,35 @@ from . import props
 from .constants import *
 from .cpp_interface import TDCoreWrapper
 
+# Gradient shader compiled once and reused. Building it inside the draw
+# callback recompiled a GPU shader on every viewport redraw while the
+# gradient overlay is enabled — visible stutter and driver-memory churn.
+_gradient_shader = None
+
+
+def _get_gradient_shader(version):
+	global _gradient_shader
+	if _gradient_shader is None:
+		if version < (3, 3, 0):
+			_gradient_shader = gpu.types.GPUShader(VERTEX_SHADER_TEXT_3_0, FRAGMENT_SHADER_TEXT_3_0)
+		else:
+			vert_out = gpu.types.GPUStageInterfaceInfo("my_interface")
+			vert_out.smooth('VEC3', "pos")
+
+			shader_info = gpu.types.GPUShaderCreateInfo()
+			shader_info.push_constant('FLOAT', "pos_x_min")
+			shader_info.push_constant('FLOAT', "pos_x_max")
+			shader_info.vertex_in(0, 'VEC2', "position")
+			shader_info.vertex_out(vert_out)
+			shader_info.fragment_out(0, 'VEC4', "FragColor")
+
+			shader_info.vertex_source(VERTEX_SHADER_TEXT_3_3)
+			shader_info.fragment_source(FRAGMENT_SHADER_TEXT_3_3)
+
+			_gradient_shader = gpu.shader.create_from_info(shader_info)
+	return _gradient_shader
+
+
 # Draw Reference Gradient Line for Color Visualizer
 def draw_callback_px(_, __):
 	td = bpy.context.scene.td
@@ -146,29 +175,8 @@ def draw_callback_px(_, __):
 	# Set Shader Parameters and Draw
 	indices = ((0, 1, 2), (2, 1, 3))
 
-	if version < (3, 3, 0):
-		shader = gpu.types.GPUShader(VERTEX_SHADER_TEXT_3_0, FRAGMENT_SHADER_TEXT_3_0)
-		batch = batch_for_shader(shader, 'TRIS', {"position": vertices}, indices=indices)
-	else:
-		# Draw Gradient Line via Shader
-		vert_out = gpu.types.GPUStageInterfaceInfo("my_interface")
-		vert_out.smooth('VEC3', "pos")
-
-		shader_info = gpu.types.GPUShaderCreateInfo()
-		shader_info.push_constant('FLOAT', "pos_x_min")
-		shader_info.push_constant('FLOAT', "pos_x_max")
-		shader_info.vertex_in(0, 'VEC2', "position")
-		shader_info.vertex_out(vert_out)
-		shader_info.fragment_out(0, 'VEC4', "FragColor")
-
-		shader_info.vertex_source(VERTEX_SHADER_TEXT_3_3)
-		shader_info.fragment_source(FRAGMENT_SHADER_TEXT_3_3)
-
-		shader = gpu.shader.create_from_info(shader_info)
-		del vert_out
-		del shader_info
-
-		batch = batch_for_shader(shader, 'TRIS', {"position": vertices}, indices=indices)
+	shader = _get_gradient_shader(version)
+	batch = batch_for_shader(shader, 'TRIS', {"position": vertices}, indices=indices)
 
 	shader.bind()
 	shader.uniform_float("pos_x_min", pos_x_min)
