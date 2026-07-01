@@ -215,9 +215,60 @@ def export_objects_to_obj(objects: list) -> tuple:
 # =============================================================================
 
 
-def download_texture_from_url(url: str, name: str) -> bpy.types.Image:
+def download_texture_to_tempfile(url: str) -> str:
+    """Download a texture image from URL to a temp file.
+
+    Thread-safe (no ``bpy`` access) — this is the half of the old
+    ``download_texture_from_url`` that may run on a background thread.
+
+    Returns:
+        Path to the temp file. The caller owns it; ``load_texture_from_file``
+        removes it after loading.
     """
-    Download texture image from URL and load into Blender.
+    import urllib.request
+
+    logger.debug("[Lookdev360] Downloading texture...")
+    with urllib.request.urlopen(url, timeout=60) as response:
+        image_bytes = response.read()
+    logger.debug("[Lookdev360] Downloaded %s bytes", len(image_bytes))
+
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+        f.write(image_bytes)
+        return f.name
+
+
+def load_texture_from_file(temp_path: str, name: str) -> bpy.types.Image:
+    """Load + pack a downloaded texture and remove the temp file.
+
+    MAIN THREAD ONLY: creating, renaming, and packing image datablocks
+    mutates ``bpy.data``, which is not thread-safe.
+
+    Args:
+        temp_path: Path returned by ``download_texture_to_tempfile``
+        name: Name for the loaded image
+
+    Returns:
+        Blender Image object
+    """
+    try:
+        img = bpy.data.images.load(temp_path, check_existing=False)
+        img.name = name
+        img.pack()
+        logger.debug("[Lookdev360] Loaded texture: %s", img.name)
+        return img
+    finally:
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+
+
+def download_texture_from_url(url: str, name: str) -> bpy.types.Image:
+    """Download texture image from URL and load into Blender.
+
+    MAIN THREAD ONLY (creates bpy datablocks). Background threads should use
+    ``download_texture_to_tempfile`` and defer ``load_texture_from_file`` to
+    a main-thread timer.
 
     Args:
         url: URL to download image from
@@ -226,34 +277,7 @@ def download_texture_from_url(url: str, name: str) -> bpy.types.Image:
     Returns:
         Blender Image object
     """
-    import urllib.request
-
-    logger.debug("[Lookdev360] Downloading texture...")
-
-    # Download image
-    with urllib.request.urlopen(url, timeout=60) as response:
-        image_bytes = response.read()
-
-    logger.debug("[Lookdev360] Downloaded %s bytes", len(image_bytes))
-
-    # Write to temp file
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
-        f.write(image_bytes)
-        temp_path = f.name
-
-    try:
-        # Load into Blender
-        img = bpy.data.images.load(temp_path, check_existing=False)
-        img.name = name
-        img.pack()
-        logger.debug("[Lookdev360] Loaded texture: %s", img.name)
-        return img
-    finally:
-        # Clean up temp file
-        try:
-            os.unlink(temp_path)
-        except OSError:
-            pass
+    return load_texture_from_file(download_texture_to_tempfile(url), name)
 
 
 # Paint module integration functions re-exported from dedicated module
