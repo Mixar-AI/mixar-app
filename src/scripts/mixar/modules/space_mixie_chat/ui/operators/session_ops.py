@@ -244,12 +244,16 @@ class MIXIE_CHAT_OT_abort_session(Operator):
             return False
         session = get_session_manager()
         scene = context.scene
-        if session.get_state(scene) == SessionState.BUSY:
+        state = session.get_state(scene)
+        # BUSY: agent running (or showing choice/approval interrupt buttons).
+        # AWAITING_INPUT: agent paused on a text question — Escape should cancel
+        # it too, otherwise a text prompt can only be answered, never dismissed.
+        if state in (SessionState.BUSY, SessionState.AWAITING_INPUT):
             return True
         # Defence-in-depth: allow abort from IDLE when a session_id exists.
         # Normally SSE errors keep state=BUSY, but edge cases may leave IDLE
         # while the backend is still running.
-        if session.get_state(scene) == SessionState.IDLE:
+        if state == SessionState.IDLE:
             return bool(session.get_session_id(scene))
         return False
 
@@ -271,13 +275,13 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
 
-        # 4b. Settle the turn: collapse live narration -> "Thought for Ns",
-        # finalize running steps, so a retry starts from a clean transcript.
-        try:
-            from ...core.slot_processor import finalize_turn
-            finalize_turn(scene)
-        except Exception as e:
-            logger.debug(f"finalize_turn on abort skipped: {e}")
+        # 4b. Clear any pending interrupt prompt. If the agent was paused on a
+        # request_user_input question (choice/approval buttons or a text
+        # prompt), abort means the user is dismissing it — drop the buttons /
+        # input affordance so a stale prompt can't be answered after the fact.
+        # The backend /agent/cancel call below clears the matching server-side
+        # interrupt, so the two stay in sync.
+        self._clear_interrupt_prompt(context)
 
         # 5. Send abort to backend
         self._send_abort_request_async(session.get_session_id(scene))
@@ -322,6 +326,26 @@ class MIXIE_CHAT_OT_abort_session(Operator):
                 messages.remove(idx)
         except Exception as e:
             logger.debug(f"_finalize_loader_bubble skipped: {e}")
+
+    @staticmethod
+    def _clear_interrupt_prompt(context) -> None:
+        """Drop any pending request_user_input prompt UI on user abort.
+
+        Clears per-bubble ``action_items`` (choice/approval buttons) and
+        ``input_type`` (text-input affordance) so the dismissed prompt can no
+        longer be answered. Without this the C++ slot renderer keeps drawing the
+        buttons after the session returns to IDLE, and clicking one would POST to
+        /agent/input for an interrupt the backend has already cleared.
+        """
+        try:
+            messages = context.scene.mixie_chat_messages
+            for msg in messages:
+                if getattr(msg, 'action_items', None) and len(msg.action_items):
+                    msg.action_items.clear()
+                if getattr(msg, 'input_type', ''):
+                    msg.input_type = ''
+        except Exception as e:
+            logger.debug(f"_clear_interrupt_prompt skipped: {e}")
 
     def _send_abort_request_async(self, session_id: str) -> None:
         """Send abort request to backend in background thread."""

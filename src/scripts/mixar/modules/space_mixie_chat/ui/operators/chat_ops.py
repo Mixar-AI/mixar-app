@@ -24,6 +24,7 @@ from mixar.config.logging_config import get_logger
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
 from ...core import (
+    get_dummy_response,
     get_session_manager,
     image_to_base64,
 )
@@ -131,6 +132,22 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not ws_client.connection_id:
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
+
+        # Clear any STALE loader left by a prior turn before starting a new one.
+        # If the previous turn was cancelled or the stream was closed client-side,
+        # the backend can't emit a loader-off (you can't write to a closed stream),
+        # so a "Thinking" loader — and its ghost placeholder bubble — can spin
+        # forever. Starting a NEW turn is the reliable point to clear it. Modify /
+        # input-response turns continue an existing flow, so leave those untouched.
+        if not is_modify and not is_awaiting_input:
+            stale_placeholders = []
+            for i, m in enumerate(scene.mixie_chat_messages):
+                if getattr(m, 'loader_visible', False):
+                    m.loader_visible = False
+                if getattr(m, 'bubble_id', '').startswith(TEMP_PLACEHOLDER_PREFIX):
+                    stale_placeholders.append(i)
+            for i in reversed(stale_placeholders):
+                scene.mixie_chat_messages.remove(i)
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
@@ -361,38 +378,36 @@ class MIXIE_CHAT_OT_send_message(Operator):
         return {'FINISHED'}
 
     def _execute_dev_mode(self, context, message_text: str):
-        """Handle message sending in dev mode with a scripted streaming turn.
-
-        Streams a realistic agent turn (thinking → plan → tools → Markdown
-        answer) through the real slot pipeline so the output UI can be
-        evaluated without a backend.
-        """
-        from ...core.dev_stream import start_demo_stream
-
+        """Handle message sending in dev mode with simulated response."""
         scene = context.scene
         pending_attachments = scene.mixie_chat_pending_attachments
 
-        # Copy any pending attachments onto a user bubble before streaming,
-        # matching the live path. start_demo_stream adds the user text bubble.
-        if len(pending_attachments) > 0:
-            user_msg = scene.mixie_chat_messages.add()
-            user_msg.sender = 'USER'
-            user_msg.text = message_text
-            for att in pending_attachments:
-                msg_att = user_msg.attachments.add()
-                msg_att.image_path = att.image_path
-                msg_att.image_source = att.image_source
-                msg_att.display_name = att.display_name
-            start_demo_stream(scene, user_text="")
-        else:
-            start_demo_stream(scene, user_text=message_text)
+        # Add user message to history
+        user_msg = scene.mixie_chat_messages.add()
+        user_msg.sender = 'USER'
+        user_msg.text = message_text
+
+        # Copy attachments to message history
+        for att in pending_attachments:
+            msg_att = user_msg.attachments.add()
+            msg_att.image_path = att.image_path
+            msg_att.image_source = att.image_source
+            msg_att.display_name = att.display_name
+
+        # Add simulated agent response
+        agent_msg = scene.mixie_chat_messages.add()
+        agent_msg.sender = 'AGENT'
+        agent_msg.text = get_dummy_response(message_text)
 
         # Clear input field and pending attachments
         scene.mixie_chat_input = ""
         pending_attachments.clear()
+
+        # Notify UI to refresh
         redraw_chat_areas()
 
-        logger.debug(f"Dev mode: streaming demo turn for: {message_text[:50]}...")
+        logger.debug(f"Dev mode: Simulated response for: {message_text[:50]}...")
+        self.report({'INFO'}, "Dev Mode: Message sent")
         return {'FINISHED'}
 
 
