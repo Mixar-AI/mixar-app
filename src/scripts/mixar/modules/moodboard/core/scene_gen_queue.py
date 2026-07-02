@@ -123,7 +123,12 @@ class SceneGenQueueJob(Job):
 
                 done = threading.Event()
 
-                def _import_cb():
+                # Loop variables are bound as defaults: with plain closure
+                # capture, a timed-out done.wait() lets the loop rebind them,
+                # and a late-firing callback would import the NEXT object's
+                # data under this object's id (and signal the wrong Event).
+                def _import_cb(glb_bytes=glb_bytes, pose=pose,
+                               object_id=object_id, done=done):
                     try:
                         callback = self._on_object_ready
                         result = callback(glb_bytes, pose, object_id) if callback else None

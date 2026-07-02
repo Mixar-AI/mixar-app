@@ -20,65 +20,32 @@ This approach is non-blocking and prevents UI freezes by:
 from collections.abc import Callable
 from mixar.config.logging_config import get_logger
 import queue
+import threading
 import time
 from typing import Optional
 
 import bpy
 
 from .executor import get_executor
-from ..constants import (
-    SessionState,
-    TIMER_INTERVAL,
-    is_lane_scene,
-    is_non_scene_routing_session,
-)
+from ..constants import SessionState, TIMER_INTERVAL
 
 logger = get_logger(__name__)
 
 # Request queue: (request_id, script, tool_name, session_id) from WebSocket thread
 _request_queue: queue.Queue = queue.Queue(maxsize=1000)
 
-# Timer state
+# Timer state. _timer_active is read/written from both the WebSocket thread
+# (queue_script_request) and the main thread (_process_one_request); every
+# access must hold _timer_lock — an unsynchronized check-then-clear can
+# strand a queued script, and its unsent tool response then hangs the
+# backend's agent turn until timeout.
+_timer_lock = threading.Lock()
 _timer_active = False
+_timer_fn = None  # the closure currently registered with bpy.app.timers
 _shutdown_requested = False
 
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
-
-# The user's genuine foreground scene — the one window.scene should return to
-# after a per-scene-routed (or lane) script flips away from it. Tracked by name
-# because Scene datablocks are not safe to hold across undo/file-load. Updated
-# only when an active-scene-follow script runs (agent:/empty session), i.e. the
-# scene the user is actually looking at (see _process_one_request).
-_user_foreground_scene_name: str = ""
-
-
-def _resolve_user_foreground_scene():
-    """The user's real (non-lane) foreground scene to restore window.scene to.
-
-    Prefers the tracked scene captured while an active-scene-follow script ran.
-    If it was deleted, falls back to any real (non-lane) scene — NEVER a lane
-    scene. Returns None only if no real scene exists (should not happen).
-    """
-    import bpy
-    tracked = bpy.data.scenes.get(_user_foreground_scene_name) if _user_foreground_scene_name else None
-    if tracked is not None and not is_lane_scene(tracked):
-        return tracked
-    for s in bpy.data.scenes:
-        if not is_lane_scene(s):
-            return s
-    return None
-
-
-def _send_error_response(request_id: str, error: str) -> None:
-    """Reply to a script request with a failure result (mirrors the stale-session
-    path). No-op for notifications or when no client is connected."""
-    if request_id == "notification":
-        return
-    from .jsonrpc_client import get_jsonrpc_client
-    client = get_jsonrpc_client()
-    if client and client.is_connected:
-        client.queue_response(request_id, {"success": False, "error": error})
 
 
 def queue_script_request(script: str, request_id: str, tool_name: str = "unknown", session_id: str = "") -> None:
@@ -97,7 +64,12 @@ def queue_script_request(script: str, request_id: str, tool_name: str = "unknown
     """
     global _execution_gate_until
     if _shutdown_requested:
-        logger.debug("Dropping script request during shutdown")
+        # Warning, not debug: if this fires outside real shutdown the backend
+        # will time out waiting for the never-sent response.
+        logger.warning(
+            "Dropping script request during shutdown (%s, id: %s)",
+            tool_name, request_id,
+        )
         return
 
     # Gate: give SSE events (planning text) time to arrive before execution
@@ -129,19 +101,51 @@ def gate_execution(delay: float = 0.05) -> None:
 
 
 def _ensure_timer_running() -> None:
-    """Ensure the execution timer is running."""
-    global _timer_active
+    """Ensure the execution timer is running.
+
+    A fresh closure is registered per start (instead of _process_one_request
+    itself): bpy timers are keyed by the callback object, so re-registering
+    the same function while a previous registration is still completing its
+    final ``return None`` can be silently dropped — stranding the queued
+    request and never sending its tool response.
+    """
+    global _timer_active, _timer_fn
     if _shutdown_requested:
         return
 
-    if not _timer_active:
+    with _timer_lock:
+        if _timer_active:
+            return
+
+        def _tick():
+            return _process_one_request()
+
         try:
-            if not bpy.app.timers.is_registered(_process_one_request):
-                bpy.app.timers.register(_process_one_request, first_interval=0.01)
-                _timer_active = True
-                logger.debug("Script execution timer started")
+            bpy.app.timers.register(_tick, first_interval=0.01)
+            _timer_fn = _tick
+            _timer_active = True
+            logger.debug("Script execution timer started")
         except Exception as e:
+            _timer_active = False
             logger.error(f"Failed to start timer: {e}")
+
+
+def _stop_timer_if_idle() -> Optional[float]:
+    """Atomically stop the timer when the queue is empty.
+
+    The emptiness check and the flag clear must happen under _timer_lock so
+    a producer enqueueing at the same instant either sees the flag already
+    cleared (and re-arms the timer) or is seen by this check.
+
+    Returns:
+        None to stop the timer, or the next interval if work arrived.
+    """
+    global _timer_active
+    with _timer_lock:
+        if not _request_queue.empty():
+            return TIMER_INTERVAL
+        _timer_active = False
+        return None
 
 
 def _process_one_request() -> Optional[float]:
@@ -154,11 +158,10 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call (0.20s) if more requests, None to stop timer
     """
-    global _timer_active
-
     if _request_queue.empty():
-        _timer_active = False
-        return None  # No more requests, stop timer
+        stop = _stop_timer_if_idle()
+        if stop is None:
+            return None  # No more requests, stop timer
 
     # Drain pending SSE events so planning text is finalized before
     # script execution blocks the main thread.
@@ -173,8 +176,7 @@ def _process_one_request() -> Optional[float]:
     try:
         request_id, script, tool_name, session_id = _request_queue.get_nowait()
     except queue.Empty:
-        _timer_active = False
-        return None
+        return _stop_timer_if_idle()
 
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window). If the session is no longer
@@ -190,53 +192,25 @@ def _process_one_request() -> Optional[float]:
         client = get_jsonrpc_client()
         if client and client.is_connected and request_id != "notification":
             client.queue_response(request_id, {"success": False, "error": "Agent session not active"})
-        if not _request_queue.empty():
-            return TIMER_INTERVAL
-        _timer_active = False
-        return None
+        return _stop_timer_if_idle()
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
 
     # --- Scene context routing ---
-    # A per-scene routing session (the user's main scene UUID, or an
-    # "agentlane:<parent>:<n>" lane scene) MUST resolve to a scene: switch to it,
-    # execute, restore. The constant "agent:<connection>" / empty session instead
-    # follows the user's active window scene (normal / sandbox mode).
-    # The switch + execute + restore all happen within this single timer tick —
-    # Blender does not redraw, so the user sees no visual change.
-    global _user_foreground_scene_name
-    did_switch = False
+    # Find the target scene by session_id and switch context so the
+    # script executes against the correct scene's objects.
+    # The switch + execute + restore all happen within this single timer
+    # tick — Blender does not redraw, so the user sees no visual change.
+    original_scene = None
     target_scene = None
-    non_scene_routed = is_non_scene_routing_session(session_id)
-
-    if not non_scene_routed:
+    if session_id:
         for s in bpy.data.scenes:
             if getattr(s, 'mixie_session_id', '') == session_id:
                 target_scene = s
                 break
-        if target_scene is None:
-            # Bug 1: a real per-scene session with no matching scene. Running it
-            # against whatever is active would clobber the user's work in the
-            # wrong scene — hard-fail instead of the old silent fallback.
-            logger.warning(
-                "No scene for session '%s' (tool %s, id %s) — rejecting script",
-                session_id, tool_name, request_id,
-            )
-            _send_error_response(request_id, f"no scene for session {session_id}")
-            if not _request_queue.empty():
-                return TIMER_INTERVAL
-            _timer_active = False
-            return None
-    elif bpy.context.window is not None:
-        # Active-scene-follow request → this is the user's foreground scene.
-        # Remember it (unless it's a lane scene) so per-scene/lane scripts can
-        # restore window.scene back to it, not to whatever was last active.
-        active = bpy.context.window.scene
-        if active is not None and not is_lane_scene(active):
-            _user_foreground_scene_name = active.name
 
     if target_scene and bpy.context.window and bpy.context.window.scene != target_scene:
-        did_switch = True
+        original_scene = bpy.context.window.scene
         bpy.context.window.scene = target_scene
         logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
 
@@ -278,18 +252,12 @@ def _process_one_request() -> Optional[float]:
     except Exception as _op_exc:  # never break execution/response on history failure
         logger.debug("operation_history: failed to record agent op: %s", _op_exc)
 
-    # Restore the user's real foreground scene after execution (Bug 2).
-    # Restore to the tracked user scene — NOT "whatever was active when this
-    # script started", which may itself be a throwaway lane scene. If that
-    # scene was deleted, _resolve_user_foreground_scene() falls back to any
-    # real (non-lane) scene, never a lane.
-    if did_switch and bpy.context.window:
-        restore_scene = _resolve_user_foreground_scene()
-        if restore_scene is not None and bpy.context.window.scene != restore_scene:
-            try:
-                bpy.context.window.scene = restore_scene
-            except Exception:
-                pass  # Scene may have been deleted by the script
+    # Restore original scene after execution
+    if original_scene is not None and bpy.context.window:
+        try:
+            bpy.context.window.scene = original_scene
+        except Exception:
+            pass  # Scene may have been deleted by the script
 
     # Send response directly via WebSocket client (thread-safe)
     # This avoids cross-thread queue polling which caused segfaults
@@ -304,8 +272,7 @@ def _process_one_request() -> Optional[float]:
     if not _request_queue.empty():
         return 0.50  # 500ms between executions (safe for edit mode operations)
 
-    _timer_active = False
-    return None  # Stop timer when queue empty
+    return _stop_timer_if_idle()  # Stop timer when queue empty
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> None:
@@ -334,24 +301,43 @@ def run_on_main_thread(fn: Callable[[], None]) -> None:
         logger.warning(f"run_on_main_thread: failed to register timer: {e}")
 
 
+def resume() -> None:
+    """Re-arm the executor after a ``cleanup(shutdown=True)``.
+
+    ``cleanup(shutdown=True)`` runs when the agent connection is torn down
+    via bootstrap unregister (Blender exit, but also "Reload Scripts").
+    Module state survives the subsequent re-register, so without clearing
+    the flag every later script request is silently dropped — no tool
+    response is ever sent and the backend times out on EVERY command until
+    Blender is fully restarted. ConnectionManager.connect() calls this so a
+    new connection always starts with a live executor.
+    """
+    global _shutdown_requested
+    _shutdown_requested = False
+
+
 def cleanup(shutdown: bool = False) -> None:
     """
     Clean up executor state.
 
     Call on addon unregister or disconnect to clean up pending requests.
     """
-    global _timer_active, _execution_gate_until, _shutdown_requested
+    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested
 
     if shutdown:
         _shutdown_requested = True
 
+    with _timer_lock:
+        timer_fn = _timer_fn
+        _timer_fn = None
+        _timer_active = False
+
     try:
-        if bpy.app.timers.is_registered(_process_one_request):
-            bpy.app.timers.unregister(_process_one_request)
+        if timer_fn is not None and bpy.app.timers.is_registered(timer_fn):
+            bpy.app.timers.unregister(timer_fn)
     except Exception:
         pass
 
-    _timer_active = False
     _execution_gate_until = 0.0
 
     # Clear request queue

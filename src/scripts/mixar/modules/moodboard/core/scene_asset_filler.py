@@ -205,8 +205,12 @@ def _import_asset_on_main_thread(
     placeholder_obj,
     object_id: int,
     on_filled: Optional[Callable],
-):
-    """Import an asset from a .blend file and replace the placeholder (main thread)."""
+) -> bool:
+    """Import an asset from a .blend file and replace the placeholder (main thread).
+
+    Returns:
+        True if the placeholder was actually replaced, False otherwise.
+    """
     from mixar.modules.moodboard.core import scene_importer
 
     try:
@@ -229,7 +233,7 @@ def _import_asset_on_main_thread(
 
         if not imported_objs:
             logger.warning("[AssetFiller] No objects imported for '%s'", asset_name)
-            return
+            return False
 
         # Replace the placeholder
         result = scene_importer.replace_placeholder(placeholder_obj, imported_objs)
@@ -239,9 +243,11 @@ def _import_asset_on_main_thread(
                 on_filled(object_id, asset_name)
             except Exception as e:
                 logger.error("[AssetFiller] on_filled callback error: %s", e)
+        return bool(result)
 
     except Exception as e:
         logger.error("[AssetFiller] Import failed for '%s': %s", asset_name, e)
+        return False
 
 
 def fill_placeholders_from_library(
@@ -354,10 +360,10 @@ def _apply_search_results(
             logger.warning("[AssetFiller] Placeholder for '%s' was already removed", label)
             continue
 
-        _import_asset_on_main_thread(
+        if _import_asset_on_main_thread(
             blend_path, asset_name, placeholder_obj, obj_id, on_filled,
-        )
-        filled += 1
+        ):
+            filled += 1
 
     placement_end = time.monotonic()
     timings["placement_start"] = placement_start
