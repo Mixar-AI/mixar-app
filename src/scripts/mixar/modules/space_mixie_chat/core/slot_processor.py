@@ -19,32 +19,6 @@ from .session import get_session_manager
 
 logger = get_logger(__name__)
 
-# Mirrors the StringProperty maxlen on the message slot fields
-# (chat_props.py). Hot-path writes below use ID-property subscript
-# assignment (``bubble["content"] = ...``) which skips the RNA setter —
-# and therefore its maxlen clamp — so we clamp here to keep behaviour
-# identical to the previous attribute writes.
-_SLOT_TEXT_MAXLEN = 65536
-
-
-def _fast_set(bubble, prop_name: str, value) -> None:
-    """Write a message slot property without firing RNA updates.
-
-    Attribute assignment on Python-registered properties routes through
-    ``rna_property_update`` which, for ID-properties, tags the owning
-    Scene's depsgraph (TRANSFORM|GEOMETRY|PARAMETERS) and broadcasts
-    ``NC_WINDOW`` + ``NC_ID`` notifiers — i.e. every streamed SSE chunk
-    forced a full-app redraw and a scene re-evaluation. Subscript
-    assignment writes the same underlying ID-property storage (the RNA
-    reads used by the C++ renderer see it identically) but skips that
-    global invalidation. The chat/bubble regions are redrawn explicitly
-    via redraw_chat_areas() after each event batch, so nothing is lost.
-
-    Only safe for properties without ``update=`` callbacks — true for
-    all message slot fields.
-    """
-    bubble[prop_name] = value
-
 
 class SlotEventProcessor:
     """
@@ -164,15 +138,13 @@ class SlotEventProcessor:
             if texts is None:
                 texts = []
             texts_count = len(texts) if isinstance(texts, list) else 0
-            _fast_set(bubble, "loader_texts", json.dumps(texts)[:2048])
-            _fast_set(bubble, "loader_current_index", 0)  # Reset on new texts
+            bubble.loader_texts = json.dumps(texts)
+            bubble.loader_current_index = 0  # Reset on new texts
 
         if "rotate_ms" in loader_data:
             rotate_ms = loader_data["rotate_ms"]
-            # Handle None - default to 2000. Clamp to the property's min
-            # (the subscript write below bypasses RNA's min=100 clamp).
-            value = int(rotate_ms) if rotate_ms is not None else 2000
-            _fast_set(bubble, "loader_rotate_ms", max(100, value))
+            # Handle None - default to 2000
+            bubble.loader_rotate_ms = int(rotate_ms) if rotate_ms is not None else 2000
 
         # Start/stop loader timer based on visibility change
         if bubble.loader_visible and not was_visible:
@@ -193,24 +165,21 @@ class SlotEventProcessor:
         operation = "unknown"
 
         if content_data.get("clear"):
-            _fast_set(bubble, "content", "")
+            bubble.content = ""
             operation = "clear"
         elif "set" in content_data:
             # Handle None values - Blender properties don't accept None
-            set_text = (content_data["set"] or "")[:_SLOT_TEXT_MAXLEN]
-            _fast_set(bubble, "content", set_text)
+            set_text = content_data["set"] or ""
+            bubble.content = set_text
             operation = f"set({len(set_text)} chars)"
         elif "append" in content_data:
             # Handle None values
             append_text = content_data["append"] or ""
-            _fast_set(
-                bubble, "content",
-                (bubble.content + append_text)[:_SLOT_TEXT_MAXLEN],
-            )
+            bubble.content += append_text
             operation = f"append({len(append_text)} chars)"
 
         # Also update legacy text field for backward compatibility
-        _fast_set(bubble, "text", bubble.content)
+        bubble.text = bubble.content
 
         # Parse markdown segments for C++ rendering (incremental for streaming)
         try:
@@ -238,10 +207,7 @@ class SlotEventProcessor:
                 except json.JSONDecodeError:
                     metadata = {}
                 metadata["markdown_segments"] = segments
-                _fast_set(
-                    bubble, "metadata",
-                    json.dumps(metadata, ensure_ascii=False)[:_SLOT_TEXT_MAXLEN],
-                )
+                bubble.metadata = json.dumps(metadata, ensure_ascii=False)
             else:
                 # Clear only markdown segments, preserve other metadata
                 try:
@@ -249,10 +215,7 @@ class SlotEventProcessor:
                 except json.JSONDecodeError:
                     metadata = {}
                 metadata.pop("markdown_segments", None)
-                _fast_set(
-                    bubble, "metadata",
-                    json.dumps(metadata, ensure_ascii=False)[:_SLOT_TEXT_MAXLEN],
-                )
+                bubble.metadata = json.dumps(metadata, ensure_ascii=False)
                 # Clear incremental cache for this bubble
                 bubble_id = bubble.bubble_id if hasattr(bubble, 'bubble_id') else ""
                 if bubble_id:
@@ -276,20 +239,17 @@ class SlotEventProcessor:
         operation = "unknown"
 
         if ephemeral_data.get("clear"):
-            _fast_set(bubble, "ephemeral", "")
+            bubble.ephemeral = ""
             operation = "clear"
         elif "set" in ephemeral_data:
             # Handle None values - Blender properties don't accept None
-            set_text = (ephemeral_data["set"] or "")[:_SLOT_TEXT_MAXLEN]
-            _fast_set(bubble, "ephemeral", set_text)
+            set_text = ephemeral_data["set"] or ""
+            bubble.ephemeral = set_text
             operation = f"set({len(set_text)} chars)"
         elif "append" in ephemeral_data:
             # Handle None values
             append_text = ephemeral_data["append"] or ""
-            _fast_set(
-                bubble, "ephemeral",
-                (bubble.ephemeral + append_text)[:_SLOT_TEXT_MAXLEN],
-            )
+            bubble.ephemeral += append_text
             operation = f"append({len(append_text)} chars)"
 
 
@@ -336,11 +296,9 @@ class SlotEventProcessor:
         # Add new items
         for idx, item_data in enumerate(todo_items):
             item = bubble.todo_items.add()
-            # Handle None values - Blender properties don't accept None for
-            # strings. Clamps mirror the maxlens in chat_slot_types.py
-            # (item_id=64 matches the C++ TodoItemSlotData::id buffer).
-            _fast_set(item, "item_id", (item_data.get("id") or "")[:64])
-            _fast_set(item, "text", (item_data.get("text") or "")[:512])
+            # Handle None values - Blender properties don't accept None for strings
+            item.item_id = item_data.get("id") or ""
+            item.text = item_data.get("text") or ""
 
             # Map status string to enum
             status_str = item_data.get("status") or "pending"
