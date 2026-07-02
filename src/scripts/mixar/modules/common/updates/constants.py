@@ -19,10 +19,6 @@ from enum import Enum
 DEFAULT_CHECK_DELAY_SECONDS = 5
 DEFAULT_DOWNLOAD_CHUNK_SIZE = 65536  # 64 KB
 DEFAULT_MAX_DOWNLOAD_RETRIES = 3
-# Socket timeout for the installer download (connect + each blocking read).
-# Without it a stalled CDN connection blocks the download thread forever and
-# the DOWNLOADING state permanently suppresses all future update checks.
-DOWNLOAD_SOCKET_TIMEOUT_SECONDS = 60
 
 # ============================================================================
 # PLATFORM MAPPING

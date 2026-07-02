@@ -24,11 +24,7 @@ class MixieChatTodoItem(PropertyGroup):
     item_id: StringProperty(
         name="Item ID",
         description="Unique identifier for this todo item",
-        default="",
-        # Must match TodoItemSlotData::id (char[64]) in
-        # mixie_chat_ui_types.hh — the C++ slot reader copies this string
-        # into that fixed buffer.
-        maxlen=64
+        default=""
     )
     text: StringProperty(
         name="Text",
