@@ -144,12 +144,26 @@ def _cleanup_once_per_day() -> None:
 
 def _next_seq(session_id: str) -> int:
     if session_id not in _seq_cache:
+        # Resume from the highest retained seq, NOT the line count: after
+        # cleanup_expired prunes old records the file has fewer lines than
+        # the max seq, so counting would hand out numbers that collide with
+        # retained records and fall below callers' since_seq high-watermark
+        # (silently hiding every new operation from pagination).
         n = 0
         p = _ops_path(session_id)
         if os.path.isfile(p):
             try:
                 with open(p, "r", encoding="utf-8") as f:
-                    n = sum(1 for line in f if line.strip())
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            seq = int(json.loads(line).get("seq", 0) or 0)
+                        except Exception:
+                            continue
+                        if seq > n:
+                            n = seq
             except Exception:
                 n = 0
         _seq_cache[session_id] = n

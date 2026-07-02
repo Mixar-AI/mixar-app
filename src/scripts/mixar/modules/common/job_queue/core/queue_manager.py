@@ -243,6 +243,19 @@ def _ensure_sync_watchdog() -> None:
 
     def _tick():
         global _sync_watchdog_registered
+        # Enforce the wall-clock deadline here: the queue is push-driven, so
+        # if the backend loses a job (or the socket stays down) no terminal
+        # ``job.update`` ever arrives and the job would sit in RUNNING_POLL
+        # forever. The watchdog is the only recurring tick that can fail it.
+        now = time.time()
+        for queue in all_queues():
+            for job in queue.snapshot():
+                if (
+                    job.state == JobState.RUNNING_POLL
+                    and job.poll_start_time > 0
+                    and now - job.poll_start_time > MAX_POLL_DURATION
+                ):
+                    queue._fail_timed_out(job)
         needs_backend_sync = any(
             job.state in _BACKEND_SYNC_STATES
             for queue in all_queues()
@@ -490,6 +503,16 @@ class FeatureQueue:
         _ensure_sync_watchdog()
         # The backend job queue is push-driven. Do not start the old REST GET
         # polling loop here; ``job.update``/``job.sync`` will advance the job.
+        #
+        # A very fast job can emit its terminal ``job.update`` push while we
+        # are still in RUNNING_SUBMIT. handle_backend_job_update records the
+        # status but skips the transition (pushes are at-most-once), so catch
+        # up here instead of waiting for the next 30s watchdog sync.
+        if job.backend_job_id:
+            if job.backend_status == "DONE":
+                _request_backend_job_get(job.backend_job_id)
+            elif job.backend_status in FAILED_BACKEND_STATUSES:
+                _request_backend_job_sync()
 
     def _on_submit_error(self, job: Job, error) -> None:
         if job.state != JobState.RUNNING_SUBMIT:
@@ -614,6 +637,18 @@ class FeatureQueue:
             self._notify()
             self._pump()
             return
+
+    def _fail_timed_out(self, job: Job) -> None:
+        """Fail a job that exceeded MAX_POLL_DURATION without a terminal push."""
+        if job.state != JobState.RUNNING_POLL:
+            return
+        if job.backend_job_id:
+            self._cancel_on_backend(job.backend_job_id)
+        job.state = JobState.FAILED
+        job.error = f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
+        job.user_message = "Generation timed out — please try again"
+        self._notify()
+        self._pump()
 
     def _on_poll_error(self, job: Job, error) -> None:
         if job.state != JobState.RUNNING_POLL:
@@ -741,6 +776,12 @@ class FeatureQueue:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
             job.user_message = "Failed to import the generated model"
+            # Don't leave the downloaded temp file behind — repeated failed
+            # imports would otherwise accumulate multi-MB files in tempdir.
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
 
         self._notify()
         self._pump()
