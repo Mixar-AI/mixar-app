@@ -52,3 +52,33 @@ def validate_manifest(manifest: dict) -> None:
     base = [l for l in layers if l.get("index") == 0]
     if not base or base[0].get("type") != "PBR":
         raise ManifestError("index 0 layer must be type PBR")
+
+
+def collect_asset_urls(manifest: dict) -> tuple[list[str], list[str]]:
+    """Every downloadable asset URL in the manifest, split by failure semantics.
+
+    Returns ``(required, optional)``:
+    - ``required`` — the index-0 PBR layer's map URLs, in bind order. The build
+      aborts (before touching the layer stack) when any of these can't be
+      fetched, matching ``build_base_pbr_layer``'s download-before-mutate rule.
+    - ``optional`` — detail layers' IMAGE-mask URLs. Mask failures are
+      non-fatal: the detail layer is built without that mask.
+
+    Both lists are de-duplicated and contain no empty entries.
+    """
+    required: list[str] = []
+    optional: list[str] = []
+    for layer in sorted(manifest.get("layers") or [], key=lambda l: l.get("index", 0)):
+        maps = layer.get("maps") or {}
+        bucket = required if layer.get("index", 0) == 0 else optional
+        for key in ("basecolor", "roughness", "metallic", "ao", "normal", "height"):
+            url = maps.get(key)
+            if url:
+                bucket.append(url)
+        for mask in layer.get("masks") or []:
+            url = mask.get("image_url")
+            if url:
+                optional.append(url)
+    required = list(dict.fromkeys(required))
+    optional = [u for u in dict.fromkeys(optional) if u not in required]
+    return required, optional
