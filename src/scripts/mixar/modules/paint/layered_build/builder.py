@@ -10,7 +10,8 @@ PROCEDURAL detail layers (with baked masks + coordinated scale) above it.
 
 import bpy
 
-from .manifest import validate_manifest
+from .download import prefetch_urls
+from .manifest import collect_asset_urls, validate_manifest
 from .pbr_layer import build_base_pbr_layer
 from .procedural_layer import add_procedural_detail_layer
 # Import paths match pbr_layer.py's own imports (both live at paint/layered_build/).
@@ -76,6 +77,25 @@ def build_layered_material(manifest: dict, obj=None):
     bpy.context.view_layer.objects.active = obj
 
     validate_manifest(manifest)
+
+    # Prefetch every manifest asset CONCURRENTLY before any bpy mutation. The
+    # in-build load_image calls below then read from the local cache. Without
+    # this, up to ~8 serial network fetches (each with retries) ran mid-build
+    # on the main thread — the UI freeze / beach ball while textures applied.
+    # A failed base map aborts here, before the stack is touched (same
+    # invariant build_base_pbr_layer enforces); failed mask URLs stay
+    # non-fatal — the detail layer just skips that mask, exactly as before.
+    required, optional = collect_asset_urls(manifest)
+    errors = prefetch_urls(required + optional)
+    fatal = [u for u in required if u in errors]
+    if fatal:
+        raise RuntimeError(
+            f"failed to download {len(fatal)} of {len(required)} base PBR map(s); "
+            f"first error: {errors[fatal[0]]}"
+        )
+    for url in (u for u in optional if u in errors):
+        print(f"[layered_build] mask asset prefetch failed (non-fatal): {url}: {errors[url]}")
+
     _ensure_paint_material(obj)
 
     base_tiling = (manifest.get("scale") or {}).get("base_tiling", 1.0)
