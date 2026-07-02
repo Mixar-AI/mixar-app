@@ -51,12 +51,7 @@ def _update_loader():
 
                 needs_animation = True
 
-                # Subscript write: skips rna_property_update, which would
-                # otherwise tag the Scene depsgraph and broadcast NC_WINDOW
-                # (full-app redraw) twice a second for the whole duration of
-                # an agent run. The explicit tag_redraw below repaints the
-                # chat surfaces; nothing else reads this property.
-                msg["loader_spinner_index"] = (msg.loader_spinner_index + 1) % 4
+                msg.loader_spinner_index = (msg.loader_spinner_index + 1) % 4
 
                 if has_loader:
                     bubble_id = msg.bubble_id if hasattr(msg, 'bubble_id') else ""
@@ -74,7 +69,7 @@ def _update_loader():
                         except json.JSONDecodeError:
                             texts = []
                         if texts:
-                            msg["loader_current_index"] = (msg.loader_current_index + 1) % len(texts)
+                            msg.loader_current_index = (msg.loader_current_index + 1) % len(texts)
                         _text_rotate_times[key] = now
 
         if not needs_animation:
