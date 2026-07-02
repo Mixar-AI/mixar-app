@@ -173,17 +173,7 @@ def register():
     pcoll = bpy.utils.previews.new()
     for color_name, color_rgb in _PILL_PALETTE.items():
         png_path = os.path.join(_cache_dir, color_name + ".png")
-        # Reuse a PNG generated earlier in this OS session. refresh()
-        # re-runs register() after every file load and save; the pixel
-        # colours never change, so regenerating (a pure-Python per-pixel
-        # loop plus an image datablock create/save/remove each) is
-        # wasted main-thread time on every save/load.
-        needs_write = True
-        try:
-            needs_write = os.path.getsize(png_path) <= 0
-        except OSError:
-            pass
-        if needs_write and not _write_circle_png(png_path, color_rgb):
+        if not _write_circle_png(png_path, color_rgb):
             continue
         try:
             pcoll.load(color_name, png_path, "IMAGE")

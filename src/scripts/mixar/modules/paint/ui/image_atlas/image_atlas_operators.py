@@ -19,7 +19,6 @@ import random
 import time
 
 import bpy
-import numpy
 from bpy.props import EnumProperty, IntProperty
 
 from .....config.logging_config import get_logger
@@ -144,15 +143,18 @@ class MNewImageAtlasSegmentTest(bpy.types.Operator):
             start_y = self.height * segment.tile_y
             end_y = start_y + self.height
 
-            # foreach_get/foreach_set + a numpy slice assignment instead of a
-            # per-pixel Python loop over the slow RNA accessor — on a 4K/8K
-            # atlas the old path copied the whole image through Python twice
-            # and froze the UI for seconds.
-            width, height = atlas_img.size
-            pxs = numpy.empty(width * height * 4, dtype=numpy.float32)
-            atlas_img.pixels.foreach_get(pxs)
-            pxs.reshape(height, width, 4)[start_y:end_y, start_x:end_x] = col
-            atlas_img.pixels.foreach_set(pxs)
+            pxs = list(atlas_img.pixels)
+
+            for y in range(start_y, end_y):
+
+                offset_y = atlas_img.size[0] * 4 * y
+
+                for x in range(start_x, end_x):
+                    for i in range(3):
+                        pxs[offset_y + (x * 4) + i] = col[i]
+                        pxs[offset_y + (x * 4) + 3] = 1.0
+
+            atlas_img.pixels = pxs
 
         # Update image editor
         update_image_editor_image(context, atlas_img)

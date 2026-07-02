@@ -32,19 +32,14 @@ def search_for_images(tree):
     return images
 
 
-def search_for_image_node(node, channel_name, channel_image_dict=None):
+def search_for_image_node(node, channel_name, channel_image_dict={}):
     """Recursively search for image nodes and map them to channels.
 
     Args:
         node: Blender shader node to start search from.
         channel_name (str): Name of the channel being searched.
-        channel_image_dict (dict, optional): Dictionary to store channel to
-            image mappings. A fresh dict is created when omitted — a mutable
-            ``{}`` default would be shared across calls, leaking mappings
-            (and image references) from one search into the next.
+        channel_image_dict (dict, optional): Dictionary to store channel to image mappings. Defaults to {}.
     """
-    if channel_image_dict is None:
-        channel_image_dict = {}
     if node.type == "TEX_IMAGE" and node.image:
         channel_image_dict[channel_name] = node.image
     elif node.type == "BUMP":
