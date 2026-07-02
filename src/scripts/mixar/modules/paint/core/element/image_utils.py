@@ -34,9 +34,7 @@ def get_image_mask_base_color(mask, image, mask_index):
     color = (0, 0, 0, 1)
     pxs = numpy.empty(shape=image.size[0] * image.size[1] * 4, dtype=numpy.float32)
     image.pixels.foreach_get(pxs)
-    # Brightness = RGB only. Including alpha (1.0 on opaque images) biased
-    # the mean by +0.25, flipping mid-dark images to a white base color.
-    if numpy.average(pxs.reshape(-1, 4)[:, :3]) > 0.5:
+    if numpy.average(pxs) > 0.5:
         color = (1, 1, 1, 1)
     return color
 
