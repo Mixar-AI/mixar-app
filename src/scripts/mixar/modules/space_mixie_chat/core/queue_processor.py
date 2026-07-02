@@ -53,6 +53,9 @@ else:
 _sse_event_queue: queue.Queue = queue.Queue(maxsize=1000)
 _sse_timer_lock = threading.Lock()
 _sse_timer_active = False
+# The closure currently registered with bpy.app.timers (see
+# _ensure_sse_timer_running for why a fresh closure is used per start).
+_sse_timer_fn = None
 _sse_drop_count = 0
 # Tracks whether we're streaming long content (for adaptive timer frequency)
 _streaming_content_long = False
@@ -136,19 +139,28 @@ def _ensure_sse_timer_running() -> None:
     """Ensure the SSE processing timer is running.
 
     Thread-safe: called from SSE background thread via queue_sse_* functions.
+
+    A fresh closure is registered per start (instead of _process_sse_queue
+    itself): bpy timers are keyed by the callback object, so re-registering
+    the same function while a previous registration is still completing its
+    final ``return None`` can be silently dropped — stranding the queued
+    event with no timer scheduled to process it.
     """
-    global _sse_timer_active
+    global _sse_timer_active, _sse_timer_fn
     with _sse_timer_lock:
-        if not _sse_timer_active:
-            try:
-                if not bpy.app.timers.is_registered(_process_sse_queue):
-                    bpy.app.timers.register(_process_sse_queue, first_interval=TIMER_INTERVAL)
-                    _sse_timer_active = True
-            except Exception as e:
-                if bpy.app.timers.is_registered(_process_sse_queue):
-                    bpy.app.timers.unregister(_process_sse_queue)
-                _sse_timer_active = False
-                logger.error(f"Failed to start SSE timer: {e}")
+        if _sse_timer_active:
+            return
+
+        def _tick():
+            return _process_sse_queue()
+
+        try:
+            bpy.app.timers.register(_tick, first_interval=TIMER_INTERVAL)
+            _sse_timer_fn = _tick
+            _sse_timer_active = True
+        except Exception as e:
+            _sse_timer_active = False
+            logger.error(f"Failed to start SSE timer: {e}")
 
 
 def _process_sse_queue() -> Optional[float]:
@@ -223,12 +235,16 @@ def _process_sse_queue() -> Optional[float]:
         if content_append_count > 0:
             _streaming_content_long = _check_content_length_threshold()
 
-    if not _sse_event_queue.empty():
-        if _streaming_content_long:
-            return TIMER_INTERVAL_THROTTLED
-        return TIMER_INTERVAL
-
+    # The emptiness check and the flag clear must be atomic with respect to
+    # the producer's flag check in _ensure_sse_timer_running: a put_nowait
+    # landing between an unlocked check and the clear would see the flag
+    # still True, skip re-arming the timer, and strand the final event
+    # (stuck loader, session never returns to IDLE).
     with _sse_timer_lock:
+        if not _sse_event_queue.empty():
+            if _streaming_content_long:
+                return TIMER_INTERVAL_THROTTLED
+            return TIMER_INTERVAL
         _sse_timer_active = False
     _streaming_content_long = False
     return None
@@ -257,16 +273,18 @@ def _check_content_length_threshold() -> bool:
 
 def cleanup_sse_queue() -> None:
     """Clean up SSE queue and timer. Call on disconnect/shutdown."""
-    global _sse_timer_active, _sse_drop_count, _streaming_content_long
-
-    try:
-        if bpy.app.timers.is_registered(_process_sse_queue):
-            bpy.app.timers.unregister(_process_sse_queue)
-    except Exception:
-        pass
+    global _sse_timer_active, _sse_drop_count, _streaming_content_long, _sse_timer_fn
 
     with _sse_timer_lock:
+        timer_fn = _sse_timer_fn
+        _sse_timer_fn = None
         _sse_timer_active = False
+
+    try:
+        if timer_fn is not None and bpy.app.timers.is_registered(timer_fn):
+            bpy.app.timers.unregister(timer_fn)
+    except Exception:
+        pass
 
     _streaming_content_long = False
 

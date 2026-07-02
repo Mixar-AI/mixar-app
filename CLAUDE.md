@@ -81,7 +81,7 @@ src/
 ```
 
 ### Active Modules
-`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`, `scene_grid`
+`agent_bubble`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
 
 ---
 
@@ -114,7 +114,6 @@ src/
 | **texel_density** | UV texel density analysis and visualization |
 | **uv_editor** | Advanced UV editing workspace with dual-space architecture, mutually exclusive tool/header panels, annotate and UV tool sidebars, dynamic panel ordering, and toolbar auto-expand |
 | **space_texture_sets** | Texture set management |
-| **scene_grid** | "Scene Grid" editor (`SPACE_SCENE_GRID`, C++ in `src/source/blender/editors/space_scene_grid/`): live offscreen-rendered viewport tiles of ALL scenes in an auto grid, for monitoring parallel agents (one per scene). Realtime via a 0.1s TIMERNOTIFIER poll + depsgraph change detection (`DEG_get_update_count`), so tiles follow script edits to non-active scenes with no notifiers needed. Per-tile orbit/pan/zoom, click-to-activate scene, per-scene agent busy badge (reads `mixie_chat_is_busy`). Python side: header (shading toggle) only. |
 | **operation_history** | Per-session local log (`operations.jsonl` + `scripts/`) of every agent script execution plus curated manual user ops. Agent executions captured at `space_mixie_chat/core/main_thread_executor.py`; manual ops via a depsgraph→timer capture service. Read by the agent through `operation_history/core/tools.py:run_tool`. No backend DB. |
 | **testing** | Pure-Python unit tests (pytest, run from repo root with bpy stubbed via root `conftest.py`) |
 
