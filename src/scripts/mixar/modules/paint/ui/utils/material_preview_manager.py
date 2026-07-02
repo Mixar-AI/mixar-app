@@ -121,13 +121,7 @@ def load_material_preview(material) -> int:
             material.thumbnail_path = local_path
             return pcoll[material.material_id].icon_id
         except Exception:
-            # A truncated/corrupt cached file (interrupted download, error
-            # page saved as .png) would otherwise fail here on every session
-            # with no self-heal. Remove it so the re-download below can run.
-            try:
-                os.remove(local_path)
-            except OSError:
-                return 0
+            return 0
 
     # No local copy — start background download if URL is available
     if material.thumbnail_url:

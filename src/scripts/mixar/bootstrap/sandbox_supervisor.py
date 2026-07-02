@@ -124,29 +124,6 @@ def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
         return {"success": True, "pid": proc.pid}
 
 
-def _reap_child(proc, cid: str) -> None:
-    """Wait for a terminated child; escalate to SIGKILL if it ignores SIGTERM.
-
-    Runs on a daemon thread so shutdown never blocks the main thread, while
-    still guaranteeing the child is reaped (no zombie) and cannot survive a
-    polite terminate().
-    """
-    try:
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        logger.warning("Sandbox %s ignored terminate; killing pid=%s", cid, proc.pid)
-        try:
-            proc.kill()
-        except Exception:
-            pass
-        try:
-            proc.wait(timeout=5)
-        except Exception:
-            pass
-    except Exception:
-        pass
-
-
 def shutdown_sandbox(connection_id: str | None = None) -> dict:
     """Terminate one sandbox child (or all if connection_id is None)."""
     with _lock:
@@ -158,9 +135,6 @@ def shutdown_sandbox(connection_id: str | None = None) -> dict:
                     proc.terminate()
                 except Exception:
                     pass
-                threading.Thread(
-                    target=_reap_child, args=(proc, cid), daemon=True
-                ).start()
             logf = _child_logs.pop(cid, None)
             if logf:
                 try:
