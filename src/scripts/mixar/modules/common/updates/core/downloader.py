@@ -28,6 +28,7 @@ from mixar.config.logging_config import get_logger
 from ..constants import (
     DEFAULT_DOWNLOAD_CHUNK_SIZE,
     DEFAULT_MAX_DOWNLOAD_RETRIES,
+    DOWNLOAD_SOCKET_TIMEOUT_SECONDS,
     UPDATES_CACHE_DIR,
 )
 from .state import UpdateInfo, get_update_state
@@ -129,7 +130,11 @@ def download_update(
                 "Download attempt %d/%d: %s", attempt, max_retries, url
             )
             req = urllib.request.Request(url)
-            with urllib.request.urlopen(req) as resp:
+            # The timeout applies to connect and to every blocking read, so a
+            # mid-stream stall raises instead of hanging this thread forever.
+            with urllib.request.urlopen(
+                req, timeout=DOWNLOAD_SOCKET_TIMEOUT_SECONDS
+            ) as resp:
                 total = int(resp.headers.get("Content-Length", 0))
                 state.update_progress(0)
                 downloaded = 0

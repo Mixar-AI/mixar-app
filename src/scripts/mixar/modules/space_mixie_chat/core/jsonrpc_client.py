@@ -229,10 +229,12 @@ class JSONRPCWebSocketClient:
                 self.ws_url, timeout=10, header=headers
             )
             self._connected = True
-            self._current_delay = self._reconnect_delay
-            self._auth.reset()
 
-            # Perform handshake
+            # Perform handshake. The backoff delay and auth-failure counter
+            # are only reset AFTER the handshake succeeds: resetting them on
+            # bare TCP/WS connect meant a server that accepts the upgrade but
+            # rejects the token was retried in a tight ~1s loop forever
+            # (failure count wiped each cycle, so max_failures never tripped).
             if not self._perform_handshake():
                 # Handshake failure right after connect likely means auth rejection
                 # (server accepted WS upgrade but closed on token validation)
@@ -245,6 +247,8 @@ class JSONRPCWebSocketClient:
                 return False
 
             self._handshake_complete = True
+            self._current_delay = self._reconnect_delay
+            self._auth.reset()
             self._last_ping_time = time.time()
 
             if self._on_connected:
