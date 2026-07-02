@@ -282,6 +282,12 @@ class ConnectionManager:
 
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
+        # Re-arm the script executor: a prior disconnect(update_session_state=
+        # False) (bootstrap unregister / Reload Scripts) latches its shutdown
+        # flag, which would silently drop every script request on the new
+        # connection — the backend then times out on every tool call.
+        from .main_thread_executor import resume as resume_executor
+        resume_executor()
         client = create_jsonrpc_client(
             host=base_url,
             connection_id=session.instance_id,
