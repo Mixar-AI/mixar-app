@@ -64,7 +64,12 @@ def queue_script_request(script: str, request_id: str, tool_name: str = "unknown
     """
     global _execution_gate_until
     if _shutdown_requested:
-        logger.debug("Dropping script request during shutdown")
+        # Warning, not debug: if this fires outside real shutdown the backend
+        # will time out waiting for the never-sent response.
+        logger.warning(
+            "Dropping script request during shutdown (%s, id: %s)",
+            tool_name, request_id,
+        )
         return
 
     # Gate: give SSE events (planning text) time to arrive before execution
@@ -294,6 +299,21 @@ def run_on_main_thread(fn: Callable[[], None]) -> None:
         bpy.app.timers.register(_wrapper, first_interval=0.0)
     except Exception as e:
         logger.warning(f"run_on_main_thread: failed to register timer: {e}")
+
+
+def resume() -> None:
+    """Re-arm the executor after a ``cleanup(shutdown=True)``.
+
+    ``cleanup(shutdown=True)`` runs when the agent connection is torn down
+    via bootstrap unregister (Blender exit, but also "Reload Scripts").
+    Module state survives the subsequent re-register, so without clearing
+    the flag every later script request is silently dropped — no tool
+    response is ever sent and the backend times out on EVERY command until
+    Blender is fully restarted. ConnectionManager.connect() calls this so a
+    new connection always starts with a live executor.
+    """
+    global _shutdown_requested
+    _shutdown_requested = False
 
 
 def cleanup(shutdown: bool = False) -> None:
