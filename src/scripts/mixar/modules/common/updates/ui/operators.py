@@ -83,6 +83,44 @@ class MIXAR_OT_dismiss_update(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class MIXAR_OT_check_for_updates(bpy.types.Operator):
+    """Check whether a newer version of Mixar is available"""
+
+    bl_idname = "mixar.check_for_updates"
+    bl_label = "Check for Updates"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        from ..constants import UpdateState
+        from ..core.state import get_update_state
+        from ..core.trigger import _push_update_toast, trigger_update_check
+
+        state = get_update_state()
+        current = state.state
+        info = state.update_info
+
+        # An installer is already downloaded — re-show the toast (the user
+        # may have skipped it earlier and changed their mind).
+        if current == UpdateState.READY and info:
+            _push_update_toast(info, ready=True)
+            return {"FINISHED"}
+
+        if current == UpdateState.DOWNLOADING and info:
+            self.report(
+                {"INFO"},
+                f"Update {info.latest_version} is downloading in the background",
+            )
+            return {"FINISHED"}
+
+        if current in (UpdateState.CHECKING, UpdateState.INSTALLING):
+            self.report({"INFO"}, "An update check is already in progress")
+            return {"CANCELLED"}
+
+        trigger_update_check(interactive=True)
+        self.report({"INFO"}, "Checking for updates…")
+        return {"FINISHED"}
+
+
 class MIXAR_OT_open_changelog(bpy.types.Operator):
     """Open the changelog in the default browser"""
 
@@ -108,5 +146,6 @@ class MIXAR_OT_open_changelog(bpy.types.Operator):
 classes = (
     MIXAR_OT_install_update,
     MIXAR_OT_dismiss_update,
+    MIXAR_OT_check_for_updates,
     MIXAR_OT_open_changelog,
 )

@@ -30,17 +30,28 @@ _ACTIVE_STATES = frozenset({
     UpdateState.INSTALLING,
 })
 
+# Whether the in-flight check was requested explicitly by the user
+# (Help → Check for Updates).  Interactive checks give feedback even when
+# up to date or on failure, and ignore a previously skipped version.
+# Only one check runs at a time (_ACTIVE_STATES guard), so a plain flag
+# is race-safe; the callbacks consume and reset it.
+_interactive_check = {"active": False}
+
 
 # ============================================================================
 # Public entry point
 # ============================================================================
 
 
-def trigger_update_check() -> bool:
+def trigger_update_check(interactive: bool = False) -> bool:
     """Trigger an update check if one is not already in progress.
 
     Safe to call from **any** thread.  Bounces work to the main thread
     via ``bpy.app.timers.register``.
+
+    Args:
+        interactive: True when the user explicitly asked (menu action) —
+            shows "up to date"/failure feedback and bypasses skip-version.
 
     Returns:
         ``True`` if a check was scheduled, ``False`` if skipped because
@@ -55,8 +66,9 @@ def trigger_update_check() -> bool:
         )
         return False
 
+    _interactive_check["active"] = interactive
     bpy.app.timers.register(_do_update_check, first_interval=0.0)
-    logger.info("Update check scheduled on main thread")
+    logger.info("Update check scheduled on main thread (interactive=%s)", interactive)
     return True
 
 
@@ -135,6 +147,8 @@ def _on_check_success(response) -> None:
     from .update_checker import get_skipped_version, parse_update_response
 
     state = get_update_state()
+    interactive = _interactive_check["active"]
+    _interactive_check["active"] = False
 
     try:
         data = response.data if hasattr(response, "data") else {}
@@ -143,10 +157,12 @@ def _on_check_success(response) -> None:
         if info is None:
             logger.info("No update available")
             state.set_idle()
+            if interactive:
+                _push_up_to_date_toast()
             return
 
-        # Skip check (unless forced)
-        if not is_forced(info):
+        # Skip check (unless forced, or the user asked explicitly)
+        if not is_forced(info) and not interactive:
             skipped = get_skipped_version()
             if skipped and skipped == info.latest_version:
                 logger.info("Version %s was skipped by user", info.latest_version)
@@ -188,11 +204,16 @@ def _on_check_success(response) -> None:
 
 
 def _on_check_error(error: Exception) -> None:
-    """Handle update check failure — silent, no UI."""
+    """Handle update check failure — silent unless user-requested."""
     from .state import get_update_state
+
+    interactive = _interactive_check["active"]
+    _interactive_check["active"] = False
 
     logger.debug("Update check failed (silent): %s", error)
     get_update_state().set_idle()
+    if interactive:
+        _push_check_failed_toast()
 
 
 # ============================================================================
@@ -289,6 +310,37 @@ def _push_update_toast(info, ready: bool) -> None:
         info.latest_version, ready, forced,
     )
     return None  # For use as timer callback
+
+
+def _push_up_to_date_toast() -> None:
+    """Feedback for an interactive check that found no update."""
+    from ...notifications.store import get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+    from .update_checker import get_current_version
+
+    get_notification_store().push(
+        type_str="success",
+        title="Mixar is up to date",
+        body=f"You're running the latest version ({get_current_version()}).",
+        priority="normal",
+        ttl_ms=6000,
+        id=UPDATE_NOTIFICATION_ID,
+    )
+
+
+def _push_check_failed_toast() -> None:
+    """Feedback for an interactive check that could not reach the server."""
+    from ...notifications.store import get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+
+    get_notification_store().push(
+        type_str="error",
+        title="Could not check for updates",
+        body="Check your internet connection and try again.",
+        priority="normal",
+        ttl_ms=6000,
+        id=UPDATE_NOTIFICATION_ID,
+    )
 
 
 def _push_ready_toast(info) -> None:
