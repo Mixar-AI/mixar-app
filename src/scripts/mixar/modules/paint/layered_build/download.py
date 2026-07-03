@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import threading
 import time
 import tempfile
 import urllib.parse
@@ -91,7 +92,11 @@ def download_to_tempfile(
     attempts = max(1, int(attempts or 1))
     last_error = None
     for attempt in range(1, attempts + 1):
-        tmp_path = f"{path}.part"
+        # Writer-unique part path: the enqueue-time script prefetch and an
+        # in-build load may fetch the same URL from different threads; a
+        # shared "<path>.part" would have both writers truncating one file.
+        # os.replace onto the final path stays atomic either way.
+        tmp_path = f"{path}.{threading.get_ident()}.part"
         try:
             data = _read_url(url, timeout)
             with open(tmp_path, "wb") as f:
