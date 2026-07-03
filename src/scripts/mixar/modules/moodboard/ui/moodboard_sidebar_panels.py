@@ -93,12 +93,15 @@ class MIXIE_PT_gen_blockout_to_render(Panel):
 
 
 class MIXIE_PT_gen_lookdev360(Panel):
-    bl_label = "Generate PBR Maps"
+    # Consolidated "Texture Gen" tab (PBR Textures / Texture Edit /
+    # Procedural Material via the catalog mode selector). bl_idname kept
+    # stable — the tab system is restructured in Stage 3.
+    bl_label = "Texture Gen"
     bl_idname = "MIXIE_PT_gen_lookdev360"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PBR Maps"
-    bl_order = 50  # 5. PBR Maps
+    bl_category = "Texture Gen"
+    bl_order = 50  # 5. Texture Gen
     bl_options = set()
 
     @classmethod
@@ -113,12 +116,15 @@ class MIXIE_PT_gen_lookdev360(Panel):
 
 
 class MIXIE_PT_gen_image_to_3d(Panel):
-    bl_label = "Image to 3D"
+    # Consolidated "Model Gen" tab (Image to 3D / Image to 3D Pro /
+    # Rapid 3D via the catalog mode selector). bl_idname kept stable —
+    # other code keys on it; the tab system is restructured in Stage 3.
+    bl_label = "Model Gen"
     bl_idname = "MIXIE_PT_gen_image_to_3d"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Image to 3D"
-    bl_order = 20  # 2. Image to 3D
+    bl_category = "Model Gen"
+    bl_order = 20  # 2. Model Gen
     bl_options = set()
 
     @classmethod
