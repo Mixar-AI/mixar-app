@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Lookdev360 PBR job queue: concrete Job + enqueue helpers.
+"""Lookdev360 PBR generation queue: concrete Job + enqueue helpers.
 
 Wires the generic ``FeatureQueue`` framework to the Lookdev360 PBR
 generation service. All params are snapshotted at enqueue time.
@@ -18,11 +18,10 @@ from typing import Dict, List, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.services.job_queue_service import (
-    get_job_queue_service,
+from mixar.modules.common.api.services.generation_queue_service import (
+    get_generation_queue_service,
 )
 from mixar.modules.common.job_queue import Job, get_queue
-from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
@@ -58,7 +57,7 @@ class Lookdev360Job(Job):
     # ------------------------------------------------------------------ #
 
     def submit(self, on_success, on_error) -> None:
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         payload = {
             "prompt": self.prompt,
             "mesh_file_bytes_b64": self.mesh_bytes_b64,
@@ -75,14 +74,13 @@ class Lookdev360Job(Job):
             job_type="pbr_gen",
             model="hunyuan-pbr",
             payload=payload,
-            idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
             on_error=on_error,
             timeout=1200.0,
         )
 
     def poll(self, on_success, on_error) -> None:
-        service = get_job_queue_service()
+        service = get_generation_queue_service()
         service.get_job_status(
             self.backend_job_id,
             on_success=on_success,
@@ -131,7 +129,7 @@ class Lookdev360Job(Job):
             if isinstance(result, dict):
                 self._extract_texture_urls(result)
             return ("DONE", [])
-        if status in FAILED_BACKEND_STATUSES:
+        if status == "FAILED":
             self.error = inner.get("error", "PBR generation failed")
             self.user_message = inner.get("user_message", "") or "PBR generation failed"
             return ("FAIL", [])

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Operators for the job queue UIList."""
+"""Operators for the generation queue UIList."""
 
 from bpy.props import StringProperty
 from bpy.types import Operator

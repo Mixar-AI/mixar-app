@@ -190,12 +190,7 @@ def process_normal_channel(
         logger.debug(f"  normal_proc outputs: {[o.name for o in normal_proc.outputs]}")
 
     # Get context variables
-    # Use the preserved pre-mask alpha for smooth-bump neighbor defaults.
-    # (end_chain now carries the mask-multiplied alpha and must not be reused here.)
-    if getattr(ctx, 'alpha_after_mod', None) is not None:
-        alpha_after_mod = ctx.alpha_after_mod
-    else:
-        alpha_after_mod = ctx.end_chain if hasattr(ctx, 'end_chain') else alpha
+    alpha_after_mod = ctx.end_chain if hasattr(ctx, 'end_chain') else alpha
 
     # Set up neighbor values for smooth bump
     (rgb_n, rgb_s, rgb_e, rgb_w,

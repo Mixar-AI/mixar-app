@@ -408,15 +408,8 @@ def register():
         bpy.app.timers.register(_register_bubble_keymap, first_interval=0.8)
 
     if not bpy.app.timers.is_registered(_streaming_redraw_tick):
-        # persistent=True so the bubble keeps repainting after a .blend
-        # file load. Blender unregisters non-persistent timers on load and
-        # register() only runs once at addon startup, so without this the
-        # bubble's loader/spinner would freeze (static dots) on every file
-        # the user opens until a mouse-move/keystroke forced a redraw.
         bpy.app.timers.register(
-            _streaming_redraw_tick,
-            first_interval=_STREAMING_TICK_IDLE,
-            persistent=True,
+            _streaming_redraw_tick, first_interval=_STREAMING_TICK_IDLE
         )
 
 
