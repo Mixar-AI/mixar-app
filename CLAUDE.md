@@ -157,6 +157,7 @@ The backend runs a **LangGraph-based orchestrator agent** (Claude Sonnet 4.6 pri
 - **Authentication**: Cross-platform keyring + local OAuth PKCE callback server
 - **Custom editor spaces**: `space_mixie_chat`, `space_mixar_properties`, `space_mixar_layers`, `space_mixar_assets`
 - **3D viewport enhancements**: 13 modified files
+- **Python GIL safety**: `python/generic/py_capi_utils.cc` overlay — `PyC_IsInterpreterActive()` uses per-thread `PyGILState_Check()` instead of the process-global current-tstate check. On Python ≤ 3.11 the global check answers "does *any* thread hold the GIL", which let C++ operators (GIL released around `WM_operator_call_py`) call Python C-API concurrently with background Python threads (auth/keyring, cache fetchers) → allocator corruption → startup segfaults in `PyUnicode_New`.
 
 ---
 
