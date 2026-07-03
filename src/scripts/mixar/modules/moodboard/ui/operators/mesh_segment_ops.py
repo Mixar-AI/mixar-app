@@ -117,6 +117,21 @@ class MIXIE_OT_mesh_segment_submit(Operator):
             self.report({'ERROR'}, f"Failed to export mesh: {e}")
             return {'CANCELLED'}
 
+        # Model slug from the tab's catalog selection (catalog default →
+        # legacy "mesh_segment_v1" fallback, byte-identical today).
+        model = "mesh_segment_v1"
+        try:
+            from mixar.modules.common.generation_params import (
+                resolve_model_slug,
+            )
+            model = resolve_model_slug(
+                "mesh_segment",
+                getattr(sidebar_tab, 'model', '') if sidebar_tab else '',
+                "mesh_segment_v1",
+            )
+        except Exception:
+            pass
+
         # Submit job via FeatureQueue
         try:
             from ....mesh_segment.core.mesh_segment_queue import enqueue_mesh_segment_job
@@ -126,6 +141,7 @@ class MIXIE_OT_mesh_segment_submit(Operator):
                 mesh_file_path=obj_path,
                 description=prompt,  # 'prompt' from UI, API expects 'description'
                 expected_parts=expected_parts,
+                model=model,
             )
 
             if job:
