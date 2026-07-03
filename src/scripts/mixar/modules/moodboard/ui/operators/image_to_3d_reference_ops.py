@@ -189,15 +189,9 @@ class MIXIE_OT_image_to_3d_refresh_models(Operator):
             )
 
             refresh_generation_catalog_cache()
-        except Exception:
-            pass
-        try:
-            from mixar.bootstrap.model_3d_cache import refresh_models_cache
-
-            refresh_models_cache()
             self.report({"INFO"}, "Refreshing models list...")
         except ImportError:
-            self.report({"ERROR"}, "Model cache module not available")
+            self.report({"ERROR"}, "Generation catalog module not available")
             return {"CANCELLED"}
         return {"FINISHED"}
 
