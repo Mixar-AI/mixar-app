@@ -15,30 +15,31 @@ logger = get_logger(__name__)
 
 
 def refresh_generation_caches():
-    """Refresh the generation catalog cache after successful authentication.
-
-    The legacy per-feature imagegen / model_3d caches were retired — the
-    unified generation catalog is the single source for models, styles
-    and parameter schemas.
-    """
+    """Refresh generation config caches after successful authentication."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            refresh_generation_catalog_cache,
-        )
-        refresh_generation_catalog_cache()
+        from mixar.bootstrap.imagegen_cache import refresh_imagegen_cache
+        refresh_imagegen_cache()
     except Exception as e:
-        logger.warning(f"Generation catalog refresh failed: {e}")
+        logger.warning(f"ImageGen cache refresh failed: {e}")
+    try:
+        from mixar.bootstrap.model_3d_cache import refresh_models_cache
+        refresh_models_cache()
+    except Exception as e:
+        logger.warning(f"Model3D cache refresh failed: {e}")
 
 
 def invalidate_generation_caches():
-    """Clear the generation catalog cache on logout."""
+    """Clear generation config caches on logout."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            clear_generation_catalog_cache,
-        )
-        clear_generation_catalog_cache()
+        from mixar.bootstrap.imagegen_cache import clear_imagegen_cache
+        clear_imagegen_cache()
     except Exception as e:
-        logger.warning(f"Generation catalog clear failed: {e}")
+        logger.warning(f"ImageGen cache clear failed: {e}")
+    try:
+        from mixar.bootstrap.model_3d_cache import clear_models_cache
+        clear_models_cache()
+    except Exception as e:
+        logger.warning(f"Model3D cache clear failed: {e}")
 
 
 def maybe_show_onboarding(email: str) -> None:
