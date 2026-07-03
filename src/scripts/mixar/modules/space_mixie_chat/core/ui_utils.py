@@ -12,21 +12,6 @@ logger = get_logger(__name__)
 
 _sync_timers_pending = False
 _deferred_force_attachment = False
-# Pending-attachment count at the last executed sync. The deferred sync
-# runs after every SSE batch via redraw_chat_areas(); invoking the C++
-# operator unconditionally forced an ED_screen_refresh of the bubble
-# window every ~0.1 s during streaming. Skipping when the count is
-# unchanged keeps the refresh for real attachment changes only.
-_last_synced_attachment_count = -1
-
-
-def _pending_attachment_count() -> int:
-    try:
-        scene = bpy.context.scene
-        attachments = getattr(scene, "mixie_chat_pending_attachments", None)
-        return len(attachments) if attachments is not None else 0
-    except Exception:
-        return -1
 
 
 def _sync_bubble_attachment_size(force_attachment_height=False):
@@ -61,14 +46,10 @@ def _tag_chat_and_bubble_areas():
 
 def _deferred_sync_callback():
     global _sync_timers_pending, _deferred_force_attachment
-    global _last_synced_attachment_count
     _sync_timers_pending = False
     force = _deferred_force_attachment
     _deferred_force_attachment = False
-    count = _pending_attachment_count()
-    if force or count != _last_synced_attachment_count:
-        _last_synced_attachment_count = count
-        _sync_bubble_attachment_size(force_attachment_height=force)
+    _sync_bubble_attachment_size(force_attachment_height=force)
     # Always tag areas for redraw so thumbnails render even when the
     # bubble size didn't change (the C++ sync early-returns in that case
     # without tagging a redraw).
@@ -107,6 +88,19 @@ def sync_bubble_attachment_size_deferred(force_attachment_height=False):
     except Exception:
         _sync_timers_pending = False
         logger.debug("failed to register bubble sync timer", exc_info=True)
+
+
+def bump_layout_epoch(scene) -> None:
+    """Force the C++ chat layout cache to rebuild on the next draw.
+
+    The cache only invalidates on message-count / width / stream changes, so
+    anything that changes a bubble's height in place (collapse toggles, step
+    rows appearing, thinking finalization) must bump this scene counter.
+    """
+    try:
+        scene.mixie_chat_layout_epoch = scene.mixie_chat_layout_epoch + 1
+    except Exception:
+        logger.debug("failed to bump chat layout epoch", exc_info=True)
 
 
 def redraw_chat_areas():

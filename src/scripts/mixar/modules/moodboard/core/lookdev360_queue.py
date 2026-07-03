@@ -148,17 +148,16 @@ class Lookdev360Job(Job):
         stored_obj_path = self.stored_obj_path
 
         def _bg_download():
-            # Only raw byte downloads happen on this thread. Creating the
-            # image datablocks (bpy.data.images.load/pack) is NOT thread-safe
-            # and is deferred to the _apply main-thread timer below.
             try:
                 from mixar.modules.moodboard.core.lookdev360_utils import (
-                    download_texture_to_tempfile,
+                    download_texture_from_url,
                 )
 
                 timestamp = int(time.time())
                 try:
-                    albedo_path = download_texture_to_tempfile(urls["basecolor"])
+                    albedo_img = download_texture_from_url(
+                        urls["basecolor"], f"pbr_basecolor_{timestamp}"
+                    )
                 except Exception as e:
                     err = f"Failed to download BaseColor texture: {e}"
 
@@ -169,47 +168,34 @@ class Lookdev360Job(Job):
                     bpy.app.timers.register(_fail, first_interval=0.0)
                     return
 
-                optional_paths = {}
-                for tex_type in ("roughness", "metallic", "normal"):
-                    if not urls.get(tex_type):
-                        continue
+                roughness_img = metallic_img = normal_img = None
+                if urls.get("roughness"):
                     try:
-                        optional_paths[tex_type] = download_texture_to_tempfile(
-                            urls[tex_type]
+                        roughness_img = download_texture_from_url(
+                            urls["roughness"], f"pbr_roughness_{timestamp}"
                         )
                     except Exception as e:
-                        logger.warning(
-                            "Failed to download %s: %s", tex_type.capitalize(), e
+                        logger.warning("Failed to download Roughness: %s", e)
+                if urls.get("metallic"):
+                    try:
+                        metallic_img = download_texture_from_url(
+                            urls["metallic"], f"pbr_metallic_{timestamp}"
                         )
+                    except Exception as e:
+                        logger.warning("Failed to download Metallic: %s", e)
+                if urls.get("normal"):
+                    try:
+                        normal_img = download_texture_from_url(
+                            urls["normal"], f"pbr_normal_{timestamp}"
+                        )
+                    except Exception as e:
+                        logger.warning("Failed to download Normal: %s", e)
 
                 def _apply():
-                    from mixar.modules.moodboard.core.lookdev360_utils import (
-                        load_texture_from_file,
-                    )
-
-                    try:
-                        albedo_img = load_texture_from_file(
-                            albedo_path, f"pbr_basecolor_{timestamp}"
-                        )
-                    except Exception as e:
-                        on_error(f"Failed to load BaseColor texture: {e}")
-                        return None
-
-                    optional_imgs = {}
-                    for tex_type, path in optional_paths.items():
-                        try:
-                            optional_imgs[tex_type] = load_texture_from_file(
-                                path, f"pbr_{tex_type}_{timestamp}"
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                "Failed to load %s: %s", tex_type.capitalize(), e
-                            )
-
                     _apply_textures(
-                        stored_objects, albedo_img, optional_imgs.get("roughness"),
-                        optional_imgs.get("metallic"), optional_imgs.get("normal"),
-                        timestamp, stored_obj_path, on_done, on_error,
+                        stored_objects, albedo_img, roughness_img,
+                        metallic_img, normal_img, timestamp,
+                        stored_obj_path, on_done, on_error,
                     )
                     return None
 
@@ -294,20 +280,6 @@ def _apply_textures(
             applied_count += 1
 
     if applied_count == 0:
-        # Remove the just-created (packed) image datablocks and the temp OBJ:
-        # otherwise every failed apply leaks up to 4 multi-MB textures into
-        # the session that get embedded in the saved .blend.
-        for img in (albedo_img, roughness_img, metallic_img, normal_img):
-            if img is not None:
-                try:
-                    bpy.data.images.remove(img)
-                except Exception:
-                    pass
-        try:
-            if stored_obj_path and os.path.exists(stored_obj_path):
-                os.unlink(stored_obj_path)
-        except OSError:
-            pass
         on_error("Failed to apply textures to any object")
         return
 

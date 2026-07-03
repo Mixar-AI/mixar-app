@@ -98,7 +98,7 @@ def replace_image(old_image, new_image, mp=None, uv_name=''):
         list: List of entities that were using the old image and have been updated.
     """
 
-    if old_image == new_image: return []
+    if old_image == new_image: return
 
     # Rename
     if not new_image.yia.is_image_atlas and not new_image.yua.is_udim_atlas:

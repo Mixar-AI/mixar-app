@@ -49,11 +49,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
     geometry_file_format: bpy.props.StringProperty(default="")
     material: bpy.props.StringProperty(default="")
 
-    # Tripo-specific (tripo-p1)
-    texture: bpy.props.BoolProperty(default=True)
-    face_limit: bpy.props.IntProperty(default=0, min=0, max=20000)
-    model_seed: bpy.props.IntProperty(default=0)
-
     def execute(self, context):
         # Direct invocation with explicit params (agent scripts)
         if self.image_name:
@@ -220,9 +215,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             return {"CANCELLED"}
 
         model_name = self.model.strip().lower() if self.model else "trellis-1"
-        if model_name not in ("trellis-1", "rodin", "tripo-p1"):
-            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be 'trellis-1', 'rodin', or 'tripo-p1'")
-            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be 'trellis-1', 'rodin', or 'tripo-p1'")
+        if model_name not in ("trellis-1", "rodin"):
+            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be 'trellis-1' or 'rodin'")
+            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be 'trellis-1' or 'rodin'")
             return {"CANCELLED"}
 
         try:
@@ -240,12 +235,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 "generate_normal": self.generate_normal,
                 "save_gaussian_ply": self.save_gaussian_ply,
             }
-        elif model_name == "tripo-p1":
-            parameters = {"texture": self.texture}
-            if self.face_limit > 0:
-                parameters["face_limit"] = self.face_limit
-            if self.model_seed:
-                parameters["model_seed"] = self.model_seed
         else:
             parameters = {
                 "quality": self.quality or "medium",

@@ -62,19 +62,17 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     # Get image dimensions
     width, height = image.size
 
-    # Read + convert pixels with numpy via foreach_get. The previous
-    # implementation copied image.pixels into a Python list and ran two
-    # pure-Python per-pixel passes (float→byte conversion, then scanline
-    # assembly) — multi-second UI freezes for 1K+ images on every chat /
-    # brush-gen / moodboard upload. foreach_get is a single memcpy-style
-    # bulk read; the conversion below matches the old int() truncation
-    # semantics exactly.
-    import numpy as np
+    # Get pixel data (RGBA floats)
+    pixels = list(image.pixels[:])
 
-    flat = np.empty(width * height * 4, dtype=np.float32)
-    image.pixels.foreach_get(flat)
-    rgba = np.clip(flat * 255.0, 0.0, 255.0).astype(np.uint8)
-    rgba = rgba.reshape(height, width * 4)
+    # Convert to 8-bit RGBA
+    pixel_data = []
+    for i in range(0, len(pixels), 4):
+        r = int(max(0, min(255, pixels[i] * 255)))
+        g = int(max(0, min(255, pixels[i + 1] * 255)))
+        b = int(max(0, min(255, pixels[i + 2] * 255)))
+        a = int(max(0, min(255, pixels[i + 3] * 255)))
+        pixel_data.extend([r, g, b, a])
 
     def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
         chunk = chunk_type + data
@@ -88,14 +86,16 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr_chunk = png_chunk(b'IHDR', ihdr_data)
 
-    # IDAT chunk - raw scanlines, filter byte 0 (None) per row.
-    # Blender stores rows bottom-to-top; PNG needs top-to-bottom.
-    raw = np.zeros((height, 1 + width * 4), dtype=np.uint8)
-    raw[:, 1:] = rgba[::-1]
+    # IDAT chunk - prepare raw scanlines (filter byte 0 = None)
+    raw_data = []
+    for y in range(height):
+        raw_data.append(0)  # Filter type None
+        for x in range(width):
+            # Blender stores bottom-to-top, PNG needs top-to-bottom
+            idx = ((height - 1 - y) * width + x) * 4
+            raw_data.extend(pixel_data[idx:idx + 4])
 
-    # Level 6 instead of 9: the payload is a network upload, and level 9
-    # costs several times the CPU for a few percent smaller output.
-    compressed = zlib.compress(raw.tobytes(), 6)
+    compressed = zlib.compress(bytes(raw_data), 9)
     idat_chunk = png_chunk(b'IDAT', compressed)
 
     # IEND chunk

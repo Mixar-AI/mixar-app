@@ -51,12 +51,7 @@ def _update_loader():
 
                 needs_animation = True
 
-                # Subscript write: skips rna_property_update, which would
-                # otherwise tag the Scene depsgraph and broadcast NC_WINDOW
-                # (full-app redraw) twice a second for the whole duration of
-                # an agent run. The explicit tag_redraw below repaints the
-                # chat surfaces; nothing else reads this property.
-                msg["loader_spinner_index"] = (msg.loader_spinner_index + 1) % 4
+                msg.loader_spinner_index = (msg.loader_spinner_index + 1) % 4
 
                 if has_loader:
                     bubble_id = msg.bubble_id if hasattr(msg, 'bubble_id') else ""
@@ -74,7 +69,7 @@ def _update_loader():
                         except json.JSONDecodeError:
                             texts = []
                         if texts:
-                            msg["loader_current_index"] = (msg.loader_current_index + 1) % len(texts)
+                            msg.loader_current_index = (msg.loader_current_index + 1) % len(texts)
                         _text_rotate_times[key] = now
 
         if not needs_animation:
@@ -144,3 +139,48 @@ def stop_loader_animation():
 def cleanup():
     """Clean up animation resources on module unload."""
     stop_loader_animation()
+
+
+# ---------------------------------------------------------------------------
+# Slide-in redraw burst
+# ---------------------------------------------------------------------------
+# The C++ side animates a 0.25s slide-in when a new bubble appears, advancing
+# it per draw and tagging its own region for redraw. But a tag from inside a
+# draw callback does NOT wake Blender's idle event loop — with no input
+# events, the next draw only happens on the next timer tick (~250ms), so the
+# slide renders ~2 frames and looks stuck. This short ~60fps timer burst
+# wakes the loop for the animation window so the slide gets real frames.
+
+SLIDE_REDRAW_INTERVAL = 1.0 / 60.0
+SLIDE_REDRAW_DURATION = 0.35  # covers the 0.25s slide with margin
+_slide_burst_until = 0.0
+_slide_burst_active = False
+
+
+def _slide_redraw_burst():
+    global _slide_burst_active
+    try:
+        from .ui_utils import redraw_chat_areas
+        redraw_chat_areas()
+    except Exception:
+        _slide_burst_active = False
+        return None
+    if time.monotonic() >= _slide_burst_until:
+        _slide_burst_active = False
+        return None
+    return SLIDE_REDRAW_INTERVAL
+
+
+def start_slide_redraw_burst():
+    """Drive ~60fps chat redraws briefly after a new bubble is added."""
+    global _slide_burst_until, _slide_burst_active
+    _slide_burst_until = time.monotonic() + SLIDE_REDRAW_DURATION
+    if _slide_burst_active:
+        return
+    _slide_burst_active = True
+    try:
+        bpy.app.timers.register(
+            _slide_redraw_burst, first_interval=SLIDE_REDRAW_INTERVAL
+        )
+    except Exception:
+        _slide_burst_active = False
