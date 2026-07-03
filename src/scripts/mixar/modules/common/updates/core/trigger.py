@@ -30,28 +30,17 @@ _ACTIVE_STATES = frozenset({
     UpdateState.INSTALLING,
 })
 
-# Whether the in-flight check was requested explicitly by the user
-# (Help → Check for Updates).  Interactive checks give feedback even when
-# up to date or on failure, and ignore a previously skipped version.
-# Only one check runs at a time (_ACTIVE_STATES guard), so a plain flag
-# is race-safe; the callbacks consume and reset it.
-_interactive_check = {"active": False}
-
 
 # ============================================================================
 # Public entry point
 # ============================================================================
 
 
-def trigger_update_check(interactive: bool = False) -> bool:
+def trigger_update_check() -> bool:
     """Trigger an update check if one is not already in progress.
 
     Safe to call from **any** thread.  Bounces work to the main thread
     via ``bpy.app.timers.register``.
-
-    Args:
-        interactive: True when the user explicitly asked (menu action) —
-            shows "up to date"/failure feedback and bypasses skip-version.
 
     Returns:
         ``True`` if a check was scheduled, ``False`` if skipped because
@@ -66,9 +55,8 @@ def trigger_update_check(interactive: bool = False) -> bool:
         )
         return False
 
-    _interactive_check["active"] = interactive
     bpy.app.timers.register(_do_update_check, first_interval=0.0)
-    logger.info("Update check scheduled on main thread (interactive=%s)", interactive)
+    logger.info("Update check scheduled on main thread")
     return True
 
 
@@ -147,8 +135,6 @@ def _on_check_success(response) -> None:
     from .update_checker import get_skipped_version, parse_update_response
 
     state = get_update_state()
-    interactive = _interactive_check["active"]
-    _interactive_check["active"] = False
 
     try:
         data = response.data if hasattr(response, "data") else {}
@@ -157,12 +143,10 @@ def _on_check_success(response) -> None:
         if info is None:
             logger.info("No update available")
             state.set_idle()
-            if interactive:
-                _push_up_to_date_toast()
             return
 
-        # Skip check (unless forced, or the user asked explicitly)
-        if not is_forced(info) and not interactive:
+        # Skip check (unless forced)
+        if not info.force_update:
             skipped = get_skipped_version()
             if skipped and skipped == info.latest_version:
                 logger.info("Version %s was skipped by user", info.latest_version)
@@ -204,16 +188,11 @@ def _on_check_success(response) -> None:
 
 
 def _on_check_error(error: Exception) -> None:
-    """Handle update check failure — silent unless user-requested."""
+    """Handle update check failure — silent, no UI."""
     from .state import get_update_state
-
-    interactive = _interactive_check["active"]
-    _interactive_check["active"] = False
 
     logger.debug("Update check failed (silent): %s", error)
     get_update_state().set_idle()
-    if interactive:
-        _push_check_failed_toast()
 
 
 # ============================================================================
@@ -257,97 +236,66 @@ def _start_background_download(info) -> None:
 # ============================================================================
 
 
-def is_forced(info) -> bool:
-    """A forced or unsupported update must be installed — no skipping."""
-    return bool(info.force_update or info.unsupported)
-
-
-def _push_update_toast(info, ready: bool) -> None:
-    """Push the sticky update toast.
-
-    ``ready`` selects the wording (installer downloaded vs. merely
-    available).  Forced/unsupported updates render without Skip or a
-    close button so the only path forward is Install.
-    """
+def _push_ready_toast(info) -> None:
+    """Push a sticky toast telling the user the update is ready to install."""
     from ...notifications.store import NotificationAction, get_notification_store
     from ..constants import UPDATE_NOTIFICATION_ID
 
-    forced = is_forced(info)
-
-    state_word = "ready to install" if ready else "available"
-    body = f"Version {info.latest_version} is {state_word}."
-    if forced:
-        body += " This update is required to continue using Mixar."
+    body = f"Version {info.latest_version} is ready to install."
     if info.changelog_summary:
         body += f"\n{info.changelog_summary}"
 
-    actions = []
-    if not forced:
-        actions.append(NotificationAction(
-            label="Skip",
-            operator="mixar.dismiss_update",
-            style="secondary",
-        ))
-    actions.append(NotificationAction(
-        label="Install Update",
-        operator="mixar.install_update",
-        style="primary",
-    ))
-
     get_notification_store().push(
         type_str="update",
-        title="Mixar Update Required" if forced else
-              ("Mixar Update Ready" if ready else "Mixar Update Available"),
+        title="Mixar Update Ready",
         body=body,
-        priority="critical" if forced else ("high" if ready else "normal"),
-        actions=actions,
+        priority="high",
+        actions=[
+            NotificationAction(
+                label="Skip",
+                operator="mixar.dismiss_update",
+                style="secondary",
+            ),
+            NotificationAction(
+                label="Install Update",
+                operator="mixar.install_update",
+                style="primary",
+            ),
+        ],
         ttl_ms=0,
         id=UPDATE_NOTIFICATION_ID,
-        dismissible=not forced,
     )
-    logger.info(
-        "Pushed update toast for v%s (ready=%s, forced=%s)",
-        info.latest_version, ready, forced,
-    )
+    logger.info("Pushed 'ready to install' toast for v%s", info.latest_version)
     return None  # For use as timer callback
-
-
-def _push_up_to_date_toast() -> None:
-    """Feedback for an interactive check that found no update."""
-    from ...notifications.store import get_notification_store
-    from ..constants import UPDATE_NOTIFICATION_ID
-    from .update_checker import get_current_version
-
-    get_notification_store().push(
-        type_str="success",
-        title="Mixar is up to date",
-        body=f"You're running the latest version ({get_current_version()}).",
-        priority="normal",
-        ttl_ms=6000,
-        id=UPDATE_NOTIFICATION_ID,
-    )
-
-
-def _push_check_failed_toast() -> None:
-    """Feedback for an interactive check that could not reach the server."""
-    from ...notifications.store import get_notification_store
-    from ..constants import UPDATE_NOTIFICATION_ID
-
-    get_notification_store().push(
-        type_str="error",
-        title="Could not check for updates",
-        body="Check your internet connection and try again.",
-        priority="normal",
-        ttl_ms=6000,
-        id=UPDATE_NOTIFICATION_ID,
-    )
-
-
-def _push_ready_toast(info) -> None:
-    """Push a sticky toast telling the user the update is ready to install."""
-    return _push_update_toast(info, ready=True)
 
 
 def _push_update_available_toast(info) -> None:
     """Push a toast notifying that an update exists (no auto-download)."""
-    return _push_update_toast(info, ready=False)
+    from ...notifications.store import NotificationAction, get_notification_store
+    from ..constants import UPDATE_NOTIFICATION_ID
+
+    body = f"Version {info.latest_version} is available."
+    if info.changelog_summary:
+        body += f"\n{info.changelog_summary}"
+
+    get_notification_store().push(
+        type_str="update",
+        title="Mixar Update Available",
+        body=body,
+        priority="normal",
+        actions=[
+            NotificationAction(
+                label="Skip",
+                operator="mixar.dismiss_update",
+                style="secondary",
+            ),
+            NotificationAction(
+                label="Install Update",
+                operator="mixar.install_update",
+                style="primary",
+            ),
+        ],
+        ttl_ms=0,
+        id=UPDATE_NOTIFICATION_ID,
+    )
+    logger.info("Pushed 'update available' toast for v%s", info.latest_version)

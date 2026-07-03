@@ -8,10 +8,6 @@ Toast Renderer
 Draws notification toasts in the 3D viewport using GPU and BLF.
 Modern Apple-style cards with rounded corners, type badge, action
 buttons, and a circular close button.
-
-Buttons carry full interaction states: bordered idle look, hover
-highlight (driven by MOUSEMOVE forwarded from view3d_toast_click.cc),
-and a pressed flash before the action fires.
 """
 
 import bpy
@@ -21,7 +17,6 @@ from .constants import (
     ACTION_URL_FONT_SIZE,
     BADGE_RADIUS,
     BODY_FONT_SIZE,
-    BUTTON_BORDER_WIDTH,
     BUTTON_CORNER_RADIUS,
     BUTTON_FONT_SIZE,
     BUTTON_GAP,
@@ -40,12 +35,7 @@ from .constants import (
     get_toast_colors,
 )
 from .store import NotificationItem, get_notification_store
-from .toast_renderer_shapes import (
-    draw_circle,
-    draw_rect,
-    draw_rounded_rect,
-    draw_rounded_rect_outline,
-)
+from .toast_renderer_shapes import draw_circle, draw_rect, draw_rounded_rect
 
 # Draw handler reference
 _draw_handle = {"handler": None}
@@ -53,77 +43,17 @@ _draw_handle = {"handler": None}
 # Font ID (0 = default Blender font)
 _FONT_ID = 0
 
-# Hit-test bounding boxes, keyed by region pointer (each View3D region draws
-# its own toast layout). Rebuilt every draw pass, consumed by the click and
-# hover operators via bounds_for_region().
-#   {region_ptr: {"close":  [(nid, x, y, w, h), ...],
-#                 "action": [(nid, operator_idname, x, y, w, h), ...],
-#                 "url":    [(nid, url, x, y, w, h), ...]}}
-toast_bounds_by_region: dict[int, dict[str, list]] = {}
+# Bounding boxes for close buttons: list of (notification_id, x, y, w, h)
+# Updated each draw pass, consumed by the dismiss modal operator.
+toast_close_bounds: list[tuple[str, float, float, float, float]] = []
 
-# Interaction state shared with the click/hover operators. Keys:
-#   ("close", nid) | ("action", nid, operator_idname) | ("url", nid)
-toast_hover_state: dict = {"key": None}
-toast_pressed_state: dict = {"key": None}
+# Bounding boxes for action buttons:
+#   list of (notification_id, operator_idname, x, y, w, h)
+toast_action_bounds: list[tuple[str, str, float, float, float, float]] = []
 
-
-def bounds_for_region(region_ptr: int) -> dict[str, list] | None:
-    """Return the hit-test bounds recorded for a region, if any."""
-    return toast_bounds_by_region.get(region_ptr)
-
-
-def point_in_rect(mx: float, my: float, bx: float, by: float, bw: float, bh: float) -> bool:
-    """Test whether a point lies inside an axis-aligned rect."""
-    return bx <= mx <= bx + bw and by <= my <= by + bh
-
-
-def update_hover_state(region_ptr: int, mx: float, my: float) -> bool:
-    """Recompute the hovered element for a mouse position.
-
-    Returns True when the hover target changed (caller should redraw).
-    """
-    bounds = toast_bounds_by_region.get(region_ptr)
-    key = None
-    if bounds:
-        for nid, bx, by, bw, bh in bounds["close"]:
-            if point_in_rect(mx, my, bx, by, bw, bh):
-                key = ("close", nid)
-                break
-        if key is None:
-            for nid, op, bx, by, bw, bh in bounds["action"]:
-                if point_in_rect(mx, my, bx, by, bw, bh):
-                    key = ("action", nid, op)
-                    break
-        if key is None:
-            for nid, url, bx, by, bw, bh in bounds["url"]:
-                if point_in_rect(mx, my, bx, by, bw, bh):
-                    key = ("url", nid)
-                    break
-
-    if key != toast_hover_state["key"]:
-        toast_hover_state["key"] = key
-        return True
-    return False
-
-
-def _hovered(color: tuple) -> tuple:
-    """Brighten a color for the hover state."""
-    return (
-        min(color[0] + 0.10, 1.0),
-        min(color[1] + 0.10, 1.0),
-        min(color[2] + 0.10, 1.0),
-        min(color[3] + 0.12, 1.0),
-    )
-
-
-def _pressed(color: tuple) -> tuple:
-    """Darken (and solidify) a color for the pressed state."""
-    return (
-        color[0] * 0.75,
-        color[1] * 0.75,
-        color[2] * 0.75,
-        min(color[3] + 0.25, 1.0),
-    )
+# Bounding boxes for clickable action URLs:
+#   list of (notification_id, url, x, y, w, h)
+toast_url_bounds: list[tuple[str, str, float, float, float, float]] = []
 
 
 def _wrap_text(text: str, font_size: int, max_width: float) -> list[str]:
@@ -161,9 +91,7 @@ def _measure_button_width(label: str) -> float:
     return tw + BUTTON_PADDING_X * 2
 
 
-def _draw_single_toast(
-    item: NotificationItem, x_right: float, y_top: float, bounds: dict[str, list],
-) -> float:
+def _draw_single_toast(item: NotificationItem, x_right: float, y_top: float) -> float:
     """Render one toast and return its total height (including margin).
 
     Layout:
@@ -243,31 +171,26 @@ def _draw_single_toast(
     badge_cy = y + toast_h - TOAST_PADDING_Y - title_h * 0.5
     draw_circle(badge_cx, badge_cy, BADGE_RADIUS, badge_color)
 
-    # -- Close button (circular) \u2014 omitted for non-dismissible toasts --
-    if item.dismissible:
-        close_cx = x + TOAST_WIDTH - TOAST_PADDING_X - CLOSE_BUTTON_RADIUS
-        close_cy = y + toast_h - TOAST_PADDING_Y - CLOSE_BUTTON_RADIUS
-        close_hovered = toast_hover_state["key"] == ("close", item.id)
-        close_base = _hovered(colors["close_bg"]) if close_hovered else colors["close_bg"]
-        draw_circle(close_cx, close_cy, CLOSE_BUTTON_RADIUS, _apply_opacity(close_base, opacity))
+    # -- Close button (circular) --
+    close_cx = x + TOAST_WIDTH - TOAST_PADDING_X - CLOSE_BUTTON_RADIUS
+    close_cy = y + toast_h - TOAST_PADDING_Y - CLOSE_BUTTON_RADIUS
+    close_bg = _apply_opacity(colors["close_bg"], opacity)
+    draw_circle(close_cx, close_cy, CLOSE_BUTTON_RADIUS, close_bg)
 
-        # "x" glyph centered in circle
-        close_icon = colors["close_icon"]
-        if close_hovered:
-            close_icon = (*close_icon[:3], 1.0)
-        blf.size(_FONT_ID, 16)
-        xw, xh = blf.dimensions(_FONT_ID, "\u00d7")
-        blf.color(_FONT_ID, *_apply_opacity(close_icon, opacity))
-        blf.position(_FONT_ID, close_cx - xw * 0.5, close_cy - xh * 0.5, 0)
-        blf.draw(_FONT_ID, "\u00d7")
+    # "x" glyph centered in circle
+    blf.size(_FONT_ID, 16)
+    xw, xh = blf.dimensions(_FONT_ID, "\u00d7")
+    blf.color(_FONT_ID, *_apply_opacity(colors["close_icon"], opacity))
+    blf.position(_FONT_ID, close_cx - xw * 0.5, close_cy - xh * 0.5, 0)
+    blf.draw(_FONT_ID, "\u00d7")
 
-        # Record close-button bounds (square around circle for easier hit-testing)
-        close_box_x = close_cx - CLOSE_BUTTON_RADIUS
-        close_box_y = close_cy - CLOSE_BUTTON_RADIUS
-        bounds["close"].append((
-            item.id, close_box_x, close_box_y,
-            CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE,
-        ))
+    # Record close-button bounds (square around circle for easier hit-testing)
+    close_box_x = close_cx - CLOSE_BUTTON_RADIUS
+    close_box_y = close_cy - CLOSE_BUTTON_RADIUS
+    toast_close_bounds.append((
+        item.id, close_box_x, close_box_y,
+        CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE,
+    ))
 
     # -- Title text --
     title_x = x + TOAST_PADDING_X + badge_space
@@ -290,11 +213,8 @@ def _draw_single_toast(
     # -- Action URL (styled as clickable link) --
     if url_lines:
         cursor_y -= gap_url
-        url_hovered = toast_hover_state["key"] == ("url", item.id)
-        url_base = _hovered(badge_base) if url_hovered else badge_base
-        link_color = _apply_opacity(url_base, opacity)
-        underline_alpha = 1.0 if url_hovered else 0.5
-        underline_color = (*url_base[:3], url_base[3] * opacity * underline_alpha)
+        link_color = _apply_opacity(badge_base, opacity)
+        underline_color = (*badge_base[:3], badge_base[3] * opacity * 0.5)
         blf.size(_FONT_ID, ACTION_URL_FONT_SIZE)
 
         url_block_top = cursor_y
@@ -309,7 +229,7 @@ def _draw_single_toast(
 
         # Record URL bounds for click handling
         url_block_h = url_block_top - cursor_y
-        bounds["url"].append((
+        toast_url_bounds.append((
             item.id, item.action_url,
             title_x, cursor_y, inner_width, url_block_h,
         ))
@@ -331,29 +251,8 @@ def _draw_single_toast(
             btn_w = _measure_button_width(action.label)
             btn_x = btn_right - btn_w
 
-            key = ("action", item.id, action.operator)
-            is_pressed = toast_pressed_state["key"] == key
-            is_hovered = toast_hover_state["key"] == key
-
-            fill = style["bg"]
-            border = style.get("border")
-            if is_pressed:
-                fill = _pressed(fill)
-            elif is_hovered:
-                fill = _hovered(fill)
-                if border:
-                    border = (*border[:3], min(border[3] + 0.25, 1.0))
-
-            draw_rounded_rect(
-                btn_x, btn_y, btn_w, BUTTON_HEIGHT,
-                BUTTON_CORNER_RADIUS, _apply_opacity(fill, opacity),
-            )
-            if border:
-                draw_rounded_rect_outline(
-                    btn_x, btn_y, btn_w, BUTTON_HEIGHT,
-                    BUTTON_CORNER_RADIUS, _apply_opacity(border, opacity),
-                    BUTTON_BORDER_WIDTH,
-                )
+            btn_bg = _apply_opacity(style["bg"], opacity)
+            draw_rounded_rect(btn_x, btn_y, btn_w, BUTTON_HEIGHT, BUTTON_CORNER_RADIUS, btn_bg)
 
             # Button label centered
             blf.size(_FONT_ID, BUTTON_FONT_SIZE)
@@ -368,7 +267,7 @@ def _draw_single_toast(
             blf.draw(_FONT_ID, action.label)
 
             # Record bounds for hit-testing
-            bounds["action"].append((
+            toast_action_bounds.append((
                 item.id, action.operator,
                 btn_x, btn_y, btn_w, BUTTON_HEIGHT,
             ))
@@ -389,15 +288,16 @@ def _draw_toast_callback() -> None:
     if region is None:
         return
 
-    # Rebuild this region's bounds from scratch each draw pass
-    bounds: dict[str, list] = {"close": [], "action": [], "url": []}
-    toast_bounds_by_region[region.as_pointer()] = bounds
+    # Clear previous frame's bounds and rebuild
+    toast_close_bounds.clear()
+    toast_action_bounds.clear()
+    toast_url_bounds.clear()
 
     x_right = region.width - TOAST_CORNER_OFFSET_X
     y_cursor = region.height - TOAST_CORNER_OFFSET_Y
 
     for item in toasts:
-        consumed = _draw_single_toast(item, x_right, y_cursor, bounds)
+        consumed = _draw_single_toast(item, x_right, y_cursor)
         y_cursor -= consumed
 
 
@@ -414,6 +314,3 @@ def remove_draw_handler() -> None:
     if _draw_handle["handler"] is not None:
         bpy.types.SpaceView3D.draw_handler_remove(_draw_handle["handler"], 'WINDOW')
         _draw_handle["handler"] = None
-    toast_bounds_by_region.clear()
-    toast_hover_state["key"] = None
-    toast_pressed_state["key"] = None

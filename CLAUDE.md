@@ -18,6 +18,7 @@ make install       # Install Python packages into embedded Blender Python
 ### How the Build Works
 - `scripts/unix/build.sh` orchestrates the build
 - `scripts/unix/overlay.sh` copies `/src` onto `/source` (Blender upstream)
+- **Git worktrees build out of the box**: `upstream/` is a multi-GB submodule that linked worktrees don't carry, so `settings.sh` falls back to the main checkout's `upstream/` (read-only rsync source; warns if the shared tree isn't at the commit the branch pins). Override with `MIXAR_UPSTREAM_DIR`. Each worktree still assembles its own `source/` and `build/` — never share those.
 - Config loaded from `.env` → env vars via `scripts/unix/settings.sh` → `scripts/generate_config.py` generates runtime `mixar.json` into the app bundle
 - C++ env header auto-generated at `source/creator/mixar_env_config.h`
 - Python build-frozen env marker auto-generated at `source/scripts/mixar/config/_build_env.py` (gates `get_dev_bypass_credentials`; `DEV_BYPASS_ALLOWED=True` only when `MIXAR_ENV=Dev`). Setting `DEV_BYPASS_*` env vars with `MIXAR_ENV != Dev` aborts the build.
@@ -107,7 +108,7 @@ src/
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
 | **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |
 | **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines via the Topology "Model" dropdown: **Hunyuan** (backend service `retopology`) and **Tripo** (v2.0 `mesh/decimate`, backend service `retopology_tripo`). Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
-| **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, auto-updates (startup check, forced-update enforcement, Help → Check for Updates) |
+| **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, updates |
 | **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
 | **asset_search** | Neural embedding-based asset library search and training |
 | **mesh_segment** | UV mesh segmentation via SAM-based API |
