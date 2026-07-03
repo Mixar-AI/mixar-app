@@ -64,7 +64,6 @@ class APIModule(Enum):
     HUNYUAN = "hunyuan"
     UPDATES = "updates"
     JOB_QUEUE = "job-queue"
-    GENERATION_CATALOG = "generation-catalog"
 
 
 # ============================================================================
