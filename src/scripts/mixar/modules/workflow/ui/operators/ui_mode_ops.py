@@ -27,11 +27,7 @@ from mixar.config.config import (
 from mixar.config.logging_config import get_logger
 
 from ...constants import BASIC_WORKSPACE_NAME
-from ...core.workspace_loader import (
-    apply_ui_mode,
-    configure_basic_workspace_chrome,
-    ensure_basic_workspace,
-)
+from ...core.workspace_loader import apply_ui_mode, ensure_basic_workspace
 
 _logger = get_logger(__name__)
 
@@ -92,11 +88,6 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
                 "Could not create Zen Mode workspace — no template available",
             )
             return {"CANCELLED"}
-        # Enforce Zen Mode viewport chrome/overlay defaults (visible
-        # chrome regions, relationship lines + object extras off) every
-        # time the user enters Zen Mode, so a workspace saved with those
-        # overlays on gets cleaned up on entry.
-        configure_basic_workspace_chrome()
         _force_workspace_rebuild(target)
         _redraw_topbar(context)
         _logger.info("Switched to Zen mode")

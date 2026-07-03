@@ -131,7 +131,7 @@ class HTTPClient:
 
         # Configure retry strategy.
         # POST is included so transient 5xx responses on enqueue and other
-        # POST endpoints are retried. The job-queue enqueue is safe
+        # POST endpoints are retried. The generation-queue enqueue is safe
         # to retry because it carries an idempotency key; other POST callers
         # should ensure their endpoints are idempotent or guard against
         # duplicate work themselves.
