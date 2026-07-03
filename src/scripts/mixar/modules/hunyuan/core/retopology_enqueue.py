@@ -201,36 +201,26 @@ def enqueue_retopology_jobs(
 
 
 def _enqueue_hunyuan(obj, shared, file_bytes, filename):
-    """Enqueue a Hunyuan retopology job (backend service ``retopology``).
+    """Enqueue a Hunyuan retopology job (backend service ``retopology``)."""
+    sdk_params = {}
+    if shared.get("polygon_type"):
+        sdk_params["PolygonType"] = shared["polygon_type"]
+    if shared.get("face_level"):
+        sdk_params["FaceLevel"] = shared["face_level"]
 
-    Payload assembly lives in the shared ``retopology`` assembler
-    (generation_params/core/assemblers.py) so the legacy props path and
-    the catalog-driven tab produce the same wire shape.
-    """
-    from mixar.modules.common.generation_params import assemble_payload
-
-    model = shared.get("model_slug") or RETOPOLOGY_HUNYUAN_MODEL
-    params = {
-        "polygon_type": shared.get("polygon_type"),
-        "face_level": shared.get("face_level"),
+    payload = {
+        "sdk_params": sdk_params,
+        "input_name": obj.name,
         "post_process": shared.get("post_process", True),
+        "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
+        "file_filename": filename,
     }
-    payload = assemble_payload(
-        RETOPOLOGY_HUNYUAN_SERVICE,
-        params,
-        {
-            "input_name": obj.name,
-            "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
-            "file_filename": filename,
-        },
-        model,
-    )
 
     return enqueue_generation(
         kind="glb",
         feature_key=FEATURE_RETOPOLOGY,
         job_type=RETOPOLOGY_HUNYUAN_SERVICE,
-        model=model,
+        model=RETOPOLOGY_HUNYUAN_MODEL,
         payload=payload,
         label=obj.name,
         fail_message="Retopology failed",
@@ -244,35 +234,31 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
     """Enqueue a Tripo retopology job (backend service ``retopology_tripo``).
 
     Shares the same client queue (``FEATURE_RETOPOLOGY``) as Hunyuan, but targets
-    a different backend service so its concurrency is isolated. The
-    ``retopology_tripo`` assembler builds ``tripo_params`` (model "v2.0",
-    quad-aware face_limit clamping, bake).
+    a different backend service so its concurrency is isolated.
     """
-    from mixar.modules.common.generation_params import assemble_payload
-
-    model = shared.get("model_slug") or RETOPOLOGY_TRIPO_MODEL
     bake = bool(shared.get("tripo_bake", True))
-    params = {
-        "quad": bool(shared.get("tripo_quad", False)),
-        "face_limit": shared.get("tripo_face_limit", 10000),
-        "bake": bake,
-    }
-    payload = assemble_payload(
-        RETOPOLOGY_TRIPO_SERVICE,
-        params,
-        {
-            "input_name": obj.name,
-            "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
-            "file_filename": filename,
+    quad = bool(shared.get("tripo_quad", False))
+    # Tripo v2.0 caps face_limit at 20,000 (triangle) / 10,000 (quad). The slider
+    # is bounded to the triangle range, so clamp the quad case here.
+    face_limit = max(500, min(int(shared.get("tripo_face_limit", 10000)),
+                              10000 if quad else 20000))
+    payload = {
+        "input_name": obj.name,
+        "tripo_params": {
+            "model": "v2.0",
+            "face_limit": face_limit,
+            "quad": quad,
+            "bake": bake,
         },
-        model,
-    )
+        "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
+        "file_filename": filename,
+    }
 
     return enqueue_generation(
         kind="glb",
         feature_key=FEATURE_RETOPOLOGY,
         job_type=RETOPOLOGY_TRIPO_SERVICE,
-        model=model,
+        model=RETOPOLOGY_TRIPO_MODEL,
         payload=payload,
         label=obj.name,
         fail_message="Retopology failed",
