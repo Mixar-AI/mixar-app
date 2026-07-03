@@ -44,38 +44,6 @@ _SCENE_RECON_PROMPT_SUFFIX = (
 )
 
 
-def _gather_recon_params(sidebar_tab):
-    """Pipeline flags for scene reconstruction submission.
-
-    Schema-driven from the catalog's ``scene_reconstruction`` service
-    (model sam3d) when loaded, the sidebar tab props otherwise. Keys map
-    1:1 onto the SceneReconJob payload (generate_mesh, min_mask_pixels,
-    mesh_postprocess, texture_baking, vertex_color) — wire shape
-    unchanged. ``save_to_library`` / ``asset_library_path`` are
-    client-side props, not catalog params, and are read separately.
-    """
-    params = {
-        "generate_mesh": bool(getattr(sidebar_tab, 'generate_mesh', True)),
-        "min_mask_pixels": int(getattr(sidebar_tab, 'min_mask_pixels', 2000)),
-        "mesh_postprocess": bool(getattr(sidebar_tab, 'mesh_postprocess', True)),
-        "texture_baking": bool(getattr(sidebar_tab, 'texture_baking', False)),
-        "vertex_color": bool(getattr(sidebar_tab, 'vertex_color', True)),
-    }
-    try:
-        from mixar.modules.common.generation_params import (
-            collect_params, resolve_model_slug,
-        )
-        slug = resolve_model_slug("scene_reconstruction", "", "")
-        if slug:
-            collected = collect_params("scene_reconstruction", slug)
-            for key in params:
-                if key in collected:
-                    params[key] = type(params[key])(collected[key])
-    except Exception as e:
-        logger.debug("Scene recon catalog params unavailable: %s", e)
-    return params
-
-
 class MIXIE_OT_scene_recon_pick_image(Operator):
     """Select an image file for scene reconstruction"""
 
@@ -266,12 +234,15 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 return self._start_from_prompt(scene, sidebar_tab, prompt)
 
         start_progress('scene_recon')
-        recon_params = _gather_recon_params(sidebar_tab)
         success = _submit_recon_from_callback(
             scene, sidebar_tab, image_bytes,
+            generate_mesh=getattr(sidebar_tab, 'generate_mesh', True),
+            min_mask_pixels=getattr(sidebar_tab, 'min_mask_pixels', 2000),
+            mesh_postprocess=getattr(sidebar_tab, 'mesh_postprocess', True),
+            texture_baking=getattr(sidebar_tab, 'texture_baking', False),
+            vertex_color=getattr(sidebar_tab, 'vertex_color', True),
             save_to_library=getattr(sidebar_tab, 'save_to_library', False),
             asset_library_path=getattr(sidebar_tab, 'asset_library_path', ''),
-            **recon_params,
         )
 
         if not success:
@@ -300,7 +271,11 @@ class MIXIE_OT_scene_recon_generate(Operator):
         stored_prompt = prompt + _SCENE_RECON_PROMPT_SUFFIX
 
         recon_params = {
-            **_gather_recon_params(sidebar_tab),
+            "generate_mesh": getattr(sidebar_tab, 'generate_mesh', True),
+            "min_mask_pixels": getattr(sidebar_tab, 'min_mask_pixels', 2000),
+            "mesh_postprocess": getattr(sidebar_tab, 'mesh_postprocess', True),
+            "texture_baking": getattr(sidebar_tab, 'texture_baking', False),
+            "vertex_color": getattr(sidebar_tab, 'vertex_color', True),
             "save_to_library": getattr(sidebar_tab, 'save_to_library', False),
             "asset_library_path": getattr(sidebar_tab, 'asset_library_path', ''),
         }

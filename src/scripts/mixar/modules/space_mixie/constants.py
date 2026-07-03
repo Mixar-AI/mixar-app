@@ -21,16 +21,12 @@ def get_imagegen_max_refs(model: str) -> int:
     """
     Get the maximum reference images for a given model.
 
-    Uses the generation catalog's model metadata when loaded, otherwise
-    falls back to hardcoded values.
+    Uses cached model data if available, otherwise falls back to hardcoded values.
     """
     try:
-        from mixar.bootstrap.generation_catalog_cache import get_model
+        from mixar.bootstrap.imagegen_cache import get_max_reference_images
 
-        info = get_model("image_gen", model)
-        if info and info.get("max_reference_images") is not None:
-            return int(info["max_reference_images"])
-    except Exception:
-        pass
-    # Fallback to hardcoded values
-    return IMAGEGEN_MAX_REFS_PRO if model == "pro" else IMAGEGEN_MAX_REFS_FLASH
+        return get_max_reference_images(model)
+    except ImportError:
+        # Fallback to hardcoded values
+        return IMAGEGEN_MAX_REFS_PRO if model == "pro" else IMAGEGEN_MAX_REFS_FLASH
