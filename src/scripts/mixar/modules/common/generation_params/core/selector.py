@@ -91,6 +91,30 @@ def resolve_service_key(
     return keys[0]
 
 
+def resolve_model_slug(
+    service_key: str, selected: str, fallback: str = ""
+) -> str:
+    """Map a model enum value to a valid model slug for *service_key*.
+
+    Returns *selected* when it names one of the service's catalog models,
+    the service's default model otherwise, and *fallback* when the catalog
+    isn't loaded (or has no models for the service).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_default_model_slug,
+            get_model,
+        )
+        slug = selected or ""
+        if slug in PLACEHOLDER_IDS or get_model(service_key, slug) is None:
+            slug = get_default_model_slug(service_key) or ""
+        if slug and slug not in PLACEHOLDER_IDS:
+            return slug
+    except Exception:
+        pass
+    return fallback
+
+
 def _dropdown(layout, data, prop, text):
     """Enum prop via the Mixar styled dropdown when available."""
     if hasattr(layout, "mixar_dropdown"):

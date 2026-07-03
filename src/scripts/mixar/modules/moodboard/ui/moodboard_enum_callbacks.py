@@ -194,6 +194,22 @@ def _get_texture_gen_model_items(self, context):
     )
 
 
+def _get_retopology_mode_items(self, context):
+    """Retopology tab mode items (capability ``retopology``)."""
+    return _capability_mode_items(
+        "retopology",
+        [("retopology", "Retopology", "Hunyuan AI retopology")],
+    )
+
+
+def _get_retopology_model_items(self, context):
+    """Retopology tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "retopology", self,
+        [("hunyuan_topology", "Hunyuan Topology", "Hunyuan AI retopology")],
+    )
+
+
 def _get_model_gen_mode_items(self, context):
     """Dynamic callback for Model Gen mode (service) enum items.
 

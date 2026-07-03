@@ -19,6 +19,10 @@ operator has always sent:
   (EnablePBR, EnableGeometry, ResultFormat? non-glb only, Prompt?).
 - ``hunyuan_texture_edit`` → ``payload["sdk_params"]`` (Prompt?) next to
   the FBX ``file_bytes_b64`` and optional ``reference_image_bytes_b64``.
+- ``retopology``   → ``payload["sdk_params"]`` (PolygonType?, FaceLevel?)
+  plus top-level ``post_process``.
+- ``retopology_tripo`` → ``payload["tripo_params"]`` (model "v2.0",
+  clamped face_limit, quad, bake).
 - anything else    → ``payload["params"] = {...}`` (default).
 
 Contract: ``assemble(params, payload, model_slug="") -> payload`` — mutates
@@ -132,6 +136,70 @@ def _assemble_hunyuan_rapid(
 
 
 # ---------------------------------------------------------------------------
+# retopology (Hunyuan) / retopology_tripo (Tripo v2.0 mesh decimate)
+# ---------------------------------------------------------------------------
+
+
+def _assemble_retopology(
+    params: Dict[str, Any], payload: Dict[str, Any], model_slug: str = ""
+) -> Dict[str, Any]:
+    """Wire shape (matches the legacy ``retopology_enqueue._enqueue_hunyuan``):
+    {"sdk_params": {PolygonType?, FaceLevel?}, input_name, post_process,
+    file_bytes_b64, file_filename}.
+    """
+    params = dict(params or {})
+    sdk = payload.setdefault("sdk_params", {})
+
+    polygon_type = params.pop("polygon_type", None)
+    if polygon_type:
+        sdk["PolygonType"] = polygon_type
+    face_level = params.pop("face_level", None)
+    if face_level:
+        sdk["FaceLevel"] = face_level
+
+    if "post_process" in params:
+        payload["post_process"] = bool(params.pop("post_process"))
+    else:
+        payload.setdefault("post_process", True)
+
+    for key, value in params.items():
+        sdk.setdefault(_pascal(key), value)
+    return payload
+
+
+def _assemble_retopology_tripo(
+    params: Dict[str, Any], payload: Dict[str, Any], model_slug: str = ""
+) -> Dict[str, Any]:
+    """Wire shape (matches the legacy ``retopology_enqueue._enqueue_tripo``):
+    {"input_name", "tripo_params": {model: "v2.0", face_limit, quad, bake},
+    file_bytes_b64, file_filename}.
+
+    ``bake`` is a client-side flag (not a catalog param) that callers pass
+    through *params*; it defaults to True like the legacy UI property.
+    """
+    params = dict(params or {})
+    quad = bool(params.pop("quad", False))
+    try:
+        face_limit = int(params.pop("face_limit", 0) or 0)
+    except (TypeError, ValueError):
+        face_limit = 0
+    if face_limit <= 0:
+        face_limit = 10000
+    # Tripo v2.0 caps face_limit at 20,000 (triangle) / 10,000 (quad).
+    face_limit = max(500, min(face_limit, 10000 if quad else 20000))
+
+    tripo = payload.setdefault("tripo_params", {})
+    tripo["model"] = "v2.0"
+    tripo["face_limit"] = face_limit
+    tripo["quad"] = quad
+    tripo["bake"] = bool(params.pop("bake", True))
+
+    for key, value in params.items():
+        tripo.setdefault(key, value)
+    return payload
+
+
+# ---------------------------------------------------------------------------
 # hunyuan_texture_edit (Texture Edit)
 # ---------------------------------------------------------------------------
 
@@ -175,6 +243,8 @@ _ASSEMBLERS: Dict[str, Assembler] = {
     "image_to_3d": _assemble_image_to_3d,
     "hunyuan_rapid": _assemble_hunyuan_rapid,
     "hunyuan_texture_edit": _assemble_hunyuan_texture_edit,
+    "retopology": _assemble_retopology,
+    "retopology_tripo": _assemble_retopology_tripo,
 }
 
 

@@ -23,6 +23,9 @@ from bpy.props import (
 )
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
+from .moodboard_catalog_tab_props import (  # noqa: F401
+    MixieMoodboardTabRetopologyProps,
+)
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
 #     MixieSceneGenExpBBox,
@@ -417,6 +420,12 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabSceneReconProps,
         name="Scene Recon Tab",
         description="Properties for Scene Reconstruction tab"
+    )
+
+    tab_retopology: PointerProperty(
+        type=MixieMoodboardTabRetopologyProps,
+        name="Retopology Tab",
+        description="Properties for Retopology tab"
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.

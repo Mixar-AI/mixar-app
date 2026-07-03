@@ -14,6 +14,7 @@ Public surface:
         # Capability mode selector (Mode → Model → params)
         get_service_enum_items,   # Mode dropdown items for a capability
         resolve_service_key,      # mode enum value -> valid service key
+        resolve_model_slug,       # model enum value -> valid model slug
         draw_capability_selector, # render Mode/Model dropdowns + params
         # Wire payload assembly
         assemble_payload,         # merge catalog params into wire payloads
@@ -35,6 +36,7 @@ from .core.draw import draw_service_params
 from .core.selector import (
     draw_capability_selector,
     get_service_enum_items,
+    resolve_model_slug,
     resolve_service_key,
 )
 from .core.assemblers import assemble_payload, get_assembler
@@ -47,6 +49,7 @@ __all__ = (
     "draw_service_params",
     "get_service_enum_items",
     "resolve_service_key",
+    "resolve_model_slug",
     "draw_capability_selector",
     "assemble_payload",
     "get_assembler",
