@@ -82,6 +82,28 @@ def _snapshot_single_scene(scene):
                 }
                 for img in msg.image_items
             ],
+            # Steps block (tool-call rows) + its collapsed/summary state. Without
+            # these, an undo restores messages with the plan but no "Used N tools".
+            'steps_summary': msg.steps_summary,
+            'steps_collapsed': msg.steps_collapsed,
+            'step_items': [
+                {
+                    'item_id': step.item_id,
+                    'kind': step.kind,
+                    'label': step.label,
+                    'target': step.target,
+                    'detail': step.detail,
+                    'status': step.status,
+                    'expanded': step.expanded,
+                }
+                for step in msg.step_items
+            ],
+            # Thinking block ("Thought for Ns" dropdown). Without these, an undo
+            # wipes the reasoning text from every message.
+            'thinking_text': msg.thinking_text,
+            'thinking_active': msg.thinking_active,
+            'thinking_duration_ms': msg.thinking_duration_ms,
+            'thinking_collapsed': msg.thinking_collapsed,
         }
         messages.append(msg_data)
 
@@ -152,6 +174,25 @@ def _restore_single_scene(scene, snapshot):
             img.local_path = img_data['local_path']
             img.width = img_data['width']
             img.height = img_data['height']
+
+        # Steps block + state (.get for snapshots taken before this field existed).
+        msg.steps_summary = msg_data.get('steps_summary', '')
+        msg.steps_collapsed = msg_data.get('steps_collapsed', True)
+        for step_data in msg_data.get('step_items', []):
+            step = msg.step_items.add()
+            step.item_id = step_data['item_id']
+            step.kind = step_data['kind']
+            step.label = step_data['label']
+            step.target = step_data['target']
+            step.detail = step_data['detail']
+            step.status = step_data['status']
+            step.expanded = step_data['expanded']
+
+        # Thinking block + state.
+        msg.thinking_text = msg_data.get('thinking_text', '')
+        msg.thinking_active = msg_data.get('thinking_active', False)
+        msg.thinking_duration_ms = msg_data.get('thinking_duration_ms', 0)
+        msg.thinking_collapsed = msg_data.get('thinking_collapsed', True)
 
 
 def _restore_all_scenes(snapshots):

@@ -172,12 +172,8 @@ class WebSocketClient:
                     prev_send.join(timeout=1.0)
                 self._send_thread = None
 
-                # Attempt connection. On failure, apply the same reconnect
-                # backoff as a dropped connection — `continue` alone would
-                # skip the sleep below and spin in a tight reconnect storm
-                # while the server is unreachable.
+                # Attempt connection
                 if not self._connect_with_retry():
-                    self._sleep_reconnect_backoff()
                     continue
 
                 # Start send thread
@@ -195,17 +191,13 @@ class WebSocketClient:
                 self._handle_disconnect(str(e))
 
             # Wait before reconnecting
-            self._sleep_reconnect_backoff()
-
-    def _sleep_reconnect_backoff(self) -> None:
-        """Sleep for the current reconnect delay, then increase it (exponential backoff)."""
-        if not self._running.is_set():
-            return
-        self._log("info", f"Reconnecting in {self._current_delay:.1f}s...")
-        time.sleep(self._current_delay)
-        self._current_delay = min(
-            self._current_delay * 2, self._max_reconnect_delay
-        )
+            if self._running.is_set():
+                self._log("info", f"Reconnecting in {self._current_delay:.1f}s...")
+                time.sleep(self._current_delay)
+                # Exponential backoff
+                self._current_delay = min(
+                    self._current_delay * 2, self._max_reconnect_delay
+                )
 
     def _connect_with_retry(self) -> bool:
         """
