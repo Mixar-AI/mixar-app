@@ -127,6 +127,73 @@ def _get_model_3d_items(self, context):
         ]
 
 
+# ---------------------------------------------------------------------------
+# Generic capability-driven callbacks (catalog-converted tabs)
+# ---------------------------------------------------------------------------
+
+
+def _capability_mode_items(capability_key, fallback):
+    """Mode (service) enum items for a catalog capability.
+
+    Sources the unified generation catalog; returns *fallback* when the
+    catalog isn't loaded (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import is_loaded
+        from mixar.modules.common.generation_params import (
+            get_service_enum_items,
+        )
+        if is_loaded():
+            items = get_service_enum_items(capability_key)
+            if items:
+                return items
+    except Exception:
+        pass
+    return fallback
+
+
+def _capability_model_items(capability_key, owner, fallback):
+    """Model enum items for *owner*'s currently selected mode (service).
+
+    Sources the unified generation catalog; returns *fallback* when the
+    catalog isn't loaded (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items as get_catalog_model_items,
+            is_loaded,
+        )
+        from mixar.modules.common.generation_params import resolve_service_key
+        if is_loaded():
+            service_key = resolve_service_key(
+                capability_key, getattr(owner, "mode", "")
+            )
+            if service_key:
+                items = get_catalog_model_items(service_key)
+                if items:
+                    return items
+    except Exception:
+        pass
+    return fallback
+
+
+def _get_texture_gen_mode_items(self, context):
+    """Texture Gen tab mode items (capability ``texture_gen``)."""
+    return _capability_mode_items(
+        "texture_gen",
+        [("pbr_gen", "PBR Textures",
+          "Generate PBR texture maps for the selected mesh")],
+    )
+
+
+def _get_texture_gen_model_items(self, context):
+    """Texture Gen tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "texture_gen", self,
+        [("hunyuan-pbr", "Hunyuan PBR", "Hunyuan PBR texture generation")],
+    )
+
+
 def _get_model_gen_mode_items(self, context):
     """Dynamic callback for Model Gen mode (service) enum items.
 
