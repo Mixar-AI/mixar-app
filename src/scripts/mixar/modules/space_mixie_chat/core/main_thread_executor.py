@@ -27,6 +27,7 @@ from typing import Optional
 import bpy
 
 from .executor import get_executor
+from .script_prefetch import maybe_start_prefetch
 from ..constants import (
     SessionState,
     TIMER_INTERVAL,
@@ -36,8 +37,16 @@ from ..constants import (
 
 logger = get_logger(__name__)
 
-# Request queue: (request_id, script, tool_name, session_id) from WebSocket thread
+# Request queue: (request_id, script, tool_name, session_id, prefetch) from
+# WebSocket thread. `prefetch` is a ScriptAssetPrefetch handle (or None) —
+# heavy texture-apply scripts start downloading their assets the moment they
+# are queued, and the timer holds them (UI responsive) until the cache is warm.
 _request_queue: queue.Queue = queue.Queue(maxsize=1000)
+
+# Head-of-queue request waiting for its asset prefetch. Dequeued but not yet
+# executed — strict FIFO is preserved (later scripts wait behind it). Main
+# thread only.
+_held: Optional[tuple] = None
 
 # Timer state. _timer_active is read/written from both the WebSocket thread
 # (queue_script_request) and the main thread (_process_one_request); every
@@ -115,8 +124,13 @@ def queue_script_request(script: str, request_id: str, tool_name: str = "unknown
     # Gate: give SSE events (planning text) time to arrive before execution
     _execution_gate_until = max(_execution_gate_until, time.monotonic() + 0.05)
     logger.debug(f"Queuing script request (id: {request_id}), initial gate set")
+    # Start downloading the script's texture assets NOW, on this (WebSocket)
+    # thread's watch — by the time the script reaches the front of the queue
+    # its images are usually already on disk, so execution never waits on the
+    # network while holding the main thread.
+    prefetch = maybe_start_prefetch(script, tool_name)
     try:
-        _request_queue.put_nowait((request_id, script, tool_name, session_id))
+        _request_queue.put_nowait((request_id, script, tool_name, session_id, prefetch))
     except queue.Full:
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
         return
@@ -124,8 +138,8 @@ def queue_script_request(script: str, request_id: str, tool_name: str = "unknown
 
 
 def has_pending_requests() -> bool:
-    """Check if there are pending script requests."""
-    return not _request_queue.empty()
+    """Check if there are pending script requests (queued or held)."""
+    return _held is not None or not _request_queue.empty()
 
 
 def gate_execution(delay: float = 0.05) -> None:
@@ -182,7 +196,7 @@ def _stop_timer_if_idle() -> Optional[float]:
     """
     global _timer_active
     with _timer_lock:
-        if not _request_queue.empty():
+        if _held is not None or not _request_queue.empty():
             return TIMER_INTERVAL
         _timer_active = False
         return None
@@ -198,7 +212,8 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call (0.20s) if more requests, None to stop timer
     """
-    if _request_queue.empty():
+    global _held
+    if _held is None and _request_queue.empty():
         stop = _stop_timer_if_idle()
         if stop is None:
             return None  # No more requests, stop timer
@@ -213,10 +228,22 @@ def _process_one_request() -> Optional[float]:
     if time.monotonic() < _execution_gate_until:
         return TIMER_INTERVAL
 
-    try:
-        request_id, script, tool_name, session_id = _request_queue.get_nowait()
-    except queue.Empty:
-        return _stop_timer_if_idle()
+    if _held is None:
+        try:
+            _held = _request_queue.get_nowait()
+        except queue.Empty:
+            return _stop_timer_if_idle()
+
+    request_id, script, tool_name, session_id, prefetch = _held
+    if prefetch is not None and not prefetch.ready():
+        # The script's texture assets are still downloading in the
+        # background. Keep holding it — this tick cost one flag check, so
+        # the UI stays fully responsive — and check again shortly. FIFO is
+        # preserved: everything behind it waits too. ready() flips true on
+        # completion OR the wait cap, so a stuck download can't stall the
+        # queue forever.
+        return TIMER_INTERVAL
+    _held = None
 
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window). If the session is no longer
@@ -393,7 +420,7 @@ def cleanup(shutdown: bool = False) -> None:
 
     Call on addon unregister or disconnect to clean up pending requests.
     """
-    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested
+    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested, _held
 
     if shutdown:
         _shutdown_requested = True
@@ -410,6 +437,7 @@ def cleanup(shutdown: bool = False) -> None:
         pass
 
     _execution_gate_until = 0.0
+    _held = None  # drop a prefetch-held request along with the queue
 
     # Clear request queue
     while not _request_queue.empty():
