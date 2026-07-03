@@ -61,41 +61,7 @@ export BUILD_DIR="${ROOT_DIR}/build"
 export SOURCE_DIR="${ROOT_DIR}/source"
 export SRC_DIR="${ROOT_DIR}/src"
 export CMAKE_DIR="${ROOT_DIR}/cmake"
-
-# Upstream Blender tree (multi-GB, gitignored — populated once per machine).
-# Linked git worktrees don't carry ignored files, so a worktree checkout has
-# no upstream/ of its own. Resolution order:
-#   1. MIXAR_UPSTREAM_DIR (env / .env override)
-#   2. this checkout's own upstream/ (a real tree, not an empty dir)
-#   3. the main checkout's upstream/ (worktrees share it — overlay.sh only
-#      ever READS from $UPSTREAM_DIR, so sharing is safe)
-if [ -n "${MIXAR_UPSTREAM_DIR:-}" ]; then
-    export UPSTREAM_DIR="$MIXAR_UPSTREAM_DIR"
-elif [ -f "${ROOT_DIR}/upstream/CMakeLists.txt" ]; then
-    export UPSTREAM_DIR="${ROOT_DIR}/upstream"
-else
-    _git_common_dir="$(git -C "$ROOT_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
-    _main_checkout_root="${_git_common_dir%/.git}"
-    if [ -n "$_git_common_dir" ] && [ -f "${_main_checkout_root}/upstream/CMakeLists.txt" ]; then
-        export UPSTREAM_DIR="${_main_checkout_root}/upstream"
-        echo "Worktree checkout: sharing upstream from main checkout: $UPSTREAM_DIR" >&2
-        # upstream is a submodule pinned per branch — warn (don't fail) when
-        # the shared tree isn't at the commit THIS branch pins, so a silent
-        # wrong-revision build can't sneak past.
-        _pinned="$(git -C "$ROOT_DIR" rev-parse HEAD:upstream 2>/dev/null || true)"
-        _actual="$(git -C "$UPSTREAM_DIR" rev-parse HEAD 2>/dev/null || true)"
-        if [ -n "$_pinned" ] && [ -n "$_actual" ] && [ "$_pinned" != "$_actual" ]; then
-            echo "WARNING: shared upstream is at ${_actual:0:12} but this branch pins ${_pinned:0:12}." >&2
-            echo "         Update it (git -C \"$UPSTREAM_DIR\" checkout $_pinned) or set MIXAR_UPSTREAM_DIR." >&2
-        fi
-        unset _pinned _actual
-    else
-        # No usable upstream anywhere — keep the default path so the
-        # overlay's error message points at the expected location.
-        export UPSTREAM_DIR="${ROOT_DIR}/upstream"
-    fi
-    unset _git_common_dir _main_checkout_root
-fi
+export UPSTREAM_DIR="${ROOT_DIR}/upstream"
 
 # Platform-specific settings
 if [[ "$OSTYPE" == "darwin"* ]]; then
