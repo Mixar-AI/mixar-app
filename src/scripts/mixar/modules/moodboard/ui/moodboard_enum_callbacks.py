@@ -13,22 +13,7 @@ on PropertyGroup class definitions.
 
 
 def _get_imagegen_model_items(self, context):
-    """Dynamic callback for model enum items.
-
-    Sources the unified generation catalog first; falls back to the legacy
-    imagegen cache, then to hardcoded items (offline / pre-auth).
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_model_enum_items as get_catalog_model_items,
-            is_loaded,
-        )
-        if is_loaded():
-            items = get_catalog_model_items("image_gen")
-            if items:
-                return items
-    except Exception:
-        pass
+    """Dynamic callback for model enum items from cache."""
     try:
         from mixar.bootstrap.imagegen_cache import get_model_enum_items
         items = get_model_enum_items(self, context)
@@ -43,22 +28,7 @@ def _get_imagegen_model_items(self, context):
 
 
 def _get_imagegen_style_items(self, context):
-    """Dynamic callback for style enum items.
-
-    Sources the unified generation catalog first; falls back to the legacy
-    imagegen cache, then to hardcoded items (offline / pre-auth).
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_style_enum_items as get_catalog_style_items,
-            is_loaded,
-        )
-        if is_loaded():
-            items = get_catalog_style_items("image")
-            if items:
-                return items
-    except Exception:
-        pass
+    """Dynamic callback for style enum items from cache."""
     try:
         from mixar.bootstrap.imagegen_cache import get_style_enum_items
         items = get_style_enum_items(self, context)
