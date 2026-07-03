@@ -13,6 +13,7 @@ from .auth_service import AuthService, get_auth_service
 from .base_service import BaseService
 from .images_service import ImagesService, get_images_service
 from .generation_metadata_service import GenerationMetadataService, get_generation_metadata_service
+from .generation_catalog_service import GenerationCatalogService, get_generation_catalog_service
 from .scene_recon_service import SceneReconService, get_scene_recon_service
 from .scene_segment_service import SceneSegmentService, get_scene_segment_service
 from .update_service import UpdateService, get_update_service
@@ -33,6 +34,9 @@ __all__ = [
     # Generation Metadata (models/styles listing)
     "GenerationMetadataService",
     "get_generation_metadata_service",
+    # Generation Catalog (unified capability/service/model catalog)
+    "GenerationCatalogService",
+    "get_generation_catalog_service",
     # Scene Reconstruction
     "SceneReconService",
     "get_scene_recon_service",
