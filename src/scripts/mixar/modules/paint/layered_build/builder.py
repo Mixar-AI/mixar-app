@@ -21,14 +21,9 @@ from ..core.io.arrangements.layer_arrangements import rearrange_mp_nodes
 
 
 def _ensure_paint_material(obj):
-    """Run layers.create_material if obj has no Mixar paint group yet.
-
-    The default fill layer is skipped: the manifest build creates the base PBR
-    layer itself, so the UI's default layer would only linger at the bottom of
-    the stack (and confuse agents inspecting it later).
-    """
+    """Run layers.create_material if obj has no Mixar paint group yet."""
     if get_active_mpaint_node(obj) is None:
-        bpy.ops.layers.create_material('EXEC_DEFAULT', create_default_layer=False)
+        bpy.ops.layers.create_material('EXEC_DEFAULT')
 
 
 def _move_base_to_bottom(base_name: str, n_details: int) -> None:
@@ -42,9 +37,8 @@ def _move_base_to_bottom(base_name: str, n_details: int) -> None:
     + the ``scene.mixar_layers`` UI list, then reconnect/rearrange the node tree — but
     without the operator's poll/context dependencies (which made the previous
     operator-based attempt silently no-op mid-build). The base is currently at the top
-    (index 0) with the details at indices 1..n (plus a trailing fill layer only on
-    stacks initialized before default-layer skipping); moving the base to index
-    ``n_details`` places it below every detail.
+    (index 0) with the details at indices 1..n and a default fill layer last; moving the
+    base to index ``n_details`` places it just above the fill, below every detail.
     """
     if n_details <= 0:
         return

@@ -106,14 +106,71 @@ def _draw_segment_to_3d(layout, context):
 # Mesh Segment
 # ---------------------------------------------------------------------------
 
-def _draw_mesh_segment(layout, context):
-    """Draw Mesh Segment tab — inline version of the popup dialog."""
-    tab = context.scene.mixie_moodboard_sidebar.tab_mesh_segment
+def _mesh_segment_catalog_ready():
+    """True when the catalog has mesh_segmentation services."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_services, is_loaded,
+        )
+        return is_loaded() and bool(get_services("mesh_segmentation"))
+    except Exception:
+        return False
 
+
+def _draw_mesh_segment(layout, context):
+    """Draw Mesh Segment tab.
+
+    Catalog-driven mode selector (Mesh Segmentation = ``mesh_segment`` /
+    Part Segmentation = ``hunyuan_part``) when the generation catalog is
+    loaded; the legacy mesh_segment-only UI otherwise. The
+    ``hunyuan_part`` mode reuses the PART_SEGMENT tab's existing
+    submission flow (scene.hunyuan.part + ``mixie.hunyuan_generate``).
+    """
+    scene = context.scene
+    tab = scene.mixie_moodboard_sidebar.tab_mesh_segment
+
+    service_key = "mesh_segment"
+    catalog_ready = _mesh_segment_catalog_ready()
+    if catalog_ready:
+        from mixar.modules.common.generation_params import (
+            draw_capability_selector, resolve_service_key,
+        )
+        service_key = resolve_service_key(
+            "mesh_segmentation", getattr(tab, "mode", "")
+        ) or "mesh_segment"
+
+        col = draw_section_box(layout, "Settings", icon='SETTINGS')
+        col.use_property_split = True
+        col.use_property_decorate = False
+        draw_capability_selector(col, tab, "mesh_segmentation")
+        draw_section_separator(layout)
+
+    if service_key == "hunyuan_part":
+        # Part Segmentation — same inputs + submit flow as PART_SEGMENT.
+        if not hasattr(scene, 'hunyuan'):
+            layout.label(text="Hunyuan not initialized", icon='ERROR')
+            return
+        part = scene.hunyuan.part
+
+        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+        draw_mesh_info(col, context, max_faces=30000, max_mb=100)
+        draw_section_separator(layout)
+
+        col = draw_section_box(layout, "Export", icon='EXPORT')
+        draw_dropdown(col, part, "export_format", text="Format")
+
+        draw_hunyuan_generate_footer(
+            layout, context, part.job, 'PART',
+            lambda: _mesh_can_generate(context, 'PART'),
+        )
+        return
+
+    # Mesh Segmentation (default) — existing inputs + submit flow.
     draw_prompt_section(layout, tab, label="Description")
     draw_section_separator(layout)
 
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(
+        layout, "Inputs" if catalog_ready else "Settings", icon='SETTINGS')
     col.prop(tab, "expected_parts", text="Expected Parts")
 
     draw_generate_footer(
@@ -127,34 +184,6 @@ def _draw_mesh_segment(layout, context):
 # ---------------------------------------------------------------------------
 # Hunyuan shared input drawers
 # ---------------------------------------------------------------------------
-
-def _draw_hunyuan_rapid(layout, rapid, context=None):
-    """Draw Rapid mode inputs."""
-    # --- Input (prompt + image source) ---
-    col = draw_prompt_section(layout, rapid)
-    draw_hint(col, "Max 200 characters")
-    col.separator(factor=SEP_INTRA)
-
-    if context and hasattr(rapid, 'use_selected_image'):
-        draw_moodboard_image_toggle(col, rapid, context)
-    if not getattr(rapid, 'use_selected_image', False):
-        if rapid.image:
-            draw_image_info_card(col, rapid.image)
-        row = col.row(align=True)
-        row.prop(rapid, "image", text="Image")
-        row.operator("mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
-        draw_hint(col, "Max 6MB (jpg/png/jpeg/webp)")
-
-    draw_section_separator(layout)
-
-    # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
-    col.use_property_split = True
-    col.use_property_decorate = False
-    draw_dropdown(col, rapid, "result_format", text="Format")
-    draw_toggle(col, rapid, "enable_pbr", text="Enable PBR")
-    draw_toggle(col, rapid, "enable_geometry", text="Geometry Only")
-
 
 def _draw_hunyuan_pro(layout, pro, context=None):
     """Draw Pro mode inputs."""
@@ -212,55 +241,6 @@ def _draw_hunyuan_pro(layout, pro, context=None):
         draw_dropdown(col, pro, "polygon_type", text="Polygon Type")
 
 
-# ---------------------------------------------------------------------------
-# Hunyuan popup helpers (still used by VIEW_3D N-panel drawers)
-# ---------------------------------------------------------------------------
-
-def _draw_hunyuan_mesh_info(layout, context, max_faces=None, max_mb=None):
-    """Show selected mesh info with limit warnings."""
-    obj = context.active_object
-    if obj and obj.type == 'MESH':
-        face_count = len(obj.data.polygons)
-        layout.label(text=f"Mesh: {obj.name} ({face_count:,} faces)")
-
-        limits_parts = []
-        if max_faces:
-            limits_parts.append(f"{max_faces:,} faces")
-        if max_mb:
-            limits_parts.append(f"{max_mb}MB")
-        if limits_parts:
-            layout.label(text=f"Limits: {' / '.join(limits_parts)}", icon='INFO')
-
-        if max_faces and face_count > max_faces:
-            layout.label(
-                text=f"Warning: {face_count:,} faces exceeds {max_faces:,} limit",
-                icon='ERROR',
-            )
-    else:
-        layout.label(text="No mesh selected", icon='ERROR')
-
-
-def _draw_hunyuan_part(layout, part, context):
-    """Draw Part mode inputs."""
-    _draw_hunyuan_mesh_info(layout, context, max_faces=30000, max_mb=100)
-    layout.prop(part, "export_format", text="Format")
-
-
-def _draw_hunyuan_topology(layout, topo, context):
-    """Draw Topology mode inputs."""
-    _draw_hunyuan_mesh_info(layout, context, max_mb=200)
-    layout.prop(topo, "export_format", text="Format")
-    layout.prop(topo, "polygon_type", text="Polygon Type")
-    layout.prop(topo, "face_level", text="Face Level")
-    layout.prop(topo, "post_process", text="Post-Processing")
-
-
-def _draw_hunyuan_uv(layout, uv, context):
-    """Draw UV mode inputs (still used by VIEW_3D N-panel)."""
-    _draw_hunyuan_mesh_info(layout, context, max_faces=30000, max_mb=100)
-    layout.prop(uv, "export_format", text="Format")
-
-
 def _mesh_can_generate(context, mode):
     """Check if a mesh-based Hunyuan mode can generate."""
     selected_meshes = [o for o in context.selected_objects if o.type == 'MESH']
@@ -280,12 +260,19 @@ def _mesh_can_generate(context, mode):
 # ---------------------------------------------------------------------------
 
 def _draw_uv_unwrap(layout, context):
-    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties."""
+    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties.
+
+    The catalog Model dropdown + schema params (capability
+    ``uv_unwrapping``, single service — Mode dropdown hidden) are drawn
+    when the generation catalog is loaded; the mesh-export inputs and the
+    hunyuan submit flow are unchanged either way.
+    """
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return
 
-    props = context.scene.hunyuan
+    scene = context.scene
+    props = scene.hunyuan
     uv = props.uv
     job = uv.job
 
@@ -295,6 +282,18 @@ def _draw_uv_unwrap(layout, context):
 
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
     draw_dropdown(col, uv, "export_format", text="Format")
+
+    # Catalog Model dropdown + schema params (no-op when not loaded).
+    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+    tab = getattr(sidebar, 'tab_uv_unwrap', None) if sidebar else None
+    if tab is not None:
+        try:
+            from mixar.modules.common.generation_params import (
+                draw_capability_selector,
+            )
+            draw_capability_selector(col, tab, "uv_unwrapping")
+        except Exception:
+            pass
 
     draw_hunyuan_generate_footer(
         layout, context, job, 'UV',
@@ -307,12 +306,22 @@ def _draw_uv_unwrap(layout, context):
 # ---------------------------------------------------------------------------
 
 def _draw_retopology(layout, context):
-    """Draw standalone Retopology tab — uses scene.hunyuan.topology properties.
+    """Draw standalone Retopology tab.
 
-    Retopology is queue-driven (one job per selected mesh), so the
-    standard hunyuan generate footer is replaced with the queue footer
-    and a collapsible "Generation Queue" panel is appended.
+    Catalog-driven UI (mode selector + schema params) when the generation
+    catalog is loaded; the legacy ``scene.hunyuan.topology`` UI otherwise
+    so the tab never goes blank offline / pre-auth. Retopology is
+    queue-driven (one job per selected mesh) in both paths.
     """
+    from .retopology_drawer import (
+        _draw_retopology_catalog, _retopology_catalog_ready,
+    )
+
+    if _retopology_catalog_ready():
+        _draw_retopology_catalog(layout, context)
+        return
+
+    # --- Legacy fallback (catalog not loaded) ---
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return
@@ -357,56 +366,6 @@ def _draw_retopology(layout, context):
         lambda: _mesh_can_generate(context, 'TOPOLOGY'),
         mode_override='TOPOLOGY',
     )
-
-
-# ---------------------------------------------------------------------------
-# Part Segmentation (standalone tab)
-# ---------------------------------------------------------------------------
-
-def _draw_part_segment(layout, context):
-    """Draw standalone Part Segmentation tab — uses scene.hunyuan.part properties."""
-    if not hasattr(context.scene, 'hunyuan'):
-        layout.label(text="Hunyuan not initialized", icon='ERROR')
-        return
-
-    props = context.scene.hunyuan
-    part = props.part
-    job = part.job
-
-    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
-    draw_mesh_info(col, context, max_faces=30000, max_mb=100)
-    draw_section_separator(layout)
-
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
-    draw_dropdown(col, part, "export_format", text="Format")
-
-    draw_hunyuan_generate_footer(
-        layout, context, job, 'PART',
-        lambda: _mesh_can_generate(context, 'PART'),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Image to 3D — Rapid subtab
-# ---------------------------------------------------------------------------
-
-def _draw_image_to_3d_rapid(layout, context):
-    """Draw Rapid subtab inside Image to 3D — uses scene.hunyuan.rapid."""
-    if not hasattr(context.scene, 'hunyuan'):
-        layout.label(text="Hunyuan not initialized", icon='ERROR')
-        return
-
-    rapid = context.scene.hunyuan.rapid
-    job = rapid.job
-
-    _draw_hunyuan_rapid(layout, rapid, context)
-
-    def _can_gen():
-        if getattr(rapid, 'use_selected_image', False):
-            return get_selected_moodboard_image(context) is not None
-        return bool(rapid.prompt.strip()) or (rapid.image is not None)
-
-    draw_hunyuan_generate_footer(layout, context, job, 'RAPID', _can_gen)
 
 
 # ---------------------------------------------------------------------------

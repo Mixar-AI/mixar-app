@@ -18,6 +18,17 @@ from mixar.modules.common.utils.image_utils import compress_for_service
 logger = get_logger(__name__)
 
 
+def _get_default_model_3d():
+    """Default model_3d model slug from the catalog, or None."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_default_model_slug,
+        )
+        return get_default_model_slug("model_3d")
+    except Exception:
+        return None
+
+
 class MIXIE_OT_image_to_3d_generate(Operator):
     """Generate a 3D model from an image"""
 
@@ -69,14 +80,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
         # Determine model to use
         if self.from_chat:
-            try:
-                from mixar.bootstrap.model_3d_cache import get_default_model_name
-                model_name = get_default_model_name()
-                if not model_name:
-                    self.report({"WARNING"}, "No models available - please wait for models to load")
-                    return {"CANCELLED"}
-            except ImportError:
-                self.report({"WARNING"}, "Model cache not available")
+            model_name = _get_default_model_3d()
+            if not model_name:
+                self.report({"WARNING"}, "No models available - please wait for models to load")
                 return {"CANCELLED"}
         else:
             if sidebar_tab:
@@ -87,11 +93,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_name = ''
 
             if model_name in ("LOADING", "ERROR", "NONE", ""):
-                try:
-                    from mixar.bootstrap.model_3d_cache import get_default_model_name
-                    model_name = get_default_model_name()
-                except ImportError:
-                    pass
+                # Property has invalid value — use the catalog default
+                model_name = _get_default_model_3d()
 
             if not model_name or model_name in ("LOADING", "ERROR", "NONE", ""):
                 self.report({"WARNING"}, "Please wait for models to load or check connection")
@@ -219,10 +222,29 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             self.report({"ERROR"}, f"Image '{self.image_name}' has no pixel data")
             return {"CANCELLED"}
 
-        model_name = self.model.strip().lower() if self.model else "trellis-1"
-        if model_name not in ("trellis-1", "rodin", "tripo-p1"):
-            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be 'trellis-1', 'rodin', or 'tripo-p1'")
-            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be 'trellis-1', 'rodin', or 'tripo-p1'")
+        # Agent invocations are always authenticated, so the catalog is the
+        # single source of valid models — no hardcoded fallback list.
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_default_model_slug, get_models, is_loaded,
+            )
+            catalog_ready = is_loaded()
+        except Exception:
+            catalog_ready = False
+        if not catalog_ready:
+            set_agent_gen_reason(context, "Generation catalog not loaded yet — retry shortly")
+            self.report({"ERROR"}, "Generation catalog not loaded yet — retry shortly")
+            return {"CANCELLED"}
+
+        valid_models = tuple(m["slug"] for m in get_models("model_3d"))
+        model_name = (
+            self.model.strip().lower() if self.model
+            else (get_default_model_slug("model_3d") or "")
+        )
+        if not model_name or model_name not in valid_models:
+            choices = ", ".join(f"'{m}'" for m in valid_models)
+            set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be one of: {choices}")
+            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be one of: {choices}")
             return {"CANCELLED"}
 
         try:
@@ -232,31 +254,28 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             self.report({"ERROR"}, f"Failed to convert image: {e}")
             return {"CANCELLED"}
 
-        # Build model-specific parameters
-        if model_name == "trellis-1":
-            parameters = {
-                "texture_size": self.texture_size if self.texture_size > 0 else 2048,
-                "mesh_simplify": self.mesh_simplify if self.mesh_simplify >= 0 else 0.9,
-                "generate_normal": self.generate_normal,
-                "save_gaussian_ply": self.save_gaussian_ply,
-            }
-        elif model_name == "tripo-p1":
-            parameters = {"texture": self.texture}
-            if self.face_limit > 0:
-                parameters["face_limit"] = self.face_limit
-            if self.model_seed:
-                parameters["model_seed"] = self.model_seed
-        else:
-            parameters = {
-                "quality": self.quality or "medium",
-                "geometry_file_format": self.geometry_file_format or "glb",
-                "material": self.material or "PBR",
-            }
+        # Pass through only the operator properties the agent explicitly
+        # set; the backend validates them against the model's catalog
+        # schema and fills defaults for the rest. No per-model branching —
+        # unknown params for the chosen model are ignored server-side.
+        _PARAM_PROPS = (
+            "texture_size", "mesh_simplify", "generate_normal",
+            "save_gaussian_ply", "quality", "geometry_file_format",
+            "material", "texture", "face_limit", "model_seed",
+        )
+        parameters = {
+            name: getattr(self, name)
+            for name in _PARAM_PROPS
+            if self.properties.is_property_set(name)
+        }
 
         payload = {
             "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
             "image_filename": "image.png",
-            "parameters": parameters,
+            # NOTE: the backend model_3d path reads payload["params"] — the
+            # old "parameters" key was silently ignored (schema defaults ran
+            # instead of the agent's explicit settings).
+            "params": parameters,
         }
         prompt = self.prompt.strip() if self.prompt else None
         if prompt:

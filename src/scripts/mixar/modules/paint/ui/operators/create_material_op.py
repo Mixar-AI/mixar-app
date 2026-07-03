@@ -116,15 +116,6 @@ class LAYERS_OT_CreateMaterial(Operator):
         description="Switch to material view so the node setup is automatically visible",
         default=True,
     )
-    create_default_layer: BoolProperty(
-        name="Create Default Layer",
-        description=(
-            "Create the default fill layer after the material is set up. "
-            "Disable for scripted/agent flows that build their own layers, "
-            "so the stack starts empty instead of carrying a leftover fill layer"
-        ),
-        default=True,
-    )
     target_bsdf_name: StringProperty(default="")
     not_on_material_view: BoolProperty(default=True)
 
@@ -372,24 +363,23 @@ class LAYERS_OT_CreateMaterial(Operator):
             context.window_manager.mpui.expand_channels = True
 
         # Create default layer
-        if self.create_default_layer:
-            mp = group_tree.mp
-            mp.halt_update = True
-            try:
-                bpy.ops.wm.m_new_layer(
-                    'INVOKE_DEFAULT', type='COLOR', add_mask=False, default_layer=True
-                )
-                mp.active_layer_index = 0
-            finally:
-                mp.halt_update = False
+        mp = group_tree.mp
+        mp.halt_update = True
+        try:
+            bpy.ops.wm.m_new_layer(
+                'INVOKE_DEFAULT', type='COLOR', add_mask=False, default_layer=True
+            )
+            mp.active_layer_index = 0
+        finally:
+            mp.halt_update = False
 
-            # Enable channels on fill layer based on created root channels
-            if mp.layers:
-                fill_layer = mp.layers[mp.active_layer_index]
-                for i, ch in enumerate(fill_layer.channels):
-                    if i < len(mp.channels):
-                        # All created channels should be enabled on the fill layer
-                        ch.enable = True
+        # Enable channels on fill layer based on created root channels
+        if mp.layers:
+            fill_layer = mp.layers[mp.active_layer_index]
+            for i, ch in enumerate(fill_layer.channels):
+                if i < len(mp.channels):
+                    # All created channels should be enabled on the fill layer
+                    ch.enable = True
 
         request_ui_refresh()
 
