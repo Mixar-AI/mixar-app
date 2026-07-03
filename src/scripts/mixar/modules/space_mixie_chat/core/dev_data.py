@@ -203,76 +203,6 @@ class DevDataProvider:
         cls._current_state_index = 0
 
 
-def _add_steps_and_thinking_demo(scene):
-    """Append demo messages exercising all four render paths:
-
-    1. steps block collapsed (summary only)
-    2. steps block expanded, with one row also expanded (detail visible)
-    3. thinking live (ephemeral bubble + loader) — existing path
-    4. thinking finalized ("Thought for 6s" dropdown, collapsed)
-
-    Direct PropertyGroup writes — mirrors how _apply_steps_slot would populate,
-    but without the slot-event round trip.
-    """
-    from .steps_format import format_steps_summary
-
-    def _add_steps(msg, items, collapsed):
-        kinds = []
-        for it in items:
-            row = msg.step_items.add()
-            row.item_id = it["id"]
-            row.kind = it["kind"]
-            row.label = it["label"]
-            row.target = it.get("target", "")
-            row.detail = it.get("detail", "")
-            row.status = it.get("status", "DONE")
-            row.expanded = it.get("expanded", False)
-            kinds.append(it["kind"])
-        msg.steps_summary = format_steps_summary(kinds)
-        msg.steps_collapsed = collapsed
-
-    demo_items = [
-        {"id": "s1", "kind": "READ", "label": "Read", "target": "layer_ops.py",
-         "status": "DONE"},
-        {"id": "s2", "kind": "COMMAND", "label": "Ran", "target": "pytest -q",
-         "detail": "3 passed in 0.41s\nall green", "status": "DONE"},
-    ]
-
-    # State 1: collapsed steps block.
-    m1 = scene.mixie_chat_messages.add()
-    m1.sender = 'AGENT'
-    m1.bubble_id = "dev-steps-collapsed"
-    m1.content = "Done — applied the red material to the cube."
-    _add_steps(m1, demo_items, collapsed=True)
-
-    # State 2: expanded steps block, second row pre-expanded.
-    m2 = scene.mixie_chat_messages.add()
-    m2.sender = 'AGENT'
-    m2.bubble_id = "dev-steps-expanded"
-    m2.content = "Here's what I did, expanded:"
-    expanded_items = [dict(demo_items[0]),
-                      dict(demo_items[1], expanded=True)]
-    _add_steps(m2, expanded_items, collapsed=False)
-
-    # State 3: thinking live (existing ephemeral + loader path).
-    m3 = scene.mixie_chat_messages.add()
-    m3.sender = 'AGENT'
-    m3.bubble_id = "dev-thinking-live"
-    m3.ephemeral = DUMMY_STREAMING_CONTENT
-    m3.loader_visible = True
-    m3.loader_texts = '["Thinking..."]'
-
-    # State 4: thinking finalized dropdown (collapsed, 6s).
-    m4 = scene.mixie_chat_messages.add()
-    m4.sender = 'AGENT'
-    m4.bubble_id = "dev-thinking-finalized"
-    m4.thinking_text = DUMMY_STREAMING_CONTENT
-    m4.thinking_active = False
-    m4.thinking_collapsed = True
-    m4.thinking_duration_ms = 6000
-    m4.content = "Created the sphere with a blue metallic material."
-
-
 def populate_dev_session(session, scene, initial_state: Optional[SessionState] = None):
     """
     Populate session and scene with dummy data for development.
@@ -290,9 +220,6 @@ def populate_dev_session(session, scene, initial_state: Optional[SessionState] =
         msg = scene.mixie_chat_messages.add()
         msg.sender = msg_data["sender"]
         msg.text = msg_data["text"]
-
-    # Demo the steps block + thinking dropdown (all four render states).
-    _add_steps_and_thinking_demo(scene)
 
     # Set state
     state = initial_state or SessionState.IDLE
