@@ -15,6 +15,7 @@ from bpy.props import StringProperty
 
 from mixar.config.logging_config import get_logger
 
+from ...core.ui_utils import bump_layout_epoch as _bump_layout_epoch
 from ...core.ui_utils import redraw_chat_areas
 
 logger = get_logger(__name__)
@@ -279,9 +280,103 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
         return {'FINISHED'}
 
 
+def _find_bubble(scene, bubble_id):
+    """Linear scan for a message by bubble_id (mirrors slot_processor)."""
+    for msg in scene.mixie_chat_messages:
+        if getattr(msg, 'bubble_id', "") == bubble_id:
+            return msg
+    return None
+
+
+class MIXIE_CHAT_OT_toggle_steps(Operator):
+    """Collapse / expand the agent steps block"""
+    bl_idname = "mixie_chat.toggle_steps"
+    bl_label = "Toggle Steps Block"
+    bl_options = {'REGISTER'}
+
+    bubble_id: StringProperty(name="Bubble ID", default="")
+
+    def execute(self, context):
+        scene = context.scene
+        msg = _find_bubble(scene, self.bubble_id)
+        if msg is None:
+            return {'CANCELLED'}
+        msg.steps_collapsed = not msg.steps_collapsed
+        _bump_layout_epoch(scene)
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
+class MIXIE_CHAT_OT_toggle_step_row(Operator):
+    """Expand / collapse a single step row's detail"""
+    bl_idname = "mixie_chat.toggle_step_row"
+    bl_label = "Toggle Step Row"
+    bl_options = {'REGISTER'}
+
+    bubble_id: StringProperty(name="Bubble ID", default="")
+    item_id: StringProperty(name="Item ID", default="")
+
+    def execute(self, context):
+        scene = context.scene
+        msg = _find_bubble(scene, self.bubble_id)
+        if msg is None:
+            return {'CANCELLED'}
+        for row in msg.step_items:
+            if row.item_id == self.item_id:
+                row.expanded = not row.expanded
+                _bump_layout_epoch(scene)
+                redraw_chat_areas()
+                return {'FINISHED'}
+        return {'CANCELLED'}
+
+
+class MIXIE_CHAT_OT_toggle_thinking(Operator):
+    """Collapse / expand the finalized thinking dropdown"""
+    bl_idname = "mixie_chat.toggle_thinking"
+    bl_label = "Toggle Thinking"
+    bl_options = {'REGISTER'}
+
+    bubble_id: StringProperty(name="Bubble ID", default="")
+
+    def execute(self, context):
+        scene = context.scene
+        msg = _find_bubble(scene, self.bubble_id)
+        if msg is None:
+            return {'CANCELLED'}
+        msg.thinking_collapsed = not msg.thinking_collapsed
+        _bump_layout_epoch(scene)
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
+class MIXIE_CHAT_OT_dev_stream_demo(Operator):
+    """Stream a scripted demo agent turn (thinking → plan → tools → answer).
+
+    Dev/QA aid for evaluating the agent-output UI without a backend. Drives the
+    real slot pipeline so what renders here matches live streaming.
+    """
+    bl_idname = "mixie_chat.dev_stream_demo"
+    bl_label = "Dev: Stream Demo Turn"
+    bl_options = {'REGISTER'}
+
+    user_text: StringProperty(
+        name="User Text",
+        default="Make a woods scene with a cabin and an outdoor fireplace",
+    )
+
+    def execute(self, context):
+        from ...core.dev_stream import start_demo_stream
+        start_demo_stream(context.scene, self.user_text)
+        return {'FINISHED'}
+
+
 classes = (
     MIXIE_CHAT_OT_select_slot_action,
     MIXIE_CHAT_OT_insert_prompt_text,
     MIXIE_CHAT_OT_toggle_plan_mode,
     MIXIE_CHAT_OT_cancel_generation,
+    MIXIE_CHAT_OT_toggle_steps,
+    MIXIE_CHAT_OT_toggle_step_row,
+    MIXIE_CHAT_OT_toggle_thinking,
+    MIXIE_CHAT_OT_dev_stream_demo,
 )

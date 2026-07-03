@@ -80,18 +80,8 @@ def _draw_imagegen(layout, context):
     draw_dropdown(row, tab, "model", text="Model")
     row.operator("mixie.imagegen_refresh", text="", icon='FILE_REFRESH')
 
-    # Remaining params come from the catalog-driven parameter engine.
-    # When the catalog isn't loaded (offline / pre-auth) fall back to the
-    # legacy hardcoded enum properties so the tab never goes blank.
-    drew_catalog_params = False
-    try:
-        from mixar.modules.common.generation_params import draw_service_params
-        drew_catalog_params = draw_service_params(col, "image_gen", tab.model)
-    except Exception:
-        drew_catalog_params = False
-    if not drew_catalog_params:
-        draw_dropdown(col, tab, "aspect_ratio", text="Aspect Ratio")
-        draw_dropdown(col, tab, "resolution", text="Resolution")
+    draw_dropdown(col, tab, "aspect_ratio", text="Aspect Ratio")
+    draw_dropdown(col, tab, "resolution", text="Resolution")
 
     # --- Generate ---
     draw_generate_footer(layout, context, "mixie.imagegen_generate", "imagegen",
@@ -120,25 +110,11 @@ def _draw_blockout_to_render(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# Texture Gen (Lookdev360 / Texture Edit / Procedural Material)
+# Lookdev360 (Generate PBR Maps)
 # ---------------------------------------------------------------------------
 
 def _draw_lookdev360(layout, context):
-    """Draw the Texture Gen panel.
-
-    Catalog-driven consolidated UI (mode selector) when the generation
-    catalog is loaded; the legacy PBR-only UI otherwise so the tab never
-    goes blank offline / pre-auth.
-    """
-    from .texture_gen_drawer import (
-        _draw_texture_gen, _texture_gen_catalog_ready,
-    )
-
-    if _texture_gen_catalog_ready():
-        _draw_texture_gen(layout, context)
-        return
-
-    # --- Legacy fallback (catalog not loaded) ---
+    """Draw Lookdev360 panel settings."""
     tab = context.scene.mixie_moodboard_sidebar.tab_lookdev360
 
     # --- Prompt ---
@@ -184,23 +160,11 @@ def _draw_lookdev360(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# Model Gen (Image to 3D / Image to 3D Pro / Rapid 3D)
+# Image to 3D
 # ---------------------------------------------------------------------------
 
 def _draw_image_to_3d(layout, context):
-    """Draw the Model Gen panel.
-
-    Catalog-driven consolidated UI (mode selector) when the generation
-    catalog is loaded; the legacy Basic/Pro subtab UI otherwise so the tab
-    never goes blank offline / pre-auth.
-    """
-    from .model_gen_drawer import _draw_model_gen, _model_gen_catalog_ready
-
-    if _model_gen_catalog_ready():
-        _draw_model_gen(layout, context)
-        return
-
-    # --- Legacy fallback (catalog not loaded) ---
+    """Draw Image to 3D panel with subtabs (Basic / Pro)."""
     scene = context.scene
     sidebar = scene.mixie_moodboard_sidebar
 
@@ -293,31 +257,13 @@ def _draw_scene_recon(layout, context):
     draw_section_separator(layout)
 
     # --- Settings ---
-    # Pipeline flags are schema-driven from the catalog's
-    # scene_reconstruction service (model sam3d) when loaded; the legacy
-    # hardcoded tab props otherwise so the tab never goes blank offline.
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
-    drew_catalog_params = False
-    try:
-        from mixar.modules.common.generation_params import (
-            draw_service_params, resolve_model_slug,
-        )
-        slug = resolve_model_slug("scene_reconstruction", "", "")
-        if slug:
-            col.use_property_split = True
-            col.use_property_decorate = False
-            drew_catalog_params = draw_service_params(
-                col, "scene_reconstruction", slug)
-    except Exception:
-        drew_catalog_params = False
-    if not drew_catalog_params:
-        col.use_property_split = False
-        draw_toggle(col, tab, "generate_mesh", text="Generate Meshes")
-        draw_toggle(col, tab, "mesh_postprocess", text="Simplify Mesh")
-        draw_toggle(col, tab, "texture_baking", text="Bake Textures")
-        col.use_property_split = True
-        col.use_property_decorate = False
-        col.prop(tab, "min_mask_pixels", text="Min Mask Pixels")
+    draw_toggle(col, tab, "generate_mesh", text="Generate Meshes")
+    draw_toggle(col, tab, "mesh_postprocess", text="Simplify Mesh")
+    draw_toggle(col, tab, "texture_baking", text="Bake Textures")
+    col.use_property_split = True
+    col.use_property_decorate = False
+    col.prop(tab, "min_mask_pixels", text="Min Mask Pixels")
 
     # Progress (if running)
     if scene.mixie_scene_recon_is_generating:

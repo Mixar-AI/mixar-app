@@ -42,7 +42,6 @@ class Lookdev360Job(Job):
     prompt: str = ""
     mesh_bytes_b64: str = ""
     mesh_filename: str = "model.obj"
-    model: str = "hunyuan-pbr"
     resolution: Optional[int] = None
     style_image_bytes_b64: Optional[str] = None
     reference_image_bytes_b64: Optional[str] = None
@@ -74,7 +73,7 @@ class Lookdev360Job(Job):
 
         service.enqueue(
             job_type="pbr_gen",
-            model=self.model or "hunyuan-pbr",
+            model="hunyuan-pbr",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
@@ -355,7 +354,6 @@ def enqueue_lookdev360_job(
     prompt: str,
     mesh_bytes_b64: str,
     mesh_filename: str = "model.obj",
-    model: str = "hunyuan-pbr",
     resolution: Optional[int] = None,
     style_image_bytes_b64: Optional[str] = None,
     reference_image_bytes_b64: Optional[str] = None,
@@ -369,7 +367,6 @@ def enqueue_lookdev360_job(
         prompt=prompt,
         mesh_bytes_b64=mesh_bytes_b64,
         mesh_filename=mesh_filename,
-        model=model,
         resolution=resolution,
         style_image_bytes_b64=style_image_bytes_b64,
         reference_image_bytes_b64=reference_image_bytes_b64,
