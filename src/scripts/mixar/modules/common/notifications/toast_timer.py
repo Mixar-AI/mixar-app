@@ -15,24 +15,10 @@ from typing import Optional
 
 import bpy
 
-from .constants import TIMER_INTERVAL, TOASTS_VISIBLE_WM_PROP
+from .constants import TIMER_INTERVAL
 
 _timer_lock = threading.Lock()
 _timer_active = False
-
-
-def _set_toasts_visible_flag(visible: bool) -> None:
-    """Mirror toast visibility into a WM ID property.
-
-    Read by the C++ UI handler (view3d_toast_click.cc) to gate MOUSEMOVE
-    forwarding for hover highlights — keeps the per-mousemove cost at zero
-    when no toasts are on screen.
-    """
-    try:
-        for wm in bpy.data.window_managers:
-            wm[TOASTS_VISIBLE_WM_PROP] = 1 if visible else 0
-    except Exception:
-        pass
 
 
 def _tag_redraw_view3d() -> None:
@@ -70,8 +56,6 @@ def _toast_tick() -> Optional[float]:
     with _timer_lock:
         _timer_active = False
 
-    _set_toasts_visible_flag(False)
-
     from .toast_renderer import remove_draw_handler
     remove_draw_handler()
 
@@ -97,7 +81,6 @@ def ensure_toast_timer_running() -> None:
         """Deferred setup that runs on the main thread."""
         from .toast_renderer import install_draw_handler
         install_draw_handler()
-        _set_toasts_visible_flag(True)
 
         if not bpy.app.timers.is_registered(_toast_tick):
             bpy.app.timers.register(_toast_tick, first_interval=TIMER_INTERVAL)
@@ -115,8 +98,6 @@ def cleanup_toast_timer() -> None:
 
     if bpy.app.timers.is_registered(_toast_tick):
         bpy.app.timers.unregister(_toast_tick)
-
-    _set_toasts_visible_flag(False)
 
     from .toast_renderer import remove_draw_handler
     remove_draw_handler()

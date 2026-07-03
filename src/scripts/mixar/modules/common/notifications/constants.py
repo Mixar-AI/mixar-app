@@ -64,14 +64,6 @@ BUTTON_PADDING_X = 20
 BUTTON_GAP = 10
 BUTTON_CORNER_RADIUS = 8
 BUTTON_FONT_SIZE = 15
-BUTTON_BORDER_WIDTH = 1.0
-
-# -- Interaction feedback -----------------------------------------------------
-# How long a button stays visually "pressed" before its action fires (seconds).
-PRESS_FLASH_DURATION = 0.12
-# Window-manager ID property read by the C++ UI handler (view3d_toast_click.cc)
-# to gate MOUSEMOVE forwarding — must stay in sync with the C++ string.
-TOASTS_VISIBLE_WM_PROP = "mixar_toasts_visible"
 
 # -- Animation --------------------------------------------------------------
 FADE_DURATION_MS = 300
@@ -82,11 +74,6 @@ NOTIFICATIONS_REST_PATH = "/api/v1/notifications"
 
 
 # -- Theme-aware colors -----------------------------------------------------
-
-def _luminance(color) -> float:
-    """Relative luminance of an RGB(A) color (ITU-R BT.709)."""
-    return 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]
-
 
 def _rgba(color, alpha_override=None):
     """Normalize a Blender theme color to an RGBA tuple.
@@ -136,23 +123,12 @@ def get_toast_colors(ntype: NotificationType) -> dict:
 
     # -- Action buttons --
     chat = theme.mixie_chat
-    primary_bg = _rgba(chat.chat_prompt_button, alpha_override=1.0)
-    primary_text = _rgba(chat.chat_button_text, alpha_override=1.0)
-    # If the theme's accent barely differs from the card background the
-    # primary button reads as plain text — fall back to the theme's
-    # selected-tool color, which is guaranteed to be an accent.
-    if abs(_luminance(primary_bg) - _luminance(bg)) < 0.15:
-        tool = ui.wcol_tool
-        primary_bg = _rgba(tool.inner_sel, alpha_override=1.0)
-        primary_text = _rgba(tool.text_sel, alpha_override=1.0)
-    # Secondary buttons: subtle text-tinted fill + border so they read as
-    # buttons on any theme (the old inner-color fill vanished on the card).
-    secondary_bg = (*text[:3], 0.10)
+    primary_bg = _rgba(chat.chat_prompt_button)
+    primary_text = _rgba(chat.chat_button_text)
+    secondary_bg = _rgba(tooltip.inner, alpha_override=0.3)
     secondary_text = text
-    secondary_border = (*text[:3], 0.30)
     danger_bg = _rgba(state.error, alpha_override=1.0)
     danger_text = (1.0, 1.0, 1.0, 1.0)
-    filled_border = (1.0, 1.0, 1.0, 0.20)
 
     return {
         "bg": bg,
@@ -161,13 +137,7 @@ def get_toast_colors(ntype: NotificationType) -> dict:
         "badge": badge,
         "close_bg": close_bg,
         "close_icon": close_icon,
-        "button_primary": {
-            "bg": primary_bg, "text": primary_text, "border": filled_border,
-        },
-        "button_secondary": {
-            "bg": secondary_bg, "text": secondary_text, "border": secondary_border,
-        },
-        "button_danger": {
-            "bg": danger_bg, "text": danger_text, "border": filled_border,
-        },
+        "button_primary": {"bg": primary_bg, "text": primary_text},
+        "button_secondary": {"bg": secondary_bg, "text": secondary_text},
+        "button_danger": {"bg": danger_bg, "text": danger_text},
     }

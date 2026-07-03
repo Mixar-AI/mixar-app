@@ -72,8 +72,13 @@ def initialize_layer_paint_project(
     object_names=None,
     material_name: str = "",
     include_ao: bool = False,
+    create_default_layer: bool = True,
 ) -> dict:
-    """Create Mixar Paint nodes, core channels, and a default layer for targets."""
+    """Create Mixar Paint nodes, core channels, and (optionally) a default layer for targets.
+
+    With ``create_default_layer=False`` the stack starts EMPTY — use when the
+    caller builds every layer itself so the default fill layer doesn't linger.
+    """
     targets, missing = _resolve_mesh_objects(object_names)
     if not targets:
         return {
@@ -113,6 +118,7 @@ def initialize_layer_paint_project(
                     roughness=True,
                     normal=True,
                     switch_to_material_view=False,
+                    create_default_layer=bool(create_default_layer),
                 )
             except Exception as exc:
                 errors.append({"object": obj.name, "error": str(exc)})
@@ -144,6 +150,25 @@ def initialize_layer_paint_project(
         "missing": missing,
         "errors": errors,
     }
+
+
+def initialize_empty_layer_paint_project(
+    object_names=None,
+    material_name: str = "",
+    include_ao: bool = False,
+) -> dict:
+    """Initialize Mixar Paint stacks WITHOUT the default fill layer.
+
+    Agent workflows build their own layers (fill/procedural/PBR binds) right
+    after initializing, so the UI's default fill layer would only linger in the
+    stack. Callers must add at least one real layer after this.
+    """
+    return initialize_layer_paint_project(
+        object_names=object_names,
+        material_name=material_name,
+        include_ao=include_ao,
+        create_default_layer=False,
+    )
 
 
 def add_procedural_material_layer(

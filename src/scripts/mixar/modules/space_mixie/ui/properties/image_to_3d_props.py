@@ -20,15 +20,22 @@ from bpy.props import (
 
 
 def _get_model_enum_items(self, context):
-    """Dynamic callback for model enum items."""
+    """Dynamic callback for model enum items (catalog, then hardcoded)."""
     try:
-        from mixar.bootstrap.model_3d_cache import get_model_enum_items
-
-        return get_model_enum_items(self, context)
-    except ImportError:
-        return [
-            ("ERROR", "Cache not available", "Model cache module not loaded", "ERROR", 0)
-        ]
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items,
+            is_loaded,
+        )
+        if is_loaded():
+            items = get_model_enum_items("model_3d")
+            if items:
+                return items
+    except Exception:
+        pass
+    return [
+        ("trellis-1", "Trellis 1.0", "Trellis generation model", "MESH_DATA", 0),
+        ("meshy-6", "Meshy 6", "Meshy v6 generation model", "MESH_DATA", 1),
+    ]
 
 
 def register():
