@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 from ..constants import SessionState, TEMP_PLACEHOLDER_PREFIX
 from .session import get_session_manager
+from .ui_utils import bump_layout_epoch as _bump_layout_epoch
 
 logger = get_logger(__name__)
 
@@ -44,6 +45,62 @@ def _fast_set(bubble, prop_name: str, value) -> None:
     all message slot fields.
     """
     bubble[prop_name] = value
+
+
+def _extinguish_other_loaders(scene, keep_bubble_id: str) -> None:
+    """Hide every visible loader except `keep_bubble_id`'s — one spinner, always."""
+    for msg in getattr(scene, "mixie_chat_messages", []) or []:
+        if (getattr(msg, "bubble_id", "") != keep_bubble_id
+                and getattr(msg, "loader_visible", False)):
+            msg.loader_visible = False
+
+
+def collapse_live_thinking(bubble, scene=None) -> None:
+    """Finalize the bubble's current live reasoning phase into the quiet
+    '▸ Thought for Ns' dropdown — called when the next tool step starts (so
+    reasoning collapses progressively) and on turn end. The pure lifecycle
+    snapshots the live ephemeral FIFO into thinking_text and accumulates the
+    duration; a later narration burst re-opens the panel live."""
+    import time
+
+    from .thinking_lifecycle import apply_ephemeral_to_bubble
+
+    changed = False
+    if getattr(bubble, "thinking_active", False):
+        apply_ephemeral_to_bubble(bubble, {"clear": True}, time.time())
+        changed = True
+    if ((getattr(bubble, "thinking_text", "") or "").strip()
+            and not getattr(bubble, "thinking_collapsed", False)):
+        bubble.thinking_collapsed = True  # show as "▸ Thought for Ns"
+        changed = True
+    if changed and scene is not None:
+        _bump_layout_epoch(scene)
+
+
+def finalize_turn(scene) -> None:
+    """End-of-turn cleanup, called on stream completion AND user abort.
+
+    - Collapses each bubble's live thinking into the "Thought for Ns" dropdown.
+    - Marks any still-RUNNING tool steps DONE so their animation settles.
+    - Hides lingering loaders.
+    A retry then starts from a clean, settled transcript instead of interleaving
+    with a half-finished turn.
+    """
+    messages = getattr(scene, "mixie_chat_messages", None)
+    if not messages:
+        return
+    for msg in messages:
+        collapse_live_thinking(msg)
+        try:
+            for row in msg.step_items:
+                if row.status == "RUNNING":
+                    row.status = "DONE"
+        except Exception:  # noqa: BLE001
+            pass
+        if getattr(msg, "loader_visible", False):
+            msg.loader_visible = False
+
+    _bump_layout_epoch(scene)
 
 
 class SlotEventProcessor:
@@ -97,9 +154,10 @@ class SlotEventProcessor:
         slot_handlers = [
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
-            ("content", lambda: self._apply_content_slot(bubble, event_data["content"])),
-            ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"])),
+            ("content", lambda: self._apply_content_slot(bubble, event_data["content"], scene)),
+            ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
             ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
+            ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"], scene)),
             ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"])),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
         ]
@@ -142,6 +200,11 @@ class SlotEventProcessor:
         msg.bubble_id = bubble_id
         msg.sender = 'AGENT'  # Slot events are always from agent
         msg.message_type = 'AGENT'  # Slots determine rendering, type matches sender
+
+        # Agent bubbles arrive with no input events flowing — drive redraws
+        # briefly so the C++ slide-in animation gets frames.
+        from .animation_manager import start_slide_redraw_burst
+        start_slide_redraw_burst()
         return msg
 
     def _apply_loader_slot(self, bubble: Any, loader_data: dict, scene=None) -> None:
@@ -157,14 +220,12 @@ class SlotEventProcessor:
         # Handle None for boolean - default to False
         bubble.loader_visible = bool(loader_data.get("visible", False))
 
-        texts_count = 0
         if "texts" in loader_data:
             texts = loader_data["texts"]
-            # Handle None - default to empty list
             if texts is None:
                 texts = []
-            texts_count = len(texts) if isinstance(texts, list) else 0
-            _fast_set(bubble, "loader_texts", json.dumps(texts)[:2048])
+            _fast_set(bubble, "loader_texts",
+                      json.dumps(texts if isinstance(texts, list) else [])[:2048])
             _fast_set(bubble, "loader_current_index", 0)  # Reset on new texts
 
         if "rotate_ms" in loader_data:
@@ -174,6 +235,13 @@ class SlotEventProcessor:
             value = int(rotate_ms) if rotate_ms is not None else 2000
             _fast_set(bubble, "loader_rotate_ms", max(100, value))
 
+        # ONE spinner, always: whichever bubble's loader just turned visible is
+        # the live indicator — extinguish every other bubble's. The backend
+        # already moves its single loader between bubbles; this is the
+        # client-side invariant should events race or drop.
+        if bubble.loader_visible and scene is not None:
+            _extinguish_other_loaders(scene, getattr(bubble, "bubble_id", ""))
+
         # Start/stop loader timer based on visibility change
         if bubble.loader_visible and not was_visible:
             self._start_loader_timer()
@@ -181,43 +249,36 @@ class SlotEventProcessor:
             if scene is not None:
                 self._stop_loader_timer_if_no_active(scene)
 
-    def _apply_content_slot(self, bubble: Any, content_data: dict) -> None:
-        """
-        Apply content slot update (persistent text).
+    def _apply_content_slot(self, bubble: Any, content_data: dict, scene=None) -> None:
+        """Apply a content slot update (persistent text).
 
-        Args:
-            bubble: Message PropertyGroup
-            content_data: Dict with append/set/clear operations
+        Content is curated by the backend (plan-free notices, interrupt
+        questions, the final answer); live narration arrives via the ephemeral
+        slot and is handled by the thinking lifecycle.
         """
-        prev_len = len(bubble.content)
-        operation = "unknown"
-
         if content_data.get("clear"):
             _fast_set(bubble, "content", "")
-            operation = "clear"
         elif "set" in content_data:
-            # Handle None values - Blender properties don't accept None
-            set_text = (content_data["set"] or "")[:_SLOT_TEXT_MAXLEN]
-            _fast_set(bubble, "content", set_text)
-            operation = f"set({len(set_text)} chars)"
+            _fast_set(bubble, "content",
+                      (content_data["set"] or "")[:_SLOT_TEXT_MAXLEN])
         elif "append" in content_data:
-            # Handle None values
-            append_text = content_data["append"] or ""
             _fast_set(
                 bubble, "content",
-                (bubble.content + append_text)[:_SLOT_TEXT_MAXLEN],
+                (bubble.content + (content_data.get("append") or ""))[:_SLOT_TEXT_MAXLEN],
             )
-            operation = f"append({len(append_text)} chars)"
 
         # Also update legacy text field for backward compatibility
         _fast_set(bubble, "text", bubble.content)
 
-        # Parse markdown segments for C++ rendering (incremental for streaming)
+        self._reparse_content_markdown(bubble, is_append=("append" in content_data))
+        if scene is not None:
+            _bump_layout_epoch(scene)
+
+    def _reparse_content_markdown(self, bubble: Any, is_append: bool) -> None:
+        """(Re)build the markdown_segments metadata from bubble.content."""
+        bubble_id = bubble.bubble_id if hasattr(bubble, 'bubble_id') else ""
         try:
             if bubble.content:
-                is_append = "append" in content_data
-                bubble_id = bubble.bubble_id if hasattr(bubble, 'bubble_id') else ""
-
                 if is_append and bubble_id:
                     from .markdown_parser import parse_markdown_incremental
                     segments = parse_markdown_incremental(
@@ -232,7 +293,6 @@ class SlotEventProcessor:
                         from .markdown_parser import clear_incremental_cache
                         clear_incremental_cache(bubble_id)
 
-                # Inline metadata update
                 try:
                     metadata = json.loads(bubble.metadata) if bubble.metadata else {}
                 except json.JSONDecodeError:
@@ -243,7 +303,6 @@ class SlotEventProcessor:
                     json.dumps(metadata, ensure_ascii=False)[:_SLOT_TEXT_MAXLEN],
                 )
             else:
-                # Clear only markdown segments, preserve other metadata
                 try:
                     metadata = json.loads(bubble.metadata) if bubble.metadata else {}
                 except json.JSONDecodeError:
@@ -253,44 +312,35 @@ class SlotEventProcessor:
                     bubble, "metadata",
                     json.dumps(metadata, ensure_ascii=False)[:_SLOT_TEXT_MAXLEN],
                 )
-                # Clear incremental cache for this bubble
-                bubble_id = bubble.bubble_id if hasattr(bubble, 'bubble_id') else ""
                 if bubble_id:
                     from .markdown_parser import clear_incremental_cache
                     clear_incremental_cache(bubble_id)
         except Exception as e:
             logger.error(f"[SLOT:CONTENT] Markdown parsing failed: {e}")
 
-    def _apply_ephemeral_slot(self, bubble: Any, ephemeral_data: dict) -> None:
+    def _apply_ephemeral_slot(self, bubble: Any, ephemeral_data: dict, scene) -> None:
         """
         Apply ephemeral slot update (temporary text with FIFO).
 
-        Ephemeral content is displayed with FIFO (last 4 lines visible)
-        and is cleared when the response completes.
+        Ephemeral content is displayed with FIFO (last 4 lines visible) and is
+        cleared when the response completes. The set/append/clear ops also
+        drive the thinking lifecycle: live reasoning marks the bubble
+        thinking_active; the closing `clear` snapshots the text into the
+        finalized "Thought for Ns" dropdown (thinking_text + duration).
 
         Args:
             bubble: Message PropertyGroup
             ephemeral_data: Dict with append/set/clear operations
+            scene: The Blender scene (for the layout-epoch bump on finalize)
         """
-        prev_len = len(bubble.ephemeral)
-        operation = "unknown"
+        import time
 
-        if ephemeral_data.get("clear"):
-            _fast_set(bubble, "ephemeral", "")
-            operation = "clear"
-        elif "set" in ephemeral_data:
-            # Handle None values - Blender properties don't accept None
-            set_text = (ephemeral_data["set"] or "")[:_SLOT_TEXT_MAXLEN]
-            _fast_set(bubble, "ephemeral", set_text)
-            operation = f"set({len(set_text)} chars)"
-        elif "append" in ephemeral_data:
-            # Handle None values
-            append_text = ephemeral_data["append"] or ""
-            _fast_set(
-                bubble, "ephemeral",
-                (bubble.ephemeral + append_text)[:_SLOT_TEXT_MAXLEN],
-            )
-            operation = f"append({len(append_text)} chars)"
+        from .thinking_lifecycle import apply_ephemeral_to_bubble
+
+        finalized = apply_ephemeral_to_bubble(bubble, ephemeral_data, time.time())
+        if finalized:
+            # The dropdown is a new block — force a C++ layout rebuild.
+            _bump_layout_epoch(scene)
 
 
     def _apply_input_type_slot(self, bubble: Any, input_type: str, scene) -> None:
@@ -356,6 +406,23 @@ class SlotEventProcessor:
         # Start animation timer if any items are in_progress
         if status_counts['IN_PROGRESS'] > 0:
             self._start_loader_timer()
+
+    def _apply_steps_slot(self, bubble: Any, steps_data: dict, scene) -> None:
+        """
+        Apply steps slot update (full replacement of the steps block).
+
+        All branching logic lives in the unit-tested
+        steps_format.apply_steps_to_bubble; this is a thin wrapper.
+
+        Args:
+            bubble: Message PropertyGroup
+            steps_data: dict with optional "summary" and "items"
+            scene: The Blender scene (for the layout-epoch bump)
+        """
+        from .steps_format import apply_steps_to_bubble
+        apply_steps_to_bubble(bubble, steps_data)
+        # Row count / detail text changed the block height.
+        _bump_layout_epoch(scene)
 
     def _apply_actions_slot(self, bubble: Any, actions: list) -> None:
         """

@@ -541,6 +541,12 @@ class EventProcessor:
         if current_state not in (SessionState.AWAITING_INPUT, SessionState.MODIFYING):
             logger.info(f"SSE stream complete - returning to IDLE")
             self._session.set_state(scene, SessionState.IDLE)
+            # Collapse live narration -> "Thought for Ns" and settle steps.
+            try:
+                from .slot_processor import finalize_turn
+                finalize_turn(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"finalize_turn on complete skipped: {e}")
         else:
             logger.info(f"SSE stream complete - keeping state {current_state.value} (waiting for user input)")
         self._redraw_ui()

@@ -12,6 +12,7 @@ the slots received.
 """
 
 from bpy.props import (
+    BoolProperty,
     EnumProperty,
     FloatProperty,
     StringProperty,
@@ -121,8 +122,68 @@ class MixieChatImageItem(PropertyGroup):
     )
 
 
+class MixieChatStepItem(PropertyGroup):
+    """Property group for a single tool-call row in the agent steps block."""
+    item_id: StringProperty(
+        name="Item ID",
+        description="Unique identifier for this step row",
+        default="",
+        maxlen=63
+    )
+    # Order MUST stay READ, WRITE, COMMAND, SEARCH, TOOL — the C++ side reads
+    # this enum as an int index (RNA_property_enum_get) to pick the row icon.
+    kind: EnumProperty(
+        name="Kind",
+        description="What kind of tool call this row represents",
+        items=[
+            ('READ', "Read", "File read"),
+            ('WRITE', "Write", "File write"),
+            ('COMMAND', "Command", "Shell command"),
+            ('SEARCH', "Search", "Search / grep"),
+            ('TOOL', "Tool", "Generic tool call"),
+        ],
+        default='TOOL'
+    )
+    label: StringProperty(
+        name="Label",
+        description="Row label, e.g. 'Read'",
+        default="",
+        maxlen=256
+    )
+    target: StringProperty(
+        name="Target",
+        description="Row target, e.g. a filename",
+        default="",
+        maxlen=256
+    )
+    detail: StringProperty(
+        name="Detail",
+        description="Second-level detail body (command output / snippet)",
+        default="",
+        maxlen=4096
+    )
+    # Order MUST stay PENDING, RUNNING, DONE, FAILED (C++ reads as int index).
+    status: EnumProperty(
+        name="Status",
+        description="Current status of this step",
+        items=[
+            ('PENDING', "Pending", "Not started"),
+            ('RUNNING', "Running", "In progress"),
+            ('DONE', "Done", "Completed"),
+            ('FAILED', "Failed", "Failed"),
+        ],
+        default='DONE'
+    )
+    expanded: BoolProperty(
+        name="Expanded",
+        description="Whether this row's detail is expanded",
+        default=False
+    )
+
+
 classes = (
     MixieChatTodoItem,
     MixieChatActionItem,
     MixieChatImageItem,
+    MixieChatStepItem,
 )
