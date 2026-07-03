@@ -293,13 +293,31 @@ def _draw_scene_recon(layout, context):
     draw_section_separator(layout)
 
     # --- Settings ---
+    # Pipeline flags are schema-driven from the catalog's
+    # scene_reconstruction service (model sam3d) when loaded; the legacy
+    # hardcoded tab props otherwise so the tab never goes blank offline.
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
-    draw_toggle(col, tab, "generate_mesh", text="Generate Meshes")
-    draw_toggle(col, tab, "mesh_postprocess", text="Simplify Mesh")
-    draw_toggle(col, tab, "texture_baking", text="Bake Textures")
-    col.use_property_split = True
-    col.use_property_decorate = False
-    col.prop(tab, "min_mask_pixels", text="Min Mask Pixels")
+    drew_catalog_params = False
+    try:
+        from mixar.modules.common.generation_params import (
+            draw_service_params, resolve_model_slug,
+        )
+        slug = resolve_model_slug("scene_reconstruction", "", "")
+        if slug:
+            col.use_property_split = True
+            col.use_property_decorate = False
+            drew_catalog_params = draw_service_params(
+                col, "scene_reconstruction", slug)
+    except Exception:
+        drew_catalog_params = False
+    if not drew_catalog_params:
+        col.use_property_split = False
+        draw_toggle(col, tab, "generate_mesh", text="Generate Meshes")
+        draw_toggle(col, tab, "mesh_postprocess", text="Simplify Mesh")
+        draw_toggle(col, tab, "texture_baking", text="Bake Textures")
+        col.use_property_split = True
+        col.use_property_decorate = False
+        col.prop(tab, "min_mask_pixels", text="Min Mask Pixels")
 
     # Progress (if running)
     if scene.mixie_scene_recon_is_generating:
