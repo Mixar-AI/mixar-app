@@ -225,6 +225,31 @@ def _assemble_hunyuan_texture_edit(
 
 
 # ---------------------------------------------------------------------------
+# hunyuan_uv / hunyuan_part (mesh-file services, sdk_params passthrough)
+# ---------------------------------------------------------------------------
+
+
+def _assemble_sdk_params(
+    params: Dict[str, Any], payload: Dict[str, Any], model_slug: str = ""
+) -> Dict[str, Any]:
+    """Generic Hunyuan mesh-file services: params → ``sdk_params`` with
+    PascalCase keys. When there are no params (hunyuan_uv / hunyuan_part
+    today) the payload is returned untouched — byte-identical to the
+    legacy {"file_bytes_b64", "file_filename"} wire shape.
+    """
+    params = dict(params or {})
+    if not params:
+        return payload
+    sdk = payload.setdefault("sdk_params", {})
+    prompt = params.pop("prompt", None)
+    if prompt:
+        sdk["Prompt"] = prompt
+    for key, value in params.items():
+        sdk.setdefault(_pascal(key), value)
+    return payload
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -245,6 +270,8 @@ _ASSEMBLERS: Dict[str, Assembler] = {
     "hunyuan_texture_edit": _assemble_hunyuan_texture_edit,
     "retopology": _assemble_retopology,
     "retopology_tripo": _assemble_retopology_tripo,
+    "hunyuan_uv": _assemble_sdk_params,
+    "hunyuan_part": _assemble_sdk_params,
 }
 
 

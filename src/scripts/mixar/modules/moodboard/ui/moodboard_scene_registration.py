@@ -52,6 +52,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabMeshSegmentProps,
     MixieMoodboardTabSceneReconProps,
     MixieMoodboardTabRetopologyProps,
+    MixieMoodboardTabUVUnwrapProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,
@@ -74,6 +75,7 @@ classes = (
     MixieMoodboardTabMeshSegmentProps,
     MixieMoodboardTabSceneReconProps,
     MixieMoodboardTabRetopologyProps,
+    MixieMoodboardTabUVUnwrapProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,

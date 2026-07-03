@@ -280,12 +280,19 @@ def _mesh_can_generate(context, mode):
 # ---------------------------------------------------------------------------
 
 def _draw_uv_unwrap(layout, context):
-    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties."""
+    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties.
+
+    The catalog Model dropdown + schema params (capability
+    ``uv_unwrapping``, single service — Mode dropdown hidden) are drawn
+    when the generation catalog is loaded; the mesh-export inputs and the
+    hunyuan submit flow are unchanged either way.
+    """
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return
 
-    props = context.scene.hunyuan
+    scene = context.scene
+    props = scene.hunyuan
     uv = props.uv
     job = uv.job
 
@@ -295,6 +302,18 @@ def _draw_uv_unwrap(layout, context):
 
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
     draw_dropdown(col, uv, "export_format", text="Format")
+
+    # Catalog Model dropdown + schema params (no-op when not loaded).
+    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+    tab = getattr(sidebar, 'tab_uv_unwrap', None) if sidebar else None
+    if tab is not None:
+        try:
+            from mixar.modules.common.generation_params import (
+                draw_capability_selector,
+            )
+            draw_capability_selector(col, tab, "uv_unwrapping")
+        except Exception:
+            pass
 
     draw_hunyuan_generate_footer(
         layout, context, job, 'UV',
