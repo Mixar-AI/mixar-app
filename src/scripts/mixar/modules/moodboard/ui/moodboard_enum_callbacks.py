@@ -210,6 +210,23 @@ def _get_retopology_model_items(self, context):
     )
 
 
+def _get_mesh_segment_mode_items(self, context):
+    """Mesh Segment tab mode items (capability ``mesh_segmentation``)."""
+    return _capability_mode_items(
+        "mesh_segmentation",
+        [("mesh_segment", "Mesh Segmentation",
+          "Segment a UV-unwrapped mesh into labeled parts")],
+    )
+
+
+def _get_mesh_segment_model_items(self, context):
+    """Mesh Segment tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "mesh_segmentation", self,
+        [("mesh_segment_v1", "Mesh Segment v1", "UV mesh segmentation")],
+    )
+
+
 def _get_uv_unwrap_model_items(self, context):
     """UV Unwrap tab model items (capability ``uv_unwrapping``)."""
     return _capability_model_items(

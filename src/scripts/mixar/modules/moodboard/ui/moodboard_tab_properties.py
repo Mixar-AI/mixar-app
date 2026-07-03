@@ -45,6 +45,8 @@ from .moodboard_enum_callbacks import (
     _get_model_gen_model_items,
     _get_texture_gen_mode_items,
     _get_texture_gen_model_items,
+    _get_mesh_segment_mode_items,
+    _get_mesh_segment_model_items,
 )
 
 
@@ -235,6 +237,22 @@ class MixieMoodboardTabImageGenProps(PropertyGroup):
 
 class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
     """Properties for Mesh Segment tab"""
+
+    # Generation mode = catalog service of capability "mesh_segmentation"
+    # (Mesh Segmentation = mesh_segment / Part Segmentation = hunyuan_part)
+    mode: EnumProperty(
+        name="Mode",
+        description="Mesh segmentation mode",
+        items=_get_mesh_segment_mode_items,
+        update=_on_model_changed,
+    )
+
+    model: EnumProperty(
+        name="Model",
+        description="AI model for mesh segmentation",
+        items=_get_mesh_segment_model_items,
+        update=_on_model_changed,
+    )
 
     prompt: StringProperty(
         name="Prompt",
