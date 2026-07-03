@@ -152,18 +152,38 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV
 
+        # Model slug + schema params from the catalog's depth_to_image
+        # service when loaded (Image Gen tab "From Blockout" mode); the
+        # legacy hardcoded model + empty params otherwise. Wire payload
+        # shape unchanged.
+        model_slug = "flux-depth-dev"
+        catalog_params = {}
+        try:
+            from mixar.modules.common.generation_params import (
+                collect_params, resolve_model_slug,
+            )
+            sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+            imagegen_tab = getattr(sidebar, 'tab_imagegen', None) if sidebar else None
+            selected = getattr(imagegen_tab, 'model', '') if imagegen_tab else ''
+            slug = resolve_model_slug("depth_to_image", selected, "")
+            if slug:
+                model_slug = slug
+                catalog_params = collect_params("depth_to_image", slug) or {}
+        except Exception as e:
+            logger.debug("depth_to_image catalog params unavailable: %s", e)
+
         stripped_prompt = prompt.strip()
         payload = {
             "prompt": stripped_prompt,
             "depth_map_bytes_b64": _b64.b64encode(depth_bytes).decode(),
-            "params": {},
+            "params": catalog_params,
         }
 
         job = enqueue_generation(
             kind="image",
             feature_key=FEATURE_LOOKDEV,
             job_type="depth_to_image",
-            model="flux-depth-dev",
+            model=model_slug,
             payload=payload,
             label=f"Lookdev: {stripped_prompt[:40]}",
             fail_message="Lookdev generation failed",
