@@ -121,20 +121,12 @@ class MixarUILayer(bpy.types.PropertyGroup):
 
 
 def _get_brush_model_items(self, context):
-    """Dynamic enum callback for brush generation models.
-
-    Sources the generation catalog's ``brush_gen`` service (surface
-    "paint"); falls back to hardcoded flash/pro (offline / pre-auth).
-    """
+    """Dynamic enum callback filtering imagegen_cache to flash/pro models."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_model_enum_items,
-            is_loaded,
-        )
-        if is_loaded():
-            items = get_model_enum_items("brush_gen")
-            if items:
-                return items
+        from mixar.bootstrap.imagegen_cache import get_model_enum_items
+        items = [i for i in get_model_enum_items(self, context) if i[0] in {"flash", "pro"}]
+        if items:
+            return items
     except Exception:
         pass
     return [("flash", "Flash", "Fast generation"), ("pro", "Pro", "Higher quality")]

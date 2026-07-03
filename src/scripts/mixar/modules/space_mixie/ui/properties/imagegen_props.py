@@ -35,29 +35,14 @@ class MixieImageGenRefImage(bpy.types.PropertyGroup):
     )
 
 
-def _current_model_slug(context):
-    """Currently selected image_gen model slug (validated via catalog)."""
-    model_name = ""
-    try:
-        if context and hasattr(context, "scene"):
-            model_name = getattr(context.scene, "mixie_imagegen_model", "")
-    except Exception:
-        model_name = ""
-    from mixar.modules.common.generation_params import resolve_model_slug
-    return resolve_model_slug("image_gen", model_name, "")
-
-
 def _get_model_enum_items(self, context):
-    """Dynamic callback for model enum items (catalog, then hardcoded)."""
+    """Dynamic callback for model enum items."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_model_enum_items,
-            is_loaded,
-        )
-        if is_loaded():
-            items = get_model_enum_items("image_gen")
-            if items:
-                return items
+        from mixar.bootstrap.imagegen_cache import get_model_enum_items
+
+        items = get_model_enum_items(self, context)
+        if items:
+            return items
     except Exception as e:
         logger.error("[ImageGen] Model enum callback error: %s", e)
     return [
@@ -67,16 +52,13 @@ def _get_model_enum_items(self, context):
 
 
 def _get_style_enum_items(self, context):
-    """Dynamic callback for style enum items (catalog, then hardcoded)."""
+    """Dynamic callback for style enum items."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_style_enum_items,
-            is_loaded,
-        )
-        if is_loaded():
-            items = get_style_enum_items("image")
-            if items:
-                return items
+        from mixar.bootstrap.imagegen_cache import get_style_enum_items
+
+        items = get_style_enum_items(self, context)
+        if items:
+            return items
     except Exception as e:
         logger.error("[ImageGen] Style enum callback error: %s", e)
     return [
@@ -90,19 +72,13 @@ def _get_style_enum_items(self, context):
 
 
 def _get_aspect_ratio_enum_items(self, context):
-    """Dynamic callback for aspect ratio enum items.
-
-    Sources the selected model's ``aspect_ratio`` schema param from the
-    catalog; hardcoded fallback offline / pre-auth.
-    """
+    """Dynamic callback for aspect ratio enum items."""
     try:
-        from mixar.modules.common.generation_params import get_param_enum_items
+        from mixar.bootstrap.imagegen_cache import get_aspect_ratio_enum_items
 
-        slug = _current_model_slug(context)
-        if slug:
-            items = get_param_enum_items("image_gen", slug, "aspect_ratio")
-            if items:
-                return items
+        items = get_aspect_ratio_enum_items(self, context)
+        if items:
+            return items
     except Exception as e:
         logger.error("[ImageGen] Aspect ratio enum callback error: %s", e)
     return [
@@ -115,19 +91,13 @@ def _get_aspect_ratio_enum_items(self, context):
 
 
 def _get_resolution_enum_items(self, context):
-    """Dynamic callback for resolution enum items.
-
-    Sources the selected model's ``resolution`` schema param from the
-    catalog; hardcoded fallback offline / pre-auth.
-    """
+    """Dynamic callback for resolution enum items."""
     try:
-        from mixar.modules.common.generation_params import get_param_enum_items
+        from mixar.bootstrap.imagegen_cache import get_resolution_enum_items
 
-        slug = _current_model_slug(context)
-        if slug:
-            items = get_param_enum_items("image_gen", slug, "resolution")
-            if items:
-                return items
+        items = get_resolution_enum_items(self, context)
+        if items:
+            return items
     except Exception as e:
         logger.error("[ImageGen] Resolution enum callback error: %s", e)
     return [("1K", "1K", "1024px (Standard)", "RENDER_RESULT", 0)]
