@@ -59,12 +59,20 @@ class MIXAR_OT_dismiss_update(bpy.types.Operator):
 
     def execute(self, context):
         from ..core.state import get_update_state
+        from ..core.trigger import is_forced
         from ..core.update_checker import set_skipped_version
         from ..constants import UPDATE_NOTIFICATION_ID
         from ...notifications.store import get_notification_store
 
         state = get_update_state()
         info = state.update_info
+
+        # Forced/unsupported updates cannot be skipped — defence in depth;
+        # the toast doesn't offer Skip for these, but nothing else should
+        # be able to clear the requirement either.
+        if info and is_forced(info):
+            self.report({"WARNING"}, "This update is required and cannot be skipped")
+            return {"CANCELLED"}
 
         if info and info.latest_version:
             set_skipped_version(info.latest_version)

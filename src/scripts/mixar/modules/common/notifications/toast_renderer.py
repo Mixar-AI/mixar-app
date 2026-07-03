@@ -243,30 +243,31 @@ def _draw_single_toast(
     badge_cy = y + toast_h - TOAST_PADDING_Y - title_h * 0.5
     draw_circle(badge_cx, badge_cy, BADGE_RADIUS, badge_color)
 
-    # -- Close button (circular) --
-    close_cx = x + TOAST_WIDTH - TOAST_PADDING_X - CLOSE_BUTTON_RADIUS
-    close_cy = y + toast_h - TOAST_PADDING_Y - CLOSE_BUTTON_RADIUS
-    close_hovered = toast_hover_state["key"] == ("close", item.id)
-    close_base = _hovered(colors["close_bg"]) if close_hovered else colors["close_bg"]
-    draw_circle(close_cx, close_cy, CLOSE_BUTTON_RADIUS, _apply_opacity(close_base, opacity))
+    # -- Close button (circular) \u2014 omitted for non-dismissible toasts --
+    if item.dismissible:
+        close_cx = x + TOAST_WIDTH - TOAST_PADDING_X - CLOSE_BUTTON_RADIUS
+        close_cy = y + toast_h - TOAST_PADDING_Y - CLOSE_BUTTON_RADIUS
+        close_hovered = toast_hover_state["key"] == ("close", item.id)
+        close_base = _hovered(colors["close_bg"]) if close_hovered else colors["close_bg"]
+        draw_circle(close_cx, close_cy, CLOSE_BUTTON_RADIUS, _apply_opacity(close_base, opacity))
 
-    # "x" glyph centered in circle
-    close_icon = colors["close_icon"]
-    if close_hovered:
-        close_icon = (*close_icon[:3], 1.0)
-    blf.size(_FONT_ID, 16)
-    xw, xh = blf.dimensions(_FONT_ID, "\u00d7")
-    blf.color(_FONT_ID, *_apply_opacity(close_icon, opacity))
-    blf.position(_FONT_ID, close_cx - xw * 0.5, close_cy - xh * 0.5, 0)
-    blf.draw(_FONT_ID, "\u00d7")
+        # "x" glyph centered in circle
+        close_icon = colors["close_icon"]
+        if close_hovered:
+            close_icon = (*close_icon[:3], 1.0)
+        blf.size(_FONT_ID, 16)
+        xw, xh = blf.dimensions(_FONT_ID, "\u00d7")
+        blf.color(_FONT_ID, *_apply_opacity(close_icon, opacity))
+        blf.position(_FONT_ID, close_cx - xw * 0.5, close_cy - xh * 0.5, 0)
+        blf.draw(_FONT_ID, "\u00d7")
 
-    # Record close-button bounds (square around circle for easier hit-testing)
-    close_box_x = close_cx - CLOSE_BUTTON_RADIUS
-    close_box_y = close_cy - CLOSE_BUTTON_RADIUS
-    bounds["close"].append((
-        item.id, close_box_x, close_box_y,
-        CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE,
-    ))
+        # Record close-button bounds (square around circle for easier hit-testing)
+        close_box_x = close_cx - CLOSE_BUTTON_RADIUS
+        close_box_y = close_cy - CLOSE_BUTTON_RADIUS
+        bounds["close"].append((
+            item.id, close_box_x, close_box_y,
+            CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE,
+        ))
 
     # -- Title text --
     title_x = x + TOAST_PADDING_X + badge_space
