@@ -21,11 +21,12 @@ from .sidebar_panel_drawers import (
     _draw_blockout_to_render,
     _draw_lookdev360,
     _draw_image_to_3d,
+    _draw_scene_recon,
     _draw_scene_gen_exp,
+    _draw_segmentation,
     _draw_queue,
 )
 from .sidebar_tab_drawers import _draw_retopology
-from .scene_gen_drawer import _draw_scene_gen
 
 logger = get_logger(__name__)
 
@@ -92,15 +93,12 @@ class MIXIE_PT_gen_blockout_to_render(Panel):
 
 
 class MIXIE_PT_gen_lookdev360(Panel):
-    # Consolidated "Texture Gen" tab (PBR Textures / Texture Edit /
-    # Procedural Material via the catalog mode selector). bl_idname kept
-    # stable — the tab system is restructured in Stage 3.
-    bl_label = "Texture Gen"
+    bl_label = "Generate PBR Maps"
     bl_idname = "MIXIE_PT_gen_lookdev360"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Texture Gen"
-    bl_order = 50  # 5. Texture Gen
+    bl_category = "PBR Maps"
+    bl_order = 50  # 5. PBR Maps
     bl_options = set()
 
     @classmethod
@@ -115,15 +113,12 @@ class MIXIE_PT_gen_lookdev360(Panel):
 
 
 class MIXIE_PT_gen_image_to_3d(Panel):
-    # Consolidated "Model Gen" tab (Image to 3D / Image to 3D Pro /
-    # Rapid 3D via the catalog mode selector). bl_idname kept stable —
-    # other code keys on it; the tab system is restructured in Stage 3.
-    bl_label = "Model Gen"
+    bl_label = "Image to 3D"
     bl_idname = "MIXIE_PT_gen_image_to_3d"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Model Gen"
-    bl_order = 20  # 2. Model Gen
+    bl_category = "Image to 3D"
+    bl_order = 20  # 2. Image to 3D
     bl_options = set()
 
     @classmethod
@@ -138,15 +133,12 @@ class MIXIE_PT_gen_image_to_3d(Panel):
 
 
 class MIXIE_PT_gen_scene_recon(Panel):
-    # Consolidated "Scene Gen" tab (Scene Reconstruction / Segments to 3D
-    # via the catalog mode selector — capability ``scene_gen``).
-    # bl_idname kept stable — other code keys on it.
-    bl_label = "Scene Gen"
+    bl_label = "Generate Scene"
     bl_idname = "MIXIE_PT_gen_scene_recon"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Scene Gen"
-    bl_order = 40  # 4. Scene Gen
+    bl_category = "Scene"
+    bl_order = 40  # 4. Scene
     bl_options = set()
 
     @classmethod
@@ -157,7 +149,7 @@ class MIXIE_PT_gen_scene_recon(Panel):
         self.layout.label(text="", icon='SCENE_DATA')
 
     def draw(self, context):
-        _safe_draw(_draw_scene_gen, self.layout, context)
+        _safe_draw(_draw_scene_recon, self.layout, context)
 
 
 class MIXIE_PT_gen_retopology(Panel):
@@ -200,6 +192,26 @@ class MIXIE_PT_gen_scene_gen_exp(Panel):
         _safe_draw(_draw_scene_gen_exp, self.layout, context)
 
 
+class MIXIE_PT_gen_segmentation(Panel):
+    bl_label = "Segmentation"
+    bl_idname = "MIXIE_PT_gen_segmentation"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Segment"
+    bl_order = 60  # 6. Segment
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        return _moodboard_poll(context)
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='MOD_MASK')
+
+    def draw(self, context):
+        _safe_draw(_draw_segmentation, self.layout, context)
+
+
 class MIXIE_PT_gen_queue(Panel):
     bl_label = "Queue"
     bl_idname = "MIXIE_PT_gen_queue"
@@ -228,5 +240,6 @@ classes = (
     MIXIE_PT_gen_scene_recon,
     # MIXIE_PT_gen_scene_gen_exp,  # Scene Gen Experimental disabled
     MIXIE_PT_gen_retopology,
+    MIXIE_PT_gen_segmentation,
     MIXIE_PT_gen_queue,
 ) if MIXIE_SPACE_AVAILABLE else ()

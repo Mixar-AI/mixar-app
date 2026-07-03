@@ -306,6 +306,12 @@ def _process_one_request() -> Optional[float]:
         bpy.context.window.scene = target_scene
         logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
 
+    # Record a RUNNING step row on the active agent bubble (steps block UI).
+    from .steps_recorder import record_step_start, record_step_end
+    chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
+    if chat_scene:
+        record_step_start(chat_scene, request_id, tool_name, script)
+
     executor = get_executor()
 
     # Skip if previous script is still executing (should not normally happen
@@ -356,6 +362,10 @@ def _process_one_request() -> Optional[float]:
                 bpy.context.window.scene = restore_scene
             except Exception:
                 pass  # Scene may have been deleted by the script
+
+    # Complete the step row with status / touched objects / output.
+    if chat_scene:
+        record_step_end(chat_scene, request_id, result_dict)
 
     # Send response directly via WebSocket client (thread-safe)
     # This avoids cross-thread queue polling which caused segfaults
