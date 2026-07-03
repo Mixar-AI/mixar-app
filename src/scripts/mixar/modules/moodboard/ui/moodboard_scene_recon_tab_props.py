@@ -11,27 +11,11 @@ from bpy.props import (
     IntProperty,
     BoolProperty,
     StringProperty,
-    EnumProperty,
-)
-
-from .moodboard_enum_callbacks import (
-    _get_scene_gen_mode_items,
-    _on_model_changed,
 )
 
 
 class MixieMoodboardTabSceneReconProps(PropertyGroup):
     """Properties for Scene Reconstruction tab"""
-
-    # Generation mode = catalog service of capability "scene_gen"
-    # (Scene Reconstruction = scene_reconstruction / Segments to 3D =
-    # scene_gen)
-    mode: EnumProperty(
-        name="Mode",
-        description="Scene generation mode",
-        items=_get_scene_gen_mode_items,
-        update=_on_model_changed,
-    )
 
     # Text prompt for scene generation (alternative to providing an image)
     prompt: StringProperty(

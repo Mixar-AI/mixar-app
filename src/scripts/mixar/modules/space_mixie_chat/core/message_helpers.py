@@ -84,8 +84,10 @@ def add_slot_loader(scene, text):
     msg.loader_visible = True
     msg.loader_texts = json.dumps([text])
 
-    # Start unified loader animation
+    # Start unified loader animation + drive frames for the slide-in
     start_loader_animation()
+    from .animation_manager import start_slide_redraw_burst
+    start_slide_redraw_burst()
 
     # Trigger redraw
     redraw_chat_areas()
@@ -115,6 +117,8 @@ def add_agent_message(scene, text: str) -> None:
             agent_msg = scene.mixie_chat_messages.add()
             agent_msg.sender = 'AGENT'
             agent_msg.text = text[:4096]
+            from .animation_manager import start_slide_redraw_burst
+            start_slide_redraw_burst()
         else:
             logger.warning("Cannot add message - scene or property missing")
     except Exception as e:
