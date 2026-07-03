@@ -23,10 +23,6 @@ from bpy.props import (
 )
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
-from .moodboard_catalog_tab_props import (  # noqa: F401
-    MixieMoodboardTabRetopologyProps,
-    MixieMoodboardTabUVUnwrapProps,
-)
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
 #     MixieSceneGenExpBBox,
@@ -35,42 +31,17 @@ from .moodboard_catalog_tab_props import (  # noqa: F401
 # )
 
 from .moodboard_enum_callbacks import (
-    _get_image_gen_mode_items,
     _get_imagegen_model_items,
     _get_imagegen_style_items,
     _get_imagegen_aspect_ratio_items,
     _get_imagegen_resolution_items,
     _on_model_changed,
-    _get_model_3d_items,  # noqa: F401 — legacy fallback, kept importable
-    _get_model_gen_mode_items,
-    _get_model_gen_model_items,
-    _get_texture_gen_mode_items,
-    _get_texture_gen_model_items,
-    _get_mesh_segment_mode_items,
-    _get_mesh_segment_model_items,
+    _get_model_3d_items,
 )
 
 
 class MixieMoodboardTabLookdev360Props(PropertyGroup):
-    """Properties for the Texture Gen (Lookdev360) tab"""
-
-    # Generation mode = catalog service of capability "texture_gen"
-    # (PBR Textures / Texture Edit / Procedural Material)
-    mode: EnumProperty(
-        name="Mode",
-        description="Texture generation mode",
-        items=_get_texture_gen_mode_items,
-        update=_on_model_changed,
-    )
-
-    # Dynamic model enum — models of the selected mode (catalog), falling
-    # back to the single legacy hunyuan-pbr model offline.
-    model: EnumProperty(
-        name="Model",
-        description="AI model for texture generation",
-        items=_get_texture_gen_model_items,
-        update=_on_model_changed,
-    )
+    """Properties for Lookdev360 tab - PBR texture generation from mesh"""
 
     prompt: StringProperty(
         name="Prompt",
@@ -186,15 +157,6 @@ class MixieMoodboardReferenceImage(PropertyGroup):
 class MixieMoodboardTabImageGenProps(PropertyGroup):
     """Properties for ImageGen tab"""
 
-    # Generation mode = catalog service of capability "image_gen"
-    # (Text to Image = image_gen / From Blockout = depth_to_image)
-    mode: EnumProperty(
-        name="Mode",
-        description="Image generation mode",
-        items=_get_image_gen_mode_items,
-        update=_on_model_changed,
-    )
-
     prompt: StringProperty(
         name="Prompt",
         description="Description for image generation",
@@ -248,22 +210,6 @@ class MixieMoodboardTabImageGenProps(PropertyGroup):
 class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
     """Properties for Mesh Segment tab"""
 
-    # Generation mode = catalog service of capability "mesh_segmentation"
-    # (Mesh Segmentation = mesh_segment / Part Segmentation = hunyuan_part)
-    mode: EnumProperty(
-        name="Mode",
-        description="Mesh segmentation mode",
-        items=_get_mesh_segment_mode_items,
-        update=_on_model_changed,
-    )
-
-    model: EnumProperty(
-        name="Model",
-        description="AI model for mesh segmentation",
-        items=_get_mesh_segment_model_items,
-        update=_on_model_changed,
-    )
-
     prompt: StringProperty(
         name="Prompt",
         description="Description of what to segment (e.g., 'head, torso, arms, legs')",
@@ -288,7 +234,7 @@ class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
 
 
 class MixieMoodboardTabImageTo3DProps(PropertyGroup):
-    """Properties for the Model Gen (Image to 3D) tab"""
+    """Properties for Image to 3D tab"""
 
     prompt: StringProperty(
         name="Prompt",
@@ -296,15 +242,6 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         default="",
         maxlen=2048,
         options={'TEXTEDIT_UPDATE'},
-    )
-
-    # Generation mode = catalog service of capability "model_gen"
-    # (Image to 3D / Image to 3D Pro / Rapid 3D)
-    mode: EnumProperty(
-        name="Mode",
-        description="3D generation mode",
-        items=_get_model_gen_mode_items,
-        update=_on_model_changed,
     )
 
     # Toggle between uploaded image (OFF) and selected moodboard image (ON)
@@ -322,13 +259,11 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         description="Uploaded image for 3D model generation (used when toggle is OFF)"
     )
 
-    # Dynamic model enum — models of the selected mode (catalog), falling
-    # back to the legacy model_3d cache when the catalog isn't loaded.
+    # Dynamic model enum from cache
     model: EnumProperty(
         name="Model",
         description="AI model for 3D generation",
-        items=_get_model_gen_model_items,
-        update=_on_model_changed,
+        items=_get_model_3d_items,
     )
 
 
@@ -449,18 +384,6 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabSceneReconProps,
         name="Scene Recon Tab",
         description="Properties for Scene Reconstruction tab"
-    )
-
-    tab_retopology: PointerProperty(
-        type=MixieMoodboardTabRetopologyProps,
-        name="Retopology Tab",
-        description="Properties for Retopology tab"
-    )
-
-    tab_uv_unwrap: PointerProperty(
-        type=MixieMoodboardTabUVUnwrapProps,
-        name="UV Unwrap Tab",
-        description="Properties for UV Unwrap tab"
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.

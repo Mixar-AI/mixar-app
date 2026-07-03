@@ -106,71 +106,14 @@ def _draw_segment_to_3d(layout, context):
 # Mesh Segment
 # ---------------------------------------------------------------------------
 
-def _mesh_segment_catalog_ready():
-    """True when the catalog has mesh_segmentation services."""
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_services, is_loaded,
-        )
-        return is_loaded() and bool(get_services("mesh_segmentation"))
-    except Exception:
-        return False
-
-
 def _draw_mesh_segment(layout, context):
-    """Draw Mesh Segment tab.
+    """Draw Mesh Segment tab — inline version of the popup dialog."""
+    tab = context.scene.mixie_moodboard_sidebar.tab_mesh_segment
 
-    Catalog-driven mode selector (Mesh Segmentation = ``mesh_segment`` /
-    Part Segmentation = ``hunyuan_part``) when the generation catalog is
-    loaded; the legacy mesh_segment-only UI otherwise. The
-    ``hunyuan_part`` mode reuses the PART_SEGMENT tab's existing
-    submission flow (scene.hunyuan.part + ``mixie.hunyuan_generate``).
-    """
-    scene = context.scene
-    tab = scene.mixie_moodboard_sidebar.tab_mesh_segment
-
-    service_key = "mesh_segment"
-    catalog_ready = _mesh_segment_catalog_ready()
-    if catalog_ready:
-        from mixar.modules.common.generation_params import (
-            draw_capability_selector, resolve_service_key,
-        )
-        service_key = resolve_service_key(
-            "mesh_segmentation", getattr(tab, "mode", "")
-        ) or "mesh_segment"
-
-        col = draw_section_box(layout, "Settings", icon='SETTINGS')
-        col.use_property_split = True
-        col.use_property_decorate = False
-        draw_capability_selector(col, tab, "mesh_segmentation")
-        draw_section_separator(layout)
-
-    if service_key == "hunyuan_part":
-        # Part Segmentation — same inputs + submit flow as PART_SEGMENT.
-        if not hasattr(scene, 'hunyuan'):
-            layout.label(text="Hunyuan not initialized", icon='ERROR')
-            return
-        part = scene.hunyuan.part
-
-        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
-        draw_mesh_info(col, context, max_faces=30000, max_mb=100)
-        draw_section_separator(layout)
-
-        col = draw_section_box(layout, "Export", icon='EXPORT')
-        draw_dropdown(col, part, "export_format", text="Format")
-
-        draw_hunyuan_generate_footer(
-            layout, context, part.job, 'PART',
-            lambda: _mesh_can_generate(context, 'PART'),
-        )
-        return
-
-    # Mesh Segmentation (default) — existing inputs + submit flow.
     draw_prompt_section(layout, tab, label="Description")
     draw_section_separator(layout)
 
-    col = draw_section_box(
-        layout, "Inputs" if catalog_ready else "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
     col.prop(tab, "expected_parts", text="Expected Parts")
 
     draw_generate_footer(
@@ -337,19 +280,12 @@ def _mesh_can_generate(context, mode):
 # ---------------------------------------------------------------------------
 
 def _draw_uv_unwrap(layout, context):
-    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties.
-
-    The catalog Model dropdown + schema params (capability
-    ``uv_unwrapping``, single service — Mode dropdown hidden) are drawn
-    when the generation catalog is loaded; the mesh-export inputs and the
-    hunyuan submit flow are unchanged either way.
-    """
+    """Draw standalone UV Unwrap tab — uses scene.hunyuan.uv properties."""
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return
 
-    scene = context.scene
-    props = scene.hunyuan
+    props = context.scene.hunyuan
     uv = props.uv
     job = uv.job
 
@@ -359,18 +295,6 @@ def _draw_uv_unwrap(layout, context):
 
     col = draw_section_box(layout, "Settings", icon='SETTINGS')
     draw_dropdown(col, uv, "export_format", text="Format")
-
-    # Catalog Model dropdown + schema params (no-op when not loaded).
-    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
-    tab = getattr(sidebar, 'tab_uv_unwrap', None) if sidebar else None
-    if tab is not None:
-        try:
-            from mixar.modules.common.generation_params import (
-                draw_capability_selector,
-            )
-            draw_capability_selector(col, tab, "uv_unwrapping")
-        except Exception:
-            pass
 
     draw_hunyuan_generate_footer(
         layout, context, job, 'UV',
@@ -383,22 +307,12 @@ def _draw_uv_unwrap(layout, context):
 # ---------------------------------------------------------------------------
 
 def _draw_retopology(layout, context):
-    """Draw standalone Retopology tab.
+    """Draw standalone Retopology tab — uses scene.hunyuan.topology properties.
 
-    Catalog-driven UI (mode selector + schema params) when the generation
-    catalog is loaded; the legacy ``scene.hunyuan.topology`` UI otherwise
-    so the tab never goes blank offline / pre-auth. Retopology is
-    queue-driven (one job per selected mesh) in both paths.
+    Retopology is queue-driven (one job per selected mesh), so the
+    standard hunyuan generate footer is replaced with the queue footer
+    and a collapsible "Generation Queue" panel is appended.
     """
-    from .retopology_drawer import (
-        _draw_retopology_catalog, _retopology_catalog_ready,
-    )
-
-    if _retopology_catalog_ready():
-        _draw_retopology_catalog(layout, context)
-        return
-
-    # --- Legacy fallback (catalog not loaded) ---
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return

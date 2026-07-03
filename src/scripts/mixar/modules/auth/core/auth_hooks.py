@@ -17,13 +17,6 @@ logger = get_logger(__name__)
 def refresh_generation_caches():
     """Refresh generation config caches after successful authentication."""
     try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            refresh_generation_catalog_cache,
-        )
-        refresh_generation_catalog_cache()
-    except Exception as e:
-        logger.warning(f"Generation catalog refresh failed: {e}")
-    try:
         from mixar.bootstrap.imagegen_cache import refresh_imagegen_cache
         refresh_imagegen_cache()
     except Exception as e:
@@ -37,13 +30,6 @@ def refresh_generation_caches():
 
 def invalidate_generation_caches():
     """Clear generation config caches on logout."""
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            clear_generation_catalog_cache,
-        )
-        clear_generation_catalog_cache()
-    except Exception as e:
-        logger.warning(f"Generation catalog clear failed: {e}")
     try:
         from mixar.bootstrap.imagegen_cache import clear_imagegen_cache
         clear_imagegen_cache()
