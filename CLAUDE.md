@@ -107,7 +107,7 @@ src/
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
 | **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |
 | **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines via the Topology "Model" dropdown: **Hunyuan** (backend service `retopology`) and **Tripo** (v2.0 `mesh/decimate`, backend service `retopology_tripo`). Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
-| **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, updates |
+| **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, auto-updates (startup check, forced-update enforcement, Help → Check for Updates) |
 | **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
 | **asset_search** | Neural embedding-based asset library search and training |
 | **mesh_segment** | UV mesh segmentation via SAM-based API |
