@@ -56,17 +56,58 @@ def _extract_text(node) -> str:
     return ''
 
 
+def _extract_inline(node) -> str:
+    """Extract text while PRESERVING lightweight inline markdown markers.
+
+    Unlike `_extract_text` (which flattens everything to plain text), this
+    keeps `**bold**`, `*italic*` and `` `code` `` markers in the string so the
+    C++ rich-text renderer can style inline runs. Used for paragraph / heading
+    / list-item / quote text; tables still use the plain extractor.
+    """
+    if isinstance(node, str):
+        return node
+
+    if isinstance(node, dict):
+        node_type = node.get('type', '')
+
+        if node_type == 'text':
+            return node.get('raw', '')
+        if node_type == 'codespan':
+            return '`' + node.get('raw', '') + '`'
+        if node_type == 'strong':
+            return '**' + _extract_inline(node.get('children', [])) + '**'
+        if node_type == 'emphasis':
+            return '*' + _extract_inline(node.get('children', [])) + '*'
+        if node_type == 'softbreak':
+            return ' '
+        if node_type == 'linebreak':
+            return '\n'
+        if node_type == 'link':
+            # Render the link's visible text only (URL dropped for now).
+            return _extract_inline(node.get('children', []))
+
+        children = node.get('children', [])
+        if children:
+            return _extract_inline(children)
+        return node.get('raw', '')
+
+    if isinstance(node, list):
+        return ''.join(_extract_inline(child) for child in node)
+
+    return ''
+
+
 def _process_ast_node(node: dict) -> dict:
     """Convert AST node to segment format for C++ rendering."""
     node_type = node.get('type', '')
 
     if node_type == 'heading':
         level = node.get('attrs', {}).get('level', 1)
-        text = _extract_text(node.get('children', []))
+        text = _extract_inline(node.get('children', []))
         return {'type': 'heading', 'text': text, 'level': level}
 
     elif node_type == 'paragraph':
-        text = _extract_text(node.get('children', []))
+        text = _extract_inline(node.get('children', []))
         return {'type': 'paragraph', 'text': text}
 
     elif node_type == 'block_code':
@@ -85,7 +126,7 @@ def _process_ast_node(node: dict) -> dict:
         return _process_table_node(node)
 
     elif node_type == 'block_quote':
-        text = _extract_text(node.get('children', []))
+        text = _extract_inline(node.get('children', []))
         return {'type': 'quote', 'text': text}
 
     elif node_type == 'thematic_break':
@@ -133,7 +174,7 @@ def _process_list_node(children: list, ordered: bool, start: int = 1):
                     else:
                         nested_after.append(nested)
             else:
-                part = _extract_text(sub).strip()
+                part = _extract_inline(sub).strip()
                 if part:
                     text_parts.append(part)
 

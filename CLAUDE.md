@@ -18,6 +18,7 @@ make install       # Install Python packages into embedded Blender Python
 ### How the Build Works
 - `scripts/unix/build.sh` orchestrates the build
 - `scripts/unix/overlay.sh` copies `/src` onto `/source` (Blender upstream)
+- **Git worktrees build out of the box**: `upstream/` is a multi-GB submodule that linked worktrees don't carry, so `settings.sh` falls back to the main checkout's `upstream/` (read-only rsync source; warns if the shared tree isn't at the commit the branch pins). Override with `MIXAR_UPSTREAM_DIR`. Each worktree still assembles its own `source/` and `build/` — never share those.
 - Config loaded from `.env` → env vars via `scripts/unix/settings.sh` → `scripts/generate_config.py` generates runtime `mixar.json` into the app bundle
 - C++ env header auto-generated at `source/creator/mixar_env_config.h`
 - Python build-frozen env marker auto-generated at `source/scripts/mixar/config/_build_env.py` (gates `get_dev_bypass_credentials`; `DEV_BYPASS_ALLOWED=True` only when `MIXAR_ENV=Dev`). Setting `DEV_BYPASS_*` env vars with `MIXAR_ENV != Dev` aborts the build.
