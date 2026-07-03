@@ -39,9 +39,30 @@ _BAKE_CONFIG = {
     "CAVITY":     {"samples": 1,  "blend_type": "ADD",      "hdr": False},
     "POINTINESS": {"samples": 1,  "blend_type": "ADD",      "hdr": True, "fxaa": False},
     "DUST":       {"samples": 1,  "blend_type": "MIX",      "hdr": False},
+    "BEVEL_MASK": {"samples": 32, "blend_type": "MIX",      "hdr": False, "use_baked_disp": False},
 }
 _VALID_BAKE_TYPES = set(_BAKE_CONFIG)
 _MASK_BAKE_RES = 1024  # square bake resolution for mask maps
+
+# Pointiness is vertex-interpolated curvature: below this many (evaluated) vertices the
+# bake carries no edge signal — a primitive cube is 8 identical corners, so the mask comes
+# out near-uniform mid-grey and the detail layer floods the entire surface instead of
+# hugging the edges. The Bevel-node edge mask reads the actual geometric edges and works
+# regardless of vertex density, so it is the right detector for sparse hard-surface meshes.
+_POINTINESS_MIN_VERTS = 4096
+
+
+def _pointiness_bake_is_degenerate() -> bool:
+    """True when the active object's mesh is too sparse for a meaningful pointiness bake."""
+    obj = bpy.context.view_layer.objects.active
+    if obj is None or obj.type != "MESH":
+        return False
+    try:
+        deps = bpy.context.evaluated_depsgraph_get()
+        count = len(obj.evaluated_get(deps).data.vertices)
+    except Exception:
+        count = len(obj.data.vertices)
+    return count < _POINTINESS_MIN_VERTS
 
 
 def sanitize_blend_type(bt) -> str:
@@ -133,17 +154,25 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
                 print(f"[layered_build] image mask for '{name}' failed: {e}")
         elif mtype == "BAKED" and mask.get("bake_type"):
             bake_type = str(mask["bake_type"]).upper()
+            if bake_type == "POINTINESS" and _pointiness_bake_is_degenerate():
+                print(
+                    f"[layered_build] sparse mesh: baking BEVEL_MASK instead of "
+                    f"POINTINESS for '{name}'"
+                )
+                bake_type = "BEVEL_MASK"
             if bake_type not in _BAKE_CONFIG:
                 print(f"[layered_build] unknown bake_type {bake_type!r} for '{name}'; skipping")
                 continue
-            # Bakes a geometry mask (AO/CAVITY/POINTINESS/DUST) from the active object's
-            # mesh onto the active layer (the detail just created above). Needs Cycles + a
-            # mesh with real geometry; failures are non-fatal (logged, layer keeps going).
-            # The per-type kwargs replicate what the operator's invoke() would set.
+            # Bakes a geometry mask (AO/CAVITY/POINTINESS/DUST/BEVEL_MASK) from the active
+            # object's mesh onto the active layer (the detail just created above). Needs
+            # Cycles + a mesh with real geometry; failures are non-fatal (logged, layer
+            # keeps going). The per-type kwargs replicate what the operator's invoke()
+            # would set.
+            label = bake_type.title().replace("_", " ").removesuffix(" Mask")
             try:
                 bpy.ops.wm.m_bake_to_layer(
                     'EXEC_DEFAULT',
-                    name=f"{name} {bake_type.title()} Mask",
+                    name=f"{name} {label} Mask",
                     target_type='MASK',
                     type=bake_type,
                     uv_map=uv_name,
