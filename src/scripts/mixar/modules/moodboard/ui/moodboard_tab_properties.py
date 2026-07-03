@@ -39,11 +39,31 @@ from .moodboard_enum_callbacks import (
     _get_model_3d_items,  # noqa: F401 — legacy fallback, kept importable
     _get_model_gen_mode_items,
     _get_model_gen_model_items,
+    _get_texture_gen_mode_items,
+    _get_texture_gen_model_items,
 )
 
 
 class MixieMoodboardTabLookdev360Props(PropertyGroup):
-    """Properties for Lookdev360 tab - PBR texture generation from mesh"""
+    """Properties for the Texture Gen (Lookdev360) tab"""
+
+    # Generation mode = catalog service of capability "texture_gen"
+    # (PBR Textures / Texture Edit / Procedural Material)
+    mode: EnumProperty(
+        name="Mode",
+        description="Texture generation mode",
+        items=_get_texture_gen_mode_items,
+        update=_on_model_changed,
+    )
+
+    # Dynamic model enum — models of the selected mode (catalog), falling
+    # back to the single legacy hunyuan-pbr model offline.
+    model: EnumProperty(
+        name="Model",
+        description="AI model for texture generation",
+        items=_get_texture_gen_model_items,
+        update=_on_model_changed,
+    )
 
     prompt: StringProperty(
         name="Prompt",

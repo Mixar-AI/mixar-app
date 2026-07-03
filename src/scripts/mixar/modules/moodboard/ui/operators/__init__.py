@@ -24,6 +24,7 @@ from . import (
     scene_recon_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,
+    texture_gen_ops,
     transform_modal_ops,
 )
 
@@ -43,6 +44,7 @@ modules = (
     scene_recon_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,
+    texture_gen_ops,
     transform_modal_ops,
 )
 

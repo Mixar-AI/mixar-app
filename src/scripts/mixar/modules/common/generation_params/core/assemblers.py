@@ -17,6 +17,8 @@ operator has always sent:
   keys (GenerateType, Model, EnablePBR, Prompt?, FaceCount?, PolygonType?).
 - ``hunyuan_rapid``→ ``payload["sdk_params"]`` with Rapid PascalCase keys
   (EnablePBR, EnableGeometry, ResultFormat? non-glb only, Prompt?).
+- ``hunyuan_texture_edit`` → ``payload["sdk_params"]`` (Prompt?) next to
+  the FBX ``file_bytes_b64`` and optional ``reference_image_bytes_b64``.
 - anything else    → ``payload["params"] = {...}`` (default).
 
 Contract: ``assemble(params, payload, model_slug="") -> payload`` — mutates
@@ -130,6 +132,31 @@ def _assemble_hunyuan_rapid(
 
 
 # ---------------------------------------------------------------------------
+# hunyuan_texture_edit (Texture Edit)
+# ---------------------------------------------------------------------------
+
+
+def _assemble_hunyuan_texture_edit(
+    params: Dict[str, Any], payload: Dict[str, Any], model_slug: str = ""
+) -> Dict[str, Any]:
+    """Wire shape (backend ``HunyuanAdapter._submit_texture_edit``):
+    {"sdk_params": {Prompt?}, file_bytes_b64 (FBX), file_filename,
+    reference_image_bytes_b64?}. Prompt and reference image are mutually
+    exclusive on the vendor API — callers enforce the XOR before enqueue.
+    """
+    params = dict(params or {})
+    sdk = payload.setdefault("sdk_params", {})
+
+    prompt = params.pop("prompt", None)
+    if prompt:
+        sdk["Prompt"] = prompt
+
+    for key, value in params.items():
+        sdk.setdefault(_pascal(key), value)
+    return payload
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -147,6 +174,7 @@ _ASSEMBLERS: Dict[str, Assembler] = {
     "model_3d": _assemble_model_3d,
     "image_to_3d": _assemble_image_to_3d,
     "hunyuan_rapid": _assemble_hunyuan_rapid,
+    "hunyuan_texture_edit": _assemble_hunyuan_texture_edit,
 }
 
 

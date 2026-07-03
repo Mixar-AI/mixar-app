@@ -120,11 +120,25 @@ def _draw_blockout_to_render(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# Lookdev360 (Generate PBR Maps)
+# Texture Gen (Lookdev360 / Texture Edit / Procedural Material)
 # ---------------------------------------------------------------------------
 
 def _draw_lookdev360(layout, context):
-    """Draw Lookdev360 panel settings."""
+    """Draw the Texture Gen panel.
+
+    Catalog-driven consolidated UI (mode selector) when the generation
+    catalog is loaded; the legacy PBR-only UI otherwise so the tab never
+    goes blank offline / pre-auth.
+    """
+    from .texture_gen_drawer import (
+        _draw_texture_gen, _texture_gen_catalog_ready,
+    )
+
+    if _texture_gen_catalog_ready():
+        _draw_texture_gen(layout, context)
+        return
+
+    # --- Legacy fallback (catalog not loaded) ---
     tab = context.scene.mixie_moodboard_sidebar.tab_lookdev360
 
     # --- Prompt ---
