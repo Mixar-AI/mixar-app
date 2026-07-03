@@ -210,6 +210,14 @@ def _get_retopology_model_items(self, context):
     )
 
 
+def _get_uv_unwrap_model_items(self, context):
+    """UV Unwrap tab model items (capability ``uv_unwrapping``)."""
+    return _capability_model_items(
+        "uv_unwrapping", self,
+        [("hunyuan_uv", "Hunyuan UV", "Hunyuan AI UV unwrapping")],
+    )
+
+
 def _get_model_gen_mode_items(self, context):
     """Dynamic callback for Model Gen mode (service) enum items.
 

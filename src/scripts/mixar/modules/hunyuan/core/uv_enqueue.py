@@ -18,6 +18,24 @@ from .hunyuan_helpers import _get_total_face_count, export_selected_mesh
 logger = get_logger(__name__)
 
 
+def _resolve_uv_model(context) -> str:
+    """Model slug for ``hunyuan_uv`` — the moodboard UV tab's catalog
+    selection when available, else the catalog default, else the legacy
+    hardcoded slug (byte-identical wire value today)."""
+    selected = ""
+    try:
+        sidebar = getattr(context.scene, 'mixie_moodboard_sidebar', None)
+        tab = getattr(sidebar, 'tab_uv_unwrap', None) if sidebar else None
+        selected = getattr(tab, 'model', '') if tab else ''
+    except Exception:
+        selected = ""
+    try:
+        from mixar.modules.common.generation_params import resolve_model_slug
+        return resolve_model_slug("hunyuan_uv", selected, "hunyuan_uv")
+    except Exception:
+        return "hunyuan_uv"
+
+
 def enqueue_uv_job(*, context, operator=None):
     """Validate face count, export mesh, and submit a UV job to the queue."""
     max_faces = LIMITS['UV']['max_faces']
@@ -38,16 +56,26 @@ def enqueue_uv_job(*, context, operator=None):
         "uv_job",
     )
 
+    model = _resolve_uv_model(context)
     payload = {
         "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
         "file_filename": filename,
     }
+    # Merge catalog schema params (none today — payload stays untouched).
+    try:
+        from mixar.modules.common.generation_params import (
+            assemble_payload, collect_params,
+        )
+        payload = assemble_payload(
+            "hunyuan_uv", collect_params("hunyuan_uv", model), payload, model)
+    except Exception as e:
+        logger.debug("UV catalog param merge skipped: %s", e)
 
     return enqueue_generation(
         kind="glb",
         feature_key=FEATURE_HUNYUAN_UV,
         job_type="hunyuan_uv",
-        model="hunyuan_uv",
+        model=model,
         payload=payload,
         label=obj_name,
         scene_flag="mixie_hunyuan_uv_is_generating",

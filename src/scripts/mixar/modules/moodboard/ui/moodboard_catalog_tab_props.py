@@ -24,6 +24,7 @@ from .moodboard_enum_callbacks import (
     _on_model_changed,
     _get_retopology_mode_items,
     _get_retopology_model_items,
+    _get_uv_unwrap_model_items,
 )
 
 
@@ -43,5 +44,21 @@ class MixieMoodboardTabRetopologyProps(PropertyGroup):
         name="Model",
         description="AI model for retopology",
         items=_get_retopology_model_items,
+        update=_on_model_changed,
+    )
+
+
+class MixieMoodboardTabUVUnwrapProps(PropertyGroup):
+    """Properties for the UV Unwrap tab (catalog model selection).
+
+    ``uv_unwrapping`` has a single service (``hunyuan_uv``), so there is
+    no Mode enum — ``draw_capability_selector`` hides the Mode dropdown
+    for single-service capabilities.
+    """
+
+    model: EnumProperty(
+        name="Model",
+        description="AI model for UV unwrapping",
+        items=_get_uv_unwrap_model_items,
         update=_on_model_changed,
     )
