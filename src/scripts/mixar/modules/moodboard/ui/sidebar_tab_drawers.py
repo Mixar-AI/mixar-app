@@ -307,12 +307,22 @@ def _draw_uv_unwrap(layout, context):
 # ---------------------------------------------------------------------------
 
 def _draw_retopology(layout, context):
-    """Draw standalone Retopology tab — uses scene.hunyuan.topology properties.
+    """Draw standalone Retopology tab.
 
-    Retopology is queue-driven (one job per selected mesh), so the
-    standard hunyuan generate footer is replaced with the queue footer
-    and a collapsible "Generation Queue" panel is appended.
+    Catalog-driven UI (mode selector + schema params) when the generation
+    catalog is loaded; the legacy ``scene.hunyuan.topology`` UI otherwise
+    so the tab never goes blank offline / pre-auth. Retopology is
+    queue-driven (one job per selected mesh) in both paths.
     """
+    from .retopology_drawer import (
+        _draw_retopology_catalog, _retopology_catalog_ready,
+    )
+
+    if _retopology_catalog_ready():
+        _draw_retopology_catalog(layout, context)
+        return
+
+    # --- Legacy fallback (catalog not loaded) ---
     if not hasattr(context.scene, 'hunyuan'):
         layout.label(text="Hunyuan not initialized", icon='ERROR')
         return

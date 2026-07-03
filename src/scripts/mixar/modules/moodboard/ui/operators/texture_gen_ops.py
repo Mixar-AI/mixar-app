@@ -25,9 +25,6 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Placeholder enum ids that are never real catalog keys/slugs.
-_PLACEHOLDERS = ("LOADING", "ERROR", "NONE", "")
-
 # Backend limit for texture-edit mesh uploads (validator: 100MB FBX).
 _MAX_TEXTURE_EDIT_FILE_SIZE = 100 * 1024 * 1024
 
@@ -41,16 +38,9 @@ def _get_texture_gen_tab(context):
 def _resolve_model(tab, service_key, fallback):
     """The tab's model slug when valid for *service_key*, else the
     catalog default, else *fallback*."""
-    slug = getattr(tab, 'model', '') if tab else ''
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_default_model_slug, get_model,
-        )
-        if slug in _PLACEHOLDERS or get_model(service_key, slug) is None:
-            slug = get_default_model_slug(service_key) or ""
-    except Exception:
-        slug = ""
-    return slug if slug and slug not in _PLACEHOLDERS else fallback
+    from mixar.modules.common.generation_params import resolve_model_slug
+    return resolve_model_slug(
+        service_key, getattr(tab, 'model', '') if tab else '', fallback)
 
 
 def _get_reference_image(context, tab):
