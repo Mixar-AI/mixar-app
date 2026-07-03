@@ -65,7 +65,7 @@ TOTAL_INFO_STEPS = 6
 # panels' bl_category values exactly.
 # ---------------------------------------------------------------------------
 CATEGORY_IMAGE_GEN = "Image Gen"
-CATEGORY_IMAGE_TO_3D = "Image to 3D"
+CATEGORY_IMAGE_TO_3D = "Model Gen"
 CATEGORY_RETOPOLOGY = "Retopology"
 
 # ---------------------------------------------------------------------------

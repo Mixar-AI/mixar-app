@@ -6,7 +6,7 @@
 """
 Mixie Chat Send Message Operator
 
-Core send-message operator for Agent/Ask modes with HTTP/SSE streaming.
+Core send-message operator for Agent mode with HTTP/SSE streaming.
 Generate mode is delegated to generate_ops.py.
 """
 
@@ -24,7 +24,6 @@ from mixar.config.logging_config import get_logger
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
 from ...core import (
-    get_dummy_response,
     get_session_manager,
     image_to_base64,
 )
@@ -319,17 +318,14 @@ class MIXIE_CHAT_OT_send_message(Operator):
             # Normal message: start new session stream
             session_id = session.start_session(scene, message_text)
 
-            is_ask_mode = scene.mixie_chat_mode == 'ASK'
-            plan_enabled = getattr(scene, 'mixie_chat_plan_enabled', True)
-            plan_required = (not is_ask_mode) and plan_enabled
-            execution_required = not is_ask_mode
+            plan_required = getattr(scene, 'mixie_chat_plan_enabled', True)
 
             success = sse_handler.start_stream(
                 message=message_text,
                 instance_id=ws_client.connection_id,
                 session_id=session_id,
                 plan_required=plan_required,
-                execution_required=execution_required,
+                execution_required=True,
                 approval_required=True,
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
@@ -378,36 +374,38 @@ class MIXIE_CHAT_OT_send_message(Operator):
         return {'FINISHED'}
 
     def _execute_dev_mode(self, context, message_text: str):
-        """Handle message sending in dev mode with simulated response."""
+        """Handle message sending in dev mode with a scripted streaming turn.
+
+        Streams a realistic agent turn (thinking → plan → tools → Markdown
+        answer) through the real slot pipeline so the output UI can be
+        evaluated without a backend.
+        """
+        from ...core.dev_stream import start_demo_stream
+
         scene = context.scene
         pending_attachments = scene.mixie_chat_pending_attachments
 
-        # Add user message to history
-        user_msg = scene.mixie_chat_messages.add()
-        user_msg.sender = 'USER'
-        user_msg.text = message_text
-
-        # Copy attachments to message history
-        for att in pending_attachments:
-            msg_att = user_msg.attachments.add()
-            msg_att.image_path = att.image_path
-            msg_att.image_source = att.image_source
-            msg_att.display_name = att.display_name
-
-        # Add simulated agent response
-        agent_msg = scene.mixie_chat_messages.add()
-        agent_msg.sender = 'AGENT'
-        agent_msg.text = get_dummy_response(message_text)
+        # Copy any pending attachments onto a user bubble before streaming,
+        # matching the live path. start_demo_stream adds the user text bubble.
+        if len(pending_attachments) > 0:
+            user_msg = scene.mixie_chat_messages.add()
+            user_msg.sender = 'USER'
+            user_msg.text = message_text
+            for att in pending_attachments:
+                msg_att = user_msg.attachments.add()
+                msg_att.image_path = att.image_path
+                msg_att.image_source = att.image_source
+                msg_att.display_name = att.display_name
+            start_demo_stream(scene, user_text="")
+        else:
+            start_demo_stream(scene, user_text=message_text)
 
         # Clear input field and pending attachments
         scene.mixie_chat_input = ""
         pending_attachments.clear()
-
-        # Notify UI to refresh
         redraw_chat_areas()
 
-        logger.debug(f"Dev mode: Simulated response for: {message_text[:50]}...")
-        self.report({'INFO'}, "Dev Mode: Message sent")
+        logger.debug(f"Dev mode: streaming demo turn for: {message_text[:50]}...")
         return {'FINISHED'}
 
 
