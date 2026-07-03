@@ -39,7 +39,6 @@ class MeshSegmentJob(Job):
     mesh_filename: str = "mesh.obj"
     description: str = ""
     expected_parts: str = ""
-    model: str = "mesh_segment_v1"
     mesh_object_name: str = ""  # String reference, not bpy pointer
 
     # Internal state
@@ -60,7 +59,7 @@ class MeshSegmentJob(Job):
         }
         service.enqueue(
             job_type="mesh_segment",
-            model=self.model or "mesh_segment_v1",
+            model="mesh_segment_v1",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
@@ -180,7 +179,6 @@ def enqueue_mesh_segment_job(
     mesh_file_path: str,
     description: str,
     expected_parts: str,
-    model: str = "mesh_segment_v1",
 ) -> Optional[MeshSegmentJob]:
     """Build a ``MeshSegmentJob`` and submit it to the queue."""
     try:
@@ -197,7 +195,6 @@ def enqueue_mesh_segment_job(
         mesh_filename="mesh.obj",
         description=description,
         expected_parts=expected_parts,
-        model=model or "mesh_segment_v1",
         mesh_object_name=mesh_object_name,
     )
     queue = _get_mesh_segment_queue()
