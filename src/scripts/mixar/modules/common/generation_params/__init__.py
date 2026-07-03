@@ -35,6 +35,7 @@ from .core.engine import (
 from .core.draw import draw_service_params
 from .core.selector import (
     draw_capability_selector,
+    get_param_enum_items,
     get_service_enum_items,
     resolve_model_slug,
     resolve_service_key,
@@ -47,6 +48,7 @@ __all__ = (
     "rebuild_from_catalog",
     "unregister_all_param_groups",
     "draw_service_params",
+    "get_param_enum_items",
     "get_service_enum_items",
     "resolve_service_key",
     "resolve_model_slug",

@@ -15,11 +15,10 @@ on PropertyGroup class definitions.
 def _get_imagegen_model_items(self, context):
     """Dynamic callback for model enum items.
 
-    Sources the unified generation catalog first — models of the tab's
+    Sources the unified generation catalog — models of the tab's
     currently selected mode (capability ``image_gen`` service, e.g.
     Text to Image = ``image_gen`` / From Blockout = ``depth_to_image``).
-    Falls back to the legacy imagegen cache, then to hardcoded items
-    (offline / pre-auth).
+    Falls back to hardcoded items (offline / pre-auth).
     """
     try:
         from mixar.bootstrap.generation_catalog_cache import (
@@ -36,13 +35,6 @@ def _get_imagegen_model_items(self, context):
                 return items
     except Exception:
         pass
-    try:
-        from mixar.bootstrap.imagegen_cache import get_model_enum_items
-        items = get_model_enum_items(self, context)
-        if items:
-            return items
-    except Exception:
-        pass
     return [
         ("flash", "Flash", "Fast generation"),
         ("pro", "Pro", "Higher quality generation"),
@@ -52,8 +44,8 @@ def _get_imagegen_model_items(self, context):
 def _get_imagegen_style_items(self, context):
     """Dynamic callback for style enum items.
 
-    Sources the unified generation catalog first; falls back to the legacy
-    imagegen cache, then to hardcoded items (offline / pre-auth).
+    Sources the unified generation catalog; falls back to hardcoded items
+    (offline / pre-auth).
     """
     try:
         from mixar.bootstrap.generation_catalog_cache import (
@@ -66,13 +58,6 @@ def _get_imagegen_style_items(self, context):
                 return items
     except Exception:
         pass
-    try:
-        from mixar.bootstrap.imagegen_cache import get_style_enum_items
-        items = get_style_enum_items(self, context)
-        if items:
-            return items
-    except Exception:
-        pass
     return [
         ("photorealistic", "Photorealistic", "Realistic style"),
         ("digital_art", "Digital Art", "Digital art style"),
@@ -80,12 +65,22 @@ def _get_imagegen_style_items(self, context):
 
 
 def _get_imagegen_aspect_ratio_items(self, context):
-    """Dynamic callback for aspect ratio enum items from cache."""
+    """Dynamic callback for aspect ratio enum items.
+
+    Sources the selected model's ``aspect_ratio`` schema param from the
+    catalog; hardcoded fallback offline / pre-auth. (The dropdown itself
+    is only drawn in the catalog-not-loaded fallback UI — when the
+    catalog is loaded the param engine renders this param instead.)
+    """
     try:
-        from mixar.bootstrap.imagegen_cache import get_aspect_ratio_enum_items
-        items = get_aspect_ratio_enum_items(self, context)
-        if items:
-            return items
+        from mixar.modules.common.generation_params import (
+            get_param_enum_items, resolve_model_slug,
+        )
+        slug = resolve_model_slug("image_gen", getattr(self, "model", ""), "")
+        if slug:
+            items = get_param_enum_items("image_gen", slug, "aspect_ratio")
+            if items:
+                return items
     except Exception:
         pass
     return [
@@ -96,12 +91,20 @@ def _get_imagegen_aspect_ratio_items(self, context):
 
 
 def _get_imagegen_resolution_items(self, context):
-    """Dynamic callback for resolution enum items from cache."""
+    """Dynamic callback for resolution enum items.
+
+    Sources the selected model's ``resolution`` schema param from the
+    catalog; hardcoded fallback offline / pre-auth.
+    """
     try:
-        from mixar.bootstrap.imagegen_cache import get_resolution_enum_items
-        items = get_resolution_enum_items(self, context)
-        if items:
-            return items
+        from mixar.modules.common.generation_params import (
+            get_param_enum_items, resolve_model_slug,
+        )
+        slug = resolve_model_slug("image_gen", getattr(self, "model", ""), "")
+        if slug:
+            items = get_param_enum_items("image_gen", slug, "resolution")
+            if items:
+                return items
     except Exception:
         pass
     return [
@@ -123,15 +126,26 @@ def _on_model_changed(self, context):
 
 
 def _get_model_3d_items(self, context):
-    """Dynamic callback for 3D model enum items from cache."""
+    """Dynamic callback for 3D model enum items.
+
+    Sources the unified generation catalog (service ``model_3d``); falls
+    back to hardcoded items (offline / pre-auth).
+    """
     try:
-        from mixar.bootstrap.model_3d_cache import get_model_enum_items
-        return get_model_enum_items(self, context)
-    except ImportError:
-        return [
-            ("trellis-1", "Trellis 1.0", "Trellis generation model"),
-            ("meshy-6", "Meshy 6", "Meshy v6 generation model"),
-        ]
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items as get_catalog_model_items,
+            is_loaded,
+        )
+        if is_loaded():
+            items = get_catalog_model_items("model_3d")
+            if items:
+                return items
+    except Exception:
+        pass
+    return [
+        ("trellis-1", "Trellis 1.0", "Trellis generation model"),
+        ("meshy-6", "Meshy 6", "Meshy v6 generation model"),
+    ]
 
 
 # ---------------------------------------------------------------------------

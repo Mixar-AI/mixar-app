@@ -9,8 +9,8 @@ Caches the unified generation catalog (``GET /api/v1/generation-catalog``)
 that describes all generation capabilities, their services, models,
 parameter schemas, styles and credit costs. This is the successor of the
 per-feature ``imagegen_cache.py`` / ``model_3d_cache.py`` pattern — those
-files remain in place for now as fallbacks and for their remaining
-consumers.
+files were retired (Stage 3); every consumer now reads this cache with
+static hardcoded lists as last-resort fallbacks.
 
 Behaviour (mirrors the proven imagegen_cache architecture):
 - ``register()`` loads the last persisted payload from disk (instant,

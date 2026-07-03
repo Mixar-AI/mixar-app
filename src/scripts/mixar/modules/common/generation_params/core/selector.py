@@ -115,6 +115,43 @@ def resolve_model_slug(
     return fallback
 
 
+def get_param_enum_items(
+    service_key: str,
+    model_slug: str,
+    param_name: str,
+    fallback=(),
+) -> List[Tuple[str, str, str]]:
+    """(id, label, desc) tuples for one enum-typed schema param of a
+    catalog model (``choices`` or ``enum`` spec forms), *fallback* when
+    the catalog / model / param is unavailable.
+
+    Used by legacy enum properties (e.g. the offline aspect-ratio /
+    resolution dropdowns) that mirror a schema param outside the dynamic
+    param engine.
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        model = get_model(service_key, model_slug)
+        spec = ((model or {}).get("parameters") or {}).get(param_name) or {}
+        choices = spec.get("choices") or [
+            {"value": v, "label": str(v)} for v in (spec.get("enum") or [])
+        ]
+        items = []
+        for choice in choices:
+            value = choice.get("value")
+            if value is None:
+                continue
+            ident = str(value)
+            label = str(choice.get("label") or ident)
+            items.append((ident, label, label))
+        if items:
+            return items
+    except Exception:
+        pass
+    return list(fallback)
+
+
 def _dropdown(layout, data, prop, text):
     """Enum prop via the Mixar styled dropdown when available."""
     if hasattr(layout, "mixar_dropdown"):
