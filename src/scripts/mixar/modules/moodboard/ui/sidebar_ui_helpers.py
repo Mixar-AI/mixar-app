@@ -85,6 +85,40 @@ def draw_hint(col, text, icon='NONE'):
 
 
 # ---------------------------------------------------------------------------
+# Sidebar tab focus
+# ---------------------------------------------------------------------------
+
+def focus_scene_gen_segments(context):
+    """Surface the Scene Gen tab's Segments to 3D mode.
+
+    Used by the moodboard segmentation tools (magic select, box/lasso
+    mask) so their results are visible where the Generate button lives.
+    Switches the sidebar to the "Scene Gen" panel category and selects
+    the ``scene_gen`` mode when the catalog is loaded (the mode enum item
+    doesn't exist offline — silently skipped). Never raises.
+    """
+    scene = context.scene
+    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+    if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
+        try:
+            sidebar.tab_scene_recon.mode = 'scene_gen'
+        except Exception:
+            pass  # catalog not loaded / capability disabled
+    try:
+        space = context.space_data
+        if hasattr(space, 'show_region_ui'):
+            space.show_region_ui = True
+        area = context.area
+        region = next(
+            (r for r in area.regions if r.type == 'UI'), None,
+        ) if area else None
+        if region and hasattr(region, 'active_panel_category'):
+            region.active_panel_category = "Scene Gen"
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Prompt section
 # ---------------------------------------------------------------------------
 
