@@ -18,17 +18,6 @@ from mixar.modules.common.utils.image_utils import compress_for_service
 logger = get_logger(__name__)
 
 
-def _get_default_model_3d():
-    """Default model_3d model slug from the catalog, or None."""
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_default_model_slug,
-        )
-        return get_default_model_slug("model_3d")
-    except Exception:
-        return None
-
-
 class MIXIE_OT_image_to_3d_generate(Operator):
     """Generate a 3D model from an image"""
 
@@ -80,9 +69,14 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
         # Determine model to use
         if self.from_chat:
-            model_name = _get_default_model_3d()
-            if not model_name:
-                self.report({"WARNING"}, "No models available - please wait for models to load")
+            try:
+                from mixar.bootstrap.model_3d_cache import get_default_model_name
+                model_name = get_default_model_name()
+                if not model_name:
+                    self.report({"WARNING"}, "No models available - please wait for models to load")
+                    return {"CANCELLED"}
+            except ImportError:
+                self.report({"WARNING"}, "Model cache not available")
                 return {"CANCELLED"}
         else:
             if sidebar_tab:
@@ -93,8 +87,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_name = ''
 
             if model_name in ("LOADING", "ERROR", "NONE", ""):
-                # Property has invalid value — use the catalog default
-                model_name = _get_default_model_3d()
+                try:
+                    from mixar.bootstrap.model_3d_cache import get_default_model_name
+                    model_name = get_default_model_name()
+                except ImportError:
+                    pass
 
             if not model_name or model_name in ("LOADING", "ERROR", "NONE", ""):
                 self.report({"WARNING"}, "Please wait for models to load or check connection")
