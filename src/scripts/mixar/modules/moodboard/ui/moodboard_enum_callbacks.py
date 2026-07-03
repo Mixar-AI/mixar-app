@@ -232,6 +232,20 @@ def _get_retopology_model_items(self, context):
     )
 
 
+def _get_scene_gen_mode_items(self, context):
+    """Scene Gen tab mode items (capability ``scene_gen``).
+
+    Scene Reconstruction = ``scene_reconstruction`` / Segments to 3D =
+    ``scene_gen``. Falls back to the single Scene Reconstruction mode
+    when the catalog isn't loaded (offline / pre-auth).
+    """
+    return _capability_mode_items(
+        "scene_gen",
+        [("scene_reconstruction", "Scene Reconstruction",
+          "Reconstruct a 3D scene from an image")],
+    )
+
+
 def _get_mesh_segment_mode_items(self, context):
     """Mesh Segment tab mode items (capability ``mesh_segmentation``)."""
     return _capability_mode_items(

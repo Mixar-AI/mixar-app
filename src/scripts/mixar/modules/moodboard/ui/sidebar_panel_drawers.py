@@ -354,16 +354,6 @@ def _draw_scene_recon(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# Segmentation
-# ---------------------------------------------------------------------------
-
-def _draw_segmentation(layout, context):
-    """Draw Segmentation panel (Segment to 3D)."""
-    from .sidebar_tab_drawers import _draw_segment_to_3d
-    _draw_segment_to_3d(layout, context)
-
-
-# ---------------------------------------------------------------------------
 # Scene Gen Experimental
 # ---------------------------------------------------------------------------
 
