@@ -754,6 +754,52 @@ extern "C" void Mixar_WindowSetHidesOnDeactivate(void *window_handle, bool hides
 }
 
 
+/* Pin a window to its owning Space so it never leaks onto another
+ * Space (macOS virtual desktop / full-screen app).
+ *
+ * The bug this fixes: when Mixar's main window is full-screen it lives
+ * in its own dedicated Space. The Agent Bubble + pill are floating
+ * child windows of that main window. With the default collection
+ * behaviour AppKit treats these small auxiliary windows as eligible to
+ * appear on whatever Space is currently active — so the moment the
+ * user swipes to another Space (the three-finger gesture / Mission
+ * Control), the bubble "comes out of Mixar" and renders on top of the
+ * window in that other Space.
+ *
+ * The fix is two flags working together:
+ *   - NSWindowCollectionBehaviorManaged ties the window to a single
+ *     Space (it participates in Spaces / Exposé normally and does NOT
+ *     follow the user to other Spaces).
+ *   - NSWindowCollectionBehaviorFullScreenAuxiliary lets the window be
+ *     shown alongside a full-screen window — without it, a child of a
+ *     full-screen parent gets stranded on the non-full-screen desktop
+ *     Space instead of accompanying the parent into full screen.
+ *
+ * We explicitly clear CanJoinAllSpaces / MoveToActiveSpace (the two
+ * behaviours that make a window appear everywhere / chase the active
+ * Space) in case AppKit set them implicitly for the borderless dock. */
+extern "C" void Mixar_WindowBindToParentSpace(void *window_handle)
+{
+  if (window_handle == nullptr) {
+    return;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return;
+  }
+  @autoreleasepool {
+    NSWindowCollectionBehavior behavior = [win collectionBehavior];
+    behavior &= ~(NSWindowCollectionBehaviorCanJoinAllSpaces |
+                  NSWindowCollectionBehaviorMoveToActiveSpace |
+                  NSWindowCollectionBehaviorTransient);
+    behavior |= NSWindowCollectionBehaviorManaged |
+                NSWindowCollectionBehaviorFullScreenAuxiliary;
+    [win setCollectionBehavior:behavior];
+  }
+}
+
+
 /* Keep the bubble above Mixar's own windows.
  *
  * On macOS, the addChildWindow:ordered:NSWindowAbove relationship
@@ -1887,6 +1933,16 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
     @autoreleasepool {
       [NSApplication sharedApplication]; /* initializes `NSApp`. */
 
+      /* Mixar: headless sandbox children (`--background`, spawned by
+       * sandbox_supervisor) still create a Cocoa system so off-screen GPU work
+       * keeps working, but they must not show a Dock icon or app-switcher entry.
+       * Demote them to an accessory (background) app. Detected via the env var
+       * the supervisor sets only on child processes, so the user's GUI instance
+       * (which lacks it) is unaffected. */
+      if ([[NSProcessInfo processInfo].environment objectForKey:@"MIXAR_SANDBOX_CONNECTION_ID"]) {
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+      }
+
       if ([NSApp mainMenu] == nil) {
         NSMenu *mainMenubar = [[NSMenu alloc] init];
         NSMenuItem *menuItem;
@@ -2389,13 +2445,32 @@ GHOST_TSuccess GHOST_SystemCocoa::handleApplicationBecomeActiveEvent()
       GHOST_WindowCocoa *window = (GHOST_WindowCocoa *)iwindow;
       if (window->isDialog()) {
         NSWindow *nswin = (NSWindow *)window->getViewWindow();
-        /* Skip auxiliary floating windows (Agent Bubble, pill) that
-         * set hidesOnDeactivate.  Making them key here would steal
-         * keyboard focus from the main viewport every time the user
-         * alt-tabs back to Mixar.  They should only become key when
-         * the user explicitly clicks on them. */
-        if (nswin != nil && nswin.hidesOnDeactivate) {
-          [nswin orderFront:nil];
+        const bool is_floating_dock =
+            nswin != nil &&
+            [nswin.identifier isEqualToString:kMixarFloatingDockIdentifier];
+        if (is_floating_dock) {
+          /* Auxiliary floating docks (Agent Bubble + pill) manage
+           * their OWN visibility — do nothing here. Two reasons:
+           *
+           * 1. Space yank-back. The docks are pinned to Mixar's Space
+           *    (Mixar_WindowBindToParentSpace). hidesOnDeactivate == YES
+           *    docks (the open bubble, the minimised pill) are already
+           *    auto-restored by AppKit on activation, and AppKit does it
+           *    in a Space-aware way. Calling orderFront ourselves
+           *    overrides that and force-switches the user back to
+           *    Mixar's Space the instant they swipe to another Space —
+           *    the "swiped right but got yanked back to the leftmost
+           *    window" bug.
+           *
+           * 2. Resurrecting a minimised bubble. A dock hidden with
+           *    hidesOnDeactivate == NO was intentionally orderOut'd
+           *    (the bubble is collapsed to its pill). Order-fronting it
+           *    pops the full chat window back open while the pill stays
+           *    minimised.
+           *
+           * Their Z-order above the host is guaranteed by the
+           * addChildWindow relationship, and making them key would
+           * steal viewport focus, so there is nothing for us to do. */
           continue;
         }
         [nswin makeKeyAndOrderFront:nil];

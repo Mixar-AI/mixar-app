@@ -191,8 +191,21 @@ class MixieHunyuanPartProps(PropertyGroup):
 
 
 class MixieHunyuanTopologyProps(PropertyGroup):
-    """Input properties for Hunyuan 3D Topology mode."""
+    """Input properties for Topology (retopology) mode.
 
+    Supports two engines via ``model``: Hunyuan (the original) and Tripo. The
+    ``polygon_type``/``face_level``/``post_process`` fields drive Hunyuan; the
+    ``tripo_*`` fields drive Tripo's v2.0 ``mesh/decimate`` API.
+    """
+
+    model: EnumProperty(
+        name="Model",
+        items=[
+            ('hunyuan', "Hunyuan", "Hunyuan AI retopology"),
+            ('tripo', "Tripo", "Tripo v2.0 smart retopology (mesh decimate)"),
+        ],
+        default='hunyuan',
+    )
     polygon_type: EnumProperty(
         name="Polygon Type",
         items=[
@@ -213,6 +226,29 @@ class MixieHunyuanTopologyProps(PropertyGroup):
     post_process: BoolProperty(
         name="Post-Processing",
         description="Run GPU post-processing: fix pivot, match scale, UV unwrap, and bake textures from HP to LP",
+        default=True,
+    )
+    # --- Tripo (v2.0) settings ---
+    tripo_face_limit: IntProperty(
+        name="Face Limit",
+        description=(
+            "Target polycount for the decimated low-poly mesh. "
+            "Tripo v2.0 range: 500-20,000 (triangle), 500-10,000 (quad)"
+        ),
+        default=10000,
+        min=500,
+        max=20000,
+        soft_min=500,
+        soft_max=20000,
+    )
+    tripo_quad: BoolProperty(
+        name="Quad Mesh",
+        description="Output a quad mesh instead of triangles",
+        default=False,
+    )
+    tripo_bake: BoolProperty(
+        name="Bake Textures",
+        description="Bake textures onto the low-poly model (preserves baked UVs)",
         default=True,
     )
     job: PointerProperty(type=MixieHunyuanJobState)

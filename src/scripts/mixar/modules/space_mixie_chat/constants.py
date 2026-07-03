@@ -29,6 +29,40 @@ STARTUP_DELAY_SECONDS = 1.0
 
 
 # ============================================================================
+# SCENE ROUTING
+# ============================================================================
+
+# The backend addresses every execute_script with a `session_id` that acts as a
+# scene-routing key (backend: decorator.execute_script_on_instance / services).
+# - "agent:{connection_id}" is the CONSTANT per-connection routing session used
+#   for normal / sandbox mode. It intentionally matches NO scene.mixie_session_id
+#   so the client follows in-script window.scene changes (active-scene follow).
+# - An empty session_id has the same "no explicit scene" meaning.
+# - Any OTHER non-empty session is a REAL per-scene target: either the user's
+#   main scene mixie_session_id (a UUID v4 set by SessionManager.start_session)
+#   or a throwaway lane scene keyed "agentlane:{parent}:{n}" (scene-build mode).
+#   These MUST resolve to a scene or the script is rejected — running one against
+#   the wrong (active) scene corrupts the user's work.
+AGENT_ROUTING_SESSION_PREFIX = "agent:"     # non-pinned constant → active scene
+AGENT_LANE_SESSION_PREFIX = "agentlane:"    # throwaway lane scene marker
+
+
+def is_non_scene_routing_session(session_id: str) -> bool:
+    """True for the non-pinned constant / empty routing session.
+
+    These intentionally match no scene and follow the user's active scene.
+    Every other non-empty session is a per-scene session that MUST resolve
+    to a real scene or the script is rejected (see main_thread_executor).
+    """
+    return (not session_id) or session_id.startswith(AGENT_ROUTING_SESSION_PREFIX)
+
+
+def is_lane_scene(scene) -> bool:
+    """True if a scene is a throwaway agent-lane scene (never a restore target)."""
+    return getattr(scene, 'mixie_session_id', '').startswith(AGENT_LANE_SESSION_PREFIX)
+
+
+# ============================================================================
 # SESSION STATES
 # ============================================================================
 
@@ -86,6 +120,8 @@ class JSONRPCMethod:
 
     # Server -> Client (requests - expect response)
     BLENDER_EXECUTE_SCRIPT = "blender.execute_script"
+    # Server -> Client (request - sandbox lifecycle; handled by the parent only)
+    AGENT_SANDBOX_CONTROL = "agent.sandbox_control"
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"
@@ -94,10 +130,13 @@ class JSONRPCMethod:
 
     # Server -> Client (notifications push)
     NOTIFICATIONS_PUSH = "notifications.push"
+    JOB_UPDATE = "job.update"
     # Client -> Server (notification RPC)
     NOTIFICATIONS_SYNC = "notifications.sync"
     NOTIFICATIONS_MARK_READ = "notifications.mark_read"
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
+    JOB_SYNC = "job.sync"
+    JOB_GET = "job.get"
 
 
 # ============================================================================

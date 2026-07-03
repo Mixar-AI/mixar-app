@@ -50,9 +50,22 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
         logger.debug("Cancelled existing poll for %s", is_generating_attr)
 
     poll_count = [0]
+    # Hold the scene by name, not by reference: the poll can outlive the
+    # scene (file load, scene delete), and touching a removed StructRNA
+    # raises ReferenceError out of the timer — killing it mid-flight and
+    # leaking the _active_polls entry.
+    scene_name = scene.name
 
     def _poll_completion():
         poll_count[0] += 1
+
+        scene = bpy.data.scenes.get(scene_name)
+        if scene is None:
+            _active_polls.pop(is_generating_attr, None)
+            logger.debug(
+                "Scene %r gone; stopping poll for %s", scene_name, is_generating_attr
+            )
+            return None
 
         if poll_count[0] > _POLL_MAX_COUNT:
             _active_polls.pop(is_generating_attr, None)

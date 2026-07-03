@@ -10,8 +10,6 @@ Generated textures are added to the moodboard for review. Users can then
 apply a selected moodboard image as the brush mask/alpha texture.
 """
 
-import time
-
 import bpy
 from bpy.types import Operator
 
@@ -102,18 +100,32 @@ def _apply_image_as_mask(image):
 
 
 def _redraw_ui(_context=None):
-    """Force UI redraw for all relevant areas.
-
-    Uses window manager iteration instead of a captured operator context,
-    making it safe to call from async callbacks where the original operator
-    context has expired (dangling C pointer after execute returns FINISHED).
-    """
+    """Force UI redraw for all relevant areas."""
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
                 area.tag_redraw()
     except Exception:
         pass
+
+
+_brush_gen_listener = None
+
+
+def _get_brush_gen_listener():
+    """Lazily create the brush gen queue listener (cached singleton).
+
+    Replicates old brush_gen_queue.py: redraw all areas on every change.
+    """
+    global _brush_gen_listener
+    if _brush_gen_listener is not None:
+        return _brush_gen_listener
+
+    def _on_queue_changed(_queue):
+        _redraw_ui()
+
+    _brush_gen_listener = _on_queue_changed
+    return _brush_gen_listener
 
 
 def _get_ref_image_bytes(mixar_ui):
@@ -141,6 +153,29 @@ class MGenerateBrushTexture(Operator):
     bl_description = "Generate a brush texture from text prompt using AI"
     bl_options = {'REGISTER'}
 
+    # Direct-invocation properties (agent/chat): when `prompt` is set, the
+    # operator runs from these explicit params instead of the UI state.
+    prompt: bpy.props.StringProperty(
+        name="Prompt",
+        description="Brush texture prompt (direct invocation; overrides UI state)",
+        default="",
+    )
+    model: bpy.props.StringProperty(
+        name="Model",
+        description="Generation model (direct invocation; falls back to UI/default)",
+        default="",
+    )
+    reference_image_name: bpy.props.StringProperty(
+        name="Reference Image",
+        description="Name of a bpy.data.images entry to use as reference",
+        default="",
+    )
+    from_chat: bpy.props.BoolProperty(
+        name="From Chat",
+        description="Called from chat/agent context",
+        default=False,
+    )
+
     @classmethod
     def poll(cls, context):
         if not hasattr(context, 'tool_settings'):
@@ -149,174 +184,83 @@ class MGenerateBrushTexture(Operator):
         return settings is not None and settings.brush is not None
 
     def execute(self, context):
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
+
         mixar_ui = get_mixar_ui(context)
         if not mixar_ui:
+            set_agent_gen_reason(context, "UI state not available")
             self.report({'ERROR'}, "UI state not available")
             return {'CANCELLED'}
 
-        # Atomic check-and-set to prevent concurrent requests
         if mixar_ui.brush_gen_in_progress:
+            set_agent_gen_reason(context, "Brush texture generation is already in progress")
             self.report({'WARNING'}, "Brush texture generation is already in progress")
             return {'CANCELLED'}
-        mixar_ui.brush_gen_in_progress = True
 
-        # Get the prompt
-        prompt = mixar_ui.brush_texture_prompt.strip()
+        # Direct (agent) invocation: explicit params override UI state.
+        if self.prompt.strip():
+            prompt = self.prompt.strip()
+            model_name = self.model.strip() or mixar_ui.brush_gen_model
+            reference_image = self._get_direct_ref_bytes(self.reference_image_name)
+        else:
+            prompt = mixar_ui.brush_texture_prompt.strip()
+            model_name = mixar_ui.brush_gen_model
+            reference_image = _get_ref_image_bytes(mixar_ui)
+
         if not prompt:
-            mixar_ui.brush_gen_in_progress = False
+            set_agent_gen_reason(context, "No prompt provided for the brush texture")
             self.report({'WARNING'}, "Please enter a prompt for the brush texture")
             return {'CANCELLED'}
 
-        # Import brush service
-        try:
-            from mixar.modules.common.api.services import get_brush_service
-        except ImportError as e:
-            mixar_ui.brush_gen_in_progress = False
-            self.report({'ERROR'}, f"Brush API service not available: {e}")
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_BRUSH_GEN
+
+        payload = {"prompt": prompt}
+        if reference_image:
+            payload["reference_image_bytes_b64"] = _b64.b64encode(reference_image).decode()
+
+        job = enqueue_generation(
+            kind="image",
+            feature_key=FEATURE_BRUSH_GEN,
+            job_type="brush_gen",
+            model=model_name,
+            payload=payload,
+            label=f"Brush: {prompt[:40]}",
+            fail_message="Brush generation failed",
+            name_prefix="brush_gen",
+            prompt_text=prompt,
+            listener=_get_brush_gen_listener(),
+        )
+
+        if not job:
+            set_agent_gen_reason(context, "Brush generation already queued (duplicate)")
+            self.report({'ERROR'}, "Failed to enqueue brush generation")
             return {'CANCELLED'}
 
-        service = get_brush_service()
-
-        # Read model and reference image from UI state
-        model_name = mixar_ui.brush_gen_model
-        reference_image = _get_ref_image_bytes(mixar_ui)
-
-        # Set generating state
+        mixar_ui.brush_gen_in_progress = True
         mixar_ui.brush_gen_progress = 0.1
         mixar_ui.brush_gen_status = "Requesting texture from AI..."
         _redraw_ui(context)
 
-        # Store prompt for callbacks
-        stored_prompt = prompt
-
-        def show_error(message: str):
-            """Show error message and reset state."""
-            logger.error("[BrushGen] %s", message)
-            mixar_ui.brush_gen_in_progress = False
-            mixar_ui.brush_gen_progress = 0.0
-            mixar_ui.brush_gen_status = f"Error: {message}"
-            _redraw_ui(context)
-
-        def on_success(response):
-            """Handle successful generation response."""
-            logger.debug("[BrushGen] on_success called")
-
-            try:
-                if not response.success:
-                    error_msg = getattr(response, 'error', None) or "Generation failed"
-                    show_error(f"API Error: {error_msg}")
-                    return
-
-                data = response.data
-                logger.debug("[BrushGen] Response data received")
-
-                if not data:
-                    show_error("No data received from server")
-                    return
-
-                # Check for failure status in response data
-                if isinstance(data, dict):
-                    status = data.get('status', '').lower()
-                    if status in ('failure', 'error'):
-                        error_message = data.get('message', 'Unknown error from server')
-                        show_error(f"Server Error: {error_message}")
-                        return
-
-                # Extract image URL from response
-                image_url = None
-
-                if isinstance(data, dict):
-                    if 'data' in data and isinstance(data['data'], dict):
-                        inner_data = data['data']
-                        if inner_data.get('status', '').lower() in ('failure', 'error'):
-                            error_message = inner_data.get('message', 'Unknown error')
-                            show_error(f"Server Error: {error_message}")
-                            return
-                        image_url = inner_data.get('image_url')
-                    else:
-                        image_url = data.get('image_url') or data.get('url')
-
-                if not image_url:
-                    show_error("No image URL in server response")
-                    return
-
-                logger.debug("[BrushGen] Found image URL")
-
-                # Update progress
-                mixar_ui.brush_gen_progress = 0.5
-                mixar_ui.brush_gen_status = "Downloading texture..."
-                _redraw_ui(context)
-
-                from mixar.modules.common.utils.image_utils import (
-                    load_image_from_url,
-                    add_image_to_moodboard,
-                )
-
-                try:
-                    timestamp = int(time.time())
-                    name = f"brush_gen_{timestamp}"
-
-                    mixar_ui.brush_gen_progress = 0.8
-                    mixar_ui.brush_gen_status = "Adding to moodboard..."
-                    _redraw_ui(context)
-
-                    # Download, load, pack, cleanup temp file
-                    image = load_image_from_url(image_url, name)
-
-                    # Add to moodboard (tags MIXIE areas for redraw)
-                    add_image_to_moodboard(image, stored_prompt)
-
-                    mixar_ui.brush_gen_in_progress = False
-                    mixar_ui.brush_gen_progress = 1.0
-                    mixar_ui.brush_gen_status = "Added to moodboard!"
-                    _redraw_ui(context)
-                    logger.debug("[BrushGen] Generation complete - added to moodboard")
-
-                except Exception as e:
-                    show_error(f"Failed to download/apply image: {e}")
-                    return
-
-            except Exception as e:
-                logger.error("[BrushGen] Error processing response: %s", e)
-                show_error(f"Error processing response: {e}")
-
-        def on_error(error):
-            """Handle generation error."""
-            logger.error("[BrushGen] on_error called with: %s", error)
-            error_str = str(error) if error else "Unknown error"
-            show_error(f"Request failed: {error_str}")
-
-        def on_complete(async_response):
-            """Handle completion (called regardless of success/failure)."""
-            logger.debug("[BrushGen] on_complete called")
-
-            # If still in generating state, something went wrong
-            if mixar_ui.brush_gen_in_progress:
-                error = getattr(async_response, 'error', None)
-                if error:
-                    show_error(f"Request failed: {error}")
-                else:
-                    mixar_ui.brush_gen_in_progress = False
-                    _redraw_ui(context)
-
-        # Call async API
-        try:
-            service.generate_async(
-                prompt=stored_prompt,
-                model_name=model_name,
-                reference_image=reference_image,
-                on_success=on_success,
-                on_error=on_error,
-                on_complete=on_complete,
-            )
-        except Exception as e:
-            mixar_ui.brush_gen_in_progress = False
-            mixar_ui.brush_gen_status = ""
-            self.report({'ERROR'}, f"Failed to start generation: {e}")
-            return {'CANCELLED'}
-
         self.report({'INFO'}, "Brush texture generation started...")
         return {'FINISHED'}
+
+    @staticmethod
+    def _get_direct_ref_bytes(image_name):
+        """Get reference image bytes by bpy.data.images name, or None."""
+        if not image_name:
+            return None
+        image = bpy.data.images.get(image_name)
+        if not image:
+            return None
+        try:
+            from mixar.modules.common.utils.image_utils import image_to_png_bytes
+            return image_to_png_bytes(image)
+        except Exception as e:
+            logger.error("[BrushGen] Failed to convert reference image '%s': %s",
+                         image_name, e)
+            return None
 
 
 class MBrushGenClearReference(Operator):

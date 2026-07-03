@@ -17,10 +17,11 @@ Operators:
 import os
 
 import bpy
-from bpy.props import IntProperty, StringProperty
+from bpy.props import BoolProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
 from ...core.hunyuan_helpers import _redraw_3d_views
+from ...constants import HUNYUAN_RAPID_JOB_TYPE, HUNYUAN_RAPID_MODEL
 from mixar.modules.common.utils.mixie_space_utils import (
     get_first_selected_moodboard_image,
 )
@@ -169,33 +170,59 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
     mode_override: StringProperty(default="")
 
+    # Direct-invocation properties (agent/chat) for PRO mode: when `prompt` or
+    # `image_name` is set, the PRO path runs from these explicit params instead
+    # of the sidebar/moodboard UI state.
+    prompt: StringProperty(default="")
+    image_name: StringProperty(default="")
+    model_version: StringProperty(default="3.0")
+    enable_pbr: BoolProperty(default=False)
+    face_count: IntProperty(default=0)
+    polygon_type: StringProperty(default="")
+    # Rapid direct-invocation params
+    enable_geometry: BoolProperty(default=False)
+    result_format: StringProperty(default="glb")
+    # Retopology (TOPOLOGY) direct-invocation params
+    object_name: StringProperty(default="")
+    model: StringProperty(default="tripo")
+    face_level: IntProperty(default=0)
+    post_process: BoolProperty(default=True)
+    # Mesh export params for direct PART/UV invocation
+    export_format: StringProperty(default="GLB")
+    from_chat: BoolProperty(default=False)
+
     @classmethod
     def poll(cls, context):
         return hasattr(context.scene, 'hunyuan')
 
     def execute(self, context):
         from mixar.modules.common.utils.image_utils import compress_image_for_upload
+        from mixar.modules.common.utils.agent_feedback import set_agent_gen_reason
 
         props = context.scene.hunyuan
         mode = self.mode_override or props.active_mode
 
-        # Early check: mesh-based modes require a selected mesh
+        # Early check: mesh-based modes require a selected mesh — unless the
+        # agent passed an explicit object_name (direct invocation).
         if mode in ('TOPOLOGY', 'PART', 'UV'):
-            has_mesh = any(o.type == 'MESH' for o in context.selected_objects)
-            if not has_mesh:
-                self.report({'WARNING'}, "No mesh selected")
-                return {'CANCELLED'}
+            if not self.object_name.strip():
+                has_mesh = any(o.type == 'MESH' for o in context.selected_objects)
+                if not has_mesh:
+                    self.report({'WARNING'}, "No mesh selected")
+                    return {'CANCELLED'}
 
-        # PRO mode — generation queue
+        # PRO mode — job queue
         if mode == 'PRO':
-            from mixar.modules.common.api import get_hunyuan_service
-            service = get_hunyuan_service()
             try:
-                self._submit_pro(
-                    context, props.pro, service,
-                    None, None, compress_image_for_upload,
-                )
+                # Direct (agent) invocation: explicit params bypass UI state.
+                if self.from_chat or self.prompt.strip() or self.image_name.strip():
+                    self._submit_pro_direct(context)
+                else:
+                    self._submit_pro(
+                        context, props.pro, compress_image_for_upload,
+                    )
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_IMAGE_TO_3D_PRO
@@ -204,11 +231,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # TOPOLOGY — generation queue with per-object fan-out
+        # TOPOLOGY — job queue with per-object fan-out
         if mode == 'TOPOLOGY':
             try:
-                self._submit_topology_queue(context, props.topology)
+                # Direct (agent) invocation: retopologize a named object.
+                if self.object_name.strip():
+                    self._submit_topology_direct(context)
+                else:
+                    self._submit_topology_queue(context, props.topology)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
@@ -217,11 +249,15 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # RAPID — generation queue
+        # RAPID — job queue
         if mode == 'RAPID':
             try:
-                self._submit_rapid_queue(context, props.rapid, compress_image_for_upload)
+                if self.from_chat or self.prompt.strip() or self.image_name.strip():
+                    self._submit_rapid_direct(context, compress_image_for_upload)
+                else:
+                    self._submit_rapid_queue(context, props.rapid, compress_image_for_upload)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
@@ -230,12 +266,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # PART — generation queue
+        # PART — job queue
         if mode == 'PART':
             try:
-                from ...core.part_queue import enqueue_part_job
-                enqueue_part_job(context=context, operator=self)
+                from ...core.part_enqueue import enqueue_part_job
+                if self.object_name.strip():
+                    self._submit_part_direct(context, enqueue_part_job)
+                else:
+                    enqueue_part_job(context=context, operator=self)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_PART
@@ -244,12 +284,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        # UV — generation queue
+        # UV — job queue
         if mode == 'UV':
             try:
-                from ...core.uv_queue import enqueue_uv_job
-                enqueue_uv_job(context=context, operator=self)
+                from ...core.uv_enqueue import enqueue_uv_job
+                if self.object_name.strip():
+                    self._submit_uv_direct(context, enqueue_uv_job)
+                else:
+                    enqueue_uv_job(context=context, operator=self)
             except Exception as e:
+                set_agent_gen_reason(context, str(e))
                 self.report({'ERROR'}, str(e))
                 return {'CANCELLED'}
             from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_UV
@@ -265,17 +309,196 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # Per-mode submit helpers
     # ------------------------------------------------------------------ #
 
-    def _submit_pro(
-        self, context, pro, service, on_success, on_error, compress_image_for_upload,
+    def _submit_pro_direct(self, context):
+        """Submit a single Pro (image-to-3D) job from explicit operator params.
+
+        Used by the agent/chat path: reads prompt/image_name/model_version/
+        enable_pbr/face_count/polygon_type directly instead of props.pro.
+        """
+        from mixar.modules.moodboard.core.generation_enqueue import enqueue_pro_job
+
+        image = None
+        if self.image_name.strip():
+            image = bpy.data.images.get(self.image_name.strip())
+            if image is None:
+                raise ValueError(f"Image '{self.image_name}' not found")
+
+        prompt = self.prompt.strip() or None
+        if image is None and not prompt:
+            raise ValueError("Provide at least a prompt or an image_name")
+
+        polygon_type = self.polygon_type.strip() or None
+        shared = {
+            "generate_type": "LowPoly" if polygon_type else "Normal",
+            "model_version": self.model_version.strip() or "3.0",
+            "enable_pbr": bool(self.enable_pbr),
+            "face_count": self.face_count if self.face_count > 0 else None,
+            "polygon_type": polygon_type,
+            "prompt": prompt,
+        }
+        label = image.name if image is not None else prompt
+        enqueue_pro_job(image=image, shared=shared, label=label)
+
+    def _submit_rapid_direct(self, context, compress_image_for_upload):
+        """Submit a Rapid job from explicit agent/chat params."""
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
+
+        image = None
+        if self.image_name.strip():
+            image = bpy.data.images.get(self.image_name.strip())
+            if image is None:
+                raise ValueError(f"Image '{self.image_name}' not found")
+            if not image.has_data:
+                raise ValueError(f"Image '{self.image_name}' has no pixel data")
+
+        prompt = self.prompt.strip()
+        has_prompt = bool(prompt)
+        has_image = image is not None
+        if not has_prompt and not has_image:
+            raise ValueError("Provide either a prompt or an image_name")
+        if has_prompt and has_image:
+            raise ValueError("Prompt and image are mutually exclusive")
+
+        result_format = (self.result_format or "glb").strip().lower()
+        if result_format not in {"glb", "usdz"}:
+            raise ValueError("result_format must be 'glb' or 'usdz'")
+
+        sdk_params = {
+            "EnablePBR": bool(self.enable_pbr),
+            "EnableGeometry": bool(self.enable_geometry),
+        }
+        if result_format != "glb":
+            sdk_params["ResultFormat"] = result_format
+        if has_prompt:
+            sdk_params["Prompt"] = prompt
+
+        payload = {"sdk_params": sdk_params}
+        if has_image:
+            image_bytes = compress_image_for_upload(image)
+            payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
+            payload["image_filename"] = "image.png"
+
+        label = prompt[:40] if has_prompt else image.name
+        enqueue_generation(
+            kind="glb",
+            feature_key=FEATURE_HUNYUAN_RAPID,
+            job_type=HUNYUAN_RAPID_JOB_TYPE,
+            model=HUNYUAN_RAPID_MODEL,
+            payload=payload,
+            label=label,
+            scene_flag="mixie_hunyuan_rapid_is_generating",
+        )
+
+    def _submit_topology_direct(self, context):
+        """Retopologize a single named mesh object from explicit params (agent).
+
+        Used by the agent/chat path: looks up object_name in the scene and runs
+        the queue retopology on it, bypassing the selection-based UI flow.
+        """
+        from mixar.modules.hunyuan.core.retopology_enqueue import (
+            enqueue_retopology_jobs,
+        )
+
+        obj = bpy.data.objects.get(self.object_name.strip())
+        if obj is None or obj.type != 'MESH':
+            raise ValueError(f"Mesh object '{self.object_name}' not found")
+
+        model = (self.model or "tripo").strip().lower()
+        if model not in {"tripo", "hunyuan"}:
+            raise ValueError("model must be 'tripo' or 'hunyuan'")
+
+        shared = {
+            "model": model,
+            "polygon_type": self.polygon_type.strip() or None,
+            "face_level": self.face_level if self.face_level > 0 else None,
+            "post_process": bool(self.post_process),
+        }
+        enqueued = enqueue_retopology_jobs(
+            context=context, objects=[obj], shared=shared, operator=self,
+        )
+        if not enqueued:
+            raise ValueError(
+                "Retopology could not be enqueued (export failed or file too large)",
+            )
+
+    def _submit_part_direct(self, context, enqueue_part_job):
+        """Submit Hunyuan Part for a named mesh object from explicit params."""
+        self._submit_selected_object_job(
+            context=context,
+            object_name=self.object_name,
+            export_format=self.export_format,
+            mode_props=context.scene.hunyuan.part,
+            enqueue_func=enqueue_part_job,
+            failure_message="Hunyuan Part could not be enqueued",
+        )
+
+    def _submit_uv_direct(self, context, enqueue_uv_job):
+        """Submit Hunyuan UV for a named mesh object from explicit params."""
+        self._submit_selected_object_job(
+            context=context,
+            object_name=self.object_name,
+            export_format=self.export_format,
+            mode_props=context.scene.hunyuan.uv,
+            enqueue_func=enqueue_uv_job,
+            failure_message="Hunyuan UV could not be enqueued",
+        )
+
+    def _submit_selected_object_job(
+        self,
+        *,
+        context,
+        object_name,
+        export_format,
+        mode_props,
+        enqueue_func,
+        failure_message,
     ):
-        """Fan out a Pro generation request into the generation queue.
+        obj = bpy.data.objects.get(object_name.strip())
+        if obj is None or obj.type != 'MESH':
+            raise ValueError(f"Mesh object '{object_name}' not found")
+
+        fmt = (export_format or "GLB").strip().upper()
+        if fmt not in {"GLB", "OBJ", "FBX"}:
+            raise ValueError("export_format must be GLB, OBJ, or FBX")
+
+        prev_selected = list(context.selected_objects)
+        prev_active = context.view_layer.objects.active
+        prev_format = getattr(mode_props, "export_format", "GLB")
+        try:
+            for selected in prev_selected:
+                selected.select_set(False)
+            obj.select_set(True)
+            context.view_layer.objects.active = obj
+            mode_props.export_format = fmt
+            job = enqueue_func(context=context, operator=self)
+            if not job:
+                raise ValueError(failure_message)
+        finally:
+            mode_props.export_format = prev_format
+            obj.select_set(False)
+            for selected in prev_selected:
+                try:
+                    selected.select_set(True)
+                except ReferenceError:
+                    pass
+            try:
+                context.view_layer.objects.active = prev_active
+            except (ReferenceError, TypeError):
+                pass
+
+    def _submit_pro(
+        self, context, pro, compress_image_for_upload,
+    ):
+        """Fan out a Pro generation request into the job queue.
 
         - When ``use_selected_image`` is on, every selected moodboard
           image becomes its own queued job (multi-view ignored).
         - Otherwise a single job is enqueued, optionally with multi-view
           images and the uploaded reference image.
         """
-        from mixar.modules.moodboard.core.image_to_3d_queue import (
+        from mixar.modules.moodboard.core.generation_enqueue import (
             enqueue_pro_job, snapshot_shared_params,
         )
 
@@ -341,7 +564,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
     def _submit_rapid_queue(self, context, rapid, compress_image_for_upload):
         """Validate and enqueue a Rapid generation job via FeatureQueue."""
-        from ...core.rapid_queue import enqueue_rapid_job
+        import base64 as _b64
+        from mixar.modules.common.job_queue import enqueue_generation
+        from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_RAPID
 
         has_prompt = bool(rapid.prompt.strip())
         has_image = rapid.image is not None
@@ -355,6 +580,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
             has_image = True
             has_prompt = False
 
+        if not has_prompt and not has_image:
+            raise ValueError("Provide either a prompt or an image")
+        if has_prompt and has_image:
+            raise ValueError("Prompt and image are mutually exclusive")
+
         image_bytes = b""
         if has_image:
             if use_moodboard and mb_img:
@@ -362,22 +592,41 @@ class MIXIE_OT_hunyuan_generate(Operator):
             elif rapid.image:
                 image_bytes = compress_image_for_upload(rapid.image)
 
-        enqueue_rapid_job(
-            prompt=rapid.prompt.strip() if has_prompt else "",
-            image_bytes=image_bytes,
-            image_filename="image.png",
-            result_format=rapid.result_format,
-            enable_pbr=rapid.enable_pbr,
-            enable_geometry=rapid.enable_geometry,
+        sdk_params = {
+            "EnablePBR": rapid.enable_pbr,
+            "EnableGeometry": rapid.enable_geometry,
+        }
+        result_format = rapid.result_format
+        if result_format and result_format != "glb":
+            sdk_params["ResultFormat"] = result_format
+        prompt_str = rapid.prompt.strip() if has_prompt else ""
+        if prompt_str:
+            sdk_params["Prompt"] = prompt_str
+
+        payload = {"sdk_params": sdk_params}
+        if image_bytes:
+            payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
+            payload["image_filename"] = "image.png"
+
+        label = prompt_str[:40] if has_prompt else "image.png"
+
+        enqueue_generation(
+            kind="glb",
+            feature_key=FEATURE_HUNYUAN_RAPID,
+            job_type=HUNYUAN_RAPID_JOB_TYPE,
+            model=HUNYUAN_RAPID_MODEL,
+            payload=payload,
+            label=label,
+            scene_flag="mixie_hunyuan_rapid_is_generating",
         )
 
     def _submit_topology_queue(self, context, topo):
-        """Fan out a Topology retopology request into the generation queue.
+        """Fan out a Topology retopology request into the job queue.
 
         Each selected mesh becomes its own job (per-object fan-out, Q1).
         Files exceeding the size limit are skipped with a warning.
         """
-        from mixar.modules.hunyuan.core.retopology_queue import (
+        from mixar.modules.hunyuan.core.retopology_enqueue import (
             enqueue_retopology_jobs, snapshot_shared_params,
         )
 

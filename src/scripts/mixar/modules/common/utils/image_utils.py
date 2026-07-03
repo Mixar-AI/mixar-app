@@ -62,17 +62,19 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     # Get image dimensions
     width, height = image.size
 
-    # Get pixel data (RGBA floats)
-    pixels = list(image.pixels[:])
+    # Read + convert pixels with numpy via foreach_get. The previous
+    # implementation copied image.pixels into a Python list and ran two
+    # pure-Python per-pixel passes (float→byte conversion, then scanline
+    # assembly) — multi-second UI freezes for 1K+ images on every chat /
+    # brush-gen / moodboard upload. foreach_get is a single memcpy-style
+    # bulk read; the conversion below matches the old int() truncation
+    # semantics exactly.
+    import numpy as np
 
-    # Convert to 8-bit RGBA
-    pixel_data = []
-    for i in range(0, len(pixels), 4):
-        r = int(max(0, min(255, pixels[i] * 255)))
-        g = int(max(0, min(255, pixels[i + 1] * 255)))
-        b = int(max(0, min(255, pixels[i + 2] * 255)))
-        a = int(max(0, min(255, pixels[i + 3] * 255)))
-        pixel_data.extend([r, g, b, a])
+    flat = np.empty(width * height * 4, dtype=np.float32)
+    image.pixels.foreach_get(flat)
+    rgba = np.clip(flat * 255.0, 0.0, 255.0).astype(np.uint8)
+    rgba = rgba.reshape(height, width * 4)
 
     def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
         chunk = chunk_type + data
@@ -86,16 +88,14 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr_chunk = png_chunk(b'IHDR', ihdr_data)
 
-    # IDAT chunk - prepare raw scanlines (filter byte 0 = None)
-    raw_data = []
-    for y in range(height):
-        raw_data.append(0)  # Filter type None
-        for x in range(width):
-            # Blender stores bottom-to-top, PNG needs top-to-bottom
-            idx = ((height - 1 - y) * width + x) * 4
-            raw_data.extend(pixel_data[idx:idx + 4])
+    # IDAT chunk - raw scanlines, filter byte 0 (None) per row.
+    # Blender stores rows bottom-to-top; PNG needs top-to-bottom.
+    raw = np.zeros((height, 1 + width * 4), dtype=np.uint8)
+    raw[:, 1:] = rgba[::-1]
 
-    compressed = zlib.compress(bytes(raw_data), 9)
+    # Level 6 instead of 9: the payload is a network upload, and level 9
+    # costs several times the CPU for a few percent smaller output.
+    compressed = zlib.compress(raw.tobytes(), 6)
     idat_chunk = png_chunk(b'IDAT', compressed)
 
     # IEND chunk
@@ -291,8 +291,12 @@ def load_image_from_base64(data: str, name: str) -> bpy.types.Image:
             pass
 
 
-def load_image_from_url(url: str, name: str, retries: int = 3) -> bpy.types.Image:
-    """Load a Blender Image from a URL with retry on timeout."""
+def download_image_to_tempfile(url: str, retries: int = 3) -> tuple[str, int]:
+    """Download an image URL to a temporary file.
+
+    This helper is safe to call from a background thread. Blender image loading
+    must happen later on the main thread via ``load_image_from_file``.
+    """
     import urllib.request
     import time as _time
 
@@ -316,24 +320,36 @@ def load_image_from_url(url: str, name: str, retries: int = 3) -> bpy.types.Imag
     if image_bytes is None:
         raise RuntimeError("Failed to download image after retries")
 
-    logger.debug("[ImageUtils] Downloaded %s bytes", len(image_bytes))
+    byte_count = len(image_bytes)
+    logger.debug("[ImageUtils] Downloaded %s bytes", byte_count)
 
     # Write to temp file
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
         f.write(image_bytes)
         temp_path = f.name
 
+    return temp_path, byte_count
+
+
+def load_image_from_file(file_path: str, name: str) -> bpy.types.Image:
+    """Load and pack a Blender Image from a local file on the main thread."""
+    img = bpy.data.images.load(file_path, check_existing=False)
+    img.name = name
+    # Keep sRGB colorspace for proper display in Image Editor and other Blender areas
+    # Moodboard rendering handles color management bypass separately
+    img.colorspace_settings.name = 'sRGB'
+    img.pack()
+    img.filepath = ""  # Clear temp path so Blender doesn't try to re-pack from deleted file
+    logger.debug("[ImageUtils] Loaded image: %s", img.name)
+    return img
+
+
+def load_image_from_url(url: str, name: str, retries: int = 3) -> bpy.types.Image:
+    """Load a Blender Image from a URL with retry on timeout."""
+    temp_path, _byte_count = download_image_to_tempfile(url, retries=retries)
+
     try:
-        # Load into Blender
-        img = bpy.data.images.load(temp_path, check_existing=False)
-        img.name = name
-        # Keep sRGB colorspace for proper display in Image Editor and other Blender areas
-        # Moodboard rendering handles color management bypass separately
-        img.colorspace_settings.name = 'sRGB'
-        img.pack()
-        img.filepath = ""  # Clear temp path so Blender doesn't try to re-pack from deleted file
-        logger.debug("[ImageUtils] Loaded image: %s", img.name)
-        return img
+        return load_image_from_file(temp_path, name)
     finally:
         # Clean up temp file
         try:
