@@ -58,14 +58,28 @@ def _get_imagegen_listener():
 
 
 def _get_max_refs(model_name: str) -> int:
-    """Get maximum reference images for a model."""
+    """Get maximum reference images for a model (catalog, then hardcoded)."""
     try:
-        from mixar.bootstrap.imagegen_cache import get_max_reference_images
+        from mixar.bootstrap.generation_catalog_cache import get_model
 
-        return get_max_reference_images(model_name)
-    except ImportError:
-        # Fallback
-        return 14 if model_name == "pro" else 3
+        model = get_model("image_gen", model_name)
+        if model and model.get("max_reference_images") is not None:
+            return int(model["max_reference_images"])
+    except Exception:
+        pass
+    # Hardcoded last-resort fallback (offline / pre-auth)
+    return 14 if model_name == "pro" else 3
+
+
+def _get_default_image_model():
+    """Default image_gen model slug from the catalog, or None."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_default_model_slug,
+        )
+        return get_default_model_slug("image_gen")
+    except Exception:
+        return None
 
 
 class MIXIE_OT_imagegen_generate(Operator):
@@ -167,18 +181,12 @@ class MIXIE_OT_imagegen_generate(Operator):
 
         # Determine model and other params based on context
         if self.from_chat:
-            # Use default model from cache for chat context
-            try:
-                from mixar.bootstrap.imagegen_cache import get_default_model_name
-
-                model = get_default_model_name()
-                if not model:
-                    self.report(
-                        {"WARNING"}, "No models available - please wait for models to load"
-                    )
-                    return {"CANCELLED"}
-            except ImportError:
-                self.report({"WARNING"}, "Model cache not available")
+            # Use default model from the catalog for chat context
+            model = _get_default_image_model()
+            if not model:
+                self.report(
+                    {"WARNING"}, "No models available - please wait for models to load"
+                )
                 return {"CANCELLED"}
 
             # Check for chat-attached reference images
@@ -199,12 +207,8 @@ class MIXIE_OT_imagegen_generate(Operator):
                 model = scene.mixie_imagegen_model
 
             if model in ("LOADING", "ERROR", "NONE", ""):
-                # Scene property has invalid value, try to use first cached model
-                try:
-                    from mixar.bootstrap.imagegen_cache import get_default_model_name
-                    model = get_default_model_name()
-                except ImportError:
-                    pass
+                # Scene property has invalid value — use the catalog default
+                model = _get_default_image_model()
 
             if not model or model in ("LOADING", "ERROR", "NONE", ""):
                 self.report(
@@ -298,6 +302,35 @@ class MIXIE_OT_imagegen_generate(Operator):
         stored_prompt = prompt.strip()
         stored_num_images = getattr(scene, "mixie_imagegen_num_images", 1)
 
+        # Sidebar context: prefer the catalog-driven parameter engine for
+        # everything beyond style (aspect_ratio, resolution?,
+        # number_of_images, and any future params). Falls back to the
+        # legacy hardcoded properties when the catalog isn't loaded.
+        catalog_params = None
+        if not self.from_chat and use_sidebar_props:
+            try:
+                from mixar.modules.common.generation_params import (
+                    collect_params, has_params,
+                )
+                if model and has_params("image_gen", model):
+                    catalog_params = collect_params("image_gen", model)
+            except Exception as e:
+                logger.debug("Catalog param collection failed: %s", e)
+                catalog_params = None
+
+        if catalog_params is not None:
+            params = {"style": style, **catalog_params}
+            # Wire contract requires number_of_images even if a model's
+            # schema omits it.
+            params.setdefault("number_of_images", stored_num_images)
+        else:
+            params = {
+                "style": style,
+                "aspect_ratio": aspect_ratio,
+                "resolution": resolution,
+                "number_of_images": stored_num_images,
+            }
+
         # Submit via FeatureQueue
         try:
             import base64 as _b64
@@ -310,12 +343,7 @@ class MIXIE_OT_imagegen_generate(Operator):
 
             payload = {
                 "prompt": stored_prompt,
-                "params": {
-                    "style": style,
-                    "aspect_ratio": aspect_ratio,
-                    "resolution": resolution,
-                    "number_of_images": stored_num_images,
-                },
+                "params": params,
             }
             if negative_prompt:
                 payload["params"]["negative_prompt"] = negative_prompt
@@ -363,11 +391,7 @@ class MIXIE_OT_imagegen_generate(Operator):
         model = self.model
 
         if not model:
-            try:
-                from mixar.bootstrap.imagegen_cache import get_default_model_name
-                model = get_default_model_name()
-            except ImportError:
-                pass
+            model = _get_default_image_model()
         if not model:
             set_agent_gen_reason(context, "No model specified and no default available")
             self.report({"ERROR"}, "No model specified and no default available")

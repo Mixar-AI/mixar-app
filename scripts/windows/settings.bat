@@ -63,25 +63,7 @@ set "BUILD_DIR=%ROOT_DIR%\build"
 set "SOURCE_DIR=%ROOT_DIR%\source"
 set "SRC_DIR=%ROOT_DIR%\src"
 set "CMAKE_DIR=%ROOT_DIR%\cmake"
-
-REM Upstream Blender tree (multi-GB, gitignored). Linked git worktrees don't
-REM carry ignored files, so fall back to the main checkout's upstream\ (the
-REM overlay only reads from it). Mirrors scripts/unix/settings.sh.
-if defined MIXAR_UPSTREAM_DIR (
-    set "UPSTREAM_DIR=%MIXAR_UPSTREAM_DIR%"
-) else (
-    set "UPSTREAM_DIR=%ROOT_DIR%\upstream"
-    if not exist "%ROOT_DIR%\upstream\CMakeLists.txt" (
-        for /f "usebackq delims=" %%g in (`git -C "%ROOT_DIR%" rev-parse --path-format=absolute --git-common-dir 2^>nul`) do (
-            for %%m in ("%%g\..") do (
-                if exist "%%~fm\upstream\CMakeLists.txt" (
-                    set "UPSTREAM_DIR=%%~fm\upstream"
-                    echo Worktree checkout: sharing upstream from main checkout: %%~fm\upstream 1>&2
-                )
-            )
-        )
-    )
-)
+set "UPSTREAM_DIR=%ROOT_DIR%\upstream"
 
 REM Platform-specific settings
 set "PLATFORM=Windows"

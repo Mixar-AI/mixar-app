@@ -114,10 +114,9 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Track active tab for operator state
-        if hasattr(scene, 'mixie_moodboard_sidebar'):
-            scene.mixie_moodboard_sidebar.active_tab = 'SEGMENTATION'
-            scene.mixie_moodboard_sidebar.segmentation_subtab = 'SEGMENT_TO_3D'
+        # Surface the Scene Gen tab's Segments to 3D mode
+        from ..sidebar_ui_helpers import focus_scene_gen_segments
+        focus_scene_gen_segments(context)
 
         # Find the selected image
         selected_idx = -1
@@ -318,10 +317,9 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Track active tab for operator state
-        if hasattr(scene, 'mixie_moodboard_sidebar'):
-            scene.mixie_moodboard_sidebar.active_tab = 'SEGMENTATION'
-            scene.mixie_moodboard_sidebar.segmentation_subtab = 'SEGMENT_TO_3D'
+        # Surface the Scene Gen tab's Segments to 3D mode
+        from ..sidebar_ui_helpers import focus_scene_gen_segments
+        focus_scene_gen_segments(context)
 
         # Find the selected image
         selected_idx = -1
