@@ -36,7 +36,9 @@ from .moodboard_enum_callbacks import (
     _get_imagegen_aspect_ratio_items,
     _get_imagegen_resolution_items,
     _on_model_changed,
-    _get_model_3d_items,
+    _get_model_3d_items,  # noqa: F401 — legacy fallback, kept importable
+    _get_model_gen_mode_items,
+    _get_model_gen_model_items,
 )
 
 
@@ -234,7 +236,7 @@ class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
 
 
 class MixieMoodboardTabImageTo3DProps(PropertyGroup):
-    """Properties for Image to 3D tab"""
+    """Properties for the Model Gen (Image to 3D) tab"""
 
     prompt: StringProperty(
         name="Prompt",
@@ -242,6 +244,15 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         default="",
         maxlen=2048,
         options={'TEXTEDIT_UPDATE'},
+    )
+
+    # Generation mode = catalog service of capability "model_gen"
+    # (Image to 3D / Image to 3D Pro / Rapid 3D)
+    mode: EnumProperty(
+        name="Mode",
+        description="3D generation mode",
+        items=_get_model_gen_mode_items,
+        update=_on_model_changed,
     )
 
     # Toggle between uploaded image (OFF) and selected moodboard image (ON)
@@ -259,11 +270,13 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         description="Uploaded image for 3D model generation (used when toggle is OFF)"
     )
 
-    # Dynamic model enum from cache
+    # Dynamic model enum — models of the selected mode (catalog), falling
+    # back to the legacy model_3d cache when the catalog isn't loaded.
     model: EnumProperty(
         name="Model",
         description="AI model for 3D generation",
-        items=_get_model_3d_items,
+        items=_get_model_gen_model_items,
+        update=_on_model_changed,
     )
 
 
