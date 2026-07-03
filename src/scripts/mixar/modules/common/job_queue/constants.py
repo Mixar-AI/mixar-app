@@ -24,9 +24,13 @@ FEATURE_HUNYUAN_UV = "hunyuan_uv"
 FEATURE_MODEL_3D = "model_3d"
 FEATURE_IMAGEGEN = "imagegen"
 FEATURE_LOOKDEV360 = "lookdev360"
+FEATURE_SCENE_GEN = "scene_gen"
 FEATURE_MESH_SEGMENT = "mesh_segment"
 FEATURE_SCENE_RECON = "scene_recon"
 FEATURE_MATGEN = "matgen"
+FEATURE_BRUSH_GEN = "brush_gen"
+FEATURE_LOOKDEV = "lookdev"
+FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
 
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
@@ -45,8 +49,12 @@ __all__ = (
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
     "FEATURE_LOOKDEV360",
+    "FEATURE_SCENE_GEN",
     "FEATURE_MESH_SEGMENT",
     "FEATURE_SCENE_RECON",
     "FEATURE_MATGEN",
+    "FEATURE_BRUSH_GEN",
+    "FEATURE_LOOKDEV",
+    "FEATURE_SCENE_GEN_EXP_LABELS",
     "LOG_PREFIX",
 )

@@ -180,6 +180,16 @@ def configure_basic_workspace_chrome() -> None:
                         space.show_region_header = True
                     if not space.show_region_tool_header:
                         space.show_region_tool_header = True
+                    # Zen Mode keeps the viewport clean: relationship lines
+                    # are off by default. Same idempotent guard as above so we
+                    # don't trigger redraws that would close the splash.
+                    if space.overlay.show_relationship_lines:
+                        space.overlay.show_relationship_lines = False
+                    # Extras must stay ON: hiding them also hides cameras
+                    # and lights, not just empties/guides. Force it back on
+                    # for workspaces saved while a past build disabled it.
+                    if not space.overlay.show_extras:
+                        space.overlay.show_extras = True
 
 
 def apply_ui_mode(mode: str) -> bool:
