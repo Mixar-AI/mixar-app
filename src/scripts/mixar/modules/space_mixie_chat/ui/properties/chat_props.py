@@ -410,7 +410,6 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks and assistance", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
-            ('ASK', "Ask", "Ask questions and get answers", 'ASK', 2),
         ],
         default='AGENT',
     )
@@ -552,7 +551,6 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate content", 'GENERATE', 1),
-            ('ASK', "Ask", "Ask questions", 'ASK', 2),
         ],
         default='AGENT',
     )

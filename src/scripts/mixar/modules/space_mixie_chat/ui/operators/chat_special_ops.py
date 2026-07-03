@@ -175,7 +175,7 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
 
     mode: StringProperty(
         name="Mode",
-        description="The chat mode to switch to (AGENT, GENERATE, ASK)",
+        description="The chat mode to switch to (AGENT, GENERATE)",
         default="",
     )
 
@@ -190,7 +190,7 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
             return {'CANCELLED'}
 
         # Set the chat mode if provided
-        if self.mode and self.mode in {'AGENT', 'GENERATE', 'ASK'}:
+        if self.mode and self.mode in {'AGENT', 'GENERATE'}:
             context.scene.mixie_chat_mode = self.mode
 
         # Set the generate type if provided (only applies when mode is GENERATE)

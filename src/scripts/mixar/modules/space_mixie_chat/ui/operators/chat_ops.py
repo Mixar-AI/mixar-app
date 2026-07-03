@@ -6,7 +6,7 @@
 """
 Mixie Chat Send Message Operator
 
-Core send-message operator for Agent/Ask modes with HTTP/SSE streaming.
+Core send-message operator for Agent mode with HTTP/SSE streaming.
 Generate mode is delegated to generate_ops.py.
 """
 
@@ -318,17 +318,14 @@ class MIXIE_CHAT_OT_send_message(Operator):
             # Normal message: start new session stream
             session_id = session.start_session(scene, message_text)
 
-            is_ask_mode = scene.mixie_chat_mode == 'ASK'
-            plan_enabled = getattr(scene, 'mixie_chat_plan_enabled', True)
-            plan_required = (not is_ask_mode) and plan_enabled
-            execution_required = not is_ask_mode
+            plan_required = getattr(scene, 'mixie_chat_plan_enabled', True)
 
             success = sse_handler.start_stream(
                 message=message_text,
                 instance_id=ws_client.connection_id,
                 session_id=session_id,
                 plan_required=plan_required,
-                execution_required=execution_required,
+                execution_required=True,
                 approval_required=True,
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
