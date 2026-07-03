@@ -329,11 +329,13 @@ class MBrushGenRefreshModels(Operator):
 
     def execute(self, context):
         try:
-            from mixar.bootstrap.imagegen_cache import refresh_imagegen_cache
-            refresh_imagegen_cache()
+            from mixar.bootstrap.generation_catalog_cache import (
+                refresh_generation_catalog_cache,
+            )
+            refresh_generation_catalog_cache()
             self.report({'INFO'}, "Refreshing models...")
         except ImportError:
-            self.report({'ERROR'}, "ImageGen cache module not available")
+            self.report({'ERROR'}, "Generation catalog module not available")
             return {'CANCELLED'}
         return {'FINISHED'}
 
