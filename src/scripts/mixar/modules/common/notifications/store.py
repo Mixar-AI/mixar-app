@@ -45,6 +45,7 @@ class NotificationItem:
     action_url: Optional[str] = None
     actions: List[NotificationAction] = field(default_factory=list)
     server_id: Optional[int] = None
+    dismissible: bool = True
     created_at: float = field(default_factory=time.time)
 
     @property
@@ -111,6 +112,7 @@ class NotificationStore:
         actions: Optional[List[NotificationAction]] = None,
         ttl_ms: Optional[int] = None,
         id: Optional[Union[str, int]] = None,
+        dismissible: bool = True,
     ) -> str:
         """Add a notification and ensure the toast timer is running.
 
@@ -123,6 +125,9 @@ class NotificationStore:
             actions: Optional list of NotificationAction for button rendering.
             ttl_ms: Explicit TTL override; if None, derived from priority.
             id: Optional unique id (str or int); auto-generated if omitted.
+            dismissible: When False the toast renders without a close button
+                and UI clicks cannot dismiss it (programmatic ``dismiss()``
+                still works) — used for forced updates.
 
         Returns:
             The notification id (as string).
@@ -145,6 +150,7 @@ class NotificationStore:
             action_url=action_url,
             actions=actions or [],
             server_id=id if isinstance(id, int) else None,
+            dismissible=dismissible,
         )
 
         with self._lock:
