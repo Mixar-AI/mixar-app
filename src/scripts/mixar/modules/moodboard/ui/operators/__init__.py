@@ -20,6 +20,7 @@ from . import (
     image_to_3d_ops,
     image_to_3d_reference_ops,
     mesh_segment_ops,
+    model_gen_ops,
     scene_recon_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,
@@ -38,6 +39,7 @@ modules = (
     image_to_3d_ops,
     image_to_3d_reference_ops,
     mesh_segment_ops,
+    model_gen_ops,
     scene_recon_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,

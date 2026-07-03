@@ -18,7 +18,6 @@ make install       # Install Python packages into embedded Blender Python
 ### How the Build Works
 - `scripts/unix/build.sh` orchestrates the build
 - `scripts/unix/overlay.sh` copies `/src` onto `/source` (Blender upstream)
-- **Git worktrees build out of the box**: `upstream/` is a multi-GB submodule that linked worktrees don't carry, so `settings.sh` falls back to the main checkout's `upstream/` (read-only rsync source; warns if the shared tree isn't at the commit the branch pins). Override with `MIXAR_UPSTREAM_DIR`. Each worktree still assembles its own `source/` and `build/` — never share those.
 - Config loaded from `.env` → env vars via `scripts/unix/settings.sh` → `scripts/generate_config.py` generates runtime `mixar.json` into the app bundle
 - C++ env header auto-generated at `source/creator/mixar_env_config.h`
 - Python build-frozen env marker auto-generated at `source/scripts/mixar/config/_build_env.py` (gates `get_dev_bypass_credentials`; `DEV_BYPASS_ALLOWED=True` only when `MIXAR_ENV=Dev`). Setting `DEV_BYPASS_*` env vars with `MIXAR_ENV != Dev` aborts the build.
@@ -106,9 +105,9 @@ src/
 | **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |
 | **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, supervised headless sandbox script execution with Windows-safe parent liveness checks, markdown rendering |
 | **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. |
-| **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. |
+| **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. The **Image Gen tab** is catalog-driven: model/style dropdowns source `generation_catalog_cache`, settings past style/model render via `generation_params.draw_service_params()`, and the generate operator builds `payload["params"]` from `collect_params("image_gen", model)` — legacy `imagegen_cache`/hardcoded enums remain as the offline/pre-auth fallback (other tabs are still hardcoded, migration pending). |
 | **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines via the Topology "Model" dropdown: **Hunyuan** (backend service `retopology`) and **Tripo** (v2.0 `mesh/decimate`, backend service `retopology_tripo`). Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
-| **common** | Shared API clients (12 services), WebSocket infrastructure, notifications, versioning, updates |
+| **common** | Shared API clients (13 services), WebSocket infrastructure, notifications, versioning, updates, and `generation_params/` — the schema-driven parameter engine (see Generation Catalog section) |
 | **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
 | **asset_search** | Neural embedding-based asset library search and training |
 | **mesh_segment** | UV mesh segmentation via SAM-based API |
@@ -139,6 +138,16 @@ All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush ge
 **Per-feature enqueue helpers** (build payloads + fan-out, then call `enqueue_generation()`): `moodboard/core/generation_enqueue.py` (Pro, scene gen HP/LP), `hunyuan/core/{retopology,uv,part}_enqueue.py`. Operators call these or `enqueue_generation()` directly — **do not** create new Job subclasses for standard features. `retopology_enqueue.py` branches on the Topology `model` prop: Hunyuan → `service=retopology, model=hunyuan_topology`; Tripo → `service=retopology_tripo, model=tripo_v2` with a `tripo_params` payload (`face_limit`/`quad`/`bake`), a 150 MB export cap, and an import hook that renames to `*_low` and only Smart-UV-unwraps when `bake=false`.
 
 **Genuinely unique jobs keep their own queue files** (custom polling/result handling): `lookdev360_queue.py` (PBR textures → fill layers), `scene_recon_queue.py` (progressive 2-phase), `scene_gen_exp_labels_queue.py` (label extraction), `mesh_segment_queue.py` (inline JSON → vertex groups), `matgen_queue.py` (inline script → procedural material).
+
+---
+
+## Generation Catalog & Dynamic Params
+
+Foundation for the DB-driven moodboard tabs (Stage 1: Image Gen tab only; other tabs still hardcoded).
+
+- **`bootstrap/generation_catalog_cache.py`** — caches `GET /api/v1/generation-catalog` (capabilities → services → models → parameter schemas, plus styles and credit costs). Mirrors the `imagegen_cache` architecture (2s-delayed background fetch, lock-guarded state, logout clear, manual refresh) and adds ETag/`If-None-Match` revalidation plus disk persistence (`generation_catalog.json` in `bpy.utils.user_resource('DATAFILES', path='mixar')`) so panels render instantly from stale cache on launch. Typed accessors: `get_capabilities/get_services(capability, surface)/get_models/get_model/get_styles/get_credit_cost/is_loaded` + enum-item helpers with LOADING/ERROR placeholders. Services carry `surface` (`moodboard`|`paint`) — paint-only services must never appear in moodboard tabs.
+- **`modules/common/generation_params/`** — schema-driven parameter engine: dynamically builds one PropertyGroup per (service, model) from catalog schemas, attached to **WindowManager** pointers (not Scene) so re-registration on catalog change is safe (no .blend/undo persistence; rebuilds run on a main-thread timer scheduled by the cache). `draw_service_params(layout, service, model)` renders widgets by schema `widget` kind honoring `order`/`group`/`visible`/`visible_if`; `collect_params(service, model)` returns visible params as a typed plain dict for payloads. Never hardcode param names here — key sets change from the DB without client releases. Design rationale in `core/engine.py` docstring.
+- **Legacy caches** `bootstrap/imagegen_cache.py` / `model_3d_cache.py` stay for now — they are the offline/pre-auth fallback and still have consumers (space_mixie popup, model 3D tab).
 
 ---
 

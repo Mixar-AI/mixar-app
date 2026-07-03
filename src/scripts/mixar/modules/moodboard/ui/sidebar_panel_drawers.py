@@ -80,8 +80,18 @@ def _draw_imagegen(layout, context):
     draw_dropdown(row, tab, "model", text="Model")
     row.operator("mixie.imagegen_refresh", text="", icon='FILE_REFRESH')
 
-    draw_dropdown(col, tab, "aspect_ratio", text="Aspect Ratio")
-    draw_dropdown(col, tab, "resolution", text="Resolution")
+    # Remaining params come from the catalog-driven parameter engine.
+    # When the catalog isn't loaded (offline / pre-auth) fall back to the
+    # legacy hardcoded enum properties so the tab never goes blank.
+    drew_catalog_params = False
+    try:
+        from mixar.modules.common.generation_params import draw_service_params
+        drew_catalog_params = draw_service_params(col, "image_gen", tab.model)
+    except Exception:
+        drew_catalog_params = False
+    if not drew_catalog_params:
+        draw_dropdown(col, tab, "aspect_ratio", text="Aspect Ratio")
+        draw_dropdown(col, tab, "resolution", text="Resolution")
 
     # --- Generate ---
     draw_generate_footer(layout, context, "mixie.imagegen_generate", "imagegen",
@@ -160,11 +170,23 @@ def _draw_lookdev360(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# Image to 3D
+# Model Gen (Image to 3D / Image to 3D Pro / Rapid 3D)
 # ---------------------------------------------------------------------------
 
 def _draw_image_to_3d(layout, context):
-    """Draw Image to 3D panel with subtabs (Basic / Pro)."""
+    """Draw the Model Gen panel.
+
+    Catalog-driven consolidated UI (mode selector) when the generation
+    catalog is loaded; the legacy Basic/Pro subtab UI otherwise so the tab
+    never goes blank offline / pre-auth.
+    """
+    from .model_gen_drawer import _draw_model_gen, _model_gen_catalog_ready
+
+    if _model_gen_catalog_ready():
+        _draw_model_gen(layout, context)
+        return
+
+    # --- Legacy fallback (catalog not loaded) ---
     scene = context.scene
     sidebar = scene.mixie_moodboard_sidebar
 

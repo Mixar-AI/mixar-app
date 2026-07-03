@@ -13,7 +13,22 @@ on PropertyGroup class definitions.
 
 
 def _get_imagegen_model_items(self, context):
-    """Dynamic callback for model enum items from cache."""
+    """Dynamic callback for model enum items.
+
+    Sources the unified generation catalog first; falls back to the legacy
+    imagegen cache, then to hardcoded items (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items as get_catalog_model_items,
+            is_loaded,
+        )
+        if is_loaded():
+            items = get_catalog_model_items("image_gen")
+            if items:
+                return items
+    except Exception:
+        pass
     try:
         from mixar.bootstrap.imagegen_cache import get_model_enum_items
         items = get_model_enum_items(self, context)
@@ -28,7 +43,22 @@ def _get_imagegen_model_items(self, context):
 
 
 def _get_imagegen_style_items(self, context):
-    """Dynamic callback for style enum items from cache."""
+    """Dynamic callback for style enum items.
+
+    Sources the unified generation catalog first; falls back to the legacy
+    imagegen cache, then to hardcoded items (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_style_enum_items as get_catalog_style_items,
+            is_loaded,
+        )
+        if is_loaded():
+            items = get_catalog_style_items("image")
+            if items:
+                return items
+    except Exception:
+        pass
     try:
         from mixar.bootstrap.imagegen_cache import get_style_enum_items
         items = get_style_enum_items(self, context)
@@ -95,3 +125,48 @@ def _get_model_3d_items(self, context):
             ("trellis-1", "Trellis 1.0", "Trellis generation model"),
             ("meshy-6", "Meshy 6", "Meshy v6 generation model"),
         ]
+
+
+def _get_model_gen_mode_items(self, context):
+    """Dynamic callback for Model Gen mode (service) enum items.
+
+    Sources the unified generation catalog (capability ``model_gen``);
+    falls back to the single legacy model_3d mode (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import is_loaded
+        from mixar.modules.common.generation_params import (
+            get_service_enum_items,
+        )
+        if is_loaded():
+            items = get_service_enum_items("model_gen")
+            if items:
+                return items
+    except Exception:
+        pass
+    return [("model_3d", "Image to 3D", "Convert an image to a 3D model")]
+
+
+def _get_model_gen_model_items(self, context):
+    """Dynamic callback for Model Gen model enum items.
+
+    Models of the currently selected mode (service) from the catalog;
+    falls back to the legacy model_3d cache items (offline / pre-auth).
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items as get_catalog_model_items,
+            is_loaded,
+        )
+        from mixar.modules.common.generation_params import resolve_service_key
+        if is_loaded():
+            service_key = resolve_service_key(
+                "model_gen", getattr(self, "mode", "")
+            )
+            if service_key:
+                items = get_catalog_model_items(service_key)
+                if items:
+                    return items
+    except Exception:
+        pass
+    return _get_model_3d_items(self, context)
