@@ -38,36 +38,6 @@ def _get_lookdev360_props(scene):
     return None
 
 
-# Placeholder enum ids that are never real catalog model slugs.
-_PLACEHOLDERS = ("LOADING", "ERROR", "NONE", "")
-
-
-def _resolve_catalog_settings(props):
-    """(model_slug, resolution) from the generation catalog, when loaded.
-
-    The tab's model dropdown wins when it names a valid ``pbr_gen`` model;
-    otherwise the catalog default. Resolution comes from the model's
-    schema-driven param group. Returns ("", None) when the catalog isn't
-    loaded so the caller falls back to the legacy hardcoded enum.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_default_model_slug, get_model,
-        )
-        from mixar.modules.common.generation_params import collect_params
-
-        slug = getattr(props, 'model', '') if props else ''
-        if slug in _PLACEHOLDERS or get_model("pbr_gen", slug) is None:
-            slug = get_default_model_slug("pbr_gen") or ""
-        if not slug:
-            return "", None
-        params = collect_params("pbr_gen", slug)
-        resolution = params.get("resolution")
-        return slug, (int(resolution) if resolution is not None else None)
-    except Exception:
-        return "", None
-
-
 class MIXIE_OT_lookdev360_generate(Operator):
     """Generate PBR textures from selected objects using AI"""
 
@@ -182,10 +152,9 @@ class MIXIE_OT_lookdev360_generate(Operator):
             except Exception as e:
                 logger.error("Failed to convert image: %s", e)
 
-        # Step 4b: Get model + resolution — schema-driven from the catalog
-        # when loaded, legacy hardcoded enum otherwise.
-        model_slug, resolution = _resolve_catalog_settings(props)
-        if resolution is None and props:
+        # Step 4b: Get resolution setting
+        resolution = None
+        if props:
             res_str = getattr(props, 'resolution', '1024')
             try:
                 resolution = int(res_str)
@@ -208,7 +177,6 @@ class MIXIE_OT_lookdev360_generate(Operator):
                 prompt=prompt.strip(),
                 mesh_bytes_b64=_b64.b64encode(mesh_bytes).decode(),
                 mesh_filename="model.obj",
-                model=model_slug or "hunyuan-pbr",
                 resolution=resolution,
                 style_image_bytes_b64=(
                     _b64.b64encode(style_image_bytes).decode() if style_image_bytes else None
