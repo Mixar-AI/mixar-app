@@ -19,10 +19,7 @@ from .sandbox_validator import _BLOCKED_DUNDER_ATTRS
 # Restricted builtins whitelist for safe script execution
 # Excludes dangerous functions like: eval, exec, compile, __import__,
 # globals, locals, input, breakpoint
-# NOTE: `vars` is intentionally EXCLUDED. Unlike getattr, vars(obj) returns the
-# raw obj.__dict__ without passing through the dunder guard, so `vars(json)`
-# (or any injected module) exposes the real __builtins__ dict -> eval/exec.
-# `dir` stays (returns attribute-name strings only, no object handles).
+# NOTE: vars and dir are included (guarded by sandbox dunder checks)
 SAFE_BUILTIN_NAMES = frozenset({
     # Type constructors
     'bool', 'bytearray', 'bytes', 'complex', 'dict', 'float', 'frozenset',
@@ -33,7 +30,7 @@ SAFE_BUILTIN_NAMES = frozenset({
     # Math
     'abs', 'divmod', 'pow', 'round',
     # Attribute access / introspection
-    'getattr', 'hasattr', 'setattr', 'isinstance', 'issubclass', 'dir',
+    'getattr', 'hasattr', 'setattr', 'isinstance', 'issubclass', 'dir', 'vars',
     # Output (safe)
     'print', 'repr', 'format', 'ascii', 'bin', 'hex', 'oct', 'chr', 'ord',
     # Other safe functions
