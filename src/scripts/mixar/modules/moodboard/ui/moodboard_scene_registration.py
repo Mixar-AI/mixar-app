@@ -44,7 +44,6 @@ from .moodboard_properties import (
 )
 from .moodboard_tab_properties import (
     MixieMoodboardReferenceImage,
-    MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabImageGenProps,
     MixieMoodboardTabLookdevProps,
     MixieMoodboardTabLookdev360Props,
@@ -68,7 +67,6 @@ classes = (
     MixieMoodboardImage,
     MixieMoodboardGroup,
     MixieMoodboardReferenceImage,
-    MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabImageGenProps,
     MixieMoodboardTabLookdevProps,
     MixieMoodboardTabLookdev360Props,
