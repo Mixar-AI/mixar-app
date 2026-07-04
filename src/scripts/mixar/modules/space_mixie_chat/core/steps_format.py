@@ -253,7 +253,6 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = 
     prefers a real backend tool name, then the script-inferred action, then a
     generic placeholder the result counts will refine on finish.
     """
-    was_empty = len(bubble.step_items) == 0
     row = bubble.step_items.add()
     row.item_id = request_id or ""
     row.kind = infer_step_kind(tool_name)
@@ -266,10 +265,6 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = 
     row.target = ""
     row.detail = ""
     row.status = "RUNNING"
-    if was_empty and hasattr(bubble, "steps_collapsed"):
-        # Expanded by default so the per-tool notes appear progressively as the
-        # agent works; the user can collapse via the header.
-        bubble.steps_collapsed = False
     _refresh_summary(bubble)
 
 

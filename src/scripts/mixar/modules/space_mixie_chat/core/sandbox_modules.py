@@ -11,64 +11,15 @@ only exposes a safe subset of the original module's API, with
 dangerous operations either blocked or restricted to the temp directory.
 
 Blocked capabilities:
-- os: environ, exec*, popen, chmod, chown, and all other unsafe functions
+- os / pathlib: NOT exposed at all -- the real modules grant os.system,
+  os.environ, Path.write_text, etc. (a full sandbox escape). A script that
+  imports them is rejected by the restricted __import__ in executor.py.
 - tempfile: NamedTemporaryFile, mkdtemp, and all creation functions
 - base64: only b64encode and b64decode are allowed
 - open(): write mode restricted to temp directory only
 """
 
 import builtins
-
-
-class _RestrictedOsPath:
-    """Restricted os.path exposing only safe path inspection functions."""
-
-    def __init__(self):
-        import os.path as _osp
-        self.join = _osp.join
-        self.exists = _osp.exists
-        self.basename = _osp.basename
-        self.dirname = _osp.dirname
-        self.splitext = _osp.splitext
-        self.isfile = _osp.isfile
-        self.isdir = _osp.isdir
-
-    def __getattr__(self, name):
-        raise AttributeError(
-            f"os.path.{name} is not available in the sandbox. "
-            f"Allowed: join, exists, basename, dirname, splitext, isfile, isdir"
-        )
-
-
-class RestrictedOs:
-    """Restricted os module: only safe path ops and temp-file removal."""
-
-    def __init__(self):
-        import os as _os
-        import os.path as _osp
-        import tempfile as _tf
-        self.path = _RestrictedOsPath()
-        self._real_remove = _os.remove
-        # realpath so the prefix matches realpath'd targets (on macOS /var is a symlink
-        # to /private/var, so an un-normalized prefix never matches and every temp op fails)
-        self._temp_prefix = _osp.realpath(_tf.gettempdir())
-
-    def remove(self, path: str) -> None:
-        """Only allow removing files inside the system temp directory."""
-        import os.path as _osp
-        real = _osp.realpath(str(path))
-        if not real.startswith(self._temp_prefix):
-            raise PermissionError(
-                f"os.remove() is restricted to temp directory. "
-                f"Cannot remove: {path}"
-            )
-        self._real_remove(real)
-
-    def __getattr__(self, name):
-        raise AttributeError(
-            f"os.{name} is not available in the sandbox. "
-            f"Allowed: os.path.*, os.remove (temp dir only)"
-        )
 
 
 class RestrictedTempfile:
@@ -205,7 +156,6 @@ class RestrictedUrllib:
 
 
 # Singleton instances (created once at module load)
-RESTRICTED_OS = RestrictedOs()
 RESTRICTED_TEMPFILE = RestrictedTempfile()
 RESTRICTED_BASE64 = RestrictedBase64()
 RESTRICTED_URLLIB = RestrictedUrllib()

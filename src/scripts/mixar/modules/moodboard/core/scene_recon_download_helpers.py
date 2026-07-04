@@ -14,10 +14,6 @@ from typing import Optional, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.job_queue.core.model_io import (
-    new_object_names,
-    snapshot_object_uids,
-)
 from .scene_recon_constants import MAX_CONCURRENT_DOWNLOADS
 
 logger = get_logger(__name__)
@@ -132,7 +128,7 @@ def try_import_next(job) -> None:
                 del job._downloaded_glbs[obj_id]
                 if job._on_object_ready:
                     try:
-                        before = snapshot_object_uids()
+                        before = set(o.name for o in bpy.data.objects)
                         job._on_object_ready(glb_bytes, pose_data, obj_id, label)
                         _capture_new_objects(job, before)
                     except Exception as e:
@@ -144,7 +140,7 @@ def try_import_next(job) -> None:
                     del job._downloaded_glbs[obj_id]
                     if job._on_object_ready:
                         try:
-                            before = snapshot_object_uids()
+                            before = set(o.name for o in bpy.data.objects)
                             job._on_object_ready(glb_bytes, pose_data, obj_id, label)
                             _capture_new_objects(job, before)
                         except Exception as e:
@@ -157,12 +153,8 @@ def try_import_next(job) -> None:
 
 
 def _capture_new_objects(job, before: set) -> None:
-    """Record names of objects created by the import callback.
-
-    *before* is a ``snapshot_object_uids()`` set — diffing by session_uid
-    (and skipping undecodable names) so one object with invalid UTF-8 in
-    its name can't fail every import.
-    """
-    new_names = sorted(new_object_names(before))
+    """Record names of objects created by the import callback."""
+    after = set(o.name for o in bpy.data.objects)
+    new_names = sorted(after - before)
     if new_names:
         job._imported_names.extend(new_names)
