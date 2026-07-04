@@ -147,45 +147,25 @@ def cleanup():
 
 
 # ---------------------------------------------------------------------------
-# Slide-in redraw burst
+# Slide-in kick-off
 # ---------------------------------------------------------------------------
-# The C++ side animates a 0.25s slide-in when a new bubble appears, advancing
-# it per draw and tagging its own region for redraw. But a tag from inside a
-# draw callback does NOT wake Blender's idle event loop — with no input
-# events, the next draw only happens on the next timer tick (~250ms), so the
-# slide renders ~2 frames and looks stuck. This short ~60fps timer burst
-# wakes the loop for the animation window so the slide gets real frames.
-
-SLIDE_REDRAW_INTERVAL = 1.0 / 60.0
-SLIDE_REDRAW_DURATION = 0.35  # covers the 0.25s slide with margin
-_slide_burst_until = 0.0
-_slide_burst_active = False
-
-
-def _slide_redraw_burst():
-    global _slide_burst_active
-    try:
-        from .ui_utils import redraw_chat_areas
-        redraw_chat_areas()
-    except Exception:
-        _slide_burst_active = False
-        return None
-    if time.monotonic() >= _slide_burst_until:
-        _slide_burst_active = False
-        return None
-    return SLIDE_REDRAW_INTERVAL
+# The C++ side animates a 0.25s slide-in when a new bubble appears. Animation
+# FRAMES are delivered natively by the C++ animation pump (a TIMERNOTIFIER
+# wmTimer in mixie_chat_main_region.cc) — this function only guarantees the
+# FIRST draw happens right after the message is added, which is the draw that
+# detects the new message, starts the slide, and spins the pump up.
+#
+# Historical note: this used to be a ~60fps bpy.app.timers redraw burst. That
+# frame pump was fragile (starved behind main-thread work, capped at 0.35s,
+# and each tick scheduled bubble-resize sync work — see the post-submit-hang
+# incident). Do NOT reintroduce a Python frame pump here; the C++ pump owns
+# frame delivery.
 
 
 def start_slide_redraw_burst():
-    """Drive ~60fps chat redraws briefly after a new bubble is added."""
-    global _slide_burst_until, _slide_burst_active
-    _slide_burst_until = time.monotonic() + SLIDE_REDRAW_DURATION
-    if _slide_burst_active:
-        return
-    _slide_burst_active = True
+    """Tag the chat surfaces once so the slide-in's first frame draws now."""
     try:
-        bpy.app.timers.register(
-            _slide_redraw_burst, first_interval=SLIDE_REDRAW_INTERVAL
-        )
+        from .ui_utils import _tag_chat_and_bubble_areas
+        _tag_chat_and_bubble_areas()
     except Exception:
-        _slide_burst_active = False
+        pass

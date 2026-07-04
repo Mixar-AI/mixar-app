@@ -2,24 +2,16 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Generic Blender-side model I/O and queue pacing helpers.
+"""
+Hunyuan 3D -- Helper Functions
 
-Provider-agnostic plumbing shared by the queue engine and feature
-operators (moved out of ``modules/hunyuan/core/hunyuan_helpers.py`` —
-it never contained vendor logic, only Blender-session work the backend
-cannot do):
-
+Pure utility functions used by operators and callbacks:
 - get_poll_interval: progressive poll timing
-- redraw_3d_views: force viewport redraws
-- get_total_face_count: sum selected mesh faces
-- export_selected_mesh: export selection to bytes for upload
-- download_file: download a result URL to a temp file (background-safe)
+- _redraw_3d_views: force viewport redraws
+- _get_total_face_count: sum selected mesh faces
+- export_selected_mesh: export selection to temp file
+- download_file: download a URL to a temp file (safe for background threads)
 - import_file: import a downloaded file into Blender (main thread only)
-- post_import_rename_and_setup: rename/origin/UV cleanup after import
-
-Deliberately imports nothing from the queue core so ``queue_manager``
-can depend on it without cycles (``helpers.py`` is the image-side
-counterpart but sits above ``queue_manager``).
 """
 
 import os
@@ -54,7 +46,7 @@ def get_poll_interval(poll_count):
 # ============================================================================
 
 
-def redraw_3d_views():
+def _redraw_3d_views():
     """Force redraw of all 3D viewports and MIXIE areas."""
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
@@ -67,7 +59,7 @@ def redraw_3d_views():
 # ============================================================================
 
 
-def get_total_face_count(context):
+def _get_total_face_count(context):
     """Get total face count of all selected mesh objects."""
     total = 0
     for obj in context.selected_objects:
@@ -80,7 +72,7 @@ def export_selected_mesh(context, format="GLB"):
     """Export selected mesh objects to temp file. Returns (bytes, filename)."""
     ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
     ext = ext_map[format]
-    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="hunyuan_export_")
     os.close(fd)
 
     selected = [o for o in context.selected_objects if o.type == 'MESH']
@@ -109,44 +101,6 @@ def export_selected_mesh(context, format="GLB"):
 
 
 # ============================================================================
-# SAFE OBJECT-DIFF SNAPSHOTS
-# ============================================================================
-# Reading obj.name raises UnicodeDecodeError when a scene object carries
-# invalid UTF-8 bytes in its name (e.g. a binary file once fed to the OBJ
-# importer). Diffing by session_uid never touches names, so one poisoned
-# object can't fail every subsequent import in the session.
-
-
-def snapshot_object_uids():
-    """Session-uid snapshot of bpy.data.objects (never reads names)."""
-    return {o.session_uid for o in bpy.data.objects}
-
-
-def new_object_names(before):
-    """Names of objects created since *before* (a snapshot_object_uids()
-    set).
-
-    Any object whose name can't be decoded — new or pre-existing — is
-    renamed in place to a readable fallback (renaming never reads the old
-    name), so a previously poisoned scene self-heals on the next import
-    instead of breaking every later name read.
-    """
-    names = []
-    for o in bpy.data.objects:
-        try:
-            name = o.name
-        except UnicodeDecodeError:
-            name = f"recovered_{o.session_uid}"
-            try:
-                o.name = name
-            except Exception:
-                continue  # not renameable (e.g. linked data) — skip
-        if o.session_uid not in before:
-            names.append(name)
-    return names
-
-
-# ============================================================================
 # DOWNLOAD & IMPORT
 # ============================================================================
 
@@ -161,7 +115,7 @@ def download_file(url, file_type="GLB"):
     """
     ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
     ext = ext_map.get(file_type.upper(), ".glb")
-    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_result_")
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="hunyuan_result_")
     os.close(fd)
 
     response = urllib.request.urlopen(url, timeout=HUNYUAN_TIMEOUT)
@@ -184,7 +138,7 @@ def import_file(filepath, file_type="GLB"):
     Returns:
         A comma-separated string of newly imported object names.
     """
-    before = snapshot_object_uids()
+    before = set(o.name for o in bpy.data.objects)
 
     try:
         ft = file_type.upper()
@@ -195,7 +149,9 @@ def import_file(filepath, file_type="GLB"):
         elif ft == "FBX":
             bpy.ops.import_scene.fbx(filepath=filepath)
 
-        new_objects = new_object_names(before)
+        after = set(o.name for o in bpy.data.objects)
+        new_objects = after - before
+
         return ", ".join(new_objects) if new_objects else "Unknown"
     finally:
         # Always unlink the temp file even when the import itself raises,
@@ -286,7 +242,7 @@ def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False):
             bpy.ops.uv.smart_project(angle_limit=1.15192, island_margin=0.02)
             bpy.ops.object.mode_set(mode='OBJECT')
             logger.info(
-                "[ModelIO] Smart UV Project applied to '%s'", target_name
+                "[HunyuanHelpers] Smart UV Project applied to '%s'", target_name
             )
         except Exception as e:
             # Ensure we return to object mode even on failure
@@ -295,10 +251,10 @@ def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False):
             except Exception:
                 pass
             logger.warning(
-                "[ModelIO] Smart UV Project failed for '%s': %s",
+                "[HunyuanHelpers] Smart UV Project failed for '%s': %s",
                 target_name, e,
             )
 
     logger.info(
-        "[ModelIO] Post-import setup complete: '%s'", target_name
+        "[HunyuanHelpers] Post-import setup complete: '%s'", target_name
     )
