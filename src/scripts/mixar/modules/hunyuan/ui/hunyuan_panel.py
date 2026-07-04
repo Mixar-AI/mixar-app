@@ -146,7 +146,8 @@ class MIXIE_PT_hunyuan(Panel):
         for i, mv in enumerate(pro.multi_views):
             row = box.row(align=True)
             row.prop(mv, "view_type", text="")
-            row.prop(mv, "image", text="")
+            # template_ID (not prop) for the image-preview hover tooltip.
+            row.template_ID(mv, "image")
             op_load = row.operator(
                 "mixie.hunyuan_load_image", text="", icon='FILE_FOLDER',
             )
