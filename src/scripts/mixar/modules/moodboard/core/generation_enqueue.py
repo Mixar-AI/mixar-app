@@ -151,24 +151,20 @@ def _build_pro_payload(
     shared: dict,
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
 ) -> tuple:
-    """Build (payload, model_key) for a Pro job.
-
-    Catalog-schema params only — the backend HunyuanAdapter maps them to
-    Tencent SDK keys and derives the Model version from the catalog row
-    (selected here via the model_key slug).
-    """
-    params = {
-        "generate_type": shared.get("generate_type", "Normal"),
-        "enable_pbr": bool(shared.get("enable_pbr", False)),
+    """Build (payload, model_key) for a Pro job."""
+    sdk_params = {
+        "GenerateType": shared.get("generate_type", "Normal"),
+        "Model": shared.get("model_version", "3.0"),
+        "EnablePBR": bool(shared.get("enable_pbr", False)),
     }
     if shared.get("prompt"):
-        params["prompt"] = shared["prompt"]
+        sdk_params["Prompt"] = shared["prompt"]
     if shared.get("face_count") is not None:
-        params["face_count"] = shared["face_count"]
+        sdk_params["FaceCount"] = shared["face_count"]
     if shared.get("polygon_type"):
-        params["polygon_type"] = shared["polygon_type"]
+        sdk_params["PolygonType"] = shared["polygon_type"]
 
-    payload = {"params": params}
+    payload = {"sdk_params": sdk_params}
     if image_bytes:
         payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
         payload["image_filename"] = "image.png"
@@ -243,21 +239,22 @@ def enqueue_scene_gen_hp_jobs(
         if face_count == DEFAULT_FACE_COUNT:
             face_count = None
 
-        params = {
-            "generate_type": shared_params.get("generate_type", "Normal"),
-            "enable_pbr": bool(shared_params.get("enable_pbr", False)),
+        sdk_params = {
+            "GenerateType": shared_params.get("generate_type", "Normal"),
+            "Model": shared_params.get("model_version", "3.0"),
+            "EnablePBR": bool(shared_params.get("enable_pbr", False)),
         }
         if face_count is not None:
-            params["face_count"] = face_count
+            sdk_params["FaceCount"] = face_count
         polygon_type = (
             shared_params.get("polygon_type")
             if shared_params.get("generate_type") == "LowPoly"
             else None
         )
         if polygon_type:
-            params["polygon_type"] = polygon_type
+            sdk_params["PolygonType"] = polygon_type
 
-        payload = {"params": params}
+        payload = {"sdk_params": sdk_params}
         if image_bytes:
             payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
             payload["image_filename"] = "image.png"
@@ -323,15 +320,16 @@ def enqueue_scene_gen_lp_jobs(
                 operator.report({'WARNING'}, msg)
             continue
 
-        params = {"post_process": bool(shared_params.get("post_process", True))}
+        sdk_params = {}
         if shared_params.get("polygon_type"):
-            params["polygon_type"] = shared_params["polygon_type"]
+            sdk_params["PolygonType"] = shared_params["polygon_type"]
         if shared_params.get("face_level"):
-            params["face_level"] = shared_params["face_level"]
+            sdk_params["FaceLevel"] = shared_params["face_level"]
 
         payload = {
-            "params": params,
+            "sdk_params": sdk_params,
             "input_name": obj.name,
+            "post_process": shared_params.get("post_process", True),
             "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
             "file_filename": filename,
         }
