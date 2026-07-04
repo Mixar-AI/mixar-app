@@ -20,7 +20,7 @@ import bpy
 from bpy.props import BoolProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
-from ...core.hunyuan_helpers import _redraw_3d_views
+from mixar.modules.common.job_queue.core.model_io import redraw_3d_views
 from ...constants import HUNYUAN_RAPID_JOB_TYPE, HUNYUAN_RAPID_MODEL
 from mixar.modules.common.utils.mixie_space_utils import (
     get_first_selected_moodboard_image,
@@ -79,7 +79,7 @@ class MIXIE_OT_hunyuan_load_image(Operator):
             props.rapid.image = img
             props.rapid.use_selected_image = False
 
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -100,7 +100,7 @@ class MIXIE_OT_hunyuan_remove_image(Operator):
         elif mode == 'RAPID':
             props.rapid.image = None
 
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -117,7 +117,7 @@ class MIXIE_OT_hunyuan_remove_uploaded_image(Operator):
         uploaded = context.scene.hunyuan.pro.uploaded_images
         if 0 <= self.index < len(uploaded):
             uploaded.remove(self.index)
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -135,7 +135,7 @@ class MIXIE_OT_hunyuan_add_multi_view(Operator):
 
     def execute(self, context):
         context.scene.hunyuan.pro.multi_views.add()
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -152,7 +152,7 @@ class MIXIE_OT_hunyuan_remove_multi_view(Operator):
         mv = context.scene.hunyuan.pro.multi_views
         if 0 <= self.index < len(mv):
             mv.remove(self.index)
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -368,9 +368,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
         sdk_params = {
             "EnablePBR": bool(self.enable_pbr),
             "EnableGeometry": bool(self.enable_geometry),
+            # Always sent, uppercase: Tencent's default when omitted is an
+            # OBJ ZIP archive the client can't import.
+            "ResultFormat": result_format.upper(),
         }
-        if result_format != "glb":
-            sdk_params["ResultFormat"] = result_format
         if has_prompt:
             sdk_params["Prompt"] = prompt
 
@@ -595,10 +596,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
         sdk_params = {
             "EnablePBR": rapid.enable_pbr,
             "EnableGeometry": rapid.enable_geometry,
+            # Always sent, uppercase: Tencent's default when omitted is an
+            # OBJ ZIP archive the client can't import.
+            "ResultFormat": (rapid.result_format or "GLB").upper(),
         }
-        result_format = rapid.result_format
-        if result_format and result_format != "glb":
-            sdk_params["ResultFormat"] = result_format
         prompt_str = rapid.prompt.strip() if has_prompt else ""
         if prompt_str:
             sdk_params["Prompt"] = prompt_str
@@ -698,7 +699,7 @@ class MIXIE_OT_hunyuan_cancel(Operator):
             queue = get_queue(feature_key)
             queue.cancel_all()
 
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
@@ -736,7 +737,7 @@ class MIXIE_OT_hunyuan_dismiss_error(Operator):
         job.error_message = ""
         job.progress = 0.0
 
-        _redraw_3d_views()
+        redraw_3d_views()
         return {'FINISHED'}
 
 
