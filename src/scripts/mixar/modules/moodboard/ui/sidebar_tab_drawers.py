@@ -217,10 +217,7 @@ def _draw_hunyuan_pro(layout, pro, context=None):
     for i, mv in enumerate(pro.multi_views):
         row = col.row(align=True)
         draw_dropdown(row, mv, "view_type", text="")
-        # template_ID (not prop) so hovering an existing image in the
-        # browse dropdown shows Blender's rich preview tooltip — see the
-        # matching note in model_gen_drawer._draw_multi_view_section.
-        row.template_ID(mv, "image")
+        row.prop(mv, "image", text="")
         op_load = row.operator("mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
         op_load.target = "multi_view"
         op_load.multi_view_index = i

@@ -47,13 +47,7 @@ def _draw_multi_view_section(layout, scene):
     for i, mv in enumerate(pro.multi_views):
         row = col.row(align=True)
         draw_dropdown(row, mv, "view_type", text="")
-        # template_ID (not prop) so hovering an existing image in the
-        # browse dropdown shows Blender's rich preview tooltip. A plain
-        # prop() ID search registers no preview-tooltip callback
-        # (ui_but_add_search), whereas template_ID routes through
-        # template_common_search_menu which wires up the image preview
-        # tooltip — the same widget the Image Editor header uses.
-        row.template_ID(mv, "image")
+        row.prop(mv, "image", text="")
         op_load = row.operator(
             "mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
         op_load.target = "multi_view"
