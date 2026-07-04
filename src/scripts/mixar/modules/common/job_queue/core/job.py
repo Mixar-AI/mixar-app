@@ -49,7 +49,13 @@ class Job:
     state: JobState = JobState.PENDING
     error: str = ""
     user_message: str = ""
-    created_at: float = field(default_factory=time.time)
+    # Session-relative clocks (time.monotonic, not epoch) so they survive
+    # being round-tripped through a 32-bit ``bpy.props.FloatProperty`` on
+    # the scene-side mirror. Epoch seconds (~1.75e9) lose ~128 s of
+    # precision when stored as a single-precision float, which corrupted
+    # the queue row's elapsed display before we switched to monotonic.
+    created_at: float = field(default_factory=time.monotonic)
+    finished_at: float = 0.0  # stamped by the mirror sync on first terminal tick
 
     # Backend tracking
     backend_job_id: str = ""
@@ -214,9 +220,9 @@ class Job:
                 if self.queue_position > 0:
                     return f"Queued (#{self.queue_position})"
                 return "Queued"
-            elapsed = int(time.time() - self.poll_start_time) if self.poll_start_time else 0
-            mins, secs = divmod(elapsed, 60)
-            return f"Processing {mins}:{secs:02d}"
+            # No elapsed time here — row 1 of the queue UIList already
+            # shows the job's running clock; a second one is confusing.
+            return "Processing"
         if st == JobState.RUNNING_DOWNLOAD:
             return "Downloading…"
         if st == JobState.SUCCESS:

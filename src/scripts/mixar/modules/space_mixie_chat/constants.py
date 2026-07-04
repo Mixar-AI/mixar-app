@@ -75,8 +75,7 @@ class SessionState(Enum):
     - IDLE: Connected and ready to send messages
     - BUSY: Agent processing request (sending/receiving/executing)
     - MODIFYING: User typing modification feedback
-    - AWAITING_INPUT: Agent paused on a request_user_input question
-      (free-form text, choice buttons, or approval buttons)
+    - AWAITING_INPUT: Agent waiting for user to provide text input
     """
     OFFLINE = "offline"
     CONNECTING = "connecting"
