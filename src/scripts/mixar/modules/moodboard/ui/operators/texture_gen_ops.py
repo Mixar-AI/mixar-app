@@ -72,7 +72,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
         from mixar.modules.common.utils.image_utils import (
             compress_image_for_upload,
         )
-        from mixar.modules.hunyuan.core.hunyuan_helpers import (
+        from mixar.modules.common.job_queue.core.model_io import (
             export_selected_mesh,
         )
 
