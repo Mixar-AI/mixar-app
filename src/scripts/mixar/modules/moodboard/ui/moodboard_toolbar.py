@@ -16,7 +16,7 @@ Left T-panel toolbar with core moodboard actions:
 """
 
 import bpy
-from bpy.types import Panel
+from bpy.types import Menu, Panel
 
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
@@ -31,27 +31,30 @@ _MASK_TOOL_ICONS = {
 _MASK_ICON_DEFAULT = 'MOD_MASK'
 
 
-class MIXIE_PT_add_image_popover(Panel):
+class MIXIE_MT_add_image_menu(Menu):
     """
-    Popover panel with image adding options.
+    Dropdown menu with image-adding options.
     Opened by clicking the Add Image button in the toolbar.
+
+    A Menu (not a popover) so it auto-dismisses the instant an option is
+    picked. Both add operators return RUNNING_MODAL from invoke() (a file
+    browser / a search popup), and a popover lingers behind those modals
+    instead of closing — a menu closes on item-click, before invoke runs.
     """
-    bl_idname = "MIXIE_PT_add_image_popover"
+    bl_idname = "MIXIE_MT_add_image_menu"
     bl_label = "Add Image"
-    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
-    bl_region_type = 'HEADER'
-    bl_ui_units_x = 9
-    bl_options = {'INSTANCED'}
 
     def draw(self, context):
         layout = self.layout
-        col = layout.column(align=True)
-        col.operator(
+        # INVOKE_DEFAULT so each operator's invoke() runs (opening its
+        # file browser / search popup) rather than executing headless.
+        layout.operator_context = 'INVOKE_DEFAULT'
+        layout.operator(
             "mixie.moodboard_add_image",
             text="Open Image",
             icon='FILE_FOLDER',
         )
-        col.operator(
+        layout.operator(
             "mixie.moodboard_add_existing_image",
             text="Add Existing Image",
             icon='IMAGE_DATA',
@@ -140,12 +143,12 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
         col = layout.column(align=True)
 
-        # ── Add Image (popover) ───────────────────────────────────────
+        # ── Add Image (menu) ──────────────────────────────────────────
         row = col.row(align=True)
         row.scale_x = 1.5
         row.scale_y = 1.5
-        row.popover(
-            panel="MIXIE_PT_add_image_popover",
+        row.menu(
+            "MIXIE_MT_add_image_menu",
             text="",
             icon='FILE_FOLDER',
         )
@@ -190,7 +193,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
 # Only include panels if MIXIE space is available
 classes = (
-    MIXIE_PT_add_image_popover,
+    MIXIE_MT_add_image_menu,
     MIXIE_PT_mask_tools_popover,
     MIXIE_PT_moodboard_toolbar,
 ) if MIXIE_SPACE_AVAILABLE else ()

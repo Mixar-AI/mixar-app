@@ -42,7 +42,7 @@ const bTheme U_theme_default = {
       .text = RGBA(0xe6e6e6ff),
       .text_sel = RGBA(0x1d1d1dff),
       .shadedown = -5,
-      .roundness = 0.2f,
+      .roundness = 0.5f,
     },
     .wcol_toolbar_item = {
       .outline = RGBA(0x444447ff),
