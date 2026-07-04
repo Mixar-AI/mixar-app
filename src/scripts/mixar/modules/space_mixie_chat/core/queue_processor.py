@@ -536,7 +536,8 @@ class EventProcessor:
     def _handle_sse_complete_internal(self, scene) -> None:
         """Handle SSE stream completion (called from main thread timer)."""
         # Don't override AWAITING_INPUT or MODIFYING states
-        # (agent is waiting for user to provide text input)
+        # (agent is paused on a question — text, choice, or approval —
+        # so the pill keeps reading "Awaiting input" instead of "Idle")
         current_state = self._session.get_state(scene)
         if current_state not in (SessionState.AWAITING_INPUT, SessionState.MODIFYING):
             logger.info(f"SSE stream complete - returning to IDLE")
