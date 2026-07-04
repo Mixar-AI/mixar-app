@@ -29,11 +29,11 @@ from mixar.modules.common.api.exceptions import (
     ConnectionError as APIConnectionError,
     TimeoutError as APITimeoutError,
 )
-from mixar.modules.hunyuan.core.hunyuan_helpers import (
-    _redraw_3d_views,
+from .model_io import (
     download_file,
     get_poll_interval,
     import_file,
+    redraw_3d_views,
 )
 
 from ..constants import (
@@ -425,7 +425,7 @@ class FeatureQueue:
                 fn(self)
             except Exception as e:
                 logger.warning("%s listener failed: %s", LOG_PREFIX, e)
-        _redraw_3d_views()
+        redraw_3d_views()
 
     def _pump(self) -> None:
         if self._auth_paused or self._pumping:
