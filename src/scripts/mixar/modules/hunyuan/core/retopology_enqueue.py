@@ -23,7 +23,7 @@ from ..constants import (
     RETOPOLOGY_TRIPO_MODEL,
     RETOPOLOGY_TRIPO_SERVICE,
 )
-from mixar.modules.common.job_queue.core.model_io import export_selected_mesh
+from .hunyuan_helpers import export_selected_mesh
 
 logger = get_logger(__name__)
 
@@ -68,9 +68,7 @@ def _retopology_on_imported(job, object_names: str) -> None:
             break
     target = name + "_low"
     try:
-        from mixar.modules.common.job_queue.core.model_io import (
-            post_import_rename_and_setup,
-        )
+        from .hunyuan_helpers import post_import_rename_and_setup
         post_import_rename_and_setup(object_names, target, smart_uv=True)
     except Exception as e:
         logger.warning("[Retopology] post_import_rename_and_setup failed: %s", e)
@@ -97,9 +95,7 @@ def _make_tripo_on_imported(bake: bool):
     def _on_imported(job, object_names: str) -> None:
         target = _strip_high_suffix(job.label) + "_low"
         try:
-            from mixar.modules.common.job_queue.core.model_io import (
-                post_import_rename_and_setup,
-            )
+            from .hunyuan_helpers import post_import_rename_and_setup
             post_import_rename_and_setup(object_names, target, smart_uv=not bake)
         except Exception as e:
             logger.warning("[Retopology/Tripo] post_import_rename_and_setup failed: %s", e)

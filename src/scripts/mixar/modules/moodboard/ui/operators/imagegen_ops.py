@@ -303,9 +303,9 @@ class MIXIE_OT_imagegen_generate(Operator):
         stored_num_images = getattr(scene, "mixie_imagegen_num_images", 1)
 
         # Sidebar context: prefer the catalog-driven parameter engine for
-        # all params (style, aspect_ratio, resolution?, number_of_images,
-        # and any future params). Falls back to the legacy hardcoded
-        # properties when the catalog isn't loaded.
+        # everything beyond style (aspect_ratio, resolution?,
+        # number_of_images, and any future params). Falls back to the
+        # legacy hardcoded properties when the catalog isn't loaded.
         catalog_params = None
         if not self.from_chat and use_sidebar_props:
             try:

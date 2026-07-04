@@ -84,8 +84,8 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   ├── main_thread_executor.py  Request queue + main-thread timer (B3/B6/B8/K1/render guard).
 │   ├── executor.py              ScriptExecutor — second sandbox + handler snapshot/restore.
 │   ├── sandbox_validator.py     AST validator (mirrors backend, runs again on plugin).
-│   ├── sandbox_modules.py       RESTRICTED_OS / RESTRICTED_TEMPFILE / RESTRICTED_BASE64 wrappers.
-│   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__).
+│   ├── sandbox_modules.py       RESTRICTED_TEMPFILE / RESTRICTED_BASE64 / RESTRICTED_URLLIB wrappers (os/pathlib not exposed).
+│   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__/vars).
 │   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
 │   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
 │   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
@@ -216,7 +216,7 @@ _request_queue.put((id, script, tool, session))
 `ScriptExecutor.execute(script)`:
 
 1. **AST validation** — `validate_script_ast` in `sandbox_validator.py`. Denylist of forbidden constructs + reflection-escape blocking (matches the backend's S2 hardening) + dangerous attribute checks. Raises `SandboxViolationError` on violation.
-2. **Restricted module wrapping** — `os` → `RESTRICTED_OS` (no `system`, no `popen`, no exec family), `open` → `restricted_open` (paths gated), `tempfile` → `RESTRICTED_TEMPFILE`, `base64` → `RESTRICTED_BASE64`.
+2. **Restricted module wrapping** — `os` and `pathlib` are **not exposed at all** (importing them is rejected — the real modules grant `os.system`/`os.environ`/`Path.write_text`, a full escape); `open` → `restricted_open` (paths gated), `tempfile` → `RESTRICTED_TEMPFILE`, `base64` → `RESTRICTED_BASE64`, `urllib` → `RESTRICTED_URLLIB`.
 3. **Safe builtins** — `get_safe_builtins()` returns a curated `__builtins__` dict; no `__import__`, no `eval/exec/compile`.
 4. **Handler snapshot** — captures `bpy.app.handlers` lists (`depsgraph_update_post`, `frame_change_post`, `load_pre`/`load_post`, `object_bake_*`, ...). After execution, restores them so scripts can't leak persistent handlers across sessions.
 5. **stdout/stderr capture** — `StringIO` redirection. Parses `__RESULT__` prefix lines into `return_value` (the cross-process result protocol — backend's tools rely on this).
