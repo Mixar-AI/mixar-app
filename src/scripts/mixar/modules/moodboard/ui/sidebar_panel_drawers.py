@@ -472,29 +472,107 @@ def _draw_scene_gen_exp(layout, context):
 # ---------------------------------------------------------------------------
 
 def _draw_queue(layout, context):
-    """Draw the unified Generation Queue: filter chips + one flat list."""
+    """Draw the unified Generation Queue panel showing all feature queues."""
     try:
         from mixar.modules.common.job_queue.core.queue_manager import all_queues
         from mixar.modules.common.job_queue.core.job import JobState
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
-            draw_unified_queue_panel,
-        )
     except Exception:
         layout.label(text="Queue system not available", icon='INFO')
         return
 
-    # Per-status counts live in the filter chips inside the unified list;
-    # only the terminal count is needed here, to gate the Clear button.
-    terminal_states = (JobState.SUCCESS, JobState.FAILED, JobState.CANCELLED)
-    done_terminal = sum(
-        1 for q in all_queues() for j in q.snapshot()
-        if j.state in terminal_states
+    from mixar.modules.common.job_queue.constants import (
+        FEATURE_HUNYUAN_PART,
+        FEATURE_HUNYUAN_RAPID,
+        FEATURE_HUNYUAN_UV,
+        FEATURE_IMAGE_TO_3D_PRO,
+        FEATURE_IMAGEGEN,
+        FEATURE_BRUSH_GEN,
+        FEATURE_LOOKDEV,
+        FEATURE_LOOKDEV360,
+        FEATURE_MATGEN,
+        FEATURE_MESH_SEGMENT,
+        FEATURE_MODEL_3D,
+        FEATURE_RETOPOLOGY,
+        FEATURE_SCENE_GEN,
+        FEATURE_SCENE_GEN_HP,
+        FEATURE_SCENE_GEN_LP,
+        FEATURE_SCENE_RECON,
+    )
+    from mixar.modules.common.job_queue.ui.lists.queue_uilist import draw_queue_panel
+
+    _FEATURES = (
+        (FEATURE_IMAGE_TO_3D_PRO, "image_to_3d_pro", "Image to 3D Pro"),
+        (FEATURE_MODEL_3D, "model_3d", "Image to 3D Basic"),
+        (FEATURE_RETOPOLOGY, "retopology", "Retopology"),
+        (FEATURE_SCENE_GEN_HP, "scene_gen_hp", "Scene Gen HP"),
+        (FEATURE_SCENE_GEN_LP, "scene_gen_lp", "Scene Gen LP"),
+        (FEATURE_HUNYUAN_RAPID, "hunyuan_rapid", "Hunyuan Rapid"),
+        (FEATURE_HUNYUAN_PART, "hunyuan_part", "Hunyuan Part"),
+        (FEATURE_HUNYUAN_UV, "hunyuan_uv", "Hunyuan UV"),
+        (FEATURE_IMAGEGEN, "imagegen", "Image Generation"),
+        (FEATURE_BRUSH_GEN, "brush_gen", "Brush Generation"),
+        (FEATURE_LOOKDEV, "lookdev", "Blockout to Render"),
+        (FEATURE_LOOKDEV360, "lookdev360", "Lookdev360 PBR"),
+        (FEATURE_MATGEN, "matgen", "Material Generation"),
+        (FEATURE_MESH_SEGMENT, "mesh_segment", "Mesh Segmentation"),
+        (FEATURE_SCENE_GEN, "scene_gen", "Scene Generation"),
+        (FEATURE_SCENE_RECON, "scene_recon", "Scene Reconstruction"),
     )
 
-    # Unified list (filter chips + template_list).
-    draw_unified_queue_panel(layout, context)
+    running_states = {
+        JobState.RUNNING_SUBMIT.value,
+        JobState.RUNNING_POLL.value,
+        JobState.RUNNING_DOWNLOAD.value,
+    }
 
-    if done_terminal:
+    queues = all_queues()
+    all_jobs = []
+    for q in queues:
+        all_jobs.extend(q.snapshot())
+
+    if not all_jobs:
+        draw_status_badge(layout, "No active jobs", 'INFO')
+        col = layout.column()
+        col.label(text="Jobs will appear here when you generate content.")
+        return
+
+    # Summary box
+    running = sum(1 for j in all_jobs if j.state.value in running_states)
+    pending = sum(1 for j in all_jobs if j.state == JobState.PENDING)
+    succeeded = sum(1 for j in all_jobs if j.state == JobState.SUCCESS)
+    failed = sum(1 for j in all_jobs if j.state == JobState.FAILED)
+    cancelled = sum(1 for j in all_jobs if j.state == JobState.CANCELLED)
+    done = succeeded + failed + cancelled  # any terminal job (drives Clear button)
+
+    summary_col = draw_section_box(layout, "Summary", icon='INFO')
+
+    # Active work — always shown so "processing"/"queued" are visible at a glance.
+    active_row = summary_col.row(align=True)
+    active_row.label(text=f"{running} processing", icon='PLAY')
+    active_row.label(text=f"{pending} queued", icon='TIME')
+
+    # Outcomes — done + failed always shown; failed turns red when non-zero.
+    outcome_row = summary_col.row(align=True)
+    outcome_row.label(text=f"{succeeded} done", icon='CHECKMARK')
+    fail_cell = outcome_row.row(align=True)
+    fail_cell.alert = failed > 0
+    fail_cell.label(text=f"{failed} failed", icon='ERROR')
+    if cancelled:
+        outcome_row.label(text=f"{cancelled} cancelled", icon='CANCEL')
+
+    # Per-feature collapsible sections (skip empty features)
+    for feature_key, mirror_attr, label in _FEATURES:
+        queue = next((q for q in queues if q.feature_key == feature_key), None)
+        if queue is None or not queue.snapshot():
+            continue
+
+        layout.separator(factor=SEP_INTRA)
+        draw_queue_panel(layout, context, feature_key, mirror_attr,
+                         label_override=label, show_footer=False,
+                         show_cancel_all=True)
+
+    # Global clear button
+    if done:
         layout.separator(factor=SEP_INTRA)
         layout.operator(
             "mixie.queue_clear_all_completed",
