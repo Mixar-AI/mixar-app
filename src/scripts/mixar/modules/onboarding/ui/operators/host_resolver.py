@@ -16,7 +16,6 @@ import bpy
 
 from mixar.modules.onboarding.constants import (
     CARD_AREA_MARGIN,
-    CARD_BUBBLE_GAP,
     CARD_CHAT_INPUT_GUTTER,
     CARD_POS_ABOVE_INPUT,
     CARD_POS_SIDEBAR_ADJACENT,
@@ -27,11 +26,6 @@ from mixar.modules.onboarding.constants import (
 _CARD_REGION_WIDTH_CAP = 0.6
 _CARD_REGION_HEIGHT_CAP = 0.78
 _CARD_MIN_SCALE = 0.5
-
-# Default edge margin used by ``fit_scale_for_region`` (px). Shared so
-# clearance computations can express "reserved" space in the same
-# convention (``avail_h = height - 2 * margin - reserved_h``).
-_FIT_MARGIN = 80
 
 
 def find_host(area_type: str):
@@ -90,7 +84,7 @@ def find_largest_window_region():
 
 def fit_scale_for_region(region, target_scale: float,
                          base_w: int, base_h: int,
-                         margin: int = _FIT_MARGIN,
+                         margin: int = 80,
                          reserved_w: int = 0,
                          reserved_h: int = 0) -> float:
     """Return the largest scale <= ``target_scale`` that fits the region."""
@@ -146,35 +140,6 @@ def find_bubble_window():
             if area.type == "AGENT_BUBBLE":
                 return window
     return None
-
-
-def bubble_clearance_height(host_window_origin: tuple, region) -> int:
-    """Vertical space to reserve (in ``fit_scale_for_region``'s
-    ``reserved_h`` convention) so a TOP-anchored card's bottom clears
-    the floating Agent Bubble window.
-
-    The bubble is a separate OS-level window docked over the host
-    region's bottom-left corner, so a tall top-left card can end up
-    cropped behind it (the welcome / completion cards). Returns 0 when
-    no bubble window is open, or when the bubble sits in the right
-    half of the region where it can't collide with a left-anchored
-    card.
-    """
-    anchor = bubble_anchor_in_region(
-        host_window_origin, (region.x, region.y),
-    )
-    if anchor is None:
-        return 0
-    bcx, bcy, bw, bh = anchor
-    bubble_left = bcx - bw // 2
-    bubble_top = bcy + bh // 2
-    if bubble_left > region.width * 0.5:
-        return 0
-    if bubble_top <= 0 or bubble_top >= region.height:
-        return 0
-    # fit_scale uses avail_h = height - 2*margin - reserved_h; we want
-    # card_h <= height - margin(top) - bubble_top - gap, hence:
-    return max(0, bubble_top + CARD_BUBBLE_GAP - _FIT_MARGIN)
 
 
 def bubble_anchor_in_region(host_window_origin: tuple,

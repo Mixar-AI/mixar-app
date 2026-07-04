@@ -451,16 +451,22 @@ CHAT_DROPDOWN_H = 38      # widget renders slightly shorter than
                           # the 44px button-row height it sits in
 
 # Sidebar panel heights for STEP_INFO_IMAGEGEN / IMAGE_TO_3D /
-# RETOPOLOGY in unscaled UI px — FALLBACK ONLY. The highlight now
-# measures the real rendered panel extent from the region View2D's
-# ``tot_rect`` (Mixar RNA addition, see ``rna_screen.cc``), which is
-# required because the catalog-driven tabs render schema-dependent
-# content whose height varies per selected mode / model. These
-# estimates are used only when running against a build without that
-# RNA overlay.
-SIDEBAR_PANEL_H_IMAGEGEN = 380     # header + prompt + reference + settings + generate
-SIDEBAR_PANEL_H_IMAGE_TO_3D = 310  # header + prompt + input image + settings + generate
-SIDEBAR_PANEL_H_RETOPOLOGY = 250   # header + mesh info + hint + settings + generate
+# RETOPOLOGY in unscaled UI px. Each is the rendered height of the
+# panel content with its Settings sub-panel expanded (the state we
+# force-open when the tour reaches that step). The bounds function
+# multiplies these by ``ui_scale`` at draw time so the highlight
+# tracks each panel correctly across DPI / scale settings.
+#
+# Values measured empirically from the rendered panels on a
+# retina display: count the visible rows × Blender's UI_UNIT_Y,
+# add the panel header (~28 px), the Settings sub-panel header
+# (~24 px), the Generate button (~30 px) and final bottom padding
+# (~6 px). Conservative — slightly under-sized so the border never
+# extends past the panel content (cleaner than overshooting).
+SIDEBAR_PANEL_H_IMAGEGEN = 380     # header + prompt + reference + settings(style/model/aspect/resolution) + generate
+SIDEBAR_PANEL_H_IMAGE_TO_3D = 310  # header + Basic/Pro subtab + prompt + reference + warning + settings(model) + generate
+SIDEBAR_PANEL_H_RETOPOLOGY = 250   # header + mesh info + hint + settings(polygon type/face level) + generate
+                                    # (this one is dialled in — leave it)
 
 # Horizontal inset inside the UI region — cuts the vertical tab
 # strip out of the highlight (tabs run on the right edge ~24 px wide).
