@@ -93,15 +93,13 @@ def _draw_imagegen(layout, context):
     col.use_property_split = True
     col.use_property_decorate = False
 
-    draw_dropdown(col, tab, "style", text="Style")
-
     row = col.row(align=True)
     draw_dropdown(row, tab, "model", text="Model")
     row.operator("mixie.imagegen_refresh", text="", icon='FILE_REFRESH')
 
-    # Remaining params come from the catalog-driven parameter engine.
-    # When the catalog isn't loaded (offline / pre-auth) fall back to the
-    # legacy hardcoded enum properties so the tab never goes blank.
+    # All params (style included) come from the catalog-driven parameter
+    # engine. When the catalog isn't loaded (offline / pre-auth) fall back
+    # to the legacy hardcoded enum properties so the tab never goes blank.
     drew_catalog_params = False
     try:
         from mixar.modules.common.generation_params import draw_service_params
@@ -109,6 +107,7 @@ def _draw_imagegen(layout, context):
     except Exception:
         drew_catalog_params = False
     if not drew_catalog_params:
+        draw_dropdown(col, tab, "style", text="Style")
         draw_dropdown(col, tab, "aspect_ratio", text="Aspect Ratio")
         draw_dropdown(col, tab, "resolution", text="Resolution")
 
