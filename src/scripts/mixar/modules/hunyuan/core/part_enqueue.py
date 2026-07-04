@@ -13,7 +13,10 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_PART
 from ..constants import LIMITS, MAX_FILE_SIZE_PART
-from .hunyuan_helpers import _get_total_face_count, export_selected_mesh
+from mixar.modules.common.job_queue.core.model_io import (
+    export_selected_mesh,
+    get_total_face_count,
+)
 
 logger = get_logger(__name__)
 
@@ -42,7 +45,7 @@ def _resolve_part_model(context) -> str:
 def enqueue_part_job(*, context, operator=None):
     """Validate face count, export mesh, and submit a Part job to the queue."""
     max_faces = LIMITS['PART']['max_faces']
-    face_count = _get_total_face_count(context)
+    face_count = get_total_face_count(context)
     if face_count > max_faces:
         raise ValueError(
             f"Selected mesh has {face_count:,} faces (max {max_faces:,})",

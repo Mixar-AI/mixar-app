@@ -356,14 +356,21 @@ class SlotEventProcessor:
         input_type = input_type or ""
         bubble.input_type = input_type
 
-        if input_type == 'text':
-            # Agent wants free-form text input
+        if input_type in ('text', 'choice', 'approval'):
+            # Agent has paused for the user — free-form text, a choice
+            # button, or an approval button. All three use AWAITING_INPUT:
+            # the state survives SSE stream completion (see
+            # _handle_sse_complete_internal), so the status pill reads
+            # "Awaiting input" instead of decaying BUSY -> IDLE while the
+            # question is still on screen. Text typed while a choice /
+            # approval prompt is up is routed as an input response
+            # (start_input_stream), which the backend treats as the
+            # answer to the pending question.
             self._session.set_state(scene, SessionState.AWAITING_INPUT)
-            logger.info(f"[SLOT:INPUT_TYPE] Set state to AWAITING_INPUT (agent requesting text input)")
-        elif input_type in ('choice', 'approval'):
-            # Agent wants button click only (disable text input)
-            self._session.set_state(scene, SessionState.BUSY)
-            logger.info(f"[SLOT:INPUT_TYPE] Set state to BUSY (showing {input_type} buttons, text input disabled)")
+            logger.info(
+                f"[SLOT:INPUT_TYPE] Set state to AWAITING_INPUT "
+                f"(agent requesting {input_type} input)"
+            )
         else:
             logger.warning(f"[SLOT:INPUT_TYPE] Unknown input_type: {input_type}")
 

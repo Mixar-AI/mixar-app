@@ -61,7 +61,7 @@ def _get_status(scene) -> tuple[str, str]:
     if state in _RUNNING_STATES:
         return "Running", 'RECORD_ON'
     if state == "AWAITING_INPUT":
-        return "Awaiting input", 'QUESTION'
+        return "Awaiting Input", 'QUESTION'
     return "Idle", 'RECORD_OFF'
 
 
