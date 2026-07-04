@@ -33,6 +33,7 @@ import bpy
 from bpy.types import Header, Panel
 
 from ..constants import SessionState  # noqa: F401  (kept for parity)
+from ..core import avatar_icon
 
 
 class MIXAR_PT_profile(Panel):
@@ -100,7 +101,15 @@ def _draw_topbar_profile_right(self, context):
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
         profile_sub = layout.row(align=True)
         profile_sub.ui_units_x = len(email) * 0.35 + 2.5
-        profile_sub.popover(panel="MIXAR_PT_profile", text=email, icon='USER')
+        # Green avatar disc with the account initial; 0 means the
+        # generator failed (e.g. Pillow missing) → stock USER icon.
+        avatar_id = avatar_icon.get_avatar_icon_id(email)
+        if avatar_id:
+            profile_sub.popover(
+                panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
+        else:
+            profile_sub.popover(
+                panel="MIXAR_PT_profile", text=email, icon='USER')
     else:
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't
@@ -125,3 +134,4 @@ def unregister():
         bpy.utils.unregister_class(MIXAR_PT_profile)
     except Exception:
         pass
+    avatar_icon.unregister()

@@ -63,7 +63,7 @@
             show_shaded="FALSE"
             shadetop="0"
             shadedown="-5"
-            roundness="0.4"
+            roundness="0.2"
             >
           </ThemeWidgetColors>
         </wcol_tool>
