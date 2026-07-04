@@ -101,9 +101,8 @@ def draw_step3_hp(layout, context, tab):
         icon='MESH_DATA',
     )
 
-    # Queue panel
+    # Queue lives in the unified sidebar Queue panel — cancel-all shortcut only.
     hp_generating = getattr(scene, 'mixie_scene_gen_hp_is_generating', False)
-
     if hp_generating:
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_HP
         cancel_row = step3.row(align=True)
@@ -112,11 +111,6 @@ def draw_step3_hp(layout, context, tab):
             "mixie.queue_cancel_all", text="Cancel All", icon='CANCEL',
         )
         c_op.feature_key = FEATURE_SCENE_GEN_HP
-
-    # Queue list
-    from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_HP
-    from mixar.modules.common.job_queue.ui.lists.queue_uilist import draw_queue_panel
-    draw_queue_panel(layout, context, FEATURE_SCENE_GEN_HP, "scene_gen_hp")
 
 
 # ---------------------------------------------------------------------------
@@ -161,9 +155,8 @@ def draw_step4_lp(layout, context, tab):
         icon='MOD_REMESH',
     )
 
-    # Queue panel
+    # Queue lives in the unified sidebar Queue panel — cancel-all shortcut only.
     lp_generating = getattr(scene, 'mixie_scene_gen_lp_is_generating', False)
-
     if lp_generating:
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_LP
         cancel_row = step4.row(align=True)
@@ -172,11 +165,6 @@ def draw_step4_lp(layout, context, tab):
             "mixie.queue_cancel_all", text="Cancel All", icon='CANCEL',
         )
         c_op.feature_key = FEATURE_SCENE_GEN_LP
-
-    # Queue list
-    from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_LP
-    from mixar.modules.common.job_queue.ui.lists.queue_uilist import draw_queue_panel
-    draw_queue_panel(layout, context, FEATURE_SCENE_GEN_LP, "scene_gen_lp")
 
 
 # ---------------------------------------------------------------------------

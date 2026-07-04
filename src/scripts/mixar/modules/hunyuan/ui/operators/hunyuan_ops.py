@@ -336,7 +336,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
             "polygon_type": polygon_type,
             "prompt": prompt,
         }
-        label = image.name if image is not None else prompt
+        # Prefer the agent-supplied prompt over the image identifier so the
+        # queue row reads like the user's intent — see image_to_3d_ops for
+        # the same reasoning.
+        label = (prompt[:40] if prompt else None) or (image.name if image else "3D")
         enqueue_pro_job(image=image, shared=shared, label=label)
 
     def _submit_rapid_direct(self, context, compress_image_for_upload):
