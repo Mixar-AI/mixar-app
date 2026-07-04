@@ -303,9 +303,9 @@ class MIXIE_OT_imagegen_generate(Operator):
         stored_num_images = getattr(scene, "mixie_imagegen_num_images", 1)
 
         # Sidebar context: prefer the catalog-driven parameter engine for
-        # all params (style, aspect_ratio, resolution?, number_of_images,
-        # and any future params). Falls back to the legacy hardcoded
-        # properties when the catalog isn't loaded.
+        # everything beyond style (aspect_ratio, resolution?,
+        # number_of_images, and any future params). Falls back to the
+        # legacy hardcoded properties when the catalog isn't loaded.
         catalog_params = None
         if not self.from_chat and use_sidebar_props:
             try:
@@ -427,9 +427,11 @@ class MIXIE_OT_imagegen_generate(Operator):
         if ref_b64:
             payload["reference_images_b64"] = ref_b64
 
-        # Unique label so a batch never collides with the queue's label-based
-        # dedup (e.g. 4 images of the same prompt, or same agent-chosen name).
-        _label_base = self.name.strip() or prompt[:30] or "image"
+        # Prefer the actual API prompt for the row title so the queue reads
+        # like the interactive path; fall back to name / "image" if empty.
+        # The 4-hex uuid suffix keeps the queue's label-based dedup happy
+        # when a batch contains multiple images of the same prompt.
+        _label_base = prompt[:40] or self.name.strip() or "image"
         job = enqueue_generation(
             kind="image",
             feature_key=FEATURE_IMAGEGEN,

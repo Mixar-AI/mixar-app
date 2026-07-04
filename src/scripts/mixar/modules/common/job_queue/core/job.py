@@ -49,7 +49,13 @@ class Job:
     state: JobState = JobState.PENDING
     error: str = ""
     user_message: str = ""
-    created_at: float = field(default_factory=time.time)
+    # Session-relative clocks (time.monotonic, not epoch) so they survive
+    # being round-tripped through a 32-bit ``bpy.props.FloatProperty`` on
+    # the scene-side mirror. Epoch seconds (~1.75e9) lose ~128 s of
+    # precision when stored as a single-precision float, which corrupted
+    # the queue row's elapsed display before we switched to monotonic.
+    created_at: float = field(default_factory=time.monotonic)
+    finished_at: float = 0.0  # stamped by the mirror sync on first terminal tick
 
     # Backend tracking
     backend_job_id: str = ""

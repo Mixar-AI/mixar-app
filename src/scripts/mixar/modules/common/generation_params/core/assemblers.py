@@ -114,8 +114,8 @@ def _assemble_hunyuan_rapid(
     params: Dict[str, Any], payload: Dict[str, Any], model_slug: str = ""
 ) -> Dict[str, Any]:
     """Wire shape (matches ``hunyuan_ops.py::_submit_rapid_queue``):
-    {"sdk_params": {EnablePBR, EnableGeometry, ResultFormat, Prompt?},
-    image_bytes_b64?, image_filename?}.
+    {"sdk_params": {EnablePBR, EnableGeometry, ResultFormat? (non-glb
+    only), Prompt?}, image_bytes_b64?, image_filename?}.
     """
     params = dict(params or {})
     sdk = payload.setdefault("sdk_params", {})
@@ -123,10 +123,9 @@ def _assemble_hunyuan_rapid(
     sdk["EnablePBR"] = bool(params.pop("enable_pbr", False))
     sdk["EnableGeometry"] = bool(params.pop("enable_geometry", False))
 
-    # Always send ResultFormat, uppercase (Tencent's enum): the vendor default
-    # when omitted is an OBJ ZIP archive the client can't import.
     result_format = params.pop("result_format", None)
-    sdk["ResultFormat"] = str(result_format or "GLB").upper()
+    if result_format and str(result_format).lower() != "glb":
+        sdk["ResultFormat"] = str(result_format).lower()
     prompt = params.pop("prompt", None)
     if prompt:
         sdk["Prompt"] = prompt
