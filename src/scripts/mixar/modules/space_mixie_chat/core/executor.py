@@ -34,6 +34,7 @@ class SandboxViolationError(RuntimeError):
 
 # Restricted module wrappers (see sandbox_modules.py for implementation)
 from .sandbox_modules import (
+    RESTRICTED_OS,
     RESTRICTED_BASE64,
     RESTRICTED_TEMPFILE,
     RESTRICTED_URLLIB,
@@ -109,8 +110,7 @@ class ScriptExecutor:
     - Handles errors gracefully
     - Integrates with Blender's undo system
     - Cleans up bpy.app.handlers installed by scripts
-    - Hardened sandbox: os and pathlib are NOT exposed at all; open, tempfile,
-      base64, urllib are restricted wrappers
+    - Hardened sandbox: os, open, tempfile, base64 are restricted wrappers
     """
 
     # Handler list names on bpy.app.handlers to snapshot/restore
@@ -250,9 +250,8 @@ class ScriptExecutor:
 
             # Create execution namespace with bpy access and restricted builtins.
             # Security: only safe, non-dangerous modules are pre-injected.
-            # NOT exposed at all: os, pathlib -- the real modules grant
-            # os.system/os.environ/Path.write_text etc., a full sandbox escape.
-            # filesystem access is limited to the restricted open/tempfile below.
+            # Removed: os (full), base64, tempfile, open -- these enable
+            # filesystem access, encoding attacks, and data exfiltration.
             import math
             import re
             import random
@@ -265,6 +264,8 @@ class ScriptExecutor:
             import bpy_extras
             import imbuf
             import numpy
+            import os as _real_os
+            import pathlib as _real_pathlib
 
             exec_namespace = {
                 "__builtins__": get_safe_builtins(),
@@ -288,6 +289,8 @@ class ScriptExecutor:
                 "imbuf": imbuf,
                 # Restricted modules -- only safe subsets exposed
                 # (see sandbox_modules.py for implementation)
+                "os": _real_os,
+                "pathlib": _real_pathlib,
                 "base64": RESTRICTED_BASE64,
                 "tempfile": RESTRICTED_TEMPFILE,
                 "urllib": RESTRICTED_URLLIB,
