@@ -31,16 +31,14 @@ _MASK_TOOL_ICONS = {
 _MASK_ICON_DEFAULT = 'MOD_MASK'
 
 
+# A Menu (not a popover) so it auto-dismisses the instant an option is
+# picked. Both add operators return RUNNING_MODAL from invoke() (a file
+# browser / a search popup), and a popover lingers behind those modals
+# instead of closing — a menu closes on item-click, before invoke runs.
+# NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
+# as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """
-    Dropdown menu with image-adding options.
-    Opened by clicking the Add Image button in the toolbar.
-
-    A Menu (not a popover) so it auto-dismisses the instant an option is
-    picked. Both add operators return RUNNING_MODAL from invoke() (a file
-    browser / a search popup), and a popover lingers behind those modals
-    instead of closing — a menu closes on item-click, before invoke runs.
-    """
+    """Dropdown menu with image-adding options."""
     bl_idname = "MIXIE_MT_add_image_menu"
     bl_label = "Add Image"
 
