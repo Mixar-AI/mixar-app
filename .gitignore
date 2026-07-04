@@ -218,3 +218,6 @@ scripts/audit_out/
 
 # Blender autosave backups
 *.blend1
+
+# Separate backend repo checked out locally — not part of this repo
+mixar-backend/
