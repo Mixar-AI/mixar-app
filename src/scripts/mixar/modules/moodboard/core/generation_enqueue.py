@@ -47,7 +47,7 @@ def _pro_on_imported(job, object_names: str) -> None:
     """Rename imported mesh to ``{label}_high`` and set up origin."""
     target = _sanitize_label(job.label) + "_high"
     try:
-        from mixar.modules.common.job_queue.core.model_io import (
+        from mixar.modules.hunyuan.core.hunyuan_helpers import (
             post_import_rename_and_setup,
         )
         post_import_rename_and_setup(object_names, target)
@@ -61,7 +61,7 @@ def _make_hp_on_imported(chain_id: str) -> Callable:
     def _hook(job, object_names: str) -> None:
         target = _sanitize_label(job.label) + "_high"
         try:
-            from mixar.modules.common.job_queue.core.model_io import (
+            from mixar.modules.hunyuan.core.hunyuan_helpers import (
                 post_import_rename_and_setup,
             )
             post_import_rename_and_setup(object_names, target)
@@ -98,7 +98,7 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                     break
             target = name + "_low"
             try:
-                from mixar.modules.common.job_queue.core.model_io import (
+                from mixar.modules.hunyuan.core.hunyuan_helpers import (
                     post_import_rename_and_setup,
                 )
                 post_import_rename_and_setup(object_names, target, smart_uv=True)

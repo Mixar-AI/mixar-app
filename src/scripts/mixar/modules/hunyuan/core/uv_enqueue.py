@@ -13,10 +13,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_UV
 from ..constants import LIMITS, MAX_FILE_SIZE_UV
-from mixar.modules.common.job_queue.core.model_io import (
-    export_selected_mesh,
-    get_total_face_count,
-)
+from .hunyuan_helpers import _get_total_face_count, export_selected_mesh
 
 logger = get_logger(__name__)
 
@@ -42,7 +39,7 @@ def _resolve_uv_model(context) -> str:
 def enqueue_uv_job(*, context, operator=None):
     """Validate face count, export mesh, and submit a UV job to the queue."""
     max_faces = LIMITS['UV']['max_faces']
-    face_count = get_total_face_count(context)
+    face_count = _get_total_face_count(context)
     if face_count > max_faces:
         raise ValueError(
             f"Selected mesh has {face_count:,} faces (max {max_faces:,})",
