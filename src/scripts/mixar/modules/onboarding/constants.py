@@ -173,12 +173,15 @@ INFO_RETOPOLOGY_BODY_2 = (
 
 # Step 5 — Mixie Chat.
 INFO_MIXIE_CHAT_LABEL = "Mixie Chat — your AI partner"
-INFO_MIXIE_CHAT_BODY_1 = "Mixie Chat works in two modes:"
+INFO_MIXIE_CHAT_BODY_1 = "Mixie Chat works in three modes:"
 INFO_MIXIE_CHAT_BODY_2 = (
-    "• Agent — answers questions, runs tools, and edits your scene for you"
+    "• Ask — answer questions about Mixar, Blender, or your scene"
 )
 INFO_MIXIE_CHAT_BODY_3 = (
     "• Generate — create images, textures, and 3D models from prompts"
+)
+INFO_MIXIE_CHAT_BODY_4 = (
+    "• Agent — autonomously runs tools and edits your scene for you"
 )
 
 # Step 6 — Engine Mode (informational pointer to the workflow toggle).
