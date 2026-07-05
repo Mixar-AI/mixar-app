@@ -47,6 +47,13 @@ from ...utils.constants import (
 )
 from ...utils.statics import mask_blend_type_items
 from ..mask.mask_creation import add_new_mask
+from ..utils.image_preview_enum import build_image_enum_items
+
+
+def _open_data_image_items(self, context):
+    """EnumProperty items (with preview thumbnails) for the mask image picker."""
+    names = [item.name for item in self.image_coll]
+    return build_image_enum_items(names, cache_key="mask_open_data_image")
 
 
 class MOpenAvailableDataAsMask(bpy.types.Operator):
@@ -87,6 +94,7 @@ class MOpenAvailableDataAsMask(bpy.types.Operator):
 
     image_name: StringProperty(name="Image")
     image_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    image_enum: EnumProperty(name="Image", items=_open_data_image_items)
 
     vcol_name: StringProperty(name="Vertex Color")
     vcol_coll: CollectionProperty(type=bpy.types.PropertyGroup)
@@ -254,9 +262,7 @@ class MOpenAvailableDataAsMask(bpy.types.Operator):
         source_row = source_col.row(align=True)
         source_row.scale_y = 1.4
         if self.type == "IMAGE":
-            source_row.prop_search(
-                self, "image_name", self, "image_coll", icon="IMAGE_DATA", text=""
-            )
+            source_row.prop(self, "image_enum", text="")
         elif self.type == "VCOL":
             source_row.prop_search(
                 self, "vcol_name", self, "vcol_coll", icon="GROUP_VCOL", text=""
@@ -350,6 +356,9 @@ class MOpenAvailableDataAsMask(bpy.types.Operator):
         mp = node.node_tree.mp
         layer = get_active_layer(mp)
         mpui = context.window_manager.mpui
+
+        if self.type == "IMAGE":
+            self.image_name = "" if self.image_enum in {"", "NONE"} else self.image_enum
 
         if self.type == "IMAGE" and self.image_name == "":
             self.report({"ERROR"}, "No image selected!")
