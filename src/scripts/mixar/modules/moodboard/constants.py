@@ -29,6 +29,10 @@ MOODBOARD_IMAGE_SPACING = 50.0
 # Horizontal gap between multiple images added at once
 MOODBOARD_MULTI_IMAGE_GAP = 50.0
 
+# Maximum number of concentric rings searched when looking for a free slot to
+# drop a newly added image so it does not overlap existing moodboard images.
+MOODBOARD_MAX_PLACEMENT_RING = 16
+
 # ============================================================================
 # IMAGE PROPERTY DEFAULTS
 # ============================================================================

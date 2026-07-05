@@ -48,8 +48,42 @@ def full_window_bounds(region) -> tuple:
     )
 
 
+def _measured_panel_bounds(region) -> tuple:
+    """Measure the rendered panel content from the region's View2D
+    total rect (``tot_rect`` is a Mixar RNA addition — the panel-stack
+    extent set by ``UI_panels_end``). Tracks the real panel height,
+    which varies with the catalog-driven tab content, instead of a
+    hardcoded per-tab constant. Returns None when unavailable (e.g.
+    running against a build without the RNA overlay)."""
+    v2d = getattr(region, "view2d", None)
+    tot = getattr(v2d, "tot_rect", None) if v2d is not None else None
+    if tot is None:
+        return None
+    xmin, xmax, ymin, ymax = tot
+    if xmax - xmin <= 1.0 or ymax - ymin <= 1.0:
+        return None
+    left, top = v2d.view_to_region(xmin, ymax, clip=False)
+    right, bottom = v2d.view_to_region(xmax, ymin, clip=False)
+
+    pad = scaled(SIDEBAR_PANEL_PAD)
+    tab_strip_w = scaled(SIDEBAR_TAB_STRIP_WIDTH)
+    x = max(pad, left + pad)
+    y = max(pad, bottom + pad)
+    x_max = min(right - pad, region.width - tab_strip_w - pad)
+    y_max = min(top - pad, region.height - pad)
+    return (x, y, max(0, x_max - x), max(0, y_max - y))
+
+
 def sidebar_panel_bounds(region, panel_h_unscaled: float) -> tuple:
-    """Bounds for the active sidebar tool panel."""
+    """Bounds for the active sidebar tool panel.
+
+    Prefers the live View2D measurement; the fixed-height estimate is
+    only the fallback for builds without the ``tot_rect`` RNA overlay.
+    """
+    measured = _measured_panel_bounds(region)
+    if measured is not None and measured[2] > 0 and measured[3] > 0:
+        return measured
+
     panel_h = scaled(panel_h_unscaled)
     tab_strip_w = scaled(SIDEBAR_TAB_STRIP_WIDTH)
     pad = scaled(SIDEBAR_PANEL_PAD)

@@ -82,7 +82,9 @@ src/
 ```
 
 ### Active Modules
-`agent_bubble`, `agent_scene_strip`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
+`agent_bubble`, `agent_scene_strip`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `onboarding`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
+
+**onboarding** — first-run feature tour: GPU-rendered cards (`core/card/`), dim film + green highlight border (`core/overlay/`). The three sidebar-step highlights (Image Gen / Model Gen / Retopology) measure the rendered panel extent dynamically via `region.view2d.tot_rect` — a Mixar RNA addition in `rna_screen.cc` exposing the View2D total rect — because catalog-driven tab heights vary per mode/model; the `SIDEBAR_PANEL_H_*` constants are only a fallback for builds without that overlay. Top-left cards (welcome/completion) reserve vertical clearance above the floating Agent Bubble window (`host_resolver.bubble_clearance_height`) so the card scales down instead of being cropped behind the bubble.
 
 ---
 
