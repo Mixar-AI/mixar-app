@@ -298,11 +298,20 @@ def _draw_topbar_open_agent(self, context):
         return
     layout = self.layout
     layout.separator()
-    layout.operator(
-        "mixar.agent_bubble_open_window",
-        text="Open Mixie",
-        icon='OUTLINER_OB_LIGHT',
-    )
+    # SPARKLE is a Mixar color SVG icon (UI_icons.hh MIXIE CHAT block);
+    # fall back to the old bulb on builds that predate it.
+    try:
+        layout.operator(
+            "mixar.agent_bubble_open_window",
+            text="Open Mixie",
+            icon='SPARKLE',
+        )
+    except TypeError:
+        layout.operator(
+            "mixar.agent_bubble_open_window",
+            text="Open Mixie",
+            icon='OUTLINER_OB_LIGHT',
+        )
 
 
 _topbar_hook_appended = False

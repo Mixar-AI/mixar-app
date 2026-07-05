@@ -281,19 +281,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         if prompt:
             payload["prompt"] = prompt
 
-        # Prefer the agent-supplied prompt over the image identifier so the
-        # queue row reads like the user's intent (image name is typically an
-        # auto-generated slug like ``imagegen_1783156890_0`` when the agent
-        # chained ImageGen → Image-to-3D).
-        job_label = prompt[:40] if prompt else (self.image_name.strip() or "model_3d")
-
         job = enqueue_generation(
             kind="glb",
             feature_key=FEATURE_MODEL_3D,
             job_type="model_3d",
             model=model_name,
             payload=payload,
-            label=job_label,
+            label=self.image_name.strip(),
             fail_message="3D model generation failed",
             scene_flag="mixie_image_to_3d_is_generating",
             batch_popup_title="Image to 3D batch complete",

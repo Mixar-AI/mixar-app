@@ -16,40 +16,6 @@ from bpy.props import IntProperty, StringProperty
 from ...core.moodboard_utils import get_moodboard_viewport_center
 from ...core.image_lifecycle import release_moodboard_image_entry
 from ....common.utils.platform_utils import format_shortcut
-from ...constants import (
-    TEXTBOX_TEXT_DEFAULT,
-    TEXTBOX_WIDTH_DEFAULT,
-    TEXTBOX_HEIGHT_DEFAULT,
-    TEXTBOX_FONT_SIZE_DEFAULT,
-)
-
-
-# Caret glyph appended to the text box while it is being edited, so there is
-# clear visual feedback that typing is active.  Stripped on confirm/cancel.
-_CARET = "|"
-
-# Inline text-edit state, kept at module scope so it survives invoke->modal
-# regardless of whether the operator instance is preserved.  ``value`` is the
-# real (caret-free) text; the drawn text box shows ``value + _CARET``.  Only one
-# text box is edited at a time.
-_EDIT = {"index": -1, "value": "", "original": "", "select_all": True, "armed": False}
-
-
-def _tag_mixie_redraw(context):
-    for area in context.screen.areas:
-        if area.type == 'MIXIE':
-            area.tag_redraw()
-
-
-def _find_mixie_window_region(context):
-    """Return the MIXIE (moodboard) WINDOW region with a view2d, or None."""
-    for area in context.screen.areas:
-        if area.type != 'MIXIE':
-            continue
-        for region in area.regions:
-            if region.type == 'WINDOW' and getattr(region, 'view2d', None):
-                return region
-    return None
 
 
 class MIXIE_OT_moodboard_add_textbox(Operator):
@@ -67,111 +33,50 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         options={'SKIP_SAVE'}
     )
 
-    # Index of the sample text box being placed during the modal.
-    _tb_index: int = -1
-    _region = None
-
-    def _cursor_view_coords(self, event):
-        """Mouse position (window coords) in the moodboard's canvas space."""
-        region = self._region
-        rx = event.mouse_x - region.x
-        ry = event.mouse_y - region.y
-        return region.view2d.region_to_view(rx, ry)
-
-    def _move_to(self, scene, vx, vy):
-        boxes = scene.mixie_moodboard_textboxes
-        if 0 <= self._tb_index < len(boxes):
-            tb = boxes[self._tb_index]
-            tb.position_x = vx
-            tb.position_y = vy
-
     def invoke(self, context, event):
-        scene = context.scene
+        # If no text provided, open dialog
+        if not self.text:
+            return context.window_manager.invoke_props_dialog(self, width=400)
+        return self.execute(context)
 
-        # Explicit text (e.g. agent/programmatic call) → place immediately.
-        if self.text.strip():
-            return self.execute(context)
-
-        region = _find_mixie_window_region(context)
-        if region is None:
-            # No visible moodboard to place into: drop a sample box at 0,0.
-            self.text = TEXTBOX_TEXT_DEFAULT
-            return self.execute(context)
-
-        self._region = region
-
-        # Create a sample text box and follow the cursor until the user clicks.
-        item = scene.mixie_moodboard_textboxes.add()
-        item.text = TEXTBOX_TEXT_DEFAULT
-        item.width = TEXTBOX_WIDTH_DEFAULT
-        item.height = TEXTBOX_HEIGHT_DEFAULT
-        item.font_size = TEXTBOX_FONT_SIZE_DEFAULT
-        item.z_order = len(scene.mixie_moodboard_textboxes) + len(scene.mixie_moodboard_images)
-        self._tb_index = len(scene.mixie_moodboard_textboxes) - 1
-
-        # Select only the new box so it can be grabbed/edited/deleted right away.
-        for tb in scene.mixie_moodboard_textboxes:
-            tb.selected = False
-        for img in scene.mixie_moodboard_images:
-            img.selected = False
-        item.selected = True
-
-        vx, vy = self._cursor_view_coords(event)
-        self._move_to(scene, vx, vy)
-        _tag_mixie_redraw(context)
-
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def modal(self, context, event):
-        scene = context.scene
-
-        if event.type == 'MOUSEMOVE':
-            vx, vy = self._cursor_view_coords(event)
-            self._move_to(scene, vx, vy)
-            _tag_mixie_redraw(context)
-            return {'RUNNING_MODAL'}
-
-        if event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
-            _tag_mixie_redraw(context)
-            self.report({'INFO'}, "Added text box (double-click to edit)")
-            return {'FINISHED'}
-
-        if event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
-            boxes = scene.mixie_moodboard_textboxes
-            if 0 <= self._tb_index < len(boxes):
-                boxes.remove(self._tb_index)
-            _tag_mixie_redraw(context)
-            return {'CANCELLED'}
-
-        return {'RUNNING_MODAL'}
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.activate_init = True
+        row.prop(self, "text", text="")
 
     def execute(self, context):
         scene = context.scene
 
-        text = self.text.strip() or TEXTBOX_TEXT_DEFAULT
+        if not self.text.strip():
+            self.report({'WARNING'}, "Please enter some text")
+            return {'CANCELLED'}
+
         viewport_cx, viewport_cy = get_moodboard_viewport_center()
         item = scene.mixie_moodboard_textboxes.add()
-        item.text = text
+        item.text = self.text
         item.position_x = viewport_cx
         item.position_y = viewport_cy
-        item.width = TEXTBOX_WIDTH_DEFAULT
-        item.height = TEXTBOX_HEIGHT_DEFAULT
-        item.font_size = TEXTBOX_FONT_SIZE_DEFAULT
+        item.width = 400.0
+        item.height = 100.0
+        item.font_size = 48
         item.z_order = len(scene.mixie_moodboard_textboxes) + len(scene.mixie_moodboard_images)
 
-        _tag_mixie_redraw(context)
+        # Trigger immediate UI redraw
+        for area in context.screen.areas:
+            if area.type == 'MIXIE':
+                area.tag_redraw()
 
         self.report({'INFO'}, "Added text box to moodboard")
         return {'FINISHED'}
 
 
 class MIXIE_OT_moodboard_edit_textbox(Operator):
-    """Edit text box content inline: type to replace, Enter to confirm, Esc to cancel"""
+    """Edit text box content"""
 
     bl_idname = "mixie.moodboard_edit_textbox"
     bl_label = "Edit Text Box"
-    bl_description = "Edit the text directly — type to replace, Enter to confirm, Esc to cancel"
+    bl_description = "Edit the content of a text box"
     bl_options = {'REGISTER', 'UNDO'}
 
     index: IntProperty(
@@ -182,118 +87,35 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
 
     text: StringProperty(
         name="Text",
-        description="New text content (set to edit non-interactively)",
+        description="New text content",
         default="",
-        maxlen=1024,
-        options={'SKIP_SAVE'},
+        maxlen=1024
     )
-
-    def _resolve_index(self, scene):
-        if self.index != -1:
-            return self.index
-        for i, textbox in enumerate(scene.mixie_moodboard_textboxes):
-            if textbox.selected:
-                return i
-        return -1
 
     def invoke(self, context, event):
         scene = context.scene
 
-        idx = self._resolve_index(scene)
-        if idx == -1 or idx >= len(scene.mixie_moodboard_textboxes):
+        if self.index == -1:
+            for i, textbox in enumerate(scene.mixie_moodboard_textboxes):
+                if textbox.selected:
+                    self.index = i
+                    break
+
+        if self.index == -1 or self.index >= len(scene.mixie_moodboard_textboxes):
             self.report({'WARNING'}, "No text box selected")
             return {'CANCELLED'}
 
-        # Non-interactive call (text supplied): set and finish, no modal.
-        if self.text:
-            scene.mixie_moodboard_textboxes[idx].text = self.text
-            _tag_mixie_redraw(context)
-            return {'FINISHED'}
-
-        # Edit state lives at module scope (see _EDIT) rather than on self, so it
-        # survives invoke->modal even when this operator is started from the C++
-        # double-click handler (which may not preserve instance attributes).
-        target = scene.mixie_moodboard_textboxes[idx]
-        _EDIT["index"] = idx
-        _EDIT["value"] = target.text
-        _EDIT["original"] = target.text
-        _EDIT["select_all"] = True  # whole text is "selected" — first key replaces it
-        _EDIT["armed"] = False  # click-to-finish arms only after the mouse moves
-
-        # Edit only this text box, and show a caret so it's clearly editable.
-        for tb in scene.mixie_moodboard_textboxes:
-            tb.selected = False
-        target.selected = True
-        target.text = _EDIT["value"] + _CARET
-
-        _tag_mixie_redraw(context)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def modal(self, context, event):
-        boxes = context.scene.mixie_moodboard_textboxes
-        idx = _EDIT["index"]
-        if not (0 <= idx < len(boxes)):
-            return {'CANCELLED'}
-        tb = boxes[idx]
-
-        # Arm click-to-finish only after the mouse moves, so the double-click
-        # that started editing can't immediately confirm it.
-        if event.type == 'MOUSEMOVE':
-            _EDIT["armed"] = True
-            return {'RUNNING_MODAL'}
-
-        # Confirm: Enter/Tab, or a click once armed — strip the caret, keep value.
-        if (event.type in {'RET', 'NUMPAD_ENTER', 'TAB'} and event.value == 'PRESS') or \
-           (event.type == 'LEFTMOUSE' and event.value == 'PRESS' and _EDIT["armed"]):
-            tb.text = _EDIT["value"]
-            _tag_mixie_redraw(context)
-            self.report({'INFO'}, "Text updated")
-            return {'FINISHED'}
-
-        # Cancel: restore the original text.
-        if event.type == 'ESC' and event.value == 'PRESS':
-            tb.text = _EDIT["original"]
-            _tag_mixie_redraw(context)
-            return {'CANCELLED'}
-
-        if event.value != 'PRESS':
-            return {'RUNNING_MODAL'}
-
-        # Backspace: clear on first stroke (text was "selected"), else trim one.
-        if event.type == 'BACK_SPACE':
-            _EDIT["value"] = "" if _EDIT["select_all"] else _EDIT["value"][:-1]
-            _EDIT["select_all"] = False
-        # Paste text from the system clipboard (Ctrl/Cmd+V) into the box.
-        elif event.type == 'V' and (event.ctrl or event.oskey):
-            pasted = context.window_manager.clipboard or ""
-            if not pasted:
-                return {'RUNNING_MODAL'}
-            _EDIT["value"] = pasted if _EDIT["select_all"] else (_EDIT["value"] + pasted)
-            _EDIT["select_all"] = False
-        else:
-            # Printable character: replace the selection on the first key, else append.
-            ch = event.unicode
-            if not (ch and ch.isprintable()) or len(_EDIT["value"]) >= 1023:
-                return {'RUNNING_MODAL'}
-            _EDIT["value"] = ch if _EDIT["select_all"] else (_EDIT["value"] + ch)
-            _EDIT["select_all"] = False
-
-        # Reflect the edit with a trailing caret.
-        tb.text = _EDIT["value"] + _CARET
-        _tag_mixie_redraw(context)
-        return {'RUNNING_MODAL'}
+        self.text = scene.mixie_moodboard_textboxes[self.index].text
+        return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
         scene = context.scene
 
-        idx = self._resolve_index(scene)
-        if idx == -1 or idx >= len(scene.mixie_moodboard_textboxes):
+        if self.index == -1 or self.index >= len(scene.mixie_moodboard_textboxes):
             self.report({'WARNING'}, "Invalid text box index")
             return {'CANCELLED'}
 
-        scene.mixie_moodboard_textboxes[idx].text = self.text
-        _tag_mixie_redraw(context)
+        scene.mixie_moodboard_textboxes[self.index].text = self.text
         self.report({'INFO'}, "Text box updated")
         return {'FINISHED'}
 

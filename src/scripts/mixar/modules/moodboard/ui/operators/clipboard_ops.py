@@ -21,7 +21,6 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from ....common.utils.platform_utils import format_shortcut
-from ...core.moodboard_clipboard import copy_selected
 
 logger = get_logger(__name__)
 
@@ -35,14 +34,6 @@ def _selected_moodboard_image(scene):
         if item.selected and item.image:
             return item
     return None
-
-
-def _has_moodboard_selection(scene):
-    """True if any moodboard image or text box is selected."""
-    if _selected_moodboard_image(scene) is not None:
-        return True
-    textboxes = getattr(scene, "mixie_moodboard_textboxes", None)
-    return bool(textboxes) and any(tb.selected for tb in textboxes)
 
 
 def _save_blender_image_to_png(image, dest_path):
@@ -121,65 +112,65 @@ def _copy_png_to_clipboard(png_path):
         _copy_png_to_clipboard_linux(png_path)
 
 
-def _copy_first_image_to_system_clipboard(item):
-    """Best-effort: place ``item``'s image on the OS clipboard as a PNG.
-
-    Raises on failure so the caller can log it; never required for the in-app
-    copy to succeed.
-    """
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            suffix='.png', prefix='mixar_clipcopy_', delete=False
-        ) as tmp:
-            tmp_path = tmp.name
-        _save_blender_image_to_png(item.image, tmp_path)
-        _copy_png_to_clipboard(tmp_path)
-    finally:
-        if tmp_path:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-
-
 class MIXIE_OT_moodboard_copy_image(Operator):
-    """Copy the selected moodboard image(s) and text box(es) so they can be pasted"""
+    """Copy the first selected moodboard image to the system clipboard"""
 
     bl_idname = "mixie.moodboard_copy_image"
-    bl_label = "Copy"
+    bl_label = "Copy Image to Clipboard"
     bl_description = (
-        f"Copy the selected moodboard images and text boxes; paste with "
-        f"{format_shortcut('V')}"
+        f"Copy the first selected moodboard image to the system clipboard "
+        f"({format_shortcut('C')})"
     )
     bl_options = {'REGISTER'}
 
     @classmethod
     def poll(cls, context):
-        return _has_moodboard_selection(context.scene)
+        return _selected_moodboard_image(context.scene) is not None
 
     def execute(self, context):
-        scene = context.scene
-
-        # Primary path: snapshot the selection into the reliable in-app
-        # clipboard so paste is a lossless, cross-platform duplicate.
-        count = copy_selected(scene)
-        if count == 0:
-            self.report({'WARNING'}, "Nothing selected to copy")
+        item = _selected_moodboard_image(context.scene)
+        if item is None or item.image is None:
+            self.report({'WARNING'}, "No moodboard image selected")
             return {'CANCELLED'}
 
-        # Secondary, best-effort: also put the first image on the system
-        # clipboard for pasting into other apps.  Failures here (missing xclip,
-        # etc.) must not fail the in-app copy.
-        item = _selected_moodboard_image(scene)
-        if item is not None and item.image is not None:
-            try:
-                _copy_first_image_to_system_clipboard(item)
-            except Exception as e:
-                logger.debug("System clipboard copy skipped: %s", e)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                suffix='.png', prefix='mixar_clipcopy_', delete=False
+            ) as tmp:
+                tmp_path = tmp.name
+            _save_blender_image_to_png(item.image, tmp_path)
+            _copy_png_to_clipboard(tmp_path)
+        except FileNotFoundError as e:
+            logger.exception("Clipboard tool missing: %s", e)
+            self.report(
+                {'ERROR'},
+                "Clipboard tool not found. Install xclip (X11) or wl-clipboard (Wayland).",
+            )
+            return {'CANCELLED'}
+        except subprocess.CalledProcessError as e:
+            logger.exception("Clipboard copy command failed: %s", e)
+            self.report({'ERROR'}, f"Failed to copy image to clipboard: {e}")
+            return {'CANCELLED'}
+        except ImportError as e:
+            logger.exception("Missing dependency: %s", e)
+            self.report(
+                {'ERROR'},
+                "Missing clipboard dependency (pywin32/Pillow on Windows).",
+            )
+            return {'CANCELLED'}
+        except Exception as e:
+            logger.exception("Failed to copy image to clipboard")
+            self.report({'ERROR'}, f"Failed to copy image to clipboard: {e}")
+            return {'CANCELLED'}
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
-        noun = "item" if count == 1 else "items"
-        self.report({'INFO'}, f"Copied {count} {noun}")
+        self.report({'INFO'}, f"Copied '{item.image.name}' to clipboard")
         return {'FINISHED'}
 
 

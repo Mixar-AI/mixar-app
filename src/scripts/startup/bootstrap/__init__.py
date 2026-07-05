@@ -316,38 +316,16 @@ def _register_single_ui_module(ui_file, modules_path):
 
     try:
         full_module_name = f"mixar.modules.{module_name}"
+        spec = importlib.util.spec_from_file_location(full_module_name, ui_file)
+        module = importlib.util.module_from_spec(spec)
 
-        module = sys.modules.get(full_module_name)
-        if module is not None:
-            # Already imported — either synchronously by a mixar.bootstrap
-            # module (agent_bubble, workflow, ...) or as a dependency of a
-            # previously loaded UI file (e.g. moodboard's ui/operators/
-            # __init__.py imports every sibling ops file). Re-executing the
-            # file would mint NEW class objects with the same bl_idnames;
-            # register_class() then replaces the originals by unregistering
-            # them, which frees their wmOperatorTypes while already-drawn
-            # buttons still point at them — hovering such a button segfaults
-            # in tooltip creation (but->optype->idname use-after-free).
-            # Reuse the live module and only register what's missing.
-            module.__mixar_module_name__ = module_name
-            module.__mixar_file_path__ = str(ui_file)
-            existing_classes = getattr(module, 'classes', None)
-            if isinstance(existing_classes, (list, tuple)) and existing_classes and all(
-                getattr(cls, 'is_registered', False) for cls in existing_classes
-            ):
-                logger.debug("UI module already registered, skipping: %s", module_name)
-                return
-        else:
-            spec = importlib.util.spec_from_file_location(full_module_name, ui_file)
-            module = importlib.util.module_from_spec(spec)
+        module.__mixar_module_name__ = module_name
+        module.__mixar_file_path__ = str(ui_file)
 
-            module.__mixar_module_name__ = module_name
-            module.__mixar_file_path__ = str(ui_file)
+        # Add to sys.modules BEFORE executing so relative imports work
+        sys.modules[full_module_name] = module
 
-            # Add to sys.modules BEFORE executing so relative imports work
-            sys.modules[full_module_name] = module
-
-            spec.loader.exec_module(module)
+        spec.loader.exec_module(module)
 
         if hasattr(module, 'register') and callable(module.register):
             module.register()
@@ -356,8 +334,6 @@ def _register_single_ui_module(ui_file, modules_path):
         elif hasattr(module, 'classes') and isinstance(module.classes, (list, tuple)):
             registered_count = 0
             for cls in module.classes:
-                if getattr(cls, 'is_registered', False):
-                    continue
                 try:
                     bpy.utils.register_class(cls)
                     registered_count += 1

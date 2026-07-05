@@ -27,18 +27,20 @@ _appended = False
 def _draw_mode_menu_entry(self, context):
     """Append the mode toggle to TOPBAR_MT_editor_menus.
 
-    Sets layout.emboss = 'PULLDOWN_MENU' (the enum lives on UILayout, not as
-    an operator() kwarg — operator()'s emboss arg is a bool) so the button
-    renders as a flat menu-style label matching File / Edit / Render /
-    Window / Help, but a single click runs the operator directly.
+    Drawn on its own row with NORMAL emboss so the button renders as a
+    boxed, embossed widget (rounded rect + subtle fill) that stands out
+    from the flat File / Edit / Render / Window / Help labels. A single
+    click runs the operator directly and flips the mode. The dedicated
+    row keeps the emboss override local so it can't leak onto anything
+    else appended to the menu after us.
     """
-    layout = self.layout
-    layout.emboss = 'PULLDOWN_MENU'
+    row = self.layout.row()
+    row.emboss = 'NORMAL'
     workspace = getattr(context, "workspace", None)
     if workspace is not None and workspace.name == BASIC_WORKSPACE_NAME:
-        layout.operator("mixar.set_ui_mode_pro", text="Engine Mode")
+        row.operator("mixar.set_ui_mode_pro", text="Engine Mode")
     else:
-        layout.operator("mixar.set_ui_mode_ai", text="Zen Mode")
+        row.operator("mixar.set_ui_mode_ai", text="Zen Mode")
 
 
 def install_mode_menu_hook():

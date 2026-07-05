@@ -427,11 +427,9 @@ class MIXIE_OT_imagegen_generate(Operator):
         if ref_b64:
             payload["reference_images_b64"] = ref_b64
 
-        # Prefer the actual API prompt for the row title so the queue reads
-        # like the interactive path; fall back to name / "image" if empty.
-        # The 4-hex uuid suffix keeps the queue's label-based dedup happy
-        # when a batch contains multiple images of the same prompt.
-        _label_base = prompt[:40] or self.name.strip() or "image"
+        # Unique label so a batch never collides with the queue's label-based
+        # dedup (e.g. 4 images of the same prompt, or same agent-chosen name).
+        _label_base = self.name.strip() or prompt[:30] or "image"
         job = enqueue_generation(
             kind="image",
             feature_key=FEATURE_IMAGEGEN,
