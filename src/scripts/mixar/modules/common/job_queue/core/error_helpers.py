@@ -9,6 +9,7 @@ from mixar.modules.common.api.exceptions import (
     AuthorizationError,
     ConnectionError,
     HTTPClientError,
+    InsufficientCreditsError,
     NotFoundError,
     RateLimitError,
     ServerError,
@@ -34,6 +35,9 @@ _SENSITIVE_PATTERNS = (
 
 def classify_error(error) -> str:
     """Return a user-friendly message for a typed exception, or ``""``."""
+    # Check InsufficientCreditsError before its HTTPClientError base.
+    if isinstance(error, InsufficientCreditsError):
+        return "You're out of credits — upgrade your plan to continue"
     if isinstance(error, AuthenticationError):
         return "Authentication required — please sign in"
     if isinstance(error, AuthorizationError):

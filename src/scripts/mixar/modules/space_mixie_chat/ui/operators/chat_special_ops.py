@@ -68,6 +68,22 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             self.report({'WARNING'}, "Missing bubble_id or action_value")
             return {'CANCELLED'}
 
+        # Credit-upgrade CTA: open the manage-subscription page via the shared
+        # upgrade operator (seamless auth handoff) instead of dispatching the
+        # value back to the backend. Handled before the connection check so it
+        # works even when disconnected or out of credits.
+        from mixar.modules.common.notifications.credit_upgrade import (
+            CREDIT_UPGRADE_CHAT_ACTION,
+        )
+        if self.action_value == CREDIT_UPGRADE_CHAT_ACTION:
+            try:
+                bpy.ops.mixar.open_credit_upgrade('INVOKE_DEFAULT')
+            except Exception as e:
+                logger.error(f"[SLOT ACTION] Failed to open credit upgrade: {e}")
+                self.report({'ERROR'}, "Couldn't open the upgrade page")
+                return {'CANCELLED'}
+            return {'FINISHED'}
+
         # Check connection before dispatching
         from ...core import get_session_manager
         session = get_session_manager()

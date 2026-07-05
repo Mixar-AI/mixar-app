@@ -461,7 +461,22 @@ class EventProcessor:
             if is_read_timeout:
                 pass  # suppress — see comment above
             elif is_http_error:
-                add_agent_message(scene, user_message)
+                # Credits exhausted (402): show the in-chat "Upgrade" message
+                # instead of a plain error bubble. The backend also fires a
+                # credit_upgrade WS push (toast + chat bubble); prefix-dedup
+                # collapses the two into one bubble, and this branch doubles as
+                # a main-thread-native fallback if the push doesn't arrive.
+                details = self._parse_http_error(error_message)
+                from .credits_notice import is_credits_exhausted_error
+                if is_credits_exhausted_error(details.get("status"), user_message):
+                    from .credits_notice import add_credit_upgrade_chat_message
+                    add_credit_upgrade_chat_message(
+                        scene=scene,
+                        body=details.get("message") or user_message,
+                        action_url=details.get("action_url"),
+                    )
+                else:
+                    add_agent_message(scene, user_message)
             elif is_pre_stream_error:
                 add_agent_message(
                     scene,
@@ -508,6 +523,41 @@ class EventProcessor:
         except (json.JSONDecodeError, ValueError):
             pass
         return error_message
+
+    @staticmethod
+    def _parse_http_error(error_message: str) -> dict:
+        """Parse a "HTTP NNN: {json_body}" error into its parts.
+
+        Returns a dict with ``status`` (int or None), ``message``, and the
+        credit CTA fields ``action_url`` / ``action_label`` when the body
+        carries them. Handles both the flat ORJSONResponse body
+        ({status, message, data}) and the HTTPException body ({detail: {...}}).
+        """
+        result = {
+            "status": None,
+            "message": error_message,
+            "action_url": None,
+            "action_label": None,
+        }
+        try:
+            prefix, _, body = error_message.partition(": ")
+            parts = prefix.split()
+            if len(parts) == 2 and parts[0] == "HTTP" and parts[1].isdigit():
+                result["status"] = int(parts[1])
+            if body:
+                data = json.loads(body)
+                if isinstance(data, dict):
+                    inner = data.get("detail") if isinstance(data.get("detail"), dict) else data
+                    if isinstance(inner, dict):
+                        if inner.get("message"):
+                            result["message"] = inner["message"]
+                        cta = inner.get("data")
+                        if isinstance(cta, dict):
+                            result["action_url"] = cta.get("action_url")
+                            result["action_label"] = cta.get("action_label")
+        except (json.JSONDecodeError, ValueError, AttributeError):
+            pass
+        return result
 
     def _clear_loader_bubbles(self, scene) -> None:
         """Hide loader indicators and remove temp placeholder bubbles.

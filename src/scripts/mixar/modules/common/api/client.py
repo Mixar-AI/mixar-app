@@ -39,6 +39,7 @@ from .exceptions import (
     AuthorizationError,
     ConnectionError,
     HTTPClientError,
+    InsufficientCreditsError,
     NotFoundError,
     RateLimitError,
     ServerError,
@@ -205,6 +206,21 @@ class HTTPClient:
 
         if status == 401:
             return AuthenticationError(**error_kwargs)
+        elif status == 402:
+            # Credits exhausted. Pull the "manage subscription" CTA the backend
+            # attaches under data.action_url / data.action_label (structured
+            # body is either {detail: {..., data}} or {..., data} depending on
+            # whether it was raised via HTTPException or ORJSONResponse).
+            cta = {}
+            if isinstance(data, dict):
+                body = data.get("detail") if isinstance(data.get("detail"), dict) else data
+                if isinstance(body, dict) and isinstance(body.get("data"), dict):
+                    cta = body["data"]
+            return InsufficientCreditsError(
+                action_url=cta.get("action_url"),
+                action_label=cta.get("action_label"),
+                **error_kwargs,
+            )
         elif status == 403:
             return AuthorizationError(**error_kwargs)
         elif status == 404:

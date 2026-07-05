@@ -4,15 +4,13 @@
 
 """Retopology Generate Operator (catalog-driven tab).
 
-Resolves the Retopology tab's catalog service and model — on merged
-catalogs one ``retopology`` service carries both engines as models
-(``hunyuan_topology`` / ``tripo_v2``); pre-merge catalogs still expose
-Tripo as the separate ``retopology_tripo`` service — collects the
-model's schema params, and fans out one job per selected mesh through
-the EXISTING ``enqueue_retopology_jobs`` helper, so payload assembly
-(shared retopology assemblers), per-object export, size limits, and the
-import hooks stay identical to the legacy ``mixie.hunyuan_generate``
-TOPOLOGY path.
+Routes by the Retopology tab's selected mode (catalog service of
+capability ``retopology``), collects the model's schema params, and fans
+out one job per selected mesh through the EXISTING
+``enqueue_retopology_jobs`` helper — so payload assembly (shared
+``retopology`` / ``retopology_tripo`` assemblers), per-object export,
+size limits, and the import hooks stay identical to the legacy
+``mixie.hunyuan_generate`` TOPOLOGY path.
 """
 
 from bpy.types import Operator
@@ -63,16 +61,11 @@ class MIXIE_OT_retopology_generate(Operator):
         service_key = resolve_service_key(
             "retopology", getattr(tab, "mode", "")
         ) or RETOPOLOGY_HUNYUAN_SERVICE
+        is_tripo = service_key == _TRIPO_SERVICE
         model = resolve_model_slug(
             service_key,
             getattr(tab, 'model', ''),
-            RETOPOLOGY_TRIPO_MODEL if service_key == _TRIPO_SERVICE
-            else RETOPOLOGY_HUNYUAN_MODEL,
-        )
-        # The engine is the model choice on merged catalogs; the dedicated
-        # retopology_tripo service only exists pre-merge.
-        is_tripo = (
-            model == RETOPOLOGY_TRIPO_MODEL or service_key == _TRIPO_SERVICE
+            RETOPOLOGY_TRIPO_MODEL if is_tripo else RETOPOLOGY_HUNYUAN_MODEL,
         )
 
         params = {}
@@ -83,9 +76,7 @@ class MIXIE_OT_retopology_generate(Operator):
                          service_key, model, e)
 
         # --- Map catalog params onto the shared enqueue snapshot ---
-        # service_key rides along so the enqueue submits to whichever
-        # service the catalog linked the model under.
-        shared = {"model_slug": model, "service_key": service_key}
+        shared = {"model_slug": model}
         if is_tripo:
             topo = scene.hunyuan.topology if hasattr(scene, 'hunyuan') else None
             shared["model"] = "tripo"

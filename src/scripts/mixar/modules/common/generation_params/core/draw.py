@@ -22,7 +22,7 @@ from ..constants import (
     WIDGET_TOGGLE,
     TYPE_BOOLEAN,
     TYPE_INTEGER,
-    FLOAT_TYPES,
+    TYPE_NUMBER,
 )
 from .engine import (
     get_param_group,
@@ -42,7 +42,7 @@ def _default_widget(entry: Dict[str, Any]) -> str:
     ptype = spec.get("type")
     if ptype == TYPE_BOOLEAN:
         return WIDGET_TOGGLE
-    if ptype == TYPE_INTEGER or ptype in FLOAT_TYPES:
+    if ptype in (TYPE_INTEGER, TYPE_NUMBER):
         return "number"
     return WIDGET_TEXT
 

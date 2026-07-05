@@ -16,13 +16,7 @@ WIDGET_SEGMENTED = "segmented"
 TYPE_STRING = "string"
 TYPE_INTEGER = "integer"
 TYPE_NUMBER = "number"
-TYPE_FLOAT = "float"
 TYPE_BOOLEAN = "boolean"
-
-# The backend validator treats "float" and "number" as the same numeric
-# type; keep the client in sync so a "float" param renders as a real
-# FloatProperty (and is sent as a number) instead of a text field/string.
-FLOAT_TYPES = (TYPE_NUMBER, TYPE_FLOAT)
 
 # Prefix for the dynamic property attributes inside a generated
 # PropertyGroup (avoids collisions with reserved names / leading digits).

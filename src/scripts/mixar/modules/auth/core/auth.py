@@ -478,9 +478,15 @@ def get_user_info():
         return response_data
 
 
-def create_dashboard_handoff_url():
+def create_dashboard_handoff_url(source="texture_painting", target=None):
     """
     Create a one-time auth handoff URL for the web dashboard.
+
+    Args:
+        source: Identifies where the handoff originated (analytics/routing).
+        target: Optional post-auth destination (e.g. the manage-subscription
+            page). Forwarded to the backend so the returned ``redirect_url``
+            lands there when the backend honours it; ignored otherwise.
     """
     token = get_access_token()
     if not token:
@@ -493,7 +499,9 @@ def create_dashboard_handoff_url():
             "accept": "application/json",
             "Authorization": f"Bearer {token}",
         }
-        payload = {"source": "texture_painting"}
+        payload = {"source": source}
+        if target:
+            payload["target"] = target
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
 
         if response.status_code not in (200, 201):

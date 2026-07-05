@@ -252,6 +252,25 @@ class ConnectionManager:
                 trigger_update_check()
                 return
 
+            if notif_type == "credit_upgrade":
+                # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
+                from ...common.notifications.credit_upgrade import push_credit_upgrade
+                push_credit_upgrade(params)
+                # Surface #2 — a Mixie chat message with the same CTA. This
+                # mutates scene data, so marshal it onto the main thread.
+                from .main_thread_executor import run_on_main_thread
+
+                def _add_chat_notice(p=params):
+                    from .credits_notice import add_credit_upgrade_chat_message
+                    add_credit_upgrade_chat_message(
+                        title=p.get("title"),
+                        body=p.get("body", p.get("message")),
+                        action_url=p.get("action_url"),
+                    )
+
+                run_on_main_thread(_add_chat_notice)
+                return
+
             from ...common.notifications import get_notification_store
             store = get_notification_store()
             store.push(
