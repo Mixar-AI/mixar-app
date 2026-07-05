@@ -13,9 +13,11 @@ Item / Tool / View in the 3D Viewport N-panel.
 Tab structure (Stage 3)
 -----------------------
 One panel per generation-catalog capability, in catalog sort order:
-Image Gen, Model Gen, Texture Gen, Scene Gen, Retopology, UV Unwrapping,
-Mesh Segmentation — plus the Queue utility panel (not a capability;
-``mixie.queue_view`` keys on its "Queue" category).
+Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Retopology,
+UV Unwrapping, Mesh Segmentation — plus the Queue utility panel (not a
+capability; ``mixie.queue_view`` keys on its "Queue" category). AI
+Render is catalog-only (no offline fallback): its panel hides unless the
+loaded catalog has ``ai_render`` services.
 
 Design decision — static panels, catalog-driven content:
 Blender resolves ``bl_category``/``bl_label`` at class registration, so
@@ -49,6 +51,7 @@ from .sidebar_tab_drawers import (
     _draw_retopology,
     _draw_uv_unwrap,
 )
+from .ai_render_drawer import _draw_ai_render
 from .scene_gen_drawer import _draw_scene_gen
 
 logger = get_logger(__name__)
@@ -115,6 +118,39 @@ class MIXIE_PT_gen_imagegen(Panel):
 
     def draw(self, context):
         _safe_draw(_draw_imagegen, self.layout, context)
+
+
+class MIXIE_PT_gen_ai_render(Panel):
+    # Capability "ai_render" — hosts depth_to_image (From Blockout) when
+    # the catalog routes it here. Unlike the seven legacy tabs, this one
+    # has NO offline fallback identity: it only exists as a catalog
+    # capability, so poll() requires the catalog to be loaded AND to have
+    # moodboard services for it (pre-move / reverted DBs hide the tab).
+    bl_label = "AI Render"
+    bl_idname = "MIXIE_PT_gen_ai_render"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "AI Render"
+    bl_order = 15
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("ai_render"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='RESTRICT_RENDER_OFF')
+
+    def draw(self, context):
+        _safe_draw(_draw_ai_render, self.layout, context)
 
 
 class MIXIE_PT_gen_image_to_3d(Panel):
@@ -291,6 +327,7 @@ class MIXIE_PT_gen_queue(Panel):
 # Only register if MIXIE space is available.
 classes = (
     MIXIE_PT_gen_imagegen,
+    MIXIE_PT_gen_ai_render,
     MIXIE_PT_gen_image_to_3d,
     MIXIE_PT_gen_lookdev360,
     MIXIE_PT_gen_scene_recon,

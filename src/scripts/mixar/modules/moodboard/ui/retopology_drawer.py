@@ -5,12 +5,14 @@
 """Retopology Tab Drawer — catalog-driven engine selection.
 
 Renders the Retopology sidebar tab from the generation catalog's
-``retopology`` capability: a Mode dropdown (Retopology = Hunyuan /
-Retopology (Tripo) = ``retopology_tripo``), the selected mode's Model
-dropdown, and its schema-driven params (polygon_type / face_level /
-post_process for Hunyuan; quad / face_limit for Tripo). Tripo's
-"Bake Textures" flag is client-side (drives the import hook's smart-UV
-decision), so it stays on ``scene.hunyuan.topology.tripo_bake``.
+``retopology`` capability. On merged catalogs that's one ``retopology``
+service (Mode dropdown hidden) whose Model dropdown picks the engine
+(``hunyuan_topology`` / ``tripo_v2``); pre-merge catalogs still show
+Tripo as a separate ``retopology_tripo`` mode. Schema-driven params
+follow the selected model (polygon_type / face_level / post_process for
+Hunyuan; quad / face_limit for Tripo). Tripo's "Bake Textures" flag is
+client-side (drives the import hook's smart-UV decision), so it stays
+on ``scene.hunyuan.topology.tripo_bake``.
 
 Called from ``sidebar_tab_drawers._draw_retopology`` which falls back to
 the legacy ``scene.hunyuan.topology`` UI when the catalog isn't loaded.
@@ -24,6 +26,7 @@ from .sidebar_ui_helpers import (
 )
 
 _TRIPO_SERVICE = "retopology_tripo"
+_TRIPO_MODEL = "tripo_v2"
 
 
 def _retopology_catalog_ready():
@@ -43,12 +46,15 @@ def _draw_retopology_catalog(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_retopology
 
     from mixar.modules.common.generation_params import (
-        draw_capability_selector, resolve_service_key,
+        draw_capability_selector, resolve_model_slug, resolve_service_key,
     )
     service_key = resolve_service_key(
         "retopology", getattr(tab, "mode", "")
     ) or "retopology"
-    is_tripo = service_key == _TRIPO_SERVICE
+    # The engine is the model choice on merged catalogs; the dedicated
+    # retopology_tripo service only exists pre-merge.
+    model_slug = resolve_model_slug(service_key, getattr(tab, "model", ""))
+    is_tripo = model_slug == _TRIPO_MODEL or service_key == _TRIPO_SERVICE
 
     # --- Mesh info ---
     col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
