@@ -52,10 +52,10 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from ..constants import (
+    FLOAT_TYPES,
     PARAM_ATTR_PREFIX,
     TYPE_BOOLEAN,
     TYPE_INTEGER,
-    TYPE_NUMBER,
     UNBOUNDED_FLOAT_MAX,
     UNBOUNDED_FLOAT_MIN,
     UNBOUNDED_INT_MAX,
@@ -160,7 +160,7 @@ def _make_prop(param_name: str, spec: dict):
             None,
         )
 
-    if ptype == TYPE_NUMBER:
+    if ptype in FLOAT_TYPES:
         pmin = spec.get("min")
         pmax = spec.get("max")
         return (

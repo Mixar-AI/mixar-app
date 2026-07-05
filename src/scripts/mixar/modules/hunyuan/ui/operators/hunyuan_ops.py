@@ -368,17 +368,15 @@ class MIXIE_OT_hunyuan_generate(Operator):
         if result_format not in {"glb", "usdz"}:
             raise ValueError("result_format must be 'glb' or 'usdz'")
 
-        sdk_params = {
-            "EnablePBR": bool(self.enable_pbr),
-            "EnableGeometry": bool(self.enable_geometry),
-            # Always sent, uppercase: Tencent's default when omitted is an
-            # OBJ ZIP archive the client can't import.
-            "ResultFormat": result_format.upper(),
+        params = {
+            "enable_pbr": bool(self.enable_pbr),
+            "enable_geometry": bool(self.enable_geometry),
+            "result_format": result_format,
         }
         if has_prompt:
-            sdk_params["Prompt"] = prompt
+            params["prompt"] = prompt
 
-        payload = {"sdk_params": sdk_params}
+        payload = {"params": params}
         if has_image:
             image_bytes = compress_image_for_upload(image)
             payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
@@ -596,18 +594,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
             elif rapid.image:
                 image_bytes = compress_image_for_upload(rapid.image)
 
-        sdk_params = {
-            "EnablePBR": rapid.enable_pbr,
-            "EnableGeometry": rapid.enable_geometry,
-            # Always sent, uppercase: Tencent's default when omitted is an
-            # OBJ ZIP archive the client can't import.
-            "ResultFormat": (rapid.result_format or "GLB").upper(),
+        params = {
+            "enable_pbr": bool(rapid.enable_pbr),
+            "enable_geometry": bool(rapid.enable_geometry),
+            "result_format": (rapid.result_format or "glb").lower(),
         }
         prompt_str = rapid.prompt.strip() if has_prompt else ""
         if prompt_str:
-            sdk_params["Prompt"] = prompt_str
+            params["prompt"] = prompt_str
 
-        payload = {"sdk_params": sdk_params}
+        payload = {"params": params}
         if image_bytes:
             payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
             payload["image_filename"] = "image.png"
