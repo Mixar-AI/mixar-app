@@ -57,7 +57,7 @@ def _get_status(scene) -> tuple[str, str, str]:
         # traffic-light button. CONNECTING and AWAITING_INPUT can't be
         # active simultaneously, so reusing the same blue is safe and
         # avoids the visual collision.
-        return "Awaiting input", "blue", 'QUESTION'
+        return "Awaiting Input", "blue", 'QUESTION'
     return "Idle", "grey", 'RECORD_OFF'
 
 
