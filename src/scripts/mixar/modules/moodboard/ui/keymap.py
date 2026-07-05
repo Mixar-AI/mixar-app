@@ -110,16 +110,6 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_copy_image',
-            type='C',
-            value='PRESS',
-            ctrl=modifier.get('ctrl', False),
-            oskey=modifier.get('oskey', False)
-        )
-        addon_keymaps.append((km, kmi))
-
         # Register Cmd+V (macOS) / Ctrl+V (Windows/Linux) for pasting images from clipboard
         kmi = km.keymap_items.new(
             'mixie.moodboard_paste_image',
@@ -171,7 +161,6 @@ def register():
 
         cmd_key = get_command_modifier()
         logger.info("Registered keymap: %s+P for sending images to chat", cmd_key)
-        logger.info("Registered keymap: %s+C for copying images", cmd_key)
         logger.info("Registered keymap: %s+V for pasting image from clipboard", cmd_key)
         logger.info("Registered keymap: %s for pie menu (follows user preference)", pie_key['type'])
         logger.info("Registered keymap: Ctrl+Tab for pie menu (additional shortcut)")

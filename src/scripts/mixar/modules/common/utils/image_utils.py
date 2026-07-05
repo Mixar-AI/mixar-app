@@ -369,15 +369,29 @@ def add_image_to_moodboard(
     """Add an image to the moodboard collection at specified position.
 
     When *position_x* or *position_y* are ``None`` (the default) the image is
-    placed near the centre of the currently visible moodboard viewport so that
-    it always pops up where the user is looking, regardless of pan/zoom state,
-    and nudged to the nearest free slot so it does not land on top of existing
-    images.  Explicit float values override this behaviour and allow callers to
-    place images at precise canvas coordinates (e.g. for side-by-side layouts).
+    placed at the centre of the currently visible moodboard viewport so that it
+    always pops up where the user is looking, regardless of pan/zoom state.
+    Explicit float values override this behaviour and allow callers to place
+    images at precise canvas coordinates (e.g. for side-by-side layouts).
     """
+    if position_x is None or position_y is None:
+        try:
+            from mixar.modules.moodboard.core.moodboard_utils import (
+                get_moodboard_viewport_center,
+            )
+            cx, cy = get_moodboard_viewport_center()
+        except Exception:
+            cx, cy = 0.0, 0.0
+        if position_x is None:
+            position_x = cx
+        if position_y is None:
+            position_y = cy
+
     scene = bpy.context.scene
     item = scene.mixie_moodboard_images.add()
     item.image = image
+    item.position_x = position_x
+    item.position_y = position_y
     item.scale = scale
     item.z_order = len(scene.mixie_moodboard_images) - 1
     if prompt:
@@ -385,22 +399,6 @@ def add_image_to_moodboard(
     item.mixar_created_at_iso = datetime.now(timezone.utc).isoformat()
     if job_handle:
         item.mixar_job_handle = job_handle
-
-    if position_x is None or position_y is None:
-        # Auto-place into visible free space (centre → nearest free slot →
-        # zoom out to reveal).  Shared with the upload/paste paths.
-        try:
-            from mixar.modules.moodboard.core.moodboard_utils import (
-                place_new_moodboard_item,
-            )
-            place_new_moodboard_item(scene, item)
-        except Exception:
-            pass
-    # Explicit coordinates override the auto-placement.
-    if position_x is not None:
-        item.position_x = position_x
-    if position_y is not None:
-        item.position_y = position_y
 
     # Redraw Mixie space
     for area in bpy.context.screen.areas:

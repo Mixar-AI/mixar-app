@@ -11,35 +11,29 @@ Operators for adding images to the moodboard.
 
 import bpy
 from bpy.types import Operator
-from bpy.props import (
-    StringProperty,
-    CollectionProperty,
-    EnumProperty,
-    FloatProperty,
-    BoolProperty,
-)
+from bpy.props import StringProperty, CollectionProperty, EnumProperty
 
-from ...core.moodboard_utils import place_new_moodboard_item
+from ...constants import MOODBOARD_IMAGE_BASE_SIZE, MOODBOARD_MULTI_IMAGE_GAP
+from ...core.moodboard_utils import get_moodboard_viewport_center
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ....common.utils.platform_utils import format_shortcut
 
 
-def _load_image_from_filepath(scene, filepath, anchor=None):
+def _load_image_from_filepath(scene, filepath):
     """Load an image from filepath and add it to the moodboard.
 
-    Reusable helper that loads the image into Blender, packs it, appends it to
-    the moodboard collection, and positions it into visible free space centred
-    on *anchor* (canvas coords, e.g. the cursor) or the viewport centre when
-    *anchor* is ``None``.  Returns the new item on success or None.
+    Reusable helper that loads the image into Blender, packs it, and appends
+    it to the moodboard collection.  Returns the new item on success or None.
 
     Args:
         scene: The current Blender scene.
         filepath: Absolute path to the image file.
-        anchor: Optional ``(x, y)`` canvas coordinates to centre the image on.
 
     Returns:
         The newly created moodboard item, or None on failure.
     """
+    import os
+
     try:
         img = bpy.data.images.load(filepath, check_existing=True)
         img.colorspace_settings.name = 'sRGB'
@@ -47,11 +41,20 @@ def _load_image_from_filepath(scene, filepath, anchor=None):
     except Exception:
         return None
 
+    if img.size[1] > 0:
+        aspect_ratio = img.size[0] / img.size[1]
+        image_width = MOODBOARD_IMAGE_BASE_SIZE * aspect_ratio
+    else:
+        image_width = MOODBOARD_IMAGE_BASE_SIZE
+
+    viewport_cx, viewport_cy = get_moodboard_viewport_center()
+
     item = scene.mixie_moodboard_images.add()
     item.image = img
+    item.position_x = viewport_cx
+    item.position_y = viewport_cy
     item.scale = 1.0
     item.z_order = len(scene.mixie_moodboard_images) - 1
-    place_new_moodboard_item(scene, item, anchor=anchor)
     return item
 
 
@@ -114,9 +117,11 @@ class MIXIE_OT_moodboard_add_image(Operator):
 
         added_count = 0
 
-        # Each image is dropped into the nearest free slot near the viewport
-        # centre (handled by _load_image_from_filepath) so uploads never stack
-        # on top of each other or on images already on the board.
+        # Place the first image at the viewport centre; subsequent images are
+        # laid out side-by-side starting from that centre position.
+        viewport_cx, viewport_cy = get_moodboard_viewport_center()
+        current_x = viewport_cx
+
         for i, raw_filepath in enumerate(filepaths):
             # Validate and normalize the file path to prevent path traversal
             try:
@@ -134,6 +139,17 @@ class MIXIE_OT_moodboard_add_image(Operator):
                 self.report({'WARNING'}, f"Failed to load image: {filepath}")
                 continue
 
+            # Position images side by side
+            img = item.image
+            if img.size[1] > 0:
+                aspect_ratio = img.size[0] / img.size[1]
+                image_width = MOODBOARD_IMAGE_BASE_SIZE * aspect_ratio
+            else:
+                image_width = MOODBOARD_IMAGE_BASE_SIZE
+
+            item.position_x = current_x
+            item.position_y = viewport_cy
+            current_x += image_width + MOODBOARD_MULTI_IMAGE_GAP
             added_count += 1
 
         if added_count == 0:
@@ -193,12 +209,14 @@ class MIXIE_OT_moodboard_add_existing_image(Operator):
 
         scene = context.scene
 
-        # Add to moodboard collection, positioned into visible free space.
+        # Add to moodboard collection at the centre of the visible viewport
+        viewport_cx, viewport_cy = get_moodboard_viewport_center()
         item = scene.mixie_moodboard_images.add()
         item.image = img
+        item.position_x = viewport_cx
+        item.position_y = viewport_cy
         item.scale = 1.0
         item.z_order = len(scene.mixie_moodboard_images) - 1
-        place_new_moodboard_item(scene, item)
 
         self.report({'INFO'}, f"Added '{img.name}' to moodboard")
         return {'FINISHED'}
@@ -215,44 +233,11 @@ class MIXIE_OT_moodboard_paste_image(Operator):
     )
     bl_options = {'REGISTER', 'UNDO'}
 
-    # Cursor position (canvas coords) captured at invoke so the paste lands
-    # under the mouse instead of at the viewport centre.
-    cursor_x: FloatProperty(options={'HIDDEN'})
-    cursor_y: FloatProperty(options={'HIDDEN'})
-    use_cursor: BoolProperty(default=False, options={'HIDDEN'})
-
-    def invoke(self, context, event):
-        region = context.region
-        view2d = getattr(region, "view2d", None) if region else None
-        if view2d is not None:
-            self.cursor_x, self.cursor_y = view2d.region_to_view(
-                event.mouse_region_x, event.mouse_region_y
-            )
-            self.use_cursor = True
-        else:
-            self.use_cursor = False
-        return self.execute(context)
-
     def execute(self, context):
         import os
         import tempfile
 
-        scene = context.scene
-        anchor = (self.cursor_x, self.cursor_y) if self.use_cursor else None
-
-        # Primary path: paste from the reliable in-app clipboard (images and text
-        # boxes copied from the moodboard) — a lossless duplicate, no round-trip.
-        from ...core.moodboard_clipboard import has_clipboard, paste_clipboard
-        if has_clipboard():
-            pasted = paste_clipboard(scene, anchor=anchor)
-            if pasted:
-                for area in context.screen.areas:
-                    if area.type == 'MIXIE':
-                        area.tag_redraw()
-                self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
-                return {'FINISHED'}
-
-        # Fallback: grab an external image from the system clipboard via Pillow.
+        # Try to grab an image from the system clipboard using PIL/Pillow
         try:
             from PIL import ImageGrab
         except ImportError:
@@ -288,7 +273,7 @@ class MIXIE_OT_moodboard_paste_image(Operator):
                 self.report({'WARNING'}, "No image found in clipboard")
                 return {'CANCELLED'}
 
-            item = _load_image_from_filepath(context.scene, filepath, anchor=anchor)
+            item = _load_image_from_filepath(context.scene, filepath)
             if item is None:
                 self.report({'ERROR'}, "Failed to load clipboard image")
                 return {'CANCELLED'}
@@ -313,7 +298,7 @@ class MIXIE_OT_moodboard_paste_image(Operator):
             return {'CANCELLED'}
 
         try:
-            item = _load_image_from_filepath(context.scene, tmp_path, anchor=anchor)
+            item = _load_image_from_filepath(context.scene, tmp_path)
         finally:
             # Clean up temp file regardless of outcome
             try:
