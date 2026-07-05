@@ -12,23 +12,17 @@ from mixar.modules.common.job_queue.core.job import JobState
 
 logger = get_logger(__name__)
 
-_ATTR_TO_FEATURE: dict[str, str] = {}  # Populated by queue_properties._attach_listeners
-
 # Guard: suppress selection callback during programmatic mirror syncs
 _suppress_selection = False
 
 
 def on_active_index_changed(pg, _context) -> None:
-    """Update callback for ``MixieFeatureQueuePG.active_index``.
+    """Update callback for ``MixieUnifiedQueuePG.active_index``.
 
-    Resolves the feature key from the PG instance, looks up the
-    canonical Job, and selects the result in the viewport or moodboard.
+    Reads ``feature_key`` directly off the item, looks up the canonical
+    Job, and selects the result in the viewport or moodboard.
     """
     if _suppress_selection:
-        return
-
-    feature_key = _resolve_feature_key(pg)
-    if not feature_key:
         return
 
     idx = pg.active_index
@@ -39,7 +33,10 @@ def on_active_index_changed(pg, _context) -> None:
     if item.state != JobState.SUCCESS.value:
         return
 
-    # Look up canonical Job for the full imported_object_names
+    feature_key = item.feature_key
+    if not feature_key:
+        return
+
     from mixar.modules.common.job_queue.core.queue_manager import get_queue
 
     queue = get_queue(feature_key)
@@ -61,35 +58,6 @@ def on_active_index_changed(pg, _context) -> None:
         _select_viewport_objects(job.imported_object_names)
 
 
-def _resolve_feature_key(pg) -> str:
-    """Find which feature_key owns this MixieFeatureQueuePG instance.
-
-    Uses RNA path comparison — Blender creates new Python wrappers on each
-    PointerProperty access, so ``is`` identity checks always fail.
-    """
-    try:
-        pg_path = pg.path_from_id()
-    except Exception:
-        return ""
-    try:
-        scene = bpy.context.scene
-    except Exception:
-        return ""
-    if not hasattr(scene, "mixie_queues"):
-        return ""
-    queues = scene.mixie_queues
-    for attr, feat in _ATTR_TO_FEATURE.items():
-        sub = getattr(queues, attr, None)
-        if sub is None:
-            continue
-        try:
-            if sub.path_from_id() == pg_path:
-                return feat
-        except Exception:
-            continue
-    return ""
-
-
 def _select_viewport_objects(names_csv: str) -> None:
     """Deselect all, then select + activate the named objects."""
     names = [n.strip() for n in names_csv.split(",") if n.strip()]
@@ -97,10 +65,8 @@ def _select_viewport_objects(names_csv: str) -> None:
         return
 
     try:
-        # Deselect all currently selected objects
         for obj in bpy.context.view_layer.objects.selected:
             obj.select_set(False)
-        # Select the named objects
         last = None
         for name in names:
             obj = bpy.data.objects.get(name)
@@ -109,7 +75,6 @@ def _select_viewport_objects(names_csv: str) -> None:
                 last = obj
         if last:
             bpy.context.view_layer.objects.active = last
-        # Redraw 3D viewports to show the selection change
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
                 area.tag_redraw()
@@ -123,12 +88,10 @@ def _select_moodboard_images(job) -> None:
         scene = bpy.context.scene
         if not hasattr(scene, "mixie_moodboard_images"):
             return
-        # Match by job_handle (set to job.id at enqueue time)
         for item in scene.mixie_moodboard_images:
             item.selected = (
                 item.mixar_job_handle == job.id
             )
-        # Redraw moodboard
         for area in bpy.context.screen.areas:
             if area.type == 'MIXIE':
                 area.tag_redraw()
