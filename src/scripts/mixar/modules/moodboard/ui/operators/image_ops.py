@@ -148,33 +148,17 @@ class MIXIE_OT_moodboard_add_image(Operator):
         return {'FINISHED'}
 
 
-# Blender requirement: enum-items callbacks must keep the returned strings
-# referenced from Python, otherwise they can be garbage-collected while the
-# UI still points at them (crashes/garbled text).
-_existing_image_items = []
-
-
 def _get_existing_images(self, context):
     """Build enum items from images already loaded in Blender."""
-    global _existing_image_items
     items = []
-    for i, img in enumerate(bpy.data.images):
+    for img in bpy.data.images:
         # Skip internal/viewer images
         if img.name.startswith('.') or img.type == 'RENDER_RESULT' or img.type == 'COMPOSITING':
             continue
         desc = f"{img.size[0]}x{img.size[1]}"
-        # 5-tuple with the image's preview icon so the search popup shows
-        # a thumbnail per row (operator enum popups have no automatic ID
-        # icon lookup, unlike prop()/template_ID browse dropdowns).
-        try:
-            preview = img.preview_ensure()
-            icon_id = preview.icon_id if preview else 0
-        except Exception:
-            icon_id = 0
-        items.append((img.name, img.name, desc, icon_id, i))
+        items.append((img.name, img.name, desc))
     if not items:
-        items.append(('NONE', "No images available", "", 0, 0))
-    _existing_image_items = items
+        items.append(('NONE', "No images available", ""))
     return items
 
 
