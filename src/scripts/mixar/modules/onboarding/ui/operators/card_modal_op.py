@@ -38,6 +38,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.onboarding.constants import (
     CARD_POS_NEAR_BUBBLE,
+    CARD_POS_TOP_LEFT,
     CARD_POS_WINDOW_CENTER,
     CARD_SCALE_DEFAULT,
     OP_CARD_MODAL,
@@ -47,6 +48,7 @@ from mixar.modules.onboarding.core import card as card_pkg
 from mixar.modules.onboarding.ui.operators.card_config import step_card_config
 from mixar.modules.onboarding.ui.operators.host_resolver import (
     bubble_anchor_in_region,
+    bubble_clearance_height,
     find_host,
     find_largest_window_region,
     fit_scale_for_region,
@@ -145,6 +147,15 @@ class MIXAR_OT_onboarding_card(Operator):
         reserved_w, reserved_h = reserved_space_for_position(
             self._config["position"],
         )
+        if self._config["position"] == CARD_POS_TOP_LEFT:
+            # Top-left cards (welcome / completion) can collide with
+            # the floating Agent Bubble window docked over the host
+            # region's bottom-left — reserve vertical clearance so the
+            # card scales down enough that its bottom clears the bubble.
+            reserved_h = max(
+                reserved_h,
+                bubble_clearance_height((window.x, window.y), region),
+            )
         self._config["scale"] = fit_scale_for_region(
             region, target_scale, CARD_WIDTH, CARD_MIN_HEIGHT,
             reserved_w=reserved_w, reserved_h=reserved_h,
