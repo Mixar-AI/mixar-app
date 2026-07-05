@@ -153,18 +153,26 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
         from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV
 
         # Model slug + schema params from the catalog's depth_to_image
-        # service when loaded (Image Gen tab "From Blockout" mode); the
-        # legacy hardcoded model + empty params otherwise. Wire payload
-        # shape unchanged.
+        # service when loaded; the legacy hardcoded model + empty params
+        # otherwise. The model enum lives on whichever tab the catalog
+        # routed the service to — AI Render (capability ai_render) or
+        # Image Gen "From Blockout" — so read it from the hosting tab.
+        # Wire payload shape unchanged.
         model_slug = "flux-depth-dev"
         catalog_params = {}
         try:
+            from mixar.bootstrap.generation_catalog_cache import get_services
             from mixar.modules.common.generation_params import (
                 collect_params, resolve_model_slug,
             )
             sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
-            imagegen_tab = getattr(sidebar, 'tab_imagegen', None) if sidebar else None
-            selected = getattr(imagegen_tab, 'model', '') if imagegen_tab else ''
+            hosted_by_ai_render = any(
+                s.get("key") == "depth_to_image"
+                for s in (get_services("ai_render") or [])
+            )
+            tab_attr = 'tab_ai_render' if hosted_by_ai_render else 'tab_imagegen'
+            owner_tab = getattr(sidebar, tab_attr, None) if sidebar else None
+            selected = getattr(owner_tab, 'model', '') if owner_tab else ''
             slug = resolve_model_slug("depth_to_image", selected, "")
             if slug:
                 model_slug = slug
