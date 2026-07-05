@@ -10,6 +10,7 @@ scripts, capture output, detect changes, and handle errors.
 """
 
 from mixar.config.logging_config import get_logger
+import ast
 import builtins
 import json
 import sys
@@ -41,6 +42,7 @@ from .sandbox_modules import (
 )
 from .sandbox_builtins import get_safe_builtins, sanitize_value
 from .sandbox_validator import validate_script_ast
+from .sandbox_transform import snapshot_collection_iterations
 
 
 @dataclass
@@ -320,8 +322,16 @@ class ScriptExecutor:
             if ast_error:
                 raise SandboxViolationError(ast_error)
 
+            # Crash-safety transform: rewrite `for x in <coll>.all_objects:` into
+            # `for x in list(...):` so a mutation inside the loop can't free the
+            # live RNA array the C iterator walks (a native segfault we cannot
+            # catch). The transformed AST is compiled directly (no unparse round
+            # trip). See sandbox_transform.py for the full rationale.
+            tree = ast.parse(script, filename="<agent_script>", mode="exec")
+            tree = snapshot_collection_iterations(tree)
+
             # Execute the script in the sandboxed namespace
-            compiled = compile(script, "<agent_script>", "exec")  # noqa: S102
+            compiled = compile(tree, "<agent_script>", "exec")  # noqa: S102
             exec_start = time.time()
             exec(compiled, exec_namespace)  # noqa: S102
             elapsed = time.time() - exec_start
