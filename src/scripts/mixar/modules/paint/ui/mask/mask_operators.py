@@ -87,6 +87,7 @@ from ..mask.mask_operators_helper import (
     update_new_mask_uv_map,
 )
 from ..other.base_operator import OpenImage
+from ..utils.image_preview_enum import build_image_enum_items
 from ..udim.udim_operators_helper import fill_tile
 from ..udim.udim_utils import (
     get_set_udim_atlas_segment,
@@ -322,6 +323,12 @@ class MOpenImageToReplaceMask(bpy.types.Operator, ImportHelper, OpenImage):
         return {"FINISHED"}
 
 
+def _replace_mask_image_items(self, context):
+    """EnumProperty items (with preview thumbnails) for the replace-mask image picker."""
+    names = [item.name for item in self.item_coll]
+    return build_image_enum_items(names, cache_key="replace_mask_image")
+
+
 class MReplaceMaskType(bpy.types.Operator):
     bl_idname = "wm.m_replace_mask_type"
     bl_label = "Replace Mask Type"
@@ -336,6 +343,7 @@ class MReplaceMaskType(bpy.types.Operator):
 
     item_name: StringProperty(name="Item")
     item_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    image_enum: EnumProperty(name="Image", items=_replace_mask_image_items)
 
     load_item: BoolProperty(default=False)
 
@@ -400,9 +408,7 @@ class MReplaceMaskType(bpy.types.Operator):
         label_col.alignment = "RIGHT"
         if self.type == "IMAGE":
             label_col.label(text="Image:")
-            select_split.prop_search(
-                self, "item_name", self, "item_coll", text="", icon="IMAGE_DATA"
-            )
+            select_split.prop(self, "image_enum", text="")
         else:
             label_col.label(text="Vertex Color:")
             select_split.prop_search(
@@ -428,12 +434,19 @@ class MReplaceMaskType(bpy.types.Operator):
         if self.type == mask.type and self.type not in {"IMAGE", "VCOL", "MODIFIER"}:
             return {"CANCELLED"}
 
-        if self.load_item and self.type in {"VCOL", "IMAGE"} and self.item_name == "":
+        # For "Replace with Available Image" the selection comes from the preview
+        # enum; the cached-image restore path (load_item False) keeps item_name.
+        if self.type == "IMAGE" and self.load_item:
+            item_name = "" if self.image_enum in {"", "NONE"} else self.image_enum
+        else:
+            item_name = self.item_name
+
+        if self.load_item and self.type in {"VCOL", "IMAGE"} and item_name == "":
             self.report({"ERROR"}, "Form is cannot be empty!")
             return {"CANCELLED"}
 
         replace_mask_type(
-            self.mask, self.type, self.item_name, modifier_type=self.modifier_type
+            self.mask, self.type, item_name, modifier_type=self.modifier_type
         )
 
         logger.info(
