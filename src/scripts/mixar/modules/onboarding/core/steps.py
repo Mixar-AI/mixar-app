@@ -38,6 +38,7 @@ from mixar.modules.onboarding.constants import (
     INFO_MIXIE_CHAT_BODY_1,
     INFO_MIXIE_CHAT_BODY_2,
     INFO_MIXIE_CHAT_BODY_3,
+    INFO_MIXIE_CHAT_BODY_4,
     INFO_MIXIE_CHAT_LABEL,
     INFO_MOODBOARD_BODY_1,
     INFO_MOODBOARD_BODY_2,
@@ -149,6 +150,7 @@ _STEPS: dict = {
             INFO_MIXIE_CHAT_BODY_1,
             INFO_MIXIE_CHAT_BODY_2,
             INFO_MIXIE_CHAT_BODY_3,
+            INFO_MIXIE_CHAT_BODY_4,
         ),
         # No sidebar — the chat is its own space (MIXIE_CHAT).
         category=None,

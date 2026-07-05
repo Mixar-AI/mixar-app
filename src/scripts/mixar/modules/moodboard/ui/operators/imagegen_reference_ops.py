@@ -17,7 +17,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.file_select_utils import file_select_guard, mark_file_select_executed
-from mixar.modules.moodboard.core.moodboard_utils import get_moodboard_viewport_center
+from mixar.modules.moodboard.core.moodboard_utils import place_new_moodboard_item
 from mixar.modules.moodboard.core.image_lifecycle import remove_image_safely
 
 logger = get_logger(__name__)
@@ -198,7 +198,6 @@ class MIXIE_OT_imagegen_upload_reference(Operator):
         tab = sidebar.tab_imagegen
 
         added_count = 0
-        viewport_cx, viewport_cy = get_moodboard_viewport_center()
         for file_elem in self.files:
             filepath = os.path.join(self.directory, file_elem.name)
 
@@ -215,11 +214,12 @@ class MIXIE_OT_imagegen_upload_reference(Operator):
                 img = bpy.data.images.load(filepath, check_existing=True)
                 img.pack()
 
-                # Add to moodboard so it can be referenced, positioned at viewport centre
+                # Add to moodboard so it can be referenced, dropped into the
+                # nearest free slot near the viewport centre so refs don't stack.
                 mb_item = scene.mixie_moodboard_images.add()
                 mb_item.image = img
-                mb_item.position_x = viewport_cx
-                mb_item.position_y = viewport_cy
+                mb_item.scale = 1.0
+                place_new_moodboard_item(scene, mb_item)
                 mb_item.selected = False
 
                 # Get the index of the newly added moodboard item

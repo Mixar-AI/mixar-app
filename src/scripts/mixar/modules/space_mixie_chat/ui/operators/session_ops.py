@@ -245,10 +245,9 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         session = get_session_manager()
         scene = context.scene
         state = session.get_state(scene)
-        # BUSY: agent running.
-        # AWAITING_INPUT: agent paused on a question (text / choice /
-        # approval) — Escape should cancel it too, otherwise a prompt can
-        # only be answered, never dismissed.
+        # BUSY: agent running (or showing choice/approval interrupt buttons).
+        # AWAITING_INPUT: agent paused on a text question — Escape should cancel
+        # it too, otherwise a text prompt can only be answered, never dismissed.
         if state in (SessionState.BUSY, SessionState.AWAITING_INPUT):
             return True
         # Defence-in-depth: allow abort from IDLE when a session_id exists.
