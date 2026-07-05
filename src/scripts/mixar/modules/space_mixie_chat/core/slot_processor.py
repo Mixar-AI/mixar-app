@@ -158,7 +158,7 @@ class SlotEventProcessor:
             ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
             ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
             ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"], scene)),
-            ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"])),
+            ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"], scene)),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
         ]
         for slot_name, handler in slot_handlers:
@@ -356,14 +356,21 @@ class SlotEventProcessor:
         input_type = input_type or ""
         bubble.input_type = input_type
 
-        if input_type == 'text':
-            # Agent wants free-form text input
+        if input_type in ('text', 'choice', 'approval'):
+            # Agent has paused for the user — free-form text, a choice
+            # button, or an approval button. All three use AWAITING_INPUT:
+            # the state survives SSE stream completion (see
+            # _handle_sse_complete_internal), so the status pill reads
+            # "Awaiting input" instead of decaying BUSY -> IDLE while the
+            # question is still on screen. Text typed while a choice /
+            # approval prompt is up is routed as an input response
+            # (start_input_stream), which the backend treats as the
+            # answer to the pending question.
             self._session.set_state(scene, SessionState.AWAITING_INPUT)
-            logger.info(f"[SLOT:INPUT_TYPE] Set state to AWAITING_INPUT (agent requesting text input)")
-        elif input_type in ('choice', 'approval'):
-            # Agent wants button click only (disable text input)
-            self._session.set_state(scene, SessionState.BUSY)
-            logger.info(f"[SLOT:INPUT_TYPE] Set state to BUSY (showing {input_type} buttons, text input disabled)")
+            logger.info(
+                f"[SLOT:INPUT_TYPE] Set state to AWAITING_INPUT "
+                f"(agent requesting {input_type} input)"
+            )
         else:
             logger.warning(f"[SLOT:INPUT_TYPE] Unknown input_type: {input_type}")
 
@@ -424,13 +431,14 @@ class SlotEventProcessor:
         # Row count / detail text changed the block height.
         _bump_layout_epoch(scene)
 
-    def _apply_actions_slot(self, bubble: Any, actions: list) -> None:
+    def _apply_actions_slot(self, bubble: Any, actions: list, scene=None) -> None:
         """
         Apply actions slot update (full replacement of action buttons).
 
         Args:
             bubble: Message PropertyGroup
             actions: List of dicts with label, value, style
+            scene: The Blender scene (for the AWAITING_INPUT state set)
         """
         prev_count = len(bubble.action_items)
 
@@ -454,6 +462,25 @@ class SlotEventProcessor:
                 action.style = 'DEFAULT'
 
             action_labels.append(f"{action.label}({action.style})")
+
+        # Non-empty action buttons (choice / approval, e.g. Yes / No /
+        # Cancel) unambiguously mean the agent has paused for the user.
+        # The dedicated input_type slot also sets AWAITING_INPUT, but it
+        # can be absent, out-of-order across events, or carry an
+        # unrecognized value — in which case the pill would decay to
+        # "Idle" on SSE-complete while the buttons are still on screen.
+        # Deriving the state from the buttons themselves guarantees the
+        # pill reads "Awaiting input" whenever a prompt is shown. (Free-
+        # form text prompts have no buttons and stay covered by
+        # _apply_input_type_slot.) An empty list clears buttons on answer
+        # submission — leave the state alone so the answer flow can drive
+        # the transition back to BUSY/IDLE.
+        if actions and scene is not None:
+            self._session.set_state(scene, SessionState.AWAITING_INPUT)
+            logger.info(
+                f"[SLOT:ACTIONS] Set state to AWAITING_INPUT "
+                f"({len(actions)} action button(s) shown)"
+            )
 
     def _apply_images_slot(self, bubble: Any, images: list) -> None:
         """
