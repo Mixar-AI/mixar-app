@@ -50,19 +50,22 @@ def is_normal_map_filename(filename):
 def get_existing_images(self, context):
     """Get list of existing images in blend file for enum property.
 
+    Each item carries the image's preview thumbnail so the selector shows a
+    small preview beside the name (not just the name).
+
     Args:
         self: Operator instance
         context: Blender context
 
     Returns:
-        list: List of (identifier, name, description) tuples for EnumProperty.
+        list: List of (identifier, name, description, icon_id, number) tuples.
     """
-    items = []
-    for img in bpy.data.images:
+    from ...utils.image_preview_enum import build_image_enum_items
+
+    names = [
+        img.name
+        for img in bpy.data.images
         # Skip render results and viewer nodes
-        if img.type in {'RENDER_RESULT', 'COMPOSITING'}:
-            continue
-        items.append((img.name, img.name, f"Use {img.name}"))
-    if not items:
-        items.append(('NONE', "No Images", "No images available"))
-    return items
+        if img.type not in {'RENDER_RESULT', 'COMPOSITING'}
+    ]
+    return build_image_enum_items(names, cache_key="channel_existing_images")
