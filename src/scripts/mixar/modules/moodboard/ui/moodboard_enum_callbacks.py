@@ -285,6 +285,28 @@ def _get_uv_unwrap_model_items(self, context):
     )
 
 
+def _get_ai_render_mode_items(self, context):
+    """AI Render tab mode items (capability ``ai_render``).
+
+    Catalog-only capability — the fallback is just the expected
+    depth_to_image service (the tab's panel is hidden anyway whenever
+    the catalog has no ai_render services).
+    """
+    return _capability_mode_items(
+        "ai_render",
+        [("depth_to_image", "From Blockout",
+          "Render the current blockout scene with AI")],
+    )
+
+
+def _get_ai_render_model_items(self, context):
+    """AI Render tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "ai_render", self,
+        [("flux-depth-dev", "Flux Depth", "Depth-guided image generation")],
+    )
+
+
 def _get_model_gen_mode_items(self, context):
     """Dynamic callback for Model Gen mode (service) enum items.
 
