@@ -68,6 +68,26 @@ class ServerError(HTTPClientError):
     pass
 
 
+class InsufficientCreditsError(HTTPClientError):
+    """User has exhausted their credits (402 Payment Required).
+
+    Carries the "manage subscription" call-to-action supplied by the backend
+    (``data.action_url`` / ``data.action_label``) so callers can surface a
+    toast + in-chat CTA without hardcoding the frontend URL.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        action_url: Optional[str] = None,
+        action_label: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(message, **kwargs)
+        self.action_url = action_url
+        self.action_label = action_label
+
+
 class RateLimitError(HTTPClientError):
     """Rate limit exceeded (429)."""
 

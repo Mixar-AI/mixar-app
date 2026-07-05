@@ -207,10 +207,9 @@ def enqueue_retopology_jobs(
 def _enqueue_hunyuan(obj, shared, file_bytes, filename):
     """Enqueue a Hunyuan retopology job (backend service ``retopology``).
 
-    Sends catalog-schema params (polygon_type / face_level / post_process)
-    as ``payload["params"]`` — the backend HunyuanAdapter owns the Tencent
-    SDK mapping. The legacy props path and the catalog-driven tab funnel
-    through here so both produce the same wire shape.
+    Payload assembly lives in the shared ``retopology`` assembler
+    (generation_params/core/assemblers.py) so the legacy props path and
+    the catalog-driven tab produce the same wire shape.
     """
     from mixar.modules.common.generation_params import assemble_payload
 
@@ -246,19 +245,15 @@ def _enqueue_hunyuan(obj, shared, file_bytes, filename):
 
 
 def _enqueue_tripo(obj, shared, file_bytes, filename):
-    """Enqueue a Tripo retopology job.
+    """Enqueue a Tripo retopology job (backend service ``retopology_tripo``).
 
-    Submits to the service the catalog linked the Tripo model under —
-    the merged ``retopology`` service on current catalogs (via
-    ``shared["service_key"]``), or the legacy ``retopology_tripo``
-    service pre-merge and for the old props path. Sends catalog-schema
-    params (quad / face_limit / bake) as ``payload["params"]`` — the
-    backend TripoAdapter owns the decimate body and face-limit clamping.
-    Shares the same client queue (``FEATURE_RETOPOLOGY``) as Hunyuan.
+    Shares the same client queue (``FEATURE_RETOPOLOGY``) as Hunyuan, but targets
+    a different backend service so its concurrency is isolated. The
+    ``retopology_tripo`` assembler builds ``tripo_params`` (model "v2.0",
+    quad-aware face_limit clamping, bake).
     """
     from mixar.modules.common.generation_params import assemble_payload
 
-    service = shared.get("service_key") or RETOPOLOGY_TRIPO_SERVICE
     model = shared.get("model_slug") or RETOPOLOGY_TRIPO_MODEL
     bake = bool(shared.get("tripo_bake", True))
     params = {
@@ -267,7 +262,7 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
         "bake": bake,
     }
     payload = assemble_payload(
-        service,
+        RETOPOLOGY_TRIPO_SERVICE,
         params,
         {
             "input_name": obj.name,
@@ -280,7 +275,7 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
     return enqueue_generation(
         kind="glb",
         feature_key=FEATURE_RETOPOLOGY,
-        job_type=service,
+        job_type=RETOPOLOGY_TRIPO_SERVICE,
         model=model,
         payload=payload,
         label=obj.name,

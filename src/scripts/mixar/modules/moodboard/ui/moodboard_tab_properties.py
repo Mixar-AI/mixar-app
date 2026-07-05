@@ -24,7 +24,6 @@ from bpy.props import (
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
 from .moodboard_catalog_tab_props import (  # noqa: F401
-    MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
 )
@@ -395,12 +394,6 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabImageGenProps,
         name="ImageGen Tab",
         description="Properties for ImageGen tab"
-    )
-
-    tab_ai_render: PointerProperty(
-        type=MixieMoodboardTabAIRenderProps,
-        name="AI Render Tab",
-        description="Properties for AI Render tab"
     )
 
     tab_mesh_segment: PointerProperty(

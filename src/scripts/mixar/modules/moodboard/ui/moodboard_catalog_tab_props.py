@@ -22,8 +22,6 @@ from bpy.props import EnumProperty
 
 from .moodboard_enum_callbacks import (
     _on_model_changed,
-    _get_ai_render_mode_items,
-    _get_ai_render_model_items,
     _get_retopology_mode_items,
     _get_retopology_model_items,
     _get_uv_unwrap_model_items,
@@ -46,29 +44,6 @@ class MixieMoodboardTabRetopologyProps(PropertyGroup):
         name="Model",
         description="AI model for retopology",
         items=_get_retopology_model_items,
-        update=_on_model_changed,
-    )
-
-
-class MixieMoodboardTabAIRenderProps(PropertyGroup):
-    """Properties for the AI Render tab (catalog mode/model selection).
-
-    ``ai_render`` has a single service today (``depth_to_image``), so
-    the Mode dropdown stays hidden; the enum exists so future services
-    added to the capability in the DB surface without a client change.
-    """
-
-    mode: EnumProperty(
-        name="Mode",
-        description="AI Render mode",
-        items=_get_ai_render_mode_items,
-        update=_on_model_changed,
-    )
-
-    model: EnumProperty(
-        name="Model",
-        description="AI model for rendering",
-        items=_get_ai_render_model_items,
         update=_on_model_changed,
     )
 
