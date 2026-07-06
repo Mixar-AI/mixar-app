@@ -318,12 +318,12 @@ class MIXIE_CHAT_MT_agent_bubble(Menu):
                 max_lines=6,
             )
 
-        # Mode dropdown + send button row.
+        # Send button row. The Mode dropdown (Agent / Generate) is hidden
+        # for now — the composer is locked to Agent mode. Restore the
+        # action_row.prop(scene, "mixie_chat_mode") draw to bring the
+        # selector back.
         action_row = layout.row(align=True)
         action_row.scale_y = 1.2
-
-        if scene is not None and hasattr(scene, "mixie_chat_mode"):
-            action_row.prop(scene, "mixie_chat_mode", text="")
 
         action_row.separator_spacer()
 
