@@ -93,14 +93,11 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             row.alert = True
             row.label(text="Mixie Chat is busy", icon='ERROR')
 
-        # Mode selector row
-        row = layout.row(align=True)
-        row.label(text="Mode:")
-        row.prop(wm, "mixie_chat_quick_prompt_mode", text="")
-
-        # Show generate type when GENERATE mode is active
-        if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
-            row.prop(wm, "mixie_chat_quick_prompt_generate_type", text="")
+        # Mode selector (Agent / Generate) is hidden for now — the quick
+        # prompt is locked to Agent mode. quick_prompt_mode is seeded from
+        # scene.mixie_chat_mode (default 'AGENT') in invoke() and applied
+        # back in execute(), so with the selector hidden it stays 'AGENT'.
+        # Restore the "Mode:" row + generate-type prop to bring it back.
 
         layout.separator()
 
