@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Unit tests for the pure steps-summary formatter (no bpy required)."""
 import importlib.util
