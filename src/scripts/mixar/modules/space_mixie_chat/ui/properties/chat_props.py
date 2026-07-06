@@ -412,14 +412,6 @@ def register():
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
         ],
         default='AGENT',
-        # SKIP_SAVE — the Generate mode and its selector dropdown are
-        # hidden for now (see the footer composers), so the chat is
-        # locked to Agent mode. Not persisting guarantees every launch /
-        # file load starts in 'AGENT' and never gets stuck in a saved
-        # 'GENERATE' state while the selector is unavailable. The
-        # 'GENERATE' item and its code paths remain so re-enabling is a
-        # UI-only change.
-        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
