@@ -323,33 +323,68 @@ def _execute_quick_prompt():
         pass  # Operator may not be available
 
 
+# Keep a module-level reference to the last items list returned to Blender.
+# bpy does NOT copy the strings out of a dynamic enum-items callback; without
+# this anchor they can be garbage-collected while the UI still points at
+# them (the classic dynamic-EnumProperty crash).
+_generate_type_items_ref = []
+
+
+def generate_type_enum_items(self, context):
+    """Dynamic items for the Generate Type dropdowns.
+
+    Identifiers are generation-catalog service keys, sourced from the
+    backend's /generation-catalog/chat-options view (with a static
+    fallback while it hasn't loaded). See chat_generate_options_cache.
+    """
+    global _generate_type_items_ref
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import (
+            get_generate_type_enum_items,
+        )
+        _generate_type_items_ref = get_generate_type_enum_items()
+    except Exception:
+        # Bootstrap module unavailable (e.g. isolated test) — static mirror.
+        _generate_type_items_ref = [
+            ("image_gen", "Text to Image", "Text to Image", 'IMAGE_DATA', 0),
+            ("model_3d", "Image to 3D", "Image to 3D", 'MESH_CUBE', 1),
+        ]
+    return _generate_type_items_ref
+
+
+# Instruction message shown when a generate type that needs extra input is
+# selected, keyed by catalog service key.
+_GENERATE_TYPE_HINTS = {
+    'pbr_gen': (
+        "Please enter your prompt and select the mesh objects in the "
+        "3D viewport before hitting send."
+    ),
+    'model_3d': (
+        "Attach a reference image or select one in the moodboard, then "
+        "hit send. A prompt is optional."
+    ),
+    'image_to_3d': (
+        "Attach a reference image or select one in the moodboard, then "
+        "hit send. A prompt is optional."
+    ),
+    'hunyuan_rapid': (
+        "Attach a reference image or enter a prompt, then hit send."
+    ),
+    'scene_reconstruction': (
+        "Attach an image to reconstruct it into a 3D scene, or enter a "
+        "prompt to generate one from a description. You can also combine both."
+    ),
+}
+
+
 def on_generate_type_changed(self, context):
-    """Show instruction message when Lookdev 360 or Image to 3D is selected."""
+    """Show an instruction message for types that need extra input."""
     scene = context.scene
-    gen_type = scene.mixie_chat_generate_type
-
-    if gen_type == 'LOOKDEV_360':
-        # Add agent instruction message
+    hint = _GENERATE_TYPE_HINTS.get(scene.mixie_chat_generate_type)
+    if hint:
         msg = scene.mixie_chat_messages.add()
         msg.sender = 'AGENT'
-        msg.text = "Please enter your prompt and select the mesh objects in the 3D viewport before hitting send."
-        # Trigger redraw
-        redraw_chat_areas()
-
-    elif gen_type == 'IMAGE_TO_3D':
-        # Add agent instruction message
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = "Attach a reference image or select one in the moodboard, then hit send. A prompt is optional."
-        # Trigger redraw
-        redraw_chat_areas()
-
-    elif gen_type == 'SCENE_RECON':
-        # Add agent instruction message
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = "Attach an image to reconstruct it into a 3D scene, or enter a prompt to generate one from a description. You can also combine both."
-        # Trigger redraw
+        msg.text = hint
         redraw_chat_areas()
 
 
@@ -412,14 +447,6 @@ def register():
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
         ],
         default='AGENT',
-        # SKIP_SAVE — the Generate mode and its selector dropdown are
-        # hidden for now (see the footer composers), so the chat is
-        # locked to Agent mode. Not persisting guarantees every launch /
-        # file load starts in 'AGENT' and never gets stuck in a saved
-        # 'GENERATE' state while the selector is unavailable. The
-        # 'GENERATE' item and its code paths remain so re-enabling is a
-        # UI-only change.
-        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
@@ -469,15 +496,14 @@ def register():
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(
         name="Generate Type",
         description="Type of content to generate",
-        items=[
-            ('LOOKDEV', "Blockout to Render", "Generate images from scene depth map", 'SCENE_DATA', 0),
-            ('LOOKDEV_360', "Generate PBR Maps", "Generate 360 textures for selected meshes", 'SPHERE', 1),
-            ('IMAGE_TO_3D', "Image to 3D", "Generate 3D model from image", 'MESH_CUBE', 2),
-            ('IMAGE_GEN', "Generate Image", "Generate AI images from prompt", 'IMAGE_DATA', 3),
-            ('SCENE_RECON', "Generate Scene", "Generate 3D scene from text description", 'SCENE', 4),
-        ],
-        default='IMAGE_GEN',
+        # Catalog-driven: identifiers are generation-catalog service keys
+        # served by /generation-catalog/chat-options (first option is the
+        # default). SKIP_SAVE because the option list can change between
+        # sessions — a persisted enum int could silently point at a
+        # different service after a catalog update.
+        items=generate_type_enum_items,
         update=on_generate_type_changed,
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_model = EnumProperty(
@@ -563,18 +589,13 @@ def register():
         default='AGENT',
     )
 
-    # Quick prompt generate type (ephemeral, dialog-only)
+    # Quick prompt generate type (ephemeral, dialog-only). Same
+    # catalog-driven items as scene.mixie_chat_generate_type so the two
+    # enums always share identifiers (quick_prompt copies by identifier).
     bpy.types.WindowManager.mixie_chat_quick_prompt_generate_type = EnumProperty(
         name="Quick Prompt Generate Type",
         description="Generate type for quick prompt dialog",
-        items=[
-            ('LOOKDEV', "Blockout to Render", "Generate from depth map", 'SCENE_DATA', 0),
-            ('LOOKDEV_360', "Generate PBR Maps", "Generate 360 textures", 'SPHERE', 1),
-            ('IMAGE_TO_3D', "Image to 3D", "3D from image", 'MESH_CUBE', 2),
-            ('IMAGE_GEN', "Generate Image", "Generate AI images", 'IMAGE_DATA', 3),
-            ('SCENE_RECON', "Generate Scene", "Generate 3D scene from text", 'SCENE', 4),
-        ],
-        default='IMAGE_GEN',
+        items=generate_type_enum_items,
     )
 
     # WindowManager - unique per running Blender instance (ephemeral)
