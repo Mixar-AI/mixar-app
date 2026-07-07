@@ -80,9 +80,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
         # Determine model to use
         if self.from_chat:
-            # Chat may pass an explicit model (picked via the in-chat
-            # "which model?" ask); empty means the catalog default.
-            model_name = self.model.strip() or _get_default_model_3d()
+            model_name = _get_default_model_3d()
             if not model_name:
                 self.report({"WARNING"}, "No models available - please wait for models to load")
                 return {"CANCELLED"}
