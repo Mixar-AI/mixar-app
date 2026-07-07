@@ -355,6 +355,10 @@ def generate_type_enum_items(self, context):
 # Instruction message shown when a generate type that needs extra input is
 # selected, keyed by catalog service key.
 _GENERATE_TYPE_HINTS = {
+    'depth_to_image': (
+        "Enter a render prompt. Mixie will use the current scene's depth "
+        "as the guide."
+    ),
     'pbr_gen': (
         "Please enter your prompt and select the mesh objects in the "
         "3D viewport before hitting send."

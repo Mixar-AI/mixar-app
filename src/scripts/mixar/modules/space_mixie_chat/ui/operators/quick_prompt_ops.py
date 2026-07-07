@@ -165,7 +165,19 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         # Apply quick prompt mode to scene (so message uses correct mode)
         scene.mixie_chat_mode = wm.mixie_chat_quick_prompt_mode
         if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
+            # Generate mode never reaches the agent SSE path — route through
+            # the same sub-type handlers the footer send uses (they add the
+            # user message, consume pending attachments and start the poll).
+            # Previously this fell through to the agent stream below, so a
+            # GENERATE quick prompt chatted with the agent instead of
+            # generating.
             scene.mixie_chat_generate_type = wm.mixie_chat_quick_prompt_generate_type
+            scene.mixie_chat_input = message_text
+            from . import generate_ops
+            result = generate_ops.execute_generate_mode(self, context)
+            if result == {'FINISHED'}:
+                wm.mixie_chat_quick_prompt_input = ""
+            return result
 
         # Add user message to history WITH attachments from pending
         user_msg = scene.mixie_chat_messages.add()
