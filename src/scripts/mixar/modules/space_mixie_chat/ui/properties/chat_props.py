@@ -323,33 +323,208 @@ def _execute_quick_prompt():
         pass  # Operator may not be available
 
 
+# Keep a module-level reference to the last items list returned to Blender.
+# bpy does NOT copy the strings out of a dynamic enum-items callback; without
+# this anchor they can be garbage-collected while the UI still points at
+# them (the classic dynamic-EnumProperty crash).
+_generate_type_items_ref = []
+
+
+def generate_type_enum_items(self, context):
+    """Dynamic items for the Generate Type dropdowns.
+
+    Identifiers are generation-catalog service keys, sourced from the
+    backend's /generation-catalog/chat-options view (with a static
+    fallback while it hasn't loaded). See chat_generate_options_cache.
+    """
+    global _generate_type_items_ref
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import (
+            get_generate_type_enum_items,
+        )
+        _generate_type_items_ref = get_generate_type_enum_items()
+    except Exception:
+        # Bootstrap module unavailable (e.g. isolated test) — static mirror.
+        _generate_type_items_ref = [
+            ("image_gen", "Text to Image", "Text to Image", 'IMAGE_DATA', 0),
+            ("model_3d", "Image to 3D", "Image to 3D", 'MESH_CUBE', 1),
+        ]
+    return _generate_type_items_ref
+
+
+# Instruction message shown when a generate type that needs extra input is
+# selected, keyed by catalog service key. Each entry is
+# (message, satisfied) — the hint is only posted when satisfied(scene,
+# context) is False, so users who already attached an image / typed a
+# prompt aren't told to do what they've already done.
+
+
+def _has_input_image(scene, context):
+    """True when a pending attachment or a selected moodboard image is
+    available as the generation's input image."""
+    try:
+        if len(scene.mixie_chat_pending_attachments) > 0:
+            return True
+    except Exception:
+        pass
+    try:
+        from mixar.modules.moodboard.ui.sidebar_ui_helpers import (
+            get_selected_moodboard_image,
+        )
+        return get_selected_moodboard_image(context) is not None
+    except Exception:
+        return False
+
+
+def _has_prompt(scene, context):
+    return bool((scene.mixie_chat_input or "").strip())
+
+
+def _has_prompt_or_image(scene, context):
+    return _has_prompt(scene, context) or _has_input_image(scene, context)
+
+
+def _has_mesh_selection(scene, context):
+    try:
+        return any(obj.type == 'MESH' for obj in context.selected_objects)
+    except Exception:
+        return False
+
+
+_GENERATE_TYPE_HINTS = {
+    'depth_to_image': (
+        "Enter a render prompt. Mixie will use the current scene's depth "
+        "as the guide.",
+        _has_prompt,
+    ),
+    'pbr_gen': (
+        "Please enter your prompt and select the mesh objects in the "
+        "3D viewport before hitting send.",
+        lambda scene, context: (
+            _has_prompt(scene, context) and _has_mesh_selection(scene, context)
+        ),
+    ),
+    'model_3d': (
+        "Attach a reference image or select one in the moodboard, then "
+        "hit send. A prompt is optional.",
+        _has_input_image,
+    ),
+    'image_to_3d': (
+        "Attach a reference image or select one in the moodboard, then "
+        "hit send. A prompt is optional.",
+        _has_input_image,
+    ),
+    'hunyuan_rapid': (
+        "Attach a reference image or enter a prompt, then hit send.",
+        _has_prompt_or_image,
+    ),
+    'scene_reconstruction': (
+        "Attach an image to reconstruct it into a 3D scene, or enter a "
+        "prompt to generate one from a description. You can also combine both.",
+        _has_prompt_or_image,
+    ),
+}
+
+
+# bubble_id prefix for the "which model?" ask bubbles — the slot-action
+# handler recognises clicks by the chat_model: action value, and new asks
+# strip the buttons off older ask bubbles via this prefix.
+MODEL_ASK_BUBBLE_PREFIX = "chat-model-ask-"
+
+
+def _clear_stale_model_asks(scene):
+    """Remove action buttons from previous model-ask bubbles so only the
+    ask for the currently selected type is clickable."""
+    for msg in scene.mixie_chat_messages:
+        if (getattr(msg, 'bubble_id', "").startswith(MODEL_ASK_BUBBLE_PREFIX)
+                and len(msg.action_items)):
+            msg.action_items.clear()
+
+
+def _ask_model_choice(scene, service_key):
+    """Post a chat bubble asking which model to use for *service_key*.
+
+    Only asks when the chat options cache lists more than one model for
+    the service. Buttons carry ``chat_model:<service>:<slug>`` values,
+    intercepted locally by MIXIE_CHAT_OT_select_slot_action; ignoring the
+    ask keeps the service's default model.
+    """
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import (
+            get_display_label,
+            get_option,
+        )
+        option = get_option(service_key) or {}
+    except Exception:
+        return False
+    models = option.get("models") or []
+    if len(models) < 2:
+        return False
+
+    default_slug = option.get("default_model") or models[0].get("slug")
+    default_label = next(
+        (m.get("label") or m.get("slug") for m in models
+         if m.get("slug") == default_slug),
+        default_slug,
+    )
+
+    import uuid
+    msg = scene.mixie_chat_messages.add()
+    msg.sender = 'AGENT'
+    msg.bubble_id = MODEL_ASK_BUBBLE_PREFIX + str(uuid.uuid4())
+    msg.text = (
+        f"Which model should I use for {get_display_label(service_key)}? "
+        f"Tap one below — or just hit send to use {default_label}."
+    )
+    for model in models:
+        slug = model.get("slug")
+        if not slug:
+            continue
+        label = model.get("label") or slug
+        cost = model.get("credit_cost")
+        item = msg.action_items.add()
+        item.label = f"{label} ({cost} cr)" if cost is not None else label
+        item.value = f"chat_model:{service_key}:{slug}"
+        item.style = 'PRIMARY' if slug == default_slug else 'DEFAULT'
+    return True
+
+
 def on_generate_type_changed(self, context):
-    """Show instruction message when Lookdev 360 or Image to 3D is selected."""
+    """Show an instruction message for types that still need input, and
+    ask which model to use when the type has more than one."""
     scene = context.scene
     gen_type = scene.mixie_chat_generate_type
 
-    if gen_type == 'LOOKDEV_360':
-        # Add agent instruction message
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = "Please enter your prompt and select the mesh objects in the 3D viewport before hitting send."
-        # Trigger redraw
-        redraw_chat_areas()
+    # The model choice is per-type; switching types resets to the default
+    # and retires any previous type's ask buttons (their values name the
+    # old service and would be rejected on click anyway).
+    try:
+        scene.mixie_chat_generate_model = ""
+        _clear_stale_model_asks(scene)
+    except Exception:
+        pass
 
-    elif gen_type == 'IMAGE_TO_3D':
-        # Add agent instruction message
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = "Attach a reference image or select one in the moodboard, then hit send. A prompt is optional."
-        # Trigger redraw
-        redraw_chat_areas()
+    posted = False
+    entry = _GENERATE_TYPE_HINTS.get(gen_type)
+    if entry:
+        hint, satisfied = entry
+        show = True
+        try:
+            show = not satisfied(scene, context)
+        except Exception:
+            pass  # on any doubt, show the hint
+        if show:
+            msg = scene.mixie_chat_messages.add()
+            msg.sender = 'AGENT'
+            msg.text = hint
+            posted = True
 
-    elif gen_type == 'SCENE_RECON':
-        # Add agent instruction message
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = "Attach an image to reconstruct it into a 3D scene, or enter a prompt to generate one from a description. You can also combine both."
-        # Trigger redraw
+    try:
+        posted = _ask_model_choice(scene, gen_type) or posted
+    except Exception as e:
+        logger.debug("Model-choice ask skipped: %s", e)
+
+    if posted:
         redraw_chat_areas()
 
 
@@ -412,14 +587,6 @@ def register():
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
         ],
         default='AGENT',
-        # SKIP_SAVE — the Generate mode and its selector dropdown are
-        # hidden for now (see the footer composers), so the chat is
-        # locked to Agent mode. Not persisting guarantees every launch /
-        # file load starts in 'AGENT' and never gets stuck in a saved
-        # 'GENERATE' state while the selector is unavailable. The
-        # 'GENERATE' item and its code paths remain so re-enabling is a
-        # UI-only change.
-        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
@@ -469,15 +636,27 @@ def register():
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(
         name="Generate Type",
         description="Type of content to generate",
-        items=[
-            ('LOOKDEV', "Blockout to Render", "Generate images from scene depth map", 'SCENE_DATA', 0),
-            ('LOOKDEV_360', "Generate PBR Maps", "Generate 360 textures for selected meshes", 'SPHERE', 1),
-            ('IMAGE_TO_3D', "Image to 3D", "Generate 3D model from image", 'MESH_CUBE', 2),
-            ('IMAGE_GEN', "Generate Image", "Generate AI images from prompt", 'IMAGE_DATA', 3),
-            ('SCENE_RECON', "Generate Scene", "Generate 3D scene from text description", 'SCENE', 4),
-        ],
-        default='IMAGE_GEN',
+        # Catalog-driven: identifiers are generation-catalog service keys
+        # served by /generation-catalog/chat-options (first option is the
+        # default). SKIP_SAVE because the option list can change between
+        # sessions — a persisted enum int could silently point at a
+        # different service after a catalog update.
+        items=generate_type_enum_items,
         update=on_generate_type_changed,
+        options={'SKIP_SAVE'},
+    )
+
+    # Model slug chosen via the in-chat "which model?" ask (see
+    # _ask_model_choice / the chat_model: slot-action intercept). Empty
+    # means "use the service's catalog default". Reset on every type
+    # change; SKIP_SAVE so a stale choice never outlives the session.
+    bpy.types.Scene.mixie_chat_generate_model = StringProperty(
+        name="Generate Model",
+        description="Model to use for the selected generate type "
+                    "(empty = service default)",
+        default="",
+        maxlen=128,
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_model = EnumProperty(
@@ -563,18 +742,13 @@ def register():
         default='AGENT',
     )
 
-    # Quick prompt generate type (ephemeral, dialog-only)
+    # Quick prompt generate type (ephemeral, dialog-only). Same
+    # catalog-driven items as scene.mixie_chat_generate_type so the two
+    # enums always share identifiers (quick_prompt copies by identifier).
     bpy.types.WindowManager.mixie_chat_quick_prompt_generate_type = EnumProperty(
         name="Quick Prompt Generate Type",
         description="Generate type for quick prompt dialog",
-        items=[
-            ('LOOKDEV', "Blockout to Render", "Generate from depth map", 'SCENE_DATA', 0),
-            ('LOOKDEV_360', "Generate PBR Maps", "Generate 360 textures", 'SPHERE', 1),
-            ('IMAGE_TO_3D', "Image to 3D", "3D from image", 'MESH_CUBE', 2),
-            ('IMAGE_GEN', "Generate Image", "Generate AI images", 'IMAGE_DATA', 3),
-            ('SCENE_RECON', "Generate Scene", "Generate 3D scene from text", 'SCENE', 4),
-        ],
-        default='IMAGE_GEN',
+        items=generate_type_enum_items,
     )
 
     # WindowManager - unique per running Blender instance (ephemeral)
@@ -626,7 +800,8 @@ def unregister():
     for attr in (
         'mixie_chat_layout_epoch',
         'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
-        'mixie_chat_model', 'mixie_chat_generate_type', 'mixie_chat_plan_enabled',
+        'mixie_chat_model', 'mixie_chat_generate_type',
+        'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_mode',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
