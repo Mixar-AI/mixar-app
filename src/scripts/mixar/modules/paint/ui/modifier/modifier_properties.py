@@ -167,21 +167,12 @@ class MPaintModifier(bpy.types.PropertyGroup):
 # DO NOT add a 'classes' tuple here - it causes double registration by bootstrap
 
 def register():
-    """Register MPaintModifier PropertyGroup.
-
-    Idempotent: this module is pre-registered by paint/__init__.py's
-    dependency chain AND visited by bootstrap's UI auto-loader. Because it
-    intentionally has no `classes` tuple (see note above), bootstrap's
-    already-registered guard can't short-circuit it, so register() is called
-    twice. Guard on is_registered to avoid the double-registration ValueError.
-    """
+    """Register MPaintModifier PropertyGroup."""
     import bpy
-    if not getattr(MPaintModifier, "is_registered", False):
-        bpy.utils.register_class(MPaintModifier)
+    bpy.utils.register_class(MPaintModifier)
 
 
 def unregister():
     """Unregister MPaintModifier PropertyGroup."""
     import bpy
-    if getattr(MPaintModifier, "is_registered", False):
-        bpy.utils.unregister_class(MPaintModifier)
+    bpy.utils.unregister_class(MPaintModifier)
