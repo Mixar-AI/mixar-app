@@ -33,6 +33,21 @@ from ...core.ui_utils import redraw_chat_areas
 
 logger = get_logger(__name__)
 
+# Legacy enum identifiers (pre catalog-driven dropdown) → service keys.
+# Saved keymaps or agent scripts may still hand us the old ids.
+_GEN_TYPE_ALIASES = {
+    "IMAGE_GEN": "image_gen",
+    "IMAGE_TO_3D": "model_3d",
+    "LOOKDEV": "depth_to_image",
+    "LOOKDEV_360": "pbr_gen",
+    "SCENE_RECON": "scene_reconstruction",
+}
+
+
+def normalize_generate_service(value: str) -> str:
+    """Map a generate-type value (legacy id or service key) to a service key."""
+    return _GEN_TYPE_ALIASES.get(value or "", value or "image_gen")
+
 
 def _deselect_moodboard_origin(scene) -> None:
     """Deselect moodboard images for any is_moodboard attachments in
@@ -62,9 +77,13 @@ def execute_generate_mode(operator, context):
         Blender operator return set ({'FINISHED'} or {'CANCELLED'})
     """
     scene = context.scene
-    gen_type = scene.mixie_chat_generate_type
+    gen_type = normalize_generate_service(scene.mixie_chat_generate_type)
     prompt = scene.mixie_chat_input.strip()
     pending_attachments = scene.mixie_chat_pending_attachments
+
+    # Same flag the agent send path sets — without it a generate-only
+    # session lets the "Hi I'm Mixie" empty-state greeting reappear.
+    scene.mixie_chat_user_has_engaged = True
 
     # Add user message to history (if there's a prompt)
     if prompt:

@@ -211,12 +211,15 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
             context.scene.mixie_chat_mode = self.mode
 
         # Set the generate type if provided (only applies when mode is
-        # GENERATE). The enum is catalog-driven, so validate by attempting
-        # the assignment — an identifier missing from the current options
-        # raises TypeError and we keep the current selection.
+        # GENERATE). Legacy identifiers are mapped to service keys; the
+        # enum is catalog-driven, so validate by attempting the assignment
+        # — an identifier missing from the current options raises
+        # TypeError and we keep the current selection.
         if self.generate_type:
+            from .generate_ops import normalize_generate_service
+            generate_type = normalize_generate_service(self.generate_type)
             try:
-                context.scene.mixie_chat_generate_type = self.generate_type
+                context.scene.mixie_chat_generate_type = generate_type
             except TypeError:
                 logger.warning(
                     "Unknown generate type %r — keeping current selection",
@@ -275,8 +278,11 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
     }
 
     def execute(self, context):
+        from .generate_ops import normalize_generate_service
+
         scene = context.scene
-        gen_type = getattr(scene, 'mixie_chat_generate_type', '')
+        gen_type = normalize_generate_service(
+            getattr(scene, 'mixie_chat_generate_type', ''))
 
         # Cancel the specific generation type
         flag_info = self._GEN_FLAGS.get(gen_type)
@@ -295,6 +301,7 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
                 'pbr_gen': 'lookdev360',
                 'model_3d': 'image_to_3d',
                 'image_to_3d': 'image_to_3d',
+                'hunyuan_rapid': 'hunyuan_rapid',
                 'image_gen': 'imagegen',
                 'scene_reconstruction': 'scene_recon',
             }.get(gen_type)
