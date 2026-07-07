@@ -8,11 +8,6 @@ File load handlers for Mixie Chat agent session cleanup.
 Registers a bpy.app.handlers.load_pre handler that aborts any running
 agent session when a new file is opened. This prevents agent tasks from
 the previous file from continuing to execute in the new file context.
-
-Also registers a load_post handler that sanitizes persisted chat enums:
-.blend files saved by builds with since-removed enum items (e.g. the old
-ASK chat mode, stored as int 2) would otherwise spam
-"current value '2' matches no enum" bpy.rna warnings on every redraw.
 """
 
 import threading
@@ -124,65 +119,15 @@ def _on_load_pre(*_args) -> None:
     logger.info("All agent sessions aborted due to file load")
 
 
-@persistent
-def _on_load_post(*_args) -> None:
-    """Sanitize persisted chat enums after a file loads.
-
-    mixie_chat_mode is saved in the .blend as an int. Files written by
-    builds whose enum had items that no longer exist (the old ASK mode
-    stored value 2) load with an out-of-range int: bpy then logs
-    "current value '2' matches no enum" on EVERY read — i.e. every
-    footer/bubble redraw — and reads return "". Reset such scenes to
-    'AGENT' once, right after load, so the file is clean from then on.
-    """
-    import bpy as _bpy
-
-    for scene in _bpy.data.scenes:
-        try:
-            if not hasattr(scene, "mixie_chat_mode"):
-                continue
-            # Invalid persisted ints read back as "" (no matching item).
-            if scene.mixie_chat_mode not in ('AGENT', 'GENERATE'):
-                scene.mixie_chat_mode = 'AGENT'
-                logger.info(
-                    "Sanitized stale mixie_chat_mode on scene %r (legacy "
-                    "enum value from an older build) -> AGENT", scene.name,
-                )
-        except Exception as e:  # noqa: BLE001 — never break file load
-            logger.debug("chat mode sanitize skipped on %r: %s",
-                         getattr(scene, "name", "?"), e)
-
-
-def _sanitize_once():
-    """Timer callback: sanitize the file that was open before we registered.
-
-    load_post only covers files opened AFTER registration; the startup
-    file (loaded before add-on registration) needs this one-shot pass.
-    """
-    _on_load_post()
-    return None  # don't repeat
-
-
 def register():
-    """Install load handlers (session cleanup + enum sanitize)."""
+    """Install load_pre handler for agent session cleanup."""
     if _on_load_pre not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load_pre)
-    if _on_load_post not in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.append(_on_load_post)
-    if not bpy.app.timers.is_registered(_sanitize_once):
-        bpy.app.timers.register(_sanitize_once, first_interval=0.5)
-    logger.debug("File load handlers registered")
+    logger.debug("File load handler registered")
 
 
 def unregister():
-    """Remove load handlers."""
+    """Remove load_pre handler."""
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
-    if _on_load_post in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(_on_load_post)
-    try:
-        if bpy.app.timers.is_registered(_sanitize_once):
-            bpy.app.timers.unregister(_sanitize_once)
-    except Exception:
-        pass
-    logger.debug("File load handlers unregistered")
+    logger.debug("File load handler unregistered")
