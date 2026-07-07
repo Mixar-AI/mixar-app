@@ -68,14 +68,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             self.report({'WARNING'}, "Missing bubble_id or action_value")
             return {'CANCELLED'}
 
-        # Local intercept: "which model?" ask buttons (posted by
-        # chat_props._ask_model_choice). Value shape:
-        #   chat_model:<service_key>:<model_slug>
-        # Stores the choice for the next generate send — no backend
-        # round-trip, works while disconnected.
-        if self.action_value.startswith("chat_model:"):
-            return self._apply_model_choice(context)
-
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it
@@ -184,56 +176,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         redraw_chat_areas()
         return {'FINISHED'}
 
-    def _apply_model_choice(self, context):
-        """Handle a chat_model:<service>:<slug> button click locally."""
-        from .generate_ops import normalize_generate_service
-
-        scene = context.scene
-        try:
-            _, service_key, slug = self.action_value.split(":", 2)
-        except ValueError:
-            logger.warning("Malformed model choice value: %r", self.action_value)
-            return {'CANCELLED'}
-
-        current = normalize_generate_service(
-            getattr(scene, 'mixie_chat_generate_type', ''))
-        if service_key != current:
-            # Stale ask from a previously selected type — don't cross wires.
-            self.report(
-                {'INFO'},
-                "That model belongs to a different generate type — "
-                "pick the type again to choose its model.",
-            )
-            return {'CANCELLED'}
-
-        scene.mixie_chat_generate_model = slug
-
-        # Clear the ask bubble's buttons and confirm the choice.
-        label = slug
-        try:
-            from mixar.bootstrap.chat_generate_options_cache import (
-                get_display_label,
-                get_option,
-            )
-            option = get_option(service_key) or {}
-            for model in option.get("models") or []:
-                if model.get("slug") == slug:
-                    label = model.get("label") or slug
-                    break
-            service_label = get_display_label(service_key)
-        except Exception:
-            service_label = service_key
-        for msg in scene.mixie_chat_messages:
-            if getattr(msg, 'bubble_id', "") == self.bubble_id:
-                msg.action_items.clear()
-                break
-
-        confirm = scene.mixie_chat_messages.add()
-        confirm.sender = 'AGENT'
-        confirm.text = f"Got it — I'll use {label} for {service_label}."
-        redraw_chat_areas()
-        return {'FINISHED'}
-
 
 class MIXIE_CHAT_OT_insert_prompt_text(Operator):
     """Insert prompt text into chat input and auto-submit"""
@@ -255,8 +197,7 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
 
     generate_type: StringProperty(
         name="Generate Type",
-        description="The generate sub-type — a generation-catalog service "
-                    "key (e.g. image_gen, model_3d)",
+        description="The generate sub-type (IMAGE_GEN, IMAGE_TO_3D, LOOKDEV, LOOKDEV_360)",
         default="",
     )
 
@@ -268,21 +209,9 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
         if self.mode and self.mode in {'AGENT', 'GENERATE'}:
             context.scene.mixie_chat_mode = self.mode
 
-        # Set the generate type if provided (only applies when mode is
-        # GENERATE). Legacy identifiers are mapped to service keys; the
-        # enum is catalog-driven, so validate by attempting the assignment
-        # — an identifier missing from the current options raises
-        # TypeError and we keep the current selection.
-        if self.generate_type:
-            from .generate_ops import normalize_generate_service
-            generate_type = normalize_generate_service(self.generate_type)
-            try:
-                context.scene.mixie_chat_generate_type = generate_type
-            except TypeError:
-                logger.warning(
-                    "Unknown generate type %r — keeping current selection",
-                    self.generate_type,
-                )
+        # Set the generate type if provided (only applies when mode is GENERATE)
+        if self.generate_type and self.generate_type in {'IMAGE_GEN', 'IMAGE_TO_3D', 'LOOKDEV', 'LOOKDEV_360', 'SCENE_RECON'}:
+            context.scene.mixie_chat_generate_type = self.generate_type
 
         # Set the chat input to the prompt text
         context.scene.mixie_chat_input = self.text
@@ -322,25 +251,18 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
     bl_description = "Stop the current generation"
     bl_options = {'REGISTER', 'INTERNAL'}
 
-    # Map of generate type (catalog service key) -> (is_generating attr,
-    # error attr). Keep in sync with the footer's spinner map in
-    # mixie_chat_footer.cc and generate_ops routing.
+    # Map of generate type -> (is_generating attr, error attr)
     _GEN_FLAGS = {
-        'depth_to_image':       ('mixie_lookdev_is_generating',       'mixie_lookdev_error'),
-        'pbr_gen':              ('mixie_lookdev360_is_generating',    'mixie_lookdev360_error'),
-        'model_3d':             ('mixie_image_to_3d_is_generating',   'mixie_image_to_3d_error'),
-        'image_to_3d':          ('mixie_image_to_3d_is_generating',   'mixie_image_to_3d_error'),
-        'hunyuan_rapid':        ('mixie_hunyuan_rapid_is_generating', 'mixie_hunyuan_rapid_error'),
-        'image_gen':            ('mixie_imagegen_is_generating',      'mixie_imagegen_error'),
-        'scene_reconstruction': ('mixie_scene_recon_is_generating',   'mixie_scene_recon_error'),
+        'LOOKDEV':     ('mixie_lookdev_is_generating',     'mixie_lookdev_error'),
+        'LOOKDEV_360': ('mixie_lookdev360_is_generating',  'mixie_lookdev360_error'),
+        'IMAGE_TO_3D': ('mixie_image_to_3d_is_generating', 'mixie_image_to_3d_error'),
+        'IMAGE_GEN':   ('mixie_imagegen_is_generating',    'mixie_imagegen_error'),
+        'SCENE_RECON': ('mixie_scene_recon_is_generating', 'mixie_scene_recon_error'),
     }
 
     def execute(self, context):
-        from .generate_ops import normalize_generate_service
-
         scene = context.scene
-        gen_type = normalize_generate_service(
-            getattr(scene, 'mixie_chat_generate_type', ''))
+        gen_type = getattr(scene, 'mixie_chat_generate_type', '')
 
         # Cancel the specific generation type
         flag_info = self._GEN_FLAGS.get(gen_type)
@@ -355,13 +277,11 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
         try:
             from mixar.modules.moodboard.core.generate_progress import reset_progress
             progress_key = {
-                'depth_to_image': 'lookdev',
-                'pbr_gen': 'lookdev360',
-                'model_3d': 'image_to_3d',
-                'image_to_3d': 'image_to_3d',
-                'hunyuan_rapid': 'hunyuan_rapid',
-                'image_gen': 'imagegen',
-                'scene_reconstruction': 'scene_recon',
+                'LOOKDEV': 'lookdev',
+                'LOOKDEV_360': 'lookdev360',
+                'IMAGE_TO_3D': 'image_to_3d',
+                'IMAGE_GEN': 'imagegen',
+                'SCENE_RECON': 'scene_recon',
             }.get(gen_type)
             if progress_key:
                 reset_progress(progress_key)

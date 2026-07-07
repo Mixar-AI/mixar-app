@@ -192,31 +192,25 @@ def _pressed(color: tuple) -> tuple:
 
 
 def _wrap_text(text: str, font_size: int, max_width: float) -> list[str]:
-    """Word-wrap text to fit within max_width pixels using BLF metrics.
-
-    Explicit newlines in *text* are honored as hard line breaks — each is
-    wrapped independently — so callers can force a new line with ``\\n``.
-    """
+    """Word-wrap text to fit within max_width pixels using BLF metrics."""
     blf.size(_FONT_ID, font_size)
+    words = text.split()
+    if not words:
+        return []
 
     lines: list[str] = []
-    for segment in text.split("\n"):
-        words = segment.split()
-        if not words:
-            continue
+    current_line = words[0]
 
-        current_line = words[0]
-        for word in words[1:]:
-            test = current_line + " " + word
-            w, _ = blf.dimensions(_FONT_ID, test)
-            if w <= max_width:
-                current_line = test
-            else:
-                lines.append(current_line)
-                current_line = word
+    for word in words[1:]:
+        test = current_line + " " + word
+        w, _ = blf.dimensions(_FONT_ID, test)
+        if w <= max_width:
+            current_line = test
+        else:
+            lines.append(current_line)
+            current_line = word
 
-        lines.append(current_line)
-
+    lines.append(current_line)
     return lines
 
 
