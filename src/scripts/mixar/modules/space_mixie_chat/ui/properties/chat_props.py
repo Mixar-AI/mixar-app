@@ -426,22 +426,103 @@ _GENERATE_TYPE_HINTS = {
 }
 
 
-def on_generate_type_changed(self, context):
-    """Show an instruction message for types that still need input."""
-    scene = context.scene
-    entry = _GENERATE_TYPE_HINTS.get(scene.mixie_chat_generate_type)
-    if not entry:
-        return
-    hint, satisfied = entry
+# bubble_id prefix for the "which model?" ask bubbles — the slot-action
+# handler recognises clicks by the chat_model: action value, and new asks
+# strip the buttons off older ask bubbles via this prefix.
+MODEL_ASK_BUBBLE_PREFIX = "chat-model-ask-"
+
+
+def _clear_stale_model_asks(scene):
+    """Remove action buttons from previous model-ask bubbles so only the
+    ask for the currently selected type is clickable."""
+    for msg in scene.mixie_chat_messages:
+        if (getattr(msg, 'bubble_id', "").startswith(MODEL_ASK_BUBBLE_PREFIX)
+                and len(msg.action_items)):
+            msg.action_items.clear()
+
+
+def _ask_model_choice(scene, service_key):
+    """Post a chat bubble asking which model to use for *service_key*.
+
+    Only asks when the chat options cache lists more than one model for
+    the service. Buttons carry ``chat_model:<service>:<slug>`` values,
+    intercepted locally by MIXIE_CHAT_OT_select_slot_action; ignoring the
+    ask keeps the service's default model.
+    """
     try:
-        if satisfied(scene, context):
-            return
+        from mixar.bootstrap.chat_generate_options_cache import get_option
+        option = get_option(service_key) or {}
     except Exception:
-        pass  # on any doubt, show the hint
+        return False
+    models = option.get("models") or []
+    if len(models) < 2:
+        return False
+
+    default_slug = option.get("default_model") or models[0].get("slug")
+    default_label = next(
+        (m.get("label") or m.get("slug") for m in models
+         if m.get("slug") == default_slug),
+        default_slug,
+    )
+
+    import uuid
     msg = scene.mixie_chat_messages.add()
     msg.sender = 'AGENT'
-    msg.text = hint
-    redraw_chat_areas()
+    msg.bubble_id = MODEL_ASK_BUBBLE_PREFIX + str(uuid.uuid4())
+    msg.text = (
+        f"Which model should I use for {option.get('label') or service_key}? "
+        f"Tap one below — or just hit send to use {default_label}."
+    )
+    for model in models:
+        slug = model.get("slug")
+        if not slug:
+            continue
+        label = model.get("label") or slug
+        cost = model.get("credit_cost")
+        item = msg.action_items.add()
+        item.label = f"{label} ({cost} cr)" if cost is not None else label
+        item.value = f"chat_model:{service_key}:{slug}"
+        item.style = 'PRIMARY' if slug == default_slug else 'DEFAULT'
+    return True
+
+
+def on_generate_type_changed(self, context):
+    """Show an instruction message for types that still need input, and
+    ask which model to use when the type has more than one."""
+    scene = context.scene
+    gen_type = scene.mixie_chat_generate_type
+
+    # The model choice is per-type; switching types resets to the default
+    # and retires any previous type's ask buttons (their values name the
+    # old service and would be rejected on click anyway).
+    try:
+        scene.mixie_chat_generate_model = ""
+        _clear_stale_model_asks(scene)
+    except Exception:
+        pass
+
+    posted = False
+    entry = _GENERATE_TYPE_HINTS.get(gen_type)
+    if entry:
+        hint, satisfied = entry
+        show = True
+        try:
+            show = not satisfied(scene, context)
+        except Exception:
+            pass  # on any doubt, show the hint
+        if show:
+            msg = scene.mixie_chat_messages.add()
+            msg.sender = 'AGENT'
+            msg.text = hint
+            posted = True
+
+    try:
+        posted = _ask_model_choice(scene, gen_type) or posted
+    except Exception as e:
+        logger.debug("Model-choice ask skipped: %s", e)
+
+    if posted:
+        redraw_chat_areas()
 
 
 def register():
@@ -559,6 +640,19 @@ def register():
         # different service after a catalog update.
         items=generate_type_enum_items,
         update=on_generate_type_changed,
+        options={'SKIP_SAVE'},
+    )
+
+    # Model slug chosen via the in-chat "which model?" ask (see
+    # _ask_model_choice / the chat_model: slot-action intercept). Empty
+    # means "use the service's catalog default". Reset on every type
+    # change; SKIP_SAVE so a stale choice never outlives the session.
+    bpy.types.Scene.mixie_chat_generate_model = StringProperty(
+        name="Generate Model",
+        description="Model to use for the selected generate type "
+                    "(empty = service default)",
+        default="",
+        maxlen=128,
         options={'SKIP_SAVE'},
     )
 
@@ -703,7 +797,8 @@ def unregister():
     for attr in (
         'mixie_chat_layout_epoch',
         'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
-        'mixie_chat_model', 'mixie_chat_generate_type', 'mixie_chat_plan_enabled',
+        'mixie_chat_model', 'mixie_chat_generate_type',
+        'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_mode',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):

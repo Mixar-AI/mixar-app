@@ -49,6 +49,28 @@ def normalize_generate_service(value: str) -> str:
     return _GEN_TYPE_ALIASES.get(value or "", value or "image_gen")
 
 
+def _chosen_model(scene, service_key):
+    """The model slug picked via the in-chat "which model?" ask, if it
+    names one of *service_key*'s current models — else "" (use default)."""
+    slug = (getattr(scene, "mixie_chat_generate_model", "") or "").strip()
+    if not slug:
+        return ""
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import get_option
+        models = (get_option(service_key) or {}).get("models") or []
+        if any(m.get("slug") == slug for m in models):
+            return slug
+    except Exception:
+        pass
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+        if get_model(service_key, slug):
+            return slug
+    except Exception:
+        pass
+    return ""
+
+
 def _deselect_moodboard_origin(scene) -> None:
     """Deselect moodboard images for any is_moodboard attachments in
     pending so the moodboard sync doesn't re-add them on the next poll
@@ -191,7 +213,9 @@ def _handle_image_to_3d(operator, context, prompt, pending_attachments):
 
     bubble_id = add_slot_loader(scene, "Generating 3D model from image")
 
-    bpy.ops.mixie.image_to_3d_generate(from_chat=True)
+    # model="" lets the operator fall back to the catalog default.
+    bpy.ops.mixie.image_to_3d_generate(
+        from_chat=True, model=_chosen_model(scene, "model_3d"))
 
     register_generation_poll(
         scene, bubble_id,
@@ -257,16 +281,17 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
         )
         return {'CANCELLED'}
 
-    # Resolve the model slug from the chat options (falling back to the
-    # full catalog), mirroring the moodboard's catalog-default behaviour.
-    model = None
-    try:
-        from mixar.bootstrap.chat_generate_options_cache import (
-            get_default_model_slug,
-        )
-        model = get_default_model_slug(service_key)
-    except Exception:
-        pass
+    # Model: the in-chat choice when one was made, else the service's
+    # catalog default (chat options first, then the full catalog).
+    model = _chosen_model(scene, service_key) or None
+    if not model:
+        try:
+            from mixar.bootstrap.chat_generate_options_cache import (
+                get_default_model_slug,
+            )
+            model = get_default_model_slug(service_key)
+        except Exception:
+            pass
     if not model:
         try:
             from mixar.bootstrap.generation_catalog_cache import (
@@ -405,7 +430,9 @@ def _handle_image_gen(operator, context, prompt, pending_attachments):
     scene.mixie_imagegen_prompt = prompt
     bubble_id = add_slot_loader(scene, "Generating image")
 
-    bpy.ops.mixie.imagegen_generate(from_chat=True)
+    # model="" lets the operator fall back to the catalog default.
+    bpy.ops.mixie.imagegen_generate(
+        from_chat=True, model=_chosen_model(scene, "image_gen"))
 
     register_generation_poll(
         scene, bubble_id,

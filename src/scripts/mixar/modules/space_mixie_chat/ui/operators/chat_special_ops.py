@@ -68,6 +68,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             self.report({'WARNING'}, "Missing bubble_id or action_value")
             return {'CANCELLED'}
 
+        # Local intercept: "which model?" ask buttons (posted by
+        # chat_props._ask_model_choice). Value shape:
+        #   chat_model:<service_key>:<model_slug>
+        # Stores the choice for the next generate send — no backend
+        # round-trip, works while disconnected.
+        if self.action_value.startswith("chat_model:"):
+            return self._apply_model_choice(context)
+
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it
@@ -173,6 +181,53 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             logger.error(f"Error dispatching slot action: {e}")
             self.report({'ERROR'}, f"Error: {e}")
 
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+    def _apply_model_choice(self, context):
+        """Handle a chat_model:<service>:<slug> button click locally."""
+        from .generate_ops import normalize_generate_service
+
+        scene = context.scene
+        try:
+            _, service_key, slug = self.action_value.split(":", 2)
+        except ValueError:
+            logger.warning("Malformed model choice value: %r", self.action_value)
+            return {'CANCELLED'}
+
+        current = normalize_generate_service(
+            getattr(scene, 'mixie_chat_generate_type', ''))
+        if service_key != current:
+            # Stale ask from a previously selected type — don't cross wires.
+            self.report(
+                {'INFO'},
+                "That model belongs to a different generate type — "
+                "pick the type again to choose its model.",
+            )
+            return {'CANCELLED'}
+
+        scene.mixie_chat_generate_model = slug
+
+        # Clear the ask bubble's buttons and confirm the choice.
+        label = slug
+        try:
+            from mixar.bootstrap.chat_generate_options_cache import get_option
+            option = get_option(service_key) or {}
+            for model in option.get("models") or []:
+                if model.get("slug") == slug:
+                    label = model.get("label") or slug
+                    break
+            service_label = option.get("label") or service_key
+        except Exception:
+            service_label = service_key
+        for msg in scene.mixie_chat_messages:
+            if getattr(msg, 'bubble_id', "") == self.bubble_id:
+                msg.action_items.clear()
+                break
+
+        confirm = scene.mixie_chat_messages.add()
+        confirm.sender = 'AGENT'
+        confirm.text = f"Got it — I'll use {label} for {service_label}."
         redraw_chat_areas()
         return {'FINISHED'}
 
