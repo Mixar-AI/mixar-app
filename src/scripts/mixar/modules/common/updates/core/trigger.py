@@ -476,14 +476,11 @@ def _push_downloading_toast() -> None:
     forced = is_forced(info)
     progress = state.progress
     pct = int(progress.percent)
-    # Percent + size go on their own line under the "Downloading <ver>…" head.
-    body = f"Downloading {info.latest_version}…"
+    body = f"Downloading {info.latest_version}… {pct}%"
     if progress.total_bytes > 0:
         done_mb = progress.downloaded_bytes / 1e6
         total_mb = progress.total_bytes / 1e6
-        body += f"\n{pct}% ({done_mb:.0f}/{total_mb:.0f} MB)"
-    else:
-        body += f"\n{pct}%"
+        body += f" ({done_mb:.0f}/{total_mb:.0f} MB)"
 
     actions = []
     if not forced:
