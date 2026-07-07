@@ -93,11 +93,14 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             row.alert = True
             row.label(text="Mixie Chat is busy", icon='ERROR')
 
-        # Mode selector (Agent / Generate) is hidden for now — the quick
-        # prompt is locked to Agent mode. quick_prompt_mode is seeded from
-        # scene.mixie_chat_mode (default 'AGENT') in invoke() and applied
-        # back in execute(), so with the selector hidden it stays 'AGENT'.
-        # Restore the "Mode:" row + generate-type prop to bring it back.
+        # Mode selector row
+        row = layout.row(align=True)
+        row.label(text="Mode:")
+        row.prop(wm, "mixie_chat_quick_prompt_mode", text="")
+
+        # Show generate type when GENERATE mode is active
+        if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
+            row.prop(wm, "mixie_chat_quick_prompt_generate_type", text="")
 
         layout.separator()
 
@@ -162,7 +165,19 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         # Apply quick prompt mode to scene (so message uses correct mode)
         scene.mixie_chat_mode = wm.mixie_chat_quick_prompt_mode
         if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
+            # Generate mode never reaches the agent SSE path — route through
+            # the same sub-type handlers the footer send uses (they add the
+            # user message, consume pending attachments and start the poll).
+            # Previously this fell through to the agent stream below, so a
+            # GENERATE quick prompt chatted with the agent instead of
+            # generating.
             scene.mixie_chat_generate_type = wm.mixie_chat_quick_prompt_generate_type
+            scene.mixie_chat_input = message_text
+            from . import generate_ops
+            result = generate_ops.execute_generate_mode(self, context)
+            if result == {'FINISHED'}:
+                wm.mixie_chat_quick_prompt_input = ""
+            return result
 
         # Add user message to history WITH attachments from pending
         user_msg = scene.mixie_chat_messages.add()
