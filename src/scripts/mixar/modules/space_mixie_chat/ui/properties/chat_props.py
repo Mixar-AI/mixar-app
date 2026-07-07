@@ -450,10 +450,7 @@ def _ask_model_choice(scene, service_key):
     ask keeps the service's default model.
     """
     try:
-        from mixar.bootstrap.chat_generate_options_cache import (
-            get_display_label,
-            get_option,
-        )
+        from mixar.bootstrap.chat_generate_options_cache import get_option
         option = get_option(service_key) or {}
     except Exception:
         return False
@@ -473,7 +470,7 @@ def _ask_model_choice(scene, service_key):
     msg.sender = 'AGENT'
     msg.bubble_id = MODEL_ASK_BUBBLE_PREFIX + str(uuid.uuid4())
     msg.text = (
-        f"Which model should I use for {get_display_label(service_key)}? "
+        f"Which model should I use for {option.get('label') or service_key}? "
         f"Tap one below — or just hit send to use {default_label}."
     )
     for model in models:
