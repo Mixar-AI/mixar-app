@@ -86,25 +86,6 @@ def register():
         options={'SKIP_SAVE'},
     )
 
-    # Rapid 3D (hunyuan_rapid service) state. The moodboard Model Gen tab
-    # and the hunyuan operators already pass
-    # scene_flag="mixie_hunyuan_rapid_is_generating" to the job queue's
-    # scene-flag listener, and the chat composer's spinner/poll reads it —
-    # this is where the property is actually registered.
-    bpy.types.Scene.mixie_hunyuan_rapid_is_generating = BoolProperty(
-        name="Is Generating (Rapid 3D)",
-        description="Whether Rapid 3D generation is in progress",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-
-    bpy.types.Scene.mixie_hunyuan_rapid_error = StringProperty(
-        name="Error Message (Rapid 3D)",
-        description="Last error message from Rapid 3D generation",
-        default="",
-        options={'SKIP_SAVE'},
-    )
-
 
 def unregister():
     """Unregister Image to 3D scene properties."""
@@ -115,8 +96,6 @@ def unregister():
         "mixie_image_to_3d_model",
         "mixie_image_to_3d_is_generating",
         "mixie_image_to_3d_error",
-        "mixie_hunyuan_rapid_is_generating",
-        "mixie_hunyuan_rapid_error",
     ]
     for prop in props:
         try:

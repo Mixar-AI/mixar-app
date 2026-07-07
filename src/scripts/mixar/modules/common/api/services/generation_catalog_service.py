@@ -37,17 +37,6 @@ class GenerationCatalogService(BaseService):
         headers = {"If-None-Match": etag} if etag else None
         return self.get("", headers=headers)
 
-    def get_chat_options(self, etag: Optional[str] = None) -> APIResponse:
-        """GET ``/generation-catalog/chat-options`` with optional ETag.
-
-        The chat-options view is the backend-curated subset of catalog
-        services that Mixie chat's Generate mode supports (with each
-        service's live model list). Same conditional-request contract as
-        :meth:`get_catalog`.
-        """
-        headers = {"If-None-Match": etag} if etag else None
-        return self.get("/chat-options", headers=headers)
-
 
 # ---------------------------------------------------------------------------
 # Singleton
