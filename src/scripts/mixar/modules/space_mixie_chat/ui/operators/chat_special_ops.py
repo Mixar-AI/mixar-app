@@ -211,16 +211,13 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # Clear the ask bubble's buttons and confirm the choice.
         label = slug
         try:
-            from mixar.bootstrap.chat_generate_options_cache import (
-                get_display_label,
-                get_option,
-            )
+            from mixar.bootstrap.chat_generate_options_cache import get_option
             option = get_option(service_key) or {}
             for model in option.get("models") or []:
                 if model.get("slug") == slug:
                     label = model.get("label") or slug
                     break
-            service_label = get_display_label(service_key)
+            service_label = option.get("label") or service_key
         except Exception:
             service_label = service_key
         for msg in scene.mixie_chat_messages:
