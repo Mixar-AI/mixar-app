@@ -83,6 +83,66 @@ class MIXAR_OT_dismiss_update(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class MIXAR_OT_start_update_download(bpy.types.Operator):
+    """Download the available update and show live progress"""
+
+    bl_idname = "mixar.start_update_download"
+    bl_label = "Update"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        from ..core import trigger
+        from ..core.state import get_update_state
+
+        info = get_update_state().update_info
+        if info is None:
+            self.report({"WARNING"}, "No update information available")
+            return {"CANCELLED"}
+
+        trigger.begin_download(info)
+        return {"FINISHED"}
+
+
+class MIXAR_OT_open_downloads_page(bpy.types.Operator):
+    """Open the Mixar downloads page in the default browser"""
+
+    bl_idname = "mixar.open_downloads_page"
+    bl_label = "Download in Browser"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        from mixar.config.config import get_config
+
+        from ..constants import DOWNLOADS_PAGE_URL
+
+        url = get_config().get("updates", {}).get("downloads_url") or DOWNLOADS_PAGE_URL
+        webbrowser.open(url)
+        return {"FINISHED"}
+
+
+class MIXAR_OT_cancel_update(bpy.types.Operator):
+    """Cancel the in-flight update download"""
+
+    bl_idname = "mixar.cancel_update"
+    bl_label = "Cancel"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        from ..constants import UPDATE_NOTIFICATION_ID
+        from ..core.state import get_update_state
+        from ...notifications.store import get_notification_store
+
+        state = get_update_state()
+        # Signal cancel and dismiss the toast, but do NOT set_idle() here:
+        # set_idle() clears cancel_requested, which would let the in-flight
+        # download thread run to completion and re-show a "ready" toast. The
+        # download thread transitions to IDLE once it observes the flag.
+        state.request_cancel()
+        get_notification_store().dismiss(UPDATE_NOTIFICATION_ID)
+        logger.info("User cancelled update download")
+        return {"FINISHED"}
+
+
 class MIXAR_OT_check_for_updates(bpy.types.Operator):
     """Check whether a newer version of Mixar is available"""
 
@@ -146,6 +206,9 @@ class MIXAR_OT_open_changelog(bpy.types.Operator):
 classes = (
     MIXAR_OT_install_update,
     MIXAR_OT_dismiss_update,
+    MIXAR_OT_start_update_download,
+    MIXAR_OT_open_downloads_page,
+    MIXAR_OT_cancel_update,
     MIXAR_OT_check_for_updates,
     MIXAR_OT_open_changelog,
 )
