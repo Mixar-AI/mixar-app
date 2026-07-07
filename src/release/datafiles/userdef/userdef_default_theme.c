@@ -54,10 +54,10 @@ const bTheme U_theme_default = {
       .roundness = 0.5f,
     },
     .wcol_text = {
-      .outline = RGBA(0x0b0e14ff),
+      .outline = RGBA(0x2e2e2eff),
       .outline_sel = RGBA(0x3d3d3dff),
-      .inner = RGBA(0x0b0e14ff),
-      .inner_sel = RGBA(0x0b0e14ff),
+      .inner = RGBA(0x1a1a1aff),
+      .inner_sel = RGBA(0x1f1f1fff),
       .item = RGBA(0x474747ff),
       .text = RGBA(0xffffffff),
       .text_sel = RGBA(0xffffffff),
