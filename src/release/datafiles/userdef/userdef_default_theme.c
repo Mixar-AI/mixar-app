@@ -377,7 +377,7 @@ const bTheme U_theme_default = {
     .title = RGBA(0xd4d4d4ff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),
-    .header = RGBA(0x3a3a3aff),
+    .header = RGBA(0x010000ff),
     .header_text = RGBA(0xeeeeeeff),
     .header_text_hi = RGBA(0xffffffff),
     .vertex_size = 3,
@@ -391,7 +391,7 @@ const bTheme U_theme_default = {
     .title = RGBA(0xeeeeeeff),
     .text = RGBA(0xe6e6e6ff),
     .text_hi = RGBA(0xffffffff),
-    .header = RGBA(0x3a3a3aff),
+    .header = RGBA(0x010000ff),
     .header_text = RGBA(0xeeeeeeff),
     .header_text_hi = RGBA(0xffffffff),
     .grid = RGBA(0x66666614),
@@ -810,7 +810,7 @@ const bTheme U_theme_default = {
   },
   .space_mixie_chat = {
     .text = RGBA(0xffffff00),
-    .header = RGBA(0x3a3a3aff),
+    .header = RGBA(0x010000ff),
     .header_text = RGBA(0xffffff00),
     .chat_user_bubble = RGBA(0x13161bff),
     .chat_agent_bubble = RGBA(0x232830ff),
@@ -877,7 +877,7 @@ const bTheme U_theme_default = {
     .text = RGBA(0xffffffff),
     .header = RGBA(0x000000ff),
     .header_text = RGBA(0x000000ff),
-    .chat_footer_bg = RGBA(0x1a1a1aff),
+    .chat_footer_bg = RGBA(0x141414ff),
   },
   .tarm = {
     {

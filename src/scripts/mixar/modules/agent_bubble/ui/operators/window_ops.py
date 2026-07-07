@@ -58,9 +58,12 @@ class MIXAR_OT_agent_bubble_open_window(Operator):
         except Exception:  # noqa: BLE001 — never break the open path
             pass
 
-        # NOTE: the bubble used to force scene.mixie_chat_mode back to
-        # 'AGENT' here. With the Agent/Generate selector restored in the
-        # composer, opening the bubble now preserves the last-used mode.
+        scene = getattr(context, "scene", None)
+        if scene is not None and hasattr(scene, "mixie_chat_mode"):
+            try:
+                scene.mixie_chat_mode = 'AGENT'
+            except Exception:  # noqa: BLE001 — never block the open path
+                pass
 
         # Restore from the minimised pill state first. ``bubble_restore``
         # is a no-op when the bubble isn't minimised, so calling it
