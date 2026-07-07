@@ -353,43 +353,95 @@ def generate_type_enum_items(self, context):
 
 
 # Instruction message shown when a generate type that needs extra input is
-# selected, keyed by catalog service key.
+# selected, keyed by catalog service key. Each entry is
+# (message, satisfied) — the hint is only posted when satisfied(scene,
+# context) is False, so users who already attached an image / typed a
+# prompt aren't told to do what they've already done.
+
+
+def _has_input_image(scene, context):
+    """True when a pending attachment or a selected moodboard image is
+    available as the generation's input image."""
+    try:
+        if len(scene.mixie_chat_pending_attachments) > 0:
+            return True
+    except Exception:
+        pass
+    try:
+        from mixar.modules.moodboard.ui.sidebar_ui_helpers import (
+            get_selected_moodboard_image,
+        )
+        return get_selected_moodboard_image(context) is not None
+    except Exception:
+        return False
+
+
+def _has_prompt(scene, context):
+    return bool((scene.mixie_chat_input or "").strip())
+
+
+def _has_prompt_or_image(scene, context):
+    return _has_prompt(scene, context) or _has_input_image(scene, context)
+
+
+def _has_mesh_selection(scene, context):
+    try:
+        return any(obj.type == 'MESH' for obj in context.selected_objects)
+    except Exception:
+        return False
+
+
 _GENERATE_TYPE_HINTS = {
     'depth_to_image': (
         "Enter a render prompt. Mixie will use the current scene's depth "
-        "as the guide."
+        "as the guide.",
+        _has_prompt,
     ),
     'pbr_gen': (
         "Please enter your prompt and select the mesh objects in the "
-        "3D viewport before hitting send."
+        "3D viewport before hitting send.",
+        lambda scene, context: (
+            _has_prompt(scene, context) and _has_mesh_selection(scene, context)
+        ),
     ),
     'model_3d': (
         "Attach a reference image or select one in the moodboard, then "
-        "hit send. A prompt is optional."
+        "hit send. A prompt is optional.",
+        _has_input_image,
     ),
     'image_to_3d': (
         "Attach a reference image or select one in the moodboard, then "
-        "hit send. A prompt is optional."
+        "hit send. A prompt is optional.",
+        _has_input_image,
     ),
     'hunyuan_rapid': (
-        "Attach a reference image or enter a prompt, then hit send."
+        "Attach a reference image or enter a prompt, then hit send.",
+        _has_prompt_or_image,
     ),
     'scene_reconstruction': (
         "Attach an image to reconstruct it into a 3D scene, or enter a "
-        "prompt to generate one from a description. You can also combine both."
+        "prompt to generate one from a description. You can also combine both.",
+        _has_prompt_or_image,
     ),
 }
 
 
 def on_generate_type_changed(self, context):
-    """Show an instruction message for types that need extra input."""
+    """Show an instruction message for types that still need input."""
     scene = context.scene
-    hint = _GENERATE_TYPE_HINTS.get(scene.mixie_chat_generate_type)
-    if hint:
-        msg = scene.mixie_chat_messages.add()
-        msg.sender = 'AGENT'
-        msg.text = hint
-        redraw_chat_areas()
+    entry = _GENERATE_TYPE_HINTS.get(scene.mixie_chat_generate_type)
+    if not entry:
+        return
+    hint, satisfied = entry
+    try:
+        if satisfied(scene, context):
+            return
+    except Exception:
+        pass  # on any doubt, show the hint
+    msg = scene.mixie_chat_messages.add()
+    msg.sender = 'AGENT'
+    msg.text = hint
+    redraw_chat_areas()
 
 
 def register():
