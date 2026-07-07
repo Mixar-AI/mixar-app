@@ -181,9 +181,8 @@ class MIXIE_OT_imagegen_generate(Operator):
 
         # Determine model and other params based on context
         if self.from_chat:
-            # Chat may pass an explicit model (picked via the in-chat
-            # "which model?" ask); empty means the catalog default.
-            model = self.model.strip() or _get_default_image_model()
+            # Use default model from the catalog for chat context
+            model = _get_default_image_model()
             if not model:
                 self.report(
                     {"WARNING"}, "No models available - please wait for models to load"
