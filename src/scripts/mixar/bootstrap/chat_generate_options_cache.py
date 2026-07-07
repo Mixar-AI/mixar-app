@@ -197,6 +197,15 @@ def get_option(service_key: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def get_display_label(service_key: str) -> str:
+    """The backend-provided display name for a chat service (display_label
+    with service-label fallback for older backends)."""
+    opt = get_option(service_key) or {}
+    return (
+        opt.get("display_label") or opt.get("label") or service_key
+    )
+
+
 def get_service_keys() -> List[str]:
     return [o.get("service_key") for o in get_options() if o.get("service_key")]
 
@@ -233,7 +242,10 @@ def get_generate_type_enum_items() -> List[Tuple[str, str, str, str, int]]:
         key = opt.get("service_key") or ""
         if not key:
             continue
-        label = opt.get("label") or key
+        # display_label is the backend-owned display name (matches the
+        # moodboard's capability naming); label is the service label kept
+        # for older backends that predate display_label.
+        label = opt.get("display_label") or opt.get("label") or key
         cost = opt.get("credit_cost")
         desc = f"{label} ({cost} credits)" if cost is not None else label
         icon = _SERVICE_ICONS.get(key, _DEFAULT_ICON)
