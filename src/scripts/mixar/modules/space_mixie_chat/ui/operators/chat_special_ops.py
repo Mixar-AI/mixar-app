@@ -197,7 +197,8 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
 
     generate_type: StringProperty(
         name="Generate Type",
-        description="The generate sub-type (IMAGE_GEN, IMAGE_TO_3D, LOOKDEV, LOOKDEV_360)",
+        description="The generate sub-type — a generation-catalog service "
+                    "key (e.g. image_gen, model_3d)",
         default="",
     )
 
@@ -209,9 +210,18 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
         if self.mode and self.mode in {'AGENT', 'GENERATE'}:
             context.scene.mixie_chat_mode = self.mode
 
-        # Set the generate type if provided (only applies when mode is GENERATE)
-        if self.generate_type and self.generate_type in {'IMAGE_GEN', 'IMAGE_TO_3D', 'LOOKDEV', 'LOOKDEV_360', 'SCENE_RECON'}:
-            context.scene.mixie_chat_generate_type = self.generate_type
+        # Set the generate type if provided (only applies when mode is
+        # GENERATE). The enum is catalog-driven, so validate by attempting
+        # the assignment — an identifier missing from the current options
+        # raises TypeError and we keep the current selection.
+        if self.generate_type:
+            try:
+                context.scene.mixie_chat_generate_type = self.generate_type
+            except TypeError:
+                logger.warning(
+                    "Unknown generate type %r — keeping current selection",
+                    self.generate_type,
+                )
 
         # Set the chat input to the prompt text
         context.scene.mixie_chat_input = self.text
@@ -251,13 +261,17 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
     bl_description = "Stop the current generation"
     bl_options = {'REGISTER', 'INTERNAL'}
 
-    # Map of generate type -> (is_generating attr, error attr)
+    # Map of generate type (catalog service key) -> (is_generating attr,
+    # error attr). Keep in sync with the footer's spinner map in
+    # mixie_chat_footer.cc and generate_ops routing.
     _GEN_FLAGS = {
-        'LOOKDEV':     ('mixie_lookdev_is_generating',     'mixie_lookdev_error'),
-        'LOOKDEV_360': ('mixie_lookdev360_is_generating',  'mixie_lookdev360_error'),
-        'IMAGE_TO_3D': ('mixie_image_to_3d_is_generating', 'mixie_image_to_3d_error'),
-        'IMAGE_GEN':   ('mixie_imagegen_is_generating',    'mixie_imagegen_error'),
-        'SCENE_RECON': ('mixie_scene_recon_is_generating', 'mixie_scene_recon_error'),
+        'depth_to_image':       ('mixie_lookdev_is_generating',       'mixie_lookdev_error'),
+        'pbr_gen':              ('mixie_lookdev360_is_generating',    'mixie_lookdev360_error'),
+        'model_3d':             ('mixie_image_to_3d_is_generating',   'mixie_image_to_3d_error'),
+        'image_to_3d':          ('mixie_image_to_3d_is_generating',   'mixie_image_to_3d_error'),
+        'hunyuan_rapid':        ('mixie_hunyuan_rapid_is_generating', 'mixie_hunyuan_rapid_error'),
+        'image_gen':            ('mixie_imagegen_is_generating',      'mixie_imagegen_error'),
+        'scene_reconstruction': ('mixie_scene_recon_is_generating',   'mixie_scene_recon_error'),
     }
 
     def execute(self, context):
@@ -277,11 +291,12 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
         try:
             from mixar.modules.moodboard.core.generate_progress import reset_progress
             progress_key = {
-                'LOOKDEV': 'lookdev',
-                'LOOKDEV_360': 'lookdev360',
-                'IMAGE_TO_3D': 'image_to_3d',
-                'IMAGE_GEN': 'imagegen',
-                'SCENE_RECON': 'scene_recon',
+                'depth_to_image': 'lookdev',
+                'pbr_gen': 'lookdev360',
+                'model_3d': 'image_to_3d',
+                'image_to_3d': 'image_to_3d',
+                'image_gen': 'imagegen',
+                'scene_reconstruction': 'scene_recon',
             }.get(gen_type)
             if progress_key:
                 reset_progress(progress_key)

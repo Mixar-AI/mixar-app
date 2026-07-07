@@ -28,10 +28,17 @@ def refresh_generation_caches():
         refresh_generation_catalog_cache()
     except Exception as e:
         logger.warning(f"Generation catalog refresh failed: {e}")
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import (
+            refresh_chat_generate_options_cache,
+        )
+        refresh_chat_generate_options_cache()
+    except Exception as e:
+        logger.warning(f"Chat generate options refresh failed: {e}")
 
 
 def invalidate_generation_caches():
-    """Clear the generation catalog cache on logout."""
+    """Clear the generation catalog + chat options caches on logout."""
     try:
         from mixar.bootstrap.generation_catalog_cache import (
             clear_generation_catalog_cache,
@@ -39,6 +46,13 @@ def invalidate_generation_caches():
         clear_generation_catalog_cache()
     except Exception as e:
         logger.warning(f"Generation catalog clear failed: {e}")
+    try:
+        from mixar.bootstrap.chat_generate_options_cache import (
+            clear_chat_generate_options_cache,
+        )
+        clear_chat_generate_options_cache()
+    except Exception as e:
+        logger.warning(f"Chat generate options clear failed: {e}")
 
 
 def maybe_show_onboarding(email: str) -> None:
