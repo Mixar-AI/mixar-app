@@ -58,30 +58,22 @@ class AGENT_BUBBLE_PT_footer(Panel):
             max_lines=4,
         )
 
-        # Action row — Mode dropdown on the left, Send icon-button
-        # pushed to the right via separator_spacer. Both elements
-        # placed directly on the row so they take their natural
-        # widths; earlier scale_x wrappers were squeezing the Send
-        # button below the PLAY icon's drawable size and clipping
-        # it to ">".
+        # Action row — Send icon-button pushed to the right via
+        # separator_spacer. Elements placed directly on the row so they
+        # take their natural widths; earlier scale_x wrappers were
+        # squeezing the Send button below the PLAY icon's drawable size
+        # and clipping it to ">".
         action_row = layout.row(align=True)
         action_row.scale_y = 1.1
 
-        # Mode dropdown — tightened from scale_x=0.55 to 0.4 so it
-        # matches the compact width used by the mixie chat composer
-        # and the Figma reference. The dropdown's natural width
-        # accommodates the longest enum label ("Generate"); 0.4
-        # narrows it to roughly that label's text width without
-        # squashing it to ellipsis.
-        if hasattr(scene, "mixie_chat_mode"):
-            mode_sub = action_row.row(align=True)
-            mode_sub.scale_x = 0.4
-            mode_sub.prop(scene, "mixie_chat_mode", text="")
+        # Mode dropdown (Agent / Generate) is hidden for now — the
+        # composer is locked to Agent mode (mixie_chat_mode default
+        # 'AGENT'). Restore the mode_sub.prop(scene, "mixie_chat_mode")
+        # draw here to bring the selector back.
 
-        # Paperclip — attach an image / file to the next message.
-        # Placed immediately after the mode dropdown (no spacer) so
-        # the two read as a single composer-controls cluster on the
-        # left, matching the Figma layout. Reuses the chat editor's
+        # Paperclip — attach an image / file to the next message. Now
+        # leads the control cluster on the left (the mode dropdown that
+        # used to sit before it is hidden). Reuses the chat editor's
         # add_image_from_file operator so attachments end up in the
         # same collection.
         action_row.operator(
