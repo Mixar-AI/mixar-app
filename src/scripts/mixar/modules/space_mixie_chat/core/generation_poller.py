@@ -22,7 +22,8 @@ logger = get_logger(__name__)
 # Polling constants
 _POLL_INTERVAL = 0.5        # Check every 0.5s
 _POLL_FIRST_INTERVAL = 1.0  # Wait 1s before first poll
-_POLL_MAX_COUNT = 120       # 60s timeout at 0.5s intervals
+_POLL_TIMEOUT_S = 300     # 5 min
+_POLL_MAX_COUNT = int(_POLL_TIMEOUT_S / _POLL_INTERVAL)
 
 # Track active poll callbacks so we can cancel duplicates
 _active_polls = {}  # is_generating_attr -> poll_callback
@@ -68,9 +69,15 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
             return None
 
         if poll_count[0] > _POLL_MAX_COUNT:
+            # Safety net only (see _POLL_TIMEOUT_S). The job may well still
+            # be alive in the queue, so don't claim it failed — point at
+            # the Queue panel instead of asking the user to retry.
             _active_polls.pop(is_generating_attr, None)
             _hide_loader(scene, bubble_id)
-            add_agent_message(scene, "Generation timed out. Please try again.")
+            add_agent_message(
+                scene,
+                "Generation may still be running — check the Queue panel for status.",
+            )
             redraw_chat_areas()
             return None
 
