@@ -10,6 +10,11 @@ see core/model_suggestions.py for the cache and fetch wiring. The only
 client-side enum left here is the dialog state machine.
 """
 
+# Explicitly allow long provider keys in the Blender RNA string backing
+# the password field. Some provider-issued keys can exceed Blender's
+# implicit/default text input storage.
+BYOK_API_KEY_MAX_LENGTH = 256
+
 # Dialog state machine — drives what the dialog renders on each draw.
 DIALOG_STATE_ITEMS = (
     ('IDLE',            "Idle",            "Ready for input"),
