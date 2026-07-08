@@ -840,6 +840,26 @@ extern "C" void Mixar_WindowOrderOut(void *window_handle)
   }
 }
 
+extern "C" bool Mixar_WindowIsVisible(void *window_handle)
+{
+  /* Consumed by wm_draw_update (wm_draw.cc): windows Mixar hides natively
+   * (orderOut:-ed minimised bubble, modal-suppressed floating docks) must
+   * not be drawn or presented — upstream Blender never hides a GHOST
+   * window, so its draw loop would keep presenting into them. A null
+   * handle counts as not visible for the same reason. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    return [win isVisible] == YES;
+  }
+}
+
 
 /* Show an NSWindow that was previously orderOut-ed and make it key.
  * Startup/modal code that must not affect focus uses

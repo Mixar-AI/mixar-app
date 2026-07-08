@@ -3567,6 +3567,20 @@ extern "C" void Mixar_WindowOrderOut(void *window_handle)
   ShowWindow(hwnd, SW_HIDE);
 }
 
+extern "C" bool Mixar_WindowIsVisible(void *window_handle)
+{
+  /* Consumed by wm_draw_update (wm_draw.cc): windows Mixar hides natively
+   * (minimised bubble, modal-suppressed floating docks) must not be drawn
+   * or presented — upstream Blender never hides a GHOST window, so its
+   * draw loop happily calls SwapBuffers on them, and NVIDIA's GL driver
+   * intermittently faults on such presents right after resume-from-sleep
+   * (access violation in DrvPresentBuffers). A dead/stale handle counts as
+   * not visible for the same reason: never present into it. */
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) return false;
+  return ::IsWindowVisible(hwnd) != FALSE;
+}
+
 extern "C" void Mixar_WindowOrderFront(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);

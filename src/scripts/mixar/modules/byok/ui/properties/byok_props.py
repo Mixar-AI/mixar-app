@@ -19,7 +19,7 @@ Users see friendly labels; the IDs are what get sent to the server.
 import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
-from ...constants import DIALOG_STATE_ITEMS
+from ...constants import BYOK_API_KEY_MAX_LENGTH, DIALOG_STATE_ITEMS
 from ...core.model_suggestions import get_model_items, get_provider_items
 
 
@@ -96,6 +96,7 @@ def register():
             "Your API key is stored encrypted and used only for Mixar agent requests. "
             "After saving, only a masked preview is shown."
         ),
+        maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
         subtype='PASSWORD',
     )
