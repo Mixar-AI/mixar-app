@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_icon_geom_module():
-    path = ROOT / "src/release/datafiles/blender_icons_geom.py"
+    path = ROOT / "source/release/datafiles/blender_icons_geom.py"
     spec = importlib.util.spec_from_file_location("blender_icons_geom", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

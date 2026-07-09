@@ -39,10 +39,6 @@ _IMAGE_FIELDS = (
     "flip_horizontal",
     "flip_vertical",
     "generation_prompt",
-    "component_role",
-    "component_source_item_id",
-    "component_source_segment_id",
-    "component_name",
 )
 _TEXTBOX_FIELDS = (
     "text",

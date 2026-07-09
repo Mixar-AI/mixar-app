@@ -20,8 +20,6 @@ from bpy.types import Operator
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.capture import capture
-from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
@@ -39,7 +37,6 @@ from ...core.queue_processor import (
 from ...core.sse_handler import create_sse_handler
 from ...core.animation_manager import start_loader_animation
 from ...core.message_helpers import add_agent_message, get_auth_token
-from ...core.rules import compose_wire_message, mark_rules_sent
 from ...core.ui_utils import redraw_chat_areas
 from . import generate_ops
 
@@ -93,11 +90,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Check if Generate mode - delegate to generate_ops
         if scene.mixie_chat_mode == 'GENERATE':
-            capture(EVENT_MESSAGE_SENT, {
-                "mode": "generate",
-                "has_attachments": bool(len(scene.mixie_chat_pending_attachments)),
-                "generate_type": getattr(scene, "mixie_chat_generate_type", "") or None,
-            }, context=context)
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
@@ -124,15 +116,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 f"Message too long: {len(message_text)} chars (max {MAX_MESSAGE_LENGTH})"
             )
             return {'CANCELLED'}
-
-        capture(EVENT_MESSAGE_SENT, {
-            "mode": "agent",
-            "has_attachments": bool(len(pending_attachments)),
-            "is_modify": is_modify,
-            "is_awaiting_input": is_awaiting_input,
-            "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
-            "model": getattr(scene, "mixie_chat_model", "") or None,
-        }, context=context)
 
         # Dev mode: simulate response without backend
         if DEV_MODE:
@@ -332,18 +315,13 @@ class MIXIE_CHAT_OT_send_message(Operator):
             session.set_state(scene, SessionState.BUSY)  # Set to busy after sending
             session.clear_streaming()
         else:
-            # Normal message: start new session stream.
-            # Compose the wire message BEFORE start_session — project rules
-            # are prepended only when this send opens a NEW session, and
-            # start_session is what generates the session id. The optimistic
-            # user bubble above keeps the raw message_text.
-            wire_message = compose_wire_message(scene, message_text)
+            # Normal message: start new session stream
             session_id = session.start_session(scene, message_text)
 
             plan_required = getattr(scene, 'mixie_chat_plan_enabled', True)
 
             success = sse_handler.start_stream(
-                message=wire_message,
+                message=message_text,
                 instance_id=ws_client.connection_id,
                 session_id=session_id,
                 plan_required=plan_required,
@@ -358,12 +336,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 session.set_error(scene)
                 metrics.stop_timer('send_message_total')
                 return {'CANCELLED'}
-
-            # The wire message above carried the current ruleset (first
-            # message) or a rules-update block (rules changed
-            # mid-session). Stamp the fingerprint only after the send
-            # succeeded so a failed start never swallows a pending update.
-            mark_rules_sent(scene)
 
         metrics.stop_timer('sse_start')
 

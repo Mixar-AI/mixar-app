@@ -190,14 +190,10 @@ class TestBlockedDunderAttrs(unittest.TestCase):
     """Tests for _BLOCKED_DUNDER_ATTRS completeness."""
 
     def test_all_blocked_attrs_present(self):
-        # Sync check: forces a conscious test update whenever the blocklist
-        # changes. Keep identical to sandbox_validator._BLOCKED_DUNDER_ATTRS.
         from mixar.modules.space_mixie_chat.core.sandbox_validator import _BLOCKED_DUNDER_ATTRS
         expected = {
             '__subclasses__', '__bases__', '__mro__', '__globals__',
             '__code__', '__builtins__', '__loader__', '__spec__',
-            '__class__', '__dict__', '__init_subclass__', '__set_name__',
-            '__closure__', '__self__', '__func__',
         }
         self.assertEqual(_BLOCKED_DUNDER_ATTRS, expected)
 

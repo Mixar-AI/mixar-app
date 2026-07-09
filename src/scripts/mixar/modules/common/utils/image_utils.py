@@ -291,51 +291,11 @@ def load_image_from_base64(data: str, name: str) -> bpy.types.Image:
             pass
 
 
-TEMP_IMAGE_DIR_PREFIX = "mixar_img_"
-
-
-def filename_from_url(url: str) -> str:
-    """Extract the file name from a (presigned) URL's path.
-
-    ``https://s3/.../red-dragon_a1b2_01.png?X-Amz-...`` -> ``red-dragon_a1b2_01.png``.
-    Sanitized for the local filesystem; returns "" when the URL has no usable
-    path component (caller falls back to an anonymous temp name).
-    """
-    import re
-    from urllib.parse import unquote, urlparse
-
-    name = os.path.basename(unquote(urlparse(url).path or ""))
-    name = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")
-    return name
-
-
-def cleanup_temp_image(temp_path: str) -> None:
-    """Remove a downloaded temp image and, when it lives in a directory owned
-    by ``download_image_to_tempfile`` (named-file mode), that directory too."""
-    try:
-        os.unlink(temp_path)
-    except OSError:
-        pass
-    parent = os.path.dirname(temp_path)
-    if os.path.basename(parent).startswith(TEMP_IMAGE_DIR_PREFIX):
-        try:
-            os.rmdir(parent)
-        except OSError:
-            pass
-
-
-def download_image_to_tempfile(
-    url: str, retries: int = 3, filename: str = "",
-) -> tuple[str, int]:
+def download_image_to_tempfile(url: str, retries: int = 3) -> tuple[str, int]:
     """Download an image URL to a temporary file.
 
     This helper is safe to call from a background thread. Blender image loading
     must happen later on the main thread via ``load_image_from_file``.
-
-    When *filename* is given, the temp file keeps that exact name (inside a
-    fresh private temp directory, so concurrent downloads can't collide) —
-    used to preserve the server-side/S3 file name in the loaded datablock.
-    Clean up named-mode files with :func:`cleanup_temp_image`.
     """
     import urllib.request
     import time as _time
@@ -364,42 +324,22 @@ def download_image_to_tempfile(
     logger.debug("[ImageUtils] Downloaded %s bytes", byte_count)
 
     # Write to temp file
-    if filename:
-        temp_dir = tempfile.mkdtemp(prefix=TEMP_IMAGE_DIR_PREFIX)
-        temp_path = os.path.join(temp_dir, filename)
-        with open(temp_path, 'wb') as f:
-            f.write(image_bytes)
-    else:
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
-            f.write(image_bytes)
-            temp_path = f.name
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+        f.write(image_bytes)
+        temp_path = f.name
 
     return temp_path, byte_count
 
 
-def load_image_from_file(
-    file_path: str, name: str, keep_filename: bool = False,
-) -> bpy.types.Image:
-    """Load and pack a Blender Image from a local file on the main thread.
-
-    With *keep_filename* the packed image keeps the source file's name as a
-    blend-relative phantom path (``//red-dragon_a1b2_01.png``) so the .blend
-    shows the server-side file name; without it the temp path is cleared
-    entirely. Either way Blender never re-reads the deleted temp file — the
-    pixels are packed.
-    """
+def load_image_from_file(file_path: str, name: str) -> bpy.types.Image:
+    """Load and pack a Blender Image from a local file on the main thread."""
     img = bpy.data.images.load(file_path, check_existing=False)
     img.name = name
     # Keep sRGB colorspace for proper display in Image Editor and other Blender areas
     # Moodboard rendering handles color management bypass separately
     img.colorspace_settings.name = 'sRGB'
     img.pack()
-    # filepath_raw skips path-resolution side effects; the deleted temp path
-    # must not survive here or Blender may try to re-pack from it.
-    if keep_filename:
-        img.filepath_raw = "//" + os.path.basename(file_path)
-    else:
-        img.filepath_raw = ""
+    img.filepath = ""  # Clear temp path so Blender doesn't try to re-pack from deleted file
     logger.debug("[ImageUtils] Loaded image: %s", img.name)
     return img
 
@@ -425,8 +365,7 @@ def add_image_to_moodboard(
     position_y: float | None = None,
     scale: float = 1.0,
     job_handle: str = "",
-    scene=None,
-):
+) -> None:
     """Add an image to the moodboard collection at specified position.
 
     When *position_x* or *position_y* are ``None`` (the default) the image is
@@ -436,7 +375,7 @@ def add_image_to_moodboard(
     images.  Explicit float values override this behaviour and allow callers to
     place images at precise canvas coordinates (e.g. for side-by-side layouts).
     """
-    scene = scene or bpy.context.scene
+    scene = bpy.context.scene
     item = scene.mixie_moodboard_images.add()
     item.image = image
     item.scale = scale
@@ -464,10 +403,6 @@ def add_image_to_moodboard(
         item.position_y = position_y
 
     # Redraw Mixie space
-    try:
-        for area in bpy.context.screen.areas:
-            if area.type == 'MIXIE':
-                area.tag_redraw()
-    except Exception:
-        pass
-    return item
+    for area in bpy.context.screen.areas:
+        if area.type == 'MIXIE':
+            area.tag_redraw()

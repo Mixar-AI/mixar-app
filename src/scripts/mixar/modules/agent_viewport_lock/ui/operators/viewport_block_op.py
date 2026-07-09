@@ -13,13 +13,6 @@ camera navigation (orbit / pan / zoom, including Mac trackpad
 gestures) and leaves every other editor (chat, moodboard, sidebars,
 properties) fully interactive.
 
-Notification toasts draw INSIDE the viewport but are conceptually a
-layer above it, so a left-press landing on a toast control is passed
-through too — otherwise no toast could be dismissed or actioned for the
-whole duration of an agent turn (window modal handlers run before the
-region's toast UI handler, so this modal is the only place that can
-yield).
-
 Started programmatically by the bootstrap tick when the agent enters
 BUSY / MODIFYING; self-stops via a short timer when the agent leaves
 those states (so the first post-completion click isn't eaten).
@@ -106,39 +99,22 @@ class MIXAR_OT_agent_viewport_block(Operator):
             return {"PASS_THROUGH"}
 
         # Only intercept when the pointer is over a 3D viewport canvas.
-        if et in BLOCK_MOUSE_TYPES or et in BLOCK_KEY_TYPES:
-            region = self._view3d_region_under_pointer(context, event)
-            if region is not None:
-                # Notifications float above the locked viewport: let the
-                # press reach the region's toast UI handler so toasts stay
-                # dismissable/actionable while the agent works. Safe — a
-                # control hit is consumed there (WM_UI_HANDLER_BREAK), so
-                # it never reaches the select/edit keymaps.
-                #
-                # PRESS only, deliberately: the C++ handler acts solely on
-                # LEFTMOUSE press, and passing the release too would let
-                # Blender synthesize a CLICK that DOES reach those keymaps.
-                if (et == 'LEFTMOUSE' and event.value == 'PRESS'
-                        and self._on_toast_control(region, event)):
-                    return {"PASS_THROUGH"}
-                return {"RUNNING_MODAL"}  # consume → blocked
+        if (et in BLOCK_MOUSE_TYPES or et in BLOCK_KEY_TYPES) and \
+                self._pointer_over_view3d(context, event):
+            return {"RUNNING_MODAL"}  # consume → blocked
 
         return {"PASS_THROUGH"}
 
     # -- helpers -----------------------------------------------------------
 
     @staticmethod
-    def _view3d_region_under_pointer(context, event):
-        """The VIEW_3D WINDOW region under the mouse, or None.
-
-        Window-relative ``event.mouse_x/y`` are compared against each
-        region's window offset + size. Returns the region (not a bool) so
-        callers can convert to the region-local coordinates the toast
-        bounds are recorded in.
-        """
+    def _pointer_over_view3d(context, event) -> bool:
+        """True if the mouse is inside a VIEW_3D WINDOW region of the
+        operator's window. Window-relative ``event.mouse_x/y`` are
+        compared against each region's window offset + size."""
         win = context.window
         if win is None or win.screen is None:
-            return None
+            return False
         mx, my = event.mouse_x, event.mouse_y
         for area in win.screen.areas:
             if area.type != 'VIEW_3D':
@@ -148,24 +124,8 @@ class MIXAR_OT_agent_viewport_block(Operator):
                     continue
                 if (region.x <= mx <= region.x + region.width and
                         region.y <= my <= region.y + region.height):
-                    return region
-        return None
-
-    @staticmethod
-    def _on_toast_control(region, event) -> bool:
-        """True if the click lands on a toast button / close X / link."""
-        try:
-            from mixar.modules.common.notifications.toast_renderer import (
-                point_in_any_toast_control,
-            )
-            return point_in_any_toast_control(
-                region.as_pointer(),
-                event.mouse_x - region.x,
-                event.mouse_y - region.y,
-            )
-        except Exception as e:  # noqa: BLE001 — never break the lock
-            logger.debug("toast hit-test skipped: %s", e)
-            return False
+                    return True
+        return False
 
     def _finish(self, context):
         global _running

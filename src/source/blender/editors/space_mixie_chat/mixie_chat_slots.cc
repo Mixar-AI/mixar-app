@@ -89,15 +89,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->has_todo = false;
     layout->has_actions = false;
     layout->has_images = false;
-    layout->has_feedback = false;
-    layout->feedback_rating = 0;
-    layout->feedback_row_height = 0.0f;
-    layout->feedback_comment_hovered = false;
-    layout->feedback_comment_expanded = false;
-    layout->feedback_comment_input_height = 0.0f;
-    layout->feedback_status = FEEDBACK_STATUS_IDLE;
-    layout->feedback_submitted_comment[0] = '\0';
-    layout->feedback_submitted_comment_height = 0.0f;
     layout->bubble_id[0] = '\0';
     layout->slot_action_count = 0;
     layout->slot_actions_height = 0.0f;
@@ -459,35 +450,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
 
     RNA_property_collection_end(&image_iter);
   }
-
-  /* Read feedback state */
-  layout->has_feedback = g_msg_props.feedback_visible &&
-                         RNA_property_boolean_get(msg_ptr, g_msg_props.feedback_visible);
-  layout->feedback_rating = (layout->has_feedback && g_msg_props.feedback_rating) ?
-      RNA_property_int_get(msg_ptr, g_msg_props.feedback_rating) : 0;
-  layout->feedback_row_height = 0.0f;
-  layout->feedback_comment_hovered = false;
-  layout->feedback_comment_expanded =
-      (layout->has_feedback && g_msg_props.feedback_comment_expanded) ?
-      RNA_property_boolean_get(msg_ptr, g_msg_props.feedback_comment_expanded) : false;
-  layout->feedback_comment_input_height = 0.0f;
-  layout->feedback_status =
-      (layout->has_feedback && g_msg_props.feedback_status) ?
-      RNA_property_int_get(msg_ptr, g_msg_props.feedback_status) : FEEDBACK_STATUS_IDLE;
-  layout->feedback_submitted_comment[0] = '\0';
-  if (layout->has_feedback) {
-    read_rna_string_bounded(msg_ptr,
-                            g_msg_props.feedback_submitted_comment,
-                            layout->feedback_submitted_comment,
-                            sizeof(layout->feedback_submitted_comment));
-  }
-  layout->feedback_submitted_comment_height = 0.0f;
-  for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
-    layout->feedback_stars[i].star_index = i + 1;
-    layout->feedback_stars[i].is_hovered = false;
-    memset(&layout->feedback_stars[i].bounds, 0, sizeof(rctf));
-  }
-  memset(&layout->feedback_comment_bounds, 0, sizeof(rctf));
 
   return true;
 }

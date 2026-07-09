@@ -54,21 +54,13 @@ class TestMoodboardConstants(unittest.TestCase):
         self.assertGreater(TEXTBOX_FONT_SIZE_DEFAULT, TEXTBOX_FONT_SIZE_MIN)
         self.assertLess(TEXTBOX_FONT_SIZE_DEFAULT, TEXTBOX_FONT_SIZE_MAX)
 
-    def test_no_hardcoded_model_slugs(self):
-        """Model identity is catalog data — constants.py must not mirror it.
-
-        Replaces an older test that asserted a hardcoded GEMINI_MODELS list
-        existed. Those raw vendor ids were a second vocabulary for models the
-        catalog already serves under its own slugs, and nothing consumed them.
-        """
-        from mixar.modules.moodboard import constants
-        for name in ("GEMINI_MODELS", "MOODBOARD_GEMINI_MODEL_DEFAULT",
-                     "SCENE_GEN_MODEL"):
-            self.assertFalse(
-                hasattr(constants, name),
-                f"{name} is server-owned model data; read it from the "
-                "generation catalog instead of re-adding the constant",
-            )
+    def test_gemini_models(self):
+        from mixar.modules.moodboard.constants import GEMINI_MODELS
+        self.assertGreaterEqual(len(GEMINI_MODELS), 2)
+        # Each model is a tuple of (id, label, description)
+        for model in GEMINI_MODELS:
+            self.assertEqual(len(model), 3)
+            self.assertIsInstance(model[0], str)
 
     def test_aspect_ratios(self):
         from mixar.modules.moodboard.constants import ASPECT_RATIOS

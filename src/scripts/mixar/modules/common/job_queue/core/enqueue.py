@@ -11,8 +11,7 @@ and submits to the correct ``FeatureQueue``.
 from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
-from .generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
+from .generic_jobs import AsyncGLBJob, SyncImageJob
 from .helpers import create_scene_flag_listener, get_queue_with_listener
 from .job import Job
 
@@ -27,23 +26,14 @@ def enqueue_generation(
     model: str,
     payload: dict,
     label: str,
-    display_label: str = "",
-    origin_capability_key: str = "",
-    graph_node_id: str = "",
     fail_message: str = "Generation failed",
     # GLB-only
     on_imported: Optional[Callable] = None,
-    import_options: Optional[dict] = None,
     # Image-only
     name_prefix: str = "",
     prompt_text: str = "",
     undo_message: str = "",
     base_name: str = "",
-    on_images_added: Optional[Callable] = None,
-    # Video-only streamed inputs
-    image_inputs: Optional[list] = None,
-    video_inputs: Optional[list] = None,
-    max_video_duration_seconds: float = 15.0,
     # Listener options
     scene_flag: str = "",
     batch_popup_title: str = "",
@@ -53,28 +43,20 @@ def enqueue_generation(
 
     Parameters
     ----------
-    kind : ``"glb"`` | ``"image"`` | ``"video"``
+    kind : ``"glb"`` | ``"image"``
         Which generic Job class to use.
     feature_key : str
         Queue feature key (e.g. ``FEATURE_IMAGEGEN``).
     job_type, model, payload : str, str, dict
         Forwarded to ``JobQueueService.enqueue()``.
     label : str
-        Stable job label used by queue dedup and downstream naming.
-    display_label : str
-        Optional clean queue-row title when ``label`` carries extra identity.
-    origin_capability_key : str
-        Optional backend catalog capability for composite workflow display.
+        Human-readable label for the queue UIList.
     fail_message : str
         Shown when the backend returns FAILED.
     on_imported : callable, optional
-        ``fn(job, result_names)`` — GLB/image/video post-import hook.
+        ``fn(job, object_names)`` — GLB post-import hook.
     name_prefix, prompt_text, undo_message : str
         Image-job parameters for moodboard download.
-    on_images_added : callable, optional
-        ``fn(job, names)`` — image post-add hook, called on the main thread
-        before normal job completion. An exception rolls back the added cards
-        and fails the job.
     scene_flag : str
         If set and no explicit *listener*, auto-creates a
         ``create_scene_flag_listener`` for this property.
@@ -92,25 +74,16 @@ def enqueue_generation(
         job = AsyncGLBJob(
             feature_key=feature_key,
             label=label,
-            display_label=display_label,
-            service=job_type,
-            origin_capability_key=origin_capability_key,
-            graph_node_id=graph_node_id,
             job_type=job_type,
             model=model,
             payload=payload,
             fail_message=fail_message,
             _on_imported_hook=on_imported,
-            import_options=import_options,
         )
     elif kind == "image":
         job = SyncImageJob(
             feature_key=feature_key,
             label=label,
-            display_label=display_label,
-            service=job_type,
-            origin_capability_key=origin_capability_key,
-            graph_node_id=graph_node_id,
             job_type=job_type,
             model=model,
             payload=payload,
@@ -119,26 +92,6 @@ def enqueue_generation(
             prompt_text=prompt_text,
             undo_message=undo_message,
             base_name=base_name,
-            _on_images_added_hook=on_images_added,
-            _on_imported_hook=on_imported,
-        )
-    elif kind == "video":
-        job = StreamingVideoJob(
-            feature_key=feature_key,
-            label=label,
-            display_label=display_label,
-            service=job_type,
-            origin_capability_key=origin_capability_key,
-            graph_node_id=graph_node_id,
-            job_type=job_type,
-            model=model,
-            payload=payload,
-            fail_message=fail_message,
-            import_options={"generation_prompt": prompt_text},
-            _on_imported_hook=on_imported,
-            image_inputs=list(image_inputs or []),
-            video_inputs=list(video_inputs or []),
-            max_video_duration_seconds=max_video_duration_seconds,
         )
     else:
         raise ValueError(f"Unknown enqueue_generation kind: {kind!r}")
@@ -155,9 +108,6 @@ def enqueue_generation(
         from .queue_manager import get_queue
         queue = get_queue(feature_key)
 
-    # Non-emitting marker only — the backend emits generation.submitted at
-    # the job-queue submit endpoint. This feeds draft-abandonment suppression.
-    note_generation_submitted(origin_capability_key or feature_key)
     if not queue.submit(job):
         logger.warning("Duplicate job rejected: %s", label)
         return None

@@ -19,7 +19,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
-from .job import JobState, RUNNING_STATES
+from .job import JobState
 from .queue_manager import FeatureQueue, get_queue
 
 logger = get_logger(__name__)
@@ -67,85 +67,43 @@ def create_scene_flag_listener(
         Called on the active→idle transition, *after* the flag is cleared.
     """
 
-    # Queue-level edge tracker. The flag lives per-scene but the queue (and this
-    # listener) is shared, so a single active/idle bool drives the once-per-batch
-    # on_start/on_finish hooks and the summary popup.
-    edge = {"active": False}
-
-    _ACTIVE_STATES = frozenset(
-        RUNNING_STATES | {JobState.PENDING, JobState.PAUSED_AUTH}
-    )
-
-    def _iter_scenes():
-        try:
-            return list(bpy.data.scenes)
-        except Exception:
-            return []
-
-    def _set_flag(scene, value: bool) -> None:
-        try:
-            setattr(scene, property_name, value)
-        except (AttributeError, TypeError):
-            pass
-
     def _on_queue_changed(queue: FeatureQueue) -> None:
-        snapshot = queue.snapshot()
-
-        # Scenes that submitted a job that is still active. Falls back to the
-        # currently active scene only for jobs that predate scene tracking.
-        active_scene_names = {
-            j.scene_name for j in snapshot
-            if j.scene_name and j.state in _ACTIVE_STATES
-        }
-        has_work = queue.has_active_work()
-
-        if has_work:
-            scenes = _iter_scenes()
-            scenes_by_name = {s.name: s for s in scenes}
-            targets = [scenes_by_name[n] for n in active_scene_names if n in scenes_by_name]
-            if not active_scene_names:
-                # Compatibility only for jobs created before scene tracking.
-                fallback = getattr(bpy.context, "scene", None)
-                if fallback is not None:
-                    targets = [fallback]
-            # Match by name, never identity: PyRNA wrappers are not
-            # identity-stable, so the ``bpy.context.scene`` fallback is a
-            # different Python object than the matching ``bpy.data.scenes``
-            # item and an ``id()`` set would exclude it.
-            target_names = {scene.name for scene in targets}
-            # Recompute every scene, not just the currently-active targets. If
-            # scene A finishes while scene B continues, A must be released now
-            # instead of waiting for the entire feature queue to become idle.
-            for scene in scenes:
-                _set_flag(scene, scene.name in target_names)
-            if not edge["active"]:
-                edge["active"] = True
-                if on_start is not None:
-                    for scene in targets:
-                        try:
-                            on_start(scene)
-                        except Exception:
-                            pass
+        try:
+            scene = bpy.context.scene
+        except Exception:
+            return
+        if scene is None:
             return
 
-        # Idle: clear the flag on EVERY scene that still carries it, so a scene
-        # the user has since switched away from is never left stuck True.
-        if edge["active"]:
-            edge["active"] = False
-            cleared = []
-            for scene in _iter_scenes():
-                if bool(getattr(scene, property_name, False)):
-                    _set_flag(scene, False)
-                    cleared.append(scene)
+        has_work = queue.has_active_work()
+        was_active = bool(getattr(scene, property_name, False))
+
+        if has_work and not was_active:
+            try:
+                setattr(scene, property_name, True)
+            except (AttributeError, TypeError):
+                pass
+            if on_start is not None:
+                try:
+                    on_start(scene)
+                except Exception:
+                    pass
+            return
+
+        if not has_work and was_active:
+            try:
+                setattr(scene, property_name, False)
+            except (AttributeError, TypeError):
+                pass
 
             if on_finish is not None:
-                for scene in cleared:
-                    try:
-                        on_finish(scene)
-                    except Exception:
-                        pass
+                try:
+                    on_finish(scene)
+                except Exception:
+                    pass
 
             if batch_popup_title:
+                snapshot = queue.snapshot()
                 succeeded = sum(
                     1 for j in snapshot if j.state == JobState.SUCCESS
                 )
@@ -200,31 +158,17 @@ def show_batch_summary_popup(
 # ---------------------------------------------------------------------------
 
 
-def _unwrap_result_envelope(result: dict) -> dict:
-    """Peel the optional ``data``/``result`` wrapping some backend responses
-    carry, returning the dict that holds the generation payload fields."""
-    data = result
-    if "data" in data and isinstance(data["data"], dict):
-        data = data["data"]
-    if "result" in data and isinstance(data["result"], dict):
-        data = data["result"]
-    return data
-
-
-def extract_image_name(result: dict) -> str:
-    """Extract the backend-suggested/echoed ``image_name`` from a generation
-    result dict ("" when absent). Same envelope tolerance as
-    :func:`extract_image_urls` — the name sits next to ``images``."""
-    return str(_unwrap_result_envelope(result).get("image_name") or "").strip()
-
-
 def extract_image_urls(result: dict) -> list:
     """Extract image URLs from a generation result dict.
 
     Handles nested ``data.data.result`` envelopes and both list-of-dicts
     and list-of-strings image formats.
     """
-    data = _unwrap_result_envelope(result)
+    data = result
+    if "data" in data and isinstance(data["data"], dict):
+        data = data["data"]
+    if "result" in data and isinstance(data["result"], dict):
+        data = data["result"]
 
     images = []
     for img_item in data.get("images", []):
@@ -252,13 +196,10 @@ def download_images_to_moodboard(
     name_prefix: str,
     prompt: str,
     job_id: str,
-    on_added=None,
     on_done,
     on_error,
     undo_message: str = "",
     base_name: str = "",
-    scene_name: str = "",
-    should_apply=None,
 ) -> None:
     """Download images from URLs in bg thread, add to moodboard on main thread.
 
@@ -274,52 +215,31 @@ def download_images_to_moodboard(
         Job ID for moodboard handle tracking.
     on_done : callable(names_str)
         Called on main thread with comma-separated image names.
-    on_added : callable(names_str), optional
-        Called after moodboard insertion but before the undo snapshot. Use for
-        durable metadata/placement that redo must restore with the image.
-        Failure rolls back the new cards and image datablocks.
     on_error : callable(error_str)
         Called on main thread if all downloads fail.
     undo_message : str, optional
         If set, pushes an undo step with this message after adding images.
-    scene_name : str, optional
-        Originating Blender scene. Queue jobs set this so changing the active
-        scene while a download runs cannot redirect the generated images.
-    should_apply : callable, optional
-        Main-thread cancellation guard. When false, downloaded temp files are
-        discarded without inserting images or firing completion callbacks.
     """
 
     def _bg_download():
         try:
             from mixar.modules.common.utils.image_utils import (
                 download_image_to_tempfile,
-                filename_from_url,
             )
 
             batch_started_at = time.time()
             downloaded_files = []
             for i, url in enumerate(urls):
                 try:
-                    s3_filename = filename_from_url(url)
                     if base_name:
-                        # Agent-chosen or backend-suggested name. Blender auto-dedups collisions
+                        # Agent-chosen name. Blender auto-dedups collisions
                         # (e.g. "dog" -> "dog.001"); index only when >1 image.
                         name = base_name if len(urls) == 1 else f"{base_name}_{i + 1}"
-                    elif s3_filename:
-                        # No suggested name — mirror the server-side S3 file
-                        # name (prompt-derived, unique per image) so outliner
-                        # name, filepath and S3 key stay aligned.
-                        name = os.path.splitext(s3_filename)[0]
                     else:
                         timestamp = int(time.time())
                         name = f"{name_prefix}_{timestamp}_{i}"
                     download_started_at = time.time()
-                    # Keep the server-side (S3) file name on the temp file so
-                    # the packed datablock's filepath shows the same name.
-                    temp_path, byte_count = download_image_to_tempfile(
-                        url, filename=s3_filename,
-                    )
+                    temp_path, byte_count = download_image_to_tempfile(url)
                     logger.debug(
                         "[Queue] image download completed job=%s index=%d bytes=%d duration=%.3fs",
                         job_id,
@@ -337,22 +257,14 @@ def download_images_to_moodboard(
                     return None
                 from mixar.modules.common.utils.image_utils import (
                     add_image_to_moodboard,
-                    cleanup_temp_image,
                     load_image_from_file,
                 )
-
-                if should_apply is not None and not should_apply():
-                    for temp_path, _name, _byte_count in downloaded_files:
-                        cleanup_temp_image(temp_path)
-                    return None
 
                 loaded_images = []
                 for temp_path, name, byte_count in downloaded_files:
                     load_started_at = time.time()
                     try:
-                        img = load_image_from_file(
-                            temp_path, name, keep_filename=True,
-                        )
+                        img = load_image_from_file(temp_path, name)
                         logger.debug(
                             "[Queue] image load completed job=%s image=%s bytes=%d duration=%.3fs total=%.3fs",
                             job_id,
@@ -365,94 +277,32 @@ def download_images_to_moodboard(
                     except Exception as e:
                         logger.error("Failed to load image into Blender: %s", e)
                     finally:
-                        cleanup_temp_image(temp_path)
+                        try:
+                            os.unlink(temp_path)
+                        except OSError:
+                            pass
 
                 if not loaded_images:
                     on_error("Failed to load generated images")
                     return None
 
-                target_scene = None
-                if scene_name:
-                    try:
-                        target_scene = bpy.data.scenes.get(scene_name)
-                    except Exception:
-                        target_scene = None
-                    if target_scene is None:
-                        for img in loaded_images:
-                            try:
-                                bpy.data.images.remove(img)
-                            except Exception:
-                                pass
-                        on_error(f"Originating scene '{scene_name}' no longer exists")
-                        return None
-                else:
-                    target_scene = getattr(bpy.context, "scene", None)
-                if target_scene is None:
-                    for img in loaded_images:
-                        try:
-                            bpy.data.images.remove(img)
-                        except Exception:
-                            pass
-                    on_error("No Blender scene is available for generated images")
-                    return None
-
-                added_images = []
                 for img in loaded_images:
                     try:
                         add_image_to_moodboard(
-                            img,
-                            prompt,
-                            job_handle=job_id,
-                            scene=target_scene,
+                            img, prompt, job_handle=job_id,
                         )
-                        added_images.append(img)
                     except Exception as e:
                         logger.error(
                             "Failed to add image to moodboard: %s", e,
                         )
-                        try:
-                            bpy.data.images.remove(img)
-                        except Exception:
-                            pass
 
-                if not added_images:
-                    on_error("Failed to add generated images to the moodboard")
-                    return None
-
-                names = ", ".join(img.name for img in added_images)
-                if on_added is not None:
-                    try:
-                        on_added(names)
-                    except Exception as e:
-                        # Metadata hooks may be part of the result contract
-                        # (for example, character-component provenance). Roll
-                        # back the cards and their freshly loaded datablocks so
-                        # a failed hook cannot leave a successful-looking,
-                        # untraceable result on the moodboard.
-                        items = target_scene.mixie_moodboard_images
-                        for index in range(len(items) - 1, -1, -1):
-                            try:
-                                item = items[index]
-                                if (
-                                    getattr(item, "mixar_job_handle", "") == job_id
-                                    and getattr(item, "image", None) in added_images
-                                ):
-                                    items.remove(index)
-                            except Exception:
-                                pass
-                        for img in added_images:
-                            try:
-                                bpy.data.images.remove(img)
-                            except Exception:
-                                pass
-                        on_error(f"Could not finalize generated images: {e}")
-                        return None
+                names = ", ".join(img.name for img in loaded_images)
                 if undo_message:
                     bpy.ops.ed.undo_push(message=undo_message)
                 logger.debug(
                     "[Queue] image moodboard update completed job=%s count=%d total=%.3fs",
                     job_id,
-                    len(added_images),
+                    len(loaded_images),
                     time.time() - batch_started_at,
                 )
                 on_done(names)

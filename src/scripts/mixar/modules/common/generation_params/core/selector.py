@@ -32,23 +32,6 @@ from .draw import draw_service_params
 PLACEHOLDER_IDS = ("LOADING", "ERROR", "NONE", "")
 
 _LOADING_ITEM = ("LOADING", "Loading...", "Fetching generation catalog")
-# Module-level constant so the placeholder strings outlive the callback.
-_LOADING_ITEMS = [_LOADING_ITEM]
-
-
-def _memoize(kind: str, key: str, builder):
-    """Return a persistently-referenced, catalog-versioned enum-item list.
-
-    Delegates to the shared cache in ``generation_catalog_cache`` so an
-    EnumProperty ``items`` callback never returns freshly-built strings that
-    Blender may garbage-collect while it still holds their char*. Falls back
-    to calling ``builder`` directly if the cache module is unavailable.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import memoize_enum_items
-        return memoize_enum_items(kind, key, builder)
-    except Exception:
-        return builder()
 
 
 def get_service_enum_items(
@@ -68,26 +51,21 @@ def get_service_enum_items(
 
     if not is_loaded():
         if is_cache_loading():
-            return _LOADING_ITEMS
+            return [_LOADING_ITEM]
         error = get_cache_error()
         if error:
-            return _memoize("service_err", error, lambda: [("ERROR", "Error", error)])
-        return _LOADING_ITEMS
+            return [("ERROR", "Error", error)]
+        return [_LOADING_ITEM]
 
-    def _build():
-        services = get_services(capability_key, surface=surface)
-        items = []
-        for svc in services:
-            key = svc.get("key") or ""
-            if not key:
-                continue
-            label = svc.get("label") or key
-            items.append((key, label, label))
-        return items or [("NONE", "No modes", "No services available")]
-
-    # Memoize with a persistent reference so Blender's stored char* stay valid
-    # (a fresh list per callback is the classic enum-items GC crash).
-    return _memoize("service", f"{capability_key}:{surface}", _build)
+    services = get_services(capability_key, surface=surface)
+    items = []
+    for svc in services:
+        key = svc.get("key") or ""
+        if not key:
+            continue
+        label = svc.get("label") or key
+        items.append((key, label, label))
+    return items or [("NONE", "No modes", "No services available")]
 
 
 def resolve_service_key(
@@ -137,49 +115,6 @@ def resolve_model_slug(
     return fallback
 
 
-def catalog_default_model(service_key: str) -> Optional[str]:
-    """The catalog's default model slug for *service_key*, or ``None``.
-
-    ``None`` means the catalog cannot answer — not loaded yet, the service
-    is disabled, or it has no enabled model rows. Callers MUST abort the
-    submit in that case rather than fall back to a literal slug: the model
-    row set is server-owned and changes without a client release, so a
-    guessed slug spends a queue slot (and the user's attention) on a 422.
-
-    Unlike :func:`resolve_model_slug` this takes no *fallback* — it is for
-    submit paths that have no user-facing model dropdown to resolve from,
-    and therefore nothing legitimate to fall back to.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_default_model_slug,
-        )
-
-        slug = get_default_model_slug(service_key) or ""
-        return slug if slug and slug not in PLACEHOLDER_IDS else None
-    except Exception:
-        return None
-
-
-def model_supports_multi_view(service_key: str, model_slug: str) -> bool:
-    """True when the selected catalog model accepts multi-view images.
-
-    Reads the per-model ``supports_multi_view`` flag from the catalog.
-    Keyed on the model (not the service key) so the multi-view uploader
-    follows the Hunyuan Pro models across service merges — historically it
-    was gated on the ``image_to_3d`` service key, which vanished when
-    Image-to-3D / 3D Pro / Rapid were consolidated into one service.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_model
-
-        slug = resolve_model_slug(service_key, model_slug)
-        model = get_model(service_key, slug)
-        return bool((model or {}).get("supports_multi_view"))
-    except Exception:
-        return False
-
-
 def get_param_enum_items(
     service_key: str,
     model_slug: str,
@@ -194,7 +129,7 @@ def get_param_enum_items(
     resolution dropdowns) that mirror a schema param outside the dynamic
     param engine.
     """
-    def _build():
+    try:
         from mixar.bootstrap.generation_catalog_cache import get_model
 
         model = get_model(service_key, model_slug)
@@ -202,18 +137,14 @@ def get_param_enum_items(
         choices = spec.get("choices") or [
             {"value": v, "label": str(v)} for v in (spec.get("enum") or [])
         ]
-        built = []
+        items = []
         for choice in choices:
             value = choice.get("value")
             if value is None:
                 continue
             ident = str(value)
             label = str(choice.get("label") or ident)
-            built.append((ident, label, label))
-        return built
-
-    try:
-        items = _memoize("param", f"{service_key}:{model_slug}:{param_name}", _build)
+            items.append((ident, label, label))
         if items:
             return items
     except Exception:

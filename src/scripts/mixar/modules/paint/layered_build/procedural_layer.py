@@ -41,10 +41,7 @@ _BAKE_CONFIG = {
     "DUST":       {"samples": 1,  "blend_type": "MIX",      "hdr": False},
     "BEVEL_MASK": {"samples": 32, "blend_type": "MIX",      "hdr": False, "use_baked_disp": False},
 }
-# Public manifest vocabulary shared with mixar-backend's BakeType literal.
-# BEVEL_MASK is an internal implementation fallback for sparse POINTINESS
-# bakes and must not silently become a new cross-repo input contract.
-_VALID_BAKE_TYPES = {"AO", "CAVITY", "POINTINESS", "DUST"}
+_VALID_BAKE_TYPES = set(_BAKE_CONFIG)
 _MASK_BAKE_RES = 1024  # square bake resolution for mask maps
 
 # Pointiness is vertex-interpolated curvature: below this many (evaluated) vertices the
@@ -157,15 +154,15 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
                 print(f"[layered_build] image mask for '{name}' failed: {e}")
         elif mtype == "BAKED" and mask.get("bake_type"):
             bake_type = str(mask["bake_type"]).upper()
-            if bake_type not in _VALID_BAKE_TYPES:
-                print(f"[layered_build] unknown bake_type {bake_type!r} for '{name}'; skipping")
-                continue
             if bake_type == "POINTINESS" and _pointiness_bake_is_degenerate():
                 print(
                     f"[layered_build] sparse mesh: baking BEVEL_MASK instead of "
                     f"POINTINESS for '{name}'"
                 )
                 bake_type = "BEVEL_MASK"
+            if bake_type not in _BAKE_CONFIG:
+                print(f"[layered_build] unknown bake_type {bake_type!r} for '{name}'; skipping")
+                continue
             # Bakes a geometry mask (AO/CAVITY/POINTINESS/DUST/BEVEL_MASK) from the active
             # object's mesh onto the active layer (the detail just created above). Needs
             # Cycles + a mesh with real geometry; failures are non-fatal (logged, layer

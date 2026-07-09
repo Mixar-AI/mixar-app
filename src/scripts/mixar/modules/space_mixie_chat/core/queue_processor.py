@@ -16,7 +16,6 @@ functions to safely transfer events to the main thread via timers.
 from mixar.config.logging_config import get_logger
 import json
 import queue
-import time
 from typing import Optional
 import threading
 
@@ -53,13 +52,6 @@ else:
 
 _sse_event_queue: queue.Queue = queue.Queue(maxsize=1000)
 _sse_timer_lock = threading.Lock()
-# Serializes queue mutations that must be atomic across multiple Queue calls
-# (notably per-scene cleanup). Producers wait on the condition when the queue
-# is full, which releases this lock so cleanup can cancel the wait and the
-# main-thread consumer can make progress.
-_sse_queue_condition = threading.Condition()
-_sse_queue_epoch = 0
-_sse_scene_epochs: dict[str, int] = {}
 _sse_timer_active = False
 # The closure currently registered with bpy.app.timers (see
 # _ensure_sse_timer_running for why a fresh closure is used per start).
@@ -68,98 +60,8 @@ _sse_drop_count = 0
 # Tracks whether we're streaming long content (for adaptive timer frequency)
 _streaming_content_long = False
 
-# Ordinary events use bounded backpressure. If the UI cannot drain within the
-# bound, rejecting the callback forces the SSE transport to re-attach and
-# replay from its last accepted sequence instead of silently losing an event.
-_SSE_EVENT_ENQUEUE_TIMEOUT = 1.0
-_SSE_QUEUE_WAIT_SLICE = 0.1
 
-
-def _queue_sse_item(item: tuple, timeout: Optional[float]) -> bool:
-    """Enqueue an SSE item with cleanup-aware backpressure.
-
-    ``timeout=None`` waits until capacity is available, unless queue/scene
-    cleanup explicitly cancels the pending producer. Terminal and error items
-    use that mode so queue saturation alone can never drop them.
-    """
-    scene_name = item[2]
-    with _sse_queue_condition:
-        queue_epoch = _sse_queue_epoch
-        scene_epoch = _sse_scene_epochs.get(scene_name, 0)
-
-    # Arm the consumer before waiting for capacity. Registering again after
-    # the put closes the race with a timer that drains its final item while
-    # this producer is waking up.
-    if not _ensure_sse_timer_running():
-        logger.error(
-            "Cannot accept SSE item because the processing timer is unavailable"
-        )
-        return False
-    deadline = None if timeout is None else time.monotonic() + timeout
-
-    with _sse_queue_condition:
-        while _sse_event_queue.full():
-            if (
-                queue_epoch != _sse_queue_epoch
-                or scene_epoch != _sse_scene_epochs.get(scene_name, 0)
-            ):
-                return False
-
-            wait_for = _SSE_QUEUE_WAIT_SLICE
-            if deadline is not None:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    return False
-                wait_for = min(wait_for, remaining)
-            _sse_queue_condition.wait(timeout=wait_for)
-
-        if (
-            queue_epoch != _sse_queue_epoch
-            or scene_epoch != _sse_scene_epochs.get(scene_name, 0)
-        ):
-            return False
-
-        _sse_event_queue.put_nowait(item)
-
-    if not _ensure_sse_timer_running():
-        # The timer may have finished its empty tick between the pre-wait arm
-        # and this put. If re-arming fails, retract an item that is still
-        # queued so the caller can reject it and replay from the prior seq.
-        # If the consumer already took it, downstream ownership was accepted.
-        removed = False
-        with _sse_queue_condition:
-            cancelled = (
-                queue_epoch != _sse_queue_epoch
-                or scene_epoch != _sse_scene_epochs.get(scene_name, 0)
-            )
-            kept = []
-            while True:
-                try:
-                    queued_item = _sse_event_queue.get_nowait()
-                    if not removed and queued_item is item:
-                        removed = True
-                    else:
-                        kept.append(queued_item)
-                except queue.Empty:
-                    break
-            for queued_item in kept:
-                _sse_event_queue.put_nowait(queued_item)
-            if removed:
-                _sse_queue_condition.notify_all()
-        if removed or cancelled:
-            return False
-    return True
-
-
-def _dequeue_sse_item_nowait() -> tuple:
-    """Pop one item and wake producers waiting for queue capacity."""
-    with _sse_queue_condition:
-        item = _sse_event_queue.get_nowait()
-        _sse_queue_condition.notify_all()
-        return item
-
-
-def queue_sse_event(event: SSEEvent, scene_name: str) -> bool:
+def queue_sse_event(event: SSEEvent, scene_name: str) -> None:
     """Queue an SSE event for main thread processing.
 
     Called from SSE background thread.
@@ -170,37 +72,58 @@ def queue_sse_event(event: SSEEvent, scene_name: str) -> bool:
     """
     global _sse_drop_count
 
-    # Legacy/server error payloads are terminal events even though they arrive
-    # through the normal event callback, so they must not time out under load.
-    timeout = None if event.event_type == "error" else _SSE_EVENT_ENQUEUE_TIMEOUT
-    accepted = _queue_sse_item(("event", event, scene_name), timeout=timeout)
-    if not accepted:
+    try:
+        _sse_event_queue.put_nowait(("event", event, scene_name))
+    except queue.Full:
         _sse_drop_count += 1
-        if _sse_drop_count % 10 == 1:
-            logger.warning(
-                f"[QUEUE] SSE event was not accepted (type={event.event_type}, "
-                f"total_rejections={_sse_drop_count})"
-            )
-    return accepted
+        if event.event_type == "error":
+            # Never drop error events - drain oldest non-error to make room
+            try:
+                _sse_event_queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                _sse_event_queue.put_nowait(("event", event, scene_name))
+            except queue.Full:
+                pass  # Queue still full after drain, truly cannot enqueue
+            logger.warning("Dropped oldest event to prioritize ERROR event")
+        else:
+            if _sse_drop_count % 10 == 1:
+                logger.warning(
+                    f"[QUEUE] SSE event queue full, dropping event (type={event.event_type}, "
+                    f"total_drops={_sse_drop_count})"
+                )
+            return
+    _ensure_sse_timer_running()
 
 
-def queue_sse_error(error: str, scene_name: str) -> bool:
+def queue_sse_error(error: str, scene_name: str) -> None:
     """Queue an SSE error for main thread processing.
 
     Args:
         error: Error message string
         scene_name: Name of the Blender scene this error belongs to
     """
-    return _queue_sse_item(("error", error, scene_name), timeout=None)
+    try:
+        _sse_event_queue.put_nowait(("error", error, scene_name))
+    except queue.Full:
+        logger.warning("SSE event queue full, dropping error event")
+        return
+    _ensure_sse_timer_running()
 
 
-def queue_sse_complete(scene_name: str) -> bool:
+def queue_sse_complete(scene_name: str) -> None:
     """Queue SSE completion for main thread processing.
 
     Args:
         scene_name: Name of the Blender scene this completion belongs to
     """
-    return _queue_sse_item(("complete", None, scene_name), timeout=None)
+    try:
+        _sse_event_queue.put_nowait(("complete", None, scene_name))
+    except queue.Full:
+        logger.warning("SSE event queue full, dropping complete event")
+        return
+    _ensure_sse_timer_running()
 
 
 def is_sse_timer_active() -> bool:
@@ -212,7 +135,7 @@ def is_sse_timer_active() -> bool:
     return _sse_timer_active
 
 
-def _ensure_sse_timer_running() -> bool:
+def _ensure_sse_timer_running() -> None:
     """Ensure the SSE processing timer is running.
 
     Thread-safe: called from SSE background thread via queue_sse_* functions.
@@ -226,7 +149,7 @@ def _ensure_sse_timer_running() -> bool:
     global _sse_timer_active, _sse_timer_fn
     with _sse_timer_lock:
         if _sse_timer_active:
-            return True
+            return
 
         def _tick():
             return _process_sse_queue()
@@ -235,11 +158,9 @@ def _ensure_sse_timer_running() -> bool:
             bpy.app.timers.register(_tick, first_interval=TIMER_INTERVAL)
             _sse_timer_fn = _tick
             _sse_timer_active = True
-            return True
         except Exception as e:
             _sse_timer_active = False
             logger.error(f"Failed to start SSE timer: {e}")
-            return False
 
 
 def _process_sse_queue() -> Optional[float]:
@@ -265,7 +186,7 @@ def _process_sse_queue() -> Optional[float]:
 
     while True:
         try:
-            event_type, data, scene_name = _dequeue_sse_item_nowait()
+            event_type, data, scene_name = _sse_event_queue.get_nowait()
             event_count += 1
 
             scene = bpy.data.scenes.get(scene_name)
@@ -353,7 +274,6 @@ def _check_content_length_threshold() -> bool:
 def cleanup_sse_queue() -> None:
     """Clean up SSE queue and timer. Call on disconnect/shutdown."""
     global _sse_timer_active, _sse_drop_count, _streaming_content_long, _sse_timer_fn
-    global _sse_queue_epoch
 
     with _sse_timer_lock:
         timer_fn = _sse_timer_fn
@@ -368,15 +288,11 @@ def cleanup_sse_queue() -> None:
 
     _streaming_content_long = False
 
-    with _sse_queue_condition:
-        _sse_queue_epoch += 1
-        _sse_scene_epochs.clear()
-        while True:
-            try:
-                _sse_event_queue.get_nowait()
-            except queue.Empty:
-                break
-        _sse_queue_condition.notify_all()
+    while not _sse_event_queue.empty():
+        try:
+            _sse_event_queue.get_nowait()
+        except queue.Empty:
+            break
 
     if _sse_drop_count > 0:
         logger.info(f"SSE queue cleanup: {_sse_drop_count} events were dropped this session")
@@ -394,20 +310,20 @@ def cleanup_sse_queue_for_scene(scene_name: str) -> None:
     Events for other scenes are preserved."""
     kept = []
     drained = 0
-    with _sse_queue_condition:
-        _sse_scene_epochs[scene_name] = _sse_scene_epochs.get(scene_name, 0) + 1
-        while True:
-            try:
-                item = _sse_event_queue.get_nowait()
-                if item[2] == scene_name:
-                    drained += 1
-                else:
-                    kept.append(item)
-            except queue.Empty:
-                break
-        for item in kept:
+    while True:
+        try:
+            item = _sse_event_queue.get_nowait()
+            if item[2] == scene_name:
+                drained += 1
+            else:
+                kept.append(item)
+        except queue.Empty:
+            break
+    for item in kept:
+        try:
             _sse_event_queue.put_nowait(item)
-        _sse_queue_condition.notify_all()
+        except queue.Full:
+            break
     if drained > 0:
         logger.debug(f"Drained {drained} events for scene '{scene_name}'")
 
@@ -434,7 +350,7 @@ def drain_pending_events() -> int:
 
     while count < 100:  # Safety cap
         try:
-            event_type, data, scene_name = _dequeue_sse_item_nowait()
+            event_type, data, scene_name = _sse_event_queue.get_nowait()
 
             scene = bpy.data.scenes.get(scene_name)
             if scene is None:
@@ -498,50 +414,10 @@ class EventProcessor:
         """
         data = event.data
 
-        # In-band terminal error (backend refused the request before any slot
-        # streaming — e.g. a text-only model can't accept an attached image, or
-        # the connection wasn't found). These are non-slot legacy events; if we
-        # don't handle them here they'd be silently dropped and the turn would
-        # appear to cancel with no explanation. Surface as an agent bubble and
-        # return to IDLE (the backend has already sent [DONE]).
-        is_inband_error = event.event_type == "error" or (
-            isinstance(data, dict) and data.get("type") == "error"
-        )
-        if is_inband_error:
-            message = ""
-            if isinstance(data, dict):
-                message = data.get("message") or ""
-            self._handle_inband_error(
-                message or "The request could not be completed.", scene
-            )
-            return
-
         if self._slot_processor.is_slot_event(data):
             self._slot_processor.apply_event(data, scene)
         else:
             logger.warning(f"Received non-slot event (type={event.event_type}), ignoring")
-
-    def _handle_inband_error(self, message: str, scene) -> None:
-        """Render a terminal in-band error as an agent bubble and go IDLE.
-
-        Unlike a mid-stream transport failure (``_handle_sse_error_internal``,
-        which may keep BUSY so Abort stays visible), an in-band error event is a
-        clean refusal from the backend before any work started — always end the
-        turn and return to IDLE.
-        """
-        from .executor import get_executor
-        get_executor().end_agent_turn()
-
-        from .animation_manager import stop_loader_animation
-        stop_loader_animation()
-        self._clear_loader_bubbles(scene)
-
-        try:
-            add_agent_message(scene, message)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error adding in-band error message to chat: {e}")
-
-        self._session.set_state(scene, SessionState.IDLE)
 
     def _handle_sse_error_internal(self, error_message: str, scene) -> None:
         """Handle SSE stream-level error (called from main thread timer).
@@ -623,13 +499,6 @@ class EventProcessor:
                 f"(http_error={is_http_error}, pre_stream={is_pre_stream_error})"
             )
             self._session.set_state(scene, SessionState.IDLE)
-            # Dead session: clean up leaked agentlane:* workspace scenes
-            # (the sweep re-checks that no session is active before acting).
-            try:
-                from .lane_scene_sweep import schedule_lane_scene_sweep
-                schedule_lane_scene_sweep()
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"lane scene sweep scheduling skipped: {e}")
         else:
             # Keep BUSY so the Abort button stays visible — the backend may
             # still be running.  The user must explicitly abort.
@@ -729,56 +598,9 @@ class EventProcessor:
                 finalize_turn(scene)
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"finalize_turn on complete skipped: {e}")
-            # Crash-safe history: upsert the settled transcript so the
-            # conversation is recoverable from the History popover even
-            # if the app quits before New Chat is ever clicked.
-            try:
-                from .chat_history import archive_current
-                archive_current(scene)
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"history upsert on complete skipped: {e}")
-
-            # Session settled to IDLE — remove any agentlane:* workspace
-            # scenes whose backend removal scripts never landed (dropped as
-            # stale once the session went inactive). Fail-soft, main thread.
-            try:
-                from .lane_scene_sweep import schedule_lane_scene_sweep
-                schedule_lane_scene_sweep()
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"lane scene sweep scheduling skipped: {e}")
-
-            # Show feedback only on the newest completed agent response.
-            self._show_feedback_on_last_agent_message(scene)
         else:
             logger.info(f"SSE stream complete - keeping state {current_state.value} (waiting for user input)")
         self._redraw_ui()
-
-    @staticmethod
-    def _show_feedback_on_last_agent_message(scene) -> None:
-        """Set feedback_visible=True on the most recent agent message with content."""
-        if not scene or not hasattr(scene, 'mixie_chat_messages'):
-            return
-        messages = scene.mixie_chat_messages
-        # Only the latest response should offer feedback. Clear stale flags
-        # before selecting the newest eligible agent message.
-        for msg in messages:
-            if getattr(msg, 'feedback_visible', False):
-                msg.feedback_visible = False
-
-        # Walk backwards to find the last agent message with content.
-        for i in range(len(messages) - 1, -1, -1):
-            msg = messages[i]
-            if msg.sender != 'AGENT':
-                continue
-            has_content = bool(
-                getattr(msg, 'content', '') or getattr(msg, 'text', '')
-            )
-            if has_content and getattr(msg, 'bubble_id', ''):
-                msg.feedback_visible = True
-                logger.debug(
-                    f"Feedback enabled on bubble_id={msg.bubble_id}"
-                )
-                return
 
     # ========================================================================
     # UI Helpers

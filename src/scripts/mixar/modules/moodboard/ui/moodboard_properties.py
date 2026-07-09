@@ -24,7 +24,6 @@ from bpy.props import (
 )
 
 from mixar.modules.moodboard.constants import (
-    GRAPH_NODE_ID_MAXLEN,
     IMAGE_SCALE_DEFAULT, IMAGE_SCALE_MIN, IMAGE_SCALE_MAX,
     IMAGE_ROTATION_DEFAULT, IMAGE_ROTATION_MIN, IMAGE_ROTATION_MAX,
     TEXTBOX_FONT_SIZE_DEFAULT, TEXTBOX_FONT_SIZE_MIN, TEXTBOX_FONT_SIZE_MAX,
@@ -33,20 +32,11 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_COLOR_DEFAULT, TEXTBOX_BACKGROUND_COLOR_DEFAULT,
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
-    TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
-    CHARACTER_COMPONENT_IMAGE_ROLES,
 )
-from .moodboard_annotation_props import MixieMoodboardAnnotationStroke
 
 
 class MixieMoodboardSegment(PropertyGroup):
     """Individual segment for an image (Magic Select results)"""
-
-    component_id: StringProperty(
-        name="Component ID",
-        description="Persistent identity for this character component",
-        default="",
-    )
 
     mask_image: PointerProperty(
         type=bpy.types.Image,
@@ -55,28 +45,8 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     active: BoolProperty(
         name="Active",
-        description="Show this segment overlay and include it in Segments to 3D",
+        description="Whether this segment overlay is visible",
         default=True
-    )
-    show_overlay: BoolProperty(
-        name="Show Overlay",
-        description="Show the colored mask overlay on the source image",
-        default=True,
-    )
-    outline_only: BoolProperty(
-        name="Outline Only",
-        description="Render only the selection boundary while keeping source pixels unchanged",
-        default=False,
-    )
-    selection_outline: StringProperty(
-        name="Selection Outline",
-        description="Original lasso polygon stored as normalized JSON coordinates",
-        default="",
-    )
-    include_for_detail: BoolProperty(
-        name="Include Detail",
-        description="Include this component in batch detail-image generation",
-        default=True,
     )
     index: IntProperty(
         name="Index",
@@ -85,32 +55,13 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     name: StringProperty(
         name="Name",
-        description="Component name used to guide detail-image generation",
-        default="Segment",
-        maxlen=96,
+        description="Segment name",
+        default="Segment"
     )
 
 
 class MixieMoodboardImage(PropertyGroup):
     """Property group for moodboard reference images"""
-
-    moodboard_item_id: StringProperty(
-        name="Moodboard Item ID",
-        description="Persistent identity used by component provenance links",
-        default="",
-    )
-    node_id: StringProperty(
-        name="Node ID",
-        description="Stable identifier used by moodboard graph links",
-        default="",
-        maxlen=GRAPH_NODE_ID_MAXLEN,
-    )
-    embedded_node_id: StringProperty(
-        name="Embedded Node ID",
-        description="Inference node that renders this media as its inline result",
-        default="",
-        maxlen=GRAPH_NODE_ID_MAXLEN,
-    )
 
     image: PointerProperty(
         name="Image",
@@ -202,17 +153,6 @@ class MixieMoodboardImage(PropertyGroup):
         default=-1
     )
 
-    annotations: CollectionProperty(
-        type=MixieMoodboardAnnotationStroke,
-        name="Annotations",
-        description="Non-destructive freehand strokes attached to this image",
-    )
-    show_annotations: BoolProperty(
-        name="Show Annotations",
-        description="Display freehand annotations on this image",
-        default=True,
-    )
-
     # Segment collection - stores all segments for this image (Magic Select)
     segments: CollectionProperty(
         type=MixieMoodboardSegment,
@@ -246,88 +186,6 @@ class MixieMoodboardImage(PropertyGroup):
     chain_id: StringProperty(
         name="Chain ID",
         description="Pipeline chain ID linking label → image → HP mesh → LP mesh",
-        default="",
-    )
-
-    # --- Character-component provenance --------------------------------
-    component_role: EnumProperty(
-        name="Character Component Role",
-        description="How this image participates in a character component workflow",
-        items=CHARACTER_COMPONENT_IMAGE_ROLES,
-        default='NONE',
-    )
-    component_source_item_id: StringProperty(
-        name="Component Source Image",
-        description="Persistent moodboard item ID of the source character reference",
-        default="",
-    )
-    component_source_segment_id: StringProperty(
-        name="Component Source Segment",
-        description="Persistent SAM3 segment ID that guided this detail image",
-        default="",
-    )
-    component_name: StringProperty(
-        name="Component Name",
-        description="Named character component represented by this image",
-        default="",
-        maxlen=96,
-    )
-
-    # --- Turnaround / multi-view sets ------------------------------------
-    # Populated by mixie.moodboard_detect_views when a single uploaded sheet
-    # is split into per-view crops by POST /model-3d/detect-views, or by
-    # mixie.moodboard_add_turnaround_view when the user builds a set by hand.
-    view_type: EnumProperty(
-        name="View",
-        description=(
-            "Camera angle this image shows. Only meaningful while the image "
-            "belongs to a multi-view set — it is sent alongside the tab's "
-            "input image as that angle"
-        ),
-        # Exactly the vendor's ViewType enum: seven companion angles, no
-        # 'main' / 'front' / 'none'. The main image is the tab's Input Image
-        # and never joins the set, so it needs no label. Kept STATIC rather
-        # than filtered per model: this is saved .blend data and a dynamic
-        # items= callback would remap or lose stored values when the model
-        # switches. 3.0's narrower angle set is enforced when views are
-        # assigned and again at payload build.
-        items=TURNAROUND_VIEW_TYPES,
-        default=TURNAROUND_VIEW_DEFAULT,
-    )
-    turnaround_group: StringProperty(
-        name="Turnaround Group",
-        description=(
-            "Shared identifier linking every companion view of one "
-            "multi-view set — crops detected from the same turnaround / "
-            "model sheet, plus any views added by hand. Empty for ordinary "
-            "images, including the set's own input image"
-        ),
-        default="",
-    )
-    turnaround_main_group: StringProperty(
-        name="Turnaround Main",
-        description=(
-            "Identifier of the multi-view set this image is the FRONTAL "
-            "(main) image of. This is the only thing that binds a set to an "
-            "image: a set is submitted alongside an image if, and only if, "
-            "that image carries the set's id here. Empty on companion views "
-            "and on every ordinary moodboard image — exactly one item per "
-            "set ever carries it"
-        ),
-        # Deliberately NOT turnaround_group: that property means "companion
-        # of", and group_items / eligible_selected_images / the vendor's
-        # 7-companion cap / the panel's view list all iterate on it. Putting
-        # the main image in the group would make it a companion of itself.
-        default="",
-    )
-    s3_key: StringProperty(
-        name="S3 Key",
-        description=(
-            "Durable backend object key for this image, returned by the "
-            "detect-views endpoint. Sent at submit time instead of "
-            "re-uploading the pixels. Empty for a hand-added view, which "
-            "carries its pixels inline instead"
-        ),
         default="",
     )
 

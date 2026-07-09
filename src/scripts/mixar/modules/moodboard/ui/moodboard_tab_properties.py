@@ -23,14 +23,10 @@ from bpy.props import (
 )
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
-from .moodboard_character_component_props import MixieCharacterComponentSettings  # noqa: F401
 from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabAIRenderProps,
-    MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
-    MixieMoodboardTabVideoGenProps,
-    MixieMoodboardTabWorldLabsProps,
 )
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
@@ -51,8 +47,6 @@ from .moodboard_enum_callbacks import (
     _get_model_gen_model_items,
     _get_texture_gen_mode_items,
     _get_texture_gen_model_items,
-    _get_pbr_gen_mode_items,
-    _get_pbr_gen_model_items,
     _get_mesh_segment_mode_items,
     _get_mesh_segment_model_items,
 )
@@ -134,89 +128,6 @@ class MixieMoodboardTabLookdev360Props(PropertyGroup):
         description="ON: Use currently selected moodboard image. "
                     "OFF: Use uploaded image",
         default=True
-    )
-
-
-class MixieMoodboardTabPBRGenProps(PropertyGroup):
-    """Properties for the PBR Generation tab (Tripo /models/texture).
-
-    Textures an existing untextured mesh. Guidance is Tripo's
-    mutually-exclusive ``texture_prompt`` — the ``multi_view`` toggle picks
-    between a single reference image (moodboard-selected or manual) and four
-    positional views (front/left/back/right). Catalog-only tab, so the
-    panel hides when the catalog carries no ``pbr_generation`` services.
-    """
-
-    # Generation mode = catalog service of capability "pbr_generation"
-    # (single service tripo_texture today — Mode dropdown auto-hides).
-    mode: EnumProperty(
-        name="Mode",
-        description="PBR generation mode",
-        items=_get_pbr_gen_mode_items,
-        update=_on_model_changed,
-    )
-
-    model: EnumProperty(
-        name="Model",
-        description="AI model for texture generation",
-        items=_get_pbr_gen_model_items,
-        update=_on_model_changed,
-    )
-
-    prompt: StringProperty(
-        name="Prompt",
-        description="Optional text guidance for the textures",
-        default="",
-        maxlen=2048,
-        options={'TEXTEDIT_UPDATE'},
-    )
-
-    # Single reference image ⇄ four positional views.
-    multi_view: BoolProperty(
-        name="Multiple Views",
-        description="Provide four positional reference views "
-                    "(front / left / back / right) instead of one image",
-        default=False,
-    )
-
-    # --- Single-image mode ---
-    use_selected_image: BoolProperty(
-        name="Use Selected Moodboard Image",
-        description="ON: Use the selected moodboard image. "
-                    "OFF: Pick or upload an image below",
-        default=True,
-    )
-
-    reference_image: PointerProperty(
-        type=bpy.types.Image,
-        name="Reference Image",
-        description="Reference image guiding the textures",
-    )
-
-    style_only: BoolProperty(
-        name="Use Image Style Only",
-        description="Treat the reference image as a style reference paired "
-                    "with the prompt (Tripo style_image) instead of a direct "
-                    "reference",
-        default=False,
-    )
-
-    # --- Multi-view mode (four positional views; all four required) ---
-    front_image: PointerProperty(
-        type=bpy.types.Image, name="Front",
-        description="Front view of the subject",
-    )
-    left_image: PointerProperty(
-        type=bpy.types.Image, name="Left",
-        description="Left view of the subject",
-    )
-    back_image: PointerProperty(
-        type=bpy.types.Image, name="Back",
-        description="Back view of the subject",
-    )
-    right_image: PointerProperty(
-        type=bpy.types.Image, name="Right",
-        description="Right view of the subject",
     )
 
 
@@ -369,18 +280,6 @@ class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
         maxlen=256
     )
 
-    # Tripo mesh/segment v2 only. A colour-coded mask that drives the split;
-    # supplying it makes Tripo IGNORE granularity and split_by_connectivity,
-    # which the drawer says out loud so the greyed-out params aren't confusing.
-    # Client-side pointer rather than a catalog param because it is an image
-    # input, not a scalar.
-    ref_image: PointerProperty(
-        name="Reference Mask",
-        description="Optional colour-coded segmentation mask guiding the "
-                    "split. Overrides Granularity and Split by Connectivity",
-        type=bpy.types.Image,
-    )
-
     is_processing: BoolProperty(
         name="Is Processing",
         description="Whether segmentation is currently in progress",
@@ -433,24 +332,6 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         update=_on_model_changed,
     )
 
-    # Which multi-view (turnaround) set the Multiple Views panel is showing
-    # and growing. UI STATE ONLY — it does not decide what a generation
-    # submits. A set is bound to exactly one image, the moodboard item
-    # carrying `turnaround_main_group`, and applies only when that image is
-    # the one being converted (see moodboard.core.turnaround_views
-    # .group_id_for_main_image). Reading the set off this tab instead is what
-    # let a stale set be attached to an unrelated image on a later turn.
-    # Cleared by moodboard.core.turnaround_views when the set empties.
-    turnaround_group: StringProperty(
-        name="Multi-View Set",
-        description=(
-            "Identifier of the multi-view set this tab is editing. Empty "
-            "when the tab has no multi-view set. The set is only submitted "
-            "when the image being generated from is the set's own input image"
-        ),
-        default="",
-    )
-
 
 class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
     """Properties for Segment to 3D tab"""
@@ -472,12 +353,6 @@ class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
         description="Number of active segments selected",
         default=0,
         min=0
-    )
-
-    character_components: PointerProperty(
-        type=MixieCharacterComponentSettings,
-        name="Character Component Details",
-        description="Settings for SAM3-guided component detail images",
     )
 
 
@@ -562,30 +437,6 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabUVUnwrapProps,
         name="UV Unwrap Tab",
         description="Properties for UV Unwrap tab"
-    )
-
-    tab_animate: PointerProperty(
-        type=MixieMoodboardTabAnimateProps,
-        name="Animate Tab",
-        description="Properties for Animate tab"
-    )
-
-    tab_pbr_gen: PointerProperty(
-        type=MixieMoodboardTabPBRGenProps,
-        name="PBR Generation Tab",
-        description="Properties for PBR Generation tab"
-    )
-
-    tab_video_gen: PointerProperty(
-        type=MixieMoodboardTabVideoGenProps,
-        name="Video Gen Tab",
-        description="Properties for Seedance video generation",
-    )
-
-    tab_world_labs: PointerProperty(
-        type=MixieMoodboardTabWorldLabsProps,
-        name="World Labs Tab",
-        description="Properties for World Labs world-generation tab"
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.

@@ -37,7 +37,7 @@ from ..constants import (
 
 logger = get_logger(__name__)
 
-# Request queue: (request_id, script, tool_name, session_id, agent_ctx, prefetch) from
+# Request queue: (request_id, script, tool_name, session_id, prefetch) from
 # WebSocket thread. `prefetch` is a ScriptAssetPrefetch handle (or None) —
 # heavy texture-apply scripts start downloading their assets the moment they
 # are queued, and the timer holds them (UI responsive) until the cache is warm.
@@ -69,18 +69,6 @@ _execution_gate_until: float = 0.0
 _user_foreground_scene_name: str = ""
 
 
-def _resolve_agent_context_ids(
-    agent_ctx: Optional[dict], session_id: str, request_id: str
-) -> tuple[str, str]:
-    """Resolve provenance ids, retaining compatibility with older backends."""
-    if isinstance(agent_ctx, dict):
-        return (
-            agent_ctx.get("chat_session_id", session_id),
-            agent_ctx.get("turn_id", request_id),
-        )
-    return session_id, request_id
-
-
 def _resolve_user_foreground_scene():
     """The user's real (non-lane) foreground scene to restore window.scene to.
 
@@ -109,13 +97,7 @@ def _send_error_response(request_id: str, error: str) -> None:
         client.queue_response(request_id, {"success": False, "error": error})
 
 
-def queue_script_request(
-    script: str,
-    request_id: str,
-    tool_name: str = "unknown",
-    session_id: str = "",
-    agent_ctx: Optional[dict] = None,
-) -> None:
+def queue_script_request(script: str, request_id: str, tool_name: str = "unknown", session_id: str = "") -> None:
     """
     Queue a script for execution on main thread (non-blocking).
 
@@ -128,7 +110,6 @@ def queue_script_request(
         request_id: JSON-RPC request ID for response matching
         tool_name: Name of the tool being executed
         session_id: Target session ID for scene routing
-        agent_ctx: Explicit backend chat session and turn identifiers, if sent
     """
     global _execution_gate_until
     if _shutdown_requested:
@@ -149,9 +130,7 @@ def queue_script_request(
     # network while holding the main thread.
     prefetch = maybe_start_prefetch(script, tool_name)
     try:
-        _request_queue.put_nowait(
-            (request_id, script, tool_name, session_id, agent_ctx, prefetch)
-        )
+        _request_queue.put_nowait((request_id, script, tool_name, session_id, prefetch))
     except queue.Full:
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
         return
@@ -255,7 +234,7 @@ def _process_one_request() -> Optional[float]:
         except queue.Empty:
             return _stop_timer_if_idle()
 
-    request_id, script, tool_name, session_id, agent_ctx, prefetch = _held
+    request_id, script, tool_name, session_id, prefetch = _held
     if prefetch is not None and not prefetch.ready():
         # The script's texture assets are still downloading in the
         # background. Keep holding it — this tick cost one flag check, so
@@ -280,13 +259,6 @@ def _process_one_request() -> Optional[float]:
         client = get_jsonrpc_client()
         if client and client.is_connected and request_id != "notification":
             client.queue_response(request_id, {"success": False, "error": "Agent session not active"})
-        # The dropped script may have been the backend's remove_scene cleanup
-        # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
-        try:
-            from .lane_scene_sweep import schedule_lane_scene_sweep
-            schedule_lane_scene_sweep()
-        except Exception:
-            logger.debug("lane scene sweep scheduling skipped", exc_info=True)
         return _stop_timer_if_idle()
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
@@ -317,12 +289,10 @@ def _process_one_request() -> Optional[float]:
                 session_id, tool_name, request_id,
             )
             _send_error_response(request_id, f"no scene for session {session_id}")
-            # Stop via the shared, lock-guarded helper. Assigning `_timer_active`
-            # directly here binds a function-local (this function never declares
-            # `global _timer_active`), leaving the module flag stuck True while
-            # Blender unregisters the timer — so it is never re-armed and every
-            # subsequent agent script silently stalls for the rest of the session.
-            return _stop_timer_if_idle()
+            if not _request_queue.empty():
+                return TIMER_INTERVAL
+            _timer_active = False
+            return None
     elif bpy.context.window is not None:
         # Active-scene-follow request → this is the user's foreground scene.
         # Remember it (unless it's a lane scene) so per-scene/lane scripts can
@@ -352,31 +322,13 @@ def _process_one_request() -> Optional[float]:
         )
         result_dict = {"success": False, "error": "Previous script still executing"}
     else:
-        from mixar.modules.common.agent_execution_context import (
-            clear_agent_execution_context,
-            set_agent_execution_context,
-        )
         try:
-            context_session_id, context_turn_id = _resolve_agent_context_ids(
-                agent_ctx, session_id, request_id
-            )
-            set_agent_execution_context(context_session_id, context_turn_id)
             result = executor.execute(script)
             result_dict = result.to_dict()
             logger.debug(f"Script execution completed: success={result.success}")
-            if result_dict.get("success"):
-                # Rejection-window tracking only — no event is emitted here
-                # (the backend covers agent tool telemetry server-side).
-                try:
-                    from mixar.modules.common.analytics import rejection_events
-                    rejection_events.note_output_landed("agent", None)
-                except Exception:
-                    pass
         except Exception as e:
             logger.error(f"Script execution failed: {e}")
             result_dict = {"success": False, "error": str(e)}
-        finally:
-            clear_agent_execution_context()
 
     # --- Operation history: archive every agent script/tool execution ---
     try:

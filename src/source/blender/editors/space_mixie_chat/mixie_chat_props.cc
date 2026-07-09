@@ -56,16 +56,6 @@ void init_message_property_cache(PointerRNA *msg_ptr) {
   g_msg_props.action_items = RNA_struct_find_property(msg_ptr, "action_items");
   g_msg_props.image_items = RNA_struct_find_property(msg_ptr, "image_items");
 
-  /* Feedback properties */
-  g_msg_props.feedback_visible = RNA_struct_find_property(msg_ptr, "feedback_visible");
-  g_msg_props.feedback_rating = RNA_struct_find_property(msg_ptr, "feedback_rating");
-  g_msg_props.feedback_comment_expanded = RNA_struct_find_property(
-      msg_ptr, "feedback_comment_expanded");
-  g_msg_props.feedback_status = RNA_struct_find_property(msg_ptr, "feedback_status");
-  g_msg_props.feedback_submitted_comment = RNA_struct_find_property(
-      msg_ptr, "feedback_submitted_comment");
-  g_msg_props.feedback_comment = RNA_struct_find_property(msg_ptr, "feedback_comment");
-
   g_msg_props.step_items = RNA_struct_find_property(msg_ptr, "step_items");
   g_msg_props.steps_summary = RNA_struct_find_property(msg_ptr, "steps_summary");
   g_msg_props.steps_collapsed = RNA_struct_find_property(msg_ptr, "steps_collapsed");

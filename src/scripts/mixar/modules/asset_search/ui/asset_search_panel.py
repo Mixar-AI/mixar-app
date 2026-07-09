@@ -131,6 +131,19 @@ class MIXIE_PT_asset_library_search(Panel):
         if is_training:
             search_col.enabled = False
 
+        # == Agent asset reuse ==
+        # Threshold the modelling agent uses to reuse a library asset instead of
+        # modelling from scratch (sent to the backend with each chat message).
+        if state:
+            layout.separator(factor=0.5)
+            reuse_box = layout.box()
+            reuse_col = reuse_box.column(align=True)
+            reuse_col.label(text="Agent Asset Reuse", icon='OUTLINER_OB_GROUP_INSTANCE')
+            reuse_col.prop(state, "match_threshold", text="Match Threshold", slider=True)
+            hint = reuse_col.row()
+            hint.scale_y = 0.8
+            hint.label(text="Ask the agent to \"use my library\"", icon='INFO')
+
 
 classes = (
     MIXIE_PT_asset_library_search,

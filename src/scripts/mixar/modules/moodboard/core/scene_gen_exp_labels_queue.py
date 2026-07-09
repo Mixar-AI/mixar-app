@@ -19,7 +19,6 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -29,8 +28,6 @@ from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABEL
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
-
-_SERVICE_KEY = "scene_reconstruction"
 
 TERMINAL_JOB_STATUSES = {"completed", "failed", "cancelled", "expired"}
 POLL_INTERVAL_PHASE1 = 2.0
@@ -53,10 +50,6 @@ class SceneGenExpLabelsJob(Job):
     # Callbacks (set at enqueue, not serialized)
     _on_labels_ready: Optional[Callable] = field(default=None, repr=False)
     _on_error_callback: Optional[Callable] = field(default=None, repr=False)
-    # Optional raw-objects hook: receives the Phase-2 objects array (label +
-    # 3D box fields) regardless of whether the (disabled) tab is present. Used by
-    # the World Labs scene-build flow to capture boxes into its own store.
-    _on_objects: Optional[Callable] = field(default=None, repr=False)
 
     # Internal state
     _current_poll_interval: float = POLL_INTERVAL_PHASE1
@@ -76,7 +69,7 @@ class SceneGenExpLabelsJob(Job):
             "vertex_color": False,
         }
         service.enqueue(
-            job_type=_SERVICE_KEY,
+            job_type="scene_reconstruction",
             model="sam3d",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -226,12 +219,6 @@ class SceneGenExpLabelsJob(Job):
 
     def _store_labels(self, objects: list) -> None:
         """Extract labels + spatial metadata from Phase 2 objects array."""
-        # Fire the raw-objects hook first (independent of the tab UI).
-        if self._on_objects:
-            try:
-                self._on_objects(objects)
-            except Exception as e:  # noqa: BLE001
-                logger.error("[SceneGenExp] on_objects callback error: %s", e)
         tab = _get_tab()
         if tab is None:
             return
@@ -304,23 +291,17 @@ def enqueue_scene_gen_exp_labels_job(
     min_mask_pixels: int = 2000,
     on_labels_ready: Optional[Callable] = None,
     on_error: Optional[Callable] = None,
-    on_objects: Optional[Callable] = None,
 ) -> Optional[SceneGenExpLabelsJob]:
     """Build a ``SceneGenExpLabelsJob`` and submit it to the queue."""
     job = SceneGenExpLabelsJob(
         feature_key=FEATURE_SCENE_GEN_EXP_LABELS,
         label="Scene Gen Exp Labels",
-        service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         min_mask_pixels=min_mask_pixels,
         _on_labels_ready=on_labels_ready,
         _on_error_callback=on_error,
-        _on_objects=on_objects,
     )
     queue = _get_labels_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("scene_gen")
     if not queue.submit(job):
         logger.warning("[SceneGenExp] duplicate labels job rejected")
         return None

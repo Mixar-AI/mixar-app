@@ -45,31 +45,23 @@
 
         <?include "properties.wxi"?>
         <UI>
-            <Publish Dialog="MixarExitDialog"
+            <Publish Dialog="ExitDialog"
                 Control="Finish"
                 Event="DoAction"
-                Value="LaunchMixar"
-                Order="1">LAUNCHAPP = 1 and NOT Installed</Publish>
-            <Publish Dialog="MixarExitDialog"
-                Control="Finish"
-                Event="DoAction"
-                Value="LaunchDiscord"
-                Order="2">JOINDISCORD = 1 and NOT Installed</Publish>
+                Value="LaunchBrowser">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
             <ProgressText Action="RegisterMixar">Registering Mixar</ProgressText>
         </UI>
-        <Property Id="LAUNCHAPP" Value="1" />
-        <Property Id="JOINDISCORD" Value="1" />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Visit Mixar website" />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
         <SetProperty Id="REINSTALLMODE" Value="amus" Before="FindRelatedProducts" Sequence="first">NOT REINSTALLMODE</SetProperty>
 
         <UIRef Id="WixUI_ErrorProgressText" />
-        <CustomAction Id="LaunchMixar"
-             FileKey="CM_FP_mixar_launcher.exe"
-             ExeCommand=""
-             Return="asyncNoWait" />
-        <CustomAction Id="LaunchDiscord"
-             ExeCommand="explorer.exe &quot;https://discord.com/invite/YVqvkQx8rX&quot;"
+        <CustomAction Id="LaunchBrowser"
+             ExeCommand="explorer.exe &quot;https://mixar.app/?utm_source=mixar-$(var.CPACK_PACKAGE_VERSION)-installer-msi&quot;"
              Directory="INSTALL_ROOT"
-             Return="asyncNoWait" />
+              Return="asyncNoWait" >
+           REMOVE="ALL"
+        </CustomAction>
         <CustomAction Id="RegisterMixar"
                       Impersonate="no"
                       Execute="deferred"

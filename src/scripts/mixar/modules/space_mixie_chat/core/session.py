@@ -100,30 +100,11 @@ class SessionManager:
         if hasattr(scene, 'mixie_chat_is_busy'):
             scene.mixie_chat_is_busy = (state == SessionState.BUSY)
 
-        active_states = {SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT}
-        is_active = state in active_states
-        was_active = old_str in {s.value.upper() for s in active_states}
-
-        # Stamp the chat mode the running turn started in. The agent
-        # viewport lock (halo + input block) reads this instead of the
-        # live mixie_chat_mode dropdown, which stays editable mid-turn —
-        # flipping it (AGENT → ASK → AGENT) must not lift the lock out
-        # from under a running agent turn, nor raise it for a running
-        # Ask turn. Stamped on the inactive→active edge, held across
-        # intra-turn transitions (BUSY ↔ AWAITING_INPUT ↔ MODIFYING),
-        # cleared when the turn ends.
-        if hasattr(scene, 'mixie_chat_active_turn_mode'):
-            if is_active and not was_active:
-                scene.mixie_chat_active_turn_mode = (
-                    getattr(scene, 'mixie_chat_mode', '') or ''
-                )
-            elif not is_active:
-                scene.mixie_chat_active_turn_mode = ''
-
         # Update active scenes tracking (thread-safe)
+        active_states = {SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT}
         scene_name = scene.name
         with SessionManager._active_scenes_lock:
-            if is_active:
+            if state in active_states:
                 SessionManager._active_scenes.add(scene_name)
             else:
                 SessionManager._active_scenes.discard(scene_name)
@@ -274,38 +255,6 @@ class SessionManager:
         """
         with cls._active_scenes_lock:
             return len(cls._active_scenes) > 0
-
-    # States a transport (WebSocket) drop may downgrade to OFFLINE. The active
-    # turn states — BUSY / MODIFYING / AWAITING_INPUT — are deliberately
-    # excluded: the agent turn lives on its own SSE/HTTP connection and keeps
-    # running through a WS blip, so its state must survive the reconnect.
-    _DISCONNECT_DOWNGRADABLE = frozenset({SessionState.IDLE, SessionState.CONNECTING})
-
-    @classmethod
-    def on_transport_disconnect(cls, terminal: bool = False) -> None:
-        """Apply the scene-state policy for a WebSocket disconnect.
-
-        Must be called from the main thread (mutates scene properties).
-
-        A TRANSIENT drop (``terminal=False`` — the WS client auto-reconnects
-        within seconds) downgrades only IDLE/CONNECTING scenes to OFFLINE and
-        preserves active turn states. Wiping BUSY/MODIFYING/AWAITING_INPUT
-        here used to clear ``_active_scenes``, so after the silent reconnect
-        every backend script was refused with "Agent session not active"
-        while the status pill showed Connected/idle — the backend kept
-        grinding whole build waves against those refusals (backend trace
-        b0c909ab). The turn's lifecycle is owned by the SSE stream
-        (queue_processor), not by the WS transport.
-
-        A TERMINAL disconnect (``terminal=True`` — auth failure, reconnection
-        stopped) wipes every scene to OFFLINE, as before.
-        """
-        if terminal:
-            cls.set_all_scenes_state(SessionState.OFFLINE)
-        else:
-            cls.set_all_scenes_state(
-                SessionState.OFFLINE, only_from=cls._DISCONNECT_DOWNGRADABLE
-            )
 
     @classmethod
     def set_all_scenes_state(cls, state: SessionState, only_from: Optional[set] = None) -> None:

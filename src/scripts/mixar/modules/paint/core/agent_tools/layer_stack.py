@@ -21,7 +21,6 @@ from ._common import (
     _find_mpaint_node,
     _find_mpaint_node_for_material,
     _is_finished,
-    _isolate_shared_materials,
     _material_application_snapshot,
     _resolve_mesh_objects,
     _restore_selection,
@@ -74,14 +73,11 @@ def initialize_layer_paint_project(
     material_name: str = "",
     include_ao: bool = False,
     create_default_layer: bool = True,
-    isolate_shared: bool = True,
 ) -> dict:
     """Create Mixar Paint nodes, core channels, and (optionally) a default layer for targets.
 
     With ``create_default_layer=False`` the stack starts EMPTY — use when the
     caller builds every layer itself so the default fill layer doesn't linger.
-    ``isolate_shared=False`` skips the shared-material isolation guard — only
-    for callers that already isolated the targets themselves.
     """
     targets, missing = _resolve_mesh_objects(object_names)
     if not targets:
@@ -90,13 +86,6 @@ def initialize_layer_paint_project(
             "error": "No mesh objects found for layer paint initialization",
             "missing": missing,
         }
-
-    # The stack is built inside each target's EXISTING active material; give
-    # the targets private copies of any material also used outside the set so
-    # the build cannot re-skin unrelated objects (within-set sharing is kept).
-    isolated_materials = (
-        _isolate_shared_materials(targets) if isolate_shared else []
-    )
 
     snapshot = _selection_snapshot()
     initialized: list[dict] = []
@@ -158,7 +147,6 @@ def initialize_layer_paint_project(
         "success": not errors,
         "initialized": initialized,
         "already_initialized": already_initialized,
-        "isolated_materials": isolated_materials,
         "missing": missing,
         "errors": errors,
     }
@@ -209,14 +197,6 @@ def add_procedural_material_layer(
             "error": "No mesh objects found for procedural material layer",
             "missing": missing,
         }
-
-    # Isolate materials shared with objects OUTSIDE the target set before any
-    # stack init/edit — the layer add mutates the existing material's stack in
-    # place, so a shared placeholder material would leak layers scene-wide.
-    # shared_material=False must not share even within the set.
-    isolated_materials = _isolate_shared_materials(
-        targets, per_object=not shared_material
-    )
 
     snapshot = _selection_snapshot()
     applied: list[dict] = []
@@ -272,7 +252,6 @@ def add_procedural_material_layer(
                     "semantic_material_name": semantic_name,
                     "texture_set_count": 1 if applied else 0,
                     "reused_existing_layer": True,
-                    "isolated_materials": isolated_materials,
                     "applied": applied,
                     "missing": missing,
                     "errors": errors,
@@ -286,7 +265,6 @@ def add_procedural_material_layer(
                 init_result = initialize_layer_paint_project(
                     [source_obj.name],
                     material_name=layer_name or material.name,
-                    isolate_shared=False,  # targets isolated above
                 )
                 if not init_result.get("success"):
                     return {
@@ -378,7 +356,6 @@ def add_procedural_material_layer(
                 "shared_material": shared_name,
                 "semantic_material_name": semantic_name,
                 "texture_set_count": 1 if applied else 0,
-                "isolated_materials": isolated_materials,
                 "applied": applied,
                 "missing": missing,
                 "errors": errors,
@@ -390,9 +367,7 @@ def add_procedural_material_layer(
             _activate_object(obj)
             node = get_active_mpaint_node()
             if not node and initialize_if_needed:
-                init_result = initialize_layer_paint_project(
-                    [obj.name], isolate_shared=False  # targets isolated above
-                )
+                init_result = initialize_layer_paint_project([obj.name])
                 if not init_result.get("success"):
                     errors.append({"object": obj.name, "error": init_result.get("error") or init_result.get("errors")})
                     continue
@@ -483,7 +458,6 @@ def add_procedural_material_layer(
 
     return {
         "success": not errors and bool(applied),
-        "isolated_materials": isolated_materials,
         "applied": applied,
         "missing": missing,
         "errors": errors,

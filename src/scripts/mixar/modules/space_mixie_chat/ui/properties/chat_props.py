@@ -21,7 +21,7 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
-from ...core.ui_utils import bump_layout_epoch, redraw_chat_areas
+from ...core.ui_utils import redraw_chat_areas
 from .chat_slot_types import (
     MixieChatTodoItem,
     MixieChatActionItem,
@@ -69,45 +69,6 @@ class MixieChatAttachment(PropertyGroup):
         default=False,
         options={'SKIP_SAVE'},
     )
-
-
-def on_feedback_comment_changed(self, context):
-    """Detect Enter key via \\x1F marker and submit the feedback comment."""
-    if not self.feedback_comment.endswith("\x1F"):
-        # Live typing (fires per keystroke via TEXTEDIT_UPDATE): the input
-        # grows/shrinks with its wrapped line count — Shift+Enter inserts
-        # real newlines — so the C++ layout must remeasure.
-        if self.feedback_comment_expanded:
-            scene = getattr(context, 'scene', None)
-            if scene is not None:
-                bump_layout_epoch(scene)
-        return
-    self.feedback_comment = self.feedback_comment.rstrip("\x1F")
-    bubble_id = self.bubble_id
-    if not bubble_id:
-        return
-    if not self.feedback_comment.strip():
-        return
-    if self.feedback_comment_submitting:
-        return
-    if not 1 <= int(self.feedback_rating) <= 5:
-        logger.info(
-            "Feedback comment kept open until a rating is selected: "
-            f"bubble_id={bubble_id}"
-        )
-        return
-    bpy.app.timers.register(
-        lambda bid=bubble_id: _deferred_submit_feedback(bid) or None,
-        first_interval=0.01,
-    )
-
-
-def _deferred_submit_feedback(bubble_id):
-    """Submit feedback comment via operator (called from timer)."""
-    try:
-        bpy.ops.mixie_chat.submit_feedback_comment(bubble_id=bubble_id)
-    except Exception:
-        logger.warning(f"Failed to submit feedback comment for {bubble_id}", exc_info=True)
 
 
 class MixieChatMessage(PropertyGroup):
@@ -224,15 +185,11 @@ class MixieChatMessage(PropertyGroup):
     # Input type slot - indicates what kind of input the agent expects
     input_type: StringProperty(
         name="Input Type",
-        description="Type of input expected: text, choice, approval, or file_save",
+        description="Type of input expected: 'text', 'choice', 'approval'",
         default="",
         maxlen=32,
         options={'SKIP_SAVE'}
     )
-    export_format: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
-    export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
-    export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
-    export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
@@ -303,59 +260,6 @@ class MixieChatMessage(PropertyGroup):
         default=True
     )
 
-    # -------------------------------------------------------------------------
-    # Feedback fields (post-response rating)
-    # -------------------------------------------------------------------------
-    feedback_visible: BoolProperty(
-        name="Feedback Visible",
-        description="Whether to show the feedback rating row",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-    feedback_rating: IntProperty(
-        name="Feedback Rating",
-        description="User's star rating (0=unrated, 1-5=rated)",
-        default=0,
-        min=0,
-        max=5,
-        options={'SKIP_SAVE'},
-    )
-    feedback_comment: StringProperty(
-        name="Feedback Comment",
-        description="User's feedback comment",
-        default="",
-        maxlen=2000,
-        options={'SKIP_SAVE', 'TEXTEDIT_UPDATE'},
-        update=on_feedback_comment_changed,
-    )
-    feedback_comment_expanded: BoolProperty(
-        name="Feedback Comment Expanded",
-        description="Whether the inline comment field is shown",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-    feedback_comment_submitting: BoolProperty(
-        name="Feedback Comment Submitting",
-        description="Whether this feedback comment has an in-flight request",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-    feedback_status: IntProperty(
-        name="Feedback Status",
-        description="Submission state: 0=idle, 1=sending, 2=received, 3=failed",
-        default=0,
-        min=0,
-        max=3,
-        options={'SKIP_SAVE'},
-    )
-    feedback_submitted_comment: StringProperty(
-        name="Submitted Feedback Comment",
-        description="Comment accepted by the server, shown read-only in the chat",
-        default="",
-        maxlen=2000,
-        options={'SKIP_SAVE'},
-    )
-
 
 classes = (
     MixieChatAttachment,
@@ -381,16 +285,6 @@ def on_chat_input_changed(self, context):
             lambda: _execute_send_message() or None,
             first_interval=0.001
         )
-        return
-
-    # An emptied composer can't have an active @-mention token. Interactive
-    # edits are handled by the C++ detection hooks; this covers programmatic
-    # clears (send/new-session) so the dropdown never lingers.
-    try:
-        if not self.mixie_chat_input and self.mixie_chat_mention_show:
-            self.mixie_chat_mention_show = False
-    except AttributeError:
-        pass  # mention props not registered (isolated tests)
 
 
 def _execute_send_message():
@@ -440,8 +334,8 @@ def generate_type_enum_items(self, context):
     """Dynamic items for the Generate Type dropdowns.
 
     Identifiers are generation-catalog service keys, sourced from the
-    backend's /generation-catalog/chat-options view. See
-    chat_generate_options_cache.
+    backend's /generation-catalog/chat-options view (with a static
+    fallback while it hasn't loaded). See chat_generate_options_cache.
     """
     global _generate_type_items_ref
     try:
@@ -450,10 +344,10 @@ def generate_type_enum_items(self, context):
         )
         _generate_type_items_ref = get_generate_type_enum_items()
     except Exception:
-        # Bootstrap unavailable: fail closed instead of reviving services that
-        # may have been disabled by the backend.
+        # Bootstrap module unavailable (e.g. isolated test) — static mirror.
         _generate_type_items_ref = [
-            ("NONE", "No generation services", "Generation is currently unavailable", 'ERROR', 0)
+            ("image_gen", "Text to Image", "Text to Image", 'IMAGE_DATA', 0),
+            ("model_3d", "Image to 3D", "Image to 3D", 'MESH_CUBE', 1),
         ]
     return _generate_type_items_ref
 
@@ -587,8 +481,9 @@ def _ask_model_choice(scene, service_key):
         if not slug:
             continue
         label = model.get("label") or slug
+        cost = model.get("credit_cost")
         item = msg.action_items.add()
-        item.label = label
+        item.label = f"{label} ({cost} cr)" if cost is not None else label
         item.value = f"chat_model:{service_key}:{slug}"
         item.style = 'PRIMARY' if slug == default_slug else 'DEFAULT'
     return True
@@ -736,20 +631,6 @@ def register():
         items=SESSION_STATE_ITEMS,
         default='OFFLINE',
         options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
-    )
-
-    # Chat mode captured when the currently running turn started —
-    # stamped by SessionManager.set_state on the inactive→active edge,
-    # cleared when the turn ends. The agent viewport lock (halo + input
-    # block) keys off THIS rather than the live mixie_chat_mode
-    # dropdown: the dropdown stays editable mid-turn, so flipping it
-    # (AGENT → ASK → AGENT) must not lift the lock while an agent turn
-    # is still editing the scene, nor raise it for a running Ask turn.
-    bpy.types.Scene.mixie_chat_active_turn_mode = StringProperty(
-        name="Active Turn Mode",
-        description="Chat mode the currently running turn was started in",
-        default="",
-        options={'SKIP_SAVE'},  # Never persist — turns don't survive a file load
     )
 
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(
@@ -921,8 +802,7 @@ def unregister():
         'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
-        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
-        'mixie_chat_mode',
+        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_mode',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
         if hasattr(bpy.types.Scene, attr):

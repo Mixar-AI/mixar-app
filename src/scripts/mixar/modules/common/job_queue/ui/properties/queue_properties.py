@@ -2,26 +2,18 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""WindowManager-level mirror PropertyGroup for the unified queue UIList.
+"""Scene-level mirror PropertyGroup for the unified queue UIList.
 
 Canonical job state lives in ``FeatureQueue`` (Python singleton).  This
 mirror is a read-only projection that the queue manager refreshes via
 per-feature listeners so Blender's ``UIList`` can render every job
 across every feature as a single flat list, with a filter chip for
 All / Active / Done / Failed.
-
-It is attached to ``WindowManager`` — NOT ``Scene`` — on purpose: the
-mirror is a live projection of Python-singleton state, so it must not be
-undo-tracked or serialized. On ``Scene`` an undo/redo would snap the
-collection back to whatever it held at that undo step, making the queue
-rows vanish (undo) or reappear (redo). WindowManager data participates in
-neither undo nor .blend persistence, matching ``generation_params``.
 """
 
 import time
 
 import bpy
-from bpy.app.handlers import persistent
 from bpy.props import (
     CollectionProperty,
     EnumProperty,
@@ -49,17 +41,6 @@ class MixieQueueItemPG(PropertyGroup):
     job_id: StringProperty(name="Job ID", default="")
     feature_key: StringProperty(name="Feature Key", default="")
     label: StringProperty(name="Label", default="")
-    display_label: StringProperty(name="Display Label", default="")
-    # Backend service key joins queue jobs to dynamic catalog labels.
-    service: StringProperty(name="Service", default="")
-    origin_capability_key: StringProperty(
-        name="Origin Capability",
-        default="",
-    )
-    # The model/engine slug the job was submitted with (e.g. "hunyuan_pro_v3",
-    # "pro"). Shown next to the job-type pill so two jobs of the same type but
-    # different models are distinguishable. Empty for jobs that carry no model.
-    model: StringProperty(name="Model", default="")
     state: StringProperty(name="State", default="")
     substate_text: StringProperty(name="Substate", default="")
     error: StringProperty(name="Error", default="")
@@ -95,13 +76,13 @@ def _sync_mirror(_queue) -> None:
     import mixar.modules.common.job_queue.ui.queue_selection as _sel_mod
 
     try:
-        wm = bpy.context.window_manager
+        scene = bpy.context.scene
     except Exception:
         return
-    if wm is None or not hasattr(wm, "mixie_queue"):
+    if scene is None or not hasattr(scene, "mixie_queue"):
         return
 
-    pg = wm.mixie_queue
+    pg = scene.mixie_queue
 
     # Selected job identity, so we can preserve selection across rebuild.
     prev_key = ""
@@ -132,18 +113,6 @@ def _sync_mirror(_queue) -> None:
             item.job_id = job.id
             item.feature_key = feature_key
             item.label = job.label
-            item.display_label = getattr(job, "display_label", "") or ""
-            # Backend generation identity lives on the canonical Job. Generic
-            # jobs also carry job_type before their submit ACK arrives.
-            item.service = (
-                getattr(job, "service", "")
-                or getattr(job, "job_type", "")
-                or ""
-            )
-            item.origin_capability_key = (
-                getattr(job, "origin_capability_key", "") or ""
-            )
-            item.model = getattr(job, "model", "") or ""
             item.state = (
                 job.state.value if hasattr(job.state, "value") else str(job.state)
             )
@@ -174,69 +143,36 @@ def _sync_mirror(_queue) -> None:
 def _attach_listeners() -> None:
     """Attach the unified _sync_mirror to every known feature queue."""
     from mixar.modules.common.job_queue.constants import (
-        FEATURE_ANIMATE,
         FEATURE_BRUSH_GEN,
         FEATURE_HUNYUAN_PART,
         FEATURE_HUNYUAN_RAPID,
         FEATURE_HUNYUAN_UV,
         FEATURE_IMAGE_TO_3D_PRO,
         FEATURE_IMAGEGEN,
-        FEATURE_VIDEO_GEN,
         FEATURE_LOOKDEV,
         FEATURE_LOOKDEV360,
         FEATURE_MATGEN,
         FEATURE_MESH_SEGMENT,
         FEATURE_MODEL_3D,
-        FEATURE_PBR_GEN,
         FEATURE_RETOPOLOGY,
         FEATURE_SCENE_GEN,
         FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP,
         FEATURE_SCENE_RECON,
-        FEATURE_SMART_SEGMENT,
-        FEATURE_TRIPO_SEGMENT,
-        FEATURE_WORLD_LABS,
     )
 
-    # NOTE: a queue missing from this tuple still accepts and runs jobs — the
-    # generate footer reads it directly and will happily report "1 job in
-    # queue" — but _sync_mirror is never attached, so the job never appears in
-    # the Queue panel. Any new FEATURE_* queue must be added here too.
     _FEATURES = (
         FEATURE_IMAGE_TO_3D_PRO, FEATURE_RETOPOLOGY, FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP, FEATURE_HUNYUAN_RAPID, FEATURE_HUNYUAN_PART,
-        FEATURE_HUNYUAN_UV, FEATURE_MODEL_3D, FEATURE_IMAGEGEN, FEATURE_VIDEO_GEN,
+        FEATURE_HUNYUAN_UV, FEATURE_MODEL_3D, FEATURE_IMAGEGEN,
         FEATURE_LOOKDEV, FEATURE_LOOKDEV360, FEATURE_MATGEN, FEATURE_BRUSH_GEN,
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
-        FEATURE_ANIMATE, FEATURE_PBR_GEN, FEATURE_TRIPO_SEGMENT,
-        FEATURE_SMART_SEGMENT, FEATURE_WORLD_LABS,
     )
     for feat in _FEATURES:
         try:
             get_queue(feat).add_listener(_sync_mirror)
         except Exception:
             pass
-
-
-@persistent
-def _reset_queues_on_file_load(_filepath):
-    """Start every opened file with an empty queue.
-
-    The FeatureQueue singletons and this WindowManager mirror are process-global
-    and not stored in the .blend, so without this the previous file's completed/
-    failed (and any in-flight) jobs linger in the Queue panel after opening
-    another file, with now-stale scene/node references.
-    """
-    try:
-        for queue in all_queues():
-            queue.clear_all()
-    except Exception:
-        pass
-    # Guarantee the mirror reflects the now-empty queues even if none exist yet.
-    try:
-        _sync_mirror(None)
-    except Exception:
-        pass
 
 
 def _force_list_text_sel_white():
@@ -268,13 +204,10 @@ def register():
 
     bpy.app.timers.register(_force_list_text_sel_white, first_interval=0.5)
 
-    if not hasattr(bpy.types.WindowManager, "mixie_queue"):
-        bpy.types.WindowManager.mixie_queue = PointerProperty(type=MixieUnifiedQueuePG)
+    if not hasattr(bpy.types.Scene, "mixie_queue"):
+        bpy.types.Scene.mixie_queue = PointerProperty(type=MixieUnifiedQueuePG)
 
     _attach_listeners()
-
-    if _reset_queues_on_file_load not in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.append(_reset_queues_on_file_load)
 
     # Deferred preview-icon load — mutates bpy.data via bpy.utils.previews,
     # so it MUST run on a timer tick, never inside a draw_item callback.
@@ -289,18 +222,13 @@ def unregister():
     from bpy.utils import unregister_class
 
     try:
-        bpy.app.handlers.load_post.remove(_reset_queues_on_file_load)
-    except ValueError:
-        pass
-
-    try:
         from mixar.modules.common.job_queue.ui import queue_status_icons
         queue_status_icons.unregister()
     except Exception:
         pass
 
     try:
-        delattr(bpy.types.WindowManager, "mixie_queue")
+        delattr(bpy.types.Scene, "mixie_queue")
     except AttributeError:
         pass
 

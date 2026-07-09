@@ -173,16 +173,6 @@ class HTTPClient:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        # The backend emits server-side telemetry (generation lifecycle,
-        # agent turns, ws connects) and honors this header, extending the
-        # user's "Share Usage Data" toggle to those events. Guarded: an
-        # analytics failure must never break an API call.
-        try:
-            from mixar.modules.common.analytics.preferences import is_enabled
-            headers["x-telemetry-consent"] = "1" if is_enabled() else "0"
-        except Exception:
-            pass
-
         return headers
 
     def _build_url(self, endpoint: str) -> str:
@@ -405,7 +395,6 @@ class HTTPClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Dict[str, Any]] = None,
-        data_factory: Optional[Callable[[], Any]] = None,
         json: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         files: Optional[Dict[str, Any]] = None,
@@ -427,9 +416,6 @@ class HTTPClient:
             endpoint: API endpoint
             params: Query parameters
             data: Form data
-            data_factory: Background-thread factory for a fresh streaming
-                request body. Called again after an auth refresh, so file
-                uploads are never retried from an exhausted handle.
             json: JSON body
             headers: Additional headers
             files: Files for multipart upload
@@ -481,29 +467,13 @@ class HTTPClient:
             """Execute the HTTP request in background thread."""
             # Track if we've already attempted token refresh to prevent infinite recursion
             refresh_attempted = False
-            request_data = None
-
-            def _fresh_request_data():
-                return data_factory() if data_factory is not None else data
-
-            def _close_request_data():
-                nonlocal request_data
-                if data_factory is not None and request_data is not None:
-                    close = getattr(request_data, "close", None)
-                    if close is not None:
-                        try:
-                            close()
-                        except Exception:
-                            pass
-                request_data = None
 
             try:
-                request_data = _fresh_request_data()
                 response = self._session.request(
                     method=method_str,
                     url=url,
                     params=params,
-                    data=request_data,
+                    data=data,
                     json=json,
                     headers=request_headers,
                     files=files,
@@ -517,12 +487,6 @@ class HTTPClient:
                     refresh_result = refresh_access_token()
 
                     if refresh_result.get("success"):
-                        try:
-                            response.close()
-                        except Exception:
-                            pass
-                        _close_request_data()
-                        request_data = _fresh_request_data()
                         # Get fresh headers with new token
                         retry_headers = self._get_default_headers()
                         if headers:
@@ -535,7 +499,7 @@ class HTTPClient:
                             method=method_str,
                             url=url,
                             params=params,
-                            data=request_data,
+                            data=data,
                             json=json,
                             headers=retry_headers,
                             files=files,
@@ -558,18 +522,12 @@ class HTTPClient:
                     data=response_data,
                     message="Success" if response.ok else str(response_data),
                     headers=dict(response.headers),
-                    # Keep async response parity with request(). Binary
-                    # endpoints (notably SAM3 mask downloads) need content;
-                    # parsing them as text corrupts the PNG bytes.
-                    raw=response,
                 )
 
             except requests.exceptions.Timeout:
                 raise TimeoutError(f"Request to {url} timed out")
             except requests.exceptions.ConnectionError:
                 raise ConnectionError(f"Failed to connect to {url}")
-            finally:
-                _close_request_data()
 
         # Completion handler (runs in background thread)
         def on_request_complete(

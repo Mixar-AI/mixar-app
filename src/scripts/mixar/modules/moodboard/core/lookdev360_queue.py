@@ -18,7 +18,6 @@ from typing import Dict, List, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -28,8 +27,6 @@ from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
-
-_SERVICE_KEY = "pbr_gen"
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +73,7 @@ class Lookdev360Job(Job):
             payload["reference_image_bytes_b64"] = self.reference_image_bytes_b64
 
         service.enqueue(
-            job_type=_SERVICE_KEY,
+            job_type="pbr_gen",
             model=self.model or "hunyuan-pbr",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -369,8 +366,6 @@ def enqueue_lookdev360_job(
     job = Lookdev360Job(
         feature_key=FEATURE_LOOKDEV360,
         label=f"Lookdev360: {prompt[:40]}",
-        display_label=prompt[:40],
-        service=_SERVICE_KEY,
         prompt=prompt,
         mesh_bytes_b64=mesh_bytes_b64,
         mesh_filename=mesh_filename,
@@ -382,9 +377,6 @@ def enqueue_lookdev360_job(
         stored_obj_path=stored_obj_path,
     )
     queue = _get_lookdev360_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("texture_gen")
     if not queue.submit(job):
         logger.warning("[Lookdev360] duplicate job rejected: %s", job.label)
         return None

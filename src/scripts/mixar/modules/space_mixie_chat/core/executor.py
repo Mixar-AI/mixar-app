@@ -162,29 +162,6 @@ class ScriptExecutor:
                 snapshot[name] = list(handler_list)
         return snapshot
 
-    @staticmethod
-    def _exempt_handler_ids() -> set:
-        """Identities of first-party handlers that scripts install INDIRECTLY
-        via addon operators and that must OUTLIVE the script.
-
-        mixie_chat.agent_final_render starts a background render job during a
-        sandboxed render_scene script; its render_complete/render_cancel
-        handlers do the moodboard import + settings restore AFTER the script
-        is long gone — stripping them orphans the render (settings never
-        restored, image never imported). Matching is by object IDENTITY, not
-        name/module (a script can forge ``__module__`` via ``__name__`` in
-        its globals, but it cannot forge ``id()``); at worst a script can
-        re-append these exact functions, which self-guard (no-op without an
-        active job).
-        """
-        try:
-            from mixar.modules.space_mixie_chat.ui.operators import (
-                agent_final_render_ops as _afr,
-            )
-            return {id(_afr._on_render_complete), id(_afr._on_render_cancel)}
-        except Exception:
-            return set()
-
     def _cleanup_handlers(self, snapshot: dict[str, list]) -> None:
         """Remove any handlers that were added since the snapshot.
 
@@ -196,15 +173,7 @@ class ScriptExecutor:
                 continue
             before_set = set(id(h) for h in before_list)
             added = [h for h in handler_list if id(h) not in before_set]
-            exempt = self._exempt_handler_ids()
             for handler in added:
-                if id(handler) in exempt:
-                    logger.debug(
-                        "Keeping exempt first-party handler: %s.%s (%s)",
-                        "bpy.app.handlers", name,
-                        getattr(handler, '__name__', repr(handler)),
-                    )
-                    continue
                 try:
                     handler_list.remove(handler)
                     logger.warning(
@@ -338,13 +307,9 @@ class ScriptExecutor:
                     return exec_namespace[name]
                 # Allow addon's own modules (e.g. mixar.modules.paint.*) and numpy's
                 # internal submodules (numpy lazily imports numpy.core._methods etc.).
-                # mathutils/bmesh/bpy_extras submodules (mathutils.bvhtree, bmesh.ops,
-                # bpy_extras.view3d_utils, ...) grant nothing beyond the already
-                # injected parents — they are reachable as attributes anyway; only
-                # the `import x.y` statement form was being rejected.
                 # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
                 top_module = name.split(".")[0]
-                if top_module in ("mixar", "numpy", "mathutils", "bmesh", "bpy_extras"):
+                if top_module in ("mixar", "numpy"):
                     return _real_import(name, *args, **kwargs)
                 raise ImportError(
                     f"Module '{name}' is not available. "

@@ -389,20 +389,6 @@ void chat_ui_get_button_hover_color(float out_color[4])
   }
 }
 
-void chat_ui_get_history_row_hover_color(float out_color[4])
-{
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  /* Zero alpha means "unset" (prefs saved before the field existed load it
-   * as zero, and the Python bootstrap seed may not have run yet) — fall
-   * back to the default subtle white wash rather than an invisible hover. */
-  if (ts && ts->chat_history_row_hover[3] != 0) {
-    theme_color_to_float(ts->chat_history_row_hover, out_color);
-  }
-  else {
-    out_color[0] = 1.0f; out_color[1] = 1.0f; out_color[2] = 1.0f; out_color[3] = 0.07f;
-  }
-}
-
 void chat_ui_get_toggle_on_color(float out_color[4])
 {
   const ThemeSpace *ts = chat_ui_get_theme_space();

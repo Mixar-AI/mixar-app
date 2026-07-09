@@ -46,7 +46,7 @@ _GEN_TYPE_ALIASES = {
 
 def normalize_generate_service(value: str) -> str:
     """Map a generate-type value (legacy id or service key) to a service key."""
-    return _GEN_TYPE_ALIASES.get(value or "", value or "")
+    return _GEN_TYPE_ALIASES.get(value or "", value or "image_gen")
 
 
 def _chosen_model(scene, service_key):
@@ -102,18 +102,6 @@ def execute_generate_mode(operator, context):
     gen_type = normalize_generate_service(scene.mixie_chat_generate_type)
     prompt = scene.mixie_chat_input.strip()
     pending_attachments = scene.mixie_chat_pending_attachments
-
-    try:
-        from mixar.bootstrap.chat_generate_options_cache import get_service_keys
-        available_services = get_service_keys()
-    except Exception:
-        available_services = []
-    if not gen_type or gen_type not in available_services:
-        operator.report(
-            {'WARNING'},
-            "Generation is currently unavailable. Refresh the catalog and try again.",
-        )
-        return {'CANCELLED'}
 
     # Same flag the agent send path sets — without it a generate-only
     # session lets the "Hi I'm Mixie" empty-state greeting reappear.

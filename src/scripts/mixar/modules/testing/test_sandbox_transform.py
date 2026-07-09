@@ -93,50 +93,9 @@ class TestSnapshotSource(unittest.TestCase):
             "        pass"
         )
         out = self.rewrite(src)
-        # Both levels are live collections — both get snapshotted.
-        self.assertIn("list(bpy.data.collections)", out)
+        # Inner loop over a live collection is wrapped; the outer over
+        # `.collections` is not in scope for this transform.
         self.assertIn("list(c.all_objects)", out)
-
-    def test_wraps_node_tree_clear_idiom(self):
-        # The classic "clear the node tree" loop in material scripts — same
-        # freed-ListBase segfault class as the object-collection crash.
-        src = (
-            "nodes = mat.node_tree.nodes\n"
-            "for n in mat.node_tree.nodes:\n"
-            "    nodes.remove(n)"
-        )
-        out = self.rewrite(src)
-        self.assertIn("list(mat.node_tree.nodes)", out)
-
-    def test_wraps_links_clear(self):
-        out = self.rewrite(
-            "for l in tree.links:\n    tree.links.remove(l)"
-        )
-        self.assertIn("list(tree.links)", out)
-
-    def test_wraps_data_materials_sweep(self):
-        out = self.rewrite(
-            "for m in bpy.data.materials:\n    bpy.data.materials.remove(m)"
-        )
-        self.assertIn("list(bpy.data.materials)", out)
-
-    def test_wraps_scene_teardown(self):
-        out = self.rewrite(
-            "for s in bpy.data.scenes:\n    bpy.data.scenes.remove(s)"
-        )
-        self.assertIn("list(bpy.data.scenes)", out)
-
-    def test_wraps_collection_children(self):
-        out = self.rewrite(
-            "for c in parent.children:\n    parent.children.unlink(c)"
-        )
-        self.assertIn("list(parent.children)", out)
-
-    def test_wraps_modifier_stack_removal(self):
-        out = self.rewrite(
-            "for md in obj.modifiers:\n    obj.modifiers.remove(md)"
-        )
-        self.assertIn("list(obj.modifiers)", out)
 
     # -- iterables that must be LEFT ALONE ---------------------------------
 
@@ -147,13 +106,6 @@ class TestSnapshotSource(unittest.TestCase):
     def test_leaves_selected_objects(self):
         # selected_objects already returns a fresh Python list — snapshot-safe.
         out = self.rewrite("for o in bpy.context.selected_objects:\n    pass")
-        self.assertNotIn("list(", out)
-
-    def test_leaves_high_cardinality_mesh_data(self):
-        # Deliberate exclusion: snapshotting mesh.vertices (potentially millions
-        # of elements) per loop would regress heavy scripts; these collections
-        # are not element-removable mid-loop through these handles anyway.
-        out = self.rewrite("for v in mesh.vertices:\n    v.co.x += 1.0")
         self.assertNotIn("list(", out)
 
     def test_leaves_range(self):

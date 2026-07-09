@@ -27,12 +27,6 @@ DEV_MODE = False
 # Delay before agent connection attempts on startup (seconds)
 STARTUP_DELAY_SECONDS = 1.0
 
-# Safe retry schedule for an agent SSE request that could not establish a TCP
-# connection at all.  ConnectError means the backend never accepted the turn,
-# so retrying cannot duplicate agent work.  Mid-stream/read/write failures are
-# deliberately excluded because their acceptance state is ambiguous.
-SSE_CONNECT_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
-
 
 # ============================================================================
 # SCENE ROUTING
@@ -173,13 +167,6 @@ class JSONRPCErrorCode:
 # Custom WebSocket close code for authentication failure
 WS_CLOSE_AUTH_FAILED = 4001
 
-# Disconnect reason the WS client passes to on_disconnected when it stops
-# reconnecting because authentication failed. connection_manager treats this
-# reason as TERMINAL (wipe all scene states to OFFLINE); every other reason
-# is a transient drop the client auto-reconnects from, which must preserve
-# active turn states (see SessionManager.on_transport_disconnect).
-DISCONNECT_REASON_AUTH_FAILED = "Authentication failed - please login again"
-
 
 # ============================================================================
 # WEBSOCKET CONFIGURATION DEFAULTS
@@ -198,15 +185,6 @@ EXECUTION_POLL_INTERVAL = 0.3  # Slower polling during tool execution
 
 AGENT_CHAT_ENDPOINT = "/api/v1/blender/agent/chat"
 AGENT_INPUT_ENDPOINT = "/api/v1/blender/agent/input"
-AGENT_ATTACH_ENDPOINT = "/api/v1/blender/agent/chat/attach"
-AGENT_FEEDBACK_ENDPOINT = "/api/v1/blender/agent/feedback"
-
-# Feedback submission lifecycle shown inline on the rated message.
-# Values are mirrored in C++ (mixie_chat_feedback.cc) — keep in sync.
-FEEDBACK_STATUS_IDLE = 0
-FEEDBACK_STATUS_SENDING = 1
-FEEDBACK_STATUS_RECEIVED = 2
-FEEDBACK_STATUS_FAILED = 3
 
 # ============================================================================
 # CONNECTION MANAGER SETTINGS
@@ -215,54 +193,10 @@ FEEDBACK_STATUS_FAILED = 3
 # Default timeout for HTTP requests (seconds)
 DEFAULT_HTTP_TIMEOUT = 30.0
 
-# WebSocket liveness: the client pings every ~15s and the server answers, so
-# a healthy connection always receives SOMETHING within this window. Zero
-# inbound traffic for this long means the TCP connection silently died
-# (network drop, sleep/resume, NAT rebind) — sends still "succeed" into the
-# kernel buffer on such a zombie, so only the recv side can detect it. On
-# expiry the client PROBES first (see below) and tears the socket down only
-# if the probe also gets no answer, then auto-reconnects.
-WS_LIVENESS_TIMEOUT = 45.0
-
-# Liveness grace probe: the receive thread starves whenever Blender's main
-# thread holds the GIL through a long script/render, so on wake the liveness
-# window can be expired even though the server kept the connection healthy
-# the whole time (it tolerates long pong gaps precisely for this case). On
-# expiry the client first sends a ping and waits this long for ANY inbound
-# traffic before declaring the link dead — a genuinely dead TCP connection
-# still tears down at WS_LIVENESS_TIMEOUT + this grace (~50s), while a
-# GIL-starved wake-up proves the link alive within ~1s and carries on.
-WS_LIVENESS_PROBE_GRACE = 5.0
-
-# UI transport-staleness threshold: how long recv may be silent before the
-# status surfaces (bubble pill, chat header) stop implying a healthy
-# connection. A healthy connection carries at least a pong per ~15s ping, so
-# ping interval + 5s grace of silence almost certainly means the network is
-# gone — the pill flips to Reconnecting/Disconnected here (~5–20s after the
-# drop) instead of waiting out the full teardown watchdog above. Deliberately
-# a SEPARATE, earlier threshold: send-gating keeps using is_connected because
-# a false "down" there would drop work, while a false "down" on a label is
-# just a few seconds of pessimistic UI. Must stay well below
-# WS_LIVENESS_TIMEOUT and above DEFAULT_PING_INTERVAL.
-WS_UI_STALE_THRESHOLD = 20.0
-
-# SSE read timeout: maximum seconds between BYTES on the stream before
-# httpx declares it dead. The backend emits ": keepalive" comment lines
-# every ~15s whenever the graph is silent (long LLM calls, long tools), so
-# a healthy stream always carries bytes well within this window — a long
-# silence means the TCP connection died (network drop, sleep/resume, NAT
-# rebind). Was 630s (backend 600s tool timeout + margin) before keepalives
-# existed, which left a dead mid-turn stream undetected for 10+ minutes.
-# A false positive is harmless now: a read timeout mid-turn re-attaches via
-# /agent/chat/attach (idempotent replay) instead of failing the turn.
-SSE_READ_TIMEOUT = 75.0
-
-# Re-attach after a mid-turn stream loss: total budget before giving up and
-# failing the turn client-side. The backend keeps a disconnected turn running
-# and buffers its events for replay, so a long outage is still recoverable.
-ATTACH_RETRY_MAX_SECONDS = 900.0
-# Per-attempt backoff; the last delay repeats while the budget lasts.
-ATTACH_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
+# SSE read timeout: maximum seconds between SSE events before disconnecting.
+# Backend has a 600s timeout for long-running agent tools, so the client
+# timeout must exceed that to avoid a race condition.
+SSE_READ_TIMEOUT = 630.0
 
 # ============================================================================
 # UI CONSTANTS
@@ -277,29 +211,6 @@ CHAT_INPUT_PLACEHOLDER = "Type your message..."
 
 CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
-
-# Project rules (scene.mixie_chat_rules) — persisted in the file and
-# prepended to the first message of every new chat session. Bounded well
-# below MAX_MESSAGE_LENGTH so rules + user prompt can never overflow.
-# Must stay in lockstep with RULES_TEXT_MAX / the rules_text buffer in
-# the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
-CHAT_RULES_MAXLEN = 10000
-
-# ============================================================================
-# '@' MENTION AUTOCOMPLETE
-# ============================================================================
-
-# Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
-# mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
-MENTION_MAX_ITEMS = 6
-
-# Max published query length in bytes (leading '@' included). Must match
-# MENTION_QUERY_MAX in mixie_chat_footer_constants.hh.
-MENTION_QUERY_MAXLEN = 96
-
-# Max replacement text length. The C++ accept path reads insert_text into a
-# 320-byte buffer (MIXIE_MENTION_INSERT_SIZE) and refuses longer values.
-MENTION_INSERT_MAXLEN = 300
 
 # ============================================================================
 # IMAGE ATTACHMENT CONSTANTS
@@ -321,19 +232,6 @@ MAX_IMAGE_DIMENSION = 16384
 
 # Maximum length for chat messages to prevent memory/performance issues
 MAX_MESSAGE_LENGTH = 100000  # 100KB of text
-
-# ============================================================================
-# CHAT HISTORY ARCHIVE (core/chat_history.py)
-# ============================================================================
-
-# "New Chat" archives the current conversation to ~/.mixar/chat_history/
-# instead of destroying it. Oldest sessions beyond this cap are pruned.
-MAX_ARCHIVED_SESSIONS = 30
-# Titles shown in the history popover — first line of the first user message.
-CHAT_HISTORY_TITLE_MAXLEN = 48
-# Per-session cap on image files copied into ~/.mixar/chat_media/<session>/.
-# Beyond this, remaining images keep their original (possibly temp) paths.
-CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
 # ============================================================================
 # TIMER / EXECUTION CONSTANTS
@@ -362,3 +260,4 @@ STREAMING_BATCH_LIMIT = 8
 # Prefix for temporary placeholder bubble IDs (optimistic UI loading indicator).
 # Used in chat_ops.py (creation) and slot_processor.py (cleanup).
 TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
+

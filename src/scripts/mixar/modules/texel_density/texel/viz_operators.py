@@ -191,27 +191,6 @@ class CheckerAssign(bpy.types.Operator):
 	bl_label = "Assign Checker Material"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def invoke(self, context, event):
-		# REPLACE clears every material slot outright and — unlike STORE — saves
-		# nothing to td_settings, so texel_density.material_restore cannot bring
-		# the assignments back. Confirm before destroying an artist's materials.
-		td = context.scene.td
-		if td.checker_method == 'REPLACE':
-			in_edit = bool(context.object) and context.object.mode == 'EDIT'
-			selected = context.objects_in_mode if in_edit else context.selected_objects
-			has_user_materials = any(
-				obj.type == 'MESH' and any(m and not m.is_td_material for m in obj.data.materials)
-				for obj in selected
-			)
-			if has_user_materials:
-				return context.window_manager.invoke_confirm(
-					self, event,
-					title="Replace Materials",
-					message="Replace mode removes all existing material slots and "
-					        "cannot be restored. Continue?",
-				)
-		return self.execute(context)
-
 	def execute(self, context):
 		start_time = datetime.now()
 		td = context.scene.td

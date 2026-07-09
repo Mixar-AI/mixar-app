@@ -4353,13 +4353,6 @@ static void rna_def_userdef_theme_space_mixie_chat(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Button Hover", "Color for footer buttons on hover");
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
 
-  prop = RNA_def_property(srna, "chat_history_row_hover", PROP_FLOAT, PROP_COLOR_GAMMA);
-  RNA_def_property_float_sdna(prop, nullptr, "chat_history_row_hover");
-  RNA_def_property_array(prop, 4);
-  RNA_def_property_ui_text(
-      prop, "History Row Hover", "Hover wash behind rows in the past-chats overlay");
-  RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
-
   prop = RNA_def_property(srna, "chat_label_color", PROP_FLOAT, PROP_COLOR_GAMMA);
   RNA_def_property_float_sdna(prop, nullptr, "chat_label_color");
   RNA_def_property_array(prop, 4);

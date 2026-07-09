@@ -16,15 +16,6 @@ from .moodboard_utils import (
     get_selected_moodboard_images,
     get_selected_moodboard_image_objects,
 )
-from .media_utils import (
-    describe_moodboard_media,
-    get_selected_moodboard_video_inputs,
-    is_still_image,
-    is_still_item,
-    is_video_image,
-    is_video_item,
-    media_type_for_image,
-)
 from .image_to_3d_utils import (
     download_and_import_glb,
     download_and_import_model,

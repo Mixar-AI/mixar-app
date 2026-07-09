@@ -75,41 +75,6 @@ BUILD_ENVIRONMENT = "$MIXAR_ENV"
 DEV_BYPASS_ALLOWED = $BUILD_ENV_DEV_BYPASS
 EOF
 
-# Drop cache entries that resolved into a different SDK than the one we build
-# against. CMake never re-runs find_library() for an already-cached variable,
-# so a cache configured without SDKROOT keeps its Command Line Tools framework
-# paths forever. Those live outside -isysroot, so CMake passes them as explicit
-# -F paths, which demotes their headers from system to user headers and lets
-# -Werror=unguarded-availability-new fail the Cycles Metal build. Purging by
-# value re-resolves them on this configure; the deployment-target gap that
-# actually trips the warning is unchanged.
-# Matches on whole SDK paths rather than a value prefix: entries such as
-# *_LIB_DEPENDS legitimately list several correct SDK paths mid-value, and a
-# prefix test flags every one of them on an already-healthy cache.
-CMAKE_CACHE_FILE="$BUILD_ENV_DIR/CMakeCache.txt"
-if [[ "$PLATFORM" == "macOS" && -n "${SDKROOT:-}" && -f "$CMAKE_CACHE_FILE" ]]; then
-    STALE_SDK_VARS=()
-    while read -r cache_var; do
-        [[ -n "$cache_var" ]] && STALE_SDK_VARS+=("-U$cache_var")
-    done < <(
-        grep -E '^[A-Za-z_0-9]+:[A-Z]+=' "$CMAKE_CACHE_FILE" \
-            | awk -v sdk="$SDKROOT" '
-                {
-                    var = $0; sub(/:.*/, "", var); rest = $0; stale = 0
-                    while (match(rest, /\/[^ ";=[\]]*SDKs\/MacOSX[^ ";=[\]\/]*\.sdk/)) {
-                        if (substr(rest, RSTART, RLENGTH) != sdk) stale = 1
-                        rest = substr(rest, RSTART + RLENGTH)
-                    }
-                    if (stale) print var
-                }' \
-            | sort -u
-    )
-    if (( ${#STALE_SDK_VARS[@]} > 0 )); then
-        echo "Purging ${#STALE_SDK_VARS[@]} CMake cache entries resolved outside $SDKROOT"
-        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${STALE_SDK_VARS[@]}" >/dev/null
-    fi
-fi
-
 # Configure with CMake (all platform logic handled in settings.sh)
 echo "Configuring Mixar build - Blender: $BLENDER_BUILD_ENV, Mixar Environment: $MIXAR_ENV for $PLATFORM..."
 cmake -C "$CMAKE_DIR/mixar_overrides.cmake" \
@@ -186,39 +151,6 @@ if [[ -n "$PYTHON_BIN" ]]; then
     fi
 else
     echo "Warning: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin"
-fi
-
-# Re-sign the dev build with a stable identity so macOS Keychain "Always
-# Allow" persists across rebuilds (opt-in via MIXAR_DEV_SIGN_ID in .env; see
-# scripts/unix/setup_dev_codesign.sh). Without this the linker's ad-hoc
-# signature changes every build, and Keychain re-prompts for the
-# MixarSafeStorage login tokens on each rebuild. Only the main executable is
-# signed — the process's code identity is what Keychain ACLs match on.
-# Release/notarization signing lives in package.sh and is unaffected.
-if [[ "$PLATFORM" == "macOS" && -n "${MIXAR_DEV_SIGN_ID:-}" ]]; then
-    MIXAR_APP_BINARY="$BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
-    # get-task-allow keeps the binary attachable by lldb, matching what an
-    # ad-hoc dev signature allows.
-    DEV_SIGN_ENTITLEMENTS="$BUILD_ENV_DIR/dev_codesign_entitlements.plist"
-    cat > "$DEV_SIGN_ENTITLEMENTS" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.get-task-allow</key>
-    <true/>
-</dict>
-</plist>
-EOF
-    echo "Signing dev build with identity: $MIXAR_DEV_SIGN_ID"
-    if codesign --force --sign "$MIXAR_DEV_SIGN_ID" \
-        --entitlements "$DEV_SIGN_ENTITLEMENTS" "$MIXAR_APP_BINARY"; then
-        echo "Dev codesign OK — Keychain 'Always Allow' will persist across rebuilds."
-    else
-        echo "Warning: dev codesign failed. The build is still usable, but Keychain"
-        echo "will re-prompt after every rebuild. Create the identity with:"
-        echo "  ./scripts/unix/setup_dev_codesign.sh"
-    fi
 fi
 
 # Done

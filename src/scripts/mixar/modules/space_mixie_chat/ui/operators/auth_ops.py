@@ -18,7 +18,8 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 
 from ....auth.core.auth import (
-    clear_credentials,
+    delete_access_token,
+    delete_refresh_token,
     get_access_token,
     get_user_info,
     open_dashboard_with_handoff,
@@ -35,19 +36,6 @@ logger = get_logger(__name__)
 
 
 _auto_connect_scheduled = False
-
-
-def _capture_session_started(method: str, refreshed=None) -> None:
-    """Telemetry only — auth must never break because of it."""
-    try:
-        from mixar.modules.common.analytics.session_events import (
-            capture_session_started,
-        )
-        capture_session_started(
-            method, refreshed=refreshed, context=bpy.context,
-        )
-    except Exception as exc:
-        logger.debug("session_started capture failed: %s", exc)
 
 
 def _auto_connect_websocket():
@@ -149,11 +137,8 @@ def _clear_byok_state_on_logout(wm):
         ('byok_is_active', False),
         ('byok_current_provider', ''),
         ('byok_current_model', ''),
-        ('byok_current_supports_vision', True),
         ('byok_key_preview', ''),
         ('byok_form_api_key', ''),
-        ('byok_form_openrouter_model', ''),
-        ('byok_form_codex_bundle', ''),
         ('byok_dialog_state', 'IDLE'),
         ('byok_last_error', ''),
     ):
@@ -190,7 +175,6 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             scene.mixie_chat_credits = user_info["data"].get("credits", 0)
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
-            _capture_session_started("startup_token", refreshed=refreshed)
             refresh_generation_caches()
             maybe_show_onboarding(email)
             _auto_connect_websocket()
@@ -210,17 +194,13 @@ def _auth_check_background() -> None:
     All HTTP I/O (get_user_info, refresh_access_token) happens here.
     bpy property writes are handed back to the main thread via a timer.
     """
-    global _auth_check_started
     user_info = get_user_info()
     if user_info and user_info.get("status") == "success":
         _schedule_apply_login(user_info, refreshed=False)
         return
 
-    # Token invalid — try refresh. Snapshot the access token first so a
-    # definitive rejection can distinguish "this pair is dead" from "another
-    # Blender process rotated the pair while our request was in flight".
+    # Token invalid — try refresh
     logger.debug("Access token invalid, attempting refresh")
-    stale_access_token = get_access_token()
     refresh_result = refresh_access_token()
 
     if refresh_result and refresh_result.get("success"):
@@ -228,46 +208,11 @@ def _auth_check_background() -> None:
         if user_info and user_info.get("status") == "success":
             _schedule_apply_login(user_info, refreshed=True)
             return
-        # Rotation succeeded, so the new credential pair is authoritative.
-        # A transient /me failure must not delete it and launch SSO.
-        logger.warning("Post-refresh user validation failed; preserving credentials")
-        _auth_check_started = False
-        return
 
-    if refresh_result and refresh_result.get("retryable"):
-        # The refresh attempt is deliberately retained with its idempotency key
-        # for a later check. Clearing credentials here would destroy recovery
-        # after a timeout, proxy error, rate limit, or backend outage.
-        logger.warning(
-            "Token refresh failed transiently; preserving credentials for retry: %s",
-            refresh_result.get("message"),
-        )
-        _auth_check_started = False
-        return
-
-    # A definitive rejection can also mean a second Blender process won the
-    # rotation race: its refresh consumed the token first, and the 401 handler
-    # deliberately leaves that foreign pair in safe storage. If the stored
-    # access token changed to a different non-empty value, that pair is
-    # authoritative — adopt it rather than destroying it. (Our own definitive
-    # 401 deletes the pair, leaving it empty, so this never masks a real
-    # rejection.)
-    current_access_token = get_access_token()
-    if current_access_token and current_access_token != stale_access_token:
-        user_info = get_user_info()
-        if user_info and user_info.get("status") == "success":
-            _schedule_apply_login(user_info, refreshed=True)
-            return
-        logger.warning(
-            "Refresh rejected but another process stored newer credentials; "
-            "preserving them"
-        )
-        _auth_check_started = False
-        return
-
-    # A definitive 401/403 (or a missing token) requires reauthentication.
-    logger.info("Token refresh was definitively rejected, clearing credentials")
-    clear_credentials()
+    # Both failed — clear tokens and show login panel
+    logger.info("Token refresh failed, clearing credentials")
+    delete_access_token()
+    delete_refresh_token()
 
     def _mark_expired():
         wm = getattr(bpy.context, 'window_manager', None)
@@ -307,8 +252,6 @@ def _auth_check_background() -> None:
                 if hasattr(wm, 'mixie_chat_session_expired'):
                     wm.mixie_chat_session_expired = False
                 wm.mixie_chat_login_error = ""
-
-                _capture_session_started("sso_relogin")
 
                 if user_info and user_info.get("status") == "success":
                     email = user_info["data"].get("email", "")
@@ -434,7 +377,6 @@ class MIXIE_CHAT_OT_login(Operator):
                         live_wm.mixie_chat_is_logged_in = True
                         if hasattr(live_wm, 'mixie_chat_session_expired'):
                             live_wm.mixie_chat_session_expired = False
-                        _capture_session_started("interactive_login")
 
                         if user_info and user_info.get("status") == "success":
                             email = user_info["data"].get("email", "")
@@ -490,18 +432,9 @@ class MIXIE_CHAT_OT_logout(Operator):
         _auth_check_started = False
         _auto_connect_scheduled = False
 
-        # Session-end telemetry MUST run before the credentials are
-        # cleared: capture() drops events without an auth token. The
-        # once-guard in capture_session_ended is correct here — a logout
-        # ends the session, and a later atexit must not double-fire.
-        try:
-            from mixar.bootstrap.analytics_module import capture_session_ended
-            capture_session_ended("logout")
-        except Exception as exc:
-            logger.debug("logout session-end capture failed: %s", exc)
-
         # Delete tokens from keyring
-        clear_credentials()
+        delete_access_token()
+        delete_refresh_token()
 
         # Clear cached generation configs
         invalidate_generation_caches()

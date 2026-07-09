@@ -39,6 +39,15 @@ class MixieAssetTrainingState(PropertyGroup):
     has_model: BoolProperty(name="Has Trained Model", default=False)
     auto_check_done: BoolProperty(name="Auto Check Done", default=False)
     search_image: PointerProperty(type=bpy.types.Image, name="Search Image")
+    match_threshold: FloatProperty(
+        name="Match Threshold",
+        description=(
+            "Similarity cutoff (0-1) the modelling agent uses to reuse an asset "
+            "from your library instead of modelling it from scratch. Higher = only "
+            "very close matches are reused"
+        ),
+        default=0.7, min=0.0, max=1.0, subtype='FACTOR',
+    )
 
 
 class MIXIE_OT_train_asset_model(Operator):

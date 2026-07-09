@@ -131,10 +131,8 @@ void mixie_chat_render_messages(const bContext *C,
       /* Visibility culling: skip drawing messages entirely outside viewport */
       float msg_top = layout.y_pos + layout.bubble_height + metrics.label_height;
       float msg_bottom = layout.y_pos - layout.slot_todo_height -
-                         layout.slot_actions_height - layout.slot_steps_height -
-                         layout.thinking_height - layout.feedback_row_height -
-                         layout.feedback_submitted_comment_height -
-                         layout.feedback_comment_input_height - action_zone_h;
+                          layout.slot_actions_height - layout.slot_steps_height -
+                          layout.thinking_height - action_zone_h;
       if (msg_top < v2d->cur.ymin || msg_bottom > v2d->cur.ymax) {
         message_index++;
         RNA_property_collection_next(&iter);
@@ -187,22 +185,15 @@ void mixie_chat_render_messages(const bContext *C,
                                    combined_todo,
                                    sizeof(combined_todo));
 
-        /* Draw single combined todo bubble. Todo text wraps at content_width
-         * (see the layout pass), so the bubble must span the full content
-         * area — bubble_width is fitted to the main text (e.g. a short
-         * loader line) and can be narrower, which would let the wrapped
-         * todo text overflow the bubble. Same formula as the steps card. */
+        /* Draw single combined todo bubble */
         float todo_bubble_y = layout.y_pos - metrics.bubble_spacing;
         ChatBubbleStyle slot_todo_style = layout.style;
         chat_ui_get_prompt_button_color(slot_todo_style.bg_color);
 
-        const float todo_block_width = layout.content_width +
-                                       2.0f * slot_todo_style.h_padding +
-                                       4.0f * UI_SCALE_FAC;
         chat_ui_draw_bubble(&slot_todo_style, combined_todo,
                             layout.bubble_x,
                             todo_bubble_y - layout.slot_todo_height,
-                            todo_block_width, layout.slot_todo_height,
+                            layout.bubble_width, layout.slot_todo_height,
                             layout.content_width);
       }
 
@@ -216,19 +207,12 @@ void mixie_chat_render_messages(const bContext *C,
           action_y -= layout.slot_todo_height + metrics.bubble_spacing;
         }
 
-        /* Action labels wrap at content_width like the todo/steps cards, so
-         * the buttons span the full content area too (bubble_width can be
-         * narrower than the wrapped label). Bounds must match the draw. */
-        const float action_block_width = layout.content_width +
-                                         2.0f * layout.style.h_padding +
-                                         4.0f * UI_SCALE_FAC;
-
         for (int i = 0; i < layout.slot_action_count; i++) {
           ActionSlotData &action = mutable_layout.slot_actions[i];
 
           /* Calculate bounds */
           action.bounds.xmin = layout.bubble_x;
-          action.bounds.xmax = layout.bubble_x + action_block_width;
+          action.bounds.xmax = layout.bubble_x + layout.bubble_width;
           action.bounds.ymin = action_y - action.height;
           action.bounds.ymax = action_y;
 
@@ -255,7 +239,7 @@ void mixie_chat_render_messages(const bContext *C,
 
           /* Draw action bubble */
           chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
-                              action.bounds.ymin, action_block_width,
+                              action.bounds.ymin, layout.bubble_width,
                               action.height, layout.content_width);
 
           action_y -= action.height + metrics.bubble_spacing;
@@ -370,8 +354,6 @@ void mixie_chat_render_messages(const bContext *C,
                                      1.0f);
       }
 
-      mixie_chat_render_feedback(C, region, &msg_ptr, metrics, layout);
-
       /* Draw text selection highlight if this message is selected */
       if (smixie && smixie->sel_message_index == message_index &&
           smixie->sel_start != smixie->sel_end) {
@@ -413,7 +395,7 @@ void mixie_chat_render_messages(const bContext *C,
 
   RNA_property_collection_end(&iter);
 
-  /* Update cursor based on slot action, action button, and feedback hover states */
+  /* Update cursor based on slot action and action button hover states */
   bool any_button_hovered = false;
   for (const MessageLayoutData &layout : rt->layout_cache) {
     for (int i = 0; i < layout.slot_action_count; i++) {
@@ -430,22 +412,13 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
     }
-    /* Feedback stars intentionally keep the default cursor — the fill
-     * preview is their hover affordance (see mixie_chat_main_region_cursor). */
     if (any_button_hovered) {
       break;
     }
   }
 
   if (win) {
-    /* The Agent Bubble never shows the hand cursor (see
-     * mixie_chat_main_region_cursor) — hover highlights still draw. */
-    ScrArea *cursor_area = CTX_wm_area(C);
-    const bool suppress_hand = (cursor_area &&
-                                cursor_area->spacetype == SPACE_AGENT_BUBBLE);
-    WM_cursor_set(win,
-                  (any_button_hovered && !suppress_hand) ? WM_CURSOR_HAND :
-                                                           WM_CURSOR_DEFAULT);
+    WM_cursor_set(win, any_button_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
   }
 
   /* Request redraw while slide-in animation is active */

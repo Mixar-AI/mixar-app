@@ -5,7 +5,7 @@
 
 Mixar is publishing the Blender-side client source first. External pull requests are not open for general contribution yet.
 
-For questions, build help, and general discussion, the fastest channel is the **Mixar Discord**: https://discord.gg/YVqvkQx8rX. Use GitHub issues for the specific reports listed under "Before Opening An Issue" below.
+For questions, build help, and general discussion, the fastest channel is the **Mixar Discord**: https://discord.gg/HJNMUesyp. Use GitHub issues for the specific reports listed under "Before Opening An Issue" below.
 
 ## Current Contribution Status
 

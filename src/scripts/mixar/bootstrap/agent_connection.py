@@ -99,14 +99,6 @@ def unregister() -> None:
     global _init_timer_registered
 
     try:
-        from mixar.modules.space_mixie_chat.core.export_destination import (
-            clear_all_destinations,
-        )
-        clear_all_destinations()
-    except ImportError:
-        pass
-
-    try:
         if bpy.app.timers.is_registered(_delayed_init):
             bpy.app.timers.unregister(_delayed_init)
             logger.debug("Agent connection timer unregistered")

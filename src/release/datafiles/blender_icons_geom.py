@@ -165,7 +165,7 @@ def mesh_data_lists_from_mesh(me, material_colors):
         # we only write tris now
         if len(loops_poly) != 3:
             raise RuntimeError(
-                f"Non-triangle face {p.index} in {me.name}; "
+                f"Non-triangle face {p.index} in {ob.name}; "
                 "triangulate before exporting icons."
             )
 

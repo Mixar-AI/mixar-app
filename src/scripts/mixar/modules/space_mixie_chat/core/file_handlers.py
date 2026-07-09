@@ -69,10 +69,7 @@ def _on_load_pre(*_args) -> None:
     Iterates all scenes and aborts any that have active sessions.
     """
     import bpy
-    from .export_destination import clear_all_destinations
     from .session import get_session_manager
-
-    clear_all_destinations()
 
     session = get_session_manager()
 
@@ -179,9 +176,6 @@ def register():
 
 def unregister():
     """Remove load handlers."""
-    from .export_destination import clear_all_destinations
-
-    clear_all_destinations()
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
     if _on_load_post in bpy.app.handlers.load_post:

@@ -24,7 +24,6 @@ from ...core.moodboard_utils import (
     validate_selection_region,
     reset_tool_state,
 )
-from ...core.media_utils import is_still_item
 
 
 def _auto_trigger_box_sam():
@@ -35,44 +34,6 @@ def _auto_trigger_box_sam():
     except Exception:
         pass
     return None  # one-shot timer
-
-
-def _auto_trigger_lasso_sam():
-    """Start SAM refinement after the modal lasso capture is finalized."""
-    try:
-        if bpy.ops.mixie.lasso_select_sam.poll():
-            bpy.ops.mixie.lasso_select_sam('INVOKE_DEFAULT')
-    except Exception:
-        pass
-    return None
-
-
-def _snapshot_lasso_loop(state) -> bool:
-    """Copy the active polygon into the completed multi-loop collection."""
-    if len(state.lasso_points) < LASSO_MIN_POINTS:
-        return False
-    loop = state.lasso_loops.add()
-    for point in state.lasso_points:
-        copied = loop.points.add()
-        copied.x = point.x
-        copied.y = point.y
-    state.lasso_select_has_selection = True
-    return True
-
-
-def _commit_lasso_loop(state) -> bool:
-    """Snapshot one loop and preserve the existing local mask behavior."""
-    if not _snapshot_lasso_loop(state):
-        return False
-    try:
-        result = bpy.ops.mixie.moodboard_apply_lasso_mask(invert=False)
-        if result != {'FINISHED'}:
-            state.lasso_loops.remove(len(state.lasso_loops) - 1)
-            return False
-    except Exception:
-        state.lasso_loops.remove(len(state.lasso_loops) - 1)
-        return False
-    return True
 
 
 class MIXIE_OT_moodboard_box_mask_tool(Operator):
@@ -87,7 +48,7 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
         if not hasattr(context.scene, 'mixie_moodboard_images'):
             return False
         selected = [i for i, img in enumerate(context.scene.mixie_moodboard_images)
-                    if img.selected and is_still_item(img)]
+                    if img.selected and img.image]
         return len(selected) == 1
 
     def modal(self, context, event):
@@ -153,14 +114,14 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Surface the segments panel (Character Parts / Scene Gen fallback)
-        from ..sidebar_ui_helpers import focus_segments_panel
-        focus_segments_panel(context)
+        # Surface the Scene Gen tab's Segments to 3D mode
+        from ..sidebar_ui_helpers import focus_scene_gen_segments
+        focus_scene_gen_segments(context)
 
         # Find the selected image
         selected_idx = -1
         for i, img in enumerate(scene.mixie_moodboard_images):
-            if img.selected and is_still_item(img):
+            if img.selected and img.image:
                 selected_idx = i
                 break
 
@@ -259,25 +220,18 @@ class MIXIE_OT_moodboard_apply_box_mask(Operator):
 
 
 class MIXIE_OT_moodboard_lasso_tool(Operator):
-    """Capture one or more freeform loops for SAM3 refinement."""
+    """Activate lasso tool - click and drag to draw freeform mask region"""
     bl_idname = "mixie.moodboard_lasso_tool"
-    bl_label = "Multi-Lasso Mask"
-    bl_description = "Draw loops, release after each one, then press Enter to refine with SAM3 (L)"
+    bl_label = "Lasso Tool"
+    bl_description = "Activate lasso tool - click and drag to draw freeform mask region (L)"
     bl_options = {'REGISTER', 'BLOCKING'}
-
-    create_nodes: BoolProperty(
-        name="Create Nodes",
-        description="Spawn a connected mask-detail node for each refined loop",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
 
     @classmethod
     def poll(cls, context):
         if not hasattr(context.scene, 'mixie_moodboard_images'):
             return False
         selected = [i for i, img in enumerate(context.scene.mixie_moodboard_images)
-                    if img.selected and is_still_item(img)]
+                    if img.selected and img.image]
         return len(selected) == 1
 
     def modal(self, context, event):
@@ -290,7 +244,6 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
             state.is_drawing = False
             state.target_image_index = -1
             state.lasso_points.clear()
-            state.lasso_loops.clear()
             state.lasso_select_has_selection = False
             state.lasso_select_pending = False
             context.area.tag_redraw()
@@ -316,16 +269,11 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                     state.is_drawing = False
                     # Apply mask on mouse release if we have enough points
                     if len(state.lasso_points) >= LASSO_MIN_POINTS:
-                        if not _commit_lasso_loop(state):
-                            self.report({'ERROR'}, "Could not save lasso loop")
-                            return {'CANCELLED'}
+                        bpy.ops.mixie.moodboard_apply_lasso_mask(invert=False)
+                        # Mark selection as ready for SAM refinement
+                        state.lasso_select_has_selection = True
                         context.area.tag_redraw()
-                        self.report(
-                            {'INFO'},
-                            f"Lasso loop {len(state.lasso_loops)} added. "
-                            "Draw another loop or press Enter to finish.",
-                        )
-                        return {'RUNNING_MODAL'}
+                        return {'FINISHED'}
                     else:
                         self.report({'WARNING'}, f"Need at least {LASSO_MIN_POINTS} points to create lasso mask")
                         state.lasso_points.clear()
@@ -355,15 +303,12 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                 context.area.tag_redraw()
             return {'RUNNING_MODAL'}
 
-        # Enter finalizes the collected loops and starts SAM3 refinement.
+        # Handle Enter to apply mask (non-inverted) - kept as fallback
         if event.type == 'RET' and event.value == 'PRESS':
-            if len(state.lasso_points) >= LASSO_MIN_POINTS and state.is_drawing:
-                state.is_drawing = False
-                _commit_lasso_loop(state)
-            if len(state.lasso_loops) == 0:
+            if len(state.lasso_points) >= LASSO_MIN_POINTS:
+                bpy.ops.mixie.moodboard_apply_lasso_mask(invert=False)
+            else:
                 self.report({'WARNING'}, f"Need at least {LASSO_MIN_POINTS} points to create lasso mask")
-                return {'RUNNING_MODAL'}
-            bpy.app.timers.register(_auto_trigger_lasso_sam, first_interval=0.0)
             return {'FINISHED'}
 
         return {'PASS_THROUGH'}
@@ -372,14 +317,14 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Surface the segments panel (Character Parts / Scene Gen fallback)
-        from ..sidebar_ui_helpers import focus_segments_panel
-        focus_segments_panel(context)
+        # Surface the Scene Gen tab's Segments to 3D mode
+        from ..sidebar_ui_helpers import focus_scene_gen_segments
+        focus_scene_gen_segments(context)
 
         # Find the selected image
         selected_idx = -1
         for i, img in enumerate(scene.mixie_moodboard_images):
-            if img.selected and is_still_item(img):
+            if img.selected and img.image:
                 selected_idx = i
                 break
 
@@ -392,17 +337,10 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         state.target_image_index = selected_idx
         state.is_drawing = False
         state.lasso_points.clear()
-        state.lasso_loops.clear()
-        # When launched from the "Multi Lasso Mask" node action, each refined
-        # loop also spawns a connected MASK_DETAIL node.
-        state.lasso_creates_nodes = self.create_nodes
 
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()
-        self.report(
-            {'INFO'},
-            "Draw one or more loops. Press Enter to refine them with SAM3, ESC to cancel.",
-        )
+        self.report({'INFO'}, "Click and drag to draw freeform selection. Enter to apply mask, ESC to cancel.")
         return {'RUNNING_MODAL'}
 
 

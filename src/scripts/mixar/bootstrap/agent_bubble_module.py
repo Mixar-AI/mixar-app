@@ -313,17 +313,6 @@ def _draw_topbar_open_agent(self, context):
             icon='OUTLINER_OB_LIGHT',
         )
 
-    # Update badge — appears just right of Open Mixie whenever an update
-    # is known; clicking re-shows the sticky update toast.
-    try:
-        from mixar.modules.common.updates.ui.topbar_badge import (
-            draw_update_badge,
-        )
-
-        draw_update_badge(layout)
-    except Exception:
-        pass
-
 
 _topbar_hook_appended = False
 

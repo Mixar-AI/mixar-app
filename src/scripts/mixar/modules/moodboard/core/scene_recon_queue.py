@@ -20,7 +20,6 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -37,8 +36,6 @@ from .scene_recon_constants import (
 
 logger = get_logger(__name__)
 
-_SERVICE_KEY = "scene_reconstruction"
-
 
 # ---------------------------------------------------------------------------
 # Job
@@ -52,7 +49,7 @@ class SceneReconJob(Job):
     # Submission payload
     image_bytes_b64: str = ""
     generate_mesh: bool = True
-    min_mask_pixels: int = 6000
+    min_mask_pixels: int = 2000
     mesh_postprocess: bool = True
     texture_baking: bool = False
     vertex_color: bool = True
@@ -94,7 +91,7 @@ class SceneReconJob(Job):
             "vertex_color": self.vertex_color,
         }
         service.enqueue(
-            job_type=_SERVICE_KEY,
+            job_type="scene_reconstruction",
             model="sam3d",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -340,7 +337,7 @@ def enqueue_scene_recon_job(
     *,
     image_bytes: bytes,
     generate_mesh: bool = True,
-    min_mask_pixels: int = 6000,
+    min_mask_pixels: int = 2000,
     mesh_postprocess: bool = True,
     texture_baking: bool = False,
     vertex_color: bool = True,
@@ -354,7 +351,6 @@ def enqueue_scene_recon_job(
     job = SceneReconJob(
         feature_key=FEATURE_SCENE_RECON,
         label="Scene Reconstruction",
-        service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         generate_mesh=generate_mesh,
         min_mask_pixels=min_mask_pixels,
@@ -368,9 +364,6 @@ def enqueue_scene_recon_job(
         _on_error_callback=on_error,
     )
     queue = _get_scene_recon_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("scene_gen")
     if not queue.submit(job):
         logger.warning("[SceneRecon] duplicate job rejected")
         return None

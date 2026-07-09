@@ -13,7 +13,6 @@
  *   - mixie_chat_messages_render.cc: message render loop
  */
 
-#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -354,61 +353,6 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
     needs_layout_rebuild = true;
   } else if (layout_epoch != rt->prev_layout_epoch) {
     needs_layout_rebuild = true;
-  } else if (!g_msg_props.initialized) {
-    /* The global RNA property cache was cleared while our layout cache
-     * stayed populated. This happens whenever ANY SpaceMixieChat is freed —
-     * mixie_chat_free() clears the process-global caches — including the
-     * spaces inside the temp Main that the workspace "+" menu / append
-     * reads from startup.blend and immediately frees
-     * (BKE_blendfile_workspace_config_data_free -> BKE_main_free -> space
-     * free callback). Without this trigger the render path null-guards
-     * every g_msg_props access, silently drawing zero-length text: the
-     * bubble/chat goes blank until a resize changes winx and forces a
-     * rebuild. Rebuilding re-runs init_message_property_cache(), healing
-     * the cache on the very next draw. */
-    needs_layout_rebuild = true;
-  }
-
-  /* Check if feedback state changed (visibility, rating, or expansion) on any
-   * cached message. Uses message_index stored in layout entries to look up the
-   * right RNA item. */
-  if (!needs_layout_rebuild && !rt->layout_cache.is_empty() &&
-      g_msg_props.feedback_visible && g_msg_props.feedback_rating)
-  {
-    for (int i = rt->layout_cache.size() - 1; i >= 0; i--) {
-      const MessageLayoutData &cached = rt->layout_cache[i];
-      if (!cached.has_feedback && !cached.is_slot_based) {
-        continue;  /* Only slot-based messages can have feedback */
-      }
-      PointerRNA msg_ptr;
-      if (!RNA_property_collection_lookup_int(
-              &scene_ptr, prop, cached.message_index, &msg_ptr)) {
-        continue;
-      }
-      bool rna_fb = RNA_property_boolean_get(&msg_ptr, g_msg_props.feedback_visible);
-      int rna_rating = RNA_property_int_get(&msg_ptr, g_msg_props.feedback_rating);
-      bool rna_expanded = g_msg_props.feedback_comment_expanded ?
-          RNA_property_boolean_get(&msg_ptr, g_msg_props.feedback_comment_expanded) :
-          false;
-      int rna_status = g_msg_props.feedback_status ?
-          RNA_property_int_get(&msg_ptr, g_msg_props.feedback_status) : 0;
-      /* Compare submitted-comment lengths clamped to the display buffer so a
-       * server-accepted comment longer than the cached copy can't trigger a
-       * rebuild on every draw. */
-      int rna_submitted_len = g_msg_props.feedback_submitted_comment ?
-          RNA_property_string_length(&msg_ptr, g_msg_props.feedback_submitted_comment) : 0;
-      const int display_max = FEEDBACK_COMMENT_DISPLAY_MAX - 1;
-      rna_submitted_len = std::min(rna_submitted_len, display_max);
-      const int cached_submitted_len = int(strlen(cached.feedback_submitted_comment));
-      if (rna_fb != cached.has_feedback || rna_rating != cached.feedback_rating ||
-          rna_expanded != cached.feedback_comment_expanded ||
-          rna_status != cached.feedback_status ||
-          rna_submitted_len != cached_submitted_len)
-      {
-        needs_layout_rebuild = true;
-        break;
-      }
-    }
   }
 
   /* Build or reuse layout cache */

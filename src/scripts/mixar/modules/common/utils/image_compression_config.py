@@ -40,10 +40,6 @@ SERVICE_SETTINGS: Dict[str, CompressionSettings] = {
     # Moderate resolution is sufficient; the model down-samples internally.
     "imagegen": CompressionSettings(max_dimension=2048, quality=85),
 
-    # Seedance visual references. Preserve detail while keeping up to nine
-    # selected stills inexpensive to stage alongside linked video files.
-    "video_gen": CompressionSettings(max_dimension=2048, quality=90),
-
     # Blockout-to-Render (Lookdev) – depth map rendered from the 3D scene.
     # Depth fidelity matters more than colour, keep resolution higher.
     "lookdev": CompressionSettings(max_dimension=2048, quality=90),
@@ -55,17 +51,6 @@ SERVICE_SETTINGS: Dict[str, CompressionSettings] = {
     # Image-to-3D – single input image for mesh reconstruction.
     # Higher resolution preserves geometry detail for the reconstruction model.
     "image_to_3d": CompressionSettings(max_dimension=2048, quality=90),
-
-    # Turnaround detection – a model sheet that the backend SPLITS into
-    # per-view crops. Each crop is only a fraction of the sheet, so the
-    # upload resolution divides down into the actual 3D input: at 2048 a
-    # four-panel sheet yields ~500 px views, at 4096 it yields ~1000 px.
-    # 4096 / 20 MB is the backend's hard ceiling (core/validators.py) —
-    # do not raise it, larger uploads are rejected outright. The extra
-    # pixels cost nothing at detection time (the backend downscales its
-    # own copy to 1024 to find the panels, then crops the full-resolution
-    # original), so they go entirely into panel quality.
-    "turnaround_detect": CompressionSettings(max_dimension=4096, quality=92),
 
     # Scene Segment (SAM / Magic Select) – image uploaded for segmentation.
     # SAM works well at ≤2048 px; quality can be slightly lower.

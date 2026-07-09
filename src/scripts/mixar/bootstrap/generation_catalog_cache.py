@@ -2,103 +2,76 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Stale-while-revalidate cache for ``GET /api/v1/generation-catalog``.
+"""
+Generation Catalog Cache Module.
 
-The catalog describes capabilities, services, models, parameter schemas,
-styles, and credit costs. Startup loads its persisted payload before a delayed
-ETag revalidation; successful swaps rebuild dynamic parameters and redraw the
-UI. A lifecycle epoch prevents late workers from repopulating data after
-logout/unregister. Persistence uses Blender's per-user Mixar data directory,
-with ``~/.mixar`` as a fallback.
+Caches the unified generation catalog (``GET /api/v1/generation-catalog``)
+that describes all generation capabilities, their services, models,
+parameter schemas, styles and credit costs. This is the successor of the
+per-feature ``imagegen_cache.py`` / ``model_3d_cache.py`` pattern — those
+files were retired (Stage 3); every consumer now reads this cache with
+static hardcoded lists as last-resort fallbacks.
+
+Behaviour (mirrors the proven imagegen_cache architecture):
+- ``register()`` loads the last persisted payload from disk (instant,
+  stale-while-revalidate) and schedules a background fetch ~2s after
+  startup via ``bpy.app.timers``.
+- All cache state lives behind a module lock; the background thread only
+  holds the lock for guard checks and the final swap — never during I/O.
+- Revalidation sends ``If-None-Match`` with the last ``ETag``; a ``304``
+  keeps the current payload, a ``200`` swaps it, persists it to disk and
+  redraws MIXIE areas (plus rebuilds the dynamic parameter engine).
+- ``clear_generation_catalog_cache()`` on logout, manual
+  ``refresh_generation_catalog_cache()`` for the refresh buttons / login.
+
+Disk persistence uses the same per-user Mixar data dir as the onboarding
+persistence: ``bpy.utils.user_resource('DATAFILES', path='mixar')`` with a
+``~/.mixar`` fallback.
 """
 
+import json
+import os
 import threading
 from typing import Any, Dict, List, Optional, Tuple
 
-from mixar.bootstrap.generation_catalog import storage as generation_catalog_storage
-from mixar.bootstrap.generation_catalog.queries import GenerationCatalogQueries
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
 
 logger = get_logger(__name__)
 
+_DISK_FILENAME = "generation_catalog.json"
+
 # Module-level cache — all reads and writes must be protected by _lock to
 # prevent TOCTOU races between the background fetch thread and main-thread
 # enum callbacks / draw code.
 _lock = threading.Lock()
-# Disk I/O is serialized separately so logout cannot race a stale worker's
-# save, while UI readers are not blocked behind fsync/replace.
-_persistence_lock = threading.Lock()
 _catalog: Optional[Dict[str, Any]] = None  # the response "data" object
 _etag: Optional[str] = None
 _cache_error: Optional[str] = None
 _is_loading: bool = False
 _shutdown_requested: bool = False
-# Monotonic lifecycle token.  Every logout/register/unregister invalidates
-# workers started by the previous lifecycle so a late response can never
-# repopulate another user's cache (or reset a newer worker's loading state).
-_lifecycle_epoch: int = 0
-
-# EnumProperty ``items`` callbacks MUST keep a persistent Python reference to
-# the strings they return — Blender stores the raw ``char*`` and will render
-# garbage or crash if the strings are garbage-collected. Building a fresh list
-# on every callback (they fire on every redraw) is exactly that hazard. Cache
-# each built list keyed by (kind, key, version); ``_enum_version`` bumps on
-# every catalog swap/clear (always under ``_lock``) so callers get a stable,
-# strongly-referenced object that is only rebuilt when the catalog changes.
-_enum_version: int = 0
-_enum_cache: Dict[Tuple[str, str, int], List[Tuple[str, str, str]]] = {}
-
-# Placeholder item lists are module-level constants (not rebuilt per call) so
-# their strings also outlive the callback.
-_ENUM_LOADING = [("LOADING", "Loading...", "Fetching generation catalog")]
 
 
-def _catalog_snapshot() -> Optional[Dict[str, Any]]:
-    with _lock:
-        return _catalog
+# ============================================================================
+# DISK PERSISTENCE
+# ============================================================================
 
 
-_queries = GenerationCatalogQueries(_catalog_snapshot)
+def _data_dir() -> str:
+    """Per-user Mixar data dir (same location onboarding persistence uses)."""
+    try:
+        import bpy
+
+        path = bpy.utils.user_resource("DATAFILES", path="mixar")
+        if path:
+            return path
+    except Exception:
+        pass
+    return os.path.join(os.path.expanduser("~"), ".mixar")
 
 
-def _bump_enum_version_locked() -> None:
-    """Invalidate the enum-item cache. Caller MUST hold ``_lock``."""
-    global _enum_version
-    _enum_version += 1
-
-
-def _enum_cached(kind: str, key: str, version: int, builder):
-    """Return a memoized enum-item list, holding a persistent reference.
-
-    Rebuilds via ``builder()`` only when this (kind, key, version) is unseen,
-    then prunes entries from versions older than the previous one (Blender may
-    still hold ``char*`` into the immediately-previous version during a redraw).
-    """
-    cache_key = (kind, key, version)
-    cached = _enum_cache.get(cache_key)
-    if cached is not None:
-        return cached
-    items = builder()
-    _enum_cache[cache_key] = items
-    stale = [k for k in _enum_cache if k[2] < version - 1]
-    for k in stale:
-        del _enum_cache[k]
-    return items
-
-
-def memoize_enum_items(kind: str, key: str, builder):
-    """Memoize an EnumProperty ``items`` list built by other modules.
-
-    Public wrapper around the internal enum cache so callers outside this
-    module (e.g. ``generation_params.selector``) can return persistently
-    referenced lists too. ``builder()`` runs only when this (kind, key)
-    is unseen for the current catalog version. Enum callbacks run on the
-    main thread, so the cache dict itself needs no extra lock.
-    """
-    with _lock:
-        version = _enum_version
-    return _enum_cached(kind, key, version, builder)
+def _disk_path() -> str:
+    return os.path.join(_data_dir(), _DISK_FILENAME)
 
 
 def _load_from_disk() -> bool:
@@ -107,19 +80,46 @@ def _load_from_disk() -> bool:
     Returns True when a payload was loaded. Never raises.
     """
     global _catalog, _etag
-    loaded = generation_catalog_storage.load()
-    if loaded is None:
+    path = _disk_path()
+    if not os.path.isfile(path):
         return False
-    data, etag = loaded
-    with _lock:
-        _catalog = data
-        _etag = etag
-        _bump_enum_version_locked()
-    logger.info(
-        "Generation catalog loaded from disk cache (version=%s)",
-        data.get("catalog_version", "?"),
-    )
-    return True
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            stored = json.load(fh)
+        data = stored.get("data") if isinstance(stored, dict) else None
+        if not isinstance(data, dict) or not data.get("capabilities"):
+            return False
+        with _lock:
+            _catalog = data
+            _etag = stored.get("etag") or None
+        logger.info(
+            "Generation catalog loaded from disk cache (version=%s)",
+            data.get("catalog_version", "?"),
+        )
+        return True
+    except Exception as exc:
+        logger.warning("Generation catalog disk cache read failed: %s", exc)
+        return False
+
+
+def _save_to_disk(etag: Optional[str], data: Dict[str, Any]) -> None:
+    """Persist the payload + etag. Never raises."""
+    path = _disk_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({"etag": etag, "data": data}, fh)
+    except Exception as exc:
+        logger.warning("Generation catalog disk cache write failed: %s", exc)
+
+
+def _delete_disk_cache() -> None:
+    try:
+        path = _disk_path()
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception as exc:
+        logger.warning("Generation catalog disk cache delete failed: %s", exc)
 
 
 # ============================================================================
@@ -150,17 +150,82 @@ def get_catalog_version() -> Optional[str]:
     return None
 
 
-get_capabilities = _queries.get_capabilities
-get_capability = _queries.get_capability
-get_capability_label = _queries.get_capability_label
-get_capability_for_service = _queries.get_capability_for_service
-get_services = _queries.get_services
-get_service = _queries.get_service
-get_models = _queries.get_models
-get_model = _queries.get_model
-get_default_model_slug = _queries.get_default_model_slug
-get_styles = _queries.get_styles
-get_credit_cost = _queries.get_credit_cost
+def get_capabilities() -> List[Dict[str, Any]]:
+    """All capabilities sorted by sort_order. Empty list when not loaded."""
+    with _lock:
+        caps = (_catalog or {}).get("capabilities") or []
+    return sorted(caps, key=lambda c: c.get("sort_order", 0))
+
+
+def get_capability(capability_key: str) -> Optional[Dict[str, Any]]:
+    for cap in get_capabilities():
+        if cap.get("key") == capability_key:
+            return cap
+    return None
+
+
+def get_services(
+    capability_key: str, surface: str = "moodboard"
+) -> List[Dict[str, Any]]:
+    """Services of a capability filtered by surface, sorted by sort_order.
+
+    Paint-surfaced services (e.g. brush_gen) never appear in moodboard tabs.
+    """
+    cap = get_capability(capability_key)
+    if not cap:
+        return []
+    services = [
+        s for s in (cap.get("services") or [])
+        if not surface or s.get("surface") == surface
+    ]
+    return sorted(services, key=lambda s: s.get("sort_order", 0))
+
+
+def get_service(service_key: str) -> Optional[Dict[str, Any]]:
+    """Look up a service by key across all capabilities (any surface)."""
+    for cap in get_capabilities():
+        for svc in cap.get("services") or []:
+            if svc.get("key") == service_key:
+                return svc
+    return None
+
+
+def get_models(service_key: str) -> List[Dict[str, Any]]:
+    svc = get_service(service_key)
+    if not svc:
+        return []
+    return svc.get("models") or []
+
+
+def get_model(service_key: str, slug: str) -> Optional[Dict[str, Any]]:
+    for model in get_models(service_key):
+        if model.get("slug") == slug:
+            return model
+    return None
+
+
+def get_default_model_slug(service_key: str) -> Optional[str]:
+    """Default (or first) model slug for a service, None when not loaded."""
+    models = get_models(service_key)
+    for model in models:
+        if model.get("is_default"):
+            return model.get("slug")
+    if models:
+        return models[0].get("slug")
+    return None
+
+
+def get_styles(generation_type: str) -> List[Dict[str, Any]]:
+    """Styles for a generation type (e.g. ``"image"``)."""
+    with _lock:
+        styles = ((_catalog or {}).get("styles") or {}).get(generation_type)
+    return styles or []
+
+
+def get_credit_cost(feature_key: str) -> Optional[int]:
+    with _lock:
+        costs = (_catalog or {}).get("credit_costs") or {}
+    return costs.get(feature_key)
 
 
 # ============================================================================
@@ -175,28 +240,25 @@ def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
         loading = _is_loading
         loaded = _catalog is not None
         error = _cache_error
-        version = _enum_version
 
     if not loaded:
         if loading:
-            return _ENUM_LOADING
+            return [("LOADING", "Loading...", "Fetching generation catalog")]
         if error:
-            return _enum_cached("model_err", error, version,
-                                lambda: [("ERROR", "Error", error)])
-        return _ENUM_LOADING
+            return [("ERROR", "Error", error)]
+        return [("LOADING", "Loading...", "Fetching generation catalog")]
 
-    def _build():
-        models = get_models(service_key)
-        if not models:
-            return [("NONE", "No models", "No models available")]
-        built = []
-        for m in models:
-            slug = m.get("slug") or ""
-            label = m.get("label") or slug
-            built.append((slug, label, label))
-        return built
-
-    return _enum_cached("model", service_key, version, _build)
+    models = get_models(service_key)
+    if not models:
+        return [("NONE", "No models", "No models available")]
+    items = []
+    for m in models:
+        slug = m.get("slug") or ""
+        label = m.get("label") or slug
+        cost = m.get("credit_cost")
+        desc = f"{label} ({cost} credits)" if cost is not None else label
+        items.append((slug, label, desc))
+    return items
 
 
 def get_style_enum_items(generation_type: str) -> List[Tuple[str, str, str]]:
@@ -205,31 +267,26 @@ def get_style_enum_items(generation_type: str) -> List[Tuple[str, str, str]]:
         loading = _is_loading
         loaded = _catalog is not None
         error = _cache_error
-        version = _enum_version
 
     if not loaded:
         if loading:
-            return _ENUM_LOADING
+            return [("LOADING", "Loading...", "Fetching generation catalog")]
         if error:
-            return _enum_cached("style_err", error, version,
-                                lambda: [("ERROR", "Error", error)])
-        return _ENUM_LOADING
+            return [("ERROR", "Error", error)]
+        return [("LOADING", "Loading...", "Fetching generation catalog")]
 
-    def _build():
-        styles = get_styles(generation_type)
-        if not styles:
-            return [("NONE", "No styles", "No styles available")]
-        return [
-            (
-                s.get("name") or "NONE",
-                s.get("display_name") or s.get("name") or "Unknown",
-                s.get("description") or "",
-            )
-            for s in styles
-            if s.get("name")
-        ]
-
-    return _enum_cached("style", generation_type, version, _build)
+    styles = get_styles(generation_type)
+    if not styles:
+        return [("NONE", "No styles", "No styles available")]
+    return [
+        (
+            s.get("name") or "NONE",
+            s.get("display_name") or s.get("name") or "Unknown",
+            s.get("description") or "",
+        )
+        for s in styles
+        if s.get("name")
+    ]
 
 
 # ============================================================================
@@ -243,18 +300,12 @@ def clear_generation_catalog_cache() -> None:
     Also removes the disk persistence so the next user on this machine
     doesn't render another account's catalog.
     """
-    global _catalog, _etag, _cache_error, _is_loading, _lifecycle_epoch
+    global _catalog, _etag, _cache_error
     with _lock:
-        _lifecycle_epoch += 1
         _catalog = None
         _etag = None
         _cache_error = None
-        _is_loading = False
-        _bump_enum_version_locked()
-    # Serialize deletion with a worker's guarded atomic save. Once this lock
-    # is acquired, no invalidated worker can recreate the file afterward.
-    with _persistence_lock:
-        generation_catalog_storage.delete()
+    _delete_disk_cache()
 
 
 def refresh_generation_catalog_cache() -> None:
@@ -282,21 +333,10 @@ def _on_catalog_swapped() -> None:
         )
 
         rebuild_from_catalog()
-        from mixar.modules.moodboard.core.node_schema import sync_all_node_schemas
-
-        sync_all_node_schemas()
     except ImportError:
         pass
     except Exception as exc:
         logger.error("Generation param engine rebuild failed: %s", exc)
-    # Re-register moodboard sidebar tabs whose capability label was renamed
-    # (no-op until the panels module loads / when nothing changed). We are
-    # on a main-thread timer here, as bpy class re-registration requires.
-    try:
-        from mixar.modules.moodboard.ui.moodboard_tab_labels import refresh_tab_labels
-        refresh_tab_labels()
-    except Exception as exc:
-        logger.error("Moodboard tab label refresh failed: %s", exc)
     trigger_ui_redraw()
     return None
 
@@ -306,14 +346,8 @@ def _schedule_catalog_swapped() -> None:
     try:
         import bpy
 
-        # Keep the lifecycle check and registration atomic with unregister().
-        # A fetch may finish after shutdown has begun; without the lock it can
-        # recreate this timer after unregister() has already removed it.
-        with _lock:
-            if _shutdown_requested:
-                return
-            if not bpy.app.timers.is_registered(_on_catalog_swapped):
-                bpy.app.timers.register(_on_catalog_swapped, first_interval=0.0)
+        if not bpy.app.timers.is_registered(_on_catalog_swapped):
+            bpy.app.timers.register(_on_catalog_swapped, first_interval=0.0)
     except Exception:
         pass
 
@@ -333,7 +367,6 @@ def _fetch_data_sync() -> None:
             return
         _is_loading = True
         etag = _etag
-        epoch = _lifecycle_epoch
 
     new_error: Optional[str] = None
     swapped = False
@@ -354,26 +387,20 @@ def _fetch_data_sync() -> None:
             if response.status_code == 304:
                 logger.info("Generation catalog unchanged (304 Not Modified)")
             elif response.success and isinstance(response.data, dict):
-                data = response.data.get("data")
-                capabilities = data.get("capabilities") if isinstance(data, dict) else None
-                # An empty list is authoritative: it is the backend's kill
-                # switch for all generation capabilities, not a malformed
-                # response that should leave stale services visible.
-                if isinstance(data, dict) and isinstance(capabilities, list):
+                data = response.data.get("data") or {}
+                if isinstance(data, dict) and data.get("capabilities"):
                     new_etag = response.headers.get("ETag") or response.headers.get("etag")
-                    with _persistence_lock:
-                        with _lock:
-                            if _shutdown_requested or epoch != _lifecycle_epoch:
-                                return
-                            _catalog = data
-                            _etag = new_etag
-                            _bump_enum_version_locked()
-                        generation_catalog_storage.save(new_etag, data)
+                    with _lock:
+                        if _shutdown_requested:
+                            return
+                        _catalog = data
+                        _etag = new_etag
+                    _save_to_disk(new_etag, data)
                     swapped = True
                     logger.info(
                         "Generation catalog loaded (version=%s, %d capabilities)",
                         data.get("catalog_version", "?"),
-                        len(capabilities),
+                        len(data.get("capabilities") or []),
                     )
                 else:
                     new_error = "Catalog response missing capabilities"
@@ -390,12 +417,9 @@ def _fetch_data_sync() -> None:
 
     finally:
         with _lock:
-            if epoch == _lifecycle_epoch:
-                _cache_error = new_error
-                _is_loading = False
-                do_notify = swapped and not _shutdown_requested
-            else:
-                do_notify = False
+            _cache_error = new_error
+            _is_loading = False
+            do_notify = swapped and not _shutdown_requested
         if do_notify:
             _schedule_catalog_swapped()
 
@@ -441,15 +465,11 @@ def register() -> None:
     Loads the persisted payload synchronously (instant stale render) and
     schedules the background revalidation ~2s after startup.
     """
-    global _shutdown_requested, _is_loading, _lifecycle_epoch
+    global _shutdown_requested
     import bpy
 
-    generation_catalog_storage.initialize_disk_path()
-
     with _lock:
-        _lifecycle_epoch += 1
         _shutdown_requested = False
-        _is_loading = False
 
     if _load_from_disk():
         # Rebuild the parameter engine from the stale payload right away so
@@ -466,11 +486,9 @@ def register() -> None:
 
 def unregister() -> None:
     """Called by bootstrap during shutdown."""
-    global _catalog, _etag, _cache_error, _is_loading, _shutdown_requested, _lifecycle_epoch
+    global _catalog, _etag, _cache_error, _is_loading, _shutdown_requested
     with _lock:
-        _lifecycle_epoch += 1
         _shutdown_requested = True
-        _is_loading = False
 
     try:
         import bpy
@@ -497,4 +515,3 @@ def unregister() -> None:
         _etag = None
         _cache_error = None
         _is_loading = False
-        _bump_enum_version_locked()

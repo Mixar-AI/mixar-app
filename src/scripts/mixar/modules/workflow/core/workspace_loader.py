@@ -124,11 +124,11 @@ def activate_basic_workspace() -> bool:
 
 
 def activate_pro_default_workspace() -> bool:
-    """Activate a Pro-mode workspace, preferring "Layout".
+    """Activate a Pro-mode workspace, preferring "Modeling".
 
-    Falls back to any workspace that isn't Zen Mode if Layout has been
+    Falls back to any workspace that isn't Zen Mode if Modeling has been
     deleted. Without this fallback, flipping to Engine mode after the user
-    deletes Layout would silently fail and leave them on the Zen Mode
+    deletes Modeling would silently fail and leave them on the Zen Mode
     workspace with Pro chrome — an inconsistent state.
     """
     if activate_workspace(PRO_DEFAULT_WORKSPACE_NAME):
@@ -164,14 +164,6 @@ def configure_basic_workspace_chrome() -> None:
     for workspace in bpy.data.workspaces:
         if workspace.name != BASIC_WORKSPACE_NAME:
             continue
-        # Workspaces store the object mode Blender restores on activation.
-        # The Zen Mode workspace is seeded from the "AI Mode" template,
-        # which may have been saved in Edit mode — that would drop the
-        # viewport into Edit mode every time the user enters Zen Mode.
-        # Force Object mode. Idempotent guard avoids redraws that would
-        # close the startup splash popup.
-        if workspace.object_mode != 'OBJECT':
-            workspace.object_mode = 'OBJECT'
         for screen in workspace.screens:
             for area in screen.areas:
                 if area.type != 'VIEW_3D':
@@ -186,11 +178,8 @@ def configure_basic_workspace_chrome() -> None:
                         space.show_region_toolbar = True
                     if not space.show_region_header:
                         space.show_region_header = True
-                    # Tool Settings header (the tool-options strip above the
-                    # main header) stays HIDDEN in Zen Mode for a cleaner
-                    # viewport. Idempotent guard, same splash-safe reason.
-                    if space.show_region_tool_header:
-                        space.show_region_tool_header = False
+                    if not space.show_region_tool_header:
+                        space.show_region_tool_header = True
                     # Zen Mode keeps the viewport clean: relationship lines
                     # are off by default. Same idempotent guard as above so we
                     # don't trigger redraws that would close the splash.
@@ -207,7 +196,7 @@ def apply_ui_mode(mode: str) -> bool:
     """Activate the workspace appropriate for the given UI mode.
 
     Zen mode materializes (if needed) and activates the dedicated Basic
-    Mode workspace; Engine mode lands on Layout. Header/tool-header content
+    Mode workspace; Engine mode lands on Modeling. Header/tool-header content
     is filtered by view3d_header_filter — that runs on every redraw and
     reads context.workspace, so it stays correct across mode flips without
     any explicit call here.

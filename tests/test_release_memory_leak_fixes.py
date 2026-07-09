@@ -40,10 +40,11 @@ def test_scene_gen_clear_all_clears_all_job_state_maps():
 
 
 def test_scene_segment_completed_requests_are_pruned():
-    source = read_src("moodboard/core/scene_segment_requests.py")
+    source = read_src("moodboard/core/scene_segment_manager.py")
 
     assert "state.requests.pop(request.request_id, None)" in source
     assert "state.requests.pop(request_id, None)" in source
+    assert "request.mask_bytes = None" in source
     assert "request.callback = None" in source
 
 

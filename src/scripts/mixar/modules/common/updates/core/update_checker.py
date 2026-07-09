@@ -24,6 +24,8 @@ from .state import UpdateInfo
 logger = get_logger(__name__)
 
 _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+_ALLOWED_INSTALLER_TYPES = frozenset({"dmg", "exe", "msi", "AppImage"})
+_SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 # ============================================================================
@@ -109,37 +111,6 @@ def get_current_version() -> str:
     return get_config().get("app_info", {}).get("version", "0.0.0")
 
 
-def get_runtime_version() -> Optional[str]:
-    """Version of the running binary, for reporting to the backend.
-
-    Prefers the compiled-in Mixar version (``bpy.app.version_string``, built
-    from ``MIXAR_VERSION`` in ``BKE_blender_version.h``) over the ``mixar.json``
-    value, which is served from a process-lifetime config cache and can go
-    stale. When ``version_string`` merely echoes Blender's own version tuple
-    (i.e. not a Mixar build — e.g. scripts running under stock Blender), falls
-    back to :func:`get_current_version`. Returns ``None`` when no real version
-    is known — callers must then omit the version rather than send a
-    placeholder.
-    """
-    version = ""
-    try:
-        import bpy
-
-        match = re.search(r"\d+\.\d+\.\d+", bpy.app.version_string or "")
-        if match:
-            candidate = match.group(0)
-            blender_version = ".".join(str(c) for c in bpy.app.version)
-            if candidate != blender_version:
-                version = candidate
-    except Exception:
-        pass
-    if not version or version == "0.0.0":
-        version = get_current_version()
-    if not version or version == "0.0.0":
-        return None
-    return version
-
-
 # ============================================================================
 # Parse API response
 # ============================================================================
@@ -149,8 +120,8 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
     """Convert the raw API ``/check`` response dict into an ``UpdateInfo``.
 
     Handles the server envelope: ``{"status": "success", "data": {...}}``.
-    Only metadata is consumed — the update flow is browser-based, so the
-    nested ``download`` binary object is ignored entirely.
+    The inner ``data`` dict contains update fields with a nested
+    ``download`` object for binary info.
 
     Returns ``None`` when the response indicates *no update available*.
     """
@@ -160,9 +131,28 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
     if not isinstance(data, dict) or not data.get("update_available", False):
         return None
 
+    download = data.get("download") or {}
+
     latest_version = data.get("latest_version", "") or ""
     if not _SEMVER_RE.match(latest_version):
         logger.error("Rejecting update: malformed latest_version %r", latest_version)
+        return None
+
+    raw_installer_type = download.get("installer_type")
+    if raw_installer_type is None or raw_installer_type == "":
+        installer_type = ""
+    else:
+        installer_type = str(raw_installer_type).lstrip(".")
+        if installer_type not in _ALLOWED_INSTALLER_TYPES:
+            logger.error("Rejecting update: unknown installer_type %r", raw_installer_type)
+            return None
+
+    sha256 = (download.get("sha256") or "").strip()
+    if not _SHA256_HEX_RE.match(sha256):
+        logger.info(
+            "Skipping update %s: server SHA-256 missing or invalid (%r)",
+            latest_version, sha256,
+        )
         return None
 
     return UpdateInfo(
@@ -173,7 +163,10 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         unsupported=data.get("unsupported", False),
         changelog_summary=data.get("changelog_summary", ""),
         changelog_url=data.get("changelog_url", ""),
-        browser_download_url=data.get("browser_download_url", ""),
+        download_url=download.get("url", ""),
+        download_size_bytes=download.get("size_bytes", 0),
+        sha256=sha256,
+        installer_type=installer_type,
     )
 
 

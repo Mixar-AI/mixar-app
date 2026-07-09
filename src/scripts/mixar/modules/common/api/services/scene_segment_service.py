@@ -319,7 +319,6 @@ class SceneSegmentService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-        timeout: float = 30.0,
     ) -> str:
         """
         Poll job status asynchronously.
@@ -339,7 +338,6 @@ class SceneSegmentService(BaseService):
             on_success=on_success,
             on_error=on_error,
             on_complete=on_complete,
-            timeout=timeout,
         )
 
     # ========================================================================
@@ -372,7 +370,6 @@ class SceneSegmentService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-        timeout: float = 30.0,
     ) -> str:
         """
         Download the segmentation mask asynchronously.
@@ -393,7 +390,6 @@ class SceneSegmentService(BaseService):
             on_success=on_success,
             on_error=on_error,
             on_complete=on_complete,
-            timeout=timeout,
         )
 
     # ========================================================================

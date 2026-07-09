@@ -20,7 +20,7 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 from ...core.scene_segment_manager import get_scene_segment_manager
-from ...core.segment_overlay import recomposite_display_image
+from .magic_select_ops import recomposite_display_image
 
 
 def _redraw_all():
@@ -74,9 +74,6 @@ def _create_segment_from_mask(image_index, mask_bytes, base_name):
         segment.name = segment_name
 
         recomposite_display_image(img_item)
-        from ...core.component_debug import add_sam3_mask_preview
-
-        add_sam3_mask_preview(scene, image_index, mask_img, segment_name)
         logger.debug("[BoxSelectSAM] Added %s", segment_name)
         return True
 
@@ -130,12 +127,13 @@ class MIXIE_OT_box_select_sam(Operator):
 
         # Check if image is uploaded
         if not manager.is_ready(img_item.image):
+            if manager.is_uploading(img_item.image):
+                self.report({'INFO'}, "Image is uploading, please wait...")
+                return {'CANCELLED'}
+
             # Queue upload first
             state.box_select_pending = True
-            if manager.is_uploading(img_item.image):
-                self.report({'INFO'}, "Waiting for image upload...")
-            else:
-                self.report({'INFO'}, "Uploading image for segmentation...")
+            self.report({'INFO'}, "Uploading image for segmentation...")
 
             target_idx = state.target_image_index
             x1 = min(state.box_start_x, state.box_end_x)

@@ -74,19 +74,11 @@ def _draw_widget(layout, group, entry: Dict[str, Any]) -> None:
         layout.prop(group, attr, text=label)
 
 
-def draw_service_params(
-    layout,
-    service_key: str,
-    model_slug: str,
-    *,
-    excluded_params=None,
-) -> bool:
+def draw_service_params(layout, service_key: str, model_slug: str) -> bool:
     """Render all visible params of (service, model) into *layout*.
 
     Params are drawn in schema ``order``; params sharing a ``group`` value
-    are drawn together under a sub-box with the group name as header. Names
-    in *excluded_params* are intentionally omitted for composite workflows
-    that own those values (for example, one output per character component).
+    are drawn together under a sub-box with the group name as header.
     Returns True when the engine had a schema for the model (even if every
     param was hidden), False when the caller should fall back.
     """
@@ -98,10 +90,7 @@ def draw_service_params(
     # Partition into root params and named groups, preserving order.
     root = []
     grouped: Dict[str, list] = {}
-    excluded = frozenset(excluded_params or ())
     for param_name in sorted_param_names(schema):
-        if param_name in excluded:
-            continue
         if not is_param_visible(schema, group_data, param_name):
             continue
         entry = schema[param_name]

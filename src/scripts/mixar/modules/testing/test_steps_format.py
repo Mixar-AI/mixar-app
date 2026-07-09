@@ -257,24 +257,6 @@ def test_classify_script_action():
     assert c("") == ""
 
 
-def test_readonly_script_mentioning_materials_is_inspection():
-    """Regression: the backend's verification snapshot reads material_slots /
-    uv_layers / data.lights without mutating anything — it must classify as
-    an observation, never "Applied materials"/"Set up lighting" (it showed as
-    an acted step on every prompt, before anything was modelled)."""
-    c = steps_format.classify_script_action
-    snapshot = (
-        "import bpy, json\n"
-        "_objs = list(bpy.context.scene.objects)\n"
-        "bare = [o.name for o in _objs if o.type == 'MESH'"
-        " and not any(s.material for s in o.material_slots)]\n"
-        "print(json.dumps({'bare': bare}))"
-    )
-    assert c(snapshot) == "Inspected scene"
-    assert c("uvs = [m.uv_layers.active for m in bpy.data.meshes]") == "Inspected scene"
-    assert c("n = len([l for l in bpy.data.lights]); print(n)") == "Inspected scene"
-
-
 def test_inspected_scene_override_when_objects_change():
     """A read-only guess that actually created objects falls back to counts."""
     bubble = _FakeBubble()

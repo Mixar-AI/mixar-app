@@ -24,8 +24,7 @@ import requests
 from ....config.config import get_frontend_url, get_server_url
 from ....config.logging_config import get_logger
 from ..utils.constants import SSO_CALLBACK_PORT
-from .device import get_device_id
-from .auth import store_login_token_pair
+from .auth import store_access_token, store_refresh_token
 
 logger = get_logger(__name__)
 
@@ -243,13 +242,7 @@ def sso_login(timeout=120):
     # Exchange code for tokens
     try:
         url = f"{get_server_url()}/api/v1/auth/desktop/token"
-        payload = {'code': code, 'code_verifier': verifier}
-        # Anti-abuse device signal: this exchange is the first moment the
-        # backend sees the machine after a browser signup (best-effort)
-        device_id = get_device_id()
-        if device_id:
-            payload['device_id'] = device_id
-        body = json.dumps(payload)
+        body = json.dumps({'code': code, 'code_verifier': verifier})
 
         response = requests.post(
             url,
@@ -269,27 +262,20 @@ def sso_login(timeout=120):
             access_token = token_data.get('access_token')
             refresh_token_val = token_data.get('refresh_token')
 
-            if (
-                access_token
-                and access_token.strip()
-                and refresh_token_val
-                and refresh_token_val.strip()
-            ):
-                stored, storage_error = store_login_token_pair(
-                    access_token,
-                    refresh_token_val,
-                )
-                if not stored:
-                    logger.error("Failed to store SSO token pair in safe storage")
-                    return {'success': False, 'message': storage_error}
+            if access_token and access_token.strip():
+                if not store_access_token(access_token):
+                    logger.error("Failed to store access token in keyring")
+                    return {'success': False, 'message': 'Failed to store access token'}
+                if refresh_token_val and refresh_token_val.strip():
+                    store_refresh_token(refresh_token_val)
                 logger.info("SSO login successful — tokens stored")
                 return {
                     'success': True,
                     'message': 'Login successful',
                     'token': access_token,
                 }
-            logger.warning("Token exchange 200 but token pair was incomplete")
-            return {'success': False, 'message': 'Incomplete token pair in response'}
+            logger.warning("Token exchange 200 but no access_token in response")
+            return {'success': False, 'message': 'No access token in response'}
 
         error_msg = f'Token exchange failed: {response.status_code}'
         try:

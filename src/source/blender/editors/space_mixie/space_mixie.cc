@@ -32,7 +32,6 @@
 #include "UI_view2d.hh"
 
 #include "GPU_framebuffer.hh"
-#include "GPU_state.hh"
 
 #include "BLO_read_write.hh"
 
@@ -44,10 +43,6 @@
 #include "mixie_intern.hh"
 
 using namespace blender::ed::mixie;
-
-/* Mixie carries richer generation controls than Blender's generic sidebar.
- * Keep this editor-specific so View3D and Image Editor defaults stay intact. */
-static constexpr int MIXIE_SIDEBAR_PANEL_WIDTH = 320;
 
 /* -------------------------------------------------------------------- */
 /** \name Forward Declarations
@@ -210,10 +205,6 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
   region->v2d.keepzoom = V2D_LIMITZOOM;
   region->v2d.keeptot = 0;
 
-  /* Let uiBlocks drawn over the canvas receive pointer and keyboard events
-   * before the moodboard's canvas keymaps. */
-  UI_region_handlers_add(&region->runtime->handlers);
-
   /* Setup keymap */
   wmKeyMap *keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
@@ -227,22 +218,11 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
 static void mixie_main_region_draw(const bContext *C, ARegion *region)
 {
-  /* Moodboard reference canvas: neutral pure black, independent of the
-   * selected Blender theme. Other Mixie regions continue using TH_BACK. */
-  GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+  /* Clear background */
+  UI_ThemeClearColor(TH_BACK);
 
   /* Always draw moodboard mode - panels are controlled via scene properties */
   mixie_draw_moodboard_mode(C, region);
-}
-
-static void mixie_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
-{
-  mixie_moodboard_video_playback_shutdown(wm);
-  /* The link-drag preview lives in a file-static. Closing the region (area
-   * close, workspace switch, file load) can end a drag without the modal ever
-   * seeing a release, so clear it here rather than leaving a stale curve to be
-   * drawn against whatever scene next matches. */
-  blender::ed::mixie::moodboard_graph_link_drag_reset();
 }
 
 static void mixie_main_region_listener(const wmRegionListenerParams *params)
@@ -305,9 +285,6 @@ static void mixie_operatortypes()
   /* Moodboard operators (from mixie_moodboard_ops.cc) */
   WM_operatortype_append(MIXIE_OT_moodboard_drop_image);
   WM_operatortype_append(MIXIE_OT_moodboard_select_image);
-  WM_operatortype_append(MIXIE_OT_moodboard_graph_select);
-  WM_operatortype_append(MIXIE_OT_moodboard_context_menu);
-  WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
@@ -320,28 +297,11 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 {
   wmKeyMap *keymap = WM_keymap_ensure(keyconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
 
-  /* Stateless hover checks leave normal click/drag keymap dispatch untouched. */
-  KeyMapItem_Params hover_params{};
-  hover_params.type = MOUSEMOVE;
-  hover_params.value = KM_ANY;
-  hover_params.modifier = 0;
-  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-
-  /* Entering the sidebar or header also leaves the originating video tile. */
-  wmKeyMap *sidebar_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Sidebar", SPACE_MIXIE, RGN_TYPE_UI);
-  WM_keymap_add_item(sidebar_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-  wmKeyMap *header_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Header", SPACE_MIXIE, RGN_TYPE_HEADER);
-  WM_keymap_add_item(header_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-
   /* Select and move images in moodboard */
   KeyMapItem_Params params{};
   params.type = LEFTMOUSE;
   params.value = KM_PRESS;
   params.modifier = 0;
-  /* Graph cards get first refusal; the operator passes through on media/empty space. */
-  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_graph_select", &params);
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_select_image", &params);
 
   /* Double-click to edit text boxes */
@@ -395,11 +355,6 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   delete_params.type = EVT_XKEY;
   delete_params.value = KM_PRESS;
   delete_params.modifier = 0;
-  WM_keymap_add_item(keymap, "mixie.moodboard_delete", &delete_params);
-
-  delete_params.type = EVT_DELKEY;
-  WM_keymap_add_item(keymap, "mixie.moodboard_delete", &delete_params);
-  delete_params.type = EVT_BACKSPACEKEY;
   WM_keymap_add_item(keymap, "mixie.moodboard_delete", &delete_params);
 
   /* Add Text Box Interactive - Cmd+T (macOS) / Ctrl+T (Windows/Linux) */
@@ -537,7 +492,8 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   context_menu_params.type = RIGHTMOUSE;
   context_menu_params.value = KM_PRESS;
   context_menu_params.modifier = 0;
-  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_context_menu", &context_menu_params);
+  wmKeyMapItem *kmi_context = WM_keymap_add_item(keymap, "wm.call_menu", &context_menu_params);
+  RNA_string_set(kmi_context->ptr, "name", "MIXIE_MT_moodboard_context_menu");
 
   /* Toggle N-panel sidebar - N key */
   KeyMapItem_Params sidebar_params{};
@@ -701,11 +657,9 @@ void ED_spacetype_mixie()
   /* regions: main window */
   art = MEM_callocN<ARegionType>("spacetype mixie region");
   art->regionid = RGN_TYPE_WINDOW;
-  art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_FRAMES |
-                    ED_KEYMAP_VIEW2D;
+  art->keymapflag = ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_FRAMES | ED_KEYMAP_VIEW2D;
 
   art->init = mixie_main_region_init;
-  art->exit = mixie_main_region_exit;
   art->draw = mixie_main_region_draw;
   art->listener = mixie_main_region_listener;
 
@@ -740,7 +694,7 @@ void ED_spacetype_mixie()
   /* regions: UI sidebar (N-panel on right side) */
   art = MEM_callocN<ARegionType>("spacetype mixie ui region");
   art->regionid = RGN_TYPE_UI;
-  art->prefsizex = MIXIE_SIDEBAR_PANEL_WIDTH;
+  art->prefsizex = UI_SIDEBAR_PANEL_WIDTH;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
 
   art->listener = mixie_ui_region_listener;

@@ -15,8 +15,6 @@ Public surface:
         get_service_enum_items,   # Mode dropdown items for a capability
         resolve_service_key,      # mode enum value -> valid service key
         resolve_model_slug,       # model enum value -> valid model slug
-        catalog_default_model,    # service default slug, None when unknown
-        model_supports_multi_view,# per-model multi-view uploader flag
         draw_capability_selector, # render Mode/Model dropdowns + params
         # Wire payload assembly
         assemble_payload,         # merge catalog params into wire payloads
@@ -36,11 +34,9 @@ from .core.engine import (
 )
 from .core.draw import draw_service_params
 from .core.selector import (
-    catalog_default_model,
     draw_capability_selector,
     get_param_enum_items,
     get_service_enum_items,
-    model_supports_multi_view,
     resolve_model_slug,
     resolve_service_key,
 )
@@ -56,8 +52,6 @@ __all__ = (
     "get_service_enum_items",
     "resolve_service_key",
     "resolve_model_slug",
-    "catalog_default_model",
-    "model_supports_multi_view",
     "draw_capability_selector",
     "assemble_payload",
     "get_assembler",

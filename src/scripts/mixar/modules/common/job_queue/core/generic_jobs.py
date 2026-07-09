@@ -2,25 +2,19 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Generic Job subclasses for the dominant queue patterns.
+"""Generic Job subclasses for the two dominant queue patterns.
 
 ``AsyncGLBJob``  — submit → poll → download GLB → import (8 former subclasses)
 ``SyncImageJob`` — submit (may return inline result) → download images → moodboard (3 former subclasses)
-``StreamingVideoJob`` — stream inputs → submit → download video → moodboard
 """
 
-import io
 import time
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
-from .job import FAILED_BACKEND_STATUSES, Job, JobState
-from .helpers import (
-    download_images_to_moodboard,
-    extract_image_name,
-    extract_image_urls,
-)
+from .job import FAILED_BACKEND_STATUSES, Job
+from .helpers import download_images_to_moodboard, extract_image_urls
 
 logger = get_logger(__name__)
 
@@ -51,9 +45,6 @@ class AsyncGLBJob(Job):
     payload: dict = field(default_factory=dict)
     fail_message: str = "Generation failed"
     _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
-    # Extra glTF import operator kwargs (GLB only). Animate uses this to
-    # keep Tripo rigged/animated imports from collapsing — see model_io.
-    import_options: Optional[dict] = field(default=None, repr=False)
 
     _processing_started: bool = False
 
@@ -78,9 +69,6 @@ class AsyncGLBJob(Job):
     def parse_submit_response(self, response) -> None:
         self._parse_standard_submit(response)
         self.payload = {}  # release memory
-
-    def release_resources(self) -> None:
-        self.payload = {}
 
     def parse_poll_response(self, response):
         return self._parse_standard_poll(
@@ -119,10 +107,6 @@ class SyncImageJob(Job):
         Prefix for ``bpy.data.images`` names (e.g. ``"imagegen"``).
     undo_message : str
         If set, pushes an undo step after adding images.
-    _on_images_added_hook : callable | None
-        ``fn(job, names)`` called on the main thread after moodboard images
-        are added and before the queue marks the job complete. Hook failure is
-        terminal so required metadata cannot be silently omitted.
     """
 
     job_type: str = ""
@@ -133,13 +117,8 @@ class SyncImageJob(Job):
     prompt_text: str = ""
     undo_message: str = ""
     base_name: str = ""  # agent-chosen image name (overrides name_prefix)
-    _on_images_added_hook: Optional[Callable] = field(default=None, repr=False)
-    _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
 
     _image_urls: List[str] = field(default_factory=list, repr=False)
-    # Backend-suggested display name (model-generated for Gemini image gen).
-    # Used only when no explicit base_name was provided.
-    _server_image_name: str = field(default="", repr=False)
 
     # ------------------------------------------------------------------ #
     # Job interface
@@ -167,17 +146,11 @@ class SyncImageJob(Job):
         result = inner.get("result") or {}
         if status == "DONE" and isinstance(result, dict):
             self._image_urls = extract_image_urls(result)
-            self._server_image_name = extract_image_name(result)
 
         if not self.backend_job_id and not self._image_urls:
             raise ValueError("Enqueue response missing job_id")
 
         self.payload = {}  # release memory
-
-    def release_resources(self) -> None:
-        self.payload = {}
-        self._image_urls = []
-        self._on_images_added_hook = None
 
     def should_skip_poll(self) -> bool:
         return bool(self._image_urls)
@@ -195,7 +168,6 @@ class SyncImageJob(Job):
             result = inner.get("result") or {}
             if isinstance(result, dict):
                 self._image_urls = extract_image_urls(result)
-                self._server_image_name = extract_image_name(result)
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
             self.error = inner.get("error", self.fail_message)
@@ -210,151 +182,17 @@ class SyncImageJob(Job):
             on_error("No image URLs in server response")
             return True
 
-        def _on_images_added(names: str) -> None:
-            if self._on_images_added_hook is not None:
-                self._on_images_added_hook(self, names)
-
-        def _download_done(image_names: str):
-            self.on_imported(image_names)
-            on_done(image_names)
-
         download_images_to_moodboard(
             urls=list(self._image_urls),
             name_prefix=self.name_prefix,
             prompt=self.prompt_text,
             job_id=self.id,
-            on_added=_on_images_added,
-            on_done=_download_done,
+            on_done=on_done,
             on_error=on_error,
             undo_message=self.undo_message,
-            base_name=self.base_name or self._server_image_name,
-            scene_name=self.scene_name,
-            should_apply=lambda: self.state == JobState.RUNNING_DOWNLOAD,
+            base_name=self.base_name,
         )
         return True
 
-    def on_imported(self, image_names: str) -> None:
-        super().on_imported(image_names)
-        if self._on_imported_hook is not None:
-            try:
-                self._on_imported_hook(self, image_names)
-            except Exception as e:
-                logger.warning("on_imported hook failed: %s", e)
-
     def get_poll_interval(self):
         return 3.0
-
-
-# ---------------------------------------------------------------------------
-# Pattern C — streamed media inputs + video output
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class StreamingVideoJob(AsyncGLBJob):
-    """Stage large media without base64, then enqueue a video result job.
-
-    ``image_inputs`` entries carry ``filename``, ``mime_type`` and ``bytes``.
-    ``video_inputs`` carry ``filename``, ``mime_type``, ``filepath`` and
-    ``file_size_bytes``. Uploads are sequential to bound memory and network
-    pressure; each callback advances to the next input before the final queue
-    submit.
-    """
-
-    image_inputs: list = field(default_factory=list, repr=False)
-    video_inputs: list = field(default_factory=list, repr=False)
-    max_video_duration_seconds: float = 15.0
-    _upload_index: int = field(default=0, repr=False)
-    _staged_image_keys: list = field(default_factory=list, repr=False)
-    _staged_video_keys: list = field(default_factory=list, repr=False)
-    _staged_video_seconds: float = field(default=0.0, repr=False)
-
-    def _uploads(self):
-        return [
-            *(('image', item) for item in self.image_inputs),
-            *(('video', item) for item in self.video_inputs),
-        ]
-
-    @staticmethod
-    def _response_data(response):
-        outer = getattr(response, "data", None) or {}
-        data = outer.get("data", outer) if isinstance(outer, dict) else {}
-        return data if isinstance(data, dict) else {}
-
-    def submit(self, on_success, on_error) -> None:
-        uploads = self._uploads()
-        if self._upload_index >= len(uploads):
-            if self._staged_image_keys:
-                self.payload["reference_image_s3_keys"] = list(
-                    self._staged_image_keys
-                )
-            if self._staged_video_keys:
-                self.payload["reference_video_s3_keys"] = list(
-                    self._staged_video_keys
-                )
-            super().submit(on_success, on_error)
-            return
-
-        media_kind, item = uploads[self._upload_index]
-        if media_kind == 'image':
-            content = item.get("bytes") or b""
-            body_factory = lambda data=content: io.BytesIO(data)
-            content_length = len(content)
-        else:
-            filepath = item.get("filepath") or ""
-            body_factory = lambda path=filepath: open(path, "rb")
-            content_length = int(item.get("file_size_bytes") or 0)
-
-        from mixar.modules.common.api.services.job_queue_service import (
-            get_job_queue_service,
-        )
-
-        def _staged(response):
-            data = self._response_data(response)
-            key = str(data.get("s3_key") or "")
-            if not key:
-                on_error(ValueError("Media staging response omitted s3_key"))
-                return
-            if media_kind == 'image':
-                self._staged_image_keys.append(key)
-            else:
-                try:
-                    duration = float(data.get("duration_seconds") or 0.0)
-                except (TypeError, ValueError):
-                    duration = 0.0
-                if duration <= 0:
-                    on_error(ValueError("Could not determine video duration"))
-                    return
-                self._staged_video_seconds += duration
-                if self._staged_video_seconds > self.max_video_duration_seconds + 0.001:
-                    # The cap is catalog-supplied; quoting a literal would
-                    # misreport the limit the moment the DB seed changes.
-                    on_error(ValueError(
-                        "Selected videos exceed the "
-                        f"{self.max_video_duration_seconds:g}-second "
-                        "combined limit"
-                    ))
-                    return
-                self._staged_video_keys.append(key)
-            self._upload_index += 1
-            self.submit(on_success, on_error)
-
-        get_job_queue_service().stage_media(
-            media_kind=media_kind,
-            filename=item.get("filename") or f"reference.{media_kind}",
-            content_type=item.get("mime_type") or "application/octet-stream",
-            content_length=content_length,
-            body_factory=body_factory,
-            on_success=_staged,
-            on_error=on_error,
-        )
-
-    def parse_submit_response(self, response) -> None:
-        super().parse_submit_response(response)
-        self.image_inputs = []
-        self.video_inputs = []
-
-    def release_resources(self) -> None:
-        super().release_resources()
-        self.image_inputs = []
-        self.video_inputs = []

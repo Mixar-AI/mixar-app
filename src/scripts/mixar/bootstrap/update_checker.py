@@ -81,7 +81,10 @@ def unregister() -> None:
     try:
         from mixar.modules.common.updates.core.state import get_update_state
 
-        get_update_state().set_idle()
+        state = get_update_state()
+        state.request_cancel()
+        state.join_download_thread()
+        state.set_idle()
     except Exception:
         pass
 

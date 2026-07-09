@@ -18,12 +18,6 @@ Renders the Scene Gen sidebar tab from the generation catalog's
 When the catalog isn't loaded (offline / pre-auth) the Mode dropdown is
 not drawn and the tab falls back to the Scene Reconstruction-only UI
 (today's default).
-
-Post-split catalogs move the ``scene_gen`` service to the
-``character_parts`` capability (its own "Character Parts" tab in
-``moodboard_sidebar_panels``), so this tab then lists a single service
-and renders Scene Reconstruction only — no code change needed here, the
-split is DB-driven and revertible from the DB alone.
 """
 
 from .sidebar_ui_helpers import draw_dropdown, draw_section_separator

@@ -38,21 +38,9 @@ def _safe(label: str, fn, *args, **kwargs) -> None:
         logger.debug("Shutdown hook %s failed: %s", label, exc)
 
 
-def _run_all_cleanups(reason: str = "atexit") -> None:
+def _run_all_cleanups() -> None:
     """Invoke every known cleanup_/stop_ entry point in dependency order."""
     # 1. Stop producers first (operator-facing cleanup), then drain consumers.
-    try:
-        from mixar.bootstrap.analytics_module import capture_session_ended
-        _safe("capture_session_ended", capture_session_ended, reason)
-    except ImportError:
-        pass
-
-    try:
-        from mixar.modules.common.analytics import shutdown as shutdown_analytics
-        _safe("shutdown_analytics", shutdown_analytics)
-    except ImportError:
-        pass
-
     try:
         from mixar.modules.space_mixie_chat.core.sse_handler import (
             cleanup_all_sse_handlers,
@@ -124,4 +112,4 @@ def register() -> None:
 
 def unregister() -> None:
     """Normal addon-disable / Blender-quit path: flush every cleanup."""
-    _run_all_cleanups("quit")
+    _run_all_cleanups()

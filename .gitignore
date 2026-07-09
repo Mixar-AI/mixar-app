@@ -213,16 +213,8 @@ mixar_api_out/
 report/
 scripts/audit_out/
 
-# Public-mirror sync state (last private SHA mirrored to public).
-# sync_commit_mirror.sh writes one file per branch (.sync-state-develop,
-# .sync-state-release-v2.0.x, ...) plus the legacy unsuffixed file. Untracked
-# leftovers would otherwise trip the script's own "working tree is clean"
-# pre-flight on the next local run.
+# Public-mirror sync state (last private SHA mirrored to public)
 .sync-state
-.sync-state-*
 
 # Blender autosave backups
 *.blend1
-
-# Local Azure signing metadata (values come from env vars / secrets in CI)
-scripts/windows/codesign-tools/metadata.json

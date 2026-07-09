@@ -30,8 +30,6 @@ class MIXIE_OT_moodboard_cancel_tool(Operator):
         state.is_drawing = False
         state.target_image_index = -1
         state.lasso_points.clear()
-        state.lasso_loops.clear()
-        state.lasso_select_has_selection = False
         context.area.tag_redraw()
         return {'FINISHED'}
 

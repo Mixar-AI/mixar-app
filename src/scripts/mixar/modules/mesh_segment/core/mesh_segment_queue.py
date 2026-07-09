@@ -15,7 +15,6 @@ from typing import Dict, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -23,10 +22,7 @@ from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
-
 logger = get_logger(__name__)
-
-_SERVICE_KEY = "mesh_segment"
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +59,7 @@ class MeshSegmentJob(Job):
             "expected_parts": self.expected_parts,
         }
         service.enqueue(
-            job_type=_SERVICE_KEY,
+            job_type="mesh_segment",
             model=self.model or "mesh_segment_v1",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -197,8 +193,6 @@ def enqueue_mesh_segment_job(
     job = MeshSegmentJob(
         feature_key=FEATURE_MESH_SEGMENT,
         label=f"Segment: {mesh_object_name}",
-        display_label=mesh_object_name,
-        service=_SERVICE_KEY,
         mesh_bytes_b64=_b64.b64encode(mesh_bytes).decode(),
         mesh_filename="mesh.obj",
         description=description,
@@ -207,9 +201,6 @@ def enqueue_mesh_segment_job(
         mesh_object_name=mesh_object_name,
     )
     queue = _get_mesh_segment_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("mesh_segmentation")
     if not queue.submit(job):
         logger.warning("[MeshSegment] duplicate job rejected: %s", job.label)
         return None

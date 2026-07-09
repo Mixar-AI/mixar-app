@@ -79,11 +79,6 @@ int moodboard_find_image_under_mouse(PointerRNA *scene_ptr,
     PointerRNA item_ptr;
     RNA_property_collection_lookup_int(scene_ptr, prop, i, &item_ptr);
 
-    PropertyRNA *embedded_prop = RNA_struct_find_property(&item_ptr, "embedded_node_id");
-    if (embedded_prop && RNA_property_string_length(&item_ptr, embedded_prop) > 0) {
-      continue;
-    }
-
     PropertyRNA *image_prop = RNA_struct_find_property(&item_ptr, "image");
     PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
     PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
@@ -576,30 +571,6 @@ void moodboard_deselect_all(PointerRNA *scene_ptr)
         RNA_property_boolean_set(&group_ptr, sel_prop, false);
       }
     }
-  }
-
-  /* Graph nodes and links share the canvas selection model with media. */
-  for (const char *collection_name : {"mixie_moodboard_action_nodes",
-                                      "mixie_moodboard_asset_nodes",
-                                      "mixie_moodboard_links"})
-  {
-    PropertyRNA *collection = RNA_struct_find_property(scene_ptr, collection_name);
-    if (!collection) {
-      continue;
-    }
-    CollectionPropertyIterator iter{};
-    RNA_property_collection_begin(scene_ptr, collection, &iter);
-    while (iter.valid) {
-      PropertyRNA *selected = RNA_struct_find_property(&iter.ptr, "selected");
-      if (selected) {
-        RNA_property_boolean_set(&iter.ptr, selected, false);
-      }
-      RNA_property_collection_next(&iter);
-    }
-    RNA_property_collection_end(&iter);
-  }
-  if (RNA_struct_find_property(scene_ptr, "mixie_moodboard_active_node_id")) {
-    RNA_string_set(scene_ptr, "mixie_moodboard_active_node_id", "");
   }
 }
 

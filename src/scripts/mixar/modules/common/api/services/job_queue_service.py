@@ -16,7 +16,6 @@ existing concrete Job classes.
 
 import uuid
 from typing import Callable, Optional
-from urllib.parse import quote
 
 from mixar.config.logging_config import get_logger
 
@@ -86,10 +85,6 @@ class JobQueueService(BaseService):
             "attempts": data.get("attempts"),
             "service": data.get("service"),
         }
-        # Preserve omission for rolling deploys: older backends do not send
-        # model, and a missing key must not erase the locally submitted value.
-        if "model" in data:
-            normalized["model"] = data.get("model")
         return APIResponse(
             success=response.success,
             status_code=response.status_code,
@@ -119,7 +114,6 @@ class JobQueueService(BaseService):
         model: str,
         payload: dict,
         idempotency_key: Optional[str] = None,
-        max_retries: Optional[int] = None,
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
@@ -128,58 +122,22 @@ class JobQueueService(BaseService):
         """POST /job-queue/jobs
 
         Args:
-            max_retries: Backend retry budget override. Pass 0 for expensive
-                vendor jobs that must never be re-billed on failure
-                (e.g. World Labs worlds); None keeps the backend default.
             timeout: Request timeout in seconds.
         """
         _require_auth()
         idempotency_key = idempotency_key or str(uuid.uuid4())
-        body = {
-            "service": job_type,
-            "model": model,
-            "payload": payload,
-            "idempotency_key": idempotency_key,
-        }
-        if max_retries is not None:
-            body["max_retries"] = max_retries
         return self.post_async(
             "jobs",
-            json=body,
+            json={
+                "service": job_type,
+                "model": model,
+                "payload": payload,
+                "idempotency_key": idempotency_key,
+            },
             on_success=self._wrap_success(on_success),
             on_error=on_error,
             on_complete=on_complete,
             timeout=timeout,
-        )
-
-    def stage_media(
-        self,
-        *,
-        media_kind: str,
-        filename: str,
-        content_type: str,
-        content_length: int,
-        body_factory: Callable[[], object],
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """Stream one generation input to an ownership-scoped backend key."""
-        _require_auth()
-        if media_kind not in {"image", "video"}:
-            raise ValueError(f"Unsupported media kind: {media_kind!r}")
-        return self.post_async(
-            f"uploads/{media_kind}",
-            data_factory=body_factory,
-            headers={
-                "Content-Type": content_type or "application/octet-stream",
-                "Content-Length": str(max(0, int(content_length))),
-                "X-File-Name": quote(filename, safe=""),
-            },
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-            timeout=300.0,
         )
 
     def get_job_status(

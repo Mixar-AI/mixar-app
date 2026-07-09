@@ -7,7 +7,7 @@
 
 Join the Mixar Discord for real-time discussion, troubleshooting help, and announcements:
 
-- **Discord:** https://discord.gg/YVqvkQx8rX
+- **Discord:** https://discord.gg/HJNMUesyp
 
 The Discord is the fastest way to reach maintainers and other Mixar users. Most build problems, "is this expected?" questions, and general help requests are best handled there before opening a GitHub issue.
 

@@ -123,8 +123,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
 int footer_layout_calculate_height(Scene *scene,
                                     const struct FooterThemeCache *theme,
                                     bool *out_has_overflow,
-                                    int input_line_count,
-                                    int mention_row_count)
+                                    int input_line_count)
 {
   /* Get cached theme if not provided */
   if (!theme) {
@@ -154,13 +153,6 @@ int footer_layout_calculate_height(Scene *scene,
   const int thumb_top_margin_base = int(theme->thumbnail_top_margin);
   const int main_footer_gap_base = int(theme->main_footer_gap);
 
-  /* '@' mention dropdown block above the input (0 when closed):
-   * gap + panel padding + N suggestion rows. */
-  const int mention_block_base =
-      (mention_row_count > 0) ? (FOOTER_MENTION_GAP_BASE + FOOTER_MENTION_PANEL_PAD_BASE * 2 +
-                                 FOOTER_MENTION_ROW_H_BASE * mention_row_count) :
-                                0;
-
   /* Bottom-up height calculation (TWO-ROW LAYOUT) - ALL IN UNSCALED UNITS:
    *
    * Without thumbnails:
@@ -185,14 +177,13 @@ int footer_layout_calculate_height(Scene *scene,
   if (pending_count > 0) {
     /* With thumbnails - include top padding above thumbnails for clearance */
     required_height_unscaled = bottom_padding_base + row_height_base + row_spacing_base +
-                               input_row_base + mention_block_base + main_footer_gap_base +
-                               thumb_top_margin_base + thumb_size_base + top_padding_base;
+                               input_row_base + main_footer_gap_base + thumb_top_margin_base +
+                               thumb_size_base + top_padding_base;
   }
   else {
     /* No thumbnails - top padding provides space above input */
     required_height_unscaled = bottom_padding_base + row_height_base + row_spacing_base +
-                               input_row_base + mention_block_base + main_footer_gap_base +
-                               top_padding_base;
+                               input_row_base + main_footer_gap_base + top_padding_base;
   }
 
   /* Safety check for maximum height */
@@ -227,8 +218,7 @@ void footer_layout_calculate_positions(int region_width,
                                         int pending_count,
                                         const struct FooterThemeCache *theme,
                                         FooterElementPositions *out_positions,
-                                        int input_line_count,
-                                        int mention_row_count)
+                                        int input_line_count)
 {
   if (!theme || !out_positions) {
     return;
@@ -257,25 +247,10 @@ void footer_layout_calculate_positions(int region_width,
   out_positions->input_y = out_positions->buttons_y + out_positions->button_row_height +
                            row_spacing + main_footer_gap;
 
-  /* '@' mention dropdown sits directly above the input; thumbnails (when
-   * present) are pushed above it. */
-  out_positions->mention_count = mention_row_count;
-  int mention_block = 0;
-  if (mention_row_count > 0) {
-    out_positions->mention_y = out_positions->input_y + out_positions->input_height +
-                               int(FOOTER_MENTION_GAP_BASE * scale);
-    mention_block = int(FOOTER_MENTION_GAP_BASE * scale) +
-                    int(FOOTER_MENTION_PANEL_PAD_BASE * scale) * 2 +
-                    int(FOOTER_MENTION_ROW_H_BASE * scale) * mention_row_count;
-  }
-  else {
-    out_positions->mention_y = 0;
-  }
-
   if (pending_count > 0) {
     /* Use dedicated thumbnail top margin for vertical spacing above thumbnails */
     out_positions->thumb_y = out_positions->input_y + out_positions->input_height +
-                             mention_block + int(theme->thumbnail_top_margin * scale);
+                             int(theme->thumbnail_top_margin * scale);
   }
   else {
     out_positions->thumb_y = 0;

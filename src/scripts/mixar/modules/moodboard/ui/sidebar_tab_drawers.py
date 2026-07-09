@@ -19,7 +19,6 @@ from .sidebar_ui_helpers import (
     draw_status_badge, draw_image_info_card,
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import is_still_item
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +35,7 @@ def _draw_segment_to_3d(layout, context):
     selected_item = None
     if hasattr(scene, 'mixie_moodboard_images'):
         for i, img_item in enumerate(scene.mixie_moodboard_images):
-            if img_item.selected and is_still_item(img_item):
+            if img_item.selected and img_item.image:
                 selected_idx = i
                 selected_item = img_item
                 break
@@ -63,18 +62,13 @@ def _draw_segment_to_3d(layout, context):
     # Lasso Select SAM section
     if state.lasso_select_has_selection or state.lasso_select_pending:
         sam_box = layout.box()
-        sam_box.label(text="Multi-Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
+        sam_box.label(text="Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
         if state.lasso_select_pending:
             draw_status_badge(sam_box, "Refining...", 'GENERATING')
         else:
-            sam_box.label(text="Draw another loop or press Enter to finish", icon='INFO')
             row = sam_box.row()
             row.scale_y = GENERATE_BUTTON_SCALE_Y
-            row.operator(
-                "mixie.lasso_select_sam",
-                text="Finish & Refine with SAM3",
-                icon='MOD_MASK',
-            )
+            row.operator("mixie.lasso_select_sam", text="Refine selection", icon='MOD_MASK')
 
     draw_section_separator(layout)
 
@@ -85,17 +79,22 @@ def _draw_segment_to_3d(layout, context):
         box.label(text="No segments yet", icon='INFO')
         box.label(text="Use selection tools to create segments")
     else:
-        from .character_components_drawer import draw_character_components
+        col = draw_section_box(layout, f"Segments ({num_segments})", icon='MOD_MASK')
+        for i, segment in enumerate(selected_item.segments):
+            row = col.row(align=True)
+            icon = 'CHECKBOX_HLT' if segment.active else 'CHECKBOX_DEHLT'
+            op = row.operator("mixie.toggle_segment", text="", icon=icon, emboss=False)
+            op.image_index = selected_idx
+            op.segment_index = i
+            row.label(text=segment.name)
+            op = row.operator("mixie.delete_segment", text="", icon='X')
+            op.image_index = selected_idx
+            op.segment_index = i
 
-        settings = (
-            scene.mixie_moodboard_sidebar.tab_segment_to_3d.character_components
-        )
-        draw_character_components(
-            layout,
-            selected_idx,
-            selected_item,
-            settings,
-        )
+        active_count = sum(1 for s in selected_item.segments if s.active)
+        if active_count > 0:
+            col.separator(factor=SEP_INTRA)
+            draw_status_badge(col, f"{active_count} segment(s) active", 'DONE')
 
     from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
     draw_generate_footer(layout, context, "mixie.generate_scene", "segment_to_3d",
@@ -145,43 +144,6 @@ def _draw_mesh_segment(layout, context):
         col.use_property_decorate = False
         draw_capability_selector(col, tab, "mesh_segmentation")
         draw_section_separator(layout)
-
-    if service_key == "tripo_segment":
-        # Tripo Mesh Segmentation — splits the SELECTED mesh. Mode/Model and
-        # the schema params (granularity, split_by_connectivity) were already
-        # drawn by draw_capability_selector above.
-        from mixar.modules.common.job_queue.constants import (
-            FEATURE_TRIPO_SEGMENT,
-        )
-
-        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
-        draw_mesh_info(col, context, max_mb=150)
-        draw_hint(layout, "Select the objects you want to split into parts",
-                  icon='INFO')
-        draw_section_separator(layout)
-
-        col = draw_section_box(layout, "Reference Mask", icon='IMAGE_DATA')
-        col.template_ID(tab, "ref_image", open="image.open")
-        if tab.ref_image is not None:
-            # Say this explicitly: Tripo silently ignores both params when a
-            # mask is supplied, and a user who tuned them would otherwise
-            # think they took effect.
-            draw_hint(col, "Mask supplied — Granularity and Split by "
-                           "Connectivity are ignored", icon='INFO')
-        draw_section_separator(layout)
-
-        info = draw_section_box(layout, "About Tripo Segmentation", icon='INFO')
-        draw_hint(info, "Parts import into a '<object>_parts' collection",
-                  icon='DOT')
-        draw_hint(info, "The original mesh is hidden, not deleted", icon='DOT')
-        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
-
-        draw_generate_footer(
-            layout, context, "mixie.tripo_segment_generate", "tripo_segment",
-            gen_flag_attr='mixie_tripo_segment_is_generating',
-            feature_key=FEATURE_TRIPO_SEGMENT,
-        )
-        return
 
     if service_key == "hunyuan_part":
         # Part Segmentation — same inputs + submit flow as PART_SEGMENT.
@@ -251,13 +213,6 @@ def _draw_hunyuan_pro(layout, pro, context=None):
 
     draw_section_separator(layout)
 
-    # This is the catalog-not-loaded fallback (offline / pre-auth), and it
-    # submits through mixie.hunyuan_generate -> _submit_pro, which reads
-    # pro.multi_views directly and knows nothing about turnaround groups. So
-    # this picker stays: the merged Multiple Views section that replaced it on
-    # the catalog-driven Model Gen tab would render here as a control that
-    # silently does nothing. Both are removable once _submit_pro resolves
-    # turnaround groups.
     col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
     for i, mv in enumerate(pro.multi_views):
         row = col.row(align=True)

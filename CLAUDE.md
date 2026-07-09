@@ -1,161 +1,198 @@
 <!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
 <!-- SPDX-License-Identifier: GPL-2.0-or-later -->
 
-# Mixar (Blender client)
+# Mixar
 
-**Mixar is a custom fork of Blender 5.0 that turns Blender into an AI-powered 3D content creation tool** — layered texture painting, AI 3D generation, and a real-time chat agent that drives the scene. This repo is the **desktop client**; the AI backend is the separate `mixar-backend` repo (FastAPI), and the admin dashboard is `mixar-admin-dashboard`.
+**Mixar is a custom fork of Blender 5.0 that turns Blender into an AI-powered 3D content creation tool**, with deep integrations for texture painting, AI-assisted modeling, and real-time agent chat. It's built as an **overlay system** — Mixar's source code gets layered on top of upstream Blender during build.
 
-## Overlay Build Model (the #1 thing to understand)
+## Build & Development
 
-All Mixar source lives in `/src` and is rsync'd **on top of** upstream Blender at build time:
-
-```text
-upstream/    Blender 5.0 source (git submodule)
-src/         Mixar overlay — ALL Mixar code goes here
-source/      GENERATED: upstream/ copied here, then src/ overlaid. NEVER edit directly.
-build/<env>/ CMake build output (e.g. build/Prod/bin, build/Dev/bin)
-```
-
-- Python → `src/scripts/mixar/modules/{module}`; C/C++ → `src/source/blender/`.
-- **Never run `cmake`/`make` inside `source/`** — always `make build` (overlay must run first).
-- CMake install clears the bundled `scripts/mixar` package before recopying, so incremental builds can't retain Python modules deleted from `/src`.
-- **Git worktrees build out of the box**: `settings.sh` falls back to the main checkout's `upstream/` (multi-GB submodule linked worktrees don't carry; read-only rsync source, warns if it isn't at the pinned commit). Override with `MIXAR_UPSTREAM_DIR`; each worktree still assembles its own `source/` and `build/` — never share those.
-- **macOS dev codesign (optional)**: `MIXAR_DEV_SIGN_ID` in `.env` makes `build.sh` re-sign the built `Mixar` executable with a stable self-signed identity (one-time setup: `scripts/unix/setup_dev_codesign.sh`), so the Keychain "Always Allow" sticks across rebuilds instead of every ad-hoc signature reading as a new identity. Signs with `get-task-allow` to keep lldb attach working. Local dev only — release signing stays in `package.sh`.
-
-## Build, Run, Test
-
+### Build Commands
 ```bash
-make init            # git submodules + LFS
-make build           # overlay + CMake + compile + install packages (scripts/unix/build.sh)
-make clean_build     # wipe source/ and rebuild
-make install         # install Python packages into embedded Blender Python
-make run [Prod|Dev]  # launch the built app (default build/Dev)
-
-python -m pytest -q  # standalone suite, runs OUTSIDE Blender (root conftest.py stubs bpy)
-python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (needs runtime deps)
+make init          # Initialize: git submodules + LFS files
+make build         # Full build: overlay + CMake + compile + install packages
+make clean_build   # Clean build: removes source/ and rebuilds
+make install       # Install Python packages into embedded Blender Python
 ```
 
-- `pytest.ini` testpaths: `tests/`, plus in-tree suites under `space_mixie_chat/tests` and `paint/{layered_build,procedural_materials}/tests`. `pythonpath = src/scripts`.
-- Because `bpy` is a MagicMock in tests, `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
-- Config: env vars in `.env` (copy `.env.example`; never commit `.env`) → `scripts/unix/settings.sh` → `scripts/generate_config.py` emits runtime `mixar.json`. C++ env header generated at `source/creator/mixar_env_config.h`. `MIXAR_ENV=Prod` targets `https://api.mixar.app`; `Dev` targets a dev backend (and is the only env where dev-bypass credentials are allowed — the build aborts otherwise).
+### How the Build Works
+- `scripts/unix/build.sh` orchestrates the build
+- `scripts/unix/overlay.sh` copies `/src` onto `/source` (Blender upstream)
+- **Git worktrees build out of the box**: `upstream/` is a multi-GB submodule that linked worktrees don't carry, so `settings.sh` falls back to the main checkout's `upstream/` (read-only rsync source; warns if the shared tree isn't at the commit the branch pins). Override with `MIXAR_UPSTREAM_DIR`. Each worktree still assembles its own `source/` and `build/` — never share those.
+- Config loaded from `.env` → env vars via `scripts/unix/settings.sh` → `scripts/generate_config.py` generates runtime `mixar.json` into the app bundle
+- C++ env header auto-generated at `source/creator/mixar_env_config.h`
+- Python build-frozen env marker auto-generated at `source/scripts/mixar/config/_build_env.py` (gates `get_dev_bypass_credentials`; `DEV_BYPASS_ALLOWED=True` only when `MIXAR_ENV=Dev`). Setting `DEV_BYPASS_*` env vars with `MIXAR_ENV != Dev` aborts the build.
+- Python packages installed from `scripts/python_requirements.txt` into embedded Blender Python
+- **Never run `cmake` or `make` directly in `source/`** — always use `make build` or `./scripts/unix/build.sh` (overlay must run first)
+
+### Testing
+```bash
+pytest              # Run tests (root conftest.py stubs bpy via MagicMock)
+```
+Tests can run outside Blender. The root `conftest.py` injects `bpy` stubs into `sys.modules`.
 
 ## Code Rules
 
-- No file larger than **500 lines** — split aggressively. Use C++ for performance-critical paths.
-- Module layout (strict): `constants.py` at module root; `core/` for logic; `ui/` for auto-discovered UI split into `properties/`, `operators/`, `panels/`, `menus/`, `lists/`. **Properties and operators stay in separate folders.**
-- Cross-module shared code goes in `modules/common/` (`common/utils` for utilities).
-- **Always update this CLAUDE.md** when features are added/modified/deleted.
+- Keep the code as modular, readable and performance efficient as possible. No file should be larger than 500 lines of code. Leverage C++ wherever needed to get maximum performance.
+- All code goes in `/src` — it gets overlaid onto Blender source during build.
+- Write all python code inside `/src/scripts/mixar/modules` in the relevant module. When in doubt, ask for the correct module.
+- Place all code which can be used across modules in the `common` folder.
+- All C/C++ files should be inside `src/source/blender`.
+- Put all environment variables in `.env` (copy `.env.example` as template). Never commit `.env`. Config is generated at build time by `scripts/generate_config.py`.
+- Keep properties and operators segregated in different folders.
+- Keep all the constants for a module inside a `constants.py` file inside the module root.
+- **Always update this CLAUDE.md** when features are added, modified, or deleted — keep module descriptions, architecture tables, and patterns in sync with the actual codebase.
 
 ## Bootstrap & Registration
 
-`src/scripts/startup/bootstrap/__init__.py` loads everything in 3 phases:
+The bootstrap system in `src/scripts/startup/bootstrap/__init__.py` handles module loading in 3 phases:
 
-1. **Package setup** — synthetic packages for `src/scripts/mixar/` (no `__init__.py` needed in most subdirs).
-2. **Bootstrap modules** — `src/scripts/mixar/bootstrap/*.py`, each with `register()`/`unregister()` (agent connection, paint module, generation catalog cache, update checker, sandbox supervisor, etc.).
-3. **UI auto-discovery** — every file under `modules/**/ui/` is loaded in time-budgeted (~4ms/frame) batches: properties first (priority 0), then operators/core (1), then panels/menus/headers (2).
+1. **Package setup** — creates synthetic packages for `/src/scripts/mixar/` (no `__init__.py` needed in subdirs)
+2. **Bootstrap modules** — loads `src/scripts/mixar/bootstrap/*.py` (must have `register()`/`unregister()`)
+3. **UI modules** — auto-discovers all files in `modules/**/ui/` dirs, loads in time-budgeted batches
 
-Rules: expose a `classes` tuple and let the fallback mechanism register it — only hand-write `register()`/`unregister()` when genuinely needed. For cross-directory property dependencies, drive import order via the module's `__init__.py` (reference: `paint/__init__.py`).
+**Key rules:**
+- Only make `register` and `unregister` functions when needed. Let the fallback mechanism handle registrations — pass the list of classes properly via `classes` tuple.
+- UI classes in `ui/` are auto-registered by bootstrap. Properties load first (priority 0), then operators/core (1), then panels/menus/headers (2).
+- For cross-directory property dependencies, use the module's `__init__.py` to import in order (see `paint/__init__.py`).
 
-## Modules (`src/scripts/mixar/modules/`)
+## Project Structure
 
-| Module | Purpose |
-|--------|---------|
-| **paint** (largest) | Layer-based texture painting: node trees, modifiers, baking, procedural materials/MatGen, decals, UDIM, vertex colors, asset export; agent-facing layer-stack tools in `paint/core/agent_tools` |
-| **space_mixie_chat** | Agent chat: WebSocket JSON-RPC + SSE streaming, reconnect-resume (`POST /agent/chat/attach` seq-dedup replay), sandboxed script execution, project/global rules (`core/rules_api.py`), @-mention autocomplete (C++ cursor, Python registry), feedback stars, and the deterministic export lane (FBX/GLB/OBJ/USD): `core/export_preflight.py` resolves the exporter's exact selected/named/scene targets before the `file_save` interrupt and reports applied rotation/scale, non-Armature modifiers, recursively referenced packed images, and Mixar bake readiness; permanent repair preserves Armature modifiers, scopes shared mesh/material data, and is checkpoint-replay idempotent; export destinations stay process-local — the backend only ever sees the opaque `export_destination_selected` resume action, never a path |
-| **agent_bubble** | Floating chat bubble over the viewport (native windows + GPU draw); shares ConnectionManager/message store with space_mixie_chat. Queue-aware status pill (`ui/header.py:_get_status` → `PillStatus`): reports unified-queue activity ONLY in the otherwise-Idle branch (never masks Disconnected/Reconnecting/Running/Awaiting Input); one active job shows its catalog label + elapsed clock, several show a count ("3 jobs 1:24"); data from `queue_manager.active_queue_activity()` (canonical FeatureQueue singletons, not the `wm.mixie_queue` mirror). Fixed 148px pill width → count caps at `9+`, `format_elapsed_compact` clock, labels over budget degrade to "Generating"; `animate` is False for queue states (the ticking clock is the animation) |
-| **agent_viewport_lock** | "Agent working" halo + input-block modal, keyed to the mode the *running* turn started in (`mixie_chat_active_turn_mode`), toasts pass through |
-| **agent_scene_strip** | Bottom View3D region (C++ `view3d_agent_strip*`) with live tiles of non-active scenes; keymap in addon keyconfig (required for custom C regions) |
-| **moodboard** | Reference boards + node canvas (below), catalog-driven generation sidebar (Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character Parts, Retopology, UV Unwrap, Mesh Segment, Auto Rig, Video Gen, World Labs + Queue), turnaround/multi-view image-to-3D, clipboard, scene recon, freehand image annotations, SAM3-guided character components, World Labs Gaussian splats (all below) |
-| **director** | Phase-zero camera directing as a viewport mode (below): native C++ View3D rail/gate/popups/timeline over Python-owned operators |
-| **hunyuan** | 3D generation enqueue helpers: text/image→3D, retopology (Hunyuan/Tripo engines), UV unwrap, auto-rig (`core/animate_enqueue.py`) |
-| **common** | API clients (`common/api/services/`), authenticated content-free UX telemetry (`common/analytics` — event reference in `docs/telemetry-events.md`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, browser-based updates, **job_queue** (below), **generation_params** schema engine |
-| **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager) |
-| **byok** | Bring-your-own-key provider settings via backend credentials endpoints |
-| **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune |
-| **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
-| **onboarding** | First-run GPU-rendered tour cards + highlight overlays |
-| **workflow** | Zen/Engine dual-mode workspace UI |
-| **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
-| **testing** | Legacy embedded test suite (explicit opt-in) |
+```
+.env.example                       # Environment config template (copy to .env for local dev)
+scripts/generate_config.py         # Generates runtime mixar.json at build time from env vars
+src/
+├── scripts/
+│   └── mixar/
+│       ├── bootstrap/         # Startup modules (agent_connection, paint_module, etc.)
+│       ├── config/            # Logging config
+│       └── modules/
+│           ├── common/utils   # Shared utilities
+│           └── {module_name}/
+│               ├── constants.py  # Module constants
+│               ├── core/         # Functional and calculation logic
+│               └── ui/           # UI elements (auto-discovered)
+│                   ├── properties/   # PropertyGroup definitions
+│                   ├── operators/    # Operator definitions
+│                   ├── panels/      # Panel drawing code
+│                   ├── menus/       # Menu definitions
+│                   └── lists/       # UIList definitions
+└── source/
+    └── blender/               # C/C++ extensions
+```
 
-## Moodboard Canvas, Inference Graph & Video
+### Active Modules
+`agent_bubble`, `agent_scene_strip`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `onboarding`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
 
-- **Canvas**: theme-independent pure black with a sparse neutral-gray dot grid fixed in *canvas* space (zoom in → fewer/larger dots). Dots are filled discs, not GPU point primitives (subpixel Moiré), and fade out as their projected diameter approaches one pixel.
-- **Media**: items may reference still-image *or movie* `bpy.types.Image` datablocks. Movies stay linked to the source file (Blender cannot pack movies), are copied/exported without re-encoding, and expose stream metadata via `moodboard/core/media_utils.py`. Playback is runtime-only (centered play/pause affordance or double-click, native frame rate, narrow redraw timer); a pass-through mouse-move handler stops it when the pointer leaves the tile. Image gen, masking/crop, system clipboard, chat attachments and image-to-3D deliberately filter movies out — those services are still-only.
-- **Inference graph**: persistent per-scene node graph on the canvas (image/video/3D blocks, stable ids, saved typed links, node-editor Bézier drawing). Prompt/model/catalog schema render in a screen-space toolbar above the selected block; a draft block whose controls are hidden always echoes its prompt or a hint rather than drawing an empty card. Blocks expose backend-typed media inputs plus one `+` output handle (never one socket per scalar param); repeatable inputs grow one empty socket at a time up to the backend limit; links are rejected on type/capacity/occupancy/duplicate/cycle failure. Generated media are owned by their block and released with it; uploaded media stay independent. Node services/models/choices/bounds/`visible_if` project from the same backend catalog as the sidebar.
-- **Node control panel is authored in Python, not C++**: C++ (`mixie_draw_moodboard_node_ui.cc:add_action_node_panel`) owns only placement — it hands the node to `MIXIE_MT_moodboard_node_controls` (`ui/moodboard_node_panel.py`) via `layout.context_ptr_set("mixie_moodboard_node", node)` and draws with `UI_menutype_draw`, keeping only a slim prompt/mode/model/Generate fallback for the startup window. The menu renders with the same building blocks as the sidebar N-panel (`sidebar_ui_helpers` sections + `mixar_*` styled UILayout widgets), but reads values from the per-node `node.parameters` collection (`_draw_node_param`, value props keyed on the `parameter_type` enum IDENTIFIER). Only the SELECTED node shows the full control stack (others get a compact type+status header); the focused panel is clamped fully on-screen — never size-gated away — and floats over the card's preview tile, which is drawn by the ONE shared graph-pass preview path in `mixie_draw_moodboard_graph.cc` (incl. a MASK_DETAIL node's `mask_preview`; the old `MaskThumbDraw` pass is gone). Plain Enter in a node prompt passes the owning node's id EXPLICITLY (`interface_handlers.cc`) — a prop-less `WM_operator_name_call` re-applies a REGISTER operator's saved last-used properties, so Enter used to resubmit whichever node Generate last ran; `run_action_node`/`reset_node_params` keep `node_id` `SKIP_SAVE` for the same reason.
-- **Generating feedback + agent visibility**: a QUEUED/RUNNING block draws a pulsing green glow (`draw_running_glow`, phase from `BLI_time_now_seconds()`), animated by a self-gating `bpy.app.timers` pump (`node_job_bridge.ensure_pulse_timer`, started from the `sync_graph_jobs` queue listener, unregistered once no node is generating — discrete job-state edges alone can't animate it). Selecting an inference block surfaces its generated still to the agent like a selected upload: `chat_sync._collect_selected_image_names` also walks `mixie_moodboard_action_nodes` and adds each selected node's non-movie `preview_image` (video/3D previews skipped — attachments are still-only).
-- **Graph safety contracts** (pinned by `tests/moodboard/test_node_graph_hardening.py`): every graph string the C++ canvas reads declares a `GRAPH_*_MAXLEN` strictly below its `MIXIE_GRAPH_*_BUF` stack buffer, and reads go through `mixie_rna_string_get_clamped` (`RNA_string_get` is strcpy-shaped; `maxlen` is only enforced on assignment). A node's service/model come from the saved `service_key_id`/`model_slug` strings, **never** the dynamic `EnumProperty` dropdowns (an enum persists as an index, so it repoints after a catalog reorder or reads `LOADING` pre-fetch; `SKIP_SAVE` does not help). Link draw and hit-testing share one `moodboard_graph_cache_build` pass; the drag preview keys on `scene->id.session_uid`, not a static `Scene *`; `media_item_by_id` is read-only (id migration runs from the poll tick / `load_post`, not a menu draw).
-- **Node-owned media are never `selected`**: generated media carry `embedded_node_id` and are excluded from `moodboard_find_image_under_mouse`, so every seam that makes an uploaded movie playable needs a node-aware counterpart (draw overlay, `graph_select_invoke` toggling playback *before* installing the move modal, `hovered_video_index_from_event`) — all keyed on the `mixie_moodboard_images` index via `moodboard_find_node_preview_video_under_mouse`, with one definition of the preview rect (`moodboard_graph_node_preview_bounds`). `g_video_playback` is keyed on `Image *` and pruned against `bmain->images` (deleting a node frees its movie). Selection-driven actions likewise resolve through the owning node: `media_utils.selected_exportable_media()` is the one definition, shared by the context menu and `mixie.moodboard_export_images` — deliberately read-only actions only (crop/rotate/flip stay on direct selection).
-- **Video Gen** is catalog-only (no offline fallback): availability, models, params and reference limits come from the backend seed and fail closed when missing/malformed. Stills are compressed, movie files stream through `POST /job-queue/uploads/{image|video}` (no base64 copies), duration is the backend-parsed value, and `video_gen` submits through the unified queue; completed videos move from queue temp storage into persistent Mixar storage before joining the originating scene's moodboard.
+**onboarding** — first-run feature tour: GPU-rendered cards (`core/card/`), dim film + green highlight border (`core/overlay/`). The three sidebar-step highlights (Image Gen / Model Gen / Retopology) measure the rendered panel extent dynamically via `region.view2d.tot_rect` — a Mixar RNA addition in `rna_screen.cc` exposing the View2D total rect — because catalog-driven tab heights vary per mode/model; the `SIDEBAR_PANEL_H_*` constants are only a fallback for builds without that overlay. Top-left cards (welcome/completion) reserve vertical clearance above the floating Agent Bubble window (`host_resolver.bubble_clearance_height`) so the card scales down instead of being cropped behind the bubble.
 
-## Director (`modules/director/`)
+---
 
-Phase-zero camera directing as a mode-level viewport experience. The native C++ View3D layer (`view3d_director_{state,overlay,overlay_frame,timeline*,popup*}.cc`) only *reads* registered Director RNA and *invokes* Python operators — behavior has exactly one owner, and the module registers **no** Python panel or popover.
+## Core Architecture
 
-- **Data model**: `scene.mixar_director` holds Shot records referencing native Scene/Camera data. Sparse user-facing Keyframes live in `beats` (stable ids, frames, packed stills) while **native camera transform/rotation/lens keys stay spatial truth**. Director preserves each camera's native rotation mode; complete Euler F-curve triplets are continuity-filtered chronologically with their Bezier handles after capture/deletion and before preview, locking, or guide rendering, while partial or misaligned triplets fail closed. Locking preserves the compiled `snapshot_json`; further edits go into a new child take. Manifest is provider-neutral `mixar.camera_direction.v1`. **Capturing a keyframe no longer auto-boards its still** — `pack_still_image` packs it into the blend and stores it on `beat.image`; stills reach the moodboard ONLY through the explicit Export (`send_keyframes_to_board`), which lays them out as a loose centered-grid CLUSTER (via `add_packed_image_to_board(anchor=...)`), never a formal Moodboard group — rendered guides land as plain board items too (the old shot-named `get_or_create_group_index` grouping was removed).
-- **Surface**: a 3-button rail (Shots · Moves · Camera, + Animation for characters) of native block popups, the live camera gate (lens in **millimetres, never FOV degrees**, aspect, timing, Navigate — a text-only button living ONLY on the gate — movable frame), and a bottom timeline dock — an `RGN_TYPE_CHANNELS` region, **not** `RGN_TYPE_FOOTER` (Blender hard-clamps footers to one header row); first footer-based builds migrate during View3D init. A single combined **Export to Moodboard** native block popup (`view3d_director_popup_render.cc`, replacing the old separate Shot Renders / Moodboard / Video Gen cluster — the Video Gen button was removed) exports keyframe stills (`mixar.director_send_keyframes`) and/or rendered Beauty/Clay/Depth guides (`mixar.director_render_videos`); it stays `UI_BLOCK_KEEP_OPEN` (kind selection is multi-select) and dismisses via an explicit `UI_popup_menu_retval_set(UI_RETURN_OK)`. The Director toggle sits in the topbar beside the Engine/Zen switch — redraws must also tag `Window.global_areas`.
-- **Deletion has three entry points and they must agree**: the strip menu, X/Del/Backspace over the timeline (the `mixar.director_block_input` guard never sees keys over the CHANNELS region, so the timeline owns its own deletion), and native Dope Sheet/Timeline key deletion reconciled by `core/beat_sync.py` (depsgraph handler *detects* a genuine drop in key count — a MOVE keeps the count — a debounce timer *mutates*, because editing scene data inside `depsgraph_update_post` is unsafe). `beat_sync` reconciles **both directions**: keys inserted through the native timeline (I-key, native auto-keying, pasted curves) are *adopted* as beats of the active draft shot on count growth or when a shot comes freshly under watch — adopted beats carry no packed still, and frames already claimed by any shot sharing the camera stay put (takes/split shots share one camera timeline). Directing entry and shot/camera switches cause **no depsgraph tick**, so they call `beat_sync.request_reconcile()` explicitly — otherwise an already-keyed camera keeps an empty strip until an unrelated edit ticks the watcher. Removing the last beat or the last shot referencing a camera calls `purge_camera_animation` (transform/lens F-curves + handheld modifiers) — per-frame key deletion misses stray/hand-authored keys; `camera_shared_elsewhere` keeps motion alive while another take still directs that camera.
-- **Input guards**: each `mixar.director_block_input` item must live in the keymap Blender dispatches **first** for that key (View3D walks WINDOW handlers head→tail: mode keymaps → "3D View Generic" → "3D View"; addon items are prepended only within their own keymap). G/R/S/X/Del guards sit in addon "Object Mode", N/T in "3D View Generic", Shift+S in "3D View". `F` capture lives in the addon "3D View" keymap because GUI keyconfig reload empties C-registered keymaps.
-- **Navigate** (`MIXAR_OT_director_navigate`) is a modal *supervisor* around native `view3d.walk` — its handler is installed after walk starts, so it sees events first: Esc snapshots the pose before walk's native CANCEL reverts it and re-applies it once walk dies (stop in place, keep the framing), RMB keeps native revert; every exit warps the cursor back to region center and a green reticle draws `POST_PIXEL`. **Fix Z** (`state.level_horizon`) levels roll when Navigate starts.
-- **Auto Key** (`core/auto_key.py` + `ui/auto_key_watch.py`): walk auto-captures on exit when the pose changed; Precise edits use a depsgraph handler + 0.8s stillness debounce that **rebaselines on frame changes** so scrubbing/playback never capture, and `mark_captured` pose signatures prevent double-keying.
-- **Motion**: camera move presets (`core/camera_moves.py`) all funnel through the ordinary `capture_beat` flow, pivoting on `interest_distance`. **Handheld is deliberately not a preset** — jitter can't be sparse-keyframed, so `core/handheld.py` applies named noise F-modifiers to the camera curves (captured keys stay clean; previews/guides/manifest sampling carry the drift). Character presets (`core/animation_presets.py`) are blocking-level object keys, not limb animation.
-- **Trajectory overlay** (`ui/trajectory_overlay.py` + `core/trajectory.py`): Python `POST_VIEW` GPU draw of the active shot's path, sampled by evaluating location F-curves via `anim_curves` — **never** `scene.frame_set` scrubbing (that re-evaluates the depsgraph per sample); ≤256 points cached behind an animation signature, only the playhead marker recomputes.
-- **Renders** (`core/render_outputs.py` / `render_passes.py`): passes render asynchronously across the first-to-last keyframe, polling Blender's render-job state between passes, and every touched scene/render/compositor property is snapshotted and restored. Blender 5 output requires switching `image_settings.media_type` to `VIDEO` before `FFMPEG` (and to `IMAGE` before `PNG`, restoring media_type *before* the saved format — legacy FFMPEG scenes otherwise reject PNG); movies move from temp output into persistent Mixar storage before moodboard insertion.
-- `MIXAR_OT_director_pick_camera` switches to the newest take already using that camera or creates a new Shot — it must **never** reassign the active Shot's camera and collapse two camera timelines. Active-shot changes keep `scene.camera`, camera view, preview range **and object selection** in sync (`viewport.select_camera_object` — called from deliberate camera *switches* and session entry only, never from `enter_camera_view`, which every capture re-enters and must not steal the selection from character Animation flows). Video handoff stays catalog-limited and model-neutral.
+| Layer | Location | Language | Purpose |
+|-------|----------|----------|---------|
+| **Blender C++ modifications** | `src/source/blender/` | C/C++ | Native editor spaces, auth, chat UI rendering |
+| **Python addon** | `src/scripts/mixar/` | Python | All feature modules, UI panels, operators |
+| **Backend (separate repo)** | `mixar-backend/` | Python/FastAPI | AI agent, API services, GPU job queues |
+| **Upstream Blender** | `upstream/` | Git submodule | Base Blender 5.0 source |
 
-## World Labs & Gaussian Splats
+**Build flow**: `upstream/` → copy to `source/` → overlay `src/` on top → CMake build with CUDA/OptiX → custom Blender binary.
 
-Gaussian-splat environments, from the backend `world_labs` job or a local file, rendered through a vendored KIRI addon. Splats are the Director-flow path for placing cameras/characters inside a captured environment.
+---
 
-- **Vendored addon**: `src/scripts/addons_core/kiri_3dgs_render` — KIRI 3DGS Render v4.1.5. It must live in `addons_core`, **not** `addons`: Blender maps the bundled scripts dir to `addons_core`. Vendored WITHOUT its extension wheels (open3d/scipy/dash, ~1 GB; availability-guarded, never needed by import or render) but WITH `assets/3DGS Render APPEND V4.blend` — the geometry-nodes group + material the import operator appends, release-zip-only upstream, vendored as a lossless compressed resave (190→62 MB). See the vendored `README.mixar.md`.
-- **Backend path**: the World Labs tab (`MIXIE_PT_gen_world_labs`, `_draw_world_labs`) generates a 3D world from text/image via the `world_labs` job (backend `adapters/worldlabs.py` on the job_queue platform + seed migration `b5d7e3f1a2c9`). Catalog-only, following the AI Render pattern — hidden until the catalog publishes an enabled `world_labs` service/model.
-- **SPZ → PLY** (`moodboard/core/world_labs_spz.py`): pure Python, numpy-only, SPZ v2/v3 gzip → 3DGS PLY. RUB→RDF conversion rotates all supported degree 1–4 spherical-harmonic coefficients with the geometry before writing KIRI's channel-major PLY fields. SH0 inputs get a zero degree-1 `f_rest` block because KIRI's importer hard-requires `f_rest_0`.
-- **Import** (`moodboard/core/world_labs_importer.py`) into a `WorldLabs_*` collection: splat +90°X orient, collider Rx180 reconcile + robust percentile ground/centre, KIRI render proxy built LAST in the final pose. The proxy renders while the point-cloud mesh and collider stay hidden — the splat mesh only *eye*-hidden so its geo-nodes still evaluate.
-- **Orientation is +90°X for CONVERTED files and −90°X for raw 3DGS `.ply`** (`RAW_PLY_ROT_EULER_DEG`). Marble SPZ stores the INRIA y-DOWN frame and `world_labs_spz` NEGATES Y/Z, so its temp PLY is y-UP (+90 → Z-up; validated on a real Marble 1.1 interior 2026-08-10 — at −90 the furniture hung from the ceiling), while an unconverted vendor `.ply` keeps y-down and takes KIRI's own −90 convention. **Do not "unify" these two rotations** — the converter's negation is exactly the 180° between them.
-- **Local import needs no backend**: `mixie.import_splat` (File > Import > Gaussian Splat, `moodboard/core/splat_import.py`) imports `.spz`/3DGS `.ply` through the same conversion/KIRI/orientation pipeline into `Splat_*` collections, with optional ground-at-origin.
-- **KIRI's render model**: the proxy draws splats via its own GPU shader pipeline during *interactive viewport redraws only*. F12/animation renders instead use the splat mesh's `KIRI_3DGS_Render_GN` camera-facing quads, which render **BLACK** until view/projection matrices are pushed into the modifier sockets — per-object `sna_dgs_object_properties.update_mode = 'Enable Camera Updates'` + `cam_update` (active camera). Director shot-render integration must enable that (or drive KIRI's Advanced Render flow); validated in-build — F12 EEVEE produces gaussian colour with camera updates on, black without.
+## 14 Feature Modules
 
-## Unified Job Queue (`modules/common/job_queue/`)
+| Module | What it does |
+|--------|-------------|
+| **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |
+| **space_mixie_chat** | AI agent chat interface — JSON-RPC 2.0 over WebSocket, SSE streaming, supervised headless sandbox script execution with Windows-safe parent liveness checks, markdown rendering |
+| **agent_bubble** | Floating draggable / resizable agent chat bubble overlaid on the 3D viewport. Status pill + composer + expandable history. Bridges to space_mixie_chat backend (ConnectionManager + scene message store) so the agent integration is shared. Pure Python: GPU draw handler + persistent modal operator. **Lifecycle invariants (crash-class fixes)**: bubble/pill wmWindows are NEVER serialized — every WM-layer `BLO_write_file` caller (interactive save, save-startup, AND `WM_autosave_write`) unlinks them via `wm_agent_bubble_windows_unlink_for_write`; files that already carry them (old autosaves) are stripped on read by `wm_file_read_strip_agent_bubble_windows` (wm_files.cc, runs in `wm_file_read_setup_wm_finalize` before the first `WM_check`, GUI only) and excluded from ghost-window winid matching. The cached raw GHOST pointers (`g_bubble_ghostwin`/`g_pill_ghostwin`/`g_host_ghostwin`) are invalidated at BOTH chokepoints: `wm_window_close` (space-based, `ED_agent_bubble_windows_closed`) and `wm_window_free` (pointer-based, `ED_agent_bubble_window_freed` — covers file-load WM replacement that bypasses close). Natively-hidden windows (minimised bubble `SW_HIDE`/`orderOut:`, modal-suppressed docks) are skipped in `wm_draw_update` via `Mixar_WindowIsVisible` (GHOST Win32+Cocoa) — presenting GL into a hidden window is what crashed NVIDIA's driver (`DrvPresentBuffers`) after resume-from-sleep; restore paths must tag a redraw after re-showing (they do — `bubble_force_size_and_refresh` / `NC_WINDOW` notifier in `wm_mixar_floating_docks_restore_after_modal`). |
+| **moodboard** | Reference image boards, scene reconstruction, image-to-3D, 360° lookdev, scene generation. Scene Gen Experimental source remains in the tree but its operators, UIList, tab PropertyGroups, scene flags, and queue mirrors are intentionally not registered/exposed. The **Image Gen tab** is catalog-driven: model/style dropdowns source `generation_catalog_cache`, settings past style/model render via `generation_params.draw_service_params()`, and the generate operator builds `payload["params"]` from `collect_params("image_gen", model)` — hardcoded enums remain as the offline/pre-auth fallback. The tab also carries a Mode dropdown for the `image_gen` capability's services (paint-surfaced `brush_gen` is filtered out). **From Blockout (`depth_to_image`) lives under whichever capability the catalog assigns it** — the dedicated **AI Render** tab (capability `ai_render`, `ui/ai_render_drawer.py`) or the Image Gen tab's From Blockout mode — and moving it between them is a DB-only `capability_id` flip: the drawing logic is the SHARED `ui/blockout_drawer.py` (never fold it into one tab's drawer), both host tabs carry a catalog model enum, and `lookdev_scene_ops` reads the model from whichever tab currently hosts the service. It renders the Blockout-to-Render inputs (`tab_lookdev` prompt + fast_mode) plus the catalog Model dropdown/schema params and submits through the EXISTING depth-capture flow (`mixie.lookdev_generate` → `lookdev_generate_from_scene`, payload shape unchanged, model slug + params catalog-resolved with `flux-depth-dev`/`{}` fallback). The **Model Gen tab** (panel `MIXIE_PT_gen_image_to_3d`, bl_category "Model Gen") consolidates the catalog's `model_gen` capability: a Mode dropdown (Image to 3D / Image to 3D Pro / Rapid 3D = services `model_3d`/`image_to_3d`/`hunyuan_rapid`), per-mode Model dropdown + schema params via `draw_capability_selector()`, shared input-image UI, Pro-only multi-view pickers (reusing `scene.hunyuan.pro` state/operators), and `mixie.model_gen_generate` (`ui/operators/model_gen_ops.py`) which routes by mode through the payload assemblers onto each mode's existing feature queue/scene flag/import hook. Catalog-not-loaded falls back to the legacy Basic/Pro subtab UI (`sidebar_panel_drawers._draw_image_to_3d`); the drawer lives in `ui/model_gen_drawer.py`. **Stage 2b converted the remaining tabs**: **Texture Gen** (panel `MIXIE_PT_gen_lookdev360`, bl_category "Texture Gen") — capability `texture_gen`, modes PBR Textures/`pbr_gen` (existing `mixie.lookdev360_generate` pipeline, resolution now schema-driven), Texture Edit/`hunyuan_texture_edit` (`mixie.texture_edit_generate` in `ui/operators/texture_gen_ops.py`: FBX export + reference image XOR prompt, shares `FEATURE_LOOKDEV360`), and Procedural Material/`mat_gen` (`mixie.texture_gen_matgen` → paint-side `enqueue_matgen_job`, catalog slug fast/detailed = pipeline); drawer `ui/texture_gen_drawer.py`. **Retopology** — capability `retopology`, drawer `ui/retopology_drawer.py` + `mixie.retopology_generate` (`ui/operators/retopology_gen_ops.py`) fanning out through `enqueue_retopology_jobs`; Tripo "Bake Textures" stays client-side on `scene.hunyuan.topology.tripo_bake`. **UV Unwrap** — capability `uv_unwrapping` (single service, Mode hidden): the catalog Model dropdown/params append to the existing drawer, submit flow unchanged. **Mesh Segment** — capability `mesh_segmentation` with modes `mesh_segment` (existing flow) and `hunyuan_part` (embeds the former PART_SEGMENT flow). **Scene Recon** — pipeline flags schema-driven from service `scene_reconstruction` (`_gather_recon_params` in `scene_recon_ops.py`); `save_to_library`/`asset_library_path` remain plain Blender props. Catalog Mode/Model enum selections for tabs without their own prop group live in `ui/moodboard_catalog_tab_props.py` (registered via `moodboard_scene_registration.py` before the sidebar container). Every tab keeps its legacy hardcoded UI as the catalog-not-loaded fallback. **Stage 3 — final sidebar** (`ui/moodboard_sidebar_panels.py`): exactly one N-panel per catalog capability, in catalog sort order — Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Retopology, UV Unwrapping, Mesh Segmentation — plus the Queue utility panel (`mixie.queue_view` keys on its category). AI Render is catalog-only: unlike the seven legacy tabs it has no offline fallback, so its `poll()` requires a loaded catalog with `ai_render` services (empty/absent capability = hidden tab, which makes the depth_to_image move revertible from the DB alone). **Scene Gen** (panel `MIXIE_PT_gen_scene_recon`, `ui/scene_gen_drawer.py`) merges Scene Reconstruction (`scene_reconstruction`) and Segments to 3D (`scene_gen`) behind a Mode dropdown; each mode's operator/payload flow is untouched. Panels are STATIC (labels mirror the DB capability labels — runtime re-registration for relabelling is fragile) with catalog-driven content, and each panel's `poll()` hides the tab when the loaded catalog has no moodboard services for its capability; offline all 7 tabs render legacy fallbacks. Removed in Stage 3: the Blockout panel (absorbed into Image Gen), the Segment panel (merged into Scene Gen), the legacy single-panel tab strip (`moodboard_sidebar_panel.py`) + `core/sidebar_animation.py`, the sidebar `active_tab`/`imagegen_subtab`/`segmentation_subtab` enums (`image_to_3d_subtab` survives for the Model Gen offline fallback), and the dead hunyuan/part/rapid drawers in `sidebar_tab_drawers.py`. Segmentation tools (magic select, box/lasso mask) surface results via `sidebar_ui_helpers.focus_scene_gen_segments()`. All generate operator bl_idnames and `scene.hunyuan.*` property groups are unchanged (frozen agent contracts). |
+| **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines as **models of the one `retopology` backend service**: **Hunyuan** (`hunyuan_topology`) and **Tripo** (`tripo_v2`, v2.0 `mesh/decimate`); pre-merge catalogs still expose Tripo as the separate `retopology_tripo` service and the enqueue follows whichever service the catalog resolved. Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
+| **common** | Shared API clients (13 services), WebSocket infrastructure, notifications, versioning, auto-updates (startup check, forced-update enforcement, Help → Check for Updates), and `generation_params/` — the schema-driven parameter engine (see Generation Catalog section) |
+| **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
+| **asset_search** | Neural embedding-based asset library search and training |
+| **mesh_segment** | UV mesh segmentation via SAM-based API |
+| **texel_density** | UV texel density analysis and visualization |
+| **uv_editor** | Advanced UV editing workspace with dual-space architecture, mutually exclusive tool/header panels, annotate and UV tool sidebars, dynamic panel ordering, and toolbar auto-expand |
+| **space_texture_sets** | Texture set management |
+| **Agent Scene Strip** (C++ region + `agent_scene_strip` Python keymap module) | Bottom-docked View3D region (`RGN_TYPE_EXECUTE`, `src/source/blender/editors/space_view3d/view3d_agent_strip*`): live offscreen-rendered viewport tiles of **every scene except the window's active one**, for monitoring parallel agents (one per scene) without leaving the viewport. Replaces the removed Scene Grid editor space (`SPACE_SCENE_GRID` = 109, enum value reserved). Poll-driven region: auto-shows when the file has more than one scene, auto-hides otherwise. Realtime via a 0.1s TIMERNOTIFIER poll + depsgraph change detection (`DEG_get_update_count`), so tiles follow script edits to non-active scenes with no notifiers needed. Per-tile orbit/pan/zoom (`VIEW3D_OT_agent_strip_*`), click-to-activate scene (swaps that tile out for the previous active scene), per-scene `mixie_chat_is_busy` badge; tiles follow the host viewport shading (solid/material). Mixar file subversion 100.3 adds the region to previously saved View3D areas. Key bindings live in `modules/agent_scene_strip/ui/keymap.py` (addon keyconfig): the GUI keyconfig preset reload wipes items from all C-registered keymaps in the default config, so C-side `WM_keymap_add_item` bindings go dead in GUI sessions — addon-keyconfig registration is the required pattern for custom C region keymaps (same as `space_mixie_chat`). |
+| **operation_history** | Per-session local log (`operations.jsonl` + `scripts/`) of every agent script execution plus curated manual user ops. Agent executions captured at `space_mixie_chat/core/main_thread_executor.py`; manual ops via a depsgraph→timer capture service. Read by the agent through `operation_history/core/tools.py:run_tool`. No backend DB. |
+| **testing** | Pure-Python unit tests (pytest, run from repo root with bpy stubbed via root `conftest.py`) |
 
-All standard AI generation goes through **one** queue — do NOT create new `Job` subclasses for standard features.
+---
 
-- **Contract**: `POST /job-queue/jobs` (job_type, model, payload) submits; state is driven by the shared agent WebSocket (`job.update` pushes, `job.get`/`job.sync` reconciliation); `GET`/`DELETE /job-queue/jobs/{id}` for status/cancel (`common/api/services/job_queue_service.py`).
-- **Entry point**: `enqueue_generation(kind="glb"|"image", feature_key, job_type, model, payload, label, ...)` in `core/enqueue.py`. Two generic jobs cover everything standard: `AsyncGLBJob` (submit→poll→download→import) and `SyncImageJob` (inline result→moodboard) in `core/generic_jobs.py`.
-- **Per-feature enqueue helpers** build payloads and call `enqueue_generation()`: `moodboard/core/generation_enqueue.py`, `hunyuan/core/{retopology,uv,part,animate}_enqueue.py`. No literal model slugs in this layer — resolve via catalog (`catalog_default_model()`; `None` = abort submit, never substitute a slug) or `hunyuan/core/pro_model.resolve_pro_model_slug`.
-- **Bespoke queues** (genuinely custom polling/result handling) keep their own files: `lookdev360_queue`, `scene_recon_queue`, `mesh_segment_queue`, `matgen_queue`, `world_labs_queue` (submit the catalog-backed `world_labs` job, download SPZ + optional GLB/panorama off the main thread, `world_labs_spz.spz_to_ply()`, then import the KIRI splat and collider).
-- Lifecycle: PENDING → RUNNING_SUBMIT → RUNNING_POLL → RUNNING_DOWNLOAD → SUCCESS/FAILED (`core/queue_manager.py` + `queue_download.py`). Download policy in `core/downloader.py`: total deadline, Content-Length verification, bounded retry (never retry 4xx — presigned S3 URLs expire; never refresh URLs client-side).
-- Jobs constructed during synchronous agent script execution capture the explicit backend `agent_ctx` chat session/turn ids and Mixar instance id in top-level payload `agent_context`; older frames without `agent_ctx` fall back to the routing session/envelope request ids. User enqueues remain unstamped. Bespoke jobs that assemble payloads at submit time must forward the context captured by `Job` construction.
-- Queue UI labels resolve through the generation catalog; keep raw identifiers only as offline/historical fallback. Never parse prompt text to derive labels; use `display_label` when `label` carries naming data. Job naming is shared across surfaces (Queue UIList, agent-bubble pill) via `core/labels.py:catalog_feature_label()` — empty on a catalog miss, never leak raw feature keys like `mesh_segment`. Composite workflows whose originating N-panel differs from the submitted service carry a catalog-resolved `origin_capability_key` — Scene Gen HP/LP and component-detail jobs stamp `CHARACTER_PARTS_CAPABILITY_KEY` (`moodboard/constants.py`) so their badge follows the Character Parts label.
-- **Queue-activity feedback**: one toast under one stable id (`core/enqueue_toast.py`) tracks the queue from first enqueue to drain — STICKY while any job is active ("3 generations in progress" + View Queue, `QUEUE_ACTIVE_TOAST_TTL_MS = 0`), replaced on drain by a transient "N generations ready" summary, or dismissed when nothing succeeded (failures raise their own toasts). Counts derive from live queue snapshots on every `_notify()`, never a burst counter; the toast is re-pushed only when its rendered text changes; user dismissal (detected via `NotificationStore.contains()` — a sticky item's absence after a push can only mean the user closed it) is respected until the next `submit()`.
-- **Queue-state redraw contract**: any surface showing queue state must be in `model_io.QUEUE_SURFACE_AREA_TYPES` — includes `AGENT_BUBBLE` (bubble and minimised pill live in their OWN wmWindows; tag their REGIONS, not just the area). The 0.5s repaint pump that advances the pill clock is `queue_status_icons`' blink timer, keyed on the ACTIVE set and started from `FeatureQueue._notify()` (not just the mirror listener, which would leave unlisted queues' clocks frozen).
+## Unified Job Queue
+
+All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush gen, scene gen) submit through **one unified async job queue** instead of bespoke per-feature services. Lives in `modules/common/job_queue/`.
+
+**Backend contract**: `POST /job-queue/jobs` (job_type, model, payload) → `GET /job-queue/jobs/{id}` polling → `DONE`/`FAILED`. The client `JobQueueService` wraps these.
+
+**Client architecture**:
+- **`core/job.py`** — base `Job` with shared `_unwrap_response()`, `_parse_standard_submit()`, `_parse_standard_poll()`, default `poll()`.
+- **`core/generic_jobs.py`** — two generic Job classes cover all standard features:
+  - `AsyncGLBJob` — submit → poll → download GLB → import (3D gen, retopology, UV, part, rapid, image-to-3D, scene gen HP/LP). Optional `on_imported` hook for rename/chain-id stamping.
+  - `SyncImageJob` — submit with inline result → download images to moodboard (image gen, lookdev/depth-to-image, brush gen).
+- **`core/enqueue.py`** — single `enqueue_generation(kind="glb"|"image", ...)` entry point. Builds the right Job, auto-attaches the queue listener (custom or from `scene_flag`), submits.
+- **`core/helpers.py`** — `get_queue_with_listener()`, `create_scene_flag_listener()` (with `on_start`/`on_finish` hooks), `show_batch_summary_popup()`, `extract_image_urls()`, `download_images_to_moodboard()`.
+- **`core/queue_manager.py`** — `FeatureQueue` drives Job lifecycle: PENDING → RUNNING_SUBMIT → RUNNING_POLL → RUNNING_DOWNLOAD → SUCCESS/FAILED.
+
+**Per-feature enqueue helpers** (build payloads + fan-out, then call `enqueue_generation()`): `moodboard/core/generation_enqueue.py` (Pro, scene gen HP/LP), `hunyuan/core/{retopology,uv,part}_enqueue.py`. Operators call these or `enqueue_generation()` directly — **do not** create new Job subclasses for standard features. `retopology_enqueue.py` branches on the shared snapshot's `model` key (`hunyuan`/`tripo`, set by the legacy Topology prop or the catalog tab): Hunyuan → `service=retopology, model=hunyuan_topology`, `params` `polygon_type`/`face_level`/`post_process`; Tripo → `model=tripo_v2`, `params` `quad`/`face_limit`/`bake` (backend clamps face_limit), a 150 MB export cap, and an import hook that renames to `*_low` and only Smart-UV-unwraps when `bake=false`. Tripo submits to `shared["service_key"]` — the merged `retopology` service on current catalogs, falling back to the legacy `retopology_tripo` service (pre-merge catalogs / legacy props path). `shared["model_slug"]` overrides the model constants when the catalog tab selects one.
+
+**Genuinely unique jobs keep their own queue files** (custom polling/result handling): `lookdev360_queue.py` (PBR textures → fill layers), `scene_recon_queue.py` (progressive 2-phase), `scene_gen_exp_labels_queue.py` (label extraction), `mesh_segment_queue.py` (inline JSON → vertex groups), `matgen_queue.py` (inline script → procedural material).
+
+---
 
 ## Generation Catalog & Dynamic Params
 
-- `bootstrap/generation_catalog_cache.py` + `bootstrap/generation_catalog/{storage,queries}.py` — ETag-revalidated cache of `GET /api/v1/generation-catalog` (capabilities → services → models → param schemas, styles, credit costs); persisted to disk so panels render instantly; cleared on logout.
-- `modules/common/generation_params/` — builds one PropertyGroup per (service, model) from schemas, attached to **WindowManager** (safe re-registration, no .blend persistence). `draw_service_params()` renders; `collect_params()` returns the payload dict; `core/assemblers.py` puts params in `payload["params"]` (snake_case). **Never hardcode param names** — the backend adapters own all vendor mapping; never build provider shapes client-side.
-- Every catalog-driven tab keeps its legacy hardcoded UI as the offline/pre-auth fallback — **except** catalog-only capabilities (AI Render, Auto Rig, Video Gen), which stay hidden until the backend publishes an enabled service/model and have no hardcoded submit fallback. Generate operator `bl_idname`s and `scene.hunyuan.*` prop groups are **frozen agent contracts** — don't rename.
+Foundation for the DB-driven moodboard tabs — the sidebar is exactly the 7 capability tabs (Image Gen, Model Gen, Texture Gen, Scene Gen, Retopology, UV Unwrapping, Mesh Segmentation) plus Queue, each with a legacy offline fallback.
 
-## Agent System (backend-driven)
+- **`bootstrap/generation_catalog_cache.py`** — caches `GET /api/v1/generation-catalog` (capabilities → services → models → parameter schemas, plus styles and credit costs). Mirrors the `imagegen_cache` architecture (2s-delayed background fetch, lock-guarded state, logout clear, manual refresh) and adds ETag/`If-None-Match` revalidation plus disk persistence (`generation_catalog.json` in `bpy.utils.user_resource('DATAFILES', path='mixar')`) so panels render instantly from stale cache on launch. Typed accessors: `get_capabilities/get_services(capability, surface)/get_models/get_model/get_styles/get_credit_cost/is_loaded` + enum-item helpers with LOADING/ERROR placeholders. Services carry `surface` (`moodboard`|`paint`) — paint-only services must never appear in moodboard tabs.
+- **`modules/common/generation_params/`** — schema-driven parameter engine: dynamically builds one PropertyGroup per (service, model) from catalog schemas, attached to **WindowManager** pointers (not Scene) so re-registration on catalog change is safe (no .blend/undo persistence; rebuilds run on a main-thread timer scheduled by the cache). `draw_service_params(layout, service, model)` renders widgets by schema `widget` kind honoring `order`/`group`/`visible`/`visible_if`; `collect_params(service, model)` returns visible params as a typed plain dict for payloads. Never hardcode param names here — key sets change from the DB without client releases. Design rationale in `core/engine.py` docstring. Two more layers live here: **`core/selector.py`** — capability mode selector (`get_service_enum_items()` Mode-dropdown items with LOADING/ERROR placeholders, `resolve_service_key()` mode-enum→valid service key, `draw_capability_selector()` Mode→Model→params rendering that returns False when the catalog isn't loaded so tabs fall back to legacy UI); and **`core/assemblers.py`** — the generic wire contract: `assemble_payload(service, params, payload, model_slug)` puts `collect_params()` output (plus `prompt` where a service takes one) into `payload["params"]` (snake_case, None values dropped) for EVERY service; file/image inputs stay top-level (`image_bytes_b64`, `file_bytes_b64`, `multi_view_images`, ...). The backend provider adapters own all vendor mapping (Tencent PascalCase `sdk_params`, Tripo decimate body + face-limit clamping, fal snake_case) — never build provider shapes client-side. `resolve_model_slug()` (selector.py) maps a model enum value to a valid catalog slug with a hardcoded fallback. Bespoke-queue services (`pbr_gen`, `mesh_segment`, `scene_reconstruction`, `mat_gen`) have no assembler entry: their Jobs build payloads from dataclass fields, so catalog params thread through the enqueue helpers' kwargs instead.
+- **Legacy caches retired** — `bootstrap/imagegen_cache.py` / `model_3d_cache.py` were deleted (Stage 3); every consumer (moodboard enum callbacks, space_mixie popup props, paint brush-gen models, auth login/logout hooks, refresh operators, default-model/max-refs lookups) reads the generation catalog cache, with static hardcoded lists as the last-resort offline/pre-auth fallback. `generation_params.get_param_enum_items(service, model, param)` serves legacy enum props that mirror a schema param (e.g. aspect_ratio/resolution) outside the dynamic engine.
 
-Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → backend validates → Blender script over WebSocket → script reads `__PARAMS__`, emits `print("__RESULT__" + json.dumps(...))` → result returns to LLM. Client-side execution runs through `space_mixie_chat/core/main_thread_executor.py` / `core/executor.py`.
+---
 
-## Key Patterns & Gotchas
+## AI Agent System
 
-- **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks.
-- **Singleton + daemon threads** for persistent connections (ConnectionManager WebSocket). Background threads must not touch `bpy`; marshal to main thread via timers.
-- **DRW offscreen passes reset the region framebuffer viewport/scissor** — capture and restore manually or the region renders black.
-- **Custom C region keymaps must register in the addon keyconfig** (Python side), not via C `WM_keymap_add_item` — GUI keyconfig preset reload wipes C-registered items.
-- Safety contracts: backend-authoritative option lists fail closed (empty list → disabled, never resurrect hardcoded services); feedback locks only after confirmed 2xx; BYOK keys are transient `SKIP_SAVE` fields; terminal queue states release large payloads but keep lightweight history.
-- Multi-view/turnaround submits **refuse loudly** rather than silently degrading to a single image (terminal `ValueError` reaches the agent verbatim).
-- **Character component detail contract**: Box Mask / multi-loop Lasso Mask / Magic Select results stay packed SAM3 masks on their source image and become editable named components (`moodboard/core/character_components.py`). SAM3 refinement runs loop-by-loop and every returned mask is intersected with the authoritative user lasso (`core/mask_guidance.py`); the source artwork is never mutated. Detail generation fails closed unless the catalog-selected `image_gen` model advertises mask guidance and ≥2 reference images, then submits one queue job per component with ordered `reference_image_roles` (`component_cutout` + lossless `selection_mask`, optional `full_context`); never hardcode an image-model slug. Scene Segment polling is single-flight per uploaded image with a 120s terminal deadline on the shared HTTP executor — never register timers from raw worker threads. Debug mask preview cards are hard-disabled via `COMPONENT_DEBUG_MASKS_ENABLED = False` (`core/component_debug.py`).
-- **Moodboard annotation contract**: freehand annotations are non-destructive normalized vector strokes owned by a moodboard image (`core/annotation_geometry.py` for transforms), persisted in the `.blend`, rendered inside the image's scale/rotation/flip transform; one stroke per non-blocking draw action, visibility toggle / undo-last / undoable clear, deep-copied on duplicate — never mutating source pixels or generation-reference pixels. The toolbar's Annotate popover is hidden for now; a direct Multi-Lasso Mask button takes its slot.
-- **World Labs client contract**: World Labs is a catalog-only Gaussian-splat capability, **not** a synonym for ordinary scene generation. The live catalog owns the enabled model plus the `mode` and `lod` schemas; the panel and the agent-direct operator fail closed when those rows are unavailable. There is no bundled test model or fixture asset path. World result downloads, including the optional panorama, happen off Blender's main thread; only packed datablock creation and import run on the main thread. SPZ RUB→RDF conversion must rotate all supported degree 1–4 spherical-harmonic coefficients with the geometry before writing KIRI's channel-major PLY fields.
-- **Character Parts** is a DB-driven capability split: backend migration `a9e4c1d7b3f2` moves the `scene_gen` service (key/job_type/feature_key frozen) under a new `character_parts` capability, so the Scene Gen tab drops to one service and the catalog-only Character Parts tab (Segments to 3D) appears — revertible from the DB alone. Segmentation tools surface results via `sidebar_ui_helpers.focus_segments_panel()`.
-- **Director safety contract**: shots reference native Blender scene/camera/timeline/output state instead of copying it into a second editable source of truth; the C++ surface only reads Director RNA and invokes Python operators, so directing behavior is never duplicated natively.
-- C++ overlays of note: `rna_main_api.cc` (kill preview jobs before `bpy.data.*.remove()` frees IDs), `py_capi_utils.cc` (per-thread GIL check), agent-bubble window lifecycle in `wm_files.cc`/`wm_window` (bubble windows never serialized; GHOST pointers invalidated on close AND free).
-- `mixie_chat_free()` clears process-global caches and runs for ANY freed Main (including temp Mains) — any new global cache cleared there needs a self-heal check on the draw path.
+The backend runs a **LangGraph-based orchestrator agent** (Claude Sonnet 4.6 primary, Gemini 3.1 Pro fallback) with:
 
-## Repo Docs Map
+- **18 tool domains** and **200+ tools** covering modeling, texturing, UV, rigging, particles, scene management, layer painting
+- **12+ workflow modes** (MODELING, TEXTURING, RIGGING, UV_UNWRAP, SCENE, LAYER_PAINTING, etc.) that filter which tools the LLM sees
+- **Tool execution pattern**: LLM calls tool → backend validates → sends Blender script via WebSocket → script uses `__PARAMS__` for input and emits `__RESULT__` JSON → result fed back to LLM
 
-`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs).
+---
+
+## C++ Customizations (~150 files)
+
+- **26 C++ files** for native chat UI rendering (markdown, thinking visualization, hit testing, thumbnails)
+- **Authentication**: Cross-platform keyring + local OAuth PKCE callback server
+- **Custom editor spaces**: `space_mixie_chat`, `space_mixar_properties`, `space_mixar_layers`, `space_mixar_assets`
+- **3D viewport enhancements**: 13 modified files
+- **Python GIL safety**: `python/generic/py_capi_utils.cc` overlay — `PyC_IsInterpreterActive()` uses per-thread `PyGILState_Check()` instead of the process-global current-tstate check. On Python ≤ 3.11 the global check answers "does *any* thread hold the GIL", which let C++ operators (GIL released around `WM_operator_call_py`) call Python C-API concurrently with background Python threads (auth/keyring, cache fetchers) → allocator corruption → startup segfaults in `PyUnicode_New`.
+
+---
+
+## Bootstrap & Loading
+
+A sophisticated **two-phase registration system**:
+1. **Synchronous bootstrap** (6 modules): paint property chains, agent connection, splash, caches, update checker
+2. **Deferred UI loading**: ~415 Python files loaded in **4ms/frame time-budgeted batches** to keep Blender responsive during startup, with dependency-ordered priority (properties → operators → panels)
+
+---
+
+## Key Patterns
+
+- **Overlay mechanism**: Mixar code overlays upstream Blender, making version upgrades cleaner
+- **Singleton + daemon threads**: ConnectionManager for persistent WebSocket
+- **Handler pattern**: Depsgraph handlers set flags → timers do work (avoids blocking draw)
+- **Script communication**: `__PARAMS__` in, `print("__RESULT__" + json.dumps(...))` out
+- **Headless sandbox supervision**: Parent Mixar process spawns a background sandbox child with platform-specific process flags; Windows children use Win32 process APIs for parent liveness checks.
+- **Time-budgeted loading**: UI modules load without blocking the main loop
+
+---
+
+## Summary
+
+This is a **production-grade, AI-augmented 3D creation platform** built on top of Blender. The texture painting system is the core feature (layer-based, node-driven, with procedural materials and baking), but it's surrounded by a rich ecosystem of AI capabilities — an autonomous chat agent that can manipulate the 3D scene, AI-powered 3D generation, reference moodboards, smart asset search, and mesh segmentation. The codebase is modular (~1,000+ Python files, ~150 C++ files) with clear separation between Blender-side UI/logic and backend AI services.

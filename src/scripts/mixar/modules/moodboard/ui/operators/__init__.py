@@ -10,10 +10,7 @@ Collection of operators for moodboard UI interactions.
 """
 
 from . import (
-    agent_auto_rig_ops,
-    agent_segment_ops,
     cancel_ops,
-    detect_views_ops,
     imagegen_ops,
     imagegen_reference_ops,
     lookdev_ops,
@@ -26,22 +23,15 @@ from . import (
     model_gen_ops,
     retopology_gen_ops,
     scene_recon_ops,
-    segment_gen_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,
     texture_gen_ops,
     transform_modal_ops,
 )
 
-# Submodules to register.
-# NOTE: agent_auto_rig_ops was added in 9b9564fd but never listed here, so
-# `mixie.agent_auto_rig` was never registered and every agent auto-rig enqueue
-# failed with "operator not found". Listed now alongside agent_segment_ops.
+# Submodules to register
 modules = (
-    agent_auto_rig_ops,
-    agent_segment_ops,
     cancel_ops,
-    detect_views_ops,
     imagegen_ops,
     imagegen_reference_ops,
     lookdev_ops,
@@ -54,7 +44,6 @@ modules = (
     model_gen_ops,
     retopology_gen_ops,
     scene_recon_ops,
-    segment_gen_ops,
     # scene_gen_exp_ops,  # Scene Gen Experimental disabled
     sidebar_ops,
     texture_gen_ops,

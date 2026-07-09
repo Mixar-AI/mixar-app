@@ -24,10 +24,7 @@ from mixar.modules.common.api.request_queue import (
     get_request_queues,
 )
 from mixar.modules.common.api.services import job_queue_service as JQS
-from mixar.modules.common.job_queue.core.generic_jobs import (
-    AsyncGLBJob,
-    StreamingVideoJob,
-)
+from mixar.modules.common.job_queue.core.generic_jobs import AsyncGLBJob
 from mixar.modules.common.job_queue.core import queue_manager as QM
 from mixar.modules.common.job_queue.core.job import Job, JobState
 
@@ -115,34 +112,6 @@ def test_job_queue_service_accepts_stable_idempotency_key(monkeypatch):
     )
 
     assert client.calls[0][2]["json"]["idempotency_key"] == "stable-submit-key"
-
-
-def test_job_queue_service_streams_media_with_explicit_metadata(monkeypatch):
-    monkeypatch.setattr(JQS, "get_access_token", lambda: "token")
-    client = FakeClient()
-    service = JQS.JobQueueService(client)
-    body_factory = lambda: object()
-
-    request_id = service.stage_media(
-        media_kind="video",
-        filename="shot one.mp4",
-        content_type="video/mp4",
-        content_length=123,
-        body_factory=body_factory,
-    )
-
-    method, endpoint, kwargs = client.calls[0]
-    assert request_id == "request-post"
-    assert (method, endpoint) == (
-        "POST",
-        "api/v1/job-queue/uploads/video",
-    )
-    assert kwargs["data_factory"] is body_factory
-    assert kwargs["headers"] == {
-        "Content-Type": "video/mp4",
-        "Content-Length": "123",
-        "X-File-Name": "shot%20one.mp4",
-    }
 
 
 def test_job_status_and_cancel_use_job_queue_paths(monkeypatch):
@@ -299,77 +268,6 @@ def test_async_glb_job_reuses_idempotency_key_on_submit_retry(monkeypatch):
     assert fake_service.calls[1]["idempotency_key"] == job.submit_idempotency_key
 
 
-def test_streaming_video_job_stages_inputs_before_enqueue(monkeypatch, tmp_path):
-    video_path = tmp_path / "reference.mp4"
-    video_path.write_bytes(b"movie-bytes")
-
-    class FakeService:
-        def __init__(self):
-            self.staged = []
-            self.enqueued = []
-
-        def stage_media(self, **kwargs):
-            self.staged.append(kwargs)
-            body = kwargs["body_factory"]()
-            try:
-                assert body.read()
-            finally:
-                body.close()
-            is_video = kwargs["media_kind"] == "video"
-            kwargs["on_success"](
-                APIResponse(
-                    success=True,
-                    status_code=200,
-                    data={
-                        "data": {
-                            "s3_key": (
-                                "user-uploads/u/seedance/videos/2250/id/reference.mp4"
-                                if is_video
-                                else "user-uploads/u/seedance/images/id/still.jpg"
-                            ),
-                            "duration_seconds": 2.25 if is_video else None,
-                        }
-                    },
-                )
-            )
-
-        def enqueue(self, **kwargs):
-            self.enqueued.append(kwargs)
-
-    service = FakeService()
-    monkeypatch.setattr(JQS, "get_job_queue_service", lambda: service)
-    errors = []
-    job = StreamingVideoJob(
-        job_type="video_gen",
-        model="seedance-2-0",
-        payload={"prompt": "A cloth flag moves in the wind", "params": {}},
-        image_inputs=[{
-            "filename": "still.jpg",
-            "mime_type": "image/jpeg",
-            "bytes": b"jpeg-bytes",
-        }],
-        video_inputs=[{
-            "filename": "reference.mp4",
-            "mime_type": "video/mp4",
-            "filepath": str(video_path),
-            "file_size_bytes": video_path.stat().st_size,
-        }],
-    )
-
-    job.submit(lambda _response: None, errors.append)
-
-    assert not errors
-    assert [call["media_kind"] for call in service.staged] == ["image", "video"]
-    assert len(service.enqueued) == 1
-    payload = service.enqueued[0]["payload"]
-    assert payload["reference_image_s3_keys"] == [
-        "user-uploads/u/seedance/images/id/still.jpg"
-    ]
-    assert payload["reference_video_s3_keys"] == [
-        "user-uploads/u/seedance/videos/2250/id/reference.mp4"
-    ]
-
-
 def test_feature_queue_waits_for_ws_without_rest_poll_timer(monkeypatch):
     QM._queues.clear()
     QM._sync_watchdog_registered = False
@@ -415,7 +313,6 @@ def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
                         "job": {
                             "job_id": "job-ws",
                             "state": "succeeded",
-                            "model": "flux-fast",
                             "result": {"result_files": []},
                         }
                     }
@@ -435,7 +332,6 @@ def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
     assert job.poll_calls == 0
     assert job.handled is True
     assert job.state == JobState.SUCCESS
-    assert job.model == "flux-fast"
 
 
 def test_dlq_job_update_fails_immediately(monkeypatch):

@@ -99,12 +99,12 @@ def _get_primary_font_id() -> int:
 # its own toast layout). Rebuilt every draw pass, consumed by the click and
 # hover operators via bounds_for_region().
 #   {region_ptr: {"close":  [(nid, x, y, w, h), ...],
-#                 "action": [(nid, operator_idname, url, x, y, w, h), ...],
+#                 "action": [(nid, operator_idname, x, y, w, h), ...],
 #                 "url":    [(nid, url, x, y, w, h), ...]}}
 toast_bounds_by_region: dict[int, dict[str, list]] = {}
 
 # Interaction state shared with the click/hover operators. Keys:
-#   ("close", nid) | ("action", nid, operator_idname or url) | ("url", nid)
+#   ("close", nid) | ("action", nid, operator_idname) | ("url", nid)
 toast_hover_state: dict = {"key": None}
 toast_pressed_state: dict = {"key": None}
 
@@ -142,31 +142,6 @@ def point_in_rect(mx: float, my: float, bx: float, by: float, bw: float, bh: flo
     return bx <= mx <= bx + bw and by <= my <= by + bh
 
 
-def point_in_any_toast_control(region_ptr: int, mx: float, my: float) -> bool:
-    """True if a region-local point lies on a toast button, close X, or link.
-
-    Pure predicate (no hover-state mutation) so input-blocking modals can
-    ask "should this click reach the toast?" before consuming it. Only the
-    interactive controls count, not the toast card body: a click that
-    misses them makes ``notification.toast_click`` return CANCELLED, and
-    the event would fall through to the viewport keymaps the modal exists
-    to block.
-    """
-    bounds = toast_bounds_by_region.get(region_ptr)
-    if not bounds:
-        return False
-    for _nid, bx, by, bw, bh in bounds["close"]:
-        if point_in_rect(mx, my, bx, by, bw, bh):
-            return True
-    for _nid, _op, _url, bx, by, bw, bh in bounds["action"]:
-        if point_in_rect(mx, my, bx, by, bw, bh):
-            return True
-    for _nid, _url, bx, by, bw, bh in bounds["url"]:
-        if point_in_rect(mx, my, bx, by, bw, bh):
-            return True
-    return False
-
-
 def update_hover_state(region_ptr: int, mx: float, my: float) -> bool:
     """Recompute the hovered element for a mouse position.
 
@@ -180,9 +155,9 @@ def update_hover_state(region_ptr: int, mx: float, my: float) -> bool:
                 key = ("close", nid)
                 break
         if key is None:
-            for nid, op, url, bx, by, bw, bh in bounds["action"]:
+            for nid, op, bx, by, bw, bh in bounds["action"]:
                 if point_in_rect(mx, my, bx, by, bw, bh):
-                    key = ("action", nid, op or url)
+                    key = ("action", nid, op)
                     break
         if key is None:
             for nid, url, bx, by, bw, bh in bounds["url"]:
@@ -460,7 +435,7 @@ def _draw_single_toast(
             btn_w = _measure_button_width(action.label, action.style, s)
             btn_x = btn_right - btn_w
 
-            key = ("action", item.id, action.operator or action.url)
+            key = ("action", item.id, action.operator)
             is_pressed = toast_pressed_state["key"] == key
             is_hovered = toast_hover_state["key"] == key
 
@@ -499,7 +474,7 @@ def _draw_single_toast(
 
             # Record bounds for hit-testing
             bounds["action"].append((
-                item.id, action.operator, action.url,
+                item.id, action.operator,
                 btn_x, btn_y, btn_w, btn_h,
             ))
 

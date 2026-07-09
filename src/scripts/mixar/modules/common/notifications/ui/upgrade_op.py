@@ -15,6 +15,7 @@ main thread; the toast is dismissed immediately on click.
 """
 
 import threading
+import webbrowser
 from typing import Optional
 
 import bpy
@@ -75,19 +76,10 @@ class MIXAR_OT_open_credit_upgrade(bpy.types.Operator):
             if not url:
                 logger.error("Could not resolve the upgrade page URL")
                 return
-
-            # The URL is resolved off-thread (network handoff), but bpy.ops must
-            # run on the main thread — marshal the open back via a timer. Use
-            # Blender's native opener; webbrowser.open() fails silently under
-            # Blender's embedded Python.
-            def _fire():
-                try:
-                    bpy.ops.wm.url_open(url=url)
-                except Exception as e:
-                    logger.error("Failed to open upgrade URL %s: %s", url, e)
-                return None
-
-            bpy.app.timers.register(_fire)
+            try:
+                webbrowser.open(url)
+            except Exception as e:
+                logger.error("Failed to open upgrade URL %s: %s", url, e)
 
         threading.Thread(target=_open, daemon=True).start()
         get_notification_store().dismiss(CREDIT_UPGRADE_NOTIFICATION_ID)

@@ -14,27 +14,17 @@ Basic/Pro subtab UI when the catalog isn't loaded.
 
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
-    draw_moodboard_image_toggle, draw_generate_footer,
+    draw_moodboard_image_toggle, draw_generate_footer, draw_dropdown,
     draw_image_info_card,
 )
 
-# Per-mode generate-footer routing:
-#   service key -> (feature_key, scene flag, operator).
+# Per-mode generate-footer routing: service key -> (feature_key, scene flag).
 # Feature keys reuse the existing FeatureQueue constants
 # (job_queue/constants.py) so each mode lands in its established queue.
-# All the image-to-3D modes share mixie.model_gen_generate; smart segmentation
-# is a different pipeline (it segments as well as models) with its own enqueue
-# helper and import hook, so it carries its own operator.
-_MODEL_GEN_GENERATE = "mixie.model_gen_generate"
 _MODEL_GEN_FOOTER = {
-    "model_3d": ("model_3d", "mixie_image_to_3d_is_generating",
-                 _MODEL_GEN_GENERATE),
-    "image_to_3d": ("image_to_3d_pro", "mixie_image_to_3d_is_generating",
-                    _MODEL_GEN_GENERATE),
-    "hunyuan_rapid": ("hunyuan_rapid", "mixie_hunyuan_rapid_is_generating",
-                      _MODEL_GEN_GENERATE),
-    "tripo_smart_segment": ("smart_segment", "mixie_smart_segment_is_generating",
-                            "mixie.smart_segment_generate"),
+    "model_3d": ("model_3d", "mixie_image_to_3d_is_generating"),
+    "image_to_3d": ("image_to_3d_pro", "mixie_image_to_3d_is_generating"),
+    "hunyuan_rapid": ("hunyuan_rapid", "mixie_hunyuan_rapid_is_generating"),
 }
 
 
@@ -47,6 +37,25 @@ def _model_gen_catalog_ready():
         return is_loaded() and bool(get_services("model_gen"))
     except Exception:
         return False
+
+
+def _draw_multi_view_section(layout, scene):
+    """Multi-view image pickers (Pro only) — reuses scene.hunyuan.pro
+    state and the existing hunyuan multi-view operators."""
+    pro = scene.hunyuan.pro
+    col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
+    for i, mv in enumerate(pro.multi_views):
+        row = col.row(align=True)
+        draw_dropdown(row, mv, "view_type", text="")
+        row.prop(mv, "image", text="")
+        op_load = row.operator(
+            "mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
+        op_load.target = "multi_view"
+        op_load.multi_view_index = i
+        op_rm = row.operator(
+            "mixie.hunyuan_remove_multi_view", text="", icon='X')
+        op_rm.index = i
+    col.operator("mixie.hunyuan_add_multi_view", text="Add View", icon='ADD')
 
 
 def _draw_model_gen(layout, context):
@@ -80,12 +89,10 @@ def _draw_model_gen(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
-    # --- Multiple Views: detected turnaround crops AND hand-added views,
-    # one section, one data model (multi-view-capable models only) ---
-    from .turnaround_drawer import draw_detect_views_section
-    draw_section_separator(layout)
-    draw_detect_views_section(
-        layout, context, service_key, getattr(tab, "model", ""))
+    # --- Multi-view images (Image to 3D Pro only) ---
+    if service_key == "image_to_3d" and hasattr(scene, 'hunyuan'):
+        draw_section_separator(layout)
+        _draw_multi_view_section(layout, scene)
 
     draw_section_separator(layout)
 
@@ -99,9 +106,9 @@ def _draw_model_gen(layout, context):
     )
 
     # --- Generate (routed per mode) ---
-    feature_key, gen_flag, generate_op = _MODEL_GEN_FOOTER.get(
+    feature_key, gen_flag = _MODEL_GEN_FOOTER.get(
         service_key, _MODEL_GEN_FOOTER["model_3d"])
     draw_generate_footer(
-        layout, context, generate_op, "image_to_3d",
+        layout, context, "mixie.model_gen_generate", "image_to_3d",
         gen_flag_attr=gen_flag, feature_key=feature_key,
     )

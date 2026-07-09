@@ -24,10 +24,6 @@ from __future__ import annotations
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.common.analytics.capture import capture
-from mixar.modules.common.analytics.constants import EVENT_BUBBLE_EXPAND
-from mixar.modules.common.analytics.bubble_events import capture_bubble_state
-
 
 class MIXAR_OT_bubble_close(Operator):
     bl_idname = "mixar.bubble_close"
@@ -51,13 +47,7 @@ class MIXAR_OT_bubble_close(Operator):
 
         # Minimise to pill instead of destroying the window.
         try:
-            result = bpy.ops.mixar.bubble_minimise()
-            if result == {'FINISHED'}:
-                try:
-                    capture_bubble_state("minimized", context=context)
-                except Exception:
-                    pass
-            return result
+            return bpy.ops.mixar.bubble_minimise()
         except RuntimeError:
             return {'CANCELLED'}
 
@@ -83,13 +73,7 @@ class MIXAR_OT_bubble_restore_user(Operator):
             pass
 
         try:
-            result = bpy.ops.mixar.bubble_restore()
-            if result == {'FINISHED'}:
-                try:
-                    capture_bubble_state("maximized", context=context)
-                except Exception:
-                    pass
-            return result
+            return bpy.ops.mixar.bubble_restore()
         except RuntimeError:
             return {'CANCELLED'}
 
@@ -124,10 +108,6 @@ class MIXAR_OT_bubble_toggle_minimise(Operator):
 
         if result == {'FINISHED'}:
             self._mark(closed=True)
-            try:
-                capture_bubble_state("minimized", context=context)
-            except Exception:
-                pass
             return {'FINISHED'}
 
         # Already minimised (or no bubble): restore. bubble_restore is a safe
@@ -137,10 +117,6 @@ class MIXAR_OT_bubble_toggle_minimise(Operator):
         except RuntimeError:
             return {'CANCELLED'}
         self._mark(closed=False)
-        try:
-            capture_bubble_state("maximized", context=context)
-        except Exception:
-            pass
         return {'FINISHED'}
 
     @staticmethod
@@ -153,26 +129,6 @@ class MIXAR_OT_bubble_toggle_minimise(Operator):
                 agent_bubble_module.mark_user_opened()
         except Exception:  # noqa: BLE001 — never break the toggle path
             pass
-
-
-class MIXAR_OT_bubble_toggle_expand_tracked(Operator):
-    """Python bridge for the native expand toggle so the user action is visible."""
-
-    bl_idname = "mixar.bubble_toggle_expand_tracked"
-    bl_label = "Expand or Collapse Agent Bubble"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        try:
-            result = bpy.ops.mixar.bubble_toggle_expand()
-        except RuntimeError:
-            return {'CANCELLED'}
-        if result == {'FINISHED'}:
-            try:
-                capture(EVENT_BUBBLE_EXPAND, context=context)
-            except Exception:
-                pass
-        return result
 
 
 class MIXAR_OT_bubble_block_context_menu(Operator):
@@ -199,6 +155,5 @@ classes = (
     MIXAR_OT_bubble_close,
     MIXAR_OT_bubble_restore_user,
     MIXAR_OT_bubble_toggle_minimise,
-    MIXAR_OT_bubble_toggle_expand_tracked,
     MIXAR_OT_bubble_block_context_menu,
 )

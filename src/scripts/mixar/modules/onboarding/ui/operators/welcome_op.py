@@ -41,19 +41,6 @@ class MIXAR_OT_onboarding_welcome(Operator):
 
     def execute(self, context):
         from mixar.modules.onboarding.core import state
-        from mixar.modules.onboarding.ui.operators.card_modal_op import (
-            is_card_active,
-        )
-
-        # Guard against duplicate welcome cards: several triggers (auth
-        # hook, mode-pick nudge, dev fallback) can each fire the welcome
-        # near session start. If a card is already on screen, this call is
-        # a no-op — otherwise a second modal stacks and the first stays
-        # stuck behind the tour.
-        if is_card_active():
-            logger.debug("Onboarding welcome: a card is already active; skip")
-            return {"FINISHED"}
-
         if state.is_opted_out(context):
             state.reset(context)
         else:

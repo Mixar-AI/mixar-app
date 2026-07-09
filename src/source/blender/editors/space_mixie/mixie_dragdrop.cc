@@ -26,7 +26,7 @@
 #include <vector>
 
 /* -------------------------------------------------------------------- */
-/** \name Moodboard Media Drop Poll
+/** \name Moodboard Image Drop Poll
  * \{ */
 
 static bool moodboard_image_drop_poll(bContext *C, wmDrag *drag, const wmEvent * /*event*/)
@@ -42,11 +42,10 @@ static bool moodboard_image_drop_poll(bContext *C, wmDrag *drag, const wmEvent *
     return false;
   }
 
-  /* Accept image and movie files, including mixed multi-file drops. */
+  /* Accept image files */
   if (drag->type == WM_DRAG_PATH) {
-    if (WM_drag_has_path_file_type(drag, FILE_TYPE_IMAGE) ||
-        WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE))
-    {
+    const eFileSel_File_Types file_type = eFileSel_File_Types(WM_drag_get_path_file_type(drag));
+    if (file_type == FILE_TYPE_IMAGE) {
       return true;
     }
   }
@@ -62,7 +61,7 @@ static bool moodboard_image_drop_poll(bContext *C, wmDrag *drag, const wmEvent *
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name Moodboard Media Drop Copy
+/** \name Moodboard Image Drop Copy
  * \{ */
 
 static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop)

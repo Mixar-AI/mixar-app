@@ -23,8 +23,6 @@ main bubble) — DPI-invariant, unlike pixel-width thresholds.
 """
 
 import sys
-import time
-from typing import NamedTuple
 
 import bpy
 from bpy.types import Header
@@ -44,152 +42,23 @@ _RUNNING_STATES = {"BUSY", "MODIFYING"}
 
 _IS_WINDOWS = sys.platform == "win32"
 
-# Largest job count the pill spells out; beyond it the label reads "9+".
-# Past a handful the exact number stops mattering — the user is going to open
-# the Queue panel either way — and an uncapped count would widen the label
-# without bound.
-_QUEUE_COUNT_CAP = 9
 
-# Character budget for the queue label. The pill window is a FIXED 148 px
-# wide (AGENT_BUBBLE_PILL_WIDTH in space_agent_bubble.cc) with the text
-# centred beside an icon, and "Awaiting Input" (14) is the widest label
-# already shipping there. Anything over this budget — a long capability name
-# like "Mesh Segmentation" — falls back to generic wording rather than being
-# clipped mid-word by Blender's layout.
-_QUEUE_TEXT_BUDGET = 16
-
-
-class PillStatus(NamedTuple):
-    """What the pill renders. ``animate`` drives the trailing-dot pulse.
-
-    Queue states set it False: their elapsed clock ticks once a second, and a
-    live number is a better "still working" signal than dots — running both
-    reads as two competing animations in a 148 px window.
-    """
-
-    label: str
-    colour: str
-    fallback_icon: str
-    animate: bool = False
-
-
-def _transport_down() -> bool:
-    """True when the WebSocket transport is currently disconnected.
-
-    Session state deliberately preserves BUSY/AWAITING_INPUT/MODIFYING while
-    the WS reconnects (so resumed tool calls aren't rejected — see
-    connection_manager.on_disconnected), which means scene state alone says
-    "Running" even with the network gone. The pill must not lie about that.
-
-    Uses is_transport_live (recv-recency) rather than is_connected: on a
-    silent network drop is_connected stays True until the 45s teardown
-    watchdog, and the pill would keep implying a healthy connection for
-    that whole window.
-    """
-    try:
-        from mixar.modules.space_mixie_chat.core.connection_manager import (
-            get_connection_manager,
-        )
-        return not get_connection_manager().is_transport_live
-    except Exception:
-        return False
-
-
-def _queue_activity():
-    """Live queue summary, or None when nothing is outstanding.
-
-    Read-only and cheap (a pass over in-memory job lists) — safe to call
-    from a header draw, which must never write RNA or raise.
-    """
-    try:
-        from mixar.modules.common.job_queue.core.queue_manager import (
-            active_queue_activity,
-        )
-        activity = active_queue_activity()
-        return activity if activity.count else None
-    except Exception:
-        return None
-
-
-def _queue_clock(started_at: float) -> str:
-    """Elapsed text for the oldest active job."""
-    if not started_at:
-        return ""
-    try:
-        from mixar.modules.common.job_queue.core.labels import (
-            format_elapsed_compact,
-        )
-        return format_elapsed_compact(time.monotonic() - started_at)
-    except Exception:
-        return ""
-
-
-def _queue_count_text(count: int) -> str:
-    capped = f"{_QUEUE_COUNT_CAP}+" if count > _QUEUE_COUNT_CAP else str(count)
-    return f"{capped} jobs"
-
-
-def _queue_label(activity) -> str:
-    """Pill text for outstanding generations: what, and for how long.
-
-    One job is named ("Image Gen 1:24") because that is the case where a
-    name is both unambiguous and useful. Several become a count ("3 jobs
-    1:24") — naming one of them would misrepresent the rest, and there is no
-    room to list them.
-
-    The clock is the load-bearing half: it is the difference between "this
-    is slow" and "this is stuck", the same reason the download substate
-    shows moving byte counts instead of a fixed "Downloading…".
-    """
-    clock = _queue_clock(activity.started_at)
-    if activity.count == 1:
-        # Empty label = the catalog could not answer. Generic wording beats
-        # leaking a raw service key like "mesh_segment" into the pill.
-        subject = activity.label or "Generating"
-    else:
-        subject = _queue_count_text(activity.count)
-
-    text = f"{subject} {clock}".strip()
-    if len(text) <= _QUEUE_TEXT_BUDGET:
-        return text
-    # Long capability names ("Mesh Segmentation") don't fit beside a clock.
-    # Keep the clock — it carries more information than the name here.
-    return f"Generating {clock}".strip()
-
-
-def _get_status(scene) -> PillStatus:
-    """Return what the status pill should render."""
+def _get_status(scene) -> tuple[str, str, str]:
+    """Return (label, custom icon colour, fallback icon) for the pill."""
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
     if state == "OFFLINE":
-        return PillStatus("Disconnected", "red", 'CANCEL')
+        return "Disconnected", "red", 'CANCEL'
     if state == "CONNECTING":
-        return PillStatus("Connecting", "blue", 'SORTTIME')
-    if _transport_down():
-        # Any non-offline state with the transport gone means the client is
-        # auto-reconnecting (and, mid-turn, will re-attach to the stream).
-        return PillStatus("Reconnecting", "red", 'CANCEL')
+        return "Connecting", "blue", 'SORTTIME'
     if state in _RUNNING_STATES:
-        return PillStatus("Running", "green", 'RECORD_ON', animate=True)
+        return "Running", "green", 'RECORD_ON'
     if state == "AWAITING_INPUT":
         # Blue instead of yellow — yellow is already the macOS close
         # traffic-light button. CONNECTING and AWAITING_INPUT can't be
         # active simultaneously, so reusing the same blue is safe and
         # avoids the visual collision.
-        return PillStatus("Awaiting Input", "blue", 'QUESTION')
-
-    # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
-    # enqueues a multi-minute generation, answers in chat and drops to IDLE
-    # while the job runs — at which point every surface claimed nothing was
-    # happening. Surfacing it here, in the Idle branch ONLY, is deliberate:
-    # the states above are ones the user must act on (connection lost, agent
-    # asking a question), and background work must never mask them. The
-    # repaint pump that advances the clock is the queue blink timer
-    # (queue_status_icons), which ticks every 0.5 s while jobs are active.
-    activity = _queue_activity()
-    if activity is not None:
-        return PillStatus(_queue_label(activity), "green", 'RECORD_ON')
-
-    return PillStatus("Idle", "grey", 'RECORD_OFF')
+        return "Awaiting Input", "blue", 'QUESTION'
+    return "Idle", "grey", 'RECORD_OFF'
 
 
 def _is_pill_window(context) -> bool:
@@ -206,21 +75,16 @@ def _is_pill_window(context) -> bool:
     return True
 
 
-def _pill_text(status: PillStatus) -> str:
-    """Final label text, with the trailing-dot pulse where it applies."""
-    if status.animate:
-        return status.label + get_running_text_suffix()
-    return status.label
-
-
 def _draw_status(layout, scene) -> None:
     """Render the connection / activity status pill (icon + text)."""
-    status = _get_status(scene)
-    icon_id = get_pill_icon_id_named(status.colour)
+    label, icon_name, fallback_icon = _get_status(scene)
+    if icon_name == "green":
+        label = label + get_running_text_suffix()
+    icon_id = get_pill_icon_id_named(icon_name)
     if icon_id:
-        layout.label(text=_pill_text(status), icon_value=icon_id)
+        layout.label(text=label, icon_value=icon_id)
     else:
-        layout.label(text=_pill_text(status), icon=status.fallback_icon)
+        layout.label(text=label, icon=fallback_icon)
 
 
 class AGENT_BUBBLE_HT_header(Header):
@@ -266,9 +130,10 @@ class AGENT_BUBBLE_HT_header(Header):
             # layout's flex pass and squashes the spacers). Detect
             # LARGE pill via context.window.height — SMALL is 28 px,
             # LARGE is 44 px, so any height ≥ 36 is the LARGE state.
-            status = _get_status(scene)
-            label = _pill_text(status)
-            icon_id = get_pill_icon_id_named(status.colour)
+            label, icon_name, fallback_icon = _get_status(scene)
+            if icon_name == "green":
+                label = label + get_running_text_suffix()
+            icon_id = get_pill_icon_id_named(icon_name)
 
             # Centre the operator in the header.  separator_spacer()
             # pairs don't centre accurately because the header has
@@ -295,7 +160,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 row.operator(
                     "mixar.bubble_restore_user",
                     text=label,
-                    icon=status.fallback_icon,
+                    icon=fallback_icon,
                     emboss=False,
                     no_tooltip=True,
                 )
@@ -318,7 +183,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 no_tooltip=True,
             )
             traffic.operator(
-                "mixar.bubble_toggle_expand_tracked",
+                "mixar.bubble_toggle_expand",
                 text="",
                 icon='FULLSCREEN_ENTER',
                 emboss=False,
@@ -337,7 +202,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 )
             if green_id:
                 traffic.operator(
-                    "mixar.bubble_toggle_expand_tracked",
+                    "mixar.bubble_toggle_expand",
                     text="",
                     icon_value=green_id,
                     emboss=False,
@@ -349,34 +214,6 @@ class AGENT_BUBBLE_HT_header(Header):
         handle_row.alignment = 'CENTER'
         handle_row.label(text="▬▬▬▬")
         layout.separator_spacer()
-
-        # Right-side buttons (left → right): reconnect, new chat, past chats.
-        #
-        # These are icon-only, so they keep Blender's DEFAULT tooltip box
-        # (each operator's bl_description) as the hover affordance — unlike
-        # the pill/traffic-light buttons above, which use no_tooltip=True
-        # because the tiny pill window clips the popup into a fragment.
-        right_controls = layout.row(align=True)
-
-        # Reconnect button (mirrors the Connect button in mixie chat's
-        # header, icon-only). Only rendered while disconnected — the
-        # operator's poll additionally requires login, and hiding it
-        # when logged out avoids a permanently greyed-out button.
-        state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
-        wm = context.window_manager
-        if state == "OFFLINE" and getattr(wm, "mixie_chat_is_logged_in", False):
-            right_controls.operator(
-                "mixie_chat.connect",
-                text="",
-                icon='LINKED',
-                emboss=False,
-            )
-
-        # New-chat and past-chats are hidden while a turn is executing
-        # (same states as the "Running" pill): switching or clearing the
-        # conversation mid-run would detach the UI from the turn the
-        # agent is still working on.
-        agent_running = state in _RUNNING_STATES
 
         # New-chat button on the right (mirrors the one in mixie chat's
         # header). Only rendered when there is chat history to clear:
@@ -395,44 +232,14 @@ class AGENT_BUBBLE_HT_header(Header):
                     msg_count = len(msgs)
                 except TypeError:
                     msg_count = 0
-        if msg_count > 0 and not agent_running:
-            right_controls.operator(
+        if msg_count > 0:
+            new_chat_row = layout.row(align=True)
+            new_chat_row.operator(
                 "mixie_chat.new_session",
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
-            )
-
-        # Past chats — toggles the C++-drawn history overlay (shared with
-        # the mixie chat editor; the bubble's main region reuses the same
-        # draw callbacks). Shown even when the current chat is empty —
-        # reopening an old chat from a fresh state is exactly the history
-        # use-case. hasattr guard: registers in the deferred UI pass.
-        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history') and not agent_running:
-            wm = context.window_manager
-            right_controls.operator(
-                "mixie_chat.show_history",
-                text="",
-                icon='RECOVER_LAST',
-                emboss=False,
-                depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
-            )
-
-        # Project rules — mirrors the docked header's Add Rules button:
-        # toggles the C++-drawn rules overlay in the chat region (same
-        # style as the past-chats overlay; see rules_ops.py /
-        # mixie_chat_rules_overlay.cc). Icon-only here (header space is
-        # tight); Blender's default tooltip (bl_description) is the hover
-        # affordance, like the siblings above. depress mirrors the overlay
-        # being open.
-        if hasattr(bpy.types, 'MIXIE_CHAT_OT_add_rules') and not agent_running:
-            wm = context.window_manager
-            right_controls.operator(
-                "mixie_chat.add_rules",
-                text="",
-                icon='TEXT',
-                emboss=False,
-                depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
+                no_tooltip=True,
             )
 
 

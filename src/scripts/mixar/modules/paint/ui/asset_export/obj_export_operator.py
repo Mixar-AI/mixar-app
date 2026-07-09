@@ -17,26 +17,8 @@ from ...core.node.node_utils import get_active_mpaint_node
 from ...core.asset_export.bake_and_assign import create_export_material
 from ...core.asset_export.revert_material import revert_to_original_material
 from .export_utils import export_poll, settings_to_kwargs
-from mixar.modules.common.analytics.export_events import (
-    capture_export,
-    normalized_settings,
-    scene_counts,
-)
 
 logger = get_logger(__name__)
-
-
-def _capture_obj_export(context, settings, success, filepath):
-    try:
-        selected_only = bool(getattr(settings, "export_selected_objects", False))
-        capture_export(
-            context, export_format="OBJ", success=success, filepath=filepath,
-            extra={
-                **normalized_settings("OBJ", settings),
-                **scene_counts(context, selected_only=selected_only),
-            })
-    except Exception:
-        pass
 
 
 def draw_obj_export_panels(layout, s, is_file_browser=True):
@@ -151,12 +133,10 @@ class MExportObj(bpy.types.Operator):
             logger.error("OBJ export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")
             self._revert(context)
-            _capture_obj_export(context, os, False, self.filepath)
             return {'CANCELLED'}
 
         self._revert(context)
         self.report({'INFO'}, f"Exported OBJ to {self.filepath}")
-        _capture_obj_export(context, os, True, self.filepath)
         return {'FINISHED'}
 
     def cancel(self, context):

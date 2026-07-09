@@ -25,13 +25,6 @@ memory and Blender dies with a native segfault in ``Collection_all_objects_next`
 — which no ``try/except`` in the executor can catch, taking the user's unsaved
 work with it.
 
-The same mechanism is not specific to objects: any live RNA collection whose
-elements the loop body removes (``node_tree.nodes``/``.links`` clears in
-material scripts, ``bpy.data.materials``/``.images`` cleanup sweeps,
-``bpy.data.scenes``/``.collections`` lane teardown, modifier/constraint stack
-removal) reads freed memory the same way. ``_LIVE_COLLECTION_ATTRS`` below
-lists the covered attributes.
-
 Wrapping the iterable in ``list(...)`` drains the collection into a plain Python
 list up front, so the loop walks Python references instead of the live C array.
 Any mutation inside the body is then safe. This is body-agnostic: it fixes the
@@ -65,32 +58,11 @@ logger = get_logger(__name__)
 # is freed on membership change. Iterating one of these directly (not via
 # ``list(...)``) and mutating inside the loop segfaults Blender.
 #
-# Beyond the original ``.objects``/``.all_objects`` crash, the same
-# mechanism (C iterator holding a pointer into a ListBase/Main-backed array
-# freed by ``.remove()``/``.unlink()``/an operator inside the body) applies to
-# the collections agent texturing and scene-lane scripts routinely clear in a
-# loop: ``node_tree.nodes``/``.links`` ("clear the node tree"), ``bpy.data
-# .materials``/``.images``/``.meshes`` (cleanup sweeps), ``bpy.data
-# .collections``/``.scenes``/``collection.children`` (lane teardown), and the
-# per-object stacks (``modifiers``, ``constraints``, ``vertex_groups``,
-# ``uv_layers``, ``edit_bones``).
-#
-# Deliberate exclusions:
-# - ``selected_objects`` — returns a fresh Python list per access, already safe.
-# - High-cardinality mesh data (``vertices``, ``edges``, ``loops``,
-#   ``polygons``) — not element-removable mid-loop through these handles, and a
-#   ``list(...)`` snapshot of a million-element array per loop would be a real
-#   performance regression on exactly the heavy scripts this guards.
-_LIVE_COLLECTION_ATTRS = frozenset({
-    # object membership
-    "objects", "all_objects", "children",
-    # bpy.data ID collections agent scripts sweep-clean
-    "materials", "meshes", "images", "collections", "scenes", "node_groups",
-    # node-tree editing ("clear all nodes/links" idiom in material scripts)
-    "nodes", "links",
-    # per-object / per-mesh stacks removed element-wise in loops
-    "modifiers", "constraints", "vertex_groups", "uv_layers", "edit_bones",
-})
+# Intentionally NARROW: ``selected_objects`` is excluded — it returns a fresh
+# Python list on each access, so it is already snapshot-safe. Extend this set if
+# other live collections (e.g. ``children`` for collection hierarchies) prove to
+# hit the same crash.
+_LIVE_COLLECTION_ATTRS = frozenset({"objects", "all_objects"})
 
 
 class _SnapshotForIterables(ast.NodeTransformer):

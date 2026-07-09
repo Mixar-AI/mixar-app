@@ -10,16 +10,12 @@ it never contained vendor logic, only Blender-session work the backend
 cannot do):
 
 - get_poll_interval: progressive poll timing
-- tag_redraw_queue_surfaces: repaint every area that shows queue state
-  (``redraw_3d_views`` is the legacy alias)
+- redraw_3d_views: force viewport redraws
 - get_total_face_count: sum selected mesh faces
 - export_selected_mesh: export selection to bytes for upload
+- download_file: download a result URL to a temp file (background-safe)
 - import_file: import a downloaded file into Blender (main thread only)
 - post_import_rename_and_setup: rename/origin/UV cleanup after import
-
-``download_file`` used to live here; it now lives in ``downloader.py``
-(deadline / verification / retry policy earned its own file) and is
-re-exported below so existing import sites keep working.
 
 Deliberately imports nothing from the queue core so ``queue_manager``
 can depend on it without cycles (``helpers.py`` is the image-side
@@ -28,12 +24,12 @@ counterpart but sits above ``queue_manager``).
 
 import os
 import tempfile
+import urllib.request
 
 import bpy
 
 from mixar.config.logging_config import get_logger
-
-from .downloader import download_file  # noqa: F401  (re-export)
+from mixar.modules.common.api.constants import HUNYUAN_TIMEOUT
 
 logger = get_logger(__name__)
 
@@ -58,36 +54,12 @@ def get_poll_interval(poll_count):
 # ============================================================================
 
 
-# Every area type that renders live queue state: the 3D viewport (toasts,
-# feature overlays), the MIXIE editor (Queue panel) and the floating Agent
-# Bubble / status pill (queue-aware pill label).
-#
-# AGENT_BUBBLE is load-bearing: the bubble and its minimised pill each live
-# in their OWN wmWindow, so a queue change tagged only VIEW_3D/MIXIE left the
-# pill painting a stale label until the user happened to hover it — which is
-# exactly the surface that is supposed to report background work.
-QUEUE_SURFACE_AREA_TYPES = ('VIEW_3D', 'MIXIE', 'AGENT_BUBBLE')
-
-
-def tag_redraw_queue_surfaces():
-    """Tag every area that renders queue state for redraw."""
+def redraw_3d_views():
+    """Force redraw of all 3D viewports and MIXIE areas."""
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
-            if area.type not in QUEUE_SURFACE_AREA_TYPES:
-                continue
-            area.tag_redraw()
-            if area.type == 'AGENT_BUBBLE':
-                # The bubble's header/pill needs its regions tagged
-                # explicitly — same finding as the chat loader animation
-                # (animation_manager._update_loader): tagging the area alone
-                # leaves the pill static in Zen Mode.
-                for region in area.regions:
-                    region.tag_redraw()
-
-
-def redraw_3d_views():
-    """Deprecated alias — use ``tag_redraw_queue_surfaces()``."""
-    tag_redraw_queue_surfaces()
+            if area.type in ('VIEW_3D', 'MIXIE'):
+                area.tag_redraw()
 
 
 # ============================================================================
@@ -175,18 +147,39 @@ def new_object_names(before):
 
 
 # ============================================================================
-# IMPORT
+# DOWNLOAD & IMPORT
 # ============================================================================
 
-def import_file(filepath, file_type="GLB", import_options=None):
-    """Import a local file into Blender. Must run on the main thread.
+def download_file(url, file_type="GLB"):
+    """Download a URL to a temp file. Safe to call from a background thread.
 
-    ``import_options`` (dict, GLB only) is merged into the glTF import
-    operator kwargs — used by the Animate feature to import Tripo rigged /
-    animated glTF with ``guess_original_bind_pose=False`` so externally
-    authored animations don't collapse (Blender's default guessed bind
-    pose distorts non-Blender rigs). Callers pass only keys the glTF
-    importer accepts.
+    Uses ``urllib.request.urlopen`` with an explicit timeout so the call
+    never blocks indefinitely.
+
+    Returns:
+        The path to the downloaded temp file.
+    """
+    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
+    ext = ext_map.get(file_type.upper(), ".glb")
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_result_")
+    os.close(fd)
+
+    response = urllib.request.urlopen(url, timeout=HUNYUAN_TIMEOUT)
+    try:
+        with open(filepath, "wb") as out:
+            while True:
+                chunk = response.read(8192)
+                if not chunk:
+                    break
+                out.write(chunk)
+    finally:
+        response.close()
+
+    return filepath
+
+
+def import_file(filepath, file_type="GLB"):
+    """Import a local file into Blender. Must run on the main thread.
 
     Returns:
         A comma-separated string of newly imported object names.
@@ -196,31 +189,17 @@ def import_file(filepath, file_type="GLB", import_options=None):
     try:
         ft = file_type.upper()
         if ft == "GLB":
-            gltf_kwargs = {"filepath": filepath}
-            if import_options:
-                gltf_kwargs.update(import_options)
-            bpy.ops.import_scene.gltf(**gltf_kwargs)
+            bpy.ops.import_scene.gltf(filepath=filepath)
         elif ft == "OBJ":
             bpy.ops.wm.obj_import(filepath=filepath)
         elif ft == "FBX":
             bpy.ops.import_scene.fbx(filepath=filepath)
-        elif ft == "VIDEO":
-            from mixar.modules.moodboard.core.media_import import (
-                import_generated_video,
-            )
-
-            options = import_options or {}
-            return import_generated_video(
-                filepath,
-                scene_name=options.get("scene_name", ""),
-                generation_prompt=options.get("generation_prompt", ""),
-            )
 
         new_objects = new_object_names(before)
         return ", ".join(new_objects) if new_objects else "Unknown"
     finally:
-        # Generated-video import moves the temp file into persistent Mixar
-        # storage. Removing the now-missing source is harmless.
+        # Always unlink the temp file even when the import itself raises,
+        # otherwise every failed import leaves a GLB/OBJ/FBX behind in /tmp.
         try:
             os.remove(filepath)
         except OSError:

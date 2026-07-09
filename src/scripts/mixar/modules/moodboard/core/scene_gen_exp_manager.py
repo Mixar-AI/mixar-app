@@ -22,7 +22,6 @@ from typing import Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from .media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -174,7 +173,6 @@ class SceneGenExpManager:
                 model=model,
                 payload=payload,
                 label=f"ImageGen: {prompt[:40]}",
-                display_label=prompt[:40],
                 fail_message="Image generation failed",
                 name_prefix="imagegen",
                 prompt_text=prompt,
@@ -260,7 +258,7 @@ class SceneGenExpManager:
         try:
             scene = bpy.context.scene
             for item in scene.mixie_moodboard_images:
-                if item.selected and is_still_item(item):
+                if item.selected and item.image:
                     ref_x = item.position_x
                     ref_y = item.position_y
                     ref_scale = item.scale

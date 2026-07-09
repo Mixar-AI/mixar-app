@@ -20,7 +20,6 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -94,62 +93,30 @@ class MIXIE_OT_model_gen_generate(Operator):
         if getattr(tab, 'use_selected_image', False):
             if hasattr(scene, 'mixie_moodboard_images'):
                 for item in scene.mixie_moodboard_images:
-                    if item.selected and is_still_item(item):
+                    if item.selected and item.image:
                         return item.image
             return None
         return getattr(tab, 'reference_image', None)
 
-    def _turnaround_payload(self, context, image, service_key, model):
-        """Multi-view payload fragment for the set *image* is the main of.
-
-        The ONLY multi-view source for this tab: the Multiple Views section
-        holds both backend-detected turnaround crops and views the user added
-        by hand, so there is nothing else to merge in.
-        ``scene.hunyuan.pro.multi_views`` is deliberately not consulted — it
-        belongs to the standalone Hunyuan panel, and reading it here used to
-        silently discard whatever the user put in it.
-
-        The set is resolved FROM *image* (the vendor's single frontal image,
-        never a group member), not from the tab, so an Input Image that does
-        not own a set takes the plain single-image path even while a set is
-        active on the tab. Reading it off the tab is the production defect:
-        a set detected for one subject was inherited by an unrelated image
-        picked later and generated as a morph of the two.
-
-        Shares ``build_active_group_payload`` with the agent/legacy operator
-        so the binding, the capability check and the terminal error wording
-        all come from one place. Deliberately NOT pre-gated on
-        ``model_supports_multi_view``: an incapable model on a bound main has
-        to cancel loudly, and an early-out would silently drop the set — the
-        exact "degrade to one image" this guard exists to prevent.
-
-        Returns ``None`` when *image* owns no multi-view set (the normal
-        single-image path applies unchanged), ``False`` when the set is
-        unusable and the operator should cancel, else the fragment.
-        """
-        from mixar.modules.moodboard.core.turnaround_views import (
-            build_active_group_payload,
+    def _get_multi_views(self, context):
+        """Pro multi-view images as (bytes, filename, view_type), or None."""
+        from mixar.modules.common.utils.image_utils import (
+            compress_image_for_upload,
         )
-
-        if image is None:
+        scene = context.scene
+        if not hasattr(scene, 'hunyuan'):
             return None
-        try:
-            result = build_active_group_payload(
-                context.scene, image, service_key, model)
-        except ValueError as e:
-            self.report({"ERROR"}, str(e))
-            return False
-        if result is None:
-            return None
-        fragment, warnings = result
-        for warning in warnings:
-            self.report({"WARNING"}, warning)
-        return fragment
+        entries = []
+        for mv in scene.hunyuan.pro.multi_views:
+            if mv.image:
+                entries.append(
+                    (compress_image_for_upload(mv.image), "mv.png", mv.view_type)
+                )
+        return entries or None
 
     def execute(self, context):
         from mixar.modules.common.generation_params import (
-            assemble_payload, collect_params, model_supports_multi_view,
-            resolve_service_key,
+            assemble_payload, collect_params, resolve_service_key,
         )
         from mixar.modules.common.utils.image_utils import (
             compress_for_service, compress_image_for_upload,
@@ -181,30 +148,20 @@ class MIXIE_OT_model_gen_generate(Operator):
             self.report({"WARNING"}, "Please wait for models to load")
             return {"CANCELLED"}
 
-        # --- Inputs (image shared by all modes; multi-view for models that
-        # advertise supports_multi_view, keyed per-model not per-service) ---
+        # --- Inputs (image shared by all modes; multi-view Pro-only) ---
         image = self._get_input_image(context, tab)
         prompt = (getattr(tab, 'prompt', '') or '').strip() or None
-        supports_mv = model_supports_multi_view(service_key, model)
-
-        # --- Multiple Views: submit the whole set as ONE multi-view job ---
-        # Detected crops were already staged in S3 by detect-views, so their
-        # keys are forwarded verbatim; hand-added views carry inline pixels.
-        # Applies only when THIS image is the set's own frontal image; the
-        # capability check lives inside, not in the supports_mv pre-gate.
-        turnaround_payload = self._turnaround_payload(
-            context, image, service_key, model)
-        if turnaround_payload is False:
-            return {"CANCELLED"}
+        multi_views = (
+            self._get_multi_views(context)
+            if service_key == "image_to_3d" else None
+        )
 
         # Per-mode input validation (mirrors each legacy operator).
-        if turnaround_payload:
-            pass  # the input image plus its companion views are the input
-        elif service_key == "image_to_3d" or supports_mv:
-            if not (image or prompt):
+        if service_key == "image_to_3d":
+            if not (image or prompt or multi_views):
                 self.report(
                     {"WARNING"},
-                    "Provide at least one of: prompt, image, or multiple views",
+                    "Provide at least one of: prompt, image, or multi-view images",
                 )
                 return {"CANCELLED"}
         elif service_key == "hunyuan_rapid":
@@ -218,9 +175,7 @@ class MIXIE_OT_model_gen_generate(Operator):
 
         # --- Base payload (image / multi-view) ---
         payload = {}
-        if turnaround_payload:
-            payload.update(turnaround_payload)
-        elif image is not None:
+        if image is not None:
             try:
                 if service_key == "model_3d":
                     image_bytes = compress_for_service(image, "image_to_3d")
@@ -232,6 +187,15 @@ class MIXIE_OT_model_gen_generate(Operator):
             if image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
                 payload["image_filename"] = "image.png"
+        if multi_views:
+            payload["multi_view_images"] = [
+                {
+                    "image_bytes_b64": _b64.b64encode(img_bytes).decode(),
+                    "filename": fname,
+                    "view_type": vtype,
+                }
+                for img_bytes, fname, vtype in multi_views
+            ]
 
         # --- Catalog params -> wire payload (per-service assembler) ---
         params = {}
