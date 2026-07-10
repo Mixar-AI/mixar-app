@@ -49,20 +49,28 @@ _LOCK_HELD_WARN_S = 120.0
 _ABANDON = threading.Event()
 
 
+# Staleness epoch. Bumped whenever a scheduled job must NOT run to completion
+# against the state it will find when its (persistent) timer eventually fires:
+#  - a .blend load (`_on_load_post`) — the scene it targeted is gone;
+#  - a bridge shutdown (`signal_shutdown`) — e.g. Reload Scripts force-releases
+#    the lock, but the already-registered persistent timer would otherwise still
+#    fire post-reload and run the script unsupervised ("ghost execution").
+# The epoch is captured at schedule time and re-checked when the job runs; a
+# mismatch makes the job a clean no-op that still releases its lock. Plain int:
+# GIL-atomic, and `load_post`/shutdown run-before any later timer tick.
+_LOAD_GENERATION = 0
+
+
 def signal_shutdown() -> None:
     """Tell in-flight releasers to stop waiting (the bridge is shutting down)."""
+    global _LOAD_GENERATION
+    _LOAD_GENERATION += 1  # mark any pending job stale so it can't ghost-run later
     _ABANDON.set()
 
 
 def clear_shutdown() -> None:
     """Re-arm for a fresh bridge lifecycle (called when the server (re)starts)."""
     _ABANDON.clear()
-
-
-# Bumped on every .blend load. A job scheduled against one file must not run
-# against a different one loaded before its timer fired — the generation is
-# captured at schedule time and re-checked when the job runs (see below).
-_LOAD_GENERATION = 0
 
 
 def _on_load_post(*_args):
@@ -179,13 +187,16 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     def _job():
         started.set()
         try:
-            # If a different .blend was loaded before this job's (persistent)
-            # timer fired, running against the new file would be wrong — skip it
-            # and report cleanly. The lock is still released in `finally`.
+            # If the world changed before this job's (persistent) timer fired —
+            # a .blend was loaded, or the bridge was shut down / reloaded — do
+            # NOT run against the new state (wrong scene, or an unsupervised
+            # "ghost" run after the lock was already reused). Skip cleanly; the
+            # lock is still released in `finally`.
             if _LOAD_GENERATION != sched_generation:
                 holder["result"] = {
                     "success": False,
-                    "error": "Abandoned: a .blend file was loaded before this job ran. Retry.",
+                    "error": "Abandoned: the scene changed (file load or bridge reload) "
+                    "before this job ran. Retry.",
                     "abandoned": True,
                 }
                 return

@@ -250,6 +250,35 @@ def test_run_on_main_thread_sync_abandons_job_on_blend_load(monkeypatch):
     executor_bridge._EXEC_LOCK.release()
 
 
+def test_run_on_main_thread_sync_abandons_ghost_job_after_shutdown(monkeypatch):
+    # Reload Scripts / shutdown force-releases the lock but the persistent timer
+    # may still fire later. signal_shutdown() bumps the staleness epoch, so when
+    # that orphaned job finally runs it must SKIP fn() (no unsupervised "ghost"
+    # execution) rather than run against the reloaded state.
+    from mixar.modules.mcp_bridge.core import executor_bridge
+
+    ran = {"called": False}
+
+    def _fn():
+        ran["called"] = True
+        return {"success": True}
+
+    def _sched(fn):
+        # Simulate: job scheduled, then a shutdown occurs before the timer fires.
+        executor_bridge.signal_shutdown()
+        try:
+            fn()  # the persistent timer eventually fires post-reload
+        finally:
+            executor_bridge.clear_shutdown()
+
+    monkeypatch.setattr(executor_bridge, "_schedule_on_main_thread", _sched)
+    result = executor_bridge.run_on_main_thread_sync(_fn)
+    assert result.get("abandoned") is True
+    assert ran["called"] is False  # no ghost execution
+    assert executor_bridge._EXEC_LOCK.acquire(blocking=False) is True
+    executor_bridge._EXEC_LOCK.release()
+
+
 def test_run_on_main_thread_sync_async_busy_then_release(monkeypatch):
     # Exercise the REAL async path (job runs on a background thread, not inline):
     # while a long job holds the lock, an overlapping caller must get "busy";
