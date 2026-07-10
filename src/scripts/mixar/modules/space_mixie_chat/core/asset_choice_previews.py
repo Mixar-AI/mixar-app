@@ -250,9 +250,23 @@ def _generate(candidate):
             if appended_coll.name not in scene_coll.children:
                 scene_coll.children.link(appended_coll)
 
+        # This runs from a bpy.app.timers callback, where bpy.context has no
+        # window — bpy.ops.render.render() can fail its poll there. Override
+        # with a real window (any) so the operator has a full context.
+        win = bpy.context.window
+        if win is None:
+            wm = bpy.context.window_manager
+            win = wm.windows[0] if wm and wm.windows else None
+
         with PreviewRenderRig(scene, size=RENDER_SIZE) as rig:
             frame_camera(rig.camera, render_objs)
-            img = render_to_image(scene, name, pack=False)
+            if win is not None:
+                with bpy.context.temp_override(
+                    window=win, screen=win.screen, scene=scene
+                ):
+                    img = render_to_image(scene, name, pack=False)
+            else:
+                img = render_to_image(scene, name, pack=False)
         return img.name if img else None
     finally:
         # Remove the appended datablocks — the picker must not mutate the scene.
