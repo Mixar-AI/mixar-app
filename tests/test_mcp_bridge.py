@@ -74,6 +74,11 @@ _install_executor_fakes()
 from mixar.modules.mcp_bridge.constants import TOKEN_HEADER  # noqa: E402
 from mixar.modules.mcp_bridge.core import executor_bridge, handlers  # noqa: E402
 
+# The bridge now schedules onto Blender's main thread via its own
+# `_schedule_on_main_thread` (bpy.app.timers). Outside Blender, run the job
+# inline by default; specific tests override this to exercise the async path.
+executor_bridge._schedule_on_main_thread = lambda fn: fn()
+
 
 # ── build_script: the __PARAMS__ contract ────────────────────────────────────
 
@@ -206,8 +211,7 @@ def test_redact_matches_secret_shaped_substrings():
 
 def test_run_on_main_thread_sync_releases_lock_after_completion():
     # Two sequential calls must both succeed: the lock is released when the job
-    # completes, so the second call is not answered "busy". (With the fake
-    # main_thread_executor, _job runs inline.)
+    # completes, so the second call is not answered "busy". (Inline schedule.)
     from mixar.modules.mcp_bridge.core import executor_bridge
 
     r1 = executor_bridge.run_on_main_thread_sync(lambda: {"success": True, "n": 1})
@@ -217,6 +221,51 @@ def test_run_on_main_thread_sync_releases_lock_after_completion():
     # Lock is free afterward (not stuck held).
     assert executor_bridge._EXEC_LOCK.acquire(blocking=False) is True
     executor_bridge._EXEC_LOCK.release()
+
+
+def test_run_on_main_thread_sync_async_busy_then_release(monkeypatch):
+    # Exercise the REAL async path (job runs on a background thread, not inline):
+    # while a long job holds the lock, an overlapping caller must get "busy";
+    # once the job completes the lock frees and a later call succeeds — proving
+    # the busy-on-retry guarantee without releasing a still-running job's lock.
+    import threading as _t
+
+    from mixar.modules.mcp_bridge.core import executor_bridge
+
+    monkeypatch.setattr(
+        executor_bridge,
+        "_schedule_on_main_thread",
+        lambda fn: _t.Thread(target=fn, daemon=True).start(),
+    )
+    # Shorten the busy-wait so the test is fast but still real.
+    monkeypatch.setattr(executor_bridge, "_LOCK_ACQUIRE_TIMEOUT_S", 0.3)
+
+    release_a = _t.Event()
+    a_started = _t.Event()
+    a_result = {}
+
+    def _slow():
+        a_started.set()
+        release_a.wait(5.0)  # hold the main-thread slot until the test frees it
+        return {"success": True, "job": "A"}
+
+    def _run_a():
+        a_result["r"] = executor_bridge.run_on_main_thread_sync(_slow, timeout=5.0)
+
+    ta = _t.Thread(target=_run_a, daemon=True)
+    ta.start()
+    assert a_started.wait(2.0), "job A never started"
+
+    # B overlaps while A holds the lock → must be answered busy (no duplicate run).
+    b = executor_bridge.run_on_main_thread_sync(lambda: {"success": True, "job": "B"}, timeout=2.0)
+    assert b.get("busy") is True
+
+    # Let A finish; the lock frees, and a later call C succeeds.
+    release_a.set()
+    ta.join(5.0)
+    assert a_result["r"] == {"success": True, "job": "A"}
+    c = executor_bridge.run_on_main_thread_sync(lambda: {"success": True, "job": "C"}, timeout=2.0)
+    assert c == {"success": True, "job": "C"}
 
 
 # ── Vendored Blender handler surface (/api/*) ────────────────────────────────
@@ -400,6 +449,19 @@ def test_origin_header_is_forbidden(bridge_server):
     )
     assert status == 403
     assert "Origin" in data["error"]
+
+
+def test_host_header_parsing_including_ipv6():
+    from mixar.modules.mcp_bridge.core import server as server_mod
+
+    ok = server_mod._host_header_ok
+    assert ok("127.0.0.1:9877", 9877) is True
+    assert ok("localhost", 9877) is True
+    assert ok("[::1]:9877", 9877) is True
+    assert ok("[::1]", 9877) is True  # bracketed IPv6 without port
+    assert ok("attacker.example", 9877) is False
+    assert ok("evil.example:80", 9877) is False
+    assert ok("", 9877) is False
 
 
 def test_non_loopback_host_header_is_forbidden(bridge_server):

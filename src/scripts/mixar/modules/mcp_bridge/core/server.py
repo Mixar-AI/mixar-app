@@ -124,11 +124,21 @@ def _is_loopback(host: str) -> bool:
 
 
 def _host_header_ok(host_header: str, port: int) -> bool:
-    """Host header must name a loopback host (optionally with our port)."""
+    """Host header must name a loopback host (optionally with our port).
+
+    Handles bracketed IPv6 (`[::1]` and `[::1]:9877`) as well as `host:port`.
+    """
     if not host_header:
         return False
-    hostname = host_header.rsplit(":", 1)[0].strip("[]").lower()
-    return hostname in LOOPBACK_HOSTS
+    h = host_header.strip()
+    if h.startswith("["):  # bracketed IPv6, optional :port
+        end = h.find("]")
+        hostname = h[1:end] if end != -1 else h.strip("[]")
+    elif ":" in h:  # host:port
+        hostname = h.rsplit(":", 1)[0]
+    else:
+        hostname = h
+    return hostname.lower() in LOOPBACK_HOSTS
 
 
 class MCPBridgeHandler(BaseHTTPRequestHandler):
@@ -258,6 +268,8 @@ class MCPBridgeHandler(BaseHTTPRequestHandler):
         try:
             payload = json.dumps(data).encode("utf-8")
         except (TypeError, ValueError) as exc:
+            # Don't fail silently: a non-serializable handler result is a bug.
+            logger.error("[MCP bridge] response not JSON-serializable: %s", exc, exc_info=True)
             payload = json.dumps(
                 {"success": False, "error": "Non-serializable response: {0}".format(exc)}
             ).encode("utf-8")
@@ -315,6 +327,11 @@ def start_server(host: Optional[str] = None, port: Optional[int] = None) -> Opti
         except (TypeError, ValueError):
             bind_port = DEFAULT_PORT
 
+        # Fresh lifecycle: re-arm the executor's shutdown-abandon signal.
+        from .executor_bridge import clear_shutdown
+
+        clear_shutdown()
+
         _active_token = _resolve_token()
 
         try:
@@ -342,6 +359,11 @@ def stop_server() -> None:
     re-bind the port before the socket is actually released.
     """
     global _server
+    # Signal in-flight releasers first so a job that will never finish (app
+    # going away) frees its lock instead of blocking a restart.
+    from .executor_bridge import signal_shutdown
+
+    signal_shutdown()
     with _server_lock:
         server = _server
         _server = None

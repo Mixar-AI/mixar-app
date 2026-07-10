@@ -14,12 +14,10 @@ a deliberate, auditable step rather than a forever-manual diff.
 | `mcp/reference-data/` | `AnkleBreaker-Studio/blender-mcp-server` | `reference-data/` |
 | `src/scripts/mixar/modules/mcp_bridge/blender/{handlers,utils,recipe}/` | `AnkleBreaker-Studio/blender-mcp-plugin` | `handlers/`, `utils/`, `recipe/` |
 
-**Upstream commit at vendoring time:** record the source SHA of each repo here when
-you (re)vendor. Left blank on first import — fill from `git-mcp repos get` / the
-repo's default branch HEAD.
+**Upstream commit at vendoring time** (verify a re-sync against these; update when re-vendoring):
 
-- `blender-mcp-server`: `main` @ `<sha>`
-- `blender-mcp-plugin`: `main` @ `<sha>`
+- `blender-mcp-server`: `main` @ `67dfc66aa6948c7b73d57a47124dfef26a3b7bb0` (2026-03-19)
+- `blender-mcp-plugin`: `main` @ `6702e5445bc57bbbd6a94789fdeb42007a368a1f` (2026-03-19)
 
 ## Mixar adaptations (do NOT overwrite on re-sync)
 

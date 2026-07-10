@@ -19,117 +19,45 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
+import { readdirSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
+
 import { CONFIG } from "./config.js";
-
-// ─── Mixar-native tools ───
-import { systemTools } from "./tools/system.js";
-import { executeTools } from "./tools/execute.js";
-import { sceneTools as mixarSceneTools } from "./tools/scene.js";
-import { historyTools } from "./tools/history.js";
-import { generationTools } from "./tools/generation.js";
-import { providerTools } from "./tools/providers.js";
-
-// ─── Vendored Blender tool surface (two-tier) ───
 import { splitToolTiers } from "./blender/tool-tiers.js";
 import { validateParams } from "./blender/validate-params.js";
 import { loadReferenceData } from "./blender/reference/loader.js";
 import { deriveAnnotations } from "./annotations.js";
 
-// Core Blender tools
-import { fileTools } from "./blender/tools/core/file.js";
-import { sceneTools } from "./blender/tools/core/scene.js";
-import { objectTools } from "./blender/tools/core/object.js";
-import { collectionTools } from "./blender/tools/core/collection.js";
-import { materialTools } from "./blender/tools/core/material.js";
-import { modifierTools } from "./blender/tools/core/modifier.js";
-import { meshTools } from "./blender/tools/core/mesh.js";
-import { renderTools } from "./blender/tools/core/render.js";
-import { animationTools } from "./blender/tools/core/animation.js";
-import { exportTools } from "./blender/tools/core/export.js";
-import { validationTools } from "./blender/tools/core/validation.js";
-import { referenceTools } from "./blender/tools/core/reference.js";
-import { analysisTools } from "./blender/tools/core/analysis.js";
-import { viewportTools } from "./blender/tools/core/viewport.js";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Advanced Blender tools
-import { exportExtendedTools } from "./blender/tools/advanced/export-extended.js";
-import { validationExtendedTools } from "./blender/tools/advanced/validation-extended.js";
-import { pythonExecTools } from "./blender/tools/advanced/python-exec.js";
-import { modelingTools } from "./blender/tools/advanced/modeling.js";
-import { uvTools } from "./blender/tools/advanced/uv.js";
-import { referenceExtendedTools } from "./blender/tools/advanced/reference-extended.js";
-import { analysisExtendedTools } from "./blender/tools/advanced/analysis-extended.js";
-import { viewportExtendedTools } from "./blender/tools/advanced/viewport-extended.js";
-import { sculptTools } from "./blender/tools/advanced/sculpt.js";
-import { armatureTools } from "./blender/tools/advanced/armature.js";
-import { animationExtendedTools } from "./blender/tools/advanced/animation-extended.js";
-import { nodeTools } from "./blender/tools/advanced/node.js";
-import { curveTools } from "./blender/tools/advanced/curve.js";
-import { lightTools } from "./blender/tools/advanced/light.js";
-import { cameraTools } from "./blender/tools/advanced/camera.js";
-import { textureTools } from "./blender/tools/advanced/texture.js";
-import { particleTools } from "./blender/tools/advanced/particle.js";
-import { physicsTools } from "./blender/tools/advanced/physics.js";
-import { constraintTools } from "./blender/tools/advanced/constraint.js";
-import { renderExtendedTools } from "./blender/tools/advanced/render-extended.js";
-import { greasePencilTools } from "./blender/tools/advanced/grease-pencil.js";
-import { textObjectTools } from "./blender/tools/advanced/text.js";
-import { latticeTools } from "./blender/tools/advanced/lattice.js";
-import { vertexGroupTools } from "./blender/tools/advanced/vertex-group.js";
-import { addonTools } from "./blender/tools/advanced/addon.js";
-import { coreExtendedTools } from "./blender/tools/advanced/core-extended.js";
+// Auto-discover tool modules: every .js in a tools directory that exports an
+// array of {name, handler} tool defs is collected. Adding a tool is just
+// dropping a file in the right directory — there is no hand-maintained import
+// list or spread array to keep in sync (that was a real drift class), and no
+// module can be silently forgotten.
+async function loadToolArrays(dir) {
+  const tools = [];
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".js")).sort()) {
+    const mod = await import(pathToFileURL(join(dir, file)).href);
+    for (const value of Object.values(mod)) {
+      if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every((t) => t && typeof t.name === "string" && typeof t.handler === "function")
+      ) {
+        tools.push(...value);
+      }
+    }
+  }
+  return tools;
+}
 
-// ─── Assemble ───
-const mixarTools = [
-  ...systemTools,
-  ...executeTools,
-  ...mixarSceneTools,
-  ...historyTools,
-  ...generationTools,
-  ...providerTools,
-];
-
+// ─── Assemble (glob-discovered) ───
+const mixarTools = await loadToolArrays(join(__dirname, "tools"));
 const allBlenderTools = [
-  ...fileTools,
-  ...sceneTools,
-  ...objectTools,
-  ...collectionTools,
-  ...materialTools,
-  ...modifierTools,
-  ...meshTools,
-  ...renderTools,
-  ...animationTools,
-  ...exportTools,
-  ...validationTools,
-  ...referenceTools,
-  ...analysisTools,
-  ...viewportTools,
-  ...exportExtendedTools,
-  ...validationExtendedTools,
-  ...pythonExecTools,
-  ...modelingTools,
-  ...uvTools,
-  ...referenceExtendedTools,
-  ...analysisExtendedTools,
-  ...viewportExtendedTools,
-  ...sculptTools,
-  ...armatureTools,
-  ...animationExtendedTools,
-  ...nodeTools,
-  ...curveTools,
-  ...lightTools,
-  ...cameraTools,
-  ...textureTools,
-  ...particleTools,
-  ...physicsTools,
-  ...constraintTools,
-  ...renderExtendedTools,
-  ...greasePencilTools,
-  ...textObjectTools,
-  ...latticeTools,
-  ...vertexGroupTools,
-  ...addonTools,
-  ...coreExtendedTools,
+  ...(await loadToolArrays(join(__dirname, "blender", "tools", "core"))),
+  ...(await loadToolArrays(join(__dirname, "blender", "tools", "advanced"))),
 ];
 
 const { coreTools, metaTools, advancedCount, coreCount } = splitToolTiers(allBlenderTools);

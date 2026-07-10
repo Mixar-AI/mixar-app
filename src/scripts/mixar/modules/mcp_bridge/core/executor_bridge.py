@@ -7,8 +7,10 @@
 Runs scripts through the exact same sandboxed ScriptExecutor the hosted
 Mixie agent uses (`space_mixie_chat.core.executor`), but synchronously from
 the bridge's HTTP thread: the work is marshalled onto Blender's main thread
-via `main_thread_executor.run_on_main_thread` and the HTTP thread blocks on
-an event until the result is ready (or the timeout fires).
+via the bridge's own `_schedule_on_main_thread` (a direct, thread-safe
+`bpy.app.timers.register`, independent of the hosted-agent WS scheduler) and
+the HTTP thread blocks on an event until the result is ready (or the timeout
+fires).
 
 This deliberately bypasses the WebSocket transport, the chat-session gate
 and Mixar auth — the trust boundary is the loopback HTTP server. The sandbox
@@ -35,10 +37,45 @@ logger = get_logger(__name__)
 # fail-fast "busy" answer instead of stacking a duplicate main-thread job.
 _EXEC_LOCK = threading.Lock()
 _LOCK_ACQUIRE_TIMEOUT_S = 2.0
-# Safety cap: if a scheduled job is never actually run (e.g. dropped by a
-# concurrent shutdown latch), release the lock this long after the hard
-# execution ceiling so the bridge can never deadlock permanently.
-_RELEASER_GRACE_S = 5.0
+
+# Set when the bridge is shutting down (Reload Scripts / addon disable / exit).
+# A job that will never complete because the app is going away must not hold the
+# lock forever — the releaser wakes on this and frees it (logged). A job that is
+# merely running long (render/bake) is NOT abandoned: it keeps the lock until it
+# truly finishes, so a retry is always answered "busy", never a duplicate run.
+_ABANDON = threading.Event()
+
+
+def signal_shutdown() -> None:
+    """Tell in-flight releasers to stop waiting (the bridge is shutting down)."""
+    _ABANDON.set()
+
+
+def clear_shutdown() -> None:
+    """Re-arm for a fresh bridge lifecycle (called when the server (re)starts)."""
+    _ABANDON.clear()
+
+
+def _schedule_on_main_thread(fn) -> None:
+    """Schedule `fn` to run once on Blender's main thread (bridge-owned).
+
+    Uses ``bpy.app.timers.register`` directly (one of the few thread-safe bpy
+    calls) instead of routing through ``space_mixie_chat.main_thread_executor``.
+    That deliberately decouples the bridge from that module's process-global
+    ``_shutdown_requested`` latch, which belongs to the hosted-agent WS
+    lifecycle — the bridge no longer reads or mutates it. Raises if scheduling
+    fails so the caller can release the lock and report the error.
+    """
+    import bpy
+
+    def _wrapper():
+        try:
+            fn()
+        except Exception as exc:  # never let a callback break the timer loop
+            logger.error("MCP bridge main-thread callback raised: %s", exc, exc_info=True)
+        return None  # one-shot timer
+
+    bpy.app.timers.register(_wrapper, first_interval=0.0)
 
 
 def build_script(script: str, params: Optional[dict] = None) -> str:
@@ -73,15 +110,6 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     serialization lock is held until it truly finishes, so a retry after a
     client-side timeout is answered "busy" rather than running a duplicate.
     """
-    from mixar.modules.space_mixie_chat.core import main_thread_executor
-
-    # The `_shutdown_requested` latch is a process-global shared with the WS
-    # agent path; it stays set after a "Reload Scripts" / disconnect and is
-    # only cleared by ConnectionManager.connect(). The bridge's lifecycle is
-    # independent of the hosted agent, so clear it ourselves — otherwise every
-    # job is silently dropped and the request hangs until timeout.
-    main_thread_executor.resume()
-
     if not _EXEC_LOCK.acquire(timeout=_LOCK_ACQUIRE_TIMEOUT_S):
         return {
             "success": False,
@@ -117,7 +145,7 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
             _release_once()  # lock freed only when the job truly completes
 
     try:
-        main_thread_executor.run_on_main_thread(_job)
+        _schedule_on_main_thread(_job)
     except Exception as exc:
         _release_once()  # scheduling failed; we still own the lock
         logger.error("MCP bridge: failed to schedule main-thread job: %s", exc, exc_info=True)
@@ -126,10 +154,21 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
             "error": "Could not schedule work on Blender's main thread: {0}".format(exc),
         }
 
-    # Safety net: if the job is never actually run (dropped by a shutdown race),
-    # free the lock after the hard ceiling so the bridge cannot deadlock forever.
+    # Hold the lock until the job TRULY completes — however long a legitimate
+    # render/bake runs — so a retry is always answered "busy", never a duplicate.
+    # The only escape is bridge shutdown (_ABANDON): a job that can never finish
+    # because the app is going away must not deadlock the lock forever. Both
+    # exits are the sole timer-free release paths, and the shutdown exit is
+    # logged so an abandoned job is diagnosable (never silent).
     def _releaser():
-        done.wait(EXECUTE_TIMEOUT_MAX_S + _RELEASER_GRACE_S)
+        while not done.wait(1.0):
+            if _ABANDON.is_set():
+                logger.error(
+                    "MCP bridge: releasing the exec lock during shutdown while a "
+                    "main-thread job was in flight (started=%s); its result is discarded.",
+                    started.is_set(),
+                )
+                break
         _release_once()
 
     threading.Thread(target=_releaser, name="Mixar-MCP-LockReleaser", daemon=True).start()

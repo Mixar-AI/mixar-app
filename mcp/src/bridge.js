@@ -7,20 +7,13 @@ import { CONFIG } from "./config.js";
 
 const BASE_URL = `http://${CONFIG.mixarHost}:${CONFIG.mixarPort}`;
 
-/**
- * POST a JSON body to a bridge endpoint and return the parsed JSON result.
- * Bridge responses always carry a top-level `success` flag; failures are
- * thrown as Errors so tool handlers surface them uniformly.
- */
-export async function callBridge(path, body = {}) {
+async function _post(path, body) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CONFIG.requestTimeoutMs);
   const headers = { "Content-Type": "application/json" };
   if (CONFIG.bridgeToken) headers["X-Mixar-MCP-Token"] = CONFIG.bridgeToken;
-
-  let response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    return await fetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -28,15 +21,30 @@ export async function callBridge(path, body = {}) {
     });
   } catch (err) {
     if (err.name === "AbortError") {
-      throw new Error(
-        `Bridge request to ${path} timed out after ${CONFIG.requestTimeoutMs}ms`
-      );
+      throw new Error(`Bridge request to ${path} timed out after ${CONFIG.requestTimeoutMs}ms`);
     }
     throw new Error(
       `Cannot reach Mixar at ${BASE_URL} — is Mixar running with the MCP bridge enabled? (${err.message})`
     );
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * POST a JSON body to a bridge endpoint and return the parsed JSON result.
+ * Bridge responses always carry a top-level `success` flag; failures are
+ * thrown as Errors so tool handlers surface them uniformly.
+ *
+ * On a 401 the cached token is invalidated and the request retried once — so a
+ * token Mixar generated after this client started (launch-order race) is picked
+ * up automatically instead of failing for the whole session.
+ */
+export async function callBridge(path, body = {}) {
+  let response = await _post(path, body);
+  if (response.status === 401) {
+    CONFIG.resetBridgeToken();
+    if (CONFIG.bridgeToken) response = await _post(path, body);
   }
 
   const text = await response.text();
