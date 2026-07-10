@@ -37,6 +37,9 @@ logger = get_logger(__name__)
 # fail-fast "busy" answer instead of stacking a duplicate main-thread job.
 _EXEC_LOCK = threading.Lock()
 _LOCK_ACQUIRE_TIMEOUT_S = 2.0
+# Heartbeat: warn if the exec lock is held this long by a single in-flight job,
+# so a stuck/orphaned lock surfaces even with no client retry or shutdown.
+_LOCK_HELD_WARN_S = 120.0
 
 # Set when the bridge is shutting down (Reload Scripts / addon disable / exit).
 # A job that will never complete because the app is going away must not hold the
@@ -56,6 +59,39 @@ def clear_shutdown() -> None:
     _ABANDON.clear()
 
 
+# Bumped on every .blend load. A job scheduled against one file must not run
+# against a different one loaded before its timer fired — the generation is
+# captured at schedule time and re-checked when the job runs (see below).
+_LOAD_GENERATION = 0
+
+
+def _on_load_post(*_args):
+    global _LOAD_GENERATION
+    _LOAD_GENERATION += 1
+
+
+def install_load_guard() -> None:
+    """Register the .blend-load handler (idempotent). Called on bridge start."""
+    try:
+        import bpy
+
+        if _on_load_post not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(_on_load_post)
+    except Exception as exc:
+        logger.warning("[MCP bridge] could not install load guard: %s", exc)
+
+
+def remove_load_guard() -> None:
+    """Unregister the .blend-load handler (idempotent). Called on bridge stop."""
+    try:
+        import bpy
+
+        if _on_load_post in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.remove(_on_load_post)
+    except Exception:
+        pass
+
+
 def _schedule_on_main_thread(fn) -> None:
     """Schedule `fn` to run once on Blender's main thread (bridge-owned).
 
@@ -63,8 +99,14 @@ def _schedule_on_main_thread(fn) -> None:
     calls) instead of routing through ``space_mixie_chat.main_thread_executor``.
     That deliberately decouples the bridge from that module's process-global
     ``_shutdown_requested`` latch, which belongs to the hosted-agent WS
-    lifecycle — the bridge no longer reads or mutates it. Raises if scheduling
-    fails so the caller can release the lock and report the error.
+    lifecycle — the bridge no longer reads or mutates it.
+
+    ``persistent=True`` is REQUIRED: a non-persistent timer is silently dropped
+    when a .blend is loaded, which would orphan the job and hold the exec lock
+    forever. Persistent timers survive the load and still fire, so the job
+    always runs to completion (or is skipped by the load-generation guard) and
+    always releases the lock. Raises if scheduling fails so the caller can
+    release the lock and report the error.
     """
     import bpy
 
@@ -75,7 +117,7 @@ def _schedule_on_main_thread(fn) -> None:
             logger.error("MCP bridge main-thread callback raised: %s", exc, exc_info=True)
         return None  # one-shot timer
 
-    bpy.app.timers.register(_wrapper, first_interval=0.0)
+    bpy.app.timers.register(_wrapper, first_interval=0.0, persistent=True)
 
 
 def build_script(script: str, params: Optional[dict] = None) -> str:
@@ -120,6 +162,7 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     started = threading.Event()  # set once the job actually begins on the main thread
     done = threading.Event()
     holder: dict = {}
+    sched_generation = _LOAD_GENERATION  # the .blend this job targets
 
     # Release the lock exactly once, from whichever path first observes the job
     # as finished (or the safety cap). Guarded so the prompt-return path and the
@@ -136,6 +179,16 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     def _job():
         started.set()
         try:
+            # If a different .blend was loaded before this job's (persistent)
+            # timer fired, running against the new file would be wrong — skip it
+            # and report cleanly. The lock is still released in `finally`.
+            if _LOAD_GENERATION != sched_generation:
+                holder["result"] = {
+                    "success": False,
+                    "error": "Abandoned: a .blend file was loaded before this job ran. Retry.",
+                    "abandoned": True,
+                }
+                return
             holder["result"] = fn()
         except Exception as exc:  # surface, never swallow
             logger.error("MCP bridge main-thread job failed: %s", exc, exc_info=True)
@@ -161,6 +214,8 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     # exits are the sole timer-free release paths, and the shutdown exit is
     # logged so an abandoned job is diagnosable (never silent).
     def _releaser():
+        waited = 0.0
+        warned_at = 0.0
         while not done.wait(1.0):
             if _ABANDON.is_set():
                 logger.error(
@@ -169,6 +224,16 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
                     started.is_set(),
                 )
                 break
+            # Proactively surface a lock that is held far longer than any real
+            # operation should take — a heartbeat so an orphaned/stuck lock is
+            # diagnosable even with no client retry and no shutdown.
+            waited += 1.0
+            if waited - warned_at >= _LOCK_HELD_WARN_S:
+                warned_at = waited
+                logger.warning(
+                    "MCP bridge: exec lock held %.0fs by an in-flight job (started=%s); "
+                    "still waiting for it to complete.", waited, started.is_set(),
+                )
         _release_once()
 
     threading.Thread(target=_releaser, name="Mixar-MCP-LockReleaser", daemon=True).start()

@@ -223,6 +223,33 @@ def test_run_on_main_thread_sync_releases_lock_after_completion():
     executor_bridge._EXEC_LOCK.release()
 
 
+def test_run_on_main_thread_sync_abandons_job_on_blend_load(monkeypatch):
+    # If a .blend is loaded (generation bumped) between scheduling and the job
+    # running, the job must be skipped (not run against the new file) and the
+    # lock still released — never held forever.
+    from mixar.modules.mcp_bridge.core import executor_bridge
+
+    ran = {"called": False}
+
+    def _fn():
+        ran["called"] = True
+        return {"success": True}
+
+    # Simulate a file load happening before the (inline) job runs by bumping the
+    # generation inside the scheduler, right before invoking the job.
+    def _sched(fn):
+        executor_bridge._on_load_post()  # a .blend was loaded
+        fn()
+
+    monkeypatch.setattr(executor_bridge, "_schedule_on_main_thread", _sched)
+    result = executor_bridge.run_on_main_thread_sync(_fn)
+    assert result.get("abandoned") is True
+    assert ran["called"] is False  # fn must NOT run against the new file
+    # Lock released despite the abandon.
+    assert executor_bridge._EXEC_LOCK.acquire(blocking=False) is True
+    executor_bridge._EXEC_LOCK.release()
+
+
 def test_run_on_main_thread_sync_async_busy_then_release(monkeypatch):
     # Exercise the REAL async path (job runs on a background thread, not inline):
     # while a long job holds the lock, an overlapping caller must get "busy";

@@ -327,10 +327,13 @@ def start_server(host: Optional[str] = None, port: Optional[int] = None) -> Opti
         except (TypeError, ValueError):
             bind_port = DEFAULT_PORT
 
-        # Fresh lifecycle: re-arm the executor's shutdown-abandon signal.
-        from .executor_bridge import clear_shutdown
+        # Fresh lifecycle: re-arm the executor's shutdown-abandon signal and
+        # install the .blend-load guard (so a job scheduled against one file is
+        # abandoned rather than run against a newly-loaded one).
+        from .executor_bridge import clear_shutdown, install_load_guard
 
         clear_shutdown()
+        install_load_guard()
 
         _active_token = _resolve_token()
 
@@ -360,10 +363,12 @@ def stop_server() -> None:
     """
     global _server
     # Signal in-flight releasers first so a job that will never finish (app
-    # going away) frees its lock instead of blocking a restart.
-    from .executor_bridge import signal_shutdown
+    # going away) frees its lock instead of blocking a restart; drop the
+    # .blend-load guard handler.
+    from .executor_bridge import remove_load_guard, signal_shutdown
 
     signal_shutdown()
+    remove_load_guard()
     with _server_lock:
         server = _server
         _server = None
