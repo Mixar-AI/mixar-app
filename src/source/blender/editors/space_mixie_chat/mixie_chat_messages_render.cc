@@ -238,9 +238,56 @@ void mixie_chat_render_messages(const bContext *C,
           }
 
           /* Draw action bubble */
-          chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
-                              action.bounds.ymin, layout.bubble_width,
-                              action.height, layout.content_width);
+          if (action.image[0] != '\0') {
+            /* Asset-picker image button: background only, then a square
+             * preview thumbnail (bpy.data.images lookup) with the label to
+             * its right. A missing image draws nothing (returns 0) and the
+             * row gracefully reads as a text button. Height was laid out
+             * from the same CHAT_ACTION_THUMB_SIZE constant. */
+            chat_ui_draw_bubble(&action_style, "", action.bounds.xmin,
+                                action.bounds.ymin, layout.bubble_width,
+                                action.height, layout.content_width);
+
+            const float thumb = CHAT_ACTION_THUMB_SIZE * UI_SCALE_FAC;
+            ChatImageStyle thumb_style = image_style;
+            thumb_style.max_width = thumb;
+            thumb_style.max_height = thumb;
+            thumb_style.margin = 0.0f;
+            /* draw_image_attachment anchors the image's TOP at (y - margin):
+             * pass the vertically-centered top edge for a square preview. */
+            const float thumb_top =
+                action.bounds.ymin + (action.height + thumb) / 2.0f;
+            chat_ui_draw_image_attachment(bmain, action.image, /*source=*/1,
+                                          action.bounds.xmin +
+                                              layout.style.h_padding,
+                                          thumb_top, thumb, &thumb_style);
+
+            /* Label right of the thumbnail, vertically centered. */
+            const float text_x = action.bounds.xmin + layout.style.h_padding +
+                                 thumb + layout.style.h_padding;
+            const float text_w =
+                action.bounds.xmax - text_x - layout.style.h_padding;
+            if (text_w > 0.0f && action.label[0] != '\0') {
+              float label_w, label_h;
+              chat_ui_calc_text_bounds(
+                  action.label, text_w, layout.style.font_size, 0, &label_w,
+                  &label_h);
+              rctf label_rect;
+              label_rect.xmin = text_x;
+              label_rect.xmax = text_x + text_w;
+              label_rect.ymin =
+                  action.bounds.ymin + (action.height - label_h) / 2.0f;
+              label_rect.ymax = label_rect.ymin + label_h;
+              chat_ui_draw_text_wrapped(action.label, &label_rect,
+                                        layout.style.font_size, 0,
+                                        action_style.text_color);
+            }
+          }
+          else {
+            chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
+                                action.bounds.ymin, layout.bubble_width,
+                                action.height, layout.content_width);
+          }
 
           action_y -= action.height + metrics.bubble_spacing;
         }

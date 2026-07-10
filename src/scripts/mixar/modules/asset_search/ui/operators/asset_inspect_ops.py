@@ -10,16 +10,20 @@ Operators for inspecting and rendering preview images of marked assets
 (objects and collections) across all custom asset libraries.
 """
 
-import os
-import tempfile
-from math import cos, radians, sin, tan
+from math import radians
 from pathlib import Path
 
 import bpy
 from bpy.types import Operator
-from mathutils import Vector
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.utils.preview_render import (
+    compute_bounds as _compute_bounds,  # noqa: F401 — re-exported for callers
+    frame_camera as _frame_camera,
+    remove_collection as _remove_collection,
+    remove_objects as _remove_objects,
+    render_to_image as _render_to_image,
+)
 
 logger = get_logger(__name__)
 
@@ -58,105 +62,10 @@ def _matches_render_filter(name, library_name, blend_rel_path):
     return f"{name}|{library_name}|{blend_rel_path}" in _render_filter
 
 
-# Mapping of object types to bpy.data collection names for cleanup
-_DATA_COLLECTIONS = {
-    'MESH': 'meshes',
-    'CURVE': 'curves',
-    'SURFACE': 'curves',
-    'META': 'metaballs',
-    'FONT': 'curves',
-    'CURVES': 'hair_curves',
-    'POINTCLOUD': 'pointclouds',
-    'VOLUME': 'volumes',
-    'GPENCIL': 'grease_pencils',
-    'GREASEPENCIL': 'grease_pencils',
-    'ARMATURE': 'armatures',
-    'LATTICE': 'lattices',
-    'LIGHT': 'lights',
-    'LIGHT_PROBE': 'lightprobes',
-    'CAMERA': 'cameras',
-    'SPEAKER': 'speakers',
-}
-
-
-def _compute_bounds(objects):
-    """Compute combined bounding box center and radius for objects."""
-    all_corners = []
-    for obj in objects:
-        for corner in obj.bound_box:
-            all_corners.append(obj.matrix_world @ Vector(corner))
-
-    if not all_corners:
-        return Vector((0, 0, 0)), 1.0
-
-    min_co = Vector((
-        min(c.x for c in all_corners),
-        min(c.y for c in all_corners),
-        min(c.z for c in all_corners),
-    ))
-    max_co = Vector((
-        max(c.x for c in all_corners),
-        max(c.y for c in all_corners),
-        max(c.z for c in all_corners),
-    ))
-
-    center = (min_co + max_co) / 2
-    radius = (max_co - min_co).length / 2
-    return center, max(radius, 0.001)
-
-
-def _frame_camera(camera_obj, objects):
-    """Position camera for a preview-style 3/4 view framing the objects."""
-    center, radius = _compute_bounds(objects)
-
-    fov = camera_obj.data.angle
-    distance = (radius / tan(fov / 2)) * 1.2
-
-    elev = radians(25)
-    azim = radians(45)
-    offset = Vector((
-        cos(elev) * sin(azim),
-        -cos(elev) * cos(azim),
-        sin(elev),
-    )) * distance
-
-    camera_obj.location = center + offset
-    direction = center - camera_obj.location
-    camera_obj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
-
-
-def _render_to_image(scene, image_name):
-    """Render the scene, save to temp JPEG, load back as packed image."""
-    temp_path = os.path.join(tempfile.gettempdir(), f"{image_name}.jpg")
-
-    # Temporarily switch output format to JPEG with 80% quality
-    orig_format = scene.render.image_settings.file_format
-    orig_quality = scene.render.image_settings.quality
-    scene.render.image_settings.file_format = 'JPEG'
-    scene.render.image_settings.quality = 80
-
-    try:
-        bpy.ops.render.render()
-
-        render_img = bpy.data.images.get('Render Result')
-        if not render_img:
-            return None
-
-        render_img.save_render(filepath=temp_path, scene=scene)
-
-        existing = bpy.data.images.get(image_name)
-        if existing:
-            bpy.data.images.remove(existing)
-
-        img = bpy.data.images.load(temp_path)
-        img.name = image_name
-        img.pack()
-        return img
-    finally:
-        scene.render.image_settings.file_format = orig_format
-        scene.render.image_settings.quality = orig_quality
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+# _DATA_COLLECTIONS / _compute_bounds / _frame_camera / _render_to_image /
+# _remove_objects / _remove_collection moved to
+# asset_search/utils/preview_render.py (shared with the chat asset-picker's
+# thumbnail generation) — imported above under their original names.
 
 
 def _convert_idprop_to_py(value):
@@ -224,25 +133,6 @@ def _collect_asset_metadata(asset_id, library_name, blend_rel_path):
     else:
         logger.debug("[Asset Inspector] (no asset metadata)")
     return info
-
-
-def _remove_objects(objects):
-    """Delete objects and their orphan data-blocks."""
-    for obj in objects:
-        data = obj.data
-        obj_type = obj.type
-        bpy.data.objects.remove(obj, do_unlink=True)
-        if data and data.users == 0:
-            coll_attr = _DATA_COLLECTIONS.get(obj_type)
-            if coll_attr and hasattr(bpy.data, coll_attr):
-                getattr(bpy.data, coll_attr).remove(data)
-
-
-def _remove_collection(collection):
-    """Delete a collection and all its objects and orphan data."""
-    objects = list(collection.all_objects)
-    _remove_objects(objects)
-    bpy.data.collections.remove(collection)
 
 
 class MIXIE_OT_inspect_asset_libraries(Operator):

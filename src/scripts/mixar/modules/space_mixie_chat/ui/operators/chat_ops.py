@@ -148,6 +148,16 @@ class MIXIE_CHAT_OT_send_message(Operator):
             for i in reversed(stale_placeholders):
                 scene.mixie_chat_messages.remove(i)
 
+            # A fresh turn is also the reliable point to sweep asset-picker
+            # preview thumbnails no bubble references anymore (an abandoned
+            # picker never gets the empty-actions replacement that normally
+            # cleans them).
+            try:
+                from ...core import asset_choice_previews
+                asset_choice_previews.cleanup_orphans(scene)
+            except Exception:
+                pass
+
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
         user_msg.sender = 'USER'

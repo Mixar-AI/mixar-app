@@ -268,10 +268,19 @@ struct TodoItemSlotData {
  * Action button data for user interaction.
  * Style determines the button color scheme.
  */
+
+/* Asset-picker thumbnail edge (px, pre-UI-scale). Layout and render both
+ * derive the image-button row height from this — keep them in sync. */
+#define CHAT_ACTION_THUMB_SIZE 96.0f
+
 struct ActionSlotData {
   char label[256];
   char value[256];
   int style;  /* 0=primary, 1=default, 2=danger */
+  /* bpy.data.images name of a locally generated preview thumbnail; empty for
+   * plain text buttons. Set by the asset-picker (multi-match HITL). Must match
+   * MixieChatActionItem.image (StringProperty maxlen=64). */
+  char image[64];
   float height;
   rctf bounds;
   bool is_hovered;

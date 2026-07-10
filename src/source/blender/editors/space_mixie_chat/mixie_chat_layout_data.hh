@@ -79,6 +79,9 @@ struct ChatActionItemProps {
   PropertyRNA *label;
   PropertyRNA *value;
   PropertyRNA *style;
+  /* Asset-picker preview thumbnail (bpy image name); may be null when the
+   * scripts overlay predates the property — buttons then render text-only. */
+  PropertyRNA *image;
   bool initialized;
 };
 
