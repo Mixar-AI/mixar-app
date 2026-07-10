@@ -633,6 +633,20 @@ def register():
         options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
     )
 
+    # Chat mode captured when the currently running turn started —
+    # stamped by SessionManager.set_state on the inactive→active edge,
+    # cleared when the turn ends. The agent viewport lock (halo + input
+    # block) keys off THIS rather than the live mixie_chat_mode
+    # dropdown: the dropdown stays editable mid-turn, so flipping it
+    # (AGENT → ASK → AGENT) must not lift the lock while an agent turn
+    # is still editing the scene, nor raise it for a running Ask turn.
+    bpy.types.Scene.mixie_chat_active_turn_mode = StringProperty(
+        name="Active Turn Mode",
+        description="Chat mode the currently running turn was started in",
+        default="",
+        options={'SKIP_SAVE'},  # Never persist — turns don't survive a file load
+    )
+
     bpy.types.Scene.mixie_chat_generate_type = EnumProperty(
         name="Generate Type",
         description="Type of content to generate",
@@ -802,7 +816,8 @@ def unregister():
         'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
-        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_mode',
+        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
+        'mixie_chat_mode',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
         if hasattr(bpy.types.Scene, attr):

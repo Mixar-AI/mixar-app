@@ -100,11 +100,30 @@ class SessionManager:
         if hasattr(scene, 'mixie_chat_is_busy'):
             scene.mixie_chat_is_busy = (state == SessionState.BUSY)
 
-        # Update active scenes tracking (thread-safe)
         active_states = {SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT}
+        is_active = state in active_states
+        was_active = old_str in {s.value.upper() for s in active_states}
+
+        # Stamp the chat mode the running turn started in. The agent
+        # viewport lock (halo + input block) reads this instead of the
+        # live mixie_chat_mode dropdown, which stays editable mid-turn —
+        # flipping it (AGENT → ASK → AGENT) must not lift the lock out
+        # from under a running agent turn, nor raise it for a running
+        # Ask turn. Stamped on the inactive→active edge, held across
+        # intra-turn transitions (BUSY ↔ AWAITING_INPUT ↔ MODIFYING),
+        # cleared when the turn ends.
+        if hasattr(scene, 'mixie_chat_active_turn_mode'):
+            if is_active and not was_active:
+                scene.mixie_chat_active_turn_mode = (
+                    getattr(scene, 'mixie_chat_mode', '') or ''
+                )
+            elif not is_active:
+                scene.mixie_chat_active_turn_mode = ''
+
+        # Update active scenes tracking (thread-safe)
         scene_name = scene.name
         with SessionManager._active_scenes_lock:
-            if state in active_states:
+            if is_active:
                 SessionManager._active_scenes.add(scene_name)
             else:
                 SessionManager._active_scenes.discard(scene_name)
