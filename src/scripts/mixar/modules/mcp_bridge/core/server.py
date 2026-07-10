@@ -1,0 +1,308 @@
+# SPDX-FileCopyrightText: 2026 AnkleBreaker Studio
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Loopback HTTP server for the MCP bridge.
+
+Runs in daemon threads inside Mixar's embedded Python. The companion MCP
+server (mcp/ at the repo root) is the only intended client.
+
+Security posture (the bind is loopback, but a local web page could still try
+to POST here, so the transport is hardened against browser-driven CSRF /
+DNS-rebinding):
+  * A shared token is ALWAYS required. If MIXAR_MCP_TOKEN is unset one is
+    generated at startup and written to a file the local MCP server reads.
+  * POSTs must be Content-Type: application/json (forces a CORS preflight for
+    cross-origin browsers, which the server never answers → request blocked).
+  * Any request carrying an Origin header is rejected (the Node client never
+    sends one; browsers always do cross-origin).
+  * The Host header must be loopback (defeats DNS-rebinding).
+  * Binding is refused for any non-loopback host.
+
+Thread safety: handlers that touch bpy marshal onto the main thread via
+executor_bridge; backend service calls are plain sync HTTP, safe off-main.
+"""
+
+import hmac
+import json
+import os
+import secrets
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
+from typing import Optional
+from urllib.parse import urlparse
+
+from mixar.config.logging_config import get_logger
+
+from ..constants import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    ENV_HOST,
+    ENV_PORT,
+    ENV_TOKEN,
+    LOOPBACK_HOSTS,
+    MAX_CONCURRENT_REQUESTS,
+    MAX_REQUEST_BODY_BYTES,
+    SOCKET_TIMEOUT_S,
+    TOKEN_FILE_NAME,
+    TOKEN_HEADER,
+)
+
+logger = get_logger(__name__)
+
+_server: Optional["MCPBridgeServer"] = None
+_server_lock = threading.Lock()
+# Active shared token for this process (env-supplied or auto-generated).
+_active_token: str = ""
+_request_slots = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+
+def _token_file_path() -> str:
+    """Path to the auto-generated token file (under Blender's config dir)."""
+    try:
+        import bpy
+
+        base = bpy.utils.user_resource("CONFIG", path="mixar", create=True)
+    except Exception:
+        base = os.path.join(os.path.expanduser("~"), ".mixar")
+        os.makedirs(base, exist_ok=True)
+    return os.path.join(base, TOKEN_FILE_NAME)
+
+
+def _resolve_token() -> str:
+    """Return the env token, or generate + persist one for MCP clients."""
+    env_token = os.environ.get(ENV_TOKEN, "").strip()
+    if env_token:
+        return env_token
+    token = secrets.token_urlsafe(32)
+    try:
+        path = _token_file_path()
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(token)
+        # Best-effort: restrict to the owner on POSIX.
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+        logger.info("[MCP bridge] generated auth token at %s", path)
+    except Exception as exc:
+        logger.warning("[MCP bridge] could not persist auth token: %s", exc)
+    return token
+
+
+def _is_loopback(host: str) -> bool:
+    return (host or "").strip().lower() in LOOPBACK_HOSTS
+
+
+def _host_header_ok(host_header: str, port: int) -> bool:
+    """Host header must name a loopback host (optionally with our port)."""
+    if not host_header:
+        return False
+    hostname = host_header.rsplit(":", 1)[0].strip("[]").lower()
+    return hostname in LOOPBACK_HOSTS
+
+
+class MCPBridgeHandler(BaseHTTPRequestHandler):
+    """HTTP handler: GET /health plus POST routes from handlers.ROUTES."""
+
+    timeout = SOCKET_TIMEOUT_S  # slow-loris guard (socketserver honors this)
+
+    # Keep Blender's console quiet; route through the module logger instead.
+    def log_message(self, fmt, *args):  # noqa: N802 (stdlib signature)
+        logger.debug("[MCP bridge] %s", fmt % args)
+
+    # ── request guards ──────────────────────────────────────────────────────
+
+    def _reject_browser(self) -> Optional[str]:
+        """Return a reason string if this looks like a browser cross-origin
+        request (CSRF / DNS-rebinding), else None."""
+        if self.headers.get("Origin"):
+            return "Origin header present"
+        port = self.server.server_address[1]
+        if not _host_header_ok(self.headers.get("Host", ""), port):
+            return "non-loopback Host header"
+        return None
+
+    def _check_token(self) -> bool:
+        provided = self.headers.get(TOKEN_HEADER, "")
+        return bool(_active_token) and hmac.compare_digest(provided, _active_token)
+
+    # ── verbs ───────────────────────────────────────────────────────────────
+
+    def do_GET(self):  # noqa: N802
+        reason = self._reject_browser()
+        if reason:
+            self._send_json(403, {"success": False, "error": "Forbidden: {0}".format(reason)})
+            return
+        if urlparse(self.path).path != "/health":
+            self._send_json(404, {"success": False, "error": "Unknown GET endpoint"})
+            return
+        # /health still requires the token — no pre-attack recon of app state.
+        if not self._check_token():
+            self._send_json(401, {"success": False, "error": "Missing or invalid token"})
+            return
+        self._send_json(200, {
+            "success": True,
+            "status": "ok",
+            "app": "mixar",
+            "app_version": self._app_version(),
+        })
+
+    def do_POST(self):  # noqa: N802
+        reason = self._reject_browser()
+        if reason:
+            self._send_json(403, {"success": False, "error": "Forbidden: {0}".format(reason)})
+            return
+        if not self._check_token():
+            self._send_json(401, {
+                "success": False,
+                "error": "Missing or invalid {0} header".format(TOKEN_HEADER),
+            })
+            return
+        # Enforce JSON content type: blocks CORS-safelisted (text/plain,
+        # form) cross-origin POSTs that would otherwise skip preflight.
+        content_type = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            self._send_json(415, {
+                "success": False,
+                "error": "Content-Type must be application/json",
+            })
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            content_length = 0
+        if content_length > MAX_REQUEST_BODY_BYTES:
+            self._send_json(413, {
+                "success": False,
+                "error": "Request body too large ({0} bytes, max {1})".format(
+                    content_length, MAX_REQUEST_BODY_BYTES
+                ),
+            })
+            return
+
+        body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        try:
+            params = json.loads(body) if body else {}
+        except (json.JSONDecodeError, RecursionError, ValueError) as exc:
+            self._send_json(400, {"success": False, "error": "Invalid JSON: {0}".format(exc)})
+            return
+
+        if not _request_slots.acquire(blocking=False):
+            self._send_json(503, {
+                "success": False,
+                "error": "Bridge busy (too many concurrent requests)",
+            })
+            return
+        try:
+            from .handlers import route_request
+
+            result = route_request(urlparse(self.path).path, params)
+            self._send_json(200, result)
+        except Exception as exc:
+            logger.error("[MCP bridge] request failed: %s", exc, exc_info=True)
+            self._send_json(500, {"success": False, "error": str(exc)})
+        finally:
+            _request_slots.release()
+
+    # ── helpers ─────────────────────────────────────────────────────────────
+
+    def _send_json(self, status: int, data: dict) -> None:
+        try:
+            payload = json.dumps(data).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+            payload = json.dumps(
+                {"success": False, "error": "Non-serializable response: {0}".format(exc)}
+            ).encode("utf-8")
+            status = 500
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # client hung up; nothing to do
+
+    @staticmethod
+    def _app_version() -> str:
+        try:
+            import bpy
+
+            return ".".join(str(v) for v in bpy.app.version)
+        except Exception:
+            return "unknown"
+
+
+class MCPBridgeServer(ThreadingMixIn, HTTPServer):
+    """Thread-per-request server; long scripts must not block other calls.
+
+    Concurrency is capped by a semaphore in the handler, so runaway
+    connections cannot exhaust the main thread's work queue unbounded.
+    """
+
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+def start_server(host: Optional[str] = None, port: Optional[int] = None) -> Optional[MCPBridgeServer]:
+    """Start the bridge server in a daemon thread (idempotent).
+
+    Refuses to bind to any non-loopback host. Always establishes a shared
+    token first (env-supplied or auto-generated).
+    """
+    global _server, _active_token
+    with _server_lock:
+        if _server is not None:
+            return _server
+        bind_host = host or os.environ.get(ENV_HOST, DEFAULT_HOST)
+        if not _is_loopback(bind_host):
+            logger.error(
+                "[MCP bridge] refusing to bind non-loopback host %r — the bridge "
+                "is a local-control surface only. Unset MIXAR_MCP_HOST.",
+                bind_host,
+            )
+            return None
+        try:
+            bind_port = int(port if port is not None else os.environ.get(ENV_PORT, DEFAULT_PORT))
+        except (TypeError, ValueError):
+            bind_port = DEFAULT_PORT
+
+        _active_token = _resolve_token()
+
+        try:
+            server = MCPBridgeServer((bind_host, bind_port), MCPBridgeHandler)
+        except OSError as exc:
+            logger.error(
+                "[MCP bridge] failed to bind %s:%s — %s (is another instance running?)",
+                bind_host, bind_port, exc,
+            )
+            return None
+        thread = threading.Thread(
+            target=server.serve_forever, name="Mixar-MCP-Bridge", daemon=True
+        )
+        thread.start()
+        _server = server
+        logger.info("[MCP bridge] listening on %s:%s (token auth required)", bind_host, bind_port)
+        return server
+
+
+def stop_server() -> None:
+    """Shut the bridge down gracefully (idempotent)."""
+    global _server
+    with _server_lock:
+        server = _server
+        _server = None
+    if server is not None:
+        try:
+            server.shutdown()
+            server.server_close()
+        except Exception as exc:
+            logger.warning("[MCP bridge] shutdown error: %s", exc)
+        logger.info("[MCP bridge] stopped")
+
+
+def is_running() -> bool:
+    return _server is not None

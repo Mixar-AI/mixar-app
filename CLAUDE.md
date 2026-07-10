@@ -82,7 +82,7 @@ src/
 ```
 
 ### Active Modules
-`agent_bubble`, `agent_scene_strip`, `asset_search`, `auth`, `common`, `hunyuan`, `mesh_segment`, `moodboard`, `onboarding`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
+`agent_bubble`, `agent_scene_strip`, `asset_search`, `auth`, `common`, `hunyuan`, `mcp_bridge`, `mesh_segment`, `moodboard`, `onboarding`, `operation_history`, `paint`, `space_mixie`, `space_mixie_chat`, `space_texture_sets`, `texel_density`, `uv_editor`, `workflow`
 
 **onboarding** — first-run feature tour: GPU-rendered cards (`core/card/`), dim film + green highlight border (`core/overlay/`). The three sidebar-step highlights (Image Gen / Model Gen / Retopology) measure the rendered panel extent dynamically via `region.view2d.tot_rect` — a Mixar RNA addition in `rna_screen.cc` exposing the View2D total rect — because catalog-driven tab heights vary per mode/model; the `SIDEBAR_PANEL_H_*` constants are only a fallback for builds without that overlay. Top-left cards (welcome/completion) reserve vertical clearance above the floating Agent Bubble window (`host_resolver.bubble_clearance_height`) so the card scales down instead of being cropped behind the bubble.
 
@@ -101,7 +101,7 @@ src/
 
 ---
 
-## 14 Feature Modules
+## 15 Feature Modules
 
 | Module | What it does |
 |--------|-------------|
@@ -112,6 +112,7 @@ src/
 | **hunyuan** | AI 3D generation (text/image → 3D mesh), retopology, UV unwrapping. Retopology offers two engines as **models of the one `retopology` backend service**: **Hunyuan** (`hunyuan_topology`) and **Tripo** (`tripo_v2`, v2.0 `mesh/decimate`); pre-merge catalogs still expose Tripo as the separate `retopology_tripo` service and the enqueue follows whichever service the catalog resolved. Both share the same client Retopology queue (`FEATURE_RETOPOLOGY`); the engine is chosen by the queue `job_type`/`model` sent to the backend, decoupled from the client `feature_key`. |
 | **common** | Shared API clients (13 services), WebSocket infrastructure, notifications, versioning, auto-updates (startup check, forced-update enforcement, Help → Check for Updates), and `generation_params/` — the schema-driven parameter engine (see Generation Catalog section) |
 | **auth** | OAuth PKCE flow with native keyring storage (macOS Keychain, Windows Credential Manager) |
+| **mcp_bridge** (AnkleBreaker) | **MCP integration replacing the hosted agent.** Loopback HTTP server (default `127.0.0.1:9877`; env overrides `MIXAR_MCP_ENABLED`/`MIXAR_MCP_HOST`/`MIXAR_MCP_PORT`/`MIXAR_MCP_TOKEN`) started by `bootstrap/mcp_bridge_module.py`. Exposes the local agent-execution surface to the companion Node MCP server in `mcp/` at the repo root, so any MCP client (Claude Code/Desktop, Cursor, ...) becomes the orchestrator with **zero hosted agent-token usage**. Endpoints: `/execute` — sandboxed script through the same `space_mixie_chat` ScriptExecutor the hosted agent uses, marshalled onto the main thread by `core/executor_bridge.py` (`run_on_main_thread` + event wait; identical sandbox/undo/scene-diff; `__PARAMS__` injected as a `json.loads` literal, structured output via the `__RESULT__` **variable**, not the print marker); `/tool` — scene_graph + operation_history read registries against the active scene; `/generation/*` — unified job-queue enqueue/status/cancel (sync HTTP, normalized via `JobQueueService._normalize_response`) + cached generation catalog; `/byok/*` — BYOK key-provider status/models/set/remove via AgentService. Route table is data-driven in `core/handlers.py` and pure-Python testable (`tests/test_mcp_bridge.py`, incl. real-socket loopback + token-auth tests). Deliberately bypasses the WS transport and chat-session gate — the trust boundary is the loopback bind + optional shared token. |
 | **asset_search** | Neural embedding-based asset library search and training |
 | **mesh_segment** | UV mesh segmentation via SAM-based API |
 | **texel_density** | UV texel density analysis and visualization |
@@ -161,6 +162,8 @@ The backend runs a **LangGraph-based orchestrator agent** (Claude Sonnet 4.6 pri
 - **18 tool domains** and **200+ tools** covering modeling, texturing, UV, rigging, particles, scene management, layer painting
 - **12+ workflow modes** (MODELING, TEXTURING, RIGGING, UV_UNWRAP, SCENE, LAYER_PAINTING, etc.) that filter which tools the LLM sees
 - **Tool execution pattern**: LLM calls tool → backend validates → sends Blender script via WebSocket → script uses `__PARAMS__` for input and emits `__RESULT__` JSON → result fed back to LLM
+
+**MCP alternative (AnkleBreaker fork)**: the `mcp_bridge` module + the Node MCP server in `mcp/` replace this hosted orchestrator entirely — the MCP client (Claude Code/Desktop) plans and calls `mixar_execute_script` etc. directly against the same local executor, consuming zero hosted agent tokens. See `mcp/README.md`.
 
 ---
 

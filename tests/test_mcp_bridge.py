@@ -1,0 +1,321 @@
+# SPDX-FileCopyrightText: 2026 AnkleBreaker Studio
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Unit + loopback-integration tests for the MCP bridge module.
+
+Runs outside Blender: bpy is stubbed (root conftest + mock_bpy) and the
+space_mixie_chat executor modules are replaced with fakes that run
+main-thread jobs inline.
+"""
+
+import json
+import sys
+import types
+import urllib.request
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "src" / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from mixar.modules.testing.mock_bpy import install_bpy_mock
+
+install_bpy_mock()
+
+
+# ── Fake the space_mixie_chat executor seam ─────────────────────────────────
+
+class _FakeExecutionResult:
+    def __init__(self, script):
+        self.script = script
+
+    def to_dict(self):
+        return {"success": True, "executed_script": self.script}
+
+
+class _FakeExecutor:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, script, push_undo=True):
+        self.calls.append((script, push_undo))
+        return _FakeExecutionResult(script)
+
+
+FAKE_EXECUTOR = _FakeExecutor()
+
+
+def _install_executor_fakes():
+    mte = types.ModuleType("mixar.modules.space_mixie_chat.core.main_thread_executor")
+    mte.run_on_main_thread = lambda fn: fn()  # run inline
+    mte.resume = lambda: None
+
+    ex = types.ModuleType("mixar.modules.space_mixie_chat.core.executor")
+    ex.get_executor = lambda: FAKE_EXECUTOR
+
+    pkg_names = [
+        "mixar.modules.space_mixie_chat",
+        "mixar.modules.space_mixie_chat.core",
+    ]
+    for name in pkg_names:
+        if name not in sys.modules:
+            sys.modules[name] = types.ModuleType(name)
+    sys.modules["mixar.modules.space_mixie_chat.core.main_thread_executor"] = mte
+    sys.modules["mixar.modules.space_mixie_chat.core.executor"] = ex
+
+
+_install_executor_fakes()
+
+from mixar.modules.mcp_bridge.constants import TOKEN_HEADER  # noqa: E402
+from mixar.modules.mcp_bridge.core import executor_bridge, handlers  # noqa: E402
+
+
+# ── build_script: the __PARAMS__ contract ────────────────────────────────────
+
+def test_build_script_without_params_is_untouched():
+    assert executor_bridge.build_script("x = 1") == "x = 1"
+
+
+def test_build_script_injects_params_as_json_loads():
+    script = executor_bridge.build_script("y = __PARAMS__['a']", {"a": 1, "b": "it's"})
+    first_line, rest = script.split("\n", 1)
+    assert first_line.startswith("__PARAMS__ = json.loads(")
+    assert rest == "y = __PARAMS__['a']"
+    # The embedded literal must round-trip through eval+json.loads unchanged.
+    literal = first_line[len("__PARAMS__ = json.loads("):-1]
+    assert json.loads(eval(literal)) == {"a": 1, "b": "it's"}  # noqa: S307
+
+
+def test_build_script_params_survive_quotes_and_newlines():
+    params = {"text": 'he said "hi"\nline2', "n": [1, 2]}
+    script = executor_bridge.build_script("pass", params)
+    first_line = script.split("\n", 1)[0]
+    literal = first_line[len("__PARAMS__ = json.loads("):-1]
+    assert json.loads(eval(literal)) == params  # noqa: S307
+
+
+# ── execute_script through the (faked) main-thread seam ─────────────────────
+
+def test_execute_script_returns_executor_envelope():
+    result = executor_bridge.execute_script("bpy.ops.mesh.primitive_cube_add()")
+    assert result["success"] is True
+    assert "primitive_cube_add" in result["executed_script"]
+
+
+def test_execute_script_rejects_empty_script():
+    result = executor_bridge.execute_script("   ")
+    assert result["success"] is False
+    assert "non-empty" in result["error"]
+
+
+def test_execute_script_passes_push_undo_flag():
+    FAKE_EXECUTOR.calls.clear()
+    executor_bridge.execute_script("pass", push_undo=False)
+    assert FAKE_EXECUTOR.calls[-1][1] is False
+
+
+def test_run_local_tool_rejects_unknown_domain():
+    result = executor_bridge.run_local_tool("nope", "anything")
+    assert result["success"] is False
+    assert "unknown tool domain" in result["error"]
+    assert "scene_graph" in result["available_domains"]
+
+
+# ── Route table ──────────────────────────────────────────────────────────────
+
+def test_route_request_unknown_endpoint_lists_routes():
+    result = handlers.route_request("/nope", {})
+    assert result["success"] is False
+    assert "/execute" in result["available"]
+    assert "/byok/set" in result["available"]
+
+
+def test_route_request_rejects_non_dict_body():
+    result = handlers.route_request("/execute", "not a dict")
+    assert result["success"] is False
+
+
+def test_route_request_execute_dispatches(monkeypatch):
+    captured = {}
+
+    def fake_execute(script, params=None, push_undo=True, timeout=None):
+        captured.update(script=script, params=params, push_undo=push_undo, timeout=timeout)
+        return {"success": True}
+
+    monkeypatch.setattr(handlers.executor_bridge, "execute_script", fake_execute)
+    result = handlers.route_request(
+        "/execute",
+        {"script": "pass", "params": {"k": 1}, "push_undo": False, "timeout": 5},
+    )
+    assert result["success"] is True
+    assert captured == {"script": "pass", "params": {"k": 1}, "push_undo": False, "timeout": 5}
+
+
+def test_route_request_byok_set_requires_fields(monkeypatch):
+    # services_bridge validates presence before any network call.
+    from mixar.modules.mcp_bridge.core import services_bridge
+
+    result = services_bridge.byok_set("", "", "")
+    assert result["success"] is False
+    assert "required" in result["error"]
+
+
+def test_generation_enqueue_requires_service_and_model():
+    from mixar.modules.mcp_bridge.core import services_bridge
+
+    result = services_bridge.generation_enqueue("", "", {})
+    assert result["success"] is False
+
+
+# ── Loopback HTTP server integration (real socket, ephemeral port) ──────────
+
+@pytest.fixture()
+def bridge_server(monkeypatch):
+    from mixar.modules.mcp_bridge.core import server as server_mod
+
+    server_mod.stop_server()
+    # Fixed token for deterministic tests (avoids touching the token file).
+    monkeypatch.setenv("MIXAR_MCP_TOKEN", "test-token")
+    srv = server_mod.start_server(host="127.0.0.1", port=0)
+    assert srv is not None
+    port = srv.server_address[1]
+    yield server_mod, port, "test-token"
+    server_mod.stop_server()
+
+
+def _post(port, path, body, headers=None, content_type="application/json", token="test-token"):
+    hdrs = {}
+    if content_type is not None:
+        hdrs["Content-Type"] = content_type
+    if token is not None:
+        hdrs[TOKEN_HEADER] = token
+    hdrs.update(headers or {})
+    req = urllib.request.Request(
+        "http://127.0.0.1:{0}{1}".format(port, path),
+        data=json.dumps(body).encode("utf-8"),
+        headers=hdrs,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read())
+
+
+def test_health_requires_token(bridge_server):
+    _, port, _token = bridge_server
+    # No token → 401.
+    req = urllib.request.Request("http://127.0.0.1:{0}/health".format(port))
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        status = 200
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+    assert status == 401
+
+
+def test_health_endpoint_with_token(bridge_server):
+    _, port, token = bridge_server
+    req = urllib.request.Request(
+        "http://127.0.0.1:{0}/health".format(port), headers={TOKEN_HEADER: token}
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.loads(resp.read())
+    assert data["success"] is True
+    assert data["app"] == "mixar"
+
+
+def test_post_execute_roundtrip(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(port, "/execute", {"script": "pass"})
+    assert status == 200
+    assert data["success"] is True
+
+
+def test_post_unknown_route_is_self_diagnosing(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(port, "/does-not-exist", {})
+    assert status == 200
+    assert data["success"] is False
+    assert "/tool" in data["available"]
+
+
+def test_post_invalid_json_is_400(bridge_server):
+    _, port, token = bridge_server
+    req = urllib.request.Request(
+        "http://127.0.0.1:{0}/execute".format(port),
+        data=b"{not json",
+        headers={"Content-Type": "application/json", TOKEN_HEADER: token},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        raised = False
+    except urllib.error.HTTPError as exc:
+        raised = exc.code == 400
+    assert raised
+
+
+def test_missing_token_is_401(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(port, "/execute", {"script": "pass"}, token=None)
+    assert status == 401
+    assert data["success"] is False
+
+
+def test_non_json_content_type_is_415(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(port, "/execute", {"script": "pass"}, content_type="text/plain")
+    assert status == 415
+
+
+def test_origin_header_is_forbidden(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(
+        port, "/execute", {"script": "pass"}, headers={"Origin": "http://evil.example"}
+    )
+    assert status == 403
+    assert "Origin" in data["error"]
+
+
+def test_non_loopback_host_header_is_forbidden(bridge_server):
+    _, port, _token = bridge_server
+    status, data = _post(
+        port, "/execute", {"script": "pass"}, headers={"Host": "attacker.example"}
+    )
+    assert status == 403
+
+
+def test_refuses_non_loopback_bind(monkeypatch):
+    from mixar.modules.mcp_bridge.core import server as server_mod
+
+    server_mod.stop_server()
+    srv = server_mod.start_server(host="0.0.0.0", port=0)
+    assert srv is None
+    assert server_mod.is_running() is False
+
+
+def test_auto_token_generated_when_env_unset(monkeypatch):
+    from mixar.modules.mcp_bridge.core import server as server_mod
+
+    server_mod.stop_server()
+    monkeypatch.delenv("MIXAR_MCP_TOKEN", raising=False)
+    srv = server_mod.start_server(host="127.0.0.1", port=0)
+    try:
+        assert srv is not None
+        # A token was established; unauthenticated POST is rejected.
+        port = srv.server_address[1]
+        status, _ = _post(port, "/execute", {"script": "pass"}, token=None)
+        assert status == 401
+        # With the generated token it passes.
+        status, data = _post(port, "/execute", {"script": "pass"}, token=server_mod._active_token)
+        assert status == 200
+        assert data["success"] is True
+    finally:
+        server_mod.stop_server()
