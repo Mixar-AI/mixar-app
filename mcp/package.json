@@ -1,0 +1,21 @@
+{
+  "name": "mixar-mcp-server",
+  "version": "0.3.0",
+  "description": "MCP server for Mixar — replaces the hosted Mixie agent with direct MCP-client control (AnkleBreaker Studio)",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "mixar-mcp-server": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "license": "GPL-3.0-or-later"
+}

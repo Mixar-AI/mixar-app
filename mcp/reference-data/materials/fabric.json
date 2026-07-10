@@ -1,0 +1,107 @@
+{
+  "category": "fabric",
+  "description": "PBR material values for common fabric and textile materials.",
+  "items": [
+    {
+      "name": "cotton_white",
+      "display_name": "White Cotton",
+      "pbr": {
+        "base_color": [0.95, 0.94, 0.92, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.95,
+        "specular": 0.02,
+        "normal_strength": 1.0
+      },
+      "texture_hints": { "pattern": "woven_plain", "scale": 0.2 },
+      "notes": "Plain-weave cotton; slightly off-white; very diffuse; micro-fibre detail.",
+      "tags": ["cotton", "fabric", "white", "textile", "clothing"]
+    },
+    {
+      "name": "denim",
+      "display_name": "Blue Denim",
+      "pbr": {
+        "base_color": [0.24, 0.38, 0.60, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.90,
+        "specular": 0.02
+      },
+      "texture_hints": { "pattern": "woven_twill", "scale": 0.15 },
+      "notes": "Diagonal twill weave; medium blue; worn denim lightens to ~[0.5, 0.6, 0.85].",
+      "tags": ["denim", "fabric", "blue", "jeans", "textile"]
+    },
+    {
+      "name": "silk",
+      "display_name": "Silk",
+      "pbr": {
+        "base_color": [0.92, 0.88, 0.80, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.15,
+        "specular": 0.3
+      },
+      "notes": "High specular with slight sheen; use Sheen shader node for fabric sheen effect.",
+      "tags": ["silk", "fabric", "sheen", "luxury", "textile"]
+    },
+    {
+      "name": "leather_brown",
+      "display_name": "Brown Leather",
+      "pbr": {
+        "base_color": [0.35, 0.18, 0.08, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.65,
+        "specular": 0.15
+      },
+      "notes": "Vegetable-tanned hide; saddle brown; creases and grain detail critical.",
+      "tags": ["leather", "brown", "fabric", "furniture", "clothing"]
+    },
+    {
+      "name": "velvet",
+      "display_name": "Velvet",
+      "pbr": {
+        "base_color": [0.25, 0.08, 0.22, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.95,
+        "specular": 0.01
+      },
+      "notes": "Deep pile; strong sheen node; direction-dependent colour shift.",
+      "tags": ["velvet", "fabric", "plush", "luxury", "upholstery"]
+    },
+    {
+      "name": "linen",
+      "display_name": "Natural Linen",
+      "pbr": {
+        "base_color": [0.82, 0.75, 0.58, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.92,
+        "specular": 0.02
+      },
+      "texture_hints": { "pattern": "woven_plain_coarse", "scale": 0.25 },
+      "notes": "Flax-based; warm tan; coarser weave than cotton; slightly translucent.",
+      "tags": ["linen", "fabric", "natural", "beige", "textile"]
+    },
+    {
+      "name": "wool",
+      "display_name": "Wool (Knit)",
+      "pbr": {
+        "base_color": [0.70, 0.18, 0.15, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.97,
+        "specular": 0.01
+      },
+      "texture_hints": { "pattern": "knit", "scale": 0.3 },
+      "notes": "Fluffy red wool; nearly Lambertian; loopy surface structure.",
+      "tags": ["wool", "fabric", "knit", "warm", "textile"]
+    },
+    {
+      "name": "canvas",
+      "display_name": "Canvas / Duck Cloth",
+      "pbr": {
+        "base_color": [0.72, 0.68, 0.54, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.93,
+        "specular": 0.03
+      },
+      "notes": "Heavy plain-weave cotton; used for bags, tents, sails. Very matte.",
+      "tags": ["canvas", "fabric", "heavy", "outdoor", "textile"]
+    }
+  ]
+}

@@ -1,0 +1,605 @@
+{
+  "category": "props",
+  "description": "Everyday prop recipes for furniture and household objects.",
+  "recipes": [
+    {
+      "name": "table_simple",
+      "display_name": "Simple Four-Leg Table",
+      "description": "A rectangular table with four legs from a cube top.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.04
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              37.5,
+              22.5,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.06
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.72
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "z",
+            "direction": "negative"
+          }
+        },
+        {
+          "op": "dissolve"
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "TableBevel",
+          "params": {
+            "width": 0.008,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "oak"
+        }
+      ],
+      "tags": [
+        "table",
+        "furniture",
+        "prop",
+        "interior"
+      ]
+    },
+    {
+      "name": "chair_basic",
+      "display_name": "Basic Chair",
+      "description": "A simple four-legged chair with seat and back from cube extrusions.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.04
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              11.25,
+              12.5,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.04
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.42
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.02
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "y",
+            "distance": -0.06
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.0,
+              1.0,
+              0.15
+            ]
+          }
+        },
+        {
+          "op": "move",
+          "params": {
+            "direction": [
+              0.0,
+              0.0,
+              0.48
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.5
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "ChairBevel",
+          "params": {
+            "width": 0.007,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "oak"
+        }
+      ],
+      "tags": [
+        "chair",
+        "furniture",
+        "prop",
+        "seating",
+        "interior"
+      ]
+    },
+    {
+      "name": "cup",
+      "display_name": "Coffee Cup / Mug",
+      "description": "A cylindrical mug with an inset hollow interior.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 16,
+        "radius": 0.04,
+        "depth": 0.09
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.004
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.082
+          }
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 2,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.04,
+              1.04,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "SUBSURF",
+          "name": "Subdivision",
+          "params": {
+            "levels": 2
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "marble_white"
+        }
+      ],
+      "tags": [
+        "cup",
+        "mug",
+        "kitchenware",
+        "prop",
+        "interior"
+      ]
+    },
+    {
+      "name": "bookshelf_simple",
+      "display_name": "Simple Bookshelf",
+      "description": "A flat-pack style bookshelf with three horizontal shelves.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.015
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              26.6,
+              10.0,
+              60.0
+            ]
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.02
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "y",
+            "distance": -0.27
+          }
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 4,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "y",
+            "distance": 0.02
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "ShelfBevel",
+          "params": {
+            "width": 0.006,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "birch"
+        }
+      ],
+      "tags": [
+        "bookshelf",
+        "furniture",
+        "storage",
+        "prop",
+        "interior"
+      ]
+    },
+    {
+      "name": "lamp_shade",
+      "display_name": "Table Lamp",
+      "description": "A table lamp with a tapered cone shade on a slender stem.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 16,
+        "radius": 0.025,
+        "depth": 0.01
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.35
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.02
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              7.0,
+              7.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.25
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              0.45,
+              0.45,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "dissolve"
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.02
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              4.0,
+              4.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.02
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.5,
+              1.5,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "SUBSURF",
+          "name": "ShadeSub",
+          "params": {
+            "levels": 1
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "brushed_steel"
+        },
+        {
+          "slot": 1,
+          "ref": "linen"
+        }
+      ],
+      "tags": [
+        "lamp",
+        "light",
+        "furniture",
+        "prop",
+        "interior"
+      ]
+    }
+  ]
+}

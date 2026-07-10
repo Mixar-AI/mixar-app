@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RecipeFile",
+  "description": "Schema for 3D model recipe files used by the RecipeExecutor.",
+  "type": "object",
+  "required": ["category", "recipes"],
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Recipe category, e.g. 'hard-surface', 'architecture', 'organic', 'props'."
+    },
+    "description": {
+      "type": "string"
+    },
+    "recipes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "display_name", "base", "steps"],
+        "properties": {
+          "name":         { "type": "string" },
+          "display_name": { "type": "string" },
+          "description":  { "type": "string" },
+          "base": {
+            "type": "object",
+            "required": ["type"],
+            "description": "Starting primitive.",
+            "properties": {
+              "type":     { "type": "string" },
+              "size":     { "type": "number" },
+              "radius":   { "type": "number" },
+              "depth":    { "type": "number" },
+              "vertices": { "type": "integer" },
+              "segments": { "type": "integer" },
+              "rings":    { "type": "integer" }
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["op"],
+              "properties": {
+                "op":     { "type": "string" },
+                "params": { "type": "object" }
+              }
+            }
+          },
+          "modifiers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type":   { "type": "string" },
+                "name":   { "type": "string" },
+                "params": { "type": "object" }
+              }
+            }
+          },
+          "post_process": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["op"],
+              "properties": {
+                "op":     { "type": "string" },
+                "params": { "type": "object" }
+              }
+            }
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slot":  { "type": "integer" },
+                "ref":   { "type": "string" }
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

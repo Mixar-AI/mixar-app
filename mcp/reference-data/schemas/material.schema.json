@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MaterialFile",
+  "description": "Schema for PBR material reference data files.",
+  "type": "object",
+  "required": ["category", "items"],
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Category identifier, e.g. 'metals', 'wood', 'stone'."
+    },
+    "description": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "display_name", "pbr"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Machine-readable identifier (snake_case)."
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "pbr": {
+            "type": "object",
+            "description": "Principled BSDF PBR channel values.",
+            "properties": {
+              "base_color":         { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 4 },
+              "metallic":           { "type": "number", "minimum": 0, "maximum": 1 },
+              "roughness":          { "type": "number", "minimum": 0, "maximum": 1 },
+              "specular":           { "type": "number", "minimum": 0, "maximum": 1 },
+              "ior":                { "type": "number" },
+              "transmission":       { "type": "number", "minimum": 0, "maximum": 1 },
+              "subsurface":         { "type": "number", "minimum": 0, "maximum": 1 },
+              "subsurface_color":   { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 4 },
+              "emission_color":     { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 4 },
+              "emission_strength":  { "type": "number" },
+              "alpha":              { "type": "number", "minimum": 0, "maximum": 1 },
+              "normal_strength":    { "type": "number" }
+            }
+          },
+          "texture_hints": {
+            "type": "object",
+            "description": "Hints for texture generation (scale, pattern type).",
+            "properties": {
+              "grain_direction": { "type": "string" },
+              "scale":           { "type": "number" },
+              "pattern":         { "type": "string" }
+            }
+          },
+          "notes": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

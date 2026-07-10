@@ -1,0 +1,106 @@
+{
+  "category": "wood",
+  "description": "PBR material values for common wood species and panels.",
+  "items": [
+    {
+      "name": "oak",
+      "display_name": "Oak Wood",
+      "pbr": {
+        "base_color": [0.55, 0.38, 0.19, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.75,
+        "specular": 0.05
+      },
+      "texture_hints": { "grain_direction": "vertical", "scale": 0.5, "pattern": "wood_grain_coarse" },
+      "notes": "Medium brown; pronounced open grain. Finish (lacquer) reduces roughness to ~0.35.",
+      "tags": ["oak", "wood", "hardwood", "furniture"]
+    },
+    {
+      "name": "pine",
+      "display_name": "Pine Wood",
+      "pbr": {
+        "base_color": [0.72, 0.55, 0.29, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.8,
+        "specular": 0.04
+      },
+      "texture_hints": { "grain_direction": "vertical", "scale": 0.4, "pattern": "wood_grain_knotty" },
+      "notes": "Light yellow-brown; knots visible; softwood, used in framing.",
+      "tags": ["pine", "wood", "softwood", "construction"]
+    },
+    {
+      "name": "walnut",
+      "display_name": "Walnut Wood",
+      "pbr": {
+        "base_color": [0.28, 0.17, 0.08, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.65,
+        "specular": 0.06
+      },
+      "texture_hints": { "grain_direction": "vertical", "scale": 0.4 },
+      "notes": "Dark chocolate brown; used for premium furniture and gunstocks.",
+      "tags": ["walnut", "wood", "hardwood", "dark", "luxury"]
+    },
+    {
+      "name": "bamboo",
+      "display_name": "Bamboo",
+      "pbr": {
+        "base_color": [0.76, 0.70, 0.45, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.60,
+        "specular": 0.05
+      },
+      "texture_hints": { "grain_direction": "vertical", "scale": 0.3, "pattern": "bamboo_nodes" },
+      "notes": "Light yellow-green; fine parallel grain with periodic nodes at ~30–40 cm.",
+      "tags": ["bamboo", "wood", "grass", "asian", "eco"]
+    },
+    {
+      "name": "plywood",
+      "display_name": "Birch Plywood (Exposed Edge)",
+      "pbr": {
+        "base_color": [0.82, 0.74, 0.55, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.70,
+        "specular": 0.04
+      },
+      "notes": "Visible laminate layers on edges; flat face has fine birch veneer.",
+      "tags": ["plywood", "wood", "panel", "construction", "furniture"]
+    },
+    {
+      "name": "mahogany",
+      "display_name": "Mahogany",
+      "pbr": {
+        "base_color": [0.45, 0.18, 0.10, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.60,
+        "specular": 0.07
+      },
+      "notes": "Deep red-brown; interlocked grain produces chatoyant ribbon stripe.",
+      "tags": ["mahogany", "wood", "hardwood", "red", "classic"]
+    },
+    {
+      "name": "birch",
+      "display_name": "Birch Wood",
+      "pbr": {
+        "base_color": [0.90, 0.82, 0.67, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.72,
+        "specular": 0.04
+      },
+      "notes": "Very pale; fine even grain; distinctive white bark with dark lenticels.",
+      "tags": ["birch", "wood", "light", "nordic", "furniture"]
+    },
+    {
+      "name": "cedar",
+      "display_name": "Western Red Cedar",
+      "pbr": {
+        "base_color": [0.60, 0.31, 0.19, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.78,
+        "specular": 0.04
+      },
+      "notes": "Warm reddish-brown; natural oils give aromatic scent and rot resistance.",
+      "tags": ["cedar", "wood", "softwood", "aromatic", "outdoor"]
+    }
+  ]
+}

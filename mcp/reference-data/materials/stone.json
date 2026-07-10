@@ -1,0 +1,106 @@
+{
+  "category": "stone",
+  "description": "PBR material values for stone, concrete, and masonry materials.",
+  "items": [
+    {
+      "name": "marble_white",
+      "display_name": "White Carrara Marble",
+      "pbr": {
+        "base_color": [0.92, 0.90, 0.88, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.10,
+        "specular": 0.5,
+        "ior": 1.486
+      },
+      "texture_hints": { "pattern": "marble_veins" },
+      "notes": "Polished Carrara marble; fine grey veins; used in sculpture and architecture.",
+      "tags": ["marble", "stone", "polished", "white", "luxury"]
+    },
+    {
+      "name": "granite_gray",
+      "display_name": "Gray Granite",
+      "pbr": {
+        "base_color": [0.45, 0.45, 0.42, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.65,
+        "specular": 0.3,
+        "ior": 1.55
+      },
+      "texture_hints": { "pattern": "salt_pepper_speckle", "scale": 0.5 },
+      "notes": "Medium grey; salt-and-pepper crystal texture; polished version roughness ~0.1.",
+      "tags": ["granite", "stone", "grey", "hard", "countertop"]
+    },
+    {
+      "name": "sandstone",
+      "display_name": "Sandstone",
+      "pbr": {
+        "base_color": [0.75, 0.61, 0.42, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.90,
+        "specular": 0.1
+      },
+      "notes": "Warm yellow-tan; porous and rough; used in desert architecture.",
+      "tags": ["sandstone", "stone", "warm", "desert", "architecture"]
+    },
+    {
+      "name": "slate",
+      "display_name": "Slate",
+      "pbr": {
+        "base_color": [0.20, 0.22, 0.24, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.80,
+        "specular": 0.15
+      },
+      "notes": "Dark blue-grey; natural cleavage creates layered flat surface.",
+      "tags": ["slate", "stone", "dark", "roof", "tile"]
+    },
+    {
+      "name": "limestone",
+      "display_name": "Limestone",
+      "pbr": {
+        "base_color": [0.82, 0.78, 0.68, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.85,
+        "specular": 0.1
+      },
+      "notes": "Light tan-cream; fossil inclusions common; used in classic European buildings.",
+      "tags": ["limestone", "stone", "cream", "classic", "architecture"]
+    },
+    {
+      "name": "concrete",
+      "display_name": "Raw Concrete",
+      "pbr": {
+        "base_color": [0.55, 0.54, 0.52, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.88,
+        "specular": 0.05
+      },
+      "notes": "Poured or precast; matte; surface marks from formwork boards common.",
+      "tags": ["concrete", "stone", "industrial", "grey", "modern"]
+    },
+    {
+      "name": "brick_red",
+      "display_name": "Red Fired Brick",
+      "pbr": {
+        "base_color": [0.65, 0.28, 0.18, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.95,
+        "specular": 0.05
+      },
+      "notes": "Standard clay brick; mortar joint colour ~[0.75, 0.72, 0.65]; total unit 215×102×65 mm.",
+      "tags": ["brick", "masonry", "red", "architecture", "exterior"]
+    },
+    {
+      "name": "cobblestone",
+      "display_name": "Cobblestone / Sett",
+      "pbr": {
+        "base_color": [0.38, 0.36, 0.33, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.92,
+        "specular": 0.08
+      },
+      "notes": "Granite or basalt sett; rounded tops; wet cobblestone specular ~0.3.",
+      "tags": ["cobblestone", "stone", "street", "pavement", "historic"]
+    }
+  ]
+}

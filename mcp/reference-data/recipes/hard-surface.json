@@ -1,0 +1,505 @@
+{
+  "category": "hard-surface",
+  "description": "Hard-surface model recipes for common industrial and game props.",
+  "recipes": [
+    {
+      "name": "barrel",
+      "display_name": "Wooden / Metal Barrel",
+      "description": "A squat barrel with hoops and rounded profile built from a cylinder.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 16,
+        "radius": 0.3,
+        "depth": 0.5
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "subdivide",
+          "params": {
+            "cuts": 4
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.12,
+              1.12,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 1
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.08,
+              1.08,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.05
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.05
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "Bevel",
+          "params": {
+            "width": 0.015,
+            "segments": 2
+          }
+        },
+        {
+          "type": "SUBSURF",
+          "name": "Subdivision",
+          "params": {
+            "levels": 2,
+            "render_levels": 2
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_CENTER_OF_MASS"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "oak"
+        }
+      ],
+      "tags": [
+        "barrel",
+        "container",
+        "prop",
+        "hard-surface",
+        "game-asset"
+      ]
+    },
+    {
+      "name": "crate",
+      "display_name": "Wooden Crate",
+      "description": "A simple shipping crate with bevelled edges and plank detail.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.6
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "bevel",
+          "params": {
+            "segments": 2,
+            "offset": 0.015
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "z",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.04,
+            "depth": 0.0
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "z",
+            "direction": "negative"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.04,
+            "depth": 0.0
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "EDGE_SPLIT",
+          "name": "EdgeSplit",
+          "params": {
+            "split_angle": 0.523
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "pine"
+        }
+      ],
+      "tags": [
+        "crate",
+        "box",
+        "prop",
+        "hard-surface",
+        "game-asset"
+      ]
+    },
+    {
+      "name": "pipe_section",
+      "display_name": "Metal Pipe Section",
+      "description": "A hollow cylindrical pipe section.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 16,
+        "radius": 0.05,
+        "depth": 1.0
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.008
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.95
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "dissolve"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 2,
+            "factor": 0.85
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "EndBevel",
+          "params": {
+            "width": 0.004,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "brushed_steel"
+        }
+      ],
+      "tags": [
+        "pipe",
+        "tube",
+        "industrial",
+        "hard-surface",
+        "plumbing"
+      ]
+    },
+    {
+      "name": "bolt",
+      "display_name": "Hex Head Bolt",
+      "description": "A hexagonal-head machine bolt with threaded shank suggestion.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 6,
+        "radius": 0.06,
+        "depth": 0.025
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.008
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.004
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.02
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.18
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "bevel",
+          "params": {
+            "segments": 1,
+            "offset": 0.004
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "brushed_steel"
+        }
+      ],
+      "tags": [
+        "bolt",
+        "fastener",
+        "hardware",
+        "hard-surface",
+        "mechanical"
+      ]
+    },
+    {
+      "name": "gear",
+      "display_name": "Simple Gear",
+      "description": "A flat gear disc with extruded teeth from a circle base.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 24,
+        "radius": 0.25,
+        "depth": 0.05
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 1,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.18,
+              1.18,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "normal",
+            "distance": 0.0
+          }
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 1,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.04
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.04
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "ToothBevel",
+          "params": {
+            "width": 0.006,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "cast_iron"
+        }
+      ],
+      "tags": [
+        "gear",
+        "mechanical",
+        "cog",
+        "industrial",
+        "hard-surface"
+      ]
+    }
+  ]
+}
