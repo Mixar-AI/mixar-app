@@ -1,0 +1,126 @@
+{
+  "category": "characters",
+  "description": "Anatomical dimensions for character modeling in meters.",
+  "items": [
+    {
+      "name": "adult_male",
+      "display_name": "Adult Male (Average)",
+      "dimensions": { "width": 0.46, "depth": 0.24, "height": 1.76 },
+      "variants": [
+        { "name": "tall",      "dimensions": { "width": 0.48, "depth": 0.25, "height": 1.85 } },
+        { "name": "athletic",  "dimensions": { "width": 0.52, "depth": 0.28, "height": 1.80 } },
+        { "name": "lean",      "dimensions": { "width": 0.42, "depth": 0.20, "height": 1.78 } }
+      ],
+      "notes": "Average US adult male: 176 cm tall, ~46 cm shoulder width.",
+      "tags": ["character", "human", "male", "adult", "anatomy"]
+    },
+    {
+      "name": "adult_female",
+      "display_name": "Adult Female (Average)",
+      "dimensions": { "width": 0.42, "depth": 0.22, "height": 1.62 },
+      "variants": [
+        { "name": "tall",     "dimensions": { "width": 0.44, "depth": 0.22, "height": 1.72 } },
+        { "name": "athletic", "dimensions": { "width": 0.46, "depth": 0.24, "height": 1.68 } }
+      ],
+      "notes": "Average US adult female: 162 cm tall, ~42 cm shoulder width.",
+      "tags": ["character", "human", "female", "adult", "anatomy"]
+    },
+    {
+      "name": "child_10yr",
+      "display_name": "Child (10 years old)",
+      "dimensions": { "width": 0.32, "depth": 0.18, "height": 1.38 },
+      "variants": [
+        { "name": "age_8",  "dimensions": { "width": 0.28, "depth": 0.16, "height": 1.27 } },
+        { "name": "age_12", "dimensions": { "width": 0.35, "depth": 0.19, "height": 1.49 } }
+      ],
+      "notes": "Average 10-yr-old ~138 cm; proportions differ from adult (larger head).",
+      "tags": ["character", "human", "child", "anatomy"]
+    },
+    {
+      "name": "toddler",
+      "display_name": "Toddler (2–3 years)",
+      "dimensions": { "width": 0.22, "depth": 0.14, "height": 0.92 },
+      "variants": [
+        { "name": "infant_1yr", "dimensions": { "width": 0.18, "depth": 0.12, "height": 0.75 } }
+      ],
+      "notes": "Toddler head ~¼ body height vs adult ~⅛; stocky proportions.",
+      "tags": ["character", "human", "toddler", "child", "anatomy"]
+    },
+    {
+      "name": "hand",
+      "display_name": "Adult Hand",
+      "dimensions": { "width": 0.09, "depth": 0.025, "height": 0.19 },
+      "variants": [
+        { "name": "female", "dimensions": { "width": 0.082, "depth": 0.022, "height": 0.175 } }
+      ],
+      "notes": "Palm width ~9 cm; hand length wrist to middle fingertip ~19 cm.",
+      "tags": ["hand", "anatomy", "character", "limb"]
+    },
+    {
+      "name": "head",
+      "display_name": "Adult Human Head",
+      "dimensions": { "width": 0.155, "depth": 0.2, "height": 0.235 },
+      "variants": [
+        { "name": "female", "dimensions": { "width": 0.145, "depth": 0.185, "height": 0.22 } }
+      ],
+      "notes": "Average cranium: 15.5 cm wide, 20 cm front-to-back, 23 cm tall (chin to crown).",
+      "tags": ["head", "skull", "anatomy", "character"]
+    },
+    {
+      "name": "torso",
+      "display_name": "Adult Male Torso",
+      "dimensions": { "width": 0.46, "depth": 0.24, "height": 0.6 },
+      "variants": [
+        { "name": "female", "dimensions": { "width": 0.38, "depth": 0.22, "height": 0.55 } }
+      ],
+      "notes": "Shoulder to hip ~60 cm; shoulder width ~46 cm; chest depth ~24 cm.",
+      "tags": ["torso", "chest", "anatomy", "character"]
+    },
+    {
+      "name": "foot",
+      "display_name": "Adult Foot",
+      "dimensions": { "width": 0.09, "depth": 0.26, "height": 0.07 },
+      "variants": [
+        { "name": "size_uk10", "dimensions": { "width": 0.095, "depth": 0.276, "height": 0.072 } }
+      ],
+      "notes": "EU42 / UK8 ≈ 26 cm long, 9 cm wide; height at heel ~7 cm.",
+      "tags": ["foot", "anatomy", "character", "limb"]
+    },
+    {
+      "name": "arm",
+      "display_name": "Adult Arm (Shoulder to Wrist)",
+      "dimensions": { "width": 0.09, "depth": 0.09, "height": 0.59 },
+      "variants": [
+        { "name": "forearm_only", "dimensions": { "width": 0.07, "depth": 0.07, "height": 0.28 } }
+      ],
+      "notes": "Upper arm ~32 cm, forearm ~28 cm; total shoulder to wrist ~59 cm.",
+      "tags": ["arm", "anatomy", "character", "limb"]
+    },
+    {
+      "name": "leg",
+      "display_name": "Adult Leg (Hip to Ankle)",
+      "dimensions": { "width": 0.16, "depth": 0.16, "height": 0.88 },
+      "variants": [
+        { "name": "lower_leg", "dimensions": { "width": 0.1, "depth": 0.1, "height": 0.44 } }
+      ],
+      "notes": "Thigh ~45 cm, shin ~44 cm; total hip to ankle ~88 cm.",
+      "tags": ["leg", "anatomy", "character", "limb"]
+    },
+    {
+      "name": "eye",
+      "display_name": "Human Eyeball",
+      "dimensions": { "width": 0.024, "depth": 0.024, "height": 0.024 },
+      "variants": [],
+      "notes": "Human eye ~24 mm diameter; iris ~11–12 mm; pupil 2–8 mm.",
+      "tags": ["eye", "anatomy", "character", "face"]
+    },
+    {
+      "name": "ear",
+      "display_name": "Human Ear",
+      "dimensions": { "width": 0.033, "depth": 0.015, "height": 0.065 },
+      "variants": [],
+      "notes": "Auricle ~6.5 cm tall, 3.3 cm wide, protrudes ~1.5 cm from skull.",
+      "tags": ["ear", "anatomy", "character", "face"]
+    }
+  ]
+}

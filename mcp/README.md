@@ -31,7 +31,11 @@ The bridge is a local-control surface, hardened against browser-driven CSRF / DN
 - **No `Origin`, loopback `Host` only.** Requests carrying an `Origin` header, or a non-loopback `Host`, are rejected (403).
 - **Loopback bind enforced.** The server refuses to bind any non-loopback host; the Node client refuses to connect to one.
 
-## Tools (11)
+## Tools
+
+Two families. **Mixar is a Blender 5.0 fork**, so this server ships the entire AnkleBreaker Blender MCP tool surface *plus* Mixar-native tools — one MCP, full control.
+
+### Mixar-native (`mixar_*`, 11)
 
 | Tool | Purpose |
 |---|---|
@@ -46,6 +50,19 @@ The bridge is a local-control surface, hardened against browser-driven CSRF / DN
 | `mixar_generation_job_status` | Poll jobs; returns result URLs when DONE |
 | `mixar_generation_job_cancel` | Cancel a job |
 | `mixar_provider_keys` | BYOK: status / models / set / remove provider API keys |
+
+### Blender surface (`blender_*`, 236 — two-tier)
+
+The full Blender editing toolset, vendored from our Blender MCP and pointed at Mixar's in-app bridge. To keep the client's tool list manageable, it uses a **two-tier** system: **52 core tools** are exposed directly, and **184 advanced tools** sit behind a proxy.
+
+- **Core (direct):** scene, object, mesh, material, modifier, render, animation, file, collection, export/import, validation, reference (dimensions/materials/recipes), analysis, viewport.
+- **Advanced (via proxy):** modeling, UV, sculpt, armature, curve, light, camera, texture, particle, physics, constraint, node graphs, grease pencil, text, lattice, vertex groups, addons, extended render/animation/export, and more.
+- `blender_list_advanced_tools` — discover advanced tools by category.
+- `blender_advanced_tool` — invoke any advanced tool by name with its params.
+
+Every Blender op runs on Blender's main thread through the same serialized path as `mixar_execute_script` (no concurrent bpy access), with `render/physics/bake/export` routes getting an extended timeout.
+
+**Total: 247 tools across both families, exposed as 65** (11 Mixar + 52 Blender core + 2 proxy meta-tools).
 
 ## Quick Start
 
@@ -77,6 +94,7 @@ Launch Mixar, then ask: *"What's in my Mixar scene?"* → *"Model a low-poly hou
 | `MIXAR_MCP_PORT` | `9877` | both | Bridge port (9876 is our Blender MCP — they coexist) |
 | `MIXAR_MCP_TOKEN` | *(auto-generated)* | both | Shared secret (`X-Mixar-MCP-Token`); auto-generated to a token file if unset |
 | `MIXAR_MCP_TIMEOUT` | `620000` | MCP server | HTTP timeout (ms) |
+| `MIXAR_MCP_ALLOW_PYTHON_EXEC` | `1` | MCP server | Set `0` to disable the raw `blender_python_*` exec tools (sandboxed `mixar_execute_script` still available) |
 
 ## What still needs a Mixar account
 

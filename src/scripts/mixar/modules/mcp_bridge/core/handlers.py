@@ -96,16 +96,25 @@ ROUTES: Dict[str, Callable[[dict], dict]] = {
 def route_request(path: str, params: dict) -> dict:
     """Dispatch a POST request to its handler.
 
+    Paths under ``/api/`` are the vendored Blender MCP handler surface
+    (scene/object/mesh/... — the full Blender tool set, since Mixar is a
+    Blender fork); everything else is a Mixar-native endpoint from ROUTES.
     Unknown paths return an error envelope listing the available routes so
     MCP-side mistakes are self-diagnosing.
     """
+    if not isinstance(params, dict):
+        return {"success": False, "error": "Request body must be a JSON object"}
+
+    if path.startswith("/api/"):
+        from .blender_dispatch import dispatch_blender
+
+        return dispatch_blender(path, params)
+
     handler = ROUTES.get(path)
     if handler is None:
         return {
             "success": False,
             "error": "Unknown endpoint: {0}".format(path),
-            "available": sorted(ROUTES),
+            "available": sorted(ROUTES) + ["/api/{category}/{action} (Blender tools)"],
         }
-    if not isinstance(params, dict):
-        return {"success": False, "error": "Request body must be a JSON object"}
     return handler(params)

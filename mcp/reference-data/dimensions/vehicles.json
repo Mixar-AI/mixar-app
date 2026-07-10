@@ -1,0 +1,113 @@
+{
+  "category": "vehicles",
+  "description": "Real-world dimensions for common vehicles in meters.",
+  "items": [
+    {
+      "name": "sedan",
+      "display_name": "Sedan Car",
+      "dimensions": { "width": 1.82, "depth": 4.6, "height": 1.46 },
+      "variants": [
+        { "name": "compact", "dimensions": { "width": 1.74, "depth": 4.2,  "height": 1.44 } },
+        { "name": "full_size","dimensions": { "width": 1.88, "depth": 5.0,  "height": 1.48 } }
+      ],
+      "notes": "Mid-size sedan (e.g. Toyota Camry): 4600 mm L × 1820 mm W × 1455 mm H.",
+      "tags": ["car", "sedan", "vehicle", "transport"]
+    },
+    {
+      "name": "suv",
+      "display_name": "SUV / Crossover",
+      "dimensions": { "width": 1.93, "depth": 4.7, "height": 1.7 },
+      "variants": [
+        { "name": "compact_suv", "dimensions": { "width": 1.82, "depth": 4.3, "height": 1.62 } },
+        { "name": "full_suv",    "dimensions": { "width": 2.0,  "depth": 5.2, "height": 1.85 } }
+      ],
+      "notes": "Mid-size SUV (e.g. RAV4): 4600 L × 1855 W × 1685 H mm.",
+      "tags": ["suv", "crossover", "car", "vehicle", "transport"]
+    },
+    {
+      "name": "pickup_truck",
+      "display_name": "Full-Size Pickup Truck",
+      "dimensions": { "width": 2.03, "depth": 5.88, "height": 1.9 },
+      "variants": [
+        { "name": "mid_size", "dimensions": { "width": 1.86, "depth": 5.28, "height": 1.78 } }
+      ],
+      "notes": "Ford F-150 crew cab: 5882 L × 2030 W × 1904 H mm.",
+      "tags": ["truck", "pickup", "vehicle", "transport"]
+    },
+    {
+      "name": "motorcycle",
+      "display_name": "Motorcycle (Sport/Naked)",
+      "dimensions": { "width": 0.74, "depth": 2.07, "height": 1.07 },
+      "variants": [
+        { "name": "cruiser",    "dimensions": { "width": 0.84, "depth": 2.3,  "height": 1.1 } },
+        { "name": "sport_bike", "dimensions": { "width": 0.7,  "depth": 2.0,  "height": 1.05} }
+      ],
+      "notes": "Average naked bike ~2070 L × 740 W × 1070 H mm; wheelbase ~1450 mm.",
+      "tags": ["motorcycle", "bike", "vehicle", "transport"]
+    },
+    {
+      "name": "bicycle",
+      "display_name": "Adult Bicycle",
+      "dimensions": { "width": 0.42, "depth": 1.76, "height": 1.06 },
+      "variants": [
+        { "name": "road_bike",   "dimensions": { "width": 0.4, "depth": 1.8, "height": 1.0 } },
+        { "name": "mountain_bike","dimensions": { "width": 0.45,"depth": 1.82,"height": 1.08 } }
+      ],
+      "notes": "Adult road bike wheelbase ~1000 mm; overall length ~1760 mm; height (saddle) ~1.06 m.",
+      "tags": ["bicycle", "bike", "vehicle", "transport"]
+    },
+    {
+      "name": "bus",
+      "display_name": "City Bus (Standard)",
+      "dimensions": { "width": 2.55, "depth": 12.0, "height": 3.2 },
+      "variants": [
+        { "name": "minibus",      "dimensions": { "width": 2.0,  "depth": 7.0,  "height": 2.6  } },
+        { "name": "articulated",  "dimensions": { "width": 2.55, "depth": 18.0, "height": 3.2  } }
+      ],
+      "notes": "Standard 12 m city bus: 12000 L × 2550 W × 3200 H mm.",
+      "tags": ["bus", "transit", "vehicle", "transport"]
+    },
+    {
+      "name": "semi_truck",
+      "display_name": "Semi Truck (Tractor + 53ft Trailer)",
+      "dimensions": { "width": 2.59, "depth": 22.0, "height": 4.1 },
+      "variants": [
+        { "name": "tractor_only",   "dimensions": { "width": 2.59, "depth": 6.4,  "height": 4.0 } },
+        { "name": "flatbed_combo",  "dimensions": { "width": 2.59, "depth": 22.0, "height": 4.1 } }
+      ],
+      "notes": "US 53ft (16.15 m) trailer + ~6.4 m tractor = ~22 m combined; 13'6\" (4.11 m) height.",
+      "tags": ["truck", "semi", "semi_truck", "vehicle", "transport"]
+    },
+    {
+      "name": "sports_car",
+      "display_name": "Sports Car (2-seater)",
+      "dimensions": { "width": 1.85, "depth": 4.3, "height": 1.18 },
+      "variants": [
+        { "name": "supercar", "dimensions": { "width": 1.95, "depth": 4.5, "height": 1.12 } }
+      ],
+      "notes": "Typical sports coupe (e.g. Porsche 911): 4519 L × 1852 W × 1295 H mm.",
+      "tags": ["sportscar", "car", "coupe", "vehicle", "transport"]
+    },
+    {
+      "name": "helicopter",
+      "display_name": "Light Helicopter",
+      "dimensions": { "width": 10.5, "depth": 11.2, "height": 3.4 },
+      "variants": [
+        { "name": "heavy",  "dimensions": { "width": 18.0, "depth": 22.0, "height": 5.5 } }
+      ],
+      "notes": "Robinson R44: 11.4 m length, 10.5 m main rotor, 3.4 m height.",
+      "tags": ["helicopter", "aircraft", "vehicle", "transport"]
+    },
+    {
+      "name": "rowboat",
+      "display_name": "Wooden Rowboat",
+      "dimensions": { "width": 1.3, "depth": 4.0, "height": 0.55 },
+      "variants": [
+        { "name": "dinghy",  "dimensions": { "width": 1.0, "depth": 2.5, "height": 0.4 } },
+        { "name": "longboat","dimensions": { "width": 1.6, "depth": 7.0, "height": 0.7 } }
+      ],
+      "notes": "Traditional 4 m rowboat: 1.3 m beam, freeboard ~55 cm.",
+      "tags": ["boat", "rowboat", "watercraft", "vehicle", "transport"]
+    }
+  ]
+}

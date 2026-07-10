@@ -1,0 +1,108 @@
+{
+  "category": "organic",
+  "description": "PBR material values for organic and biological materials.",
+  "items": [
+    {
+      "name": "skin_light",
+      "display_name": "Light Human Skin",
+      "pbr": {
+        "base_color": [0.88, 0.68, 0.56, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.60,
+        "specular": 0.25,
+        "subsurface": 0.12,
+        "subsurface_color": [1.0, 0.42, 0.28, 1.0]
+      },
+      "notes": "Subsurface scattering critical for realistic skin. Specular ~0.25–0.35.",
+      "tags": ["skin", "human", "light", "organic", "character"]
+    },
+    {
+      "name": "skin_dark",
+      "display_name": "Dark Human Skin",
+      "pbr": {
+        "base_color": [0.32, 0.20, 0.13, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.62,
+        "specular": 0.28,
+        "subsurface": 0.08,
+        "subsurface_color": [0.65, 0.25, 0.14, 1.0]
+      },
+      "notes": "Higher melanin; deeper SSS colour. Specular same as light skin.",
+      "tags": ["skin", "human", "dark", "organic", "character"]
+    },
+    {
+      "name": "bark",
+      "display_name": "Tree Bark",
+      "pbr": {
+        "base_color": [0.28, 0.18, 0.10, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.95,
+        "specular": 0.03
+      },
+      "texture_hints": { "pattern": "bark_fissures", "scale": 0.5 },
+      "notes": "Deep fissures; nearly Lambertian; height displacement adds depth.",
+      "tags": ["bark", "tree", "wood", "organic", "nature"]
+    },
+    {
+      "name": "leaf_green",
+      "display_name": "Green Leaf",
+      "pbr": {
+        "base_color": [0.18, 0.45, 0.12, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.55,
+        "specular": 0.15,
+        "alpha": 0.98
+      },
+      "notes": "Waxy cuticle; slight specularity; SSS tiny amount. Veins lighter. Slightly translucent.",
+      "tags": ["leaf", "plant", "green", "organic", "nature"]
+    },
+    {
+      "name": "grass",
+      "display_name": "Grass Blade",
+      "pbr": {
+        "base_color": [0.22, 0.52, 0.10, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.80,
+        "specular": 0.05
+      },
+      "notes": "Thin blade; two-sided rendering; tip slightly lighter than base.",
+      "tags": ["grass", "plant", "green", "organic", "nature"]
+    },
+    {
+      "name": "mud",
+      "display_name": "Wet Mud / Clay Soil",
+      "pbr": {
+        "base_color": [0.22, 0.16, 0.10, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.78,
+        "specular": 0.08
+      },
+      "notes": "Wet mud: specular ~0.15; dry mud roughness ~0.95.",
+      "tags": ["mud", "soil", "dirt", "organic", "nature"]
+    },
+    {
+      "name": "sand",
+      "display_name": "Beach Sand",
+      "pbr": {
+        "base_color": [0.85, 0.78, 0.58, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.95,
+        "specular": 0.04
+      },
+      "notes": "Dry sand; nearly Lambertian; wet sand specular ~0.2, darker base ~0.55.",
+      "tags": ["sand", "beach", "ground", "organic", "nature"]
+    },
+    {
+      "name": "clay",
+      "display_name": "Red Clay",
+      "pbr": {
+        "base_color": [0.68, 0.30, 0.16, 1.0],
+        "metallic": 0.0,
+        "roughness": 0.90,
+        "specular": 0.04
+      },
+      "notes": "Iron-rich red clay; smooth when wet; cracked when dry (displacement).",
+      "tags": ["clay", "soil", "red", "organic", "nature"]
+    }
+  ]
+}

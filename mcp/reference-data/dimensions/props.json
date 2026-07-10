@@ -1,0 +1,135 @@
+{
+  "category": "props",
+  "description": "Real-world dimensions for common everyday props in meters.",
+  "items": [
+    {
+      "name": "book",
+      "display_name": "Hardcover Book",
+      "dimensions": { "width": 0.155, "depth": 0.025, "height": 0.235 },
+      "variants": [
+        { "name": "paperback",  "dimensions": { "width": 0.13,  "depth": 0.018, "height": 0.21 } },
+        { "name": "coffee_table_book", "dimensions": { "width": 0.28, "depth": 0.03, "height": 0.35 } }
+      ],
+      "notes": "Average hardcover ~155×235 mm; spine 18–30 mm.",
+      "tags": ["book", "prop", "desk", "literature"]
+    },
+    {
+      "name": "laptop",
+      "display_name": "Laptop Computer",
+      "dimensions": { "width": 0.33, "depth": 0.23, "height": 0.018 },
+      "variants": [
+        { "name": "13inch", "dimensions": { "width": 0.304, "depth": 0.212, "height": 0.015 } },
+        { "name": "15inch", "dimensions": { "width": 0.356, "depth": 0.248, "height": 0.018 } }
+      ],
+      "notes": "Closed height ~15–20 mm; screen diagonal 13–16 inches typical.",
+      "tags": ["laptop", "computer", "tech", "prop"]
+    },
+    {
+      "name": "smartphone",
+      "display_name": "Smartphone",
+      "dimensions": { "width": 0.072, "depth": 0.008, "height": 0.153 },
+      "variants": [
+        { "name": "compact", "dimensions": { "width": 0.067, "depth": 0.0075, "height": 0.138 } },
+        { "name": "plus",    "dimensions": { "width": 0.078, "depth": 0.0085, "height": 0.163 } }
+      ],
+      "notes": "Modern flagship ~72×153×8 mm; varies ±5 mm by model.",
+      "tags": ["phone", "smartphone", "tech", "prop"]
+    },
+    {
+      "name": "cup",
+      "display_name": "Coffee / Tea Cup",
+      "dimensions": { "width": 0.085, "depth": 0.085, "height": 0.09 },
+      "variants": [
+        { "name": "mug",     "dimensions": { "width": 0.08,  "depth": 0.08,  "height": 0.1 } },
+        { "name": "espresso","dimensions": { "width": 0.065, "depth": 0.065, "height": 0.06 } }
+      ],
+      "notes": "Standard 8 oz mug ~80 mm dia, 95 mm tall.",
+      "tags": ["cup", "mug", "kitchen", "prop"]
+    },
+    {
+      "name": "plate",
+      "display_name": "Dinner Plate",
+      "dimensions": { "width": 0.27, "depth": 0.27, "height": 0.025 },
+      "variants": [
+        { "name": "salad",  "dimensions": { "width": 0.21, "depth": 0.21, "height": 0.022 } },
+        { "name": "platter","dimensions": { "width": 0.35, "depth": 0.28, "height": 0.025 } }
+      ],
+      "notes": "Dinner plate 26–28 cm diameter; depth ~2 cm.",
+      "tags": ["plate", "dish", "kitchen", "prop"]
+    },
+    {
+      "name": "bottle",
+      "display_name": "Water Bottle (500 ml)",
+      "dimensions": { "width": 0.065, "depth": 0.065, "height": 0.22 },
+      "variants": [
+        { "name": "wine",  "dimensions": { "width": 0.09,  "depth": 0.09,  "height": 0.30 } },
+        { "name": "1litre","dimensions": { "width": 0.075, "depth": 0.075, "height": 0.255 } }
+      ],
+      "notes": "500 ml PET bottle ~65 mm dia, 220 mm tall.",
+      "tags": ["bottle", "container", "kitchen", "prop"]
+    },
+    {
+      "name": "vase",
+      "display_name": "Decorative Vase",
+      "dimensions": { "width": 0.12, "depth": 0.12, "height": 0.28 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.08, "depth": 0.08, "height": 0.18 } },
+        { "name": "tall",  "dimensions": { "width": 0.14, "depth": 0.14, "height": 0.45 } }
+      ],
+      "notes": "Common ceramic vase 12 cm dia, 28 cm tall.",
+      "tags": ["vase", "decoration", "interior", "prop"]
+    },
+    {
+      "name": "lamp_desk",
+      "display_name": "Desk Lamp",
+      "dimensions": { "width": 0.15, "depth": 0.2, "height": 0.45 },
+      "variants": [
+        { "name": "architect", "dimensions": { "width": 0.18, "depth": 0.25, "height": 0.6 } }
+      ],
+      "notes": "Articulated arm lamp; shade ~15 cm dia; arm reach ~40–60 cm.",
+      "tags": ["lamp", "light", "desk", "prop"]
+    },
+    {
+      "name": "monitor",
+      "display_name": "Computer Monitor (27-inch)",
+      "dimensions": { "width": 0.614, "depth": 0.22, "height": 0.52 },
+      "variants": [
+        { "name": "24inch", "dimensions": { "width": 0.552, "depth": 0.2, "height": 0.47 } },
+        { "name": "32inch", "dimensions": { "width": 0.714, "depth": 0.24, "height": 0.6 } }
+      ],
+      "notes": "27-inch 16:9 panel ~61.4 cm wide, 34.6 cm tall; stand adds height.",
+      "tags": ["monitor", "screen", "computer", "tech", "prop"]
+    },
+    {
+      "name": "keyboard",
+      "display_name": "Full-Size Keyboard",
+      "dimensions": { "width": 0.44, "depth": 0.135, "height": 0.035 },
+      "variants": [
+        { "name": "tenkeyless", "dimensions": { "width": 0.36, "depth": 0.135, "height": 0.035 } },
+        { "name": "compact_60pct", "dimensions": { "width": 0.295, "depth": 0.11, "height": 0.03 } }
+      ],
+      "notes": "Full-size US layout ~440 mm wide, 135 mm deep, 35 mm tall.",
+      "tags": ["keyboard", "input", "computer", "tech", "prop"]
+    },
+    {
+      "name": "mouse",
+      "display_name": "Computer Mouse",
+      "dimensions": { "width": 0.065, "depth": 0.115, "height": 0.038 },
+      "variants": [
+        { "name": "gaming", "dimensions": { "width": 0.07, "depth": 0.125, "height": 0.045 } }
+      ],
+      "notes": "Standard optical mouse ~65 mm wide, 115 mm long, 38 mm tall.",
+      "tags": ["mouse", "input", "computer", "tech", "prop"]
+    },
+    {
+      "name": "pen",
+      "display_name": "Ballpoint Pen",
+      "dimensions": { "width": 0.01, "depth": 0.01, "height": 0.145 },
+      "variants": [
+        { "name": "marker", "dimensions": { "width": 0.013, "depth": 0.013, "height": 0.135 } }
+      ],
+      "notes": "Standard pen ~14.5 cm long, 10 mm diameter.",
+      "tags": ["pen", "stationery", "prop", "desk"]
+    }
+  ]
+}

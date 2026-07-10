@@ -172,6 +172,77 @@ def test_generation_enqueue_requires_service_and_model():
     assert result["success"] is False
 
 
+# ── Vendored Blender handler surface (/api/*) ────────────────────────────────
+
+def test_route_request_delegates_api_paths(monkeypatch):
+    from mixar.modules.mcp_bridge.core import blender_dispatch
+
+    seen = {}
+
+    def fake_dispatch(path, params):
+        seen["path"] = path
+        seen["params"] = params
+        return {"success": True, "data": {"ok": 1}}
+
+    # route_request lazy-imports dispatch_blender from this module at call time,
+    # so patching the attribute here is honored.
+    monkeypatch.setattr(blender_dispatch, "dispatch_blender", fake_dispatch)
+    result = handlers.route_request("/api/scene/info", {"a": 1})
+    assert result == {"success": True, "data": {"ok": 1}}
+    assert seen["path"] == "/api/scene/info"
+    assert seen["params"] == {"a": 1}
+
+
+def test_route_request_api_rejects_non_dict_body():
+    result = handlers.route_request("/api/scene/info", "nope")
+    assert result["success"] is False
+
+
+def test_blender_queue_shim_timeout_selection():
+    from mixar.modules.mcp_bridge.blender.utils import queue as q
+
+    # Every genuinely long-running route must get the extended timeout —
+    # including the non-obvious ones (anim bake, offscreen viewport render).
+    for long_route in ("render/image", "physics/bake", "physics/free-bake",
+                       "export/fbx", "texture/bake", "anim/bake",
+                       "viewport/render-preview"):
+        assert q._select_timeout(long_route) == q.LONG_OPERATION_TIMEOUT, long_route
+    # Fast routes keep the default.
+    for short_route in ("scene/info", "object/create", "anim/get-keyframes", None):
+        assert q._select_timeout(short_route) == q.RESULT_TIMEOUT, short_route
+
+
+def test_python_exec_gate_blocks_when_disabled(monkeypatch):
+    from mixar.modules.mcp_bridge.core import blender_dispatch
+
+    monkeypatch.setenv("MIXAR_MCP_ALLOW_PYTHON_EXEC", "0")
+    for route in ("/api/python/exec", "/api/python/exec-file"):
+        result = blender_dispatch.dispatch_blender(route, {"code": "x = 1"})
+        assert result["success"] is False
+        assert "disabled" in result["error"]
+
+
+def test_python_exec_gate_default_enabled(monkeypatch):
+    # Default (unset) must NOT be treated as disabled — the gate only trips on
+    # explicit off values, so a normal call proceeds past the gate to dispatch.
+    from mixar.modules.mcp_bridge.core import blender_dispatch
+
+    monkeypatch.delenv("MIXAR_MCP_ALLOW_PYTHON_EXEC", raising=False)
+    assert blender_dispatch._python_exec_allowed() is True
+
+
+def test_dispatch_blender_never_raises():
+    # blender_dispatch wraps the handler import so a failure (e.g. Blender math
+    # modules unavailable outside a real Blender process) degrades to an error
+    # envelope instead of a 500. Inside real Mixar it returns the handler
+    # result; either way it must be a dict carrying "success".
+    from mixar.modules.mcp_bridge.core.blender_dispatch import dispatch_blender
+
+    result = dispatch_blender("/api/scene/info", {})
+    assert isinstance(result, dict)
+    assert "success" in result
+
+
 # ── Loopback HTTP server integration (real socket, ephemeral port) ──────────
 
 @pytest.fixture()

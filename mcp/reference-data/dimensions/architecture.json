@@ -1,0 +1,134 @@
+{
+  "category": "architecture",
+  "description": "Real-world dimensions for common architectural elements in meters.",
+  "items": [
+    {
+      "name": "standard_door",
+      "display_name": "Standard Interior Door",
+      "dimensions": { "width": 0.9, "depth": 0.04, "height": 2.1 },
+      "variants": [
+        { "name": "narrow", "dimensions": { "width": 0.75, "depth": 0.04, "height": 2.1 } },
+        { "name": "wide",   "dimensions": { "width": 1.0,  "depth": 0.04, "height": 2.1 } }
+      ],
+      "notes": "US standard 2-8 (0.81 m) to 3-0 (0.91 m) wide; 6-8 (2.03 m) tall.",
+      "tags": ["door", "interior", "architecture", "opening"]
+    },
+    {
+      "name": "double_door",
+      "display_name": "Double Entry Door",
+      "dimensions": { "width": 1.8, "depth": 0.05, "height": 2.1 },
+      "variants": [
+        { "name": "grand", "dimensions": { "width": 2.4, "depth": 0.06, "height": 2.4 } }
+      ],
+      "notes": "Each leaf ~0.9 m wide; combined opening 1.8 m.",
+      "tags": ["door", "double", "exterior", "architecture"]
+    },
+    {
+      "name": "window_single",
+      "display_name": "Single-Hung Window",
+      "dimensions": { "width": 0.9, "depth": 0.12, "height": 1.2 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.6, "depth": 0.12, "height": 0.9 } },
+        { "name": "large", "dimensions": { "width": 1.2, "depth": 0.12, "height": 1.5 } }
+      ],
+      "notes": "Sill typically 0.9 m above floor; head 2.1 m.",
+      "tags": ["window", "single", "architecture", "opening"]
+    },
+    {
+      "name": "window_double",
+      "display_name": "Double Window / Bay",
+      "dimensions": { "width": 1.8, "depth": 0.15, "height": 1.2 },
+      "variants": [
+        { "name": "bay_3panel", "dimensions": { "width": 1.5, "depth": 0.45, "height": 1.2 } }
+      ],
+      "notes": "Side-by-side sash windows; bay protrudes 0.45 m.",
+      "tags": ["window", "double", "bay", "architecture"]
+    },
+    {
+      "name": "staircase_step",
+      "display_name": "Standard Stair Step (Tread + Riser)",
+      "dimensions": { "width": 0.9, "depth": 0.28, "height": 0.18 },
+      "variants": [
+        { "name": "residential", "dimensions": { "width": 0.9,  "depth": 0.28, "height": 0.18 } },
+        { "name": "commercial",  "dimensions": { "width": 1.2,  "depth": 0.30, "height": 0.17 } }
+      ],
+      "notes": "Riser 0.17–0.19 m; tread 0.25–0.30 m for comfort.",
+      "tags": ["stair", "step", "architecture", "vertical_circulation"]
+    },
+    {
+      "name": "column_doric",
+      "display_name": "Doric Column",
+      "dimensions": { "width": 0.8, "depth": 0.8, "height": 6.0 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.4, "depth": 0.4, "height": 3.0 } },
+        { "name": "large", "dimensions": { "width": 1.2, "depth": 1.2, "height": 9.0 } }
+      ],
+      "notes": "Doric order: height ≈ 7× base diameter. No base, simple capital.",
+      "tags": ["column", "doric", "classical", "architecture"]
+    },
+    {
+      "name": "arch_roman",
+      "display_name": "Roman Semicircular Arch",
+      "dimensions": { "width": 2.4, "depth": 0.5, "height": 3.6 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 1.2, "depth": 0.4, "height": 1.8 } },
+        { "name": "large", "dimensions": { "width": 3.6, "depth": 0.6, "height": 5.4 } }
+      ],
+      "notes": "Semicircle: height = opening_width/2 + springer. Total height ~1.5× width.",
+      "tags": ["arch", "roman", "classical", "architecture"]
+    },
+    {
+      "name": "wall_section",
+      "display_name": "Standard Wall Section",
+      "dimensions": { "width": 3.0, "depth": 0.2, "height": 3.0 },
+      "variants": [
+        { "name": "brick_exterior", "dimensions": { "width": 3.0, "depth": 0.28, "height": 3.0 } },
+        { "name": "partition",      "dimensions": { "width": 3.0, "depth": 0.1,  "height": 3.0 } }
+      ],
+      "notes": "Interior stud wall 0.1–0.15 m; exterior brick 0.25–0.3 m.",
+      "tags": ["wall", "interior", "exterior", "architecture"]
+    },
+    {
+      "name": "floor_tile",
+      "display_name": "Standard Floor Tile",
+      "dimensions": { "width": 0.6, "depth": 0.6, "height": 0.01 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.3, "depth": 0.3, "height": 0.008 } },
+        { "name": "large", "dimensions": { "width": 0.9, "depth": 0.9, "height": 0.012 } }
+      ],
+      "notes": "Common sizes: 30×30, 45×45, 60×60 cm. Thickness 8–12 mm.",
+      "tags": ["tile", "floor", "surface", "architecture"]
+    },
+    {
+      "name": "ceiling_panel",
+      "display_name": "Suspended Ceiling Panel",
+      "dimensions": { "width": 0.6, "depth": 0.6, "height": 0.016 },
+      "variants": [
+        { "name": "2x4ft", "dimensions": { "width": 0.61, "depth": 1.22, "height": 0.016 } }
+      ],
+      "notes": "Standard acoustic tile 600×600 mm or 600×1200 mm; 16 mm thick.",
+      "tags": ["ceiling", "tile", "panel", "architecture"]
+    },
+    {
+      "name": "balustrade",
+      "display_name": "Balustrade / Railing Section",
+      "dimensions": { "width": 1.0, "depth": 0.1, "height": 1.0 },
+      "variants": [
+        { "name": "residential", "dimensions": { "width": 1.0, "depth": 0.1, "height": 0.9 } },
+        { "name": "commercial",  "dimensions": { "width": 1.0, "depth": 0.1, "height": 1.1 } }
+      ],
+      "notes": "Guard rail min. 0.9 m residential, 1.1 m commercial.",
+      "tags": ["railing", "balustrade", "balcony", "architecture"]
+    },
+    {
+      "name": "fireplace",
+      "display_name": "Traditional Fireplace Surround",
+      "dimensions": { "width": 1.5, "depth": 0.4, "height": 1.2 },
+      "variants": [
+        { "name": "large_mantel", "dimensions": { "width": 1.8, "depth": 0.5, "height": 1.5 } }
+      ],
+      "notes": "Opening ~0.75 m wide, 0.6 m tall; mantel surround adds ~0.3–0.4 m.",
+      "tags": ["fireplace", "hearth", "mantel", "interior"]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "category": "nature",
+  "description": "Real-world dimensions for natural objects in meters.",
+  "items": [
+    {
+      "name": "tree_oak",
+      "display_name": "Oak Tree (Mature)",
+      "dimensions": { "width": 15.0, "depth": 15.0, "height": 20.0 },
+      "variants": [
+        { "name": "young",  "dimensions": { "width": 4.0,  "depth": 4.0,  "height": 6.0  } },
+        { "name": "ancient","dimensions": { "width": 25.0, "depth": 25.0, "height": 25.0 } }
+      ],
+      "notes": "Mature English oak: 15–25 m tall, canopy spread up to 25 m. Trunk dia ~1–2 m.",
+      "tags": ["tree", "oak", "nature", "plant", "environment"]
+    },
+    {
+      "name": "tree_pine",
+      "display_name": "Pine Tree (Scots Pine)",
+      "dimensions": { "width": 4.0, "depth": 4.0, "height": 25.0 },
+      "variants": [
+        { "name": "young",  "dimensions": { "width": 1.5,  "depth": 1.5,  "height": 5.0 } },
+        { "name": "christmas_tree", "dimensions": { "width": 2.0, "depth": 2.0, "height": 3.0 } }
+      ],
+      "notes": "Scots pine 25–35 m tall, narrow conical crown 4–8 m wide.",
+      "tags": ["tree", "pine", "conifer", "nature", "plant"]
+    },
+    {
+      "name": "bush_small",
+      "display_name": "Small Garden Bush / Shrub",
+      "dimensions": { "width": 1.2, "depth": 1.2, "height": 1.0 },
+      "variants": [
+        { "name": "hedge_section", "dimensions": { "width": 1.0, "depth": 0.6, "height": 1.5 } },
+        { "name": "ornamental",    "dimensions": { "width": 0.8, "depth": 0.8, "height": 0.6 } }
+      ],
+      "notes": "Common garden shrub ~1 m wide, 1 m tall.",
+      "tags": ["bush", "shrub", "nature", "plant", "landscape"]
+    },
+    {
+      "name": "rock_boulder",
+      "display_name": "Boulder",
+      "dimensions": { "width": 1.5, "depth": 1.2, "height": 1.0 },
+      "variants": [
+        { "name": "small",  "dimensions": { "width": 0.3, "depth": 0.25, "height": 0.2  } },
+        { "name": "large",  "dimensions": { "width": 3.0, "depth": 2.5,  "height": 2.0  } }
+      ],
+      "notes": "A boulder is rock >25 cm. Average field boulder ~1.5 m diameter.",
+      "tags": ["rock", "boulder", "stone", "nature", "landscape"]
+    },
+    {
+      "name": "flower_pot",
+      "display_name": "Terracotta Flower Pot",
+      "dimensions": { "width": 0.25, "depth": 0.25, "height": 0.25 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.12, "depth": 0.12, "height": 0.12 } },
+        { "name": "large", "dimensions": { "width": 0.4,  "depth": 0.4,  "height": 0.35 } }
+      ],
+      "notes": "Standard terracotta pot top diameter = height. Range 10–40 cm.",
+      "tags": ["pot", "planter", "flower", "garden", "prop"]
+    },
+    {
+      "name": "grass_patch",
+      "display_name": "Grass Patch / Turf Tile",
+      "dimensions": { "width": 1.0, "depth": 1.0, "height": 0.08 },
+      "variants": [
+        { "name": "long_grass", "dimensions": { "width": 1.0, "depth": 1.0, "height": 0.25 } }
+      ],
+      "notes": "Lawn grass height 5–8 cm mowed; wildflower meadow 20–60 cm.",
+      "tags": ["grass", "ground_cover", "nature", "landscape"]
+    },
+    {
+      "name": "log",
+      "display_name": "Fallen Log",
+      "dimensions": { "width": 0.35, "depth": 2.5, "height": 0.35 },
+      "variants": [
+        { "name": "small",  "dimensions": { "width": 0.15, "depth": 1.2, "height": 0.15 } },
+        { "name": "large",  "dimensions": { "width": 0.7,  "depth": 4.0, "height": 0.7  } }
+      ],
+      "notes": "Firewood log ~35 cm dia, 2.5 m length before cutting.",
+      "tags": ["log", "wood", "nature", "tree", "prop"]
+    },
+    {
+      "name": "stump",
+      "display_name": "Tree Stump",
+      "dimensions": { "width": 0.6, "depth": 0.6, "height": 0.4 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.3, "depth": 0.3, "height": 0.25 } },
+        { "name": "large", "dimensions": { "width": 1.2, "depth": 1.2, "height": 0.6  } }
+      ],
+      "notes": "Old oak stump ~60 cm diameter, ~40 cm above ground.",
+      "tags": ["stump", "wood", "nature", "tree"]
+    },
+    {
+      "name": "mushroom",
+      "display_name": "Field Mushroom",
+      "dimensions": { "width": 0.1, "depth": 0.1, "height": 0.1 },
+      "variants": [
+        { "name": "giant_puffball", "dimensions": { "width": 0.4, "depth": 0.4, "height": 0.3 } },
+        { "name": "toadstool",      "dimensions": { "width": 0.15,"depth": 0.15,"height": 0.15} }
+      ],
+      "notes": "Common field mushroom cap 5–10 cm; stem 5–8 cm tall.",
+      "tags": ["mushroom", "fungus", "nature", "plant", "prop"]
+    },
+    {
+      "name": "fern",
+      "display_name": "Forest Fern",
+      "dimensions": { "width": 0.8, "depth": 0.8, "height": 0.5 },
+      "variants": [
+        { "name": "tree_fern", "dimensions": { "width": 3.0, "depth": 3.0, "height": 6.0 } }
+      ],
+      "notes": "Common sword fern frond length ~60–90 cm; spread ~80 cm.",
+      "tags": ["fern", "plant", "nature", "ground_cover"]
+    }
+  ]
+}

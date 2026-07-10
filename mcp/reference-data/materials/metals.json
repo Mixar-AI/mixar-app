@@ -1,0 +1,111 @@
+{
+  "category": "metals",
+  "description": "PBR material values for common metals (Principled BSDF).",
+  "items": [
+    {
+      "name": "brushed_steel",
+      "display_name": "Brushed Steel",
+      "pbr": {
+        "base_color": [0.65, 0.65, 0.65, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.35,
+        "specular": 0.5,
+        "ior": 2.5
+      },
+      "texture_hints": { "grain_direction": "horizontal", "scale": 1.0, "pattern": "anisotropic_lines" },
+      "notes": "Directional brush finish; use anisotropic roughness ~0.1 / 0.5 for realism.",
+      "tags": ["steel", "metal", "brushed", "industrial"]
+    },
+    {
+      "name": "polished_gold",
+      "display_name": "Polished Gold",
+      "pbr": {
+        "base_color": [1.0, 0.766, 0.336, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.05,
+        "specular": 0.5,
+        "ior": 0.47
+      },
+      "notes": "IOR 0.47 for gold at visible spectrum; very low roughness for mirror polish.",
+      "tags": ["gold", "metal", "polished", "precious", "luxury"]
+    },
+    {
+      "name": "raw_copper",
+      "display_name": "Raw / Unfinished Copper",
+      "pbr": {
+        "base_color": [0.722, 0.45, 0.20, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.45,
+        "specular": 0.5,
+        "ior": 1.1
+      },
+      "notes": "Unpolished copper; add patina variation with roughness map.",
+      "tags": ["copper", "metal", "raw", "industrial"]
+    },
+    {
+      "name": "cast_iron",
+      "display_name": "Cast Iron",
+      "pbr": {
+        "base_color": [0.08, 0.08, 0.08, 1.0],
+        "metallic": 0.9,
+        "roughness": 0.75,
+        "specular": 0.3
+      },
+      "notes": "Very dark, rough surface. Slight micro-pitting visible at close range.",
+      "tags": ["iron", "metal", "cast", "dark", "industrial"]
+    },
+    {
+      "name": "brushed_aluminum",
+      "display_name": "Brushed Aluminum",
+      "pbr": {
+        "base_color": [0.913, 0.921, 0.925, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.25,
+        "specular": 0.5,
+        "ior": 1.44
+      },
+      "texture_hints": { "grain_direction": "horizontal", "scale": 1.0 },
+      "notes": "Slightly brighter than steel; warm grey tint.",
+      "tags": ["aluminum", "aluminium", "metal", "brushed", "tech"]
+    },
+    {
+      "name": "chrome",
+      "display_name": "Chrome / Mirror Chrome",
+      "pbr": {
+        "base_color": [0.95, 0.95, 0.95, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.02,
+        "specular": 0.5,
+        "ior": 3.17
+      },
+      "notes": "Near-perfect mirror. Add very subtle roughness variation map for realism.",
+      "tags": ["chrome", "metal", "mirror", "shiny", "industrial"]
+    },
+    {
+      "name": "bronze",
+      "display_name": "Bronze (Aged)",
+      "pbr": {
+        "base_color": [0.61, 0.45, 0.22, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.40,
+        "specular": 0.4,
+        "ior": 1.18
+      },
+      "notes": "Cu ~88%, Sn ~12%. Aged patina: add greenish tint in roughness cavities.",
+      "tags": ["bronze", "metal", "aged", "classic", "sculpture"]
+    },
+    {
+      "name": "titanium",
+      "display_name": "Titanium",
+      "pbr": {
+        "base_color": [0.616, 0.582, 0.553, 1.0],
+        "metallic": 1.0,
+        "roughness": 0.30,
+        "specular": 0.5,
+        "ior": 2.16
+      },
+      "notes": "Warm grey tone; lower reflectivity than steel; used in aerospace / medical.",
+      "tags": ["titanium", "metal", "aerospace", "strong"]
+    }
+  ]
+}

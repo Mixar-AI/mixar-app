@@ -1,0 +1,116 @@
+{
+  "category": "weapons",
+  "description": "Realistic dimensions for fantasy and historical weapons in meters.",
+  "items": [
+    {
+      "name": "sword_longsword",
+      "display_name": "Longsword",
+      "dimensions": { "width": 0.03, "depth": 0.008, "height": 1.1 },
+      "variants": [
+        { "name": "arming_sword", "dimensions": { "width": 0.025, "depth": 0.006, "height": 0.9 } },
+        { "name": "great_sword",  "dimensions": { "width": 0.04,  "depth": 0.01,  "height": 1.4 } }
+      ],
+      "notes": "Blade ~85 cm; crossguard ~25 cm wide; grip ~15 cm. Total ~1.1 m.",
+      "tags": ["sword", "blade", "medieval", "weapon"]
+    },
+    {
+      "name": "shield_round",
+      "display_name": "Round Shield (Buckler / Viking)",
+      "dimensions": { "width": 0.6, "depth": 0.05, "height": 0.6 },
+      "variants": [
+        { "name": "buckler",     "dimensions": { "width": 0.3,  "depth": 0.04, "height": 0.3 } },
+        { "name": "heater",      "dimensions": { "width": 0.45, "depth": 0.04, "height": 0.55 } },
+        { "name": "kite_shield", "dimensions": { "width": 0.5,  "depth": 0.05, "height": 0.9 } }
+      ],
+      "notes": "Viking round shield 60–90 cm diameter; buckler 25–35 cm.",
+      "tags": ["shield", "defense", "medieval", "weapon"]
+    },
+    {
+      "name": "bow_longbow",
+      "display_name": "English Longbow",
+      "dimensions": { "width": 0.02, "depth": 0.02, "height": 1.8 },
+      "variants": [
+        { "name": "shortbow", "dimensions": { "width": 0.018, "depth": 0.018, "height": 1.2 } },
+        { "name": "recurve",  "dimensions": { "width": 0.05,  "depth": 0.05,  "height": 1.5 } }
+      ],
+      "notes": "English longbow 1.6–2.0 m; yew stave ~25–35 mm cross section.",
+      "tags": ["bow", "ranged", "medieval", "weapon"]
+    },
+    {
+      "name": "dagger",
+      "display_name": "Dagger",
+      "dimensions": { "width": 0.02, "depth": 0.006, "height": 0.35 },
+      "variants": [
+        { "name": "rondel",    "dimensions": { "width": 0.015, "depth": 0.005, "height": 0.30 } },
+        { "name": "stiletto",  "dimensions": { "width": 0.012, "depth": 0.005, "height": 0.32 } }
+      ],
+      "notes": "Blade ~20–25 cm; overall ~30–40 cm; narrow profile.",
+      "tags": ["dagger", "knife", "blade", "weapon"]
+    },
+    {
+      "name": "axe_battle",
+      "display_name": "Battle Axe",
+      "dimensions": { "width": 0.45, "depth": 0.04, "height": 0.85 },
+      "variants": [
+        { "name": "hatchet",    "dimensions": { "width": 0.12, "depth": 0.03, "height": 0.35 } },
+        { "name": "two_handed", "dimensions": { "width": 0.6,  "depth": 0.05, "height": 1.2 } }
+      ],
+      "notes": "Single-hand battle axe: head width 40–50 cm; haft 75–90 cm.",
+      "tags": ["axe", "blade", "medieval", "weapon"]
+    },
+    {
+      "name": "staff",
+      "display_name": "Quarterstaff / Mage Staff",
+      "dimensions": { "width": 0.035, "depth": 0.035, "height": 1.8 },
+      "variants": [
+        { "name": "walking_staff", "dimensions": { "width": 0.03, "depth": 0.03, "height": 1.5 } },
+        { "name": "war_staff",     "dimensions": { "width": 0.04, "depth": 0.04, "height": 2.0 } }
+      ],
+      "notes": "Quarterstaff 1.5–2.0 m; diameter 25–40 mm at grip.",
+      "tags": ["staff", "polearm", "magic", "weapon"]
+    },
+    {
+      "name": "mace",
+      "display_name": "Flanged Mace",
+      "dimensions": { "width": 0.12, "depth": 0.12, "height": 0.65 },
+      "variants": [
+        { "name": "morning_star", "dimensions": { "width": 0.15, "depth": 0.15, "height": 0.7 } }
+      ],
+      "notes": "Head diameter ~10–15 cm; haft ~45–55 cm; total ~60–70 cm.",
+      "tags": ["mace", "blunt", "medieval", "weapon"]
+    },
+    {
+      "name": "spear",
+      "display_name": "Spear",
+      "dimensions": { "width": 0.04, "depth": 0.04, "height": 2.2 },
+      "variants": [
+        { "name": "javelin", "dimensions": { "width": 0.03, "depth": 0.03, "height": 1.8 } },
+        { "name": "pike",    "dimensions": { "width": 0.04, "depth": 0.04, "height": 5.0 } }
+      ],
+      "notes": "Infantry spear 2.0–2.5 m; pike 4.5–5.5 m; head 20–30 cm.",
+      "tags": ["spear", "polearm", "ranged", "weapon"]
+    },
+    {
+      "name": "crossbow",
+      "display_name": "Crossbow",
+      "dimensions": { "width": 0.65, "depth": 0.12, "height": 0.45 },
+      "variants": [
+        { "name": "pistol_crossbow", "dimensions": { "width": 0.35, "depth": 0.08, "height": 0.30 } },
+        { "name": "arbalest",        "dimensions": { "width": 0.85, "depth": 0.15, "height": 0.55 } }
+      ],
+      "notes": "Medieval crossbow: stock 45–55 cm; prod (bow) 60–70 cm wide.",
+      "tags": ["crossbow", "ranged", "medieval", "weapon"]
+    },
+    {
+      "name": "katana",
+      "display_name": "Katana",
+      "dimensions": { "width": 0.028, "depth": 0.007, "height": 1.04 },
+      "variants": [
+        { "name": "wakizashi", "dimensions": { "width": 0.025, "depth": 0.006, "height": 0.65 } },
+        { "name": "nodachi",   "dimensions": { "width": 0.035, "depth": 0.008, "height": 1.5 } }
+      ],
+      "notes": "Katana blade ~73 cm; tsuka (grip) ~26 cm; total ~104 cm.",
+      "tags": ["katana", "sword", "japanese", "blade", "weapon"]
+    }
+  ]
+}

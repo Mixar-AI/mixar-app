@@ -1,0 +1,544 @@
+{
+  "category": "architecture",
+  "description": "Architectural element recipes for columns, arches, windows, doors, and stairs.",
+  "recipes": [
+    {
+      "name": "column_greek",
+      "display_name": "Greek Column (Doric)",
+      "description": "A Doric column with capital and base blocks, built from a cylinder.",
+      "base": {
+        "type": "CYLINDER",
+        "vertices": 24,
+        "radius": 0.35,
+        "depth": 5.5
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 6,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.18,
+              1.18,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.25
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.35,
+              1.35,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.18
+          }
+        },
+        {
+          "op": "select_bottom"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.05,
+              1.05,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": -0.2
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.1,
+              1.1,
+              1.0
+            ]
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "EdgeBevel",
+          "params": {
+            "width": 0.01,
+            "segments": 2,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "marble_white"
+        }
+      ],
+      "tags": [
+        "column",
+        "greek",
+        "doric",
+        "classical",
+        "architecture"
+      ]
+    },
+    {
+      "name": "arch_simple",
+      "display_name": "Semicircular Arch",
+      "description": "A Roman semicircular arch with two piers and a keystone.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.5
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              0.3,
+              0.5,
+              1.5
+            ]
+          }
+        },
+        {
+          "op": "select_top"
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "z",
+            "distance": 0.5
+          }
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "op": "move",
+          "params": {
+            "direction": [
+              1.2,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 4,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "SUBSURF",
+          "name": "Subdivision",
+          "params": {
+            "levels": 2,
+            "render_levels": 3
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "limestone"
+        }
+      ],
+      "tags": [
+        "arch",
+        "roman",
+        "architecture",
+        "opening"
+      ]
+    },
+    {
+      "name": "window_frame",
+      "display_name": "Window Frame",
+      "description": "A rectangular window frame with glass pane inset.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.05
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              9.0,
+              1.0,
+              12.0
+            ]
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.06
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "y",
+            "distance": 0.02
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.01
+          }
+        },
+        {
+          "op": "dissolve"
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "FrameBevel",
+          "params": {
+            "width": 0.008,
+            "segments": 1
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "oak"
+        },
+        {
+          "slot": 1,
+          "ref": "clear_glass"
+        }
+      ],
+      "tags": [
+        "window",
+        "frame",
+        "architecture",
+        "opening"
+      ]
+    },
+    {
+      "name": "door_simple",
+      "display_name": "Panelled Door",
+      "description": "A simple 4-panel wooden interior door.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.05
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              9.0,
+              0.8,
+              21.0
+            ]
+          }
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 3,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "positive"
+          }
+        },
+        {
+          "op": "inset",
+          "params": {
+            "thickness": 0.04,
+            "depth": 0.0
+          }
+        },
+        {
+          "op": "extrude",
+          "params": {
+            "direction": "y",
+            "distance": -0.01
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "DoorBevel",
+          "params": {
+            "width": 0.005,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "oak"
+        }
+      ],
+      "tags": [
+        "door",
+        "panel",
+        "architecture",
+        "interior"
+      ]
+    },
+    {
+      "name": "staircase_straight",
+      "display_name": "Straight Staircase (10 Steps)",
+      "description": "A straight staircase run of 10 steps using extruded profile.",
+      "base": {
+        "type": "CUBE",
+        "size": 0.05
+      },
+      "steps": [
+        {
+          "op": "edit_mode"
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "scale",
+          "params": {
+            "value": [
+              9.0,
+              2.8,
+              1.8
+            ]
+          }
+        },
+        {
+          "op": "select_faces",
+          "params": {
+            "axis": "y",
+            "direction": "negative"
+          }
+        },
+        {
+          "op": "loop_cut",
+          "params": {
+            "cuts": 9,
+            "factor": 0.0
+          }
+        },
+        {
+          "op": "select_all"
+        },
+        {
+          "op": "subdivide",
+          "params": {
+            "cuts": 1
+          }
+        },
+        {
+          "op": "select_loop",
+          "params": {
+            "edge_index": 0
+          }
+        },
+        {
+          "op": "move",
+          "params": {
+            "direction": [
+              0.0,
+              0.0,
+              0.18
+            ]
+          }
+        },
+        {
+          "op": "object_mode"
+        }
+      ],
+      "modifiers": [
+        {
+          "type": "BEVEL",
+          "name": "StairBevel",
+          "params": {
+            "width": 0.006,
+            "segments": 1,
+            "limit_method": "ANGLE"
+          }
+        }
+      ],
+      "post_process": [
+        {
+          "op": "set_origin",
+          "params": {
+            "type": "ORIGIN_GEOMETRY"
+          }
+        },
+        {
+          "op": "apply_transforms"
+        },
+        {
+          "op": "unwrap"
+        }
+      ],
+      "materials": [
+        {
+          "slot": 0,
+          "ref": "concrete"
+        }
+      ],
+      "tags": [
+        "staircase",
+        "steps",
+        "architecture",
+        "vertical_circulation"
+      ]
+    }
+  ]
+}

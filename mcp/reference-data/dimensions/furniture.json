@@ -1,0 +1,135 @@
+{
+  "category": "furniture",
+  "description": "Real-world dimensions for common furniture pieces in meters.",
+  "items": [
+    {
+      "name": "dining_table",
+      "display_name": "Dining Table",
+      "dimensions": { "width": 1.5, "depth": 0.9, "height": 0.75 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 1.2, "depth": 0.8, "height": 0.75 } },
+        { "name": "large", "dimensions": { "width": 1.8, "depth": 1.0, "height": 0.75 } },
+        { "name": "extendable", "dimensions": { "width": 2.4, "depth": 1.0, "height": 0.75 } }
+      ],
+      "notes": "Standard 4–6 seat dining table. Height 0.75 m is universal.",
+      "tags": ["table", "dining", "kitchen", "interior"]
+    },
+    {
+      "name": "desk",
+      "display_name": "Office Desk",
+      "dimensions": { "width": 1.4, "depth": 0.7, "height": 0.74 },
+      "variants": [
+        { "name": "compact", "dimensions": { "width": 1.0, "depth": 0.55, "height": 0.74 } },
+        { "name": "l_shape", "dimensions": { "width": 1.8, "depth": 1.5, "height": 0.74 } }
+      ],
+      "notes": "Standard desk height matches dining table at 0.74–0.76 m.",
+      "tags": ["desk", "office", "work", "interior"]
+    },
+    {
+      "name": "bookshelf",
+      "display_name": "Bookshelf",
+      "dimensions": { "width": 0.8, "depth": 0.3, "height": 1.8 },
+      "variants": [
+        { "name": "low", "dimensions": { "width": 0.8, "depth": 0.3, "height": 0.9 } },
+        { "name": "tall", "dimensions": { "width": 0.8, "depth": 0.3, "height": 2.2 } },
+        { "name": "wide", "dimensions": { "width": 1.6, "depth": 0.3, "height": 1.8 } }
+      ],
+      "notes": "Shelf depth 0.25–0.35 m; standard height 1.8 m.",
+      "tags": ["shelf", "storage", "books", "interior"]
+    },
+    {
+      "name": "bed_single",
+      "display_name": "Single Bed",
+      "dimensions": { "width": 0.9, "depth": 2.0, "height": 0.55 },
+      "variants": [
+        { "name": "with_headboard", "dimensions": { "width": 0.9, "depth": 2.0, "height": 1.1 } }
+      ],
+      "notes": "Single / twin mattress 0.9 × 1.9 m; frame adds ~5 cm each side.",
+      "tags": ["bed", "bedroom", "sleeping", "interior"]
+    },
+    {
+      "name": "bed_double",
+      "display_name": "Double / Full Bed",
+      "dimensions": { "width": 1.35, "depth": 2.0, "height": 0.55 },
+      "variants": [
+        { "name": "queen", "dimensions": { "width": 1.52, "depth": 2.03, "height": 0.55 } },
+        { "name": "king", "dimensions": { "width": 1.93, "depth": 2.03, "height": 0.55 } }
+      ],
+      "notes": "Full/double 1.35 × 1.9 m mattress; queen 1.52 × 2.03 m.",
+      "tags": ["bed", "bedroom", "double", "interior"]
+    },
+    {
+      "name": "wardrobe",
+      "display_name": "Wardrobe / Armoire",
+      "dimensions": { "width": 1.2, "depth": 0.6, "height": 2.0 },
+      "variants": [
+        { "name": "double", "dimensions": { "width": 1.8, "depth": 0.6, "height": 2.0 } },
+        { "name": "triple", "dimensions": { "width": 2.4, "depth": 0.6, "height": 2.0 } }
+      ],
+      "notes": "Standard hanging depth 0.55–0.6 m; height typically 2.0 m.",
+      "tags": ["wardrobe", "closet", "storage", "bedroom"]
+    },
+    {
+      "name": "nightstand",
+      "display_name": "Nightstand / Bedside Table",
+      "dimensions": { "width": 0.5, "depth": 0.4, "height": 0.6 },
+      "variants": [
+        { "name": "small", "dimensions": { "width": 0.4, "depth": 0.35, "height": 0.55 } }
+      ],
+      "notes": "Height usually equals mattress top height ~0.55–0.65 m.",
+      "tags": ["nightstand", "bedside", "table", "bedroom"]
+    },
+    {
+      "name": "coffee_table",
+      "display_name": "Coffee Table",
+      "dimensions": { "width": 1.2, "depth": 0.6, "height": 0.45 },
+      "variants": [
+        { "name": "round", "dimensions": { "width": 0.9, "depth": 0.9, "height": 0.45 } },
+        { "name": "large", "dimensions": { "width": 1.4, "depth": 0.7, "height": 0.45 } }
+      ],
+      "notes": "Height 0.4–0.5 m for comfortable reach from sofa seat.",
+      "tags": ["coffee_table", "living_room", "table", "interior"]
+    },
+    {
+      "name": "sofa_3seat",
+      "display_name": "3-Seat Sofa",
+      "dimensions": { "width": 2.2, "depth": 0.9, "height": 0.85 },
+      "variants": [
+        { "name": "2seat", "dimensions": { "width": 1.6, "depth": 0.9, "height": 0.85 } },
+        { "name": "sectional_l", "dimensions": { "width": 2.8, "depth": 1.8, "height": 0.85 } }
+      ],
+      "notes": "Seat height ~0.42 m; back 0.85 m; 3-seat width 2.0–2.4 m typical.",
+      "tags": ["sofa", "couch", "living_room", "seating"]
+    },
+    {
+      "name": "dining_chair",
+      "display_name": "Dining Chair",
+      "dimensions": { "width": 0.45, "depth": 0.5, "height": 0.9 },
+      "variants": [
+        { "name": "armchair", "dimensions": { "width": 0.6, "depth": 0.55, "height": 0.95 } }
+      ],
+      "notes": "Seat height 0.44–0.46 m to match 0.74–0.76 m table height.",
+      "tags": ["chair", "dining", "seating", "interior"]
+    },
+    {
+      "name": "tv_stand",
+      "display_name": "TV Stand / Media Console",
+      "dimensions": { "width": 1.5, "depth": 0.45, "height": 0.5 },
+      "variants": [
+        { "name": "wide", "dimensions": { "width": 1.8, "depth": 0.45, "height": 0.5 } }
+      ],
+      "notes": "Height 0.45–0.55 m places screen at comfortable viewing level.",
+      "tags": ["tv_stand", "media", "living_room", "interior"]
+    },
+    {
+      "name": "bar_stool",
+      "display_name": "Bar Stool",
+      "dimensions": { "width": 0.4, "depth": 0.4, "height": 1.05 },
+      "variants": [
+        { "name": "counter_height", "dimensions": { "width": 0.4, "depth": 0.4, "height": 0.9 } }
+      ],
+      "notes": "Bar height stool seat ~0.74 m; counter height seat ~0.61 m.",
+      "tags": ["stool", "bar", "kitchen", "seating"]
+    }
+  ]
+}
