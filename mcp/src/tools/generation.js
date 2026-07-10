@@ -5,7 +5,7 @@
 // UV unwrap, texture gen, scene gen. Jobs run on the configured backend using
 // the user's own Mixar session (and BYOK keys when active).
 
-import { callBridge, asText } from "../bridge.js";
+import { callBridgeChecked, asText } from "../bridge.js";
 
 export const generationTools = [
   {
@@ -21,7 +21,7 @@ export const generationTools = [
         service: { type: "string", description: "Service key (e.g. image_gen, model_3d, retopology)" },
       },
     },
-    handler: async (args) => asText(await callBridge("/generation/catalog", args)),
+    handler: async (args) => asText(await callBridgeChecked("/generation/catalog", args)),
   },
   {
     name: "mixar_generate",
@@ -41,7 +41,7 @@ export const generationTools = [
       },
       required: ["service", "model", "payload"],
     },
-    handler: async (args) => asText(await callBridge("/generation/enqueue", args)),
+    handler: async (args) => asText(await callBridgeChecked("/generation/enqueue", args)),
   },
   {
     name: "mixar_generation_job_status",
@@ -56,7 +56,7 @@ export const generationTools = [
       },
       required: ["job_id"],
     },
-    handler: async (args) => asText(await callBridge("/generation/status", args)),
+    handler: async (args) => asText(await callBridgeChecked("/generation/status", args)),
   },
   {
     name: "mixar_generation_job_cancel",
@@ -68,6 +68,6 @@ export const generationTools = [
       },
       required: ["job_id"],
     },
-    handler: async (args) => asText(await callBridge("/generation/cancel", args)),
+    handler: async (args) => asText(await callBridgeChecked("/generation/cancel", args)),
   },
 ];

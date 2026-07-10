@@ -4,7 +4,7 @@
 // The full-control tool: sandboxed bpy script execution — the exact engine
 // the hosted Mixie agent drives, minus the hosted agent.
 
-import { callBridge, asText } from "../bridge.js";
+import { callBridgeChecked, asText } from "../bridge.js";
 
 export const executeTools = [
   {
@@ -43,6 +43,6 @@ export const executeTools = [
       },
       required: ["script"],
     },
-    handler: async (args) => asText(await callBridge("/execute", args)),
+    handler: async (args) => asText(await callBridgeChecked("/execute", args)),
   },
 ];

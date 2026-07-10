@@ -8,6 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { splitToolTiers } from "../src/blender/tool-tiers.js";
+import { deriveAnnotations } from "../src/annotations.js";
 import { sceneTools } from "../src/blender/tools/core/scene.js";
 import { objectTools } from "../src/blender/tools/core/object.js";
 import { nodeTools } from "../src/blender/tools/advanced/node.js";
@@ -33,6 +34,34 @@ test("advanced proxy lists and can target a tool by name", async () => {
   const catalog = JSON.parse(await list.handler({}));
   assert.ok(catalog.totalAdvancedTools >= 1);
   assert.ok(catalog.categories.node, "node category present in advanced catalog");
+});
+
+test("annotations: reads are read-only, deletes destructive, proxy open-world", () => {
+  assert.deepEqual(deriveAnnotations("blender_scene_info"), { readOnlyHint: true, idempotentHint: true });
+  assert.deepEqual(deriveAnnotations("mixar_object_info"), { readOnlyHint: true, idempotentHint: true });
+  assert.deepEqual(deriveAnnotations("blender_object_delete"), { destructiveHint: true });
+  assert.deepEqual(deriveAnnotations("blender_collection_remove_object"), { destructiveHint: true });
+  assert.deepEqual(deriveAnnotations("blender_object_set_parent"), { idempotentHint: true });
+  assert.ok(deriveAnnotations("blender_advanced_tool").openWorldHint);
+  assert.ok(deriveAnnotations("mixar_execute_script").openWorldHint);
+  assert.ok(deriveAnnotations("mixar_generate").openWorldHint);
+  // A plain create is neither read-only nor destructive → no annotation (MCP defaults).
+  assert.equal(deriveAnnotations("blender_object_create"), undefined);
+});
+
+test("every exposed tool gets valid annotation shape or none", () => {
+  const all = [...sceneTools, ...objectTools, ...nodeTools, ...physicsTools];
+  const VALID = new Set(["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"]);
+  for (const t of all) {
+    const ann = deriveAnnotations(t.name);
+    if (ann === undefined) continue;
+    for (const [k, v] of Object.entries(ann)) {
+      assert.ok(VALID.has(k), `${t.name}: unexpected annotation ${k}`);
+      assert.equal(typeof v, "boolean");
+    }
+    // A tool must never be both read-only and destructive.
+    assert.ok(!(ann.readOnlyHint && ann.destructiveHint), `${t.name}: read-only AND destructive`);
+  }
 });
 
 test("python-exec route gate rejects when disabled", async () => {

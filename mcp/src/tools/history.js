@@ -4,7 +4,7 @@
 // Operation history: Mixar's local per-scene log of every agent script and
 // curated manual edit (operations.jsonl — no backend involved).
 
-import { callBridge, asText } from "../bridge.js";
+import { callBridgeChecked, asText } from "../bridge.js";
 
 export const historyTools = [
   {
@@ -38,7 +38,7 @@ export const historyTools = [
     },
     handler: async (args) =>
       asText(
-        await callBridge("/tool", {
+        await callBridgeChecked("/tool", {
           domain: "operation_history",
           name: args.tool,
           params: args.params || {},

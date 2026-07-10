@@ -6,7 +6,7 @@
 // place the *chat agent* consumes zero tokens (the MCP client is the brain);
 // BYOK keeps GPU generation billed to the user's own provider account.
 
-import { callBridge, asText } from "../bridge.js";
+import { callBridgeChecked, asText } from "../bridge.js";
 
 export const providerTools = [
   {
@@ -35,19 +35,19 @@ export const providerTools = [
     handler: async (args) => {
       switch (args.action) {
         case "status":
-          return asText(await callBridge("/byok/status", {}));
+          return asText(await callBridgeChecked("/byok/status", {}));
         case "models":
-          return asText(await callBridge("/byok/models", {}));
+          return asText(await callBridgeChecked("/byok/models", {}));
         case "set":
           return asText(
-            await callBridge("/byok/set", {
+            await callBridgeChecked("/byok/set", {
               provider: args.provider,
               model: args.model,
               api_key: args.api_key,
             })
           );
         case "remove":
-          return asText(await callBridge("/byok/remove", {}));
+          return asText(await callBridgeChecked("/byok/remove", {}));
         default:
           throw new Error(`Unknown action: ${args.action}`);
       }

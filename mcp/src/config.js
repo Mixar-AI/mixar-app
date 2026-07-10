@@ -21,24 +21,27 @@ function resolveHost() {
   return host;
 }
 
-// The in-app bridge writes an auto-generated token here when MIXAR_MCP_TOKEN
-// is not explicitly set. Read it so the operator doesn't have to copy it by
-// hand. An explicit env var always wins.
+// The in-app bridge writes an auto-generated token to a stable, version-
+// independent path (~/.mixar/mcp_bridge_token) on every platform. Read it so
+// the operator doesn't have to copy it by hand. An explicit env var wins.
 function resolveToken() {
   if (process.env.MIXAR_MCP_TOKEN) return process.env.MIXAR_MCP_TOKEN.trim();
-  const candidates = [];
-  // Blender user config dir (Windows / macOS / Linux best-effort).
-  if (process.env.APPDATA) {
-    candidates.push(join(process.env.APPDATA, "Blender Foundation", "Blender"));
-  }
-  candidates.push(join(homedir(), ".mixar", "mcp_bridge_token"));
+  const candidates = [join(homedir(), ".mixar", "mcp_bridge_token")];
   for (const path of candidates) {
     try {
-      return readFileSync(path, "utf-8").trim();
+      const token = readFileSync(path, "utf-8").trim();
+      if (token) return token;
     } catch {
-      // try next
+      // try next candidate
     }
   }
+  // No token found and none set explicitly — every request will 401. Leave a
+  // breadcrumb so the failure is diagnosable instead of a bare 401.
+  console.error(
+    `[Mixar MCP] No auth token found (looked in ${candidates.join(", ")}). ` +
+      "Start Mixar with the bridge enabled so it generates one, or set " +
+      "MIXAR_MCP_TOKEN identically on both sides."
+  );
   return "";
 }
 

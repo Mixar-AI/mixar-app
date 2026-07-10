@@ -49,12 +49,29 @@ export async function callBridge(path, body = {}) {
   return data;
 }
 
-/** GET /health — connectivity check. */
+/**
+ * Like callBridge, but throws when the bridge reports a failed operation
+ * (`success: false`) so the MCP layer marks the tool result isError. Use this
+ * for Mixar-native tools whose envelope's `success` reflects whether the
+ * operation itself worked (execute, generation, byok). Mirrors the contract
+ * blender-bridge.js already enforces for the Blender tools.
+ */
+export async function callBridgeChecked(path, body = {}) {
+  const data = await callBridge(path, body);
+  if (data && data.success === false) {
+    throw new Error(data.error || `Mixar operation failed (${path})`);
+  }
+  return data;
+}
+
+/** GET /health — connectivity check. Sends the auth token (health is gated). */
 export async function getHealth() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
+  const headers = {};
+  if (CONFIG.bridgeToken) headers["X-Mixar-MCP-Token"] = CONFIG.bridgeToken;
   try {
-    const response = await fetch(`${BASE_URL}/health`, { signal: controller.signal });
+    const response = await fetch(`${BASE_URL}/health`, { headers, signal: controller.signal });
     return await response.json();
   } catch (err) {
     throw new Error(

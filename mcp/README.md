@@ -26,7 +26,7 @@ The in-app bridge ships with Mixar itself (enabled by default; `MIXAR_MCP_ENABLE
 
 The bridge is a local-control surface, hardened against browser-driven CSRF / DNS-rebinding:
 
-- **Token always required.** If `MIXAR_MCP_TOKEN` is unset, the bridge generates a random token at startup and writes it to a file under Blender's config dir (`.../config/mixar/mcp_bridge_token`). This MCP server reads it automatically; set `MIXAR_MCP_TOKEN` on both sides to pin an explicit value.
+- **Token always required.** If `MIXAR_MCP_TOKEN` is unset, the bridge generates a random token at startup and writes it to a stable, version-independent path — `~/.mixar/mcp_bridge_token` (and also into Mixar's own config dir). This MCP server reads `~/.mixar/mcp_bridge_token` automatically on every platform; if it can't find a token it logs a diagnostic breadcrumb rather than failing with an opaque 401. Set `MIXAR_MCP_TOKEN` on both sides to pin an explicit value.
 - **JSON-only.** POSTs must be `Content-Type: application/json`, which forces a CORS preflight the server never answers — so a web page can't reach it with a "simple" cross-origin request.
 - **No `Origin`, loopback `Host` only.** Requests carrying an `Origin` header, or a non-loopback `Host`, are rejected (403).
 - **Loopback bind enforced.** The server refuses to bind any non-loopback host; the Node client refuses to connect to one.
@@ -63,6 +63,8 @@ The full Blender editing toolset, vendored from our Blender MCP and pointed at M
 Every Blender op runs on Blender's main thread through the same serialized path as `mixar_execute_script` (no concurrent bpy access), with `render/physics/bake/export` routes getting an extended timeout.
 
 **Total: 247 tools across both families, exposed as 65** (11 Mixar + 52 Blender core + 2 proxy meta-tools).
+
+Every tool carries MCP **annotations** (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), derived at assembly time from the tool name — so clients like Claude Desktop can gate destructive operations (deletes) behind confirmation and route read-only queries freely. The in-app bridge uses HTTP/1.1 keep-alive so a session's many tool calls reuse one loopback socket.
 
 ## Quick Start
 

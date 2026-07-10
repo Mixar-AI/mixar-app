@@ -29,12 +29,16 @@ logger = get_logger(__name__)
 # Serialize bridge-driven main-thread jobs. Blender's main thread runs one
 # script at a time; without this, a timed-out HTTP request could return
 # "failed" while a second request's script is already queued behind the first,
-# so a client that retries a non-idempotent script would run it twice. Holding
-# this lock across schedule+wait guarantees at most one bridge job is in flight,
-# and a request that can't get the lock quickly gets a clear "busy" answer
-# instead of silently stacking a duplicate.
+# so a client that retries a non-idempotent script would run it twice. The lock
+# is held from acquire until the scheduled job TRULY completes (not merely until
+# the caller's wait elapses), so a retry after a client-side timeout gets a
+# fail-fast "busy" answer instead of stacking a duplicate main-thread job.
 _EXEC_LOCK = threading.Lock()
 _LOCK_ACQUIRE_TIMEOUT_S = 2.0
+# Safety cap: if a scheduled job is never actually run (e.g. dropped by a
+# concurrent shutdown latch), release the lock this long after the hard
+# execution ceiling so the bridge can never deadlock permanently.
+_RELEASER_GRACE_S = 5.0
 
 
 def build_script(script: str, params: Optional[dict] = None) -> str:
@@ -63,10 +67,11 @@ def _clamp_timeout(timeout: Optional[float]) -> float:
 def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
     """Run `fn` on Blender's main thread and wait for its dict result.
 
-    Returns `fn()`'s result, or an error envelope on timeout/exception.
-    The callable keeps running to completion on the main thread even if the
-    waiter times out — Blender scripts cannot be safely interrupted — but the
-    late result is discarded.
+    Returns `fn()`'s result, or an error envelope on timeout/exception. The
+    callable keeps running to completion on the main thread even if the caller's
+    wait elapses — Blender scripts cannot be safely interrupted — and the
+    serialization lock is held until it truly finishes, so a retry after a
+    client-side timeout is answered "busy" rather than running a duplicate.
     """
     from mixar.modules.space_mixie_chat.core import main_thread_executor
 
@@ -84,10 +89,24 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
             "busy": True,
         }
 
+    started = threading.Event()  # set once the job actually begins on the main thread
     done = threading.Event()
     holder: dict = {}
 
+    # Release the lock exactly once, from whichever path first observes the job
+    # as finished (or the safety cap). Guarded so the prompt-return path and the
+    # background releaser can never double-release.
+    release_guard = threading.Lock()
+    released = {"done": False}
+
+    def _release_once():
+        with release_guard:
+            if not released["done"]:
+                released["done"] = True
+                _EXEC_LOCK.release()
+
     def _job():
+        started.set()
         try:
             holder["result"] = fn()
         except Exception as exc:  # surface, never swallow
@@ -95,22 +114,49 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
             holder["result"] = {"success": False, "error": str(exc)}
         finally:
             done.set()
+            _release_once()  # lock freed only when the job truly completes
 
     try:
         main_thread_executor.run_on_main_thread(_job)
+    except Exception as exc:
+        _release_once()  # scheduling failed; we still own the lock
+        logger.error("MCP bridge: failed to schedule main-thread job: %s", exc, exc_info=True)
+        return {
+            "success": False,
+            "error": "Could not schedule work on Blender's main thread: {0}".format(exc),
+        }
 
-        wait_s = _clamp_timeout(timeout)
-        if not done.wait(wait_s):
-            logger.warning("MCP bridge: main-thread job timed out after %.1fs", wait_s)
-            return {
-                "success": False,
-                "error": "Timed out after {0:.0f}s waiting for Blender's main thread. "
-                "The script may still be running; check the scene before retrying.".format(wait_s),
-                "timed_out": True,
-            }
+    # Safety net: if the job is never actually run (dropped by a shutdown race),
+    # free the lock after the hard ceiling so the bridge cannot deadlock forever.
+    def _releaser():
+        done.wait(EXECUTE_TIMEOUT_MAX_S + _RELEASER_GRACE_S)
+        _release_once()
+
+    threading.Thread(target=_releaser, name="Mixar-MCP-LockReleaser", daemon=True).start()
+
+    wait_s = _clamp_timeout(timeout)
+    if done.wait(wait_s):
+        _release_once()  # completed within the wait — free the slot promptly
         return holder.get("result", {"success": False, "error": "No result produced"})
-    finally:
-        _EXEC_LOCK.release()
+
+    # Timed out. The lock stays held (job still owns it) so a retry gets "busy".
+    # Distinguish "still running" from "never started" so the caller knows
+    # whether a retry is safe.
+    if started.is_set():
+        message = (
+            "Timed out after {0:.0f}s; the script is still running on Blender's main "
+            "thread. Do not blindly retry a non-idempotent operation — inspect the "
+            "scene first (the bridge answers 'busy' until it finishes).".format(wait_s)
+        )
+    else:
+        message = (
+            "Timed out after {0:.0f}s; the job has not started yet (main thread busy "
+            "or the bridge is mid-shutdown). Safe to retry shortly.".format(wait_s)
+        )
+    logger.warning(
+        "MCP bridge: main-thread job timed out after %.1fs (started=%s)", wait_s, started.is_set()
+    )
+    return {"success": False, "error": message, "timed_out": True, "started": started.is_set()}
 
 
 def execute_script(

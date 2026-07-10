@@ -35,8 +35,17 @@ def register():
             return
         from mixar.modules.mcp_bridge.core import server
 
-        server.start_server()
-        logger.debug("mcp_bridge bootstrap: registered")
+        srv = server.start_server()
+        if srv is None:
+            # Bind failure / non-loopback host / port conflict — start_server
+            # already logged the cause. Make the operator-facing consequence
+            # explicit rather than logging "registered" as if it worked.
+            logger.warning(
+                "mcp_bridge bootstrap: bridge is NOT listening; MCP tool calls will "
+                "fail until this is resolved (check for a port conflict on the bridge port)."
+            )
+        else:
+            logger.debug("mcp_bridge bootstrap: registered")
     except Exception as e:  # never break startup
         logger.error("mcp_bridge bootstrap: FAILED - %s", e, exc_info=True)
 
@@ -47,4 +56,4 @@ def unregister():
 
         server.stop_server()
     except Exception as e:
-        logger.error("mcp_bridge bootstrap unregister failed: %s", e)
+        logger.error("mcp_bridge bootstrap unregister failed: %s", e, exc_info=True)

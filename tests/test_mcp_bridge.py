@@ -172,6 +172,53 @@ def test_generation_enqueue_requires_service_and_model():
     assert result["success"] is False
 
 
+def test_generation_enqueue_rejects_non_dict_payload():
+    from mixar.modules.mcp_bridge.core import services_bridge
+
+    # A JSON string instead of an object (a plausible LLM slip) must fail loudly,
+    # not silently submit an empty-payload job.
+    result = services_bridge.generation_enqueue("image_gen", "flux", '{"prompt":"x"}')
+    assert result["success"] is False
+    assert "payload" in result["error"]
+
+
+def test_redact_matches_secret_shaped_substrings():
+    from mixar.modules.mcp_bridge.core import services_bridge
+
+    data = {
+        "byok_active": True,
+        "api_key": "sk-should-hide",
+        "access_token_full": "tok-should-hide",
+        "client_key_preview": "kp-should-hide",
+        "nested": {"user_secret_hint": "shh", "safe": "ok"},
+        "items": [{"provider": "anthropic", "model_key": "hide-me"}],
+    }
+    red = services_bridge._redact(data)
+    assert red["byok_active"] is True
+    assert red["api_key"] == "***redacted***"
+    assert red["access_token_full"] == "***redacted***"
+    assert red["client_key_preview"] == "***redacted***"
+    assert red["nested"]["user_secret_hint"] == "***redacted***"
+    assert red["nested"]["safe"] == "ok"
+    assert red["items"][0]["model_key"] == "***redacted***"
+    assert red["items"][0]["provider"] == "anthropic"
+
+
+def test_run_on_main_thread_sync_releases_lock_after_completion():
+    # Two sequential calls must both succeed: the lock is released when the job
+    # completes, so the second call is not answered "busy". (With the fake
+    # main_thread_executor, _job runs inline.)
+    from mixar.modules.mcp_bridge.core import executor_bridge
+
+    r1 = executor_bridge.run_on_main_thread_sync(lambda: {"success": True, "n": 1})
+    r2 = executor_bridge.run_on_main_thread_sync(lambda: {"success": True, "n": 2})
+    assert r1 == {"success": True, "n": 1}
+    assert r2 == {"success": True, "n": 2}
+    # Lock is free afterward (not stuck held).
+    assert executor_bridge._EXEC_LOCK.acquire(blocking=False) is True
+    executor_bridge._EXEC_LOCK.release()
+
+
 # ── Vendored Blender handler surface (/api/*) ────────────────────────────────
 
 def test_route_request_delegates_api_paths(monkeypatch):

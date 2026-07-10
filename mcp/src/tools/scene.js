@@ -4,7 +4,7 @@
 // Scene introspection: the client-side scene-graph tool registry the hosted
 // agent already consumes, plus convenience script templates for common reads.
 
-import { callBridge, asText } from "../bridge.js";
+import { callBridgeChecked, asText } from "../bridge.js";
 
 const SCENE_INFO_SCRIPT = `
 scene = bpy.context.scene
@@ -87,7 +87,7 @@ export const sceneTools = [
     handler: async (args) => {
       const params = args.object_name ? { object_name: args.object_name } : {};
       return asText(
-        await callBridge("/tool", { domain: "scene_graph", name: args.tool, params })
+        await callBridgeChecked("/tool", { domain: "scene_graph", name: args.tool, params })
       );
     },
   },
@@ -107,7 +107,7 @@ export const sceneTools = [
     },
     handler: async (args) =>
       asText(
-        await callBridge("/execute", {
+        await callBridgeChecked("/execute", {
           script: SCENE_INFO_SCRIPT,
           params: { limit: args.limit || 200 },
           push_undo: false,
@@ -128,7 +128,7 @@ export const sceneTools = [
     },
     handler: async (args) =>
       asText(
-        await callBridge("/execute", {
+        await callBridgeChecked("/execute", {
           script: OBJECT_INFO_SCRIPT,
           params: { object_name: args.object_name },
           push_undo: false,

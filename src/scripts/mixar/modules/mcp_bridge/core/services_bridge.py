@@ -28,12 +28,22 @@ logger = get_logger(__name__)
 _SECRET_KEYS = ("api_key", "apikey", "key", "secret", "token", "password")
 
 
+def _is_secret_key(key: str) -> bool:
+    """True if a field name looks secret-shaped (substring match).
+
+    Substring (not exact) so `access_token_full`, `client_key_preview`, etc.
+    are also redacted — over-redacting is safe, under-redacting leaks.
+    """
+    low = key.lower()
+    return any(s in low for s in _SECRET_KEYS)
+
+
 def _redact(value: Any) -> Any:
     """Recursively drop secret-shaped fields from a JSON-ish structure."""
     if isinstance(value, dict):
         out = {}
         for k, v in value.items():
-            if isinstance(k, str) and k.lower() in _SECRET_KEYS:
+            if isinstance(k, str) and _is_secret_key(k):
                 out[k] = "***redacted***"
             else:
                 out[k] = _redact(v)
@@ -67,10 +77,16 @@ def _guarded(fn) -> dict:
     except Exception as exc:
         name = type(exc).__name__
         hint = ""
+        is_expected = "Authentication" in name or getattr(exc, "status_code", None) in (401, 402, 403)
         if "Authentication" in name or getattr(exc, "status_code", None) == 401:
             hint = " Login to Mixar in the app first (backend features use your Mixar session)."
         safe = _redact_text("{0}".format(exc))
-        logger.warning("MCP bridge service call failed: %s: %s", name, safe)
+        # Known auth/network cases log at warning; unexpected exceptions (likely a
+        # code defect) log at error WITH a traceback so they're diagnosable.
+        if is_expected:
+            logger.warning("MCP bridge service call failed: %s: %s", name, safe)
+        else:
+            logger.error("MCP bridge service call failed: %s: %s", name, safe, exc_info=True)
         return {"success": False, "error": "{0}: {1}{2}".format(name, safe, hint)}
 
 
@@ -80,11 +96,23 @@ def generation_enqueue(service: str, model: str, payload: dict) -> dict:
     """Submit a job to the unified queue (POST /job-queue/jobs)."""
     if not service or not model:
         return {"success": False, "error": "'service' and 'model' are required"}
+    # Validate rather than silently coerce: a payload sent as a JSON string (a
+    # plausible LLM slip) must fail loudly, not submit an empty-payload job.
+    if not isinstance(payload, dict):
+        return {"success": False, "error": "'payload' must be an object/dict"}
 
     def _call() -> dict:
-        import uuid
+        import hashlib
+        import json as _json
 
         from mixar.modules.common.api.services import job_queue_service as jq
+
+        # Deterministic idempotency key derived from the request content, so a
+        # retry of the SAME logical request (client timeout, network blip, LLM
+        # re-issue) collapses to one job server-side instead of double-billing.
+        digest = hashlib.sha256(
+            _json.dumps([service, model, payload], sort_keys=True, ensure_ascii=True).encode()
+        ).hexdigest()
 
         # Match the auth pre-check the public enqueue()/cancel_job() run, so an
         # unauthenticated call surfaces the same friendly "login first" hint as
@@ -96,8 +124,8 @@ def generation_enqueue(service: str, model: str, payload: dict) -> dict:
             json={
                 "service": service,
                 "model": model,
-                "payload": payload if isinstance(payload, dict) else {},
-                "idempotency_key": str(uuid.uuid4()),
+                "payload": payload,
+                "idempotency_key": "mcp-{0}".format(digest),
             },
         )
         return _api_result(jq.JobQueueService._normalize_response(response))

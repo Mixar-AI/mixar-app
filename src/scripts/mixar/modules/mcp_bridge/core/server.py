@@ -58,16 +58,38 @@ _active_token: str = ""
 _request_slots = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
 
 
-def _token_file_path() -> str:
-    """Path to the auto-generated token file (under Blender's config dir)."""
+def _stable_token_path() -> str:
+    """Version-independent token path the Node client probes on every OS.
+
+    `~/.mixar/mcp_bridge_token` — deterministic and platform-agnostic, so the
+    companion MCP server can find the auto-generated token without guessing
+    Blender's versioned config directory.
+    """
+    base = os.path.join(os.path.expanduser("~"), ".mixar")
+    os.makedirs(base, exist_ok=True)
+    return os.path.join(base, TOKEN_FILE_NAME)
+
+
+def _token_file_paths() -> list:
+    """All locations to persist the token to.
+
+    Always includes the stable `~/.mixar` path (what the Node client reads);
+    also writes into Blender's own config dir when available, for operators
+    who look there.
+    """
+    paths = []
     try:
         import bpy
 
         base = bpy.utils.user_resource("CONFIG", path="mixar", create=True)
+        if base:
+            paths.append(os.path.join(base, TOKEN_FILE_NAME))
     except Exception:
-        base = os.path.join(os.path.expanduser("~"), ".mixar")
-        os.makedirs(base, exist_ok=True)
-    return os.path.join(base, TOKEN_FILE_NAME)
+        pass
+    stable = _stable_token_path()
+    if stable not in paths:
+        paths.append(stable)
+    return paths
 
 
 def _resolve_token() -> str:
@@ -76,18 +98,24 @@ def _resolve_token() -> str:
     if env_token:
         return env_token
     token = secrets.token_urlsafe(32)
-    try:
-        path = _token_file_path()
-        with open(path, "w", encoding="utf-8") as handle:
-            handle.write(token)
-        # Best-effort: restrict to the owner on POSIX.
+    persisted = False
+    for path in _token_file_paths():
         try:
-            os.chmod(path, 0o600)
-        except OSError:
-            pass
-        logger.info("[MCP bridge] generated auth token at %s", path)
-    except Exception as exc:
-        logger.warning("[MCP bridge] could not persist auth token: %s", exc)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(token)
+            try:  # best-effort owner-only on POSIX
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
+            logger.info("[MCP bridge] auth token written to %s", path)
+            persisted = True
+        except Exception as exc:
+            logger.warning("[MCP bridge] could not write auth token to %s: %s", path, exc)
+    if not persisted:
+        logger.error(
+            "[MCP bridge] could not persist the auth token anywhere; the MCP client "
+            "will 401. Set MIXAR_MCP_TOKEN on both sides to work around this."
+        )
     return token
 
 
@@ -107,6 +135,11 @@ class MCPBridgeHandler(BaseHTTPRequestHandler):
     """HTTP handler: GET /health plus POST routes from handlers.ROUTES."""
 
     timeout = SOCKET_TIMEOUT_S  # slow-loris guard (socketserver honors this)
+    # HTTP/1.1 enables keep-alive so the Node client reuses one loopback socket
+    # across a session's many tool calls instead of a connect/close per request.
+    # Every response already sends Content-Length, the precondition keep-alive
+    # needs.
+    protocol_version = "HTTP/1.1"
 
     # Keep Blender's console quiet; route through the module logger instead.
     def log_message(self, fmt, *args):  # noqa: N802 (stdlib signature)
@@ -183,7 +216,19 @@ class MCPBridgeHandler(BaseHTTPRequestHandler):
             })
             return
 
-        body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        # Guard the raw socket read: a stalled or reset client mid-upload (very
+        # plausible for the large base64 payloads this endpoint anticipates)
+        # must yield a structured envelope, not an uncaught traceback to stderr
+        # that the Node client would misread as "Mixar is unreachable".
+        try:
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        except (TimeoutError, ConnectionError, OSError) as exc:
+            logger.warning("[MCP bridge] failed reading request body: %s", exc)
+            self._send_json(408, {
+                "success": False,
+                "error": "Timed out or lost connection reading the request body.",
+            })
+            return
         try:
             params = json.loads(body) if body else {}
         except (json.JSONDecodeError, RecursionError, ValueError) as exc:
@@ -290,18 +335,23 @@ def start_server(host: Optional[str] = None, port: Optional[int] = None) -> Opti
 
 
 def stop_server() -> None:
-    """Shut the bridge down gracefully (idempotent)."""
+    """Shut the bridge down gracefully (idempotent).
+
+    The lock is held across shutdown+close so a concurrent start_server() (e.g.
+    a rapid Reload Scripts / enable toggle) cannot observe "stopped" and try to
+    re-bind the port before the socket is actually released.
+    """
     global _server
     with _server_lock:
         server = _server
         _server = None
-    if server is not None:
-        try:
-            server.shutdown()
-            server.server_close()
-        except Exception as exc:
-            logger.warning("[MCP bridge] shutdown error: %s", exc)
-        logger.info("[MCP bridge] stopped")
+        if server is not None:
+            try:
+                server.shutdown()
+                server.server_close()
+            except Exception as exc:
+                logger.warning("[MCP bridge] shutdown error: %s", exc)
+            logger.info("[MCP bridge] stopped")
 
 
 def is_running() -> bool:

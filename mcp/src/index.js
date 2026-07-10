@@ -7,9 +7,10 @@
 // or any MCP-capable assistant) becomes the orchestrator and drives Mixar
 // directly. Because Mixar is a Blender 5.0 fork, this server exposes BOTH:
 //   * Mixar-native tools (mixar_*): sandboxed scripting, generation queue, BYOK
-//   * the full AnkleBreaker Blender MCP surface (blender_*): 44 core tools +
-//     ~180 advanced tools behind a two-tier proxy — vendored from our Blender
-//     MCP and pointed at Mixar's in-app bridge.
+//   * the full AnkleBreaker Blender MCP surface (blender_*): ~52 core tools +
+//     ~184 advanced tools behind a two-tier proxy — vendored from our Blender
+//     MCP and pointed at Mixar's in-app bridge. Every tool is annotated
+//     (read-only/destructive/idempotent/open-world) at assembly time.
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -32,6 +33,7 @@ import { providerTools } from "./tools/providers.js";
 import { splitToolTiers } from "./blender/tool-tiers.js";
 import { validateParams } from "./blender/validate-params.js";
 import { loadReferenceData } from "./blender/reference/loader.js";
+import { deriveAnnotations } from "./annotations.js";
 
 // Core Blender tools
 import { fileTools } from "./blender/tools/core/file.js";
@@ -133,38 +135,68 @@ const allBlenderTools = [
 const { coreTools, metaTools, advancedCount, coreCount } = splitToolTiers(allBlenderTools);
 const ALL_TOOLS = [...mixarTools, ...coreTools, ...metaTools];
 
+// O(1) dispatch — avoid a linear scan of ALL_TOOLS on every CallTool.
+const TOOL_BY_NAME = new Map(ALL_TOOLS.map((t) => [t.name, t]));
+
+// Drift guard: the core-tier membership set (CORE_TOOLS in tool-tiers.js) is a
+// hardcoded name list. If an upstream rename drops a name, the tool silently
+// demotes to advanced. Surface that instead of letting the "52 core" quietly rot.
+const EXPECTED_CORE_MIN = 50;
+if (coreCount < EXPECTED_CORE_MIN) {
+  console.error(
+    `[MCP] WARNING: only ${coreCount} core Blender tools resolved (expected >= ${EXPECTED_CORE_MIN}). ` +
+      "A tool may have been renamed upstream and silently demoted to the advanced tier — " +
+      "check CORE_TOOLS in blender/tool-tiers.js."
+  );
+}
+
+// Precompute the ListTools payload (annotations included) once.
+const LISTED_TOOLS = ALL_TOOLS.map(({ name, description, inputSchema }) => {
+  const annotations = deriveAnnotations(name);
+  return annotations ? { name, description, inputSchema, annotations } : { name, description, inputSchema };
+});
+
 console.error(
   `[MCP] Mixar tools: ${mixarTools.length} | Blender tiers: ${coreCount} core + ` +
-    `${advancedCount} advanced (via blender_advanced_tool) | ${ALL_TOOLS.length} exposed`
+    `${advancedCount} advanced (via blender_advanced_tool) | ${ALL_TOOLS.length} exposed | ` +
+    `${LISTED_TOOLS.filter((t) => t.annotations).length} annotated`
 );
 
 const server = new Server(
-  { name: "mixar-mcp-server", version: "0.2.0" },
+  { name: "mixar-mcp-server", version: "0.3.0" },
   {
     capabilities: { tools: {} },
     instructions: [
-      "You are driving Mixar (a Blender 5.0 fork) directly — you replace its hosted AI agent.",
-      "Two tool families: mixar_* (sandboxed scripting, generation queue, BYOK keys) and",
-      "blender_* (the full Blender editing surface — scene/object/mesh/material/modifier/render/",
-      "animation/UV/sculpt/armature/node/physics/etc.). Use blender_list_advanced_tools +",
-      "blender_advanced_tool to reach specialized tools. Never call the HTTP bridge directly.",
-      "Understand the scene with mixar_scene_info / blender_scene_info, then act with the",
-      "structured blender_* tools or mixar_execute_script for arbitrary bpy.",
+      "You are driving Mixar (a Blender 5.0 fork) directly — you REPLACE its hosted AI agent, so",
+      "you do the planning and tool selection yourself.",
+      "",
+      "TWO TOOL FAMILIES:",
+      "• mixar_* — Mixar-native: mixar_execute_script (arbitrary sandboxed bpy: modules bpy/bmesh/",
+      "mathutils/numpy available, but NO os/pathlib/eval/exec; return data by assigning a dict to",
+      "__RESULT__), the generation queue (mixar_generate → mixar_generation_job_status), and",
+      "mixar_provider_keys (BYOK).",
+      "• blender_* — the full Blender editing surface. 52 common tools are exposed directly; ~184",
+      "specialized ones are reachable via blender_list_advanced_tools (discover) + blender_advanced_tool",
+      "(invoke by name).",
+      "",
+      "WORKFLOW: inspect first (mixar_scene_info / blender_scene_info / blender_object_info /",
+      "mixar_scene_graph), then act with structured blender_* tools; drop to mixar_execute_script only",
+      "for logic no structured tool covers. Prefer structured tools — they validate inputs and are",
+      "annotated (read-only vs destructive).",
+      "",
+      "NOTES: Tools are annotated with readOnlyHint/destructiveHint/idempotentHint/openWorldHint — respect",
+      "them (confirm destructive ops like deletes). The bridge serializes bpy access on one main thread,",
+      "so a long render/bake blocks other calls and a busy bridge answers 'busy: true' — back off and",
+      "retry, don't hammer. Call mixar_health first if tools fail. Never call the HTTP bridge directly.",
     ].join(" "),
   }
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: ALL_TOOLS.map(({ name, description, inputSchema }) => ({
-    name,
-    description,
-    inputSchema,
-  })),
-}));
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: LISTED_TOOLS }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  const tool = ALL_TOOLS.find((t) => t.name === name);
+  const tool = TOOL_BY_NAME.get(name);
   if (!tool) {
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -213,7 +245,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error(
-    `Mixar MCP Server v0.2.0 on stdio — ${ALL_TOOLS.length} tools (bridge: ${CONFIG.mixarHost}:${CONFIG.mixarPort})`
+    `Mixar MCP Server v0.3.0 on stdio — ${ALL_TOOLS.length} tools (bridge: ${CONFIG.mixarHost}:${CONFIG.mixarPort})`
   );
 }
 
