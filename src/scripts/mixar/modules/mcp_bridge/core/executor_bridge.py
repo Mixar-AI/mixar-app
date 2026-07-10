@@ -193,6 +193,10 @@ def run_on_main_thread_sync(fn, timeout: Optional[float] = None) -> dict:
             # "ghost" run after the lock was already reused). Skip cleanly; the
             # lock is still released in `finally`.
             if _LOAD_GENERATION != sched_generation:
+                logger.info(
+                    "MCP bridge: discarding a stale main-thread job (scene changed via "
+                    "file load or bridge reload between schedule and run)."
+                )
                 holder["result"] = {
                     "success": False,
                     "error": "Abandoned: the scene changed (file load or bridge reload) "
