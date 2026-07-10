@@ -116,3 +116,4 @@ def test_valid_bake_types_match_backend_vocabulary():
     """BAKED-mask bake types must match the backend planner's BakeType literal
     (AO/CAVITY/DUST/POINTINESS) and the paint module's bake_type_items identifiers."""
     assert mod._VALID_BAKE_TYPES == {"AO", "CAVITY", "POINTINESS", "DUST"}
+    assert set(mod._BAKE_CONFIG) == mod._VALID_BAKE_TYPES | {"BEVEL_MASK"}
