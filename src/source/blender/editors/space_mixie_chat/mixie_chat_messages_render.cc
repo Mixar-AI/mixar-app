@@ -185,15 +185,22 @@ void mixie_chat_render_messages(const bContext *C,
                                    combined_todo,
                                    sizeof(combined_todo));
 
-        /* Draw single combined todo bubble */
+        /* Draw single combined todo bubble. Todo text wraps at content_width
+         * (see the layout pass), so the bubble must span the full content
+         * area — bubble_width is fitted to the main text (e.g. a short
+         * loader line) and can be narrower, which would let the wrapped
+         * todo text overflow the bubble. Same formula as the steps card. */
         float todo_bubble_y = layout.y_pos - metrics.bubble_spacing;
         ChatBubbleStyle slot_todo_style = layout.style;
         chat_ui_get_prompt_button_color(slot_todo_style.bg_color);
 
+        const float todo_block_width = layout.content_width +
+                                       2.0f * slot_todo_style.h_padding +
+                                       4.0f * UI_SCALE_FAC;
         chat_ui_draw_bubble(&slot_todo_style, combined_todo,
                             layout.bubble_x,
                             todo_bubble_y - layout.slot_todo_height,
-                            layout.bubble_width, layout.slot_todo_height,
+                            todo_block_width, layout.slot_todo_height,
                             layout.content_width);
       }
 
@@ -207,12 +214,19 @@ void mixie_chat_render_messages(const bContext *C,
           action_y -= layout.slot_todo_height + metrics.bubble_spacing;
         }
 
+        /* Action labels wrap at content_width like the todo/steps cards, so
+         * the buttons span the full content area too (bubble_width can be
+         * narrower than the wrapped label). Bounds must match the draw. */
+        const float action_block_width = layout.content_width +
+                                         2.0f * layout.style.h_padding +
+                                         4.0f * UI_SCALE_FAC;
+
         for (int i = 0; i < layout.slot_action_count; i++) {
           ActionSlotData &action = mutable_layout.slot_actions[i];
 
           /* Calculate bounds */
           action.bounds.xmin = layout.bubble_x;
-          action.bounds.xmax = layout.bubble_x + layout.bubble_width;
+          action.bounds.xmax = layout.bubble_x + action_block_width;
           action.bounds.ymin = action_y - action.height;
           action.bounds.ymax = action_y;
 
@@ -243,9 +257,11 @@ void mixie_chat_render_messages(const bContext *C,
              * preview thumbnail (bpy.data.images lookup) with the label to
              * its right. A missing image draws nothing (returns 0) and the
              * row gracefully reads as a text button. Height was laid out
-             * from the same CHAT_ACTION_THUMB_SIZE constant. */
+             * from the same CHAT_ACTION_THUMB_SIZE constant. Draw at
+             * action_block_width (develop 7462b76a) so the card matches the
+             * hit-test bounds and the wrapped-label cards around it. */
             chat_ui_draw_bubble(&action_style, "", action.bounds.xmin,
-                                action.bounds.ymin, layout.bubble_width,
+                                action.bounds.ymin, action_block_width,
                                 action.height, layout.content_width);
 
             const float thumb = CHAT_ACTION_THUMB_SIZE * UI_SCALE_FAC;
@@ -285,7 +301,7 @@ void mixie_chat_render_messages(const bContext *C,
           }
           else {
             chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
-                                action.bounds.ymin, layout.bubble_width,
+                                action.bounds.ymin, action_block_width,
                                 action.height, layout.content_width);
           }
 

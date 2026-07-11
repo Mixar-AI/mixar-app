@@ -130,6 +130,24 @@ def _feature_label(feature_key: str) -> str:
     return _FEATURE_LABEL.get(feature_key, feature_key.replace('_', ' ').title())
 
 
+# Friendly overrides for a few model slugs whose auto-prettified form reads
+# poorly; everything else falls through to a title-cased slug. Kept small on
+# purpose — the raw slug is informative, so we don't try to mirror the whole
+# catalog here.
+_MODEL_LABEL = {
+    "pro": "Pro",
+    "standard": "Standard",
+}
+
+
+def _model_label(model: str) -> str:
+    """Human-facing model name for the row-2 chip. "" when the job has none."""
+    m = (model or "").strip()
+    if not m:
+        return ""
+    return _MODEL_LABEL.get(m, m.replace('_', ' ').replace('-', ' ').title())
+
+
 def _status_word(state: str, substate: str) -> str:
     """Row-2 status text — collapses SUCCESS to a plain 'Done'."""
     if state == JobState.SUCCESS.value:
@@ -209,9 +227,9 @@ class MIXIE_UL_unified_queue(UIList):
         # together but still respects separator gaps).
         col.separator(factor=0.4)
 
-        # -- Row 2: | pill 40% | gap 30% | status 30% | across the full row
-        # width, so the right-aligned status lines up with row 1's elapsed
-        # time at the row's right edge.
+        # -- Row 2: | type chip [+ model chip] ~70% | status ~30% | across the
+        # full row width, so the right-aligned status lines up with row 1's
+        # elapsed time at the row's right edge.
         # Row 2 is visually secondary to row 1 purely via ``scale_y`` — we
         # avoid ``active = False`` because Blender inverts text colour on
         # the highlighted (selected) UIList row, which turns dimmed text
@@ -222,17 +240,22 @@ class MIXIE_UL_unified_queue(UIList):
         # error row below) so the pill's left edge lines up with the title
         # text after row 1's status dot.
         second.label(text="", icon='BLANK1')
-        outer = second.split(factor=0.5, align=True)
+        # Left ~70% carries the type chip and (when present) the model chip;
+        # the remaining ~30% right-aligns the status word to the row's edge.
+        outer = second.split(factor=0.7, align=True)
 
-        # Left ~third = bordered pill, kept narrow so it hugs the label
-        # text. Sentence case (as authored in _FEATURE_LABEL) reads better
-        # in a chip than a shout-cased tag.
-        pill_box = outer.box()
-        pill_box.label(text=job_type)
+        # Left = bordered pill(s): the feature type, then the model used, so two
+        # jobs of the same type but different models are distinguishable.
+        # Sentence case (as authored in _FEATURE_LABEL) reads better in a chip.
+        chips = outer.row(align=True)
+        type_box = chips.box()
+        type_box.label(text=job_type)
+        model_label = _model_label(item.model)
+        if model_label:
+            model_box = chips.box()
+            model_box.label(text=model_label)
 
-        # Remaining width: split in half — empty gap, then the status word.
-        rest = outer.split(factor=0.3, align=True)
-        rest.label(text="")  # gap between pill and status
+        rest = outer.column(align=True)
 
         # Status word, right-aligned so it sits at row 2's right edge.
         # Must be a ``.column()``, not a ``.row()`` — the working

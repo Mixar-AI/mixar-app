@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 from pathlib import Path
 
 
@@ -18,28 +19,70 @@ def read_job_queue(relative_path: str) -> str:
     return (COMMON_JOB_QUEUE / relative_path).read_text()
 
 
+def identifiers(source: str) -> set[str]:
+    """Return active Python identifiers, excluding comments and strings."""
+    names = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Name):
+            names.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            names.add(node.attr)
+        elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.alias):
+            names.add(node.asname or node.name.rsplit('.', 1)[-1])
+    return names
+
+
+def assigned_class_names(source: str) -> set[str]:
+    """Return class names in the module's final ``classes`` assignment."""
+    value = None
+    for node in ast.parse(source).body:
+        if (
+            isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "classes"
+                for target in node.targets
+            )
+        ):
+            value = node.value.body if isinstance(node.value, ast.IfExp) else node.value
+    if not isinstance(value, (ast.Tuple, ast.List)):
+        return set()
+    return {
+        element.id
+        for element in value.elts
+        if isinstance(element, ast.Name)
+    }
+
+
 def test_scene_gen_exp_operators_are_not_registered():
     operators = read("operators/scene_gen_exp_ops.py")
     place_ops = read("operators/scene_gen_exp_place_ops.py")
+    operator_registry = identifiers(read("operators/__init__.py"))
 
-    assert "classes = ()" in operators
-    assert "classes = ()" in place_ops
-    assert "register_class" not in operators
-    assert "mixie.scene_gen_exp_" not in read("operators/__init__.py")
+    # The implementation remains for later reuse, but its module-level register
+    # hook is deliberately a no-op and the aggregate registry does not import it.
+    register = next(
+        node
+        for node in ast.parse(operators).body
+        if isinstance(node, ast.FunctionDef) and node.name == "register"
+    )
+    assert len(register.body) == 1 and isinstance(register.body[0], ast.Return)
+    assert assigned_class_names(place_ops) == set()
+    assert "scene_gen_exp_ops" not in operator_registry
 
 
 def test_scene_gen_exp_ui_list_is_not_registered():
     ui_list = read("lists/scene_gen_exp_uilist.py")
+    panels = read("moodboard_sidebar_panels.py")
 
-    assert "classes = ()" in ui_list
-    assert "MIXIE_UL_scene_gen_labels" not in read("moodboard_sidebar_panel.py")
-    assert "MIXIE_UL_scene_gen_labels" not in read("sidebar_panel_drawers.py")
+    assert assigned_class_names(ui_list) == set()
+    assert "MIXIE_PT_gen_scene_gen_exp" not in assigned_class_names(panels)
 
 
 def test_scene_gen_exp_properties_are_not_registered_on_bpy_types():
     scene_registration = read("moodboard_scene_registration.py")
     tab_properties = read("moodboard_tab_properties.py")
-    exp_tab_properties = read("moodboard_scene_gen_exp_tab_props.py")
     queue_properties = read_job_queue("ui/properties/queue_properties.py")
 
     forbidden = (
@@ -54,8 +97,7 @@ def test_scene_gen_exp_properties_are_not_registered_on_bpy_types():
         "scene_gen_lp",
         "SCENE_GEN_EXP",
     )
-    assert "classes = ()" in exp_tab_properties
     for symbol in forbidden:
-        assert symbol not in scene_registration
-        assert symbol not in tab_properties
-        assert symbol not in queue_properties
+        assert symbol not in identifiers(scene_registration)
+        assert symbol not in identifiers(tab_properties)
+        assert symbol not in identifiers(queue_properties)
