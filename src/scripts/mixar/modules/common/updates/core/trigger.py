@@ -140,8 +140,6 @@ def _do_update_check() -> None:
 
 def _on_check_success(response) -> None:
     """Handle the API response from the update check."""
-    from mixar.config.config import get_config
-
     from .downloader import get_cached_installer
     from .state import get_update_state
     from .update_checker import get_skipped_version, parse_update_response
@@ -157,6 +155,7 @@ def _on_check_success(response) -> None:
         if info is None:
             logger.info("No update available")
             state.set_idle()
+            _tag_topbar_redraw()
             if interactive:
                 _push_up_to_date_toast()
             return
@@ -167,6 +166,7 @@ def _on_check_success(response) -> None:
             if skipped and skipped == info.latest_version:
                 logger.info("Version %s was skipped by user", info.latest_version)
                 state.set_idle()
+                _tag_topbar_redraw()
                 return
 
         logger.info(
@@ -189,16 +189,9 @@ def _on_check_success(response) -> None:
             _push_ready_toast(info)
             return
 
-        # Download only on explicit user action ([Update]) unless the user
-        # opted into auto-download via config (default: False). Either path is
-        # visible — begin_download shows a live progress toast.
-        config = get_config()
-        auto_download = config.get("updates", {}).get("auto_download", False)
-
-        if auto_download and info.download_url:
-            begin_download(info)
-        else:
-            _push_update_available_toast(info)
+        # Download starts only on explicit user action ([Update]) —
+        # begin_download shows a live progress toast.
+        _push_update_available_toast(info)
 
     except Exception as e:
         logger.error("Failed to process update response: %s", e, exc_info=True)
@@ -229,8 +222,8 @@ _PROGRESS_INTERVAL = 0.4
 def begin_download(info) -> None:
     """Start (or resume from cache) the installer download for *info*.
 
-    Main-thread safe. Called by ``_on_check_success`` (auto-download) and by
-    the ``mixar.start_update_download`` operator ([Update] / [Retry]).
+    Main-thread safe. Called by the ``mixar.start_update_download``
+    operator ([Update] / [Retry]).
     """
     from .downloader import get_cached_installer
     from .state import get_update_state
@@ -314,6 +307,7 @@ def _start_background_download(info) -> None:
             # cancel flag) so no stale ready/failed toast is shown afterwards.
             logger.info("Download cancelled by user for %s", info.latest_version)
             state.set_idle()
+            bpy.app.timers.register(_tag_topbar_redraw, first_interval=0.0)
 
     thread = threading.Thread(
         target=_run, daemon=True, name="MixarUpdateDownload",
@@ -331,6 +325,20 @@ def _start_background_download(info) -> None:
 def is_forced(info) -> bool:
     """A forced or unsupported update must be installed — no skipping."""
     return bool(info.force_update or info.unsupported)
+
+
+def _tag_topbar_redraw():
+    """Refresh the topbar update badge (main thread only).
+
+    Usable directly or as a one-shot ``bpy.app.timers`` callback.
+    """
+    try:
+        from ..ui.topbar_badge import tag_topbar_redraw
+
+        tag_topbar_redraw()
+    except Exception:
+        pass
+    return None
 
 
 def _push_update_toast(info, ready: bool) -> None:
@@ -380,6 +388,7 @@ def _push_update_toast(info, ready: bool) -> None:
         "Pushed update toast for v%s (ready=%s, forced=%s)",
         info.latest_version, ready, forced,
     )
+    _tag_topbar_redraw()
     return None  # For use as timer callback
 
 
@@ -456,6 +465,7 @@ def _push_update_available_toast(info) -> None:
         dismissible=not forced,
     )
     logger.info("Pushed 'update available' toast for v%s", info.latest_version)
+    _tag_topbar_redraw()
     return None
 
 
@@ -501,6 +511,7 @@ def _push_downloading_toast() -> None:
         id=UPDATE_NOTIFICATION_ID,
         dismissible=not forced,
     )
+    _tag_topbar_redraw()
     return None
 
 
@@ -540,4 +551,5 @@ def _push_download_failed_toast(info) -> None:
         dismissible=not forced,
     )
     logger.warning("Pushed 'download failed' toast for v%s", info.latest_version)
+    _tag_topbar_redraw()
     return None

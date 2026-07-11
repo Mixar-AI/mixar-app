@@ -164,6 +164,7 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         changelog_summary=data.get("changelog_summary", ""),
         changelog_url=data.get("changelog_url", ""),
         download_url=download.get("url", ""),
+        browser_download_url=data.get("browser_download_url", ""),
         download_size_bytes=download.get("size_bytes", 0),
         sha256=sha256,
         installer_type=installer_type,

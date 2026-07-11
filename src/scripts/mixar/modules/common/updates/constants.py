@@ -11,7 +11,6 @@ downloader, and installer subsystems.
 
 from enum import Enum
 
-
 # ============================================================================
 # TIMING
 # ============================================================================
@@ -61,7 +60,7 @@ OP_CHECK_FOR_UPDATES = "mixar.check_for_updates"
 
 # Public downloads page — browser fallback when the in-app download fails.
 # Overridable at runtime via mixar.json ("updates" -> "downloads_url").
-DOWNLOADS_PAGE_URL = "https://mixar.app/downloads"
+DOWNLOADS_PAGE_URL = "https://www.mixar.app/downloads"
 
 # ============================================================================
 # STATE MACHINE
