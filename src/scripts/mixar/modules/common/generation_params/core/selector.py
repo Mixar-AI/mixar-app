@@ -115,6 +115,25 @@ def resolve_model_slug(
     return fallback
 
 
+def model_supports_multi_view(service_key: str, model_slug: str) -> bool:
+    """True when the selected catalog model accepts multi-view images.
+
+    Reads the per-model ``supports_multi_view`` flag from the catalog.
+    Keyed on the model (not the service key) so the multi-view uploader
+    follows the Hunyuan Pro models across service merges — historically it
+    was gated on the ``image_to_3d`` service key, which vanished when
+    Image-to-3D / 3D Pro / Rapid were consolidated into one service.
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        slug = resolve_model_slug(service_key, model_slug)
+        model = get_model(service_key, slug)
+        return bool((model or {}).get("supports_multi_view"))
+    except Exception:
+        return False
+
+
 def get_param_enum_items(
     service_key: str,
     model_slug: str,

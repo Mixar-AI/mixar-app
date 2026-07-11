@@ -116,7 +116,8 @@ class MIXIE_OT_model_gen_generate(Operator):
 
     def execute(self, context):
         from mixar.modules.common.generation_params import (
-            assemble_payload, collect_params, resolve_service_key,
+            assemble_payload, collect_params, model_supports_multi_view,
+            resolve_service_key,
         )
         from mixar.modules.common.utils.image_utils import (
             compress_for_service, compress_image_for_upload,
@@ -148,16 +149,17 @@ class MIXIE_OT_model_gen_generate(Operator):
             self.report({"WARNING"}, "Please wait for models to load")
             return {"CANCELLED"}
 
-        # --- Inputs (image shared by all modes; multi-view Pro-only) ---
+        # --- Inputs (image shared by all modes; multi-view for models that
+        # advertise supports_multi_view, keyed per-model not per-service) ---
         image = self._get_input_image(context, tab)
         prompt = (getattr(tab, 'prompt', '') or '').strip() or None
+        supports_mv = model_supports_multi_view(service_key, model)
         multi_views = (
-            self._get_multi_views(context)
-            if service_key == "image_to_3d" else None
+            self._get_multi_views(context) if supports_mv else None
         )
 
         # Per-mode input validation (mirrors each legacy operator).
-        if service_key == "image_to_3d":
+        if service_key == "image_to_3d" or supports_mv:
             if not (image or prompt or multi_views):
                 self.report(
                     {"WARNING"},
