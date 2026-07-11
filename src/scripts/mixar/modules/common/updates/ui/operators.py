@@ -10,8 +10,6 @@ for available updates.  Auto-registered by bootstrap via the ``classes``
 tuple at module level.
 """
 
-import webbrowser
-
 import bpy
 
 from mixar.config.logging_config import get_logger
@@ -27,6 +25,7 @@ class MIXAR_OT_install_update(bpy.types.Operator):
     bl_options = {"INTERNAL"}
 
     def execute(self, context):
+        from ..core import trigger
         from ..core.installer import launch_installer
         from ..core.state import get_update_state
         from ..constants import UPDATE_NOTIFICATION_ID
@@ -41,6 +40,7 @@ class MIXAR_OT_install_update(bpy.types.Operator):
 
         state.set_installing()
         get_notification_store().dismiss(UPDATE_NOTIFICATION_ID)
+        trigger._tag_topbar_redraw()
 
         if launch_installer(path, quit_blender=True):
             return {"FINISHED"}
@@ -58,6 +58,7 @@ class MIXAR_OT_dismiss_update(bpy.types.Operator):
     bl_options = {"INTERNAL"}
 
     def execute(self, context):
+        from ..core import trigger
         from ..core.state import get_update_state
         from ..core.trigger import is_forced
         from ..core.update_checker import set_skipped_version
@@ -80,6 +81,7 @@ class MIXAR_OT_dismiss_update(bpy.types.Operator):
 
         get_notification_store().dismiss(UPDATE_NOTIFICATION_ID)
         state.set_idle()
+        trigger._tag_topbar_redraw()
         return {"FINISHED"}
 
 
@@ -114,9 +116,22 @@ class MIXAR_OT_open_downloads_page(bpy.types.Operator):
         from mixar.config.config import get_config
 
         from ..constants import DOWNLOADS_PAGE_URL
+        from ..core.state import get_update_state
 
-        url = get_config().get("updates", {}).get("downloads_url") or DOWNLOADS_PAGE_URL
-        webbrowser.open(url)
+        # Prefer a per-release URL supplied by the backend in the /check
+        # response; only trust an explicit https URL, else fall back to the
+        # configured downloads page, then the hardcoded constant.
+        info = get_update_state().update_info
+        backend_url = info.browser_download_url if info else ""
+
+        if backend_url.startswith("https://"):
+            url = backend_url
+        else:
+            url = get_config().get("updates", {}).get("downloads_url") or DOWNLOADS_PAGE_URL
+
+        # Use Blender's native URL opener — webbrowser.open() fails silently
+        # under Blender's embedded Python (no browser registry populated).
+        bpy.ops.wm.url_open(url=url)
         return {"FINISHED"}
 
 
@@ -181,6 +196,38 @@ class MIXAR_OT_check_for_updates(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class MIXAR_OT_show_update_toast(bpy.types.Operator):
+    """Show details for the pending Mixar update"""
+
+    bl_idname = "mixar.show_update_toast"
+    bl_label = "Update Available"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        from ..constants import UpdateState
+        from ..core import trigger
+        from ..core.state import get_update_state
+
+        state = get_update_state()
+        info = state.update_info
+        if info is None:
+            return {"CANCELLED"}
+
+        # Re-push the sticky toast matching the current lifecycle state —
+        # this is the topbar badge's click action, so a user who dismissed
+        # the toast can always get back to the Update/Install buttons.
+        current = state.state
+        if current == UpdateState.READY:
+            trigger._push_ready_toast(info)
+        elif current == UpdateState.DOWNLOADING:
+            trigger._push_downloading_toast()
+        elif current == UpdateState.ERROR:
+            trigger._push_download_failed_toast(info)
+        else:
+            trigger._push_update_available_toast(info)
+        return {"FINISHED"}
+
+
 class MIXAR_OT_open_changelog(bpy.types.Operator):
     """Open the changelog in the default browser"""
 
@@ -199,7 +246,7 @@ class MIXAR_OT_open_changelog(bpy.types.Operator):
             self.report({"WARNING"}, "No changelog URL available")
             return {"CANCELLED"}
 
-        webbrowser.open(url)
+        bpy.ops.wm.url_open(url=url)
         return {"FINISHED"}
 
 
@@ -210,5 +257,6 @@ classes = (
     MIXAR_OT_open_downloads_page,
     MIXAR_OT_cancel_update,
     MIXAR_OT_check_for_updates,
+    MIXAR_OT_show_update_toast,
     MIXAR_OT_open_changelog,
 )

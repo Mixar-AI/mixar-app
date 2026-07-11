@@ -64,7 +64,8 @@ def _draw_model_gen(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_image_to_3d
 
     from mixar.modules.common.generation_params import (
-        draw_capability_selector, resolve_service_key,
+        draw_capability_selector, model_supports_multi_view,
+        resolve_service_key,
     )
     service_key = resolve_service_key(
         "model_gen", getattr(tab, "mode", "")
@@ -89,8 +90,11 @@ def _draw_model_gen(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
-    # --- Multi-view images (Image to 3D Pro only) ---
-    if service_key == "image_to_3d" and hasattr(scene, 'hunyuan'):
+    # --- Multi-view images (models that advertise supports_multi_view) ---
+    if (
+        model_supports_multi_view(service_key, getattr(tab, "model", ""))
+        and hasattr(scene, 'hunyuan')
+    ):
         draw_section_separator(layout)
         _draw_multi_view_section(layout, scene)
 

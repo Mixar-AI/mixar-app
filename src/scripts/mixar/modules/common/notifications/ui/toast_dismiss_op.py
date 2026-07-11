@@ -17,8 +17,6 @@ toast_renderer.
   redraw.
 """
 
-import webbrowser
-
 import bpy
 from bpy.types import Operator
 
@@ -101,8 +99,10 @@ class NOTIFICATION_OT_toast_click(Operator):
         # URL links
         for nid, url, bx, by, bw, bh in bounds["url"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
+                # Native opener — webbrowser.open() fails silently under
+                # Blender's embedded Python.
                 try:
-                    webbrowser.open(url)
+                    bpy.ops.wm.url_open(url=url)
                 except Exception as e:
                     logger.error("Failed to open URL %s: %s", url, e)
                 return {'FINISHED'}

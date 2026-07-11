@@ -29,6 +29,7 @@ class UpdateInfo:
     changelog_summary: str = ""
     changelog_url: str = ""
     download_url: str = ""
+    browser_download_url: str = ""
     download_size_bytes: int = 0
     sha256: str = ""
     installer_type: str = ""
