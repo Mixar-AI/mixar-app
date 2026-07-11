@@ -71,6 +71,9 @@ def schedule(scene, bubble):
             "asset_name": action.asset_name,
             "library": action.library,
             "blend_file": action.blend_file,
+            # 'Collection' vs mesh types — picks the right datablock when the
+            # .blend contains BOTH a collection asset and a same-named object.
+            "type": action.asset_type,
         }
         name = image_name_for(candidate)
         if bpy.data.images.get(name) is not None:
@@ -109,9 +112,19 @@ def _process_next():
         name = None
 
     if name:
-        _assign_image(scene_name, bubble_id, action_value, name)
+        try:
+            _assign_image(scene_name, bubble_id, action_value, name)
+        except Exception:
+            logger.exception("[AssetChoice] could not assign preview image")
 
-    return 0.05 if _queue else None
+    if _queue:
+        return 0.05
+    # Latch reset on the LAST item too — resetting only on the empty-at-entry
+    # branch left _timer_running stuck True after a round completed, so the
+    # NEXT picker's schedule() never restarted the timer and its previews
+    # never generated (second-picker no-images bug).
+    _timer_running = False
+    return None
 
 
 def _assign_image(scene_name, bubble_id, action_value, image_name):
@@ -211,13 +224,20 @@ def _generate(candidate):
         return None
 
     asset_name = candidate["asset_name"]
+    # A collection asset's .blend usually ALSO contains a same-named member
+    # object — probing objects first then appended the WRONG datablock (no
+    # embedded preview on it → blank thumbnails). The search metadata's type
+    # says which one the asset actually is.
+    prefer_collection = (candidate.get("type") or "").lower().startswith("collection")
 
-    # Append the datablock (object or collection).
+    # Append the datablock (object or collection, type-aware preference).
     with bpy.data.libraries.load(blend_path, link=False) as (data_from, data_to):
-        if asset_name in data_from.objects:
-            data_to.objects = [asset_name]
-        elif asset_name in getattr(data_from, "collections", []):
+        in_objects = asset_name in data_from.objects
+        in_collections = asset_name in getattr(data_from, "collections", [])
+        if in_collections and (prefer_collection or not in_objects):
             data_to.collections = [asset_name]
+        elif in_objects:
+            data_to.objects = [asset_name]
         else:
             logger.warning(
                 "[AssetChoice] '%s' not found in %s", asset_name, blend_path,
@@ -243,6 +263,24 @@ def _generate(candidate):
         render_objs = (
             [appended_obj] if appended_obj else list(appended_coll.all_objects)
         )
+        # A render of nothing produces an all-black JPEG that reads as a blank
+        # button — a plain text button is better. Only render when there is
+        # something visible (meshes/curves, or collection-instancer empties).
+        renderable = any(
+            o.type in {"MESH", "CURVE", "SURFACE", "META", "FONT"}
+            or (
+                o.type == "EMPTY"
+                and getattr(o, "instance_type", "") == "COLLECTION"
+                and getattr(o, "instance_collection", None) is not None
+            )
+            for o in render_objs
+        )
+        if not renderable:
+            logger.warning(
+                "[AssetChoice] '%s' has no renderable geometry — leaving a "
+                "text-only button", asset_name,
+            )
+            return None
         if appended_obj:
             if appended_obj.name not in scene_coll.objects:
                 scene_coll.objects.link(appended_obj)
