@@ -65,6 +65,15 @@ class MIXIE_PT_asset_library_search(Panel):
                     icon='FILE_REFRESH',
                 )
 
+            # Delete ALL embeddings — icon-only, confirmation dialog on click
+            delete_sub = row.row(align=True)
+            delete_sub.scale_x = 0.8
+            delete_sub.operator(
+                "mixie.delete_asset_embeddings",
+                text="",
+                icon='TRASH',
+            )
+
             # Stale-embeddings warning
             if state and state.needs_retraining:
                 col.separator(factor=0.3)
