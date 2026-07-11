@@ -18,8 +18,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 
 from ....auth.core.auth import (
-    delete_access_token,
-    delete_refresh_token,
+    clear_credentials,
     get_access_token,
     get_user_info,
     open_dashboard_with_handoff,
@@ -194,13 +193,17 @@ def _auth_check_background() -> None:
     All HTTP I/O (get_user_info, refresh_access_token) happens here.
     bpy property writes are handed back to the main thread via a timer.
     """
+    global _auth_check_started
     user_info = get_user_info()
     if user_info and user_info.get("status") == "success":
         _schedule_apply_login(user_info, refreshed=False)
         return
 
-    # Token invalid — try refresh
+    # Token invalid — try refresh. Snapshot the access token first so a
+    # definitive rejection can distinguish "this pair is dead" from "another
+    # Blender process rotated the pair while our request was in flight".
     logger.debug("Access token invalid, attempting refresh")
+    stale_access_token = get_access_token()
     refresh_result = refresh_access_token()
 
     if refresh_result and refresh_result.get("success"):
@@ -208,11 +211,46 @@ def _auth_check_background() -> None:
         if user_info and user_info.get("status") == "success":
             _schedule_apply_login(user_info, refreshed=True)
             return
+        # Rotation succeeded, so the new credential pair is authoritative.
+        # A transient /me failure must not delete it and launch SSO.
+        logger.warning("Post-refresh user validation failed; preserving credentials")
+        _auth_check_started = False
+        return
 
-    # Both failed — clear tokens and show login panel
-    logger.info("Token refresh failed, clearing credentials")
-    delete_access_token()
-    delete_refresh_token()
+    if refresh_result and refresh_result.get("retryable"):
+        # The refresh attempt is deliberately retained with its idempotency key
+        # for a later check. Clearing credentials here would destroy recovery
+        # after a timeout, proxy error, rate limit, or backend outage.
+        logger.warning(
+            "Token refresh failed transiently; preserving credentials for retry: %s",
+            refresh_result.get("message"),
+        )
+        _auth_check_started = False
+        return
+
+    # A definitive rejection can also mean a second Blender process won the
+    # rotation race: its refresh consumed the token first, and the 401 handler
+    # deliberately leaves that foreign pair in safe storage. If the stored
+    # access token changed to a different non-empty value, that pair is
+    # authoritative — adopt it rather than destroying it. (Our own definitive
+    # 401 deletes the pair, leaving it empty, so this never masks a real
+    # rejection.)
+    current_access_token = get_access_token()
+    if current_access_token and current_access_token != stale_access_token:
+        user_info = get_user_info()
+        if user_info and user_info.get("status") == "success":
+            _schedule_apply_login(user_info, refreshed=True)
+            return
+        logger.warning(
+            "Refresh rejected but another process stored newer credentials; "
+            "preserving them"
+        )
+        _auth_check_started = False
+        return
+
+    # A definitive 401/403 (or a missing token) requires reauthentication.
+    logger.info("Token refresh was definitively rejected, clearing credentials")
+    clear_credentials()
 
     def _mark_expired():
         wm = getattr(bpy.context, 'window_manager', None)
@@ -433,8 +471,7 @@ class MIXIE_CHAT_OT_logout(Operator):
         _auto_connect_scheduled = False
 
         # Delete tokens from keyring
-        delete_access_token()
-        delete_refresh_token()
+        clear_credentials()
 
         # Clear cached generation configs
         invalidate_generation_caches()
