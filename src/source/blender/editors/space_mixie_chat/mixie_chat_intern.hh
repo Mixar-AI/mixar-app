@@ -255,6 +255,7 @@ float chat_ui_get_thumbnail_border_radius();
 float chat_ui_get_thumbnail_padding();
 void chat_ui_get_thumbnail_border_color(float out_color[4]);
 void chat_ui_get_button_hover_color(float out_color[4]);
+void chat_ui_get_history_row_hover_color(float out_color[4]);
 void chat_ui_get_placeholder_text_color(float out_color[4]);
 void chat_ui_get_prompt_button_color(float out_color[4]);
 

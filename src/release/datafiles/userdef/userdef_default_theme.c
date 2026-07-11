@@ -823,6 +823,7 @@ const bTheme U_theme_default = {
     .chat_button_bg = RGBA(0x545454ff),
     .chat_button_text = RGBA(0xffffffff),
     .chat_button_hover = RGBA(0x668cd9ff),
+    .chat_history_row_hover = RGBA(0xffffff12),
     .chat_prompt_button = RGBA(0x30303000),
     .chat_placeholder_text = RGBA(0xffffff80),
     .chat_thumbnail_border = RGBA(0x70c62dff),

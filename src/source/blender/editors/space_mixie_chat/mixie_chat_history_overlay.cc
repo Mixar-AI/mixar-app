@@ -90,7 +90,8 @@ static const float COL_PANEL_SHADOW[4] = {0.0f, 0.0f, 0.0f, 0.35f};
 static const float COL_HEADER_TEXT[4] = {0.92f, 0.94f, 0.97f, 1.0f};
 static const float COL_MUTED[4] = {0.52f, 0.56f, 0.61f, 1.0f};
 static const float COL_DIVIDER[4] = {1.0f, 1.0f, 1.0f, 0.06f};
-static const float COL_ROW_HOVER[4] = {1.0f, 1.0f, 1.0f, 0.055f};
+/* Row hover comes from the theme: theme.space_mixie_chat.chat_history_row_hover
+ * (chat_ui_get_history_row_hover_color), seeded by the Python bootstrap. */
 static const float COL_TITLE[4] = {0.86f, 0.88f, 0.91f, 0.96f};
 static const float COL_TITLE_CURRENT[4] = {0.97f, 0.98f, 1.0f, 1.0f};
 static const float COL_ACCENT[4] = CHAT_ACCENT_LIVE;
@@ -180,6 +181,10 @@ static void history_draw_label(
   BLF_color4fv(font_id, color);
   BLF_position(font_id, x, baseline_y, 0.0f);
   BLF_draw(font_id, text, strlen(text));
+  /* BLF can leave a different blend mode behind; every translucent fill
+   * drawn after a label (divider, hover wash, delete ring, scroll thumb)
+   * needs alpha blending back or it renders fully opaque. */
+  GPU_blend(GPU_BLEND_ALPHA);
 }
 
 static float history_text_width(const char *text, int font_id, int font_px)
@@ -566,8 +571,9 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
       rctf hover_rect;
       BLI_rctf_init(&hover_rect, row_xmin, row_xmax, draw_bottom + 2.0f * scale,
                     draw_top - 2.0f * scale);
-      float hover_col[4] = {COL_ROW_HOVER[0], COL_ROW_HOVER[1], COL_ROW_HOVER[2],
-                            COL_ROW_HOVER[3] * ease};
+      float hover_col[4];
+      chat_ui_get_history_row_hover_color(hover_col);
+      hover_col[3] *= ease;
       chat_ui_draw_rounded_rect(&hover_rect, ROW_RADIUS * scale, hover_col);
     }
 
