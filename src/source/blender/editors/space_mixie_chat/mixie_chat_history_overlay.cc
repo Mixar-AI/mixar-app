@@ -732,17 +732,19 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
     return true;
   }
 
-  /* Trackpad pan: accumulate into row steps. */
+  /* Trackpad pan: accumulate into row steps. A positive delta (fingers
+   * swipe up under natural scrolling) advances the list toward older rows
+   * — matching the platform scroll convention and the wheel mapping. */
   if (event->type == MOUSEPAN) {
     if (inside_panel && scrollable) {
       rt->history_pan_accum += float(event->xy[1] - event->prev_xy[1]);
       const float step = 24.0f * UI_SCALE_FAC;
       while (rt->history_pan_accum >= step) {
-        rt->history_scroll_row -= 1;
+        rt->history_scroll_row += 1;
         rt->history_pan_accum -= step;
       }
       while (rt->history_pan_accum <= -step) {
-        rt->history_scroll_row += 1;
+        rt->history_scroll_row -= 1;
         rt->history_pan_accum += step;
       }
       rt->history_scroll_row = std::max(0, std::min(rt->history_scroll_row, max_scroll));
