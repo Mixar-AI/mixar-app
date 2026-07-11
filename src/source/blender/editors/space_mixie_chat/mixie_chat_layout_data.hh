@@ -298,6 +298,25 @@ extern const char *g_empty_prompt_generate_types[CHAT_EMPTY_PROMPT_COUNT];
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Chat History Overlay
+ * \{ */
+
+/**
+ * One visible row of the past-chats overlay (mixie_chat_history_overlay.cc).
+ * Bounds are in region pixel coords (screen-space, like the scroll
+ * indicator), rebuilt on every overlay draw.
+ */
+struct HistoryRowHit {
+  rctf bounds = {0, 0, 0, 0};        /* whole row hit area */
+  rctf delete_bounds = {0, 0, 0, 0}; /* trailing X button hit area */
+  bool is_hovered = false;
+  bool delete_hovered = false;
+  char session_id[128] = "";
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Per-Instance Runtime State
  * \{ */
 
@@ -369,6 +388,31 @@ struct MixieChatRuntime {
 
   /** Scroll-to-bottom indicator: bounce animation start time (new msg while scrolled up). */
   double scroll_indicator_bounce_start = 0.0;
+
+  /* -- Past-chats overlay (mixie_chat_history_overlay.cc) -------------- */
+
+  /** History overlay: visibility mirrored from the Python-registered
+   * WindowManager bool during draw (events check this, never RNA). */
+  bool history_overlay_active = false;
+
+  /** History overlay: panel bounds in region pixels (click-away test). */
+  rctf history_panel_bounds = {0, 0, 0, 0};
+
+  /** History overlay: first visible row (wheel-scrolled in row steps). */
+  int history_scroll_row = 0;
+
+  /** History overlay: total rows in the store / rows that fit the panel. */
+  int history_total_rows = 0;
+  int history_visible_rows = 0;
+
+  /** History overlay: trackpad pan accumulator (px until a row step). */
+  float history_pan_accum = 0.0f;
+
+  /** History overlay: open animation start time (0 = not animating). */
+  double history_anim_start = 0.0;
+
+  /** History overlay: hit rects for the visible rows (rebuilt per draw). */
+  blender::Vector<HistoryRowHit> history_rows;
 };
 
 /**

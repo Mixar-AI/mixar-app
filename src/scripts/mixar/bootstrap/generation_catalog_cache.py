@@ -51,59 +51,6 @@ _cache_error: Optional[str] = None
 _is_loading: bool = False
 _shutdown_requested: bool = False
 
-# EnumProperty ``items`` callbacks MUST keep a persistent Python reference to
-# the strings they return — Blender stores the raw ``char*`` and will render
-# garbage or crash if the strings are garbage-collected. Building a fresh list
-# on every callback (they fire on every redraw) is exactly that hazard. Cache
-# each built list keyed by (kind, key, version); ``_enum_version`` bumps on
-# every catalog swap/clear (always under ``_lock``) so callers get a stable,
-# strongly-referenced object that is only rebuilt when the catalog changes.
-_enum_version: int = 0
-_enum_cache: Dict[Tuple[str, str, int], List[Tuple[str, str, str]]] = {}
-
-# Placeholder item lists are module-level constants (not rebuilt per call) so
-# their strings also outlive the callback.
-_ENUM_LOADING = [("LOADING", "Loading...", "Fetching generation catalog")]
-
-
-def _bump_enum_version_locked() -> None:
-    """Invalidate the enum-item cache. Caller MUST hold ``_lock``."""
-    global _enum_version
-    _enum_version += 1
-
-
-def _enum_cached(kind: str, key: str, version: int, builder):
-    """Return a memoized enum-item list, holding a persistent reference.
-
-    Rebuilds via ``builder()`` only when this (kind, key, version) is unseen,
-    then prunes entries from versions older than the previous one (Blender may
-    still hold ``char*`` into the immediately-previous version during a redraw).
-    """
-    cache_key = (kind, key, version)
-    cached = _enum_cache.get(cache_key)
-    if cached is not None:
-        return cached
-    items = builder()
-    _enum_cache[cache_key] = items
-    stale = [k for k in _enum_cache if k[2] < version - 1]
-    for k in stale:
-        del _enum_cache[k]
-    return items
-
-
-def memoize_enum_items(kind: str, key: str, builder):
-    """Memoize an EnumProperty ``items`` list built by other modules.
-
-    Public wrapper around the internal enum cache so callers outside this
-    module (e.g. ``generation_params.selector``) can return persistently
-    referenced lists too. ``builder()`` runs only when this (kind, key)
-    is unseen for the current catalog version. Enum callbacks run on the
-    main thread, so the cache dict itself needs no extra lock.
-    """
-    with _lock:
-        version = _enum_version
-    return _enum_cached(kind, key, version, builder)
-
 
 # ============================================================================
 # DISK PERSISTENCE
@@ -145,7 +92,6 @@ def _load_from_disk() -> bool:
         with _lock:
             _catalog = data
             _etag = stored.get("etag") or None
-            _bump_enum_version_locked()
         logger.info(
             "Generation catalog loaded from disk cache (version=%s)",
             data.get("catalog_version", "?"),
@@ -294,30 +240,25 @@ def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
         loading = _is_loading
         loaded = _catalog is not None
         error = _cache_error
-        version = _enum_version
 
     if not loaded:
         if loading:
-            return _ENUM_LOADING
+            return [("LOADING", "Loading...", "Fetching generation catalog")]
         if error:
-            return _enum_cached("model_err", error, version,
-                                lambda: [("ERROR", "Error", error)])
-        return _ENUM_LOADING
+            return [("ERROR", "Error", error)]
+        return [("LOADING", "Loading...", "Fetching generation catalog")]
 
-    def _build():
-        models = get_models(service_key)
-        if not models:
-            return [("NONE", "No models", "No models available")]
-        built = []
-        for m in models:
-            slug = m.get("slug") or ""
-            label = m.get("label") or slug
-            cost = m.get("credit_cost")
-            desc = f"{label} ({cost} credits)" if cost is not None else label
-            built.append((slug, label, desc))
-        return built
-
-    return _enum_cached("model", service_key, version, _build)
+    models = get_models(service_key)
+    if not models:
+        return [("NONE", "No models", "No models available")]
+    items = []
+    for m in models:
+        slug = m.get("slug") or ""
+        label = m.get("label") or slug
+        cost = m.get("credit_cost")
+        desc = f"{label} ({cost} credits)" if cost is not None else label
+        items.append((slug, label, desc))
+    return items
 
 
 def get_style_enum_items(generation_type: str) -> List[Tuple[str, str, str]]:
@@ -326,31 +267,26 @@ def get_style_enum_items(generation_type: str) -> List[Tuple[str, str, str]]:
         loading = _is_loading
         loaded = _catalog is not None
         error = _cache_error
-        version = _enum_version
 
     if not loaded:
         if loading:
-            return _ENUM_LOADING
+            return [("LOADING", "Loading...", "Fetching generation catalog")]
         if error:
-            return _enum_cached("style_err", error, version,
-                                lambda: [("ERROR", "Error", error)])
-        return _ENUM_LOADING
+            return [("ERROR", "Error", error)]
+        return [("LOADING", "Loading...", "Fetching generation catalog")]
 
-    def _build():
-        styles = get_styles(generation_type)
-        if not styles:
-            return [("NONE", "No styles", "No styles available")]
-        return [
-            (
-                s.get("name") or "NONE",
-                s.get("display_name") or s.get("name") or "Unknown",
-                s.get("description") or "",
-            )
-            for s in styles
-            if s.get("name")
-        ]
-
-    return _enum_cached("style", generation_type, version, _build)
+    styles = get_styles(generation_type)
+    if not styles:
+        return [("NONE", "No styles", "No styles available")]
+    return [
+        (
+            s.get("name") or "NONE",
+            s.get("display_name") or s.get("name") or "Unknown",
+            s.get("description") or "",
+        )
+        for s in styles
+        if s.get("name")
+    ]
 
 
 # ============================================================================
@@ -369,7 +305,6 @@ def clear_generation_catalog_cache() -> None:
         _catalog = None
         _etag = None
         _cache_error = None
-        _bump_enum_version_locked()
     _delete_disk_cache()
 
 
@@ -460,7 +395,6 @@ def _fetch_data_sync() -> None:
                             return
                         _catalog = data
                         _etag = new_etag
-                        _bump_enum_version_locked()
                     _save_to_disk(new_etag, data)
                     swapped = True
                     logger.info(
@@ -581,4 +515,3 @@ def unregister() -> None:
         _etag = None
         _cache_error = None
         _is_loading = False
-        _bump_enum_version_locked()

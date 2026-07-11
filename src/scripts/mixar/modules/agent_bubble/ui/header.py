@@ -232,14 +232,30 @@ class AGENT_BUBBLE_HT_header(Header):
                     msg_count = len(msgs)
                 except TypeError:
                     msg_count = 0
+        right_controls = layout.row(align=True)
         if msg_count > 0:
-            new_chat_row = layout.row(align=True)
-            new_chat_row.operator(
+            right_controls.operator(
                 "mixie_chat.new_session",
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
                 no_tooltip=True,
+            )
+
+        # Past chats — toggles the C++-drawn history overlay (shared with
+        # the mixie chat editor; the bubble's main region reuses the same
+        # draw callbacks). Shown even when the current chat is empty —
+        # reopening an old chat from a fresh state is exactly the history
+        # use-case. hasattr guard: registers in the deferred UI pass.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history'):
+            wm = context.window_manager
+            right_controls.operator(
+                "mixie_chat.show_history",
+                text="",
+                icon='TIME',
+                emboss=False,
+                no_tooltip=True,
+                depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 
 

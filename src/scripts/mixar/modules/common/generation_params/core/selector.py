@@ -32,23 +32,6 @@ from .draw import draw_service_params
 PLACEHOLDER_IDS = ("LOADING", "ERROR", "NONE", "")
 
 _LOADING_ITEM = ("LOADING", "Loading...", "Fetching generation catalog")
-# Module-level constant so the placeholder strings outlive the callback.
-_LOADING_ITEMS = [_LOADING_ITEM]
-
-
-def _memoize(kind: str, key: str, builder):
-    """Return a persistently-referenced, catalog-versioned enum-item list.
-
-    Delegates to the shared cache in ``generation_catalog_cache`` so an
-    EnumProperty ``items`` callback never returns freshly-built strings that
-    Blender may garbage-collect while it still holds their char*. Falls back
-    to calling ``builder`` directly if the cache module is unavailable.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import memoize_enum_items
-        return memoize_enum_items(kind, key, builder)
-    except Exception:
-        return builder()
 
 
 def get_service_enum_items(
@@ -68,26 +51,21 @@ def get_service_enum_items(
 
     if not is_loaded():
         if is_cache_loading():
-            return _LOADING_ITEMS
+            return [_LOADING_ITEM]
         error = get_cache_error()
         if error:
-            return _memoize("service_err", error, lambda: [("ERROR", "Error", error)])
-        return _LOADING_ITEMS
+            return [("ERROR", "Error", error)]
+        return [_LOADING_ITEM]
 
-    def _build():
-        services = get_services(capability_key, surface=surface)
-        items = []
-        for svc in services:
-            key = svc.get("key") or ""
-            if not key:
-                continue
-            label = svc.get("label") or key
-            items.append((key, label, label))
-        return items or [("NONE", "No modes", "No services available")]
-
-    # Memoize with a persistent reference so Blender's stored char* stay valid
-    # (a fresh list per callback is the classic enum-items GC crash).
-    return _memoize("service", f"{capability_key}:{surface}", _build)
+    services = get_services(capability_key, surface=surface)
+    items = []
+    for svc in services:
+        key = svc.get("key") or ""
+        if not key:
+            continue
+        label = svc.get("label") or key
+        items.append((key, label, label))
+    return items or [("NONE", "No modes", "No services available")]
 
 
 def resolve_service_key(
@@ -170,7 +148,7 @@ def get_param_enum_items(
     resolution dropdowns) that mirror a schema param outside the dynamic
     param engine.
     """
-    def _build():
+    try:
         from mixar.bootstrap.generation_catalog_cache import get_model
 
         model = get_model(service_key, model_slug)
@@ -178,18 +156,14 @@ def get_param_enum_items(
         choices = spec.get("choices") or [
             {"value": v, "label": str(v)} for v in (spec.get("enum") or [])
         ]
-        built = []
+        items = []
         for choice in choices:
             value = choice.get("value")
             if value is None:
                 continue
             ident = str(value)
             label = str(choice.get("label") or ident)
-            built.append((ident, label, label))
-        return built
-
-    try:
-        items = _memoize("param", f"{service_key}:{model_slug}:{param_name}", _build)
+            items.append((ident, label, label))
         if items:
             return items
     except Exception:

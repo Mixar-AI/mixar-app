@@ -167,13 +167,6 @@ class JSONRPCErrorCode:
 # Custom WebSocket close code for authentication failure
 WS_CLOSE_AUTH_FAILED = 4001
 
-# Disconnect reason the WS client passes to on_disconnected when it stops
-# reconnecting because authentication failed. connection_manager treats this
-# reason as TERMINAL (wipe all scene states to OFFLINE); every other reason
-# is a transient drop the client auto-reconnects from, which must preserve
-# active turn states (see SessionManager.on_transport_disconnect).
-DISCONNECT_REASON_AUTH_FAILED = "Authentication failed - please login again"
-
 
 # ============================================================================
 # WEBSOCKET CONFIGURATION DEFAULTS
@@ -239,6 +232,19 @@ MAX_IMAGE_DIMENSION = 16384
 
 # Maximum length for chat messages to prevent memory/performance issues
 MAX_MESSAGE_LENGTH = 100000  # 100KB of text
+
+# ============================================================================
+# CHAT HISTORY ARCHIVE (core/chat_history.py)
+# ============================================================================
+
+# "New Chat" archives the current conversation to ~/.mixar/chat_history/
+# instead of destroying it. Oldest sessions beyond this cap are pruned.
+MAX_ARCHIVED_SESSIONS = 30
+# Titles shown in the history popover — first line of the first user message.
+CHAT_HISTORY_TITLE_MAXLEN = 48
+# Per-session cap on image files copied into ~/.mixar/chat_media/<session>/.
+# Beyond this, remaining images keep their original (possibly temp) paths.
+CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
 # ============================================================================
 # TIMER / EXECUTION CONSTANTS

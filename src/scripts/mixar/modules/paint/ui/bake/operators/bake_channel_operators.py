@@ -355,104 +355,54 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
         width = self.width * self.aa_level
         height = self.height * self.aa_level
 
-        # From here on the scene's render engine, sample count and modifier
-        # visibility are mutated (prepare_bake_settings) and temp meshes exist.
-        # Any failure in the bake body MUST still restore them — otherwise the
-        # artist is silently left on the wrong render engine/samples with
-        # orphan *_temp meshes and only a console traceback.
-        disabled_layers = []
-        try:
-            prepare_bake_settings(
-                book, objs, mp, self.samples, margin, self.uv_map,
-                disable_problematic_modifiers=True, bake_device=self.bake_device,
-                margin_type=self.margin_type, use_osl=self.use_osl,
-            )
+        prepare_bake_settings(
+            book, objs, mp, self.samples, margin, self.uv_map,
+            disable_problematic_modifiers=True, bake_device=self.bake_device,
+            margin_type=self.margin_type, use_osl=self.use_osl,
+        )
 
-            tilenums = get_tile_numbers(objs, self.uv_map) if self.use_udim else [1001]
-            disabled_layers = self._enable_disabled_layers(mp)
-            baked_exists = self._bake_all_channels(node, mat, width, height, tilenums)
+        tilenums = get_tile_numbers(objs, self.uv_map) if self.use_udim else [1001]
+        disabled_layers = self._enable_disabled_layers(mp)
+        baked_exists = self._bake_all_channels(node, mat, width, height, tilenums)
 
-            baked_images = process_baked_images(
-                self, self.channels, tree, baked_exists,
-                self.use_dithering, self.dither_intensity, self.denoise,
-                self.aa_level, self.width, self.height, self.fxaa, self.bake_device,
-            )
-            set_bake_info_to_images(baked_images, self)
+        baked_images = process_baked_images(
+            self, self.channels, tree, baked_exists,
+            self.use_dithering, self.dither_intensity, self.denoise,
+            self.aa_level, self.width, self.height, self.fxaa, self.bake_device,
+        )
+        set_bake_info_to_images(baked_images, self)
 
-            if not self.only_active_channel:
-                process_custom_bake_targets(mp, tree, self.channels, tilenums, self.width, self.height, self.use_udim)
+        if not self.only_active_channel:
+            process_custom_bake_targets(mp, tree, self.channels, tilenums, self.width, self.height, self.use_udim)
 
-            mp.baked_uv_name = self.uv_map
-            recover_bake_settings(book, mp)
-            self._recover_disabled_layers(disabled_layers)
-            disabled_layers = []
+        mp.baked_uv_name = self.uv_map
+        recover_bake_settings(book, mp)
+        self._recover_disabled_layers(disabled_layers)
 
-            if ori_objs:
-                objs = ori_objs
+        if ori_objs:
+            objs = ori_objs
 
-            recover_multi_material(objs, ori_mat_ids, ori_loop_locs, self.uv_map, get_uv_layers)
+        recover_multi_material(objs, ori_mat_ids, ori_loop_locs, self.uv_map, get_uv_layers)
 
-            prepare_bake_settings(book, objs, mp, disable_problematic_modifiers=True, bake_device=self.bake_device, bake_target="VERTEX_COLORS")
-            bake_vcol_for_channels(
-                self.channels, mp, mat, node, tree, objs, ori_mat_ids,
-                self.only_active_channel, self.vcol_force_first_ch_idx_bool, self.vcol_force_first_ch_idx,
-            )
-            recover_bake_settings(book, mp)
+        prepare_bake_settings(book, objs, mp, disable_problematic_modifiers=True, bake_device=self.bake_device, bake_target="VERTEX_COLORS")
+        bake_vcol_for_channels(
+            self.channels, mp, mat, node, tree, objs, ori_mat_ids,
+            self.only_active_channel, self.vcol_force_first_ch_idx_bool, self.vcol_force_first_ch_idx,
+        )
+        recover_bake_settings(book, mp)
 
-            mp.halt_update = True
-            mp.use_baked = True
-            mp.halt_update = False
+        mp.halt_update = True
+        mp.use_baked = True
+        mp.halt_update = False
 
-            post_bake_operations(
-                context, tree, mp, height_ch, ori_edit_mode, temp_objs,
-                check_subdiv_setup, check_uv_nodes, check_start_end_root_ch_nodes,
-                reconnect_mp_nodes, rearrange_mp_nodes, update_enable_baked_outside, remove_mesh_obj,
-            )
+        post_bake_operations(
+            context, tree, mp, height_ch, ori_edit_mode, temp_objs,
+            check_subdiv_setup, check_uv_nodes, check_start_end_root_ch_nodes,
+            reconnect_mp_nodes, rearrange_mp_nodes, update_enable_baked_outside, remove_mesh_obj,
+        )
 
-            self._report_bake_result(T, mp, tree)
-            return {"FINISHED"}
-        except Exception as exc:
-            logger.error("Channel bake failed, restoring scene state: %s", exc, exc_info=True)
-            self._recover_after_bake_failure(
-                context, book, mp, ori_objs if ori_objs else objs,
-                ori_mat_ids, ori_loop_locs, disabled_layers, temp_objs,
-                ori_edit_mode,
-            )
-            self.report({"ERROR"}, f"Bake failed: {exc}")
-            return {"CANCELLED"}
-
-    def _recover_after_bake_failure(
-        self, context, book, mp, recover_objs, ori_mat_ids, ori_loop_locs,
-        disabled_layers, temp_objs, ori_edit_mode,
-    ):
-        """Best-effort restoration after a mid-bake exception.
-
-        Each step is independently guarded so one failure never blocks the
-        rest — the priority is leaving render settings, materials and temp
-        meshes as they were, not perfect ordering.
-        """
-        try:
-            recover_bake_settings(book, mp)
-        except Exception as e:
-            logger.error("Failed to restore bake settings after failure: %s", e)
-        try:
-            self._recover_disabled_layers(disabled_layers)
-        except Exception as e:
-            logger.error("Failed to restore disabled layers after failure: %s", e)
-        try:
-            recover_multi_material(recover_objs, ori_mat_ids, ori_loop_locs, self.uv_map, get_uv_layers)
-        except Exception as e:
-            logger.error("Failed to restore multi-material after failure: %s", e)
-        for temp in (temp_objs or []):
-            try:
-                remove_mesh_obj(temp)
-            except Exception as e:
-                logger.error("Failed to remove temp bake object after failure: %s", e)
-        if ori_edit_mode:
-            try:
-                bpy.ops.object.mode_set(mode="EDIT")
-            except Exception as e:
-                logger.error("Failed to restore edit mode after failure: %s", e)
+        self._report_bake_result(T, mp, tree)
+        return {"FINISHED"}
 
     def _validate_bake_inputs(self, obj):
         """Validate bake inputs and return error message if invalid."""

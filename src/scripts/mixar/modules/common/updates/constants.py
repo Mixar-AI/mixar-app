@@ -5,13 +5,23 @@
 """
 Auto-Update System Constants
 
-Configuration values, enums, and file paths for the update checker.
-Updating is browser-based: the client only detects that a newer version
-exists and points the user at the downloads page — there is no in-app
-download or installer launch.
+Configuration values, enums, and file paths for the update checker,
+downloader, and installer subsystems.
 """
 
 from enum import Enum
+
+# ============================================================================
+# TIMING
+# ============================================================================
+
+DEFAULT_CHECK_DELAY_SECONDS = 5
+DEFAULT_DOWNLOAD_CHUNK_SIZE = 65536  # 64 KB
+DEFAULT_MAX_DOWNLOAD_RETRIES = 3
+# Socket timeout for the installer download (connect + each blocking read).
+# Without it a stalled CDN connection blocks the download thread forever and
+# the DOWNLOADING state permanently suppresses all future update checks.
+DOWNLOAD_SOCKET_TIMEOUT_SECONDS = 60
 
 # ============================================================================
 # PLATFORM MAPPING
@@ -28,6 +38,7 @@ PLATFORM_MAP = {
 # FILE / DIRECTORY NAMES
 # ============================================================================
 
+UPDATES_CACHE_DIR = "mixar_updates"
 INSTALL_ID_FILENAME = ".mixar_install_id"
 SKIPPED_VERSION_FILENAME = ".mixar_skipped_version"
 
@@ -47,8 +58,7 @@ OP_CHECK_FOR_UPDATES = "mixar.check_for_updates"
 # URLS
 # ============================================================================
 
-# Public downloads page — where the update toast's [Download] button goes
-# when the backend doesn't supply a per-release browser URL.
+# Public downloads page — browser fallback when the in-app download fails.
 # Overridable at runtime via mixar.json ("updates" -> "downloads_url").
 DOWNLOADS_PAGE_URL = "https://www.mixar.app/downloads"
 
@@ -58,9 +68,11 @@ DOWNLOADS_PAGE_URL = "https://www.mixar.app/downloads"
 
 
 class UpdateState(Enum):
-    """Lifecycle states for the update checker."""
+    """Lifecycle states for the auto-update process."""
 
     IDLE = "idle"
     CHECKING = "checking"
-    AVAILABLE = "available"
+    DOWNLOADING = "downloading"
+    READY = "ready"
+    INSTALLING = "installing"
     ERROR = "error"

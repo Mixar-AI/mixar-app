@@ -8,29 +8,39 @@ Topbar Update Badge
 Persistent "Update Available" indicator drawn just right of the topbar
 "Open Mixie" button (called from agent_bubble's TOPBAR_HT_upper_bar
 draw hook).  Visible whenever update info is cached in the update state
-singleton — including after the user skips the version, so the badge
-persists until they are actually on the latest release.  Clicking
-re-shows the sticky update toast.
+singleton; clicking re-shows the sticky update toast for the current
+lifecycle state (available / downloading / ready / failed).
 """
 
 import bpy
 
+from ..constants import UpdateState
 from ..core.state import get_update_state
 from ..core.trigger import is_forced
 
 
 def draw_update_badge(layout) -> None:
     """Draw the update badge into *layout*; no-op while no update is known."""
-    info = get_update_state().update_info
+    state = get_update_state()
+    info = state.update_info
     if info is None:
         return
+
+    current = state.state
+    if current == UpdateState.INSTALLING:
+        return
+
+    if current == UpdateState.READY:
+        text = "Update Ready"
+    elif current == UpdateState.DOWNLOADING:
+        text = f"Downloading… {int(state.progress.percent)}%"
+    else:
+        text = "Update Available"
 
     row = layout.row(align=True)
     # Red only for forced/unsupported updates; regular button otherwise.
     row.alert = is_forced(info)
-    row.operator(
-        "mixar.show_update_toast", text="Update Available", icon='FILE_REFRESH',
-    )
+    row.operator("mixar.show_update_toast", text=text, icon='FILE_REFRESH')
 
 
 def tag_topbar_redraw() -> None:

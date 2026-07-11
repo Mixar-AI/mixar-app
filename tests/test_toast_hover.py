@@ -34,10 +34,10 @@ def _setup_bounds():
     tr.toast_bounds_by_region[REGION] = {
         # (nid, x, y, w, h)
         "close": [("n1", 480, 260, 30, 30)],
-        # (nid, operator, url, x, y, w, h)
+        # (nid, operator, x, y, w, h)
         "action": [
-            ("n1", "mixar.dismiss_update", None, 300, 100, 80, 38),
-            ("n1", "mixar.install_update", None, 390, 100, 120, 38),
+            ("n1", "mixar.dismiss_update", 300, 100, 80, 38),
+            ("n1", "mixar.install_update", 390, 100, 120, 38),
         ],
         # (nid, url, x, y, w, h)
         "url": [("n1", "https://example.com", 60, 180, 400, 20)],

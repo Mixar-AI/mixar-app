@@ -150,7 +150,7 @@ External pull requests are **not** open yet — see [CONTRIBUTING.md](CONTRIBUTI
 
 ## Community and support
 
-- **Discord:** https://discord.gg/YVqvkQx8rX — fastest channel for build help, questions, and discussion with maintainers and other Mixar users.
+- **Discord:** https://discord.gg/HJNMUesyp — fastest channel for build help, questions, and discussion with maintainers and other Mixar users.
 - **GitHub issues:** for reproducible bugs from the public source, build problems, and license / documentation questions. See [SUPPORT.md](SUPPORT.md) for full scope.
 - **Security:** report privately per [SECURITY.md](SECURITY.md).
 - **Hosted Mixar service:** sign in at [mixar.app](https://www.mixar.app) for customer-account support.
