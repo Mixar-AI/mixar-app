@@ -26,7 +26,7 @@
 #define BLENDER_VERSION_CYCLE release
 
 #define MIXAR_VERSION 300
-#define MIXAR_VERSION_PATCH 15
+#define MIXAR_VERSION_PATCH 16
 #define MIXAR_VERSION_CYCLE release
 
 /* Mixar file format version, stored in FileGlobal.
