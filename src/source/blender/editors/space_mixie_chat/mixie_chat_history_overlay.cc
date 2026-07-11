@@ -17,8 +17,12 @@
  *   - current:     scene.mixie_session_id marks the open chat's row
  *
  * Interactions dispatch back to Python operators (same pattern as slot
- * actions): row click -> mixie_chat.open_history_session, X click ->
- * mixie_chat.delete_history_session (InvokeDefault for its confirm).
+ * actions): row click -> mixie_chat.open_history_session; delete is
+ * arm-to-confirm IN the overlay (first X click arms the row — red
+ * "Delete?" — second X click dispatches
+ * mixie_chat.delete_history_session; any other click or ESC disarms).
+ * No OS confirm popup: it anchors at the cursor, landing its OK button
+ * exactly on the X that was just clicked.
  * While open the overlay is modal for this region: it consumes clicks
  * (click-away closes), wheel/trackpad scroll (row-stepped, so no GPU
  * scissor clipping is needed) and ESC.
@@ -98,6 +102,7 @@ static const float COL_ACCENT[4] = CHAT_ACCENT_LIVE;
 static const float COL_DELETE[4] = {0.55f, 0.58f, 0.62f, 0.75f};
 static const float COL_DELETE_HOVER[4] = {0.95f, 0.42f, 0.42f, 1.0f};
 static const float COL_DELETE_HOVER_BG[4] = {1.0f, 1.0f, 1.0f, 0.09f};
+static const float COL_DELETE_ARMED_BG[4] = {0.95f, 0.42f, 0.42f, 0.18f};
 static const float COL_SCROLL_THUMB[4] = {1.0f, 1.0f, 1.0f, 0.16f};
 
 /** \} */
@@ -237,6 +242,7 @@ static void history_reset_runtime(MixieChatRuntime *rt)
   BLI_rctf_init(&rt->history_panel_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
   rt->history_total_rows = 0;
   rt->history_visible_rows = 0;
+  rt->history_confirm_id[0] = '\0';
 }
 
 /** Dispatch a Python operator that takes a single session_id string. */
@@ -354,10 +360,11 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
 
   const double now = BLI_time_now_seconds();
   if (visible && !rt->history_overlay_active) {
-    /* Opening edge: restart animation and scroll position. */
+    /* Opening edge: restart animation, scroll position, armed delete. */
     rt->history_anim_start = now;
     rt->history_scroll_row = 0;
     rt->history_pan_accum = 0.0f;
+    rt->history_confirm_id[0] = '\0';
   }
   rt->history_overlay_active = visible;
   if (!visible) {
@@ -540,6 +547,8 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
     const HistoryDrawEntry &entry = items[idx];
     const bool is_current = (current_id[0] != '\0') &&
                             STREQ(entry.session_id, current_id);
+    const bool is_armed = (rt->history_confirm_id[0] != '\0') &&
+                          STREQ(entry.session_id, rt->history_confirm_id);
 
     const float row_top = list_top - float(v) * row_h;
     const float row_bottom = row_top - row_h;
@@ -588,13 +597,27 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
       chat_ui_draw_rounded_rect(&dot, dot_r, dot_col);
     }
 
-    /* Time label, right-aligned before the X. */
+    /* Time label, right-aligned before the X. An armed row shows a red
+     * "Delete?" prompt instead — click the X again to confirm. */
     const float del_zone_left = hit.delete_bounds.xmin - 8.0f * scale;
+    const char *when_text = is_armed ? "Delete?" : entry.when;
     float when_w = 0.0f;
-    if (entry.when[0] != '\0') {
-      when_w = history_text_width(entry.when, font_id, meta_px);
-      float when_col[4] = {COL_MUTED[0], COL_MUTED[1], COL_MUTED[2], COL_MUTED[3] * 0.95f * ease};
-      history_draw_label(entry.when, font_id, meta_px, del_zone_left - when_w,
+    if (when_text[0] != '\0') {
+      when_w = history_text_width(when_text, font_id, meta_px);
+      float when_col[4];
+      if (is_armed) {
+        when_col[0] = COL_DELETE_HOVER[0];
+        when_col[1] = COL_DELETE_HOVER[1];
+        when_col[2] = COL_DELETE_HOVER[2];
+        when_col[3] = COL_DELETE_HOVER[3] * ease;
+      }
+      else {
+        when_col[0] = COL_MUTED[0];
+        when_col[1] = COL_MUTED[1];
+        when_col[2] = COL_MUTED[2];
+        when_col[3] = COL_MUTED[3] * 0.95f * ease;
+      }
+      history_draw_label(when_text, font_id, meta_px, del_zone_left - when_w,
                          draw_center - float(meta_px) * 0.35f, when_col);
     }
 
@@ -612,17 +635,18 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
                          draw_center - float(title_px) * 0.35f, title_col);
     }
 
-    /* Delete X (hover ring + glyph). */
+    /* Delete X (ring + glyph). Armed rows keep a red-tinted ring and a red
+     * glyph regardless of hover, signalling "click again to delete". */
     {
-      if (hit.delete_hovered) {
+      if (is_armed || hit.delete_hovered) {
         rctf ring = hit.delete_bounds;
         ring.ymin -= slide;
         ring.ymax -= slide;
-        float ring_col[4] = {COL_DELETE_HOVER_BG[0], COL_DELETE_HOVER_BG[1],
-                             COL_DELETE_HOVER_BG[2], COL_DELETE_HOVER_BG[3] * ease};
+        const float *ring_base = is_armed ? COL_DELETE_ARMED_BG : COL_DELETE_HOVER_BG;
+        float ring_col[4] = {ring_base[0], ring_base[1], ring_base[2], ring_base[3] * ease};
         chat_ui_draw_rounded_rect(&ring, del_half, ring_col);
       }
-      const float *base_col = hit.delete_hovered ? COL_DELETE_HOVER : COL_DELETE;
+      const float *base_col = (is_armed || hit.delete_hovered) ? COL_DELETE_HOVER : COL_DELETE;
       float x_col[4] = {base_col[0], base_col[1], base_col[2], base_col[3] * ease};
       history_draw_x_glyph(del_cx, draw_center, 4.2f * scale, x_col, scale);
     }
@@ -709,9 +733,15 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
     return false;
   }
 
-  /* ESC closes. */
+  /* ESC: first disarm a pending delete, then close. */
   if (event->type == EVT_ESCKEY && event->val == KM_PRESS) {
-    mixie_chat_history_set_visible(C, false);
+    if (rt->history_confirm_id[0] != '\0') {
+      rt->history_confirm_id[0] = '\0';
+      ED_region_tag_redraw(region);
+    }
+    else {
+      mixie_chat_history_set_visible(C, false);
+    }
     return true;
   }
 
@@ -767,14 +797,24 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
       char session_id[128];
       BLI_strncpy(session_id, rt->history_rows[idx].session_id, sizeof(session_id));
       if (over_delete) {
-        /* InvokeDefault so the operator's confirm dialog shows. */
-        history_dispatch_session_op(C,
-                                    region,
-                                    "mixie_chat.delete_history_session",
-                                    session_id,
-                                    blender::wm::OpCallContext::InvokeDefault);
+        /* Arm-to-confirm: first X click arms the row (red "Delete?"),
+         * a second X click on the SAME row deletes. No popup — the OS
+         * confirm anchored its OK button right under the clicked X. */
+        if (STREQ(rt->history_confirm_id, session_id)) {
+          rt->history_confirm_id[0] = '\0';
+          history_dispatch_session_op(C,
+                                      region,
+                                      "mixie_chat.delete_history_session",
+                                      session_id,
+                                      blender::wm::OpCallContext::ExecDefault);
+        }
+        else {
+          BLI_strncpy(rt->history_confirm_id, session_id, sizeof(rt->history_confirm_id));
+          ED_region_tag_redraw(region);
+        }
       }
       else {
+        rt->history_confirm_id[0] = '\0';
         history_dispatch_session_op(C,
                                     region,
                                     "mixie_chat.open_history_session",
@@ -782,6 +822,11 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
                                     blender::wm::OpCallContext::ExecDefault);
         mixie_chat_history_set_visible(C, false);
       }
+    }
+    else if (rt->history_confirm_id[0] != '\0') {
+      /* Click on header/blank space disarms a pending delete. */
+      rt->history_confirm_id[0] = '\0';
+      ED_region_tag_redraw(region);
     }
     /* Clicks inside the panel (rows, header, blank space) never fall
      * through to the chat behind it. */

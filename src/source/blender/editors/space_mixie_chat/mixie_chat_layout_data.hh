@@ -411,6 +411,13 @@ struct MixieChatRuntime {
   /** History overlay: open animation start time (0 = not animating). */
   double history_anim_start = 0.0;
 
+  /** History overlay: session id armed for delete (arm-to-confirm: the
+   * first X click arms the row — it turns red with a "Delete?" label —
+   * and a second X click deletes; any other click/ESC disarms). Replaces
+   * the OS confirm popup, which anchored its OK button under the cursor,
+   * i.e. exactly on the X. Empty = nothing armed. */
+  char history_confirm_id[128] = "";
+
   /** History overlay: hit rects for the visible rows (rebuilt per draw). */
   blender::Vector<HistoryRowHit> history_rows;
 };
