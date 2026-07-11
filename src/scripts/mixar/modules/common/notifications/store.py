@@ -29,7 +29,7 @@ from .constants import (
 class NotificationAction:
     """A clickable action button on a toast notification."""
     label: str
-    operator: str       # e.g. "mixar.install_update"
+    operator: str       # e.g. "mixar.open_downloads_page"
     style: str = "secondary"  # "primary", "secondary", or "danger"
 
 
