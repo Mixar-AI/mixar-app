@@ -41,6 +41,10 @@ class MixieQueueItemPG(PropertyGroup):
     job_id: StringProperty(name="Job ID", default="")
     feature_key: StringProperty(name="Feature Key", default="")
     label: StringProperty(name="Label", default="")
+    # The model/engine slug the job was submitted with (e.g. "hunyuan_pro_v3",
+    # "pro"). Shown next to the job-type pill so two jobs of the same type but
+    # different models are distinguishable. Empty for jobs that carry no model.
+    model: StringProperty(name="Model", default="")
     state: StringProperty(name="State", default="")
     substate_text: StringProperty(name="Substate", default="")
     error: StringProperty(name="Error", default="")
@@ -113,6 +117,9 @@ def _sync_mirror(_queue) -> None:
             item.job_id = job.id
             item.feature_key = feature_key
             item.label = job.label
+            # Concrete job subclasses (AsyncGLBJob/SyncImageJob) carry the model
+            # slug; bespoke-queue jobs may not — default to "" so it's optional.
+            item.model = getattr(job, "model", "") or ""
             item.state = (
                 job.state.value if hasattr(job.state, "value") else str(job.state)
             )
