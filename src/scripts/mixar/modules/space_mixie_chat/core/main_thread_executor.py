@@ -289,10 +289,12 @@ def _process_one_request() -> Optional[float]:
                 session_id, tool_name, request_id,
             )
             _send_error_response(request_id, f"no scene for session {session_id}")
-            if not _request_queue.empty():
-                return TIMER_INTERVAL
-            _timer_active = False
-            return None
+            # Stop via the shared, lock-guarded helper. Assigning `_timer_active`
+            # directly here binds a function-local (this function never declares
+            # `global _timer_active`), leaving the module flag stuck True while
+            # Blender unregisters the timer — so it is never re-armed and every
+            # subsequent agent script silently stalls for the rest of the session.
+            return _stop_timer_if_idle()
     elif bpy.context.window is not None:
         # Active-scene-follow request → this is the user's foreground scene.
         # Remember it (unless it's a lane scene) so per-scene/lane scripts can
