@@ -34,6 +34,44 @@ from .jsonrpc_client import (
 logger = get_logger(__name__)
 
 
+def handle_server_notification(params: dict) -> None:
+    """Route one server-originated notification to the right surface.
+
+    Shared by live ``notifications.push`` and the ``notifications.sync``
+    catch-up on (re)connect, so reserved types (``update``,
+    ``credit_upgrade``) behave identically no matter how the notification
+    arrives.
+    """
+    notif_type = params.get("type", "info")
+
+    if notif_type == "update":
+        from mixar.modules.common.updates.core.trigger import trigger_update_check
+        trigger_update_check()
+        return
+
+    if notif_type == "credit_upgrade":
+        # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
+        from ...common.notifications.credit_upgrade import push_credit_upgrade
+        push_credit_upgrade(params)
+        # Surface #2 — a Mixie chat message with the same CTA. This
+        # mutates scene data, so marshal it onto the main thread.
+        from .main_thread_executor import run_on_main_thread
+
+        def _add_chat_notice(p=params):
+            from .credits_notice import add_credit_upgrade_chat_message
+            add_credit_upgrade_chat_message(
+                title=p.get("title"),
+                body=p.get("body", p.get("message")),
+                action_url=p.get("action_url"),
+            )
+
+        run_on_main_thread(_add_chat_notice)
+        return
+
+    from ...common.notifications import get_notification_store
+    get_notification_store().push_from_server(params)
+
+
 class ConnectionManager:
     """
     Singleton managing WebSocket client lifecycle.
@@ -158,9 +196,6 @@ class ConnectionManager:
             # Sync pending notifications via JSON-RPC
             client = get_jsonrpc_client()
             if client:
-                from ...common.notifications import get_notification_store
-                store = get_notification_store()
-
                 def _on_sync_result(result):
                     notifications = []
                     if isinstance(result, list):
@@ -172,11 +207,7 @@ class ConnectionManager:
                         return
 
                     for notif in notifications:
-                        if notif.get("type") == "update":
-                            from mixar.modules.common.updates.core.trigger import trigger_update_check
-                            trigger_update_check()
-                        else:
-                            store.push_from_server(notif)
+                        handle_server_notification(notif)
                     logger.info(f"notifications.sync returned {len(notifications)} notifications")
 
                 client.send_request("notifications.sync", {}, _on_sync_result)
@@ -245,42 +276,8 @@ class ConnectionManager:
             pass  # Logging handled in main_thread_executor
 
         def on_notifications_push(params: dict):
-            """Handle notifications.push — push to toast overlay."""
-            notif_type = params.get("type", "info")
-            if notif_type == "update":
-                from mixar.modules.common.updates.core.trigger import trigger_update_check
-                trigger_update_check()
-                return
-
-            if notif_type == "credit_upgrade":
-                # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
-                from ...common.notifications.credit_upgrade import push_credit_upgrade
-                push_credit_upgrade(params)
-                # Surface #2 — a Mixie chat message with the same CTA. This
-                # mutates scene data, so marshal it onto the main thread.
-                from .main_thread_executor import run_on_main_thread
-
-                def _add_chat_notice(p=params):
-                    from .credits_notice import add_credit_upgrade_chat_message
-                    add_credit_upgrade_chat_message(
-                        title=p.get("title"),
-                        body=p.get("body", p.get("message")),
-                        action_url=p.get("action_url"),
-                    )
-
-                run_on_main_thread(_add_chat_notice)
-                return
-
-            from ...common.notifications import get_notification_store
-            store = get_notification_store()
-            store.push(
-                type_str=notif_type,
-                title=params.get("title", ""),
-                body=params.get("body", params.get("message", "")),
-                priority=params.get("priority", "normal"),
-                action_url=params.get("action_url"),
-                id=params.get("id"),
-            )
+            """Handle notifications.push — route to the shared handler."""
+            handle_server_notification(params)
 
         def on_job_update(params: dict):
             """Handle job.update — reconcile the matching local queue job."""
