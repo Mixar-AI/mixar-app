@@ -109,19 +109,65 @@ def _redraw_ui(_context=None):
         pass
 
 
+def _sync_brush_gen_ui(queue):
+    """Reflect queue state onto the brush-gen UI flags.
+
+    Critically clears ``brush_gen_in_progress`` when no job is active so the
+    feature does not stay locked after a job finishes/fails/cancels. Without
+    this the guard in MGenerateBrushTexture.execute rejects every subsequent
+    generation for the rest of the session (the flag was never reset).
+    Mirrors procedural_materials/matgen_queue._on_queue_changed.
+    """
+    wm = getattr(bpy.context, "window_manager", None)
+    mixar_ui = getattr(wm, "mixar_ui", None) if wm else None
+    if mixar_ui is None:
+        return
+
+    if queue.has_active_work():
+        mixar_ui.brush_gen_in_progress = True
+        return
+
+    # No active work — release the lock and surface the terminal status.
+    if mixar_ui.brush_gen_in_progress:
+        mixar_ui.brush_gen_in_progress = False
+        mixar_ui.brush_gen_progress = 0.0
+
+    try:
+        from mixar.modules.common.job_queue import JobState
+        from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
+
+        jobs = queue.snapshot()
+        if not jobs:
+            return
+        latest = max(jobs, key=lambda job: job.created_at)
+        if latest.state == JobState.SUCCESS:
+            mixar_ui.brush_gen_status = "Brush texture ready"
+        elif latest.state == JobState.FAILED:
+            mixar_ui.brush_gen_status = (
+                latest.user_message or sanitize_message(latest.error)
+                or "Brush generation failed"
+            )
+        elif latest.state == JobState.CANCELLED:
+            mixar_ui.brush_gen_status = "Cancelled"
+    except Exception as exc:  # never let status reporting break the listener
+        logger.debug("[BrushGen] status sync failed: %s", exc)
+
+
 _brush_gen_listener = None
 
 
 def _get_brush_gen_listener():
     """Lazily create the brush gen queue listener (cached singleton).
 
-    Replicates old brush_gen_queue.py: redraw all areas on every change.
+    Replicates old brush_gen_queue.py: redraw all areas on every change, and
+    keeps the brush-gen busy flag in sync with the queue lifecycle.
     """
     global _brush_gen_listener
     if _brush_gen_listener is not None:
         return _brush_gen_listener
 
-    def _on_queue_changed(_queue):
+    def _on_queue_changed(queue):
+        _sync_brush_gen_ui(queue)
         _redraw_ui()
 
     _brush_gen_listener = _on_queue_changed
