@@ -252,7 +252,7 @@ class AGENT_BUBBLE_HT_header(Header):
             right_controls.operator(
                 "mixie_chat.show_history",
                 text="",
-                icon='TIME',
+                icon='RECOVER_LAST',
                 emboss=False,
                 no_tooltip=True,
                 depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),

@@ -2317,6 +2317,9 @@ void ED_spacetype_agent_bubble()
   art->exit = mixie_chat_main_region_exit; /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;
+  /* Per-mousemove cursor callback — hover highlights (history overlay rows,
+   * option bubbles) redraw from it; see the same flag in space_mixie_chat.cc. */
+  art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region (status pill). */

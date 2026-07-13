@@ -46,7 +46,7 @@ class MIXIE_CHAT_HT_header(Header):
             layout.operator(
                 "mixie_chat.show_history",
                 text="",
-                icon='TIME',
+                icon='RECOVER_LAST',
                 depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 

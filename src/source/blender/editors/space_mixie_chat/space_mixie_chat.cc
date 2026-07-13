@@ -323,6 +323,12 @@ void ED_spacetype_mixie_chat()
   art->exit = mixie_chat_main_region_exit;  /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;  /* Hover tracking for option bubbles */
+  /* Run the cursor callback on EVERY mouse move, not just on region entry /
+   * explicit refresh (region_cursor_set_ex gates on this flag). Hover
+   * highlights (history overlay rows, option bubbles) redraw from that
+   * callback, so without it hover only updates when something else happens
+   * to repaint — which reads as lag when sweeping the cursor across rows. */
+  art->event_cursor = true;
 
   BLI_addhead(&st->regiontypes, art);
 
