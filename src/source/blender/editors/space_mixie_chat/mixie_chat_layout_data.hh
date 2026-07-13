@@ -311,6 +311,10 @@ struct HistoryRowHit {
   rctf delete_bounds = {0, 0, 0, 0}; /* trailing X button hit area */
   bool is_hovered = false;
   bool delete_hovered = false;
+  /** Row-top offset from the top of the scrollable content (px, grows
+   * downward). Keyboard navigation uses it to scroll a selected row into
+   * view without re-deriving the grouped layout. */
+  float content_top = 0.0f;
   char session_id[128] = "";
 };
 
@@ -398,15 +402,35 @@ struct MixieChatRuntime {
   /** History overlay: panel bounds in region pixels (click-away test). */
   rctf history_panel_bounds = {0, 0, 0, 0};
 
-  /** History overlay: first visible row (wheel-scrolled in row steps). */
-  int history_scroll_row = 0;
+  /** History overlay: scrollable list viewport in region pixels — rows
+   * only hit-test / hover inside it (they scissor-clip to it too). */
+  rctf history_list_bounds = {0, 0, 0, 0};
 
-  /** History overlay: total rows in the store / rows that fit the panel. */
-  int history_total_rows = 0;
-  int history_visible_rows = 0;
+  /** History overlay: header close (X) button + search field rects. */
+  rctf history_close_bounds = {0, 0, 0, 0};
+  rctf history_search_bounds = {0, 0, 0, 0};
+  bool history_close_hovered = false;
 
-  /** History overlay: trackpad pan accumulator (px until a row step). */
-  float history_pan_accum = 0.0f;
+  /** History overlay: smooth scrolling. `history_scroll_px` is the drawn
+   * offset (px from content top), eased every draw toward
+   * `history_scroll_target` (wheel / trackpad / keyboard write the
+   * target only). */
+  float history_scroll_px = 0.0f;
+  float history_scroll_target = 0.0f;
+  double history_scroll_last_time = 0.0;
+
+  /** History overlay: content + viewport heights from the last draw —
+   * the event side clamps scroll targets with these. */
+  float history_content_h = 0.0f;
+  float history_view_h = 0.0f;
+
+  /** History overlay: type-to-filter query (UTF-8, always focused while
+   * the overlay is open; edited by the overlay key handler). */
+  char history_search[96] = "";
+
+  /** History overlay: keyboard-selected row (index into history_rows,
+   * -1 = none). Arrow keys move it, Enter opens, Delete arms delete. */
+  int history_sel = -1;
 
   /** History overlay: open animation start time (0 = not animating). */
   double history_anim_start = 0.0;
@@ -418,7 +442,9 @@ struct MixieChatRuntime {
    * i.e. exactly on the X. Empty = nothing armed. */
   char history_confirm_id[128] = "";
 
-  /** History overlay: hit rects for the visible rows (rebuilt per draw). */
+  /** History overlay: hit rects for ALL filtered rows in list order
+   * (rebuilt per draw; rows scrolled out of view keep their offscreen
+   * bounds — hit tests additionally require history_list_bounds). */
   blender::Vector<HistoryRowHit> history_rows;
 };
 

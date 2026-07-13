@@ -13,19 +13,17 @@
  *   - visibility:  WindowManager.mixie_chat_history_visible (bool, toggled
  *     by MIXIE_CHAT_OT_show_history in the header, which also syncs)
  *   - rows:        WindowManager.mixie_chat_history_entries (name /
- *     session_id / when), the runtime mirror of ~/.mixar/chat_history/
+ *     session_id / when / group), the runtime mirror of
+ *     ~/.mixar/chat_history/ — `group` is a precomputed date-bucket label
+ *     ("Today", "Yesterday", ...) rendered as section headers
  *   - current:     scene.mixie_session_id marks the open chat's row
  *
- * Interactions dispatch back to Python operators (same pattern as slot
- * actions): row click -> mixie_chat.open_history_session; delete is
- * arm-to-confirm IN the overlay (first X click arms the row — red
- * "Delete?" — second X click dispatches
- * mixie_chat.delete_history_session; any other click or ESC disarms).
- * No OS confirm popup: it anchors at the cursor, landing its OK button
- * exactly on the X that was just clicked.
- * While open the overlay is modal for this region: it consumes clicks
- * (click-away closes), wheel/trackpad scroll (row-stepped, so no GPU
- * scissor clipping is needed) and ESC.
+ * This file owns panel layout + drawing: search field (type-to-filter,
+ * always focused while open), date-group section headers, pixel-smooth
+ * eased scrolling (rows scissor-clip to the list viewport), keyboard
+ * selection highlight, and the header close button. Event handling +
+ * cursor live in mixie_chat_history_events.cc; shared helpers in
+ * mixie_chat_history_util.cc.
  */
 
 #include <algorithm>
@@ -34,6 +32,7 @@
 
 #include "MEM_guardedalloc.h"
 
+#include "BLI_math_vector.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_string_utf8.h"
@@ -52,7 +51,6 @@
 
 #include "ED_screen.hh"
 
-#include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
 #include "RNA_access.hh"
@@ -63,49 +61,10 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
 
-/* -------------------------------------------------------------------- */
-/** \name Constants (base px, scaled by UI_SCALE_FAC at draw time)
- * \{ */
-
-static const float PANEL_MAX_WIDTH = 480.0f;
-static const float PANEL_SIDE_MARGIN = 12.0f;
-static const float PANEL_TOP_MARGIN = 10.0f;
-static const float PANEL_RADIUS = 14.0f;
-static const float PANEL_PAD = 12.0f;
-static const float HEADER_HEIGHT = 46.0f;
-static const float ROW_HEIGHT = 40.0f;
-static const float ROW_RADIUS = 9.0f;
-static const float ROW_SIDE_INSET = 6.0f;
-static const float DOT_RADIUS = 3.5f;
-static const float TITLE_INDENT = 26.0f;
-static const float DELETE_SIZE = 22.0f;
-static const float DELETE_RIGHT_INSET = 8.0f;
-static const int MAX_VISIBLE_ROWS = 12;
-static const float OPEN_ANIM_DURATION = 0.18f; /* seconds */
-static const float OPEN_SLIDE_PX = 8.0f;
-
-/* Colors (Mixar dark surface language; alpha multiplied by open anim). */
-static const float COL_SCRIM[4] = {0.02f, 0.03f, 0.04f, 0.42f};
-static const float COL_PANEL[4] = {0.105f, 0.115f, 0.135f, 0.995f};
-static const float COL_PANEL_OUTLINE[4] = {1.0f, 1.0f, 1.0f, 0.075f};
-static const float COL_PANEL_SHADOW[4] = {0.0f, 0.0f, 0.0f, 0.35f};
-static const float COL_HEADER_TEXT[4] = {0.92f, 0.94f, 0.97f, 1.0f};
-static const float COL_MUTED[4] = {0.52f, 0.56f, 0.61f, 1.0f};
-static const float COL_DIVIDER[4] = {1.0f, 1.0f, 1.0f, 0.06f};
-/* Row hover comes from the theme: theme.space_mixie_chat.chat_history_row_hover
- * (chat_ui_get_history_row_hover_color), seeded by the Python bootstrap. */
-static const float COL_TITLE[4] = {0.86f, 0.88f, 0.91f, 0.96f};
-static const float COL_TITLE_CURRENT[4] = {0.97f, 0.98f, 1.0f, 1.0f};
 static const float COL_ACCENT[4] = CHAT_ACCENT_LIVE;
-static const float COL_DELETE[4] = {0.55f, 0.58f, 0.62f, 0.75f};
-static const float COL_DELETE_HOVER[4] = {0.95f, 0.42f, 0.42f, 1.0f};
-static const float COL_DELETE_HOVER_BG[4] = {1.0f, 1.0f, 1.0f, 0.09f};
-static const float COL_DELETE_ARMED_BG[4] = {0.95f, 0.42f, 0.42f, 0.18f};
-static const float COL_SCROLL_THUMB[4] = {1.0f, 1.0f, 1.0f, 0.16f};
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Small Helpers
@@ -130,158 +89,19 @@ static float ease_out_cubic(float t)
   return t1 * t1 * t1 + 1.0f;
 }
 
-/** Bounded read of a Python-registered RNA string property. */
-static void history_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, int buf_maxncpy)
-{
-  buf[0] = '\0';
-  if (!prop) {
-    return;
-  }
-  char fixed[256];
-  int len = 0;
-  char *value = RNA_property_string_get_alloc(ptr, prop, fixed, sizeof(fixed), &len);
-  if (value) {
-    BLI_strncpy(buf, value, buf_maxncpy);
-    if (value != fixed) {
-      MEM_freeN(value);
-    }
-  }
-}
-
-/** Clip `src` to `max_width` px (font already implied by `font_px`),
- * appending a UTF-8 ellipsis when trimmed. The chat primitives only wrap
- * (never truncate), so list rows need their own single-line clipper. */
-static void history_text_ellipsis(
-    const char *src, int font_id, int font_px, float max_width, char *dst, size_t dst_size)
-{
-  BLF_size(font_id, float(font_px));
-  const size_t len = strlen(src);
-  if (BLF_width(font_id, src, len) <= max_width) {
-    BLI_strncpy(dst, src, dst_size);
-    return;
-  }
-  const char *ellipsis = "\xe2\x80\xa6"; /* U+2026 */
-  const float ellipsis_w = BLF_width(font_id, ellipsis, 3);
-  size_t keep = 0;
-  while (keep < len) {
-    const size_t step = size_t(std::max(1, BLI_str_utf8_size_safe(src + keep)));
-    const size_t next = keep + step;
-    if (next >= len || next + 4 >= dst_size) {
-      break;
-    }
-    if (BLF_width(font_id, src, next) + ellipsis_w > max_width) {
-      break;
-    }
-    keep = next;
-  }
-  memcpy(dst, src, keep);
-  dst[keep] = '\0';
-  BLI_strncpy(dst + keep, ellipsis, dst_size - keep);
-}
-
-static void history_draw_label(
-    const char *text, int font_id, int font_px, float x, float baseline_y, const float color[4])
-{
-  BLF_size(font_id, float(font_px));
-  BLF_color4fv(font_id, color);
-  BLF_position(font_id, x, baseline_y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-  /* BLF can leave a different blend mode behind; every translucent fill
-   * drawn after a label (divider, hover wash, delete ring, scroll thumb)
-   * needs alpha blending back or it renders fully opaque. */
-  GPU_blend(GPU_BLEND_ALPHA);
-}
-
-static float history_text_width(const char *text, int font_id, int font_px)
-{
-  BLF_size(font_id, float(font_px));
-  return BLF_width(font_id, text, strlen(text));
-}
-
-/** Two crossing GPU lines forming the delete X glyph. */
-static void history_draw_x_glyph(float cx, float cy, float half, const float color[4], float scale)
-{
-  GPUVertFormat *format = immVertexFormat();
-  uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4fv(color);
-  GPU_line_width(1.5f * scale);
-
-  immBegin(GPU_PRIM_LINES, 4);
-  immVertex2f(pos, cx - half, cy - half);
-  immVertex2f(pos, cx + half, cy + half);
-  immVertex2f(pos, cx - half, cy + half);
-  immVertex2f(pos, cx + half, cy - half);
-  immEnd();
-
-  immUnbindProgram();
-  GPU_line_width(1.0f);
-}
-
-/** Row index under the mouse, or -1. `r_over_delete` reports the X hit. */
-static int history_hit_row(const MixieChatRuntime *rt, float mx, float my, bool *r_over_delete)
-{
-  *r_over_delete = false;
-  for (int i = 0; i < int(rt->history_rows.size()); i++) {
-    const HistoryRowHit &row = rt->history_rows[i];
-    if (row.bounds.xmax <= row.bounds.xmin) {
-      continue;
-    }
-    if (BLI_rctf_isect_pt(&row.bounds, mx, my)) {
-      *r_over_delete = BLI_rctf_isect_pt(&row.delete_bounds, mx, my);
-      return i;
-    }
-  }
-  return -1;
-}
-
-static void history_reset_runtime(MixieChatRuntime *rt)
-{
-  rt->history_rows.clear();
-  BLI_rctf_init(&rt->history_panel_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
-  rt->history_total_rows = 0;
-  rt->history_visible_rows = 0;
-  rt->history_confirm_id[0] = '\0';
-}
-
-/** Dispatch a Python operator that takes a single session_id string. */
-static void history_dispatch_session_op(bContext *C,
-                                        ARegion *region,
-                                        const char *op_idname,
-                                        const char *session_id,
-                                        blender::wm::OpCallContext call_context)
-{
-  wmOperatorType *ot = WM_operatortype_find(op_idname, true);
-  if (!ot || session_id[0] == '\0') {
-    return;
-  }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
-  RNA_string_set(&op_ptr, "session_id", session_id);
-  WM_operator_name_call_ptr(C, ot, call_context, &op_ptr, nullptr);
-  WM_operator_properties_free(&op_ptr);
-  ED_region_tag_redraw(region);
-}
+/** One line of the scrollable list: a date-group header or an entry row. */
+struct HistoryDisplayItem {
+  int entry_index;       /* index into the filtered entries, -1 = group header */
+  const char *group;     /* header label (points into the entries vector) */
+  float content_top;     /* px offset from content top, grows downward */
+  float height;
+};
 
 /** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Visibility (Python-registered WM bool)
  * \{ */
-
-static bool history_read_visible(wmWindowManager *wm)
-{
-  if (!wm) {
-    return false;
-  }
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_chat_history_visible");
-  if (!prop) {
-    return false;
-  }
-  return RNA_property_boolean_get(&wm_ptr, prop);
-}
 
 void mixie_chat_history_set_visible(bContext *C, bool visible)
 {
@@ -306,44 +126,62 @@ void mixie_chat_history_set_visible(bContext *C, bool visible)
 /** \name Drawing
  * \{ */
 
-/** Local snapshot of one history entry read from RNA. */
-struct HistoryDrawEntry {
-  char title[200];
-  char when[24];
-  char session_id[128];
-};
-
-static void history_read_entries(wmWindowManager *wm, blender::Vector<HistoryDrawEntry> &r_items)
+/** Search field: rounded box, query text (tail-clipped) or placeholder,
+ * and a static caret — the field is always focused while the overlay is
+ * open (all typing filters the list). */
+static void history_draw_search(
+    MixieChatRuntime *rt, int font_id, int text_px, float scale, float slide, float ease)
 {
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *entries_prop = RNA_struct_find_property(&wm_ptr, "mixie_chat_history_entries");
-  if (!entries_prop) {
-    return;
+  rctf field = rt->history_search_bounds;
+  field.ymin -= slide;
+  field.ymax -= slide;
+  const float radius = 8.0f * scale;
+  const float inner_pad = 10.0f * scale;
+
+  float bg[4] = {HIST_COL_SEARCH_BG[0], HIST_COL_SEARCH_BG[1], HIST_COL_SEARCH_BG[2],
+                 HIST_COL_SEARCH_BG[3] * ease};
+  float outline[4] = {HIST_COL_SEARCH_OUTLINE[0], HIST_COL_SEARCH_OUTLINE[1],
+                      HIST_COL_SEARCH_OUTLINE[2], HIST_COL_SEARCH_OUTLINE[3] * ease};
+  chat_ui_draw_rounded_rect(&field, radius, bg);
+  chat_ui_draw_rounded_rect_outline(&field, radius, outline, 1.0f);
+
+  const float text_x = field.xmin + inner_pad;
+  const float avail_w = (field.xmax - inner_pad) - text_x;
+  const float baseline =
+      (field.ymin + field.ymax) * 0.5f - float(text_px) * 0.35f;
+
+  const char *query = rt->history_search;
+  float caret_x = text_x;
+  if (query[0] == '\0') {
+    float hint_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
+                         HIST_COL_MUTED[3] * 0.85f * ease};
+    /* Placeholder sits right of the caret so the two don't overlap. */
+    hist_draw_label(
+        "Search chats\xe2\x80\xa6", font_id, text_px, text_x + 5.0f * scale, baseline, hint_col);
+  }
+  else {
+    /* Tail-clip: drop leading characters until the remainder fits, so the
+     * end of the query (where the caret is) always stays visible. */
+    BLF_size(font_id, float(text_px));
+    const char *start = query;
+    while (*start && BLF_width(font_id, start, strlen(start)) > avail_w) {
+      start += std::max(1, BLI_str_utf8_size_safe(start));
+    }
+    float text_col[4] = {HIST_COL_TITLE[0], HIST_COL_TITLE[1], HIST_COL_TITLE[2],
+                         HIST_COL_TITLE[3] * ease};
+    hist_draw_label(start, font_id, text_px, text_x, baseline, text_col);
+    caret_x = text_x + BLF_width(font_id, start, strlen(start)) + 1.0f * scale;
   }
 
-  PropertyRNA *p_name = nullptr;
-  PropertyRNA *p_sid = nullptr;
-  PropertyRNA *p_when = nullptr;
-
-  CollectionPropertyIterator iter;
-  RNA_property_collection_begin(&wm_ptr, entries_prop, &iter);
-  for (; iter.valid; RNA_property_collection_next(&iter)) {
-    PointerRNA item_ptr = iter.ptr;
-    if (!p_name) {
-      /* All items share one runtime StructRNA — resolve once. */
-      p_name = RNA_struct_find_property(&item_ptr, "name");
-      p_sid = RNA_struct_find_property(&item_ptr, "session_id");
-      p_when = RNA_struct_find_property(&item_ptr, "when");
-    }
-    HistoryDrawEntry entry;
-    history_read_string(&item_ptr, p_name, entry.title, sizeof(entry.title));
-    history_read_string(&item_ptr, p_sid, entry.session_id, sizeof(entry.session_id));
-    history_read_string(&item_ptr, p_when, entry.when, sizeof(entry.when));
-    if (entry.session_id[0] != '\0') {
-      r_items.append(entry);
-    }
+  /* Caret. */
+  {
+    rctf caret;
+    const float caret_half_h = float(text_px) * 0.62f;
+    const float cy = (field.ymin + field.ymax) * 0.5f;
+    BLI_rctf_init(&caret, caret_x, caret_x + 1.5f * scale, cy - caret_half_h, cy + caret_half_h);
+    float caret_col[4] = {COL_ACCENT[0], COL_ACCENT[1], COL_ACCENT[2], 0.9f * ease};
+    chat_ui_draw_rounded_rect(&caret, 0.75f * scale, caret_col);
   }
-  RNA_property_collection_end(&iter);
 }
 
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
@@ -356,32 +194,65 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
   wmWindowManager *wm = CTX_wm_manager(C);
-  const bool visible = history_read_visible(wm);
+  const bool visible = mixie_chat_history_read_visible(wm);
 
   const double now = BLI_time_now_seconds();
   if (visible && !rt->history_overlay_active) {
-    /* Opening edge: restart animation, scroll position, armed delete. */
+    /* Opening edge: restart animation, scroll, search, selection. */
     rt->history_anim_start = now;
-    rt->history_scroll_row = 0;
-    rt->history_pan_accum = 0.0f;
+    rt->history_scroll_px = 0.0f;
+    rt->history_scroll_target = 0.0f;
+    rt->history_scroll_last_time = 0.0;
+    rt->history_search[0] = '\0';
+    rt->history_sel = -1;
     rt->history_confirm_id[0] = '\0';
   }
   rt->history_overlay_active = visible;
   if (!visible) {
-    history_reset_runtime(rt);
+    mixie_chat_history_reset_runtime(rt);
     return;
   }
 
-  /* Open animation (fade + slide), pumped like the other chat animations. */
-  const float anim_t = float((now - rt->history_anim_start) / OPEN_ANIM_DURATION);
+  /* Smooth scroll: ease the drawn offset toward the target (events only
+   * ever write the target). Exponential approach, framerate-independent. */
+  float dt = 0.0f;
+  if (rt->history_scroll_last_time > 0.0) {
+    dt = float(std::min(now - rt->history_scroll_last_time, 0.05));
+  }
+  rt->history_scroll_last_time = now;
+  {
+    const float diff = rt->history_scroll_target - rt->history_scroll_px;
+    if (std::abs(diff) <= 0.25f) {
+      rt->history_scroll_px = rt->history_scroll_target;
+    }
+    else {
+      const float f = 1.0f - std::exp(-HIST_SCROLL_APPROACH_RATE * dt);
+      rt->history_scroll_px += diff * f;
+    }
+  }
+
+  /* Open animation (fade + slide), pumped like the other chat animations.
+   * Smooth scrolling shares the same pump while it settles. */
+  const float anim_t = float((now - rt->history_anim_start) / HIST_OPEN_ANIM_DURATION);
   const float ease = ease_out_cubic(anim_t);
-  mixie_chat_anim_pump_request(C, anim_t < 1.0f);
-  if (anim_t < 1.0f && area) {
+  const bool scroll_settling = (rt->history_scroll_px != rt->history_scroll_target);
+  mixie_chat_anim_pump_request(C, anim_t < 1.0f || scroll_settling);
+  if ((anim_t < 1.0f || scroll_settling) && area) {
     ED_area_tag_redraw(area);
   }
 
-  blender::Vector<HistoryDrawEntry> items;
-  history_read_entries(wm, items);
+  blender::Vector<HistoryDrawEntry> entries;
+  mixie_chat_history_read_entries(wm, entries);
+
+  /* Type-to-filter: case-insensitive substring match on the title. */
+  blender::Vector<int> filtered;
+  for (int i = 0; i < int(entries.size()); i++) {
+    if (rt->history_search[0] == '\0' ||
+        BLI_strcasestr(entries[i].title, rt->history_search) != nullptr)
+    {
+      filtered.append(i);
+    }
+  }
 
   /* Current chat's session id (marks its row with the accent dot). */
   char current_id[128] = "";
@@ -389,7 +260,12 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
     PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
     PropertyRNA *sid_prop = RNA_struct_find_property(&scene_ptr, "mixie_session_id");
     if (sid_prop) {
-      history_read_string(&scene_ptr, sid_prop, current_id, sizeof(current_id));
+      char *value = RNA_property_string_get_alloc(
+          &scene_ptr, sid_prop, current_id, sizeof(current_id), nullptr);
+      if (value && value != current_id) {
+        BLI_strncpy(current_id, value, sizeof(current_id));
+        MEM_freeN(value);
+      }
     }
   }
 
@@ -399,38 +275,90 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
   const int font_id = BLF_default();
   const int title_px = int(14.0f * scale);
   const int meta_px = int(12.0f * scale);
+  const int group_px = int(11.0f * scale);
   const int header_px = int(15.0f * scale);
 
-  const float pad = PANEL_PAD * scale;
-  const float row_h = ROW_HEIGHT * scale;
-  const float header_h = HEADER_HEIGHT * scale;
+  const float pad = HIST_PANEL_PAD * scale;
+  const float row_h = HIST_ROW_HEIGHT * scale;
+  const float group_h = HIST_GROUP_HEADER_HEIGHT * scale;
+  const float header_h = HIST_HEADER_HEIGHT * scale;
 
-  float panel_w = std::min(float(winx) - 2.0f * PANEL_SIDE_MARGIN * scale,
-                           PANEL_MAX_WIDTH * scale);
+  const bool store_empty = entries.is_empty();
+  const float search_h = store_empty ? 0.0f : HIST_SEARCH_AREA_HEIGHT * scale;
+
+  float panel_w = std::min(float(winx) - 2.0f * HIST_PANEL_SIDE_MARGIN * scale,
+                           HIST_PANEL_MAX_WIDTH * scale);
   panel_w = std::max(panel_w, 120.0f * scale);
 
-  const int total = int(items.size());
+  /* Build the display list: entry rows with a section header wherever the
+   * date-group label changes (entries arrive newest-first from Python). */
+  blender::Vector<HistoryDisplayItem> items;
+  float content_h = 0.0f;
+  {
+    const char *prev_group = "";
+    for (const int entry_index : filtered) {
+      const HistoryDrawEntry &entry = entries[entry_index];
+      if (entry.group[0] != '\0' && !STREQ(entry.group, prev_group)) {
+        items.append({-1, entry.group, content_h, group_h});
+        content_h += group_h;
+        prev_group = entry.group;
+      }
+      items.append({entry_index, nullptr, content_h, row_h});
+      content_h += row_h;
+    }
+  }
 
-  /* Visible row count: fit the region, capped, leaving breathing room. */
-  const float avail_h = float(winy) - PANEL_TOP_MARGIN * scale - header_h - pad - 24.0f * scale;
-  const int fit_rows = std::max(1, int(avail_h / row_h));
-  const int visible_rows = std::min(total, std::min(fit_rows, MAX_VISIBLE_ROWS));
+  /* List viewport height: fit the region, capped, leaving breathing room. */
+  const float avail_h = float(winy) - HIST_PANEL_TOP_MARGIN * scale - header_h - search_h - pad -
+                        24.0f * scale;
+  float view_h = std::min(content_h, std::min(avail_h, HIST_LIST_MAX_HEIGHT * scale));
+  const bool no_matches = (!store_empty && filtered.is_empty());
+  if (store_empty || no_matches) {
+    view_h = 64.0f * scale;
+  }
+  view_h = std::max(view_h, row_h);
 
-  const float body_h = (total == 0) ? 64.0f * scale : float(visible_rows) * row_h;
-  const float panel_h = header_h + body_h + pad;
+  const float panel_h = header_h + search_h + view_h + pad;
   const float panel_x = (float(winx) - panel_w) * 0.5f;
-  const float panel_top = float(winy) - PANEL_TOP_MARGIN * scale;
+  const float panel_top = float(winy) - HIST_PANEL_TOP_MARGIN * scale;
   const float panel_bottom = panel_top - panel_h;
 
-  /* Clamp scroll to the row range. */
-  const int max_scroll = std::max(0, total - visible_rows);
-  rt->history_scroll_row = std::max(0, std::min(rt->history_scroll_row, max_scroll));
-  rt->history_total_rows = total;
-  rt->history_visible_rows = visible_rows;
+  /* Clamp scrolling to the content range (filter edits shrink it). */
+  const float max_scroll = std::max(0.0f, content_h - view_h);
+  rt->history_scroll_target = std::clamp(rt->history_scroll_target, 0.0f, max_scroll);
+  rt->history_scroll_px = std::clamp(rt->history_scroll_px, 0.0f, max_scroll);
+  rt->history_content_h = content_h;
+  rt->history_view_h = view_h;
 
   /* Hit bounds at the FINAL (unslid) position for stable click targets. */
   BLI_rctf_init(&rt->history_panel_bounds, panel_x, panel_x + panel_w, panel_bottom, panel_top);
+  const float list_top = panel_top - header_h - search_h;
+  const float list_bottom = list_top - view_h;
+  BLI_rctf_init(&rt->history_list_bounds, panel_x, panel_x + panel_w, list_bottom, list_top);
+  {
+    const float close_half = HIST_CLOSE_SIZE * 0.5f * scale;
+    const float close_cx = panel_x + panel_w - pad - close_half;
+    const float close_cy = panel_top - header_h * 0.5f;
+    BLI_rctf_init(&rt->history_close_bounds,
+                  close_cx - close_half,
+                  close_cx + close_half,
+                  close_cy - close_half,
+                  close_cy + close_half);
+  }
+  if (!store_empty) {
+    const float field_h = HIST_SEARCH_FIELD_HEIGHT * scale;
+    const float field_top = panel_top - header_h - (search_h - field_h) * 0.5f;
+    BLI_rctf_init(&rt->history_search_bounds,
+                  panel_x + pad,
+                  panel_x + panel_w - pad,
+                  field_top - field_h,
+                  field_top);
+  }
+  else {
+    BLI_rctf_init(&rt->history_search_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
+  }
   rt->history_rows.clear();
+  rt->history_sel = std::min(rt->history_sel, int(filtered.size()) - 1);
 
   /* Mouse position for hover (freshest source, like the empty state). */
   wmWindow *win = CTX_wm_window(C);
@@ -440,7 +368,7 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
     mouse_y = float(win->eventstate->xy[1] - region->winrct.ymin);
   }
 
-  const float slide = OPEN_SLIDE_PX * scale * (1.0f - ease);
+  const float slide = HIST_OPEN_SLIDE_PX * scale * (1.0f - ease);
 
   GPU_blend(GPU_BLEND_ALPHA);
 
@@ -448,11 +376,12 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
   {
     rctf full;
     BLI_rctf_init(&full, 0.0f, float(winx), 0.0f, float(winy));
-    float scrim[4] = {COL_SCRIM[0], COL_SCRIM[1], COL_SCRIM[2], COL_SCRIM[3] * ease};
+    float scrim[4] = {HIST_COL_SCRIM[0], HIST_COL_SCRIM[1], HIST_COL_SCRIM[2],
+                      HIST_COL_SCRIM[3] * ease};
     chat_ui_draw_rounded_rect(&full, 0.0f, scrim);
   }
 
-  const float radius = PANEL_RADIUS * scale;
+  const float radius = HIST_PANEL_RADIUS * scale;
   rctf panel;
   BLI_rctf_init(&panel, panel_x, panel_x + panel_w, panel_bottom - slide, panel_top - slide);
 
@@ -464,36 +393,66 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
     shadow.xmax += grow;
     shadow.ymin -= grow * 1.6f;
     shadow.ymax += grow * 0.4f;
-    float col[4] = {COL_PANEL_SHADOW[0], COL_PANEL_SHADOW[1], COL_PANEL_SHADOW[2],
-                    COL_PANEL_SHADOW[3] * ease};
+    float col[4] = {HIST_COL_PANEL_SHADOW[0], HIST_COL_PANEL_SHADOW[1], HIST_COL_PANEL_SHADOW[2],
+                    HIST_COL_PANEL_SHADOW[3] * ease};
     chat_ui_draw_rounded_rect(&shadow, radius + grow, col);
   }
 
   /* Card. */
   {
-    float fill[4] = {COL_PANEL[0], COL_PANEL[1], COL_PANEL[2], COL_PANEL[3] * ease};
-    float outline[4] = {COL_PANEL_OUTLINE[0], COL_PANEL_OUTLINE[1], COL_PANEL_OUTLINE[2],
-                        COL_PANEL_OUTLINE[3] * ease};
+    float fill[4] = {HIST_COL_PANEL[0], HIST_COL_PANEL[1], HIST_COL_PANEL[2],
+                     HIST_COL_PANEL[3] * ease};
+    float outline[4] = {HIST_COL_PANEL_OUTLINE[0], HIST_COL_PANEL_OUTLINE[1],
+                        HIST_COL_PANEL_OUTLINE[2], HIST_COL_PANEL_OUTLINE[3] * ease};
     chat_ui_draw_rounded_rect(&panel, radius, fill);
     chat_ui_draw_rounded_rect_outline(&panel, radius, outline, 1.0f);
   }
 
-  /* Header: "Chats" left, dimmed count right, hairline divider below. */
+  /* Header: "Chats" + count left, close X right, hairline divider below. */
   {
     const float header_center = panel.ymax - header_h * 0.5f;
     const float baseline = header_center - float(header_px) * 0.35f;
 
-    float title_col[4] = {COL_HEADER_TEXT[0], COL_HEADER_TEXT[1], COL_HEADER_TEXT[2],
-                          COL_HEADER_TEXT[3] * ease};
-    history_draw_label("Chats", font_id, header_px, panel.xmin + pad, baseline, title_col);
+    float title_col[4] = {HIST_COL_HEADER_TEXT[0], HIST_COL_HEADER_TEXT[1],
+                          HIST_COL_HEADER_TEXT[2], HIST_COL_HEADER_TEXT[3] * ease};
+    hist_draw_label("Chats", font_id, header_px, panel.xmin + pad, baseline, title_col);
 
-    if (total > 0) {
-      char count_buf[16];
-      SNPRINTF(count_buf, "%d", total);
-      float count_col[4] = {COL_MUTED[0], COL_MUTED[1], COL_MUTED[2], COL_MUTED[3] * ease};
-      const float count_w = history_text_width(count_buf, font_id, meta_px);
-      history_draw_label(count_buf, font_id, meta_px, panel.xmax - pad - count_w,
-                         header_center - float(meta_px) * 0.35f, count_col);
+    if (!store_empty) {
+      char count_buf[32];
+      if (rt->history_search[0] != '\0') {
+        SNPRINTF(count_buf, "%d / %d", int(filtered.size()), int(entries.size()));
+      }
+      else {
+        SNPRINTF(count_buf, "%d", int(entries.size()));
+      }
+      float count_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
+                            HIST_COL_MUTED[3] * ease};
+      const float title_w = hist_text_width("Chats", font_id, header_px);
+      hist_draw_label(count_buf, font_id, meta_px, panel.xmin + pad + title_w + 8.0f * scale,
+                      header_center - float(meta_px) * 0.35f, count_col);
+    }
+
+    /* Close button (X, ring on hover). */
+    {
+      const bool close_hovered = BLI_rctf_isect_pt(&rt->history_close_bounds, mouse_x, mouse_y);
+      const float close_cx = BLI_rctf_cent_x(&rt->history_close_bounds);
+      const float close_cy = BLI_rctf_cent_y(&rt->history_close_bounds) - slide;
+      if (close_hovered) {
+        rctf ring = rt->history_close_bounds;
+        ring.ymin -= slide;
+        ring.ymax -= slide;
+        float ring_col[4] = {HIST_COL_DELETE_HOVER_BG[0], HIST_COL_DELETE_HOVER_BG[1],
+                             HIST_COL_DELETE_HOVER_BG[2], HIST_COL_DELETE_HOVER_BG[3] * ease};
+        chat_ui_draw_rounded_rect(&ring, HIST_CLOSE_SIZE * 0.5f * scale, ring_col);
+      }
+      float x_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
+                        (close_hovered ? 1.0f : 0.8f) * ease};
+      if (close_hovered) {
+        x_col[0] = HIST_COL_HEADER_TEXT[0];
+        x_col[1] = HIST_COL_HEADER_TEXT[1];
+        x_col[2] = HIST_COL_HEADER_TEXT[2];
+      }
+      hist_draw_x_glyph(close_cx, close_cy, 4.6f * scale, x_col, scale);
     }
 
     rctf divider;
@@ -502,93 +461,142 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
                   panel.xmax - pad,
                   panel.ymax - header_h,
                   panel.ymax - header_h + 1.0f * scale);
-    float div_col[4] = {COL_DIVIDER[0], COL_DIVIDER[1], COL_DIVIDER[2], COL_DIVIDER[3] * ease};
+    float div_col[4] = {HIST_COL_DIVIDER[0], HIST_COL_DIVIDER[1], HIST_COL_DIVIDER[2],
+                        HIST_COL_DIVIDER[3] * ease};
     chat_ui_draw_rounded_rect(&divider, 0.0f, div_col);
   }
 
-  /* Empty state. */
-  if (total == 0) {
-    float title_col[4] = {COL_TITLE[0], COL_TITLE[1], COL_TITLE[2], COL_TITLE[3] * ease};
-    float hint_col[4] = {COL_MUTED[0], COL_MUTED[1], COL_MUTED[2], COL_MUTED[3] * ease};
+  if (!store_empty) {
+    history_draw_search(rt, font_id, title_px, scale, slide, ease);
+  }
 
-    const char *empty_text = "No past chats yet";
-    const char *hint_text = "New Chat saves the current conversation here";
+  /* Empty states: no archived chats at all / no titles match the query. */
+  if (store_empty || no_matches) {
+    float title_col[4] = {HIST_COL_TITLE[0], HIST_COL_TITLE[1], HIST_COL_TITLE[2],
+                          HIST_COL_TITLE[3] * ease};
+    float hint_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
+                         HIST_COL_MUTED[3] * ease};
+
+    const char *empty_text = store_empty ? "No past chats yet" : "No chats match your search";
+    const char *hint_text = store_empty ?
+                                "New Chat saves the current conversation here" :
+                                "Backspace to edit, Esc to clear";
     const float cx = (panel.xmin + panel.xmax) * 0.5f;
-    const float cy = panel.ymax - header_h - body_h * 0.5f;
+    const float cy = (list_top + list_bottom) * 0.5f - slide;
 
-    float w = history_text_width(empty_text, font_id, title_px);
-    history_draw_label(empty_text, font_id, title_px, cx - w * 0.5f,
-                       cy + 4.0f * scale, title_col);
-    w = history_text_width(hint_text, font_id, meta_px);
-    history_draw_label(hint_text, font_id, meta_px, cx - w * 0.5f,
-                       cy - (4.0f * scale + float(meta_px)), hint_col);
+    float w = hist_text_width(empty_text, font_id, title_px);
+    hist_draw_label(empty_text, font_id, title_px, cx - w * 0.5f, cy + 4.0f * scale, title_col);
+    w = hist_text_width(hint_text, font_id, meta_px);
+    hist_draw_label(hint_text, font_id, meta_px, cx - w * 0.5f,
+                    cy - (4.0f * scale + float(meta_px)), hint_col);
 
     GPU_blend(GPU_BLEND_NONE);
     if (win) {
-      WM_cursor_set(win, WM_CURSOR_DEFAULT);
+      const bool over_search = BLI_rctf_isect_pt(&rt->history_search_bounds, mouse_x, mouse_y);
+      const bool over_close = BLI_rctf_isect_pt(&rt->history_close_bounds, mouse_x, mouse_y);
+      WM_cursor_set(win,
+                    over_search ? WM_CURSOR_TEXT_EDIT :
+                                  (over_close ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT));
     }
     return;
   }
 
-  /* Rows (row-stepped scroll: only whole rows draw, so nothing clips). */
-  const bool has_scrollbar = (total > visible_rows);
-  const float row_xmin = panel_x + ROW_SIDE_INSET * scale;
+  /* Rows + group headers, scissor-clipped to the list viewport so the
+   * pixel-smooth scroll can show partial rows at both edges. Regions draw
+   * into a REGION-SIZED offscreen buffer (wm_draw_region_bind sets the
+   * scissor to 0,0,winx,winy) — so GPU_scissor takes region-local coords
+   * here, NOT window coords; restore the full-region scissor after. */
+  const bool has_scrollbar = (content_h > view_h + 0.5f);
+  const float row_xmin = panel_x + HIST_ROW_SIDE_INSET * scale;
   const float row_xmax =
-      panel_x + panel_w - ROW_SIDE_INSET * scale - (has_scrollbar ? 8.0f * scale : 0.0f);
-  const float list_top = panel_top - header_h;
+      panel_x + panel_w - HIST_ROW_SIDE_INSET * scale - (has_scrollbar ? 8.0f * scale : 0.0f);
 
   bool any_hovered = false;
 
-  for (int v = 0; v < visible_rows; v++) {
-    const int idx = rt->history_scroll_row + v;
-    if (idx >= total) {
-      break;
+  GPU_scissor(int(std::floor(panel_x)),
+              int(std::floor(list_bottom)),
+              int(std::ceil(panel_w)) + 1,
+              int(std::ceil(view_h)) + 1);
+
+  for (const HistoryDisplayItem &item : items) {
+    /* Content-space -> screen-space: scrolling moves content up. */
+    const float item_top = list_top - item.content_top + rt->history_scroll_px;
+    const float item_bottom = item_top - item.height;
+
+    if (item.entry_index < 0) {
+      /* Date-group section header. */
+      if (item_bottom <= list_top + item.height && item_top >= list_bottom - item.height) {
+        const float baseline = (item_top + item_bottom) * 0.5f - slide - float(group_px) * 0.30f;
+        float group_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
+                              HIST_COL_MUTED[3] * 0.9f * ease};
+        hist_draw_label(item.group, font_id, group_px, row_xmin + 8.0f * scale, baseline,
+                        group_col);
+      }
+      continue;
     }
-    const HistoryDrawEntry &entry = items[idx];
-    const bool is_current = (current_id[0] != '\0') &&
-                            STREQ(entry.session_id, current_id);
+
+    const HistoryDrawEntry &entry = entries[item.entry_index];
+    const bool is_current = (current_id[0] != '\0') && STREQ(entry.session_id, current_id);
     const bool is_armed = (rt->history_confirm_id[0] != '\0') &&
                           STREQ(entry.session_id, rt->history_confirm_id);
 
-    const float row_top = list_top - float(v) * row_h;
-    const float row_bottom = row_top - row_h;
+    const float row_top = item_top;
+    const float row_bottom = item_bottom;
     const float row_center = (row_top + row_bottom) * 0.5f;
 
-    /* Hit rects at final position. */
+    /* Hit rects for EVERY filtered row (even offscreen ones — keyboard
+     * selection needs their content offsets; mouse hits are additionally
+     * gated on history_list_bounds). */
     HistoryRowHit hit;
     BLI_rctf_init(&hit.bounds, row_xmin, row_xmax, row_bottom, row_top);
-    const float del_half = DELETE_SIZE * 0.5f * scale;
-    const float del_cx = row_xmax - DELETE_RIGHT_INSET * scale - del_half;
+    const float del_half = HIST_DELETE_SIZE * 0.5f * scale;
+    const float del_cx = row_xmax - HIST_DELETE_RIGHT_INSET * scale - del_half;
     BLI_rctf_init(&hit.delete_bounds,
                   del_cx - del_half,
                   del_cx + del_half,
                   row_center - del_half,
                   row_center + del_half);
+    hit.content_top = item.content_top;
     BLI_strncpy(hit.session_id, entry.session_id, sizeof(hit.session_id));
-    hit.is_hovered = BLI_rctf_isect_pt(&hit.bounds, mouse_x, mouse_y);
+    const bool in_list = BLI_rctf_isect_pt(&rt->history_list_bounds, mouse_x, mouse_y);
+    hit.is_hovered = in_list && BLI_rctf_isect_pt(&hit.bounds, mouse_x, mouse_y);
     hit.delete_hovered = hit.is_hovered &&
                          BLI_rctf_isect_pt(&hit.delete_bounds, mouse_x, mouse_y);
     any_hovered |= hit.is_hovered;
+    const int row_index = int(rt->history_rows.size());
     rt->history_rows.append(hit);
+
+    /* Skip drawing rows fully outside the viewport. */
+    if (row_bottom > list_top || row_top < list_bottom) {
+      continue;
+    }
+
+    const bool is_selected = (row_index == rt->history_sel);
 
     /* Draw geometry follows the slide offset. */
     const float draw_top = row_top - slide;
     const float draw_bottom = row_bottom - slide;
     const float draw_center = row_center - slide;
 
-    if (hit.is_hovered) {
+    if (hit.is_hovered || is_selected) {
       rctf hover_rect;
-      BLI_rctf_init(&hover_rect, row_xmin, row_xmax, draw_bottom + 2.0f * scale,
-                    draw_top - 2.0f * scale);
+      BLI_rctf_init(
+          &hover_rect, row_xmin, row_xmax, draw_bottom + 2.0f * scale, draw_top - 2.0f * scale);
       float hover_col[4];
       chat_ui_get_history_row_hover_color(hover_col);
-      hover_col[3] *= ease;
-      chat_ui_draw_rounded_rect(&hover_rect, ROW_RADIUS * scale, hover_col);
+      hover_col[3] *= ease * (hit.is_hovered ? 1.0f : 0.7f);
+      chat_ui_draw_rounded_rect(&hover_rect, HIST_ROW_RADIUS * scale, hover_col);
+      if (is_selected) {
+        /* Keyboard selection: accent outline so it reads distinctly from
+         * a transient mouse hover. */
+        float sel_col[4] = {COL_ACCENT[0], COL_ACCENT[1], COL_ACCENT[2], 0.45f * ease};
+        chat_ui_draw_rounded_rect_outline(&hover_rect, HIST_ROW_RADIUS * scale, sel_col, 1.0f);
+      }
     }
 
     /* Accent dot on the currently open chat. */
     if (is_current) {
-      const float dot_r = DOT_RADIUS * scale;
+      const float dot_r = HIST_DOT_RADIUS * scale;
       const float dot_cx = row_xmin + 13.0f * scale;
       rctf dot;
       BLI_rctf_init(&dot, dot_cx - dot_r, dot_cx + dot_r, draw_center - dot_r,
@@ -603,36 +611,32 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
     const char *when_text = is_armed ? "Delete?" : entry.when;
     float when_w = 0.0f;
     if (when_text[0] != '\0') {
-      when_w = history_text_width(when_text, font_id, meta_px);
+      when_w = hist_text_width(when_text, font_id, meta_px);
       float when_col[4];
       if (is_armed) {
-        when_col[0] = COL_DELETE_HOVER[0];
-        when_col[1] = COL_DELETE_HOVER[1];
-        when_col[2] = COL_DELETE_HOVER[2];
-        when_col[3] = COL_DELETE_HOVER[3] * ease;
+        copy_v4_v4(when_col, HIST_COL_DELETE_HOVER);
+        when_col[3] *= ease;
       }
       else {
-        when_col[0] = COL_MUTED[0];
-        when_col[1] = COL_MUTED[1];
-        when_col[2] = COL_MUTED[2];
-        when_col[3] = COL_MUTED[3] * 0.95f * ease;
+        copy_v4_v4(when_col, HIST_COL_MUTED);
+        when_col[3] *= 0.95f * ease;
       }
-      history_draw_label(when_text, font_id, meta_px, del_zone_left - when_w,
-                         draw_center - float(meta_px) * 0.35f, when_col);
+      hist_draw_label(when_text, font_id, meta_px, del_zone_left - when_w,
+                      draw_center - float(meta_px) * 0.35f, when_col);
     }
 
     /* Title, ellipsis-clipped to the space before the time label. */
     {
-      const float title_x = row_xmin + TITLE_INDENT * scale;
+      const float title_x = row_xmin + HIST_TITLE_INDENT * scale;
       const float title_max_w = (del_zone_left - when_w - 10.0f * scale) - title_x;
       char clipped[224];
-      history_text_ellipsis(entry.title[0] ? entry.title : "Untitled chat",
-                            font_id, title_px, std::max(title_max_w, 20.0f * scale),
-                            clipped, sizeof(clipped));
-      const float *base_col = is_current ? COL_TITLE_CURRENT : COL_TITLE;
+      hist_text_ellipsis(entry.title[0] ? entry.title : "Untitled chat",
+                         font_id, title_px, std::max(title_max_w, 20.0f * scale),
+                         clipped, sizeof(clipped));
+      const float *base_col = is_current ? HIST_COL_TITLE_CURRENT : HIST_COL_TITLE;
       float title_col[4] = {base_col[0], base_col[1], base_col[2], base_col[3] * ease};
-      history_draw_label(clipped, font_id, title_px, title_x,
-                         draw_center - float(title_px) * 0.35f, title_col);
+      hist_draw_label(clipped, font_id, title_px, title_x,
+                      draw_center - float(title_px) * 0.35f, title_col);
     }
 
     /* Delete X (ring + glyph). Armed rows keep a red-tinted ring and a red
@@ -642,33 +646,34 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
         rctf ring = hit.delete_bounds;
         ring.ymin -= slide;
         ring.ymax -= slide;
-        const float *ring_base = is_armed ? COL_DELETE_ARMED_BG : COL_DELETE_HOVER_BG;
+        const float *ring_base = is_armed ? HIST_COL_DELETE_ARMED_BG : HIST_COL_DELETE_HOVER_BG;
         float ring_col[4] = {ring_base[0], ring_base[1], ring_base[2], ring_base[3] * ease};
         chat_ui_draw_rounded_rect(&ring, del_half, ring_col);
       }
-      const float *base_col = (is_armed || hit.delete_hovered) ? COL_DELETE_HOVER : COL_DELETE;
+      const float *base_col = (is_armed || hit.delete_hovered) ? HIST_COL_DELETE_HOVER :
+                                                                 HIST_COL_DELETE;
       float x_col[4] = {base_col[0], base_col[1], base_col[2], base_col[3] * ease};
-      history_draw_x_glyph(del_cx, draw_center, 4.2f * scale, x_col, scale);
+      hist_draw_x_glyph(del_cx, draw_center, 4.2f * scale, x_col, scale);
     }
   }
+
+  /* Restore the full-region scissor wm_draw_region_bind() established. */
+  GPU_scissor(0, 0, region->winx, region->winy);
 
   /* Slim scrollbar thumb when the list overflows. */
   if (has_scrollbar) {
     const float track_top = list_top - 2.0f * scale;
-    const float track_bottom = panel_bottom + pad;
+    const float track_bottom = list_bottom + 2.0f * scale;
     const float track_h = track_top - track_bottom;
     if (track_h > 8.0f * scale) {
-      const float thumb_h = std::max(track_h * float(visible_rows) / float(total),
-                                     14.0f * scale);
-      const float scroll_frac = (max_scroll > 0) ?
-                                    float(rt->history_scroll_row) / float(max_scroll) :
-                                    0.0f;
+      const float thumb_h = std::max(track_h * view_h / content_h, 14.0f * scale);
+      const float scroll_frac = (max_scroll > 0.0f) ? rt->history_scroll_px / max_scroll : 0.0f;
       const float thumb_top = track_top - (track_h - thumb_h) * scroll_frac - slide;
       rctf thumb;
       const float thumb_x = panel_x + panel_w - 7.0f * scale;
       BLI_rctf_init(&thumb, thumb_x, thumb_x + 3.5f * scale, thumb_top - thumb_h, thumb_top);
-      float thumb_col[4] = {COL_SCROLL_THUMB[0], COL_SCROLL_THUMB[1], COL_SCROLL_THUMB[2],
-                            COL_SCROLL_THUMB[3] * ease};
+      float thumb_col[4] = {HIST_COL_SCROLL_THUMB[0], HIST_COL_SCROLL_THUMB[1],
+                            HIST_COL_SCROLL_THUMB[2], HIST_COL_SCROLL_THUMB[3] * ease};
       chat_ui_draw_rounded_rect(&thumb, 1.75f * scale, thumb_col);
     }
   }
@@ -678,162 +683,13 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
   /* Cursor: this draw runs after the empty-state draw (which also sets the
    * cursor), so setting it here wins while the overlay is open. */
   if (win) {
-    WM_cursor_set(win, any_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+    const bool over_close = BLI_rctf_isect_pt(&rt->history_close_bounds, mouse_x, mouse_y);
+    const bool over_search = BLI_rctf_isect_pt(&rt->history_search_bounds, mouse_x, mouse_y);
+    WM_cursor_set(win,
+                  over_search ? WM_CURSOR_TEXT_EDIT :
+                                ((any_hovered || over_close) ? WM_CURSOR_HAND :
+                                                               WM_CURSOR_DEFAULT));
   }
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Hover (region cursor callback)
- * \{ */
-
-bool mixie_chat_history_cursor(
-    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y)
-{
-  if (!rt->history_overlay_active) {
-    return false;
-  }
-
-  bool needs_redraw = false;
-  bool any_hovered = false;
-  for (HistoryRowHit &row : rt->history_rows) {
-    const bool was_hovered = row.is_hovered;
-    const bool was_delete = row.delete_hovered;
-    row.is_hovered = BLI_rctf_isect_pt(&row.bounds, mouse_x, mouse_y);
-    row.delete_hovered = row.is_hovered &&
-                         BLI_rctf_isect_pt(&row.delete_bounds, mouse_x, mouse_y);
-    needs_redraw |= (was_hovered != row.is_hovered) || (was_delete != row.delete_hovered);
-    any_hovered |= row.is_hovered;
-  }
-
-  if (needs_redraw) {
-    ED_region_tag_redraw(region);
-  }
-  WM_cursor_set(win, any_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
-  return true; /* Overlay is modal — suppress hover on elements behind it. */
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Events (called first from the region UI handler)
- * \{ */
-
-bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
-{
-  ScrArea *area = CTX_wm_area(C);
-  ARegion *region = CTX_wm_region(C);
-  SpaceMixieChat *smixie = history_space_from_area(area);
-  if (!smixie || !region) {
-    return false;
-  }
-  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
-  if (!rt->history_overlay_active) {
-    return false;
-  }
-
-  /* ESC: first disarm a pending delete, then close. */
-  if (event->type == EVT_ESCKEY && event->val == KM_PRESS) {
-    if (rt->history_confirm_id[0] != '\0') {
-      rt->history_confirm_id[0] = '\0';
-      ED_region_tag_redraw(region);
-    }
-    else {
-      mixie_chat_history_set_visible(C, false);
-    }
-    return true;
-  }
-
-  const float mx = float(event->mval[0]);
-  const float my = float(event->mval[1]);
-  const bool inside_panel = BLI_rctf_isect_pt(&rt->history_panel_bounds, mx, my);
-  const bool scrollable = (rt->history_total_rows > rt->history_visible_rows);
-  const int max_scroll = std::max(0, rt->history_total_rows - rt->history_visible_rows);
-
-  /* Wheel: row-stepped scroll inside the panel; consumed everywhere while
-   * open so the chat behind the scrim never scrolls. */
-  if (event->type == WHEELUPMOUSE || event->type == WHEELDOWNMOUSE) {
-    if (inside_panel && scrollable) {
-      rt->history_scroll_row += (event->type == WHEELDOWNMOUSE) ? 1 : -1;
-      rt->history_scroll_row = std::max(0, std::min(rt->history_scroll_row, max_scroll));
-      ED_region_tag_redraw(region);
-    }
-    return true;
-  }
-
-  /* Trackpad pan: accumulate into row steps. A positive delta (fingers
-   * swipe up under natural scrolling) advances the list toward older rows
-   * — matching the platform scroll convention and the wheel mapping. */
-  if (event->type == MOUSEPAN) {
-    if (inside_panel && scrollable) {
-      rt->history_pan_accum += float(event->xy[1] - event->prev_xy[1]);
-      const float step = 24.0f * UI_SCALE_FAC;
-      while (rt->history_pan_accum >= step) {
-        rt->history_scroll_row += 1;
-        rt->history_pan_accum -= step;
-      }
-      while (rt->history_pan_accum <= -step) {
-        rt->history_scroll_row -= 1;
-        rt->history_pan_accum += step;
-      }
-      rt->history_scroll_row = std::max(0, std::min(rt->history_scroll_row, max_scroll));
-      ED_region_tag_redraw(region);
-    }
-    return true;
-  }
-
-  if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
-    if (!inside_panel) {
-      /* Click-away closes and consumes the click. */
-      mixie_chat_history_set_visible(C, false);
-      return true;
-    }
-
-    bool over_delete = false;
-    const int idx = history_hit_row(rt, mx, my, &over_delete);
-    if (idx >= 0) {
-      /* Copy the id out — the dispatched operator redraws/rebuilds rows. */
-      char session_id[128];
-      BLI_strncpy(session_id, rt->history_rows[idx].session_id, sizeof(session_id));
-      if (over_delete) {
-        /* Arm-to-confirm: first X click arms the row (red "Delete?"),
-         * a second X click on the SAME row deletes. No popup — the OS
-         * confirm anchored its OK button right under the clicked X. */
-        if (STREQ(rt->history_confirm_id, session_id)) {
-          rt->history_confirm_id[0] = '\0';
-          history_dispatch_session_op(C,
-                                      region,
-                                      "mixie_chat.delete_history_session",
-                                      session_id,
-                                      blender::wm::OpCallContext::ExecDefault);
-        }
-        else {
-          BLI_strncpy(rt->history_confirm_id, session_id, sizeof(rt->history_confirm_id));
-          ED_region_tag_redraw(region);
-        }
-      }
-      else {
-        rt->history_confirm_id[0] = '\0';
-        history_dispatch_session_op(C,
-                                    region,
-                                    "mixie_chat.open_history_session",
-                                    session_id,
-                                    blender::wm::OpCallContext::ExecDefault);
-        mixie_chat_history_set_visible(C, false);
-      }
-    }
-    else if (rt->history_confirm_id[0] != '\0') {
-      /* Click on header/blank space disarms a pending delete. */
-      rt->history_confirm_id[0] = '\0';
-      ED_region_tag_redraw(region);
-    }
-    /* Clicks inside the panel (rows, header, blank space) never fall
-     * through to the chat behind it. */
-    return true;
-  }
-
-  return false;
 }
 
 /** \} */

@@ -29,6 +29,8 @@ and sets ``scene.mixie_session_id`` back, so the next message resumes the
 backend conversation (its LangGraph checkpoint) — nothing is re-uploaded.
 """
 
+from datetime import datetime, timezone
+
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, StringProperty
 from bpy.types import Operator, PropertyGroup
@@ -71,6 +73,36 @@ class MixieChatHistoryEntry(PropertyGroup):
                     "overlay renders it verbatim",
         default="",
     )
+    group: StringProperty(
+        name="Group",
+        description="Date-bucket label ('Today', 'Yesterday', ...) "
+                    "precomputed at sync time — the C++ overlay draws a "
+                    "section header whenever it changes between "
+                    "consecutive (newest-first) rows",
+        default="",
+    )
+
+
+def _group_label(iso_ts: str) -> str:
+    """Date bucket for the overlay's section headers, from the archive
+    timestamp (UTC ISO) compared in the user's local calendar."""
+    try:
+        then = datetime.fromisoformat(iso_ts)
+    except (TypeError, ValueError):
+        return "Older"
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    days = (datetime.now(timezone.utc).astimezone().date()
+            - then.astimezone().date()).days
+    if days <= 0:
+        return "Today"
+    if days == 1:
+        return "Yesterday"
+    if days <= 7:
+        return "Previous 7 Days"
+    if days <= 30:
+        return "Previous 30 Days"
+    return "Older"
 
 
 def sync_history_entries(context) -> None:
@@ -101,6 +133,7 @@ def sync_history_entries(context) -> None:
         entry.when = chat_history.format_relative_time(
             entry.archived_at, short=True
         )
+        entry.group = _group_label(entry.archived_at)
 
 
 # =============================================================================
