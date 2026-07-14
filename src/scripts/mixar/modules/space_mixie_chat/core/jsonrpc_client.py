@@ -19,7 +19,12 @@ import time
 from queue import Empty, Queue
 from typing import Any, Callable, Optional
 
-from ..constants import JSONRPCErrorCode, JSONRPCMethod, WS_CLOSE_AUTH_FAILED
+from ..constants import (
+    DISCONNECT_REASON_AUTH_FAILED,
+    JSONRPCErrorCode,
+    JSONRPCMethod,
+    WS_CLOSE_AUTH_FAILED,
+)
 from .jsonrpc_auth import AuthBackoffManager
 
 try:
@@ -207,7 +212,7 @@ class JSONRPCWebSocketClient:
         if self._auth.max_failures_reached:
             logger.error("Max auth failures reached - stopping reconnection")
             if self._on_disconnected:
-                self._on_disconnected("Authentication failed - please login again")
+                self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
             self._running.clear()
             return False
 
@@ -367,7 +372,7 @@ class JSONRPCWebSocketClient:
                             f"attempt {self._auth.failure_count}"
                         )
                         if self._on_disconnected:
-                            self._on_disconnected("Authentication failed - please login again")
+                            self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
                         if self._auth.max_failures_reached:
                             self._running.clear()
                         return

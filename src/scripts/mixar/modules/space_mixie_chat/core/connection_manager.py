@@ -21,6 +21,7 @@ from ..constants import (
     DEFAULT_MAX_RECONNECT_DELAY,
     DEFAULT_PING_INTERVAL,
     DEFAULT_RECONNECT_DELAY,
+    DISCONNECT_REASON_AUTH_FAILED,
     JSONRPCMethod,
     SessionState,
 )
@@ -245,8 +246,16 @@ class ConnectionManager:
                 logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
                 return
             from .main_thread_executor import run_on_main_thread
+            # An auth failure stops the reconnect loop — that disconnect is
+            # terminal. Anything else is a transient drop the client will
+            # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
+            # AWAITING_INPUT) must survive it: the turn streams over its own
+            # SSE connection and the backend keeps executing — wiping its
+            # state here made the client refuse every post-reconnect script
+            # with "Agent session not active" while showing an idle pill.
+            terminal = reason == DISCONNECT_REASON_AUTH_FAILED
             def _set_offline():
-                session.set_all_scenes_state(SessionState.OFFLINE)
+                session.on_transport_disconnect(terminal=terminal)
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
 

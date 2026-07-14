@@ -167,6 +167,13 @@ class JSONRPCErrorCode:
 # Custom WebSocket close code for authentication failure
 WS_CLOSE_AUTH_FAILED = 4001
 
+# Disconnect reason the WS client passes to on_disconnected when it stops
+# reconnecting because authentication failed. connection_manager treats this
+# reason as TERMINAL (wipe all scene states to OFFLINE); every other reason
+# is a transient drop the client auto-reconnects from, which must preserve
+# active turn states (see SessionManager.on_transport_disconnect).
+DISCONNECT_REASON_AUTH_FAILED = "Authentication failed - please login again"
+
 
 # ============================================================================
 # WEBSOCKET CONFIGURATION DEFAULTS
