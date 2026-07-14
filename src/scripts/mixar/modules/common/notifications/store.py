@@ -27,10 +27,17 @@ from .constants import (
 
 @dataclass
 class NotificationAction:
-    """A clickable action button on a toast notification."""
+    """A clickable action button on a toast notification.
+
+    A button either invokes ``operator`` or, when ``url`` is set, opens the
+    URL in the browser (and reports the notification read). ``url`` avoids a
+    module-global stash per notification type: several toasts with different
+    links can be on screen at once, each button carrying its own URL.
+    """
     label: str
-    operator: str       # e.g. "mixar.open_downloads_page"
+    operator: str = ""  # e.g. "mixar.open_downloads_page"
     style: str = "secondary"  # "primary", "secondary", or "danger"
+    url: Optional[str] = None  # when set, clicking opens this URL instead
 
 
 @dataclass
@@ -44,7 +51,7 @@ class NotificationItem:
     priority: str = "normal"
     action_url: Optional[str] = None
     actions: List[NotificationAction] = field(default_factory=list)
-    server_id: Optional[int] = None
+    server_id: Optional[str] = None  # backend notification UUID (read receipts)
     dismissible: bool = True
     created_at: float = field(default_factory=time.time)
 
@@ -113,6 +120,7 @@ class NotificationStore:
         ttl_ms: Optional[int] = None,
         id: Optional[Union[str, int]] = None,
         dismissible: bool = True,
+        server_id: Optional[str] = None,
     ) -> str:
         """Add a notification and ensure the toast timer is running.
 
@@ -128,6 +136,9 @@ class NotificationStore:
             dismissible: When False the toast renders without a close button
                 and UI clicks cannot dismiss it (programmatic ``dismiss()``
                 still works) — used for forced updates.
+            server_id: Backend notification id (UUID string) for
+                server-originated notifications; enables read receipts.
+                Local/client notifications must leave this None.
 
         Returns:
             The notification id (as string).
@@ -149,7 +160,7 @@ class NotificationStore:
             priority=priority,
             action_url=action_url,
             actions=actions or [],
-            server_id=id if isinstance(id, int) else None,
+            server_id=server_id,
             dismissible=dismissible,
         )
 
@@ -167,15 +178,33 @@ class NotificationStore:
     def push_from_server(self, data: dict) -> str:
         """Convenience wrapper that unpacks the server notification payload.
 
-        Expected ``data`` keys: id, title, body, type, priority, action_url.
+        Expected ``data`` keys: id, title, body (or legacy ``message``), type,
+        priority, action_url, action_label. The server id doubles as the
+        read-receipt handle.
+
+        When ``action_url`` is present it renders as a primary button labelled
+        ``action_label`` (default "Open") that opens the URL — matching the
+        update toast's Download button — instead of the dimmed inline link.
         """
+        server_id = data.get("id")
+        action_url = data.get("action_url")
+        actions = None
+        if action_url:
+            actions = [
+                NotificationAction(
+                    label=data.get("action_label") or "Open",
+                    style="primary",
+                    url=action_url,
+                ),
+            ]
         return self.push(
             type_str=data.get("type", "info"),
             title=data.get("title", ""),
-            body=data.get("body", ""),
+            body=data.get("body", data.get("message", "")),
             priority=data.get("priority", "normal"),
-            action_url=data.get("action_url"),
-            id=data.get("id"),
+            actions=actions,
+            id=server_id,
+            server_id=str(server_id) if server_id is not None else None,
         )
 
     # ------------------------------------------------------------------
@@ -194,16 +223,24 @@ class NotificationStore:
             self._items = [i for i in self._items if not i.is_expired]
             return len(self._items)
 
-    def get_server_ids(self) -> List[int]:
+    def get_server_ids(self) -> List[str]:
         """Return server IDs of all currently held items (for mark-read)."""
         with self._lock:
             return [i.server_id for i in self._items if i.server_id is not None]
+
+    def get_server_id(self, nid: str) -> Optional[str]:
+        """Return the server id for one notification, without removing it."""
+        with self._lock:
+            for i in self._items:
+                if i.id == nid:
+                    return i.server_id
+            return None
 
     # ------------------------------------------------------------------
     # Mutations
     # ------------------------------------------------------------------
 
-    def dismiss(self, nid: str) -> Optional[int]:
+    def dismiss(self, nid: str) -> Optional[str]:
         """Remove a notification by id. Returns its server_id if present."""
         with self._lock:
             server_id = None

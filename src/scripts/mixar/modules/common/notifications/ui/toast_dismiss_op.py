@@ -34,6 +34,27 @@ from ..toast_renderer import (
 logger = get_logger(__name__)
 
 
+def _send_mark_read(server_id: str) -> None:
+    """Report a server notification as read over the WebSocket.
+
+    Fire-and-forget: read receipts are best-effort and must never break
+    toast interaction (e.g. while offline). Deferred imports keep
+    common/ free of an import-time dependency on space_mixie_chat.
+    """
+    try:
+        from ....space_mixie_chat.constants import JSONRPCMethod
+        from ....space_mixie_chat.core.jsonrpc_client import get_jsonrpc_client
+
+        client = get_jsonrpc_client()
+        if client:
+            client.send_request(
+                JSONRPCMethod.NOTIFICATIONS_MARK_READ,
+                {"notification_ids": [server_id]},
+            )
+    except Exception as e:
+        logger.debug("mark_read skipped for %s: %s", server_id, e)
+
+
 def _invoke_operator(operator_idname: str) -> None:
     """Invoke a ``category.name`` operator idname, logging failures."""
     try:
@@ -46,19 +67,40 @@ def _invoke_operator(operator_idname: str) -> None:
         logger.error("Failed to invoke %s: %s", operator_idname, e)
 
 
-def _press_button(nid: str, operator_idname: str) -> None:
+def _open_url_and_mark_read(nid: str, url: str) -> None:
+    """Open a notification URL in the browser and report it read.
+
+    Native opener — webbrowser.open() fails silently under Blender's
+    embedded Python. Following the CTA counts as reading the notification.
+    """
+    try:
+        bpy.ops.wm.url_open(url=url)
+    except Exception as e:
+        logger.error("Failed to open URL %s: %s", url, e)
+    else:
+        server_id = get_notification_store().get_server_id(nid)
+        if server_id:
+            _send_mark_read(server_id)
+
+
+def _press_button(nid: str, operator_idname: str, url: str = None) -> None:
     """Show the pressed state, then fire the action after a short flash.
 
     The deferred timer lets the user actually see the button depress
     before the action (which may dismiss the toast or quit the app) runs.
+    URL-carrying buttons (server notifications) open the URL and mark the
+    notification read; the rest invoke their operator.
     """
-    toast_pressed_state["key"] = ("action", nid, operator_idname)
+    toast_pressed_state["key"] = ("action", nid, operator_idname or url)
 
     def _fire():
         from ..toast_timer import _tag_redraw_view3d
 
         toast_pressed_state["key"] = None
-        _invoke_operator(operator_idname)
+        if url:
+            _open_url_and_mark_read(nid, url)
+        else:
+            _invoke_operator(operator_idname)
         _tag_redraw_view3d()
         return None
 
@@ -86,25 +128,22 @@ class NOTIFICATION_OT_toast_click(Operator):
         # Close buttons
         for nid, bx, by, bw, bh in bounds["close"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
-                store.dismiss(nid)
+                server_id = store.dismiss(nid)
+                if server_id:
+                    _send_mark_read(server_id)
                 return {'FINISHED'}
 
         # Action buttons — flash pressed state, then fire via timer
-        for nid, operator_idname, bx, by, bw, bh in bounds["action"]:
+        for nid, operator_idname, url, bx, by, bw, bh in bounds["action"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
                 if toast_pressed_state["key"] is None:
-                    _press_button(nid, operator_idname)
+                    _press_button(nid, operator_idname, url)
                 return {'FINISHED'}
 
         # URL links
         for nid, url, bx, by, bw, bh in bounds["url"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
-                # Native opener — webbrowser.open() fails silently under
-                # Blender's embedded Python.
-                try:
-                    bpy.ops.wm.url_open(url=url)
-                except Exception as e:
-                    logger.error("Failed to open URL %s: %s", url, e)
+                _open_url_and_mark_read(nid, url)
                 return {'FINISHED'}
 
         # No hit — C++ handler will pass the event through
