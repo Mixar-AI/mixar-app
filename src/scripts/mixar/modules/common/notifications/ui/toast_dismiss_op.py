@@ -67,19 +67,40 @@ def _invoke_operator(operator_idname: str) -> None:
         logger.error("Failed to invoke %s: %s", operator_idname, e)
 
 
-def _press_button(nid: str, operator_idname: str) -> None:
+def _open_url_and_mark_read(nid: str, url: str) -> None:
+    """Open a notification URL in the browser and report it read.
+
+    Native opener — webbrowser.open() fails silently under Blender's
+    embedded Python. Following the CTA counts as reading the notification.
+    """
+    try:
+        bpy.ops.wm.url_open(url=url)
+    except Exception as e:
+        logger.error("Failed to open URL %s: %s", url, e)
+    else:
+        server_id = get_notification_store().get_server_id(nid)
+        if server_id:
+            _send_mark_read(server_id)
+
+
+def _press_button(nid: str, operator_idname: str, url: str = None) -> None:
     """Show the pressed state, then fire the action after a short flash.
 
     The deferred timer lets the user actually see the button depress
     before the action (which may dismiss the toast or quit the app) runs.
+    URL-carrying buttons (server notifications) open the URL and mark the
+    notification read; the rest invoke their operator.
     """
-    toast_pressed_state["key"] = ("action", nid, operator_idname)
+    toast_pressed_state["key"] = ("action", nid, operator_idname or url)
 
     def _fire():
         from ..toast_timer import _tag_redraw_view3d
 
         toast_pressed_state["key"] = None
-        _invoke_operator(operator_idname)
+        if url:
+            _open_url_and_mark_read(nid, url)
+        else:
+            _invoke_operator(operator_idname)
         _tag_redraw_view3d()
         return None
 
@@ -113,26 +134,16 @@ class NOTIFICATION_OT_toast_click(Operator):
                 return {'FINISHED'}
 
         # Action buttons — flash pressed state, then fire via timer
-        for nid, operator_idname, bx, by, bw, bh in bounds["action"]:
+        for nid, operator_idname, url, bx, by, bw, bh in bounds["action"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
                 if toast_pressed_state["key"] is None:
-                    _press_button(nid, operator_idname)
+                    _press_button(nid, operator_idname, url)
                 return {'FINISHED'}
 
         # URL links
         for nid, url, bx, by, bw, bh in bounds["url"]:
             if point_in_rect(mx, my, bx, by, bw, bh):
-                # Native opener — webbrowser.open() fails silently under
-                # Blender's embedded Python.
-                try:
-                    bpy.ops.wm.url_open(url=url)
-                except Exception as e:
-                    logger.error("Failed to open URL %s: %s", url, e)
-                else:
-                    # Following the CTA counts as reading the notification.
-                    server_id = store.get_server_id(nid)
-                    if server_id:
-                        _send_mark_read(server_id)
+                _open_url_and_mark_read(nid, url)
                 return {'FINISHED'}
 
         # No hit — C++ handler will pass the event through

@@ -27,10 +27,17 @@ from .constants import (
 
 @dataclass
 class NotificationAction:
-    """A clickable action button on a toast notification."""
+    """A clickable action button on a toast notification.
+
+    A button either invokes ``operator`` or, when ``url`` is set, opens the
+    URL in the browser (and reports the notification read). ``url`` avoids a
+    module-global stash per notification type: several toasts with different
+    links can be on screen at once, each button carrying its own URL.
+    """
     label: str
-    operator: str       # e.g. "mixar.open_downloads_page"
+    operator: str = ""  # e.g. "mixar.open_downloads_page"
     style: str = "secondary"  # "primary", "secondary", or "danger"
+    url: Optional[str] = None  # when set, clicking opens this URL instead
 
 
 @dataclass
@@ -172,15 +179,30 @@ class NotificationStore:
         """Convenience wrapper that unpacks the server notification payload.
 
         Expected ``data`` keys: id, title, body (or legacy ``message``), type,
-        priority, action_url. The server id doubles as the read-receipt handle.
+        priority, action_url, action_label. The server id doubles as the
+        read-receipt handle.
+
+        When ``action_url`` is present it renders as a primary button labelled
+        ``action_label`` (default "Open") that opens the URL — matching the
+        update toast's Download button — instead of the dimmed inline link.
         """
         server_id = data.get("id")
+        action_url = data.get("action_url")
+        actions = None
+        if action_url:
+            actions = [
+                NotificationAction(
+                    label=data.get("action_label") or "Open",
+                    style="primary",
+                    url=action_url,
+                ),
+            ]
         return self.push(
             type_str=data.get("type", "info"),
             title=data.get("title", ""),
             body=data.get("body", data.get("message", "")),
             priority=data.get("priority", "normal"),
-            action_url=data.get("action_url"),
+            actions=actions,
             id=server_id,
             server_id=str(server_id) if server_id is not None else None,
         )
