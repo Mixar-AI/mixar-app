@@ -30,7 +30,10 @@ sys.modules.setdefault(
 from mixar.modules.common.notifications.store import get_notification_store
 from mixar.modules.common.updates.constants import UPDATE_NOTIFICATION_ID
 from mixar.modules.common.updates.core.state import UpdateInfo
-from mixar.modules.common.updates.core.trigger import _push_update_toast, is_forced
+from mixar.modules.common.updates.core.trigger import (
+    _push_update_available_toast,
+    is_forced,
+)
 
 
 def _info(**overrides) -> UpdateInfo:
@@ -42,10 +45,7 @@ def _info(**overrides) -> UpdateInfo:
         unsupported=False,
         changelog_summary="",
         changelog_url="",
-        download_url="https://example.com/x.dmg",
-        download_size_bytes=1,
-        sha256="a" * 64,
-        installer_type="dmg",
+        browser_download_url="https://example.com/downloads",
     )
     defaults.update(overrides)
     return UpdateInfo(**defaults)
@@ -70,32 +70,33 @@ def test_is_forced_flags():
 
 
 def test_normal_toast_has_skip_and_is_dismissible():
-    _push_update_toast(_info(), ready=True)
+    _push_update_available_toast(_info())
     item = _pushed_item()
     assert item.dismissible is True
-    assert item.title == "Mixar Update Ready"
-    assert [a.label for a in item.actions] == ["Skip", "Install Update"]
+    assert item.title == "Mixar Update Available"
+    assert "available" in item.body
+    assert [a.label for a in item.actions] == ["Skip", "Download"]
 
 
 def test_forced_toast_has_no_skip_and_is_not_dismissible():
-    _push_update_toast(_info(force_update=True), ready=True)
+    _push_update_available_toast(_info(force_update=True))
     item = _pushed_item()
     assert item.dismissible is False
     assert item.title == "Mixar Update Required"
     assert item.priority == "critical"
-    assert [a.label for a in item.actions] == ["Install Update"]
+    assert [a.label for a in item.actions] == ["Download"]
     assert "required" in item.body
 
 
 def test_unsupported_toast_is_treated_as_forced():
-    _push_update_toast(_info(unsupported=True), ready=False)
+    _push_update_available_toast(_info(unsupported=True))
     item = _pushed_item()
     assert item.dismissible is False
-    assert [a.label for a in item.actions] == ["Install Update"]
+    assert [a.label for a in item.actions] == ["Download"]
 
 
-def test_available_wording_when_not_ready():
-    _push_update_toast(_info(), ready=False)
+def test_download_action_opens_downloads_page_operator():
+    _push_update_available_toast(_info())
     item = _pushed_item()
-    assert item.title == "Mixar Update Available"
-    assert "available" in item.body
+    download = next(a for a in item.actions if a.label == "Download")
+    assert download.operator == "mixar.open_downloads_page"
