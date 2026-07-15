@@ -46,6 +46,14 @@ struct ChatMessageProps {
   PropertyRNA *action_items;
   PropertyRNA *image_items;
 
+  /* Feedback properties */
+  PropertyRNA *feedback_visible;
+  PropertyRNA *feedback_rating;
+  PropertyRNA *feedback_comment_expanded;
+  PropertyRNA *feedback_status;
+  PropertyRNA *feedback_submitted_comment;
+  PropertyRNA *feedback_comment;
+
   /* Steps slot */
   PropertyRNA *step_items;
   PropertyRNA *steps_summary;
@@ -227,6 +235,19 @@ struct MessageLayoutData {
   ImageSlotData slot_images[SLOT_MAX_IMAGE_ITEMS];
   int slot_image_count;
   float slot_images_height;
+
+  /* Feedback row (post-response rating) */
+  bool has_feedback;       /* feedback_visible is true */
+  int feedback_rating;     /* 0=unrated, 1-5 */
+  float feedback_row_height;
+  FeedbackStarData feedback_stars[FEEDBACK_STAR_COUNT];
+  rctf feedback_comment_bounds;
+  bool feedback_comment_hovered;
+  bool feedback_comment_expanded;  /* inline comment field visible */
+  float feedback_comment_input_height;  /* extra height for input row */
+  int feedback_status; /* 0=idle, 1=sending, 2=received, 3=failed */
+  char feedback_submitted_comment[FEEDBACK_COMMENT_DISPLAY_MAX]; /* accepted comment */
+  float feedback_submitted_comment_height; /* wrapped read-only comment block */
 
   /* Steps block slot */
   bool has_steps;

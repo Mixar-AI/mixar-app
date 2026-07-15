@@ -2317,6 +2317,9 @@ void ED_spacetype_agent_bubble()
   art->exit = mixie_chat_main_region_exit; /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;
+  /* Run the cursor callback on EVERY mouse move, not only when the active
+   * region changes — hover states (stars, chips, links) update live. */
+  art->event_cursor = 1;
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region (status pill). */

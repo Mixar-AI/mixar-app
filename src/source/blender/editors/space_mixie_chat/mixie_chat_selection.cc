@@ -278,6 +278,11 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
     return OPERATOR_FINISHED;
   }
 
+  /* Check for feedback star/comment clicks */
+  if (mixie_chat_handle_feedback_click(C, region, event->mval[0], event->mval[1])) {
+    return OPERATOR_FINISHED;
+  }
+
   /* Convert mouse to text position */
   int msg_idx, char_offset;
   if (!mixie_chat_pos_to_text(C, region, event->mval, &msg_idx, &char_offset)) {

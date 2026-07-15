@@ -15,6 +15,7 @@ set(INC_SYS
 )
 
 set(SRC
+  mixie_chat_action_buttons.cc
   mixie_chat_agent_bubble.cc
   mixie_chat_dragdrop.cc
   mixie_chat_footer.cc
@@ -29,6 +30,7 @@ set(SRC
   mixie_chat_markdown_parse.cc
   mixie_chat_table.cc
   mixie_chat_empty_state.cc
+  mixie_chat_feedback.cc
   mixie_chat_messages.cc
   mixie_chat_messages_content.cc
   mixie_chat_messages_layout.cc

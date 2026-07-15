@@ -89,6 +89,7 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
 │   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
 │   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
+│   ├── feedback_policy.py       Pure rating/comment validation shared by the UI.
 │   ├── undo_guard.py            Snapshot/restore chat across undo/redo (K4 try/finally).
 │   ├── animation_manager.py     Loader-spinner animation timer (K2 active-scene-first).
 │   ├── file_handlers.py         load_pre / load_post cleanup chain (K6 exception-safe).
@@ -103,7 +104,7 @@ src/scripts/mixar/modules/space_mixie_chat/
 │       ├── chat_ops.py             Main "send message" operator.
 │       ├── auth_ops.py             Login flow.
 │       ├── screenshot_ops.py       Viewport capture.
-│       └── chat_special_ops.py     Approve / abort / modify operators.
+│       └── chat_special_ops.py     Approve / abort / modify + async feedback operators.
 └── ARCHITECTURE.md           This file.
 
 Related but outside space_mixie_chat:
@@ -256,6 +257,17 @@ When an SSE event arrives, `_on_event` dispatches to `SlotEventProcessor.apply_e
 The C++ editor (`src/source/blender/editors/space_mixie_chat/`) renders `scene.mixie_chat_messages` on each redraw — `mixie_chat_messages_render.cc` walks the collection, `mixie_chat_messages_layout.cc` computes layout, `mixie_chat_slots.cc` dispatches per-slot rendering. Markdown content goes through `mixie_chat_markdown_intern.hh`. Drag-drop of moodboard images is wired in `mixie_chat_dragdrop.cc`.
 
 Persisting chat as scene properties means **chat survives `.blend` save/load** for free. It also means `undo_guard.py` snapshots all scenes' chat collections before every undo/redo.
+
+### Post-response feedback
+
+On a clean stream completion, `queue_processor.py` clears every stale
+`feedback_visible` flag and exposes the row only on the newest completed agent
+bubble. C++ layout/rendering lives in `mixie_chat_feedback.cc`; Python operators
+post `{session_id, bubble_id, rating, comment?}` to the backend without blocking
+Blender's main thread. Comments require a 1–5 rating, allow only one in-flight
+submission per bubble, clear after a successful HTTP response, and remain open
+for retry after a network or server failure. Completion callbacks return to the
+main thread through `main_thread_executor.run_on_main_thread` before touching RNA.
 
 ## Session lifecycle
 
