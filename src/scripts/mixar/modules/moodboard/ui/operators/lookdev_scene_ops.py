@@ -194,6 +194,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
             model=model_slug,
             payload=payload,
             label=f"Lookdev: {stripped_prompt[:40]}",
+            display_label=stripped_prompt[:40],
             fail_message="Lookdev generation failed",
             name_prefix="lookdev",
             prompt_text=stripped_prompt,

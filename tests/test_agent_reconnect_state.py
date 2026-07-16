@@ -27,7 +27,7 @@ def _callback_block(source: str, start: str, end: str) -> str:
     return source[offset : source.index(end, offset)]
 
 
-def test_disconnect_only_marks_non_active_scenes_offline():
+def test_disconnect_preserves_active_turn_state_via_transport_hook():
     source = MANAGER.read_text()
     block = _callback_block(
         source,
@@ -35,11 +35,9 @@ def test_disconnect_only_marks_non_active_scenes_offline():
         "        def on_script_execute",
     )
 
-    assert "only_from={SessionState.IDLE, SessionState.CONNECTING}" in block
-    transition = block.split("only_from=", 1)[1]
-    assert "SessionState.BUSY" not in transition
-    assert "SessionState.AWAITING_INPUT" not in transition
-    assert "SessionState.MODIFYING" not in transition
+    assert "terminal = reason == DISCONNECT_REASON_AUTH_FAILED" in block
+    assert "session.on_transport_disconnect(terminal=terminal)" in block
+    assert "set_all_scenes_state" not in block
 
 
 def test_reconnect_does_not_overwrite_active_turn_state():

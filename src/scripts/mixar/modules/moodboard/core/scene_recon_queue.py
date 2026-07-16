@@ -36,6 +36,8 @@ from .scene_recon_constants import (
 
 logger = get_logger(__name__)
 
+_SERVICE_KEY = "scene_reconstruction"
+
 
 # ---------------------------------------------------------------------------
 # Job
@@ -91,7 +93,7 @@ class SceneReconJob(Job):
             "vertex_color": self.vertex_color,
         }
         service.enqueue(
-            job_type="scene_reconstruction",
+            job_type=_SERVICE_KEY,
             model="sam3d",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -351,6 +353,7 @@ def enqueue_scene_recon_job(
     job = SceneReconJob(
         feature_key=FEATURE_SCENE_RECON,
         label="Scene Reconstruction",
+        service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         generate_mesh=generate_mesh,
         min_mask_pixels=min_mask_pixels,

@@ -48,6 +48,13 @@ class MixieQueueItemPG(PropertyGroup):
     job_id: StringProperty(name="Job ID", default="")
     feature_key: StringProperty(name="Feature Key", default="")
     label: StringProperty(name="Label", default="")
+    display_label: StringProperty(name="Display Label", default="")
+    # Backend service key joins queue jobs to dynamic catalog labels.
+    service: StringProperty(name="Service", default="")
+    origin_capability_key: StringProperty(
+        name="Origin Capability",
+        default="",
+    )
     # The model/engine slug the job was submitted with (e.g. "hunyuan_pro_v3",
     # "pro"). Shown next to the job-type pill so two jobs of the same type but
     # different models are distinguishable. Empty for jobs that carry no model.
@@ -124,8 +131,17 @@ def _sync_mirror(_queue) -> None:
             item.job_id = job.id
             item.feature_key = feature_key
             item.label = job.label
-            # Concrete job subclasses (AsyncGLBJob/SyncImageJob) carry the model
-            # slug; bespoke-queue jobs may not — default to "" so it's optional.
+            item.display_label = getattr(job, "display_label", "") or ""
+            # Backend generation identity lives on the canonical Job. Generic
+            # jobs also carry job_type before their submit ACK arrives.
+            item.service = (
+                getattr(job, "service", "")
+                or getattr(job, "job_type", "")
+                or ""
+            )
+            item.origin_capability_key = (
+                getattr(job, "origin_capability_key", "") or ""
+            )
             item.model = getattr(job, "model", "") or ""
             item.state = (
                 job.state.value if hasattr(job.state, "value") else str(job.state)
