@@ -35,11 +35,15 @@ _splash_last_drawn_ts: float = 0.0
 SPLASH_VISIBLE_WINDOW_S = 2.0
 _module_load_ts: float = time.monotonic()
 _SPLASH_STARTUP_GRACE_S = 3.0  # assume splash is coming for first 3s
-# Last-resort "splash is gone" window for onboarding_can_start(), used
-# only when the splash was exited without an operator signal (Esc /
-# click-outside / About links). Long enough to never trip while a
-# normal splash is on screen.
-_SPLASH_GONE_FALLBACK_S = 20.0
+# "Splash is gone" window for onboarding_can_start() when the splash was
+# exited WITHOUT a mode-pick (Esc / click-outside / About links) — the
+# common first-run path where the user dismisses the splash and signs in.
+# Kept just above is_splash_visible()'s staleness window so onboarding
+# starts promptly after dismissal (was 20s, which delayed the card ~10s+
+# after sign-in). Firing a touch early behind a rare idle-but-open popup
+# is now harmless: the card modal PASS_THROUGHs clicks while the splash is
+# visible, and a duplicate welcome is blocked by the card-active guard.
+_SPLASH_GONE_FALLBACK_S = 2.5
 
 
 def is_splash_visible() -> bool:
@@ -82,10 +86,11 @@ def onboarding_can_start() -> bool:
     * User picked a mode → splash is gone, go.
     * Splash disabled in prefs → no splash to wait for; defer to the
       normal visibility heuristic once startup grace has passed.
-    * Otherwise the splash is (or was) on screen and no mode has been
-      chosen yet → wait. We deliberately do NOT fall back to
-      draw-staleness here: an idle-but-open "Choose Your Mode" popup
-      must keep blocking the card until the user actually clicks.
+    * Splash exited without a mode-pick (Esc / click-outside / About) →
+      start once it has stopped drawing for _SPLASH_GONE_FALLBACK_S. This
+      is the common first-run path (dismiss splash, sign in), so it must
+      be prompt. An early fire behind a rare idle-open popup is harmless
+      now (the card ignores clicks while the splash is visible).
     """
     if _splash_mode_chosen:
         return True
@@ -95,12 +100,6 @@ def onboarding_can_start() -> bool:
             return not is_splash_visible()
     except Exception:
         pass
-    # Safety net for splash exits that fire no operator (Esc, click
-    # outside, About / Discord links): once the splash has not redrawn
-    # for a long stretch, treat it as gone so a pending welcome resolves
-    # instead of polling forever. The window is deliberately long — far
-    # beyond how long auth takes and how long anyone idles on the mode
-    # picker — so it never fires behind a normally-open splash.
     if _splash_last_drawn_ts != 0.0:
         return (time.monotonic() - _splash_last_drawn_ts) >= _SPLASH_GONE_FALLBACK_S
     return False

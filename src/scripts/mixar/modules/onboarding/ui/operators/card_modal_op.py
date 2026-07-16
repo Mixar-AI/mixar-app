@@ -59,6 +59,53 @@ from mixar.modules.onboarding.ui.operators.host_resolver import (
 logger = get_logger(__name__)
 
 
+# Session-scoped guard: True while a card modal is on screen. Multiple
+# independent welcome triggers (auth-success hook + mode-pick nudge +
+# dev-bypass fallback) can each try to open the welcome card; without this
+# they stack two modals — one gets the click and advances, the other keeps
+# drawing, leaving a "stuck" duplicate. The welcome operator checks this and
+# skips when a card is already up. Transitions are safe: each step cleans up
+# (clears this) before invoking the next card.
+_card_active = False
+
+# Monotonic token bumped by close_active_card(). Each card captures the
+# current value in invoke(); its modal() self-terminates once the global
+# has moved past it. This is how a mode-pick discards a card that fired
+# behind the splash (bound to the old workspace's region) and replaces it
+# with a fresh card in the newly chosen workspace — no orphaned modal.
+_card_generation = 0
+# The on-screen card's draw handle, so close_active_card() can stop it
+# drawing IMMEDIATELY (before its modal next ticks).
+_active_draw_handle = None
+_active_space_cls = None
+
+
+def is_card_active() -> bool:
+    """True while an onboarding card modal is currently displayed."""
+    return _card_active
+
+
+def close_active_card() -> None:
+    """Dismiss the current onboarding card immediately, if any.
+
+    Removes its draw handler now and bumps the generation so the running
+    modal self-terminates on its next event. Used by the splash mode-pick
+    operators: a card pre-fired behind the splash is bound to the old
+    workspace's region, so on a mode switch it must be closed and re-shown
+    fresh in the chosen workspace.
+    """
+    global _card_generation, _active_draw_handle, _active_space_cls, _card_active
+    _card_generation += 1
+    if _active_draw_handle is not None and _active_space_cls is not None:
+        try:
+            _active_space_cls.draw_handler_remove(_active_draw_handle, "WINDOW")
+        except Exception as exc:
+            logger.debug("close_active_card: draw remove failed: %s", exc)
+    _active_draw_handle = None
+    _active_space_cls = None
+    _card_active = False
+
+
 # ---------------------------------------------------------------------------
 # State machine helpers — defer the transition through a timer so the
 # modal cleanly returns FINISHED before the next dialog opens.
@@ -115,6 +162,7 @@ class MIXAR_OT_onboarding_card(Operator):
     _hover = None
     _config = None
     _multi_handles = ()
+    _generation = 0  # snapshot of _card_generation at invoke
 
     def invoke(self, context, event):
         self._config = step_card_config(self.step_id)
@@ -196,6 +244,11 @@ class MIXAR_OT_onboarding_card(Operator):
 
         area.tag_redraw()
         context.window_manager.modal_handler_add(self)
+        global _card_active, _active_draw_handle, _active_space_cls
+        self._generation = _card_generation
+        _active_draw_handle = self._draw_handle
+        _active_space_cls = self._host_space_cls
+        _card_active = True
         return {"RUNNING_MODAL"}
 
 
@@ -255,6 +308,13 @@ class MIXAR_OT_onboarding_card(Operator):
             self._cleanup()
             return {"CANCELLED"}
 
+        # A newer card (from a mode-pick) has superseded us — tear down so a
+        # card pre-fired behind the splash doesn't linger in the modal stack
+        # after the workspace changed.
+        if self._generation != _card_generation:
+            self._cleanup()
+            return {"CANCELLED"}
+
         if event.type == "MOUSEMOVE":
             new_hover = self._hit_test_event(event)
             if new_hover != self._hover:
@@ -263,6 +323,16 @@ class MIXAR_OT_onboarding_card(Operator):
             return {"PASS_THROUGH"}
 
         if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            # While the splash is still on screen this click belongs to the
+            # splash (the card can briefly render behind an idle-open popup) —
+            # never treat it as an off-card dismiss, or the tour gets marked
+            # 'seen' by a splash-directed click.
+            try:
+                from mixar.bootstrap import splash_menu
+                if splash_menu.is_splash_visible():
+                    return {"PASS_THROUGH"}
+            except Exception:
+                pass
             target = self._hit_test_event(event)
             if target == "primary":
                 return self._on_primary(context)
@@ -351,6 +421,13 @@ class MIXAR_OT_onboarding_card(Operator):
     # -- cleanup -----------------------------------------------------------
 
     def _cleanup(self):
+        # Clear the module-level active refs only if they still point at THIS
+        # card — a newer card (mode-pick replacement) may already own them.
+        global _card_active, _active_draw_handle, _active_space_cls
+        if _active_draw_handle is self._draw_handle:
+            _active_draw_handle = None
+            _active_space_cls = None
+            _card_active = False
         if self._draw_handle is not None and self._host_space_cls is not None:
             try:
                 self._host_space_cls.draw_handler_remove(

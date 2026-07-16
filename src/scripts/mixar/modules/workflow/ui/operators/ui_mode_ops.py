@@ -63,17 +63,32 @@ def _notify_splash_mode_chosen():
         _logger.debug("notify_mode_chosen failed: %s", exc)
 
 
-def _trigger_first_run_onboarding():
-    """Give the first-run onboarding tour a nudge on Zen Mode entry.
+def _restart_onboarding_after_mode():
+    """Make the chosen mode OWN the first-run onboarding.
 
-    Belt-and-suspenders alongside the auth-success hook: if the user is
-    already signed in when they pick Zen Mode, re-arm the welcome so it
-    fires in the Zen workspace. ``maybe_show_for_user`` gates on the
-    per-user ``onboarding_seen.json`` file (returning users never see it
-    again) and dedupes an already-scheduled welcome, so this only ever
-    *adds* reliability. If the user isn't signed in yet (no email), the
-    auth-success hook triggers the tour when login completes.
+    A welcome card may already be on screen — pre-fired behind the splash
+    (auth completed while the user idled on the picker) and bound to the
+    OLD workspace's region. Picking a mode changes the workspace, which
+    would orphan that card (its region is gone → it stops drawing but
+    lingers in the modal stack). So we CLOSE any such card, then re-trigger
+    a fresh welcome in the newly chosen workspace.
+
+    ``maybe_show_for_user`` gates on the per-user ``onboarding_seen.json``
+    file (returning users never see it again). If a pre-fired welcome
+    already consumed the scheduled slot, closing it here frees the
+    card-active guard so the fresh trigger can open a new card; if no card
+    fired yet, the still-pending auth trigger opens it in this workspace.
+    If the user isn't signed in yet (no email), the auth-success hook
+    triggers the tour when login completes.
     """
+    try:
+        from mixar.modules.onboarding.ui.operators.card_modal_op import (
+            close_active_card,
+        )
+        close_active_card()
+    except Exception as exc:  # noqa: BLE001 — best-effort
+        _logger.debug("close_active_card failed: %s", exc)
+
     scene = getattr(bpy.context, "scene", None)
     email = getattr(scene, "mixie_chat_user_id", "") if scene else ""
     if not email:
@@ -82,7 +97,7 @@ def _trigger_first_run_onboarding():
         from mixar.modules.onboarding.core import maybe_show_for_user
         maybe_show_for_user(email)
     except Exception as exc:  # noqa: BLE001 — onboarding is best-effort
-        _logger.debug("Zen Mode onboarding trigger failed: %s", exc)
+        _logger.debug("mode onboarding trigger failed: %s", exc)
 
 
 def _force_workspace_rebuild(target):
@@ -138,12 +153,11 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
         configure_basic_workspace_chrome()
         _force_workspace_rebuild(target)
         _redraw_topbar(context)
-        # Now that we're in Zen Mode (the new-user entry point), unblock
-        # and nudge the first-run onboarding tour. The splash signal must
-        # come first so the welcome card only opens here, in the Zen
-        # workspace, and never behind the splash.
+        # Now that we're in Zen Mode, unblock the onboarding gate, then
+        # (re)start the tour so it owns the welcome card in THIS workspace
+        # — replacing any card that fired behind the splash.
         _notify_splash_mode_chosen()
-        _trigger_first_run_onboarding()
+        _restart_onboarding_after_mode()
         _logger.info("Switched to Zen mode")
         return {"FINISHED"}
 
@@ -161,8 +175,11 @@ class MIXAR_OT_set_ui_mode_pro(Operator):
             self.report({"WARNING"}, "Modeling workspace not found")
         _redraw_topbar(context)
         # Engine Mode also dismisses the splash — release the onboarding
-        # gate so a pending welcome resolves instead of polling forever.
+        # gate, then (re)start the tour so it owns the welcome card in the
+        # Engine workspace, replacing any card pre-fired behind the splash
+        # (which was bound to the pre-switch workspace's region).
         _notify_splash_mode_chosen()
+        _restart_onboarding_after_mode()
         _logger.info("Switched to Engine mode")
         return {"FINISHED"}
 
