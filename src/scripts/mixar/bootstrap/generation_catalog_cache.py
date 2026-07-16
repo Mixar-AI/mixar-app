@@ -411,8 +411,14 @@ def _schedule_catalog_swapped() -> None:
     try:
         import bpy
 
-        if not bpy.app.timers.is_registered(_on_catalog_swapped):
-            bpy.app.timers.register(_on_catalog_swapped, first_interval=0.0)
+        # Keep the lifecycle check and registration atomic with unregister().
+        # A fetch may finish after shutdown has begun; without the lock it can
+        # recreate this timer after unregister() has already removed it.
+        with _lock:
+            if _shutdown_requested:
+                return
+            if not bpy.app.timers.is_registered(_on_catalog_swapped):
+                bpy.app.timers.register(_on_catalog_swapped, first_interval=0.0)
     except Exception:
         pass
 

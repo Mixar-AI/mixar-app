@@ -24,6 +24,8 @@ from ..constants import (
     JSONRPCErrorCode,
     JSONRPCMethod,
     WS_CLOSE_AUTH_FAILED,
+    WS_LIVENESS_TIMEOUT,
+    WS_UI_STALE_THRESHOLD,
 )
 from .jsonrpc_auth import AuthBackoffManager
 
@@ -97,6 +99,7 @@ class JSONRPCWebSocketClient:
         self._handshake_complete = False
         self._current_delay = reconnect_delay
         self._last_ping_time = 0.0
+        self._last_recv_time = 0.0
 
         # Auth failure backoff
         self._auth = AuthBackoffManager()
@@ -122,6 +125,26 @@ class JSONRPCWebSocketClient:
     def is_connected(self) -> bool:
         """Check if connected and handshake completed."""
         return self._connected and self._handshake_complete
+
+    @property
+    def is_transport_live(self) -> bool:
+        """Connected AND recently receiving traffic — the fast liveness signal.
+
+        ``is_connected`` stays True on a silently dead TCP connection (wifi
+        off, sleep/resume, NAT rebind) until the WS_LIVENESS_TIMEOUT watchdog
+        tears it down: sends keep "succeeding" into the kernel buffer, so
+        only recv starvation reveals the death. Status surfaces must not
+        show Connected/Idle for that whole window, so this trips much
+        earlier, on WS_UI_STALE_THRESHOLD of recv silence (a healthy
+        connection carries at least a pong per ~15s ping).
+
+        Display-only: send-gating must keep using ``is_connected`` — a
+        stale-but-recoverable socket can still deliver queued work, and a
+        false "down" there drops it.
+        """
+        if not (self._connected and self._handshake_complete):
+            return False
+        return (time.time() - self._last_recv_time) <= WS_UI_STALE_THRESHOLD
 
     @property
     def connection_id(self) -> str:
@@ -255,6 +278,7 @@ class JSONRPCWebSocketClient:
             self._current_delay = self._reconnect_delay
             self._auth.reset()
             self._last_ping_time = time.time()
+            self._last_recv_time = time.time()
 
             if self._on_connected:
                 try:
@@ -346,6 +370,22 @@ class JSONRPCWebSocketClient:
         """Receive and process incoming messages."""
         while self._running.is_set() and self._connected:
             try:
+                # Liveness: a healthy connection receives at least the pong
+                # to our ~15s pings. A silently dead TCP connection (network
+                # drop, sleep/resume) times out recv forever while sends
+                # still "succeed" — without this check the client never
+                # notices and never reconnects.
+                if time.time() - self._last_recv_time > WS_LIVENESS_TIMEOUT:
+                    logger.warning(
+                        f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
+                        f"(pings unanswered) — treating connection as dead"
+                    )
+                    try:
+                        self._ws.close()
+                    except Exception:
+                        pass
+                    break
+
                 # Send ping if needed
                 if time.time() - self._last_ping_time > self._ping_interval:
                     self._send_ping()
@@ -380,6 +420,7 @@ class JSONRPCWebSocketClient:
                     break
 
                 if data:
+                    self._last_recv_time = time.time()
                     self._handle_message(json.loads(data))
 
             except Exception as e:

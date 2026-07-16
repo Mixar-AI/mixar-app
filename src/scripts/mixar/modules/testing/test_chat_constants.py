@@ -146,8 +146,12 @@ class TestWebSocketConstants(unittest.TestCase):
         self.assertIn("/agent/input", AGENT_INPUT_ENDPOINT)
 
     def test_sse_read_timeout(self):
+        # Must comfortably exceed the backend's ~15s SSE keepalive cadence
+        # (so a healthy-but-quiet stream never trips it) while staying far
+        # below the old 630s that left a dead mid-turn stream undetected
+        # for 10+ minutes.
         from mixar.modules.space_mixie_chat.constants import SSE_READ_TIMEOUT
-        self.assertEqual(SSE_READ_TIMEOUT, 300.0)
+        self.assertEqual(SSE_READ_TIMEOUT, 75.0)
 
 
 class TestUIConstants(unittest.TestCase):

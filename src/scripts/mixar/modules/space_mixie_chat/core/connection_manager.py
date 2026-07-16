@@ -96,6 +96,8 @@ class ConnectionManager:
 
         self._is_initializing = False
         self._is_shutting_down = False
+        self._liveness_monitor_running = False
+        self._last_transport_live: Optional[bool] = None
         self._initialized = True
         logger.debug("ConnectionManager created")
 
@@ -191,6 +193,11 @@ class ConnectionManager:
                     SessionState.IDLE,
                     only_from={SessionState.OFFLINE, SessionState.CONNECTING},
                 )
+                # Scenes holding an active turn keep their state (no edge to
+                # redraw on), but the status pill/header derive "Reconnecting"
+                # from transport liveness — repaint them on the flip back.
+                from .ui_utils import redraw_chat_areas
+                redraw_chat_areas()
             run_on_main_thread(_set_idle)
             logger.info("JSON-RPC WebSocket connected")
 
@@ -256,6 +263,11 @@ class ConnectionManager:
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED
             def _set_offline():
                 session.on_transport_disconnect(terminal=terminal)
+                # Preserved active states produce no state edge, so repaint
+                # explicitly — the pill/header show "Reconnecting" from
+                # transport liveness, not from scene state.
+                from .ui_utils import redraw_chat_areas
+                redraw_chat_areas()
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
 
@@ -333,6 +345,7 @@ class ConnectionManager:
         # Connect
         if client.connect():
             logger.info("JSON-RPC WebSocket connection initiated")
+            self._start_liveness_monitor()
             return True
         else:
             session.set_all_scenes_state(SessionState.OFFLINE)
@@ -391,6 +404,55 @@ class ConnectionManager:
         self._setup()
         client = get_jsonrpc_client()
         return client is not None and client.is_connected
+
+    @property
+    def is_transport_live(self) -> bool:
+        """Fast liveness signal for status displays only.
+
+        False as soon as the socket has gone recv-silent past
+        WS_UI_STALE_THRESHOLD — well before is_connected flips on the
+        teardown watchdog. Send-gating must keep using is_connected.
+        """
+        self._setup()
+        client = get_jsonrpc_client()
+        return client is not None and client.is_transport_live
+
+    def _start_liveness_monitor(self) -> None:
+        """Repaint status surfaces when transport liveness flips.
+
+        The pill/header compute their label from is_transport_live at draw
+        time, but nothing tags a redraw when a connection dies silently —
+        there is no scene-state edge until the teardown watchdog fires, so
+        the stale "Idle/Connected" pill would sit unrepainted for the whole
+        zombie window. A cheap main-thread poll closes that gap; it stops
+        itself once the client is gone.
+        """
+        if self._liveness_monitor_running:
+            return
+
+        import bpy
+
+        self._liveness_monitor_running = True
+        self._last_transport_live = None
+
+        def _poll():
+            if self._is_shutting_down or get_jsonrpc_client() is None:
+                self._liveness_monitor_running = False
+                self._last_transport_live = None
+                return None
+            try:
+                live = self.is_transport_live
+                if live != self._last_transport_live:
+                    self._last_transport_live = live
+                    from .ui_utils import redraw_chat_areas
+                    redraw_chat_areas()
+            except Exception:
+                logger.debug("liveness monitor poll failed", exc_info=True)
+            return 2.0
+
+        # persistent=True: the WS connection survives file loads, so the
+        # monitor must too (non-persistent timers are dropped on load).
+        bpy.app.timers.register(_poll, first_interval=2.0, persistent=True)
 
     @property
     def connection_state(self) -> SessionState:

@@ -77,10 +77,10 @@ Three IDs identify what:
 src/scripts/mixar/modules/space_mixie_chat/
 ├── constants.py              Enums (SessionState), endpoint paths, timeouts.
 ├── core/
-│   ├── connection_manager.py    Singleton WS lifecycle (connect/disconnect/reset).
+│   ├── connection_manager.py    Singleton WS lifecycle (connect/disconnect/reset); transient disconnects preserve active agent-turn states so resumed tool calls remain routable.
 │   ├── jsonrpc_client.py        WS client (tool execution channel). B3/B4/B6/B8/K5.
 │   ├── jsonrpc_auth.py          AuthBackoffManager + shared JWT refresh helper (K5).
-│   ├── sse_handler.py           Per-scene HTTP SSE client (agent stream).
+│   ├── sse_handler.py           Per-scene HTTP SSE client; safely retries pre-accept ConnectError only (never ambiguous mid-stream/write failures).
 │   ├── main_thread_executor.py  Request queue + main-thread timer (B3/B6/B8/K1/render guard).
 │   ├── executor.py              ScriptExecutor — second sandbox + handler snapshot/restore.
 │   ├── sandbox_validator.py     AST validator (mirrors backend, runs again on plugin).
