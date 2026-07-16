@@ -2317,8 +2317,10 @@ void ED_spacetype_agent_bubble()
   art->exit = mixie_chat_main_region_exit; /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;
-  /* Per-mousemove cursor callback — hover highlights (history overlay rows,
-   * option bubbles) redraw from it; see the same flag in space_mixie_chat.cc. */
+  /* Run the cursor callback on every mouse move, not just on region entry or
+   * explicit refresh (region_cursor_set_ex gates on this flag). This keeps
+   * history rows, option bubbles, stars, chips, and links responsive while
+   * the cursor moves across them. */
   art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 

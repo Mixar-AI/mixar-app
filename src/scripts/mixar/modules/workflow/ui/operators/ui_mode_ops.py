@@ -46,6 +46,45 @@ def _redraw_topbar(context):
             area.tag_redraw()
 
 
+def _notify_splash_mode_chosen():
+    """Tell the splash layer the user has left it by picking a mode.
+
+    This is the explicit signal onboarding waits on before opening its
+    welcome card (``splash_menu.onboarding_can_start``). Without it the
+    card can open *behind* an idle-but-still-open splash and get torn
+    down by this very mode-click — which marks the user 'seen' by
+    mistake. Calling it here, for both mode operators, guarantees the
+    card only ever appears once we're actually in a workspace.
+    """
+    try:
+        from mixar.bootstrap import splash_menu
+        splash_menu.notify_mode_chosen()
+    except Exception as exc:  # noqa: BLE001 — best-effort signal
+        _logger.debug("notify_mode_chosen failed: %s", exc)
+
+
+def _trigger_first_run_onboarding():
+    """Give the first-run onboarding tour a nudge on Zen Mode entry.
+
+    Belt-and-suspenders alongside the auth-success hook: if the user is
+    already signed in when they pick Zen Mode, re-arm the welcome so it
+    fires in the Zen workspace. ``maybe_show_for_user`` gates on the
+    per-user ``onboarding_seen.json`` file (returning users never see it
+    again) and dedupes an already-scheduled welcome, so this only ever
+    *adds* reliability. If the user isn't signed in yet (no email), the
+    auth-success hook triggers the tour when login completes.
+    """
+    scene = getattr(bpy.context, "scene", None)
+    email = getattr(scene, "mixie_chat_user_id", "") if scene else ""
+    if not email:
+        return
+    try:
+        from mixar.modules.onboarding.core import maybe_show_for_user
+        maybe_show_for_user(email)
+    except Exception as exc:  # noqa: BLE001 — onboarding is best-effort
+        _logger.debug("Zen Mode onboarding trigger failed: %s", exc)
+
+
 def _force_workspace_rebuild(target):
     """Make sure switching to `target` triggers a screen rebuild.
 
@@ -99,6 +138,12 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
         configure_basic_workspace_chrome()
         _force_workspace_rebuild(target)
         _redraw_topbar(context)
+        # Now that we're in Zen Mode (the new-user entry point), unblock
+        # and nudge the first-run onboarding tour. The splash signal must
+        # come first so the welcome card only opens here, in the Zen
+        # workspace, and never behind the splash.
+        _notify_splash_mode_chosen()
+        _trigger_first_run_onboarding()
         _logger.info("Switched to Zen mode")
         return {"FINISHED"}
 
@@ -115,6 +160,9 @@ class MIXAR_OT_set_ui_mode_pro(Operator):
         if not apply_ui_mode(UI_MODE_PRO):
             self.report({"WARNING"}, "Modeling workspace not found")
         _redraw_topbar(context)
+        # Engine Mode also dismisses the splash — release the onboarding
+        # gate so a pending welcome resolves instead of polling forever.
+        _notify_splash_mode_chosen()
         _logger.info("Switched to Engine mode")
         return {"FINISHED"}
 

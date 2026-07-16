@@ -311,10 +311,10 @@ void ED_spacetype_mixie_chat()
   /* regions: main window (custom chat drawing) */
   art = MEM_callocN<ARegionType>("spacetype mixie_chat region");
   art->regionid = RGN_TYPE_WINDOW;
-  /* NO keymapflag here: the main region uses 100% custom GPU drawing (no standard
-   * Blender UI blocks/buttons). ED_KEYMAP_UI adds a ui_region_handler + "User Interface"
-   * keymap that can consume LEFTMOUSE before our "Mixie Chat" keymap sees it.
-   * Scrolling & selection are handled by handlers registered in init(). */
+  /* NO keymapflag here: most of the region uses custom GPU drawing. ED_KEYMAP_UI
+   * would also add the broad "User Interface" keymap, which can consume LEFTMOUSE
+   * before the chat handler. main_region_init installs only the uiBlock handler
+   * needed by the embedded feedback text field, then adds chat-specific handlers. */
   art->keymapflag = 0;
 
   art->init = mixie_chat_main_region_init;
@@ -323,11 +323,10 @@ void ED_spacetype_mixie_chat()
   art->exit = mixie_chat_main_region_exit;  /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;  /* Hover tracking for option bubbles */
-  /* Run the cursor callback on EVERY mouse move, not just on region entry /
-   * explicit refresh (region_cursor_set_ex gates on this flag). Hover
-   * highlights (history overlay rows, option bubbles) redraw from that
-   * callback, so without it hover only updates when something else happens
-   * to repaint — which reads as lag when sweeping the cursor across rows. */
+  /* Run the cursor callback on every mouse move, not just on region entry or
+   * explicit refresh (region_cursor_set_ex gates on this flag). This keeps
+   * history rows, option bubbles, stars, chips, and links responsive while
+   * the cursor moves across them. */
   art->event_cursor = true;
 
   BLI_addhead(&st->regiontypes, art);

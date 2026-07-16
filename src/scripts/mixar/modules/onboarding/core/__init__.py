@@ -56,7 +56,14 @@ def maybe_show_for_user(email: str) -> bool:
     def _fire():
         try:
             from mixar.bootstrap import splash_menu
-            if splash_menu.is_splash_visible():
+            # Wait until the user has actually left the splash (picked a
+            # workspace mode). Firing while the splash is still on screen
+            # draws the card *behind* it, and the subsequent mode-click
+            # is then misread as an off-card dismiss — which marks the
+            # user 'seen' and kills the tour. onboarding_can_start() is
+            # the splash-safe gate; is_splash_visible()'s draw-staleness
+            # goes false for an idle-but-open popup, which is the bug.
+            if not splash_menu.onboarding_can_start():
                 return 0.3
         except Exception:
             pass

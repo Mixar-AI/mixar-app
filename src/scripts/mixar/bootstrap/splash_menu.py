@@ -35,6 +35,11 @@ _splash_last_drawn_ts: float = 0.0
 SPLASH_VISIBLE_WINDOW_S = 2.0
 _module_load_ts: float = time.monotonic()
 _SPLASH_STARTUP_GRACE_S = 3.0  # assume splash is coming for first 3s
+# Last-resort "splash is gone" window for onboarding_can_start(), used
+# only when the splash was exited without an operator signal (Esc /
+# click-outside / About links). Long enough to never trip while a
+# normal splash is on screen.
+_SPLASH_GONE_FALLBACK_S = 20.0
 
 
 def is_splash_visible() -> bool:
@@ -49,6 +54,56 @@ def is_splash_visible() -> bool:
         pass
     # Splash hasn't drawn yet; assume it's coming if we're early in startup.
     return (time.monotonic() - _module_load_ts) < _SPLASH_STARTUP_GRACE_S
+
+
+# Set True the moment the user leaves the splash by picking a workspace
+# mode (Start with Zen Mode / Engine Mode — see workflow.ui_mode_ops).
+# A static, still-open popup stops redrawing, so draw-staleness alone
+# can't tell "dismissed" from "idle but on screen". Onboarding keys off
+# this explicit signal so its welcome card never opens *behind* an open
+# splash (a later mode-click would then be read as an off-card dismiss,
+# marking the user 'seen' by mistake).
+_splash_mode_chosen = False
+
+
+def notify_mode_chosen() -> None:
+    """Record that the user picked a workspace mode from the splash."""
+    global _splash_mode_chosen
+    _splash_mode_chosen = True
+
+
+def onboarding_can_start() -> bool:
+    """True once it's safe to open the onboarding welcome card.
+
+    Stricter than :func:`is_splash_visible` on purpose: the welcome must
+    only appear *after* the user has left the splash, so a subsequent
+    mode-pick click can't be misread as dismissing the card.
+
+    * User picked a mode → splash is gone, go.
+    * Splash disabled in prefs → no splash to wait for; defer to the
+      normal visibility heuristic once startup grace has passed.
+    * Otherwise the splash is (or was) on screen and no mode has been
+      chosen yet → wait. We deliberately do NOT fall back to
+      draw-staleness here: an idle-but-open "Choose Your Mode" popup
+      must keep blocking the card until the user actually clicks.
+    """
+    if _splash_mode_chosen:
+        return True
+    try:
+        prefs = bpy.context.preferences
+        if prefs is not None and not prefs.view.show_splash:
+            return not is_splash_visible()
+    except Exception:
+        pass
+    # Safety net for splash exits that fire no operator (Esc, click
+    # outside, About / Discord links): once the splash has not redrawn
+    # for a long stretch, treat it as gone so a pending welcome resolves
+    # instead of polling forever. The window is deliberately long — far
+    # beyond how long auth takes and how long anyone idles on the mode
+    # picker — so it never fires behind a normally-open splash.
+    if _splash_last_drawn_ts != 0.0:
+        return (time.monotonic() - _splash_last_drawn_ts) >= _SPLASH_GONE_FALLBACK_S
+    return False
 
 
 _bubble_hidden_for_splash = False
@@ -138,6 +193,8 @@ class WM_MT_splash(Menu):
 
 def register():
     """Replace native WM_MT_splash with custom one."""
+    global _splash_mode_chosen
+    _splash_mode_chosen = False
     bpy.utils.register_class(WM_MT_splash)
 
 

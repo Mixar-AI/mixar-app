@@ -67,9 +67,12 @@ class MIXIE_CHAT_HT_header(Header):
         # Auto-sync: newly created scenes default to OFFLINE, but if the
         # WebSocket connection is already active, schedule a state sync.
         # draw() is read-only — cannot write RNA properties here.
+        # is_transport_live (not is_connected): a silently dead socket keeps
+        # is_connected True until the teardown watchdog, and syncing to IDLE
+        # off a zombie would paint a fresh scene as Connected with no network.
         if state == SessionState.OFFLINE:
             from ..core.connection_manager import get_connection_manager
-            if get_connection_manager().is_connected:
+            if get_connection_manager().is_transport_live:
                 scene_name = scene.name
                 def _sync():
                     s = bpy.data.scenes.get(scene_name)
@@ -84,6 +87,16 @@ class MIXIE_CHAT_HT_header(Header):
             if state == SessionState.OFFLINE:
                 # Show connect button when offline; no disconnect button when connected.
                 right_row.operator("mixie_chat.connect", text="Connect", icon="LINKED")
+            elif state != SessionState.CONNECTING:
+                # Transport can be down while session state preserves an
+                # active turn (BUSY etc. survive WS loss so resumed tool
+                # calls aren't rejected) — surface that instead of implying
+                # a healthy connection. is_transport_live trips on recv
+                # silence within seconds; is_connected only flips at the
+                # 45s teardown watchdog.
+                from ..core.connection_manager import get_connection_manager
+                if not get_connection_manager().is_transport_live:
+                    right_row.label(text="Reconnecting", icon="SORTTIME")
 
         # Dev mode: state cycling button
         if DEV_MODE and session.is_connected(scene):

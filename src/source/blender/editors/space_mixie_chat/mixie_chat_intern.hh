@@ -128,6 +128,19 @@ void mixie_chat_render_messages(const bContext *C,
                                 PropertyRNA *prop,
                                 const ChatLayoutMetrics &metrics,
                                 const ChatImageStyle &image_style);
+void mixie_chat_render_feedback(const bContext *C,
+                                ARegion *region,
+                                PointerRNA *msg_ptr,
+                                const ChatLayoutMetrics &metrics,
+                                const MessageLayoutData &layout);
+/* Vertical gap between the message's last content row and the feedback stars.
+ * Shared by the layout pass and the render pass so they always agree. */
+float chat_ui_get_feedback_top_gap(const ChatLayoutMetrics &metrics);
+/* Pixel height for the in-progress feedback comment input, wrap-measured with
+ * the exact widget_draw_text_multiline() font and line-height math so the
+ * button grows one widget line at a time (Shift+Enter multi-line). Clamped to
+ * FEEDBACK_COMMENT_MAX_LINES. */
+float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, float input_width);
 
 /** \} */
 
@@ -478,6 +491,10 @@ bool mixie_chat_handle_action_button_click(bContext *C,
                                             ARegion *region,
                                             float mouse_x,
                                             float mouse_y);
+bool mixie_chat_handle_feedback_click(bContext *C,
+                                      ARegion *region,
+                                      float mouse_x,
+                                      float mouse_y);
 bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y);
 bool mixie_chat_handle_steps_click(bContext *C,
                                    ARegion *region,

@@ -418,12 +418,12 @@ def draw_queue_generate_footer(
 
 def draw_unified_queue_panel(layout, context):
     """Draw the single unified queue: filter chips + flat template_list."""
-    scene = context.scene
-    if not hasattr(scene, "mixie_queue"):
+    wm = context.window_manager
+    if not hasattr(wm, "mixie_queue"):
         layout.label(text="Queue system not available", icon='INFO')
         return
 
-    pg = scene.mixie_queue
+    pg = wm.mixie_queue
 
     # Filter chips row (All / Active / Done / Failed), each with its
     # live job count so no separate summary block is needed.
