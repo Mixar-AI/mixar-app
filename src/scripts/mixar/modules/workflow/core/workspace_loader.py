@@ -164,6 +164,14 @@ def configure_basic_workspace_chrome() -> None:
     for workspace in bpy.data.workspaces:
         if workspace.name != BASIC_WORKSPACE_NAME:
             continue
+        # Workspaces store the object mode Blender restores on activation.
+        # The Zen Mode workspace is seeded from the "AI Mode" template,
+        # which may have been saved in Edit mode — that would drop the
+        # viewport into Edit mode every time the user enters Zen Mode.
+        # Force Object mode. Idempotent guard avoids redraws that would
+        # close the startup splash popup.
+        if workspace.object_mode != 'OBJECT':
+            workspace.object_mode = 'OBJECT'
         for screen in workspace.screens:
             for area in screen.areas:
                 if area.type != 'VIEW_3D':
