@@ -24,6 +24,8 @@ from .moodboard_enum_callbacks import (
     _on_model_changed,
     _get_ai_render_mode_items,
     _get_ai_render_model_items,
+    _get_animate_mode_items,
+    _get_animate_model_items,
     _get_retopology_mode_items,
     _get_retopology_model_items,
     _get_uv_unwrap_model_items,
@@ -85,5 +87,29 @@ class MixieMoodboardTabUVUnwrapProps(PropertyGroup):
         name="Model",
         description="AI model for UV unwrapping",
         items=_get_uv_unwrap_model_items,
+        update=_on_model_changed,
+    )
+
+
+class MixieMoodboardTabAnimateProps(PropertyGroup):
+    """Properties for the Animate tab (catalog mode/model selection).
+
+    Capability ``animate`` — Auto Rig (``tripo_rig``) / Animate
+    (``tripo_retarget``). Catalog-only tab: like AI Render it has no
+    offline fallback, so the panel hides when the catalog carries no
+    animate services.
+    """
+
+    mode: EnumProperty(
+        name="Mode",
+        description="Animate mode (Auto Rig / Animate)",
+        items=_get_animate_mode_items,
+        update=_on_model_changed,
+    )
+
+    model: EnumProperty(
+        name="Model",
+        description="AI model for rigging/animation",
+        items=_get_animate_model_items,
         update=_on_model_changed,
     )

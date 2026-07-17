@@ -24,6 +24,17 @@ RETOPOLOGY_HUNYUAN_MODEL = "hunyuan_topology"
 RETOPOLOGY_TRIPO_SERVICE = "retopology_tripo"
 RETOPOLOGY_TRIPO_MODEL = "tripo_v2"
 
+# Animate capability (Tripo v3 animations API). Service keys == job_queue
+# job_types; models are catalog rows routed by model_ref on the backend.
+ANIMATE_RIG_SERVICE = "tripo_rig"
+ANIMATE_RIG_MODEL = "tripo_rig_v2_5"
+ANIMATE_RETARGET_SERVICE = "tripo_retarget"
+ANIMATE_RETARGET_MODEL = "tripo_retarget_v2_5"
+# Custom property stamped on every object imported from an Auto Rig job;
+# holds OUR queue job id (never Tripo's task id) — the retarget payload
+# sends it and the backend resolves/authorizes the vendor task.
+ANIMATE_RIG_JOB_PROP = "mixar_rig_job_id"
+
 # ============================================================================
 # POLL CONFIGURATION
 # ============================================================================
@@ -40,6 +51,7 @@ MAX_CONSECUTIVE_POLL_ERRORS = 5
 MAX_FILE_SIZE_PART = 100 * 1024 * 1024       # 100 MB
 MAX_FILE_SIZE_TOPOLOGY = 200 * 1024 * 1024   # 200 MB
 MAX_FILE_SIZE_TRIPO_RETOPOLOGY = 150 * 1024 * 1024  # 150 MB (Tripo mesh limit)
+MAX_FILE_SIZE_ANIMATE_RIG = 150 * 1024 * 1024  # 150 MB (Tripo rig-check GLB limit)
 MAX_FILE_SIZE_UV = 100 * 1024 * 1024         # 100 MB
 
 # ============================================================================

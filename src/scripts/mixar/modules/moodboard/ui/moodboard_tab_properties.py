@@ -25,6 +25,7 @@ from bpy.props import (
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
 from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabAIRenderProps,
+    MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
 )
@@ -437,6 +438,12 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabUVUnwrapProps,
         name="UV Unwrap Tab",
         description="Properties for UV Unwrap tab"
+    )
+
+    tab_animate: PointerProperty(
+        type=MixieMoodboardTabAnimateProps,
+        name="Animate Tab",
+        description="Properties for Animate tab"
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.

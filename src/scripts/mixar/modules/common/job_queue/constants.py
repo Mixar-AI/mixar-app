@@ -16,6 +16,7 @@ AUTH_RETRY_INTERVAL_S = 5.0
 # Feature keys
 FEATURE_IMAGE_TO_3D_PRO = "image_to_3d_pro"
 FEATURE_RETOPOLOGY = "retopology"
+FEATURE_ANIMATE = "animate"
 FEATURE_SCENE_GEN_HP = "scene_gen_hp"
 FEATURE_SCENE_GEN_LP = "scene_gen_lp"
 FEATURE_HUNYUAN_RAPID = "hunyuan_rapid"

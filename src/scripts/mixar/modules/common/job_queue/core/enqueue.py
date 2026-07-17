@@ -31,6 +31,7 @@ def enqueue_generation(
     fail_message: str = "Generation failed",
     # GLB-only
     on_imported: Optional[Callable] = None,
+    import_options: Optional[dict] = None,
     # Image-only
     name_prefix: str = "",
     prompt_text: str = "",
@@ -88,6 +89,7 @@ def enqueue_generation(
             payload=payload,
             fail_message=fail_message,
             _on_imported_hook=on_imported,
+            import_options=import_options,
         )
     elif kind == "image":
         job = SyncImageJob(

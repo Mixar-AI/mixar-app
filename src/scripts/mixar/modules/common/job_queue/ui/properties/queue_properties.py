@@ -173,6 +173,7 @@ def _sync_mirror(_queue) -> None:
 def _attach_listeners() -> None:
     """Attach the unified _sync_mirror to every known feature queue."""
     from mixar.modules.common.job_queue.constants import (
+        FEATURE_ANIMATE,
         FEATURE_BRUSH_GEN,
         FEATURE_HUNYUAN_PART,
         FEATURE_HUNYUAN_RAPID,
@@ -197,6 +198,7 @@ def _attach_listeners() -> None:
         FEATURE_HUNYUAN_UV, FEATURE_MODEL_3D, FEATURE_IMAGEGEN,
         FEATURE_LOOKDEV, FEATURE_LOOKDEV360, FEATURE_MATGEN, FEATURE_BRUSH_GEN,
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
+        FEATURE_ANIMATE,
     )
     for feat in _FEATURES:
         try:
