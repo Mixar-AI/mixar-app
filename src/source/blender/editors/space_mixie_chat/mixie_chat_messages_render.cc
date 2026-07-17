@@ -131,8 +131,10 @@ void mixie_chat_render_messages(const bContext *C,
       /* Visibility culling: skip drawing messages entirely outside viewport */
       float msg_top = layout.y_pos + layout.bubble_height + metrics.label_height;
       float msg_bottom = layout.y_pos - layout.slot_todo_height -
-                          layout.slot_actions_height - layout.slot_steps_height -
-                          layout.thinking_height - action_zone_h;
+                         layout.slot_actions_height - layout.slot_steps_height -
+                         layout.thinking_height - layout.feedback_row_height -
+                         layout.feedback_submitted_comment_height -
+                         layout.feedback_comment_input_height - action_zone_h;
       if (msg_top < v2d->cur.ymin || msg_bottom > v2d->cur.ymax) {
         message_index++;
         RNA_property_collection_next(&iter);
@@ -417,6 +419,8 @@ void mixie_chat_render_messages(const bContext *C,
                                      1.0f);
       }
 
+      mixie_chat_render_feedback(C, region, &msg_ptr, metrics, layout);
+
       /* Draw text selection highlight if this message is selected */
       if (smixie && smixie->sel_message_index == message_index &&
           smixie->sel_start != smixie->sel_end) {
@@ -458,7 +462,7 @@ void mixie_chat_render_messages(const bContext *C,
 
   RNA_property_collection_end(&iter);
 
-  /* Update cursor based on slot action and action button hover states */
+  /* Update cursor based on slot action, action button, and feedback hover states */
   bool any_button_hovered = false;
   for (const MessageLayoutData &layout : rt->layout_cache) {
     for (int i = 0; i < layout.slot_action_count; i++) {
@@ -475,6 +479,8 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
     }
+    /* Feedback stars intentionally keep the default cursor — the fill
+     * preview is their hover affordance (see mixie_chat_main_region_cursor). */
     if (any_button_hovered) {
       break;
     }

@@ -13,7 +13,8 @@ Centralized configuration values for the moodboard module.
 # JOB QUEUE IDENTIFIERS
 # ============================================================================
 
-SCENE_GEN_JOB_TYPE = "scene_gen"
+SCENE_GEN_CAPABILITY_KEY = "scene_gen"
+SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
 SCENE_GEN_MODEL = "scene_gen_v1"
 
 # ============================================================================

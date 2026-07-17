@@ -85,6 +85,10 @@ class JobQueueService(BaseService):
             "attempts": data.get("attempts"),
             "service": data.get("service"),
         }
+        # Preserve omission for rolling deploys: older backends do not send
+        # model, and a missing key must not erase the locally submitted value.
+        if "model" in data:
+            normalized["model"] = data.get("model")
         return APIResponse(
             success=response.success,
             status_code=response.status_code,

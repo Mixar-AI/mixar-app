@@ -136,6 +136,38 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       }
     }
 
+    /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
+     * interactive, so it gets no hover affordance either. */
+    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING ||
+                                 layout.feedback_status == FEEDBACK_STATUS_RECEIVED;
+    if (layout.has_feedback) {
+      /* Stars keep the DEFAULT cursor: the fill preview is the hover
+       * affordance, and flipping to the hand while sweeping the row reads as
+       * flicker. So hover only drives needs_redraw, never any_hovered. */
+      for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
+        FeedbackStarData &star = layout.feedback_stars[i];
+        bool was_hovered = star.is_hovered;
+        bool has_bounds = star.bounds.xmax > star.bounds.xmin;
+        star.is_hovered = !feedback_locked && has_bounds &&
+                          BLI_rctf_isect_pt(&star.bounds, mouse_x, mouse_y);
+        if (was_hovered != star.is_hovered) {
+          needs_redraw = true;
+        }
+      }
+      /* Comment link hover */
+      bool was_comment_hovered = layout.feedback_comment_hovered;
+      bool has_comment_bounds = layout.feedback_comment_bounds.xmax >
+                                layout.feedback_comment_bounds.xmin;
+      layout.feedback_comment_hovered = has_comment_bounds &&
+          BLI_rctf_isect_pt(&layout.feedback_comment_bounds, mouse_x, mouse_y);
+      if (was_comment_hovered != layout.feedback_comment_hovered) {
+        needs_redraw = true;
+      }
+      if (layout.feedback_comment_hovered) {
+        any_hovered = true;
+      }
+    }
+
     /* Steps block header + rows and thinking dropdown header are click
      * targets too — give them the hand cursor. */
     if (layout.has_steps &&
@@ -229,7 +261,12 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
       return WM_UI_HANDLER_BREAK;
     }
 
-    /* 6. Option bubble clicks */
+    /* 6. Feedback star/comment clicks */
+    if (mixie_chat_handle_feedback_click(C, region, mx, my)) {
+      return WM_UI_HANDLER_BREAK;
+    }
+
+    /* 7. Option bubble clicks */
     {
       const blender::Vector<MessageLayoutData> &layout_cache =
           mixie_chat_get_layout_cache(smixie);
@@ -307,7 +344,12 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   v2d->align = V2D_ALIGN_NO_NEG_X | V2D_ALIGN_NO_NEG_Y;
   v2d->keeptot = V2D_KEEPTOT_STRICT;
 
-  /* Register our direct UI click handler FIRST.
+  /* Register uiBlock event handler so embedded text inputs (feedback comment)
+   * can receive clicks and keyboard events. Must come BEFORE our custom handler
+   * so uiBlock buttons get first priority on mouse events. */
+  UI_region_handlers_add(&region->runtime->handlers);
+
+  /* Register our direct UI click handler.
    * UI handlers run before ALL keymap handlers in Blender's event dispatch.
    * This ensures LEFTMOUSE clicks reach our chat click dispatch (option bubbles,
    * slot actions, scroll indicator, etc.) before any keymap consumes the event. */

@@ -5,14 +5,13 @@
 """
 Mixar Auto-Update System
 
-Public re-exports for the update checker, downloader, installer,
-and state management subsystems.
+Public re-exports for the update checker and state management.  The
+update flow is browser-based: the client detects newer versions and
+points the user at the downloads page.
 """
 
 from .constants import UPDATE_NOTIFICATION_ID, UpdateState
-from .core.downloader import download_update, get_cached_installer
-from .core.installer import launch_installer
-from .core.state import DownloadProgress, UpdateInfo, UpdateStateManager, get_update_state
+from .core.state import UpdateInfo, UpdateStateManager, get_update_state
 from .core.trigger import trigger_update_check
 from .core.update_checker import (
     clear_skipped_version,
@@ -34,7 +33,6 @@ __all__ = [
     "UpdateStateManager",
     "get_update_state",
     "UpdateInfo",
-    "DownloadProgress",
     # Checker helpers
     "parse_semver",
     "is_newer",
@@ -45,11 +43,6 @@ __all__ = [
     "get_skipped_version",
     "set_skipped_version",
     "clear_skipped_version",
-    # Downloader
-    "get_cached_installer",
-    "download_update",
-    # Installer
-    "launch_installer",
     # Trigger
     "trigger_update_check",
 ]

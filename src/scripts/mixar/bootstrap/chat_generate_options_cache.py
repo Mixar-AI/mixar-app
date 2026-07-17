@@ -377,8 +377,14 @@ def _schedule_redraw() -> None:
     try:
         import bpy
 
-        if not bpy.app.timers.is_registered(trigger_ui_redraw):
-            bpy.app.timers.register(trigger_ui_redraw, first_interval=0.0)
+        # Keep the lifecycle check and registration atomic with unregister().
+        # A fetch may finish after shutdown has begun; without the lock it can
+        # recreate this timer after unregister() has already removed it.
+        with _lock:
+            if _shutdown_requested:
+                return
+            if not bpy.app.timers.is_registered(trigger_ui_redraw):
+                bpy.app.timers.register(trigger_ui_redraw, first_interval=0.0)
     except Exception:
         pass
 

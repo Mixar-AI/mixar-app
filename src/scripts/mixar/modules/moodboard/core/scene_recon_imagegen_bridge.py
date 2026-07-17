@@ -144,6 +144,7 @@ def enqueue_imagegen_for_recon(
     job = _SceneReconImageGenJob(
         feature_key=FEATURE_IMAGEGEN,
         label=f"SceneRecon: {prompt[:40]}",
+        display_label=prompt[:40],
         job_type="image_gen",
         model="pro",
         payload=payload,

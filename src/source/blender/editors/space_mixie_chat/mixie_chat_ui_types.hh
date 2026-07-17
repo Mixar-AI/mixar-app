@@ -302,6 +302,35 @@ struct ImageSlotData {
 };
 
 /**
+ * Feedback star hit-test data.
+ * One per star in the feedback rating row.
+ */
+struct FeedbackStarData {
+  rctf bounds;
+  int star_index; /* 1-5 */
+  bool is_hovered;
+};
+
+#define FEEDBACK_STAR_COUNT 5
+
+/* Display cap for the read-only accepted-comment copy kept in layout data.
+ * The RNA property allows 2000 chars; the inline confirmation truncates. */
+#define FEEDBACK_COMMENT_DISPLAY_MAX 512
+
+/* The comment input grows with its wrapped line count (Shift+Enter inserts
+ * newlines), capped like the composer (FOOTER_INPUT_MAX_LINE_COUNT). */
+#define FEEDBACK_COMMENT_MAX_LINES 6
+
+/* Submission lifecycle for the feedback row. Mirrors the Python constants in
+ * space_mixie_chat/constants.py — keep in sync. */
+enum FeedbackStatus {
+  FEEDBACK_STATUS_IDLE = 0,
+  FEEDBACK_STATUS_SENDING = 1,
+  FEEDBACK_STATUS_RECEIVED = 2,
+  FEEDBACK_STATUS_FAILED = 3,
+};
+
+/**
  * Step item data for the agent steps block (tool-call rows).
  * kind selects the row icon; status selects the trailing state glyph.
  */
@@ -317,7 +346,6 @@ struct StepItemSlotData {
   rctf row_bounds;   /* header hit area (View2D coords) */
   bool is_hovered;
 };
-
 /* Maximum items per slot */
 #define SLOT_MAX_TODO_ITEMS 50
 #define SLOT_MAX_ACTION_ITEMS 10
