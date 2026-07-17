@@ -27,6 +27,7 @@ from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
 from mixar.modules.common.job_queue.core.job import Job
 from mixar.modules.common.utils.image_utils import compress_image_for_upload
 from mixar.modules.hunyuan.constants import DEFAULT_FACE_COUNT, MAX_FILE_SIZE_TOPOLOGY
+from mixar.modules.moodboard.constants import SCENE_GEN_CAPABILITY_KEY
 
 logger = get_logger(__name__)
 
@@ -272,6 +273,7 @@ def enqueue_scene_gen_hp_jobs(
             model=model_key,
             payload=payload,
             label=image.name,
+            origin_capability_key=SCENE_GEN_CAPABILITY_KEY,
             fail_message="Scene generation failed",
             on_imported=_make_hp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_hp_is_generating",
@@ -343,6 +345,7 @@ def enqueue_scene_gen_lp_jobs(
             model="hunyuan_topology",
             payload=payload,
             label=obj.name,
+            origin_capability_key=SCENE_GEN_CAPABILITY_KEY,
             fail_message="Scene generation failed",
             on_imported=_make_lp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_lp_is_generating",

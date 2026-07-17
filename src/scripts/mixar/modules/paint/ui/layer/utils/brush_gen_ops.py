@@ -273,6 +273,7 @@ class MGenerateBrushTexture(Operator):
             model=model_name,
             payload=payload,
             label=f"Brush: {prompt[:40]}",
+            display_label=prompt[:40],
             fail_message="Brush generation failed",
             name_prefix="brush_gen",
             prompt_text=prompt,

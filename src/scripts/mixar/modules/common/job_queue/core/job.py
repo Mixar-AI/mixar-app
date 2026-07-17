@@ -58,6 +58,14 @@ class Job:
     finished_at: float = 0.0  # stamped by the mirror sync on first terminal tick
 
     # Backend tracking
+    # Generation identity is shared here rather than only on generic job
+    # subclasses so bespoke queues receive authoritative submit/WS metadata.
+    service: str = ""
+    # Optional backend catalog capability that owns the originating workflow.
+    # Usually the service's parent capability is correct; composite workflows
+    # can override it without hardcoding any human-facing label.
+    origin_capability_key: str = ""
+    model: str = ""
     backend_job_id: str = ""
     backend_api_type: str = ""
     poll_count: int = 0
@@ -76,6 +84,9 @@ class Job:
 
     # Result objects (populated by on_imported)
     imported_object_names: str = ""
+    # Optional UI-only title when ``label`` also carries dedup or downstream
+    # naming data. Keeping this structured avoids parsing human text.
+    display_label: str = ""
 
     # ------------------------------------------------------------------ #
     # Subclass interface
@@ -151,6 +162,25 @@ class Job:
         data = getattr(response, "data", None) or {}
         inner = data.get("data", data) if isinstance(data, dict) else {}
         return inner if isinstance(inner, dict) else {}
+
+    def apply_backend_metadata(self, data: dict) -> None:
+        """Merge optional service/model fields from a client view.
+
+        Missing keys are ignored for rolling-deploy compatibility. A blank
+        incoming model also preserves the locally submitted model.
+        """
+        if not isinstance(data, dict):
+            return
+
+        if "service" in data:
+            service = str(data.get("service") or "").strip()
+            if service:
+                self.service = service
+
+        if "model" in data:
+            model = str(data.get("model") or "").strip()
+            if model:
+                self.model = model
 
     def _parse_standard_submit(self, response) -> None:
         """Standard submit parsing: extract ``backend_job_id`` or raise."""

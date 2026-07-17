@@ -60,22 +60,48 @@ def test_agent_bubble_pill_regions_exit_before_free():
 
 
 def test_startup_cache_fetches_do_not_schedule_redraw_after_shutdown():
-    for relative_path in (
-        "src/scripts/mixar/bootstrap/imagegen_cache.py",
-        "src/scripts/mixar/bootstrap/model_3d_cache.py",
+    for relative_path, scheduler_name, scheduled_callback in (
+        (
+            "bootstrap/generation_catalog_cache.py",
+            "_schedule_catalog_swapped",
+            "_on_catalog_swapped",
+        ),
+        (
+            "bootstrap/chat_generate_options_cache.py",
+            "_schedule_redraw",
+            "trigger_ui_redraw",
+        ),
     ):
-        source = (ROOT / relative_path).read_text()
-        unregister_block = source[
-            source.index("def unregister() -> None:"):
-        ]
+        source = read_src(relative_path)
+        functions = {
+            node.name: node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef)
+        }
+        scheduler = functions[scheduler_name]
+        unregister = functions["unregister"]
 
-        assert "_shutdown_requested" in source
-        assert "not _shutdown_requested" in source
-        assert "bpy.app.timers.unregister(trigger_ui_redraw)" in unregister_block
-        assert (
-            source.index("not _shutdown_requested")
-            < source.index("bpy.app.timers.register(trigger_ui_redraw")
+        lifecycle_block = next(
+            nested
+            for statement in scheduler.body
+            if isinstance(statement, ast.Try)
+            for nested in statement.body
+            if isinstance(nested, ast.With)
+            and any(ast.unparse(item.context_expr) == "_lock" for item in nested.items)
         )
+        lifecycle_source = ast.unparse(lifecycle_block)
+        register_call = f"bpy.app.timers.register({scheduled_callback}"
+
+        assert "if _shutdown_requested:" in lifecycle_source
+        assert register_call in lifecycle_source
+        assert lifecycle_source.index("if _shutdown_requested:") < lifecycle_source.index(
+            register_call
+        )
+
+        unregister_source = ast.unparse(unregister)
+        assert "_shutdown_requested = True" in unregister_source
+        assert scheduled_callback in unregister_source
+        assert "bpy.app.timers.unregister" in unregister_source
 
 
 def test_agent_connection_callbacks_skip_main_thread_timers_during_shutdown():

@@ -107,6 +107,7 @@ def handle_backend_job_update(payload: dict) -> bool:
     if job is None:
         return False
 
+    job.apply_backend_metadata(payload)
     state = str(payload.get("state") or payload.get("status") or "").lower()
     status = _JOBQ_STATE_TO_STATUS.get(state, "")
     if status:
@@ -472,6 +473,7 @@ class FeatureQueue:
         if job.state == JobState.CANCELLED:
             self._pump()
             return
+        job.apply_backend_metadata(job._unwrap_response(response))
         job._submit_retry_scheduled = False
         job.error = ""
         job.user_message = ""
@@ -607,6 +609,10 @@ class FeatureQueue:
         return custom if custom > 0 else get_poll_interval(job.poll_count)
 
     def _on_poll_success(self, job: Job, response) -> None:
+        # Full job.get/job.sync snapshots can arrive while a fast job is still
+        # leaving RUNNING_SUBMIT. Retain their display metadata even when the
+        # lifecycle parser must wait for RUNNING_POLL.
+        job.apply_backend_metadata(job._unwrap_response(response))
         if job.state != JobState.RUNNING_POLL:
             return
         job.consecutive_poll_errors = 0

@@ -43,6 +43,28 @@ _RUNNING_STATES = {"BUSY", "MODIFYING"}
 _IS_WINDOWS = sys.platform == "win32"
 
 
+def _transport_down() -> bool:
+    """True when the WebSocket transport is currently disconnected.
+
+    Session state deliberately preserves BUSY/AWAITING_INPUT/MODIFYING while
+    the WS reconnects (so resumed tool calls aren't rejected — see
+    connection_manager.on_disconnected), which means scene state alone says
+    "Running" even with the network gone. The pill must not lie about that.
+
+    Uses is_transport_live (recv-recency) rather than is_connected: on a
+    silent network drop is_connected stays True until the 45s teardown
+    watchdog, and the pill would keep implying a healthy connection for
+    that whole window.
+    """
+    try:
+        from mixar.modules.space_mixie_chat.core.connection_manager import (
+            get_connection_manager,
+        )
+        return not get_connection_manager().is_transport_live
+    except Exception:
+        return False
+
+
 def _get_status(scene) -> tuple[str, str, str]:
     """Return (label, custom icon colour, fallback icon) for the pill."""
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
@@ -50,6 +72,10 @@ def _get_status(scene) -> tuple[str, str, str]:
         return "Disconnected", "red", 'CANCEL'
     if state == "CONNECTING":
         return "Connecting", "blue", 'SORTTIME'
+    if _transport_down():
+        # Any non-offline state with the transport gone means the client is
+        # auto-reconnecting (and, mid-turn, will re-attach to the stream).
+        return "Reconnecting", "red", 'CANCEL'
     if state in _RUNNING_STATES:
         return "Running", "green", 'RECORD_ON'
     if state == "AWAITING_INPUT":
@@ -215,6 +241,24 @@ class AGENT_BUBBLE_HT_header(Header):
         handle_row.label(text="▬▬▬▬")
         layout.separator_spacer()
 
+        # Right-side buttons (left → right): reconnect, new chat, past chats.
+        right_controls = layout.row(align=True)
+
+        # Reconnect button (mirrors the Connect button in mixie chat's
+        # header, icon-only). Only rendered while disconnected — the
+        # operator's poll additionally requires login, and hiding it
+        # when logged out avoids a permanently greyed-out button.
+        state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
+        wm = context.window_manager
+        if state == "OFFLINE" and getattr(wm, "mixie_chat_is_logged_in", False):
+            right_controls.operator(
+                "mixie_chat.connect",
+                text="",
+                icon='LINKED',
+                emboss=False,
+                no_tooltip=True,
+            )
+
         # New-chat button on the right (mirrors the one in mixie chat's
         # header). Only rendered when there is chat history to clear:
         # an empty conversation already shows the empty state, and
@@ -233,13 +277,28 @@ class AGENT_BUBBLE_HT_header(Header):
                 except TypeError:
                     msg_count = 0
         if msg_count > 0:
-            new_chat_row = layout.row(align=True)
-            new_chat_row.operator(
+            right_controls.operator(
                 "mixie_chat.new_session",
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
                 no_tooltip=True,
+            )
+
+        # Past chats — toggles the C++-drawn history overlay (shared with
+        # the mixie chat editor; the bubble's main region reuses the same
+        # draw callbacks). Shown even when the current chat is empty —
+        # reopening an old chat from a fresh state is exactly the history
+        # use-case. hasattr guard: registers in the deferred UI pass.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history'):
+            wm = context.window_manager
+            right_controls.operator(
+                "mixie_chat.show_history",
+                text="",
+                icon='RECOVER_LAST',
+                emboss=False,
+                no_tooltip=True,
+                depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 
 

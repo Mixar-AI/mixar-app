@@ -11,12 +11,17 @@ Uses httpx for HTTP/SSE streaming.
 import json
 from mixar.config.logging_config import get_logger
 import threading
+import time
 from dataclasses import dataclass
 from typing import Callable, Optional
 
 from ..constants import (
+    AGENT_ATTACH_ENDPOINT,
     AGENT_CHAT_ENDPOINT,
     AGENT_INPUT_ENDPOINT,
+    ATTACH_RETRY_DELAYS,
+    ATTACH_RETRY_MAX_SECONDS,
+    SSE_CONNECT_RETRY_DELAYS,
     SSE_READ_TIMEOUT
 )
 
@@ -77,11 +82,159 @@ class SSEStreamHandler:
         self._client: Optional["httpx.Client"] = None
         self._user_aborted = False
 
+        # Reconnect-resume state. The backend stamps every SSE payload with a
+        # per-session monotonic seq and buffers it; after a mid-turn stream
+        # loss we re-attach with the last seq we saw and the backend replays
+        # what we missed. last_seq spans a whole turn (chat + input streams).
+        self._session_id: Optional[str] = None
+        self._last_seq = -1
+        self._resume_unavailable = False
+
     def _on_error(self, message: str) -> None:
         if self._user_aborted:
             logger.debug(f"Suppressing SSE error after user abort: {message}")
             return
         self._on_error_cb(message)
+
+    def _retry_connect_error(self, label: str, attempt: int, error: Exception) -> bool:
+        """Wait for a bounded retry after a pre-request connection failure.
+
+        Only ``httpx.ConnectError`` reaches this helper.  No HTTP connection
+        was established, so the backend cannot have accepted the turn and the
+        retry is idempotent.  The short-sleep loop lets Stop/cleanup interrupt
+        a longer backoff promptly.
+        """
+        if attempt >= len(SSE_CONNECT_RETRY_DELAYS) or not self._running.is_set():
+            return False
+
+        delay = SSE_CONNECT_RETRY_DELAYS[attempt]
+        logger.warning(
+            f"{label} SSE connection failed before request acceptance "
+            f"(attempt {attempt + 1}): {error}; retrying in {delay:.1f}s"
+        )
+        deadline = time.monotonic() + delay
+        while self._running.is_set() and time.monotonic() < deadline:
+            time.sleep(min(0.1, max(0.0, deadline - time.monotonic())))
+        return self._running.is_set()
+
+    def _resume_via_attach(self, label: str) -> None:
+        """Recover a turn whose accepted stream died mid-flight.
+
+        The backend keeps a disconnected turn running (disconnect drain) and
+        tees every event into a seq-stamped replay buffer, so this retries
+        POST /agent/chat/attach — replay everything after ``_last_seq``, then
+        follow live — until the turn ends, the budget runs out, or the user
+        stops the stream. Attach is idempotent, so unlike re-POSTing the
+        original request it is safe to retry through a flapping network.
+
+        Runs on the stream thread; terminates the turn via _on_complete (a
+        replayed [DONE]) or _on_error, exactly like the primary stream.
+        """
+        if self._user_aborted or not self._running.is_set():
+            return
+        if not self._session_id:
+            self._on_error(f"{label} connection lost mid-stream")
+            return
+
+        logger.warning(
+            f"{label} SSE stream lost mid-turn; re-attaching after seq "
+            f"{self._last_seq} (budget {int(ATTACH_RETRY_MAX_SECONDS)}s)"
+        )
+        budget_end = time.monotonic() + ATTACH_RETRY_MAX_SECONDS
+        attempt = 0
+        while self._running.is_set() and not self._user_aborted:
+            delay = ATTACH_RETRY_DELAYS[min(attempt, len(ATTACH_RETRY_DELAYS) - 1)]
+            attempt += 1
+            deadline = time.monotonic() + delay
+            while self._running.is_set() and time.monotonic() < deadline:
+                time.sleep(min(0.1, max(0.0, deadline - time.monotonic())))
+            if not self._running.is_set() or self._user_aborted:
+                return
+            if time.monotonic() > budget_end:
+                break
+
+            result = self._attach_once(attempt)
+            if result == "done":
+                logger.info(f"{label} turn recovered via attach (attempt {attempt})")
+                return
+            if result == "unavailable":
+                self._on_error(
+                    "Connection lost and the response could not be recovered. "
+                    "The agent may have finished in the background."
+                )
+                return
+            # "lost" — network still down or the stream broke again; retry.
+
+        if self._running.is_set() and not self._user_aborted:
+            self._on_error(
+                f"{label} connection lost; could not re-attach within "
+                f"{int(ATTACH_RETRY_MAX_SECONDS)}s"
+            )
+
+    def _attach_once(self, attempt: int) -> str:
+        """One POST /agent/chat/attach round.
+
+        Returns "done" (turn finished cleanly), "unavailable" (nothing to
+        resume — buffer expired/never existed, or the endpoint doesn't
+        exist), or "lost" (try again).
+        """
+        token = ""
+        try:
+            from mixar.modules.auth.core.auth import get_access_token
+            token = get_access_token() or ""
+        except Exception:
+            pass
+        headers = {"Accept": "text/event-stream"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        payload = {"session_id": self._session_id, "after_seq": self._last_seq}
+        timeout_config = httpx.Timeout(
+            connect=10.0,
+            read=SSE_READ_TIMEOUT,
+            write=30.0,
+            pool=10.0,
+        )
+
+        self._resume_unavailable = False
+        try:
+            self._client = httpx.Client(timeout=timeout_config)
+            try:
+                with self._client.stream(
+                    "POST",
+                    self.attach_url,
+                    json=payload,
+                    headers=headers,
+                ) as response:
+                    if response.status_code == 401:
+                        response.read()
+                        # Refresh and let the next round send the new token.
+                        _try_refresh_token()
+                        return "lost"
+                    if response.status_code in (404, 405):
+                        # Backend without the attach endpoint — nothing to
+                        # resume onto, ever.
+                        response.read()
+                        return "unavailable"
+                    if response.status_code != 200:
+                        logger.warning(
+                            f"Attach attempt {attempt} got HTTP {response.status_code}"
+                        )
+                        return "lost"
+
+                    outcome = self._consume_sse_stream(response, "Attach")
+                    if self._resume_unavailable:
+                        return "unavailable"
+                    if outcome == "done":
+                        return "done"
+                    if outcome == "stopped":
+                        return "done"  # user stopped; nothing left to report
+                    return "lost"
+            finally:
+                self._client.close()
+                self._client = None
+        except Exception as e:
+            logger.warning(f"Attach attempt {attempt} failed: {e}")
+            return "lost"
 
     @property
     def chat_url(self) -> str:
@@ -92,6 +245,11 @@ class SSEStreamHandler:
     def input_url(self) -> str:
         """Build input endpoint URL."""
         return f"{self._host}{AGENT_INPUT_ENDPOINT}"
+
+    @property
+    def attach_url(self) -> str:
+        """Build attach (reconnect-resume) endpoint URL."""
+        return f"{self._host}{AGENT_ATTACH_ENDPOINT}"
 
     @property
     def is_running(self) -> bool:
@@ -141,6 +299,11 @@ class SSEStreamHandler:
             return False
 
         self._user_aborted = False
+        self._session_id = session_id
+        # Fresh turn — the backend resets the session's replay buffer and its
+        # seq numbering on POST /agent/chat.
+        self._last_seq = -1
+        self._resume_unavailable = False
         self._running.set()
         self._thread = threading.Thread(
             target=self._stream_loop,
@@ -190,6 +353,10 @@ class SSEStreamHandler:
             return False
 
         self._user_aborted = False
+        self._session_id = session_id
+        # NOT resetting _last_seq: an input stream continues the same turn,
+        # and the backend continues the turn's buffer/seq numbering with it.
+        self._resume_unavailable = False
         self._running.set()
         self._thread = threading.Thread(
             target=self._input_stream_loop,
@@ -208,6 +375,7 @@ class SSEStreamHandler:
         action: str,
         text: str,
         auth_token: Optional[str],
+        _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles input SSE streaming."""
         received_done = False
@@ -232,6 +400,9 @@ class SSEStreamHandler:
             )
 
             self._client = httpx.Client(timeout=timeout_config)
+            # Set once a 200 stream has been consumed; "lost" is handled
+            # below, outside the response context.
+            outcome: Optional[str] = None
             try:
                 with self._client.stream(
                     "POST",
@@ -257,39 +428,48 @@ class SSEStreamHandler:
                         self._on_error(f"HTTP {response.status_code}: {error_text}")
                         return
                     else:
-                        # 200 — process stream and return
-                        received_done = self._consume_sse_stream(response, "Input")
-                        if not received_done:
-                            self._on_error("Server closed the connection unexpectedly")
-                        return
+                        outcome = self._consume_sse_stream(response, "Input")
 
-                # Retry after token refresh (only reached on 401 with successful refresh)
-                self._client.close()
-                self._client = httpx.Client(timeout=timeout_config)
-                with self._client.stream(
-                    "POST",
-                    self.input_url,
-                    json=payload,
-                    headers=headers,
-                ) as response:
-                    if response.status_code != 200:
-                        error_text = ""
-                        try:
-                            error_text = response.read().decode()
-                        except Exception:
-                            pass
-                        self._on_error(f"HTTP {response.status_code}: {error_text}")
-                        return
+                if outcome is None:
+                    # Retry after token refresh (only reached on 401 with successful refresh)
+                    self._client.close()
+                    self._client = httpx.Client(timeout=timeout_config)
+                    with self._client.stream(
+                        "POST",
+                        self.input_url,
+                        json=payload,
+                        headers=headers,
+                    ) as response:
+                        if response.status_code != 200:
+                            error_text = ""
+                            try:
+                                error_text = response.read().decode()
+                            except Exception:
+                                pass
+                            self._on_error(f"HTTP {response.status_code}: {error_text}")
+                            return
 
-                    received_done = self._consume_sse_stream(response, "Input")
-                    if not received_done:
-                        self._on_error("Server closed the connection unexpectedly")
+                        outcome = self._consume_sse_stream(response, "Input")
 
             finally:
                 self._client.close()
                 self._client = None
 
+            if outcome == "lost":
+                # The POST was accepted and the stream died mid-turn — the
+                # resumed graph keeps running server-side. Re-attach and
+                # replay (re-POSTing an input is not idempotent).
+                self._resume_via_attach("Input")
+
         except httpx.ConnectError as e:
+            if self._retry_connect_error("Input", _connect_attempt, e):
+                return self._input_stream_loop(
+                    session_id,
+                    action,
+                    text,
+                    auth_token,
+                    _connect_attempt + 1,
+                )
             self._on_error(f"Connection error: {e}")
         except httpx.TimeoutException as e:
             logger.error(f"Input SSE read timeout after {SSE_READ_TIMEOUT}s: {e}")
@@ -311,6 +491,7 @@ class SSEStreamHandler:
         auth_token: Optional[str],
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
         try:
@@ -362,6 +543,10 @@ class SSEStreamHandler:
             )
 
             self._client = httpx.Client(timeout=timeout_config)
+            # Set once a 200 stream has been consumed; "lost" is handled
+            # below, outside the response context (re-attach opens its own
+            # connections).
+            outcome: Optional[str] = None
             try:
                 with self._client.stream(
                     "POST",
@@ -387,39 +572,54 @@ class SSEStreamHandler:
                         self._on_error(f"HTTP {response.status_code}: {error_text}")
                         return
                     else:
-                        # 200 — process stream and return
-                        received_done = self._consume_sse_stream(response, "Chat")
-                        if not received_done:
-                            self._on_error("Server closed the connection unexpectedly")
-                        return
+                        outcome = self._consume_sse_stream(response, "Chat")
 
-                # Retry after token refresh (only reached on 401 with successful refresh)
-                self._client.close()
-                self._client = httpx.Client(timeout=timeout_config)
-                with self._client.stream(
-                    "POST",
-                    self.chat_url,
-                    json=payload,
-                    headers=headers,
-                ) as response:
-                    if response.status_code != 200:
-                        error_text = ""
-                        try:
-                            error_text = response.read().decode()
-                        except Exception:
-                            pass
-                        self._on_error(f"HTTP {response.status_code}: {error_text}")
-                        return
+                if outcome is None:
+                    # Retry after token refresh (only reached on 401 with successful refresh)
+                    self._client.close()
+                    self._client = httpx.Client(timeout=timeout_config)
+                    with self._client.stream(
+                        "POST",
+                        self.chat_url,
+                        json=payload,
+                        headers=headers,
+                    ) as response:
+                        if response.status_code != 200:
+                            error_text = ""
+                            try:
+                                error_text = response.read().decode()
+                            except Exception:
+                                pass
+                            self._on_error(f"HTTP {response.status_code}: {error_text}")
+                            return
 
-                    received_done = self._consume_sse_stream(response, "Chat")
-                    if not received_done:
-                        self._on_error("Server closed the connection unexpectedly")
+                        outcome = self._consume_sse_stream(response, "Chat")
 
             finally:
                 self._client.close()
                 self._client = None
 
+            if outcome == "lost":
+                # The POST was accepted and the stream died mid-turn — the
+                # backend keeps the turn running and buffers its events.
+                # Re-attach and replay instead of failing the turn
+                # (re-POSTing would start a duplicate turn).
+                self._resume_via_attach("Chat")
+
         except httpx.ConnectError as e:
+            if self._retry_connect_error("Chat", _connect_attempt, e):
+                return self._stream_loop(
+                    message,
+                    instance_id,
+                    session_id,
+                    plan_required,
+                    execution_required,
+                    approval_required,
+                    auth_token,
+                    image_attachments,
+                    attachment_names,
+                    _connect_attempt + 1,
+                )
             self._on_error(f"Connection error: {e}")
         except httpx.TimeoutException as e:
             self._on_error(f"Request timeout: {e}")
@@ -429,37 +629,38 @@ class SSEStreamHandler:
         finally:
             self._running.clear()
 
-    def _consume_sse_stream(self, response, label: str = "SSE") -> bool:
+    def _consume_sse_stream(self, response, label: str = "SSE") -> str:
         """Iterate over an SSE response, dispatching events.
 
         Args:
             response: An open httpx streaming response.
-            label: Label for log messages (e.g. "Chat", "Input").
+            label: Label for log messages (e.g. "Chat", "Input", "Attach").
 
         Returns:
-            True if the stream completed with a [DONE] marker.
+            "done"    — the stream completed with a [DONE] marker.
+            "stopped" — the client stopped the stream (user abort/cleanup).
+            "lost"    — the connection died before [DONE] (read timeout,
+                        iteration error, or server close without DONE). The
+                        turn may still be running server-side; stream-loop
+                        callers re-attach via /agent/chat/attach.
         """
-        received_done = False
         try:
             for line in response.iter_lines():
                 if not self._running.is_set():
                     logger.debug(f"{label} stream stopped by client")
-                    return True  # treat client-stop as graceful
+                    return "stopped"
 
                 if not line:
                     continue
 
                 if self._process_sse_line(line):
-                    received_done = True
-                    break
+                    return "done"
         except Exception as e:
-            logger.error(f"{label} SSE iteration error: {e}")
-            self._on_error(str(e))
-            return True  # error already reported
+            logger.warning(f"{label} SSE iteration error: {e}")
+            return "lost"
 
-        if not received_done:
-            logger.warning(f"{label} SSE stream ended without [DONE] marker")
-        return received_done
+        logger.warning(f"{label} SSE stream ended without [DONE] marker")
+        return "lost"
 
     def _process_sse_line(self, line: str) -> bool:
         """Process a single SSE line.
@@ -478,11 +679,29 @@ class SSEStreamHandler:
 
         # Check for [DONE] marker
         if data_str == "[DONE]":
+            if self._resume_unavailable:
+                # Attach answered "nothing to resume" — the attach loop turns
+                # this into an error; completing here would end the turn as if
+                # it succeeded, silently swallowing the lost response.
+                return True
             self._on_complete()
             return True
 
         try:
             event_data = json.loads(data_str)
+
+            if event_data.get("type") == "resume_unavailable":
+                self._resume_unavailable = True
+                return False
+
+            # Replay dedup: the backend stamps a per-session monotonic seq on
+            # every payload. After a re-attach the replay overlaps what we
+            # already rendered — skip anything at or below the last seen seq.
+            seq = event_data.get("seq")
+            if isinstance(seq, int):
+                if seq <= self._last_seq:
+                    return False
+                self._last_seq = seq
 
             # Detect event format based on presence of bubble_id
             if "bubble_id" in event_data:

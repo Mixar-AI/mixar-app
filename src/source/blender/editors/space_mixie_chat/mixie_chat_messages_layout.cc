@@ -451,6 +451,32 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       if (text_height > 0.0f && !layout.has_loader) {
         total_height += chat_ui_get_action_buttons_height(UI_SCALE_FAC);
       }
+      /* Feedback row height (5 stars + comment link) */
+      if (is_slot_msg && layout.has_feedback) {
+        layout.feedback_row_height = style.font_size * 2.0f;
+        total_height += layout.feedback_row_height + chat_ui_get_feedback_top_gap(metrics);
+        /* Read-only copy of the accepted comment, shown under the stars. */
+        if (layout.feedback_submitted_comment[0] != '\0') {
+          const float comment_indent = style.font_size;
+          float comment_w = 0.0f, comment_h = 0.0f;
+          chat_ui_calc_text_bounds(layout.feedback_submitted_comment,
+                                   content_width - comment_indent,
+                                   style.font_size - 1,
+                                   0,
+                                   &comment_w,
+                                   &comment_h);
+          layout.feedback_submitted_comment_height = comment_h;
+          total_height += comment_h + metrics.bubble_spacing;
+        }
+        /* Extra height for the inline comment input when expanded. One line
+         * by default; grows one widget line at a time as the user types or
+         * inserts newlines via Shift+Enter (same behavior as the composer). */
+        if (layout.feedback_comment_expanded) {
+          layout.feedback_comment_input_height =
+              mixie_chat_feedback_comment_input_height(&msg_ptr, bubble_width);
+          total_height += layout.feedback_comment_input_height + metrics.bubble_spacing;
+        }
+      }
       total_height += metrics.bubble_spacing;
 
       /* Store layout data (y_pos will be set in pass 2) */
@@ -518,6 +544,16 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
 
     if (layout.text_height > 0.0f && !layout.has_loader) {
       y_pos -= chat_ui_get_action_buttons_height(UI_SCALE_FAC);
+    }
+
+    if (layout.has_feedback && layout.feedback_row_height > 0.0f) {
+      y_pos -= layout.feedback_row_height + chat_ui_get_feedback_top_gap(metrics);
+      if (layout.feedback_submitted_comment_height > 0.0f) {
+        y_pos -= layout.feedback_submitted_comment_height + metrics.bubble_spacing;
+      }
+      if (layout.feedback_comment_expanded && layout.feedback_comment_input_height > 0.0f) {
+        y_pos -= layout.feedback_comment_input_height + metrics.bubble_spacing;
+      }
     }
 
     y_pos -= metrics.bubble_spacing;

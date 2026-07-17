@@ -598,9 +598,47 @@ class EventProcessor:
                 finalize_turn(scene)
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"finalize_turn on complete skipped: {e}")
+            # Crash-safe history: upsert the settled transcript so the
+            # conversation is recoverable from the History popover even
+            # if the app quits before New Chat is ever clicked.
+            try:
+                from .chat_history import archive_current
+                archive_current(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"history upsert on complete skipped: {e}")
+
+            # Show feedback only on the newest completed agent response.
+            self._show_feedback_on_last_agent_message(scene)
         else:
             logger.info(f"SSE stream complete - keeping state {current_state.value} (waiting for user input)")
         self._redraw_ui()
+
+    @staticmethod
+    def _show_feedback_on_last_agent_message(scene) -> None:
+        """Set feedback_visible=True on the most recent agent message with content."""
+        if not scene or not hasattr(scene, 'mixie_chat_messages'):
+            return
+        messages = scene.mixie_chat_messages
+        # Only the latest response should offer feedback. Clear stale flags
+        # before selecting the newest eligible agent message.
+        for msg in messages:
+            if getattr(msg, 'feedback_visible', False):
+                msg.feedback_visible = False
+
+        # Walk backwards to find the last agent message with content.
+        for i in range(len(messages) - 1, -1, -1):
+            msg = messages[i]
+            if msg.sender != 'AGENT':
+                continue
+            has_content = bool(
+                getattr(msg, 'content', '') or getattr(msg, 'text', '')
+            )
+            if has_content and getattr(msg, 'bubble_id', ''):
+                msg.feedback_visible = True
+                logger.debug(
+                    f"Feedback enabled on bubble_id={msg.bubble_id}"
+                )
+                return
 
     # ========================================================================
     # UI Helpers

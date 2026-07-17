@@ -26,6 +26,8 @@ def enqueue_generation(
     model: str,
     payload: dict,
     label: str,
+    display_label: str = "",
+    origin_capability_key: str = "",
     fail_message: str = "Generation failed",
     # GLB-only
     on_imported: Optional[Callable] = None,
@@ -50,7 +52,11 @@ def enqueue_generation(
     job_type, model, payload : str, str, dict
         Forwarded to ``JobQueueService.enqueue()``.
     label : str
-        Human-readable label for the queue UIList.
+        Stable job label used by queue dedup and downstream naming.
+    display_label : str
+        Optional clean queue-row title when ``label`` carries extra identity.
+    origin_capability_key : str
+        Optional backend catalog capability for composite workflow display.
     fail_message : str
         Shown when the backend returns FAILED.
     on_imported : callable, optional
@@ -74,6 +80,9 @@ def enqueue_generation(
         job = AsyncGLBJob(
             feature_key=feature_key,
             label=label,
+            display_label=display_label,
+            service=job_type,
+            origin_capability_key=origin_capability_key,
             job_type=job_type,
             model=model,
             payload=payload,
@@ -84,6 +93,9 @@ def enqueue_generation(
         job = SyncImageJob(
             feature_key=feature_key,
             label=label,
+            display_label=display_label,
+            service=job_type,
+            origin_capability_key=origin_capability_key,
             job_type=job_type,
             model=model,
             payload=payload,

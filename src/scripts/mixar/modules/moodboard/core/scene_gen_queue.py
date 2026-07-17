@@ -211,6 +211,7 @@ def enqueue_scene_gen_job(
     job = SceneGenQueueJob(
         feature_key=FEATURE_SCENE_GEN,
         label=label,
+        service=SCENE_GEN_JOB_TYPE,
         payload=payload,
         _on_object_ready=on_object_ready,
         _on_download_failed=on_download_failed,

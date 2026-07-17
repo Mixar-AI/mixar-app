@@ -87,6 +87,46 @@ def _wrap_lines(text: str, max_chars: int) -> list[str]:
     return out
 
 
+def _draw_feedback_stars(parent_layout, msg) -> None:
+    """Render a 5-star feedback row + inline comment under an agent message."""
+    bubble_id = getattr(msg, 'bubble_id', '')
+    if not bubble_id:
+        return
+
+    rating = getattr(msg, 'feedback_rating', 0)
+    row = parent_layout.row(align=True)
+    row.scale_x = 1.4
+    row.scale_y = 0.9
+    for i in range(1, 6):
+        icon = 'SOLO_ON' if i <= rating else 'SOLO_OFF'
+        op = row.operator(
+            "mixie_chat.set_feedback_rating",
+            text="", icon=icon,
+        )
+        op.bubble_id = bubble_id
+        op.rating = i
+
+    # Comment toggle button
+    comment = getattr(msg, 'feedback_comment', '')
+    expanded = getattr(msg, 'feedback_comment_expanded', False)
+    comment_icon = 'TEXT' if comment else 'GREASEPENCIL'
+    op = row.operator(
+        "mixie_chat.toggle_feedback_comment",
+        text="", icon=comment_icon, depress=expanded,
+    )
+    op.bubble_id = bubble_id
+
+    # Inline comment field when expanded
+    if expanded:
+        comment_row = parent_layout.row(align=True)
+        comment_row.prop(msg, "feedback_comment", text="")
+        submit_op = comment_row.operator(
+            "mixie_chat.submit_feedback_comment",
+            text="", icon='CHECKMARK',
+        )
+        submit_op.bubble_id = bubble_id
+
+
 def _draw_message(parent_layout, sender: str, wrapped: list[str]) -> None:
     """Render one message as a boxed bubble.
 
@@ -191,6 +231,9 @@ class AGENT_BUBBLE_PT_history(Panel):
                     # an ellipsis bubble as the typing indicator.
                     wrapped = ["…"]
                 _draw_message(history, sender, wrapped)
+                # Show feedback stars after agent messages when visible
+                if sender != "USER" and getattr(msg, 'feedback_visible', False):
+                    _draw_feedback_stars(history, msg)
                 history.separator(factor=0.3)
                 rendered += 1
             except Exception as e:  # noqa: BLE001 — never blank the whole panel

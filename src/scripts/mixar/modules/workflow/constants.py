@@ -21,6 +21,7 @@ AI_WORKSPACE_NAME = "AI Mode"
 # visually transparent.
 BASIC_WORKSPACE_NAME = "Zen Mode"
 
-# Workspace to land on when the user flips into Engine mode for the
-# first time.
-PRO_DEFAULT_WORKSPACE_NAME = "Modeling"
+# Workspace to land on when the user flips into Engine mode. "Layout" is
+# Blender's stock default first tab, so Engine mode opens where a Blender
+# user expects (mirrors the startup.blend's default active workspace).
+PRO_DEFAULT_WORKSPACE_NAME = "Layout"

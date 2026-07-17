@@ -44,6 +44,10 @@
 
 using namespace blender::ed::mixie;
 
+/* Mixie carries richer generation controls than Blender's generic sidebar.
+ * Keep this editor-specific so View3D and Image Editor defaults stay intact. */
+static constexpr int MIXIE_SIDEBAR_PANEL_WIDTH = 320;
+
 /* -------------------------------------------------------------------- */
 /** \name Forward Declarations
  * \{ */
@@ -694,7 +698,7 @@ void ED_spacetype_mixie()
   /* regions: UI sidebar (N-panel on right side) */
   art = MEM_callocN<ARegionType>("spacetype mixie ui region");
   art->regionid = RGN_TYPE_UI;
-  art->prefsizex = UI_SIDEBAR_PANEL_WIDTH;
+  art->prefsizex = MIXIE_SIDEBAR_PANEL_WIDTH;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
 
   art->listener = mixie_ui_region_listener;
