@@ -88,6 +88,10 @@ class Job:
     # naming data. Keeping this structured avoids parsing human text.
     display_label: str = ""
 
+    # Set once a FAILED toast has been surfaced for this job, so the queue's
+    # per-notify failure sweep shows the toast exactly once (edge-detected).
+    _failure_notified: bool = field(default=False, repr=False)
+
     # ------------------------------------------------------------------ #
     # Subclass interface
     # ------------------------------------------------------------------ #

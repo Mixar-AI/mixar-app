@@ -421,12 +421,38 @@ class FeatureQueue:
         return None
 
     def _notify(self) -> None:
+        self._notify_failure_toasts()
         for fn in list(self._listeners):
             try:
                 fn(self)
             except Exception as e:
                 logger.warning("%s listener failed: %s", LOG_PREFIX, e)
         redraw_3d_views()
+
+    def _notify_failure_toasts(self) -> None:
+        """Surface a viewport toast once for each newly-FAILED job.
+
+        A uniform safety net so a failed paid generation is never silent —
+        previously only features whose listener passed ``batch_popup_title``
+        showed any feedback, so Image Gen / Lookdev / Hunyuan UV / Texture
+        Edit failures were invisible unless the Queue panel was open.
+        """
+        for job in self._jobs:
+            if job.state == JobState.FAILED and not job._failure_notified:
+                job._failure_notified = True
+                try:
+                    from mixar.modules.common.notifications import (
+                        get_notification_store,
+                    )
+                    message = job.user_message or job.error or "Generation failed"
+                    title = job.label or "Generation failed"
+                    get_notification_store().push(
+                        "error", title, body=message, priority="high",
+                    )
+                except Exception as e:
+                    logger.debug(
+                        "%s failed to push failure toast: %s", LOG_PREFIX, e,
+                    )
 
     def _pump(self) -> None:
         if self._auth_paused or self._pumping:

@@ -3714,99 +3714,6 @@ const wmIMEData *ui_but_ime_data_get(uiBut *but)
 }
 #endif /* WITH_INPUT_IME */
 
-/* -------------------------------------------------------------------- */
-/** \name Mixar: '@' Mention Autocomplete Bridge
- *
- * The Mixie chat composer (scene.mixie_chat_input, drawn by
- * editors/space_mixie_chat/mixie_chat_footer.cc) shows a suggestion
- * dropdown for "@token" text at the cursor. C++ owns detection and the
- * key/mouse interactions in ui_do_but_textedit; Python owns the candidate
- * search (see space_mixie_chat/core/mention_registry.py), bridged through
- * scene RNA properties. Implementations live in
- * editors/space_mixie_chat/mixie_chat_mention.cc — extern-declared here and
- * resolved at final link, same pattern as g_multiline_scroll_offset.
- * \{ */
-
-bool mixie_chat_mention_detect(const char *text,
-                               int cursor_bytes,
-                               int *r_tok_start,
-                               int *r_tok_end,
-                               char *r_query,
-                               int query_maxncpy);
-void mixie_chat_mention_publish(bContext *C, Scene *scene, const char *query);
-bool mixie_chat_mention_is_open(Scene *scene);
-void mixie_chat_mention_step(Scene *scene, int dir);
-void mixie_chat_mention_active_set(Scene *scene, int index);
-int mixie_chat_mention_active_get(Scene *scene);
-int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
-void mixie_chat_mention_notify_accepted(bContext *C, Scene *scene);
-int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
-
-/* Keep in sync with MENTION_QUERY_MAX / the insert_text maxlen in
- * mixie_chat_footer_constants.hh + mention_props.py. */
-#define MIXIE_MENTION_QUERY_SIZE 104
-#define MIXIE_MENTION_INSERT_SIZE 320
-
-/** The scene that owns `but` when it is the Mixie chat composer, else null. */
-static Scene *ui_but_mixie_mention_scene(const uiBut *but)
-{
-  if (!but || !but->rnaprop || !but->rnapoin.owner_id) {
-    return nullptr;
-  }
-  if (GS(but->rnapoin.owner_id->name) != ID_SCE) {
-    return nullptr;
-  }
-  if (!STREQ(RNA_property_identifier(but->rnaprop), "mixie_chat_input")) {
-    return nullptr;
-  }
-  return reinterpret_cast<Scene *>(but->rnapoin.owner_id);
-}
-
-/**
- * Accept the active mention suggestion: select the whole "@token" around the
- * cursor and type the replacement over it (reuses the UTF8/maxlen-safe
- * selection-overwrite path of #ui_textedit_insert_buf). The caller's normal
- * TEXTEDIT_UPDATE apply then re-runs detection, which finds no token after
- * the inserted trailing space and closes the dropdown.
- *
- * \return true when the text changed.
- */
-static bool ui_textedit_mention_accept(bContext *C,
-                                       uiBut *but,
-                                       uiTextEdit &text_edit,
-                                       Scene *scene)
-{
-  char insert_buf[MIXIE_MENTION_INSERT_SIZE];
-  const int insert_len = mixie_chat_mention_insert_text_get(scene, insert_buf, sizeof(insert_buf));
-
-  int tok_start = 0, tok_end = 0;
-  char query[MIXIE_MENTION_QUERY_SIZE];
-  if (insert_len == 0 || !mixie_chat_mention_detect(text_edit.edit_string,
-                                                    but->pos,
-                                                    &tok_start,
-                                                    &tok_end,
-                                                    query,
-                                                    sizeof(query)))
-  {
-    /* Stale dropdown (token no longer at the cursor): close instead of
-     * splicing into the wrong place. */
-    mixie_chat_mention_publish(C, scene, "");
-    return false;
-  }
-
-  but->selsta = short(tok_start);
-  but->selend = short(tok_end);
-  const bool accepted = ui_textedit_insert_buf(but, text_edit, insert_buf, insert_len);
-  if (accepted) {
-    /* Python syncs the viewport selection to the mentioned assets (deferred
-     * to a timer, so it runs after the composer text has been applied). */
-    mixie_chat_mention_notify_accepted(C, scene);
-  }
-  return accepted;
-}
-
-/** \} */
-
 static void ui_textedit_begin(bContext *C, uiBut *but, uiHandleButtonData *data)
 {
   uiTextEdit &text_edit = data->text_edit;
@@ -3959,12 +3866,6 @@ static void ui_textedit_end(bContext *C, uiBut *but, uiHandleButtonData *data)
   ED_workspace_status_text(C, nullptr);
 
   if (but) {
-    /* Mixar: leaving the chat composer closes the @-mention dropdown and
-     * clears the published query (covers Esc, click-outside, Enter-submit
-     * and focus loss). */
-    if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-      mixie_chat_mention_publish(C, mention_scene, "");
-    }
     if (UI_but_is_utf8(but)) {
       const int strip = BLI_str_utf8_invalid_strip(but->editstr, strlen(but->editstr));
       /* Strip non-UTF8 characters unless buttons support this.
@@ -4168,19 +4069,6 @@ static int ui_do_but_textedit(
           break;
         }
       }
-      /* Mixar: hovering a @-mention suggestion row moves the highlight
-       * (keyboard navigation and hover share the active index). */
-      if (event->type == MOUSEMOVE) {
-        if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-          if (mixie_chat_mention_is_open(mention_scene)) {
-            const int row = mixie_chat_mention_row_hit(mention_scene, data->region, event->xy);
-            if (row >= 0 && row != mixie_chat_mention_active_get(mention_scene)) {
-              mixie_chat_mention_active_set(mention_scene, row);
-              ED_region_tag_redraw(data->region);
-            }
-          }
-        }
-      }
       if (data->searchbox) {
 #ifdef USE_KEYNAV_LIMIT
         if ((event->type == MOUSEMOVE) &&
@@ -4205,19 +4093,6 @@ static int ui_do_but_textedit(
         break;
       }
       if (event->val == KM_PRESS) {
-        /* Mixar: first Esc only closes the @-mention dropdown; editing
-         * continues. A second Esc cancels text editing as usual. */
-        if (event->type == EVT_ESCKEY) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
-              mixie_chat_mention_publish(C, mention_scene, "");
-              ED_region_tag_redraw(data->region);
-              retval = WM_UI_HANDLER_BREAK;
-              break;
-            }
-          }
-        }
-
         /* Support search context menu. */
         if (event->type == RIGHTMOUSE) {
           if (data->searchbox) {
@@ -4241,24 +4116,6 @@ static int ui_do_but_textedit(
       }
       break;
     case LEFTMOUSE: {
-      /* Mixar: a click on a @-mention suggestion row accepts it in a single
-       * click while editing continues (mirrors the searchbox behaviour —
-       * without this, the press would only exit text editing and the row
-       * would need a second click). */
-      if (ELEM(event->val, KM_PRESS, KM_DBL_CLICK)) {
-        if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-          if (mixie_chat_mention_is_open(mention_scene)) {
-            const int row = mixie_chat_mention_row_hit(mention_scene, data->region, event->xy);
-            if (row >= 0) {
-              mixie_chat_mention_active_set(mention_scene, row);
-              changed = ui_textedit_mention_accept(C, but, text_edit, mention_scene);
-              retval = WM_UI_HANDLER_BREAK;
-              break;
-            }
-          }
-        }
-      }
-
       /* Allow clicks on extra icons while editing (skip for multiline text —
        * the VALUE_CLEAR 'x' icon is auto-added by TEXTEDIT_UPDATE but not
        * wanted for multiline prompt inputs). */
@@ -4413,18 +4270,6 @@ static int ui_do_but_textedit(
           ui_searchbox_event(C, data->searchbox, but, data->region, event);
           break;
         }
-        /* Mixar: with the @-mention dropdown open, Down navigates the
-         * suggestions instead of moving the text cursor. */
-        if (event->type == EVT_DOWNARROWKEY) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
-              mixie_chat_mention_step(mention_scene, +1);
-              ED_region_tag_redraw(data->region);
-              retval = WM_UI_HANDLER_BREAK;
-              break;
-            }
-          }
-        }
         if (event->type == WHEELDOWNMOUSE) {
           if (ui_but_is_multiline_text(but)) {
             extern int g_multiline_scroll_offset;
@@ -4455,18 +4300,6 @@ static int ui_do_but_textedit(
 #endif
           ui_searchbox_event(C, data->searchbox, but, data->region, event);
           break;
-        }
-        /* Mixar: with the @-mention dropdown open, Up navigates the
-         * suggestions instead of moving the text cursor. */
-        if (event->type == EVT_UPARROWKEY) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
-              mixie_chat_mention_step(mention_scene, -1);
-              ED_region_tag_redraw(data->region);
-              retval = WM_UI_HANDLER_BREAK;
-              break;
-            }
-          }
         }
         if (event->type == WHEELUPMOUSE) {
           if (ui_but_is_multiline_text(but)) {
@@ -4534,16 +4367,6 @@ static int ui_do_but_textedit(
                 retval = WM_UI_HANDLER_BREAK;
                 break;
             }
-            /* Mixar: with the @-mention dropdown open, plain Enter accepts
-             * the highlighted suggestion instead of submitting; editing
-             * continues with the cursor after the inserted mention. */
-            if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-              if (mixie_chat_mention_is_open(mention_scene)) {
-                changed = ui_textedit_mention_accept(C, but, text_edit, mention_scene);
-                retval = WM_UI_HANDLER_BREAK;
-                break;
-              }
-            }
             /* Plain Enter in chat context: insert submit marker and trigger submit. */
             ui_textedit_insert_buf(but, data->text_edit, "\x1F", 1);
             ui_apply_but(C, block, but, data, true);
@@ -4582,16 +4405,6 @@ static int ui_do_but_textedit(
         break;
 
       case EVT_TABKEY:
-        /* Mixar: Tab also accepts the highlighted @-mention suggestion. */
-        if ((event->modifier & ~KM_SHIFT) == 0) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
-              changed = ui_textedit_mention_accept(C, but, text_edit, mention_scene);
-              retval = WM_UI_HANDLER_BREAK;
-              break;
-            }
-          }
-        }
         /* There is a key conflict here, we can't tab with auto-complete. */
         if (but->autocomplete_func || data->searchbox) {
           const int autocomplete = ui_textedit_autocomplete(C, but, data);
@@ -4717,26 +4530,6 @@ static int ui_do_but_textedit(
       ui_but_update_edited(but);
     }
     but->changed = true;
-
-    /* Mixar: every text change re-detects the "@token" at the cursor and
-     * publishes it — the Python update callback fills the suggestion list
-     * synchronously, and the footer redraw below shows/hides the dropdown. */
-    if (!is_ime_composing) {
-      if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-        char mention_query[MIXIE_MENTION_QUERY_SIZE];
-        int tok_start, tok_end;
-        if (!mixie_chat_mention_detect(text_edit.edit_string,
-                                       but->pos,
-                                       &tok_start,
-                                       &tok_end,
-                                       mention_query,
-                                       sizeof(mention_query)))
-        {
-          mention_query[0] = '\0';
-        }
-        mixie_chat_mention_publish(C, mention_scene, mention_query);
-      }
-    }
 
     if (data->searchbox) {
       ui_searchbox_update(C, data->searchbox, but, true); /* true = reset */

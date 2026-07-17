@@ -152,9 +152,8 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region)
    * CRITICAL: This eliminates code duplication between layout and draw */
   bool has_overflow = false;
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
-  int mention_rows = mixie_chat_mention_row_count(scene);
   int required_height_unscaled = footer_layout_calculate_height(
-      scene, theme, &has_overflow, input_lines, mention_rows);
+      scene, theme, &has_overflow, input_lines);
 
   /* Warn if height exceeds maximum (should rarely happen) */
   if (has_overflow) {
@@ -194,8 +193,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
    * Blender's layout system may reset sizey, so we enforce it here */
   const FooterThemeCache *theme = footer_cache_get_theme();
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
-  int mention_rows = mixie_chat_mention_row_count(scene);
-  region->sizey = footer_layout_calculate_height(scene, theme, nullptr, input_lines, mention_rows);
+  region->sizey = footer_layout_calculate_height(scene, theme, nullptr, input_lines);
 
   ScrArea *area = CTX_wm_area(C);
   if (area) {
@@ -233,8 +231,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
 
   /* Calculate element positions using centralized function */
   FooterElementPositions pos;
-  footer_layout_calculate_positions(
-      region->winx, pending_count, theme, &pos, input_lines, mention_rows);
+  footer_layout_calculate_positions(region->winx, pending_count, theme, &pos, input_lines);
 
   const float scale = UI_SCALE_FAC;
 
@@ -562,13 +559,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
    * removal above); footer_draw_plan_toggle() remains available to
    * restore it. */
   footer_draw_thumbnails(C, region, bmain, &scene_ptr, pos, theme, pending_count, attachments, scale);
-
-  /* '@' mention autocomplete dropdown above the input (mixie_chat_mention.cc).
-   * Clicks/keys are handled by the text-edit hooks in interface_handlers.cc
-   * while the input is focused — this is pure drawing. */
-  if (mention_rows > 0) {
-    mixie_chat_mention_draw(scene, region);
-  }
 }
 
 /** \} */

@@ -39,29 +39,6 @@
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name '@' Mention Dropdown Constants
- * \{ */
-
-/* Height of one suggestion row (unscaled pixels) */
-#define FOOTER_MENTION_ROW_H_BASE 22
-
-/* Inner padding of the dropdown panel (unscaled pixels) */
-#define FOOTER_MENTION_PANEL_PAD_BASE 4
-
-/* Gap between the input field and the dropdown panel (unscaled pixels) */
-#define FOOTER_MENTION_GAP_BASE 4
-
-/* Maximum visible suggestion rows. Matches MENTION_MAX_ITEMS in the Python
- * side (space_mixie_chat/constants.py) — Python never fills more items. */
-#define FOOTER_MENTION_MAX_ROWS 6
-
-/* Maximum published query length in bytes (includes the leading '@').
- * Matches the maxlen of scene.mixie_chat_mention_query. */
-#define MENTION_QUERY_MAX 96
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
 /** \name Button Sizing Constants (scaled pixels)
  * \{ */
 

@@ -377,16 +377,6 @@ def on_chat_input_changed(self, context):
             lambda: _execute_send_message() or None,
             first_interval=0.001
         )
-        return
-
-    # An emptied composer can't have an active @-mention token. Interactive
-    # edits are handled by the C++ detection hooks; this covers programmatic
-    # clears (send/new-session) so the dropdown never lingers.
-    try:
-        if not self.mixie_chat_input and self.mixie_chat_mention_show:
-            self.mixie_chat_mention_show = False
-    except AttributeError:
-        pass  # mention props not registered (isolated tests)
 
 
 def _execute_send_message():
