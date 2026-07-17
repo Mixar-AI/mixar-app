@@ -12,6 +12,8 @@ async work through `core/byok_client.py`; callbacks mutate WM state on
 the main thread and the props dialog redraws on the next tick.
 """
 
+import os
+
 import bpy
 from bpy.types import Operator
 
@@ -107,6 +109,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         wm.byok_dialog_state = 'IDLE'
         wm.byok_last_error = ''
         wm.byok_form_api_key = ''
+        wm.byok_form_codex_bundle = ''  # never prefill the token bundle
         # If we already have an active config, prefill provider/model so
         # the user sees what's currently saved and can edit from there.
         # Provider assignment can fail if the cache hasn't been populated
@@ -121,7 +124,11 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                         "Could not prefill provider %s — not in cache yet",
                         wm.byok_current_provider,
                     )
-            if wm.byok_current_model:
+            if model_suggestions.is_codex(wm.byok_current_provider):
+                # Codex uses a free-text model slug, not the catalog dropdown.
+                if wm.byok_current_model:
+                    wm.byok_form_codex_model = wm.byok_current_model
+            elif wm.byok_current_model:
                 try:
                     wm.byok_form_model = wm.byok_current_model
                 except TypeError:
@@ -227,7 +234,10 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         col.separator(factor=0.35)
         self._draw_value_row(col, "Provider", provider_label)
         self._draw_value_row(col, "Model", model_label)
-        self._draw_value_row(col, "API Key", wm.byok_key_preview or "Stored securely")
+        if model_suggestions.is_codex(wm.byok_current_provider):
+            self._draw_value_row(col, "Account", wm.byok_key_preview or "ChatGPT subscription")
+        else:
+            self._draw_value_row(col, "API Key", wm.byok_key_preview or "Stored securely")
 
     def _draw_form(self, layout, wm, disabled: bool):
         box = layout.box()
@@ -239,6 +249,13 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         col.separator(factor=0.45)
         col.enabled = not disabled
         self._draw_tall_prop(col, wm, 'byok_form_provider', "Provider")
+
+        if model_suggestions.is_codex(wm.byok_form_provider):
+            self._draw_codex_fields(box, col, wm)
+        else:
+            self._draw_cloud_fields(box, col, wm)
+
+    def _draw_cloud_fields(self, box, col, wm):
         self._draw_tall_prop(col, wm, 'byok_form_model', "Model")
         self._draw_tall_prop(col, wm, 'byok_form_api_key', "API Key")
 
@@ -252,6 +269,48 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         preview_hint = box.row()
         preview_hint.enabled = False
         preview_hint.label(text="After saving, only a masked preview is shown.")
+
+    def _draw_codex_fields(self, box, col, wm):
+        """Model slug + auto-load / paste of the ~/.codex/auth.json token bundle."""
+        self._draw_tall_prop(col, wm, 'byok_form_codex_model', "Model")
+
+        # Easy path: read ~/.codex/auth.json straight off this machine.
+        load_row = col.row()
+        load_row.scale_y = 1.35
+        load_row.operator(
+            MIXAR_BYOK_OT_codex_load_file.bl_idname,
+            text="Load from ~/.codex/auth.json",
+            icon='FILE_REFRESH',
+        )
+        col.separator(factor=0.35)
+
+        # Fallback: the (hidden) field + a Paste-from-clipboard button and a
+        # char-count confirmation, since the field masks the tokens.
+        label_row = col.row()
+        label_row.enabled = False
+        label_row.label(text="…or paste it manually")
+        paste_row = col.row(align=True)
+        paste_row.scale_y = 1.45
+        paste_row.prop(wm, 'byok_form_codex_bundle', text="")
+        paste_row.operator(MIXAR_BYOK_OT_codex_paste.bl_idname, text="", icon='PASTEDOWN')
+        n = len(wm.byok_form_codex_bundle or "")
+        status = col.row()
+        status.enabled = False
+        status.label(
+            text=(f"{n} characters pasted" if n else "Empty — paste your auth.json"),
+            icon='CHECKMARK' if n else 'INFO',
+        )
+        col.separator(factor=0.45)
+
+        box.separator(factor=0.55)
+        for line in (
+            "Run  codex login  in your terminal, then paste the full contents of",
+            "~/.codex/auth.json here (the Paste button reads your clipboard).",
+            "Uses your ChatGPT subscription — Mixar credits are not charged.",
+        ):
+            row = box.row()
+            row.enabled = False
+            row.label(text=line, icon='INFO')
 
     def _draw_tall_prop(self, layout, data, prop_name: str, label: str):
         label_row = layout.row()
@@ -310,9 +369,15 @@ class MIXAR_BYOK_OT_save(Operator):
     @classmethod
     def poll(cls, context):
         wm = context.window_manager
+        if wm.byok_dialog_state == 'SAVING':
+            return False
+        if model_suggestions.is_codex(wm.byok_form_provider):
+            # Codex needs a model slug + the pasted auth.json bundle.
+            return bool(wm.byok_form_codex_model.strip()) and bool(
+                wm.byok_form_codex_bundle.strip()
+            )
         return (
-            wm.byok_dialog_state != 'SAVING'
-            and wm.byok_form_provider != 'NONE'   # block while only a sentinel is selectable
+            wm.byok_form_provider != 'NONE'   # block while only a sentinel is selectable
             and wm.byok_form_model != 'NONE'
             and bool(wm.byok_form_api_key.strip())
         )
@@ -320,6 +385,10 @@ class MIXAR_BYOK_OT_save(Operator):
     def execute(self, context):
         wm = context.window_manager
         provider = wm.byok_form_provider
+
+        if model_suggestions.is_codex(provider):
+            return self._execute_codex(wm)
+
         model = wm.byok_form_model
         api_key = wm.byok_form_api_key.strip()
 
@@ -340,6 +409,28 @@ class MIXAR_BYOK_OT_save(Operator):
         )
         return {'FINISHED'}
 
+    def _execute_codex(self, wm):
+        """Codex save: send the pasted auth.json bundle as the credential. The
+        backend refreshes the token (validating it) and stores the bundle."""
+        model = wm.byok_form_codex_model.strip()
+        bundle = wm.byok_form_codex_bundle.strip()
+        if not model or not bundle:
+            wm.byok_dialog_state = 'ERROR'
+            wm.byok_last_error = "Model and your auth.json bundle are required."
+            return {'CANCELLED'}
+
+        wm.byok_dialog_state = 'SAVING'
+        wm.byok_last_error = ''
+        _redraw_mixie_chat_areas()
+
+        byok_client.save_credentials(
+            provider='codex',
+            model=model,
+            api_key=bundle,
+            on_done=_on_save_done,
+        )
+        return {'FINISHED'}
+
 
 def _on_save_done(success: bool, data, err):
     """Main-thread save callback."""
@@ -348,6 +439,7 @@ def _on_save_done(success: bool, data, err):
         if success:
             _apply_cached_state(wm, data or {})
             wm.byok_form_api_key = ''
+            wm.byok_form_codex_bundle = ''  # don't retain the token bundle
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
@@ -358,6 +450,57 @@ def _on_save_done(success: bool, data, err):
         _redraw_mixie_chat_areas()
     except Exception as e:
         logger.error("BYOK save callback failed: %s", e, exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# Codex — paste auth.json from clipboard
+# ---------------------------------------------------------------------------
+
+class MIXAR_BYOK_OT_codex_load_file(Operator):
+    """Read ~/.codex/auth.json from this machine into the field"""
+    bl_idname = "mixar_byok.codex_load_file"
+    bl_label = "Load from ~/.codex/auth.json"
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        path = os.path.expanduser(os.path.join("~", ".codex", "auth.json"))
+        if not os.path.exists(path):
+            self.report({'WARNING'}, "~/.codex/auth.json not found — run `codex login` first")
+            return {'CANCELLED'}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Codex auth.json read failed: %s", e)
+            self.report({'ERROR'}, "Could not read ~/.codex/auth.json")
+            return {'CANCELLED'}
+        if not content:
+            self.report({'WARNING'}, "~/.codex/auth.json is empty")
+            return {'CANCELLED'}
+        wm.byok_form_codex_bundle = content
+        _redraw_mixie_chat_areas()
+        self.report({'INFO'}, "Loaded auth.json")
+        return {'FINISHED'}
+
+
+class MIXAR_BYOK_OT_codex_paste(Operator):
+    """Paste your ~/.codex/auth.json from the clipboard into the field"""
+    bl_idname = "mixar_byok.codex_paste"
+    bl_label = "Paste auth.json"
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        # Read the clipboard directly — this preserves the multi-line JSON that
+        # a single-line prop field can't accept via a manual paste.
+        clip = (wm.clipboard or "").strip()
+        if not clip:
+            self.report({'WARNING'}, "Clipboard is empty")
+            return {'CANCELLED'}
+        wm.byok_form_codex_bundle = clip
+        _redraw_mixie_chat_areas()
+        return {'FINISHED'}
 
 
 # ---------------------------------------------------------------------------
@@ -560,6 +703,8 @@ def _wrap(text: str, width: int) -> list[str]:
 classes = (
     MIXAR_BYOK_OT_open_dialog,
     MIXAR_BYOK_OT_save,
+    MIXAR_BYOK_OT_codex_load_file,
+    MIXAR_BYOK_OT_codex_paste,
     MIXAR_BYOK_OT_request_remove,
     MIXAR_BYOK_OT_cancel_remove,
     MIXAR_BYOK_OT_confirm_remove,

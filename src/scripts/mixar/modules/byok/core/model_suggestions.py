@@ -34,6 +34,8 @@ combination of "no real selection yet".
 """
 
 from ..constants import (
+    CODEX_PROVIDER_ID,
+    CODEX_PROVIDER_ITEM,
     MODEL_EMPTY_SENTINEL,
     PROVIDER_EMPTY_SENTINEL,
     PROVIDER_LOADING_SENTINEL,
@@ -50,18 +52,25 @@ _model_cache: dict[str, list[tuple[str, str, str]]] = {}
 _populated_once: bool = False
 
 
+def is_codex(provider: str) -> bool:
+    """True when ``provider`` is the client-side Codex (ChatGPT sub) option."""
+    return provider == CODEX_PROVIDER_ID
+
+
 def get_provider_items() -> list[tuple[str, str, str]]:
     """EnumProperty items for the provider dropdown.
 
-    Returns the cached provider list when populated; otherwise a sentinel
-    so the dropdown is never empty (Blender renders a blank/broken
-    dropdown when items is []).
+    Always ends with the client-side "Codex (ChatGPT sub)" option (not part of
+    the backend catalog), so a subscriber can pick it even before the catalog
+    loads. The cloud providers come first (cached catalog, or a sentinel).
     """
     if _provider_cache:
-        return _provider_cache
-    if _populated_once:
-        return [PROVIDER_EMPTY_SENTINEL]
-    return [PROVIDER_LOADING_SENTINEL]
+        cloud = list(_provider_cache)
+    elif _populated_once:
+        cloud = [PROVIDER_EMPTY_SENTINEL]
+    else:
+        cloud = [PROVIDER_LOADING_SENTINEL]
+    return cloud + [CODEX_PROVIDER_ITEM]
 
 
 def get_model_items(provider: str) -> list[tuple[str, str, str]]:
