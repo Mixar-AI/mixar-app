@@ -241,8 +241,8 @@ class AGENT_BUBBLE_HT_header(Header):
         handle_row.label(text="▬▬▬▬")
         layout.separator_spacer()
 
-        # Right-side buttons (left → right): reconnect, new chat.
-        right_row = layout.row(align=True)
+        # Right-side buttons (left → right): reconnect, new chat, past chats.
+        right_controls = layout.row(align=True)
 
         # Reconnect button (mirrors the Connect button in mixie chat's
         # header, icon-only). Only rendered while disconnected — the
@@ -251,7 +251,7 @@ class AGENT_BUBBLE_HT_header(Header):
         state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
         wm = context.window_manager
         if state == "OFFLINE" and getattr(wm, "mixie_chat_is_logged_in", False):
-            right_row.operator(
+            right_controls.operator(
                 "mixie_chat.connect",
                 text="",
                 icon='LINKED',
@@ -277,12 +277,28 @@ class AGENT_BUBBLE_HT_header(Header):
                 except TypeError:
                     msg_count = 0
         if msg_count > 0:
-            right_row.operator(
+            right_controls.operator(
                 "mixie_chat.new_session",
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
                 no_tooltip=True,
+            )
+
+        # Past chats — toggles the C++-drawn history overlay (shared with
+        # the mixie chat editor; the bubble's main region reuses the same
+        # draw callbacks). Shown even when the current chat is empty —
+        # reopening an old chat from a fresh state is exactly the history
+        # use-case. hasattr guard: registers in the deferred UI pass.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history'):
+            wm = context.window_manager
+            right_controls.operator(
+                "mixie_chat.show_history",
+                text="",
+                icon='RECOVER_LAST',
+                emboss=False,
+                no_tooltip=True,
+                depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 
 

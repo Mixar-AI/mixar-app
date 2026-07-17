@@ -35,6 +35,21 @@ class MIXIE_CHAT_HT_header(Header):
         # New Chat button (left side, near header menu)
         layout.operator("mixie_chat.new_session", text="", icon='FILE_NEW')
 
+        # Past chats — New Chat archives the conversation instead of
+        # destroying it; this toggles the C++-drawn history overlay in
+        # the chat region (see history_ops.py + the C++ file
+        # mixie_chat_history_overlay.cc). hasattr guard: UI modules
+        # register in a deferred pass, so the operator may not exist for
+        # the first few draws (same pattern as the login popover in
+        # topbar.py).
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history'):
+            layout.operator(
+                "mixie_chat.show_history",
+                text="",
+                icon='RECOVER_LAST',
+                depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
+            )
+
         # Spacer
         layout.separator_spacer()
 

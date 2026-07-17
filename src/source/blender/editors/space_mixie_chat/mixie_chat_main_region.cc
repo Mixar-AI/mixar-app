@@ -52,6 +52,14 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first);
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
+  /* Past-chats overlay is modal while open — it owns hover + cursor and
+   * suppresses hover on everything behind its scrim. */
+  if (rt->history_overlay_active &&
+      mixie_chat_history_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
   /* Check scroll-to-bottom indicator (screen-space, checked before View2D transform) */
   if (rt->scroll_indicator_visible) {
     float mouse_x = float(mval[0]);
@@ -213,6 +221,13 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
 
 static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
+  /* 0. Past-chats overlay — modal while open: consumes clicks (incl.
+   * click-away close), wheel/trackpad scroll, and ESC. Cheap no-op when
+   * closed (runtime flag check, no RNA reads). */
+  if (mixie_chat_history_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     ScrArea *area = CTX_wm_area(C);
     ARegion *region = CTX_wm_region(C);
@@ -433,6 +448,9 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
 {
   mixie_chat_clear_background();
   mixie_chat_draw_messages(C, region);
+  /* Past-chats overlay — drawn last (screen-space) so it sits on top of
+   * messages, the empty state, and the View2D scrollbar. */
+  mixie_chat_draw_history_overlay(C, region);
 }
 
 /* -------------------------------------------------------------------- */

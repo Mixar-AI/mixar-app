@@ -472,7 +472,11 @@ typedef struct ThemeSpace {
   unsigned char chat_button_bg[4];
   unsigned char chat_button_text[4];
   unsigned char chat_button_hover[4];  /* Footer button hover color */
-  unsigned char _pad_button_hover[4];  /* Padding for 8-byte alignment */
+  /* Row hover wash for the past-chats history overlay. Repurposed from the
+   * old `_pad_button_hover` alignment slot, so the struct layout is
+   * unchanged; files saved before the rename load this as zero and the
+   * Python bootstrap re-seeds it every launch. */
+  unsigned char chat_history_row_hover[4];
   unsigned char chat_label_color[4];
   unsigned char chat_prompt_button[4];
   unsigned char chat_placeholder_text[4];

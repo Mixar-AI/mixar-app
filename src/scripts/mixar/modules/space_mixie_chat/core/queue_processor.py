@@ -598,6 +598,14 @@ class EventProcessor:
                 finalize_turn(scene)
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"finalize_turn on complete skipped: {e}")
+            # Crash-safe history: upsert the settled transcript so the
+            # conversation is recoverable from the History popover even
+            # if the app quits before New Chat is ever clicked.
+            try:
+                from .chat_history import archive_current
+                archive_current(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"history upsert on complete skipped: {e}")
 
             # Show feedback only on the newest completed agent response.
             self._show_feedback_on_last_agent_message(scene)

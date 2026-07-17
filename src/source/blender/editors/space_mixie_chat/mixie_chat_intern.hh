@@ -20,6 +20,7 @@ struct Main;
 struct PointerRNA;
 struct PropertyRNA;
 struct ScrArea;
+struct wmEvent;
 struct wmOperatorType;
 struct wmRegionListenerParams;
 struct wmWindow;
@@ -267,6 +268,7 @@ float chat_ui_get_thumbnail_border_radius();
 float chat_ui_get_thumbnail_padding();
 void chat_ui_get_thumbnail_border_color(float out_color[4]);
 void chat_ui_get_button_hover_color(float out_color[4]);
+void chat_ui_get_history_row_hover_color(float out_color[4]);
 void chat_ui_get_placeholder_text_color(float out_color[4]);
 void chat_ui_get_prompt_button_color(float out_color[4]);
 
@@ -468,6 +470,17 @@ bool mixie_chat_handle_scroll_indicator_click(struct SpaceMixieChat *smixie,
 void chat_ui_get_button_bg_color(float out_color[4]);
 void chat_ui_get_button_text_color(float out_color[4]);
 void chat_ui_get_label_color(float out_color[4]);
+
+/* Past-chats overlay (mixie_chat_history_overlay.cc). Drawn screen-space
+ * on top of the message area; modal for this region while open (consumes
+ * clicks/wheel/ESC via the region UI handler). Visibility comes from the
+ * Python-registered WindowManager bool `mixie_chat_history_visible`;
+ * rows from `mixie_chat_history_entries`. */
+void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_history_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_history_set_visible(bContext *C, bool visible);
 
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
 bool mixie_chat_handle_slot_action_click(bContext *C,
