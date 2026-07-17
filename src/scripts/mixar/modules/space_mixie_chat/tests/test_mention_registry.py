@@ -34,6 +34,7 @@ from mixar.modules.space_mixie_chat.core.mention_registry import (  # noqa: E402
 )
 from mixar.modules.space_mixie_chat.core.mention_select import (  # noqa: E402
     parse_mentions,
+    retract_names,
 )
 from mixar.modules.space_mixie_chat.constants import (  # noqa: E402
     MENTION_INSERT_MAXLEN,
@@ -153,3 +154,21 @@ class TestParseMentions:
     def test_empty_and_none(self):
         assert parse_mentions("") == []
         assert parse_mentions(None) == []
+
+
+class TestRetractNames:
+    """The selection sync is ADDITIVE: a manual selection is never part of
+    the retract set — only objects a previous sync selected for mentions
+    that have since left the composer."""
+
+    def test_removed_mention_is_retracted(self):
+        assert retract_names({"Wall", "Sofa"}, {"Sofa"}) == {"Wall"}
+
+    def test_still_mentioned_is_kept(self):
+        assert retract_names({"Wall"}, {"Wall", "Lamp"}) == set()
+
+    def test_first_sync_retracts_nothing(self):
+        # Whatever the user selected manually is untouched: the retract set
+        # derives ONLY from previous mention-selections, never from the
+        # viewport selection.
+        assert retract_names(set(), {"Wall"}) == set()

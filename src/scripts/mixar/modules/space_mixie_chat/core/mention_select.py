@@ -14,15 +14,19 @@ mentioned in the composer text:
   - material mention   -> every scene object using that material
   - collection mention -> the collection's objects in this scene
 
-The just-accepted mention's root becomes the active object. Runs on a short
-timer (handler pattern: never mutate selection inside an RNA update
-callback), and only replaces the selection when at least one mention
-resolves — a composer full of prose never clobbers a manual selection.
+The sync is ADDITIVE: it never deselects objects the user picked manually —
+"change the texture of the selected item as per @Wall" must keep the user's
+item selected. It tracks which objects it selected itself (per scene, this
+process only) and retracts only those when their mention leaves the
+composer. The accepted mention's root becomes active only when that doesn't
+steal active from a manually selected object. Runs on a short timer
+(handler pattern: never mutate selection inside an RNA update callback).
 """
 
 import re
 
 import bpy
+from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 
@@ -39,6 +43,17 @@ _MENTION_RE = re.compile(r'(?:^|(?<=\s))@(?:"([^"]+)"|(\S+))')
 _TRAILING_PUNCT = ',.;:!?)'
 
 _SYNC_TIMER_DELAY = 0.05  # after the composer text apply lands
+
+# scene name -> names of objects the LAST sync selected. Lets the next sync
+# retract only mention-driven selections while leaving the user's manual
+# selection alone. Process-local and cleared on file load.
+_MENTION_SELECTED = {}
+
+
+def retract_names(prev_names, current_names):
+    """Mention-selected names to deselect: selected by the previous sync but
+    no longer backing any mention in the composer."""
+    return set(prev_names) - set(current_names)
 
 
 def parse_mentions(text):
@@ -97,9 +112,11 @@ def _view_layer_for(scene):
 
 
 def sync_selection_to_mentions(scene, active_name=""):
-    """Select exactly the assets mentioned in the composer; no-op when
-    nothing resolves. Must be called from a main-thread timer/operator, not
-    from inside an RNA update callback."""
+    """Additively select the assets mentioned in the composer; no-op when
+    nothing resolves. Never deselects a manual selection — only objects the
+    previous sync selected are retracted when their mention is gone. Must be
+    called from a main-thread timer/operator, not from inside an RNA update
+    callback."""
     if getattr(bpy.context, "mode", 'OBJECT') != 'OBJECT':
         return  # selection flags are an object-mode interaction
 
@@ -112,19 +129,28 @@ def sync_selection_to_mentions(scene, active_name=""):
     for name in parse_mentions(scene.mixie_chat_input):
         objs, root = _resolve_lenient(scene, name)
         to_select.extend(objs)
-        # Active = the just-accepted mention's root; first resolvable root
-        # otherwise.
+        # Active candidate = the just-accepted mention's root; first
+        # resolvable root otherwise.
         if root is not None and (name == active_name or active_obj is None):
             active_obj = root
 
     if not to_select:
         return
 
-    for obj in view_layer.objects:
+    scene_key = scene.name
+    current_names = {obj.name for obj in to_select}
+    prev_names = _MENTION_SELECTED.get(scene_key, set())
+
+    # Retract ONLY what a previous sync selected for since-removed mentions.
+    for name in retract_names(prev_names, current_names):
+        obj = scene.objects.get(name)
+        if obj is None:
+            continue
         try:
             obj.select_set(False, view_layer=view_layer)
         except Exception:
             pass
+
     selected_any = False
     for obj in to_select:
         try:
@@ -133,9 +159,22 @@ def sync_selection_to_mentions(scene, active_name=""):
         except Exception:
             pass  # not in this view layer / unselectable
 
+    _MENTION_SELECTED[scene_key] = current_names
+
     if selected_any:
         try:
-            if active_obj is not None and active_obj.name in view_layer.objects:
+            # Make the accepted root active only when that doesn't steal
+            # active from a manually selected object ("the selected item"
+            # must keep meaning the user's pick).
+            active = view_layer.objects.active
+            active_is_users = (
+                active is not None
+                and active.select_get(view_layer=view_layer)
+                and active.name not in prev_names
+                and active.name not in current_names
+            )
+            if (active_obj is not None and not active_is_users
+                    and active_obj.name in view_layer.objects):
                 view_layer.objects.active = active_obj
         except Exception:
             pass
@@ -172,3 +211,21 @@ def schedule_selection_sync(scene, active_name=""):
         bpy.app.timers.register(_run, first_interval=_SYNC_TIMER_DELAY)
     except Exception:
         logger.debug("mention selection sync scheduling failed", exc_info=True)
+
+
+@persistent
+def _on_load_post(_filepath=None):
+    # Stale tracking from a previous file could retract an object the user
+    # manually selected in the new one — names carry across loads.
+    _MENTION_SELECTED.clear()
+
+
+def register_handlers():
+    if _on_load_post not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_on_load_post)
+
+
+def unregister_handlers():
+    if _on_load_post in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_on_load_post)
+    _MENTION_SELECTED.clear()

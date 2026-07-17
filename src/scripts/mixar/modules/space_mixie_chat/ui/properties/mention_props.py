@@ -105,11 +105,12 @@ def on_mention_query_changed(self, context):
 def on_mention_accepted(self, context):
     """A suggestion was accepted (C++ fires this right after the splice).
 
-    Defers to core/mention_select.py, which makes the viewport selection
-    mirror every asset mentioned in the composer — object subtrees, material
-    users, collection contents — with the accepted one active. Deferred to a
-    timer so the composer text apply lands first and no selection mutation
-    happens inside this RNA update callback.
+    Defers to core/mention_select.py, which ADDS every asset mentioned in
+    the composer to the viewport selection — object subtrees, material
+    users, collection contents — without disturbing the user's manual
+    selection (only its own previous mention-selections are retracted).
+    Deferred to a timer so the composer text apply lands first and no
+    selection mutation happens inside this RNA update callback.
     """
     try:
         name = self.mixie_chat_mention_accepted
@@ -169,15 +170,17 @@ def register():
         update=on_mention_accepted,
     )
 
-    from ...core import mention_registry
+    from ...core import mention_registry, mention_select
 
     mention_registry.register_handlers()
+    mention_select.register_handlers()
 
 
 def unregister():
-    from ...core import mention_registry
+    from ...core import mention_registry, mention_select
 
     mention_registry.unregister_handlers()
+    mention_select.unregister_handlers()
 
     for attr in (
         'mixie_chat_mention_query',
