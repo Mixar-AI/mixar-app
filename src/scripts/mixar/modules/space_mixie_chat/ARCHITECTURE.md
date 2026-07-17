@@ -361,6 +361,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 | Why did loading a new `.blend` break the agent? | `file_handlers.py` load_pre cleanup + K6 exception-safety |
 | Why is the plugin using 15% CPU at idle? | `animation_manager.py` + `queue_processor.py` K2 scene iteration |
 | Why didn't my script run? | First check sandbox in `executor.py` + `sandbox_validator.py`; then check session state in `session.py`; then check the render guard. |
+| Why is the '@' mention dropdown missing/stale/mis-clicking? | `core/mention_registry.py` (candidates + ranking) and `ui/properties/mention_props.py` (query callback); interaction/geometry live C++-side in `editors/space_mixie_chat/mixie_chat_mention.cc` + the textedit hooks in `editors/interface/interface_handlers.cc` |
 
 ## Companion docs
 
