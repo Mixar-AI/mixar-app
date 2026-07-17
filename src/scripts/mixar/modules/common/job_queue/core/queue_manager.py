@@ -801,7 +801,9 @@ class FeatureQueue:
             return None
 
         try:
-            obj_names = import_file(filepath, file_type)
+            obj_names = import_file(
+                filepath, file_type, getattr(job, "import_options", None),
+            )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
         except Exception as e:
