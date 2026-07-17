@@ -250,11 +250,6 @@ void mixie_chat_mention_dismiss(Scene *scene);
 /** Copy the active item's replacement text ("@Name ") into `r_buf`.
  * \return its length, or 0 when unavailable. */
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
-/** Publish the active item's name into scene.mixie_chat_mention_accepted and
- * fire its update — Python then syncs the viewport selection to the assets
- * mentioned in the composer. Call right after a successful accept splice,
- * while the items collection still holds the accepted row. */
-void mixie_chat_mention_notify_accepted(bContext *C, Scene *scene);
 
 /** Dropdown geometry in region pixels; row 0 is the top row.
  * \return the row count (0 = closed). */

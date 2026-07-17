@@ -102,27 +102,6 @@ def on_mention_query_changed(self, context):
             pass
 
 
-def on_mention_accepted(self, context):
-    """A suggestion was accepted (C++ fires this right after the splice).
-
-    Defers to core/mention_select.py, which ADDS every asset mentioned in
-    the composer to the viewport selection — object subtrees, material
-    users, collection contents — without disturbing the user's manual
-    selection (only its own previous mention-selections are retracted).
-    Deferred to a timer so the composer text apply lands first and no
-    selection mutation happens inside this RNA update callback.
-    """
-    try:
-        name = self.mixie_chat_mention_accepted
-        if not name:
-            return
-        from ...core.mention_select import schedule_selection_sync
-
-        schedule_selection_sync(self, active_name=name)
-    except Exception:
-        logger.debug("mention accepted handling failed", exc_info=True)
-
-
 classes = (MixieChatMentionItem,)
 
 
@@ -160,34 +139,22 @@ def register():
         default=False,
         options={'SKIP_SAVE', 'HIDDEN'},
     )
-    bpy.types.Scene.mixie_chat_mention_accepted = StringProperty(
-        name="Accepted Mention",
-        description="Name of the last accepted suggestion (written from C++; "
-                    "the update syncs the viewport selection)",
-        default="",
-        maxlen=256,
-        options={'SKIP_SAVE', 'HIDDEN'},
-        update=on_mention_accepted,
-    )
 
-    from ...core import mention_registry, mention_select
+    from ...core import mention_registry
 
     mention_registry.register_handlers()
-    mention_select.register_handlers()
 
 
 def unregister():
-    from ...core import mention_registry, mention_select
+    from ...core import mention_registry
 
     mention_registry.unregister_handlers()
-    mention_select.unregister_handlers()
 
     for attr in (
         'mixie_chat_mention_query',
         'mixie_chat_mention_items',
         'mixie_chat_mention_active',
         'mixie_chat_mention_show',
-        'mixie_chat_mention_accepted',
     ):
         if hasattr(bpy.types.Scene, attr):
             delattr(bpy.types.Scene, attr)
