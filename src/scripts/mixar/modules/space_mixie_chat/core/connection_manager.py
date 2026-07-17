@@ -21,6 +21,7 @@ from ..constants import (
     DEFAULT_MAX_RECONNECT_DELAY,
     DEFAULT_PING_INTERVAL,
     DEFAULT_RECONNECT_DELAY,
+    DISCONNECT_REASON_AUTH_FAILED,
     JSONRPCMethod,
     SessionState,
 )
@@ -32,6 +33,44 @@ from .jsonrpc_client import (
 )
 
 logger = get_logger(__name__)
+
+
+def handle_server_notification(params: dict) -> None:
+    """Route one server-originated notification to the right surface.
+
+    Shared by live ``notifications.push`` and the ``notifications.sync``
+    catch-up on (re)connect, so reserved types (``update``,
+    ``credit_upgrade``) behave identically no matter how the notification
+    arrives.
+    """
+    notif_type = params.get("type", "info")
+
+    if notif_type == "update":
+        from mixar.modules.common.updates.core.trigger import trigger_update_check
+        trigger_update_check()
+        return
+
+    if notif_type == "credit_upgrade":
+        # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
+        from ...common.notifications.credit_upgrade import push_credit_upgrade
+        push_credit_upgrade(params)
+        # Surface #2 — a Mixie chat message with the same CTA. This
+        # mutates scene data, so marshal it onto the main thread.
+        from .main_thread_executor import run_on_main_thread
+
+        def _add_chat_notice(p=params):
+            from .credits_notice import add_credit_upgrade_chat_message
+            add_credit_upgrade_chat_message(
+                title=p.get("title"),
+                body=p.get("body", p.get("message")),
+                action_url=p.get("action_url"),
+            )
+
+        run_on_main_thread(_add_chat_notice)
+        return
+
+    from ...common.notifications import get_notification_store
+    get_notification_store().push_from_server(params)
 
 
 class ConnectionManager:
@@ -57,6 +96,8 @@ class ConnectionManager:
 
         self._is_initializing = False
         self._is_shutting_down = False
+        self._liveness_monitor_running = False
+        self._last_transport_live: Optional[bool] = None
         self._initialized = True
         logger.debug("ConnectionManager created")
 
@@ -152,15 +193,17 @@ class ConnectionManager:
                     SessionState.IDLE,
                     only_from={SessionState.OFFLINE, SessionState.CONNECTING},
                 )
+                # Scenes holding an active turn keep their state (no edge to
+                # redraw on), but the status pill/header derive "Reconnecting"
+                # from transport liveness — repaint them on the flip back.
+                from .ui_utils import redraw_chat_areas
+                redraw_chat_areas()
             run_on_main_thread(_set_idle)
             logger.info("JSON-RPC WebSocket connected")
 
             # Sync pending notifications via JSON-RPC
             client = get_jsonrpc_client()
             if client:
-                from ...common.notifications import get_notification_store
-                store = get_notification_store()
-
                 def _on_sync_result(result):
                     notifications = []
                     if isinstance(result, list):
@@ -172,11 +215,7 @@ class ConnectionManager:
                         return
 
                     for notif in notifications:
-                        if notif.get("type") == "update":
-                            from mixar.modules.common.updates.core.trigger import trigger_update_check
-                            trigger_update_check()
-                        else:
-                            store.push_from_server(notif)
+                        handle_server_notification(notif)
                     logger.info(f"notifications.sync returned {len(notifications)} notifications")
 
                 client.send_request("notifications.sync", {}, _on_sync_result)
@@ -214,8 +253,21 @@ class ConnectionManager:
                 logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
                 return
             from .main_thread_executor import run_on_main_thread
+            # An auth failure stops the reconnect loop — that disconnect is
+            # terminal. Anything else is a transient drop the client will
+            # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
+            # AWAITING_INPUT) must survive it: the turn streams over its own
+            # SSE connection and the backend keeps executing — wiping its
+            # state here made the client refuse every post-reconnect script
+            # with "Agent session not active" while showing an idle pill.
+            terminal = reason == DISCONNECT_REASON_AUTH_FAILED
             def _set_offline():
-                session.set_all_scenes_state(SessionState.OFFLINE)
+                session.on_transport_disconnect(terminal=terminal)
+                # Preserved active states produce no state edge, so repaint
+                # explicitly — the pill/header show "Reconnecting" from
+                # transport liveness, not from scene state.
+                from .ui_utils import redraw_chat_areas
+                redraw_chat_areas()
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
 
@@ -245,42 +297,8 @@ class ConnectionManager:
             pass  # Logging handled in main_thread_executor
 
         def on_notifications_push(params: dict):
-            """Handle notifications.push — push to toast overlay."""
-            notif_type = params.get("type", "info")
-            if notif_type == "update":
-                from mixar.modules.common.updates.core.trigger import trigger_update_check
-                trigger_update_check()
-                return
-
-            if notif_type == "credit_upgrade":
-                # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
-                from ...common.notifications.credit_upgrade import push_credit_upgrade
-                push_credit_upgrade(params)
-                # Surface #2 — a Mixie chat message with the same CTA. This
-                # mutates scene data, so marshal it onto the main thread.
-                from .main_thread_executor import run_on_main_thread
-
-                def _add_chat_notice(p=params):
-                    from .credits_notice import add_credit_upgrade_chat_message
-                    add_credit_upgrade_chat_message(
-                        title=p.get("title"),
-                        body=p.get("body", p.get("message")),
-                        action_url=p.get("action_url"),
-                    )
-
-                run_on_main_thread(_add_chat_notice)
-                return
-
-            from ...common.notifications import get_notification_store
-            store = get_notification_store()
-            store.push(
-                type_str=notif_type,
-                title=params.get("title", ""),
-                body=params.get("body", params.get("message", "")),
-                priority=params.get("priority", "normal"),
-                action_url=params.get("action_url"),
-                id=params.get("id"),
-            )
+            """Handle notifications.push — route to the shared handler."""
+            handle_server_notification(params)
 
         def on_job_update(params: dict):
             """Handle job.update — reconcile the matching local queue job."""
@@ -327,6 +345,7 @@ class ConnectionManager:
         # Connect
         if client.connect():
             logger.info("JSON-RPC WebSocket connection initiated")
+            self._start_liveness_monitor()
             return True
         else:
             session.set_all_scenes_state(SessionState.OFFLINE)
@@ -385,6 +404,55 @@ class ConnectionManager:
         self._setup()
         client = get_jsonrpc_client()
         return client is not None and client.is_connected
+
+    @property
+    def is_transport_live(self) -> bool:
+        """Fast liveness signal for status displays only.
+
+        False as soon as the socket has gone recv-silent past
+        WS_UI_STALE_THRESHOLD — well before is_connected flips on the
+        teardown watchdog. Send-gating must keep using is_connected.
+        """
+        self._setup()
+        client = get_jsonrpc_client()
+        return client is not None and client.is_transport_live
+
+    def _start_liveness_monitor(self) -> None:
+        """Repaint status surfaces when transport liveness flips.
+
+        The pill/header compute their label from is_transport_live at draw
+        time, but nothing tags a redraw when a connection dies silently —
+        there is no scene-state edge until the teardown watchdog fires, so
+        the stale "Idle/Connected" pill would sit unrepainted for the whole
+        zombie window. A cheap main-thread poll closes that gap; it stops
+        itself once the client is gone.
+        """
+        if self._liveness_monitor_running:
+            return
+
+        import bpy
+
+        self._liveness_monitor_running = True
+        self._last_transport_live = None
+
+        def _poll():
+            if self._is_shutting_down or get_jsonrpc_client() is None:
+                self._liveness_monitor_running = False
+                self._last_transport_live = None
+                return None
+            try:
+                live = self.is_transport_live
+                if live != self._last_transport_live:
+                    self._last_transport_live = live
+                    from .ui_utils import redraw_chat_areas
+                    redraw_chat_areas()
+            except Exception:
+                logger.debug("liveness monitor poll failed", exc_info=True)
+            return 2.0
+
+        # persistent=True: the WS connection survives file loads, so the
+        # monitor must too (non-persistent timers are dropped on load).
+        bpy.app.timers.register(_poll, first_interval=2.0, persistent=True)
 
     @property
     def connection_state(self) -> SessionState:

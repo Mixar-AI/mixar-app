@@ -23,6 +23,57 @@ from ...constants import DEV_MODE, SessionState
 logger = get_logger(__name__)
 
 
+def send_cancel_request_async(session_id: str) -> None:
+    """Send a cancel request to the backend in a background thread.
+
+    Shared by New Chat and the history session switcher — both replace
+    the live conversation and must stop any run still streaming on the
+    old session first.
+    """
+    if not session_id:
+        return
+
+    import threading
+    thread = threading.Thread(
+        target=_send_cancel_request,
+        args=(session_id,),
+        daemon=True,
+    )
+    thread.start()
+
+
+def _send_cancel_request(session_id: str) -> None:
+    """Send cancel request to backend (runs in background thread)."""
+    try:
+        import httpx
+        from mixar.config.config import get_server_url
+
+        base_url = get_server_url()
+        auth_token = get_auth_token()
+
+        if not auth_token:
+            logger.warning("No auth token available for cancel request")
+            return
+
+        url = f"{base_url}/api/v1/blender/agent/cancel"
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        payload = {"session_id": session_id}
+
+        with httpx.Client(timeout=5.0) as client:
+            response = client.post(url, json=payload, headers=headers)
+
+            if response.status_code == 200:
+                logger.info(f"Backend session cancelled: {session_id[:8]}")
+            else:
+                logger.warning(
+                    f"Failed to cancel backend session: HTTP {response.status_code}"
+                )
+    except httpx.HTTPError as e:
+        logger.warning(f"HTTP error during cancel request: {e}")
+    except Exception as e:
+        logger.error(f"Failed to send cancel request: {e}")
+
+
 class MIXIE_CHAT_OT_connect(Operator):
     """Connect to the WebSocket server"""
     bl_idname = "mixie_chat.connect"
@@ -107,7 +158,7 @@ class MIXIE_CHAT_OT_new_session(Operator):
     """Start a new chat session"""
     bl_idname = "mixie_chat.new_session"
     bl_label = "New Chat"
-    bl_description = "Clear chat and start a new session"
+    bl_description = "Start a new chat (the current chat is saved to History)"
     bl_options = {'REGISTER'}
 
     @classmethod
@@ -134,7 +185,18 @@ class MIXIE_CHAT_OT_new_session(Operator):
 
         # 4. Tell the backend to cancel the old session
         if old_session_id:
-            self._send_cancel_request_async(old_session_id)
+            send_cancel_request_async(old_session_id)
+
+        # 5. Archive the current chat to local history before wiping it —
+        #    New Chat is recoverable via the History popover
+        #    (see core/chat_history.py). Best-effort: a failed archive
+        #    must never block starting a fresh chat.
+        try:
+            from ...core.chat_history import archive_current
+            archive_current(scene)
+        except Exception as e:
+            logger.error(f"Failed to archive chat before new session: {e}")
+            self.report({'WARNING'}, "Could not save the chat to History")
 
         # Clear messages and incremental markdown cache
         scene.mixie_chat_messages.clear()
@@ -160,52 +222,6 @@ class MIXIE_CHAT_OT_new_session(Operator):
 
         self.report({'INFO'}, "Started new chat session")
         return {'FINISHED'}
-
-    @staticmethod
-    def _send_cancel_request_async(session_id: str) -> None:
-        """Send cancel request to backend in background thread."""
-        if not session_id:
-            return
-
-        import threading
-        thread = threading.Thread(
-            target=MIXIE_CHAT_OT_new_session._send_cancel_request,
-            args=(session_id,),
-            daemon=True,
-        )
-        thread.start()
-
-    @staticmethod
-    def _send_cancel_request(session_id: str) -> None:
-        """Send cancel request to backend (runs in background thread)."""
-        try:
-            import httpx
-            from mixar.config.config import get_server_url
-
-            base_url = get_server_url()
-            auth_token = get_auth_token()
-
-            if not auth_token:
-                logger.warning("No auth token available for cancel request")
-                return
-
-            url = f"{base_url}/api/v1/blender/agent/cancel"
-            headers = {"Authorization": f"Bearer {auth_token}"}
-            payload = {"session_id": session_id}
-
-            with httpx.Client(timeout=5.0) as client:
-                response = client.post(url, json=payload, headers=headers)
-
-                if response.status_code == 200:
-                    logger.info(f"Backend session cancelled: {session_id[:8]}")
-                else:
-                    logger.warning(
-                        f"Failed to cancel backend session: HTTP {response.status_code}"
-                    )
-        except httpx.HTTPError as e:
-            logger.warning(f"HTTP error during cancel request: {e}")
-        except Exception as e:
-            logger.error(f"Failed to send cancel request: {e}")
 
 
 class MIXIE_CHAT_OT_dev_cycle_state(Operator):

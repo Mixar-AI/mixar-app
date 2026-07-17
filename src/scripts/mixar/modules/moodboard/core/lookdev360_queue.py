@@ -28,6 +28,8 @@ from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
 
+_SERVICE_KEY = "pbr_gen"
+
 
 # ---------------------------------------------------------------------------
 # Job
@@ -73,7 +75,7 @@ class Lookdev360Job(Job):
             payload["reference_image_bytes_b64"] = self.reference_image_bytes_b64
 
         service.enqueue(
-            job_type="pbr_gen",
+            job_type=_SERVICE_KEY,
             model=self.model or "hunyuan-pbr",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -366,6 +368,8 @@ def enqueue_lookdev360_job(
     job = Lookdev360Job(
         feature_key=FEATURE_LOOKDEV360,
         label=f"Lookdev360: {prompt[:40]}",
+        display_label=prompt[:40],
+        service=_SERVICE_KEY,
         prompt=prompt,
         mesh_bytes_b64=mesh_bytes_b64,
         mesh_filename=mesh_filename,

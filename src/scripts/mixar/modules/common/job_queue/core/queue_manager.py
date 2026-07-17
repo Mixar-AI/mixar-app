@@ -107,6 +107,7 @@ def handle_backend_job_update(payload: dict) -> bool:
     if job is None:
         return False
 
+    job.apply_backend_metadata(payload)
     state = str(payload.get("state") or payload.get("status") or "").lower()
     status = _JOBQ_STATE_TO_STATUS.get(state, "")
     if status:
@@ -300,6 +301,16 @@ class FeatureQueue:
             logger.warning("%s duplicate job rejected: %s", LOG_PREFIX, job.label)
             return False
         job.feature_key = self.feature_key
+        # Stamp the originating scene (submit runs on the main thread) so the
+        # scene-flag listener targets the scene that started the job, not
+        # whatever is active when a later notification fires.
+        if not job.scene_name:
+            try:
+                scene = getattr(bpy.context, "scene", None)
+                if scene is not None:
+                    job.scene_name = scene.name
+            except Exception:
+                pass
         self._jobs.append(job)
         self._notify()
         self._pump()
@@ -420,12 +431,38 @@ class FeatureQueue:
         return None
 
     def _notify(self) -> None:
+        self._notify_failure_toasts()
         for fn in list(self._listeners):
             try:
                 fn(self)
             except Exception as e:
                 logger.warning("%s listener failed: %s", LOG_PREFIX, e)
         redraw_3d_views()
+
+    def _notify_failure_toasts(self) -> None:
+        """Surface a viewport toast once for each newly-FAILED job.
+
+        A uniform safety net so a failed paid generation is never silent —
+        previously only features whose listener passed ``batch_popup_title``
+        showed any feedback, so Image Gen / Lookdev / Hunyuan UV / Texture
+        Edit failures were invisible unless the Queue panel was open.
+        """
+        for job in self._jobs:
+            if job.state == JobState.FAILED and not job._failure_notified:
+                job._failure_notified = True
+                try:
+                    from mixar.modules.common.notifications import (
+                        get_notification_store,
+                    )
+                    message = job.user_message or job.error or "Generation failed"
+                    title = job.label or "Generation failed"
+                    get_notification_store().push(
+                        "error", title, body=message, priority="high",
+                    )
+                except Exception as e:
+                    logger.debug(
+                        "%s failed to push failure toast: %s", LOG_PREFIX, e,
+                    )
 
     def _pump(self) -> None:
         if self._auth_paused or self._pumping:
@@ -472,6 +509,7 @@ class FeatureQueue:
         if job.state == JobState.CANCELLED:
             self._pump()
             return
+        job.apply_backend_metadata(job._unwrap_response(response))
         job._submit_retry_scheduled = False
         job.error = ""
         job.user_message = ""
@@ -607,6 +645,10 @@ class FeatureQueue:
         return custom if custom > 0 else get_poll_interval(job.poll_count)
 
     def _on_poll_success(self, job: Job, response) -> None:
+        # Full job.get/job.sync snapshots can arrive while a fast job is still
+        # leaving RUNNING_SUBMIT. Retain their display metadata even when the
+        # lifecycle parser must wait for RUNNING_POLL.
+        job.apply_backend_metadata(job._unwrap_response(response))
         if job.state != JobState.RUNNING_POLL:
             return
         job.consecutive_poll_errors = 0
@@ -769,7 +811,9 @@ class FeatureQueue:
             return None
 
         try:
-            obj_names = import_file(filepath, file_type)
+            obj_names = import_file(
+                filepath, file_type, getattr(job, "import_options", None),
+            )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
         except Exception as e:

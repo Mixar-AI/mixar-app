@@ -46,6 +46,14 @@ struct ChatMessageProps {
   PropertyRNA *action_items;
   PropertyRNA *image_items;
 
+  /* Feedback properties */
+  PropertyRNA *feedback_visible;
+  PropertyRNA *feedback_rating;
+  PropertyRNA *feedback_comment_expanded;
+  PropertyRNA *feedback_status;
+  PropertyRNA *feedback_submitted_comment;
+  PropertyRNA *feedback_comment;
+
   /* Steps slot */
   PropertyRNA *step_items;
   PropertyRNA *steps_summary;
@@ -228,6 +236,19 @@ struct MessageLayoutData {
   int slot_image_count;
   float slot_images_height;
 
+  /* Feedback row (post-response rating) */
+  bool has_feedback;       /* feedback_visible is true */
+  int feedback_rating;     /* 0=unrated, 1-5 */
+  float feedback_row_height;
+  FeedbackStarData feedback_stars[FEEDBACK_STAR_COUNT];
+  rctf feedback_comment_bounds;
+  bool feedback_comment_hovered;
+  bool feedback_comment_expanded;  /* inline comment field visible */
+  float feedback_comment_input_height;  /* extra height for input row */
+  int feedback_status; /* 0=idle, 1=sending, 2=received, 3=failed */
+  char feedback_submitted_comment[FEEDBACK_COMMENT_DISPLAY_MAX]; /* accepted comment */
+  float feedback_submitted_comment_height; /* wrapped read-only comment block */
+
   /* Steps block slot */
   bool has_steps;
   StepItemSlotData slot_steps[SLOT_MAX_STEP_ITEMS];
@@ -294,6 +315,29 @@ extern const char *g_empty_prompt_modes[CHAT_EMPTY_PROMPT_COUNT];
  * Only applies when mode is GENERATE. Empty string means no generate type.
  */
 extern const char *g_empty_prompt_generate_types[CHAT_EMPTY_PROMPT_COUNT];
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Chat History Overlay
+ * \{ */
+
+/**
+ * One visible row of the past-chats overlay (mixie_chat_history_overlay.cc).
+ * Bounds are in region pixel coords (screen-space, like the scroll
+ * indicator), rebuilt on every overlay draw.
+ */
+struct HistoryRowHit {
+  rctf bounds = {0, 0, 0, 0};        /* whole row hit area */
+  rctf delete_bounds = {0, 0, 0, 0}; /* trailing X button hit area */
+  bool is_hovered = false;
+  bool delete_hovered = false;
+  /** Row-top offset from the top of the scrollable content (px, grows
+   * downward). Keyboard navigation uses it to scroll a selected row into
+   * view without re-deriving the grouped layout. */
+  float content_top = 0.0f;
+  char session_id[128] = "";
+};
 
 /** \} */
 
@@ -369,6 +413,60 @@ struct MixieChatRuntime {
 
   /** Scroll-to-bottom indicator: bounce animation start time (new msg while scrolled up). */
   double scroll_indicator_bounce_start = 0.0;
+
+  /* -- Past-chats overlay (mixie_chat_history_overlay.cc) -------------- */
+
+  /** History overlay: visibility mirrored from the Python-registered
+   * WindowManager bool during draw (events check this, never RNA). */
+  bool history_overlay_active = false;
+
+  /** History overlay: panel bounds in region pixels (click-away test). */
+  rctf history_panel_bounds = {0, 0, 0, 0};
+
+  /** History overlay: scrollable list viewport in region pixels — rows
+   * only hit-test / hover inside it (they scissor-clip to it too). */
+  rctf history_list_bounds = {0, 0, 0, 0};
+
+  /** History overlay: header close (X) button + search field rects. */
+  rctf history_close_bounds = {0, 0, 0, 0};
+  rctf history_search_bounds = {0, 0, 0, 0};
+  bool history_close_hovered = false;
+
+  /** History overlay: smooth scrolling. `history_scroll_px` is the drawn
+   * offset (px from content top), eased every draw toward
+   * `history_scroll_target` (wheel / trackpad / keyboard write the
+   * target only). */
+  float history_scroll_px = 0.0f;
+  float history_scroll_target = 0.0f;
+  double history_scroll_last_time = 0.0;
+
+  /** History overlay: content + viewport heights from the last draw —
+   * the event side clamps scroll targets with these. */
+  float history_content_h = 0.0f;
+  float history_view_h = 0.0f;
+
+  /** History overlay: type-to-filter query (UTF-8, always focused while
+   * the overlay is open; edited by the overlay key handler). */
+  char history_search[96] = "";
+
+  /** History overlay: keyboard-selected row (index into history_rows,
+   * -1 = none). Arrow keys move it, Enter opens, Delete arms delete. */
+  int history_sel = -1;
+
+  /** History overlay: open animation start time (0 = not animating). */
+  double history_anim_start = 0.0;
+
+  /** History overlay: session id armed for delete (arm-to-confirm: the
+   * first X click arms the row — it turns red with a "Delete?" label —
+   * and a second X click deletes; any other click/ESC disarms). Replaces
+   * the OS confirm popup, which anchored its OK button under the cursor,
+   * i.e. exactly on the X. Empty = nothing armed. */
+  char history_confirm_id[128] = "";
+
+  /** History overlay: hit rects for ALL filtered rows in list order
+   * (rebuilt per draw; rows scrolled out of view keep their offscreen
+   * bounds — hit tests additionally require history_list_bounds). */
+  blender::Vector<HistoryRowHit> history_rows;
 };
 
 /**

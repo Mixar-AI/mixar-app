@@ -2,13 +2,20 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Scene-level mirror PropertyGroup for the unified queue UIList.
+"""WindowManager-level mirror PropertyGroup for the unified queue UIList.
 
 Canonical job state lives in ``FeatureQueue`` (Python singleton).  This
 mirror is a read-only projection that the queue manager refreshes via
 per-feature listeners so Blender's ``UIList`` can render every job
 across every feature as a single flat list, with a filter chip for
 All / Active / Done / Failed.
+
+It is attached to ``WindowManager`` — NOT ``Scene`` — on purpose: the
+mirror is a live projection of Python-singleton state, so it must not be
+undo-tracked or serialized. On ``Scene`` an undo/redo would snap the
+collection back to whatever it held at that undo step, making the queue
+rows vanish (undo) or reappear (redo). WindowManager data participates in
+neither undo nor .blend persistence, matching ``generation_params``.
 """
 
 import time
@@ -41,6 +48,13 @@ class MixieQueueItemPG(PropertyGroup):
     job_id: StringProperty(name="Job ID", default="")
     feature_key: StringProperty(name="Feature Key", default="")
     label: StringProperty(name="Label", default="")
+    display_label: StringProperty(name="Display Label", default="")
+    # Backend service key joins queue jobs to dynamic catalog labels.
+    service: StringProperty(name="Service", default="")
+    origin_capability_key: StringProperty(
+        name="Origin Capability",
+        default="",
+    )
     # The model/engine slug the job was submitted with (e.g. "hunyuan_pro_v3",
     # "pro"). Shown next to the job-type pill so two jobs of the same type but
     # different models are distinguishable. Empty for jobs that carry no model.
@@ -80,13 +94,13 @@ def _sync_mirror(_queue) -> None:
     import mixar.modules.common.job_queue.ui.queue_selection as _sel_mod
 
     try:
-        scene = bpy.context.scene
+        wm = bpy.context.window_manager
     except Exception:
         return
-    if scene is None or not hasattr(scene, "mixie_queue"):
+    if wm is None or not hasattr(wm, "mixie_queue"):
         return
 
-    pg = scene.mixie_queue
+    pg = wm.mixie_queue
 
     # Selected job identity, so we can preserve selection across rebuild.
     prev_key = ""
@@ -117,8 +131,17 @@ def _sync_mirror(_queue) -> None:
             item.job_id = job.id
             item.feature_key = feature_key
             item.label = job.label
-            # Concrete job subclasses (AsyncGLBJob/SyncImageJob) carry the model
-            # slug; bespoke-queue jobs may not — default to "" so it's optional.
+            item.display_label = getattr(job, "display_label", "") or ""
+            # Backend generation identity lives on the canonical Job. Generic
+            # jobs also carry job_type before their submit ACK arrives.
+            item.service = (
+                getattr(job, "service", "")
+                or getattr(job, "job_type", "")
+                or ""
+            )
+            item.origin_capability_key = (
+                getattr(job, "origin_capability_key", "") or ""
+            )
             item.model = getattr(job, "model", "") or ""
             item.state = (
                 job.state.value if hasattr(job.state, "value") else str(job.state)
@@ -150,6 +173,7 @@ def _sync_mirror(_queue) -> None:
 def _attach_listeners() -> None:
     """Attach the unified _sync_mirror to every known feature queue."""
     from mixar.modules.common.job_queue.constants import (
+        FEATURE_ANIMATE,
         FEATURE_BRUSH_GEN,
         FEATURE_HUNYUAN_PART,
         FEATURE_HUNYUAN_RAPID,
@@ -174,6 +198,7 @@ def _attach_listeners() -> None:
         FEATURE_HUNYUAN_UV, FEATURE_MODEL_3D, FEATURE_IMAGEGEN,
         FEATURE_LOOKDEV, FEATURE_LOOKDEV360, FEATURE_MATGEN, FEATURE_BRUSH_GEN,
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
+        FEATURE_ANIMATE,
     )
     for feat in _FEATURES:
         try:
@@ -211,8 +236,8 @@ def register():
 
     bpy.app.timers.register(_force_list_text_sel_white, first_interval=0.5)
 
-    if not hasattr(bpy.types.Scene, "mixie_queue"):
-        bpy.types.Scene.mixie_queue = PointerProperty(type=MixieUnifiedQueuePG)
+    if not hasattr(bpy.types.WindowManager, "mixie_queue"):
+        bpy.types.WindowManager.mixie_queue = PointerProperty(type=MixieUnifiedQueuePG)
 
     _attach_listeners()
 
@@ -235,7 +260,7 @@ def unregister():
         pass
 
     try:
-        delattr(bpy.types.Scene, "mixie_queue")
+        delattr(bpy.types.WindowManager, "mixie_queue")
     except AttributeError:
         pass
 

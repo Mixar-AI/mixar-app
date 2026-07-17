@@ -40,3 +40,16 @@ PROVIDER_EMPTY_SENTINEL   = ('NONE', "No providers configured", "Contact support
 # the 'NONE' sentinel itself, or the provider genuinely has no models).
 # Same 'NONE' id so Save's poll() also blocks on model.
 MODEL_EMPTY_SENTINEL = ('NONE', "No models available", "Select a provider with available models")
+
+# "Codex (ChatGPT)" — a client-side-only provider option (not in the backend
+# catalog). Selecting it swaps the form to a paste field for the ~/.codex/
+# auth.json bundle + a free-text model slug. The user routes the agent through
+# their ChatGPT subscription instead of an API key.
+CODEX_PROVIDER_ID = 'codex'
+CODEX_PROVIDER_ITEM = (
+    CODEX_PROVIDER_ID,
+    "Codex (ChatGPT sub)",
+    "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
+)
+# Prefilled model slug — the current Codex lineup; the user can edit it.
+CODEX_DEFAULT_MODEL = "gpt-5.5"

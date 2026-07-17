@@ -19,7 +19,7 @@ Users see friendly labels; the IDs are what get sent to the server.
 import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
-from ...constants import BYOK_API_KEY_MAX_LENGTH, DIALOG_STATE_ITEMS
+from ...constants import BYOK_API_KEY_MAX_LENGTH, CODEX_DEFAULT_MODEL, DIALOG_STATE_ITEMS
 from ...core.model_suggestions import get_model_items, get_provider_items
 
 
@@ -62,6 +62,8 @@ _WM_ATTRS = (
     'byok_form_provider',
     'byok_form_model',
     'byok_form_api_key',
+    'byok_form_codex_bundle',
+    'byok_form_codex_model',
     'byok_is_active',
     'byok_current_provider',
     'byok_current_model',
@@ -99,6 +101,24 @@ def register():
         maxlen=BYOK_API_KEY_MAX_LENGTH,
         default='',
         subtype='PASSWORD',
+    )
+
+    # --- Codex form fields (shown when provider == 'codex') ---
+    # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
+    # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
+    # count confirm it landed). Model is a free-text slug (lineup varies per
+    # subscription tier).
+    WM.byok_form_codex_bundle = StringProperty(
+        name="Codex auth.json",
+        description="Contents of ~/.codex/auth.json (run `codex login` first)",
+        maxlen=16384,
+        default='',
+        subtype='PASSWORD',
+    )
+    WM.byok_form_codex_model = StringProperty(
+        name="Model",
+        description="Codex model slug, e.g. gpt-5.5 / gpt-5.4 / gpt-5.4-mini",
+        default=CODEX_DEFAULT_MODEL,
     )
 
     # --- Cached display fields (mirror of server BYOK state) ---

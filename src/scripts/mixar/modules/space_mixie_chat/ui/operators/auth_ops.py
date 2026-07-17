@@ -138,6 +138,7 @@ def _clear_byok_state_on_logout(wm):
         ('byok_current_model', ''),
         ('byok_key_preview', ''),
         ('byok_form_api_key', ''),
+        ('byok_form_codex_bundle', ''),
         ('byok_dialog_state', 'IDLE'),
         ('byok_last_error', ''),
     ):

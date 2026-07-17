@@ -29,6 +29,8 @@ from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
 
 logger = get_logger(__name__)
 
+_SERVICE_KEY = "scene_reconstruction"
+
 TERMINAL_JOB_STATUSES = {"completed", "failed", "cancelled", "expired"}
 POLL_INTERVAL_PHASE1 = 2.0
 POLL_INTERVAL_PHASE2 = 1.0
@@ -69,7 +71,7 @@ class SceneGenExpLabelsJob(Job):
             "vertex_color": False,
         }
         service.enqueue(
-            job_type="scene_reconstruction",
+            job_type=_SERVICE_KEY,
             model="sam3d",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -296,6 +298,7 @@ def enqueue_scene_gen_exp_labels_job(
     job = SceneGenExpLabelsJob(
         feature_key=FEATURE_SCENE_GEN_EXP_LABELS,
         label="Scene Gen Exp Labels",
+        service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         min_mask_pixels=min_mask_pixels,
         _on_labels_ready=on_labels_ready,

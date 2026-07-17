@@ -21,7 +21,7 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
-from ...core.ui_utils import redraw_chat_areas
+from ...core.ui_utils import bump_layout_epoch, redraw_chat_areas
 from .chat_slot_types import (
     MixieChatTodoItem,
     MixieChatActionItem,
@@ -69,6 +69,45 @@ class MixieChatAttachment(PropertyGroup):
         default=False,
         options={'SKIP_SAVE'},
     )
+
+
+def on_feedback_comment_changed(self, context):
+    """Detect Enter key via \\x1F marker and submit the feedback comment."""
+    if not self.feedback_comment.endswith("\x1F"):
+        # Live typing (fires per keystroke via TEXTEDIT_UPDATE): the input
+        # grows/shrinks with its wrapped line count — Shift+Enter inserts
+        # real newlines — so the C++ layout must remeasure.
+        if self.feedback_comment_expanded:
+            scene = getattr(context, 'scene', None)
+            if scene is not None:
+                bump_layout_epoch(scene)
+        return
+    self.feedback_comment = self.feedback_comment.rstrip("\x1F")
+    bubble_id = self.bubble_id
+    if not bubble_id:
+        return
+    if not self.feedback_comment.strip():
+        return
+    if self.feedback_comment_submitting:
+        return
+    if not 1 <= int(self.feedback_rating) <= 5:
+        logger.info(
+            "Feedback comment kept open until a rating is selected: "
+            f"bubble_id={bubble_id}"
+        )
+        return
+    bpy.app.timers.register(
+        lambda bid=bubble_id: _deferred_submit_feedback(bid) or None,
+        first_interval=0.01,
+    )
+
+
+def _deferred_submit_feedback(bubble_id):
+    """Submit feedback comment via operator (called from timer)."""
+    try:
+        bpy.ops.mixie_chat.submit_feedback_comment(bubble_id=bubble_id)
+    except Exception:
+        logger.warning(f"Failed to submit feedback comment for {bubble_id}", exc_info=True)
 
 
 class MixieChatMessage(PropertyGroup):
@@ -260,6 +299,59 @@ class MixieChatMessage(PropertyGroup):
         default=True
     )
 
+    # -------------------------------------------------------------------------
+    # Feedback fields (post-response rating)
+    # -------------------------------------------------------------------------
+    feedback_visible: BoolProperty(
+        name="Feedback Visible",
+        description="Whether to show the feedback rating row",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    feedback_rating: IntProperty(
+        name="Feedback Rating",
+        description="User's star rating (0=unrated, 1-5=rated)",
+        default=0,
+        min=0,
+        max=5,
+        options={'SKIP_SAVE'},
+    )
+    feedback_comment: StringProperty(
+        name="Feedback Comment",
+        description="User's feedback comment",
+        default="",
+        maxlen=2000,
+        options={'SKIP_SAVE', 'TEXTEDIT_UPDATE'},
+        update=on_feedback_comment_changed,
+    )
+    feedback_comment_expanded: BoolProperty(
+        name="Feedback Comment Expanded",
+        description="Whether the inline comment field is shown",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    feedback_comment_submitting: BoolProperty(
+        name="Feedback Comment Submitting",
+        description="Whether this feedback comment has an in-flight request",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    feedback_status: IntProperty(
+        name="Feedback Status",
+        description="Submission state: 0=idle, 1=sending, 2=received, 3=failed",
+        default=0,
+        min=0,
+        max=3,
+        options={'SKIP_SAVE'},
+    )
+    feedback_submitted_comment: StringProperty(
+        name="Submitted Feedback Comment",
+        description="Comment accepted by the server, shown read-only in the chat",
+        default="",
+        maxlen=2000,
+        options={'SKIP_SAVE'},
+    )
+
 
 classes = (
     MixieChatAttachment,
@@ -285,6 +377,16 @@ def on_chat_input_changed(self, context):
             lambda: _execute_send_message() or None,
             first_interval=0.001
         )
+        return
+
+    # An emptied composer can't have an active @-mention token. Interactive
+    # edits are handled by the C++ detection hooks; this covers programmatic
+    # clears (send/new-session) so the dropdown never lingers.
+    try:
+        if not self.mixie_chat_input and self.mixie_chat_mention_show:
+            self.mixie_chat_mention_show = False
+    except AttributeError:
+        pass  # mention props not registered (isolated tests)
 
 
 def _execute_send_message():

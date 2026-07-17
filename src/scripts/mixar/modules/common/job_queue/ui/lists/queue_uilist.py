@@ -4,29 +4,10 @@
 
 """Unified job queue UIList + per-tab Generate/Cancel footer helpers."""
 
-import re
 import time
 
 from bpy.types import UIList
 
-from mixar.modules.common.job_queue.constants import (
-    FEATURE_BRUSH_GEN,
-    FEATURE_HUNYUAN_PART,
-    FEATURE_HUNYUAN_RAPID,
-    FEATURE_HUNYUAN_UV,
-    FEATURE_IMAGE_TO_3D_PRO,
-    FEATURE_IMAGEGEN,
-    FEATURE_LOOKDEV,
-    FEATURE_LOOKDEV360,
-    FEATURE_MATGEN,
-    FEATURE_MESH_SEGMENT,
-    FEATURE_MODEL_3D,
-    FEATURE_RETOPOLOGY,
-    FEATURE_SCENE_GEN,
-    FEATURE_SCENE_GEN_HP,
-    FEATURE_SCENE_GEN_LP,
-    FEATURE_SCENE_RECON,
-)
 from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
 from mixar.modules.common.job_queue.core.job import JobState
 from mixar.modules.common.job_queue.core.queue_manager import get_queue
@@ -57,63 +38,19 @@ _FAILED_STATE_VALUES = {
 
 _TERMINAL_STATE_VALUES = _DONE_STATE_VALUES | _FAILED_STATE_VALUES
 
-# Human-facing display name per feature key. Appears as the "Job Type"
-# prefix on row 1 and as the coloured badge chip on row 2.
-_FEATURE_LABEL = {
-    FEATURE_IMAGE_TO_3D_PRO: "Image to 3D Pro",
-    FEATURE_MODEL_3D: "Image to 3D",
-    FEATURE_RETOPOLOGY: "Retopology",
-    FEATURE_SCENE_GEN_HP: "Scene Gen HP",
-    FEATURE_SCENE_GEN_LP: "Scene Gen LP",
-    FEATURE_HUNYUAN_RAPID: "Rapid 3D",
-    FEATURE_HUNYUAN_PART: "Part 3D",
-    FEATURE_HUNYUAN_UV: "UV Unwrap",
-    FEATURE_IMAGEGEN: "ImageGen",
-    FEATURE_BRUSH_GEN: "Brush Gen",
-    FEATURE_LOOKDEV: "Blockout Render",
-    FEATURE_LOOKDEV360: "Lookdev360",
-    FEATURE_MATGEN: "Material Gen",
-    FEATURE_MESH_SEGMENT: "Mesh Segment",
-    FEATURE_SCENE_GEN: "Scene Gen",
-    FEATURE_SCENE_RECON: "Scene Recon",
-}
-
 _BUG_REPORT_URL = "https://www.mixar.app/bug-report"
 
-# Prefixes that every enqueue site adds to ``job.label``. Row 2 already
-# renders the feature type as a pill, so we strip the leading "<Prefix>: "
-# from row 1 to avoid saying the same thing twice. Longer prefixes first so
-# "Lookdev360:" wins over "Lookdev:".
-_ENQUEUE_PREFIXES = (
-    "ImageGen",
-    "Lookdev360",
-    "Lookdev",
-    "SceneRecon",
-    "MatGen",
-    "Brush",
-    "Segment",
-)
-
-
-def _strip_type_prefix(label: str) -> str:
-    for pfx in _ENQUEUE_PREFIXES:
-        if label.startswith(pfx + ": "):
-            return label[len(pfx) + 2:]
-        if label.startswith(pfx + ":"):
-            return label[len(pfx) + 1:]
-    return label
-
-
-# Trailing " [xxxx]" where xxxx is a 4-char hex slug — appended by agent
-# enqueue paths (e.g. imagegen_ops._execute_direct) to give each batch job
-# a unique label so the queue's label-based dedup accepts it. Removing it
-# from the row title only affects display; the underlying job.label is
-# untouched, so dedup and downstream lookups keep working.
-_DEDUP_TAG_RE = re.compile(r"\s+\[[0-9a-fA-F]{4,8}\]$")
-
-
-def _strip_dedup_suffix(label: str) -> str:
-    return _DEDUP_TAG_RE.sub("", label)
+# Centralized queue layout tokens. Generation names remain backend-owned;
+# these values only control the native Blender presentation.
+_QUEUE_PRIMARY_SCALE_Y = 1.05
+_QUEUE_SECONDARY_SCALE_Y = 0.85
+_QUEUE_STATUS_SCALE_Y = 0.8
+_QUEUE_FILTER_SCALE_Y = 1.1
+_QUEUE_ROW_GAP = 0.45
+_QUEUE_STATUS_GAP = 0.2
+_QUEUE_ITEM_GAP = 0.5
+_QUEUE_FILTER_GAP = 0.55
+_QUEUE_LIST_ROWS = 8
 
 
 def _format_elapsed(seconds: float) -> str:
@@ -126,30 +63,65 @@ def _format_elapsed(seconds: float) -> str:
     return f"{m}:{s:02d}"
 
 
-def _feature_label(feature_key: str) -> str:
-    return _FEATURE_LABEL.get(feature_key, feature_key.replace('_', ' ').title())
+def _feature_label(
+    origin_capability_key: str,
+    service: str,
+    feature_key: str,
+) -> str:
+    """Backend catalog capability label, with exact identifier fallback."""
+    capability_key = (origin_capability_key or "").strip()
+    service_key = (service or "").strip()
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_capability,
+            get_capability_for_service,
+            get_service,
+        )
+
+        if capability_key:
+            origin = get_capability(capability_key)
+            if origin and origin.get("label"):
+                return origin["label"]
+        capability = get_capability_for_service(service_key)
+        if capability and capability.get("label"):
+            return capability["label"]
+        catalog_service = get_service(service_key)
+        if catalog_service and catalog_service.get("label"):
+            return catalog_service["label"]
+    except Exception:
+        pass
+    return capability_key or service_key or (feature_key or "").strip()
 
 
-# Friendly overrides for a few model slugs whose auto-prettified form reads
-# poorly; everything else falls through to a title-cased slug. Kept small on
-# purpose — the raw slug is informative, so we don't try to mirror the whole
-# catalog here.
-_MODEL_LABEL = {
-    "pro": "Pro",
-    "standard": "Standard",
-}
-
-
-def _model_label(model: str) -> str:
-    """Human-facing model name for the row-2 chip. "" when the job has none."""
-    m = (model or "").strip()
-    if not m:
+def _model_label(service: str, model: str) -> str:
+    """Backend catalog model label, with exact submitted-slug fallback."""
+    model_slug = (model or "").strip()
+    if not model_slug:
         return ""
-    return _MODEL_LABEL.get(m, m.replace('_', ' ').replace('-', ' ').title())
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        catalog_model = get_model((service or "").strip(), model_slug)
+        if catalog_model and catalog_model.get("label"):
+            return catalog_model["label"]
+    except Exception:
+        pass
+    return model_slug
+
+
+def _generation_model_label(service: str, model: str) -> str:
+    """Queue metadata text: backend-owned model label only."""
+    return _model_label(service, model)
+
+
+def _display_title(display_label: str, label: str) -> str:
+    """Return the structured queue title without parsing human-authored text."""
+    title = (display_label or label or "(unnamed)").strip() or "(unnamed)"
+    return title[:1].upper() + title[1:]
 
 
 def _status_word(state: str, substate: str) -> str:
-    """Row-2 status text — collapses SUCCESS to a plain 'Done'."""
+    """Human-readable state text; the icon alone is not an accessible label."""
     if state == JobState.SUCCESS.value:
         return "Done"
     if state == JobState.FAILED.value:
@@ -168,9 +140,10 @@ def _status_word(state: str, substate: str) -> str:
 class MIXIE_UL_unified_queue(UIList):
     """Render every queued job across every feature as a single flat list.
 
-    Each item draws two rows:
-      1) status dot + "{JobType}: {label}" + elapsed + cancel/copy actions
-      2) feature-type badge + substate text
+    Each item draws three compact rows:
+      1) status dot + label + elapsed + cancel/copy actions
+      2) feature badge + optional model badge
+      3) right-aligned queue status
     """
 
     bl_idname = "MIXIE_UL_unified_queue"
@@ -183,24 +156,21 @@ class MIXIE_UL_unified_queue(UIList):
         is_terminal = state in _TERMINAL_STATE_VALUES
         is_failed = state == JobState.FAILED.value
 
-        job_type = _feature_label(item.feature_key)
-        # Row 2 shows the feature type as a pill, so strip the leading
-        # "ImageGen: " / "Lookdev360: " / etc. that every enqueue site adds
-        # to job.label. Then strip the trailing " [xxxx]" dedup slug that
-        # the agent enqueue paths append. Falls through unchanged for
-        # labels without either prefix or suffix.
-        title = _strip_dedup_suffix(_strip_type_prefix(item.label)) \
-            or "(unnamed)"
-        # Sentence case: prompts arrive as typed ("a mouse") — capitalise
-        # the first letter only, leaving the rest untouched so acronyms
-        # and proper nouns inside the prompt survive.
-        title = title[:1].upper() + title[1:]
+        job_type = _feature_label(
+            item.origin_capability_key,
+            item.service,
+            item.feature_key,
+        )
+        # Some jobs keep dedup or downstream naming data in ``label``.
+        # Enqueue paths provide a structured display_label for those jobs,
+        # so arbitrary prompts/object names never need string parsing.
+        title = _display_title(item.display_label, item.label)
 
         col = layout.column(align=True)
 
         # -- Row 1: coloured status dot + title + elapsed + cancel ---------
         top = col.row(align=True)
-        top.scale_y = 1.05
+        top.scale_y = _QUEUE_PRIMARY_SCALE_Y
         dot_id = queue_status_icons.get_icon_id(state)
         if dot_id:
             top.label(text="", icon_value=dot_id)
@@ -225,54 +195,46 @@ class MIXIE_UL_unified_queue(UIList):
         # Breathing room between row 1 and row 2 — an explicit separator
         # since ``col`` is aligned (align=True collapses button borders
         # together but still respects separator gaps).
-        col.separator(factor=0.4)
+        col.separator(factor=_QUEUE_ROW_GAP)
 
-        # -- Row 2: | type chip [+ model chip] ~70% | status ~30% | across the
-        # full row width, so the right-aligned status lines up with row 1's
-        # elapsed time at the row's right edge.
+        # -- Row 2: type + optional generation metadata -------------------
+        # The metadata owns the full row. Keeping queue status in its own row
+        # below prevents backend model labels from being squeezed by long
+        # states such as "Waiting for sign-in".
         # Row 2 is visually secondary to row 1 purely via ``scale_y`` — we
         # avoid ``active = False`` because Blender inverts text colour on
         # the highlighted (selected) UIList row, which turns dimmed text
         # into unreadable dark ink on the accent background.
         second = col.row(align=True)
-        second.scale_y = 0.7
-        # Indent by one icon width (blank icon label, same trick as the
-        # error row below) so the pill's left edge lines up with the title
-        # text after row 1's status dot.
-        second.label(text="", icon='BLANK1')
-        # Left ~70% carries the type chip and (when present) the model chip;
-        # the remaining ~30% right-aligns the status word to the row's edge.
-        outer = second.split(factor=0.7, align=True)
-
-        # Left = bordered pill(s): the feature type, then the model used, so two
-        # jobs of the same type but different models are distinguishable.
-        # Sentence case (as authored in _FEATURE_LABEL) reads better in a chip.
-        chips = outer.row(align=True)
+        second.scale_y = _QUEUE_SECONDARY_SCALE_Y
+        # Keep at most two boxes: capability and model. Provider routing is
+        # intentionally not shown in the queue.
+        # Start at the row edge rather than reserving a full blank icon slot;
+        # the UIList already supplies its own outer padding.
+        chips = second.row(align=False)
         type_box = chips.box()
         type_box.label(text=job_type)
-        model_label = _model_label(item.model)
-        if model_label:
-            model_box = chips.box()
-            model_box.label(text=model_label)
+        metadata_label = _generation_model_label(
+            item.service,
+            item.model,
+        )
+        if metadata_label:
+            metadata_box = chips.box()
+            metadata_box.label(text=metadata_label)
 
-        rest = outer.column(align=True)
+        # -- Row 3: status -------------------------------------------------
+        status_text = _status_word(state, item.substate_text)
+        if status_text:
+            col.separator(factor=_QUEUE_STATUS_GAP)
+            status_row = col.row(align=True)
+            status_row.scale_y = _QUEUE_STATUS_SCALE_Y
+            status_cell = status_row.column(align=True)
+            status_cell.alignment = 'RIGHT'
+            status_cell.label(text=status_text)
 
-        # Status word, right-aligned so it sits at row 2's right edge.
-        # Must be a ``.column()``, not a ``.row()`` — the working
-        # right-align pattern in the codebase (see
-        # ``paint/ui/operators/layer_paint_ops_helpers.py:38``) uses
-        # column because columns inside a split's slot fill the slot's
-        # full width, so ``alignment='RIGHT'`` actually pushes children
-        # to the right edge.  Rows inside a split slot size-to-content
-        # and then align within their own narrow bounds — that's why
-        # a plain ``outer.row(align=True)`` left "Done" drifting in
-        # the middle of row 2.
-        status_cell = rest.column(align=True)
-        status_cell.alignment = 'RIGHT'
-        status_cell.label(text=_status_word(state, item.substate_text))
-
-        # -- Optional row 3: error detail + copy/report actions -------------
+        # -- Optional error detail + copy/report actions -------------------
         if is_failed and (item.user_message or item.error):
+            col.separator(factor=_QUEUE_ROW_GAP)
             err_row = col.row(align=True)
             msg_col = err_row.row(align=True)
             msg_col.active = False
@@ -298,10 +260,10 @@ class MIXIE_UL_unified_queue(UIList):
         # empty ``col.row()`` with ``scale_y > 0``: a real widget whose
         # height is respected, keeping the line from being trimmed and
         # adding the gap before the next item.
-        col.separator(factor=0.4)
+        col.separator(factor=_QUEUE_ITEM_GAP)
         col.separator(type='LINE')
         spacer = col.row()
-        spacer.scale_y = 0.35
+        spacer.scale_y = _QUEUE_ITEM_GAP
         spacer.label(text="")
 
     def filter_items(self, context, data, propname):
@@ -418,12 +380,12 @@ def draw_queue_generate_footer(
 
 def draw_unified_queue_panel(layout, context):
     """Draw the single unified queue: filter chips + flat template_list."""
-    scene = context.scene
-    if not hasattr(scene, "mixie_queue"):
+    wm = context.window_manager
+    if not hasattr(wm, "mixie_queue"):
         layout.label(text="Queue system not available", icon='INFO')
         return
 
-    pg = scene.mixie_queue
+    pg = wm.mixie_queue
 
     # Filter chips row (All / Active / Done / Failed), each with its
     # live job count so no separate summary block is needed.
@@ -434,11 +396,12 @@ def draw_unified_queue_panel(layout, context):
     n_failed = sum(1 for s in states if s in _FAILED_STATE_VALUES)
 
     chip_row = layout.row(align=True)
-    chip_row.scale_y = 1.1
+    chip_row.scale_y = _QUEUE_FILTER_SCALE_Y
     chip_row.prop_enum(pg, "filter_mode", 'ALL', text=f"All ({n_all})")
     chip_row.prop_enum(pg, "filter_mode", 'ACTIVE', text=f"Active ({n_active})")
     chip_row.prop_enum(pg, "filter_mode", 'DONE', text=f"Done ({n_done})")
     chip_row.prop_enum(pg, "filter_mode", 'FAILED', text=f"Failed ({n_failed})")
+    layout.separator(factor=_QUEUE_FILTER_GAP)
 
     if len(pg.items) == 0:
         layout.label(text="No jobs queued", icon='INFO')
@@ -448,5 +411,5 @@ def draw_unified_queue_panel(layout, context):
         MIXIE_UL_unified_queue.bl_idname, "",
         pg, "items",
         pg, "active_index",
-        rows=8,
+        rows=_QUEUE_LIST_ROWS,
     )

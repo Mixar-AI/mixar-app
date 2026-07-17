@@ -230,6 +230,25 @@ def _get_texture_gen_model_items(self, context):
     )
 
 
+def _get_animate_mode_items(self, context):
+    """Animate tab mode items (capability ``animate``).
+
+    Catalog-only tab (no offline fallback UI) — the fallback items only
+    keep the enum valid while the catalog loads."""
+    return _capability_mode_items(
+        "animate",
+        [("tripo_rig", "Auto Rig", "Auto-rig the selected mesh (Tripo)")],
+    )
+
+
+def _get_animate_model_items(self, context):
+    """Animate tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "animate", self,
+        [("tripo_rig_v2_5", "Tripo Auto Rig 2.5", "Tripo auto-rigging")],
+    )
+
+
 def _get_retopology_mode_items(self, context):
     """Retopology tab mode items (capability ``retopology``)."""
     return _capability_mode_items(

@@ -178,8 +178,15 @@ def download_file(url, file_type="GLB"):
     return filepath
 
 
-def import_file(filepath, file_type="GLB"):
+def import_file(filepath, file_type="GLB", import_options=None):
     """Import a local file into Blender. Must run on the main thread.
+
+    ``import_options`` (dict, GLB only) is merged into the glTF import
+    operator kwargs — used by the Animate feature to import Tripo rigged /
+    animated glTF with ``guess_original_bind_pose=False`` so externally
+    authored animations don't collapse (Blender's default guessed bind
+    pose distorts non-Blender rigs). Callers pass only keys the glTF
+    importer accepts.
 
     Returns:
         A comma-separated string of newly imported object names.
@@ -189,7 +196,10 @@ def import_file(filepath, file_type="GLB"):
     try:
         ft = file_type.upper()
         if ft == "GLB":
-            bpy.ops.import_scene.gltf(filepath=filepath)
+            gltf_kwargs = {"filepath": filepath}
+            if import_options:
+                gltf_kwargs.update(import_options)
+            bpy.ops.import_scene.gltf(**gltf_kwargs)
         elif ft == "OBJ":
             bpy.ops.wm.obj_import(filepath=filepath)
         elif ft == "FBX":

@@ -173,6 +173,7 @@ class SceneGenExpManager:
                 model=model,
                 payload=payload,
                 label=f"ImageGen: {prompt[:40]}",
+                display_label=prompt[:40],
                 fail_message="Image generation failed",
                 name_prefix="imagegen",
                 prompt_text=prompt,

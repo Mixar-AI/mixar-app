@@ -20,6 +20,7 @@ struct Main;
 struct PointerRNA;
 struct PropertyRNA;
 struct ScrArea;
+struct wmEvent;
 struct wmOperatorType;
 struct wmRegionListenerParams;
 struct wmWindow;
@@ -127,6 +128,19 @@ void mixie_chat_render_messages(const bContext *C,
                                 PropertyRNA *prop,
                                 const ChatLayoutMetrics &metrics,
                                 const ChatImageStyle &image_style);
+void mixie_chat_render_feedback(const bContext *C,
+                                ARegion *region,
+                                PointerRNA *msg_ptr,
+                                const ChatLayoutMetrics &metrics,
+                                const MessageLayoutData &layout);
+/* Vertical gap between the message's last content row and the feedback stars.
+ * Shared by the layout pass and the render pass so they always agree. */
+float chat_ui_get_feedback_top_gap(const ChatLayoutMetrics &metrics);
+/* Pixel height for the in-progress feedback comment input, wrap-measured with
+ * the exact widget_draw_text_multiline() font and line-height math so the
+ * button grows one widget line at a time (Shift+Enter multi-line). Clamped to
+ * FEEDBACK_COMMENT_MAX_LINES. */
+float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, float input_width);
 
 /** \} */
 
@@ -254,6 +268,7 @@ float chat_ui_get_thumbnail_border_radius();
 float chat_ui_get_thumbnail_padding();
 void chat_ui_get_thumbnail_border_color(float out_color[4]);
 void chat_ui_get_button_hover_color(float out_color[4]);
+void chat_ui_get_history_row_hover_color(float out_color[4]);
 void chat_ui_get_placeholder_text_color(float out_color[4]);
 void chat_ui_get_prompt_button_color(float out_color[4]);
 
@@ -456,6 +471,17 @@ void chat_ui_get_button_bg_color(float out_color[4]);
 void chat_ui_get_button_text_color(float out_color[4]);
 void chat_ui_get_label_color(float out_color[4]);
 
+/* Past-chats overlay (mixie_chat_history_overlay.cc). Drawn screen-space
+ * on top of the message area; modal for this region while open (consumes
+ * clicks/wheel/ESC via the region UI handler). Visibility comes from the
+ * Python-registered WindowManager bool `mixie_chat_history_visible`;
+ * rows from `mixie_chat_history_entries`. */
+void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_history_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_history_set_visible(bContext *C, bool visible);
+
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,
@@ -465,6 +491,10 @@ bool mixie_chat_handle_action_button_click(bContext *C,
                                             ARegion *region,
                                             float mouse_x,
                                             float mouse_y);
+bool mixie_chat_handle_feedback_click(bContext *C,
+                                      ARegion *region,
+                                      float mouse_x,
+                                      float mouse_y);
 bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y);
 bool mixie_chat_handle_steps_click(bContext *C,
                                    ARegion *region,

@@ -19,7 +19,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
-from .job import JobState
+from .job import JobState, RUNNING_STATES
 from .queue_manager import FeatureQueue, get_queue
 
 logger = get_logger(__name__)
@@ -67,43 +67,75 @@ def create_scene_flag_listener(
         Called on the active→idle transition, *after* the flag is cleared.
     """
 
-    def _on_queue_changed(queue: FeatureQueue) -> None:
+    # Queue-level edge tracker. The flag lives per-scene but the queue (and this
+    # listener) is shared, so a single active/idle bool drives the once-per-batch
+    # on_start/on_finish hooks and the summary popup.
+    edge = {"active": False}
+
+    _ACTIVE_STATES = frozenset(
+        RUNNING_STATES | {JobState.PENDING, JobState.PAUSED_AUTH}
+    )
+
+    def _iter_scenes():
         try:
-            scene = bpy.context.scene
+            return list(bpy.data.scenes)
         except Exception:
-            return
-        if scene is None:
-            return
+            return []
 
+    def _set_flag(scene, value: bool) -> None:
+        try:
+            setattr(scene, property_name, value)
+        except (AttributeError, TypeError):
+            pass
+
+    def _on_queue_changed(queue: FeatureQueue) -> None:
+        snapshot = queue.snapshot()
+
+        # Scenes that submitted a job that is still active. Falls back to the
+        # currently active scene only for jobs that predate scene tracking.
+        active_scene_names = {
+            j.scene_name for j in snapshot
+            if j.scene_name and j.state in _ACTIVE_STATES
+        }
         has_work = queue.has_active_work()
-        was_active = bool(getattr(scene, property_name, False))
 
-        if has_work and not was_active:
-            try:
-                setattr(scene, property_name, True)
-            except (AttributeError, TypeError):
-                pass
-            if on_start is not None:
-                try:
-                    on_start(scene)
-                except Exception:
-                    pass
+        if has_work:
+            scenes_by_name = {s.name: s for s in _iter_scenes()}
+            targets = [scenes_by_name[n] for n in active_scene_names if n in scenes_by_name]
+            if not targets:
+                fallback = getattr(bpy.context, "scene", None)
+                if fallback is not None:
+                    targets = [fallback]
+            for scene in targets:
+                _set_flag(scene, True)
+            if not edge["active"]:
+                edge["active"] = True
+                if on_start is not None:
+                    for scene in targets:
+                        try:
+                            on_start(scene)
+                        except Exception:
+                            pass
             return
 
-        if not has_work and was_active:
-            try:
-                setattr(scene, property_name, False)
-            except (AttributeError, TypeError):
-                pass
+        # Idle: clear the flag on EVERY scene that still carries it, so a scene
+        # the user has since switched away from is never left stuck True.
+        if edge["active"]:
+            edge["active"] = False
+            cleared = []
+            for scene in _iter_scenes():
+                if bool(getattr(scene, property_name, False)):
+                    _set_flag(scene, False)
+                    cleared.append(scene)
 
             if on_finish is not None:
-                try:
-                    on_finish(scene)
-                except Exception:
-                    pass
+                for scene in cleared:
+                    try:
+                        on_finish(scene)
+                    except Exception:
+                        pass
 
             if batch_popup_title:
-                snapshot = queue.snapshot()
                 succeeded = sum(
                     1 for j in snapshot if j.state == JobState.SUCCESS
                 )

@@ -25,42 +25,12 @@ from bpy_extras.io_utils import ExportHelper
 
 from mixar.config.logging_config import get_logger
 
+from ...core.chat_serializer import (
+    restore_propgroup as _restore_propgroup,
+    snapshot_propgroup as _snapshot_propgroup,
+)
+
 logger = get_logger(__name__)
-
-
-def _is_collection_property(item) -> bool:
-    """True if ``item`` is a bpy_prop_collection wrapper (CollectionProperty).
-
-    These can't be deep-copied via ``getattr`` because Blender returns a
-    live reference into the parent struct. ``coll.clear()`` on the parent
-    invalidates these references — meaning a naive snapshot becomes a
-    list of pointers to freed memory.
-    """
-    # Avoid importing bpy at module-load — only available inside Blender.
-    return type(item).__name__ in ("bpy_prop_collection", "bpy_prop_collection_idprop")
-
-
-def _snapshot_propgroup(pg):
-    """Recursively materialise a PropertyGroup into nested Python dicts.
-
-    Each leaf is a scalar copy (str/int/float/bool). Nested
-    CollectionProperty fields become lists of dicts. The result is
-    safe to persist across a ``coll.clear()`` on the owning collection
-    because nothing in the returned structure holds a Blender pointer.
-    """
-    out = {}
-    for prop_name in pg.bl_rna.properties.keys():
-        if prop_name == "rna_type":
-            continue
-        try:
-            value = getattr(pg, prop_name)
-        except Exception:
-            continue
-        if _is_collection_property(value):
-            out[prop_name] = [_snapshot_propgroup(item) for item in value]
-        else:
-            out[prop_name] = value
-    return out
 
 
 def _snapshot_chat(scenes) -> dict:
@@ -77,39 +47,6 @@ def _snapshot_chat(scenes) -> dict:
         messages = list(getattr(scene, "mixie_chat_messages", []))
         snapshot[scene.name] = [_snapshot_propgroup(msg) for msg in messages]
     return snapshot
-
-
-def _restore_propgroup(pg, data: dict) -> None:
-    """Inverse of ``_snapshot_propgroup`` — populate ``pg`` from data dict.
-
-    Nested CollectionProperties get cleared, then rebuilt entry-by-entry
-    via ``coll.add()`` followed by a recursive restore. Scalar leaves
-    are set via ``setattr``; set failures (read-only, schema-changed,
-    type-mismatched) are skipped quietly so a partial restore still
-    yields a usable in-memory state.
-    """
-    for prop_name, value in data.items():
-        if isinstance(value, list):
-            # Nested collection — clear and rebuild.
-            try:
-                sub_coll = getattr(pg, prop_name)
-            except Exception:
-                continue
-            if not _is_collection_property(sub_coll):
-                continue
-            sub_coll.clear()
-            for entry in value:
-                new_item = sub_coll.add()
-                if isinstance(entry, dict):
-                    _restore_propgroup(new_item, entry)
-        else:
-            try:
-                setattr(pg, prop_name, value)
-            except Exception:
-                # Read-only properties (e.g. computed), schema mismatch,
-                # or wrong-type fields. Skip rather than tank the
-                # restore on one bad leaf.
-                pass
 
 
 def _strip_chat(scenes) -> int:

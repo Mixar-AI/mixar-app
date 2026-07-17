@@ -313,6 +313,7 @@ def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
                         "job": {
                             "job_id": "job-ws",
                             "state": "succeeded",
+                            "model": "flux-fast",
                             "result": {"result_files": []},
                         }
                     }
@@ -332,6 +333,7 @@ def test_terminal_job_update_reconciles_with_ws_get(monkeypatch):
     assert job.poll_calls == 0
     assert job.handled is True
     assert job.state == JobState.SUCCESS
+    assert job.model == "flux-fast"
 
 
 def test_dlq_job_update_fails_immediately(monkeypatch):

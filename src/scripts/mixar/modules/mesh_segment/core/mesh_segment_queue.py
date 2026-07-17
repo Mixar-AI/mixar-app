@@ -22,7 +22,10 @@ from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
+
 logger = get_logger(__name__)
+
+_SERVICE_KEY = "mesh_segment"
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +62,7 @@ class MeshSegmentJob(Job):
             "expected_parts": self.expected_parts,
         }
         service.enqueue(
-            job_type="mesh_segment",
+            job_type=_SERVICE_KEY,
             model=self.model or "mesh_segment_v1",
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
@@ -193,6 +196,8 @@ def enqueue_mesh_segment_job(
     job = MeshSegmentJob(
         feature_key=FEATURE_MESH_SEGMENT,
         label=f"Segment: {mesh_object_name}",
+        display_label=mesh_object_name,
+        service=_SERVICE_KEY,
         mesh_bytes_b64=_b64.b64encode(mesh_bytes).decode(),
         mesh_filename="mesh.obj",
         description=description,

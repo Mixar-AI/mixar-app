@@ -45,6 +45,9 @@ class AsyncGLBJob(Job):
     payload: dict = field(default_factory=dict)
     fail_message: str = "Generation failed"
     _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
+    # Extra glTF import operator kwargs (GLB only). Animate uses this to
+    # keep Tripo rigged/animated imports from collapsing — see model_io.
+    import_options: Optional[dict] = field(default=None, repr=False)
 
     _processing_started: bool = False
 
