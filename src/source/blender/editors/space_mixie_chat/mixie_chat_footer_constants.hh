@@ -51,9 +51,12 @@
 /* Gap between the input field and the dropdown panel (unscaled pixels) */
 #define FOOTER_MENTION_GAP_BASE 4
 
-/* Maximum visible suggestion rows. Matches MENTION_MAX_ITEMS in the Python
- * side (space_mixie_chat/constants.py) — Python never fills more items. */
+/* VISIBLE suggestion rows — the dropdown scrolls when more items match. */
 #define FOOTER_MENTION_MAX_ROWS 6
+
+/* Maximum total items in the scrollable list. Matches MENTION_MAX_ITEMS in
+ * the Python side (space_mixie_chat/constants.py) — Python never fills more. */
+#define FOOTER_MENTION_MAX_ITEMS 50
 
 /* Maximum published query length in bytes (includes the leading '@').
  * Matches the maxlen of scene.mixie_chat_mention_query. */

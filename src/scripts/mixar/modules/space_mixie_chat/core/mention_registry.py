@@ -4,8 +4,10 @@
 
 """'@' mention candidate registry for the Mixie Chat composer.
 
-Supplies the names the mention dropdown can complete: root objects of the
-current scene, materials, and asset-marked datablocks. Modeled on the dev
+Supplies the names the mention dropdown can complete: every object of the
+current scene (components included — the dropdown scrolls, so a chair's
+legs/slats/cushion are all reachable), materials, and asset-marked
+datablocks. Modeled on the dev
 scene-graph registry/store (scripts/dev/scene_graph/{registry,store}.py):
 one module-level singleton, name-keyed candidates, a cheap dirty flag set
 from a depsgraph handler and lazy refresh on query — so per-keystroke
@@ -145,9 +147,10 @@ class MentionRegistry:
                 candidates.append(Candidate(name, kind))
 
         try:
+            # ALL objects, not just roots — component parts (a chair's legs,
+            # slats, cushion) must be mentionable; the dropdown scrolls.
             for obj in scene.objects:
-                if obj.parent is None:
-                    add(obj.name, KIND_OBJECT)
+                add(obj.name, KIND_OBJECT)
         except Exception:
             logger.debug("mention registry: object scan failed", exc_info=True)
 

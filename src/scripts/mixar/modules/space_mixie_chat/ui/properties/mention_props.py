@@ -10,9 +10,9 @@ registry (core/mention_registry.py):
   - mixie_chat_mention_query: written from C++ on every composer edit
     (interface_handlers.cc detects the "@token" at the cursor). The update
     callback below runs synchronously and fills the rest.
-  - mixie_chat_mention_items / _active / _show: read back by C++ — the
-    footer draws the dropdown (mixie_chat_mention.cc) and the text-edit
-    hooks navigate/accept rows.
+  - mixie_chat_mention_items / _active / _scroll / _show: read back (and
+    navigated) by C++ — the footer draws the scrollable dropdown
+    (mixie_chat_mention.cc) and the text-edit hooks move/accept rows.
 
 Everything is SKIP_SAVE — mention state describes the in-flight composer,
 never the saved scene.
@@ -88,6 +88,7 @@ def on_mention_query_changed(self, context):
                 item.kind = match.kind
                 item.insert_text = match.insert_text
             self.mixie_chat_mention_active = 0
+            self.mixie_chat_mention_scroll = 0
             self.mixie_chat_mention_show = bool(matches)
 
         # The edited footer redraws anyway; this keeps the OTHER chat
@@ -128,7 +129,15 @@ def register():
     )
     bpy.types.Scene.mixie_chat_mention_active = IntProperty(
         name="Active Mention",
-        description="Highlighted dropdown row (keyboard + hover)",
+        description="Highlighted dropdown item (keyboard + hover)",
+        default=0,
+        min=0,
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    bpy.types.Scene.mixie_chat_mention_scroll = IntProperty(
+        name="Mention Scroll",
+        description="First visible dropdown item (list scrolls when more "
+                    "than the visible row count match)",
         default=0,
         min=0,
         options={'SKIP_SAVE', 'HIDDEN'},
@@ -154,6 +163,7 @@ def unregister():
         'mixie_chat_mention_query',
         'mixie_chat_mention_items',
         'mixie_chat_mention_active',
+        'mixie_chat_mention_scroll',
         'mixie_chat_mention_show',
     ):
         if hasattr(bpy.types.Scene, attr):

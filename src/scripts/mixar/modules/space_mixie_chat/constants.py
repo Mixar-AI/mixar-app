@@ -271,9 +271,10 @@ CHAT_INPUT_MAXLEN = 10000
 # '@' MENTION AUTOCOMPLETE
 # ============================================================================
 
-# Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
-# mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
-MENTION_MAX_ITEMS = 6
+# Max TOTAL suggestions in the scrollable dropdown list. Must match
+# FOOTER_MENTION_MAX_ITEMS in mixie_chat_footer_constants.hh; the C++ side
+# shows FOOTER_MENTION_MAX_ROWS (6) rows at a time and scrolls the rest.
+MENTION_MAX_ITEMS = 50
 
 # Max published query length in bytes (leading '@' included). Must match
 # MENTION_QUERY_MAX in mixie_chat_footer_constants.hh.

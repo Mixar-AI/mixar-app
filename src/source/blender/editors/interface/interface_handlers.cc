@@ -3740,6 +3740,8 @@ void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
+bool mixie_chat_mention_panel_hit(Scene *scene, const ARegion *region, const int xy[2]);
+void mixie_chat_mention_scroll_by(Scene *scene, int delta);
 
 /* Keep in sync with MENTION_QUERY_MAX / the insert_text maxlen in
  * mixie_chat_footer_constants.hh + mention_props.py. */
@@ -4407,11 +4409,20 @@ static int ui_do_but_textedit(
           break;
         }
         /* Mixar: with the @-mention dropdown open, Down navigates the
-         * suggestions instead of moving the text cursor. */
-        if (event->type == EVT_DOWNARROWKEY) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
+         * suggestions instead of moving the text cursor, and the wheel over
+         * the dropdown panel scrolls the list. */
+        if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
+          if (mixie_chat_mention_is_open(mention_scene)) {
+            if (event->type == EVT_DOWNARROWKEY) {
               mixie_chat_mention_step(mention_scene, +1);
+              ED_region_tag_redraw(data->region);
+              retval = WM_UI_HANDLER_BREAK;
+              break;
+            }
+            if (event->type == WHEELDOWNMOUSE &&
+                mixie_chat_mention_panel_hit(mention_scene, data->region, event->xy))
+            {
+              mixie_chat_mention_scroll_by(mention_scene, +1);
               ED_region_tag_redraw(data->region);
               retval = WM_UI_HANDLER_BREAK;
               break;
@@ -4450,11 +4461,20 @@ static int ui_do_but_textedit(
           break;
         }
         /* Mixar: with the @-mention dropdown open, Up navigates the
-         * suggestions instead of moving the text cursor. */
-        if (event->type == EVT_UPARROWKEY) {
-          if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
-            if (mixie_chat_mention_is_open(mention_scene)) {
+         * suggestions instead of moving the text cursor, and the wheel over
+         * the dropdown panel scrolls the list. */
+        if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
+          if (mixie_chat_mention_is_open(mention_scene)) {
+            if (event->type == EVT_UPARROWKEY) {
               mixie_chat_mention_step(mention_scene, -1);
+              ED_region_tag_redraw(data->region);
+              retval = WM_UI_HANDLER_BREAK;
+              break;
+            }
+            if (event->type == WHEELUPMOUSE &&
+                mixie_chat_mention_panel_hit(mention_scene, data->region, event->xy))
+            {
+              mixie_chat_mention_scroll_by(mention_scene, -1);
               ED_region_tag_redraw(data->region);
               retval = WM_UI_HANDLER_BREAK;
               break;

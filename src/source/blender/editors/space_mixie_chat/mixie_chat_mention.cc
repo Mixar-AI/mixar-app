@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "BLI_math_vector.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
@@ -177,13 +178,53 @@ bool mixie_chat_mention_is_open(Scene *scene)
   return mention_items_len(&scene_ptr) > 0;
 }
 
-int mixie_chat_mention_row_count(Scene *scene)
+int mixie_chat_mention_total_count(Scene *scene)
 {
   if (!mixie_chat_mention_is_open(scene)) {
     return 0;
   }
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  return std::min(mention_items_len(&scene_ptr), FOOTER_MENTION_MAX_ROWS);
+  return std::min(mention_items_len(&scene_ptr), FOOTER_MENTION_MAX_ITEMS);
+}
+
+int mixie_chat_mention_row_count(Scene *scene)
+{
+  return std::min(mixie_chat_mention_total_count(scene), FOOTER_MENTION_MAX_ROWS);
+}
+
+int mixie_chat_mention_scroll_get(Scene *scene)
+{
+  if (!scene) {
+    return 0;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  PropertyRNA *prop = mention_prop_find(&scene_ptr, "mixie_chat_mention_scroll");
+  if (!prop) {
+    return 0;
+  }
+  const int max_scroll = std::max(
+      0, mixie_chat_mention_total_count(scene) - FOOTER_MENTION_MAX_ROWS);
+  return std::clamp(RNA_property_int_get(&scene_ptr, prop), 0, max_scroll);
+}
+
+void mixie_chat_mention_scroll_set(Scene *scene, int scroll)
+{
+  if (!scene) {
+    return;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  PropertyRNA *prop = mention_prop_find(&scene_ptr, "mixie_chat_mention_scroll");
+  if (!prop) {
+    return;
+  }
+  const int max_scroll = std::max(
+      0, mixie_chat_mention_total_count(scene) - FOOTER_MENTION_MAX_ROWS);
+  RNA_property_int_set(&scene_ptr, prop, std::clamp(scroll, 0, max_scroll));
+}
+
+void mixie_chat_mention_scroll_by(Scene *scene, int delta)
+{
+  mixie_chat_mention_scroll_set(scene, mixie_chat_mention_scroll_get(scene) + delta);
 }
 
 int mixie_chat_mention_active_get(Scene *scene)
@@ -209,19 +250,29 @@ void mixie_chat_mention_active_set(Scene *scene, int index)
   if (!prop) {
     return;
   }
-  const int count = std::min(mention_items_len(&scene_ptr), FOOTER_MENTION_MAX_ROWS);
+  const int count = std::min(mention_items_len(&scene_ptr), FOOTER_MENTION_MAX_ITEMS);
   index = (count > 0) ? std::clamp(index, 0, count - 1) : 0;
   RNA_property_int_set(&scene_ptr, prop, index);
 }
 
 void mixie_chat_mention_step(Scene *scene, int dir)
 {
-  const int count = mixie_chat_mention_row_count(scene);
-  if (count <= 0) {
+  const int total = mixie_chat_mention_total_count(scene);
+  if (total <= 0) {
     return;
   }
-  const int active = mixie_chat_mention_active_get(scene);
-  mixie_chat_mention_active_set(scene, (active + dir + count) % count);
+  const int active = (mixie_chat_mention_active_get(scene) + dir + total) % total;
+  mixie_chat_mention_active_set(scene, active);
+
+  /* Keep the active row inside the visible window (scroll follows). */
+  int scroll = mixie_chat_mention_scroll_get(scene);
+  if (active < scroll) {
+    scroll = active;
+  }
+  else if (active >= scroll + FOOTER_MENTION_MAX_ROWS) {
+    scroll = active - FOOTER_MENTION_MAX_ROWS + 1;
+  }
+  mixie_chat_mention_scroll_set(scene, scroll);
 }
 
 void mixie_chat_mention_dismiss(Scene *scene)
@@ -249,7 +300,7 @@ int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncp
     return 0;
   }
   const int count = std::min(RNA_property_collection_length(&scene_ptr, items_prop),
-                             FOOTER_MENTION_MAX_ROWS);
+                             FOOTER_MENTION_MAX_ITEMS);
   if (count <= 0) {
     return 0;
   }
@@ -333,12 +384,28 @@ int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy
   const int count = mixie_chat_mention_rows_get(scene, region->winx, nullptr, rows);
   const float rx = float(xy[0] - region->winrct.xmin);
   const float ry = float(xy[1] - region->winrct.ymin);
-  for (int i = 0; i < count; i++) {
-    if (BLI_rctf_isect_pt(&rows[i], rx, ry)) {
-      return i;
+  const int scroll = mixie_chat_mention_scroll_get(scene);
+  const int total = mixie_chat_mention_total_count(scene);
+  for (int slot = 0; slot < count; slot++) {
+    if (BLI_rctf_isect_pt(&rows[slot], rx, ry)) {
+      const int index = scroll + slot;
+      return (index < total) ? index : -1;
     }
   }
   return -1;
+}
+
+bool mixie_chat_mention_panel_hit(Scene *scene, const ARegion *region, const int xy[2])
+{
+  if (!region) {
+    return false;
+  }
+  rctf panel;
+  if (mixie_chat_mention_rows_get(scene, region->winx, &panel, nullptr) <= 0) {
+    return false;
+  }
+  return BLI_rctf_isect_pt(
+      &panel, float(xy[0] - region->winrct.xmin), float(xy[1] - region->winrct.ymin));
 }
 
 /** \} */
@@ -387,7 +454,9 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
   if (!items_prop) {
     return;
   }
-  const int active = std::clamp(mixie_chat_mention_active_get(scene), 0, count - 1);
+  const int total = mixie_chat_mention_total_count(scene);
+  const int scroll = mixie_chat_mention_scroll_get(scene);
+  const int active = std::clamp(mixie_chat_mention_active_get(scene), 0, total - 1);
 
   const FooterThemeCache *theme = footer_cache_get_theme();
   const float scale = UI_SCALE_FAC;
@@ -401,9 +470,11 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
   const float radius = theme->border_radius * scale;
   chat_ui_draw_rounded_rect_bordered(&panel, radius, bg_color, theme->border_color, U.pixelsize);
 
-  /* Active row highlight (keyboard selection + mouse hover share it). */
-  if (active >= 0 && active < count) {
-    chat_ui_draw_rounded_rect(&rows[active], radius * 0.6f, theme->button_hover_color);
+  /* Active row highlight (keyboard selection + mouse hover share it),
+   * only when the active item is inside the visible window. */
+  const int active_slot = active - scroll;
+  if (active_slot >= 0 && active_slot < count) {
+    chat_ui_draw_rounded_rect(&rows[active_slot], radius * 0.6f, theme->button_hover_color);
   }
 
   float text_color[4];
@@ -415,21 +486,23 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
   const float icon_size = 16.0f * scale;
   const float inner_pad = 6.0f * scale;
 
-  CollectionPropertyIterator iter{};
-  RNA_property_collection_begin(&scene_ptr, items_prop, &iter);
-  for (int i = 0; iter.valid && i < count; RNA_property_collection_next(&iter), i++) {
+  for (int slot = 0; slot < count; slot++) {
+    PointerRNA item_ptr;
+    if (!RNA_property_collection_lookup_int(&scene_ptr, items_prop, scroll + slot, &item_ptr)) {
+      continue;
+    }
     char name[320] = "";
     int kind = 0;
-    PropertyRNA *name_prop = RNA_struct_find_property(&iter.ptr, "name");
-    PropertyRNA *kind_prop = RNA_struct_find_property(&iter.ptr, "kind");
-    if (name_prop && RNA_property_string_length(&iter.ptr, name_prop) < int(sizeof(name))) {
-      RNA_property_string_get(&iter.ptr, name_prop, name);
+    PropertyRNA *name_prop = RNA_struct_find_property(&item_ptr, "name");
+    PropertyRNA *kind_prop = RNA_struct_find_property(&item_ptr, "kind");
+    if (name_prop && RNA_property_string_length(&item_ptr, name_prop) < int(sizeof(name))) {
+      RNA_property_string_get(&item_ptr, name_prop, name);
     }
     if (kind_prop) {
-      kind = RNA_property_int_get(&iter.ptr, kind_prop);
+      kind = RNA_property_int_get(&item_ptr, kind_prop);
     }
 
-    const rctf *row = &rows[i];
+    const rctf *row = &rows[slot];
     const float row_cy = (row->ymin + row->ymax) * 0.5f;
 
     /* Type icon at the left edge (same aspect convention as
@@ -458,7 +531,34 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
                        kind_color,
                        true);
   }
-  RNA_property_collection_end(&iter);
+
+  /* Slim scrollbar on the right edge when the list overflows the window. */
+  if (total > count) {
+    const float track_w = 3.0f * scale;
+    const float track_pad = 2.0f * scale;
+    rctf track;
+    track.xmax = panel.xmax - track_pad;
+    track.xmin = track.xmax - track_w;
+    track.ymin = panel.ymin + track_pad;
+    track.ymax = panel.ymax - track_pad;
+
+    float track_color[4];
+    copy_v4_v4(track_color, theme->border_color);
+    track_color[3] *= 0.35f;
+    chat_ui_draw_rounded_rect(&track, track_w * 0.5f, track_color);
+
+    const float track_h = track.ymax - track.ymin;
+    const float thumb_h = std::max(track_h * float(count) / float(total), 6.0f * scale);
+    const int max_scroll = total - count;
+    /* Scroll 0 = window at the TOP of the list, so the thumb starts at the
+     * track top and moves down as the scroll offset grows. */
+    const float thumb_top = track.ymax -
+                            (track_h - thumb_h) * (float(scroll) / float(max_scroll));
+    rctf thumb = track;
+    thumb.ymax = thumb_top;
+    thumb.ymin = thumb_top - thumb_h;
+    chat_ui_draw_rounded_rect(&thumb, track_w * 0.5f, theme->border_color);
+  }
 
   GPU_blend(GPU_BLEND_NONE);
 }

@@ -240,11 +240,18 @@ bool mixie_chat_mention_detect(const char *text,
 void mixie_chat_mention_publish(bContext *C, Scene *scene, const char *query);
 
 bool mixie_chat_mention_is_open(Scene *scene);
+/** Total items in the scrollable list (<= FOOTER_MENTION_MAX_ITEMS). */
+int mixie_chat_mention_total_count(Scene *scene);
+/** VISIBLE rows (<= FOOTER_MENTION_MAX_ROWS). */
 int mixie_chat_mention_row_count(Scene *scene);
 int mixie_chat_mention_active_get(Scene *scene);
 void mixie_chat_mention_active_set(Scene *scene, int index);
-/** Move the active row by `dir` (+1/-1), wrapping. */
+/** Move the active row by `dir` (+1/-1), wrapping; scroll follows. */
 void mixie_chat_mention_step(Scene *scene, int dir);
+/** First visible item index (clamped to the current list). */
+int mixie_chat_mention_scroll_get(Scene *scene);
+void mixie_chat_mention_scroll_set(Scene *scene, int scroll);
+void mixie_chat_mention_scroll_by(Scene *scene, int delta);
 /** Hide the dropdown (keeps the query; typing re-evaluates). */
 void mixie_chat_mention_dismiss(Scene *scene);
 /** Copy the active item's replacement text ("@Name ") into `r_buf`.
@@ -257,8 +264,10 @@ int mixie_chat_mention_rows_get(Scene *scene,
                                 int region_winx,
                                 rctf *r_panel,
                                 rctf r_rows[FOOTER_MENTION_MAX_ROWS]);
-/** \return row index under the WINDOW-space point `xy`, or -1. */
+/** \return ITEM index (scroll applied) under the WINDOW-space point `xy`, or -1. */
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
+/** True when the WINDOW-space point `xy` is inside the dropdown panel. */
+bool mixie_chat_mention_panel_hit(Scene *scene, const ARegion *region, const int xy[2]);
 void mixie_chat_mention_draw(Scene *scene, ARegion *region);
 
 /** \} */
