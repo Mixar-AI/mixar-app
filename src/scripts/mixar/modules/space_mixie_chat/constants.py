@@ -268,6 +268,22 @@ CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
 
 # ============================================================================
+# '@' MENTION AUTOCOMPLETE
+# ============================================================================
+
+# Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
+# mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
+MENTION_MAX_ITEMS = 6
+
+# Max published query length in bytes (leading '@' included). Must match
+# MENTION_QUERY_MAX in mixie_chat_footer_constants.hh.
+MENTION_QUERY_MAXLEN = 96
+
+# Max replacement text length. The C++ accept path reads insert_text into a
+# 320-byte buffer (MIXIE_MENTION_INSERT_SIZE) and refuses longer values.
+MENTION_INSERT_MAXLEN = 300
+
+# ============================================================================
 # IMAGE ATTACHMENT CONSTANTS
 # ============================================================================
 
