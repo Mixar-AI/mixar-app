@@ -3739,7 +3739,6 @@ void mixie_chat_mention_step(Scene *scene, int dir);
 void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
-void mixie_chat_mention_notify_accepted(bContext *C, Scene *scene);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
 
 /* Keep in sync with MENTION_QUERY_MAX / the insert_text maxlen in
@@ -3796,13 +3795,7 @@ static bool ui_textedit_mention_accept(bContext *C,
 
   but->selsta = short(tok_start);
   but->selend = short(tok_end);
-  const bool accepted = ui_textedit_insert_buf(but, text_edit, insert_buf, insert_len);
-  if (accepted) {
-    /* Python syncs the viewport selection to the mentioned assets (deferred
-     * to a timer, so it runs after the composer text has been applied). */
-    mixie_chat_mention_notify_accepted(C, scene);
-  }
-  return accepted;
+  return ui_textedit_insert_buf(but, text_edit, insert_buf, insert_len);
 }
 
 /** \} */

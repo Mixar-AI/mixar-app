@@ -236,42 +236,6 @@ void mixie_chat_mention_dismiss(Scene *scene)
   }
 }
 
-void mixie_chat_mention_notify_accepted(bContext *C, Scene *scene)
-{
-  if (!scene) {
-    return;
-  }
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *items_prop = mention_prop_find(&scene_ptr, "mixie_chat_mention_items");
-  PropertyRNA *accepted_prop = mention_prop_find(&scene_ptr, "mixie_chat_mention_accepted");
-  if (!items_prop || !accepted_prop) {
-    return;
-  }
-  const int count = std::min(RNA_property_collection_length(&scene_ptr, items_prop),
-                             FOOTER_MENTION_MAX_ROWS);
-  if (count <= 0) {
-    return;
-  }
-  const int active = std::clamp(mixie_chat_mention_active_get(scene), 0, count - 1);
-
-  PointerRNA item_ptr;
-  if (!RNA_property_collection_lookup_int(&scene_ptr, items_prop, active, &item_ptr)) {
-    return;
-  }
-  PropertyRNA *name_prop = RNA_struct_find_property(&item_ptr, "name");
-  char name[320] = "";
-  if (!name_prop || RNA_property_string_length(&item_ptr, name_prop) >= int(sizeof(name))) {
-    return;
-  }
-  RNA_property_string_get(&item_ptr, name_prop, name);
-
-  /* The Python update callback (mention_props.on_mention_accepted) schedules
-   * the viewport selection sync on a timer — by the time it runs, the
-   * composer apply has landed and the input text contains the mention. */
-  RNA_property_string_set(&scene_ptr, accepted_prop, name);
-  RNA_property_update(C, &scene_ptr, accepted_prop);
-}
-
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy)
 {
   if (!scene || !r_buf || buf_maxncpy < 2) {

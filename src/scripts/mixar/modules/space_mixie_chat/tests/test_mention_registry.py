@@ -32,9 +32,6 @@ from mixar.modules.space_mixie_chat.core.mention_registry import (  # noqa: E402
     format_mention,
     rank_matches,
 )
-from mixar.modules.space_mixie_chat.core.mention_select import (  # noqa: E402
-    parse_mentions,
-)
 from mixar.modules.space_mixie_chat.constants import (  # noqa: E402
     MENTION_INSERT_MAXLEN,
     MENTION_MAX_ITEMS,
@@ -120,36 +117,3 @@ class TestRankMatches:
             m for m in rank_matches(CANDIDATES, "sword") if m.name == "Sword Handle"
         )
         assert match.insert_text == '@"Sword Handle" '
-
-
-class TestParseMentions:
-    """Text-side of the round trip: whatever accept inserts, the viewport
-    selection sync must parse back out (mention_select.parse_mentions)."""
-
-    def test_bare_mention(self):
-        assert parse_mentions("move @Sword up") == ["Sword"]
-
-    def test_quoted_mention_with_spaces(self):
-        assert parse_mentions('rotate @"Sword Handle" by 90') == ["Sword Handle"]
-
-    def test_round_trips_format_mention(self):
-        for name in ("Sword", "Sword Handle", "Lamp.001"):
-            text = "please move " + format_mention(name) + "to the left"
-            assert parse_mentions(text) == [name]
-
-    def test_multiple_mentions_ordered_deduped(self):
-        text = 'put @Lamp on @"Tea Table" next to @Lamp'
-        assert parse_mentions(text) == ["Lamp", "Tea Table"]
-
-    def test_start_of_text(self):
-        assert parse_mentions("@Sofa should face the window") == ["Sofa"]
-
-    def test_email_not_a_mention(self):
-        assert parse_mentions("mail user@example.com about it") == []
-
-    def test_newline_boundary(self):
-        assert parse_mentions("first line\n@Rug second") == ["Rug"]
-
-    def test_empty_and_none(self):
-        assert parse_mentions("") == []
-        assert parse_mentions(None) == []
