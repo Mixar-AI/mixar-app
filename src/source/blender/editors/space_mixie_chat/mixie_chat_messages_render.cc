@@ -438,7 +438,14 @@ void mixie_chat_render_messages(const bContext *C,
   }
 
   if (win) {
-    WM_cursor_set(win, any_button_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+    /* The Agent Bubble never shows the hand cursor (see
+     * mixie_chat_main_region_cursor) — hover highlights still draw. */
+    ScrArea *cursor_area = CTX_wm_area(C);
+    const bool suppress_hand = (cursor_area &&
+                                cursor_area->spacetype == SPACE_AGENT_BUBBLE);
+    WM_cursor_set(win,
+                  (any_button_hovered && !suppress_hand) ? WM_CURSOR_HAND :
+                                                           WM_CURSOR_DEFAULT);
   }
 
   /* Request redraw while slide-in animation is active */

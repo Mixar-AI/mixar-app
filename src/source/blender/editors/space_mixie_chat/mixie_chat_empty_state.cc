@@ -276,7 +276,9 @@ void mixie_chat_draw_empty_state(const bContext *C,
     ED_area_tag_redraw(area);
   }
 
-  /* Set cursor to hand when hovering over any bubble */
+  /* Set cursor to hand when hovering over any bubble. The Agent Bubble
+   * never shows the hand cursor (see mixie_chat_main_region_cursor) —
+   * hover highlights still draw. */
   bool any_hovered = false;
   for (int i = 0; i < CHAT_EMPTY_PROMPT_COUNT; i++) {
     if (rt->empty_prompts[i].is_hovered) {
@@ -284,8 +286,11 @@ void mixie_chat_draw_empty_state(const bContext *C,
       break;
     }
   }
+  const bool suppress_hand = (area && area->spacetype == SPACE_AGENT_BUBBLE);
   if (prompt_win) {
-    WM_cursor_set(prompt_win, any_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+    WM_cursor_set(prompt_win,
+                  (any_hovered && !suppress_hand) ? WM_CURSOR_HAND :
+                                                    WM_CURSOR_DEFAULT);
   }
 }
 
