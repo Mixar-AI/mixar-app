@@ -149,6 +149,19 @@ def classify_script_action(script: str) -> str:
         "metaballs.new", "object.add(", "objects.new(",
     ))
     if not creates_geometry:
+        # Read-only query/inspection FIRST: a script that only READS scene data
+        # must never earn an action label — verification snapshots mention
+        # material_slots/uv_layers/data.lights and were mislabelled "Applied
+        # materials"/"Set up lighting" on every prompt. Many "Ran a tool" rows
+        # are these ("Getting scene state…"). If a mutation slips through,
+        # finish_step_on_bubble overrides this with the counts.
+        mutates = any(k in s for k in (
+            ".new(", "_add(", "delete", "remove(", ".append(", "ops.object",
+            "ops.transform", "ops.import", "ops.export", "= bpy.data", "link("))
+        reads = any(k in s for k in (
+            "bpy.data", "context.scene", "context.view_layer", "context.object"))
+        if reads and not mutates:
+            return "Inspected scene"
         if any(k in s for k in (
                 "data.materials", "material_slots", "node_tree", "principled",
                 "data.images", "image_texture", ".uv_layers", "bsdf")):
@@ -164,16 +177,6 @@ def classify_script_action(script: str) -> str:
             return "Set up lighting"
         if "modifier_add" in s or "modifiers.new" in s:
             return "Added modifier"
-        # Read-only query/inspection: reads scene data with no mutation. Many
-        # "Ran a tool" rows are these ("Getting scene state…"). If a mutation
-        # slips through, finish_step_on_bubble overrides this with the counts.
-        mutates = any(k in s for k in (
-            ".new(", "_add(", "delete", "remove(", ".append(", "ops.object",
-            "ops.transform", "ops.import", "ops.export", "= bpy.data", "link("))
-        reads = any(k in s for k in (
-            "bpy.data", "context.scene", "context.view_layer", "context.object"))
-        if reads and not mutates:
-            return "Inspected scene"
     return ""
 
 
