@@ -30,15 +30,17 @@ def test_feedback_comment_requires_rating_and_deduplicates_submission():
     assert policy.validate_feedback_comment(5, "useful note", False) is None
 
 
-def test_feedback_post_checks_status_and_preserves_failed_comment():
+def test_feedback_post_is_optimistic_fire_and_forget():
     source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
 
     assert "response.raise_for_status()" in source
     assert "feedback_comment_submitting = True" in source
     assert "feedback_comment_submitting = False" in source
     assert "_feedback_post_queue.put(post)" in source
-    assert "current.feedback_comment_expanded = True" in source
-    assert 'current.feedback_comment = ""' in source
+    # Optimistic submit clears the field and shows "received" immediately;
+    # a transport failure is never surfaced back to the user.
+    assert 'msg.feedback_comment = ""' in source
+    assert "FEEDBACK_STATUS_FAILED" not in source
     assert "comment_length=" in source
     assert "comment[:50]" not in source
 
@@ -70,14 +72,11 @@ def test_feedback_submission_shows_inline_confirmation():
     """Rating and comment submissions must surface a visible received state."""
     ops_source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
 
-    # Both flows drive the shared status lifecycle.
-    assert "FEEDBACK_STATUS_SENDING" in ops_source
+    # Both flows show the received state immediately (optimistic).
     assert "FEEDBACK_STATUS_RECEIVED" in ops_source
-    assert "FEEDBACK_STATUS_FAILED" in ops_source
-    # The accepted comment is kept for the read-only inline display.
-    assert "current.feedback_submitted_comment = comment" in ops_source
-    # The rating POST reports completion back to the UI.
-    assert "on_complete=lambda success: _set_feedback_status(" in ops_source
+    assert "msg.feedback_status = FEEDBACK_STATUS_RECEIVED" in ops_source
+    # The accepted comment is shown read-only immediately.
+    assert "msg.feedback_submitted_comment = comment" in ops_source
     # Submitted feedback is locked against revision, in the operator and in
     # the C++ hit-test/hover paths.
     assert "Feedback rating ignored (locked)" in ops_source
