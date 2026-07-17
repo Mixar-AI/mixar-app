@@ -301,6 +301,16 @@ class FeatureQueue:
             logger.warning("%s duplicate job rejected: %s", LOG_PREFIX, job.label)
             return False
         job.feature_key = self.feature_key
+        # Stamp the originating scene (submit runs on the main thread) so the
+        # scene-flag listener targets the scene that started the job, not
+        # whatever is active when a later notification fires.
+        if not job.scene_name:
+            try:
+                scene = getattr(bpy.context, "scene", None)
+                if scene is not None:
+                    job.scene_name = scene.name
+            except Exception:
+                pass
         self._jobs.append(job)
         self._notify()
         self._pump()

@@ -45,6 +45,11 @@ class Job:
 
     feature_key: str = ""
     label: str = ""
+    # Name of the scene that submitted this job. Captured at submit time so the
+    # scene-flag listener can set/clear the "generating" bool on the ORIGINATING
+    # scene rather than whatever scene happens to be active when a queue
+    # notification fires (which strands the flag when the user switches scenes).
+    scene_name: str = ""
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     state: JobState = JobState.PENDING
     error: str = ""
