@@ -455,7 +455,13 @@ class FeatureQueue:
                         get_notification_store,
                     )
                     message = job.user_message or job.error or "Generation failed"
-                    title = job.label or "Generation failed"
+                    # display_label strips the agent-batch prefix + dedup hash
+                    # ("ImageGen: a hero [3f2a]") that the raw label carries.
+                    title = (
+                        getattr(job, "display_label", "")
+                        or job.label
+                        or "Generation failed"
+                    )
                     get_notification_store().push(
                         "error", title, body=message, priority="high",
                     )

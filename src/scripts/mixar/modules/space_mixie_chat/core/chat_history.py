@@ -124,9 +124,19 @@ def _read_json(path: str):
 def _atomic_write_json(path: str, data) -> None:
     """Write via tmp+rename so a crash never leaves a half-written record."""
     tmp = f"{path}.{uuid.uuid4().hex[:8]}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, path)
+    except BaseException:
+        # A failed write (disk full, encoding error) must not strand the
+        # uniquely-named tmp file — archive runs every turn end, so leaks
+        # would accumulate one orphan per turn.
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 # =============================================================================
@@ -401,7 +411,18 @@ def _copy_media(snapshot: list, session_id: str) -> None:
     target_dir = media_dir(session_id)
     media_root_real = os.path.realpath(_media_root())
     copied = {}
+    # CHAT_HISTORY_MEDIA_MAX_BYTES is a per-SESSION cap, and archive runs at
+    # every turn end — seed the running total from what the session's media
+    # dir already holds, or each archive call would admit a fresh 50 MB.
     total_bytes = 0
+    try:
+        if os.path.isdir(target_dir):
+            with os.scandir(target_dir) as it:
+                total_bytes = sum(
+                    e.stat().st_size for e in it if e.is_file()
+                )
+    except OSError:
+        pass
 
     def _duplicate(src: str) -> str:
         nonlocal total_bytes

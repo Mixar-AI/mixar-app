@@ -127,10 +127,32 @@ class MIXIE_OT_agent_auto_rig(Operator):
             return _fail(context, f"Auto-rig submission failed: {e}")
 
         if not enqueued:
+            # Distinguish the queue's duplicate-label rejection from a real
+            # export/size failure — a wrong "export failed / too large" reason
+            # sends the agent down pointless corrective paths (decimation).
+            try:
+                from mixar.modules.common.job_queue.constants import FEATURE_ANIMATE
+                from mixar.modules.common.job_queue.core.queue_manager import (
+                    TERMINAL_STATES,
+                    get_queue,
+                )
+
+                duplicate = any(
+                    j.label == name and j.state not in TERMINAL_STATES
+                    for j in get_queue(FEATURE_ANIMATE)._jobs
+                )
+            except Exception:
+                duplicate = False
+            if duplicate:
+                return _fail(
+                    context,
+                    f"An auto-rig job for '{name}' is already queued or "
+                    "running — wait for it to finish.",
+                )
             return _fail(
                 context,
                 f"Could not queue auto-rig for '{name}' (export failed or "
-                "the mesh exceeds the 150 MB limit).",
+                "the mesh exceeds the 100 MB limit).",
             )
 
         # Mirror the interactive operator: flash the Animate/Auto Rig queue.

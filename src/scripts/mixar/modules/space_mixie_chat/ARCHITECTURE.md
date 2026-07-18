@@ -264,9 +264,11 @@ On a clean stream completion, `queue_processor.py` clears every stale
 `feedback_visible` flag and exposes the row only on the newest completed agent
 bubble. C++ layout/rendering lives in `mixie_chat_feedback.cc`; Python operators
 post `{session_id, bubble_id, rating, comment?}` to the backend without blocking
-Blender's main thread. Comments require a 1–5 rating, allow only one in-flight
-submission per bubble, clear after a successful HTTP response, and remain open
-for retry after a network or server failure. Completion callbacks return to the
+Blender's main thread. Comments require a 1–5 rating and allow only one in-flight
+submission per bubble. Submission is optimistic fire-and-forget: the field
+clears and the row shows "received" immediately; a transport failure after the
+POST was queued is never surfaced (a lost rating is non-critical). Only a
+failure to queue the POST at all (no session, config error) reopens the form. Completion callbacks return to the
 main thread through `main_thread_executor.run_on_main_thread` before touching RNA.
 
 ## Session lifecycle

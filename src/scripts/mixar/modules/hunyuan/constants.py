@@ -51,7 +51,7 @@ MAX_CONSECUTIVE_POLL_ERRORS = 5
 MAX_FILE_SIZE_PART = 100 * 1024 * 1024       # 100 MB
 MAX_FILE_SIZE_TOPOLOGY = 200 * 1024 * 1024   # 200 MB
 MAX_FILE_SIZE_TRIPO_RETOPOLOGY = 150 * 1024 * 1024  # 150 MB (Tripo mesh limit)
-MAX_FILE_SIZE_ANIMATE_RIG = 150 * 1024 * 1024  # 150 MB (Tripo rig-check GLB limit)
+MAX_FILE_SIZE_ANIMATE_RIG = 100 * 1024 * 1024  # 100 MB (backend job-queue upload cap; Tripo itself allows 150)
 MAX_FILE_SIZE_UV = 100 * 1024 * 1024         # 100 MB
 
 # ============================================================================
