@@ -414,10 +414,50 @@ class EventProcessor:
         """
         data = event.data
 
+        # In-band terminal error (backend refused the request before any slot
+        # streaming — e.g. a text-only model can't accept an attached image, or
+        # the connection wasn't found). These are non-slot legacy events; if we
+        # don't handle them here they'd be silently dropped and the turn would
+        # appear to cancel with no explanation. Surface as an agent bubble and
+        # return to IDLE (the backend has already sent [DONE]).
+        is_inband_error = event.event_type == "error" or (
+            isinstance(data, dict) and data.get("type") == "error"
+        )
+        if is_inband_error:
+            message = ""
+            if isinstance(data, dict):
+                message = data.get("message") or ""
+            self._handle_inband_error(
+                message or "The request could not be completed.", scene
+            )
+            return
+
         if self._slot_processor.is_slot_event(data):
             self._slot_processor.apply_event(data, scene)
         else:
             logger.warning(f"Received non-slot event (type={event.event_type}), ignoring")
+
+    def _handle_inband_error(self, message: str, scene) -> None:
+        """Render a terminal in-band error as an agent bubble and go IDLE.
+
+        Unlike a mid-stream transport failure (``_handle_sse_error_internal``,
+        which may keep BUSY so Abort stays visible), an in-band error event is a
+        clean refusal from the backend before any work started — always end the
+        turn and return to IDLE.
+        """
+        from .executor import get_executor
+        get_executor().end_agent_turn()
+
+        from .animation_manager import stop_loader_animation
+        stop_loader_animation()
+        self._clear_loader_bubbles(scene)
+
+        try:
+            add_agent_message(scene, message)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error adding in-band error message to chat: {e}")
+
+        self._session.set_state(scene, SessionState.IDLE)
 
     def _handle_sse_error_internal(self, error_message: str, scene) -> None:
         """Handle SSE stream-level error (called from main thread timer).

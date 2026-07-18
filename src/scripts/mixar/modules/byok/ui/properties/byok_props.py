@@ -19,7 +19,12 @@ Users see friendly labels; the IDs are what get sent to the server.
 import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
-from ...constants import BYOK_API_KEY_MAX_LENGTH, CODEX_DEFAULT_MODEL, DIALOG_STATE_ITEMS
+from ...constants import (
+    BYOK_API_KEY_MAX_LENGTH,
+    CODEX_DEFAULT_MODEL,
+    DIALOG_STATE_ITEMS,
+    OPENROUTER_DEFAULT_MODEL,
+)
 from ...core.model_suggestions import get_model_items, get_provider_items
 
 
@@ -62,11 +67,13 @@ _WM_ATTRS = (
     'byok_form_provider',
     'byok_form_model',
     'byok_form_api_key',
+    'byok_form_openrouter_model',
     'byok_form_codex_bundle',
     'byok_form_codex_model',
     'byok_is_active',
     'byok_current_provider',
     'byok_current_model',
+    'byok_current_supports_vision',
     'byok_key_preview',
     'byok_dialog_state',
     'byok_last_error',
@@ -103,6 +110,14 @@ def register():
         subtype='PASSWORD',
     )
 
+    # --- OpenRouter form field (shown when provider == 'openrouter'). The key
+    # reuses byok_form_api_key; only the model is free-text and OpenRouter-specific.
+    WM.byok_form_openrouter_model = StringProperty(
+        name="Model",
+        description="Any model slug from openrouter.ai/models (e.g. anthropic/claude-opus-4.8)",
+        default=OPENROUTER_DEFAULT_MODEL,
+    )
+
     # --- Codex form fields (shown when provider == 'codex') ---
     # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
     # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
@@ -129,6 +144,10 @@ def register():
     )
     WM.byok_current_provider = StringProperty(default='')
     WM.byok_current_model = StringProperty(default='')
+    # Whether the saved model accepts image input. Text-only models (many
+    # OpenRouter models) run chat fine but skip 3D visual feedback, so the
+    # dialog surfaces a note. Defaults True (platform + vision models).
+    WM.byok_current_supports_vision = BoolProperty(default=True)
     WM.byok_key_preview = StringProperty(default='')
 
     # --- Dialog state machine ---

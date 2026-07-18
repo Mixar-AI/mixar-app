@@ -52,6 +52,7 @@ def _clear_cached_state(wm):
     wm.byok_is_active = False
     wm.byok_current_provider = ''
     wm.byok_current_model = ''
+    wm.byok_current_supports_vision = True
     wm.byok_key_preview = ''
 
 
@@ -67,6 +68,8 @@ def _apply_cached_state(wm, data):
     if items and isinstance(items[0], dict):
         wm.byok_current_provider = items[0].get('provider', '') or ''
         wm.byok_current_model = items[0].get('model', '') or ''
+        # Absent on older backends → default to vision-capable (no false note).
+        wm.byok_current_supports_vision = bool(items[0].get('supports_vision', True))
         wm.byok_key_preview = items[0].get('key_preview', '') or ''
 
 
@@ -124,7 +127,11 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                         "Could not prefill provider %s — not in cache yet",
                         wm.byok_current_provider,
                     )
-            if model_suggestions.is_codex(wm.byok_current_provider):
+            if model_suggestions.is_openrouter(wm.byok_current_provider):
+                # OpenRouter uses a free-text model slug, not the catalog dropdown.
+                if wm.byok_current_model:
+                    wm.byok_form_openrouter_model = wm.byok_current_model
+            elif model_suggestions.is_codex(wm.byok_current_provider):
                 # Codex uses a free-text model slug, not the catalog dropdown.
                 if wm.byok_current_model:
                     wm.byok_form_codex_model = wm.byok_current_model
@@ -239,6 +246,16 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         else:
             self._draw_value_row(col, "API Key", wm.byok_key_preview or "Stored securely")
 
+        # Text-only model note: chat works, but 3D modeling/texturing runs
+        # without the viewport visual-feedback loop (images can't be sent).
+        if not wm.byok_current_supports_vision:
+            box.separator(factor=0.4)
+            note = box.column(align=True)
+            note.scale_y = 0.85
+            note.enabled = False
+            note.label(text="Text-only model — no image input.", icon='INFO')
+            note.label(text="Chat works; 3D tasks run without visual feedback.")
+
     def _draw_form(self, layout, wm, disabled: bool):
         box = layout.box()
         heading = box.row()
@@ -250,7 +267,9 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         col.enabled = not disabled
         self._draw_tall_prop(col, wm, 'byok_form_provider', "Provider")
 
-        if model_suggestions.is_codex(wm.byok_form_provider):
+        if model_suggestions.is_openrouter(wm.byok_form_provider):
+            self._draw_openrouter_fields(box, col, wm)
+        elif model_suggestions.is_codex(wm.byok_form_provider):
             self._draw_codex_fields(box, col, wm)
         else:
             self._draw_cloud_fields(box, col, wm)
@@ -269,6 +288,28 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         preview_hint = box.row()
         preview_hint.enabled = False
         preview_hint.label(text="After saving, only a masked preview is shown.")
+
+    def _draw_openrouter_fields(self, box, col, wm):
+        """Free-text model slug + API key for OpenRouter (base_url is fixed)."""
+        self._draw_tall_prop(col, wm, 'byok_form_openrouter_model', "Model")
+        self._draw_tall_prop(col, wm, 'byok_form_api_key', "API Key")
+
+        box.separator(factor=0.55)
+        warn = box.row()
+        warn.alert = True
+        warn.label(
+            text="Pick a model that supports tool / function calling — the agent needs it.",
+            icon='ERROR',
+        )
+        hint = box.row()
+        hint.enabled = False
+        hint.label(
+            text="Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8.",
+            icon='INFO',
+        )
+        key_hint = box.row()
+        key_hint.enabled = False
+        key_hint.label(text="Your key is stored encrypted; only a masked preview is shown after saving.")
 
     def _draw_codex_fields(self, box, col, wm):
         """Model slug + auto-load / paste of the ~/.codex/auth.json token bundle."""
@@ -371,6 +412,11 @@ class MIXAR_BYOK_OT_save(Operator):
         wm = context.window_manager
         if wm.byok_dialog_state == 'SAVING':
             return False
+        if model_suggestions.is_openrouter(wm.byok_form_provider):
+            # OpenRouter needs a model slug + API key.
+            return bool(wm.byok_form_openrouter_model.strip()) and bool(
+                wm.byok_form_api_key.strip()
+            )
         if model_suggestions.is_codex(wm.byok_form_provider):
             # Codex needs a model slug + the pasted auth.json bundle.
             return bool(wm.byok_form_codex_model.strip()) and bool(
@@ -386,6 +432,8 @@ class MIXAR_BYOK_OT_save(Operator):
         wm = context.window_manager
         provider = wm.byok_form_provider
 
+        if model_suggestions.is_openrouter(provider):
+            return self._execute_openrouter(wm)
         if model_suggestions.is_codex(provider):
             return self._execute_codex(wm)
 
@@ -403,6 +451,28 @@ class MIXAR_BYOK_OT_save(Operator):
 
         byok_client.save_credentials(
             provider=provider,
+            model=model,
+            api_key=api_key,
+            on_done=_on_save_done,
+        )
+        return {'FINISHED'}
+
+    def _execute_openrouter(self, wm):
+        """OpenRouter save: no client-side ping — the backend can reach
+        OpenRouter directly, so it validates the key + model slug on Save."""
+        model = wm.byok_form_openrouter_model.strip()
+        api_key = wm.byok_form_api_key.strip()
+        if not model or not api_key:
+            wm.byok_dialog_state = 'ERROR'
+            wm.byok_last_error = "Model slug and API key are required."
+            return {'CANCELLED'}
+
+        wm.byok_dialog_state = 'SAVING'
+        wm.byok_last_error = ''
+        _redraw_mixie_chat_areas()
+
+        byok_client.save_credentials(
+            provider='openrouter',
             model=model,
             api_key=api_key,
             on_done=_on_save_done,
