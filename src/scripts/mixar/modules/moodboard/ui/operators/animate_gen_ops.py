@@ -51,6 +51,18 @@ class MIXIE_OT_animate_generate(Operator):
         service_key = resolve_service_key(
             "animate", getattr(tab, "mode", "")
         ) or ANIMATE_RIG_SERVICE
+        if service_key != ANIMATE_RIG_SERVICE:
+            # enqueue_rig_jobs builds rig-shaped payloads (mesh upload, no
+            # rig_job_id). If the catalog ever surfaces another animate
+            # service (e.g. tripo_retarget) under this tab, submitting rig
+            # payloads to it would fail at the backend for every job — fail
+            # loudly here instead.
+            self.report(
+                {"ERROR"},
+                f"Auto Rig can't submit to service '{service_key}' — only "
+                f"'{ANIMATE_RIG_SERVICE}' is supported by this operator.",
+            )
+            return {"CANCELLED"}
         model = resolve_model_slug(
             service_key, getattr(tab, "model", ""), ANIMATE_RIG_MODEL,
         )

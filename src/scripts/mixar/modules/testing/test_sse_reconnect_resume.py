@@ -218,5 +218,38 @@ class SSEReconnectResumeTest(unittest.TestCase):
         self.assertEqual(self.errors, [])
 
 
+class TestHandlerSwapCarriesResumeCursor(unittest.TestCase):
+    """create_sse_handler must seed the new handler from the one it replaces.
+
+    Callers build a fresh handler for every stream leg, but an input stream
+    continues the same turn (and the backend continues its seq numbering) —
+    a cursor reset to -1 would make a mid-input-leg reconnect replay the
+    whole turn as duplicates.
+    """
+
+    def tearDown(self):
+        sh.cleanup_sse_handler("SceneA")
+
+    def _make(self):
+        return sh.create_sse_handler(
+            "SceneA", "http://host", lambda e: None, lambda m: None, lambda: None
+        )
+
+    def test_replacement_inherits_last_seq_and_session(self):
+        first = self._make()
+        first._last_seq = 41
+        first._session_id = "sess-1"
+
+        second = self._make()
+        self.assertIsNot(second, first)
+        self.assertEqual(second._last_seq, 41)
+        self.assertEqual(second._session_id, "sess-1")
+
+    def test_fresh_scene_starts_at_minus_one(self):
+        handler = self._make()
+        self.assertEqual(handler._last_seq, -1)
+        self.assertIsNone(handler._session_id)
+
+
 if __name__ == "__main__":
     unittest.main()

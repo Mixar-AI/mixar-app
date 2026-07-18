@@ -523,15 +523,19 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
                 )
                 # Optimistic fire-and-forget: show "received" immediately;
                 # the POST settles in the background and a transport failure
-                # is never surfaced — a lost rating is non-critical.
-                _post_feedback_async(
+                # is never surfaced — a lost rating is non-critical. But only
+                # lock the rating when the POST was actually queued: a False
+                # return (no session id, config error) means nothing was sent,
+                # and "received" would permanently refuse retry clicks.
+                queued = _post_feedback_async(
                     scene,
                     {
                         "bubble_id": self.bubble_id,
                         "rating": self.rating,
                     },
                 )
-                msg.feedback_status = FEEDBACK_STATUS_RECEIVED
+                if queued:
+                    msg.feedback_status = FEEDBACK_STATUS_RECEIVED
                 # Open the comment field right away so text feedback is
                 # discoverable — there is no separate toggle to find.
                 if not msg.feedback_comment_submitting:

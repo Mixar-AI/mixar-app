@@ -32,6 +32,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "MEM_guardedalloc.h"
+
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_userdef_types.h"
@@ -152,10 +154,20 @@ void mixie_chat_mention_publish(bContext *C, Scene *scene, const char *query)
     return; /* Python side not registered — feature off. */
   }
   /* Skip no-op writes so the Python search callback only runs when the
-   * query actually changed. */
-  char current[MENTION_QUERY_MAX + 8] = "";
-  RNA_property_string_get(&scene_ptr, prop, current);
-  if (STREQ(current, query)) {
+   * query actually changed. Bounded read (same pattern as
+   * history_read_string): the stack buffer size is only a contract with the
+   * Python-side StringProperty maxlen, so an unbounded
+   * RNA_property_string_get would become a stack overflow if that maxlen
+   * were ever raised. */
+  char fixed[MENTION_QUERY_MAX + 8] = "";
+  int current_len = 0;
+  char *current = RNA_property_string_get_alloc(
+      &scene_ptr, prop, fixed, sizeof(fixed), &current_len);
+  const bool unchanged = current && STREQ(current, query);
+  if (current && current != fixed) {
+    MEM_freeN(current);
+  }
+  if (unchanged) {
     return;
   }
   RNA_property_string_set(&scene_ptr, prop, query);

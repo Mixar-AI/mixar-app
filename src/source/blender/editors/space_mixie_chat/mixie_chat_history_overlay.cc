@@ -491,13 +491,11 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
                     cy - (4.0f * scale + float(meta_px)), hint_col);
 
     GPU_blend(GPU_BLEND_NONE);
-    if (win) {
-      const bool over_search = BLI_rctf_isect_pt(&rt->history_search_bounds, mouse_x, mouse_y);
-      const bool over_close = BLI_rctf_isect_pt(&rt->history_close_bounds, mouse_x, mouse_y);
-      WM_cursor_set(win,
-                    over_search ? WM_CURSOR_TEXT_EDIT :
-                                  (over_close ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT));
-    }
+    /* Cursor is owned by mixie_chat_history_cursor (region event_cursor
+     * callback) — never set it from a draw callback: draws fire for reasons
+     * unrelated to the mouse (streaming redraws, scroll settling, the anim
+     * pump), and would stomp the window cursor even while the mouse is over
+     * another editor. */
     return;
   }
 
@@ -680,16 +678,9 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
 
   GPU_blend(GPU_BLEND_NONE);
 
-  /* Cursor: this draw runs after the empty-state draw (which also sets the
-   * cursor), so setting it here wins while the overlay is open. */
-  if (win) {
-    const bool over_close = BLI_rctf_isect_pt(&rt->history_close_bounds, mouse_x, mouse_y);
-    const bool over_search = BLI_rctf_isect_pt(&rt->history_search_bounds, mouse_x, mouse_y);
-    WM_cursor_set(win,
-                  over_search ? WM_CURSOR_TEXT_EDIT :
-                                ((any_hovered || over_close) ? WM_CURSOR_HAND :
-                                                               WM_CURSOR_DEFAULT));
-  }
+  /* Cursor is owned by mixie_chat_history_cursor (see above) — not set from
+   * draw. */
+  UNUSED_VARS(any_hovered);
 }
 
 /** \} */

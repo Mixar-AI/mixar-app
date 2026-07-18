@@ -369,8 +369,14 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   v2d->keeptot = V2D_KEEPTOT_STRICT;
 
   /* Register uiBlock event handler so embedded text inputs (feedback comment)
-   * can receive clicks and keyboard events. Must come BEFORE our custom handler
-   * so uiBlock buttons get first priority on mouse events. */
+   * can receive clicks and keyboard events. NOTE: both this and
+   * WM_event_add_ui_handler below PREPEND (BLI_addhead), so registering the
+   * uiBlock handler first actually makes it run AFTER the chat handler —
+   * mixie_chat_ui_handler gets first look at every mouse press. That works
+   * today only because no chat hit-target overlaps the feedback text field
+   * (and active textedit grabs keys via the window modal handler); if a chat
+   * hit-target ever overlaps a uiBlock button, the click will be stolen from
+   * the button unless this ordering is revisited. */
   UI_region_handlers_add(&region->runtime->handlers);
 
   /* Register our direct UI click handler.

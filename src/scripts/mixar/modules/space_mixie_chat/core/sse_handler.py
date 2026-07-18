@@ -378,7 +378,6 @@ class SSEStreamHandler:
         _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles input SSE streaming."""
-        received_done = False
         try:
             headers = {"Accept": "text/event-stream"}
             if auth_token:
@@ -762,6 +761,16 @@ def create_sse_handler(
         existing.stop_stream()
 
     handler = SSEStreamHandler(host, on_event, on_error, on_complete)
+    if existing is not None:
+        # Carry the turn's resume cursor across the handler swap. Callers
+        # create a fresh handler for EVERY stream leg, but an input stream
+        # continues the same turn — and the backend continues the turn's
+        # replay-buffer seq numbering with it. Starting the input leg back at
+        # -1 made a mid-leg reconnect attach with after_seq=-1 and replay the
+        # entire turn as duplicate content. start_stream() re-resets the
+        # cursor for fresh turns, so carrying it over is always safe.
+        handler._last_seq = existing._last_seq
+        handler._session_id = existing._session_id
     _sse_handlers[scene_name] = handler
     return handler
 
