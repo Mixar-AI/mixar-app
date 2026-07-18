@@ -218,3 +218,6 @@ scripts/audit_out/
 
 # Blender autosave backups
 *.blend1
+
+# Local Azure signing metadata (values come from env vars / secrets in CI)
+scripts/windows/codesign-tools/metadata.json
