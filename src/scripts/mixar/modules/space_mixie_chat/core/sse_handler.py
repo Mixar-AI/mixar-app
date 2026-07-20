@@ -68,9 +68,9 @@ class SSEStreamHandler:
     def __init__(
         self,
         host: str,
-        on_event: Callable[[SSEEvent], None],
+        on_event: Callable[[SSEEvent], Optional[bool]],
         on_error: Callable[[str], None],
-        on_complete: Callable[[], None],
+        on_complete: Callable[[], Optional[bool]],
     ):
         self._host = host
         self._on_event = on_event
@@ -683,7 +683,9 @@ class SSEStreamHandler:
                 # this into an error; completing here would end the turn as if
                 # it succeeded, silently swallowing the lost response.
                 return True
-            self._on_complete()
+            accepted = self._on_complete()
+            if accepted is False:
+                raise RuntimeError("SSE completion was rejected by downstream queue")
             return True
 
         try:
@@ -700,7 +702,6 @@ class SSEStreamHandler:
             if isinstance(seq, int):
                 if seq <= self._last_seq:
                     return False
-                self._last_seq = seq
 
             # Detect event format based on presence of bubble_id
             if "bubble_id" in event_data:
@@ -710,7 +711,16 @@ class SSEStreamHandler:
                 event_type = event_data.get("type", "unknown")
 
             event = SSEEvent(event_type=event_type, data=event_data)
-            self._on_event(event)
+            accepted = self._on_event(event)
+            if accepted is False:
+                # Continuing would allow a later accepted sequence to move
+                # the resume cursor past this missing event. Raising turns the
+                # stream into a safe attach/replay from the last accepted seq.
+                raise RuntimeError("SSE event was rejected by downstream queue")
+            if isinstance(seq, int):
+                # Backward-compatible callbacks return None; only an explicit
+                # False rejects delivery.
+                self._last_seq = seq
         except json.JSONDecodeError as e:
             logger.warning(f"[SSE] Invalid JSON in SSE line: {e}")
 
@@ -736,9 +746,9 @@ def get_sse_handler(scene_name: str) -> Optional[SSEStreamHandler]:
 def create_sse_handler(
     scene_name: str,
     host: str,
-    on_event: Callable[[SSEEvent], None],
+    on_event: Callable[[SSEEvent], Optional[bool]],
     on_error: Callable[[str], None],
-    on_complete: Callable[[], None],
+    on_complete: Callable[[], Optional[bool]],
 ) -> SSEStreamHandler:
     """
     Create a new SSE handler for a specific scene.

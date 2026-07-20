@@ -27,9 +27,10 @@ make install       # Install Python packages into embedded Blender Python
 
 ### Testing
 ```bash
-pytest              # Run tests (root conftest.py stubs bpy via MagicMock)
+python -m pytest -q  # Run the standalone stable suite (default)
+python -m pytest -q src/scripts/mixar/modules/testing  # Legacy/embedded suite (requires runtime deps)
 ```
-Tests can run outside Blender. The root `conftest.py` injects `bpy` stubs into `sys.modules`.
+The default suite runs outside Blender; root `conftest.py` injects `bpy` stubs. The legacy/embedded module suite is explicit because some tests require Blender/runtime dependencies.
 
 ## Code Rules
 
@@ -120,7 +121,9 @@ src/
 | **space_texture_sets** | Texture set management |
 | **Agent Scene Strip** (C++ region + `agent_scene_strip` Python keymap module) | Bottom-docked View3D region (`RGN_TYPE_EXECUTE`, `src/source/blender/editors/space_view3d/view3d_agent_strip*`): live offscreen-rendered viewport tiles of **every scene except the window's active one**, for monitoring parallel agents (one per scene) without leaving the viewport. Replaces the removed Scene Grid editor space (`SPACE_SCENE_GRID` = 109, enum value reserved). Poll-driven region: auto-shows when the file has more than one scene, auto-hides otherwise. Realtime via a 0.1s TIMERNOTIFIER poll + depsgraph change detection (`DEG_get_update_count`), so tiles follow script edits to non-active scenes with no notifiers needed. Per-tile orbit/pan/zoom (`VIEW3D_OT_agent_strip_*`), click-to-activate scene (swaps that tile out for the previous active scene), per-scene `mixie_chat_is_busy` badge; tiles follow the host viewport shading (solid/material). Mixar file subversion 100.3 adds the region to previously saved View3D areas. Key bindings live in `modules/agent_scene_strip/ui/keymap.py` (addon keyconfig): the GUI keyconfig preset reload wipes items from all C-registered keymaps in the default config, so C-side `WM_keymap_add_item` bindings go dead in GUI sessions — addon-keyconfig registration is the required pattern for custom C region keymaps (same as `space_mixie_chat`). |
 | **operation_history** | Per-session local log (`operations.jsonl` + `scripts/`) of every agent script execution plus curated manual user ops. Agent executions captured at `space_mixie_chat/core/main_thread_executor.py`; manual ops via a depsgraph→timer capture service. Read by the agent through `operation_history/core/tools.py:run_tool`. No backend DB. |
-| **testing** | Pure-Python unit tests (pytest, run from repo root with bpy stubbed via root `conftest.py`) |
+| **testing** | Standalone stable pytest suite runs by default; the legacy/embedded module suite is explicit because it requires Blender/runtime dependencies. |
+
+**Safety contracts:** Mixie Chat's Generate options are backend-authoritative: a successful empty list fails closed to a `NONE` placeholder and disables generation; never resurrect hardcoded services. Feedback becomes permanently locked/received only after a confirmed 2xx; enqueue or delivery failures enter retryable `FAILED` and preserve comment text. BYOK API keys/Codex bundles are transient `SKIP_SAVE` fields wiped on dialog exit, successful save/remove, truncation, and unregister, and catalog models are validated against the selected provider. Unified queue terminal states release large transient payloads/result URLs while retaining lightweight history; scene activity flags are recomputed per originating scene.
 
 ---
 

@@ -431,6 +431,19 @@ class FeatureQueue:
         return None
 
     def _notify(self) -> None:
+        # Terminal jobs stay in history until the user clears them, but large
+        # request bodies (notably base64 Auto Rig GLBs) must not stay with them.
+        # Centralizing release here covers success, every failure branch, and
+        # cancellation without relying on each transition site to remember it.
+        for job in self._jobs:
+            if job.state in TERMINAL_STATES:
+                try:
+                    job.release_resources()
+                except Exception as e:
+                    logger.debug(
+                        "%s resource release failed for %s: %s",
+                        LOG_PREFIX, job.id, e,
+                    )
         self._notify_failure_toasts()
         for fn in list(self._listeners):
             try:

@@ -173,7 +173,7 @@ class TestUIConstants(unittest.TestCase):
             CHAT_INPUT_MAXLEN,
         )
         self.assertEqual(CHAT_INPUT_DEFAULT, "")
-        self.assertEqual(CHAT_INPUT_MAXLEN, 2048)
+        self.assertEqual(CHAT_INPUT_MAXLEN, 10000)
 
     def test_max_message_length(self):
         from mixar.modules.space_mixie_chat.constants import MAX_MESSAGE_LENGTH

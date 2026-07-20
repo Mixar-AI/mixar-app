@@ -56,6 +56,15 @@ def _clear_cached_state(wm):
     wm.byok_key_preview = ''
 
 
+def _wipe_form_secrets(wm):
+    """Remove transient API/token material from the live WindowManager."""
+    for attr in ('byok_form_api_key', 'byok_form_codex_bundle'):
+        try:
+            setattr(wm, attr, '')
+        except Exception:
+            pass
+
+
 def _apply_cached_state(wm, data):
     """Write the server's `data.items[0]` into the cached display fields.
 
@@ -111,8 +120,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # Reset dialog-local state on open. Never prefill the api_key field.
         wm.byok_dialog_state = 'IDLE'
         wm.byok_last_error = ''
-        wm.byok_form_api_key = ''
-        wm.byok_form_codex_bundle = ''  # never prefill the token bundle
+        _wipe_form_secrets(wm)  # never prefill credential material
         # If we already have an active config, prefill provider/model so
         # the user sees what's currently saved and can edit from there.
         # Provider assignment can fail if the cache hasn't been populated
@@ -155,7 +163,12 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
 
     def execute(self, context):
         # No-op: Save / Remove are their own operators, invoked from draw().
+        _wipe_form_secrets(context.window_manager)
         return {'FINISHED'}
+
+    def cancel(self, context):
+        """Esc/click-away must not leave JWTs or API keys in RNA memory."""
+        _wipe_form_secrets(context.window_manager)
 
     def draw(self, context):
         layout = self.layout
@@ -424,7 +437,9 @@ class MIXAR_BYOK_OT_save(Operator):
             )
         return (
             wm.byok_form_provider != 'NONE'   # block while only a sentinel is selectable
-            and wm.byok_form_model != 'NONE'
+            and model_suggestions.is_valid_model(
+                wm.byok_form_provider, wm.byok_form_model
+            )
             and bool(wm.byok_form_api_key.strip())
         )
 
@@ -440,9 +455,13 @@ class MIXAR_BYOK_OT_save(Operator):
         model = wm.byok_form_model
         api_key = wm.byok_form_api_key.strip()
 
-        if provider == 'NONE' or model == 'NONE' or not api_key:
+        if (
+            provider == 'NONE'
+            or not model_suggestions.is_valid_model(provider, model)
+            or not api_key
+        ):
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Provider, model, and API key are required."
+            wm.byok_last_error = "Choose a model for this provider and enter an API key."
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'
@@ -508,8 +527,7 @@ def _on_save_done(success: bool, data, err):
         wm = bpy.context.window_manager
         if success:
             _apply_cached_state(wm, data or {})
-            wm.byok_form_api_key = ''
-            wm.byok_form_codex_bundle = ''  # don't retain the token bundle
+            _wipe_form_secrets(wm)
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
@@ -558,6 +576,7 @@ class MIXAR_BYOK_OT_codex_load_file(Operator):
                 "auth.json is too large for this field and was truncated — "
                 "it will not save correctly",
             )
+            _wipe_form_secrets(wm)
             return {'CANCELLED'}
         _redraw_mixie_chat_areas()
         self.report({'INFO'}, "Loaded auth.json")
@@ -585,6 +604,7 @@ class MIXAR_BYOK_OT_codex_paste(Operator):
                 "Pasted auth.json is too large for this field and was "
                 "truncated — it will not save correctly",
             )
+            _wipe_form_secrets(wm)
             return {'CANCELLED'}
         _redraw_mixie_chat_areas()
         return {'FINISHED'}
@@ -638,7 +658,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
         wm = bpy.context.window_manager
         if success:
             _clear_cached_state(wm)
-            wm.byok_form_api_key = ''
+            _wipe_form_secrets(wm)
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)

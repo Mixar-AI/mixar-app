@@ -99,6 +99,18 @@ def get_model_items(provider: str) -> list[tuple[str, str, str]]:
     return [MODEL_EMPTY_SENTINEL]
 
 
+def is_valid_model(provider: str, model: str) -> bool:
+    """True when *model* is a real cached model for *provider*.
+
+    The ``NONE`` placeholder is intentionally never valid.  Save paths use
+    this to reject a stale EnumProperty value left behind by a provider
+    switch or catalog refresh.
+    """
+    if not provider or not model or model == "NONE":
+        return False
+    return any(item[0] == model for item in (_model_cache.get(provider) or ()))
+
+
 def is_loaded() -> bool:
     """True iff populate() has been called at least once, regardless of
     whether it populated any real providers.

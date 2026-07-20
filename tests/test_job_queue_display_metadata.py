@@ -29,7 +29,9 @@ from mixar.modules.common.api.response import APIResponse
 from mixar.modules.common.api.services import job_queue_service as JQS
 from mixar.bootstrap import generation_catalog_cache as GCC
 from mixar.modules.common.job_queue.core import enqueue as ENQUEUE
+from mixar.modules.common.job_queue.core import helpers as HELPERS
 from mixar.modules.common.job_queue.core import queue_manager as QM
+from mixar.modules.common.job_queue.core.generic_jobs import AsyncGLBJob, SyncImageJob
 from mixar.modules.common.job_queue.core.job import Job, JobState
 from mixar.modules.common.job_queue.ui.lists import queue_uilist as QUI
 from mixar.modules.common.job_queue.ui.properties import queue_properties as QP
@@ -344,3 +346,110 @@ def test_queue_status_text_remains_accessible_when_icons_fall_back():
     assert QUI._status_word(JobState.PAUSED_AUTH.value, "") == "Waiting for sign-in"
     assert QUI._status_word(JobState.FAILED.value, "") == "Failed"
     assert QUI._status_word(JobState.CANCELLED.value, "") == "Cancelled"
+
+
+def test_cancelled_generic_jobs_release_large_payloads(monkeypatch):
+    monkeypatch.setattr(QM, "redraw_3d_views", lambda: None)
+    queue = QM.FeatureQueue("resource-release-cancel")
+    glb = AsyncGLBJob(payload={"file_bytes_b64": "x" * 4096})
+    image = SyncImageJob(
+        payload={"reference_image": "y" * 4096},
+        _image_urls=["https://example.invalid/large-result.png"],
+    )
+    queue._jobs.extend([glb, image])
+
+    queue.cancel_all()
+
+    assert glb.state == JobState.CANCELLED
+    assert image.state == JobState.CANCELLED
+    assert glb.payload == {}
+    assert image.payload == {}
+    assert image._image_urls == []
+
+
+def test_failed_generic_job_release_is_idempotent(monkeypatch):
+    monkeypatch.setattr(QM, "redraw_3d_views", lambda: None)
+    queue = QM.FeatureQueue("resource-release-failure")
+    job = AsyncGLBJob(
+        payload={"file_bytes_b64": "x" * 4096},
+        state=JobState.FAILED,
+    )
+    queue._jobs.append(job)
+
+    queue._notify()
+    queue._notify()
+
+    assert job.payload == {}
+
+
+def test_scene_flag_releases_finished_scene_while_other_scene_runs(monkeypatch):
+    scene_a = SimpleNamespace(name="Scene A", is_generating=False)
+    scene_b = SimpleNamespace(name="Scene B", is_generating=False)
+    monkeypatch.setattr(HELPERS.bpy.data, "scenes", [scene_a, scene_b], raising=False)
+    monkeypatch.setattr(HELPERS.bpy.context, "scene", scene_a, raising=False)
+
+    job_a = Job(scene_name="Scene A", state=JobState.RUNNING_POLL)
+    job_b = Job(scene_name="Scene B", state=JobState.RUNNING_DOWNLOAD)
+
+    class QueueSnapshot:
+        jobs = [job_a, job_b]
+
+        def snapshot(self):
+            return list(self.jobs)
+
+        def has_active_work(self):
+            return any(
+                job.state in {
+                    JobState.PENDING,
+                    JobState.PAUSED_AUTH,
+                    JobState.RUNNING_SUBMIT,
+                    JobState.RUNNING_POLL,
+                    JobState.RUNNING_DOWNLOAD,
+                }
+                for job in self.jobs
+            )
+
+    queue = QueueSnapshot()
+    listener = HELPERS.create_scene_flag_listener("is_generating")
+
+    listener(queue)
+    assert scene_a.is_generating is True
+    assert scene_b.is_generating is True
+
+    job_a.state = JobState.SUCCESS
+    listener(queue)
+    assert scene_a.is_generating is False
+    assert scene_b.is_generating is True
+
+    job_b.state = JobState.SUCCESS
+    listener(queue)
+    assert scene_a.is_generating is False
+    assert scene_b.is_generating is False
+
+
+def test_legacy_fallback_flag_survives_pyrna_wrapper_identity(monkeypatch):
+    """PyRNA wrappers are not identity-stable: ``bpy.context.scene`` is a
+    different Python object than the matching ``bpy.data.scenes`` item, so the
+    legacy no-scene-name fallback must match scenes by name, not ``id()``."""
+    scene_data = SimpleNamespace(name="Scene", is_generating=False)
+    scene_context = SimpleNamespace(name="Scene", is_generating=False)
+    other = SimpleNamespace(name="Other", is_generating=True)
+    monkeypatch.setattr(
+        HELPERS.bpy.data, "scenes", [scene_data, other], raising=False
+    )
+    monkeypatch.setattr(HELPERS.bpy.context, "scene", scene_context, raising=False)
+
+    legacy_job = Job(scene_name="", state=JobState.RUNNING_POLL)
+
+    class QueueSnapshot:
+        def snapshot(self):
+            return [legacy_job]
+
+        def has_active_work(self):
+            return True
+
+    listener = HELPERS.create_scene_flag_listener("is_generating")
+    listener(QueueSnapshot())
+
+    assert scene_data.is_generating is True
+    assert other.is_generating is False

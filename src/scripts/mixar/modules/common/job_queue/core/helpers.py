@@ -100,14 +100,24 @@ def create_scene_flag_listener(
         has_work = queue.has_active_work()
 
         if has_work:
-            scenes_by_name = {s.name: s for s in _iter_scenes()}
+            scenes = _iter_scenes()
+            scenes_by_name = {s.name: s for s in scenes}
             targets = [scenes_by_name[n] for n in active_scene_names if n in scenes_by_name]
-            if not targets:
+            if not active_scene_names:
+                # Compatibility only for jobs created before scene tracking.
                 fallback = getattr(bpy.context, "scene", None)
                 if fallback is not None:
                     targets = [fallback]
-            for scene in targets:
-                _set_flag(scene, True)
+            # Match by name, never identity: PyRNA wrappers are not
+            # identity-stable, so the ``bpy.context.scene`` fallback is a
+            # different Python object than the matching ``bpy.data.scenes``
+            # item and an ``id()`` set would exclude it.
+            target_names = {scene.name for scene in targets}
+            # Recompute every scene, not just the currently-active targets. If
+            # scene A finishes while scene B continues, A must be released now
+            # instead of waiting for the entire feature queue to become idle.
+            for scene in scenes:
+                _set_flag(scene, scene.name in target_names)
             if not edge["active"]:
                 edge["active"] = True
                 if on_start is not None:
