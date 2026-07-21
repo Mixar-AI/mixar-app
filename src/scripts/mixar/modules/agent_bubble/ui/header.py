@@ -242,6 +242,11 @@ class AGENT_BUBBLE_HT_header(Header):
         layout.separator_spacer()
 
         # Right-side buttons (left → right): reconnect, new chat, past chats.
+        #
+        # These are icon-only, so they keep Blender's DEFAULT tooltip box
+        # (each operator's bl_description) as the hover affordance — unlike
+        # the pill/traffic-light buttons above, which use no_tooltip=True
+        # because the tiny pill window clips the popup into a fragment.
         right_controls = layout.row(align=True)
 
         # Reconnect button (mirrors the Connect button in mixie chat's
@@ -256,7 +261,6 @@ class AGENT_BUBBLE_HT_header(Header):
                 text="",
                 icon='LINKED',
                 emboss=False,
-                no_tooltip=True,
             )
 
         # New-chat and past-chats are hidden while a turn is executing
@@ -288,7 +292,6 @@ class AGENT_BUBBLE_HT_header(Header):
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
-                no_tooltip=True,
             )
 
         # Past chats — toggles the C++-drawn history overlay (shared with
@@ -303,7 +306,6 @@ class AGENT_BUBBLE_HT_header(Header):
                 text="",
                 icon='RECOVER_LAST',
                 emboss=False,
-                no_tooltip=True,
                 depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 
