@@ -192,9 +192,7 @@ def get_model_enum_items(service_key: str) -> List[Tuple[str, str, str]]:
         for m in models:
             slug = m.get("slug") or ""
             label = m.get("label") or slug
-            cost = m.get("credit_cost")
-            desc = f"{label} ({cost} credits)" if cost is not None else label
-            built.append((slug, label, desc))
+            built.append((slug, label, label))
         return built
 
     return _enum_cached("model", service_key, version, _build)

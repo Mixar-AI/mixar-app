@@ -583,9 +583,8 @@ def _ask_model_choice(scene, service_key):
         if not slug:
             continue
         label = model.get("label") or slug
-        cost = model.get("credit_cost")
         item = msg.action_items.add()
-        item.label = f"{label} ({cost} cr)" if cost is not None else label
+        item.label = label
         item.value = f"chat_model:{service_key}:{slug}"
         item.style = 'PRIMARY' if slug == default_slug else 'DEFAULT'
     return True

@@ -264,10 +264,8 @@ def get_generate_type_enum_items() -> List[Tuple[str, str, str, str, int]]:
         # moodboard's capability naming); label is the service label kept
         # for older backends that predate display_label.
         label = opt.get("display_label") or opt.get("label") or key
-        cost = opt.get("credit_cost")
-        desc = f"{label} ({cost} credits)" if cost is not None else label
         icon = _SERVICE_ICONS.get(key, _DEFAULT_ICON)
-        items.append((key, label, desc, icon, idx))
+        items.append((key, label, label, icon, idx))
     return items or _ENUM_UNAVAILABLE
 
 
