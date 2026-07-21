@@ -623,6 +623,13 @@ class EventProcessor:
                 f"(http_error={is_http_error}, pre_stream={is_pre_stream_error})"
             )
             self._session.set_state(scene, SessionState.IDLE)
+            # Dead session: clean up leaked agentlane:* workspace scenes
+            # (the sweep re-checks that no session is active before acting).
+            try:
+                from .lane_scene_sweep import schedule_lane_scene_sweep
+                schedule_lane_scene_sweep()
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"lane scene sweep scheduling skipped: {e}")
         else:
             # Keep BUSY so the Abort button stays visible — the backend may
             # still be running.  The user must explicitly abort.
@@ -730,6 +737,15 @@ class EventProcessor:
                 archive_current(scene)
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"history upsert on complete skipped: {e}")
+
+            # Session settled to IDLE — remove any agentlane:* workspace
+            # scenes whose backend removal scripts never landed (dropped as
+            # stale once the session went inactive). Fail-soft, main thread.
+            try:
+                from .lane_scene_sweep import schedule_lane_scene_sweep
+                schedule_lane_scene_sweep()
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"lane scene sweep scheduling skipped: {e}")
 
             # Show feedback only on the newest completed agent response.
             self._show_feedback_on_last_agent_message(scene)
