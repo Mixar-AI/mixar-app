@@ -24,6 +24,7 @@ import requests
 from ....config.config import get_frontend_url, get_server_url
 from ....config.logging_config import get_logger
 from ..utils.constants import SSO_CALLBACK_PORT
+from .device import get_device_id
 from .auth import store_login_token_pair
 
 logger = get_logger(__name__)
@@ -242,7 +243,13 @@ def sso_login(timeout=120):
     # Exchange code for tokens
     try:
         url = f"{get_server_url()}/api/v1/auth/desktop/token"
-        body = json.dumps({'code': code, 'code_verifier': verifier})
+        payload = {'code': code, 'code_verifier': verifier}
+        # Anti-abuse device signal: this exchange is the first moment the
+        # backend sees the machine after a browser signup (best-effort)
+        device_id = get_device_id()
+        if device_id:
+            payload['device_id'] = device_id
+        body = json.dumps(payload)
 
         response = requests.post(
             url,

@@ -20,6 +20,7 @@ import requests
 from ....config.config import get_server_url
 from ....config.logging_config import get_logger
 from ..utils.constants import AUTH_BASE_URL
+from .device import get_device_id
 
 logger = get_logger(__name__)
 
@@ -317,10 +318,15 @@ def login(username, password):
             "Content-Type": "application/x-www-form-urlencoded",
             "accept": "application/json",
         }
-        data = urllib.parse.urlencode({
+        form_fields = {
             "username": username,
             "password": password,
-        })
+        }
+        # Anti-abuse device signal (one trial per machine); best-effort
+        device_id = get_device_id()
+        if device_id:
+            form_fields["device_id"] = device_id
+        data = urllib.parse.urlencode(form_fields)
 
         response = requests.post(url, headers=headers, data=data, timeout=30)
 
