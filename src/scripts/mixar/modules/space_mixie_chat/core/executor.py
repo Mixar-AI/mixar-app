@@ -338,9 +338,13 @@ class ScriptExecutor:
                     return exec_namespace[name]
                 # Allow addon's own modules (e.g. mixar.modules.paint.*) and numpy's
                 # internal submodules (numpy lazily imports numpy.core._methods etc.).
+                # mathutils/bmesh/bpy_extras submodules (mathutils.bvhtree, bmesh.ops,
+                # bpy_extras.view3d_utils, ...) grant nothing beyond the already
+                # injected parents — they are reachable as attributes anyway; only
+                # the `import x.y` statement form was being rejected.
                 # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
                 top_module = name.split(".")[0]
-                if top_module in ("mixar", "numpy"):
+                if top_module in ("mixar", "numpy", "mathutils", "bmesh", "bpy_extras"):
                     return _real_import(name, *args, **kwargs)
                 raise ImportError(
                     f"Module '{name}' is not available. "
