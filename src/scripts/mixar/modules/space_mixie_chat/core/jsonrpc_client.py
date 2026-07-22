@@ -24,6 +24,7 @@ from ..constants import (
     JSONRPCErrorCode,
     JSONRPCMethod,
     WS_CLOSE_AUTH_FAILED,
+    WS_LIVENESS_PROBE_GRACE,
     WS_LIVENESS_TIMEOUT,
     WS_UI_STALE_THRESHOLD,
 )
@@ -100,6 +101,9 @@ class JSONRPCWebSocketClient:
         self._current_delay = reconnect_delay
         self._last_ping_time = 0.0
         self._last_recv_time = 0.0
+        # Liveness grace probe: set to the probe start time when the liveness
+        # window expires, cleared when traffic arrives (see _receive_loop).
+        self._liveness_probe_started: Optional[float] = None
 
         # Auth failure backoff
         self._auth = AuthBackoffManager()
@@ -279,6 +283,7 @@ class JSONRPCWebSocketClient:
             self._auth.reset()
             self._last_ping_time = time.time()
             self._last_recv_time = time.time()
+            self._liveness_probe_started = None
 
             if self._on_connected:
                 try:
@@ -376,15 +381,53 @@ class JSONRPCWebSocketClient:
                 # still "succeed" — without this check the client never
                 # notices and never reconnects.
                 if time.time() - self._last_recv_time > WS_LIVENESS_TIMEOUT:
-                    logger.warning(
-                        f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
-                        f"(pings unanswered) — treating connection as dead"
-                    )
-                    try:
-                        self._ws.close()
-                    except Exception:
-                        pass
-                    break
+                    # Grace probe before declaring death. This thread starves
+                    # whenever Blender's main thread holds the GIL through a
+                    # long script/render — on wake, _last_recv_time is stale
+                    # even though the server kept the connection healthy the
+                    # whole time (uat3 2026-07-21: three healthy connections
+                    # torn down here after GIL-blocked stretches). Send a ping
+                    # and give the server one short window to answer; only a
+                    # probe that ALSO gets nothing means the link is dead.
+                    if self._liveness_probe_started is None:
+                        self._liveness_probe_started = time.time()
+                        logger.info(
+                            f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
+                            f"— probing liveness before teardown"
+                        )
+                        self._send_ping()
+                    elif (
+                        time.time() - self._liveness_probe_started
+                        > WS_LIVENESS_PROBE_GRACE
+                    ):
+                        # The probe's answer may already sit in the socket
+                        # buffer if this thread was starved again during the
+                        # grace window — drain once more before the verdict.
+                        _probe_data = None
+                        try:
+                            self._ws.settimeout(1.0)
+                            _probe_data = self._ws.recv()
+                        except Exception:
+                            pass
+                        if _probe_data:
+                            self._last_recv_time = time.time()
+                            self._liveness_probe_started = None
+                            self._handle_message(json.loads(_probe_data))
+                            continue
+                        logger.warning(
+                            f"No WebSocket traffic for "
+                            f"{time.time() - self._last_recv_time:.0f}s and the "
+                            f"liveness probe got no answer in "
+                            f"{WS_LIVENESS_PROBE_GRACE:.0f}s — treating "
+                            f"connection as dead"
+                        )
+                        try:
+                            self._ws.close()
+                        except Exception:
+                            pass
+                        break
+                else:
+                    self._liveness_probe_started = None
 
                 # Send ping if needed
                 if time.time() - self._last_ping_time > self._ping_interval:

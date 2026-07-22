@@ -220,8 +220,19 @@ DEFAULT_HTTP_TIMEOUT = 30.0
 # inbound traffic for this long means the TCP connection silently died
 # (network drop, sleep/resume, NAT rebind) — sends still "succeed" into the
 # kernel buffer on such a zombie, so only the recv side can detect it. On
-# expiry the client tears the socket down and auto-reconnects.
+# expiry the client PROBES first (see below) and tears the socket down only
+# if the probe also gets no answer, then auto-reconnects.
 WS_LIVENESS_TIMEOUT = 45.0
+
+# Liveness grace probe: the receive thread starves whenever Blender's main
+# thread holds the GIL through a long script/render, so on wake the liveness
+# window can be expired even though the server kept the connection healthy
+# the whole time (it tolerates long pong gaps precisely for this case). On
+# expiry the client first sends a ping and waits this long for ANY inbound
+# traffic before declaring the link dead — a genuinely dead TCP connection
+# still tears down at WS_LIVENESS_TIMEOUT + this grace (~50s), while a
+# GIL-starved wake-up proves the link alive within ~1s and carries on.
+WS_LIVENESS_PROBE_GRACE = 5.0
 
 # UI transport-staleness threshold: how long recv may be silent before the
 # status surfaces (bubble pill, chat header) stop implying a healthy
