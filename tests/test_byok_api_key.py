@@ -34,18 +34,21 @@ if "urllib3.util.retry" not in sys.modules:
 import bpy
 
 from mixar.modules.byok.constants import BYOK_API_KEY_MAX_LENGTH
+from mixar.modules.byok.core import model_suggestions
 from mixar.modules.byok.ui.operators import byok_ops
 from mixar.modules.byok.ui.properties import byok_props
 
 
 def test_byok_api_key_property_allows_long_provider_keys():
-    bpy.props.StringProperty.reset_mock()
+    # Inspect the callable captured by byok_props at import time. Other test
+    # modules may reinstall the bpy mock during collection.
+    byok_props.StringProperty.reset_mock()
 
     byok_props.register()
 
     api_key_calls = [
         call.kwargs
-        for call in bpy.props.StringProperty.call_args_list
+        for call in byok_props.StringProperty.call_args_list
         if call.kwargs.get("name") == "API Key"
     ]
     assert api_key_calls
@@ -70,8 +73,15 @@ def test_byok_save_passes_long_api_key_without_truncation(monkeypatch):
 
     monkeypatch.setattr(byok_ops.byok_client, "save_credentials", fake_save_credentials)
     monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
+    model_suggestions.populate(
+        providers=[("openai", "OpenAI", "OpenAI")],
+        models={"openai": [("gpt-5", "GPT-5", "GPT-5")]},
+    )
 
-    result = byok_ops.MIXAR_BYOK_OT_save().execute(context)
+    try:
+        result = byok_ops.MIXAR_BYOK_OT_save().execute(context)
+    finally:
+        model_suggestions.clear()
 
     assert result == {"FINISHED"}
     assert saved["provider"] == "openai"

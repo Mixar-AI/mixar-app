@@ -220,6 +220,14 @@ class MIXIE_CHAT_OT_new_session(Operator):
             session.clear_session_id(scene)
             session.set_state(scene, SessionState.OFFLINE)
 
+        # The old session is gone — sweep any agentlane:* workspace scenes it
+        # leaked (their backend removal scripts were dropped as stale).
+        try:
+            from ...core.lane_scene_sweep import schedule_lane_scene_sweep
+            schedule_lane_scene_sweep()
+        except Exception as e:
+            logger.debug(f"lane scene sweep scheduling skipped: {e}")
+
         self.report({'INFO'}, "Started new chat session")
         return {'FINISHED'}
 

@@ -87,6 +87,7 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   ├── sandbox_modules.py       RESTRICTED_TEMPFILE / RESTRICTED_BASE64 / RESTRICTED_URLLIB wrappers (os/pathlib not exposed).
 │   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__/vars).
 │   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
+│   ├── lane_scene_sweep.py      Session-end sweep of leaked agentlane:* workspace scenes (mirrors backend remove_scene semantics; one-shot main-thread timer).
 │   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
 │   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
 │   ├── feedback_policy.py       Pure rating/comment validation shared by the UI.

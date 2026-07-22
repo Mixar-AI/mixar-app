@@ -242,6 +242,11 @@ class AGENT_BUBBLE_HT_header(Header):
         layout.separator_spacer()
 
         # Right-side buttons (left → right): reconnect, new chat, past chats.
+        #
+        # These are icon-only, so they keep Blender's DEFAULT tooltip box
+        # (each operator's bl_description) as the hover affordance — unlike
+        # the pill/traffic-light buttons above, which use no_tooltip=True
+        # because the tiny pill window clips the popup into a fragment.
         right_controls = layout.row(align=True)
 
         # Reconnect button (mirrors the Connect button in mixie chat's
@@ -256,8 +261,13 @@ class AGENT_BUBBLE_HT_header(Header):
                 text="",
                 icon='LINKED',
                 emboss=False,
-                no_tooltip=True,
             )
+
+        # New-chat and past-chats are hidden while a turn is executing
+        # (same states as the "Running" pill): switching or clearing the
+        # conversation mid-run would detach the UI from the turn the
+        # agent is still working on.
+        agent_running = state in _RUNNING_STATES
 
         # New-chat button on the right (mirrors the one in mixie chat's
         # header). Only rendered when there is chat history to clear:
@@ -276,13 +286,12 @@ class AGENT_BUBBLE_HT_header(Header):
                     msg_count = len(msgs)
                 except TypeError:
                     msg_count = 0
-        if msg_count > 0:
+        if msg_count > 0 and not agent_running:
             right_controls.operator(
                 "mixie_chat.new_session",
                 text="",
                 icon='FILE_NEW',
                 emboss=False,
-                no_tooltip=True,
             )
 
         # Past chats — toggles the C++-drawn history overlay (shared with
@@ -290,14 +299,13 @@ class AGENT_BUBBLE_HT_header(Header):
         # draw callbacks). Shown even when the current chat is empty —
         # reopening an old chat from a fresh state is exactly the history
         # use-case. hasattr guard: registers in the deferred UI pass.
-        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history'):
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_show_history') and not agent_running:
             wm = context.window_manager
             right_controls.operator(
                 "mixie_chat.show_history",
                 text="",
                 icon='RECOVER_LAST',
                 emboss=False,
-                no_tooltip=True,
                 depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 

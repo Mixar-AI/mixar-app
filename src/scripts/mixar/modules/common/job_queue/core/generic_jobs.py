@@ -73,6 +73,9 @@ class AsyncGLBJob(Job):
         self._parse_standard_submit(response)
         self.payload = {}  # release memory
 
+    def release_resources(self) -> None:
+        self.payload = {}
+
     def parse_poll_response(self, response):
         return self._parse_standard_poll(
             response, fail_message=self.fail_message,
@@ -154,6 +157,10 @@ class SyncImageJob(Job):
             raise ValueError("Enqueue response missing job_id")
 
         self.payload = {}  # release memory
+
+    def release_resources(self) -> None:
+        self.payload = {}
+        self._image_urls = []
 
     def should_skip_poll(self) -> bool:
         return bool(self._image_urls)

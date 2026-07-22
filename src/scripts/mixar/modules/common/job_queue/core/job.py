@@ -158,6 +158,14 @@ class Job:
         """Override to customize poll interval (seconds). Return 0 for default."""
         return 0.0
 
+    def release_resources(self) -> None:
+        """Release large transient resources after entering a terminal state.
+
+        Subclasses may override.  Implementations must be idempotent because
+        queue notifications can run more than once for terminal jobs.
+        """
+        return None
+
     # ------------------------------------------------------------------ #
     # Shared response-parsing helpers
     # ------------------------------------------------------------------ #

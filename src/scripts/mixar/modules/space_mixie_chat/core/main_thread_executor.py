@@ -259,6 +259,13 @@ def _process_one_request() -> Optional[float]:
         client = get_jsonrpc_client()
         if client and client.is_connected and request_id != "notification":
             client.queue_response(request_id, {"success": False, "error": "Agent session not active"})
+        # The dropped script may have been the backend's remove_scene cleanup
+        # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
+        try:
+            from .lane_scene_sweep import schedule_lane_scene_sweep
+            schedule_lane_scene_sweep()
+        except Exception:
+            logger.debug("lane scene sweep scheduling skipped", exc_info=True)
         return _stop_timer_if_idle()
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
