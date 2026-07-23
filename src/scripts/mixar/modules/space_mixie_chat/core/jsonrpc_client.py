@@ -531,6 +531,9 @@ class JSONRPCWebSocketClient:
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
+        elif method == JSONRPCMethod.LLM_REQUEST:
+            self._handle_llm_request(params, request_id)
+
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
                 try:
@@ -605,6 +608,38 @@ class JSONRPCWebSocketClient:
                 "result": result,
             }
             self._outbound.put(json.dumps(response))
+
+    def _handle_llm_request(self, params: dict, request_id: Optional[str]) -> None:
+        """Relay a LOCAL-provider LLM call to the user's local model server.
+
+        The call to localhost is blocking and can take many seconds, so it runs
+        on a daemon thread — never on the WebSocket receive loop. Each request
+        carries its own id, so concurrent relays don't collide. The response is
+        enqueued on the thread-safe outbound queue when the call finishes.
+        """
+        if not request_id:
+            # A relay with no id has nowhere to return to — nothing to do.
+            return
+
+        def _worker() -> None:
+            try:
+                from mixar.modules.byok.core.local_llm_relay import handle_llm_request
+
+                result = handle_llm_request(params)
+            except Exception as e:  # noqa: BLE001 — must always answer the RPC
+                logger.error(f"LLM relay worker failed: {e}")
+                result = {
+                    "status_code": 500,
+                    "headers": {"content-type": "application/json"},
+                    "body": json.dumps({"error": {"message": str(e)}}),
+                }
+            self._outbound.put(json.dumps({
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": result,
+            }))
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
         """Handle a server-initiated agent.sandbox_control request (parent side).

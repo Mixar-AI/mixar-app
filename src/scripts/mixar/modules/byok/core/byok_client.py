@@ -139,14 +139,19 @@ def fetch_state(
 def save_credentials(
     provider: str,
     model: str,
-    api_key: str,
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s."""
+    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+
+    Cloud providers pass ``api_key``; the local provider passes ``base_url``
+    (its endpoint) and no key.
+    """
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
-                provider=provider, model=model, api_key=api_key,
+                provider=provider, model=model, api_key=api_key, base_url=base_url,
             )
             success, data, err = _translate(response)
         except Exception as e:
@@ -185,6 +190,34 @@ def delete_credentials(
 
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKDelete"
+    ).start()
+
+
+# ---------------------------------------------------------------------------
+# Local endpoint reachability (client-side — hits the user's own localhost)
+# ---------------------------------------------------------------------------
+
+def ping_local_endpoint(
+    base_url: str,
+    on_done: Callable[[bool, Optional[str]], None],
+) -> None:
+    """Check a local model server is reachable, off the main thread.
+
+    The backend cannot validate a localhost URL (it can't see the user's
+    machine), so this runs here where localhost resolves correctly. Calls
+    ``on_done(reachable, error_message)`` back on the main thread.
+    """
+    def _thread():
+        try:
+            from .local_llm_relay import ping_endpoint
+            reachable, err = ping_endpoint(base_url)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("BYOK ping_local_endpoint failed: %s", e)
+            reachable, err = False, "Could not check the local server."
+        _schedule_on_main(on_done, reachable, err)
+
+    threading.Thread(
+        target=_thread, daemon=True, name="MixarBYOKLocalPing"
     ).start()
 
 

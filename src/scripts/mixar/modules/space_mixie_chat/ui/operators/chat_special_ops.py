@@ -342,10 +342,19 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 except Exception:
                     auth_token = ""
 
+                # WS connection id — lets a LOCAL BYOK provider relay LLM calls
+                # over this connection when the resumed turn runs.
+                try:
+                    from ...core.jsonrpc_client import get_jsonrpc_client
+                    instance_id = get_jsonrpc_client().connection_id or ""
+                except Exception:
+                    instance_id = ""
+
                 success = sse_handler.start_input_stream(
                     session_id=session.get_session_id(scene),
                     action=self.action_value,
                     auth_token=auth_token,
+                    instance_id=instance_id,
                 )
 
                 if success:

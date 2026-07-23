@@ -41,7 +41,21 @@ PROVIDER_EMPTY_SENTINEL   = ('NONE', "No providers configured", "Contact support
 # Same 'NONE' id so Save's poll() also blocks on model.
 MODEL_EMPTY_SENTINEL = ('NONE', "No models available", "Select a provider with available models")
 
-# The "OpenRouter" provider is a client-side-only option in the dropdown: the user
+# The "Local LLM" provider is a client-side option — it is NOT part of the
+# backend models catalog (there is no fixed model list for a user's own
+# server). It is always offered in the provider dropdown, even offline, and
+# selecting it swaps the form to URL + free-text model fields.
+LOCAL_PROVIDER_ID = 'local'
+LOCAL_PROVIDER_ITEM = (
+    LOCAL_PROVIDER_ID,
+    "Local LLM",
+    "Run against your own local model server (Ollama, LM Studio, vLLM)",
+)
+
+# Default endpoint shown in the URL field (Ollama's default host/port).
+LOCAL_DEFAULT_URL = "http://localhost:11434"
+
+# The "OpenRouter" provider is also client-side-only in the dropdown: the user
 # supplies a key and any model slug OpenRouter exposes (no fixed catalog list),
 # so it's always offered and selecting it swaps the form to a key + free-text
 # model field. The base_url is fixed server-side (not user-entered).

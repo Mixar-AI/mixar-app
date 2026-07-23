@@ -52,6 +52,7 @@ def _clear_cached_state(wm):
     wm.byok_is_active = False
     wm.byok_current_provider = ''
     wm.byok_current_model = ''
+    wm.byok_current_base_url = ''
     wm.byok_current_supports_vision = True
     wm.byok_key_preview = ''
 
@@ -77,6 +78,7 @@ def _apply_cached_state(wm, data):
     if items and isinstance(items[0], dict):
         wm.byok_current_provider = items[0].get('provider', '') or ''
         wm.byok_current_model = items[0].get('model', '') or ''
+        wm.byok_current_base_url = items[0].get('base_url', '') or ''
         # Absent on older backends → default to vision-capable (no false note).
         wm.byok_current_supports_vision = bool(items[0].get('supports_vision', True))
         wm.byok_key_preview = items[0].get('key_preview', '') or ''
@@ -135,7 +137,14 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                         "Could not prefill provider %s — not in cache yet",
                         wm.byok_current_provider,
                     )
-            if model_suggestions.is_openrouter(wm.byok_current_provider):
+            if model_suggestions.is_local(wm.byok_current_provider):
+                # Local uses free-text URL + model fields, not the catalog
+                # dropdowns — prefill those from the saved endpoint.
+                if wm.byok_current_base_url:
+                    wm.byok_form_local_url = wm.byok_current_base_url
+                if wm.byok_current_model:
+                    wm.byok_form_local_model = wm.byok_current_model
+            elif model_suggestions.is_openrouter(wm.byok_current_provider):
                 # OpenRouter uses a free-text model slug, not the catalog dropdown.
                 if wm.byok_current_model:
                     wm.byok_form_openrouter_model = wm.byok_current_model
@@ -253,10 +262,14 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         col = box.column(align=True)
         col.separator(factor=0.35)
         self._draw_value_row(col, "Provider", provider_label)
-        self._draw_value_row(col, "Model", model_label)
-        if model_suggestions.is_codex(wm.byok_current_provider):
+        if model_suggestions.is_local(wm.byok_current_provider):
+            self._draw_value_row(col, "Server URL", wm.byok_current_base_url or "—")
+            self._draw_value_row(col, "Model", model_label)
+        elif model_suggestions.is_codex(wm.byok_current_provider):
+            self._draw_value_row(col, "Model", model_label)
             self._draw_value_row(col, "Account", wm.byok_key_preview or "ChatGPT subscription")
         else:
+            self._draw_value_row(col, "Model", model_label)
             self._draw_value_row(col, "API Key", wm.byok_key_preview or "Stored securely")
 
         # Text-only model note: chat works, but 3D modeling/texturing runs
@@ -280,7 +293,9 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         col.enabled = not disabled
         self._draw_tall_prop(col, wm, 'byok_form_provider', "Provider")
 
-        if model_suggestions.is_openrouter(wm.byok_form_provider):
+        if model_suggestions.is_local(wm.byok_form_provider):
+            self._draw_local_fields(box, col, wm)
+        elif model_suggestions.is_openrouter(wm.byok_form_provider):
             self._draw_openrouter_fields(box, col, wm)
         elif model_suggestions.is_codex(wm.byok_form_provider):
             self._draw_codex_fields(box, col, wm)
@@ -366,6 +381,29 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             row.enabled = False
             row.label(text=line, icon='INFO')
 
+    def _draw_local_fields(self, box, col, wm):
+        """URL + free-text model + optional token for a local model server."""
+        self._draw_tall_prop(col, wm, 'byok_form_local_url', "Server URL")
+        self._draw_tall_prop(col, wm, 'byok_form_local_model', "Model Name")
+        self._draw_tall_prop(col, wm, 'byok_form_api_key', "Auth Token (optional)")
+
+        box.separator(factor=0.55)
+        warn = box.row()
+        warn.alert = True
+        warn.label(
+            text="Your model must support tool / function calling for the agent to work.",
+            icon='ERROR',
+        )
+        hint = box.row()
+        hint.enabled = False
+        hint.label(
+            text="Only loopback / private addresses are allowed. No key is stored for a local server.",
+            icon='INFO',
+        )
+        open_hint = box.row()
+        open_hint.enabled = False
+        open_hint.label(text="Keep Mixar open — the agent reaches your model through it.")
+
     def _draw_tall_prop(self, layout, data, prop_name: str, label: str):
         label_row = layout.row()
         label_row.enabled = False
@@ -425,6 +463,11 @@ class MIXAR_BYOK_OT_save(Operator):
         wm = context.window_manager
         if wm.byok_dialog_state == 'SAVING':
             return False
+        if model_suggestions.is_local(wm.byok_form_provider):
+            # Local needs a URL + model name; the key is optional.
+            return bool(wm.byok_form_local_url.strip()) and bool(
+                wm.byok_form_local_model.strip()
+            )
         if model_suggestions.is_openrouter(wm.byok_form_provider):
             # OpenRouter needs a model slug + API key.
             return bool(wm.byok_form_openrouter_model.strip()) and bool(
@@ -447,6 +490,8 @@ class MIXAR_BYOK_OT_save(Operator):
         wm = context.window_manager
         provider = wm.byok_form_provider
 
+        if model_suggestions.is_local(provider):
+            return self._execute_local(wm)
         if model_suggestions.is_openrouter(provider):
             return self._execute_openrouter(wm)
         if model_suggestions.is_codex(provider):
@@ -474,6 +519,24 @@ class MIXAR_BYOK_OT_save(Operator):
             api_key=api_key,
             on_done=_on_save_done,
         )
+        return {'FINISHED'}
+
+    def _execute_local(self, wm):
+        """Local save: verify the endpoint is reachable from the client first
+        (the backend can't see localhost), then persist."""
+        url = wm.byok_form_local_url.strip()
+        model = wm.byok_form_local_model.strip()
+        if not url or not model:
+            wm.byok_dialog_state = 'ERROR'
+            wm.byok_last_error = "Server URL and model name are required."
+            return {'CANCELLED'}
+
+        wm.byok_dialog_state = 'SAVING'
+        wm.byok_last_error = ''
+        _redraw_mixie_chat_areas()
+
+        # Ping first; the save proceeds from the ping callback only if reachable.
+        byok_client.ping_local_endpoint(url, on_done=_on_local_ping_done)
         return {'FINISHED'}
 
     def _execute_openrouter(self, wm):
@@ -521,6 +584,49 @@ class MIXAR_BYOK_OT_save(Operator):
         return {'FINISHED'}
 
 
+def _on_local_ping_done(reachable: bool, err):
+    """Main-thread callback after the pre-save local reachability check.
+
+    Reachable → persist the local config (reads the still-current form fields).
+    Unreachable → surface the error and stay on the form so the user can fix
+    the URL / start their server.
+    """
+    try:
+        wm = bpy.context.window_manager
+        if not reachable:
+            wm.byok_dialog_state = 'ERROR'
+            wm.byok_last_error = err or "Could not reach the local server."
+            logger.info("BYOK local endpoint unreachable: %s", err)
+            _redraw_mixie_chat_areas()
+            return
+
+        # The backend sends each relay URL over WebSocket, so the endpoint the
+        # user approved must be anchored locally rather than trusted from a
+        # backend response. Persist it before enabling the server-side config;
+        # relay requests fail closed if the OS credential store is unavailable.
+        from ...core.local_llm_relay import store_approved_base_url
+
+        approved, approval_error = store_approved_base_url(
+            wm.byok_form_local_url.strip()
+        )
+        if not approved:
+            wm.byok_dialog_state = 'ERROR'
+            wm.byok_last_error = approval_error or (
+                "Could not store the local server approval on this device."
+            )
+            _redraw_mixie_chat_areas()
+            return
+        byok_client.save_credentials(
+            provider='local',
+            model=wm.byok_form_local_model.strip(),
+            base_url=wm.byok_form_local_url.strip(),
+            api_key=wm.byok_form_api_key.strip() or None,
+            on_done=_on_save_done,
+        )
+    except Exception as e:
+        logger.error("BYOK local ping callback failed: %s", e, exc_info=True)
+
+
 def _on_save_done(success: bool, data, err):
     """Main-thread save callback."""
     try:
@@ -528,6 +634,11 @@ def _on_save_done(success: bool, data, err):
         if success:
             _apply_cached_state(wm, data or {})
             _wipe_form_secrets(wm)
+            # Switching away from local clears this device's approved relay URL.
+            if not model_suggestions.is_local(wm.byok_current_provider):
+                from ...core.local_llm_relay import clear_approved_base_url
+
+                clear_approved_base_url()
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
@@ -659,6 +770,9 @@ def _on_delete_done(success: bool, removed_count: int, err):
         if success:
             _clear_cached_state(wm)
             _wipe_form_secrets(wm)
+            from ...core.local_llm_relay import clear_approved_base_url
+
+            clear_approved_base_url()
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)

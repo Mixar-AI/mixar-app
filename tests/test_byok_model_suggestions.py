@@ -23,10 +23,11 @@ from mixar.modules.byok.ui.operators import byok_ops
 from mixar.modules.byok.ui.properties import byok_props
 
 
-def test_client_provider_fallback_does_not_duplicate_catalog_entries():
+def test_client_provider_fallbacks_do_not_duplicate_catalog_entries():
     model_suggestions.populate(
         providers=[
             ("openrouter", "OpenRouter (admin label)", "From catalog"),
+            ("local", "Local (admin label)", "From catalog"),
             ("openai", "OpenAI", "From catalog"),
         ],
         models={},
@@ -34,9 +35,8 @@ def test_client_provider_fallback_does_not_duplicate_catalog_entries():
 
     identifiers = [item[0] for item in model_suggestions.get_provider_items()]
 
-    # OpenRouter is offered as a client-side fallback; when the catalog already
-    # lists it, the fallback must not add a duplicate entry.
     assert identifiers.count("openrouter") == 1
+    assert identifiers.count("local") == 1
     assert identifiers.count("openai") == 1
     model_suggestions.clear()
 

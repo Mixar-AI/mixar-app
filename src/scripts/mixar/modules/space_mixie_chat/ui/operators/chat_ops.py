@@ -306,6 +306,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 action=action,
                 text=message_text,
                 auth_token=auth_token,
+                instance_id=ws_client.connection_id,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to send input")

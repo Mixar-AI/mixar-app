@@ -331,6 +331,7 @@ class SSEStreamHandler:
         action: str,
         text: str = "",
         auth_token: Optional[str] = None,
+        instance_id: str = "",
     ) -> bool:
         """
         Start SSE stream for input request (unified interrupt response).
@@ -340,6 +341,8 @@ class SSEStreamHandler:
             action: Action type ("approve", "modify", "abort", "retry", "submit", or custom)
             text: Optional text payload (used with "modify", "submit")
             auth_token: Optional auth token for request
+            instance_id: WebSocket connection id — sent so a LOCAL BYOK provider
+                can relay LLM calls over this connection when resuming.
 
         Returns:
             True if stream started successfully
@@ -360,7 +363,7 @@ class SSEStreamHandler:
         self._running.set()
         self._thread = threading.Thread(
             target=self._input_stream_loop,
-            args=(session_id, action, text, auth_token),
+            args=(session_id, action, text, auth_token, instance_id),
             daemon=True,
         )
         self._thread.name = "MixarInputStream"
@@ -375,6 +378,7 @@ class SSEStreamHandler:
         action: str,
         text: str,
         auth_token: Optional[str],
+        instance_id: str = "",
         _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles input SSE streaming."""
@@ -388,6 +392,8 @@ class SSEStreamHandler:
                 "action": action,
                 "text": text,
             }
+            if instance_id:
+                payload["instance_id"] = instance_id
 
             logger.debug(f"Starting input SSE request to {self.input_url}")
 
@@ -467,6 +473,7 @@ class SSEStreamHandler:
                     action,
                     text,
                     auth_token,
+                    instance_id,
                     _connect_attempt + 1,
                 )
             self._on_error(f"Connection error: {e}")

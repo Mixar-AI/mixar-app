@@ -93,7 +93,8 @@ class AgentService(BaseService):
         self,
         provider: str,
         model: str,
-        api_key: str,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
     ) -> APIResponse:
         """PUT /agent/byok — upsert BYOK config across all agent roles.
 
@@ -101,14 +102,18 @@ class AgentService(BaseService):
         provider/model/key out to the default + per-agent roles and returns
         the same {items, byok_active} shape as GET /agent/credentials.
 
-        Server validates the key with the provider (200ms–15s) before storing.
-        Atomic: on any failure, previous state (if any) is preserved.
+        Cloud providers send ``api_key``; the local provider sends ``base_url``
+        (its endpoint) and no key. Server validates before storing. Atomic: on
+        any failure, previous state (if any) is preserved.
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "provider": provider,
             "model": model,
-            "api_key": api_key,
         }
+        if api_key:
+            payload["api_key"] = api_key
+        if base_url:
+            payload["base_url"] = base_url
         return self.put("byok", json=payload)
 
     def delete_credentials_all(self) -> APIResponse:

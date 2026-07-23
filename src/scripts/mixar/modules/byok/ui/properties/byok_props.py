@@ -23,6 +23,7 @@ from ...constants import (
     BYOK_API_KEY_MAX_LENGTH,
     CODEX_DEFAULT_MODEL,
     DIALOG_STATE_ITEMS,
+    LOCAL_DEFAULT_URL,
     OPENROUTER_DEFAULT_MODEL,
 )
 from ...core.model_suggestions import get_model_items, get_provider_items
@@ -79,12 +80,15 @@ _WM_ATTRS = (
     'byok_form_provider',
     'byok_form_model',
     'byok_form_api_key',
+    'byok_form_local_url',
+    'byok_form_local_model',
     'byok_form_openrouter_model',
     'byok_form_codex_bundle',
     'byok_form_codex_model',
     'byok_is_active',
     'byok_current_provider',
     'byok_current_model',
+    'byok_current_base_url',
     'byok_current_supports_vision',
     'byok_key_preview',
     'byok_dialog_state',
@@ -123,6 +127,21 @@ def register():
         options={'SKIP_SAVE'},
     )
 
+    # --- Local-provider form fields (shown when provider == 'local') ---
+    WM.byok_form_local_url = StringProperty(
+        name="Server URL",
+        description=(
+            "URL of your local model server (Ollama, LM Studio, vLLM). "
+            "Only loopback/private addresses are allowed."
+        ),
+        default=LOCAL_DEFAULT_URL,
+    )
+    WM.byok_form_local_model = StringProperty(
+        name="Model Name",
+        description="Model name as your local server exposes it (e.g. llama3.1)",
+        default='',
+    )
+
     # --- OpenRouter form field (shown when provider == 'openrouter'). The key
     # reuses byok_form_api_key; only the model is free-text and OpenRouter-specific.
     WM.byok_form_openrouter_model = StringProperty(
@@ -158,8 +177,10 @@ def register():
     )
     WM.byok_current_provider = StringProperty(default='')
     WM.byok_current_model = StringProperty(default='')
+    # The saved local endpoint (empty for cloud providers).
+    WM.byok_current_base_url = StringProperty(default='')
     # Whether the saved model accepts image input. Text-only models (many
-    # OpenRouter models) run chat fine but skip 3D visual feedback, so the
+    # OpenRouter/local models) run chat fine but skip 3D visual feedback, so the
     # dialog surfaces a note. Defaults True (platform + vision models).
     WM.byok_current_supports_vision = BoolProperty(default=True)
     WM.byok_key_preview = StringProperty(default='')

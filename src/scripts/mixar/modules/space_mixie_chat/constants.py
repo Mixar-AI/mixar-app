@@ -129,6 +129,9 @@ class JSONRPCMethod:
     BLENDER_EXECUTE_SCRIPT = "blender.execute_script"
     # Server -> Client (request - sandbox lifecycle; handled by the parent only)
     AGENT_SANDBOX_CONTROL = "agent.sandbox_control"
+    # Server -> Client (request - relay an LLM call to the user's local model
+    # server for the LOCAL BYOK provider; expects a proxied HTTP response)
+    LLM_REQUEST = "llm.request"
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"
