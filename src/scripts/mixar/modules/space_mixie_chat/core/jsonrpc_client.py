@@ -69,12 +69,14 @@ class JSONRPCWebSocketClient:
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
+        device_id: Optional[str] = None,
     ):
         self._host = host
         self._connection_id = connection_id
         self._token_getter = token_getter
         self._blender_version = blender_version
         self._addon_version = addon_version
+        self._device_id = device_id
         self._reconnect_delay = reconnect_delay
         self._max_reconnect_delay = max_reconnect_delay
         self._ping_interval = ping_interval
@@ -336,6 +338,9 @@ class JSONRPCWebSocketClient:
             "addon_version": self._addon_version,
             "capabilities": ["script_execution", "notifications"],
         }
+        # Anti-abuse device signal (one trial per machine); best-effort
+        if self._device_id:
+            params["device_id"] = self._device_id
         # A headless sandbox identifies itself so the backend can route a
         # create_model sub-build to it (parent_instance_id -> this connection).
         if self._role:
@@ -706,6 +711,16 @@ def create_jsonrpc_client(
 
     if _jsonrpc_client is not None:
         _jsonrpc_client.disconnect()
+
+    # Attach the anti-abuse device id unless the caller supplied one.
+    # Lazy import + fail-open: the device id must never block connecting.
+    if "device_id" not in kwargs:
+        try:
+            from ...auth.core.device import get_device_id
+
+            kwargs["device_id"] = get_device_id()
+        except Exception:
+            kwargs["device_id"] = None
 
     _jsonrpc_client = JSONRPCWebSocketClient(host, connection_id, **kwargs)
     return _jsonrpc_client
