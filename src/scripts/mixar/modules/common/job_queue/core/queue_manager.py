@@ -312,6 +312,7 @@ class FeatureQueue:
             except Exception:
                 pass
         self._jobs.append(job)
+        self._notify_enqueue_toast(job)
         self._notify()
         self._pump()
         return True
@@ -429,6 +430,20 @@ class FeatureQueue:
             if j.id == job_id:
                 return j
         return None
+
+    @staticmethod
+    def _notify_enqueue_toast(job: Job) -> None:
+        """Confirm the enqueue with a transient viewport toast.
+
+        The agent's chat text alone is easy to miss; this covers every
+        enqueue path (user- and agent-initiated) since they all funnel
+        through ``submit()``. Burst aggregation lives in enqueue_toast.
+        """
+        try:
+            from .enqueue_toast import notify_job_enqueued
+            notify_job_enqueued(job)
+        except Exception as e:
+            logger.debug("%s failed to push enqueue toast: %s", LOG_PREFIX, e)
 
     def _notify(self) -> None:
         # Terminal jobs stay in history until the user clears them, but large

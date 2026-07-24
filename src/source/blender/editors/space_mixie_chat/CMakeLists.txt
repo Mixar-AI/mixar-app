@@ -40,6 +40,9 @@ set(SRC
   mixie_chat_messages_layout.cc
   mixie_chat_messages_render.cc
   mixie_chat_props.cc
+  mixie_chat_rules_events.cc
+  mixie_chat_rules_overlay.cc
+  mixie_chat_rules_util.cc
   mixie_chat_scroll_indicator.cc
   mixie_chat_selection.cc
   mixie_chat_slots.cc
@@ -56,6 +59,7 @@ set(SRC
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
   mixie_chat_markdown_intern.hh
+  mixie_chat_rules_intern.hh
   mixie_chat_ui_types.hh
 )
 

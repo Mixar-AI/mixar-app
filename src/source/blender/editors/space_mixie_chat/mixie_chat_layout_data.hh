@@ -342,6 +342,47 @@ struct HistoryRowHit {
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Project Rules Overlay
+ * \{ */
+
+/**
+ * One wrapped visual line of the rules editor (mixie_chat_rules_overlay.cc).
+ * Byte spans into MixieChatRuntime::rules_text; rebuilt whenever the text
+ * or the wrap width changes.
+ */
+struct RulesLineSpan {
+  int start = 0;      /* byte offset of the line start in rules_text */
+  int len = 0;        /* bytes on this line, excluding any trailing '\n' */
+  float top = 0.0f;   /* px offset from content top, grows downward */
+};
+
+/**
+ * One rule card in the scrollable list (mixie_chat_rules_overlay.cc).
+ * Bounds in region pixels, rebuilt on every overlay draw — same scheme as
+ * HistoryRowHit.
+ */
+struct RuleRowHit {
+  rctf bounds = {0, 0, 0, 0};        /* whole card */
+  rctf toggle_bounds = {0, 0, 0, 0}; /* enable/disable pill */
+  rctf edit_bounds = {0, 0, 0, 0};   /* pencil button under the toggle */
+  rctf scope_bounds = {0, 0, 0, 0};  /* Global/Project chip */
+  rctf delete_bounds = {0, 0, 0, 0}; /* trailing X button */
+  bool is_hovered = false;
+  bool toggle_hovered = false;
+  bool edit_hovered = false;
+  bool scope_hovered = false;
+  bool delete_hovered = false;
+  bool enabled = true;
+  bool is_global = false;
+  /** Card-top offset from the top of the scrollable content (px). */
+  float content_top = 0.0f;
+  float height = 0.0f;
+  int index = 0; /* index into the WM rule-entries mirror */
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Per-Instance Runtime State
  * \{ */
 
@@ -467,6 +508,95 @@ struct MixieChatRuntime {
    * (rebuilt per draw; rows scrolled out of view keep their offscreen
    * bounds — hit tests additionally require history_list_bounds). */
   blender::Vector<HistoryRowHit> history_rows;
+
+  /* -- Project-rules overlay (mixie_chat_rules_overlay.cc) ------------- */
+
+  /** Rules overlay: visibility mirrored from the Python-registered
+   * WindowManager bool during draw (events check this, never RNA). */
+  bool rules_overlay_active = false;
+
+  /** Rules overlay: panel / editable-text-field / close-X bounds in
+   * region pixels (click-away, caret placement, close hit tests). */
+  rctf rules_panel_bounds = {0, 0, 0, 0};
+  rctf rules_text_bounds = {0, 0, 0, 0};
+  rctf rules_close_bounds = {0, 0, 0, 0};
+  bool rules_close_hovered = false;
+
+  /** Rules overlay: smooth scrolling, same scheme as the history overlay
+   * (events write the target, draw eases the drawn offset toward it). */
+  float rules_scroll_px = 0.0f;
+  float rules_scroll_target = 0.0f;
+  double rules_scroll_last_time = 0.0;
+
+  /** Rules overlay: content + viewport heights from the last draw. */
+  float rules_content_h = 0.0f;
+  float rules_view_h = 0.0f;
+
+  /** Rules overlay: open animation start time (0 = not animating). */
+  double rules_anim_start = 0.0;
+
+  /** Rules overlay: the edit buffer (UTF-8, mirrors scene.mixie_chat_rules;
+   * every edit writes through so the Python cross-scene mirror runs) and
+   * the caret byte offset within it. Size must stay in lockstep with
+   * RULES_TEXT_MAX / the Python CHAT_RULES_MAXLEN. */
+  char rules_text[10000] = "";
+  int rules_cursor = 0;
+
+  /** Rules overlay: selection anchor (byte offset, -1 = none). A
+   * selection is the range between the anchor and rules_cursor — set by
+   * click-drag, Shift+navigation, or Ctrl/Cmd+A (anchor 0, cursor end).
+   * Typing/pasting replaces the selection, Backspace/Delete removes it,
+   * plain navigation or a click collapses it. */
+  int rules_sel_anchor = -1;
+
+  /** Rules overlay: true while a left-drag selection is in progress
+   * (mouse-move extends the selection until the button releases). */
+  bool rules_sel_dragging = false;
+
+  /** Rules overlay: time of the last local edit — draws only resync the
+   * buffer from the scene when it diverged and no edit happened recently
+   * (another chat surface, or Python, changed the rules). */
+  double rules_last_edit_time = 0.0;
+
+  /** Rules overlay: preserved caret x for consecutive Up/Down presses
+   * (negative = derive from the current caret position). */
+  float rules_caret_goal_x = -1.0f;
+
+  /** Rules overlay: wrap metrics from the last draw — the event side
+   * relayouts with these after each edit (0 until the first draw). */
+  float rules_wrap_w = 0.0f;
+  float rules_line_h = 0.0f;
+  int rules_text_px = 0;
+
+  /** Rules overlay: wrapped visual lines of the ACTIVE editor (composer
+   * or the card being edited; rebuilt on text/width change). */
+  blender::Vector<RulesLineSpan> rules_lines;
+
+  /** Rules overlay: which rule card is being edited in place. -1 = the
+   * composer (new-rule box) is the active editor. */
+  int rules_editing_index = -1;
+
+  /** Rules overlay: hit rects for every rule card in list order (rebuilt
+   * per draw; offscreen cards keep their bounds — mouse hits additionally
+   * require rules_list_bounds). */
+  blender::Vector<RuleRowHit> rules_rows;
+
+  /** Rules overlay: list viewport + Submit button bounds. */
+  rctf rules_list_bounds = {0, 0, 0, 0};
+  rctf rules_submit_bounds = {0, 0, 0, 0};
+  bool rules_submit_hovered = false;
+
+  /** Rules overlay: rule index armed for delete (arm-to-confirm, same as
+   * the history overlay's X: first click arms, second deletes; any other
+   * click / ESC disarms). -1 = nothing armed. */
+  int rules_confirm_delete = -1;
+
+  /** Rules overlay: internal caret-follow offset of the active editor
+   * (px from its content top) when its text outgrows the editor box, and
+   * the editor's inner text height from the last draw (events pass it to
+   * the caret-follow helper after edits). */
+  float rules_editor_scroll = 0.0f;
+  float rules_editor_view_h = 0.0f;
 };
 
 /**

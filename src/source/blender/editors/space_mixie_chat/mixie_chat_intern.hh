@@ -482,6 +482,16 @@ bool mixie_chat_history_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_history_set_visible(bContext *C, bool visible);
 
+/* Project-rules overlay (mixie_chat_rules_overlay.cc). Same modal-overlay
+ * pattern and visual family as the past-chats overlay; edits a multiline
+ * text buffer written through to `scene.mixie_chat_rules`. Visibility comes
+ * from the Python-registered WindowManager bool `mixie_chat_rules_visible`. */
+void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region);
+bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_rules_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_rules_set_visible(bContext *C, bool visible);
+
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,
