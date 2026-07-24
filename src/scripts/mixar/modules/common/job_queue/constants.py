@@ -33,6 +33,12 @@ FEATURE_BRUSH_GEN = "brush_gen"
 FEATURE_LOOKDEV = "lookdev"
 FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
 
+# Enqueue toast — transient "generation queued" viewport feedback.
+# One stable id so bursts collapse into a single counting toast; the TTL is
+# also the burst window (a re-push resets the store item's created_at).
+ENQUEUE_TOAST_ID = "jobq_enqueued"
+ENQUEUE_TOAST_TTL_MS = 8000
+
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
 
@@ -57,5 +63,7 @@ __all__ = (
     "FEATURE_BRUSH_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
+    "ENQUEUE_TOAST_ID",
+    "ENQUEUE_TOAST_TTL_MS",
     "LOG_PREFIX",
 )
