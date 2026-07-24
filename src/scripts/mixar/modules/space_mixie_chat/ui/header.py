@@ -59,6 +59,23 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
                 )
 
+            # Project rules — toggles the C++-drawn rules overlay in the
+            # chat region (same style as the past-chats overlay; see
+            # rules_ops.py / mixie_chat_rules_overlay.cc). The label flips
+            # to "Rules" once rules exist; depress mirrors the overlay
+            # being open, like the Past Chats button. hasattr guard:
+            # deferred UI registration pass.
+            if hasattr(bpy.types, 'MIXIE_CHAT_OT_add_rules'):
+                has_rules = bool(
+                    (getattr(scene, 'mixie_chat_rules', '') or '').strip()
+                )
+                layout.operator(
+                    "mixie_chat.add_rules",
+                    text="Rules" if has_rules else "Add Rules",
+                    icon='TEXT',
+                    depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
+                )
+
         # Spacer
         layout.separator_spacer()
 

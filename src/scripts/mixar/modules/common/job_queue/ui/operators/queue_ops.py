@@ -8,6 +8,7 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 
 from mixar.modules.common.job_queue.core.queue_manager import get_queue
+from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 
 class MIXIE_OT_queue_cancel_job(Operator):
@@ -97,6 +98,34 @@ class MIXIE_OT_queue_clear_all_completed(Operator):
         return {'FINISHED'}
 
 
+# The unified Queue panel registers under bl_space_type MIXIE when the
+# Mixar space exists (moodboard_sidebar_panels.py) — the "Queue" sidebar
+# category does NOT exist in plain VIEW_3D areas, so the operator must
+# target the same space type the panels registered in.
+QUEUE_AREA_TYPE = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+
+
+def find_largest_queue_area(context):
+    """Return the biggest area hosting the Queue panel's space type, or None.
+
+    Fallback target for callers whose context can't reach the Queue tab —
+    toast action buttons fire from a ``bpy.app.timers`` callback where
+    ``context.area`` is None, and a toast clicked in a 3D viewport still
+    needs the MIXIE sidebar.
+    """
+    wm = getattr(context, "window_manager", None)
+    best = None
+    best_size = -1
+    for window in getattr(wm, "windows", None) or []:
+        screen = getattr(window, "screen", None)
+        for area in getattr(screen, "areas", None) or []:
+            if area.type == QUEUE_AREA_TYPE:
+                size = area.width * area.height
+                if size > best_size:
+                    best, best_size = area, size
+    return best
+
+
 class MIXIE_OT_queue_view(Operator):
     """Switch sidebar to the Queue panel."""
 
@@ -105,15 +134,24 @@ class MIXIE_OT_queue_view(Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):
-        space = context.space_data
+        area = getattr(context, "area", None)
+        if area is None or area.type != QUEUE_AREA_TYPE:
+            area = find_largest_queue_area(context)
+        if area is None:
+            return {'CANCELLED'}
+        space = area.spaces.active
         if hasattr(space, 'show_region_ui'):
             space.show_region_ui = True
         # Switch sidebar category to Queue
         region = next(
-            (r for r in context.area.regions if r.type == 'UI'), None,
+            (r for r in area.regions if r.type == 'UI'), None,
         )
-        if region and hasattr(region, 'active_panel_category'):
-            region.active_panel_category = "Queue"
+        try:
+            if region and hasattr(region, 'active_panel_category'):
+                region.active_panel_category = "Queue"
+        except Exception:
+            pass  # sidebar just opened — category list not built yet
+        area.tag_redraw()
         return {'FINISHED'}
 
 

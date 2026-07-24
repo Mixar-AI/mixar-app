@@ -309,5 +309,22 @@ class AGENT_BUBBLE_HT_header(Header):
                 depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
             )
 
+        # Project rules — mirrors the docked header's Add Rules button:
+        # toggles the C++-drawn rules overlay in the chat region (same
+        # style as the past-chats overlay; see rules_ops.py /
+        # mixie_chat_rules_overlay.cc). Icon-only here (header space is
+        # tight); Blender's default tooltip (bl_description) is the hover
+        # affordance, like the siblings above. depress mirrors the overlay
+        # being open.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_add_rules') and not agent_running:
+            wm = context.window_manager
+            right_controls.operator(
+                "mixie_chat.add_rules",
+                text="",
+                icon='TEXT',
+                emboss=False,
+                depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
+            )
+
 
 classes = (AGENT_BUBBLE_HT_header,)

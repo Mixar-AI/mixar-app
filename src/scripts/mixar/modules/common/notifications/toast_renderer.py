@@ -142,6 +142,31 @@ def point_in_rect(mx: float, my: float, bx: float, by: float, bw: float, bh: flo
     return bx <= mx <= bx + bw and by <= my <= by + bh
 
 
+def point_in_any_toast_control(region_ptr: int, mx: float, my: float) -> bool:
+    """True if a region-local point lies on a toast button, close X, or link.
+
+    Pure predicate (no hover-state mutation) so input-blocking modals can
+    ask "should this click reach the toast?" before consuming it. Only the
+    interactive controls count, not the toast card body: a click that
+    misses them makes ``notification.toast_click`` return CANCELLED, and
+    the event would fall through to the viewport keymaps the modal exists
+    to block.
+    """
+    bounds = toast_bounds_by_region.get(region_ptr)
+    if not bounds:
+        return False
+    for _nid, bx, by, bw, bh in bounds["close"]:
+        if point_in_rect(mx, my, bx, by, bw, bh):
+            return True
+    for _nid, _op, _url, bx, by, bw, bh in bounds["action"]:
+        if point_in_rect(mx, my, bx, by, bw, bh):
+            return True
+    for _nid, _url, bx, by, bw, bh in bounds["url"]:
+        if point_in_rect(mx, my, bx, by, bw, bh):
+            return True
+    return False
+
+
 def update_hover_state(region_ptr: int, mx: float, my: float) -> bool:
     """Recompute the hovered element for a mouse position.
 

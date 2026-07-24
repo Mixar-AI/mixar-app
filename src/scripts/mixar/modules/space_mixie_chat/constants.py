@@ -278,6 +278,13 @@ CHAT_INPUT_PLACEHOLDER = "Type your message..."
 CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
 
+# Project rules (scene.mixie_chat_rules) — persisted in the file and
+# prepended to the first message of every new chat session. Bounded well
+# below MAX_MESSAGE_LENGTH so rules + user prompt can never overflow.
+# Must stay in lockstep with RULES_TEXT_MAX / the rules_text buffer in
+# the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
+CHAT_RULES_MAXLEN = 10000
+
 # ============================================================================
 # '@' MENTION AUTOCOMPLETE
 # ============================================================================

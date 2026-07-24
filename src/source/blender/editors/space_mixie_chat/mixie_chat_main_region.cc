@@ -59,6 +59,15 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
    * over practically the whole window. */
   const bool suppress_hand = (area->spacetype == SPACE_AGENT_BUBBLE);
 
+  /* Project-rules overlay is modal while open — it owns hover + cursor and
+   * suppresses hover on everything behind its scrim. Checked before the
+   * history overlay: it draws on top, so it wins the cursor too. */
+  if (rt->rules_overlay_active &&
+      mixie_chat_rules_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
   /* Past-chats overlay is modal while open — it owns hover + cursor and
    * suppresses hover on everything behind its scrim. */
   if (rt->history_overlay_active &&
@@ -230,7 +239,15 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
 
 static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
-  /* 0. Past-chats overlay — modal while open: consumes clicks (incl.
+  /* 0. Project-rules overlay — modal while open: consumes text-editing
+   * keys, clicks (incl. click-away close), scroll, and ESC. Checked
+   * before the history overlay because it draws on top. Cheap no-op when
+   * closed (runtime flag check, no RNA reads). */
+  if (mixie_chat_rules_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
+  /* 0b. Past-chats overlay — modal while open: consumes clicks (incl.
    * click-away close), wheel/trackpad scroll, and ESC. Cheap no-op when
    * closed (runtime flag check, no RNA reads). */
   if (mixie_chat_history_handle_event(C, event)) {
@@ -466,6 +483,10 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
   /* Past-chats overlay — drawn last (screen-space) so it sits on top of
    * messages, the empty state, and the View2D scrollbar. */
   mixie_chat_draw_history_overlay(C, region);
+  /* Project-rules overlay — drawn after history so it sits on top (the
+   * Python toggles keep the two mutually exclusive; this is belt and
+   * braces for the event-order contract in mixie_chat_ui_handler). */
+  mixie_chat_draw_rules_overlay(C, region);
 }
 
 /* -------------------------------------------------------------------- */
