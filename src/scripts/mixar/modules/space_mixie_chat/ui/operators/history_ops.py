@@ -157,6 +157,10 @@ class MIXIE_CHAT_OT_show_history(Operator):
         opening = not wm.mixie_chat_history_visible
         if opening:
             sync_history_entries(context)
+            # The past-chats and project-rules overlays are both modal over
+            # the same chat surface — only one may be open at a time.
+            if getattr(wm, 'mixie_chat_rules_visible', False):
+                wm.mixie_chat_rules_visible = False
         wm.mixie_chat_history_visible = opening
         redraw_chat_areas()
         return {'FINISHED'}
