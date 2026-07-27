@@ -22,6 +22,17 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _flash_queue(feature_key: str) -> None:
+    """Highlight the feature's queue row, as every other generate op does."""
+    try:
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
+            mark_enqueued,
+        )
+        mark_enqueued(feature_key)
+    except Exception:
+        pass
+
+
 def _get_input_image(context, tab):
     """Input image from the Model Gen tab's shared image-source UI (or None).
 
@@ -107,6 +118,8 @@ class MIXIE_OT_tripo_segment_generate(Operator):
             self.report({"WARNING"}, "No segmentation jobs were queued")
             return {"CANCELLED"}
 
+        from mixar.modules.common.job_queue.constants import FEATURE_TRIPO_SEGMENT
+        _flash_queue(FEATURE_TRIPO_SEGMENT)
         self.report({"INFO"}, f"Segmenting {len(enqueued)} mesh(es)...")
         return {"FINISHED"}
 
@@ -176,6 +189,8 @@ class MIXIE_OT_smart_segment_generate(Operator):
             self.report({"WARNING"}, "Smart segmentation was not queued")
             return {"CANCELLED"}
 
+        from mixar.modules.common.job_queue.constants import FEATURE_SMART_SEGMENT
+        _flash_queue(FEATURE_SMART_SEGMENT)
         self.report({"INFO"}, "Generating segmented model...")
         return {"FINISHED"}
 
