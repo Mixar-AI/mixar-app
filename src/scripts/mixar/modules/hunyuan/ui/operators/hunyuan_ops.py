@@ -175,6 +175,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # of the sidebar/moodboard UI state.
     prompt: StringProperty(default="")
     image_name: StringProperty(default="")
+    # Opt IN to submitting image_name's whole detected turnaround group as one
+    # multi-view job. Deliberately explicit rather than inferred from the image
+    # belonging to a group, so generating from a single crop stays possible and
+    # the agent's intent is visible in the call.
+    multi_view: BoolProperty(default=False)
     model_version: StringProperty(default="3.0")
     enable_pbr: BoolProperty(default=False)
     face_count: IntProperty(default=0)
@@ -215,7 +220,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
         if mode == 'PRO':
             try:
                 # Direct (agent) invocation: explicit params bypass UI state.
-                if self.from_chat or self.prompt.strip() or self.image_name.strip():
+                # multi_view counts as a direct param — otherwise setting it
+                # without an image_name would fall through to the UI path and
+                # be silently ignored.
+                if (self.from_chat or self.prompt.strip()
+                        or self.image_name.strip() or self.multi_view):
                     self._submit_pro_direct(context)
                 else:
                     self._submit_pro(
@@ -324,6 +333,14 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 raise ValueError(f"Image '{self.image_name}' not found")
 
         prompt = self.prompt.strip() or None
+
+        # Turnaround group: submit every detected view of this sheet as ONE
+        # multi-view job, forwarding the S3 keys the detect-views endpoint
+        # returned instead of re-uploading pixels.
+        turnaround = None
+        if self.multi_view:
+            turnaround = self._resolve_turnaround(context, image)
+
         if image is None and not prompt:
             raise ValueError("Provide at least a prompt or an image_name")
 
@@ -340,7 +357,37 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # queue row reads like the user's intent — see image_to_3d_ops for
         # the same reasoning.
         label = (prompt[:40] if prompt else None) or (image.name if image else "3D")
-        enqueue_pro_job(image=image, shared=shared, label=label)
+        enqueue_pro_job(
+            image=image, shared=shared, label=label, turnaround=turnaround)
+
+    def _resolve_turnaround(self, context, image):
+        """S3-key multi-view payload for *image*'s detected turnaround group.
+
+        Raises ValueError (caught by execute -> reported + CANCELLED) when the
+        request cannot be honoured. Never falls back to a single-image job:
+        the caller explicitly asked for the group, so silently generating from
+        one view would spend a multi-minute job on the wrong input.
+        """
+        from mixar.modules.moodboard.core.turnaround_views import (
+            build_multi_view_payload, find_group_for_image,
+        )
+
+        if image is None:
+            raise ValueError("multi_view=True requires an image_name")
+
+        group_id = find_group_for_image(context.scene, image)
+        if not group_id:
+            raise ValueError(
+                f"Image '{image.name}' is not part of a detected turnaround "
+                "group — run mixie.moodboard_detect_views on the sheet first"
+            )
+
+        # Propagates the same front-as-main-image rule and multi-front refusal
+        # the sidebar path uses.
+        fragment, warnings = build_multi_view_payload(context.scene, group_id)
+        for warning in warnings:
+            self.report({'WARNING'}, warning)
+        return fragment
 
     def _submit_rapid_direct(self, context, compress_image_for_upload):
         """Submit a Rapid job from explicit agent/chat params."""

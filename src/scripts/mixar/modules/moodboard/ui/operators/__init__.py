@@ -11,6 +11,7 @@ Collection of operators for moodboard UI interactions.
 
 from . import (
     cancel_ops,
+    detect_views_ops,
     imagegen_ops,
     imagegen_reference_ops,
     lookdev_ops,
@@ -32,6 +33,7 @@ from . import (
 # Submodules to register
 modules = (
     cancel_ops,
+    detect_views_ops,
     imagegen_ops,
     imagegen_reference_ops,
     lookdev_ops,

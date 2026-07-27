@@ -151,12 +151,23 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 self.report({"WARNING"}, "No input image available")
                 return {"CANCELLED"}
 
-        # Convert image to bytes
-        try:
-            image_bytes = compress_for_service(image, "image_to_3d")
-        except Exception as e:
-            self.report({"ERROR"}, f"Failed to process image: {e}")
+        # Turnaround sheets: the detect-views endpoint already split this
+        # image into per-view crops and staged them in S3, so submit ONE
+        # multi-view job forwarding those keys verbatim rather than
+        # re-uploading pixels. Anything else takes the single-image path
+        # below, unchanged.
+        turnaround_payload = self._turnaround_payload(scene, image, model_name)
+        if turnaround_payload is False:
             return {"CANCELLED"}
+
+        # Convert image to bytes
+        image_bytes = None
+        if not turnaround_payload:
+            try:
+                image_bytes = compress_for_service(image, "image_to_3d")
+            except Exception as e:
+                self.report({"ERROR"}, f"Failed to process image: {e}")
+                return {"CANCELLED"}
 
         # Get prompt (optional)
         if sidebar_tab:
@@ -174,7 +185,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
             job_label = image.name if image else model_name
             payload = {}
-            if image_bytes:
+            if turnaround_payload:
+                payload.update(turnaround_payload)
+            elif image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
                 payload["image_filename"] = "image.png"
             if prompt:
@@ -202,6 +215,39 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         mark_enqueued(FEATURE_MODEL_3D)
         self.report({"INFO"}, "Added to queue")
         return {"FINISHED"}
+
+    def _turnaround_payload(self, scene, image, model_name):
+        """S3-key multi-view payload fragment for a detected turnaround.
+
+        Returns ``None`` when *image* is not a confirmed turnaround panel (the
+        existing single-image path applies unchanged), ``False`` when the
+        group is unusable and the operator should cancel, else the fragment.
+        """
+        from mixar.modules.moodboard.core.turnaround_views import (
+            build_multi_view_payload, find_group_for_image,
+            model_accepts_multi_view,
+        )
+
+        if image is None:
+            return None
+        group_id = find_group_for_image(scene, image)
+        if not group_id:
+            return None
+        if not model_accepts_multi_view("model_3d", model_name):
+            self.report(
+                {"WARNING"},
+                f"'{model_name}' does not accept multiple views — "
+                "using the front view only",
+            )
+            return None
+        try:
+            fragment, warnings = build_multi_view_payload(scene, group_id)
+        except ValueError as e:
+            self.report({"ERROR"}, str(e))
+            return False
+        for warning in warnings:
+            self.report({"WARNING"}, warning)
+        return fragment
 
     def _execute_direct(self, context):
         """Handle direct invocation with explicit params (agent scripts)."""

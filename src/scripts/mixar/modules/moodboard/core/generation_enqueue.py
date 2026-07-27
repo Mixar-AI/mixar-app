@@ -151,12 +151,19 @@ def _build_pro_payload(
     image_bytes: bytes,
     shared: dict,
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
+    turnaround: Optional[dict] = None,
 ) -> tuple:
     """Build (payload, model_key) for a Pro job.
 
     Catalog-schema params only — the backend HunyuanAdapter maps them to
     Tencent SDK keys and derives the Model version from the catalog row
     (selected here via the model_key slug).
+
+    *turnaround* is a pre-built S3-key fragment from
+    ``moodboard.core.turnaround_views.build_multi_view_payload`` — crops that
+    the detect-views endpoint already staged in S3. When present it REPLACES
+    the inline image / multi-view bytes entirely: the keys are forwarded
+    verbatim instead of the pixels being uploaded a second time.
     """
     params = {
         "generate_type": shared.get("generate_type", "Normal"),
@@ -170,18 +177,22 @@ def _build_pro_payload(
         params["polygon_type"] = shared["polygon_type"]
 
     payload = {"params": params}
-    if image_bytes:
-        payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
-        payload["image_filename"] = "image.png"
-    if multi_views:
-        payload["multi_view_images"] = [
-            {
-                "image_bytes_b64": _b64.b64encode(img_bytes).decode(),
-                "filename": fname,
-                "view_type": vtype,
-            }
-            for img_bytes, fname, vtype in multi_views
-        ]
+    if turnaround:
+        # Already-staged crops: image_s3_key + multi_view_images[{s3_key,...}]
+        payload.update(turnaround)
+    else:
+        if image_bytes:
+            payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
+            payload["image_filename"] = "image.png"
+        if multi_views:
+            payload["multi_view_images"] = [
+                {
+                    "image_bytes_b64": _b64.b64encode(img_bytes).decode(),
+                    "filename": fname,
+                    "view_type": vtype,
+                }
+                for img_bytes, fname, vtype in multi_views
+            ]
 
     version = shared.get("model_version", "3.0")
     model_key = "hunyuan_pro_v3.1" if version == "3.1" else "hunyuan_pro_v3"
@@ -194,13 +205,20 @@ def enqueue_pro_job(
     shared: dict,
     label: str,
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
+    turnaround: Optional[dict] = None,
 ) -> Optional[Job]:
-    """Build an Image-to-3D Pro job and submit it to the queue."""
+    """Build an Image-to-3D Pro job and submit it to the queue.
+
+    Pass *turnaround* (see :func:`_build_pro_payload`) to submit already-staged
+    turnaround crops by S3 key; *image* is then only used for the queue label
+    and is never re-uploaded.
+    """
     image_bytes = b""
-    if image is not None:
+    if image is not None and not turnaround:
         image_bytes = compress_image_for_upload(image)
 
-    payload, model_key = _build_pro_payload(image_bytes, shared, multi_views)
+    payload, model_key = _build_pro_payload(
+        image_bytes, shared, multi_views, turnaround)
 
     return enqueue_generation(
         kind="glb",

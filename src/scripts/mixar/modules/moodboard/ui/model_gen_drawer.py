@@ -90,6 +90,12 @@ def _draw_model_gen(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
+    # --- Turnaround sheet -> per-view crops (multi-view models only) ---
+    from .turnaround_drawer import draw_detect_views_section
+    draw_section_separator(layout)
+    draw_detect_views_section(
+        layout, context, service_key, getattr(tab, "model", ""))
+
     # --- Multi-view images (models that advertise supports_multi_view) ---
     if (
         model_supports_multi_view(service_key, getattr(tab, "model", ""))

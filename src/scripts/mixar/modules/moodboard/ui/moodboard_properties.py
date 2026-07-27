@@ -32,6 +32,7 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_COLOR_DEFAULT, TEXTBOX_BACKGROUND_COLOR_DEFAULT,
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
+    TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_NONE,
 )
 
 
@@ -186,6 +187,37 @@ class MixieMoodboardImage(PropertyGroup):
     chain_id: StringProperty(
         name="Chain ID",
         description="Pipeline chain ID linking label → image → HP mesh → LP mesh",
+        default="",
+    )
+
+    # --- Turnaround / multi-view detection -------------------------------
+    # Populated by mixie.moodboard_detect_views when a single uploaded sheet
+    # is split into per-view crops by POST /model-3d/detect-views.
+    view_type: EnumProperty(
+        name="View",
+        description=(
+            "Camera angle this image represents within its turnaround group. "
+            "Exactly one panel must be Front — it becomes the primary image "
+            "of the multi-view job; the rest are sent as additional views"
+        ),
+        items=TURNAROUND_VIEW_TYPES,
+        default=TURNAROUND_VIEW_NONE,
+    )
+    turnaround_group: StringProperty(
+        name="Turnaround Group",
+        description=(
+            "Shared identifier linking every crop detected from the same "
+            "turnaround / model sheet. Empty for ordinary images"
+        ),
+        default="",
+    )
+    s3_key: StringProperty(
+        name="S3 Key",
+        description=(
+            "Durable backend object key for this image, returned by the "
+            "detect-views endpoint. Sent at submit time instead of "
+            "re-uploading the pixels"
+        ),
         default="",
     )
 

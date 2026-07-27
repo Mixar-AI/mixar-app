@@ -18,6 +18,44 @@ SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
 SCENE_GEN_MODEL = "scene_gen_v1"
 
 # ============================================================================
+# TURNAROUND / MULTI-VIEW DETECTION
+# ============================================================================
+
+# Sentinel for "this moodboard image is not a labelled turnaround panel".
+TURNAROUND_VIEW_NONE = 'none'
+
+# The primary view. Its S3 key goes into the job payload's ``image_s3_key``;
+# it must NEVER appear in ``multi_view_images`` (the vendor's multi-view enum
+# has no ``front`` member and rejects the payload).
+TURNAROUND_VIEW_FRONT = 'front'
+
+# View types accepted by the backend's /model-3d/detect-views response and by
+# the Hunyuan Pro multi-view payload. Order drives the sidebar dropdown; left
+# and right lead because they are the labels users most often need to correct.
+TURNAROUND_VIEW_TYPES = (
+    (TURNAROUND_VIEW_NONE, "None", "Not part of a detected turnaround"),
+    (TURNAROUND_VIEW_FRONT, "Front", "Primary view (sent as the main image)"),
+    ('left', "Left", "Left side view"),
+    ('right', "Right", "Right side view"),
+    ('back', "Back", "Rear view"),
+    ('top', "Top", "Top-down view"),
+    ('bottom', "Bottom", "Bottom-up view"),
+    ('left_front', "Left Front", "Three-quarter view from the left"),
+    ('right_front', "Right Front", "Three-quarter view from the right"),
+)
+
+# Models known to accept multi-view input, used ONLY when the generation
+# catalog has not populated the per-model ``supports_multi_view`` flag
+# (offline / pre-auth). Prefer generation_params.model_supports_multi_view().
+# TODO: drop this list once every multi-view model in the catalog carries
+# supports_multi_view=True.
+TURNAROUND_FALLBACK_MULTI_VIEW_SLUGS = (
+    "hunyuan_pro_v3.1",
+    "hunyuan_pro_v3",
+    "hunyuan_pro_v2.5",
+)
+
+# ============================================================================
 # IMAGE EDITING CONSTANTS
 # ============================================================================
 

@@ -114,6 +114,32 @@ class MIXIE_OT_model_gen_generate(Operator):
                 )
         return entries or None
 
+    def _turnaround_payload(self, context, image, supports_mv):
+        """S3-key multi-view payload fragment for a detected turnaround.
+
+        Returns ``None`` when *image* is not part of a turnaround group (the
+        normal single-image path applies unchanged), ``False`` when the group
+        is unusable and the operator should cancel, otherwise the fragment.
+        """
+        from mixar.modules.moodboard.core.turnaround_views import (
+            build_multi_view_payload, find_group_for_image,
+        )
+
+        if not supports_mv or image is None:
+            return None
+        group_id = find_group_for_image(context.scene, image)
+        if not group_id:
+            return None
+        try:
+            fragment, warnings = build_multi_view_payload(
+                context.scene, group_id)
+        except ValueError as e:
+            self.report({"ERROR"}, str(e))
+            return False
+        for warning in warnings:
+            self.report({"WARNING"}, warning)
+        return fragment
+
     def execute(self, context):
         from mixar.modules.common.generation_params import (
             assemble_payload, collect_params, model_supports_multi_view,
@@ -154,12 +180,24 @@ class MIXIE_OT_model_gen_generate(Operator):
         image = self._get_input_image(context, tab)
         prompt = (getattr(tab, 'prompt', '') or '').strip() or None
         supports_mv = model_supports_multi_view(service_key, model)
+
+        # --- Turnaround sheets: submit ONE multi-view job from S3 keys ---
+        # The detect-views endpoint already staged every crop in S3, so the
+        # keys are forwarded verbatim instead of the pixels being re-uploaded.
+        turnaround_payload = self._turnaround_payload(
+            context, image, supports_mv)
+        if turnaround_payload is False:
+            return {"CANCELLED"}
+
         multi_views = (
-            self._get_multi_views(context) if supports_mv else None
+            None if turnaround_payload
+            else (self._get_multi_views(context) if supports_mv else None)
         )
 
         # Per-mode input validation (mirrors each legacy operator).
-        if service_key == "image_to_3d" or supports_mv:
+        if turnaround_payload:
+            pass  # the detected views are the input
+        elif service_key == "image_to_3d" or supports_mv:
             if not (image or prompt or multi_views):
                 self.report(
                     {"WARNING"},
@@ -177,7 +215,9 @@ class MIXIE_OT_model_gen_generate(Operator):
 
         # --- Base payload (image / multi-view) ---
         payload = {}
-        if image is not None:
+        if turnaround_payload:
+            payload.update(turnaround_payload)
+        elif image is not None:
             try:
                 if service_key == "model_3d":
                     image_bytes = compress_for_service(image, "image_to_3d")

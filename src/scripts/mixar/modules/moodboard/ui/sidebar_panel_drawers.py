@@ -240,6 +240,15 @@ def _draw_image_to_3d_basic(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
+    # --- Turnaround sheet -> per-view crops (multi-view models only) ---
+    # Offline fallback path: the catalog's supports_multi_view flag is
+    # unavailable here, so model_accepts_multi_view falls back to the known
+    # multi-view slug list in constants.py.
+    from .turnaround_drawer import draw_detect_views_section
+    draw_section_separator(layout)
+    draw_detect_views_section(
+        layout, context, "model_3d", getattr(tab, "model", ""))
+
     draw_section_separator(layout)
 
     # --- Settings ---
