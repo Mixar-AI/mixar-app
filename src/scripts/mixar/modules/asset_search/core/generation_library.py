@@ -1,0 +1,248 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Auto-curated "Mixar Generations" asset library.
+
+Every completed image->3D / model-3D generation is archived into a
+Mixar-owned asset library (registered like any user library) and, once the
+generation queue has drained of qualifying jobs, embedded via the existing
+incremental training flow — so past generations become reusable (agent
+library picker + Assets-workspace search) instead of being regenerated.
+
+Implemented entirely as a queue LISTENER so nothing in common/job_queue
+changes: the listener fires on every job state change, saves newly-succeeded
+qualifying jobs, and triggers one incremental retrain when the qualifying
+queues drain (which also fires when the last job FAILS).
+"""
+
+import time
+
+import bpy
+
+from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.constants import (
+    GENERATION_LIBRARY_JOB_TYPES,
+    GENERATION_LIBRARY_NAME,
+    GENERATION_LIBRARY_SUBPATH,
+)
+
+logger = get_logger(__name__)
+
+# Feature-queue keys whose jobs can be qualifying generations. The per-job
+# `job_type` guard is the real filter; these just tell us which queues to watch.
+_QUALIFYING_FEATURE_KEYS = ("image_to_3d_pro", "model_3d")
+
+# Jobs already archived (by id), so the repeatedly-firing listener never
+# double-writes. Bounded implicitly by generation volume per session.
+_saved_job_ids: set = set()
+# At least one asset was saved since the last retrain — gate so an all-failed
+# batch doesn't fire a pointless train.
+_batch_dirty = False
+_retrain_scheduled = False
+_MAX_RETRAIN_WAIT_TICKS = 60  # ~60 * 2s = 2 min max wait for a busy manual train
+
+
+# --------------------------------------------------------------------------- #
+# Library path + registration
+# --------------------------------------------------------------------------- #
+
+def get_library_path() -> str:
+    """User-writable folder holding the Mixar Generations .blends."""
+    try:
+        return bpy.utils.user_resource(
+            "DATAFILES", path=GENERATION_LIBRARY_SUBPATH, create=True
+        )
+    except Exception:
+        import os
+        path = os.path.join(
+            os.path.expanduser("~"), ".mixar", "generations"
+        )
+        os.makedirs(path, exist_ok=True)
+        return path
+
+
+def ensure_registered() -> None:
+    """Idempotently register the Mixar Generations library in preferences.
+
+    Runs every startup — Blender persists library registration in userpref,
+    but re-adding here makes fresh machines / lost prefs self-heal without a
+    (blocking, risky) save_userpref call.
+    """
+    try:
+        path = get_library_path()
+        libs = bpy.context.preferences.filepaths.asset_libraries
+        for lib in libs:
+            if lib.name == GENERATION_LIBRARY_NAME:
+                # Keep the path correct if the resource dir moved.
+                if bpy.path.abspath(lib.path) != bpy.path.abspath(path):
+                    lib.path = path
+                return
+        new_lib = libs.new(name=GENERATION_LIBRARY_NAME)
+        new_lib.path = path
+        logger.info("[GenLibrary] Registered '%s' -> %s", GENERATION_LIBRARY_NAME, path)
+    except Exception:
+        logger.exception("[GenLibrary] Could not register the generations library")
+
+
+# --------------------------------------------------------------------------- #
+# Listener wiring
+# --------------------------------------------------------------------------- #
+
+def attach_listeners() -> None:
+    """Attach the save/retrain listener to the qualifying feature queues."""
+    try:
+        from mixar.modules.common.job_queue.core.helpers import (
+            get_queue_with_listener,
+        )
+        for feature_key in _QUALIFYING_FEATURE_KEYS:
+            get_queue_with_listener(feature_key, _on_queue_changed)
+    except Exception:
+        logger.exception("[GenLibrary] Could not attach queue listeners")
+
+
+def _on_queue_changed(queue) -> None:
+    """Listener: save newly-succeeded qualifying jobs; retrain on full drain.
+
+    Called on every state change of a watched queue. Non-fatal throughout —
+    a failure here must never disturb the user's generation.
+    """
+    try:
+        from mixar.modules.common.job_queue.core.job import JobState
+
+        for job in queue.snapshot():
+            if job.id in _saved_job_ids:
+                continue
+            if job.state != JobState.SUCCESS:
+                continue
+            if not _is_qualifying(job):
+                continue
+            if not (job.imported_object_names or "").strip():
+                continue
+            _saved_job_ids.add(job.id)  # mark first — never retry a bad save
+            _save_job(job)
+
+        if _batch_dirty and _all_qualifying_queues_idle():
+            _schedule_retrain()
+    except Exception:
+        logger.exception("[GenLibrary] listener error")
+
+
+# --------------------------------------------------------------------------- #
+# Save + drain + retrain
+# --------------------------------------------------------------------------- #
+
+def _is_qualifying(job) -> bool:
+    job_type = getattr(job, "job_type", "") or getattr(job, "service", "")
+    return job_type in GENERATION_LIBRARY_JOB_TYPES
+
+
+def _pick_mesh(object_names: str):
+    """Choose the primary MESH datablock from a comma-separated name list.
+
+    Mesh-only (no rigged hierarchies): skip empties/armatures; if several
+    meshes, take the highest-poly one (the actual model, not a stray plane).
+    """
+    best = None
+    best_polys = -1
+    for name in (n.strip() for n in object_names.split(",")):
+        if not name:
+            continue
+        obj = bpy.data.objects.get(name)
+        if obj is None or obj.type != "MESH" or obj.data is None:
+            continue
+        polys = len(obj.data.polygons)
+        if polys > best_polys:
+            best, best_polys = obj, polys
+    return best
+
+
+def _save_job(job) -> None:
+    """Archive one succeeded generation's mesh into the Mixar library."""
+    global _batch_dirty
+    try:
+        mesh = _pick_mesh(job.imported_object_names or "")
+        if mesh is None:
+            logger.warning(
+                "[GenLibrary] No mesh to archive for job %s (%s)",
+                job.id[:8], job.imported_object_names,
+            )
+            return
+
+        label = (getattr(job, "label", "") or "Generation").strip()
+        # Unique, meaningful searchable name so repeat labels don't collide in
+        # the embedding index (identity = name/library/blend_file).
+        asset_name = f"{label} {job.id[:6]}"
+
+        from mixar.modules.moodboard.core.scene_asset_exporter import (
+            export_object_to_asset_library,
+        )
+        ok = export_object_to_asset_library(
+            mesh,
+            label,
+            get_library_path(),
+            asset_name=asset_name,
+            description=label,
+            tags=["generation"],
+        )
+        if ok:
+            _batch_dirty = True
+            logger.info("[GenLibrary] Archived generation '%s'", asset_name)
+        else:
+            logger.warning("[GenLibrary] Exporter declined job %s", job.id[:8])
+    except Exception:
+        logger.exception("[GenLibrary] Failed to archive generation")
+
+
+def _all_qualifying_queues_idle() -> bool:
+    """True when NO qualifying job is still active across ALL queues."""
+    from mixar.modules.common.job_queue.core.job import TERMINAL_STATES
+    from mixar.modules.common.job_queue.core.queue_manager import all_queues
+
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if _is_qualifying(job) and job.state not in TERMINAL_STATES:
+                return False
+    return True
+
+
+def _schedule_retrain() -> None:
+    """Fire ONE incremental retrain once the manual-train guard is free."""
+    global _retrain_scheduled
+    if _retrain_scheduled:
+        return
+    _retrain_scheduled = True
+
+    state = {"ticks": 0}
+
+    def _tick():
+        global _retrain_scheduled, _batch_dirty
+        try:
+            training = getattr(bpy.context.scene, "mixie_asset_training", None)
+            if training is not None and getattr(training, "is_training", False):
+                state["ticks"] += 1
+                if state["ticks"] > _MAX_RETRAIN_WAIT_TICKS:
+                    _retrain_scheduled = False
+                    return None  # give up; next generation will retry
+                return 2.0  # a train is running — poll back
+
+            win = bpy.context.window
+            if win is None:
+                wm = bpy.context.window_manager
+                win = wm.windows[0] if wm and wm.windows else None
+            if win is not None:
+                with bpy.context.temp_override(window=win, screen=win.screen):
+                    bpy.ops.mixie.train_asset_model()
+            else:
+                bpy.ops.mixie.train_asset_model()
+
+            _batch_dirty = False
+            logger.info("[GenLibrary] Incremental embedding retrain triggered")
+        except Exception:
+            logger.exception("[GenLibrary] Could not trigger retrain")
+        finally:
+            _retrain_scheduled = False
+        return None  # one-shot
+
+    bpy.app.timers.register(_tick, first_interval=1.0)

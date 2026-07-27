@@ -75,13 +75,18 @@ def _ensure_catalog_entry(library_path, label):
     return cat_uuid
 
 
-def _create_clean_copy(obj):
+def _create_clean_copy(obj, asset_name=None):
     """Create a clean standalone mesh copy for asset export.
 
     - Bakes the full world transform into mesh vertices
     - No parent-child relationships
     - Centered at bounding-box center with identity transform
     - Materials and textures preserved
+
+    ``asset_name`` overrides the copy's datablock name (the SEARCHABLE asset
+    name); defaults to the source object's name. Callers that archive many
+    same-typed objects (e.g. generations) pass a unique name so the embedding
+    index — keyed on (name, library, blend_file) — doesn't collide.
 
     Returns the temporary object (caller must clean up via _remove_temp).
     """
@@ -108,8 +113,10 @@ def _create_clean_copy(obj):
         center = (bbox_min + bbox_max) / 2
         clean_mesh.transform(Matrix.Translation(-center))
 
+    name = asset_name or obj.name
+    clean_mesh.name = name
     # Create standalone object at origin with identity transform
-    clean_obj = bpy.data.objects.new(obj.name, clean_mesh)
+    clean_obj = bpy.data.objects.new(name, clean_mesh)
     return clean_obj
 
 
@@ -138,7 +145,9 @@ def _collect_datablocks(clean_obj):
     return blocks
 
 
-def export_object_to_asset_library(obj, label, library_path):
+def export_object_to_asset_library(
+    obj, label, library_path, *, asset_name=None, description="", tags=None
+):
     """Export a Blender object to an asset library as a clean .blend file.
 
     The exported asset is a flat mesh (no hierarchy, no empties) with its
@@ -148,6 +157,11 @@ def export_object_to_asset_library(obj, label, library_path):
         obj: The Blender object to export (must be MESH type).
         label: Human-readable label for the asset (e.g. "wooden table").
         library_path: Root directory of the asset library.
+        asset_name: Override for the SEARCHABLE asset (datablock) name. Defaults
+            to the source object's name. Pass a unique value when archiving many
+            same-typed objects so the embedding index doesn't collide on name.
+        description: Optional asset description (feeds embedding-search text).
+        tags: Optional list of tag strings (also feed embedding-search text).
 
     Returns:
         True on success, False on failure.
@@ -182,12 +196,28 @@ def export_object_to_asset_library(obj, label, library_path):
         catalog_id = None
 
     # Create a clean, flat copy (no hierarchy, baked transform, at origin)
-    clean_obj = _create_clean_copy(obj)
+    clean_obj = _create_clean_copy(obj, asset_name=asset_name)
 
     # Mark the clean copy as asset
     clean_obj.asset_mark()
     if catalog_id and clean_obj.asset_data:
         clean_obj.asset_data.catalog_id = catalog_id
+    # Optional metadata — improves embedding-search relevance (name alone is
+    # often generic for generated meshes).
+    if clean_obj.asset_data:
+        if description:
+            try:
+                clean_obj.asset_data.description = description
+            except Exception:
+                pass
+        for tag in (tags or []):
+            if tag:
+                try:
+                    clean_obj.asset_data.tags.new(str(tag), skip_if_exists=True)
+                except TypeError:
+                    clean_obj.asset_data.tags.new(str(tag))
+                except Exception:
+                    pass
 
     # Collect datablocks from the clean copy only
     datablocks = _collect_datablocks(clean_obj)

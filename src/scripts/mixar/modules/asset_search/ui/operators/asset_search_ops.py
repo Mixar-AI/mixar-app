@@ -467,6 +467,19 @@ def _start_auto_check():
     return None  # one-shot
 
 
+def _start_generation_library():
+    """Deferred startup: register the Mixar Generations library + attach the
+    queue listener that archives generations and triggers incremental
+    embedding when the generation queue drains. One-shot, non-fatal."""
+    try:
+        from mixar.modules.asset_search.core import generation_library
+        generation_library.ensure_registered()
+        generation_library.attach_listeners()
+    except Exception as exc:
+        logger.warning("[Asset Search] Generation library init failed: %s", exc)
+    return None  # one-shot
+
+
 classes = (
     MIXIE_OT_search_assets,
     MIXIE_OT_refresh_asset_status,
@@ -481,11 +494,16 @@ def register():
     bpy.app.timers.register(
         _start_auto_check, first_interval=2.0, persistent=True,
     )
+    # Register the Mixar Generations library + generation-archive listener.
+    # Slightly after the auto-check so preferences/queues are settled.
+    bpy.app.timers.register(
+        _start_generation_library, first_interval=3.0, persistent=True,
+    )
 
 
 def unregister():
     """Unregister operator classes and timers"""
-    for fn in (_start_auto_check, _auto_check_poll):
+    for fn in (_start_auto_check, _auto_check_poll, _start_generation_library):
         if bpy.app.timers.is_registered(fn):
             bpy.app.timers.unregister(fn)
 
