@@ -35,6 +35,22 @@ ANIMATE_RETARGET_MODEL = "tripo_retarget_v2_5"
 # sends it and the backend resolves/authorizes the vendor task.
 ANIMATE_RIG_JOB_PROP = "mixar_rig_job_id"
 
+# Segmentation (Tripo v3 mesh APIs). Two services split by INPUT, not by
+# endpoint: SEGMENT takes a mesh already in the scene (/v3/mesh/segment),
+# SMART_SEGMENT takes a 2D image and both models AND segments it in one task
+# (/v3/mesh/smartsegment). The backend routes each model row by model_ref.
+SEGMENT_SERVICE = "tripo_segment"
+SEGMENT_MODEL = "tripo_seg_v2"          # semantic + part labels (Beta)
+SEGMENT_MODEL_GEOMETRY = "tripo_seg_v1"  # geometry only, unnamed parts
+SMART_SEGMENT_SERVICE = "tripo_smart_segment"
+SMART_SEGMENT_MODEL = "tripo_smartseg_v1"
+# Collection suffix for a segmentation import; the source object is hidden
+# rather than deleted so the split is non-destructive and comparable.
+SEGMENT_PARTS_SUFFIX = "_parts"
+# Stamped on every object imported from a segmentation job, holding OUR queue
+# job id — lets the agent (and a later re-segment) recognise generated parts.
+SEGMENT_JOB_PROP = "mixar_segment_job_id"
+
 # ============================================================================
 # POLL CONFIGURATION
 # ============================================================================
@@ -52,6 +68,7 @@ MAX_FILE_SIZE_PART = 100 * 1024 * 1024       # 100 MB
 MAX_FILE_SIZE_TOPOLOGY = 200 * 1024 * 1024   # 200 MB
 MAX_FILE_SIZE_TRIPO_RETOPOLOGY = 150 * 1024 * 1024  # 150 MB (Tripo mesh limit)
 MAX_FILE_SIZE_ANIMATE_RIG = 150 * 1024 * 1024  # 150 MB (aligned with backend upload cap)
+MAX_FILE_SIZE_SEGMENT = 150 * 1024 * 1024    # 150 MB (Tripo mesh limit)
 MAX_FILE_SIZE_UV = 100 * 1024 * 1024         # 100 MB
 
 # ============================================================================

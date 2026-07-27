@@ -27,6 +27,11 @@ FEATURE_IMAGEGEN = "imagegen"
 FEATURE_LOOKDEV360 = "lookdev360"
 FEATURE_SCENE_GEN = "scene_gen"
 FEATURE_MESH_SEGMENT = "mesh_segment"
+# Tripo segmentation. Separate queues from FEATURE_MESH_SEGMENT (Jasper) so a
+# Tripo job and a Jasper job on the same mesh don't collide on queue dedup,
+# which keys on the job label.
+FEATURE_TRIPO_SEGMENT = "tripo_segment"
+FEATURE_SMART_SEGMENT = "smart_segment"
 FEATURE_SCENE_RECON = "scene_recon"
 FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"

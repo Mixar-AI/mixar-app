@@ -145,6 +145,43 @@ def _draw_mesh_segment(layout, context):
         draw_capability_selector(col, tab, "mesh_segmentation")
         draw_section_separator(layout)
 
+    if service_key == "tripo_segment":
+        # Tripo Mesh Segmentation — splits the SELECTED mesh. Mode/Model and
+        # the schema params (granularity, split_by_connectivity) were already
+        # drawn by draw_capability_selector above.
+        from mixar.modules.common.job_queue.constants import (
+            FEATURE_TRIPO_SEGMENT,
+        )
+
+        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+        draw_mesh_info(col, context, max_mb=150)
+        draw_hint(layout, "Select the objects you want to split into parts",
+                  icon='INFO')
+        draw_section_separator(layout)
+
+        col = draw_section_box(layout, "Reference Mask", icon='IMAGE_DATA')
+        col.template_ID(tab, "ref_image", open="image.open")
+        if tab.ref_image is not None:
+            # Say this explicitly: Tripo silently ignores both params when a
+            # mask is supplied, and a user who tuned them would otherwise
+            # think they took effect.
+            draw_hint(col, "Mask supplied — Granularity and Split by "
+                           "Connectivity are ignored", icon='INFO')
+        draw_section_separator(layout)
+
+        info = draw_section_box(layout, "About Tripo Segmentation", icon='INFO')
+        draw_hint(info, "Parts import into a '<object>_parts' collection",
+                  icon='DOT')
+        draw_hint(info, "The original mesh is hidden, not deleted", icon='DOT')
+        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
+
+        draw_generate_footer(
+            layout, context, "mixie.tripo_segment_generate", "tripo_segment",
+            gen_flag_attr='mixie_tripo_segment_is_generating',
+            feature_key=FEATURE_TRIPO_SEGMENT,
+        )
+        return
+
     if service_key == "hunyuan_part":
         # Part Segmentation — same inputs + submit flow as PART_SEGMENT.
         if not hasattr(scene, 'hunyuan'):

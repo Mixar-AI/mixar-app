@@ -240,10 +240,31 @@ def register():
             options={'SKIP_SAVE'},
         ),
     )
+    # Tripo segmentation. Separate from mixie_mesh_segment_is_processing
+    # (Jasper) so the two engines' in-flight state never masks each other.
+    _safe_scene_prop(
+        'mixie_tripo_segment_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether Tripo mesh segmentation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_smart_segment_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether Tripo smart segmentation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
 
     # Generation progress floats (session-only)
     for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
-                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate'):
+                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate',
+                    'tripo_segment', 'smart_segment'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
         _safe_wm_prop(
             f'mixie_{prefix}_generate_progress',
@@ -264,6 +285,8 @@ def unregister():
     # Scene properties (reverse of registration order)
     for attr in (
         # Scene Gen Experimental flags were not registered; nothing to remove.
+        'mixie_smart_segment_is_generating',
+        'mixie_tripo_segment_is_generating',
         'mixie_animate_is_generating',
         'mixie_retopology_is_generating',
         'mixie_image_to_3d_is_generating',
