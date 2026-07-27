@@ -24,6 +24,7 @@ from ..constants import (
     JSONRPCErrorCode,
     JSONRPCMethod,
     WS_CLOSE_AUTH_FAILED,
+    WS_LIVENESS_PROBE_GRACE,
     WS_LIVENESS_TIMEOUT,
     WS_UI_STALE_THRESHOLD,
 )
@@ -68,12 +69,14 @@ class JSONRPCWebSocketClient:
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
+        device_id: Optional[str] = None,
     ):
         self._host = host
         self._connection_id = connection_id
         self._token_getter = token_getter
         self._blender_version = blender_version
         self._addon_version = addon_version
+        self._device_id = device_id
         self._reconnect_delay = reconnect_delay
         self._max_reconnect_delay = max_reconnect_delay
         self._ping_interval = ping_interval
@@ -100,6 +103,9 @@ class JSONRPCWebSocketClient:
         self._current_delay = reconnect_delay
         self._last_ping_time = 0.0
         self._last_recv_time = 0.0
+        # Liveness grace probe: set to the probe start time when the liveness
+        # window expires, cleared when traffic arrives (see _receive_loop).
+        self._liveness_probe_started: Optional[float] = None
 
         # Auth failure backoff
         self._auth = AuthBackoffManager()
@@ -279,6 +285,7 @@ class JSONRPCWebSocketClient:
             self._auth.reset()
             self._last_ping_time = time.time()
             self._last_recv_time = time.time()
+            self._liveness_probe_started = None
 
             if self._on_connected:
                 try:
@@ -331,6 +338,9 @@ class JSONRPCWebSocketClient:
             "addon_version": self._addon_version,
             "capabilities": ["script_execution", "notifications"],
         }
+        # Anti-abuse device signal (one trial per machine); best-effort
+        if self._device_id:
+            params["device_id"] = self._device_id
         # A headless sandbox identifies itself so the backend can route a
         # create_model sub-build to it (parent_instance_id -> this connection).
         if self._role:
@@ -376,15 +386,53 @@ class JSONRPCWebSocketClient:
                 # still "succeed" — without this check the client never
                 # notices and never reconnects.
                 if time.time() - self._last_recv_time > WS_LIVENESS_TIMEOUT:
-                    logger.warning(
-                        f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
-                        f"(pings unanswered) — treating connection as dead"
-                    )
-                    try:
-                        self._ws.close()
-                    except Exception:
-                        pass
-                    break
+                    # Grace probe before declaring death. This thread starves
+                    # whenever Blender's main thread holds the GIL through a
+                    # long script/render — on wake, _last_recv_time is stale
+                    # even though the server kept the connection healthy the
+                    # whole time (uat3 2026-07-21: three healthy connections
+                    # torn down here after GIL-blocked stretches). Send a ping
+                    # and give the server one short window to answer; only a
+                    # probe that ALSO gets nothing means the link is dead.
+                    if self._liveness_probe_started is None:
+                        self._liveness_probe_started = time.time()
+                        logger.info(
+                            f"No WebSocket traffic for {WS_LIVENESS_TIMEOUT:.0f}s "
+                            f"— probing liveness before teardown"
+                        )
+                        self._send_ping()
+                    elif (
+                        time.time() - self._liveness_probe_started
+                        > WS_LIVENESS_PROBE_GRACE
+                    ):
+                        # The probe's answer may already sit in the socket
+                        # buffer if this thread was starved again during the
+                        # grace window — drain once more before the verdict.
+                        _probe_data = None
+                        try:
+                            self._ws.settimeout(1.0)
+                            _probe_data = self._ws.recv()
+                        except Exception:
+                            pass
+                        if _probe_data:
+                            self._last_recv_time = time.time()
+                            self._liveness_probe_started = None
+                            self._handle_message(json.loads(_probe_data))
+                            continue
+                        logger.warning(
+                            f"No WebSocket traffic for "
+                            f"{time.time() - self._last_recv_time:.0f}s and the "
+                            f"liveness probe got no answer in "
+                            f"{WS_LIVENESS_PROBE_GRACE:.0f}s — treating "
+                            f"connection as dead"
+                        )
+                        try:
+                            self._ws.close()
+                        except Exception:
+                            pass
+                        break
+                else:
+                    self._liveness_probe_started = None
 
                 # Send ping if needed
                 if time.time() - self._last_ping_time > self._ping_interval:
@@ -663,6 +711,16 @@ def create_jsonrpc_client(
 
     if _jsonrpc_client is not None:
         _jsonrpc_client.disconnect()
+
+    # Attach the anti-abuse device id unless the caller supplied one.
+    # Lazy import + fail-open: the device id must never block connecting.
+    if "device_id" not in kwargs:
+        try:
+            from ...auth.core.device import get_device_id
+
+            kwargs["device_id"] = get_device_id()
+        except Exception:
+            kwargs["device_id"] = None
 
     _jsonrpc_client = JSONRPCWebSocketClient(host, connection_id, **kwargs)
     return _jsonrpc_client

@@ -6,10 +6,32 @@
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+import sys
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAT_ROOT = ROOT / "src/scripts/mixar/modules/space_mixie_chat"
+SCRIPTS = ROOT / "src" / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from mixar.modules.testing.mock_bpy import install_bpy_mock
+
+install_bpy_mock()
+
+import bpy
+
+bpy.types.Panel.bl_rna = SimpleNamespace(
+    properties={"bl_space_type": SimpleNamespace(enum_items=[])}
+)
+
+from mixar.modules.space_mixie_chat.constants import (
+    FEEDBACK_STATUS_FAILED,
+    FEEDBACK_STATUS_RECEIVED,
+    FEEDBACK_STATUS_SENDING,
+)
+from mixar.modules.space_mixie_chat.ui.operators import chat_special_ops as OPS
 
 
 def _load_feedback_policy():
@@ -30,17 +52,117 @@ def test_feedback_comment_requires_rating_and_deduplicates_submission():
     assert policy.validate_feedback_comment(5, "useful note", False) is None
 
 
-def test_feedback_post_checks_status_and_preserves_failed_comment():
+def test_feedback_post_tracks_server_outcome_and_preserves_retry_text():
     source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
 
     assert "response.raise_for_status()" in source
     assert "feedback_comment_submitting = True" in source
     assert "feedback_comment_submitting = False" in source
     assert "_feedback_post_queue.put(post)" in source
+    assert "FEEDBACK_STATUS_SENDING" in source
+    assert "FEEDBACK_STATUS_FAILED" in source
+    assert "if success:" in source
+    assert "current.feedback_comment = comment" in source
     assert "current.feedback_comment_expanded = True" in source
-    assert 'current.feedback_comment = ""' in source
     assert "comment_length=" in source
     assert "comment[:50]" not in source
+
+
+def _feedback_message(**overrides):
+    values = {
+        "bubble_id": "bubble-1",
+        "feedback_rating": 5,
+        "feedback_comment": "retryable detail",
+        "feedback_comment_submitting": False,
+        "feedback_comment_expanded": True,
+        "feedback_submitted_comment": "",
+        "feedback_status": 0,
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+def test_feedback_comment_failure_preserves_text_for_retry(monkeypatch):
+    msg = _feedback_message()
+    scene = SimpleNamespace(mixie_chat_messages=[msg])
+    callbacks = []
+    monkeypatch.setattr(
+        OPS,
+        "_post_feedback_async",
+        lambda _scene, _payload, on_complete=None: callbacks.append(on_complete) or True,
+    )
+    monkeypatch.setattr(OPS, "_bump_layout_epoch", lambda _scene: None)
+    monkeypatch.setattr(OPS, "redraw_chat_areas", lambda: None)
+
+    queued, error = OPS._queue_feedback_comment(scene, msg)
+    assert queued is True
+    assert error == ""
+    assert msg.feedback_status == FEEDBACK_STATUS_SENDING
+    assert msg.feedback_comment == "retryable detail"
+
+    callbacks[0](False)
+
+    assert msg.feedback_status == FEEDBACK_STATUS_FAILED
+    assert msg.feedback_comment_submitting is False
+    assert msg.feedback_comment == "retryable detail"
+    assert msg.feedback_comment_expanded is True
+    assert msg.feedback_submitted_comment == ""
+
+
+def test_feedback_comment_success_clears_editor_only_after_acceptance(monkeypatch):
+    msg = _feedback_message()
+    scene = SimpleNamespace(mixie_chat_messages=[msg])
+    callbacks = []
+    monkeypatch.setattr(
+        OPS,
+        "_post_feedback_async",
+        lambda _scene, _payload, on_complete=None: callbacks.append(on_complete) or True,
+    )
+    monkeypatch.setattr(OPS, "_bump_layout_epoch", lambda _scene: None)
+    monkeypatch.setattr(OPS, "redraw_chat_areas", lambda: None)
+
+    assert OPS._queue_feedback_comment(scene, msg)[0] is True
+    callbacks[0](True)
+
+    assert msg.feedback_status == FEEDBACK_STATUS_RECEIVED
+    assert msg.feedback_comment_submitting is False
+    assert msg.feedback_comment == ""
+    assert msg.feedback_comment_expanded is False
+    assert msg.feedback_submitted_comment == "retryable detail"
+
+
+def test_feedback_rating_callback_uses_stable_values_after_operator_returns(
+    monkeypatch,
+):
+    msg = _feedback_message(feedback_rating=0, feedback_comment="")
+    scene = SimpleNamespace(mixie_chat_messages=[msg])
+    context = SimpleNamespace(scene=scene)
+    callbacks = []
+    payloads = []
+
+    def _queue(_scene, payload, on_complete=None):
+        payloads.append(payload)
+        callbacks.append(on_complete)
+        return True
+
+    monkeypatch.setattr(OPS, "_post_feedback_async", _queue)
+    monkeypatch.setattr(OPS, "_bump_layout_epoch", lambda _scene: None)
+    monkeypatch.setattr(OPS, "redraw_chat_areas", lambda: None)
+
+    operator = OPS.MIXIE_CHAT_OT_set_feedback_rating()
+    operator.bubble_id = "bubble-1"
+    operator.rating = 4
+    assert operator.execute(context) == {'FINISHED'}
+    assert msg.feedback_status == FEEDBACK_STATUS_SENDING
+    assert payloads == [{"bubble_id": "bubble-1", "rating": 4}]
+
+    # Blender may invalidate an operator's RNA after execute. The callback
+    # must rely only on plain locals captured while execute was active.
+    operator.bubble_id = "invalidated-rna"
+    operator.rating = 1
+    callbacks[0](True)
+
+    assert msg.feedback_status == FEEDBACK_STATUS_RECEIVED
 
 
 def test_only_latest_agent_response_offers_feedback():
@@ -70,14 +192,12 @@ def test_feedback_submission_shows_inline_confirmation():
     """Rating and comment submissions must surface a visible received state."""
     ops_source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
 
-    # Both flows drive the shared status lifecycle.
-    assert "FEEDBACK_STATUS_SENDING" in ops_source
+    # Both flows only show the received state from their completion callback.
     assert "FEEDBACK_STATUS_RECEIVED" in ops_source
+    assert "FEEDBACK_STATUS_SENDING" in ops_source
     assert "FEEDBACK_STATUS_FAILED" in ops_source
-    # The accepted comment is kept for the read-only inline display.
+    # The accepted comment is shown read-only only after success.
     assert "current.feedback_submitted_comment = comment" in ops_source
-    # The rating POST reports completion back to the UI.
-    assert "on_complete=lambda success: _set_feedback_status(" in ops_source
     # Submitted feedback is locked against revision, in the operator and in
     # the C++ hit-test/hover paths.
     assert "Feedback rating ignored (locked)" in ops_source

@@ -45,6 +45,11 @@ class Job:
 
     feature_key: str = ""
     label: str = ""
+    # Name of the scene that submitted this job. Captured at submit time so the
+    # scene-flag listener can set/clear the "generating" bool on the ORIGINATING
+    # scene rather than whatever scene happens to be active when a queue
+    # notification fires (which strands the flag when the user switches scenes).
+    scene_name: str = ""
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     state: JobState = JobState.PENDING
     error: str = ""
@@ -87,6 +92,10 @@ class Job:
     # Optional UI-only title when ``label`` also carries dedup or downstream
     # naming data. Keeping this structured avoids parsing human text.
     display_label: str = ""
+
+    # Set once a FAILED toast has been surfaced for this job, so the queue's
+    # per-notify failure sweep shows the toast exactly once (edge-detected).
+    _failure_notified: bool = field(default=False, repr=False)
 
     # ------------------------------------------------------------------ #
     # Subclass interface
@@ -148,6 +157,14 @@ class Job:
     def get_poll_interval(self):
         """Override to customize poll interval (seconds). Return 0 for default."""
         return 0.0
+
+    def release_resources(self) -> None:
+        """Release large transient resources after entering a terminal state.
+
+        Subclasses may override.  Implementations must be idempotent because
+        queue notifications can run more than once for terminal jobs.
+        """
+        return None
 
     # ------------------------------------------------------------------ #
     # Shared response-parsing helpers

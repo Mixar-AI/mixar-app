@@ -24,10 +24,14 @@ set(SRC
   mixie_chat_footer_layout.cc
   mixie_chat_footer_thumbnails.cc
   mixie_chat_header.cc
+  mixie_chat_history_events.cc
+  mixie_chat_history_overlay.cc
+  mixie_chat_history_util.cc
   mixie_chat_hit_testing.cc
   mixie_chat_main_region.cc
   mixie_chat_markdown.cc
   mixie_chat_markdown_parse.cc
+  mixie_chat_mention.cc
   mixie_chat_table.cc
   mixie_chat_empty_state.cc
   mixie_chat_feedback.cc
@@ -36,6 +40,9 @@ set(SRC
   mixie_chat_messages_layout.cc
   mixie_chat_messages_render.cc
   mixie_chat_props.cc
+  mixie_chat_rules_events.cc
+  mixie_chat_rules_overlay.cc
+  mixie_chat_rules_util.cc
   mixie_chat_scroll_indicator.cc
   mixie_chat_selection.cc
   mixie_chat_slots.cc
@@ -48,9 +55,11 @@ set(SRC
 
   mixie_chat_footer_constants.hh
   mixie_chat_footer_intern.hh
+  mixie_chat_history_intern.hh
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
   mixie_chat_markdown_intern.hh
+  mixie_chat_rules_intern.hh
   mixie_chat_ui_types.hh
 )
 

@@ -16,6 +16,7 @@ AUTH_RETRY_INTERVAL_S = 5.0
 # Feature keys
 FEATURE_IMAGE_TO_3D_PRO = "image_to_3d_pro"
 FEATURE_RETOPOLOGY = "retopology"
+FEATURE_ANIMATE = "animate"
 FEATURE_SCENE_GEN_HP = "scene_gen_hp"
 FEATURE_SCENE_GEN_LP = "scene_gen_lp"
 FEATURE_HUNYUAN_RAPID = "hunyuan_rapid"
@@ -31,6 +32,12 @@ FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"
 FEATURE_LOOKDEV = "lookdev"
 FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
+
+# Enqueue toast — transient "generation queued" viewport feedback.
+# One stable id so bursts collapse into a single counting toast; the TTL is
+# also the burst window (a re-push resets the store item's created_at).
+ENQUEUE_TOAST_ID = "jobq_enqueued"
+ENQUEUE_TOAST_TTL_MS = 8000
 
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
@@ -56,5 +63,7 @@ __all__ = (
     "FEATURE_BRUSH_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
+    "ENQUEUE_TOAST_ID",
+    "ENQUEUE_TOAST_TTL_MS",
     "LOG_PREFIX",
 )

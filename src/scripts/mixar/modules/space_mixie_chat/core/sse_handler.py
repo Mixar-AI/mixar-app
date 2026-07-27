@@ -68,9 +68,9 @@ class SSEStreamHandler:
     def __init__(
         self,
         host: str,
-        on_event: Callable[[SSEEvent], None],
+        on_event: Callable[[SSEEvent], Optional[bool]],
         on_error: Callable[[str], None],
-        on_complete: Callable[[], None],
+        on_complete: Callable[[], Optional[bool]],
     ):
         self._host = host
         self._on_event = on_event
@@ -398,7 +398,6 @@ class SSEStreamHandler:
         _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles input SSE streaming."""
-        received_done = False
         try:
             headers = {"Accept": "text/event-stream"}
             if auth_token:
@@ -711,7 +710,9 @@ class SSEStreamHandler:
                 # this into an error; completing here would end the turn as if
                 # it succeeded, silently swallowing the lost response.
                 return True
-            self._on_complete()
+            accepted = self._on_complete()
+            if accepted is False:
+                raise RuntimeError("SSE completion was rejected by downstream queue")
             return True
 
         try:
@@ -728,7 +729,6 @@ class SSEStreamHandler:
             if isinstance(seq, int):
                 if seq <= self._last_seq:
                     return False
-                self._last_seq = seq
 
             # Detect event format based on presence of bubble_id
             if "bubble_id" in event_data:
@@ -738,7 +738,16 @@ class SSEStreamHandler:
                 event_type = event_data.get("type", "unknown")
 
             event = SSEEvent(event_type=event_type, data=event_data)
-            self._on_event(event)
+            accepted = self._on_event(event)
+            if accepted is False:
+                # Continuing would allow a later accepted sequence to move
+                # the resume cursor past this missing event. Raising turns the
+                # stream into a safe attach/replay from the last accepted seq.
+                raise RuntimeError("SSE event was rejected by downstream queue")
+            if isinstance(seq, int):
+                # Backward-compatible callbacks return None; only an explicit
+                # False rejects delivery.
+                self._last_seq = seq
         except json.JSONDecodeError as e:
             logger.warning(f"[SSE] Invalid JSON in SSE line: {e}")
 
@@ -764,9 +773,9 @@ def get_sse_handler(scene_name: str) -> Optional[SSEStreamHandler]:
 def create_sse_handler(
     scene_name: str,
     host: str,
-    on_event: Callable[[SSEEvent], None],
+    on_event: Callable[[SSEEvent], Optional[bool]],
     on_error: Callable[[str], None],
-    on_complete: Callable[[], None],
+    on_complete: Callable[[], Optional[bool]],
 ) -> SSEStreamHandler:
     """
     Create a new SSE handler for a specific scene.
@@ -789,6 +798,16 @@ def create_sse_handler(
         existing.stop_stream()
 
     handler = SSEStreamHandler(host, on_event, on_error, on_complete)
+    if existing is not None:
+        # Carry the turn's resume cursor across the handler swap. Callers
+        # create a fresh handler for EVERY stream leg, but an input stream
+        # continues the same turn — and the backend continues the turn's
+        # replay-buffer seq numbering with it. Starting the input leg back at
+        # -1 made a mid-leg reconnect attach with after_seq=-1 and replay the
+        # entire turn as duplicate content. start_stream() re-resets the
+        # cursor for fresh turns, so carrying it over is always safe.
+        handler._last_seq = existing._last_seq
+        handler._session_id = existing._session_id
     _sse_handlers[scene_name] = handler
     return handler
 

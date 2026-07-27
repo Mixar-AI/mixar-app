@@ -323,9 +323,11 @@ void ED_spacetype_mixie_chat()
   art->exit = mixie_chat_main_region_exit;  /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
   art->cursor = mixie_chat_main_region_cursor;  /* Hover tracking for option bubbles */
-  /* Run the cursor callback on EVERY mouse move, not only when the active
-   * region changes — hover states (stars, chips, links) update live. */
-  art->event_cursor = 1;
+  /* Run the cursor callback on every mouse move, not just on region entry or
+   * explicit refresh (region_cursor_set_ex gates on this flag). This keeps
+   * history rows, option bubbles, stars, chips, and links responsive while
+   * the cursor moves across them. */
+  art->event_cursor = true;
 
   BLI_addhead(&st->regiontypes, art);
 

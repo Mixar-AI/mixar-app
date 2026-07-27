@@ -139,16 +139,6 @@ def _find_feedback_message(scene, bubble_id: str):
     return None
 
 
-def _set_feedback_status(scene, bubble_id: str, status: int) -> None:
-    """Update the inline submission indicator for one feedback message."""
-    msg = _find_feedback_message(scene, bubble_id)
-    if msg is None:
-        return
-    msg.feedback_status = status
-    _bump_layout_epoch(scene)
-    redraw_chat_areas()
-
-
 def _queue_feedback_comment(scene, msg) -> tuple[bool, str]:
     """Validate and queue a comment submission for one feedback message."""
     comment = msg.feedback_comment.strip()
@@ -171,15 +161,14 @@ def _queue_feedback_comment(scene, msg) -> tuple[bool, str]:
             return
         current.feedback_comment_submitting = False
         if success:
-            # Do not erase text the user edited while the request was in flight.
-            if current.feedback_comment.strip() == comment:
-                current.feedback_comment = ""
+            current.feedback_comment = ""
             current.feedback_comment_expanded = False
-            # Show the accepted comment read-only under the stars.
             current.feedback_submitted_comment = comment
             current.feedback_status = FEEDBACK_STATUS_RECEIVED
         else:
-            # Keep the text available for a retry after a network/server error.
+            # Keep the authored text editable so a transient backend/network
+            # failure is retryable without asking the user to reconstruct it.
+            current.feedback_comment = comment
             current.feedback_comment_expanded = True
             current.feedback_status = FEEDBACK_STATUS_FAILED
         _bump_layout_epoch(scene)
@@ -196,10 +185,12 @@ def _queue_feedback_comment(scene, msg) -> tuple[bool, str]:
     )
     if not queued:
         msg.feedback_comment_submitting = False
+        msg.feedback_comment = comment
+        msg.feedback_comment_expanded = True
         msg.feedback_status = FEEDBACK_STATUS_FAILED
-        return False, "Unable to submit feedback right now"
+        _bump_layout_epoch(scene)
+        return False, "Could not queue feedback. Please try again."
 
-    msg.feedback_comment_expanded = False
     _bump_layout_epoch(scene)
     logger.info(
         f"Feedback comment queued: bubble_id={bubble_id}, "
@@ -523,9 +514,11 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
 
     def execute(self, context):
         scene = context.scene
+        bubble_id = self.bubble_id
+        rating = self.rating
         for msg in scene.mixie_chat_messages:
             bid = getattr(msg, 'bubble_id', '')
-            if bid and bid == self.bubble_id:
+            if bid and bid == bubble_id:
                 # Submitted feedback is locked — no revisions once a rating
                 # is in flight or accepted (only idle/failed accept clicks).
                 if msg.feedback_status in (
@@ -534,30 +527,42 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
                 ):
                     logger.info(
                         f"Feedback rating ignored (locked): "
-                        f"bubble_id={self.bubble_id}"
+                        f"bubble_id={bubble_id}"
                     )
                     return {'CANCELLED'}
-                msg.feedback_rating = self.rating
+                msg.feedback_rating = rating
                 logger.info(
-                    f"Feedback rating set: bubble_id={self.bubble_id}, "
-                    f"rating={self.rating}"
+                    f"Feedback rating set: bubble_id={bubble_id}, "
+                    f"rating={rating}"
                 )
-                bubble_id = self.bubble_id
+                def _complete(success: bool) -> None:
+                    current = _find_feedback_message(scene, bubble_id)
+                    if (
+                        current is None
+                        or current.feedback_comment_submitting
+                        or current.feedback_status != FEEDBACK_STATUS_SENDING
+                    ):
+                        # A newer comment submission owns the visible state.
+                        return
+                    current.feedback_status = (
+                        FEEDBACK_STATUS_RECEIVED
+                        if success else FEEDBACK_STATUS_FAILED
+                    )
+                    _bump_layout_epoch(scene)
+                    redraw_chat_areas()
+
                 queued = _post_feedback_async(
                     scene,
                     {
                         "bubble_id": bubble_id,
-                        "rating": self.rating,
+                        "rating": rating,
                     },
-                    on_complete=lambda success: _set_feedback_status(
-                        scene,
-                        bubble_id,
-                        FEEDBACK_STATUS_RECEIVED if success else FEEDBACK_STATUS_FAILED,
-                    ),
+                    on_complete=_complete,
                 )
-                msg.feedback_status = (
-                    FEEDBACK_STATUS_SENDING if queued else FEEDBACK_STATUS_FAILED
-                )
+                if queued:
+                    msg.feedback_status = FEEDBACK_STATUS_SENDING
+                else:
+                    msg.feedback_status = FEEDBACK_STATUS_FAILED
                 # Open the comment field right away so text feedback is
                 # discoverable — there is no separate toggle to find.
                 if not msg.feedback_comment_submitting:
@@ -566,7 +571,7 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
                 redraw_chat_areas()
                 return {'FINISHED'}
 
-        logger.warning(f"Feedback: bubble_id '{self.bubble_id}' not found")
+        logger.warning(f"Feedback: bubble_id '{bubble_id}' not found")
         return {'CANCELLED'}
 
 class MIXIE_CHAT_OT_toggle_feedback_comment(Operator):

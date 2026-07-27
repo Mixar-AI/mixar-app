@@ -52,6 +52,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabSegmentTo3DProps,
     MixieMoodboardTabMeshSegmentProps,
     MixieMoodboardTabSceneReconProps,
+    MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     # Scene Gen Experimental disabled
@@ -76,6 +77,7 @@ classes = (
     MixieMoodboardTabSegmentTo3DProps,
     MixieMoodboardTabMeshSegmentProps,
     MixieMoodboardTabSceneReconProps,
+    MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     # Scene Gen Experimental disabled
@@ -229,10 +231,19 @@ def register():
             options={'SKIP_SAVE'},
         ),
     )
+    _safe_scene_prop(
+        'mixie_animate_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether rig/animate generation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
 
     # Generation progress floats (session-only)
     for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
-                    'segment_to_3d', 'mesh_segment', 'retopology'):
+                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
         _safe_wm_prop(
             f'mixie_{prefix}_generate_progress',
@@ -253,6 +264,7 @@ def unregister():
     # Scene properties (reverse of registration order)
     for attr in (
         # Scene Gen Experimental flags were not registered; nothing to remove.
+        'mixie_animate_is_generating',
         'mixie_retopology_is_generating',
         'mixie_image_to_3d_is_generating',
         'mixie_lookdev360_is_generating',
@@ -276,7 +288,7 @@ def unregister():
     # WindowManager properties
     wm_attrs = []
     for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
-                    'segment_to_3d', 'mesh_segment', 'retopology'):
+                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate'):
         wm_attrs.append(f'mixie_{prefix}_generate_progress')
     for attr in wm_attrs:
         try:

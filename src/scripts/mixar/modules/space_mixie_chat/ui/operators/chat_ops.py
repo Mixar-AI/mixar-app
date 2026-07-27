@@ -37,6 +37,7 @@ from ...core.queue_processor import (
 from ...core.sse_handler import create_sse_handler
 from ...core.animation_manager import start_loader_animation
 from ...core.message_helpers import add_agent_message, get_auth_token
+from ...core.rules import compose_wire_message, mark_rules_sent
 from ...core.ui_utils import redraw_chat_areas
 from . import generate_ops
 
@@ -325,13 +326,18 @@ class MIXIE_CHAT_OT_send_message(Operator):
             session.set_state(scene, SessionState.BUSY)  # Set to busy after sending
             session.clear_streaming()
         else:
-            # Normal message: start new session stream
+            # Normal message: start new session stream.
+            # Compose the wire message BEFORE start_session — project rules
+            # are prepended only when this send opens a NEW session, and
+            # start_session is what generates the session id. The optimistic
+            # user bubble above keeps the raw message_text.
+            wire_message = compose_wire_message(scene, message_text)
             session_id = session.start_session(scene, message_text)
 
             plan_required = getattr(scene, 'mixie_chat_plan_enabled', True)
 
             success = sse_handler.start_stream(
-                message=message_text,
+                message=wire_message,
                 instance_id=ws_client.connection_id,
                 session_id=session_id,
                 plan_required=plan_required,
@@ -346,6 +352,12 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 session.set_error(scene)
                 metrics.stop_timer('send_message_total')
                 return {'CANCELLED'}
+
+            # The wire message above carried the current ruleset (first
+            # message) or a rules-update block (rules changed
+            # mid-session). Stamp the fingerprint only after the send
+            # succeeded so a failed start never swallows a pending update.
+            mark_rules_sent(scene)
 
         metrics.stop_timer('sse_start')
 

@@ -45,6 +45,9 @@ class AsyncGLBJob(Job):
     payload: dict = field(default_factory=dict)
     fail_message: str = "Generation failed"
     _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
+    # Extra glTF import operator kwargs (GLB only). Animate uses this to
+    # keep Tripo rigged/animated imports from collapsing — see model_io.
+    import_options: Optional[dict] = field(default=None, repr=False)
 
     _processing_started: bool = False
 
@@ -69,6 +72,9 @@ class AsyncGLBJob(Job):
     def parse_submit_response(self, response) -> None:
         self._parse_standard_submit(response)
         self.payload = {}  # release memory
+
+    def release_resources(self) -> None:
+        self.payload = {}
 
     def parse_poll_response(self, response):
         return self._parse_standard_poll(
@@ -151,6 +157,10 @@ class SyncImageJob(Job):
             raise ValueError("Enqueue response missing job_id")
 
         self.payload = {}  # release memory
+
+    def release_resources(self) -> None:
+        self.payload = {}
+        self._image_urls = []
 
     def should_skip_poll(self) -> bool:
         return bool(self._image_urls)

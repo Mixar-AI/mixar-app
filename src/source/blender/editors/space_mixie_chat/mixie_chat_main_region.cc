@@ -52,12 +52,36 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first);
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
+  /* The floating Agent Bubble keeps the default cursor everywhere: the
+   * hover-tracking below still runs (it drives the hover highlights), but
+   * the hand cursor is never shown — during an agent run the steps/thinking
+   * headers cover most of the bubble, which made the cursor flip to a hand
+   * over practically the whole window. */
+  const bool suppress_hand = (area->spacetype == SPACE_AGENT_BUBBLE);
+
+  /* Project-rules overlay is modal while open — it owns hover + cursor and
+   * suppresses hover on everything behind its scrim. Checked before the
+   * history overlay: it draws on top, so it wins the cursor too. */
+  if (rt->rules_overlay_active &&
+      mixie_chat_rules_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
+  /* Past-chats overlay is modal while open — it owns hover + cursor and
+   * suppresses hover on everything behind its scrim. */
+  if (rt->history_overlay_active &&
+      mixie_chat_history_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
   /* Check scroll-to-bottom indicator (screen-space, checked before View2D transform) */
   if (rt->scroll_indicator_visible) {
     float mouse_x = float(mval[0]);
     float mouse_y = float(mval[1]);
     if (BLI_rctf_isect_pt(&rt->scroll_indicator_bounds, mouse_x, mouse_y)) {
-      WM_cursor_set(win, WM_CURSOR_HAND);
+      WM_cursor_set(win, suppress_hand ? WM_CURSOR_DEFAULT : WM_CURSOR_HAND);
       return;
     }
   }
@@ -84,7 +108,8 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       ED_region_tag_redraw(region);
     }
 
-    WM_cursor_set(win, any_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+    WM_cursor_set(
+        win, (any_hovered && !suppress_hand) ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
     return;
   }
 
@@ -199,7 +224,8 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
     ED_region_tag_redraw(region);
   }
 
-  WM_cursor_set(win, any_hovered ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
+  WM_cursor_set(
+      win, (any_hovered && !suppress_hand) ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
 }
 
 /** \} */
@@ -213,6 +239,21 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
 
 static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
+  /* 0. Project-rules overlay — modal while open: consumes text-editing
+   * keys, clicks (incl. click-away close), scroll, and ESC. Checked
+   * before the history overlay because it draws on top. Cheap no-op when
+   * closed (runtime flag check, no RNA reads). */
+  if (mixie_chat_rules_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
+  /* 0b. Past-chats overlay — modal while open: consumes clicks (incl.
+   * click-away close), wheel/trackpad scroll, and ESC. Cheap no-op when
+   * closed (runtime flag check, no RNA reads). */
+  if (mixie_chat_history_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     ScrArea *area = CTX_wm_area(C);
     ARegion *region = CTX_wm_region(C);
@@ -345,8 +386,14 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   v2d->keeptot = V2D_KEEPTOT_STRICT;
 
   /* Register uiBlock event handler so embedded text inputs (feedback comment)
-   * can receive clicks and keyboard events. Must come BEFORE our custom handler
-   * so uiBlock buttons get first priority on mouse events. */
+   * can receive clicks and keyboard events. NOTE: both this and
+   * WM_event_add_ui_handler below PREPEND (BLI_addhead), so registering the
+   * uiBlock handler first actually makes it run AFTER the chat handler —
+   * mixie_chat_ui_handler gets first look at every mouse press. That works
+   * today only because no chat hit-target overlaps the feedback text field
+   * (and active textedit grabs keys via the window modal handler); if a chat
+   * hit-target ever overlaps a uiBlock button, the click will be stolen from
+   * the button unless this ordering is revisited. */
   UI_region_handlers_add(&region->runtime->handlers);
 
   /* Register our direct UI click handler.
@@ -433,6 +480,13 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
 {
   mixie_chat_clear_background();
   mixie_chat_draw_messages(C, region);
+  /* Past-chats overlay — drawn last (screen-space) so it sits on top of
+   * messages, the empty state, and the View2D scrollbar. */
+  mixie_chat_draw_history_overlay(C, region);
+  /* Project-rules overlay — drawn after history so it sits on top (the
+   * Python toggles keep the two mutually exclusive; this is belt and
+   * braces for the event-order contract in mixie_chat_ui_handler). */
+  mixie_chat_draw_rules_overlay(C, region);
 }
 
 /* -------------------------------------------------------------------- */

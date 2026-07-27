@@ -377,6 +377,16 @@ def on_chat_input_changed(self, context):
             lambda: _execute_send_message() or None,
             first_interval=0.001
         )
+        return
+
+    # An emptied composer can't have an active @-mention token. Interactive
+    # edits are handled by the C++ detection hooks; this covers programmatic
+    # clears (send/new-session) so the dropdown never lingers.
+    try:
+        if not self.mixie_chat_input and self.mixie_chat_mention_show:
+            self.mixie_chat_mention_show = False
+    except AttributeError:
+        pass  # mention props not registered (isolated tests)
 
 
 def _execute_send_message():
@@ -426,8 +436,8 @@ def generate_type_enum_items(self, context):
     """Dynamic items for the Generate Type dropdowns.
 
     Identifiers are generation-catalog service keys, sourced from the
-    backend's /generation-catalog/chat-options view (with a static
-    fallback while it hasn't loaded). See chat_generate_options_cache.
+    backend's /generation-catalog/chat-options view. See
+    chat_generate_options_cache.
     """
     global _generate_type_items_ref
     try:
@@ -436,10 +446,10 @@ def generate_type_enum_items(self, context):
         )
         _generate_type_items_ref = get_generate_type_enum_items()
     except Exception:
-        # Bootstrap module unavailable (e.g. isolated test) — static mirror.
+        # Bootstrap unavailable: fail closed instead of reviving services that
+        # may have been disabled by the backend.
         _generate_type_items_ref = [
-            ("image_gen", "Text to Image", "Text to Image", 'IMAGE_DATA', 0),
-            ("model_3d", "Image to 3D", "Image to 3D", 'MESH_CUBE', 1),
+            ("NONE", "No generation services", "Generation is currently unavailable", 'ERROR', 0)
         ]
     return _generate_type_items_ref
 
@@ -573,9 +583,8 @@ def _ask_model_choice(scene, service_key):
         if not slug:
             continue
         label = model.get("label") or slug
-        cost = model.get("credit_cost")
         item = msg.action_items.add()
-        item.label = f"{label} ({cost} cr)" if cost is not None else label
+        item.label = label
         item.value = f"chat_model:{service_key}:{slug}"
         item.style = 'PRIMARY' if slug == default_slug else 'DEFAULT'
     return True

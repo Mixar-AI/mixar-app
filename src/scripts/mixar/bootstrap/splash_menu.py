@@ -91,6 +91,8 @@ def onboarding_can_start() -> bool:
       is the common first-run path (dismiss splash, sign in), so it must
       be prompt. An early fire behind a rare idle-open popup is harmless
       now (the card ignores clicks while the splash is visible).
+    * Splash never drew (Blender suppresses it when opening a .blend
+      directly) → start once the startup grace has passed.
     """
     if _splash_mode_chosen:
         return True
@@ -102,7 +104,13 @@ def onboarding_can_start() -> bool:
         pass
     if _splash_last_drawn_ts != 0.0:
         return (time.monotonic() - _splash_last_drawn_ts) >= _SPLASH_GONE_FALLBACK_S
-    return False
+    # Never drew at all: Blender suppresses the splash on some launch paths
+    # (opening a .blend directly, `blender file.blend`) while show_splash
+    # stays True. Waiting for a draw that will never come would block the
+    # welcome forever (and leave the 0.3s onboarding timer polling for the
+    # whole session) — once the startup grace has passed, treat the splash
+    # as absent.
+    return (time.monotonic() - _module_load_ts) >= _SPLASH_STARTUP_GRACE_S
 
 
 _bubble_hidden_for_splash = False

@@ -40,3 +40,30 @@ PROVIDER_EMPTY_SENTINEL   = ('NONE', "No providers configured", "Contact support
 # the 'NONE' sentinel itself, or the provider genuinely has no models).
 # Same 'NONE' id so Save's poll() also blocks on model.
 MODEL_EMPTY_SENTINEL = ('NONE', "No models available", "Select a provider with available models")
+
+# The "OpenRouter" provider is a client-side-only option in the dropdown: the user
+# supplies a key and any model slug OpenRouter exposes (no fixed catalog list),
+# so it's always offered and selecting it swaps the form to a key + free-text
+# model field. The base_url is fixed server-side (not user-entered).
+OPENROUTER_PROVIDER_ID = 'openrouter'
+OPENROUTER_PROVIDER_ITEM = (
+    OPENROUTER_PROVIDER_ID,
+    "OpenRouter",
+    "Use your OpenRouter key with any model on openrouter.ai/models",
+)
+
+# Prefilled model slug — a sensible, widely-available default the user can edit.
+OPENROUTER_DEFAULT_MODEL = "anthropic/claude-opus-4.8"
+
+# "Codex (ChatGPT)" — a client-side-only provider option (not in the backend
+# catalog). Selecting it swaps the form to a paste field for the ~/.codex/
+# auth.json bundle + a free-text model slug. The user routes the agent through
+# their ChatGPT subscription instead of an API key.
+CODEX_PROVIDER_ID = 'codex'
+CODEX_PROVIDER_ITEM = (
+    CODEX_PROVIDER_ID,
+    "Codex (ChatGPT sub)",
+    "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
+)
+# Prefilled model slug — the current Codex lineup; the user can edit it.
+CODEX_DEFAULT_MODEL = "gpt-5.5"

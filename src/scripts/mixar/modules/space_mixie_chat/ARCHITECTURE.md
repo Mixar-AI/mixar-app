@@ -87,6 +87,7 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   ├── sandbox_modules.py       RESTRICTED_TEMPFILE / RESTRICTED_BASE64 / RESTRICTED_URLLIB wrappers (os/pathlib not exposed).
 │   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__/vars).
 │   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
+│   ├── lane_scene_sweep.py      Session-end sweep of leaked agentlane:* workspace scenes (mirrors backend remove_scene semantics; one-shot main-thread timer).
 │   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
 │   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
 │   ├── feedback_policy.py       Pure rating/comment validation shared by the UI.
@@ -264,9 +265,11 @@ On a clean stream completion, `queue_processor.py` clears every stale
 `feedback_visible` flag and exposes the row only on the newest completed agent
 bubble. C++ layout/rendering lives in `mixie_chat_feedback.cc`; Python operators
 post `{session_id, bubble_id, rating, comment?}` to the backend without blocking
-Blender's main thread. Comments require a 1–5 rating, allow only one in-flight
-submission per bubble, clear after a successful HTTP response, and remain open
-for retry after a network or server failure. Completion callbacks return to the
+Blender's main thread. Comments require a 1–5 rating and allow only one in-flight
+submission per bubble. Submission is optimistic fire-and-forget: the field
+clears and the row shows "received" immediately; a transport failure after the
+POST was queued is never surfaced (a lost rating is non-critical). Only a
+failure to queue the POST at all (no session, config error) reopens the form. Completion callbacks return to the
 main thread through `main_thread_executor.run_on_main_thread` before touching RNA.
 
 ## Session lifecycle
@@ -283,6 +286,32 @@ main thread through `main_thread_executor.run_on_main_thread` before touching RN
 **Active-scenes registry:** class-level `_active_scenes: set` tracks scene names whose state is `BUSY/MODIFYING/AWAITING_INPUT`. Updated only from the main thread under `_active_scenes_lock`. Background threads read it (e.g. `on_script_execute` checks `has_active_session()` to reject stray scripts after a session ends).
 
 **Session start (`start_session(scene, user_request)`):** generates a new `session_id` only if none exists; otherwise continues. Sets state to `BUSY`. Returns the session_id.
+
+## Chat history archive
+
+**Files:** `core/chat_history.py` (store), `core/chat_serializer.py` (generic PropertyGroup↔dict snapshot/restore, shared with `export_ops.py`), `ui/operators/history_ops.py` (data + operators), and the **C++-drawn overlay** split across `editors/space_mixie_chat/mixie_chat_history_overlay.cc` (layout + drawing), `mixie_chat_history_events.cc` (clicks/keys/scroll/cursor), `mixie_chat_history_util.cc` (RNA readers + text/glyph helpers) and `mixie_chat_history_intern.hh` (shared constants/colors).
+
+The list UI is a custom screen-space overlay in the chat main region (drawn after `mixie_chat_draw_messages`, like the scroll indicator — so it also appears inside the floating agent bubble): dim scrim + rounded card, "Chats" header with count and a close ✕, an always-focused **search field** (every printable key filters titles case-insensitively; Backspace edits), **date-group section headers** ("Today" / "Yesterday" / "Previous 7 Days" / ...), hover-highlighted rows (accent dot on the open chat, dimmed relative time, delete ✕), **pixel-smooth scrolling** (wheel/trackpad write `history_scroll_target`; the draw eases `history_scroll_px` toward it on the shared anim pump, rows scissor-clipped to the list viewport, slim thumb), **keyboard navigation** (Up/Down move an accent-outlined selection auto-scrolled into view, Enter opens the selection — or the first match while searching — Delete arms/confirms delete, Page Up/Down scroll a page), ESC (disarm → clear search → close) / click-away to close, open fade+slide animation. Contract with Python:
+
+- `WindowManager.mixie_chat_history_visible` (bool) — toggled by `MIXIE_CHAT_OT_show_history` (header history button, which syncs first); the C++ side clears it on ESC / click-away / close ✕ / row open.
+- `WindowManager.mixie_chat_history_entries` — runtime mirror of the store (title in `name`, `session_id`, precomputed short `when` label + `group` date-bucket label; a section header is drawn whenever `group` changes between consecutive newest-first rows), rebuilt by `sync_history_entries()` on open and after deletes; C++ only reads it (via RNA, same pattern as `scene.mixie_chat_messages`).
+- Row/✕ clicks dispatch `mixie_chat.open_history_session` / `mixie_chat.delete_history_session` with a `session_id` string prop (`WM_operator_name_call_ptr`, same as slot-action clicks; delete is arm-to-confirm in the overlay: first ✕ click (or Delete key) arms the row — red "Delete?" — the second dispatches ExecDefault; any other click or ESC disarms (no OS popup, which anchored its OK button under the clicked ✕)). Overlay state (scroll, search query, keyboard selection, hover/hit rects, panel bounds) lives per surface in `MixieChatRuntime` (`history_*` fields); events are handled first in `mixie_chat_ui_handler` (all keyboard input is consumed while open — the search field owns it), hover in the region cursor callback (`art->event_cursor` is set on the chat/bubble main regions so it fires per mouse-move) — both modal while open.
+
+"New Chat" (`MIXIE_CHAT_OT_new_session`) is **non-destructive**: before clearing `scene.mixie_chat_messages` it archives the conversation to a sidecar store — deliberately *outside* the .blend/.mixar file, so project files stay lean, history survives unsaved files, and shared files never leak conversations:
+
+```
+~/.mixar/chat_history/<session_id>.json   full transcript (serializer dicts) + metadata
+~/.mixar/chat_history/index.json          metadata index (self-heals by rescanning)
+~/.mixar/chat_media/<session_id>/         copies of referenced local images
+```
+
+Key mechanics:
+
+- **Upsert by session_id** — `archive_current(scene)` also runs at every turn end (`queue_processor._handle_sse_complete_internal`, IDLE branch), so history is crash-safe. `created_at` is preserved across upserts; oldest sessions beyond `MAX_ARCHIVED_SESSIONS` are pruned (records + media).
+- **Sanitize on archive** — mirrors abort semantics on the snapshot dicts: loader-only bubbles dropped, `*Stopped*` marker on interrupted content, stale `action_items`/`input_type` stripped, RUNNING steps settled, live thinking collapsed.
+- **Media copy** — chat images/screenshots live in Blender's per-session temp dir and die on restart; archive copies referenced local files into `chat_media/` and rewrites paths (capped by `CHAT_HISTORY_MEDIA_MAX_BYTES`; http(s) URLs untouched).
+- **Reopen** (`MIXIE_CHAT_OT_open_history_session`) — tears down any in-flight turn (same cleanup as New Chat), archives the outgoing chat, restores the transcript via `restore_propgroup`, and sets `scene.mixie_session_id` back. The **backend resumes the conversation from its LangGraph checkpoint** keyed by that id (`thread_id == session_id`) — the transcript itself is never uploaded. Checkpoints are retained `CHECKPOINT_RETENTION_DAYS` (7) server-side; after expiry a reopened chat still shows its transcript but the agent starts contextually fresh.
+- **Account scoping** — records store `user_email` (`scene.mixie_chat_user_id`); the popover filters to the logged-in account, and the backend independently enforces checkpoint ownership on resume.
 
 ## Undo guard
 
@@ -335,6 +364,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 | Why did loading a new `.blend` break the agent? | `file_handlers.py` load_pre cleanup + K6 exception-safety |
 | Why is the plugin using 15% CPU at idle? | `animation_manager.py` + `queue_processor.py` K2 scene iteration |
 | Why didn't my script run? | First check sandbox in `executor.py` + `sandbox_validator.py`; then check session state in `session.py`; then check the render guard. |
+| Why is the '@' mention dropdown missing/stale/mis-clicking? | `core/mention_registry.py` (candidates + ranking) and `ui/properties/mention_props.py` (query callback); interaction/geometry live C++-side in `editors/space_mixie_chat/mixie_chat_mention.cc` + the textedit hooks in `editors/interface/interface_handlers.cc` |
 
 ## Companion docs
 

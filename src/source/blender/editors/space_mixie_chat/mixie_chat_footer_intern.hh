@@ -14,10 +14,15 @@
 
 #include <cstdint>
 
+#include "BLI_rect.h"
 #include "BLI_vector.hh"
 
+#include "mixie_chat_footer_constants.hh"
+
+struct ARegion;
 struct Main;
 struct Scene;
+struct bContext;
 
 /* -------------------------------------------------------------------- */
 /** \name Footer Cache Structures
@@ -92,6 +97,10 @@ struct FooterElementPositions {
   int input_w;
   int input_height;
   int button_row_height;  /* Single-row height for buttons (scaled) */
+
+  /* '@' mention dropdown (between input row and thumbnails, if open) */
+  int mention_y;     /* Bottom of the dropdown panel (scaled) */
+  int mention_count; /* Number of suggestion rows (0 = closed) */
 
   /* Thumbnail row (top, if present) */
   int thumb_y;
@@ -170,12 +179,14 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width);
  * \param theme: Cached theme values (pass nullptr to fetch fresh)
  * \param out_has_overflow: Set to true if height exceeds maximum limit (optional)
  * \param input_line_count: Dynamic line count for input field (0 = use default minimum)
+ * \param mention_row_count: Visible '@' mention suggestion rows (0 = dropdown closed)
  * \return Required height in unscaled units
  */
 int footer_layout_calculate_height(Scene *scene,
                                     const FooterThemeCache *theme,
                                     bool *out_has_overflow,
-                                    int input_line_count = 0);
+                                    int input_line_count = 0,
+                                    int mention_row_count = 0);
 
 /**
  * Calculate X/Y positions for footer UI elements.
@@ -186,12 +197,69 @@ int footer_layout_calculate_height(Scene *scene,
  * \param theme: Cached theme values
  * \param out_positions: Structure to fill with calculated positions
  * \param input_line_count: Dynamic line count for input field (0 = use default minimum)
+ * \param mention_row_count: Visible '@' mention suggestion rows (0 = dropdown closed)
  */
 void footer_layout_calculate_positions(int region_width,
                                         int pending_count,
                                         const FooterThemeCache *theme,
                                         FooterElementPositions *out_positions,
-                                        int input_line_count = 0);
+                                        int input_line_count = 0,
+                                        int mention_row_count = 0);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name '@' Mention Autocomplete (mixie_chat_mention.cc)
+ *
+ * C++ owns the text cursor and the dropdown; Python owns the candidate data
+ * (see space_mixie_chat/core/mention_registry.py). The bridge is a set of
+ * Python-registered scene properties: mixie_chat_mention_query (written here,
+ * update callback runs the search), _items / _active / _show (read here).
+ * \{ */
+
+/**
+ * Find the active "@token" around the byte cursor in `text`.
+ * A token starts with '@' at the start of the text or after whitespace and
+ * contains no whitespace between the '@' and the cursor.
+ *
+ * \param r_tok_start: Byte offset of the '@'.
+ * \param r_tok_end: Byte offset one past the token (extends beyond the cursor
+ *                   to the next whitespace/end, so accepting replaces the whole word).
+ * \param r_query: Receives '@' + the typed part (token start .. cursor).
+ * \return true if an active token was found.
+ */
+bool mixie_chat_mention_detect(const char *text,
+                               int cursor_bytes,
+                               int *r_tok_start,
+                               int *r_tok_end,
+                               char *r_query,
+                               int query_maxncpy);
+
+/** Write `query` ("" = no active token) to the scene and run the Python
+ * search callback synchronously. No-op when unchanged or unregistered. */
+void mixie_chat_mention_publish(bContext *C, Scene *scene, const char *query);
+
+bool mixie_chat_mention_is_open(Scene *scene);
+int mixie_chat_mention_row_count(Scene *scene);
+int mixie_chat_mention_active_get(Scene *scene);
+void mixie_chat_mention_active_set(Scene *scene, int index);
+/** Move the active row by `dir` (+1/-1), wrapping. */
+void mixie_chat_mention_step(Scene *scene, int dir);
+/** Hide the dropdown (keeps the query; typing re-evaluates). */
+void mixie_chat_mention_dismiss(Scene *scene);
+/** Copy the active item's replacement text ("@Name ") into `r_buf`.
+ * \return its length, or 0 when unavailable. */
+int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
+
+/** Dropdown geometry in region pixels; row 0 is the top row.
+ * \return the row count (0 = closed). */
+int mixie_chat_mention_rows_get(Scene *scene,
+                                int region_winx,
+                                rctf *r_panel,
+                                rctf r_rows[FOOTER_MENTION_MAX_ROWS]);
+/** \return row index under the WINDOW-space point `xy`, or -1. */
+int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
+void mixie_chat_mention_draw(Scene *scene, ARegion *region);
 
 /** \} */
 

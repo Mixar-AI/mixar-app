@@ -14,6 +14,7 @@ from ._common import (
     _clean_material_name,
     _ensure_basic_uv_map,
     _find_mpaint_node_for_material,
+    _isolate_shared_materials,
     _material_application_snapshot,
     _resolve_mesh_objects,
     _restore_selection,
@@ -39,6 +40,15 @@ def apply_layered_material_manifest(
             "error": "No mesh objects found for layered material",
             "missing": missing,
         }
+
+    # The build converts each target's EXISTING active material in place, so a
+    # material shared with objects outside the target set (e.g. a scene-wide
+    # placement placeholder) must be copied first or the build re-skins the
+    # whole scene. shared_material=False builds must not share even within the
+    # target set — isolate per object there.
+    isolated_materials = _isolate_shared_materials(
+        targets, per_object=not shared_material
+    )
 
     from mixar.modules.paint.layered_build.builder import build_layered_material
 
@@ -109,6 +119,7 @@ def apply_layered_material_manifest(
                 "texture_set_count": 1 if applied else 0,
                 "layers_built": (build_result or {}).get("layers_built", 0),
                 "manifest_material_name": manifest.get("material_name", ""),
+                "isolated_materials": isolated_materials,
                 "applied": applied,
                 "missing": missing,
                 "errors": errors,
@@ -140,6 +151,7 @@ def apply_layered_material_manifest(
             "success": False,
             "error": str(exc),
             "semantic_material_name": semantic_name,
+            "isolated_materials": isolated_materials,
             "applied": applied,
             "missing": missing,
             "errors": errors,
@@ -152,6 +164,7 @@ def apply_layered_material_manifest(
         "shared_material": "",
         "semantic_material_name": semantic_name,
         "texture_set_count": len(applied),
+        "isolated_materials": isolated_materials,
         "applied": applied,
         "missing": missing,
         "errors": errors,

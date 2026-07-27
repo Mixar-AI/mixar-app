@@ -208,6 +208,13 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         # Clear pending attachments after copying
         scene.mixie_chat_pending_attachments.clear()
 
+        # Compose the wire message BEFORE start_session: project rules
+        # ride along with the send that opens a NEW session, and a
+        # mid-session rules change re-sends the current set under a
+        # supersede header (see core/rules.py:compose_wire_message).
+        from ...core.rules import compose_wire_message, mark_rules_sent
+        wire_message = compose_wire_message(scene, message_text)
+
         # Start session
         session_id = session.start_session(scene, message_text)
 
@@ -236,7 +243,7 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
 
         # Start the SSE stream
         success = sse_handler.start_stream(
-            message=message_text,
+            message=wire_message,
             instance_id=ws_client.connection_id,
             session_id=session_id,
             auth_token=auth_token,
@@ -246,6 +253,10 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             self.report({'ERROR'}, "Failed to start chat stream")
             session.set_error(scene)
             return {'CANCELLED'}
+
+        # Stamp the sent-rules fingerprint only after a successful send
+        # (see core/rules.py:mark_rules_sent).
+        mark_rules_sent(scene)
 
         # Trigger UI redraw for all Mixie Chat spaces
         redraw_chat_areas()

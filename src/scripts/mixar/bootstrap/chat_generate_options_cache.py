@@ -23,14 +23,14 @@ Behaviour (mirrors the proven generation_catalog_cache architecture):
 - ``clear_chat_generate_options_cache()`` on logout,
   ``refresh_chat_generate_options_cache()`` on login / manual refresh.
 
-When no payload is available (fresh install, offline, logged out) the
-enum helper falls back to ``FALLBACK_OPTIONS`` — a static mirror of the
-backend's chat service list — so the dropdown stays usable and every
-identifier is still a real service key.
+When no authoritative option is available, the enum exposes a disabled
+``NONE`` placeholder.  Client-side defaults must never resurrect services
+that the backend deliberately disabled.
 """
 
 import json
 import os
+import tempfile
 import threading
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -40,16 +40,21 @@ from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
 logger = get_logger(__name__)
 
 _DISK_FILENAME = "chat_generate_options.json"
+_resolved_disk_path: Optional[str] = None
 
 # Module-level cache — all reads and writes must be protected by _lock to
 # prevent TOCTOU races between the background fetch thread and main-thread
 # enum callbacks / draw code.
 _lock = threading.Lock()
+# Keep persistence ordered with logout without holding the state lock during
+# disk fsync/replace (enum callbacks run on the UI thread).
+_persistence_lock = threading.Lock()
 _options_data: Optional[Dict[str, Any]] = None  # the response "data" object
 _etag: Optional[str] = None
 _cache_error: Optional[str] = None
 _is_loading: bool = False
 _shutdown_requested: bool = False
+_lifecycle_epoch: int = 0
 
 # Per-service icon for the Generate Type dropdown (Blender icon names).
 # The C++ footer reads the icon straight off the enum item, so this map is
@@ -65,18 +70,9 @@ _SERVICE_ICONS = {
 }
 _DEFAULT_ICON = 'PRESET'
 
-# Static mirror of the backend's CHAT_GENERATE_SERVICE_KEYS view — the
-# last-resort fallback so the dropdown never renders empty / LOADING
-# identifiers. Labels match the generation catalog's service labels.
-FALLBACK_OPTIONS: Tuple[Dict[str, Any], ...] = (
-    {"service_key": "image_gen", "label": "Text to Image"},
-    {"service_key": "model_3d", "label": "Image to 3D"},
-    {"service_key": "image_to_3d", "label": "Image to 3D Pro"},
-    {"service_key": "hunyuan_rapid", "label": "Rapid 3D"},
-    {"service_key": "depth_to_image", "label": "From Blockout"},
-    {"service_key": "pbr_gen", "label": "PBR Textures"},
-    {"service_key": "scene_reconstruction", "label": "Scene Reconstruction"},
-)
+_ENUM_UNAVAILABLE = [
+    ("NONE", "No generation services", "Generation is currently unavailable", 'ERROR', 0)
+]
 
 
 # ============================================================================
@@ -98,7 +94,15 @@ def _data_dir() -> str:
 
 
 def _disk_path() -> str:
-    return os.path.join(_data_dir(), _DISK_FILENAME)
+    """Return the cache path resolved on the caller's first access.
+
+    ``register()`` deliberately resolves this on Blender's main thread before
+    a fetch worker can attempt persistence.
+    """
+    global _resolved_disk_path
+    if _resolved_disk_path is None:
+        _resolved_disk_path = os.path.join(_data_dir(), _DISK_FILENAME)
+    return _resolved_disk_path
 
 
 def _load_from_disk() -> bool:
@@ -114,7 +118,7 @@ def _load_from_disk() -> bool:
         with open(path, "r", encoding="utf-8") as fh:
             stored = json.load(fh)
         data = stored.get("data") if isinstance(stored, dict) else None
-        if not isinstance(data, dict) or not data.get("options"):
+        if not isinstance(data, dict) or not isinstance(data.get("options"), list):
             return False
         with _lock:
             _options_data = data
@@ -132,12 +136,27 @@ def _load_from_disk() -> bool:
 def _save_to_disk(etag: Optional[str], data: Dict[str, Any]) -> None:
     """Persist the payload + etag. Never raises."""
     path = _disk_path()
+    temp_path = None
     try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as fh:
+        directory = os.path.dirname(path)
+        os.makedirs(directory, exist_ok=True)
+        fd, temp_path = tempfile.mkstemp(
+            prefix=f".{_DISK_FILENAME}.", suffix=".tmp", dir=directory
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump({"etag": etag, "data": data}, fh)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(temp_path, path)
+        temp_path = None
     except Exception as exc:
         logger.warning("Chat generate options disk cache write failed: %s", exc)
+    finally:
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def _delete_disk_cache() -> None:
@@ -172,7 +191,7 @@ def get_cache_error() -> Optional[str]:
 
 def get_catalog_version() -> Optional[str]:
     with _lock:
-        if _options_data:
+        if _options_data is not None:
             return _options_data.get("catalog_version")
     return None
 
@@ -180,14 +199,13 @@ def get_catalog_version() -> Optional[str]:
 def get_options() -> List[Dict[str, Any]]:
     """The backend's chat generate options (already filtered + ordered).
 
-    Falls back to ``FALLBACK_OPTIONS`` when nothing is loaded so callers
-    always see a usable, service-key-identified list.
+    Returns an empty list when no authoritative options are loaded.  This is
+    deliberately fail-closed: a stale client default must not defeat a
+    backend disable-all response.
     """
     with _lock:
         options = (_options_data or {}).get("options")
-    if options:
-        return options
-    return [dict(opt) for opt in FALLBACK_OPTIONS]
+    return options if isinstance(options, list) else []
 
 
 def get_option(service_key: str) -> Optional[Dict[str, Any]]:
@@ -246,14 +264,9 @@ def get_generate_type_enum_items() -> List[Tuple[str, str, str, str, int]]:
         # moodboard's capability naming); label is the service label kept
         # for older backends that predate display_label.
         label = opt.get("display_label") or opt.get("label") or key
-        cost = opt.get("credit_cost")
-        desc = f"{label} ({cost} credits)" if cost is not None else label
         icon = _SERVICE_ICONS.get(key, _DEFAULT_ICON)
-        items.append((key, label, desc, icon, idx))
-    if not items:  # unreachable while FALLBACK_OPTIONS is non-empty
-        items = [("image_gen", "Text to Image", "Text to Image",
-                  _SERVICE_ICONS["image_gen"], 0)]
-    return items
+        items.append((key, label, label, icon, idx))
+    return items or _ENUM_UNAVAILABLE
 
 
 def resolve_service_key(selected: str) -> str:
@@ -265,7 +278,7 @@ def resolve_service_key(selected: str) -> str:
     keys = get_service_keys()
     if selected in keys:
         return selected
-    return keys[0] if keys else "image_gen"
+    return keys[0] if keys else ""
 
 
 # ============================================================================
@@ -279,12 +292,15 @@ def clear_chat_generate_options_cache() -> None:
     Also removes the disk persistence so the next user on this machine
     doesn't render another account's options.
     """
-    global _options_data, _etag, _cache_error
+    global _options_data, _etag, _cache_error, _is_loading, _lifecycle_epoch
     with _lock:
+        _lifecycle_epoch += 1
         _options_data = None
         _etag = None
         _cache_error = None
-    _delete_disk_cache()
+        _is_loading = False
+    with _persistence_lock:
+        _delete_disk_cache()
 
 
 def refresh_chat_generate_options_cache() -> None:
@@ -315,6 +331,7 @@ def _fetch_data_sync() -> None:
             return
         _is_loading = True
         etag = _etag
+        epoch = _lifecycle_epoch
 
     new_error: Optional[str] = None
     swapped = False
@@ -335,20 +352,22 @@ def _fetch_data_sync() -> None:
             if response.status_code == 304:
                 logger.info("Chat generate options unchanged (304 Not Modified)")
             elif response.success and isinstance(response.data, dict):
-                data = response.data.get("data") or {}
-                if isinstance(data, dict) and data.get("options"):
+                data = response.data.get("data")
+                options = data.get("options") if isinstance(data, dict) else None
+                if isinstance(data, dict) and isinstance(options, list):
                     new_etag = response.headers.get("ETag") or response.headers.get("etag")
-                    with _lock:
-                        if _shutdown_requested:
-                            return
-                        _options_data = data
-                        _etag = new_etag
-                    _save_to_disk(new_etag, data)
+                    with _persistence_lock:
+                        with _lock:
+                            if _shutdown_requested or epoch != _lifecycle_epoch:
+                                return
+                            _options_data = data
+                            _etag = new_etag
+                        _save_to_disk(new_etag, data)
                     swapped = True
                     logger.info(
                         "Chat generate options loaded (version=%s, %d options)",
                         data.get("catalog_version", "?"),
-                        len(data.get("options") or []),
+                        len(options),
                     )
                 else:
                     new_error = "Chat options response missing options"
@@ -365,9 +384,12 @@ def _fetch_data_sync() -> None:
 
     finally:
         with _lock:
-            _cache_error = new_error
-            _is_loading = False
-            do_notify = swapped and not _shutdown_requested
+            if epoch == _lifecycle_epoch:
+                _cache_error = new_error
+                _is_loading = False
+                do_notify = swapped and not _shutdown_requested
+            else:
+                do_notify = False
         if do_notify:
             _schedule_redraw()
 
@@ -429,11 +451,15 @@ def register() -> None:
     Loads the persisted payload synchronously (instant stale render) and
     schedules the background revalidation ~2s after startup.
     """
-    global _shutdown_requested
+    global _shutdown_requested, _is_loading, _lifecycle_epoch
     import bpy
 
+    _disk_path()
+
     with _lock:
+        _lifecycle_epoch += 1
         _shutdown_requested = False
+        _is_loading = False
 
     _load_from_disk()
 
@@ -447,9 +473,11 @@ def register() -> None:
 
 def unregister() -> None:
     """Called by bootstrap during shutdown."""
-    global _options_data, _etag, _cache_error, _is_loading, _shutdown_requested
+    global _options_data, _etag, _cache_error, _is_loading, _shutdown_requested, _lifecycle_epoch
     with _lock:
+        _lifecycle_epoch += 1
         _shutdown_requested = True
+        _is_loading = False
 
     try:
         import bpy

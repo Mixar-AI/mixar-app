@@ -220,8 +220,19 @@ DEFAULT_HTTP_TIMEOUT = 30.0
 # inbound traffic for this long means the TCP connection silently died
 # (network drop, sleep/resume, NAT rebind) — sends still "succeed" into the
 # kernel buffer on such a zombie, so only the recv side can detect it. On
-# expiry the client tears the socket down and auto-reconnects.
+# expiry the client PROBES first (see below) and tears the socket down only
+# if the probe also gets no answer, then auto-reconnects.
 WS_LIVENESS_TIMEOUT = 45.0
+
+# Liveness grace probe: the receive thread starves whenever Blender's main
+# thread holds the GIL through a long script/render, so on wake the liveness
+# window can be expired even though the server kept the connection healthy
+# the whole time (it tolerates long pong gaps precisely for this case). On
+# expiry the client first sends a ping and waits this long for ANY inbound
+# traffic before declaring the link dead — a genuinely dead TCP connection
+# still tears down at WS_LIVENESS_TIMEOUT + this grace (~50s), while a
+# GIL-starved wake-up proves the link alive within ~1s and carries on.
+WS_LIVENESS_PROBE_GRACE = 5.0
 
 # UI transport-staleness threshold: how long recv may be silent before the
 # status surfaces (bubble pill, chat header) stop implying a healthy
@@ -267,6 +278,29 @@ CHAT_INPUT_PLACEHOLDER = "Type your message..."
 CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
 
+# Project rules (scene.mixie_chat_rules) — persisted in the file and
+# prepended to the first message of every new chat session. Bounded well
+# below MAX_MESSAGE_LENGTH so rules + user prompt can never overflow.
+# Must stay in lockstep with RULES_TEXT_MAX / the rules_text buffer in
+# the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
+CHAT_RULES_MAXLEN = 10000
+
+# ============================================================================
+# '@' MENTION AUTOCOMPLETE
+# ============================================================================
+
+# Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
+# mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
+MENTION_MAX_ITEMS = 6
+
+# Max published query length in bytes (leading '@' included). Must match
+# MENTION_QUERY_MAX in mixie_chat_footer_constants.hh.
+MENTION_QUERY_MAXLEN = 96
+
+# Max replacement text length. The C++ accept path reads insert_text into a
+# 320-byte buffer (MIXIE_MENTION_INSERT_SIZE) and refuses longer values.
+MENTION_INSERT_MAXLEN = 300
+
 # ============================================================================
 # IMAGE ATTACHMENT CONSTANTS
 # ============================================================================
@@ -287,6 +321,19 @@ MAX_IMAGE_DIMENSION = 16384
 
 # Maximum length for chat messages to prevent memory/performance issues
 MAX_MESSAGE_LENGTH = 100000  # 100KB of text
+
+# ============================================================================
+# CHAT HISTORY ARCHIVE (core/chat_history.py)
+# ============================================================================
+
+# "New Chat" archives the current conversation to ~/.mixar/chat_history/
+# instead of destroying it. Oldest sessions beyond this cap are pruned.
+MAX_ARCHIVED_SESSIONS = 30
+# Titles shown in the history popover — first line of the first user message.
+CHAT_HISTORY_TITLE_MAXLEN = 48
+# Per-session cap on image files copied into ~/.mixar/chat_media/<session>/.
+# Beyond this, remaining images keep their original (possibly temp) paths.
+CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
 # ============================================================================
 # TIMER / EXECUTION CONSTANTS
