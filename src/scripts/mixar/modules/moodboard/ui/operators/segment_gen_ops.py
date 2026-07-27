@@ -22,6 +22,23 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _get_input_image(context, tab):
+    """Input image from the Model Gen tab's shared image-source UI (or None).
+
+    Mirrors ``mixie.model_gen_generate._get_input_image``: the tab offers two
+    sources and honouring only the moodboard selection would silently use the
+    wrong image whenever "use selected image" is off.
+    """
+    scene = context.scene
+    if getattr(tab, 'use_selected_image', False):
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for item in scene.mixie_moodboard_images:
+                if item.selected and item.image:
+                    return item.image
+        return None
+    return getattr(tab, 'reference_image', None)
+
+
 class MIXIE_OT_tripo_segment_generate(Operator):
     """Split the selected meshes into parts using Tripo"""
 
@@ -114,22 +131,33 @@ class MIXIE_OT_smart_segment_generate(Operator):
         from mixar.modules.hunyuan.core.segment_enqueue import (
             enqueue_smart_segment_job,
         )
-        from ..sidebar_ui_helpers import get_selected_moodboard_image
 
-        image = get_selected_moodboard_image(context)
+        scene = context.scene
+        sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+        tab = getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
+        if tab is None:
+            self.report({"WARNING"}, "Model Gen tab not available")
+            return {"CANCELLED"}
+
+        image = _get_input_image(context, tab)
         if image is None:
-            self.report({"WARNING"}, "No moodboard image selected")
+            self.report({"WARNING"}, "No input image selected")
             return {"CANCELLED"}
 
         service_key = resolve_service_key(
-            "model_gen", getattr(
-                getattr(getattr(context.scene, 'mixie_moodboard_sidebar', None),
-                        'tab_image_to_3d', None),
-                "mode", "",
-            ),
+            "model_gen", getattr(tab, "mode", ""),
         ) or SMART_SEGMENT_SERVICE
-        model = resolve_model_slug(service_key, "", SMART_SEGMENT_MODEL)
+        model = resolve_model_slug(
+            service_key, getattr(tab, 'model', ''), SMART_SEGMENT_MODEL,
+        )
         params = collect_params(service_key, model)
+
+        # The tab's existing Prompt field IS the segmentation hint — sent
+        # top-level rather than as a second "Part Hint" param box, which the
+        # capability selector would otherwise draw right below it.
+        prompt = (getattr(tab, 'prompt', '') or "").strip()
+        if prompt:
+            params["hint"] = prompt
 
         try:
             job = enqueue_smart_segment_job(

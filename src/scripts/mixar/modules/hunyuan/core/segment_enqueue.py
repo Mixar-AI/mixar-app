@@ -82,6 +82,11 @@ def _apply_part_names(objects, part_names, prefix: str) -> None:
     part order, but if the importer produced a different number of objects we
     have no way to line them up — and a WRONG part name is worse than a
     generic one, because the agent and the user both act on these names.
+
+    CAVEAT: equal counts do not prove equal ORDER. This assumes the glTF
+    importer preserves Tripo's part order, which has not been confirmed
+    against a real job; if labels ever come back shuffled, match on the GLB
+    node names instead of zipping positionally.
     """
     if not part_names:
         return
@@ -114,10 +119,10 @@ def _hide(obj) -> None:
 def segment_on_imported(job, object_names: str) -> None:
     """Group the imported parts, name them, and hide the source object.
 
-    ``job.result_data`` carries the backend's full result — ``part_names`` is
-    populated by smart segmentation and by mesh segmentation on the semantic
-    (v2) model; the geometry model sends none, in which case the importer's
-    own names stand.
+    ``job.result_data`` carries the backend's full result. ``part_names`` is
+    populated by SMART segmentation only — ``/mesh/segment`` returns no name
+    list on either model version, so for mesh segmentation the importer's own
+    names (from the returned GLB) stand and the rename below is a no-op.
     """
     import bpy
 
