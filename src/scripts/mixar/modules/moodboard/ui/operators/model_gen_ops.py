@@ -98,24 +98,15 @@ class MIXIE_OT_model_gen_generate(Operator):
             return None
         return getattr(tab, 'reference_image', None)
 
-    def _get_multi_views(self, context):
-        """Pro multi-view images as (bytes, filename, view_type), or None."""
-        from mixar.modules.common.utils.image_utils import (
-            compress_image_for_upload,
-        )
-        scene = context.scene
-        if not hasattr(scene, 'hunyuan'):
-            return None
-        entries = []
-        for mv in scene.hunyuan.pro.multi_views:
-            if mv.image:
-                entries.append(
-                    (compress_image_for_upload(mv.image), "mv.png", mv.view_type)
-                )
-        return entries or None
-
     def _turnaround_payload(self, context, image, supports_mv):
-        """S3-key multi-view payload fragment for a detected turnaround.
+        """Multi-view payload fragment for the tab's Multiple Views set.
+
+        The ONLY multi-view source for this tab: the merged Multiple Views
+        section holds both backend-detected turnaround crops and views the
+        user added by hand, so there is nothing else to merge in.
+        ``scene.hunyuan.pro.multi_views`` is deliberately not consulted — it
+        belongs to the standalone Hunyuan panel, and reading it here used to
+        silently discard whatever the user put in it.
 
         Returns ``None`` when *image* is not part of a turnaround group (the
         normal single-image path applies unchanged), ``False`` when the group
@@ -181,27 +172,22 @@ class MIXIE_OT_model_gen_generate(Operator):
         prompt = (getattr(tab, 'prompt', '') or '').strip() or None
         supports_mv = model_supports_multi_view(service_key, model)
 
-        # --- Turnaround sheets: submit ONE multi-view job from S3 keys ---
-        # The detect-views endpoint already staged every crop in S3, so the
-        # keys are forwarded verbatim instead of the pixels being re-uploaded.
+        # --- Multiple Views: submit the whole set as ONE multi-view job ---
+        # Detected crops were already staged in S3 by detect-views, so their
+        # keys are forwarded verbatim; hand-added views carry inline pixels.
         turnaround_payload = self._turnaround_payload(
             context, image, supports_mv)
         if turnaround_payload is False:
             return {"CANCELLED"}
 
-        multi_views = (
-            None if turnaround_payload
-            else (self._get_multi_views(context) if supports_mv else None)
-        )
-
         # Per-mode input validation (mirrors each legacy operator).
         if turnaround_payload:
-            pass  # the detected views are the input
+            pass  # the labelled views are the input
         elif service_key == "image_to_3d" or supports_mv:
-            if not (image or prompt or multi_views):
+            if not (image or prompt):
                 self.report(
                     {"WARNING"},
-                    "Provide at least one of: prompt, image, or multi-view images",
+                    "Provide at least one of: prompt, image, or multiple views",
                 )
                 return {"CANCELLED"}
         elif service_key == "hunyuan_rapid":
@@ -229,15 +215,6 @@ class MIXIE_OT_model_gen_generate(Operator):
             if image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
                 payload["image_filename"] = "image.png"
-        if multi_views:
-            payload["multi_view_images"] = [
-                {
-                    "image_bytes_b64": _b64.b64encode(img_bytes).decode(),
-                    "filename": fname,
-                    "view_type": vtype,
-                }
-                for img_bytes, fname, vtype in multi_views
-            ]
 
         # --- Catalog params -> wire payload (per-service assembler) ---
         params = {}

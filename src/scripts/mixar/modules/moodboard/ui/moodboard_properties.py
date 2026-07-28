@@ -190,15 +190,16 @@ class MixieMoodboardImage(PropertyGroup):
         default="",
     )
 
-    # --- Turnaround / multi-view detection -------------------------------
+    # --- Turnaround / multi-view sets ------------------------------------
     # Populated by mixie.moodboard_detect_views when a single uploaded sheet
-    # is split into per-view crops by POST /model-3d/detect-views.
+    # is split into per-view crops by POST /model-3d/detect-views, or by
+    # mixie.moodboard_add_turnaround_view when the user builds a set by hand.
     view_type: EnumProperty(
         name="View",
         description=(
-            "Camera angle this image represents within its turnaround group. "
-            "Exactly one panel must be Front — it becomes the primary image "
-            "of the multi-view job; the rest are sent as additional views"
+            "Camera angle this image represents within its multi-view set. "
+            "Exactly one view must be Main Image — the model is built from "
+            "it; the rest are sent as additional views"
         ),
         items=TURNAROUND_VIEW_TYPES,
         default=TURNAROUND_VIEW_NONE,
@@ -206,8 +207,9 @@ class MixieMoodboardImage(PropertyGroup):
     turnaround_group: StringProperty(
         name="Turnaround Group",
         description=(
-            "Shared identifier linking every crop detected from the same "
-            "turnaround / model sheet. Empty for ordinary images"
+            "Shared identifier linking every view of one multi-view set — "
+            "crops detected from the same turnaround / model sheet, plus any "
+            "views added by hand. Empty for ordinary images"
         ),
         default="",
     )
@@ -216,7 +218,8 @@ class MixieMoodboardImage(PropertyGroup):
         description=(
             "Durable backend object key for this image, returned by the "
             "detect-views endpoint. Sent at submit time instead of "
-            "re-uploading the pixels"
+            "re-uploading the pixels. Empty for a hand-added view, which "
+            "carries its pixels inline instead"
         ),
         default="",
     )

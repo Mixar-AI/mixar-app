@@ -24,9 +24,17 @@ SCENE_GEN_MODEL = "scene_gen_v1"
 # Sentinel for "this moodboard image is not a labelled turnaround panel".
 TURNAROUND_VIEW_NONE = 'none'
 
-# The primary view. Its S3 key goes into the job payload's ``image_s3_key``;
-# it must NEVER appear in ``multi_view_images`` (the vendor's multi-view enum
-# has no ``front`` member and rejects the payload).
+# The job's main image — the sheet's hero / main pose when it has one, the
+# front orthographic otherwise. Goes into the job payload's ``image_s3_key``
+# (detected crop) or ``image_bytes_b64`` (manually added view); it must NEVER
+# appear in ``multi_view_images``. The backend always returns it as panel 0.
+TURNAROUND_VIEW_MAIN = 'main'
+
+# A front orthographic that is NOT the main image — only produced when a sheet
+# has BOTH a hero pose and a separate front view. NOT submittable: the vendor's
+# multi-view enum has no ``front`` member, so a panel left on this label is
+# shown in the strip but dropped at submit time (with a warning). The user
+# relabels it "Main Image" to swap which image the model is built from.
 TURNAROUND_VIEW_FRONT = 'front'
 
 # View types accepted by the backend's /model-3d/detect-views response and by
@@ -34,7 +42,10 @@ TURNAROUND_VIEW_FRONT = 'front'
 # and right lead because they are the labels users most often need to correct.
 TURNAROUND_VIEW_TYPES = (
     (TURNAROUND_VIEW_NONE, "None", "Not part of a detected turnaround"),
-    (TURNAROUND_VIEW_FRONT, "Front", "Primary view (sent as the main image)"),
+    (TURNAROUND_VIEW_MAIN, "Main Image",
+     "Primary image the model is built from"),
+    (TURNAROUND_VIEW_FRONT, "Front",
+     "Not sent — Hunyuan has no front slot; switch to Main Image to use it"),
     ('left', "Left", "Left side view"),
     ('right', "Right", "Right side view"),
     ('back', "Back", "Rear view"),

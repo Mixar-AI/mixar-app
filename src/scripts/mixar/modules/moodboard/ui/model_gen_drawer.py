@@ -14,7 +14,7 @@ Basic/Pro subtab UI when the catalog isn't loaded.
 
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
-    draw_moodboard_image_toggle, draw_generate_footer, draw_dropdown,
+    draw_moodboard_image_toggle, draw_generate_footer,
     draw_image_info_card,
 )
 
@@ -39,33 +39,13 @@ def _model_gen_catalog_ready():
         return False
 
 
-def _draw_multi_view_section(layout, scene):
-    """Multi-view image pickers (Pro only) — reuses scene.hunyuan.pro
-    state and the existing hunyuan multi-view operators."""
-    pro = scene.hunyuan.pro
-    col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
-    for i, mv in enumerate(pro.multi_views):
-        row = col.row(align=True)
-        draw_dropdown(row, mv, "view_type", text="")
-        row.prop(mv, "image", text="")
-        op_load = row.operator(
-            "mixie.hunyuan_load_image", text="", icon='FILE_FOLDER')
-        op_load.target = "multi_view"
-        op_load.multi_view_index = i
-        op_rm = row.operator(
-            "mixie.hunyuan_remove_multi_view", text="", icon='X')
-        op_rm.index = i
-    col.operator("mixie.hunyuan_add_multi_view", text="Add View", icon='ADD')
-
-
 def _draw_model_gen(layout, context):
     """Draw the consolidated, catalog-driven Model Gen tab."""
     scene = context.scene
     tab = scene.mixie_moodboard_sidebar.tab_image_to_3d
 
     from mixar.modules.common.generation_params import (
-        draw_capability_selector, model_supports_multi_view,
-        resolve_service_key,
+        draw_capability_selector, resolve_service_key,
     )
     service_key = resolve_service_key(
         "model_gen", getattr(tab, "mode", "")
@@ -90,19 +70,12 @@ def _draw_model_gen(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
-    # --- Turnaround sheet -> per-view crops (multi-view models only) ---
+    # --- Multiple Views: detected turnaround crops AND hand-added views,
+    # one section, one data model (multi-view-capable models only) ---
     from .turnaround_drawer import draw_detect_views_section
     draw_section_separator(layout)
     draw_detect_views_section(
         layout, context, service_key, getattr(tab, "model", ""))
-
-    # --- Multi-view images (models that advertise supports_multi_view) ---
-    if (
-        model_supports_multi_view(service_key, getattr(tab, "model", ""))
-        and hasattr(scene, 'hunyuan')
-    ):
-        draw_section_separator(layout)
-        _draw_multi_view_section(layout, scene)
 
     draw_section_separator(layout)
 

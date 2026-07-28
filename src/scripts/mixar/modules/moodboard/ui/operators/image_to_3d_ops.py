@@ -237,7 +237,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             self.report(
                 {"WARNING"},
                 f"'{model_name}' does not accept multiple views — "
-                "using the front view only",
+                "using the main image only",
             )
             return None
         try:

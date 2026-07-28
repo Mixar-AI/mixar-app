@@ -382,7 +382,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 "group — run mixie.moodboard_detect_views on the sheet first"
             )
 
-        # Propagates the same front-as-main-image rule and multi-front refusal
+        # Propagates the same exactly-one-'main' rule and multi-main refusal
         # the sidebar path uses.
         fragment, warnings = build_multi_view_payload(context.scene, group_id)
         for warning in warnings:

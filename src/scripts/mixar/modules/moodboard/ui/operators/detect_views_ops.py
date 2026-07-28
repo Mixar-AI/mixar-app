@@ -18,9 +18,12 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 
-from ...core.turnaround_views import (
-    clear_group, detect_views, find_group_for_image,
+from ....common.utils.file_select_utils import (
+    file_select_guard, mark_file_select_executed,
 )
+from ...constants import TURNAROUND_VIEW_MAIN, TURNAROUND_VIEW_NONE
+from ...core.turnaround_detect import detect_views
+from ...core.turnaround_views import clear_group, find_group_for_image
 
 logger = get_logger(__name__)
 
@@ -112,7 +115,7 @@ class MIXIE_OT_moodboard_detect_views(Operator):
 
         def on_done(group_id, count):
             _set_running(False)
-            _select_front_panel(group_id)
+            _select_main_panel(group_id)
             logger.debug("[DetectViews] %s panels in group %s", count, group_id)
             _set_status(f"Detected {count} views")
             _redraw_all()
@@ -183,29 +186,205 @@ class MIXIE_OT_moodboard_clear_turnaround(Operator):
         return {'FINISHED'}
 
 
-def _select_front_panel(group_id: str):
-    """Make the group's front crop the active moodboard selection.
+class MIXIE_OT_moodboard_add_turnaround_view(Operator):
+    """Add another image to this multi-view set"""
+
+    bl_idname = "mixie.moodboard_add_turnaround_view"
+    bl_label = "Add View"
+    bl_description = (
+        "Load an image file and add it to the multi-view set. Label it with "
+        "the camera angle it shows; it is sent alongside the main image as "
+        "one multi-view generation"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    # Empty when the Model Gen tab has no group yet — one is minted on the
+    # fly so a multi-view job can be assembled entirely by hand.
+    group_id: bpy.props.StringProperty(default="")
+    # 'main' when invoked from the main-image row's file picker.
+    view_type: bpy.props.StringProperty(default=TURNAROUND_VIEW_NONE)
+
+    filepath: bpy.props.StringProperty(
+        name="File Path",
+        description="Path to the view image",
+        subtype="FILE_PATH",
+    )
+    filter_glob: bpy.props.StringProperty(
+        default="*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tiff;*.webp",
+        options={"HIDDEN"},
+    )
+
+    def invoke(self, context, event):
+        if not file_select_guard(self, context):
+            return {"FINISHED"}
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        from ...core.turnaround_views import attach_image, set_main_image
+
+        image = self._load(context)
+        if image is None:
+            return {"CANCELLED"}
+
+        scene = context.scene
+        group_id = _ensure_group(context, self.group_id.strip())
+        view_type = self.view_type or TURNAROUND_VIEW_NONE
+
+        if attach_image(scene, group_id, image, view_type) is None:
+            self.report({"ERROR"}, "Could not add the image to the moodboard")
+            return {"CANCELLED"}
+        if view_type == TURNAROUND_VIEW_MAIN:
+            # Demote whatever was main before — only one is allowed.
+            set_main_image(scene, group_id, image)
+
+        _keep_group_resolvable(context, group_id, image)
+        mark_file_select_executed(self)
+        _redraw_all()
+        self.report({"INFO"}, f"Added '{image.name}' to the multi-view set")
+        return {"FINISHED"}
+
+    def _load(self, context):
+        """Validated, packed image datablock for self.filepath (or None)."""
+        import os
+
+        if not self.filepath:
+            self.report({"WARNING"}, "No file selected")
+            return None
+        try:
+            path = os.path.abspath(os.path.realpath(self.filepath))
+        except (OSError, ValueError) as e:
+            self.report({"ERROR"}, f"Invalid file path: {e}")
+            return None
+        if not os.path.isfile(path):
+            self.report({"ERROR"}, f"File not found: {path}")
+            return None
+        try:
+            image = bpy.data.images.load(path, check_existing=True)
+            # Packed so the view survives a .blend reload — a hand-added view
+            # carries its pixels inline at submit time, unlike detected crops.
+            image.pack()
+        except Exception as e:
+            self.report({"ERROR"}, f"Failed to load image: {e}")
+            return None
+        return image
+
+
+class MIXIE_OT_moodboard_remove_turnaround_view(Operator):
+    """Remove this image from the multi-view set"""
+
+    bl_idname = "mixie.moodboard_remove_turnaround_view"
+    bl_label = "Remove View"
+    bl_description = (
+        "Drop this image from the multi-view set. It stays on the moodboard, "
+        "it is just no longer sent as one of the views"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    group_id: bpy.props.StringProperty(default="")
+    image_name: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        from ...core.turnaround_views import detach_image
+
+        image = bpy.data.images.get(self.image_name.strip())
+        if image is None:
+            self.report({"WARNING"}, "View image not found")
+            return {"CANCELLED"}
+        if not detach_image(context.scene, self.group_id.strip(), image):
+            self.report({"WARNING"}, "View is not part of this set")
+            return {"CANCELLED"}
+        _redraw_all()
+        self.report({"INFO"}, f"Removed '{image.name}' from the multi-view set")
+        return {"FINISHED"}
+
+
+# ---------------------------------------------------------------------------
+# Group / tab plumbing
+# ---------------------------------------------------------------------------
+
+def _model_gen_tab(scene):
+    """The Model Gen sidebar tab properties, or None."""
+    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+    return getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
+
+
+def _point_tab_at(scene, image):
+    """Make *image* the Model Gen tab's input, whichever source it uses.
+
+    BOTH paths are re-pointed on purpose. ``find_group_for_image`` can only
+    resolve a group from a moodboard item, so an image chosen through the file
+    picker (``tab.reference_image``) never resolves one — leaving it in place
+    let a freshly detected sheet be submitted whole as a single image while
+    the panel still offered "Detect Views".
+    """
+    if image is None:
+        return
+    for item in scene.mixie_moodboard_images:
+        item.selected = (item.image == image)
+    tab = _model_gen_tab(scene)
+    if tab is not None and not getattr(tab, 'use_selected_image', False):
+        tab.reference_image = image
+
+
+def _keep_group_resolvable(context, group_id: str, fallback_image) -> None:
+    """Ensure the tab's input still resolves to *group_id* after an edit."""
+    from ...core.turnaround_views import main_item
+    from ..sidebar_ui_helpers import get_image_to_3d_input_image
+
+    scene = context.scene
+    current = get_image_to_3d_input_image(context)
+    if find_group_for_image(scene, current) == group_id:
+        return
+    main = main_item(scene, group_id)
+    _point_tab_at(scene, main.image if main is not None else fallback_image)
+
+
+def _ensure_group(context, explicit_group: str) -> str:
+    """The group Add View should target, minting one when there is none.
+
+    A brand-new group is seeded with the tab's current input image as its
+    main view, so the very first hand-added view already has something to be
+    a companion of.
+    """
+    from ...core.turnaround_views import attach_image, new_group_id
+    from ..sidebar_ui_helpers import get_image_to_3d_input_image
+
+    if explicit_group:
+        return explicit_group
+
+    scene = context.scene
+    current = get_image_to_3d_input_image(context)
+    existing = find_group_for_image(scene, current)
+    if existing:
+        return existing
+
+    group_id = new_group_id()
+    if current is not None:
+        attach_image(scene, group_id, current, TURNAROUND_VIEW_MAIN)
+    return group_id
+
+
+def _select_main_panel(group_id: str):
+    """Point the Model Gen tab's input at the group's main crop.
 
     The user's next Generate press then naturally takes the multi-view path
     without them having to hunt for the right crop on the canvas.
     """
-    from ...constants import TURNAROUND_VIEW_FRONT
-    from ...core.turnaround_views import group_items
+    from ...core.turnaround_views import main_item
 
     scene = bpy.context.scene
-    items = group_items(scene, group_id)
-    if not items:
+    item = main_item(scene, group_id)
+    if item is None:
         return
-    front = items[0]
-    if front.view_type != TURNAROUND_VIEW_FRONT:
-        return
-    for item in scene.mixie_moodboard_images:
-        item.selected = (item.image == front.image)
+    _point_tab_at(scene, item.image)
 
 
 classes = (
     MIXIE_OT_moodboard_detect_views,
     MIXIE_OT_moodboard_clear_turnaround,
+    MIXIE_OT_moodboard_add_turnaround_view,
+    MIXIE_OT_moodboard_remove_turnaround_view,
 )
 
 
