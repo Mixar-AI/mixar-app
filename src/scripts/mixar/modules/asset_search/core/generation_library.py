@@ -86,6 +86,37 @@ def ensure_registered() -> None:
         logger.exception("[GenLibrary] Could not register the generations library")
 
 
+def ensure_library_dirs() -> None:
+    """Create any registered asset-library folder that is missing on disk.
+
+    Saving into a library whose directory does not exist fails deep in Blender
+    with an opaque "cannot open the target file path for writing (No such file
+    or directory)" — the agent's save_to_asset_library runs in a no-``os``
+    sandbox and cannot create it. A stale entry (e.g. an old build's
+    "User Library" -> Documents/Mixar/Assets that was never created) then
+    silently breaks every save that defaults to it. Self-heal here at startup,
+    where ``os`` is available; best-effort and per-library so a path on a
+    disconnected drive just skips.
+    """
+    import os
+
+    try:
+        libs = bpy.context.preferences.filepaths.asset_libraries
+    except Exception:
+        return
+    for lib in libs:
+        try:
+            root = bpy.path.abspath(lib.path or "").strip()
+            if not root or os.path.isdir(root):
+                continue
+            os.makedirs(root, exist_ok=True)
+            logger.info("[GenLibrary] Created missing library dir for '%s' -> %s",
+                        lib.name, root)
+        except Exception as exc:  # noqa: BLE001 — non-local/removable paths just skip
+            logger.debug("[GenLibrary] Skipped library dir for '%s': %s",
+                         getattr(lib, "name", "?"), exc)
+
+
 # --------------------------------------------------------------------------- #
 # Listener wiring
 # --------------------------------------------------------------------------- #

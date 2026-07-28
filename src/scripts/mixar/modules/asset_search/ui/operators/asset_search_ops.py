@@ -474,6 +474,9 @@ def _start_generation_library():
     try:
         from mixar.modules.asset_search.core import generation_library
         generation_library.ensure_registered()
+        # Self-heal stale/uncreated library folders so agent saves that default
+        # to a missing directory don't fail with an opaque write error.
+        generation_library.ensure_library_dirs()
         generation_library.attach_listeners()
     except Exception as exc:
         logger.warning("[Asset Search] Generation library init failed: %s", exc)
