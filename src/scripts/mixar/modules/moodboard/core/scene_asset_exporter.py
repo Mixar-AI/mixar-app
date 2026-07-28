@@ -145,6 +145,73 @@ def _collect_datablocks(clean_obj):
     return blocks
 
 
+def _attach_preview(clean_obj):
+    """Render a 512² thumbnail and embed it as the asset's datablock preview.
+
+    Reuses the same rig as the embedding-training flow (EEVEE, transparent
+    film, 3/4-view camera, key/fill lights) so generated assets (e.g.
+    image-to-3D results) get a real thumbnail instead of the placeholder
+    icon. The preview is written into the .blend by the caller's
+    ``libraries.write`` — no extra file I/O.
+
+    Best-effort: any failure (missing context, render error) leaves the
+    asset preview-less rather than aborting the export.
+    """
+    try:
+        from mixar.modules.asset_search.utils.preview_render import (
+            PreviewRenderRig,
+            frame_camera,
+            render_to_image,
+        )
+    except Exception as e:
+        logger.debug("[AssetExporter] Preview helpers unavailable: %s", e)
+        return
+
+    scene = bpy.context.scene
+    if scene is None:
+        return
+
+    img = None
+    linked = False
+    try:
+        with PreviewRenderRig(scene, size=512) as rig:
+            scene.collection.objects.link(clean_obj)
+            linked = True
+            bpy.context.view_layer.update()
+            frame_camera(rig.camera, [clean_obj])
+            # pack=True so the pixels survive render_to_image deleting its temp file
+            img = render_to_image(scene, f"_asset_preview_{clean_obj.name}", pack=True)
+
+        if not img:
+            return
+        w, h = img.size
+        if not (w and h):
+            return
+        pixels = [0.0] * (w * h * 4)
+        img.pixels.foreach_get(pixels)
+        preview = clean_obj.preview_ensure()
+        preview.image_size = (w, h)
+        preview.image_pixels_float.foreach_set(pixels)
+        logger.debug(
+            "[AssetExporter] Attached %dx%d preview to '%s'", w, h, clean_obj.name
+        )
+    except Exception as e:
+        logger.debug(
+            "[AssetExporter] Preview render failed for '%s': %s", clean_obj.name, e
+        )
+    finally:
+        if linked and clean_obj.name in bpy.data.objects:
+            try:
+                scene.collection.objects.unlink(clean_obj)
+            except Exception:
+                pass
+        if img is not None:
+            try:
+                bpy.data.images.remove(img)
+            except Exception:
+                pass
+
+
 def export_object_to_asset_library(
     obj, label, library_path, *, asset_name=None, description="", tags=None
 ):
@@ -218,6 +285,10 @@ def export_object_to_asset_library(
                     clean_obj.asset_data.tags.new(str(tag))
                 except Exception:
                     pass
+
+    # Best-effort: render a thumbnail and embed it as the asset preview so
+    # library assets (e.g. image-to-3D generations) aren't preview-less.
+    _attach_preview(clean_obj)
 
     # Collect datablocks from the clean copy only
     datablocks = _collect_datablocks(clean_obj)
