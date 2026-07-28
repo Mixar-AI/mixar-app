@@ -4,40 +4,40 @@
 
 """Multiple Views Drawer
 
-The ONE multi-view section of the Model Gen tab. It replaced two stacked
-sections — "Detect Views" (backend-split turnaround crops) and the older
-manual "Multi-View Images" picker list — which could each hold a different
-set of images while only the detected one was ever submitted.
+The ONE multi-view section of the Model Gen tab. It sits directly under Input
+Image and mirrors the vendor's shape: the Input Image is the single frontal
+image, this section holds the up-to-seven companion angles.
 
-Everything here is driven by the turnaround-group data model
-(``core/turnaround_views.py``): a set of moodboard images sharing a
-``turnaround_group``, each labelled with a ``view_type``. Groups come either
-from the backend detector or from Add View, and the two mix freely.
+Layout::
+
+    Multiple Views  (3 of 7)        [Detect Views] [X]
+      [thumb]      [thumb]      [thumb]
+      Left  ^ X    Back  ^ X    Right ^ X
+      [Add Selected]  [folder]
+
+``Add Selected`` is the primary path — it takes everything selected on the
+moodboard and auto-assigns each the next unused angle, so the common
+left/right/back turnaround is one click and no dropdown work. ``^`` promotes a
+view to Input Image (how the detected ``hero`` render gets used); the file
+picker stays as the small secondary folder icon.
+
+Everything is driven by the turnaround-group data model
+(``core/turnaround_views.py``), whose active group id lives on the tab.
 
 Shared by the catalog-driven Model Gen UI (``model_gen_drawer``) and the
 legacy Basic fallback in ``sidebar_panel_drawers`` so both behave the same.
 """
 
-from ..constants import (
-    TURNAROUND_VIEW_FRONT, TURNAROUND_VIEW_MAIN,
-)
+from ..constants import TURNAROUND_MAX_COMPANIONS
 from .sidebar_ui_helpers import (
     draw_dropdown, draw_hint, draw_image_thumbnail, draw_section_box,
     get_image_to_3d_input_image,
 )
 
-# The image the tab will actually submit — same resolution the Detect Views
-# operator and the generate operators use, so the UI never promises one image
-# and the job uses another.
+# The image the tab will actually submit as the vendor's frontal image — same
+# resolution the Detect Views operator and the generate operators use, so the
+# UI never promises one image and the job uses another.
 _resolve_input_image = get_image_to_3d_input_image
-
-
-def _active_group(context):
-    """The turnaround group of the tab's current input image, or ""."""
-    from ..core.turnaround_views import find_group_for_image
-
-    return find_group_for_image(
-        context.scene, _resolve_input_image(context))
 
 
 def draw_detect_views_section(layout, context, service_key, model_slug):
@@ -46,39 +46,34 @@ def draw_detect_views_section(layout, context, service_key, model_slug):
     Renders nothing when the selected model cannot take multi-view input, so
     the affordance never appears where it would be rejected at submit time.
     """
-    from ..core.turnaround_views import model_accepts_multi_view
+    from ..core.turnaround_views import (
+        get_active_group, group_summary, model_accepts_multi_view,
+    )
 
     if not model_accepts_multi_view(service_key, model_slug):
         return
 
     scene = context.scene
-    group_id = _active_group(context)
+    group_id = get_active_group(scene)
+    summary = group_summary(scene, group_id)
 
-    col = draw_section_box(layout, "Multiple Views", icon='RENDERLAYERS')
+    title = "Multiple Views" if not summary else f"Multiple Views  ({summary})"
+    col = draw_section_box(layout, title, icon='RENDERLAYERS')
 
+    _draw_header(col, scene, context, group_id)
     if group_id:
-        _draw_clear_button(col, group_id)
-        _draw_main_row(col, scene, context, group_id)
         col.separator()
-        _draw_view_grid(col, scene, group_id)
-        _draw_add_view(col, group_id)
-        _draw_validation_hint(col, scene, group_id)
-        return
-
-    _draw_empty_state(col, context, scene)
+        _draw_view_grid(col, scene, group_id, model_slug)
+    _draw_add_row(col, scene, context, group_id)
+    _draw_hints(col, scene, context, group_id, model_slug)
 
 
 # ---------------------------------------------------------------------------
-# Empty state — no group yet
+# Header — detect + clear
 # ---------------------------------------------------------------------------
 
-def _draw_empty_state(col, context, scene):
-    """Detect Views + Add View, the two ways into a multi-view job.
-
-    Add View is offered here too: it is what replaced the old manual
-    "Multi-View Images" list, so a user with no turnaround sheet can still
-    assemble a multi-view job by hand.
-    """
+def _draw_header(col, scene, context, group_id):
+    """Detect Views, plus a clear button once there is a set."""
     running = getattr(scene, 'mixie_detect_views_running', False)
     # The operator's poll() cannot require an input image (it would block
     # agent calls that pass an explicit image_name), so the button's
@@ -87,65 +82,28 @@ def _draw_empty_state(col, context, scene):
 
     row = col.row(align=True)
     row.scale_y = 1.2
-    row.enabled = not running and has_image
-    row.operator(
+    sub = row.row(align=True)
+    sub.enabled = not running and has_image
+    sub.operator(
         "mixie.moodboard_detect_views",
         text="Detecting..." if running else "Detect Views",
         icon='ZOOM_SELECTED',
     )
-
-    _draw_add_view(col, "", enabled=not running)
-
-    status = getattr(scene, 'mixie_detect_views_status', "")
-    if status:
-        draw_hint(col, status, icon='INFO')
-    elif not has_image:
-        draw_hint(col, "Select an image to analyse", icon='INFO')
-    else:
-        draw_hint(
-            col,
-            "Split a turnaround sheet into per-view crops, or add views by hand",
-            icon='INFO',
-        )
+    if group_id:
+        clear = row.operator(
+            "mixie.moodboard_clear_turnaround", text="", icon='X')
+        clear.group_id = group_id
 
 
 # ---------------------------------------------------------------------------
-# Populated state
+# The views themselves
 # ---------------------------------------------------------------------------
 
-def _draw_clear_button(col, group_id):
-    """Group-wide clear: every view drops out of the set at once."""
-    header = col.row(align=True)
-    header.alignment = 'RIGHT'
-    clear = header.operator(
-        "mixie.moodboard_clear_turnaround", text="", icon='X')
-    clear.group_id = group_id
+def _draw_view_grid(col, scene, group_id, model_slug):
+    """Thumbnail + angle dropdown + promote + remove for every view."""
+    from ..core.turnaround_views import allowed_view_types, group_items
 
-
-def _draw_main_row(col, scene, context, group_id):
-    """The image the model is actually built from, plus a picker to swap it."""
-    from ..core.turnaround_views import main_item
-
-    item = main_item(scene, group_id)
-    image = item.image if item is not None else None
-
-    row = col.row(align=True)
-    row.label(text="Main Image")
-    if image is not None:
-        draw_image_thumbnail(row, image, scale=1.5)
-        row.label(text=image.name)
-    else:
-        row.label(text="Not set", icon='ERROR')
-    pick = row.operator(
-        "mixie.moodboard_add_turnaround_view", text="", icon='FILE_FOLDER')
-    pick.group_id = group_id
-    pick.view_type = TURNAROUND_VIEW_MAIN
-
-
-def _draw_view_grid(col, scene, group_id):
-    """Thumbnail + editable label + remove for every view in the set."""
-    from ..core.turnaround_views import group_items
-
+    allowed = allowed_view_types(model_slug)
     grid = col.grid_flow(
         row_major=True, columns=3, even_columns=True, align=False)
     for item in group_items(scene, group_id):
@@ -153,52 +111,107 @@ def _draw_view_grid(col, scene, group_id):
         draw_image_thumbnail(cell, item.image, scale=2.5)
         row = cell.row(align=True)
         # Editable so a mislabelled view can be corrected in place — left and
-        # right are the labels that most often need swapping, and switching a
-        # 'front' to Main Image is how an unsendable front view gets used.
-        draw_dropdown(row, item, "view_type", text="")
-        # The main image is the job's input, not one of its extra views, so it
-        # is swapped through the picker above rather than removed here.
-        if item.view_type != TURNAROUND_VIEW_MAIN:
-            remove = row.operator(
-                "mixie.moodboard_remove_turnaround_view", text="", icon='X')
-            remove.group_id = group_id
-            remove.image_name = item.image.name
+        # right are the labels that most often need swapping.
+        sub = row.row(align=True)
+        # Flagged rather than hidden: the label is still true, the selected
+        # model just cannot take it. Switching back to 3.1 makes it sendable
+        # again without the user having to relabel anything.
+        sub.alert = item.view_type not in allowed
+        draw_dropdown(sub, item, "view_type", text="")
+        promote = row.operator(
+            "mixie.moodboard_promote_turnaround_view",
+            text="", icon='TRIA_UP')
+        promote.group_id = group_id
+        promote.image_name = item.image.name
+        remove = row.operator(
+            "mixie.moodboard_remove_turnaround_view", text="", icon='X')
+        remove.group_id = group_id
+        remove.image_name = item.image.name
 
 
-def _draw_add_view(col, group_id, enabled=True):
-    """Add View button. An empty *group_id* mints a group on the fly."""
+def _draw_add_row(col, scene, context, group_id):
+    """Add Selected (primary) + the file picker (secondary folder icon)."""
+    from ..core.turnaround_views import (
+        eligible_selected_images, remaining_capacity,
+    )
+
+    capacity = (
+        remaining_capacity(scene, group_id) if group_id
+        else TURNAROUND_MAX_COMPANIONS
+    )
+    eligible = eligible_selected_images(
+        scene, group_id, _resolve_input_image(context))
+
     row = col.row(align=True)
-    row.enabled = enabled
-    add = row.operator(
-        "mixie.moodboard_add_turnaround_view", text="Add View", icon='ADD')
-    add.group_id = group_id
+    add = row.row(align=True)
+    add.enabled = bool(eligible) and capacity > 0
+    count = min(len(eligible), capacity)
+    add.operator(
+        "mixie.moodboard_add_selected_views",
+        text=f"Add Selected ({count})" if count else "Add Selected",
+        icon='ADD',
+    )
+    pick = row.row(align=True)
+    pick.enabled = capacity > 0
+    op = pick.operator(
+        "mixie.moodboard_add_turnaround_view", text="", icon='FILE_FOLDER')
+    op.group_id = group_id
 
 
-def _draw_validation_hint(col, scene, group_id):
-    """Say up front what would otherwise fail at submit time.
+# ---------------------------------------------------------------------------
+# Hints — say up front what would otherwise fail at submit time
+# ---------------------------------------------------------------------------
 
-    Both main-count problems block submission, so they are flagged here rather
-    than letting the user spend a multi-minute, ~50-credit job to find out.
-    """
-    from ..core.turnaround_views import group_items
+def _draw_hints(col, scene, context, group_id, model_slug):
+    """One line of guidance for whatever the current state needs."""
+    from ..core.turnaround_views import (
+        allowed_view_types, eligible_selected_images, group_items,
+        remaining_capacity,
+    )
 
-    items = group_items(scene, group_id)
-    mains = sum(1 for it in items if it.view_type == TURNAROUND_VIEW_MAIN)
+    status = getattr(scene, 'mixie_detect_views_status', "")
+    if status:
+        draw_hint(col, status, icon='INFO')
 
-    if mains == 0:
-        draw_hint(col, "Label one view 'Main Image' to generate", icon='ERROR')
+    if _resolve_input_image(context) is None:
+        draw_hint(col, "Select an image to use as the input image", icon='ERROR')
         return
-    if mains > 1:
-        draw_hint(
-            col, f"{mains} views labelled Main Image — only one allowed",
-            icon='ERROR')
-        return
 
-    fronts = sum(1 for it in items if it.view_type == TURNAROUND_VIEW_FRONT)
-    if fronts:
-        # Not an error — the job still runs, just without these panels.
+    if not group_id:
         draw_hint(
             col,
-            "Front views are not sent — switch one to Main Image to use it",
-            icon='INFO')
+            "Split a turnaround sheet, or select images and Add Selected",
+            icon='INFO',
+        )
+        return
+
+    allowed = allowed_view_types(model_slug)
+    unsupported = [
+        it.view_type for it in group_items(scene, group_id)
+        if it.view_type not in allowed
+    ]
+    if unsupported:
+        # Not an error — the job still runs, just without these views.
+        draw_hint(
+            col,
+            f"'{model_slug}' takes {', '.join(allowed)} only — "
+            f"{len(unsupported)} view(s) will not be sent",
+            icon='ERROR',
+        )
+        return
+
+    if remaining_capacity(scene, group_id) <= 0:
+        draw_hint(
+            col,
+            f"{TURNAROUND_MAX_COMPANIONS} views is the maximum",
+            icon='INFO',
+        )
+        return
+
+    if not eligible_selected_images(
+            scene, group_id, _resolve_input_image(context)):
+        draw_hint(
+            col, "Select moodboard images to add them as views", icon='INFO')
+        return
+
     draw_hint(col, "Generates as one multi-view job", icon='CHECKMARK')

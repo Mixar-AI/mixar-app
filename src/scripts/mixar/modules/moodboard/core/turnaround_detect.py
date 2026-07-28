@@ -6,13 +6,22 @@
 Turnaround / Model-Sheet View Detection
 
 Calls ``POST /api/v1/model-3d/detect-views`` with a turnaround sheet and
-brings the returned per-view crops onto the moodboard as ordinary moodboard
-images sharing a ``turnaround_group``. The group model itself (queries,
-labelling, submit payload) lives in :mod:`turnaround_views`.
+brings the returned per-view crops onto the moodboard. The group model itself
+(queries, labelling, submit payload) lives in :mod:`turnaround_views`.
 
-Backend contract: ``panels[0].view_type`` is always ``"main"`` — the sheet's
-hero pose when it has one, its front orthographic otherwise. ``"front"`` only
-appears alongside a hero and is NOT submittable (see constants.py).
+Backend contract, and how each panel is ingested:
+
+- ``panels[0].view_type`` is always ``"main"`` — the sheet's front
+  orthographic, falling back to its hero render when there is no front. It
+  becomes the tab's **Input Image** and is NOT a group member.
+- ``"hero"`` appears only when the sheet has BOTH. No vendor ``ViewType``
+  describes it, so it is not a companion either: it lands on the moodboard
+  untagged next to the main, as an alternative Input Image the user can
+  promote when a stylised sheet reconstructs badly.
+- everything else is one of the seven vendor angles and joins the group.
+
+Both main and hero keep their ``s3_key``, so whichever one ends up as the
+Input Image submits by key instead of re-uploading pixels.
 
 Threading: the detect request runs on the shared async request queue, whose
 callbacks are delivered on Blender's main thread. Crop pixels are downloaded
@@ -21,16 +30,18 @@ on a worker thread and handed back to the main thread before touching
 """
 
 import threading
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 
 from ..constants import (
+    DETECT_PANEL_HERO,
+    DETECT_PANEL_MAIN,
     MOODBOARD_IMAGE_BASE_SIZE,
     MOODBOARD_MULTI_IMAGE_GAP,
-    TURNAROUND_VIEW_MAIN,
+    TURNAROUND_MAX_COMPANIONS,
 )
 from .turnaround_views import VALID_VIEW_TYPES, new_group_id
 
@@ -49,6 +60,7 @@ def detect_views(
     on_done: Callable[[str, int], None],
     on_error: Callable[[str], None],
     on_not_turnaround: Callable[[], None],
+    hint: str = "",
 ) -> None:
     """Detect turnaround panels in *image* and ingest the crops.
 
@@ -56,10 +68,13 @@ def detect_views(
 
     Args:
         image: The moodboard image believed to be a turnaround sheet.
-        on_done: ``fn(group_id, panel_count)`` after crops are on the board.
+        on_done: ``fn(group_id, companion_count)`` after crops are on the
+            board. ``group_id`` is "" when the sheet had no companion angles.
         on_error: ``fn(message)`` on any failure.
         on_not_turnaround: called when the backend says this is an ordinary
             single image — the caller should change nothing.
+        hint: optional one-line description of the subject, forwarded as the
+            endpoint's ``hint`` form field to help it read stylised sheets.
     """
     from mixar.modules.common.api.services import get_model_3d_service
     from mixar.modules.common.utils.image_utils import compress_for_service
@@ -109,6 +124,7 @@ def detect_views(
     get_model_3d_service().detect_views_async(
         image_bytes,
         filename="turnaround.jpg",
+        hint=(hint or "").strip(),
         on_success=_on_success,
         on_error=_on_error,
     )
@@ -136,14 +152,20 @@ def _error_message(error) -> str:
 def _sanitise_panels(raw_panels: list) -> list:
     """Keep only panels with a usable preview URL, key and known view type.
 
-    Guarantees at most one ``main`` panel and puts it first, matching the
-    endpoint contract (``panels[0].view_type == "main"``) without trusting the
-    response to already satisfy it. A group with no main image cannot be
-    submitted at all, so an unusable response is dropped entirely and the
-    caller falls back to the ordinary single-image path.
+    Returns them in ingest order — ``main``, then ``hero`` if present, then
+    the companion angles — enforcing the endpoint contract
+    (``panels[0].view_type == "main"``, at most one main, at most one hero)
+    rather than trusting the response to already satisfy it. Without a main
+    panel there is no input image, so an unusable response is dropped entirely
+    and the caller falls back to the ordinary single-image path.
+
+    Companions are capped at the vendor's seven; extras beyond that would be
+    rejected server-side after credits are held.
     """
+    order = {DETECT_PANEL_MAIN: 0, DETECT_PANEL_HERO: 1}
     panels = []
-    seen_main = False
+    seen = set()
+    companions = 0
     for panel in raw_panels:
         if not isinstance(panel, dict):
             continue
@@ -152,20 +174,28 @@ def _sanitise_panels(raw_panels: list) -> list:
         view_type = panel.get("view_type")
         if not preview_url or not s3_key:
             continue
-        if view_type not in VALID_VIEW_TYPES:
+        if view_type in order:
+            if view_type in seen:
+                logger.warning("[Turnaround] Extra %s panel — skipped", view_type)
+                continue
+            seen.add(view_type)
+        elif view_type not in VALID_VIEW_TYPES:
             logger.warning("[Turnaround] Unknown view_type %r — skipped", view_type)
             continue
-        if view_type == TURNAROUND_VIEW_MAIN:
-            if seen_main:
-                logger.warning("[Turnaround] Extra main panel — skipped")
+        else:
+            if companions >= TURNAROUND_MAX_COMPANIONS:
+                logger.warning(
+                    "[Turnaround] More than %s companion views — %r skipped",
+                    TURNAROUND_MAX_COMPANIONS, view_type,
+                )
                 continue
-            seen_main = True
+            companions += 1
         panels.append(
             {"view_type": view_type, "s3_key": s3_key, "preview_url": preview_url}
         )
 
-    panels.sort(key=lambda p: 0 if p["view_type"] == TURNAROUND_VIEW_MAIN else 1)
-    if not panels or panels[0]["view_type"] != TURNAROUND_VIEW_MAIN:
+    panels.sort(key=lambda p: order.get(p["view_type"], 2))
+    if not panels or panels[0]["view_type"] != DETECT_PANEL_MAIN:
         logger.warning("[Turnaround] Response has no main panel")
         return []
     return panels
@@ -217,45 +247,81 @@ def _ingest_panels(
 
 
 def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
-    """Main-thread: load each crop and append it as a tagged moodboard item."""
+    """Main-thread: load each crop onto the board and wire up the tab.
+
+    ``main`` becomes the tab's Input Image and ``hero`` sits beside it, both
+    untagged — only the companion angles join the group, matching what the
+    vendor payload actually has slots for. Returns ``(group_id, companions)``;
+    ``group_id`` is "" when the sheet yielded no companion angles at all (a
+    perfectly good single-image result, just not a multi-view one).
+    """
     import os
 
-    from mixar.modules.common.utils.image_utils import (
-        add_image_to_moodboard, load_image_from_file,
-    )
+    from .turnaround_views import set_active_group, set_tab_input_image
 
     scene = bpy.context.scene
     group_id = new_group_id()
     origin_x, origin_y, step = _strip_origin(scene, source_name)
 
-    added = 0
+    loaded = 0
+    companions = 0
+    main_image = None
     for index, (temp_path, panel) in enumerate(downloaded):
-        try:
-            img = load_image_from_file(temp_path, f"{base}_{panel['view_type']}")
-        except Exception as e:
-            logger.error("[Turnaround] Failed to load crop: %s", e)
+        view_type = panel["view_type"]
+        img = _load_crop(temp_path, f"{base}_{view_type}")
+        if img is None:
             continue
-        finally:
-            try:
-                os.unlink(temp_path)
-            except OSError:
-                pass
 
-        add_image_to_moodboard(
-            img,
-            position_x=origin_x + index * step,
-            position_y=origin_y,
-        )
-        # add_image_to_moodboard appends, so the new item is the last one.
-        item = scene.mixie_moodboard_images[-1]
-        item.view_type = panel["view_type"]
+        item = _place(scene, img, origin_x + index * step, origin_y)
         item.s3_key = panel["s3_key"]
-        item.turnaround_group = group_id
-        added += 1
+        loaded += 1
 
-    if not added:
+        if view_type == DETECT_PANEL_MAIN:
+            main_image = img
+        elif view_type == DETECT_PANEL_HERO:
+            # Untagged: no vendor ViewType describes a hero render, so it can
+            # only ever be used by promoting it to Input Image.
+            pass
+        else:
+            item.view_type = view_type
+            item.turnaround_group = group_id
+            companions += 1
+
+    if not loaded:
         raise RuntimeError("No crops could be loaded")
-    return group_id, added
+
+    # The user's next Generate then naturally takes the multi-view path
+    # without them having to hunt for the right crop on the canvas.
+    set_tab_input_image(scene, main_image)
+    set_active_group(scene, group_id if companions else "")
+    return (group_id if companions else ""), companions
+
+
+def _load_crop(temp_path: str, name: str) -> Optional["bpy.types.Image"]:
+    """Load one downloaded crop, always removing the temp file."""
+    import os
+
+    from mixar.modules.common.utils.image_utils import load_image_from_file
+
+    try:
+        return load_image_from_file(temp_path, name)
+    except Exception as e:
+        logger.error("[Turnaround] Failed to load crop: %s", e)
+        return None
+    finally:
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+
+
+def _place(scene, image, x: float, y: float):
+    """Append *image* to the moodboard and return its item."""
+    from mixar.modules.common.utils.image_utils import add_image_to_moodboard
+
+    add_image_to_moodboard(image, position_x=x, position_y=y)
+    # add_image_to_moodboard appends, so the new item is the last one.
+    return scene.mixie_moodboard_images[-1]
 
 
 def _base_name(source_name: str) -> str:

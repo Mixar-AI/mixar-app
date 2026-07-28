@@ -40,6 +40,7 @@ class Model3DService(BaseService):
         self,
         image_bytes: bytes,
         filename: str = "image.png",
+        hint: str = "",
         timeout: float = 120.0,
     ) -> APIResponse:
         """
@@ -54,26 +55,35 @@ class Model3DService(BaseService):
         Args:
             image_bytes: Image data (PNG, JPEG or WEBP)
             filename: Filename for the upload
+            hint: Optional one-line description of the subject, sent as a
+                form field to help the detector read stylised sheets
 
         Returns:
             APIResponse whose data envelope contains:
             - is_turnaround: bool — False means "ordinary single image",
               in which case ``panels`` is empty
             - panels: list of {view_type, s3_key, preview_url, confidence,
-              width, height}. When ``is_turnaround`` is True exactly one
-              panel has view_type == "front" and it is always panels[0].
-              ``s3_key`` is the durable handle to forward verbatim at submit
-              time; ``preview_url`` is presigned and short-lived (1h).
+              width, height}. ``view_type`` is "main", "hero", or one of the
+              seven vendor angles. ``panels[0]`` is always "main" (the front
+              orthographic, falling back to the hero render); "hero" appears
+              only when the sheet has both and is an alternative main image,
+              not a companion view. ``s3_key`` is the durable handle to
+              forward verbatim at submit time; ``preview_url`` is presigned
+              and short-lived (1h).
         """
         files = {"image": (filename, image_bytes, _mime_type(filename))}
         return self._client.post(
-            self._endpoint("detect-views"), files=files, timeout=timeout
+            self._endpoint("detect-views"),
+            files=files,
+            data=_hint_data(hint),
+            timeout=timeout,
         )
 
     def detect_views_async(
         self,
         image_bytes: bytes,
         filename: str = "image.png",
+        hint: str = "",
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
@@ -93,11 +103,22 @@ class Model3DService(BaseService):
             "POST",
             self._endpoint("detect-views"),
             files=files,
+            data=_hint_data(hint),
             timeout=timeout,
             on_success=on_success,
             on_error=on_error,
             on_complete=on_complete,
         )
+
+
+def _hint_data(hint: str) -> Optional[dict]:
+    """Multipart form fields for an optional detect-views hint.
+
+    Omitted entirely when blank — the field is optional backend-side and
+    sending an empty string would be a description of nothing.
+    """
+    hint = (hint or "").strip()
+    return {"hint": hint} if hint else None
 
 
 def _mime_type(filename: str) -> str:

@@ -333,6 +333,21 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         update=_on_model_changed,
     )
 
+    # Active multi-view (turnaround) set. Held on the TAB, not derived from
+    # the input image: the input image is the vendor's single frontal image
+    # and is never a member of the group, so there is nothing on it to look
+    # the group up from. Both input sources (selected moodboard image and
+    # file-picked reference_image) therefore resolve it identically.
+    # Cleared by moodboard.core.turnaround_views when the set empties.
+    turnaround_group: StringProperty(
+        name="Multi-View Set",
+        description=(
+            "Identifier of the multi-view set this tab submits alongside its "
+            "input image. Empty when the tab has no multi-view set"
+        ),
+        default="",
+    )
+
 
 class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
     """Properties for Segment to 3D tab"""

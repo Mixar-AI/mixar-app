@@ -21,31 +21,12 @@ SCENE_GEN_MODEL = "scene_gen_v1"
 # TURNAROUND / MULTI-VIEW DETECTION
 # ============================================================================
 
-# Sentinel for "this moodboard image is not a labelled turnaround panel".
-TURNAROUND_VIEW_NONE = 'none'
-
-# The job's main image — the sheet's hero / main pose when it has one, the
-# front orthographic otherwise. Goes into the job payload's ``image_s3_key``
-# (detected crop) or ``image_bytes_b64`` (manually added view); it must NEVER
-# appear in ``multi_view_images``. The backend always returns it as panel 0.
-TURNAROUND_VIEW_MAIN = 'main'
-
-# A front orthographic that is NOT the main image — only produced when a sheet
-# has BOTH a hero pose and a separate front view. NOT submittable: the vendor's
-# multi-view enum has no ``front`` member, so a panel left on this label is
-# shown in the strip but dropped at submit time (with a warning). The user
-# relabels it "Main Image" to swap which image the model is built from.
-TURNAROUND_VIEW_FRONT = 'front'
-
-# View types accepted by the backend's /model-3d/detect-views response and by
-# the Hunyuan Pro multi-view payload. Order drives the sidebar dropdown; left
-# and right lead because they are the labels users most often need to correct.
+# The multi-view set holds COMPANIONS ONLY. The main image is the Model Gen
+# tab's Input Image and is never a member of the group — so there is no
+# 'main', 'front' or 'none' label here. The seven ids below are exactly the
+# vendor's ``ViewType`` enum (backend modules/hunyuan/schemas/requests.py);
+# Hunyuan Pro takes 1 frontal image + these 7 angles, 8 images maximum.
 TURNAROUND_VIEW_TYPES = (
-    (TURNAROUND_VIEW_NONE, "None", "Not part of a detected turnaround"),
-    (TURNAROUND_VIEW_MAIN, "Main Image",
-     "Primary image the model is built from"),
-    (TURNAROUND_VIEW_FRONT, "Front",
-     "Not sent — Hunyuan has no front slot; switch to Main Image to use it"),
     ('left', "Left", "Left side view"),
     ('right', "Right", "Right side view"),
     ('back', "Back", "Rear view"),
@@ -55,16 +36,47 @@ TURNAROUND_VIEW_TYPES = (
     ('right_front', "Right Front", "Three-quarter view from the right"),
 )
 
-# Models known to accept multi-view input, used ONLY when the generation
-# catalog has not populated the per-model ``supports_multi_view`` flag
-# (offline / pre-auth). Prefer generation_params.model_supports_multi_view().
-# TODO: drop this list once every multi-view model in the catalog carries
-# supports_multi_view=True.
-TURNAROUND_FALLBACK_MULTI_VIEW_SLUGS = (
-    "hunyuan_pro_v3.1",
+# Assignment order for "Add Selected" — the next unused angle is handed out
+# from this sequence, so the common left/right/back turnaround needs no
+# dropdown fiddling at all.
+TURNAROUND_VIEW_ORDER = tuple(item[0] for item in TURNAROUND_VIEW_TYPES)
+
+# Label a detached image falls back to. Meaningless on its own: membership is
+# ``turnaround_group != ""``, never the view type.
+TURNAROUND_VIEW_DEFAULT = TURNAROUND_VIEW_ORDER[0]
+
+# Vendor cap: 1 frontal + 7 angles. The Input Image is the frontal one, so the
+# group itself tops out at seven companions.
+TURNAROUND_MAX_COMPANIONS = len(TURNAROUND_VIEW_ORDER)
+
+# Angles Hunyuan 3.0 (and older) accepts. top / bottom / left_front /
+# right_front are 3.1-only, so they are dropped at payload build with a
+# warning rather than being submitted for the vendor to reject after credits
+# have already been held.
+TURNAROUND_VIEW_TYPES_V30 = ('left', 'right', 'back')
+
+# Multi-view model slugs limited to TURNAROUND_VIEW_TYPES_V30. Anything not
+# listed gets the full seven — under-restricting an unknown future model is
+# recoverable, over-restricting silently drops the user's panels.
+TURNAROUND_BASE_ANGLE_ONLY_SLUGS = (
     "hunyuan_pro_v3",
     "hunyuan_pro_v2.5",
 )
+
+# ---------------------------------------------------------------------------
+# detect-views response vocabulary (NOT view_type labels)
+# ---------------------------------------------------------------------------
+
+# ``panels[0].view_type`` is always this: the sheet's front orthographic,
+# falling back to its hero render when the sheet has no front. It becomes the
+# tab's Input Image — never a group member.
+DETECT_PANEL_MAIN = 'main'
+
+# Returned only when the sheet has BOTH a front and a hero render. No vendor
+# ``ViewType`` describes it, so it is not a companion either: it lands on the
+# moodboard untagged next to the main, as an alternative Input Image for
+# stylised sheets that reconstruct badly from the flat front.
+DETECT_PANEL_HERO = 'hero'
 
 # ============================================================================
 # IMAGE EDITING CONSTANTS

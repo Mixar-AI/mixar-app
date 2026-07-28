@@ -361,30 +361,41 @@ class MIXIE_OT_hunyuan_generate(Operator):
             image=image, shared=shared, label=label, turnaround=turnaround)
 
     def _resolve_turnaround(self, context, image):
-        """S3-key multi-view payload for *image*'s detected turnaround group.
+        """Multi-view payload built from *image* plus the tab's view set.
+
+        *image* is the vendor's single frontal image; the companion angles
+        come from the Model Gen tab's active multi-view set (the set holds
+        companions only, so there is nothing on *image* to look it up from).
 
         Raises ValueError (caught by execute -> reported + CANCELLED) when the
         request cannot be honoured. Never falls back to a single-image job:
-        the caller explicitly asked for the group, so silently generating from
+        the caller explicitly asked for the set, so silently generating from
         one view would spend a multi-minute job on the wrong input.
         """
+        from mixar.modules.moodboard.core.turnaround_payload import (
+            build_multi_view_payload,
+        )
         from mixar.modules.moodboard.core.turnaround_views import (
-            build_multi_view_payload, find_group_for_image,
+            get_active_group,
         )
 
         if image is None:
             raise ValueError("multi_view=True requires an image_name")
 
-        group_id = find_group_for_image(context.scene, image)
+        group_id = get_active_group(context.scene)
         if not group_id:
             raise ValueError(
-                f"Image '{image.name}' is not part of a detected turnaround "
-                "group — run mixie.moodboard_detect_views on the sheet first"
+                "No multi-view set is active — run "
+                "mixie.moodboard_detect_views on the sheet first, or add "
+                "views with mixie.moodboard_add_selected_views"
             )
 
-        # Propagates the same exactly-one-'main' rule and multi-main refusal
-        # the sidebar path uses.
-        fragment, warnings = build_multi_view_payload(context.scene, group_id)
+        # Same angle gating and duplicate handling the sidebar path uses.
+        version = (self.model_version.strip() or "3.0")
+        model_slug = (
+            "hunyuan_pro_v3.1" if version == "3.1" else "hunyuan_pro_v3")
+        fragment, warnings = build_multi_view_payload(
+            context.scene, group_id, image, model_slug)
         for warning in warnings:
             self.report({'WARNING'}, warning)
         return fragment

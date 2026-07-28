@@ -98,32 +98,36 @@ class MIXIE_OT_model_gen_generate(Operator):
             return None
         return getattr(tab, 'reference_image', None)
 
-    def _turnaround_payload(self, context, image, supports_mv):
+    def _turnaround_payload(self, context, image, supports_mv, model):
         """Multi-view payload fragment for the tab's Multiple Views set.
 
-        The ONLY multi-view source for this tab: the merged Multiple Views
-        section holds both backend-detected turnaround crops and views the
-        user added by hand, so there is nothing else to merge in.
+        The ONLY multi-view source for this tab: the Multiple Views section
+        holds both backend-detected turnaround crops and views the user added
+        by hand, so there is nothing else to merge in.
         ``scene.hunyuan.pro.multi_views`` is deliberately not consulted — it
         belongs to the standalone Hunyuan panel, and reading it here used to
         silently discard whatever the user put in it.
 
-        Returns ``None`` when *image* is not part of a turnaround group (the
-        normal single-image path applies unchanged), ``False`` when the group
-        is unusable and the operator should cancel, otherwise the fragment.
+        *image* is the tab's Input Image — the vendor's single frontal image,
+        never a group member. Returns ``None`` when the tab has no multi-view
+        set (the normal single-image path applies unchanged), ``False`` when
+        the set is unusable and the operator should cancel, else the fragment.
         """
+        from mixar.modules.moodboard.core.turnaround_payload import (
+            build_multi_view_payload,
+        )
         from mixar.modules.moodboard.core.turnaround_views import (
-            build_multi_view_payload, find_group_for_image,
+            get_active_group,
         )
 
         if not supports_mv or image is None:
             return None
-        group_id = find_group_for_image(context.scene, image)
+        group_id = get_active_group(context.scene)
         if not group_id:
             return None
         try:
             fragment, warnings = build_multi_view_payload(
-                context.scene, group_id)
+                context.scene, group_id, image, model)
         except ValueError as e:
             self.report({"ERROR"}, str(e))
             return False
@@ -176,13 +180,13 @@ class MIXIE_OT_model_gen_generate(Operator):
         # Detected crops were already staged in S3 by detect-views, so their
         # keys are forwarded verbatim; hand-added views carry inline pixels.
         turnaround_payload = self._turnaround_payload(
-            context, image, supports_mv)
+            context, image, supports_mv, model)
         if turnaround_payload is False:
             return {"CANCELLED"}
 
         # Per-mode input validation (mirrors each legacy operator).
         if turnaround_payload:
-            pass  # the labelled views are the input
+            pass  # the input image plus its companion views are the input
         elif service_key == "image_to_3d" or supports_mv:
             if not (image or prompt):
                 self.report(

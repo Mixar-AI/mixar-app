@@ -217,31 +217,36 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         return {"FINISHED"}
 
     def _turnaround_payload(self, scene, image, model_name):
-        """S3-key multi-view payload fragment for a detected turnaround.
+        """Multi-view payload fragment for the tab's Multiple Views set.
 
-        Returns ``None`` when *image* is not a confirmed turnaround panel (the
-        existing single-image path applies unchanged), ``False`` when the
-        group is unusable and the operator should cancel, else the fragment.
+        *image* is the tab's Input Image — the vendor's single frontal image,
+        never a member of the set. Returns ``None`` when the tab has no
+        multi-view set (the existing single-image path applies unchanged),
+        ``False`` when the set is unusable and the operator should cancel,
+        else the fragment.
         """
+        from mixar.modules.moodboard.core.turnaround_payload import (
+            build_multi_view_payload,
+        )
         from mixar.modules.moodboard.core.turnaround_views import (
-            build_multi_view_payload, find_group_for_image,
-            model_accepts_multi_view,
+            get_active_group, model_accepts_multi_view,
         )
 
         if image is None:
             return None
-        group_id = find_group_for_image(scene, image)
+        group_id = get_active_group(scene)
         if not group_id:
             return None
         if not model_accepts_multi_view("model_3d", model_name):
             self.report(
                 {"WARNING"},
                 f"'{model_name}' does not accept multiple views — "
-                "using the main image only",
+                "using the input image only",
             )
             return None
         try:
-            fragment, warnings = build_multi_view_payload(scene, group_id)
+            fragment, warnings = build_multi_view_payload(
+                scene, group_id, image, model_name)
         except ValueError as e:
             self.report({"ERROR"}, str(e))
             return False

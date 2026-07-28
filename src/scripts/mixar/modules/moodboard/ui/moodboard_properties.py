@@ -32,7 +32,7 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_COLOR_DEFAULT, TEXTBOX_BACKGROUND_COLOR_DEFAULT,
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
-    TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_NONE,
+    TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
 )
 
 
@@ -197,19 +197,27 @@ class MixieMoodboardImage(PropertyGroup):
     view_type: EnumProperty(
         name="View",
         description=(
-            "Camera angle this image represents within its multi-view set. "
-            "Exactly one view must be Main Image — the model is built from "
-            "it; the rest are sent as additional views"
+            "Camera angle this image shows. Only meaningful while the image "
+            "belongs to a multi-view set — it is sent alongside the tab's "
+            "input image as that angle"
         ),
+        # Exactly the vendor's ViewType enum: seven companion angles, no
+        # 'main' / 'front' / 'none'. The main image is the tab's Input Image
+        # and never joins the set, so it needs no label. Kept STATIC rather
+        # than filtered per model: this is saved .blend data and a dynamic
+        # items= callback would remap or lose stored values when the model
+        # switches. 3.0's narrower angle set is enforced when views are
+        # assigned and again at payload build.
         items=TURNAROUND_VIEW_TYPES,
-        default=TURNAROUND_VIEW_NONE,
+        default=TURNAROUND_VIEW_DEFAULT,
     )
     turnaround_group: StringProperty(
         name="Turnaround Group",
         description=(
-            "Shared identifier linking every view of one multi-view set — "
-            "crops detected from the same turnaround / model sheet, plus any "
-            "views added by hand. Empty for ordinary images"
+            "Shared identifier linking every companion view of one "
+            "multi-view set — crops detected from the same turnaround / "
+            "model sheet, plus any views added by hand. Empty for ordinary "
+            "images, including the set's own input image"
         ),
         default="",
     )
