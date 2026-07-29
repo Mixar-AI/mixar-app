@@ -117,21 +117,6 @@ if [[ "$PLATFORM" == "macOS" ]]; then
     # macOS-specific settings
     export CMAKE_GENERATOR_ARGS=""  # Use default (Xcode or Make)
     export BUILD_ARGS="--parallel $BUILD_CORES --config \$CMAKE_BUILD_TYPE"
-    # Pin the SDK to the selected Xcode's macOS SDK. Without this, clang's
-    # default sysroot can resolve to /Library/Developer/CommandLineTools/SDKs
-    # when the CLT ships a newer SDK than Xcode.app; CMake then caches
-    # find_library() framework hits (Metal, Security, zlib, ...) inside the
-    # CLT SDK and emits explicit -F paths that demote those headers from
-    # system to user headers, turning -Werror=unguarded-availability-new into
-    # hard build failures in Cycles' Metal device code.
-    if [[ -z "${SDKROOT:-}" ]]; then
-        SDKROOT="$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)"
-        if [[ -n "$SDKROOT" ]]; then
-            export SDKROOT
-        else
-            unset SDKROOT
-        fi
-    fi
 elif [[ "$PLATFORM" == "Linux" ]]; then
     # Linux-specific settings
     export CMAKE_GENERATOR_ARGS=""  # Use default (Make or Ninja)
