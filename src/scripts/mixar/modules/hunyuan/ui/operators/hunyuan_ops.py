@@ -161,6 +161,16 @@ class MIXIE_OT_hunyuan_remove_multi_view(Operator):
 # ============================================================================
 
 
+def _has_active_view_set(context) -> bool:
+    """True when the Model Gen tab holds a multi-view set ready to submit."""
+    from mixar.modules.moodboard.core.turnaround_views import get_active_group
+
+    try:
+        return bool(get_active_group(context.scene))
+    except Exception:
+        return False
+
+
 class MIXIE_OT_hunyuan_generate(Operator):
     """Generate 3D using Hunyuan"""
 
@@ -175,10 +185,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # of the sidebar/moodboard UI state.
     prompt: StringProperty(default="")
     image_name: StringProperty(default="")
-    # Opt IN to submitting image_name's whole detected turnaround group as one
-    # multi-view job. Deliberately explicit rather than inferred from the image
-    # belonging to a group, so generating from a single crop stays possible and
-    # the agent's intent is visible in the call.
+    # Redundant now that an active view set is signal enough (see execute) —
+    # kept so an explicit agent call still reads clearly and still FAILS LOUDLY
+    # when no set exists, instead of quietly generating from one image.
     multi_view: BoolProperty(default=False)
     model_version: StringProperty(default="3.0")
     enable_pbr: BoolProperty(default=False)
@@ -337,8 +346,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # Turnaround group: submit every detected view of this sheet as ONE
         # multi-view job, forwarding the S3 keys the detect-views endpoint
         # returned instead of re-uploading pixels.
+        #
+        # multi_view is NOT required to be set. It used to be opt-in, which
+        # made the whole feature depend on the caller remembering: an agent
+        # that generated from a sheet whose views had been detected in an
+        # EARLIER turn had no trigger to pass the flag, and the job went out
+        # as a lone base64 image with every crop silently dropped. An active
+        # set on the tab is now signal enough — the user assembled it for
+        # exactly this job. Clearing the set is how you opt out.
         turnaround = None
-        if self.multi_view:
+        if self.multi_view or _has_active_view_set(context):
             turnaround = self._resolve_turnaround(context, image)
 
         if image is None and not prompt:
