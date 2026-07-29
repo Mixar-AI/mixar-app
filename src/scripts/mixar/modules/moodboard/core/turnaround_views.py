@@ -323,6 +323,29 @@ def model_accepts_multi_view(service_key: str, model_slug: str) -> bool:
         return False
 
 
+def build_active_group_payload(
+    scene, image, service_key: str, model_slug: str
+):
+    """Build the active tab group's payload, or ``None`` without a set.
+
+    An active set must never silently degrade to a single-image request.  Once
+    companion views exist, an incapable/unknown catalog model is an error; the
+    caller can surface it and cancel before spending credits.
+    """
+    group_id = get_active_group(scene)
+    if not group_id:
+        return None
+    if not model_accepts_multi_view(service_key, model_slug):
+        raise ValueError(
+            f"'{model_slug}' does not accept multiple views — "
+            "the active view set was not submitted"
+        )
+
+    from .turnaround_payload import build_multi_view_payload
+
+    return build_multi_view_payload(scene, group_id, image, model_slug)
+
+
 def allowed_view_types(model_slug: str) -> tuple:
     """Angles *model_slug* accepts.
 

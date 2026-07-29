@@ -34,6 +34,7 @@ from mixar.modules.moodboard.core.turnaround_views import (
     add_images_as_views,
     allowed_view_types,
     attach_image,
+    build_active_group_payload,
     clear_group,
     detach_image,
     eligible_selected_images,
@@ -347,6 +348,53 @@ def test_active_group_survives_a_file_picked_input_image():
     scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
 
     assert get_active_group(scene) == "g1"
+
+
+def test_agent_model_3d_payload_includes_the_active_companion_set(monkeypatch):
+    """The direct agent operator uses this helper before encoding one image."""
+    tab = FakeTab(group="g1")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    main_image = _main(scene=scene)
+    monkeypatch.setattr(
+        "mixar.modules.moodboard.core.turnaround_views."
+        "model_accepts_multi_view",
+        lambda service, model: (
+            service == "model_3d" and model == "hunyuan-pro-fal"
+        ),
+    )
+
+    result = build_active_group_payload(
+        scene, main_image, "model_3d", "hunyuan-pro-fal")
+
+    payload, warnings = result
+    assert payload == {
+        "image_s3_key": "k/main.png",
+        "multi_view_images": [
+            {"s3_key": "k/left.png", "view_type": "left"},
+            {"s3_key": "k/back.png", "view_type": "back"},
+        ],
+    }
+    assert warnings == []
+
+
+def test_active_set_never_degrades_to_one_image_when_catalog_rejects_model(
+    monkeypatch,
+):
+    tab = FakeTab(group="g1")
+    scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
+    monkeypatch.setattr(
+        "mixar.modules.moodboard.core.turnaround_views."
+        "model_accepts_multi_view",
+        lambda service, model: False,
+    )
+
+    with pytest.raises(ValueError, match="active view set was not submitted"):
+        build_active_group_payload(
+            scene, _main(scene=scene), "model_3d", "trellis-1")
 
 
 def test_removing_the_last_view_clears_the_tab():
