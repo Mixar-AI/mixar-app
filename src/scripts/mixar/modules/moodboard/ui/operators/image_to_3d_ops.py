@@ -217,13 +217,15 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         return {"FINISHED"}
 
     def _turnaround_payload(self, scene, image, model_name):
-        """Multi-view payload fragment for the tab's Multiple Views set.
+        """Multi-view payload fragment for the set *image* is the main of.
 
-        *image* is the tab's Input Image — the vendor's single frontal image,
-        never a member of the set. Returns ``None`` when the tab has no
-        multi-view set (the existing single-image path applies unchanged),
-        ``False`` when the set is unusable and the operator should cancel,
-        else the fragment.
+        The set is resolved from *image* — the vendor's single frontal image,
+        never a member of its own set — so both callers (sidebar Generate and
+        the direct agent invocation) get the same answer for the same image,
+        and an unrelated image never inherits a set left active on the tab.
+        Returns ``None`` when *image* owns no multi-view set (the existing
+        single-image path applies unchanged), ``False`` when the set is
+        unusable and the operator should cancel, else the fragment.
         """
         from mixar.modules.moodboard.core.turnaround_views import (
             build_active_group_payload,

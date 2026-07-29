@@ -221,6 +221,22 @@ class MixieMoodboardImage(PropertyGroup):
         ),
         default="",
     )
+    turnaround_main_group: StringProperty(
+        name="Turnaround Main",
+        description=(
+            "Identifier of the multi-view set this image is the FRONTAL "
+            "(main) image of. This is the only thing that binds a set to an "
+            "image: a set is submitted alongside an image if, and only if, "
+            "that image carries the set's id here. Empty on companion views "
+            "and on every ordinary moodboard image — exactly one item per "
+            "set ever carries it"
+        ),
+        # Deliberately NOT turnaround_group: that property means "companion
+        # of", and group_items / eligible_selected_images / the vendor's
+        # 7-companion cap / the panel's view list all iterate on it. Putting
+        # the main image in the group would make it a companion of itself.
+        default="",
+    )
     s3_key: StringProperty(
         name="S3 Key",
         description=(

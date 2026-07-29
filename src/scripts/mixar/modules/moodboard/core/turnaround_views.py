@@ -23,9 +23,13 @@ assembled from the moodboard selection, and the two mix freely — which is why
 a companion may carry either an S3 key (detected, already staged backend-side)
 or inline pixels (added by the user).
 
-The active group id lives on the tab (``tab_image_to_3d.turnaround_group``),
-not on the input image, so both input sources — selected moodboard image and
-file-picked reference image — resolve it identically.
+A set is BOUND to its frontal image by ``item.turnaround_main_group``, set on
+that one image and nowhere else. A set is submitted alongside an image if, and
+only if, the image being converted carries the set's id there — so an
+unrelated board image (or a later, different subject) can never inherit
+someone else's companions. ``tab_image_to_3d.turnaround_group`` still names the
+set the Multiple Views panel edits, but that is UI state only; it does not
+decide what a generation submits.
 """
 
 import uuid
@@ -42,6 +46,15 @@ from ..constants import (
     TURNAROUND_VIEW_ORDER,
     TURNAROUND_VIEW_TYPES_V30,
 )
+# Set ⇄ frontal-image binding, split out for the 500-line limit and
+# re-exported so this module stays the one import site for the group model.
+from .turnaround_binding import (  # noqa: F401
+    clear_group_main,
+    forget_main_if_empty as _forget_main_if_empty,
+    group_id_for_main_image,
+    main_image_item,
+    set_group_main_image,
+)
 
 logger = get_logger(__name__)
 
@@ -50,7 +63,7 @@ VALID_VIEW_TYPES = TURNAROUND_VIEW_ORDER
 
 
 # ---------------------------------------------------------------------------
-# Active group — stored on the tab, not derived from an image
+# Active group — UI state on the tab (which set the panel edits)
 # ---------------------------------------------------------------------------
 
 def _model_gen_tab(scene):
@@ -60,7 +73,14 @@ def _model_gen_tab(scene):
 
 
 def get_active_group(scene) -> str:
-    """The tab's current multi-view group id, or "" when there is none.
+    """The multi-view group the tab's panel is editing, or "".
+
+    UI state ONLY — it says which set the Multiple Views panel lists and which
+    set ``Add Selected`` grows. It does NOT decide whether a generation goes
+    multi-view: that comes from the image being converted, via
+    :func:`group_id_for_main_image`. Reading the set off the tab is exactly
+    the bug this split fixed — a stale tab group was being applied to whatever
+    unrelated image the agent converted next.
 
     Self-healing on read: a group whose last companion was removed some other
     way (image deleted, undo) reports as absent rather than as an empty set.
@@ -134,8 +154,9 @@ def _forget_if_active(scene, group_id: str) -> None:
 def find_group_for_image(scene, image) -> str:
     """Return the turnaround group id of *image*, or "" when it has none.
 
-    Only companions are group members, so the tab's Input Image always
-    answers "" — use :func:`get_active_group` for the active set.
+    Only companions are group members, so a set's frontal image always
+    answers "" — use :func:`group_id_for_main_image` for that side of the
+    binding.
     """
     if image is None or not hasattr(scene, 'mixie_moodboard_images'):
         return ""
@@ -206,7 +227,10 @@ def clear_group(scene, group_id: str) -> int:
     """Detach every item from *group_id* so it submits as a single image.
 
     Returns the number of items cleared. The images themselves are left on the
-    moodboard — only the grouping/labelling is dropped.
+    moodboard — only the grouping/labelling is dropped. The frontal image is
+    unbound too (unconditionally: a cleared set must not leave the main
+    claiming to own it), which is what puts the tab back on the plain
+    single-image path.
     """
     if not group_id or not hasattr(scene, 'mixie_moodboard_images'):
         return 0
@@ -215,6 +239,7 @@ def clear_group(scene, group_id: str) -> int:
         if item.turnaround_group == group_id:
             _detach(item)
             cleared += 1
+    clear_group_main(scene, group_id)
     if cleared:
         _forget_if_active(scene, group_id)
     return cleared
@@ -236,6 +261,7 @@ def detach_image(scene, group_id: str, image, keep_s3_key: bool = False) -> bool
     for item in scene.mixie_moodboard_images:
         if item.turnaround_group == group_id and item.image == image:
             _detach(item, keep_s3_key=keep_s3_key)
+            _forget_main_if_empty(scene, group_id)
             _forget_if_active(scene, group_id)
             return True
     return False
@@ -326,19 +352,33 @@ def model_accepts_multi_view(service_key: str, model_slug: str) -> bool:
 def build_active_group_payload(
     scene, image, service_key: str, model_slug: str
 ):
-    """Build the active tab group's payload, or ``None`` without a set.
+    """Payload for the set *image* is the frontal image of, else ``None``.
 
-    An active set must never silently degrade to a single-image request.  Once
-    companion views exist, an incapable/unknown catalog model is an error; the
-    caller can surface it and cancel before spending credits.
+    The set is resolved FROM *image*, never from the tab: a multi-view set
+    applies only to the one image it was built around. Converting any other
+    board image — a different subject the user dropped in later, or an image
+    the agent named directly — takes the ordinary single-image path, even
+    while a set is active elsewhere on the board.
+
+    A bound set must never silently degrade to a single-image request. Once
+    the frontal image owns companion views, an incapable/unknown catalog model
+    is a terminal error; the caller surfaces it and cancels before spending
+    credits.
     """
-    group_id = get_active_group(scene)
+    group_id = group_id_for_main_image(scene, image)
     if not group_id:
         return None
     if not model_accepts_multi_view(service_key, model_slug):
+        # Deliberately actionable: this string is handed to the agent through
+        # set_agent_gen_reason, and a vague refusal made it "recover" by
+        # silently switching to the one multi-view engine it knew — attaching
+        # the wrong subject's views to the user's image.
+        count = len(group_items(scene, group_id))
+        name = getattr(image, 'name', '') or "the input image"
         raise ValueError(
-            f"'{model_slug}' does not accept multiple views — "
-            "the active view set was not submitted"
+            f"'{model_slug}' cannot use the {count}-view set on '{name}'. "
+            "Ask the user to pick a multi-view engine or clear the set — "
+            "do NOT retry with a different model."
         )
 
     from .turnaround_payload import build_multi_view_payload

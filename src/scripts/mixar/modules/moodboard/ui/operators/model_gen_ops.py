@@ -98,8 +98,8 @@ class MIXIE_OT_model_gen_generate(Operator):
             return None
         return getattr(tab, 'reference_image', None)
 
-    def _turnaround_payload(self, context, image, supports_mv, model):
-        """Multi-view payload fragment for the tab's Multiple Views set.
+    def _turnaround_payload(self, context, image, service_key, model):
+        """Multi-view payload fragment for the set *image* is the main of.
 
         The ONLY multi-view source for this tab: the Multiple Views section
         holds both backend-detected turnaround crops and views the user added
@@ -108,29 +108,39 @@ class MIXIE_OT_model_gen_generate(Operator):
         belongs to the standalone Hunyuan panel, and reading it here used to
         silently discard whatever the user put in it.
 
-        *image* is the tab's Input Image — the vendor's single frontal image,
-        never a group member. Returns ``None`` when the tab has no multi-view
-        set (the normal single-image path applies unchanged), ``False`` when
-        the set is unusable and the operator should cancel, else the fragment.
+        The set is resolved FROM *image* (the vendor's single frontal image,
+        never a group member), not from the tab, so an Input Image that does
+        not own a set takes the plain single-image path even while a set is
+        active on the tab. Reading it off the tab is the production defect:
+        a set detected for one subject was inherited by an unrelated image
+        picked later and generated as a morph of the two.
+
+        Shares ``build_active_group_payload`` with the agent/legacy operator
+        so the binding, the capability check and the terminal error wording
+        all come from one place. Deliberately NOT pre-gated on
+        ``model_supports_multi_view``: an incapable model on a bound main has
+        to cancel loudly, and an early-out would silently drop the set — the
+        exact "degrade to one image" this guard exists to prevent.
+
+        Returns ``None`` when *image* owns no multi-view set (the normal
+        single-image path applies unchanged), ``False`` when the set is
+        unusable and the operator should cancel, else the fragment.
         """
-        from mixar.modules.moodboard.core.turnaround_payload import (
-            build_multi_view_payload,
-        )
         from mixar.modules.moodboard.core.turnaround_views import (
-            get_active_group,
+            build_active_group_payload,
         )
 
-        if not supports_mv or image is None:
-            return None
-        group_id = get_active_group(context.scene)
-        if not group_id:
+        if image is None:
             return None
         try:
-            fragment, warnings = build_multi_view_payload(
-                context.scene, group_id, image, model)
+            result = build_active_group_payload(
+                context.scene, image, service_key, model)
         except ValueError as e:
             self.report({"ERROR"}, str(e))
             return False
+        if result is None:
+            return None
+        fragment, warnings = result
         for warning in warnings:
             self.report({"WARNING"}, warning)
         return fragment
@@ -179,8 +189,10 @@ class MIXIE_OT_model_gen_generate(Operator):
         # --- Multiple Views: submit the whole set as ONE multi-view job ---
         # Detected crops were already staged in S3 by detect-views, so their
         # keys are forwarded verbatim; hand-added views carry inline pixels.
+        # Applies only when THIS image is the set's own frontal image; the
+        # capability check lives inside, not in the supports_mv pre-gate.
         turnaround_payload = self._turnaround_payload(
-            context, image, supports_mv, model)
+            context, image, service_key, model)
         if turnaround_payload is False:
             return {"CANCELLED"}
 

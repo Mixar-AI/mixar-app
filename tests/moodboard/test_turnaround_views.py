@@ -36,15 +36,19 @@ from mixar.modules.moodboard.core.turnaround_views import (
     attach_image,
     build_active_group_payload,
     clear_group,
+    clear_group_main,
     detach_image,
     eligible_selected_images,
     find_group_for_image,
     get_active_group,
+    group_id_for_main_image,
     group_items,
     group_summary,
+    main_image_item,
     next_free_view_type,
     remaining_capacity,
     set_active_group,
+    set_group_main_image,
     set_tab_input_image,
 )
 
@@ -107,11 +111,15 @@ class FakeImage:
 
 
 class FakeItem:
-    def __init__(self, name, view_type, s3_key, group="", selected=False):
+    def __init__(self, name, view_type, s3_key, group="", selected=False,
+                 main_of=""):
         self.image = FakeImage(name)
         self.view_type = view_type
         self.s3_key = s3_key
         self.turnaround_group = group
+        # The ONLY link between a set and an image. Companions and ordinary
+        # images leave it empty; exactly one item per group carries it.
+        self.turnaround_main_group = main_of
         self.selected = selected
         self.position_x = 0.0
         self.position_y = 0.0
@@ -144,9 +152,13 @@ def _scene(*specs, group="g1", tab=None):
         [FakeItem(n, v, k, group) for n, v, k in specs], tab=tab)
 
 
-def _main(name="orc_main", s3_key="k/main.png", scene=None):
-    """An input image that lives on the board (so it can carry an S3 key)."""
-    item = FakeItem(name, "left", s3_key, "")
+def _main(name="orc_main", s3_key="k/main.png", scene=None, main_of=""):
+    """An input image that lives on the board (so it can carry an S3 key).
+
+    Pass ``main_of="g1"`` to BIND it to that set — without the marker the set
+    does not apply to it, which is the whole point of the binding.
+    """
+    item = FakeItem(name, "left", s3_key, "", main_of=main_of)
     if scene is not None:
         scene.mixie_moodboard_images.append(item)
     return item.image
@@ -350,15 +362,13 @@ def test_active_group_survives_a_file_picked_input_image():
     assert get_active_group(scene) == "g1"
 
 
-def test_agent_model_3d_payload_includes_the_active_companion_set(monkeypatch):
-    """The direct agent operator uses this helper before encoding one image."""
-    tab = FakeTab(group="g1")
-    scene = _scene(
-        ("orc_left", "left", "k/left.png"),
-        ("orc_back", "back", "k/back.png"),
-        tab=tab,
-    )
-    main_image = _main(scene=scene)
+# ---------------------------------------------------------------------------
+# A set is bound to its frontal image, and applies only to that image
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def accepts_mv(monkeypatch):
+    """Only 'hunyuan-pro-fal' takes multi-view input."""
     monkeypatch.setattr(
         "mixar.modules.moodboard.core.turnaround_views."
         "model_accepts_multi_view",
@@ -366,6 +376,17 @@ def test_agent_model_3d_payload_includes_the_active_companion_set(monkeypatch):
             service == "model_3d" and model == "hunyuan-pro-fal"
         ),
     )
+
+
+def test_agent_model_3d_payload_includes_the_active_companion_set(accepts_mv):
+    """The direct agent operator uses this helper before encoding one image."""
+    tab = FakeTab(group="g1")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    main_image = _main(scene=scene, main_of="g1")
 
     result = build_active_group_payload(
         scene, main_image, "model_3d", "hunyuan-pro-fal")
@@ -381,20 +402,107 @@ def test_agent_model_3d_payload_includes_the_active_companion_set(monkeypatch):
     assert warnings == []
 
 
-def test_active_set_never_degrades_to_one_image_when_catalog_rejects_model(
-    monkeypatch,
+def test_an_unrelated_image_never_inherits_a_set_active_elsewhere(accepts_mv):
+    """The production regression: turn 1 detects a Ganesha turnaround, turn 2
+    converts an unrelated dragon image. The dragon is not the set's frontal
+    image, so it must take the plain single-image path — previously the group
+    was read off the TAB and Ganesha's left/back views were attached to the
+    dragon, producing a morph of the two."""
+    tab = FakeTab(group="turnaround_ganesha")
+    scene = _scene(
+        ("ganesha_left", "left", "k/left.png"),
+        ("ganesha_back", "back", "k/back.png"),
+        group="turnaround_ganesha",
+        tab=tab,
+    )
+    _main("ganesha_main", "k/ganesha.png", scene, main_of="turnaround_ganesha")
+    dragon = _main("dragon_front_001", "k/dragon.png", scene)
+
+    # The set is still active on the tab — it is simply not the dragon's.
+    assert get_active_group(scene) == "turnaround_ganesha"
+    assert group_id_for_main_image(scene, dragon) == ""
+    assert build_active_group_payload(
+        scene, dragon, "model_3d", "hunyuan-pro-fal") is None
+
+
+def test_an_incapable_model_on_an_unrelated_image_is_not_an_error(accepts_mv):
+    """The second half of the same regression: 'tripo-low' was refused
+    outright because the tab still held a set, so the agent retried and then
+    switched engines. With no set bound to this image there is nothing to
+    refuse."""
+    tab = FakeTab(group="turnaround_ganesha")
+    scene = _scene(
+        ("ganesha_left", "left", "k/left.png"),
+        group="turnaround_ganesha",
+        tab=tab,
+    )
+    _main("ganesha_main", "k/ganesha.png", scene, main_of="turnaround_ganesha")
+    dragon = _main("dragon_front_001", "k/dragon.png", scene)
+
+    assert build_active_group_payload(
+        scene, dragon, "model_3d", "tripo-low") is None
+
+
+def test_a_companion_is_not_its_own_sets_main(accepts_mv):
+    scene = _scene(("orc_left", "left", "k/left.png"))
+    _main(scene=scene, main_of="g1")
+    companion = scene.mixie_moodboard_images[0].image
+
+    assert group_id_for_main_image(scene, companion) == ""
+    assert build_active_group_payload(
+        scene, companion, "model_3d", "hunyuan-pro-fal") is None
+
+
+def test_a_set_whose_companions_all_vanished_reports_as_absent(accepts_mv):
+    # Same self-healing get_active_group does: a dangling marker left by a
+    # deleted/undone companion must not make the frontal image unusable.
+    scene = FakeScene([])
+    orphan = _main(scene=scene, main_of="g1")
+
+    assert group_id_for_main_image(scene, orphan) == ""
+    assert build_active_group_payload(
+        scene, orphan, "model_3d", "tripo-low") is None
+
+
+def test_bound_set_never_degrades_to_one_image_when_catalog_rejects_model(
+    accepts_mv,
 ):
     tab = FakeTab(group="g1")
     scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
-    monkeypatch.setattr(
-        "mixar.modules.moodboard.core.turnaround_views."
-        "model_accepts_multi_view",
-        lambda service, model: False,
-    )
+    main_image = _main(scene=scene, main_of="g1")
 
-    with pytest.raises(ValueError, match="active view set was not submitted"):
-        build_active_group_payload(
-            scene, _main(scene=scene), "model_3d", "trellis-1")
+    # Terminal, and worded so the agent has no reason to try another engine:
+    # substituting a multi-view model is exactly how the wrong views got
+    # attached in production.
+    with pytest.raises(ValueError) as excinfo:
+        build_active_group_payload(scene, main_image, "model_3d", "tripo-low")
+
+    message = str(excinfo.value)
+    assert "'tripo-low' cannot use the 1-view set on 'orc_main'" in message
+    assert "do NOT retry with a different model" in message
+
+
+def test_set_group_main_image_keeps_exactly_one_main(accepts_mv):
+    scene = _scene(("orc_left", "left", "k/left.png"))
+    first = _main("first", "k/first.png", scene, main_of="g1")
+    second = _main("second", "k/second.png", scene)
+
+    assert set_group_main_image(scene, "g1", second) is True
+
+    assert group_id_for_main_image(scene, first) == ""
+    assert group_id_for_main_image(scene, second) == "g1"
+    assert [i.image.name for i in scene.mixie_moodboard_images
+            if i.turnaround_main_group == "g1"] == ["second"]
+
+
+def test_a_file_picked_input_image_cannot_be_bound(accepts_mv):
+    # Not on the board, so there is no item to carry the marker. The set stays
+    # unbound (inert) rather than latching onto the wrong image.
+    scene = _scene(("orc_left", "left", "k/left.png"))
+
+    assert set_group_main_image(scene, "g1", FakeImage("picked")) is False
+    assert build_active_group_payload(
+        scene, FakeImage("picked"), "model_3d", "hunyuan-pro-fal") is None
 
 
 def test_removing_the_last_view_clears_the_tab():
@@ -416,6 +524,55 @@ def test_clearing_the_group_clears_the_tab():
 
     assert clear_group(scene, "g1") == 2
     assert tab.turnaround_group == ""
+
+
+def test_clearing_the_group_leaves_no_main_marker_behind():
+    # A dangling marker would keep the frontal image claiming a set that no
+    # longer exists, and the next incapable model would raise over nothing.
+    tab = FakeTab(group="g1")
+    scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
+    main_image = _main(scene=scene, main_of="g1")
+
+    clear_group(scene, "g1")
+
+    assert main_image_item(scene, "g1") is None
+    assert group_id_for_main_image(scene, main_image) == ""
+    assert all(
+        i.turnaround_main_group == "" for i in scene.mixie_moodboard_images)
+
+
+def test_removing_the_last_view_also_unbinds_the_main():
+    tab = FakeTab(group="g1")
+    scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
+    main_image = _main(scene=scene, main_of="g1")
+
+    detach_image(scene, "g1", scene.mixie_moodboard_images[0].image)
+
+    assert tab.turnaround_group == ""
+    assert group_id_for_main_image(scene, main_image) == ""
+
+
+def test_removing_one_of_several_views_keeps_the_main_bound():
+    tab = FakeTab(group="g1")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    main_image = _main(scene=scene, main_of="g1")
+
+    detach_image(scene, "g1", scene.mixie_moodboard_images[0].image)
+
+    assert group_id_for_main_image(scene, main_image) == "g1"
+
+
+def test_clear_group_main_is_a_no_op_on_an_unknown_group():
+    scene = _scene(("orc_left", "left", "k/left.png"))
+    main_image = _main(scene=scene, main_of="g1")
+
+    clear_group_main(scene, "other")
+
+    assert group_id_for_main_image(scene, main_image) == "g1"
 
 
 def test_removing_a_view_leaves_a_non_empty_set_alone():
@@ -577,6 +734,115 @@ def test_promoting_a_view_keeps_its_s3_key():
     assert payload["image_s3_key"] == "k/left.png"
 
 
+def _promote(scene, group_id, image, model_slug=""):
+    """The core half of MIXIE_OT_moodboard_promote_turnaround_view.
+
+    The operator itself cannot be imported outside Blender (its base class is
+    a MagicMock), so the sequence it performs is replayed here: remember the
+    outgoing main, detach the promoted view, demote the old main into the
+    angle just freed, then move the marker. Returns the demoted item's angle,
+    or "" when it stayed a plain board image.
+    """
+    previous_item = main_image_item(scene, group_id)
+    detach_image(scene, group_id, image, keep_s3_key=True)
+
+    demoted = ""
+    if previous_item is not None and previous_item.image:
+        previous_item.turnaround_main_group = ""
+        if remaining_capacity(scene, group_id) > 0:
+            demoted = next_free_view_type(
+                scene, group_id, allowed=allowed_view_types(model_slug))
+            if demoted:
+                attach_image(scene, group_id, previous_item.image, demoted)
+
+    if group_items(scene, group_id):
+        clear_group_main(scene, group_id)
+        set_group_main_image(scene, group_id, image)
+        set_active_group(scene, group_id)
+    set_tab_input_image(scene, image)
+    return demoted
+
+
+def test_promoting_moves_the_main_marker_to_the_promoted_view():
+    tab = FakeTab(group="g1")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    old_main = _main(scene=scene, main_of="g1")
+    promoted = scene.mixie_moodboard_images[0].image
+
+    _promote(scene, "g1", promoted)
+
+    assert group_id_for_main_image(scene, promoted) == "g1"
+    assert group_id_for_main_image(scene, old_main) == ""
+    # Exactly one main survives — the invariant the backend snippet relies on.
+    assert [i.image.name for i in scene.mixie_moodboard_images
+            if i.turnaround_main_group == "g1"] == ["orc_left"]
+    # And the promoted image is no longer one of its own companions.
+    assert "orc_left" not in [i.image.name for i in group_items(scene, "g1")]
+
+
+def test_promoting_demotes_the_old_main_into_the_freed_angle():
+    # Promotion frees exactly one angle, and the outgoing input image is a
+    # real view of the same subject — dropping it from the job would lose
+    # information for no reason.
+    tab = FakeTab(group="g1")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    old_main = _main(scene=scene, main_of="g1")
+
+    demoted = _promote(scene, "g1", scene.mixie_moodboard_images[0].image)
+
+    assert demoted == "left"
+    assert [(i.image.name, i.view_type) for i in group_items(scene, "g1")] == [
+        ("orc_main", "left"), ("orc_back", "back"),
+    ]
+    assert group_id_for_main_image(scene, old_main) == ""
+
+
+def test_promoting_the_only_companion_swaps_the_pair_and_keeps_the_tab():
+    # Detaching the last companion self-heals the tab to "" mid-operation;
+    # the demotion refills the set, so the panel has to be pointed back at it
+    # or a perfectly good 1-view set disappears from the UI.
+    tab = FakeTab(group="g1")
+    scene = _scene(("orc_left", "left", "k/left.png"), tab=tab)
+    old_main = _main(scene=scene, main_of="g1")
+    promoted = scene.mixie_moodboard_images[0].image
+
+    demoted = _promote(scene, "g1", promoted)
+
+    assert demoted == "left"
+    assert tab.turnaround_group == "g1"
+    assert group_id_for_main_image(scene, promoted) == "g1"
+    assert group_id_for_main_image(scene, old_main) == ""
+    assert [i.image.name for i in group_items(scene, "g1")] == ["orc_main"]
+
+
+def test_promoting_over_an_unbound_set_demotes_nothing():
+    # The old main was a file-picked reference image, so it never carried the
+    # marker and there is no board item to demote. The promoted view still
+    # becomes the main — that is what makes the set usable at all.
+    tab = FakeTab(group="g1", use_selected=False)
+    tab.reference_image = FakeImage("picked")
+    scene = _scene(
+        ("orc_left", "left", "k/left.png"),
+        ("orc_back", "back", "k/back.png"),
+        tab=tab,
+    )
+    promoted = scene.mixie_moodboard_images[0].image
+
+    demoted = _promote(scene, "g1", promoted)
+
+    assert demoted == ""
+    assert group_id_for_main_image(scene, promoted) == "g1"
+    assert [i.image.name for i in group_items(scene, "g1")] == ["orc_back"]
+
+
 def test_promoting_deselects_the_previous_input_image():
     tab = FakeTab(group="g1")
     previous = FakeItem("previous", "left", "", "", selected=True)
@@ -587,8 +853,9 @@ def test_promoting_deselects_the_previous_input_image():
     detach_image(scene, "g1", promoted.image, keep_s3_key=True)
     set_tab_input_image(scene, promoted.image)
 
-    # The old input image is an ordinary untagged moodboard image again — it
-    # cannot join the set, as no vendor angle describes a front view.
+    # A previous input image that never owned the set (no main marker) is
+    # simply deselected and left untagged — see _promote() above for the
+    # bound case, where it swaps into the angle the promotion freed.
     assert previous.selected is False
     assert previous.turnaround_group == ""
 

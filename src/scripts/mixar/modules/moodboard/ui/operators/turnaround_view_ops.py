@@ -10,13 +10,18 @@ auto-assigns angles), the secondary file picker, per-row remove and promote,
 and the group-wide clear. Detection itself lives in ``detect_views_ops.py``.
 
 The set holds COMPANIONS ONLY — the vendor takes one frontal image plus up to
-seven angles, and the frontal image is the tab's Input Image. ``Promote`` is
-how the input image gets swapped: the promoted view leaves the set (there is
-no vendor angle that describes a front view, so it cannot stay), and the old
-input image simply becomes an ordinary untagged moodboard image again.
+seven angles, and the frontal image is the tab's Input Image. That frontal
+image is also what the set is BOUND to (``turnaround_main_group``): the set
+rides along only when that exact image is the one being generated from. Every
+operator here that creates, re-points or empties a set has to maintain that
+marker, or the set silently stops applying (or worse, keeps applying after it
+should have gone). ``Promote`` is how the input image gets swapped: the
+promoted view leaves the set (there is no vendor angle that describes a front
+view, so it cannot stay) and takes the marker with it, while the old input
+image drops back into the set as a companion at the angle just freed.
 
-The active group id lives on the tab (see ``core/turnaround_views.py``), so
-these operators work identically whichever image source the tab is using.
+The tab's group id (see ``core/turnaround_views.py``) says which set these
+operators edit, so they work identically whichever image source the tab uses.
 """
 
 import bpy
@@ -33,13 +38,17 @@ from ...core.turnaround_views import (
     allowed_view_types,
     attach_image,
     clear_group,
+    clear_group_main,
     detach_image,
     eligible_selected_images,
     get_active_group,
+    group_items,
+    main_image_item,
     new_group_id,
     next_free_view_type,
     remaining_capacity,
     set_active_group,
+    set_group_main_image,
     set_tab_input_image,
 )
 
@@ -83,6 +92,27 @@ def _input_image(context):
     """The tab's current Input Image, or None."""
     from ..sidebar_ui_helpers import get_image_to_3d_input_image
     return get_image_to_3d_input_image(context)
+
+
+def _bind_main(operator, context, group_id: str) -> bool:
+    """Mark the tab's Input Image as *group_id*'s frontal image.
+
+    Called after views are successfully attached, because this is what makes
+    the set apply at all: an unbound set is inert, so a hand-assembled one
+    would silently never be submitted. Warns rather than cancelling when
+    there is nothing to bind to — the views are on the board and the user
+    only has to pick an input image on the moodboard.
+    """
+    image = _input_image(context)
+    if image is not None and set_group_main_image(
+            context.scene, group_id, image):
+        return True
+    operator.report(
+        {"WARNING"},
+        "Select a moodboard image as the Input Image — the multi-view set is "
+        "only sent with the image it was built for",
+    )
+    return False
 
 
 class MIXIE_OT_moodboard_add_selected_views(Operator):
@@ -130,6 +160,7 @@ class MIXIE_OT_moodboard_add_selected_views(Operator):
             self.report({"WARNING"}, "No free camera angles left")
             return {"CANCELLED"}
 
+        _bind_main(self, context, group_id)
         if skipped:
             # Say so rather than silently binning them — the next step is a
             # multi-minute, credit-charged job built from fewer views than
@@ -203,6 +234,7 @@ class MIXIE_OT_moodboard_add_turnaround_view(Operator):
             return {"CANCELLED"}
 
         set_active_group(scene, group_id)
+        _bind_main(self, context, group_id)
         mark_file_select_executed(self)
         _redraw_all()
         self.report({"INFO"}, f"Added '{image.name}' as the {view_type} view")
@@ -269,7 +301,7 @@ class MIXIE_OT_moodboard_promote_turnaround_view(Operator):
     bl_description = (
         "Make this view the input image the model is built from. It leaves "
         "the multi-view set — the vendor has no angle for a front view — and "
-        "the previous input image becomes an ordinary moodboard image"
+        "the previous input image swaps into the set at the angle it freed"
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -284,6 +316,7 @@ class MIXIE_OT_moodboard_promote_turnaround_view(Operator):
             return {"CANCELLED"}
 
         group_id = self.group_id.strip()
+        previous_item = main_image_item(scene, group_id) if group_id else None
         # keep_s3_key: the key is a valid upload of these exact pixels, so
         # promoting a detected crop still submits by key rather than
         # re-encoding the image.
@@ -292,10 +325,53 @@ class MIXIE_OT_moodboard_promote_turnaround_view(Operator):
             self.report({"WARNING"}, "View is not part of this set")
             return {"CANCELLED"}
 
+        demoted = self._demote_previous_main(scene, group_id, previous_item)
+        if group_id and group_items(scene, group_id):
+            # The marker moves with the input image — the set belongs to
+            # whichever image is its frontal view, and detach_image above
+            # already stripped this image's companion tags. Cleared first, so
+            # a main that cannot carry the marker leaves the set unbound
+            # (inert) rather than still bound to the demoted image.
+            clear_group_main(scene, group_id)
+            set_group_main_image(scene, group_id, image)
+            # Promoting the ONLY companion emptied the set for a moment, so
+            # detach_image self-healed the tab to "". The demotion refilled
+            # it — point the panel back at it.
+            set_active_group(scene, group_id)
         set_tab_input_image(scene, image)
         _redraw_all()
-        self.report({"INFO"}, f"'{image.name}' is now the input image")
+        if demoted:
+            self.report(
+                {"INFO"},
+                f"'{image.name}' is now the input image; "
+                f"'{previous_item.image.name}' joined the set as {demoted}",
+            )
+        else:
+            self.report({"INFO"}, f"'{image.name}' is now the input image")
         return {"FINISHED"}
+
+    def _demote_previous_main(self, scene, group_id: str, previous_item):
+        """Swap the outgoing input image into the set, returning its angle.
+
+        Promotion frees exactly one angle, so the old frontal image almost
+        always has a slot — and it is a real view of the same subject that
+        would otherwise be dropped from the job for no reason. Returns "" when
+        it cannot join (no set, no free angle, or it never reached the
+        moodboard), in which case it stays an ordinary board image.
+        """
+        if not group_id or previous_item is None or not previous_item.image:
+            return ""
+        previous_item.turnaround_main_group = ""
+        if remaining_capacity(scene, group_id) <= 0:
+            return ""
+        view_type = next_free_view_type(
+            scene, group_id, allowed=allowed_view_types(_model_slug(scene)))
+        if not view_type:
+            return ""
+        if attach_image(
+                scene, group_id, previous_item.image, view_type) is None:
+            return ""
+        return view_type
 
 
 class MIXIE_OT_moodboard_clear_turnaround(Operator):

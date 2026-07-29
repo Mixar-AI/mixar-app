@@ -249,11 +249,15 @@ def _ingest_panels(
 def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
     """Main-thread: load each crop onto the board and wire up the tab.
 
-    ``main`` becomes the tab's Input Image and ``hero`` sits beside it, both
-    untagged — only the companion angles join the group, matching what the
-    vendor payload actually has slots for. Returns ``(group_id, companions)``;
-    ``group_id`` is "" when the sheet yielded no companion angles at all (a
-    perfectly good single-image result, just not a multi-view one).
+    ``main`` becomes the tab's Input Image and ``hero`` sits beside it,
+    neither joining the group — only the companion angles do, matching what
+    the vendor payload actually has slots for. ``main`` is instead marked with
+    ``turnaround_main_group``, which is what BINDS this set to that one image:
+    the companions ride along only when this crop is the image being
+    converted, never when some unrelated board image is.
+    Returns ``(group_id, companions)``; ``group_id`` is "" when the sheet
+    yielded no companion angles at all (a perfectly good single-image result,
+    just not a multi-view one).
     """
     import os
 
@@ -266,6 +270,7 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
     loaded = 0
     companions = 0
     main_image = None
+    main_item = None
     for index, (temp_path, panel) in enumerate(downloaded):
         view_type = panel["view_type"]
         img = _load_crop(temp_path, f"{base}_{view_type}")
@@ -278,6 +283,7 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
 
         if view_type == DETECT_PANEL_MAIN:
             main_image = img
+            main_item = item
         elif view_type == DETECT_PANEL_HERO:
             # Untagged: no vendor ViewType describes a hero render, so it can
             # only ever be used by promoting it to Input Image.
@@ -291,7 +297,11 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
         raise RuntimeError("No crops could be loaded")
 
     # The user's next Generate then naturally takes the multi-view path
-    # without them having to hunt for the right crop on the canvas.
+    # without them having to hunt for the right crop on the canvas. Only when
+    # companions actually exist: a no-companion sheet is a single-image
+    # result, and marking its main would bind an empty set.
+    if main_item is not None and companions:
+        main_item.turnaround_main_group = group_id
     set_tab_input_image(scene, main_image)
     set_active_group(scene, group_id if companions else "")
     return (group_id if companions else ""), companions
