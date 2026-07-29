@@ -16,6 +16,7 @@ if "keyring" not in sys.modules:
 
 from mixar.modules.auth.core import auth
 from mixar.modules.space_mixie_chat.core import account_usage
+from mixar.modules.space_mixie_chat.ui import topbar
 
 
 class _Response:
@@ -96,3 +97,26 @@ def test_clear_removes_previous_users_account_summary():
     assert wm.mixie_account_plan_name == ""
     assert wm.mixie_account_team_name == ""
     assert wm.mixie_account_loaded is False
+
+
+def test_subtitle_falls_back_to_free_plan_and_omits_absent_context():
+    wm = _wm()
+
+    assert topbar._account_subtitle(wm) == "Free"
+
+
+def test_subtitle_joins_plan_trial_and_team_pool():
+    wm = _wm()
+    wm.mixie_account_plan_name = "Studio"
+    wm.mixie_account_trial_days = 4
+    wm.mixie_account_team_is_active = True
+    wm.mixie_account_team_name = "Design"
+
+    assert topbar._account_subtitle(wm) == "Studio   4 days left   Design pool"
+
+
+def test_subtitle_singularises_a_one_day_trial():
+    wm = _wm()
+    wm.mixie_account_trial_days = 1
+
+    assert topbar._account_subtitle(wm) == "Free   1 day left"

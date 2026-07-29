@@ -13,8 +13,8 @@ def _install_bpy_stubs():
     bpy_mock = MagicMock(name='bpy')
     # Register top-level and all known sub-modules that Mixar code imports.
     stub_names = [
-        'bpy', 'bpy.types', 'bpy.props', 'bpy.utils', 'bpy.app',
-        'bpy.app.timers', 'bpy.context', 'bpy.data', 'bpy.ops',
+        'bpy', 'bpy.types', 'bpy.props', 'bpy.utils', 'bpy.utils.previews',
+        'bpy.app', 'bpy.app.timers', 'bpy.context', 'bpy.data', 'bpy.ops',
         'bpy.ops.mixar',
     ]
     for name in stub_names:

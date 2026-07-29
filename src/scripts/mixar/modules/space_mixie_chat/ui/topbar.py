@@ -36,6 +36,27 @@ from ..constants import SessionState  # noqa: F401  (kept for parity)
 from ..core import account_usage, avatar_icon
 
 
+def _account_subtitle(wm) -> str:
+    """Dimmed one-liner under the email: plan, trial, team pool.
+
+    Folding these into a single secondary line keeps the popover to one
+    idea per row — identity, then balance, then actions — instead of a
+    stack of "Label: value" rows competing for the same weight.
+    """
+    parts = [getattr(wm, 'mixie_account_plan_name', '') or "Free"]
+
+    trial_days = int(getattr(wm, 'mixie_account_trial_days', -1))
+    if trial_days >= 0:
+        unit = "day" if trial_days == 1 else "days"
+        parts.append(f"{trial_days} {unit} left")
+
+    if getattr(wm, 'mixie_account_team_is_active', False):
+        team = getattr(wm, 'mixie_account_team_name', '') or "Team"
+        parts.append(f"{team} pool")
+
+    return "   ".join(parts)
+
+
 class MIXAR_PT_profile(Panel):
     """Profile / account dropdown — opened from the global top bar."""
 
@@ -43,6 +64,10 @@ class MIXAR_PT_profile(Panel):
     bl_idname = "MIXAR_PT_profile"
     bl_space_type = 'TOPBAR'
     bl_region_type = 'HEADER'
+    # Fixed width: the balance and the plan line both change length as the
+    # account refreshes, and an auto-sized popover visibly resizes under the
+    # cursor when they do.
+    bl_ui_units_x = 13
 
     def draw(self, context):
         layout = self.layout
@@ -50,62 +75,92 @@ class MIXAR_PT_profile(Panel):
 
         account_usage.schedule_stale_refresh(wm)
 
-        usage = layout.box()
-        title = usage.row(align=True)
-        title.label(text="Usage", icon='FUND')
-        refresh = title.row(align=True)
-        refresh.alignment = 'RIGHT'
-        refresh.enabled = not getattr(wm, 'mixie_account_loading', False)
-        refresh.operator("mixie_chat.refresh_credits", text="", icon='FILE_REFRESH')
+        self._draw_identity(layout, context, wm)
+        self._draw_balance(layout, wm)
+        self._draw_actions(layout, wm)
+
+    @staticmethod
+    def _draw_identity(layout, context, wm):
+        scene = context.scene
+        email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
+
+        head = layout.column(align=True)
+        row = head.row(align=True)
+        # Green avatar disc with the account initial; 0 means the generator
+        # failed (e.g. Pillow missing) → stock USER icon.
+        avatar_id = avatar_icon.get_avatar_icon_id(email)
+        if avatar_id:
+            row.label(text=email or "Signed in", icon_value=avatar_id)
+        else:
+            row.label(text=email or "Signed in", icon='USER')
 
         if getattr(wm, 'mixie_account_loaded', False):
-            plan = getattr(wm, 'mixie_account_plan_name', '') or "Free"
-            usage.label(text=f"Plan: {plan}")
-            credits = int(getattr(wm, 'mixie_account_credits', 0))
-            usage.label(text=f"Credits remaining: {credits:,}", icon='SOLO_ON')
-            trial_days = int(getattr(wm, 'mixie_account_trial_days', -1))
-            if trial_days >= 0:
-                suffix = "day" if trial_days == 1 else "days"
-                usage.label(text=f"Trial: {trial_days} {suffix} remaining")
-            if getattr(wm, 'mixie_account_team_is_active', False):
-                team = getattr(wm, 'mixie_account_team_name', '') or "Team"
-                usage.label(text=f"{team} shared credit pool", icon='COMMUNITY')
-            if getattr(wm, 'byok_is_active', False):
-                usage.label(
-                    text="Own provider active; agent requests do not use Mixar credits.",
-                    icon='KEY_HLT',
-                )
-        elif getattr(wm, 'mixie_account_loading', False):
-            usage.label(text="Refreshing account...", icon='SORTTIME')
-        else:
-            usage.label(text="Account usage unavailable", icon='INFO')
+            sub = head.row(align=True)
+            sub.active = False  # secondary text
+            # BLANK1 pads the subtitle to the same indent as the email above.
+            sub.label(text=_account_subtitle(wm), icon='BLANK1')
 
-        if getattr(wm, 'mixie_account_error', ''):
-            row = usage.row()
-            row.alert = True
-            row.label(text="Refresh failed. Showing the last known balance.", icon='ERROR')
+    @staticmethod
+    def _draw_balance(layout, wm):
+        loading = getattr(wm, 'mixie_account_loading', False)
 
         layout.separator()
-        layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
 
+        row = layout.row(align=True)
+        row.scale_y = 1.25  # the balance is the one number people open this for
+        if getattr(wm, 'mixie_account_loaded', False):
+            credits = int(getattr(wm, 'mixie_account_credits', 0))
+            row.label(text=f"{credits:,} credits", icon='SOLO_ON')
+        elif loading:
+            row.label(text="Refreshing...", icon='SORTTIME')
+        else:
+            row.label(text="Usage unavailable", icon='INFO')
+
+        refresh = row.row(align=True)
+        refresh.alignment = 'RIGHT'
+        refresh.enabled = not loading
+        refresh.operator(
+            "mixie_chat.refresh_credits", text="", icon='FILE_REFRESH', emboss=False,
+        )
+
+        if getattr(wm, 'byok_is_active', False):
+            note = layout.row(align=True)
+            note.active = False
+            note.label(text="Own provider — agent requests are free", icon='KEY_HLT')
+
+        if getattr(wm, 'mixie_account_error', ''):
+            err = layout.row(align=True)
+            err.alert = True
+            err.label(text="Couldn't refresh — showing last known", icon='ERROR')
+
+    @staticmethod
+    def _draw_actions(layout, wm):
+        layout.separator()
+
+        # Aligned column → the primary actions read as one contiguous menu
+        # block rather than three free-floating buttons.
+        actions = layout.column(align=True)
+        actions.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
         if hasattr(bpy.types, 'MIXAR_BYOK_OT_open_dialog'):
             byok_icon = 'KEY_HLT' if getattr(wm, 'byok_is_active', False) else 'PREFERENCES'
-            layout.operator(
-                "mixar_byok.open_dialog",
-                text="AI Provider Settings",
-                icon=byok_icon,
+            actions.operator(
+                "mixar_byok.open_dialog", text="AI Provider", icon=byok_icon,
             )
 
         layout.separator()
 
-        layout.operator(
-            "wm.url_open", text="About Mixar", icon='INFO',
+        # Secondary links share one row: they're rarely used and don't earn
+        # three full-width rows of their own. Text-only keeps the row legible
+        # at a third of the popover width each.
+        links = layout.row(align=True)
+        links.operator(
+            "wm.url_open", text="About",
         ).url = "https://www.mixar.app/about"
-        layout.operator(
-            "wm.url_open", text="Documentation", icon='HELP',
+        links.operator(
+            "wm.url_open", text="Docs",
         ).url = "https://www.mixar.app/docs"
-        layout.operator(
-            "wm.url_open", text="Report a Bug", icon='URL',
+        links.operator(
+            "wm.url_open", text="Report Bug",
         ).url = "https://www.mixar.app/bug-report"
 
         layout.separator()
@@ -138,7 +193,10 @@ def _draw_topbar_profile_right(self, context):
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
         profile_sub = layout.row(align=True)
-        profile_sub.ui_units_x = len(email) * 0.35 + 2.5
+        # Grows with the email, but capped: a long address would otherwise
+        # crowd the view-layer controls to its left. Blender elides the
+        # overflow, and the full address is the first line of the popover.
+        profile_sub.ui_units_x = min(len(email) * 0.35 + 2.5, 12.0)
         # Green avatar disc with the account initial; 0 means the
         # generator failed (e.g. Pillow missing) → stock USER icon.
         avatar_id = avatar_icon.get_avatar_icon_id(email)
