@@ -36,6 +36,16 @@ from ..constants import SessionState  # noqa: F401  (kept for parity)
 from ..core import account_usage, avatar_icon
 
 
+PILL_MAX_CHARS = 24
+
+
+def _pill_label(email: str) -> str:
+    """Top-bar pill text: the email, shortened to a predictable width."""
+    if len(email) <= PILL_MAX_CHARS:
+        return email
+    return email[:PILL_MAX_CHARS - 1] + "…"
+
+
 def _account_subtitle(wm) -> str:
     """Dimmed one-liner under the email: plan, trial, team pool.
 
@@ -108,20 +118,26 @@ class MIXAR_PT_profile(Panel):
 
         row = layout.row(align=True)
         row.scale_y = 1.25  # the balance is the one number people open this for
+
+        # The label sub-row takes the slack and the button is fixed-width, so
+        # the refresh icon sits flush right and does not drift as the balance
+        # text changes length between states.
+        label = row.row(align=True)
         if getattr(wm, 'mixie_account_loaded', False):
             credits = int(getattr(wm, 'mixie_account_credits', 0))
-            row.label(text=f"{credits:,} credits", icon='SOLO_ON')
+            label.label(text=f"{credits:,} credits", icon='SOLO_ON')
         elif loading:
-            row.label(text="Refreshing...", icon='SORTTIME')
+            label.label(text="Refreshing...", icon='SORTTIME')
         else:
-            row.label(text="Usage unavailable", icon='INFO')
+            label.label(text="Usage unavailable", icon='INFO')
 
         refresh = row.row(align=True)
         refresh.alignment = 'RIGHT'
+        refresh.ui_units_x = 1.4
+        # Stays embossed: the disabled state during an in-flight refresh is
+        # load-bearing feedback and an unembossed button barely shows it.
         refresh.enabled = not loading
-        refresh.operator(
-            "mixie_chat.refresh_credits", text="", icon='FILE_REFRESH', emboss=False,
-        )
+        refresh.operator("mixie_chat.refresh_credits", text="", icon='FILE_REFRESH')
 
         if getattr(wm, 'byok_is_active', False):
             note = layout.row(align=True)
@@ -192,20 +208,22 @@ def _draw_topbar_profile_right(self, context):
         # ui_units_x mirrors the sizing previously used in the mixie
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
+        # Truncate the string rather than the widget: a long address would
+        # crowd the view-layer controls to its left, and clipping it by width
+        # alone is at the mercy of how the widget handles overflow. The full
+        # address is always the first line of the popover.
+        pill_text = _pill_label(email)
         profile_sub = layout.row(align=True)
-        # Grows with the email, but capped: a long address would otherwise
-        # crowd the view-layer controls to its left. Blender elides the
-        # overflow, and the full address is the first line of the popover.
-        profile_sub.ui_units_x = min(len(email) * 0.35 + 2.5, 12.0)
+        profile_sub.ui_units_x = len(pill_text) * 0.35 + 2.5
         # Green avatar disc with the account initial; 0 means the
         # generator failed (e.g. Pillow missing) → stock USER icon.
         avatar_id = avatar_icon.get_avatar_icon_id(email)
         if avatar_id:
             profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
+                panel="MIXAR_PT_profile", text=pill_text, icon_value=avatar_id)
         else:
             profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon='USER')
+                panel="MIXAR_PT_profile", text=pill_text, icon='USER')
     else:
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't

@@ -115,6 +115,20 @@ def test_subtitle_joins_plan_trial_and_team_pool():
     assert topbar._account_subtitle(wm) == "Studio   4 days left   Design pool"
 
 
+def test_pill_label_passes_short_emails_through_untouched():
+    assert topbar._pill_label("artist@example.com") == "artist@example.com"
+
+
+def test_pill_label_truncates_long_emails_to_a_bounded_width():
+    long_email = "a-very-long-address@studio-example-company.com"
+
+    label = topbar._pill_label(long_email)
+
+    assert len(label) == topbar.PILL_MAX_CHARS
+    assert label.endswith("…")
+    assert long_email.startswith(label[:-1])
+
+
 def test_subtitle_singularises_a_one_day_trial():
     wm = _wm()
     wm.mixie_account_trial_days = 1
