@@ -261,7 +261,9 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
     """
     import os
 
-    from .turnaround_views import set_active_group, set_tab_input_image
+    from .turnaround_views import (
+        set_active_group, set_group_main_image, set_tab_input_image,
+    )
 
     scene = bpy.context.scene
     group_id = new_group_id()
@@ -270,20 +272,23 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
     loaded = 0
     companions = 0
     main_image = None
-    main_item = None
     for index, (temp_path, panel) in enumerate(downloaded):
         view_type = panel["view_type"]
         img = _load_crop(temp_path, f"{base}_{view_type}")
         if img is None:
             continue
 
+        # Every write below happens BEFORE the next _place(): an item is a live
+        # reference into a Blender CollectionProperty, and each add can
+        # reallocate the backing array, leaving earlier references stale. Never
+        # hold one across another add — resolve by image datablock instead
+        # (see the main-image binding after the loop).
         item = _place(scene, img, origin_x + index * step, origin_y)
         item.s3_key = panel["s3_key"]
         loaded += 1
 
         if view_type == DETECT_PANEL_MAIN:
             main_image = img
-            main_item = item
         elif view_type == DETECT_PANEL_HERO:
             # Untagged: no vendor ViewType describes a hero render, so it can
             # only ever be used by promoting it to Input Image.
@@ -300,8 +305,15 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
     # without them having to hunt for the right crop on the canvas. Only when
     # companions actually exist: a no-companion sheet is a single-image
     # result, and marking its main would bind an empty set.
-    if main_item is not None and companions:
-        main_item.turnaround_main_group = group_id
+    #
+    # Resolved by IMAGE, not by an item reference captured during the loop. The
+    # main crop is panels[0], so holding its item meant writing through a
+    # pointer that every later _place() may have invalidated — the write landed
+    # nowhere and the set stayed unbound, which is why a 7-panel sheet lost its
+    # binding while a 4-panel one kept it. An Image is an ID datablock and stays
+    # valid across collection mutations.
+    if main_image is not None and companions:
+        set_group_main_image(scene, group_id, main_image)
     set_tab_input_image(scene, main_image)
     set_active_group(scene, group_id if companions else "")
     return (group_id if companions else ""), companions

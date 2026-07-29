@@ -236,3 +236,74 @@ def test_model_gen_refuses_an_incapable_model_on_a_bound_main(pro_accepts_mv):
 
     assert "'tripo-low' cannot use the 2-view set on 'ganesha_main'" \
         in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# Detect ingest must not hold a CollectionProperty item across further adds
+# ---------------------------------------------------------------------------
+
+_DETECT = Path(__file__).resolve().parents[2] / (
+    "src/scripts/mixar/modules/moodboard/core/turnaround_detect.py")
+
+
+def _ingest_function():
+    """The `_add_panels_to_moodboard` FunctionDef node."""
+    tree = ast.parse(_DETECT.read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and \
+                node.name == "_add_panels_to_moodboard":
+            return node
+    raise AssertionError("turnaround_detect has no _add_panels_to_moodboard")
+
+
+def test_ingest_binds_the_main_by_image_not_by_a_held_item():
+    """The main crop's binding must survive the rest of the ingest loop.
+
+    Production (uat2, twice): a 7-panel Ganesha sheet ingested fine — crops
+    placed, companions grouped, S3 keys set — yet its main image came out with
+    an empty ``turnaround_main_group``, so the set never attached and only the
+    main image reached the API. A 4-panel Frog King sheet in the same session
+    bound correctly.
+
+    ``_place`` returns ``scene.mixie_moodboard_images[-1]``, a live reference
+    into a Blender CollectionProperty. The main crop is ``panels[0]``, so
+    holding its item and writing the marker AFTER the loop meant writing
+    through a pointer that six subsequent adds may have invalidated. Every
+    other write in the loop (``s3_key``, ``view_type``, ``turnaround_group``)
+    happens immediately after its own ``_place`` and survived — exactly what
+    the scene dump showed.
+
+    The binding must therefore be resolved from the main IMAGE (an ID
+    datablock, stable across collection mutations) after the loop.
+    """
+    node = _ingest_function()
+    names = _names(node)
+
+    assert "set_group_main_image" in names, (
+        "_add_panels_to_moodboard must bind the set via set_group_main_image, "
+        "which re-resolves the item from the image datablock"
+    )
+
+    assigned = {
+        target.id
+        for child in ast.walk(node)
+        if isinstance(child, ast.Assign)
+        for target in child.targets
+        if isinstance(target, ast.Name)
+    }
+    assert "main_item" not in assigned, (
+        "_add_panels_to_moodboard captures a moodboard item for the main crop "
+        "and writes to it after further _place() calls. That reference can be "
+        "invalidated by the adds in between, silently dropping the binding"
+    )
+
+    assert not any(
+        isinstance(child, ast.Attribute)
+        and child.attr == "turnaround_main_group"
+        and isinstance(child.ctx, ast.Store)
+        for child in ast.walk(node)
+    ), (
+        "_add_panels_to_moodboard writes turnaround_main_group directly; go "
+        "through set_group_main_image so the one-main-per-group invariant and "
+        "the by-image resolution are enforced in one place"
+    )
