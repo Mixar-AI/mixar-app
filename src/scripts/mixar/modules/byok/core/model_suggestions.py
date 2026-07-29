@@ -122,6 +122,48 @@ def is_loaded() -> bool:
     return _populated_once
 
 
+def parse_catalog(envelope) -> tuple[list, dict]:
+    """Split a GET /agent/models response into ``populate()`` arguments.
+
+    Response shape (inner ``data``)::
+
+        { "providers": [
+            { "id": "anthropic", "label": "Anthropic",
+              "models": [ {"id": "claude-sonnet-4-5", "label": "..."}, ... ] },
+            ...
+        ] }
+
+    Malformed entries are skipped rather than raising: a single bad row
+    from the backend must not cost the user the whole catalog. Enum items
+    are 3-tuples of (id, label, description); the API gives no
+    description, so the label doubles as the tooltip.
+    """
+    providers: list[tuple[str, str, str]] = []
+    models: dict[str, list[tuple[str, str, str]]] = {}
+
+    for entry in (envelope or {}).get('providers') or []:
+        if not isinstance(entry, dict):
+            continue
+        pid = entry.get('id')
+        if not pid:
+            continue
+        label = entry.get('label') or pid
+        providers.append((pid, label, label))
+
+        model_items: list[tuple[str, str, str]] = []
+        for m in entry.get('models') or []:
+            if not isinstance(m, dict):
+                continue
+            mid = m.get('id')
+            if not mid:
+                continue
+            mlabel = m.get('label') or mid
+            model_items.append((mid, mlabel, mlabel))
+        models[pid] = model_items
+
+    return providers, models
+
+
 def populate(providers, models) -> None:
     """Replace the caches from a successful models-catalog response.
 
