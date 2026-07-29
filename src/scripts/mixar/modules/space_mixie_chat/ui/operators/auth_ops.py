@@ -30,6 +30,7 @@ from ....auth.core.auth_hooks import (
     refresh_generation_caches,
 )
 from ....auth.core.sso import sso_login
+from ...core import account_usage
 
 logger = get_logger(__name__)
 
@@ -175,6 +176,7 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             email = user_info["data"].get("email", "")
             scene.mixie_chat_user_id = email
             scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+            account_usage.apply_user_info(wm, user_info["data"])
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
             refresh_generation_caches()
@@ -300,6 +302,7 @@ def _auth_check_background() -> None:
                     if scene is not None:
                         scene.mixie_chat_user_id = email
                         scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+                    account_usage.apply_user_info(wm, user_info["data"])
 
                     refresh_generation_caches()
                     maybe_show_onboarding(email)
@@ -425,6 +428,7 @@ class MIXIE_CHAT_OT_login(Operator):
                             if scene is not None:
                                 scene.mixie_chat_user_id = email
                                 scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+                            account_usage.apply_user_info(live_wm, user_info["data"])
 
                             refresh_generation_caches()
                             maybe_show_onboarding(email)
@@ -484,6 +488,7 @@ class MIXIE_CHAT_OT_logout(Operator):
         scene.mixie_chat_user_id = ""
         wm.mixie_chat_password = ""
         scene.mixie_chat_credits = 0
+        account_usage.clear(wm)
 
         # Clear cached BYOK state so the profile menu and dialog reset
         # when the next user logs in.
@@ -514,41 +519,13 @@ class MIXIE_CHAT_OT_open_dashboard(Operator):
 
 
 class MIXIE_CHAT_OT_refresh_credits(Operator):
-    """Refresh credits by fetching latest user info"""
+    """Refresh the account summary from the authenticated user endpoint."""
     bl_idname = "mixie_chat.refresh_credits"
     bl_label = "Refresh Credits"
     bl_description = "Refresh your credit balance"
 
     def execute(self, context):
-        logger.info("[RefreshCredits] Operator triggered")
-
-        def _fetch_credits():
-            logger.info("[RefreshCredits] Fetching user info...")
-            user_info = get_user_info()
-            logger.info("[RefreshCredits] Response: %s", user_info)
-            if user_info and user_info.get("status") == "success":
-                credits = user_info["data"].get("credits", 0)
-                logger.info("[RefreshCredits] Got credits: %s", credits)
-
-                def _apply():
-                    try:
-                        bpy.context.scene.mixie_chat_credits = credits
-                        for window in bpy.context.window_manager.windows:
-                            for area in window.screen.areas:
-                                if area.type == 'MIXIE_CHAT':
-                                    area.tag_redraw()
-                        logger.info("[RefreshCredits] Applied credits: %s", credits)
-                    except Exception as e:
-                        logger.warning("[RefreshCredits] Failed to apply: %s", e)
-                    return None
-
-                bpy.app.timers.register(_apply, first_interval=0.0)
-            else:
-                logger.warning("[RefreshCredits] Failed to fetch: %s", user_info)
-
-        threading.Thread(
-            target=_fetch_credits, daemon=True, name="MixarRefreshCredits"
-        ).start()
+        account_usage.request_refresh(context.window_manager, force=True)
         return {'FINISHED'}
 
 

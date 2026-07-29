@@ -720,6 +720,12 @@ def get_user_info():
         "data": {
             "email": "Unknown",
             "credits": 0,
+            "plan_name": "",
+            "plan_slug": "",
+            "trial_days_remaining": None,
+            "team_name": "",
+            "team_role": "",
+            "team_is_active": False,
         },
     }
 
@@ -749,6 +755,16 @@ def get_user_info():
             response_data["message"] = "User info fetched successfully"
             response_data["data"]["email"] = user_data.get("email", "Unknown")
             response_data["data"]["credits"] = user_data.get("credits", 0)
+            response_data["data"]["plan_name"] = user_data.get("plan_name") or ""
+            response_data["data"]["plan_slug"] = user_data.get("plan_slug") or ""
+            response_data["data"]["trial_days_remaining"] = user_data.get(
+                "trial_days_remaining"
+            )
+            response_data["data"]["team_name"] = user_data.get("team_name") or ""
+            response_data["data"]["team_role"] = user_data.get("team_role") or ""
+            response_data["data"]["team_is_active"] = bool(
+                user_data.get("team_is_active", False)
+            )
             return response_data
         else:
             logger.warning(f"Error getting user info: {response.status_code}")

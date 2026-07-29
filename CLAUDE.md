@@ -104,6 +104,12 @@ src/
 
 ## Feature Modules
 
+The global profile popover owns a session-only usage summary. It shows the
+backend-authoritative remaining credit balance plus plan, trial, and active
+team-pool context; it refreshes asynchronously when stale on open and exposes
+a manual refresh action. Do not infer cycle usage, allowance, or renewal dates
+from the remaining balance.
+
 | Module | What it does |
 |--------|-------------|
 | **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |

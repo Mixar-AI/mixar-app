@@ -33,7 +33,7 @@ import bpy
 from bpy.types import Header, Panel
 
 from ..constants import SessionState  # noqa: F401  (kept for parity)
-from ..core import avatar_icon
+from ..core import account_usage, avatar_icon
 
 
 class MIXAR_PT_profile(Panel):
@@ -48,6 +48,44 @@ class MIXAR_PT_profile(Panel):
         layout = self.layout
         wm = context.window_manager
 
+        account_usage.schedule_stale_refresh(wm)
+
+        usage = layout.box()
+        title = usage.row(align=True)
+        title.label(text="Usage", icon='FUND')
+        refresh = title.row(align=True)
+        refresh.alignment = 'RIGHT'
+        refresh.enabled = not getattr(wm, 'mixie_account_loading', False)
+        refresh.operator("mixie_chat.refresh_credits", text="", icon='FILE_REFRESH')
+
+        if getattr(wm, 'mixie_account_loaded', False):
+            plan = getattr(wm, 'mixie_account_plan_name', '') or "Free"
+            usage.label(text=f"Plan: {plan}")
+            credits = int(getattr(wm, 'mixie_account_credits', 0))
+            usage.label(text=f"Credits remaining: {credits:,}", icon='SOLO_ON')
+            trial_days = int(getattr(wm, 'mixie_account_trial_days', -1))
+            if trial_days >= 0:
+                suffix = "day" if trial_days == 1 else "days"
+                usage.label(text=f"Trial: {trial_days} {suffix} remaining")
+            if getattr(wm, 'mixie_account_team_is_active', False):
+                team = getattr(wm, 'mixie_account_team_name', '') or "Team"
+                usage.label(text=f"{team} shared credit pool", icon='COMMUNITY')
+            if getattr(wm, 'byok_is_active', False):
+                usage.label(
+                    text="Own provider active; agent requests do not use Mixar credits.",
+                    icon='KEY_HLT',
+                )
+        elif getattr(wm, 'mixie_account_loading', False):
+            usage.label(text="Refreshing account...", icon='SORTTIME')
+        else:
+            usage.label(text="Account usage unavailable", icon='INFO')
+
+        if getattr(wm, 'mixie_account_error', ''):
+            row = usage.row()
+            row.alert = True
+            row.label(text="Refresh failed. Showing the last known balance.", icon='ERROR')
+
+        layout.separator()
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
 
         if hasattr(bpy.types, 'MIXAR_BYOK_OT_open_dialog'):

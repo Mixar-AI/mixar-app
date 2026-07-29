@@ -835,6 +835,19 @@ def register():
         min=0,
     )
 
+    # Session-only account summary shown in the global profile popover.
+    WM = bpy.types.WindowManager
+    WM.mixie_account_credits = IntProperty(default=0, min=0)
+    WM.mixie_account_plan_name = StringProperty(default="")
+    WM.mixie_account_trial_days = IntProperty(default=-1, min=-1)
+    WM.mixie_account_team_name = StringProperty(default="")
+    WM.mixie_account_team_role = StringProperty(default="")
+    WM.mixie_account_team_is_active = BoolProperty(default=False)
+    WM.mixie_account_loaded = BoolProperty(default=False)
+    WM.mixie_account_loading = BoolProperty(default=False)
+    WM.mixie_account_error = StringProperty(default="", maxlen=512)
+    WM.mixie_account_refreshed_at = FloatProperty(default=0.0, min=0.0)
+
     # Quick prompt input (WindowManager-level for popup dialog)
     # C++ interface_handlers.cc inserts newline when Enter is pressed on this property
     bpy.types.WindowManager.mixie_chat_quick_prompt_input = StringProperty(
@@ -930,7 +943,12 @@ def unregister():
         'mixie_chat_quick_prompt_mode', 'mixie_chat_quick_prompt_input',
         'mixie_chat_session_expired', 'mixie_chat_login_error',
         'mixie_chat_is_logging_in', 'mixie_chat_is_logged_in',
-        'mixie_chat_password',
+        'mixie_chat_password', 'mixie_account_credits',
+        'mixie_account_plan_name', 'mixie_account_trial_days',
+        'mixie_account_team_name', 'mixie_account_team_role',
+        'mixie_account_team_is_active', 'mixie_account_loaded',
+        'mixie_account_loading', 'mixie_account_error',
+        'mixie_account_refreshed_at',
     ):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)
