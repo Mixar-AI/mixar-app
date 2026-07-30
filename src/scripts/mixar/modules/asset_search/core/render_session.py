@@ -24,6 +24,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.utils.preview_render import (
     PreviewRenderRig,
     frame_camera,
+    image_from_preview,
     remove_collection,
     remove_objects,
     render_to_image,
@@ -146,6 +147,7 @@ class RenderSession:
         self.collected = []
         self.failures = []
         self.current_label = ""
+        self.preview_reused = 0  # thumbnails taken from the .blend, not rendered
         self._rig = None
 
     # -- lifecycle -------------------------------------------------------
@@ -167,10 +169,20 @@ class RenderSession:
     def done(self):
         return self.index >= len(self.items)
 
-    def step(self, count=2):
-        """Render up to ``count`` items. Returns the number attempted."""
+    def step(self, count=2, time_budget=0.12):
+        """Process items until ``count`` OR ``time_budget`` seconds is hit.
+
+        Always processes at least one item. The budget matters because items
+        split into two speed classes: embedded-preview reuse (~ms) and full
+        EEVEE renders (~0.5-1s) — a fixed per-tick count would either stall
+        the UI on renders or crawl through previews one timer tick at a time.
+        Returns the number attempted.
+        """
+        import time as _time
+
+        started = _time.monotonic()
         attempted = 0
-        while attempted < count and not self.done:
+        while not self.done:
             item = self.items[self.index]
             self.index += 1
             attempted += 1
@@ -181,6 +193,8 @@ class RenderSession:
                 logger.error("[RenderSession] Error rendering %s: %s",
                              item['name'], e)
                 self.failures.append((self.current_label, str(e)[:120]))
+            if _time.monotonic() - started >= time_budget:
+                break
         return attempted
 
     # -- per-item render (adapted from the former monolithic operator) ----
@@ -193,6 +207,8 @@ class RenderSession:
             else:
                 data_to.collections = [item['name']]
 
+        img_name = f"asset_preview_{item['name']}"
+
         if item['kind'] == 'OBJECT':
             obj = data_to.objects[0]
             if obj is None:
@@ -200,13 +216,18 @@ class RenderSession:
                 return
             info = collect_asset_metadata(obj, item['library'], item['rel_path'])
             info['name'] = item['name']  # Blender may rename on append
-            scene.collection.objects.link(obj)
-            bpy.context.view_layer.update()
-            frame_camera(self._rig.camera, [obj])
-            img_name = f"asset_preview_{item['name']}"
-            img = render_to_image(scene, img_name)
-            scene.collection.objects.unlink(obj)
-            remove_objects([obj])
+            # Embedded thumbnail first — skips the whole main-thread render.
+            img = image_from_preview(obj, img_name)
+            if img is not None:
+                self.preview_reused += 1
+                remove_objects([obj])
+            else:
+                scene.collection.objects.link(obj)
+                bpy.context.view_layer.update()
+                frame_camera(self._rig.camera, [obj])
+                img = render_to_image(scene, img_name)
+                scene.collection.objects.unlink(obj)
+                remove_objects([obj])
         else:
             coll = data_to.collections[0]
             if coll is None:
@@ -214,19 +235,23 @@ class RenderSession:
                 return
             info = collect_asset_metadata(coll, item['library'], item['rel_path'])
             info['name'] = item['name']
-            scene.collection.children.link(coll)
-            bpy.context.view_layer.update()
-            objects = list(coll.all_objects)
-            if not objects:
+            img = image_from_preview(coll, img_name)
+            if img is not None:
+                self.preview_reused += 1
+                remove_collection(coll)
+            else:
+                scene.collection.children.link(coll)
+                bpy.context.view_layer.update()
+                objects = list(coll.all_objects)
+                if not objects:
+                    scene.collection.children.unlink(coll)
+                    remove_collection(coll)
+                    self.failures.append((self.current_label, "empty collection"))
+                    return
+                frame_camera(self._rig.camera, objects)
+                img = render_to_image(scene, img_name)
                 scene.collection.children.unlink(coll)
                 remove_collection(coll)
-                self.failures.append((self.current_label, "empty collection"))
-                return
-            frame_camera(self._rig.camera, objects)
-            img_name = f"asset_preview_{item['name']}"
-            img = render_to_image(scene, img_name)
-            scene.collection.children.unlink(coll)
-            remove_collection(coll)
 
         if img:
             info['image_name'] = img_name

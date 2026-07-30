@@ -105,6 +105,73 @@ def safe_temp_filename(name):
     return cleaned or "image"
 
 
+def image_from_preview(datablock, image_name, min_size=32):
+    """Build a packed JPEG bpy image from a datablock's EMBEDDED asset preview.
+
+    Library assets usually already carry a thumbnail baked into their .blend
+    (Blender's asset system; BlenderKit ships one for every asset, and Mixar's
+    own exports embed one). Reusing it skips the whole main-thread EEVEE
+    render — the dominant cost of training.
+
+    Returns the bpy image (same contract as render_to_image: named, packed
+    JPEG) or None when the datablock has no usable preview (missing, tiny, or
+    blank — an allocated-but-never-rendered preview slot is fully transparent).
+    """
+    preview = getattr(datablock, "preview", None)
+    if preview is None:
+        return None
+    w, h = preview.image_size
+    if w < min_size or h < min_size:
+        return None
+
+    import numpy as np
+
+    buf = np.empty(w * h * 4, dtype=np.float32)
+    try:
+        preview.image_pixels_float.foreach_get(buf)
+    except Exception:
+        return None
+    # Blank/transparent preview slot -> not a real thumbnail.
+    if float(buf[3::4].max(initial=0.0)) < 0.05:
+        return None
+
+    temp_path = os.path.join(
+        tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
+    )
+    float_img = None
+    try:
+        float_img = bpy.data.images.new(
+            f"_preview_src_{image_name}", width=w, height=h, alpha=True
+        )
+        float_img.pixels.foreach_set(buf)
+        float_img.file_format = 'JPEG'
+        float_img.filepath_raw = temp_path
+        float_img.save()
+
+        existing = bpy.data.images.get(image_name)
+        if existing:
+            bpy.data.images.remove(existing)
+        img = bpy.data.images.load(temp_path)
+        img.name = image_name
+        img.pack()
+        return img
+    except Exception as e:
+        logger.debug("[PreviewRender] Embedded preview unusable for %s: %s",
+                     image_name, e)
+        return None
+    finally:
+        if float_img is not None:
+            try:
+                bpy.data.images.remove(float_img)
+            except Exception:
+                pass
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
 def render_to_image(scene, image_name, pack=True):
     """Render the scene, save to temp JPEG, load back as a bpy image.
 
