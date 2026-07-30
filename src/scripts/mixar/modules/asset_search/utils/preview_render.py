@@ -90,6 +90,21 @@ def frame_camera(camera_obj, objects):
     camera_obj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
 
 
+def safe_temp_filename(name):
+    """Filesystem-safe version of a datablock name for TEMP FILE paths only.
+
+    Asset names may contain path separators / reserved chars (e.g.
+    "Carpet / rug") — writing tempdir/<name>.jpg then fails with
+    "No such file or directory" on Windows. The bpy image NAME must stay
+    unsanitized (it is the metadata key the training backend matches on);
+    only local paths need this.
+    """
+    cleaned = "".join(
+        (c if (c.isalnum() or c in "-_ .") else "_") for c in name
+    ).strip()
+    return cleaned or "image"
+
+
 def render_to_image(scene, image_name, pack=True):
     """Render the scene, save to temp JPEG, load back as a bpy image.
 
@@ -99,7 +114,9 @@ def render_to_image(scene, image_name, pack=True):
         pack: Pack the image into the .blend (True for training previews
             that must survive; False for transient UI thumbnails).
     """
-    temp_path = os.path.join(tempfile.gettempdir(), f"{image_name}.jpg")
+    temp_path = os.path.join(
+        tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
+    )
 
     # Temporarily switch output format to JPEG with 80% quality
     orig_format = scene.render.image_settings.file_format

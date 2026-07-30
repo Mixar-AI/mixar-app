@@ -457,7 +457,11 @@ def _extract_image_bytes(img):
     import os
     import tempfile
 
-    tmp_path = os.path.join(tempfile.gettempdir(), f"_mixar_tmp_{img.name}.jpg")
+    from mixar.modules.asset_search.utils.preview_render import safe_temp_filename
+
+    tmp_path = os.path.join(
+        tempfile.gettempdir(), f"_mixar_tmp_{safe_temp_filename(img.name)}.jpg"
+    )
     try:
         img.save_render(filepath=tmp_path)
         with open(tmp_path, "rb") as fh:
