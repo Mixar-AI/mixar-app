@@ -6,56 +6,106 @@
 """
 Asset Library Search Panel
 
-Panel in the asset browser's source list (TOOLS region): index status,
-training with real-time progress (counter, phase, current asset, ETA,
-failures, cancel), actionable search results, and the agent-reuse threshold.
+Asset-browser TOOLS panel styled in the Mixar sidebar language (same visual
+system as the moodboard N-panel): mixar_section boxes with labeled headers,
+hint-scale sublabels, 1.4-scale primary action buttons, and status badges.
 """
 
 import bpy
 from bpy.types import Panel
 
+# Visual constants — kept in lockstep with moodboard/constants.py
+# (GENERATE_BUTTON_SCALE_Y / SEP_* / HINT_SCALE_Y).
+_BTN_SCALE = 1.4
+_SEP_SECTION = 0.8
+_SEP_INTRA = 0.15
+_HINT_SCALE = 0.85
+
+
+def _section(layout, label=None, icon='NONE', action_op=None,
+             action_icon='FILE_REFRESH', action_enabled=True):
+    """Styled Mixar section (accent border + shadow); returns its column."""
+    box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
+    col = box.column()
+    if label:
+        if action_op:
+            row = col.row(align=True)
+            row.label(text=label, icon=icon)
+            sub = row.row(align=True)
+            sub.alignment = 'RIGHT'
+            sub.enabled = action_enabled
+            sub.operator(action_op, text="", icon=action_icon)
+        else:
+            col.label(text=label, icon=icon)
+        col.separator(factor=_SEP_INTRA)
+    return col
+
+
+def _hint(col, text, icon='NONE'):
+    row = col.row()
+    row.scale_y = _HINT_SCALE
+    row.label(text=text, icon=icon)
+
+
+def _input(layout, data, prop, **kw):
+    if hasattr(layout, 'mixar_input'):
+        layout.mixar_input(data, prop, **{k: v for k, v in kw.items() if k == 'text'})
+    else:
+        layout.prop(data, prop, **kw)
+
+
+# ---------------------------------------------------------------------------
+# Sections
+# ---------------------------------------------------------------------------
 
 def _draw_status(layout, state):
-    """Idle status block: indexed state, staleness delta, last-run summary."""
-    box = layout.box()
-    col = box.column(align=True)
-
-    if state.is_training:
-        return  # the training block owns the panel while running
-
-    if state.last_summary:
-        row = col.row()
-        row.label(
-            text=state.last_summary,
-            icon='CHECKMARK' if state.last_summary_success else 'ERROR',
-        )
-        col.separator(factor=0.3)
+    """Library Index section: state badge, last-run summary, train actions."""
+    col = _section(
+        layout, "Library Index", icon='ASSET_MANAGER',
+        action_op="mixie.refresh_asset_status",
+        action_icon='SORTTIME' if state.is_refreshing else 'FILE_REFRESH',
+        action_enabled=not state.is_refreshing,
+    )
 
     if not state.has_model and not state.last_trained_at:
-        col.label(text="Library not indexed yet", icon='INFO')
-        hint = col.row()
-        hint.scale_y = 0.8
-        hint.label(text="Train to enable search and agent reuse")
+        col.label(text="Not indexed yet", icon='INFO')
+        _hint(col, "Train to enable search and agent reuse")
     elif state.needs_retraining:
         alert = col.row()
         alert.alert = True
         alert.label(
-            text=state.retraining_message or "Library changed — retrain to update",
+            text=state.retraining_message or "Library changed — retrain",
             icon='ERROR',
         )
     else:
-        col.label(text="Index is up to date", icon='CHECKMARK')
-
+        col.label(text="Up to date", icon='CHECKMARK')
     if state.last_trained_at:
-        sub = col.row()
-        sub.scale_y = 0.8
-        sub.label(text=f"Last trained: {state.last_trained_at}")
+        _hint(col, f"Last trained: {state.last_trained_at}")
+
+    if state.last_summary:
+        col.separator(factor=_SEP_INTRA)
+        row = col.row()
+        row.scale_y = _HINT_SCALE
+        if not state.last_summary_success:
+            row.alert = True
+        row.label(
+            text=state.last_summary,
+            icon='CHECKMARK' if state.last_summary_success else 'ERROR',
+        )
+
+    col.separator(factor=_SEP_INTRA)
+    btn = col.row()
+    btn.scale_y = _BTN_SCALE
+    btn.operator("mixie.train_asset_model", text="Train Model", icon='PLAY')
+    danger = col.row()
+    danger.scale_y = _HINT_SCALE
+    danger.operator("mixie.delete_asset_embeddings",
+                    text="Delete All Embeddings…", icon='TRASH', emboss=False)
 
 
 def _draw_training_progress(layout, state):
-    """Live progress: bar + counter + phase + current item + ETA + failures."""
-    box = layout.box()
-    col = box.column(align=True)
+    """Live training section: bar, counter, phase, current item, ETA, cancel."""
+    col = _section(layout, "Training", icon='ASSET_MANAGER')
 
     col.prop(state, "progress", text=state.phase_text or "Training…", slider=True)
 
@@ -65,20 +115,14 @@ def _draw_training_progress(layout, state):
             icon='RENDER_RESULT',
         )
     if state.current_item:
-        cur = col.row()
-        cur.scale_y = 0.8
-        cur.label(text=f"Now: {state.current_item}")
+        _hint(col, f"Now: {state.current_item}")
     if state.eta_text:
-        eta = col.row()
-        eta.scale_y = 0.8
-        eta.label(text=state.eta_text, icon='TIME')
+        _hint(col, state.eta_text, icon='TIME')
     if state.prepare_note:
-        note = col.row()
-        note.scale_y = 0.8
-        note.label(text=state.prepare_note, icon='INFO')
+        _hint(col, state.prepare_note, icon='INFO')
 
     if state.failed_count:
-        col.separator(factor=0.3)
+        col.separator(factor=_SEP_INTRA)
         fail_row = col.row()
         fail_row.alert = True
         fail_row.prop(
@@ -90,11 +134,9 @@ def _draw_training_progress(layout, state):
         if state.show_failures:
             for line in state.failed_list.split("\n"):
                 if line.strip():
-                    r = col.row()
-                    r.scale_y = 0.75
-                    r.label(text="  " + line)
+                    _hint(col, "  " + line)
 
-    col.separator(factor=0.5)
+    col.separator(factor=_SEP_INTRA)
     cancel = col.row()
     cancel.scale_y = 1.1
     if state.cancel_requested:
@@ -103,110 +145,83 @@ def _draw_training_progress(layout, state):
                         text="Cancelling…", icon='SORTTIME')
     else:
         cancel.operator("mixie.cancel_asset_training",
-                        text="Cancel", icon='X')
-
-
-def _draw_train_controls(layout, state):
-    box = layout.box()
-    col = box.column(align=True)
-
-    row = col.row(align=True)
-    row.scale_y = 1.3
-    row.operator("mixie.train_asset_model", text="Train Model",
-                 icon='OUTLINER_OB_LIGHT')
-    refresh_sub = row.row(align=True)
-    refresh_sub.scale_x = 0.8
-    if state and state.is_refreshing:
-        refresh_sub.enabled = False
-        refresh_sub.operator("mixie.refresh_asset_status", text="", icon='SORTTIME')
-    else:
-        refresh_sub.operator("mixie.refresh_asset_status", text="", icon='FILE_REFRESH')
-
-    # Destructive action: labeled, on its own quiet row (not an icon trap
-    # beside the primary button).
-    danger = col.row()
-    danger.scale_y = 0.85
-    danger.operator("mixie.delete_asset_embeddings",
-                    text="Delete All Embeddings…", icon='TRASH', emboss=False)
+                        text="Cancel", icon='CANCEL')
 
 
 def _draw_search(layout, state, is_training):
-    col = layout.column()
+    """Search section: prompt + reference image + button + actionable results."""
+    col = _section(layout, "Search Library", icon='VIEWZOOM')
 
     if is_training:
-        note = col.row()
-        note.scale_y = 0.85
-        note.label(text="Search is unavailable while training", icon='LOCKED')
+        _hint(col, "Unavailable while training", icon='LOCKED')
         return
 
-    if state:
-        col.prop(state, "search_prompt", text="", icon='VIEWZOOM',
-                 placeholder="Describe an asset…")
-        col.separator(factor=0.3)
-        col.label(text="Reference Image", icon='IMAGE_DATA')
-        col.template_ID(state, "search_image", open="image.open")
-        col.separator(factor=0.5)
+    _input(col, state, "search_prompt", text="",
+           icon='VIEWZOOM', placeholder="Describe an asset…")
+    col.separator(factor=_SEP_INTRA)
+    _hint(col, "Reference Image (optional)", icon='IMAGE_DATA')
+    col.template_ID(state, "search_image", open="image.open")
 
-    btn_row = col.row(align=True)
-    btn_row.scale_y = 1.5
-    if state and state.is_searching:
-        btn_row.enabled = False
-        btn_row.operator("mixie.search_assets", text="Searching…", icon='SORTTIME')
+    col.separator(factor=_SEP_INTRA)
+    btn = col.row()
+    btn.scale_y = _BTN_SCALE
+    if state.is_searching:
+        btn.enabled = False
+        btn.operator("mixie.search_assets", text="Searching…", icon='SORTTIME')
     else:
-        btn_row.operator("mixie.search_assets", text="Search", icon='VIEWZOOM')
+        btn.operator("mixie.search_assets", text="Search", icon='VIEWZOOM')
 
-    if not state:
-        return
-
-    # -- Results: actionable rows, not text --
     if state.search_results:
-        col.separator(factor=0.5)
-        result_box = col.box()
-        header = result_box.row()
-        header.label(
-            text=f"{len(state.search_results)} result(s)", icon='CHECKMARK',
-        )
+        col.separator(factor=_SEP_SECTION)
+        header = col.row(align=True)
+        header.label(text=f"{len(state.search_results)} result(s)",
+                     icon='CHECKMARK')
         header.operator("mixie.clear_search_results", text="", icon='X',
                         emboss=False)
         for hit in state.search_results:
-            row = result_box.row(align=True)
+            card = col.box()
+            row = card.row(align=True)
             main = row.column(align=True)
-            top = main.row(align=True)
-            top.label(text=hit.name, icon='OBJECT_DATA')
-            where = main.row()
-            where.scale_y = 0.75
+            main.label(text=hit.name, icon='OBJECT_DATA')
             src = hit.library or "unknown library"
             if hit.asset_type:
                 src += f" · {hit.asset_type}"
-            where.label(text="    " + src)
+            _hint(main, "    " + src)
             score_row = main.row(align=True)
             score_row.scale_y = 0.6
             try:
                 score_row.progress(factor=hit.score,
                                    text=f"{hit.score:.0%}", type='BAR')
             except Exception:
-                score_row.label(text=f"score {hit.score:.2f}")
-            btn = row.column()
-            op = btn.operator("mixie.locate_search_result", text="",
-                              icon='ZOOM_SELECTED')
+                _hint(score_row, f"score {hit.score:.2f}")
+            btn_col = row.column()
+            op = btn_col.operator("mixie.locate_search_result", text="",
+                                  icon='ZOOM_SELECTED')
             op.asset_name = hit.name
             op.library = hit.library
-        result_box.separator(factor=0.2)
-        tip = result_box.row()
-        tip.scale_y = 0.75
-        tip.label(text="Click the magnifier to show a result in the browser",
-                  icon='INFO')
+        _hint(col, "Click the magnifier to show a result in the browser",
+              icon='INFO')
     elif state.search_message:
-        col.separator(factor=0.5)
-        msg_box = col.box()
-        row = msg_box.row()
+        col.separator(factor=_SEP_INTRA)
+        row = col.row(align=True)
+        row.scale_y = _HINT_SCALE
         row.label(text=state.search_message, icon='INFO')
+        row.operator("mixie.clear_search_results", text="", icon='X',
+                     emboss=False)
         if "No matching" in state.search_message:
-            hint = msg_box.row()
-            hint.scale_y = 0.8
-            hint.label(text="Try other words, or retrain if assets are new")
-        row.operator("mixie.clear_search_results", text="", icon='X', emboss=False)
+            _hint(col, "Try other words, or retrain if assets are new")
 
+
+def _draw_agent_reuse(layout, state):
+    col = _section(layout, "Agent Asset Reuse",
+                   icon='OUTLINER_OB_GROUP_INSTANCE')
+    col.prop(state, "match_threshold", text="Match Threshold", slider=True)
+    _hint(col, "Ask the agent to \"use my library\"", icon='INFO')
+
+
+# ---------------------------------------------------------------------------
+# Panel
+# ---------------------------------------------------------------------------
 
 class MIXIE_PT_asset_library_search(Panel):
     """Asset Library Search panel in the asset browser source list"""
@@ -225,31 +240,19 @@ class MIXIE_PT_asset_library_search(Panel):
     def draw(self, context):
         layout = self.layout
         state = getattr(context.scene, 'mixie_asset_training', None)
-        is_training = state.is_training if state else False
-
-        if state:
-            _draw_status(layout, state)
+        if state is None:
+            layout.label(text="Asset search unavailable", icon='ERROR')
+            return
+        is_training = state.is_training
 
         if is_training:
             _draw_training_progress(layout, state)
-        elif state:
-            _draw_train_controls(layout, state)
-
-        layout.separator(factor=0.5)
+        else:
+            _draw_status(layout, state)
+        layout.separator(factor=_SEP_SECTION)
         _draw_search(layout, state, is_training)
-
-        # == Agent asset reuse ==
-        if state:
-            layout.separator(factor=0.5)
-            reuse_box = layout.box()
-            reuse_col = reuse_box.column(align=True)
-            reuse_col.label(text="Agent Asset Reuse",
-                            icon='OUTLINER_OB_GROUP_INSTANCE')
-            reuse_col.prop(state, "match_threshold", text="Match Threshold",
-                           slider=True)
-            hint = reuse_col.row()
-            hint.scale_y = 0.8
-            hint.label(text="Ask the agent to \"use my library\"", icon='INFO')
+        layout.separator(factor=_SEP_SECTION)
+        _draw_agent_reuse(layout, state)
 
 
 classes = (
