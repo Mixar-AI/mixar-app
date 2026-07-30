@@ -26,7 +26,13 @@ from mixar.modules.common.job_queue.constants import (
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
 from mixar.modules.common.job_queue.core.job import Job
 from mixar.modules.common.utils.image_utils import compress_image_for_upload
-from mixar.modules.hunyuan.constants import DEFAULT_FACE_COUNT, MAX_FILE_SIZE_TOPOLOGY
+from mixar.modules.hunyuan.constants import (
+    DEFAULT_FACE_COUNT,
+    MAX_FILE_SIZE_TOPOLOGY,
+    # Service key == job_queue job_type: a wire contract, not catalog data.
+    RETOPOLOGY_HUNYUAN_SERVICE as RETOPOLOGY_JOB_TYPE,
+    RETOPOLOGY_HUNYUAN_MODEL,
+)
 from mixar.modules.moodboard.constants import SCENE_GEN_CAPABILITY_KEY
 
 logger = get_logger(__name__)
@@ -320,6 +326,14 @@ def enqueue_scene_gen_lp_jobs(
 
     enqueued: list = []
 
+    # Scene Gen LP pins Hunyuan Topology deliberately: `shared_params` carries
+    # polygon_type / face_level / post_process, which are that engine's knobs.
+    # Taking the `retopology` service default instead would hand those params
+    # to whichever engine happens to be default — a silent engine swap, and a
+    # submit-validation failure if that engine's schema doesn't define them.
+    # Left as a literal on purpose; see the de-hardcoding review.
+    model = RETOPOLOGY_HUNYUAN_MODEL
+
     for obj, chain_id in objects_with_chain_ids:
         if obj.type != 'MESH':
             continue
@@ -359,8 +373,8 @@ def enqueue_scene_gen_lp_jobs(
         job = enqueue_generation(
             kind="glb",
             feature_key=FEATURE_SCENE_GEN_LP,
-            job_type="retopology",
-            model="hunyuan_topology",
+            job_type=RETOPOLOGY_JOB_TYPE,
+            model=model,
             payload=payload,
             label=obj.name,
             origin_capability_key=SCENE_GEN_CAPABILITY_KEY,

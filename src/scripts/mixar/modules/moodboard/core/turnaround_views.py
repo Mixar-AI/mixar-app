@@ -40,11 +40,9 @@ from mixar.config.logging_config import get_logger
 from ..constants import (
     MOODBOARD_IMAGE_BASE_SIZE,
     MOODBOARD_MULTI_IMAGE_GAP,
-    TURNAROUND_BASE_ANGLE_ONLY_SLUGS,
     TURNAROUND_MAX_COMPANIONS,
     TURNAROUND_VIEW_DEFAULT,
     TURNAROUND_VIEW_ORDER,
-    TURNAROUND_VIEW_TYPES_V30,
 )
 # Set ⇄ frontal-image binding, split out for the 500-line limit and
 # re-exported so this module stays the one import site for the group model.
@@ -386,17 +384,22 @@ def build_active_group_payload(
     return build_multi_view_payload(scene, group_id, image, model_slug)
 
 
-def allowed_view_types(model_slug: str) -> tuple:
-    """Angles *model_slug* accepts.
+def allowed_view_types(model_slug: str = "") -> tuple:
+    """Angles a multi-view model accepts — the vendor's full seven.
 
-    Hunyuan 3.0 and older take only left / right / back; top, bottom and the
-    two three-quarter angles are 3.1-only. Unknown slugs get the full seven —
-    under-restricting a future model is recoverable, over-restricting would
-    silently drop panels the user supplied.
+    Narrowing this is per-model CAPABILITY, so it belongs in the generation
+    catalog, not here. It used to be keyed on a hardcoded slug list
+    ("Hunyuan 3.0 takes left/right/back only"), which is the same mistake as
+    every other hardcoded slug list: it named rows that are disabled, so it
+    never actually fired, and it would have gone stale the moment a slug
+    changed.
+
+    The seam is kept (rather than inlining TURNAROUND_VIEW_ORDER at the call
+    sites) so there is one place to implement catalog-driven narrowing when a
+    model publishes a ``view_type`` enum in its ``parameters`` schema —
+    ``generation_params.get_param_enum_items`` already reads schema enums.
+    Until then every angle is offered; the vendor rejects what it cannot take.
     """
-    slug = (model_slug or "").strip().lower()
-    if slug in TURNAROUND_BASE_ANGLE_ONLY_SLUGS:
-        return TURNAROUND_VIEW_TYPES_V30
     return TURNAROUND_VIEW_ORDER
 
 

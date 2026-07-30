@@ -15,7 +15,11 @@ Centralized configuration values for the moodboard module.
 
 SCENE_GEN_CAPABILITY_KEY = "scene_gen"
 SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
-SCENE_GEN_MODEL = "scene_gen_v1"
+# NOTE: the model slug is deliberately NOT a constant here. Model rows are
+# server-owned and change without a client release, so the submit path reads
+# the service's default from the generation catalog
+# (``generation_params.catalog_default_model``) and aborts when the catalog
+# cannot answer.
 
 # ============================================================================
 # TURNAROUND / MULTI-VIEW DETECTION
@@ -49,19 +53,6 @@ TURNAROUND_VIEW_DEFAULT = TURNAROUND_VIEW_ORDER[0]
 # group itself tops out at seven companions.
 TURNAROUND_MAX_COMPANIONS = len(TURNAROUND_VIEW_ORDER)
 
-# Angles Hunyuan 3.0 (and older) accepts. top / bottom / left_front /
-# right_front are 3.1-only, so they are dropped at payload build with a
-# warning rather than being submitted for the vendor to reject after credits
-# have already been held.
-TURNAROUND_VIEW_TYPES_V30 = ('left', 'right', 'back')
-
-# Multi-view model slugs limited to TURNAROUND_VIEW_TYPES_V30. Anything not
-# listed gets the full seven — under-restricting an unknown future model is
-# recoverable, over-restricting silently drops the user's panels.
-TURNAROUND_BASE_ANGLE_ONLY_SLUGS = (
-    "hunyuan_pro_v3",
-    "hunyuan_pro_v2.5",
-)
 
 # ---------------------------------------------------------------------------
 # detect-views response vocabulary (NOT view_type labels)
@@ -143,17 +134,17 @@ MOODBOARD_SELECTED_INDEX_DEFAULT = -1
 MOODBOARD_PROMPT_DEFAULT = ""
 MOODBOARD_GLOBAL_CONTEXT_DEFAULT = ""
 MOODBOARD_USE_STYLE_CONTEXT_DEFAULT = True
-MOODBOARD_GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash-image'
 MOODBOARD_ASPECT_RATIO_DEFAULT = '16:9'
 
 # ============================================================================
 # ENUM VALUES
 # ============================================================================
 
-GEMINI_MODELS = [
-    ('gemini-2.5-flash-image', "Flash (Fast)", "Faster generation, 1024px resolution"),
-    ('gemini-3-pro-image-preview', "Pro (Quality)", "Higher quality, up to 4K resolution")
-]
+# NOTE: there is deliberately no GEMINI_MODELS list here. The image_gen models
+# are catalog rows served under the catalog's OWN slugs ('pro', 'flash-3-1'),
+# not raw vendor ids — keeping a second vocabulary client-side is how the two
+# drifted apart. The Model dropdown builds its items from
+# ``generation_catalog_cache.get_model_enum_items('image_gen')``.
 
 ASPECT_RATIOS = [
     ('1:1', "1:1 Square", "Square aspect ratio"),

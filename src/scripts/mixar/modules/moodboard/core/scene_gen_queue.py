@@ -14,7 +14,7 @@ import requests
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
-from ..constants import SCENE_GEN_JOB_TYPE, SCENE_GEN_MODEL
+from ..constants import SCENE_GEN_JOB_TYPE
 from mixar.modules.common.job_queue.core.helpers import (
     create_scene_flag_listener,
     get_queue_with_listener,
@@ -49,7 +49,9 @@ class SceneGenQueueJob(Job):
 
         get_job_queue_service().enqueue(
             job_type=SCENE_GEN_JOB_TYPE,
-            model=SCENE_GEN_MODEL,
+            # Resolved from the catalog by enqueue_scene_gen_job(); the base
+            # Job field already carries it for the queue UI.
+            model=self.model,
             payload=self.payload,
             idempotency_key=self.submit_idempotency_key,
             on_success=on_success,
@@ -208,10 +210,24 @@ def enqueue_scene_gen_job(
     on_object_ready: Optional[Callable] = None,
     on_download_failed: Optional[Callable] = None,
 ) -> Optional[SceneGenQueueJob]:
+    from mixar.modules.common.generation_params import catalog_default_model
+
+    # The model slug is server data. No catalog means we do not know which
+    # rows are enabled, so refuse rather than submit a remembered literal.
+    model = catalog_default_model(SCENE_GEN_JOB_TYPE)
+    if not model:
+        logger.warning(
+            "[SceneGen] no catalog model for service '%s' — cannot submit "
+            "'%s' (catalog not loaded or the service is disabled)",
+            SCENE_GEN_JOB_TYPE, label,
+        )
+        return None
+
     job = SceneGenQueueJob(
         feature_key=FEATURE_SCENE_GEN,
         label=label,
         service=SCENE_GEN_JOB_TYPE,
+        model=model,
         payload=payload,
         _on_object_ready=on_object_ready,
         _on_download_failed=on_download_failed,

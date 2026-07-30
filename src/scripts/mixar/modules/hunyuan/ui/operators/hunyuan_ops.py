@@ -407,12 +407,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 "views with mixie.moodboard_add_selected_views"
             )
 
-        # Same angle gating and duplicate handling the sidebar path uses.
-        version = (self.model_version.strip() or "3.0")
-        model_slug = (
-            "hunyuan_pro_v3.1" if version == "3.1" else "hunyuan_pro_v3")
+        # Same duplicate handling the sidebar path uses. No model slug is
+        # needed: which angles a model accepts is catalog capability, not
+        # something the client derives from a version string.
         fragment, warnings = build_multi_view_payload(
-            context.scene, group_id, image, model_slug)
+            context.scene, group_id, image)
         for warning in warnings:
             self.report({'WARNING'}, warning)
         return fragment

@@ -69,15 +69,14 @@ def test_view_types_are_exactly_the_seven_vendor_angles():
     assert not {'main', 'front', 'none'} & set(ids)
 
 
-def test_only_left_right_back_are_valid_on_hunyuan_30():
-    # top / bottom / left_front / right_front are 3.1-only.
-    assert allowed_view_types("hunyuan_pro_v3") == ('left', 'right', 'back')
-    assert allowed_view_types("hunyuan_pro_v2.5") == ('left', 'right', 'back')
-    assert allowed_view_types("hunyuan_pro_v3.1") == TURNAROUND_VIEW_ORDER
-    # Unknown slugs get all seven — under-restricting a future model is
-    # recoverable, over-restricting silently drops the user's panels.
-    assert allowed_view_types("") == TURNAROUND_VIEW_ORDER
-    assert allowed_view_types("some_future_model") == TURNAROUND_VIEW_ORDER
+def test_allowed_view_types_never_narrows_by_slug():
+    # Angle capability is catalog data. This used to narrow to left/right/back
+    # for a hardcoded list of "3.0" slugs — rows that are disabled in the
+    # catalog, so the gate never fired while still encoding a vendor-version
+    # assumption on the client. Every slug now gets the vendor's seven.
+    for slug in ("hunyuan_pro_v3", "hunyuan_pro_v2.5", "hunyuan_pro_v3.1",
+                 "hunyuan-pro-fal", "", "some_future_model"):
+        assert allowed_view_types(slug) == TURNAROUND_VIEW_ORDER
 
 
 # ---------------------------------------------------------------------------
@@ -289,9 +288,9 @@ def test_group_built_entirely_by_hand_needs_no_s3_keys_at_all():
 # build_multi_view_payload — model gating and duplicate angles
 # ---------------------------------------------------------------------------
 
-def test_31_only_angles_are_dropped_with_a_warning_on_30():
-    # Better a warned-about omission than a vendor rejection after the
-    # credits have already been held.
+def test_every_angle_is_sent_regardless_of_slug():
+    # No client-side angle gate: the catalog carries no per-model view-type
+    # capability, so the client must not invent one from a slug.
     scene = _scene(
         ("orc_left", "left", "k/left.png"),
         ("orc_top", "top", "k/top.png"),
@@ -300,9 +299,10 @@ def test_31_only_angles_are_dropped_with_a_warning_on_30():
         scene, "g1", _main(scene=scene), "hunyuan_pro_v3")
 
     assert payload["multi_view_images"] == [
-        {"s3_key": "k/left.png", "view_type": "left"}
+        {"s3_key": "k/left.png", "view_type": "left"},
+        {"s3_key": "k/top.png", "view_type": "top"},
     ]
-    assert any("top" in w and "orc_top" in w for w in warnings)
+    assert not warnings
 
 
 def test_the_same_angles_are_all_sent_on_31():
@@ -610,14 +610,16 @@ def test_next_free_view_type_skips_reserved_angles():
     assert next_free_view_type(scene, "g1", taken=["right"]) == "back"
 
 
-def test_next_free_view_type_respects_the_model_limit():
+def test_next_free_view_type_walks_the_full_vendor_order():
     scene = _scene(
         ("a", "left", ""), ("b", "right", ""), ("c", "back", ""),
     )
+    # No slug narrows the set any more, so the next free angle is simply the
+    # next one in TURNAROUND_VIEW_ORDER. An explicit `allowed` still restricts.
     assert next_free_view_type(
-        scene, "g1", allowed=allowed_view_types("hunyuan_pro_v3")) == ""
+        scene, "g1", allowed=allowed_view_types()) == "top"
     assert next_free_view_type(
-        scene, "g1", allowed=allowed_view_types("hunyuan_pro_v3.1")) == "top"
+        scene, "g1", allowed=('left', 'right', 'back')) == ""
 
 
 def test_add_images_as_views_assigns_the_next_unused_angles():
@@ -635,15 +637,17 @@ def test_add_images_as_views_assigns_the_next_unused_angles():
         "left", "right", "back"]
 
 
-def test_add_images_as_views_never_assigns_a_31_only_angle_on_30():
+def test_add_images_as_views_uses_every_vendor_angle():
     scene = FakeScene([FakeItem(str(i), "left", "") for i in range(5)])
     images = [item.image for item in scene.mixie_moodboard_images]
 
+    # Formerly capped at left/right/back for "3.0" slugs. The slug no longer
+    # narrows anything, so all five land on the first five vendor angles.
     attached, skipped = add_images_as_views(
         scene, "g1", images, "hunyuan_pro_v3")
 
-    assert attached == ["left", "right", "back"]
-    assert skipped == 2
+    assert attached == ["left", "right", "back", "top", "bottom"]
+    assert skipped == 0
 
 
 def test_add_images_as_views_stops_at_the_vendor_cap():
