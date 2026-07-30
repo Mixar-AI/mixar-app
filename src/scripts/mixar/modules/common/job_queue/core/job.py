@@ -101,6 +101,13 @@ class Job:
     consecutive_poll_errors: int = 0
     backend_status: str = ""      # Raw status from backend (PENDING/SUBMITTED/POLLING/DONE/FAILED)
     queue_position: int = 0       # Position in backend queue (0 = not queued or unknown)
+    # Full ``result`` object from the DONE poll. ``_parse_standard_poll``
+    # returns only ``result_files`` (all any caller needed until segmentation),
+    # but adapters also send sibling keys — e.g. Tripo segmentation's
+    # ``part_names``, which the import hook uses to name the split objects.
+    # Keeping the whole dict here means a new result field never needs another
+    # signature change.
+    result_data: dict = field(default_factory=dict)
 
     # Submit retry/idempotency tracking. A local HTTP submit timeout is
     # ambiguous: the backend may still accept the request later.
@@ -263,6 +270,8 @@ class Job:
             return ("RUN", [])
         if status == "DONE":
             result = inner.get("result") or {}
+            if isinstance(result, dict):
+                self.result_data = result
             result_files = (
                 result.get("result_files", [])
                 if isinstance(result, dict)
