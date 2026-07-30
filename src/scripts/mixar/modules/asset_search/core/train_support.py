@@ -32,6 +32,44 @@ def set_failures(state, failures):
     state.failed_list = "\n".join(lines)
 
 
+def launch_thumbnail_backfill(rendered_items):
+    """Write the session's rendered previews back as asset thumbnails.
+
+    ``rendered_items``: RenderSession.rendered_items — assets that were
+    RENDERED because their .blend carried no usable preview. Their packed
+    JPEGs are written to a temp dir and a fire-and-forget backfill worker
+    (separate process) injects them into the source .blend files, so the
+    assets get real thumbnails and the next training run reuses them.
+    Best-effort: any failure just leaves the library as it was.
+    """
+    import os
+    import tempfile
+
+    from mixar.modules.asset_search.core import preview_worker
+
+    entries = []
+    try:
+        work_dir = None
+        for i, item in enumerate(rendered_items):
+            img = bpy.data.images.get(item.get("image_name", ""))
+            if img is None:
+                continue
+            data = extract_image_bytes(img)
+            if not data:
+                continue
+            if work_dir is None:
+                work_dir = tempfile.mkdtemp(prefix="mixar_backfill_")
+            jpg = os.path.join(work_dir, f"{i:05d}.jpg")
+            with open(jpg, "wb") as fh:
+                fh.write(data)
+            entries.append({
+                "blend_str": item["blend_str"], "name": item["name"], "jpg": jpg,
+            })
+        preview_worker.start_backfill(entries)
+    except Exception as e:  # noqa: BLE001 — thumbnails are a bonus, never a blocker
+        logger.warning("[Asset Training] Thumbnail backfill skipped: %s", e)
+
+
 def extract_image_bytes(img):
     """Extract JPEG bytes from a Blender image (packed fast path)."""
     if img.packed_file and img.packed_file.data:

@@ -84,11 +84,9 @@ def handle_render_worker(op, context, state):
     failures = op._worker_failures + worker.failures
     reused = sum(1 for r in worker.ok_results
                  if (r.get("info") or {}).get("reused_preview"))
-    if reused:
-        state.prepare_note = (
-            (state.prepare_note + " · " if state.prepare_note else "")
-            + f"{reused} thumbnails reused (not re-rendered)"
-        )
+    # Thumbnail backfill for worker-rendered assets already happened INSIDE
+    # the worker (before done.marker) — nothing to launch here.
     preview_worker.cleanup(worker)
     op._worker = None
-    return op._renders_complete(context, state, collected, failures)
+    return op._renders_complete(context, state, collected, failures,
+                                reused=reused)

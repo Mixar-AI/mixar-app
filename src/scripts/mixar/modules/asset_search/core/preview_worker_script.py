@@ -24,6 +24,7 @@ asset_search/utils/preview_render.py — keep the two in sync.
 import json
 import os
 import sys
+import time
 from math import cos, radians, sin, tan
 
 import bpy
@@ -269,18 +270,95 @@ def _process_item(scene, cam, item, out_path):
                 _remove_appended(collections=[coll])
 
 
+# ----------------------------------------------------------------------- #
+# Thumbnail backfill — write renders back as the assets' previews
+# ----------------------------------------------------------------------- #
+
+def _touch(path):
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(str(time.time()))
+
+
+def _apply_preview_from_jpg(datablock, jpg_path):
+    """Load a JPEG and set it as ``datablock``'s embedded preview."""
+    import numpy as np
+    img = bpy.data.images.load(jpg_path)
+    try:
+        w, h = img.size
+        if not (w and h):
+            return False
+        buf = np.empty(w * h * 4, dtype=np.float32)
+        img.pixels.foreach_get(buf)
+        preview = datablock.preview_ensure()
+        preview.image_size = (w, h)
+        preview.image_pixels_float.foreach_set(buf)
+        return True
+    finally:
+        bpy.data.images.remove(img)
+
+
+def _backfill_previews(entries, heartbeat_path):
+    """Write rendered thumbnails back into their source .blend files.
+
+    Assets that had NO usable embedded preview were rendered this run — save
+    that render as their preview so they show a real thumbnail in the asset
+    browser and the NEXT training run takes the fast reuse path. Groups by
+    .blend (one open + save per file); Blender's save writes via a temp file,
+    so a killed worker can't corrupt a library.
+    """
+    by_blend = {}
+    for e in entries:
+        by_blend.setdefault(e["blend_str"], []).append(e)
+
+    for blend_path, blend_entries in by_blend.items():
+        _touch(heartbeat_path)  # keep the parent's stall watchdog fed
+        try:
+            bpy.ops.wm.open_mainfile(filepath=blend_path, load_ui=False)
+        except Exception as exc:  # noqa: BLE001 — skip unopenable files
+            print(f"[backfill] cannot open {blend_path}: {exc}")
+            continue
+        changed = False
+        for e in blend_entries:
+            datablock = (bpy.data.objects.get(e["name"])
+                         or bpy.data.collections.get(e["name"]))
+            if datablock is None or not os.path.isfile(e["jpg"]):
+                continue
+            try:
+                if _apply_preview_from_jpg(datablock, e["jpg"]):
+                    changed = True
+            except Exception as exc:  # noqa: BLE001
+                print(f"[backfill] preview failed for {e['name']}: {exc}")
+        if changed:
+            try:
+                bpy.ops.wm.save_mainfile(filepath=blend_path)
+                print(f"[backfill] saved previews into {blend_path}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"[backfill] cannot save {blend_path}: {exc}")
+
+
 def main():
     argv = sys.argv
     plan_path = argv[argv.index("--") + 1]
     with open(plan_path, "r", encoding="utf-8") as fh:
         plan = json.load(fh)
-    items = plan["items"]
     out_dir = plan["out_dir"]
     os.makedirs(out_dir, exist_ok=True)
-    results_path = os.path.join(out_dir, "results.jsonl")
+    heartbeat_path = os.path.join(out_dir, "heartbeat")
 
+    # Backfill-only mode: the in-process (small-plan) session rendered in the
+    # app and hands us jpgs to write back — no render pass, no parent polling.
+    if plan.get("backfill") is not None and "items" not in plan:
+        _backfill_previews(plan["backfill"], heartbeat_path)
+        if plan.get("cleanup_self"):
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
+        return
+
+    items = plan["items"]
+    results_path = os.path.join(out_dir, "results.jsonl")
     scene, cam = _stage_scene()
 
+    backfill_entries = []
     with open(results_path, "a", encoding="utf-8") as results:
         for i, item in enumerate(items):
             label = f"{item.get('name', '?')} ({item.get('library', '?')})"
@@ -289,11 +367,23 @@ def main():
             try:
                 info = _process_item(scene, cam, item, out_path)
                 entry.update(ok=True, file=f"{i:05d}.jpg", info=info)
+                if not info.get("reused_preview"):
+                    backfill_entries.append({
+                        "blend_str": item["blend_str"],
+                        "name": item["name"],
+                        "jpg": out_path,
+                    })
             except Exception as e:  # noqa: BLE001 — record and continue
                 entry["reason"] = str(e)[:150]
             results.write(json.dumps(entry) + "\n")
             results.flush()
             os.fsync(results.fileno())
+            _touch(heartbeat_path)
+
+    # Backfill BEFORE done.marker: the parent deletes out_dir (our jpgs)
+    # right after it sees done. The heartbeat keeps its watchdog satisfied.
+    if backfill_entries:
+        _backfill_previews(backfill_entries, heartbeat_path)
 
     with open(os.path.join(out_dir, "done.marker"), "w", encoding="utf-8") as fh:
         fh.write("done")

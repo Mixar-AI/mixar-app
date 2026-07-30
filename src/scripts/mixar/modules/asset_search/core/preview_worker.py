@@ -46,6 +46,7 @@ class WorkerHandle:
         self.total = total
         self.results_path = os.path.join(work_dir, "results.jsonl")
         self.done_marker = os.path.join(work_dir, "done.marker")
+        self.heartbeat_path = os.path.join(work_dir, "heartbeat")
         self._offset = 0
         self.results = []          # every parsed line, in order
         self.last_activity = time.time()
@@ -122,6 +123,16 @@ def poll(handle):
     if new:
         handle.results.extend(new)
         handle.last_activity = time.time()
+    else:
+        # The thumbnail-backfill pass after the last result produces no new
+        # lines but touches the heartbeat file — count it as activity so the
+        # stall watchdog doesn't kill a working backfill.
+        try:
+            hb = os.path.getmtime(handle.heartbeat_path)
+            if hb > handle.last_activity:
+                handle.last_activity = hb
+        except OSError:
+            pass
 
     exited = handle.proc.poll() is not None
     done = os.path.exists(handle.done_marker) or (
@@ -183,6 +194,45 @@ def cleanup(handle):
         shutil.rmtree(handle.work_dir, ignore_errors=True)
     except Exception:
         pass
+
+
+def start_backfill(entries):
+    """Fire-and-forget worker that writes rendered thumbnails back into their
+    source .blend files (backfill-only mode; the worker deletes its own work
+    dir when finished). Used after IN-PROCESS renders — worker-run renders
+    backfill inside the worker itself.
+
+    ``entries``: [{"blend_str", "name", "jpg"}] — jpg paths must live inside
+    the plan's out_dir (the caller writes them there) so cleanup_self removes
+    everything.
+    """
+    if not entries:
+        return
+    try:
+        from mixar.modules.asset_search.core import preview_worker_script
+        script_path = os.path.abspath(preview_worker_script.__file__)
+        if script_path.endswith((".pyc", ".pyo")):
+            script_path = script_path[:-1]
+
+        work_dir = os.path.dirname(entries[0]["jpg"])
+        plan_path = os.path.join(work_dir, "plan.json")
+        with open(plan_path, "w", encoding="utf-8") as fh:
+            json.dump({"backfill": entries, "out_dir": work_dir,
+                       "cleanup_self": True}, fh)
+
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = subprocess.CREATE_NO_WINDOW
+        subprocess.Popen(
+            [bpy.app.binary_path, "-b", "--factory-startup",
+             "--python", script_path, "--", plan_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=creationflags,
+        )
+        logger.info("[PreviewWorker] Backfill launched for %d thumbnails",
+                    len(entries))
+    except Exception as e:  # noqa: BLE001 — backfill is best-effort
+        logger.warning("[PreviewWorker] Could not start backfill: %s", e)
 
 
 def worker_exit_summary(handle):

@@ -148,6 +148,11 @@ class RenderSession:
         self.failures = []
         self.current_label = ""
         self.preview_reused = 0  # thumbnails taken from the .blend, not rendered
+        # Items we RENDERED because their .blend had no usable thumbnail —
+        # candidates for writing the render back as the asset's preview
+        # (kept separate from `collected`: absolute blend paths must never
+        # ride the metadata uploaded to the server).
+        self.rendered_items = []  # {blend_str, name, image_name}
         self._rig = None
 
     # -- lifecycle -------------------------------------------------------
@@ -220,6 +225,7 @@ class RenderSession:
             img = image_from_preview(obj, img_name)
             if img is not None:
                 self.preview_reused += 1
+                info['reused_preview'] = True
                 remove_objects([obj])
             else:
                 scene.collection.objects.link(obj)
@@ -238,6 +244,7 @@ class RenderSession:
             img = image_from_preview(coll, img_name)
             if img is not None:
                 self.preview_reused += 1
+                info['reused_preview'] = True
                 remove_collection(coll)
             else:
                 scene.collection.children.link(coll)
@@ -256,5 +263,11 @@ class RenderSession:
         if img:
             info['image_name'] = img_name
             self.collected.append(info)
+            if not info.get('reused_preview'):
+                self.rendered_items.append({
+                    'blend_str': item['blend_str'],
+                    'name': item['name'],
+                    'image_name': img_name,
+                })
         else:
             self.failures.append((self.current_label, "render produced no image"))

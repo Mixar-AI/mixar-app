@@ -120,20 +120,12 @@ class MIXIE_OT_train_asset_model(Operator):
         if event.type != 'TIMER':
             return {"PASS_THROUGH"}
 
-        handlers = {
-            'SCANNING': self._handle_scanning,
-            'PREPARING': self._handle_preparing,
-            'RENDERING': self._handle_rendering,
-            'RENDER_WORKER': self._handle_render_worker,
-            'UPLOADING': self._handle_uploading,
-            'WAITING': self._handle_waiting,
-        }
         if self._phase == 'INIT':
             state.phase_text = "Scanning libraries…"
             self._phase = 'SCANNING'
             self._redraw(context)
             return {"RUNNING_MODAL"}
-        handler = handlers.get(self._phase)
+        handler = getattr(self, f"_handle_{self._phase.lower()}", None)
         return handler(context, state) if handler else {"RUNNING_MODAL"}
 
     # ------------------------------------------------------------------ #
@@ -289,19 +281,22 @@ class MIXIE_OT_train_asset_model(Operator):
             return {"RUNNING_MODAL"}
 
         session.finish()
-        if session.preview_reused:
-            state.prepare_note = (
-                (state.prepare_note + " · " if state.prepare_note else "")
-                + f"{session.preview_reused} thumbnails reused (not re-rendered)"
+        # Rendered because no thumbnail existed -> write the render back as
+        # the asset's thumbnail (fire-and-forget worker; never blocks).
+        if session.rendered_items:
+            from mixar.modules.asset_search.core.train_support import (
+                launch_thumbnail_backfill,
             )
+            launch_thumbnail_backfill(session.rendered_items)
         return self._renders_complete(context, state, session.collected,
-                                      session.failures)
+                                      session.failures,
+                                      reused=session.preview_reused)
 
     def _handle_render_worker(self, context, state):
         from .asset_train_worker_phase import handle_render_worker
         return handle_render_worker(self, context, state)
 
-    def _renders_complete(self, context, state, collected, failures):
+    def _renders_complete(self, context, state, collected, failures, reused=0):
         from .asset_inspect_ops import clear_render_filter, set_collected_asset_data
 
         set_collected_asset_data(collected)
@@ -309,6 +304,11 @@ class MIXIE_OT_train_asset_model(Operator):
         set_failures(state, failures)
         state.current_item = ""
         state.eta_text = ""
+        if reused:
+            state.prepare_note = (
+                (state.prepare_note + " · " if state.prepare_note else "")
+                + f"{reused} thumbnails reused (not re-rendered)"
+            )
 
         if not collected and self._train_mode == "full":
             self._finish(context, success=False,
