@@ -240,6 +240,17 @@ def _draw_image_to_3d_basic(layout, context):
             remove_op="mixie.image_to_3d_remove_image",
         )
 
+    # --- Turnaround sheet -> per-view crops (multi-view models only) ---
+    # Offline fallback path. There is no longer a hardcoded slug list behind
+    # this: model_accepts_multi_view() reads the catalog's supports_multi_view
+    # flag and returns False when the catalog has not loaded, so this section
+    # simply renders nothing offline — which is correct, since the job could
+    # not be submitted then either.
+    from .turnaround_drawer import draw_detect_views_section
+    draw_section_separator(layout)
+    draw_detect_views_section(
+        layout, context, "model_3d", getattr(tab, "model", ""))
+
     draw_section_separator(layout)
 
     # --- Settings ---

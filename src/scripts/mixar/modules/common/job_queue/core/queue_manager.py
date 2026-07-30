@@ -14,11 +14,10 @@ All pending jobs are submitted immediately (the backend handles concurrency
 and queue limits). Once submitted, jobs wait for backend ``job.update`` pushes
 over the agent WebSocket; terminal success reconciles full result data via
 ``job.sync`` on that same socket. Download runs on a daemon thread that
-schedules the import callback back on the main thread.
+schedules the import callback back on the main thread — that half of the
+lifecycle lives in ``queue_download.DownloadMixin``.
 """
 
-import os
-import threading
 import time
 
 import bpy
@@ -30,19 +29,19 @@ from mixar.modules.common.api.exceptions import (
     TimeoutError as APITimeoutError,
 )
 from .model_io import (
-    download_file,
     get_poll_interval,
-    import_file,
     redraw_3d_views,
 )
 
 from ..constants import (
+    DOWNLOAD_WATCHDOG_DEADLINE_S,
     LOG_PREFIX,
     MAX_CONSECUTIVE_POLL_ERRORS,
     MAX_POLL_DURATION,
 )
 from .error_helpers import classify_error
 from .job import FAILED_BACKEND_STATUSES, Job, JobState, RUNNING_STATES, TERMINAL_STATES
+from .queue_download import DownloadMixin
 
 logger = get_logger(__name__)
 
@@ -62,6 +61,12 @@ _BACKEND_SYNC_STATES = frozenset(
         JobState.PAUSED_AUTH,
     }
 )
+# States that must keep the watchdog ticking. RUNNING_DOWNLOAD is here but
+# NOT in _BACKEND_SYNC_STATES: there is nothing left to reconcile with the
+# backend (the job is already DONE there), yet the watchdog is still the only
+# recurring tick that can fail a download whose worker thread died. Without
+# this the watchdog unregistered itself the instant a job began downloading.
+_WATCHDOG_STATES = _BACKEND_SYNC_STATES | {JobState.RUNNING_DOWNLOAD}
 
 
 def get_queue(feature_key: str) -> "FeatureQueue":
@@ -249,6 +254,9 @@ def _ensure_sync_watchdog() -> None:
         # ``job.update`` ever arrives and the job would sit in RUNNING_POLL
         # forever. The watchdog is the only recurring tick that can fail it.
         now = time.time()
+        # download_started_at is monotonic (like Job.created_at); poll_start_time
+        # is epoch. Two clocks, so read both rather than mixing them.
+        now_mono = time.monotonic()
         for queue in all_queues():
             for job in queue.snapshot():
                 if (
@@ -257,15 +265,21 @@ def _ensure_sync_watchdog() -> None:
                     and now - job.poll_start_time > MAX_POLL_DURATION
                 ):
                     queue._fail_timed_out(job)
-        needs_backend_sync = any(
-            job.state in _BACKEND_SYNC_STATES
-            for queue in all_queues()
-            for job in queue.snapshot()
-        )
-        if not needs_backend_sync:
+                elif (
+                    job.state == JobState.RUNNING_DOWNLOAD
+                    and job.download_started_at > 0
+                    and now_mono - job.download_started_at
+                    > DOWNLOAD_WATCHDOG_DEADLINE_S
+                ):
+                    queue._fail_timed_out(job)
+        states = [
+            job.state for queue in all_queues() for job in queue.snapshot()
+        ]
+        if not any(state in _WATCHDOG_STATES for state in states):
             _sync_watchdog_registered = False
             return None
-        _request_backend_job_sync()
+        if any(state in _BACKEND_SYNC_STATES for state in states):
+            _request_backend_job_sync()
         return _SYNC_WATCHDOG_INTERVAL
 
     _sync_watchdog_registered = True
@@ -277,8 +291,12 @@ def _ensure_sync_watchdog() -> None:
 # ---------------------------------------------------------------------------
 
 
-class FeatureQueue:
-    """Owner of a feature's in-flight + pending + terminal jobs."""
+class FeatureQueue(DownloadMixin):
+    """Owner of a feature's in-flight + pending + terminal jobs.
+
+    The RUNNING_DOWNLOAD → SUCCESS/FAILED half of the lifecycle lives in
+    ``DownloadMixin`` (``queue_download.py``) — same class, separate file.
+    """
 
     def __init__(self, feature_key: str):
         self.feature_key = feature_key
@@ -715,14 +733,33 @@ class FeatureQueue:
             return
 
     def _fail_timed_out(self, job: Job) -> None:
-        """Fail a job that exceeded MAX_POLL_DURATION without a terminal push."""
-        if job.state != JobState.RUNNING_POLL:
+        """Fail a job stranded past its phase deadline.
+
+        Two phases, two deadlines. Previously this hard-returned on anything
+        but RUNNING_POLL, which is why a wedged download was unbounded: the
+        poll phase was guarded and everything after it was not.
+        """
+        if job.state == JobState.RUNNING_POLL:
+            # No terminal push arrived within MAX_POLL_DURATION.
+            if job.backend_job_id:
+                self._cancel_on_backend(job.backend_job_id)
+            job.error = (
+                f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
+            )
+            job.user_message = "Generation timed out — please try again"
+        elif job.state == JobState.RUNNING_DOWNLOAD:
+            # The worker thread should have failed itself long before this;
+            # reaching here means it died without registering either callback.
+            # Do NOT cancel on the backend — the generation already succeeded
+            # and the user paid for it; only the transfer is lost.
+            job.error = (
+                "Download did not finish within "
+                f"{int(DOWNLOAD_WATCHDOG_DEADLINE_S // 60)} minutes"
+            )
+            job.user_message = "Download timed out — please retry"
+        else:
             return
-        if job.backend_job_id:
-            self._cancel_on_backend(job.backend_job_id)
         job.state = JobState.FAILED
-        job.error = f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
-        job.user_message = "Generation timed out — please try again"
         self._notify()
         self._pump()
 
@@ -759,123 +796,6 @@ class FeatureQueue:
             job.user_message = classify_error(error) or "Generation failed — please retry"
             self._notify()
             self._pump()
-
-    # ------------------------------------------------------------------ #
-    # Download / import
-    # ------------------------------------------------------------------ #
-
-    def _finish_custom_success(self, job: Job, object_names=""):
-        if job.state == JobState.CANCELLED:
-            self._pump()
-            return None
-        job.imported_object_names = object_names
-        job.state = JobState.SUCCESS
-        self._notify()
-        self._pump()
-        return None
-
-    def _begin_download(self, job: Job, result_files: list) -> None:
-        # Hook: let the job handle non-standard results (images, textures, etc.)
-        def _custom_done(names=""):
-            return self._finish_custom_success(job, names)
-
-        def _custom_error(msg):
-            return self._finish_failed(job, msg)
-
-        if job.handle_result(result_files, _custom_done, _custom_error):
-            return  # Job takes responsibility
-
-        # Pick best file (GLB > OBJ > FBX)
-        preferred_order = ["GLB", "OBJ", "FBX"]
-        chosen = None
-        for pref in preferred_order:
-            for rf in result_files or []:
-                if rf.get("type", "").upper() == pref and rf.get("url"):
-                    chosen = rf
-                    break
-            if chosen:
-                break
-        if not chosen and result_files:
-            chosen = result_files[0]
-
-        if not chosen or not chosen.get("url"):
-            job.state = JobState.FAILED
-            job.error = "No downloadable result file"
-            job.user_message = "No result available — please retry"
-            self._notify()
-            self._pump()
-            return
-
-        file_type = chosen.get("type", "GLB").upper()
-        url = chosen["url"]
-
-        def _bg_download():
-            try:
-                filepath = download_file(url, file_type)
-            except Exception as e:
-                logger.error(
-                    "%s download failed for %s: %s", LOG_PREFIX, job.id, e
-                )
-                # Capture error message now — Python 3 deletes `e` when
-                # the except block exits, so the closure can't reference it.
-                err_msg = f"Download failed: {e}"
-                friendly = classify_error(e) or "Download failed — please retry"
-
-                def _fail_cb():
-                    return self._finish_failed(job, err_msg, friendly)
-
-                bpy.app.timers.register(_fail_cb, first_interval=0.0)
-                return
-
-            def _import_cb():
-                return self._finish_import(job, filepath, file_type)
-
-            bpy.app.timers.register(_import_cb, first_interval=0.0)
-
-        threading.Thread(target=_bg_download, daemon=True).start()
-
-    def _finish_import(self, job: Job, filepath: str, file_type: str):
-        # Cancelled mid-download: drop the file, free the slot.
-        if job.state == JobState.CANCELLED:
-            try:
-                os.remove(filepath)
-            except OSError:
-                pass
-            self._pump()
-            return None
-
-        try:
-            obj_names = import_file(
-                filepath, file_type, getattr(job, "import_options", None),
-            )
-            job.on_imported(obj_names)
-            job.state = JobState.SUCCESS
-        except Exception as e:
-            job.state = JobState.FAILED
-            job.error = f"Import failed: {e}"
-            job.user_message = "Failed to import the generated model"
-            # Don't leave the downloaded temp file behind — repeated failed
-            # imports would otherwise accumulate multi-MB files in tempdir.
-            try:
-                os.remove(filepath)
-            except OSError:
-                pass
-
-        self._notify()
-        self._pump()
-        return None  # one-shot
-
-    def _finish_failed(self, job: Job, message: str, user_message: str = ""):
-        if job.state == JobState.CANCELLED:
-            self._pump()
-            return None
-        job.state = JobState.FAILED
-        job.error = message
-        if user_message:
-            job.user_message = user_message
-        self._notify()
-        self._pump()
-        return None  # one-shot
 
     # ------------------------------------------------------------------ #
     # Auth pause

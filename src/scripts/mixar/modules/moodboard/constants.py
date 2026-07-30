@@ -15,7 +15,59 @@ Centralized configuration values for the moodboard module.
 
 SCENE_GEN_CAPABILITY_KEY = "scene_gen"
 SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
-SCENE_GEN_MODEL = "scene_gen_v1"
+# NOTE: the model slug is deliberately NOT a constant here. Model rows are
+# server-owned and change without a client release, so the submit path reads
+# the service's default from the generation catalog
+# (``generation_params.catalog_default_model``) and aborts when the catalog
+# cannot answer.
+
+# ============================================================================
+# TURNAROUND / MULTI-VIEW DETECTION
+# ============================================================================
+
+# The multi-view set holds COMPANIONS ONLY. The main image is the Model Gen
+# tab's Input Image and is never a member of the group — so there is no
+# 'main', 'front' or 'none' label here. The seven ids below are exactly the
+# vendor's ``ViewType`` enum (backend modules/hunyuan/schemas/requests.py);
+# Hunyuan Pro takes 1 frontal image + these 7 angles, 8 images maximum.
+TURNAROUND_VIEW_TYPES = (
+    ('left', "Left", "Left side view"),
+    ('right', "Right", "Right side view"),
+    ('back', "Back", "Rear view"),
+    ('top', "Top", "Top-down view"),
+    ('bottom', "Bottom", "Bottom-up view"),
+    ('left_front', "Left Front", "Three-quarter view from the left"),
+    ('right_front', "Right Front", "Three-quarter view from the right"),
+)
+
+# Assignment order for "Add Selected" — the next unused angle is handed out
+# from this sequence, so the common left/right/back turnaround needs no
+# dropdown fiddling at all.
+TURNAROUND_VIEW_ORDER = tuple(item[0] for item in TURNAROUND_VIEW_TYPES)
+
+# Label a detached image falls back to. Meaningless on its own: membership is
+# ``turnaround_group != ""``, never the view type.
+TURNAROUND_VIEW_DEFAULT = TURNAROUND_VIEW_ORDER[0]
+
+# Vendor cap: 1 frontal + 7 angles. The Input Image is the frontal one, so the
+# group itself tops out at seven companions.
+TURNAROUND_MAX_COMPANIONS = len(TURNAROUND_VIEW_ORDER)
+
+
+# ---------------------------------------------------------------------------
+# detect-views response vocabulary (NOT view_type labels)
+# ---------------------------------------------------------------------------
+
+# ``panels[0].view_type`` is always this: the sheet's front orthographic,
+# falling back to its hero render when the sheet has no front. It becomes the
+# tab's Input Image — never a group member.
+DETECT_PANEL_MAIN = 'main'
+
+# Returned only when the sheet has BOTH a front and a hero render. No vendor
+# ``ViewType`` describes it, so it is not a companion either: it lands on the
+# moodboard untagged next to the main, as an alternative Input Image for
+# stylised sheets that reconstruct badly from the flat front.
+DETECT_PANEL_HERO = 'hero'
 
 # ============================================================================
 # IMAGE EDITING CONSTANTS
@@ -82,17 +134,17 @@ MOODBOARD_SELECTED_INDEX_DEFAULT = -1
 MOODBOARD_PROMPT_DEFAULT = ""
 MOODBOARD_GLOBAL_CONTEXT_DEFAULT = ""
 MOODBOARD_USE_STYLE_CONTEXT_DEFAULT = True
-MOODBOARD_GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash-image'
 MOODBOARD_ASPECT_RATIO_DEFAULT = '16:9'
 
 # ============================================================================
 # ENUM VALUES
 # ============================================================================
 
-GEMINI_MODELS = [
-    ('gemini-2.5-flash-image', "Flash (Fast)", "Faster generation, 1024px resolution"),
-    ('gemini-3-pro-image-preview', "Pro (Quality)", "Higher quality, up to 4K resolution")
-]
+# NOTE: there is deliberately no GEMINI_MODELS list here. The image_gen models
+# are catalog rows served under the catalog's OWN slugs ('pro', 'flash-3-1'),
+# not raw vendor ids — keeping a second vocabulary client-side is how the two
+# drifted apart. The Model dropdown builds its items from
+# ``generation_catalog_cache.get_model_enum_items('image_gen')``.
 
 ASPECT_RATIOS = [
     ('1:1', "1:1 Square", "Square aspect ratio"),

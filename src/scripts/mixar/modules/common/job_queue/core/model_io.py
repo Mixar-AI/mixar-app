@@ -13,9 +13,12 @@ cannot do):
 - redraw_3d_views: force viewport redraws
 - get_total_face_count: sum selected mesh faces
 - export_selected_mesh: export selection to bytes for upload
-- download_file: download a result URL to a temp file (background-safe)
 - import_file: import a downloaded file into Blender (main thread only)
 - post_import_rename_and_setup: rename/origin/UV cleanup after import
+
+``download_file`` used to live here; it now lives in ``downloader.py``
+(deadline / verification / retry policy earned its own file) and is
+re-exported below so existing import sites keep working.
 
 Deliberately imports nothing from the queue core so ``queue_manager``
 can depend on it without cycles (``helpers.py`` is the image-side
@@ -24,12 +27,12 @@ counterpart but sits above ``queue_manager``).
 
 import os
 import tempfile
-import urllib.request
 
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.constants import HUNYUAN_TIMEOUT
+
+from .downloader import download_file  # noqa: F401  (re-export)
 
 logger = get_logger(__name__)
 
@@ -147,36 +150,8 @@ def new_object_names(before):
 
 
 # ============================================================================
-# DOWNLOAD & IMPORT
+# IMPORT
 # ============================================================================
-
-def download_file(url, file_type="GLB"):
-    """Download a URL to a temp file. Safe to call from a background thread.
-
-    Uses ``urllib.request.urlopen`` with an explicit timeout so the call
-    never blocks indefinitely.
-
-    Returns:
-        The path to the downloaded temp file.
-    """
-    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
-    ext = ext_map.get(file_type.upper(), ".glb")
-    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_result_")
-    os.close(fd)
-
-    response = urllib.request.urlopen(url, timeout=HUNYUAN_TIMEOUT)
-    try:
-        with open(filepath, "wb") as out:
-            while True:
-                chunk = response.read(8192)
-                if not chunk:
-                    break
-                out.write(chunk)
-    finally:
-        response.close()
-
-    return filepath
-
 
 def import_file(filepath, file_type="GLB", import_options=None):
     """Import a local file into Blender. Must run on the main thread.

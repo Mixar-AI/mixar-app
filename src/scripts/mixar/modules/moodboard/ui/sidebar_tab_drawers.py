@@ -213,6 +213,13 @@ def _draw_hunyuan_pro(layout, pro, context=None):
 
     draw_section_separator(layout)
 
+    # This is the catalog-not-loaded fallback (offline / pre-auth), and it
+    # submits through mixie.hunyuan_generate -> _submit_pro, which reads
+    # pro.multi_views directly and knows nothing about turnaround groups. So
+    # this picker stays: the merged Multiple Views section that replaced it on
+    # the catalog-driven Model Gen tab would render here as a control that
+    # silently does nothing. Both are removable once _submit_pro resolves
+    # turnaround groups.
     col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
     for i, mv in enumerate(pro.multi_views):
         row = col.row(align=True)

@@ -333,6 +333,24 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         update=_on_model_changed,
     )
 
+    # Which multi-view (turnaround) set the Multiple Views panel is showing
+    # and growing. UI STATE ONLY — it does not decide what a generation
+    # submits. A set is bound to exactly one image, the moodboard item
+    # carrying `turnaround_main_group`, and applies only when that image is
+    # the one being converted (see moodboard.core.turnaround_views
+    # .group_id_for_main_image). Reading the set off this tab instead is what
+    # let a stale set be attached to an unrelated image on a later turn.
+    # Cleared by moodboard.core.turnaround_views when the set empties.
+    turnaround_group: StringProperty(
+        name="Multi-View Set",
+        description=(
+            "Identifier of the multi-view set this tab is editing. Empty "
+            "when the tab has no multi-view set. The set is only submitted "
+            "when the image being generated from is the set's own input image"
+        ),
+        default="",
+    )
+
 
 class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
     """Properties for Segment to 3D tab"""

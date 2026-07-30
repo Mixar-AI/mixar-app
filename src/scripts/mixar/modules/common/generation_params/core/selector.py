@@ -137,6 +137,30 @@ def resolve_model_slug(
     return fallback
 
 
+def catalog_default_model(service_key: str) -> Optional[str]:
+    """The catalog's default model slug for *service_key*, or ``None``.
+
+    ``None`` means the catalog cannot answer — not loaded yet, the service
+    is disabled, or it has no enabled model rows. Callers MUST abort the
+    submit in that case rather than fall back to a literal slug: the model
+    row set is server-owned and changes without a client release, so a
+    guessed slug spends a queue slot (and the user's attention) on a 422.
+
+    Unlike :func:`resolve_model_slug` this takes no *fallback* — it is for
+    submit paths that have no user-facing model dropdown to resolve from,
+    and therefore nothing legitimate to fall back to.
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_default_model_slug,
+        )
+
+        slug = get_default_model_slug(service_key) or ""
+        return slug if slug and slug not in PLACEHOLDER_IDS else None
+    except Exception:
+        return None
+
+
 def model_supports_multi_view(service_key: str, model_slug: str) -> bool:
     """True when the selected catalog model accepts multi-view images.
 
