@@ -75,6 +75,41 @@ BUILD_ENVIRONMENT = "$MIXAR_ENV"
 DEV_BYPASS_ALLOWED = $BUILD_ENV_DEV_BYPASS
 EOF
 
+# Drop cache entries that resolved into a different SDK than the one we build
+# against. CMake never re-runs find_library() for an already-cached variable,
+# so a cache configured without SDKROOT keeps its Command Line Tools framework
+# paths forever. Those live outside -isysroot, so CMake passes them as explicit
+# -F paths, which demotes their headers from system to user headers and lets
+# -Werror=unguarded-availability-new fail the Cycles Metal build. Purging by
+# value re-resolves them on this configure; the deployment-target gap that
+# actually trips the warning is unchanged.
+# Matches on whole SDK paths rather than a value prefix: entries such as
+# *_LIB_DEPENDS legitimately list several correct SDK paths mid-value, and a
+# prefix test flags every one of them on an already-healthy cache.
+CMAKE_CACHE_FILE="$BUILD_ENV_DIR/CMakeCache.txt"
+if [[ "$PLATFORM" == "macOS" && -n "${SDKROOT:-}" && -f "$CMAKE_CACHE_FILE" ]]; then
+    STALE_SDK_VARS=()
+    while read -r cache_var; do
+        [[ -n "$cache_var" ]] && STALE_SDK_VARS+=("-U$cache_var")
+    done < <(
+        grep -E '^[A-Za-z_0-9]+:[A-Z]+=' "$CMAKE_CACHE_FILE" \
+            | awk -v sdk="$SDKROOT" '
+                {
+                    var = $0; sub(/:.*/, "", var); rest = $0; stale = 0
+                    while (match(rest, /\/[^ ";=[\]]*SDKs\/MacOSX[^ ";=[\]\/]*\.sdk/)) {
+                        if (substr(rest, RSTART, RLENGTH) != sdk) stale = 1
+                        rest = substr(rest, RSTART + RLENGTH)
+                    }
+                    if (stale) print var
+                }' \
+            | sort -u
+    )
+    if (( ${#STALE_SDK_VARS[@]} > 0 )); then
+        echo "Purging ${#STALE_SDK_VARS[@]} CMake cache entries resolved outside $SDKROOT"
+        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${STALE_SDK_VARS[@]}" >/dev/null
+    fi
+fi
+
 # Configure with CMake (all platform logic handled in settings.sh)
 echo "Configuring Mixar build - Blender: $BLENDER_BUILD_ENV, Mixar Environment: $MIXAR_ENV for $PLATFORM..."
 cmake -C "$CMAKE_DIR/mixar_overrides.cmake" \
