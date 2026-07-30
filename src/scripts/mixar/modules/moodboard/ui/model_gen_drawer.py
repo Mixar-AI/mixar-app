@@ -18,13 +18,23 @@ from .sidebar_ui_helpers import (
     draw_image_info_card,
 )
 
-# Per-mode generate-footer routing: service key -> (feature_key, scene flag).
+# Per-mode generate-footer routing:
+#   service key -> (feature_key, scene flag, operator).
 # Feature keys reuse the existing FeatureQueue constants
 # (job_queue/constants.py) so each mode lands in its established queue.
+# All the image-to-3D modes share mixie.model_gen_generate; smart segmentation
+# is a different pipeline (it segments as well as models) with its own enqueue
+# helper and import hook, so it carries its own operator.
+_MODEL_GEN_GENERATE = "mixie.model_gen_generate"
 _MODEL_GEN_FOOTER = {
-    "model_3d": ("model_3d", "mixie_image_to_3d_is_generating"),
-    "image_to_3d": ("image_to_3d_pro", "mixie_image_to_3d_is_generating"),
-    "hunyuan_rapid": ("hunyuan_rapid", "mixie_hunyuan_rapid_is_generating"),
+    "model_3d": ("model_3d", "mixie_image_to_3d_is_generating",
+                 _MODEL_GEN_GENERATE),
+    "image_to_3d": ("image_to_3d_pro", "mixie_image_to_3d_is_generating",
+                    _MODEL_GEN_GENERATE),
+    "hunyuan_rapid": ("hunyuan_rapid", "mixie_hunyuan_rapid_is_generating",
+                      _MODEL_GEN_GENERATE),
+    "tripo_smart_segment": ("smart_segment", "mixie_smart_segment_is_generating",
+                            "mixie.smart_segment_generate"),
 }
 
 
@@ -89,9 +99,9 @@ def _draw_model_gen(layout, context):
     )
 
     # --- Generate (routed per mode) ---
-    feature_key, gen_flag = _MODEL_GEN_FOOTER.get(
+    feature_key, gen_flag, generate_op = _MODEL_GEN_FOOTER.get(
         service_key, _MODEL_GEN_FOOTER["model_3d"])
     draw_generate_footer(
-        layout, context, "mixie.model_gen_generate", "image_to_3d",
+        layout, context, generate_op, "image_to_3d",
         gen_flag_attr=gen_flag, feature_key=feature_key,
     )

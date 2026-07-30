@@ -27,6 +27,7 @@ _PROGRESS_CAP = 0.75         # Max progress during slow phase
 # All tab prefixes that support progress
 _ALL_PREFIXES = ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
                  'segment_to_3d', 'mesh_segment', 'retopology',
+                 'tripo_segment', 'smart_segment',
                  'scene_gen_hp', 'scene_gen_lp')
 
 # Non-standard scene flag names (default pattern: mixie_{prefix}_is_generating)

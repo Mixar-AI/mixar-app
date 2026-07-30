@@ -281,6 +281,18 @@ class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
         maxlen=256
     )
 
+    # Tripo mesh/segment v2 only. A colour-coded mask that drives the split;
+    # supplying it makes Tripo IGNORE granularity and split_by_connectivity,
+    # which the drawer says out loud so the greyed-out params aren't confusing.
+    # Client-side pointer rather than a catalog param because it is an image
+    # input, not a scalar.
+    ref_image: PointerProperty(
+        name="Reference Mask",
+        description="Optional colour-coded segmentation mask guiding the "
+                    "split. Overrides Granularity and Split by Connectivity",
+        type=bpy.types.Image,
+    )
+
     is_processing: BoolProperty(
         name="Is Processing",
         description="Whether segmentation is currently in progress",

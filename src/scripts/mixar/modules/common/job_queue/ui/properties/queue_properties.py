@@ -190,15 +190,21 @@ def _attach_listeners() -> None:
         FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP,
         FEATURE_SCENE_RECON,
+        FEATURE_SMART_SEGMENT,
+        FEATURE_TRIPO_SEGMENT,
     )
 
+    # NOTE: a queue missing from this tuple still accepts and runs jobs — the
+    # generate footer reads it directly and will happily report "1 job in
+    # queue" — but _sync_mirror is never attached, so the job never appears in
+    # the Queue panel. Any new FEATURE_* queue must be added here too.
     _FEATURES = (
         FEATURE_IMAGE_TO_3D_PRO, FEATURE_RETOPOLOGY, FEATURE_SCENE_GEN_HP,
         FEATURE_SCENE_GEN_LP, FEATURE_HUNYUAN_RAPID, FEATURE_HUNYUAN_PART,
         FEATURE_HUNYUAN_UV, FEATURE_MODEL_3D, FEATURE_IMAGEGEN,
         FEATURE_LOOKDEV, FEATURE_LOOKDEV360, FEATURE_MATGEN, FEATURE_BRUSH_GEN,
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
-        FEATURE_ANIMATE,
+        FEATURE_ANIMATE, FEATURE_TRIPO_SEGMENT, FEATURE_SMART_SEGMENT,
     )
     for feat in _FEATURES:
         try:
