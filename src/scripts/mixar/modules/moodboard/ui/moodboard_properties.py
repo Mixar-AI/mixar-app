@@ -32,6 +32,7 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_COLOR_DEFAULT, TEXTBOX_BACKGROUND_COLOR_DEFAULT,
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
+    TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
 )
 
 
@@ -186,6 +187,64 @@ class MixieMoodboardImage(PropertyGroup):
     chain_id: StringProperty(
         name="Chain ID",
         description="Pipeline chain ID linking label → image → HP mesh → LP mesh",
+        default="",
+    )
+
+    # --- Turnaround / multi-view sets ------------------------------------
+    # Populated by mixie.moodboard_detect_views when a single uploaded sheet
+    # is split into per-view crops by POST /model-3d/detect-views, or by
+    # mixie.moodboard_add_turnaround_view when the user builds a set by hand.
+    view_type: EnumProperty(
+        name="View",
+        description=(
+            "Camera angle this image shows. Only meaningful while the image "
+            "belongs to a multi-view set — it is sent alongside the tab's "
+            "input image as that angle"
+        ),
+        # Exactly the vendor's ViewType enum: seven companion angles, no
+        # 'main' / 'front' / 'none'. The main image is the tab's Input Image
+        # and never joins the set, so it needs no label. Kept STATIC rather
+        # than filtered per model: this is saved .blend data and a dynamic
+        # items= callback would remap or lose stored values when the model
+        # switches. 3.0's narrower angle set is enforced when views are
+        # assigned and again at payload build.
+        items=TURNAROUND_VIEW_TYPES,
+        default=TURNAROUND_VIEW_DEFAULT,
+    )
+    turnaround_group: StringProperty(
+        name="Turnaround Group",
+        description=(
+            "Shared identifier linking every companion view of one "
+            "multi-view set — crops detected from the same turnaround / "
+            "model sheet, plus any views added by hand. Empty for ordinary "
+            "images, including the set's own input image"
+        ),
+        default="",
+    )
+    turnaround_main_group: StringProperty(
+        name="Turnaround Main",
+        description=(
+            "Identifier of the multi-view set this image is the FRONTAL "
+            "(main) image of. This is the only thing that binds a set to an "
+            "image: a set is submitted alongside an image if, and only if, "
+            "that image carries the set's id here. Empty on companion views "
+            "and on every ordinary moodboard image — exactly one item per "
+            "set ever carries it"
+        ),
+        # Deliberately NOT turnaround_group: that property means "companion
+        # of", and group_items / eligible_selected_images / the vendor's
+        # 7-companion cap / the panel's view list all iterate on it. Putting
+        # the main image in the group would make it a companion of itself.
+        default="",
+    )
+    s3_key: StringProperty(
+        name="S3 Key",
+        description=(
+            "Durable backend object key for this image, returned by the "
+            "detect-views endpoint. Sent at submit time instead of "
+            "re-uploading the pixels. Empty for a hand-added view, which "
+            "carries its pixels inline instead"
+        ),
         default="",
     )
 

@@ -14,7 +14,11 @@ from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
 from .job import FAILED_BACKEND_STATUSES, Job
-from .helpers import download_images_to_moodboard, extract_image_urls
+from .helpers import (
+    download_images_to_moodboard,
+    extract_image_name,
+    extract_image_urls,
+)
 
 logger = get_logger(__name__)
 
@@ -125,6 +129,9 @@ class SyncImageJob(Job):
     base_name: str = ""  # agent-chosen image name (overrides name_prefix)
 
     _image_urls: List[str] = field(default_factory=list, repr=False)
+    # Backend-suggested display name (model-generated for Gemini image gen).
+    # Used only when no explicit base_name was provided.
+    _server_image_name: str = field(default="", repr=False)
 
     # ------------------------------------------------------------------ #
     # Job interface
@@ -152,6 +159,7 @@ class SyncImageJob(Job):
         result = inner.get("result") or {}
         if status == "DONE" and isinstance(result, dict):
             self._image_urls = extract_image_urls(result)
+            self._server_image_name = extract_image_name(result)
 
         if not self.backend_job_id and not self._image_urls:
             raise ValueError("Enqueue response missing job_id")
@@ -178,6 +186,7 @@ class SyncImageJob(Job):
             result = inner.get("result") or {}
             if isinstance(result, dict):
                 self._image_urls = extract_image_urls(result)
+                self._server_image_name = extract_image_name(result)
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
             self.error = inner.get("error", self.fail_message)
@@ -200,7 +209,7 @@ class SyncImageJob(Job):
             on_done=on_done,
             on_error=on_error,
             undo_message=self.undo_message,
-            base_name=self.base_name,
+            base_name=self.base_name or self._server_image_name,
         )
         return True
 

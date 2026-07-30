@@ -200,17 +200,31 @@ def show_batch_summary_popup(
 # ---------------------------------------------------------------------------
 
 
+def _unwrap_result_envelope(result: dict) -> dict:
+    """Peel the optional ``data``/``result`` wrapping some backend responses
+    carry, returning the dict that holds the generation payload fields."""
+    data = result
+    if "data" in data and isinstance(data["data"], dict):
+        data = data["data"]
+    if "result" in data and isinstance(data["result"], dict):
+        data = data["result"]
+    return data
+
+
+def extract_image_name(result: dict) -> str:
+    """Extract the backend-suggested/echoed ``image_name`` from a generation
+    result dict ("" when absent). Same envelope tolerance as
+    :func:`extract_image_urls` — the name sits next to ``images``."""
+    return str(_unwrap_result_envelope(result).get("image_name") or "").strip()
+
+
 def extract_image_urls(result: dict) -> list:
     """Extract image URLs from a generation result dict.
 
     Handles nested ``data.data.result`` envelopes and both list-of-dicts
     and list-of-strings image formats.
     """
-    data = result
-    if "data" in data and isinstance(data["data"], dict):
-        data = data["data"]
-    if "result" in data and isinstance(data["result"], dict):
-        data = data["result"]
+    data = _unwrap_result_envelope(result)
 
     images = []
     for img_item in data.get("images", []):
@@ -267,21 +281,32 @@ def download_images_to_moodboard(
         try:
             from mixar.modules.common.utils.image_utils import (
                 download_image_to_tempfile,
+                filename_from_url,
             )
 
             batch_started_at = time.time()
             downloaded_files = []
             for i, url in enumerate(urls):
                 try:
+                    s3_filename = filename_from_url(url)
                     if base_name:
-                        # Agent-chosen name. Blender auto-dedups collisions
+                        # Agent-chosen or backend-suggested name. Blender auto-dedups collisions
                         # (e.g. "dog" -> "dog.001"); index only when >1 image.
                         name = base_name if len(urls) == 1 else f"{base_name}_{i + 1}"
+                    elif s3_filename:
+                        # No suggested name — mirror the server-side S3 file
+                        # name (prompt-derived, unique per image) so outliner
+                        # name, filepath and S3 key stay aligned.
+                        name = os.path.splitext(s3_filename)[0]
                     else:
                         timestamp = int(time.time())
                         name = f"{name_prefix}_{timestamp}_{i}"
                     download_started_at = time.time()
-                    temp_path, byte_count = download_image_to_tempfile(url)
+                    # Keep the server-side (S3) file name on the temp file so
+                    # the packed datablock's filepath shows the same name.
+                    temp_path, byte_count = download_image_to_tempfile(
+                        url, filename=s3_filename,
+                    )
                     logger.debug(
                         "[Queue] image download completed job=%s index=%d bytes=%d duration=%.3fs",
                         job_id,
@@ -299,6 +324,7 @@ def download_images_to_moodboard(
                     return None
                 from mixar.modules.common.utils.image_utils import (
                     add_image_to_moodboard,
+                    cleanup_temp_image,
                     load_image_from_file,
                 )
 
@@ -306,7 +332,9 @@ def download_images_to_moodboard(
                 for temp_path, name, byte_count in downloaded_files:
                     load_started_at = time.time()
                     try:
-                        img = load_image_from_file(temp_path, name)
+                        img = load_image_from_file(
+                            temp_path, name, keep_filename=True,
+                        )
                         logger.debug(
                             "[Queue] image load completed job=%s image=%s bytes=%d duration=%.3fs total=%.3fs",
                             job_id,
@@ -319,10 +347,7 @@ def download_images_to_moodboard(
                     except Exception as e:
                         logger.error("Failed to load image into Blender: %s", e)
                     finally:
-                        try:
-                            os.unlink(temp_path)
-                        except OSError:
-                            pass
+                        cleanup_temp_image(temp_path)
 
                 if not loaded_images:
                     on_error("Failed to load generated images")

@@ -151,12 +151,23 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 self.report({"WARNING"}, "No input image available")
                 return {"CANCELLED"}
 
-        # Convert image to bytes
-        try:
-            image_bytes = compress_for_service(image, "image_to_3d")
-        except Exception as e:
-            self.report({"ERROR"}, f"Failed to process image: {e}")
+        # Turnaround sheets: the detect-views endpoint already split this
+        # image into per-view crops and staged them in S3, so submit ONE
+        # multi-view job forwarding those keys verbatim rather than
+        # re-uploading pixels. Anything else takes the single-image path
+        # below, unchanged.
+        turnaround_payload = self._turnaround_payload(scene, image, model_name)
+        if turnaround_payload is False:
             return {"CANCELLED"}
+
+        # Convert image to bytes
+        image_bytes = None
+        if not turnaround_payload:
+            try:
+                image_bytes = compress_for_service(image, "image_to_3d")
+            except Exception as e:
+                self.report({"ERROR"}, f"Failed to process image: {e}")
+                return {"CANCELLED"}
 
         # Get prompt (optional)
         if sidebar_tab:
@@ -174,7 +185,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
 
             job_label = image.name if image else model_name
             payload = {}
-            if image_bytes:
+            if turnaround_payload:
+                payload.update(turnaround_payload)
+            elif image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
                 payload["image_filename"] = "image.png"
             if prompt:
@@ -202,6 +215,36 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         mark_enqueued(FEATURE_MODEL_3D)
         self.report({"INFO"}, "Added to queue")
         return {"FINISHED"}
+
+    def _turnaround_payload(self, scene, image, model_name):
+        """Multi-view payload fragment for the set *image* is the main of.
+
+        The set is resolved from *image* — the vendor's single frontal image,
+        never a member of its own set — so both callers (sidebar Generate and
+        the direct agent invocation) get the same answer for the same image,
+        and an unrelated image never inherits a set left active on the tab.
+        Returns ``None`` when *image* owns no multi-view set (the existing
+        single-image path applies unchanged), ``False`` when the set is
+        unusable and the operator should cancel, else the fragment.
+        """
+        from mixar.modules.moodboard.core.turnaround_views import (
+            build_active_group_payload,
+        )
+
+        if image is None:
+            return None
+        try:
+            result = build_active_group_payload(
+                scene, image, "model_3d", model_name)
+        except ValueError as e:
+            self.report({"ERROR"}, str(e))
+            return False
+        if result is None:
+            return None
+        fragment, warnings = result
+        for warning in warnings:
+            self.report({"WARNING"}, warning)
+        return fragment
 
     def _execute_direct(self, context):
         """Handle direct invocation with explicit params (agent scripts)."""
@@ -249,12 +292,27 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be one of: {choices}")
             return {"CANCELLED"}
 
-        try:
-            image_bytes = compress_image_for_upload(img)
-        except Exception as e:
-            set_agent_gen_reason(context, f"Failed to convert image: {e}")
-            self.report({"ERROR"}, f"Failed to convert image: {e}")
+        # The agent operator is the path used by backend
+        # enqueue_generation("model_3d", ...). It must use the same active
+        # turnaround set as the sidebar path; previously it always compressed
+        # only ``img``, silently dropping every companion.
+        turnaround_payload = self._turnaround_payload(
+            context.scene, img, model_name)
+        if turnaround_payload is False:
+            set_agent_gen_reason(
+                context,
+                "The active multi-view set could not be submitted",
+            )
             return {"CANCELLED"}
+
+        image_bytes = None
+        if not turnaround_payload:
+            try:
+                image_bytes = compress_image_for_upload(img)
+            except Exception as e:
+                set_agent_gen_reason(context, f"Failed to convert image: {e}")
+                self.report({"ERROR"}, f"Failed to convert image: {e}")
+                return {"CANCELLED"}
 
         # Pass through only the operator properties the agent explicitly
         # set; the backend validates them against the model's catalog
@@ -271,14 +329,15 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if self.properties.is_property_set(name)
         }
 
-        payload = {
-            "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
-            "image_filename": "image.png",
-            # NOTE: the backend model_3d path reads payload["params"] — the
-            # old "parameters" key was silently ignored (schema defaults ran
-            # instead of the agent's explicit settings).
-            "params": parameters,
-        }
+        payload = dict(turnaround_payload or {})
+        if image_bytes:
+            payload.update({
+                "image_bytes_b64": _b64.b64encode(image_bytes).decode(),
+                "image_filename": "image.png",
+            })
+        # NOTE: the backend model_3d path reads payload["params"] — the old
+        # "parameters" key was silently ignored.
+        payload["params"] = parameters
         prompt = self.prompt.strip() if self.prompt else None
         if prompt:
             payload["prompt"] = prompt

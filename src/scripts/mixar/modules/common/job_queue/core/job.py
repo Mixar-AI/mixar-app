@@ -34,6 +34,29 @@ RUNNING_STATES = frozenset(
 
 FAILED_BACKEND_STATUSES = frozenset({"FAILED", "CANCELLED", "DLQ"})
 
+_MB = 1024 * 1024
+
+
+def download_substate_text(transferred: int, total: int, attempt: int = 0) -> str:
+    """Queue-row text for RUNNING_DOWNLOAD.
+
+    A fixed "Downloading…" made a stalled transfer indistinguishable from a
+    slow one — that ambiguity is the whole reason byte counts are here. A
+    number that keeps moving reads as slow; a frozen one reads as stuck.
+    Falls back to the transferred figure alone when the result host sent no
+    ``Content-Length``.
+    """
+    prefix = (
+        "Downloading…"
+        if attempt <= 1
+        else f"Retrying download… (attempt {attempt})"
+    )
+    if transferred <= 0:
+        return prefix
+    if total > 0:
+        return f"{prefix} {transferred / _MB:.1f} / {total / _MB:.1f} MB"
+    return f"{prefix} {transferred / _MB:.1f} MB"
+
 
 @dataclass
 class Job:
@@ -78,6 +101,13 @@ class Job:
     consecutive_poll_errors: int = 0
     backend_status: str = ""      # Raw status from backend (PENDING/SUBMITTED/POLLING/DONE/FAILED)
     queue_position: int = 0       # Position in backend queue (0 = not queued or unknown)
+    # Full ``result`` object from the DONE poll. ``_parse_standard_poll``
+    # returns only ``result_files`` (all any caller needed until segmentation),
+    # but adapters also send sibling keys — e.g. Tripo segmentation's
+    # ``part_names``, which the import hook uses to name the split objects.
+    # Keeping the whole dict here means a new result field never needs another
+    # signature change.
+    result_data: dict = field(default_factory=dict)
 
     # Submit retry/idempotency tracking. A local HTTP submit timeout is
     # ambiguous: the backend may still accept the request later.
@@ -86,6 +116,16 @@ class Job:
     max_submit_attempts: int = 3
     submit_retry_delay_s: float = 8.0
     _submit_retry_scheduled: bool = field(default=False, repr=False)
+
+    # Result download progress. Written by the background download thread
+    # (plain int/float assignment only — the thread must never touch bpy or
+    # call FeatureQueue._notify) and read by the main-thread mirror sync via
+    # substate_text(). ``download_started_at`` is time.monotonic, matching
+    # created_at, and is what the RUNNING_DOWNLOAD watchdog measures against.
+    download_bytes: int = 0
+    download_total_bytes: int = 0   # 0 = host sent no Content-Length
+    download_attempt: int = 0
+    download_started_at: float = 0.0
 
     # Result objects (populated by on_imported)
     imported_object_names: str = ""
@@ -230,6 +270,8 @@ class Job:
             return ("RUN", [])
         if status == "DONE":
             result = inner.get("result") or {}
+            if isinstance(result, dict):
+                self.result_data = result
             result_files = (
                 result.get("result_files", [])
                 if isinstance(result, dict)
@@ -271,7 +313,11 @@ class Job:
             # shows the job's running clock; a second one is confusing.
             return "Processing"
         if st == JobState.RUNNING_DOWNLOAD:
-            return "Downloading…"
+            return download_substate_text(
+                self.download_bytes,
+                self.download_total_bytes,
+                self.download_attempt,
+            )
         if st == JobState.SUCCESS:
             return f"Done: {self.imported_object_names}" if self.imported_object_names else "Done"
         if st == JobState.FAILED:

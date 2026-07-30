@@ -109,6 +109,37 @@ def get_current_version() -> str:
     return get_config().get("app_info", {}).get("version", "0.0.0")
 
 
+def get_runtime_version() -> Optional[str]:
+    """Version of the running binary, for reporting to the backend.
+
+    Prefers the compiled-in Mixar version (``bpy.app.version_string``, built
+    from ``MIXAR_VERSION`` in ``BKE_blender_version.h``) over the ``mixar.json``
+    value, which is served from a process-lifetime config cache and can go
+    stale. When ``version_string`` merely echoes Blender's own version tuple
+    (i.e. not a Mixar build — e.g. scripts running under stock Blender), falls
+    back to :func:`get_current_version`. Returns ``None`` when no real version
+    is known — callers must then omit the version rather than send a
+    placeholder.
+    """
+    version = ""
+    try:
+        import bpy
+
+        match = re.search(r"\d+\.\d+\.\d+", bpy.app.version_string or "")
+        if match:
+            candidate = match.group(0)
+            blender_version = ".".join(str(c) for c in bpy.app.version)
+            if candidate != blender_version:
+                version = candidate
+    except Exception:
+        pass
+    if not version or version == "0.0.0":
+        version = get_current_version()
+    if not version or version == "0.0.0":
+        return None
+    return version
+
+
 # ============================================================================
 # Parse API response
 # ============================================================================

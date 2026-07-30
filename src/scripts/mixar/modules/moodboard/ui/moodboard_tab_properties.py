@@ -281,6 +281,18 @@ class MixieMoodboardTabMeshSegmentProps(PropertyGroup):
         maxlen=256
     )
 
+    # Tripo mesh/segment v2 only. A colour-coded mask that drives the split;
+    # supplying it makes Tripo IGNORE granularity and split_by_connectivity,
+    # which the drawer says out loud so the greyed-out params aren't confusing.
+    # Client-side pointer rather than a catalog param because it is an image
+    # input, not a scalar.
+    ref_image: PointerProperty(
+        name="Reference Mask",
+        description="Optional colour-coded segmentation mask guiding the "
+                    "split. Overrides Granularity and Split by Connectivity",
+        type=bpy.types.Image,
+    )
+
     is_processing: BoolProperty(
         name="Is Processing",
         description="Whether segmentation is currently in progress",
@@ -331,6 +343,24 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
         description="AI model for 3D generation",
         items=_get_model_gen_model_items,
         update=_on_model_changed,
+    )
+
+    # Which multi-view (turnaround) set the Multiple Views panel is showing
+    # and growing. UI STATE ONLY — it does not decide what a generation
+    # submits. A set is bound to exactly one image, the moodboard item
+    # carrying `turnaround_main_group`, and applies only when that image is
+    # the one being converted (see moodboard.core.turnaround_views
+    # .group_id_for_main_image). Reading the set off this tab instead is what
+    # let a stale set be attached to an unrelated image on a later turn.
+    # Cleared by moodboard.core.turnaround_views when the set empties.
+    turnaround_group: StringProperty(
+        name="Multi-View Set",
+        description=(
+            "Identifier of the multi-view set this tab is editing. Empty "
+            "when the tab has no multi-view set. The set is only submitted "
+            "when the image being generated from is the set's own input image"
+        ),
+        default="",
     )
 
 

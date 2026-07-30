@@ -156,6 +156,23 @@ def get_selected_moodboard_image(context):
     return None
 
 
+def get_image_to_3d_input_image(context):
+    """Return the image the Model Gen tab currently treats as its input.
+
+    The selected moodboard image when "Use Selected Moodboard Image" is on,
+    the explicit reference image otherwise. Single source of truth so the
+    sidebar button gating and the operator that runs never disagree about
+    which image is about to be used.
+    """
+    scene = context.scene
+    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+    tab = getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
+
+    if tab is not None and not getattr(tab, 'use_selected_image', False):
+        return getattr(tab, 'reference_image', None)
+    return get_selected_moodboard_image(context)
+
+
 def draw_moodboard_image_toggle(col, prop_owner, context, *, multi=False):
     """Draw 'Use Selected Moodboard Image' toggle + status.
 
