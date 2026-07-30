@@ -428,6 +428,10 @@ class MIXIE_OT_imagegen_generate(Operator):
             payload["params"]["negative_prompt"] = self.negative_prompt.strip()
         if ref_b64:
             payload["reference_images_b64"] = ref_b64
+        if self.name.strip():
+            # Agent-chosen name: the backend uses it for the S3 filenames,
+            # skips Gemini's own name suggestion, and echoes it in the result.
+            payload["image_name"] = self.name.strip()
 
         # Prefer the actual API prompt for the row title so the queue reads
         # like the interactive path; fall back to name / "image" if empty.
