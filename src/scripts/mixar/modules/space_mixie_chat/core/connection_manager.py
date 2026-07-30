@@ -239,12 +239,17 @@ class ConnectionManager:
             import threading
 
             def _report_version():
+                from ...auth.core.device import get_device_id
                 from ...common.notifications import report_client_version
-                from ...common.updates.core.update_checker import get_current_version
-                version = get_current_version()
+                from ...common.updates.core.update_checker import get_runtime_version
+                # Same version source as the agent chat X-Client-Version
+                # header, so the PUT and the header can never disagree.
+                version = get_runtime_version()
                 token = get_access_token()
-                if token:
-                    report_client_version(base_url, token, version)
+                if token and version:
+                    report_client_version(
+                        base_url, token, version, device_id=get_device_id()
+                    )
 
             threading.Thread(target=_report_version, daemon=True).start()
 

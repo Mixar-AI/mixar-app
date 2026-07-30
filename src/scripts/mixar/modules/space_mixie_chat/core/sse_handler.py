@@ -50,6 +50,27 @@ def _try_refresh_token() -> str:
     return ""
 
 
+def _base_headers(auth_token: Optional[str] = None) -> dict:
+    """Common headers for the agent SSE endpoints (chat/input/attach).
+
+    Includes ``X-Client-Version`` (the backend's agent-chat version gate
+    prefers it over the stored per-user client_version, which is
+    last-writer-wins across installs). The header is omitted entirely when
+    no real version is known — never sent as a placeholder.
+    """
+    headers = {"Accept": "text/event-stream"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    try:
+        from ...common.updates.core.update_checker import get_runtime_version
+        version = get_runtime_version()
+        if version:
+            headers["X-Client-Version"] = version
+    except Exception as e:
+        logger.debug(f"Client version unavailable for SSE headers: {e}")
+    return headers
+
+
 @dataclass
 class SSEEvent:
     """Parsed SSE event."""
@@ -184,9 +205,7 @@ class SSEStreamHandler:
             token = get_access_token() or ""
         except Exception:
             pass
-        headers = {"Accept": "text/event-stream"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        headers = _base_headers(token)
         payload = {"session_id": self._session_id, "after_seq": self._last_seq}
         timeout_config = httpx.Timeout(
             connect=10.0,
@@ -379,9 +398,7 @@ class SSEStreamHandler:
     ) -> None:
         """Background thread that handles input SSE streaming."""
         try:
-            headers = {"Accept": "text/event-stream"}
-            if auth_token:
-                headers["Authorization"] = f"Bearer {auth_token}"
+            headers = _base_headers(auth_token)
 
             payload = {
                 "session_id": session_id,
@@ -494,9 +511,7 @@ class SSEStreamHandler:
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
         try:
-            headers = {"Accept": "text/event-stream"}
-            if auth_token:
-                headers["Authorization"] = f"Bearer {auth_token}"
+            headers = _base_headers(auth_token)
 
             # Build multimodal content payload
             content = [{"type": "text", "text": message}]

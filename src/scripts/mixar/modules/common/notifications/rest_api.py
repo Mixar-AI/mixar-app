@@ -6,10 +6,11 @@
 Notifications REST API helpers
 
 Wraps the /api/v1/notifications REST endpoints:
-  PUT  /me/client-version — report the addon version to the server
+  PUT  /me/client-version — report the addon version (and hashed device id)
+                            to the server
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 import requests
 
@@ -37,13 +38,22 @@ def report_client_version(
     host: str,
     token: str,
     client_version: str,
+    device_id: Optional[str] = None,
 ) -> bool:
-    """PUT /me/client-version — returns True on success."""
+    """PUT /me/client-version — returns True on success.
+
+    ``device_id`` is the hashed id from ``auth.core.device.get_device_id()``
+    (same value as the agent WS handshake); the backend upserts it into a
+    per-device table. Omitted from the body when unavailable.
+    """
+    payload = {"client_version": client_version}
+    if device_id:
+        payload["device_id"] = device_id
     try:
         resp = requests.put(
             _url(host, "/me/client-version"),
             headers=_headers(token),
-            json={"client_version": client_version},
+            json=payload,
             timeout=_DEFAULT_TIMEOUT,
         )
         resp.raise_for_status()
