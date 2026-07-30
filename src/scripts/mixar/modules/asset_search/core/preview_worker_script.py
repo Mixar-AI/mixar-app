@@ -176,12 +176,18 @@ def _stage_scene():
     scene = bpy.context.scene
     for obj in list(scene.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
-    for engine in ('BLENDER_EEVEE_NEXT', 'BLENDER_EEVEE', 'BLENDER_WORKBENCH'):
+    # EEVEE ONLY — never Workbench (thumbnail look must match the in-app
+    # renders the embeddings were trained on). If no EEVEE variant can be
+    # set headless, DIE EARLY (nonzero exit, no results): the parent then
+    # falls back to the in-process session, which renders EEVEE in-app.
+    for engine in ('BLENDER_EEVEE_NEXT', 'BLENDER_EEVEE'):
         try:
             scene.render.engine = engine
             break
         except Exception:
             continue
+    else:
+        raise RuntimeError("No EEVEE render engine available in background mode")
     scene.render.resolution_x = 512
     scene.render.resolution_y = 512
     scene.render.resolution_percentage = 100
