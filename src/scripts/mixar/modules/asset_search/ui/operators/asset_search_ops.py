@@ -97,6 +97,15 @@ class MIXIE_OT_search_assets(Operator):
 
             res = self._result or {}
             state.search_message = res.get("message", "Search failed")
+            # Structured rows for the actionable results list (panel).
+            state.search_results.clear()
+            for hit in res.get("results", []):
+                row = state.search_results.add()
+                row.name = hit.get("name", "?")
+                row.score = float(hit.get("score", 0.0))
+                row.library = hit.get("library", "")
+                row.blend_file = hit.get("blend_file", "")
+                row.asset_type = hit.get("type", "")
             self._cleanup(context)
 
             report_type = "INFO" if res.get("success") else "WARNING"
@@ -288,17 +297,26 @@ def _search_api(prompt, image_bytes, operator):
             operator._result = {
                 "success": True,
                 "message": "No matching assets found",
+                "results": [],
             }
             return
 
-        lines = []
+        # Structured rows: the panel renders these with score bars and a
+        # "locate in browser" action, not raw text.
+        rows = []
         for r in results:
-            name = r.get("model_name", "?")
-            score = r.get("similarity_score", 0)
-            lines.append(f"{name} ({score:.2f})")
+            meta = r.get("metadata", {}) or {}
+            rows.append({
+                "name": meta.get("name") or r.get("model_name", "?"),
+                "score": float(r.get("similarity_score", 0) or 0),
+                "library": meta.get("library", ""),
+                "blend_file": meta.get("blend_file", ""),
+                "type": meta.get("type", ""),
+            })
         operator._result = {
             "success": True,
-            "message": f"Found {len(results)} results:\n" + "\n".join(lines),
+            "message": f"Found {len(rows)} matching asset(s)",
+            "results": rows,
         }
     except Exception as exc:
         operator._result = {
