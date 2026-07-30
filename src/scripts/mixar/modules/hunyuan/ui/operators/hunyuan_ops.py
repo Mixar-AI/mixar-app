@@ -161,6 +161,16 @@ class MIXIE_OT_hunyuan_remove_multi_view(Operator):
 # ============================================================================
 
 
+def _has_active_view_set(context) -> bool:
+    """True when the Model Gen tab holds a multi-view set ready to submit."""
+    from mixar.modules.moodboard.core.turnaround_views import get_active_group
+
+    try:
+        return bool(get_active_group(context.scene))
+    except Exception:
+        return False
+
+
 class MIXIE_OT_hunyuan_generate(Operator):
     """Generate 3D using Hunyuan"""
 
@@ -175,6 +185,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # of the sidebar/moodboard UI state.
     prompt: StringProperty(default="")
     image_name: StringProperty(default="")
+    # Redundant now that an active view set is signal enough (see execute) —
+    # kept so an explicit agent call still reads clearly and still FAILS LOUDLY
+    # when no set exists, instead of quietly generating from one image.
+    multi_view: BoolProperty(default=False)
     model_version: StringProperty(default="3.0")
     enable_pbr: BoolProperty(default=False)
     face_count: IntProperty(default=0)
@@ -215,7 +229,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
         if mode == 'PRO':
             try:
                 # Direct (agent) invocation: explicit params bypass UI state.
-                if self.from_chat or self.prompt.strip() or self.image_name.strip():
+                # multi_view counts as a direct param — otherwise setting it
+                # without an image_name would fall through to the UI path and
+                # be silently ignored.
+                if (self.from_chat or self.prompt.strip()
+                        or self.image_name.strip() or self.multi_view):
                     self._submit_pro_direct(context)
                 else:
                     self._submit_pro(
@@ -324,6 +342,22 @@ class MIXIE_OT_hunyuan_generate(Operator):
                 raise ValueError(f"Image '{self.image_name}' not found")
 
         prompt = self.prompt.strip() or None
+
+        # Turnaround group: submit every detected view of this sheet as ONE
+        # multi-view job, forwarding the S3 keys the detect-views endpoint
+        # returned instead of re-uploading pixels.
+        #
+        # multi_view is NOT required to be set. It used to be opt-in, which
+        # made the whole feature depend on the caller remembering: an agent
+        # that generated from a sheet whose views had been detected in an
+        # EARLIER turn had no trigger to pass the flag, and the job went out
+        # as a lone base64 image with every crop silently dropped. An active
+        # set on the tab is now signal enough — the user assembled it for
+        # exactly this job. Clearing the set is how you opt out.
+        turnaround = None
+        if self.multi_view or _has_active_view_set(context):
+            turnaround = self._resolve_turnaround(context, image)
+
         if image is None and not prompt:
             raise ValueError("Provide at least a prompt or an image_name")
 
@@ -340,7 +374,47 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # queue row reads like the user's intent — see image_to_3d_ops for
         # the same reasoning.
         label = (prompt[:40] if prompt else None) or (image.name if image else "3D")
-        enqueue_pro_job(image=image, shared=shared, label=label)
+        enqueue_pro_job(
+            image=image, shared=shared, label=label, turnaround=turnaround)
+
+    def _resolve_turnaround(self, context, image):
+        """Multi-view payload built from *image* plus the tab's view set.
+
+        *image* is the vendor's single frontal image; the companion angles
+        come from the Model Gen tab's active multi-view set (the set holds
+        companions only, so there is nothing on *image* to look it up from).
+
+        Raises ValueError (caught by execute -> reported + CANCELLED) when the
+        request cannot be honoured. Never falls back to a single-image job:
+        the caller explicitly asked for the set, so silently generating from
+        one view would spend a multi-minute job on the wrong input.
+        """
+        from mixar.modules.moodboard.core.turnaround_payload import (
+            build_multi_view_payload,
+        )
+        from mixar.modules.moodboard.core.turnaround_views import (
+            get_active_group,
+        )
+
+        if image is None:
+            raise ValueError("multi_view=True requires an image_name")
+
+        group_id = get_active_group(context.scene)
+        if not group_id:
+            raise ValueError(
+                "No multi-view set is active — run "
+                "mixie.moodboard_detect_views on the sheet first, or add "
+                "views with mixie.moodboard_add_selected_views"
+            )
+
+        # Same duplicate handling the sidebar path uses. No model slug is
+        # needed: which angles a model accepts is catalog capability, not
+        # something the client derives from a version string.
+        fragment, warnings = build_multi_view_payload(
+            context.scene, group_id, image)
+        for warning in warnings:
+            self.report({'WARNING'}, warning)
+        return fragment
 
     def _submit_rapid_direct(self, context, compress_image_for_upload):
         """Submit a Rapid job from explicit agent/chat params."""
