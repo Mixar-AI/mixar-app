@@ -96,9 +96,11 @@ def build_render_plan(context, identity_filter=None):
         {kind: 'OBJECT'|'COLLECTION', blend_str, name, library, rel_path};
         discovery_failures are (label, reason) for unreadable .blend files.
     """
+    from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
+
     items = []
     failures = []
-    for lib in context.preferences.filepaths.asset_libraries:
+    for lib in enrolled_libraries(context):
         library_path = Path(lib.path)
         if not library_path.exists() or not library_path.is_dir():
             continue

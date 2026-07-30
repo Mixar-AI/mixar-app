@@ -20,6 +20,26 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 
+def _enrolled_update(self, context):
+    """Persist a library tick to the per-user enrollment file."""
+    from mixar.modules.asset_search.core.library_enrollment import set_enrolled
+    set_enrolled(self.name, self.enabled)
+
+
+class MixieAssetLibraryItem(PropertyGroup):
+    """One registered asset library in the 'Libraries to Train' list."""
+
+    name: StringProperty(name="Library", default="")
+    path: StringProperty(name="Path", default="", subtype='DIR_PATH')
+    asset_count: IntProperty(name="Assets", default=-1)  # -1 = not counted yet
+    enabled: BoolProperty(
+        name="Train",
+        description="Include this library when training the asset search model",
+        default=False,
+        update=_enrolled_update,
+    )
+
+
 class MixieAssetSearchResult(PropertyGroup):
     """One structured search hit (name/score/library) for the results list."""
 
@@ -82,6 +102,7 @@ class MixieAssetTrainingState(PropertyGroup):
 
 
 classes = (
+    MixieAssetLibraryItem,
     MixieAssetSearchResult,
     MixieAssetTrainingState,
 )
@@ -94,10 +115,21 @@ def register():
     bpy.types.Scene.mixie_asset_training = bpy.props.PointerProperty(
         type=MixieAssetTrainingState,
     )
+    # Enrollment list is per-user/session state — WindowManager, not saved
+    # into the .blend (rebuilt from the enrollment config on demand).
+    bpy.types.WindowManager.mixie_asset_libraries = bpy.props.CollectionProperty(
+        type=MixieAssetLibraryItem,
+    )
+    bpy.types.WindowManager.mixie_asset_libraries_index = bpy.props.IntProperty(
+        name="Active Library", default=0,
+    )
 
 
 def unregister():
     from bpy.utils import unregister_class
+    for attr in ("mixie_asset_libraries", "mixie_asset_libraries_index"):
+        if hasattr(bpy.types.WindowManager, attr):
+            delattr(bpy.types.WindowManager, attr)
     if hasattr(bpy.types.Scene, 'mixie_asset_training'):
         del bpy.types.Scene.mixie_asset_training
     for cls in reversed(classes):

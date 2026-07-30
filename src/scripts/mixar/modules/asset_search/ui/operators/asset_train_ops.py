@@ -137,9 +137,16 @@ class MIXIE_OT_train_asset_model(Operator):
 
         self._scan_metadata = _scan_asset_library_metadata(context)
         if not self._scan_metadata:
-            self._finish(context, success=False,
-                         message="No asset library found — add one "
-                                 "from Edit > Preferences > File Paths")
+            from mixar.modules.asset_search.core.library_enrollment import (
+                enrolled_names,
+            )
+            if context.preferences.filepaths.asset_libraries and not enrolled_names():
+                msg = ("No libraries selected — tick the libraries to train "
+                       "in the list below, then train")
+            else:
+                msg = ("No asset library found — add one from "
+                       "Edit > Preferences > File Paths")
+            self._finish(context, success=False, message=msg)
             return {"CANCELLED"}
 
         state.progress = _W_SCAN_END

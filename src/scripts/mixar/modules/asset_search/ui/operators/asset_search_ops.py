@@ -364,9 +364,11 @@ def _status_api(metadata, operator):
 
 
 def _scan_asset_library_metadata(context):
-    """Scan asset libraries for names/metadata without rendering."""
+    """Scan ENROLLED asset libraries for names/metadata without rendering."""
+    from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
+
     metadata = []
-    for lib in context.preferences.filepaths.asset_libraries:
+    for lib in enrolled_libraries(context):
         library_path = Path(lib.path)
         if not library_path.exists():
             continue

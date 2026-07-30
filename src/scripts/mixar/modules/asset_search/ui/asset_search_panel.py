@@ -103,6 +103,41 @@ def _draw_status(layout, state):
                     text="Delete All Embeddings…", icon='TRASH', emboss=False)
 
 
+def _draw_library_enrollment(layout, context):
+    """'Libraries to Train' — tick which registered libraries to index."""
+    from mixar.modules.asset_search.ui.operators.library_ops import (
+        ensure_library_list_synced,
+    )
+    ensure_library_list_synced(context)
+
+    col = _section(
+        layout, "Libraries to Train", icon='ASSET_MANAGER',
+        action_op="mixie.refresh_libraries", action_icon='FILE_REFRESH',
+    )
+    wm = context.window_manager
+    coll = getattr(wm, "mixie_asset_libraries", None)
+    if not coll:
+        _hint(col, "Add asset libraries in Preferences › File Paths")
+        return
+
+    col.template_list(
+        "MIXIE_UL_asset_libraries", "",
+        wm, "mixie_asset_libraries",
+        wm, "mixie_asset_libraries_index",
+        rows=min(max(len(coll), 2), 6),
+    )
+    enabled_n = sum(1 for it in coll if it.enabled)
+    footer = col.row(align=True)
+    footer.scale_y = _HINT_SCALE
+    footer.label(text=f"{enabled_n} of {len(coll)} selected")
+    ops = footer.row(align=True)
+    ops.alignment = 'RIGHT'
+    ops.operator("mixie.set_all_libraries", text="All").enable = True
+    ops.operator("mixie.set_all_libraries", text="None").enable = False
+    _hint(col, "Counts show after Refresh; only ticked libraries are trained",
+          icon='INFO')
+
+
 def _draw_training_progress(layout, state):
     """Live training section: bar, counter, phase, current item, ETA, cancel."""
     col = _section(layout, "Training", icon='ASSET_MANAGER')
@@ -249,6 +284,8 @@ class MIXIE_PT_asset_library_search(Panel):
             _draw_training_progress(layout, state)
         else:
             _draw_status(layout, state)
+            layout.separator(factor=_SEP_SECTION)
+            _draw_library_enrollment(layout, context)
         layout.separator(factor=_SEP_SECTION)
         _draw_search(layout, state, is_training)
         layout.separator(factor=_SEP_SECTION)
