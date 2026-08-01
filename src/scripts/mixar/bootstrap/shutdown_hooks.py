@@ -42,6 +42,12 @@ def _run_all_cleanups() -> None:
     """Invoke every known cleanup_/stop_ entry point in dependency order."""
     # 1. Stop producers first (operator-facing cleanup), then drain consumers.
     try:
+        from mixar.modules.project_versioning.core.handlers import shutdown
+        _safe("project_versioning", shutdown)
+    except ImportError:
+        pass
+
+    try:
         from mixar.modules.space_mixie_chat.core.sse_handler import (
             cleanup_all_sse_handlers,
         )

@@ -80,6 +80,11 @@ def generate_config(version_file: str) -> dict:
         "performance": {
             "ui_batch_budget_ms": 4,
         },
+        # Build-time kill switch. Runtime/project opt-in is separate, so a
+        # release may contain the pilot without silently versioning any file.
+        "lore_pilot": {
+            "enabled": _env_bool("MIXAR_LORE_PILOT_ENABLED", False),
+        },
     }
 
     if environment == "Dev":

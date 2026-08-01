@@ -96,6 +96,8 @@ from .services import (
     get_auth_service,
     get_generation_metadata_service,
     get_job_queue_service,
+    LoreProjectsService,
+    get_lore_projects_service,
     get_images_service,
     get_update_service,
 )
@@ -150,4 +152,6 @@ __all__ = [
     "get_update_service",
     "JobQueueService",
     "get_job_queue_service",
+    "LoreProjectsService",
+    "get_lore_projects_service",
 ]
