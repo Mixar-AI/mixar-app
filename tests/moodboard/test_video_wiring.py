@@ -78,6 +78,7 @@ def test_file_picker_keeps_movies_linked_to_their_source():
 
 def test_video_generation_streams_selected_movies_and_imports_the_result():
     operator = _read(MOODBOARD / "ui/operators/video_gen_ops.py")
+    drawer = _read(MOODBOARD / "ui/video_gen_drawer.py")
     media_import = _read(MOODBOARD / "core/media_import.py")
     queue_job = _read(
         ROOT
@@ -85,6 +86,9 @@ def test_video_generation_streams_selected_movies_and_imports_the_result():
     )
 
     assert "get_selected_moodboard_media_inputs" in operator
+    assert "get_video_generation_limits" in operator
+    assert "get_video_generation_limits" in drawer
+    assert "_DEFAULT_LIMITS" not in operator
     assert 'kind="video"' in operator
     assert "video_inputs=video_inputs" in operator
     assert "StreamingVideoJob" in queue_job

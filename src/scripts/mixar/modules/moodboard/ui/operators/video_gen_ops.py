@@ -12,44 +12,6 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMITS = {
-    "max_images": 9,
-    "max_videos": 3,
-    "max_materials": 12,
-    "max_video_seconds": 15.0,
-    "max_video_bytes": 150 * 1024 * 1024,
-}
-
-
-def _catalog_limits(service_key):
-    limits = dict(_DEFAULT_LIMITS)
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_service
-
-        spec = (get_service(service_key) or {}).get("input_spec") or {}
-        limits["max_materials"] = int(
-            spec.get("max_materials") or limits["max_materials"]
-        )
-        for item in spec.get("inputs") or []:
-            if item.get("kind") == "image" and item.get("multiple"):
-                limits["max_images"] = int(
-                    item.get("max_count") or limits["max_images"]
-                )
-            elif item.get("kind") == "video":
-                limits["max_videos"] = int(
-                    item.get("max_count") or limits["max_videos"]
-                )
-                limits["max_video_seconds"] = float(
-                    item.get("max_total_duration_seconds")
-                    or limits["max_video_seconds"]
-                )
-                limits["max_video_bytes"] = int(
-                    float(item.get("max_size_mb") or 150) * 1024 * 1024
-                )
-    except Exception:
-        pass
-    return limits
-
 
 class MIXIE_OT_video_gen_generate(Operator):
     """Generate a video from a prompt and selected moodboard references"""
@@ -92,7 +54,14 @@ class MIXIE_OT_video_gen_generate(Operator):
             return {'CANCELLED'}
 
         refs = get_selected_moodboard_media_inputs(context)
-        limits = _catalog_limits(service_key)
+        from mixar.modules.moodboard.core.video_generation_catalog import (
+            get_video_generation_limits,
+        )
+
+        limits = get_video_generation_limits(service_key)
+        if limits is None:
+            self.report({'ERROR'}, "Video generation catalog config is incomplete")
+            return {'CANCELLED'}
         if len(refs["images"]) > limits["max_images"]:
             self.report({'WARNING'}, f"Select at most {limits['max_images']} images")
             return {'CANCELLED'}
@@ -114,12 +83,13 @@ class MIXIE_OT_video_gen_generate(Operator):
             if video["file_size_bytes"] > limits["max_video_bytes"]:
                 self.report({'ERROR'}, f"Video is too large: {video['filename']}")
                 return {'CANCELLED'}
-            if os.path.splitext(video["filename"])[1].lower() not in {
-                ".mp4", ".mov", ".m4v",
-            }:
+            if (
+                os.path.splitext(video["filename"])[1].lower()
+                not in limits["video_extensions"]
+            ):
                 self.report(
                     {'ERROR'},
-                    f"Seedance references must be MP4/MOV: {video['filename']}",
+                    f"Unsupported video reference: {video['filename']}",
                 )
                 return {'CANCELLED'}
             video_inputs.append({

@@ -27,6 +27,9 @@ def _draw_video_gen(layout, context):
     from mixar.modules.moodboard.core.media_utils import (
         get_selected_moodboard_media_inputs,
     )
+    from mixar.modules.moodboard.core.video_generation_catalog import (
+        get_video_generation_limits,
+    )
 
     refs = get_selected_moodboard_media_inputs(context)
     selected = draw_section_box(layout, "Selected References", icon='IMAGE_DATA')
@@ -54,10 +57,26 @@ def _draw_video_gen(layout, context):
     settings.use_property_decorate = False
     draw_capability_selector(settings, tab, "video_gen")
 
-    limits = draw_section_box(layout, "Reference Limits", icon='INFO')
-    draw_hint(limits, "Up to 9 images and 3 videos", icon='DOT')
-    draw_hint(limits, "Selected videos: 15 seconds combined", icon='DOT')
-    draw_hint(limits, "12 reference materials total", icon='DOT')
+    limit_box = draw_section_box(layout, "Reference Limits", icon='INFO')
+    limits = get_video_generation_limits("video_gen")
+    if limits is None:
+        draw_hint(limit_box, "Catalog input config is incomplete", icon='ERROR')
+    else:
+        draw_hint(
+            limit_box,
+            f"Up to {limits['max_images']} images and {limits['max_videos']} videos",
+            icon='DOT',
+        )
+        draw_hint(
+            limit_box,
+            f"Selected videos: {limits['max_video_seconds']:g} seconds combined",
+            icon='DOT',
+        )
+        draw_hint(
+            limit_box,
+            f"{limits['max_materials']} reference materials total",
+            icon='DOT',
+        )
 
     draw_generate_footer(
         layout,

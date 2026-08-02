@@ -114,8 +114,11 @@ never mutates or persists in the user's timeline. Movies remain linked to the
 source file (Blender cannot pack movies),
 are copied in-app and exported without re-encoding, and expose stream-friendly
 source metadata in `moodboard/core/media_utils.py`. The catalog-only Video Gen
-panel accepts text-only generation or selected mixed references (up to 9 stills,
-3 movies, 12 total; movies at most 15 seconds combined). It compresses stills,
+panel accepts text-only generation or selected mixed references. Its availability,
+models, parameter controls, and reference limits are projected from the backend
+DB catalog seed; missing or malformed input limits fail closed instead of using
+client defaults. The current seed publishes up to 9 stills, 3 movies, 12 total,
+with movies at most 15 seconds combined. It compresses stills,
 streams movie files through `POST /job-queue/uploads/{image|video}` without
 base64 copies, trusts the backend-parsed duration rather than client metadata,
 and submits `video_gen` through the unified queue. Completed videos are moved
