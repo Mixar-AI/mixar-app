@@ -16,6 +16,7 @@
 #include "BLI_string_utf8.h"
 
 #include "BKE_scene.hh"
+#include "BKE_screen.hh"
 
 #include "SEQ_add.hh"
 #include "SEQ_sequencer.hh"
@@ -228,6 +229,12 @@ bool moodboard_open_video_preview(bContext *C, PointerRNA *scene_ptr,
   sequencer->mainb = SEQ_DRAW_IMG_IMBUF;
   sequencer->render_size = SEQ_RENDER_SIZE_SCENE;
   sequencer->flag |= SEQ_ZOOM_TO_FIT;
+  if (ARegion *tools_region = BKE_area_find_region_type(area, RGN_TYPE_TOOLS)) {
+    /* This is a playback surface, not an editing timeline. Hide the Select,
+     * Cursor, Move, Transform, and Annotate tool shelf for this temporary
+     * preview only. */
+    tools_region->flag |= RGN_FLAG_HIDDEN | RGN_FLAG_HIDDEN_BY_USER;
+  }
   ED_area_tag_refresh(area);
   ED_area_tag_redraw(area);
   WM_event_add_notifier(C, NC_SCENE | ND_FRAME, preview_scene);

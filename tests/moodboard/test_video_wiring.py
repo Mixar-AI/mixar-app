@@ -44,6 +44,8 @@ def test_preview_is_compiled_and_reachable_from_video_clicks():
     assert "seq::add_movie_strip" in preview
     assert "SEQ_VIEW_PREVIEW" in preview
     assert "ED_screen_animation_play" in preview
+    assert "BKE_area_find_region_type(area, RGN_TYPE_TOOLS)" in preview
+    assert "RGN_FLAG_HIDDEN | RGN_FLAG_HIDDEN_BY_USER" in preview
 
 
 def test_video_preview_uses_an_isolated_transient_scene():
