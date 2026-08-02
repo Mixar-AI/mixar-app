@@ -40,8 +40,22 @@ def test_preview_is_compiled_and_reachable_from_video_clicks():
     assert "moodboard_open_video_preview" in select
     assert "KM_DBL_CLICK" in select
     assert "WM_window_open_temp" in preview
-    assert "ED_space_image_set" in preview
-    assert "IMA_ANIM_ALWAYS" in preview
+    assert "SPACE_SEQ" in preview
+    assert "seq::add_movie_strip" in preview
+    assert "SEQ_VIEW_PREVIEW" in preview
+    assert "ED_screen_animation_play" in preview
+
+
+def test_video_preview_uses_an_isolated_transient_scene():
+    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+
+    assert 'BKE_scene_add(bmain, "Mixar Video Preview")' in preview
+    assert "ID_TAG_RUNTIME" in preview
+    assert "session->workspace->sequencer_scene = preview_scene" in preview
+    assert "session->workspace->sequencer_scene = fallback_scene" in preview
+    assert "moodboard_video_preview_session_remove" in preview
+    assert "WM_event_free_ui_handler_all" in preview
+    assert "BKE_id_delete(bmain, preview_scene)" in preview
 
 
 def test_movie_thumbnail_has_a_play_affordance():
