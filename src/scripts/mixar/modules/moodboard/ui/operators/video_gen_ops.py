@@ -1,0 +1,183 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Submit selected moodboard images/videos to catalogued video generation."""
+
+import os
+
+from bpy.types import Operator
+
+from mixar.config.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+_DEFAULT_LIMITS = {
+    "max_images": 9,
+    "max_videos": 3,
+    "max_materials": 12,
+    "max_video_seconds": 15.0,
+    "max_video_bytes": 150 * 1024 * 1024,
+}
+
+
+def _catalog_limits(service_key):
+    limits = dict(_DEFAULT_LIMITS)
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_service
+
+        spec = (get_service(service_key) or {}).get("input_spec") or {}
+        limits["max_materials"] = int(
+            spec.get("max_materials") or limits["max_materials"]
+        )
+        for item in spec.get("inputs") or []:
+            if item.get("kind") == "image" and item.get("multiple"):
+                limits["max_images"] = int(
+                    item.get("max_count") or limits["max_images"]
+                )
+            elif item.get("kind") == "video":
+                limits["max_videos"] = int(
+                    item.get("max_count") or limits["max_videos"]
+                )
+                limits["max_video_seconds"] = float(
+                    item.get("max_total_duration_seconds")
+                    or limits["max_video_seconds"]
+                )
+                limits["max_video_bytes"] = int(
+                    float(item.get("max_size_mb") or 150) * 1024 * 1024
+                )
+    except Exception:
+        pass
+    return limits
+
+
+class MIXIE_OT_video_gen_generate(Operator):
+    """Generate a video from a prompt and selected moodboard references"""
+
+    bl_idname = "mixie.video_gen_generate"
+    bl_label = "Generate Video"
+    bl_description = "Generate a Seedance video from text and selected references"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        from mixar.modules.common.generation_params import (
+            collect_params,
+            resolve_model_slug,
+            resolve_service_key,
+        )
+        from mixar.modules.moodboard.core.media_utils import (
+            get_selected_moodboard_media_inputs,
+        )
+
+        sidebar = getattr(context.scene, "mixie_moodboard_sidebar", None)
+        tab = getattr(sidebar, "tab_video_gen", None) if sidebar else None
+        if tab is None:
+            self.report({'ERROR'}, "Video Gen tab is unavailable")
+            return {'CANCELLED'}
+
+        prompt = str(getattr(tab, "prompt", "") or "").strip()
+        if not prompt:
+            self.report({'WARNING'}, "Enter a video prompt")
+            return {'CANCELLED'}
+
+        service_key = resolve_service_key(
+            "video_gen", getattr(tab, "mode", "")
+        )
+        if service_key != "video_gen":
+            self.report({'ERROR'}, "The selected video service needs a newer app version")
+            return {'CANCELLED'}
+        model = resolve_model_slug(service_key, getattr(tab, "model", ""))
+        if not model:
+            self.report({'ERROR'}, "No enabled video model is available")
+            return {'CANCELLED'}
+
+        refs = get_selected_moodboard_media_inputs(context)
+        limits = _catalog_limits(service_key)
+        if len(refs["images"]) > limits["max_images"]:
+            self.report({'WARNING'}, f"Select at most {limits['max_images']} images")
+            return {'CANCELLED'}
+        if len(refs["videos"]) > limits["max_videos"]:
+            self.report({'WARNING'}, f"Select at most {limits['max_videos']} videos")
+            return {'CANCELLED'}
+        if refs["count"] > limits["max_materials"]:
+            self.report(
+                {'WARNING'},
+                f"Select at most {limits['max_materials']} reference materials",
+            )
+            return {'CANCELLED'}
+        if not refs["all_video_sources_available"]:
+            self.report({'ERROR'}, "A selected video was moved or deleted")
+            return {'CANCELLED'}
+
+        video_inputs = []
+        for video in refs["videos"]:
+            if video["file_size_bytes"] > limits["max_video_bytes"]:
+                self.report({'ERROR'}, f"Video is too large: {video['filename']}")
+                return {'CANCELLED'}
+            if os.path.splitext(video["filename"])[1].lower() not in {
+                ".mp4", ".mov", ".m4v",
+            }:
+                self.report(
+                    {'ERROR'},
+                    f"Seedance references must be MP4/MOV: {video['filename']}",
+                )
+                return {'CANCELLED'}
+            video_inputs.append({
+                "filename": video["filename"],
+                "mime_type": video["mime_type"],
+                "filepath": video["resolved_filepath"],
+                "file_size_bytes": video["file_size_bytes"],
+            })
+
+        image_inputs = []
+        try:
+            from mixar.modules.common.utils.image_utils import compress_for_service
+
+            for index, image in enumerate(refs["images"]):
+                image_inputs.append({
+                    "filename": f"reference_{index + 1}.jpg",
+                    "mime_type": "image/jpeg",
+                    "bytes": compress_for_service(image["image"], "video_gen"),
+                })
+        except Exception as exc:
+            logger.exception("Could not prepare Seedance image references")
+            self.report({'ERROR'}, f"Could not prepare image references: {exc}")
+            return {'CANCELLED'}
+
+        try:
+            params = collect_params(service_key, model)
+            from mixar.modules.common.job_queue import enqueue_generation
+            from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
+
+            job = enqueue_generation(
+                kind="video",
+                feature_key=FEATURE_VIDEO_GEN,
+                job_type=service_key,
+                model=model,
+                payload={"prompt": prompt, "params": params},
+                label=f"VideoGen: {prompt[:40]}",
+                display_label=prompt[:40],
+                origin_capability_key="video_gen",
+                fail_message="Video generation failed",
+                prompt_text=prompt,
+                image_inputs=image_inputs,
+                video_inputs=video_inputs,
+                max_video_duration_seconds=limits["max_video_seconds"],
+                scene_flag="mixie_video_gen_is_generating",
+                batch_popup_title="Video Generation Complete",
+            )
+        except Exception as exc:
+            self.report({'ERROR'}, f"Failed to start video generation: {exc}")
+            return {'CANCELLED'}
+        if job is None:
+            self.report({'WARNING'}, "A duplicate video generation is already queued")
+            return {'CANCELLED'}
+
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+
+        mark_enqueued(FEATURE_VIDEO_GEN)
+        self.report({'INFO'}, "Added video generation to queue")
+        return {'FINISHED'}
+
+
+classes = (MIXIE_OT_video_gen_generate,)

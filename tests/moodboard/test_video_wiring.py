@@ -74,3 +74,22 @@ def test_file_picker_keeps_movies_linked_to_their_source():
     assert 'getattr(bpy.path, "extensions_movie", ())' in image_ops
     assert "if img.source != 'MOVIE':" in image_ops
     assert "img.pack()" in image_ops
+
+
+def test_video_generation_streams_selected_movies_and_imports_the_result():
+    operator = _read(MOODBOARD / "ui/operators/video_gen_ops.py")
+    media_import = _read(MOODBOARD / "core/media_import.py")
+    queue_job = _read(
+        ROOT
+        / "src/scripts/mixar/modules/common/job_queue/core/generic_jobs.py"
+    )
+
+    assert "get_selected_moodboard_media_inputs" in operator
+    assert 'kind="video"' in operator
+    assert "video_inputs=video_inputs" in operator
+    assert "StreamingVideoJob" in queue_job
+    assert "stage_media(" in queue_job
+    assert "reference_video_s3_keys" in queue_job
+    assert "b64" not in queue_job[queue_job.index("class StreamingVideoJob"):]
+    assert "mixar/generated_videos" in media_import
+    assert "place_new_moodboard_item" in media_import

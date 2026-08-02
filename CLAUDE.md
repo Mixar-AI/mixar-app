@@ -113,10 +113,18 @@ isolated transient scene and movie strip that are removed with the window, so it
 never mutates or persists in the user's timeline. Movies remain linked to the
 source file (Blender cannot pack movies),
 are copied in-app and exported without re-encoding, and expose stream-friendly
-source metadata in `moodboard/core/media_utils.py` for future Seedance inputs.
-Existing image generation, masking/crop, system-image-clipboard, chat-attachment, and
-image-to-3D paths deliberately filter movies until those services define a
-video contract.
+source metadata in `moodboard/core/media_utils.py`. The catalog-only Video Gen
+panel accepts text-only generation or selected mixed references (up to 9 stills,
+3 movies, 12 total; movies at most 15 seconds combined). It compresses stills,
+streams movie files through `POST /job-queue/uploads/{image|video}` without
+base64 copies, trusts the backend-parsed duration rather than client metadata,
+and submits `video_gen` through the unified queue. Completed videos are moved
+from queue temp storage into persistent Mixar data storage and added to the
+originating scene's moodboard. The enabled catalog models are Seevio Seedance
+2.0 variants; Seedance 2.5 is backend-only and disabled until an official API
+contract replaces the requested placeholder. Existing image generation,
+masking/crop, system-image-clipboard, chat-attachment, and image-to-3D paths
+deliberately filter movies because those services remain still-only.
 
 | Module | What it does |
 |--------|-------------|
@@ -168,7 +176,7 @@ All AI generation features (image gen, 3D gen, retopology, UV, lookdev, brush ge
 
 ## Generation Catalog & Dynamic Params
 
-Foundation for the DB-driven moodboard tabs — the sidebar is exactly the 7 capability tabs (Image Gen, Model Gen, Texture Gen, Scene Gen, Retopology, UV Unwrapping, Mesh Segmentation) plus Queue, each with a legacy offline fallback.
+Foundation for the DB-driven moodboard tabs — the existing generation tabs retain their legacy offline fallbacks, while catalog-only capabilities such as Video Gen are hidden until the backend publishes an enabled service/model and have no hardcoded submit fallback.
 
 - **`bootstrap/generation_catalog_cache.py`** — owns lock-guarded lifecycle and ETag revalidation for `GET /api/v1/generation-catalog` (capabilities → services → models → parameter schemas, plus styles and credit costs). Disk I/O lives in `bootstrap/generation_catalog/storage.py`; read-only typed lookups live in `bootstrap/generation_catalog/queries.py`. Keeping these pure helpers in a subpackage leaves the lifecycle module below the 500-line limit and prevents the top-level bootstrap loader from executing them twice. The cache uses 2s-delayed background fetch, logout clear, manual refresh, and persisted stale data (`generation_catalog.json` in `bpy.utils.user_resource('DATAFILES', path='mixar')`) so panels render instantly on launch. Public accessors include `get_capabilities/get_capability/get_capability_for_service/get_services(capability, surface)/get_models/get_model/get_styles/get_credit_cost/is_loaded` plus enum-item helpers with LOADING/ERROR placeholders. Services carry `surface` (`moodboard`|`paint`) — paint-only services must never appear in moodboard tabs.
 - **`modules/common/generation_params/`** — schema-driven parameter engine: dynamically builds one PropertyGroup per (service, model) from catalog schemas, attached to **WindowManager** pointers (not Scene) so re-registration on catalog change is safe (no .blend/undo persistence; rebuilds run on a main-thread timer scheduled by the cache). `draw_service_params(layout, service, model)` renders widgets by schema `widget` kind honoring `order`/`group`/`visible`/`visible_if`; `collect_params(service, model)` returns visible params as a typed plain dict for payloads. Never hardcode param names here — key sets change from the DB without client releases. Design rationale in `core/engine.py` docstring. Two more layers live here: **`core/selector.py`** — capability mode selector (`get_service_enum_items()` Mode-dropdown items with LOADING/ERROR placeholders, `resolve_service_key()` mode-enum→valid service key, `draw_capability_selector()` Mode→Model→params rendering that returns False when the catalog isn't loaded so tabs fall back to legacy UI); and **`core/assemblers.py`** — the generic wire contract: `assemble_payload(service, params, payload, model_slug)` puts `collect_params()` output (plus `prompt` where a service takes one) into `payload["params"]` (snake_case, None values dropped) for EVERY service; file/image inputs stay top-level (`image_bytes_b64`, `file_bytes_b64`, `multi_view_images`, ...). The backend provider adapters own all vendor mapping (Tencent PascalCase `sdk_params`, Tripo decimate body + face-limit clamping, fal snake_case) — never build provider shapes client-side. `resolve_model_slug()` (selector.py) maps a model enum value to a valid catalog slug with a hardcoded fallback. **`catalog_default_model(service)`** (selector.py) is its fallback-less sibling for submit paths that have no model dropdown to resolve from: it returns the service's catalog default, or `None` when the catalog cannot answer (not loaded / service disabled / no enabled rows). `None` means **abort the submit** — never substitute a literal slug. Model rows are server state that changes without a client release, so a remembered slug does not fail loudly, it burns a queue slot and the user's wait on a 422. Used by `scene_gen_queue.enqueue_scene_gen_job` and the Scene Gen LP retopology fan-out; both refuse (and report) rather than guess. Bespoke-queue services (`pbr_gen`, `mesh_segment`, `scene_reconstruction`, `mat_gen`) have no assembler entry: their Jobs build payloads from dataclass fields, so catalog params thread through the enqueue helpers' kwargs instead.

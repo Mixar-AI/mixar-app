@@ -48,6 +48,15 @@ class SelectedVideoInputs(TypedDict):
     all_sources_available: bool
 
 
+class SelectedMediaInputs(TypedDict):
+    """Selected still and video references for mixed-media generation."""
+
+    count: int
+    images: list[MoodboardMediaInput]
+    videos: list[MoodboardMediaInput]
+    all_video_sources_available: bool
+
+
 def is_video_image(image: object | None) -> bool:
     """Return whether *image* is a Blender movie ``Image`` datablock."""
     return image is not None and getattr(image, "source", "") == "MOVIE"
@@ -173,4 +182,33 @@ def get_selected_moodboard_video_inputs(context=None) -> SelectedVideoInputs:
         "videos": videos,
         "has_selection": bool(videos),
         "all_sources_available": all(video["source_available"] for video in videos),
+    }
+
+
+def get_selected_moodboard_media_inputs(context=None) -> SelectedMediaInputs:
+    """Return selected stills and linked movies without loading video bytes."""
+    if context is None:
+        import bpy
+
+        context = bpy.context
+
+    images = []
+    videos = []
+    scene = getattr(context, "scene", None)
+    items = getattr(scene, "mixie_moodboard_images", ()) if scene else ()
+    for item in items:
+        if not getattr(item, "selected", False) or getattr(item, "image", None) is None:
+            continue
+        description = describe_moodboard_media(item)
+        if description["media_type"] == "VIDEO":
+            videos.append(description)
+        else:
+            images.append(description)
+    return {
+        "count": len(images) + len(videos),
+        "images": images,
+        "videos": videos,
+        "all_video_sources_available": all(
+            video["source_available"] for video in videos
+        ),
     }

@@ -124,3 +124,34 @@ def test_still_and_video_predicates_are_mutually_exclusive():
     assert module.is_still_image(movie) is False
     assert module.is_video_item(_item(still)) is False
     assert module.is_still_item(_item(still)) is True
+
+
+def test_selected_media_inputs_keep_stills_and_movies_in_separate_lists(tmp_path):
+    module = _load_module()
+    source = tmp_path / "reference.mp4"
+    source.write_bytes(b"video")
+    movie = SimpleNamespace(
+        source="MOVIE",
+        filepath=str(source),
+        name="reference.mp4",
+        size=(1280, 720),
+        frame_duration=48,
+    )
+    still = SimpleNamespace(
+        source="FILE",
+        filepath=str(tmp_path / "still.png"),
+        name="still.png",
+        size=(512, 512),
+    )
+    context = SimpleNamespace(
+        scene=SimpleNamespace(
+            mixie_moodboard_images=[_item(still), _item(movie)]
+        )
+    )
+
+    result = module.get_selected_moodboard_media_inputs(context)
+
+    assert result["count"] == 2
+    assert [item["image_name"] for item in result["images"]] == ["still.png"]
+    assert [item["image_name"] for item in result["videos"]] == ["reference.mp4"]
+    assert result["all_video_sources_available"] is True
