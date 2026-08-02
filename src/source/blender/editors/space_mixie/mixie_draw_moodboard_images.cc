@@ -10,6 +10,8 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
+#include "GPU_immediate_util.hh"
+
 #include <unordered_map>
 
 namespace blender::ed::mixie {
@@ -134,6 +136,35 @@ static void draw_gpu_texture_quad(blender::gpu::Texture *tex,
   GPU_texture_unbind(tex);
 }
 
+/** Draw a screen-size-stable play affordance over a movie's first frame. */
+static void draw_video_play_overlay(View2D *v2d, const float center_x, const float center_y)
+{
+  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+  const float radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  const float triangle_half_height = radius * 0.46f;
+  const float triangle_left = center_x - radius * 0.20f;
+  const float triangle_right = center_x + radius * 0.43f;
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+
+  immUniformColor4f(0.02f, 0.02f, 0.025f, 0.78f);
+  imm_draw_circle_fill_2d(pos, center_x, center_y, radius, 40);
+
+  immUniformColor4f(1.0f, 1.0f, 1.0f, 0.96f);
+  immBegin(GPU_PRIM_TRIS, 3);
+  immVertex2f(pos, triangle_left, center_y - triangle_half_height);
+  immVertex2f(pos, triangle_right, center_y);
+  immVertex2f(pos, triangle_left, center_y + triangle_half_height);
+  immEnd();
+
+  immUnbindProgram();
+  GPU_blend(GPU_BLEND_NONE);
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -223,6 +254,10 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           gpu_tex = BKE_image_get_gpu_texture(image, nullptr);
         }
 
+        bool media_drawn = false;
+        float drawn_width = 0.0f;
+        float drawn_height = 0.0f;
+
         if (gpu_tex) {
           /* Use cached GPU texture - much faster than recreating texture every frame */
           int tex_w = GPU_texture_width(gpu_tex);
@@ -232,6 +267,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
           const float display_height =
               (MOODBOARD_IMAGE_BASE_SIZE * float(tex_h) / float(tex_w)) * scale;
+          drawn_width = display_width;
+          drawn_height = display_height;
 
           /* Apply transforms (rotation and flips) */
           const float center_x = pos_x + display_width / 2.0f;
@@ -272,6 +309,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           }
 
           GPU_matrix_pop();
+          media_drawn = true;
         }
         else {
           /* Fallback: acquire image buffer and draw with immediate mode (slower path)
@@ -284,6 +322,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
             const float display_height =
                 (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale;
+            drawn_width = display_width;
+            drawn_height = display_height;
 
             /* Apply transforms (rotation and flips) */
             const float center_x = pos_x + display_width / 2.0f;
@@ -357,9 +397,15 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             }
 
             GPU_matrix_pop();
+            media_drawn = true;
 
             BKE_image_release_ibuf(image, ibuf, lock);
           }
+        }
+
+        if (media_drawn && image->source == IMA_SRC_MOVIE) {
+          draw_video_play_overlay(
+              v2d, pos_x + drawn_width * 0.5f, pos_y + drawn_height * 0.5f);
         }
       }
     }

@@ -104,6 +104,17 @@ src/
 
 ## Feature Modules
 
+**Moodboard media contract:** Moodboard items may reference still-image or movie
+`bpy.types.Image` datablocks. Movies support native file-picker and OS drag/drop,
+render as first-frame thumbnails with a centered play affordance, and open a
+fitted native Image Editor preview from the affordance or a double-click. They
+remain linked to the source file (Blender cannot pack movies), are copied in-app
+and exported without re-encoding, and expose stream-friendly source metadata in
+`moodboard/core/media_utils.py` for future Seedance inputs. Existing image
+generation, masking/crop, system-image-clipboard, chat-attachment, and
+image-to-3D paths deliberately filter movies until those services define a
+video contract.
+
 | Module | What it does |
 |--------|-------------|
 | **paint** (largest, 59MB) | Layer-based texture painting system with node trees, modifiers, baking, procedural materials, decals, UDIM, vertex colors, asset export |

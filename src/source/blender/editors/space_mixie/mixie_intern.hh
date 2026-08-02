@@ -17,6 +17,7 @@ struct ARegion;
 struct bContext;
 struct Image;
 struct PointerRNA;
+struct ReportList;
 struct Scene;
 struct SpaceMixie;
 struct View2D;
@@ -33,6 +34,7 @@ struct wmWindowManager;
 #define MOODBOARD_IMAGE_MAX_SCALE 50.0f
 #define MOODBOARD_IMAGE_SCALE_DELTA 0.1f
 #define MOODBOARD_MAX_SELECTED_IMAGES 256
+#define MOODBOARD_VIDEO_PLAY_RADIUS_PX 28.0f
 
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
@@ -119,6 +121,15 @@ int moodboard_find_textbox_under_mouse(PointerRNA *scene_ptr,
                                        float *r_pos_y,
                                        float *r_width,
                                        float *r_height);
+
+/** Whether the moodboard item at \a index references a movie datablock. */
+bool moodboard_item_is_video(PointerRNA *scene_ptr, int index);
+
+/** Open a fitted Image Editor window for a moodboard movie. */
+bool moodboard_open_video_preview(bContext *C,
+                                  PointerRNA *scene_ptr,
+                                  int index,
+                                  ReportList *reports);
 
 /** Deselect all moodboard items (images and textboxes) */
 void moodboard_deselect_all(PointerRNA *scene_ptr);

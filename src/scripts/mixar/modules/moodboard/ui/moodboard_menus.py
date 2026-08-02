@@ -32,6 +32,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             get_selected_moodboard_items(scene)
         )
         total_items_selected = selected_images + selected_textboxes
+        selected_stills = sum(
+            1 for item in scene.mixie_moodboard_images
+            if item.selected and item.image and item.image.source != 'MOVIE'
+        )
 
         # Check if any selected images belong to a group
         has_grouped_selection = any(
@@ -49,8 +53,8 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         # Add content
         layout.operator_context = 'INVOKE_DEFAULT'
-        layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Image", icon='TRIA_DOWN')
-        layout.operator("mixie.moodboard_add_image", text="Open Image", icon='FILE_FOLDER')
+        layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Media", icon='TRIA_DOWN')
+        layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
         layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
         layout.operator("mixie.moodboard_add_textbox", text="Add Text", icon='FONT_DATA')
 
@@ -79,7 +83,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         # Transform operations (only enabled when images are selected)
         row = layout.row()
-        row.enabled = selected_images > 0
+        row.enabled = selected_stills > 0
         row.operator("mixie.moodboard_crop_tool", text="Crop", icon='FULLSCREEN_EXIT')
 
         row = layout.row()

@@ -33,6 +33,8 @@ decide what a generation submits.
 """
 
 import uuid
+
+from .media_utils import is_still_item
 from typing import List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
@@ -112,7 +114,7 @@ def get_tab_input_image(scene):
     if not hasattr(scene, 'mixie_moodboard_images'):
         return None
     for item in scene.mixie_moodboard_images:
-        if item.selected and item.image:
+        if item.selected and is_still_item(item):
             return item.image
     return None
 
@@ -422,7 +424,7 @@ def eligible_selected_images(scene, group_id: str, main_image) -> list:
         return []
     images = []
     for item in scene.mixie_moodboard_images:
-        if not item.selected or not item.image:
+        if not item.selected or not is_still_item(item):
             continue
         if item.image == main_image:
             continue
