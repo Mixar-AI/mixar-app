@@ -225,28 +225,39 @@ def get_icon_id(state_value: str) -> int:
 
 
 def _has_running_jobs() -> bool:
-    """Any FeatureQueue with at least one job in a RUNNING_* state."""
+    """Any FeatureQueue with at least one job that still has work to do.
+
+    Deliberately the ACTIVE set (pending + paused included), not just
+    RUNNING_*: the pump also drives the Agent Bubble pill's animated label,
+    and a job that is queued-but-not-yet-dispatched must not leave the pill
+    frozen. The icon mapping is unchanged — only RUNNING_* rows blink.
+    """
     try:
-        from mixar.modules.common.job_queue.core.queue_manager import all_queues
+        from mixar.modules.common.job_queue.core.queue_manager import (
+            ACTIVE_JOB_STATES,
+            all_queues,
+        )
     except Exception:
         return False
     for q in all_queues():
         for job in q.snapshot():
-            if job.state in RUNNING_STATES:
+            if job.state in ACTIVE_JOB_STATES:
                 return True
     return False
 
 
 def _redraw_queue_areas() -> None:
-    """Tag areas that render the queue UIList so the new blink phase paints."""
+    """Tag every surface that renders queue state so the new phase paints.
+
+    This pump is also the only recurring tick while jobs run, so it drives
+    the Agent Bubble pill's "Generating…" dot animation — hence the shared
+    surface list (which includes AGENT_BUBBLE) rather than a local one.
+    """
     try:
-        wm = bpy.context.window_manager
-        if wm is None:
-            return
-        for window in wm.windows:
-            for area in window.screen.areas:
-                if area.type in ('MIXIE', 'VIEW_3D'):
-                    area.tag_redraw()
+        from mixar.modules.common.job_queue.core.model_io import (
+            tag_redraw_queue_surfaces,
+        )
+        tag_redraw_queue_surfaces()
     except Exception:
         pass
 
