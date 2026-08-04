@@ -42,6 +42,15 @@ _RUNNING_STATES = {"BUSY", "MODIFYING"}
 
 _IS_WINDOWS = sys.platform == "win32"
 
+# Largest job count the pill spells out; beyond it the label reads "9+".
+# The pill window is a FIXED 148 px wide (AGENT_BUBBLE_PILL_WIDTH in
+# space_agent_bubble.cc) with the label centred beside an icon, so it has no
+# room to grow with the count — and past a handful the exact number stops
+# mattering, since the user is going to open the Queue panel either way.
+# "Generating 9+" plus the 3-char animated suffix is the widest label this
+# pill can produce; "Awaiting Input" is the widest one already shipping.
+_QUEUE_COUNT_CAP = 9
+
 
 def _transport_down() -> bool:
     """True when the WebSocket transport is currently disconnected.
@@ -65,6 +74,30 @@ def _transport_down() -> bool:
         return False
 
 
+def _active_queue_jobs() -> int:
+    """Unfinished generation jobs across every feature queue.
+
+    Read-only and cheap (a pass over in-memory job lists) — safe to call
+    from a header draw, which must never write RNA.
+    """
+    try:
+        from mixar.modules.common.job_queue.core.queue_manager import (
+            active_job_count,
+        )
+        return active_job_count()
+    except Exception:
+        return 0
+
+
+def _queue_label(active_jobs: int) -> str:
+    """Pill text for ``active_jobs`` outstanding generations."""
+    if active_jobs == 1:
+        return "Generating"
+    if active_jobs > _QUEUE_COUNT_CAP:
+        return f"Generating {_QUEUE_COUNT_CAP}+"
+    return f"Generating {active_jobs}"
+
+
 def _get_status(scene) -> tuple[str, str, str]:
     """Return (label, custom icon colour, fallback icon) for the pill."""
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
@@ -84,6 +117,19 @@ def _get_status(scene) -> tuple[str, str, str]:
         # active simultaneously, so reusing the same blue is safe and
         # avoids the visual collision.
         return "Awaiting Input", "blue", 'QUESTION'
+
+    # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
+    # enqueues a multi-minute generation, answers in chat and drops to IDLE
+    # while the job runs — at which point every surface claimed nothing was
+    # happening. Surfacing it here, in the Idle branch ONLY, is deliberate:
+    # the states above are ones the user must act on (connection lost, agent
+    # asking a question), and background work must never mask them. Green +
+    # the animated dot suffix comes for free from _draw_status, and the
+    # pump that repaints it is the queue blink timer (queue_status_icons).
+    active_jobs = _active_queue_jobs()
+    if active_jobs:
+        return _queue_label(active_jobs), "green", 'RECORD_ON'
+
     return "Idle", "grey", 'RECORD_OFF'
 
 

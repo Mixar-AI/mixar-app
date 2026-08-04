@@ -82,6 +82,30 @@ def all_queues() -> list:
     return list(_queues.values())
 
 
+# Every state that means "this job still has work to do". PAUSED_AUTH is in
+# here on purpose — the job is stalled on a re-login, not finished, and the
+# user still has something outstanding to know about.
+ACTIVE_JOB_STATES = frozenset(
+    RUNNING_STATES | {JobState.PENDING, JobState.PAUSED_AUTH}
+)
+
+
+def active_job_count() -> int:
+    """Unfinished jobs across EVERY feature queue.
+
+    Read from the canonical FeatureQueue singletons rather than the
+    ``wm.mixie_queue`` mirror: the mirror only reflects the features
+    hand-listed in ``queue_properties._attach_listeners()``, so a queue
+    missing from that tuple runs jobs that the mirror never sees.
+    """
+    return sum(
+        1
+        for queue in all_queues()
+        for job in queue.snapshot()
+        if job.state in ACTIVE_JOB_STATES
+    )
+
+
 _JOBQ_STATE_TO_STATUS = {
     "pending": "PENDING",
     "dispatched": "SUBMITTED",
@@ -451,17 +475,32 @@ class FeatureQueue(DownloadMixin):
 
     @staticmethod
     def _notify_enqueue_toast(job: Job) -> None:
-        """Confirm the enqueue with a transient viewport toast.
+        """Confirm the enqueue with a viewport toast.
 
         The agent's chat text alone is easy to miss; this covers every
         enqueue path (user- and agent-initiated) since they all funnel
-        through ``submit()``. Burst aggregation lives in enqueue_toast.
+        through ``submit()``. The toast then stays up for as long as the
+        queue has work — see enqueue_toast.
         """
         try:
             from .enqueue_toast import notify_job_enqueued
             notify_job_enqueued(job)
         except Exception as e:
             logger.debug("%s failed to push enqueue toast: %s", LOG_PREFIX, e)
+
+    @staticmethod
+    def _refresh_queue_toast() -> None:
+        """Keep the queue-activity toast in step with live job state.
+
+        Runs on every notify (not just submit) because the toast's whole
+        job is to survive until the queue drains: it has to follow jobs
+        completing, failing and being cancelled, not only arriving.
+        """
+        try:
+            from .enqueue_toast import refresh_from_queues
+            refresh_from_queues()
+        except Exception as e:
+            logger.debug("%s failed to refresh queue toast: %s", LOG_PREFIX, e)
 
     def _notify(self) -> None:
         # Terminal jobs stay in history until the user clears them, but large
@@ -478,6 +517,7 @@ class FeatureQueue(DownloadMixin):
                         LOG_PREFIX, job.id, e,
                     )
         self._notify_failure_toasts()
+        self._refresh_queue_toast()
         for fn in list(self._listeners):
             try:
                 fn(self)

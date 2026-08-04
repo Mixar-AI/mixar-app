@@ -2,72 +2,198 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Transient viewport toast confirming a generation entered the queue.
+"""Viewport toast that tracks unified-queue activity from enqueue to drain.
 
-Users routinely miss the agent's chat text saying a generation was queued,
-so every ``FeatureQueue.submit()`` also raises a small auto-fading toast in
-the viewport's top-right corner with a "View Queue" action.
+One toast, one stable id, three phases:
 
-Burst aggregation: agent scripts and multi-mesh fan-outs enqueue jobs one
-at a time, sometimes seconds apart. The toast id is stable and the store's
-``push()`` replaces an existing item with the same id AND restarts its TTL,
-so while jobs keep arriving one toast stays on screen and its count climbs
-("3 generations queued"). A burst ends once no job has been queued for a
-full toast lifetime; the next enqueue then starts a fresh count. A manual
-dismiss mid-burst is intentionally NOT a reset — the next job re-shows the
-toast with the cumulative burst count, which is still the truthful number.
+  * work outstanding  -> STICKY "N generations in progress" + View Queue
+  * queue drained     -> transient "N generations ready" + View Queue
+  * nothing succeeded -> dismissed (each failure already toasted itself)
+
+This used to be an 8 s auto-fading "generation queued" confirmation, which
+covered the enqueue instant and nothing after it. The failure mode it left
+behind is the reason this file exists: the agent enqueues a generation,
+answers in chat, and drops to IDLE — so seconds later every surface in the
+app says nothing is happening, while a multi-minute paid job is running. The
+sticky phase keeps both the fact and the way to check it on screen for the
+whole wait.
+
+Counts are DERIVED from the live queue snapshots on every refresh, not
+accumulated in a burst counter. That is what makes the number self-correcting
+across the paths a counter got wrong: jobs enqueued minutes apart, jobs that
+fail while others still run, and a queue cleared underneath the toast.
+
+Re-push discipline: ``FeatureQueue._notify()`` fires on every state change
+AND on the 0.5 s download-progress tick, so the toast is only re-pushed when
+its rendered text actually changes — a push replaces the store item wholesale
+and would otherwise restart the renderer's fade bookkeeping twice a second.
 """
 
-import time
+from ..constants import (
+    QUEUE_ACTIVE_TOAST_TTL_MS,
+    QUEUE_READY_TOAST_TTL_MS,
+    QUEUE_TOAST_ID,
+)
 
-from ..constants import ENQUEUE_TOAST_ID, ENQUEUE_TOAST_TTL_MS
+# Job ids seen active since the queue last drained — the batch the completion
+# summary reports on. Ids (not counts) because a job's outcome is only known
+# later, and the batch must not double-count a job that _notify() visits many
+# times.
+_batch_ids: set = set()
 
-_burst_count = 0
-_last_push = 0.0
+# Label of the most recently enqueued job, used as the toast body.
+_latest_label = ""
+
+# Rendered text of the last push, so an unchanged state is a no-op.
+_last_key = ""
+
+# True once the sticky toast has been pushed and not yet superseded.
+_showing_active = False
+
+# The user dismissed the sticky toast — stay silent until the next enqueue.
+# A dismissal is not a request to never hear about this batch again, but it
+# IS a request to stop re-showing the same toast; the next submit re-shows it
+# (consistent with the previous burst behaviour).
+_suppressed = False
 
 
-def reset_burst() -> None:
-    """Forget the current burst (tests / defensive re-init)."""
-    global _burst_count, _last_push
-    _burst_count = 0
-    _last_push = 0.0
+def reset_state() -> None:
+    """Forget all toast state (tests / defensive re-init)."""
+    global _batch_ids, _latest_label, _last_key, _showing_active, _suppressed
+    _batch_ids = set()
+    _latest_label = ""
+    _last_key = ""
+    _showing_active = False
+    _suppressed = False
+
+
+def _store():
+    from mixar.modules.common.notifications.store import get_notification_store
+    return get_notification_store()
+
+
+def _view_queue_action():
+    from mixar.modules.common.notifications.store import NotificationAction
+    return NotificationAction(
+        label="View Queue",
+        operator="mixie.queue_view",
+        style="primary",
+    )
+
+
+def _job_label(job) -> str:
+    # display_label strips the agent-batch prefix + dedup hash the raw label
+    # carries ("ImageGen: a hero [3f2a]") — same choice as the failure toast.
+    return getattr(job, "display_label", "") or getattr(job, "label", "") or ""
 
 
 def notify_job_enqueued(job) -> None:
-    """Show/refresh the aggregated "generation queued" toast for ``job``."""
-    global _burst_count, _last_push
-    now = time.monotonic()
-    if _burst_count and (now - _last_push) * 1000.0 > ENQUEUE_TOAST_TTL_MS:
-        _burst_count = 0  # previous toast already faded — start a new burst
-    _burst_count += 1
-    _last_push = now
+    """Record an accepted submit and refresh the toast.
 
-    # display_label strips the agent-batch prefix + dedup hash the raw
-    # label carries (same choice as the failure toast).
-    label = getattr(job, "display_label", "") or getattr(job, "label", "")
-    if _burst_count == 1:
-        title = "Generation queued"
-        body = label
-    else:
-        title = f"{_burst_count} generations queued"
-        body = f"Latest: {label}" if label else ""
+    Called from ``FeatureQueue.submit()`` after the job is appended, so the
+    refresh below already counts it.
+    """
+    global _latest_label, _suppressed
+    _latest_label = _job_label(job)
+    # A new job is new information — undo an earlier dismissal.
+    _suppressed = False
+    refresh_from_queues()
 
-    from mixar.modules.common.notifications.store import (
-        NotificationAction,
-        get_notification_store,
+
+def refresh_from_queues() -> None:
+    """Recompute the toast from live queue state. Safe to call often."""
+    global _showing_active, _suppressed
+
+    try:
+        from .queue_manager import ACTIVE_JOB_STATES, all_queues
+    except Exception:
+        return
+
+    active = 0
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if job.state in ACTIVE_JOB_STATES:
+                active += 1
+                _batch_ids.add(job.id)
+
+    if active:
+        # A sticky toast never expires, so if ours is gone the user closed it.
+        if _showing_active and not _store().contains(QUEUE_TOAST_ID):
+            _suppressed = True
+            _showing_active = False
+        if not _suppressed:
+            _push_active(active)
+        return
+
+    if _batch_ids:
+        _push_summary()
+
+
+def _push_active(count: int) -> None:
+    global _last_key, _showing_active
+
+    title = (
+        "Generation in progress"
+        if count == 1
+        else f"{count} generations in progress"
     )
-
-    get_notification_store().push(
+    key = f"active\x1f{title}\x1f{_latest_label}"
+    if key == _last_key and _showing_active:
+        return
+    _last_key = key
+    _showing_active = True
+    _store().push(
         "info",
         title,
+        body=_latest_label,
+        ttl_ms=QUEUE_ACTIVE_TOAST_TTL_MS,
+        id=QUEUE_TOAST_ID,
+        actions=[_view_queue_action()],
+    )
+
+
+def _push_summary() -> None:
+    """Queue drained — replace the sticky toast with a completion summary."""
+    global _batch_ids, _last_key, _latest_label, _showing_active, _suppressed
+
+    from .job import JobState, TERMINAL_STATES
+    from .queue_manager import all_queues
+
+    succeeded = 0
+    failed = 0
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if job.id not in _batch_ids:
+                continue
+            if job.state == JobState.SUCCESS:
+                succeeded += 1
+            elif job.state in TERMINAL_STATES:
+                failed += 1
+
+    body = _latest_label
+    _batch_ids = set()
+    _latest_label = ""
+    _last_key = ""
+    _showing_active = False
+    # A dismissal applied to the in-progress toast, not to the whole batch —
+    # the completion summary is new information and clears the suppression.
+    _suppressed = False
+
+    if not succeeded:
+        # Nothing to celebrate. Failures raised their own high-priority
+        # toasts in _notify_failure_toasts(); repeating them here would
+        # double-report, and cancellations are self-explanatory.
+        _store().dismiss(QUEUE_TOAST_ID)
+        return
+
+    title = "Generation ready" if succeeded == 1 else f"{succeeded} generations ready"
+    if failed:
+        body = f"{failed} failed"
+    _store().push(
+        "success",
+        title,
         body=body,
-        ttl_ms=ENQUEUE_TOAST_TTL_MS,
-        id=ENQUEUE_TOAST_ID,
-        actions=[
-            NotificationAction(
-                label="View Queue",
-                operator="mixie.queue_view",
-                style="primary",
-            ),
-        ],
+        ttl_ms=QUEUE_READY_TOAST_TTL_MS,
+        id=QUEUE_TOAST_ID,
+        actions=[_view_queue_action()],
     )
