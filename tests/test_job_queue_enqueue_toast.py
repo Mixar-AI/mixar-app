@@ -41,6 +41,7 @@ from mixar.modules.common.job_queue.constants import (
     QUEUE_TOAST_ID,
 )
 from mixar.modules.common.job_queue.core import enqueue_toast as ET
+from mixar.modules.common.job_queue.core import labels as QM_LABELS
 from mixar.modules.common.job_queue.core import queue_manager as QM
 from mixar.modules.common.job_queue.core.job import Job, JobState
 from mixar.modules.common.job_queue.ui.operators import queue_ops as QO
@@ -289,6 +290,46 @@ def test_active_job_count_includes_paused_auth(monkeypatch):
     job.state = JobState.PAUSED_AUTH
 
     assert QM.active_job_count() == 1
+
+
+def test_activity_names_the_job_only_when_there_is_exactly_one(monkeypatch):
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+    monkeypatch.setattr(
+        QM_LABELS, "catalog_feature_label", lambda cap, svc: "Image Gen",
+    )
+
+    queue.submit(_job("job-a"))
+    assert QM.active_queue_activity().label == "Image Gen"
+
+    # With two active, naming either one misrepresents the other.
+    queue.submit(_job("job-b"))
+    assert QM.active_queue_activity().label == ""
+
+
+def test_activity_clock_starts_from_the_oldest_job(monkeypatch):
+    """"How long has this been going" is a question about the oldest job."""
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+
+    old, new = _job("job-a"), _job("job-b")
+    old.created_at = 100.0
+    new.created_at = 500.0
+    queue.submit(old)
+    queue.submit(new)
+
+    assert QM.active_queue_activity().started_at == 100.0
+
+
+def test_activity_is_empty_when_the_queue_is_idle(monkeypatch):
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    job.state = JobState.SUCCESS
+
+    assert QM.active_queue_activity() == (0, "", 0.0)
 
 
 # ---------------------------------------------------------------------------

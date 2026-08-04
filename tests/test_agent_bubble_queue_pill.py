@@ -39,15 +39,27 @@ install_bpy_mock()
 
 from mixar.modules.agent_bubble.ui import header as HDR
 from mixar.modules.common.job_queue.core import model_io as MIO
+from mixar.modules.common.job_queue.core.queue_manager import QueueActivity
 
 
 def _scene(state):
     return SimpleNamespace(mixie_chat_state=state)
 
 
-def _status(monkeypatch, state, *, jobs=0, transport_down=False):
+def _activity(count, label="", elapsed=84.0):
+    """A queue summary whose oldest job started ``elapsed`` seconds ago."""
+    if not count:
+        return None
+    import time
+    return QueueActivity(count, label, time.monotonic() - elapsed)
+
+
+def _status(monkeypatch, state, *, jobs=0, label="", elapsed=84.0,
+            transport_down=False):
     monkeypatch.setattr(HDR, "_transport_down", lambda: transport_down)
-    monkeypatch.setattr(HDR, "_active_queue_jobs", lambda: jobs)
+    monkeypatch.setattr(
+        HDR, "_queue_activity", lambda: _activity(jobs, label, elapsed),
+    )
     return HDR._get_status(_scene(state))
 
 
@@ -57,33 +69,67 @@ def _status(monkeypatch, state, *, jobs=0, transport_down=False):
 
 
 def test_idle_with_no_queue_work_still_reads_idle(monkeypatch):
-    assert _status(monkeypatch, "IDLE") == ("Idle", "grey", 'RECORD_OFF')
+    status = _status(monkeypatch, "IDLE")
+    assert (status.label, status.colour) == ("Idle", "grey")
+    assert not status.animate
 
 
-def test_idle_with_one_job_reports_generating(monkeypatch):
-    label, colour, _ = _status(monkeypatch, "IDLE", jobs=1)
-    assert label == "Generating"
-    # "green" is what makes _draw_status append the animated dot suffix.
-    assert colour == "green"
+def test_one_job_is_named_and_clocked(monkeypatch):
+    status = _status(monkeypatch, "IDLE", jobs=1, label="Image Gen")
+    assert status.label == "Image Gen 1:24"
+    assert status.colour == "green"
 
 
-def test_idle_with_several_jobs_reports_the_count(monkeypatch):
-    label, colour, _ = _status(monkeypatch, "IDLE", jobs=3)
-    assert label == "Generating 3"
-    assert colour == "green"
+def test_several_jobs_report_a_count_not_a_name(monkeypatch):
+    """Naming one of three jobs would misrepresent the other two."""
+    status = _status(monkeypatch, "IDLE", jobs=3, label="Image Gen")
+    assert status.label == "3 jobs 1:24"
 
 
-def test_queue_label_width_is_bounded(monkeypatch):
-    """The pill window is a FIXED 148 px (AGENT_BUBBLE_PILL_WIDTH), so the
-    label must not grow with the job count — a fan-out of 40 retopology jobs
-    would otherwise clip the text mid-word."""
-    assert HDR._queue_label(40) == "Generating 9+"
+def test_unknown_capability_falls_back_to_generic_wording(monkeypatch):
+    """An empty label means the catalog couldn't answer — never leak a raw
+    service key like "mesh_segment" into the pill."""
+    status = _status(monkeypatch, "IDLE", jobs=1, label="")
+    assert status.label == "Generating 1:24"
 
-    # Widest producible label: the cap plus the 3-char animated suffix.
-    widest = max(
-        len(HDR._queue_label(n)) for n in (1, 2, HDR._QUEUE_COUNT_CAP, 999)
-    ) + 3
-    assert widest <= 16
+
+def test_long_capability_name_drops_to_generic_rather_than_clipping(monkeypatch):
+    """"Mesh Segmentation 1:24" is 22 chars in a 148 px window."""
+    status = _status(monkeypatch, "IDLE", jobs=1, label="Mesh Segmentation")
+    assert status.label == "Generating 1:24"
+
+
+def test_clock_is_the_animation_so_dots_are_off(monkeypatch):
+    """A ticking clock and a dot pulse are two competing animations."""
+    queue_status = _status(monkeypatch, "IDLE", jobs=2)
+    assert not queue_status.animate
+
+    agent_status = _status(monkeypatch, "BUSY", jobs=2)
+    assert agent_status.animate
+
+
+def test_count_is_capped(monkeypatch):
+    status = _status(monkeypatch, "IDLE", jobs=40)
+    assert status.label == "9+ jobs 1:24"
+
+
+def test_hour_long_job_keeps_the_label_narrow(monkeypatch):
+    """h:mm:ss is three characters wider than m:ss and would clip."""
+    status = _status(monkeypatch, "IDLE", jobs=1, label="Image Gen",
+                     elapsed=7300.0)
+    assert status.label == "Image Gen 2h+"
+
+
+def test_every_producible_label_fits_the_pill(monkeypatch):
+    """The pill window is a FIXED 148 px (AGENT_BUBBLE_PILL_WIDTH); Blender
+    clips overflow mid-word rather than shrinking the text."""
+    worst = [
+        _status(monkeypatch, "IDLE", jobs=n, label=lbl, elapsed=sec).label
+        for n in (1, 2, 9, 40)
+        for lbl in ("", "Image Gen", "Mesh Segmentation", "UV Unwrapping")
+        for sec in (0.0, 84.0, 3599.0, 7300.0)
+    ]
+    assert max(len(text) for text in worst) <= HDR._QUEUE_TEXT_BUDGET
 
 
 # ---------------------------------------------------------------------------
@@ -93,28 +139,25 @@ def test_queue_label_width_is_bounded(monkeypatch):
 
 def test_running_turn_outranks_queue_work(monkeypatch):
     for state in ("BUSY", "MODIFYING"):
-        label, colour, _ = _status(monkeypatch, state, jobs=2)
-        assert (label, colour) == ("Running", "green")
+        status = _status(monkeypatch, state, jobs=2)
+        assert (status.label, status.colour) == ("Running", "green")
 
 
 def test_awaiting_input_outranks_queue_work(monkeypatch):
-    label, _, _ = _status(monkeypatch, "AWAITING_INPUT", jobs=2)
-    assert label == "Awaiting Input"
+    assert _status(monkeypatch, "AWAITING_INPUT", jobs=2).label == "Awaiting Input"
 
 
 def test_offline_outranks_queue_work(monkeypatch):
-    label, _, _ = _status(monkeypatch, "OFFLINE", jobs=2)
-    assert label == "Disconnected"
+    assert _status(monkeypatch, "OFFLINE", jobs=2).label == "Disconnected"
 
 
 def test_connecting_outranks_queue_work(monkeypatch):
-    label, _, _ = _status(monkeypatch, "CONNECTING", jobs=2)
-    assert label == "Connecting"
+    assert _status(monkeypatch, "CONNECTING", jobs=2).label == "Connecting"
 
 
 def test_reconnecting_outranks_queue_work(monkeypatch):
-    label, _, _ = _status(monkeypatch, "IDLE", jobs=2, transport_down=True)
-    assert label == "Reconnecting"
+    status = _status(monkeypatch, "IDLE", jobs=2, transport_down=True)
+    assert status.label == "Reconnecting"
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +165,7 @@ def test_reconnecting_outranks_queue_work(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_active_queue_jobs_never_raises_into_a_draw(monkeypatch):
+def test_queue_activity_never_raises_into_a_draw(monkeypatch):
     """A header draw that raises leaves the bubble unpainted."""
     import builtins
 
@@ -134,7 +177,21 @@ def test_active_queue_jobs_never_raises_into_a_draw(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", _boom)
-    assert HDR._active_queue_jobs() == 0
+    assert HDR._queue_activity() is None
+
+
+def test_queue_clock_survives_a_missing_labels_module(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _boom(name, *args, **kwargs):
+        if name.endswith("labels"):
+            raise ImportError("labels module unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _boom)
+    assert HDR._queue_clock(1.0) == ""
 
 
 # ---------------------------------------------------------------------------
