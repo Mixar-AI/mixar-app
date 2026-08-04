@@ -19,7 +19,11 @@ try:
         item.identifier
         for item in bpy.types.Panel.bl_rna.properties['bl_space_type'].enum_items
     ]
-except (TypeError, KeyError):
+except (AttributeError, TypeError, KeyError):
+    # AttributeError covers the standalone pytest suite: mock_bpy installs a
+    # plain `type("Panel", (), {})` with no bl_rna, so this import — which
+    # every moodboard/queue UI module pulls in transitively — raised at
+    # collection time and interrupted the whole run.
     MIXIE_SPACE_AVAILABLE = False
 
 

@@ -10,7 +10,8 @@ it never contained vendor logic, only Blender-session work the backend
 cannot do):
 
 - get_poll_interval: progressive poll timing
-- redraw_3d_views: force viewport redraws
+- tag_redraw_queue_surfaces: repaint every area that shows queue state
+  (``redraw_3d_views`` is the legacy alias)
 - get_total_face_count: sum selected mesh faces
 - export_selected_mesh: export selection to bytes for upload
 - import_file: import a downloaded file into Blender (main thread only)
@@ -57,12 +58,36 @@ def get_poll_interval(poll_count):
 # ============================================================================
 
 
-def redraw_3d_views():
-    """Force redraw of all 3D viewports and MIXIE areas."""
+# Every area type that renders live queue state: the 3D viewport (toasts,
+# feature overlays), the MIXIE editor (Queue panel) and the floating Agent
+# Bubble / status pill (queue-aware pill label).
+#
+# AGENT_BUBBLE is load-bearing: the bubble and its minimised pill each live
+# in their OWN wmWindow, so a queue change tagged only VIEW_3D/MIXIE left the
+# pill painting a stale label until the user happened to hover it — which is
+# exactly the surface that is supposed to report background work.
+QUEUE_SURFACE_AREA_TYPES = ('VIEW_3D', 'MIXIE', 'AGENT_BUBBLE')
+
+
+def tag_redraw_queue_surfaces():
+    """Tag every area that renders queue state for redraw."""
     for window in bpy.context.window_manager.windows:
         for area in window.screen.areas:
-            if area.type in ('VIEW_3D', 'MIXIE'):
-                area.tag_redraw()
+            if area.type not in QUEUE_SURFACE_AREA_TYPES:
+                continue
+            area.tag_redraw()
+            if area.type == 'AGENT_BUBBLE':
+                # The bubble's header/pill needs its regions tagged
+                # explicitly — same finding as the chat loader animation
+                # (animation_manager._update_loader): tagging the area alone
+                # leaves the pill static in Zen Mode.
+                for region in area.regions:
+                    region.tag_redraw()
+
+
+def redraw_3d_views():
+    """Deprecated alias — use ``tag_redraw_queue_surfaces()``."""
+    tag_redraw_queue_surfaces()
 
 
 # ============================================================================

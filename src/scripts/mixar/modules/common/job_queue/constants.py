@@ -87,11 +87,24 @@ DOWNLOAD_PROGRESS_REFRESH_S = 0.5
 # granularity plus the retry backoff tail.
 DOWNLOAD_WATCHDOG_DEADLINE_S = DOWNLOAD_TOTAL_DEADLINE_S + 120.0
 
-# Enqueue toast — transient "generation queued" viewport feedback.
-# One stable id so bursts collapse into a single counting toast; the TTL is
-# also the burst window (a re-push resets the store item's created_at).
-ENQUEUE_TOAST_ID = "jobq_enqueued"
-ENQUEUE_TOAST_TTL_MS = 8000
+# Queue-activity toast — one stable id, so every push replaces the previous
+# item instead of stacking a toast per job.
+QUEUE_TOAST_ID = "jobq_enqueued"
+
+# The in-progress toast is STICKY (ttl <= 0 never expires). An auto-fading
+# confirmation was the original problem: the agent enqueues a generation,
+# reports back, and goes IDLE, leaving the user with nothing on screen to
+# tell them work is still running or where to check it. The toast lives for
+# as long as the queue has unfinished work and carries the "View Queue"
+# action the whole time.
+QUEUE_ACTIVE_TOAST_TTL_MS = 0
+
+# Completion summary shown when the queue drains. Transient — it reports a
+# finished fact, and the results themselves are already in the scene.
+QUEUE_READY_TOAST_TTL_MS = 10000
+
+# Backwards-compatible alias — the id string is unchanged.
+ENQUEUE_TOAST_ID = QUEUE_TOAST_ID
 
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
@@ -126,7 +139,9 @@ __all__ = (
     "FEATURE_BRUSH_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
+    "QUEUE_TOAST_ID",
+    "QUEUE_ACTIVE_TOAST_TTL_MS",
+    "QUEUE_READY_TOAST_TTL_MS",
     "ENQUEUE_TOAST_ID",
-    "ENQUEUE_TOAST_TTL_MS",
     "LOG_PREFIX",
 )
