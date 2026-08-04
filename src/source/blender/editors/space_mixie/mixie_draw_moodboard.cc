@@ -134,47 +134,78 @@ void mixie_moodboard_region_set_view2d(ARegion *region)
 
 static void mixie_draw_moodboard_grid(View2D *v2d)
 {
-  /* Grid configuration */
-  const float grid_step = 100.0f;
-  const float grid_color[4] = {0.15f, 0.15f, 0.15f, 1.0f};
+  /* Keep both spacing and dot radius fixed in canvas space. Consequently,
+   * zooming in reveals fewer, larger dots instead of maintaining a constant
+   * screen-space density. */
+  const float grid_step = MOODBOARD_GRID_SPACING;
+  const float dot_radius = MOODBOARD_GRID_DOT_RADIUS;
+  const float view_scale = std::min(UI_view2d_scale_get_x(v2d),
+                                    UI_view2d_scale_get_y(v2d));
+  const float dot_diameter_px = dot_radius * 2.0f * view_scale;
 
-  /* Calculate visible grid lines */
+  /* A regular grid below pixel resolution produces circular Moire bands as
+   * rows are inconsistently sampled. Fade it before reaching that range. */
+  if (dot_diameter_px <= MOODBOARD_GRID_DOT_FADE_START_PX) {
+    return;
+  }
+  const float grid_alpha = std::clamp(
+      (dot_diameter_px - MOODBOARD_GRID_DOT_FADE_START_PX) /
+          (MOODBOARD_GRID_DOT_FADE_END_PX - MOODBOARD_GRID_DOT_FADE_START_PX),
+      0.0f,
+      1.0f);
+  const float grid_color[4] = {0.45f, 0.45f, 0.45f, grid_alpha};
+
+  /* Calculate the visible grid bounds. */
   float view_min_x = v2d->cur.xmin;
   float view_max_x = v2d->cur.xmax;
   float view_min_y = v2d->cur.ymin;
   float view_max_y = v2d->cur.ymax;
 
-  /* Snap to grid step */
-  float start_x = floorf(view_min_x / grid_step) * grid_step;
-  float start_y = floorf(view_min_y / grid_step) * grid_step;
+  const int first_column = int(floorf(view_min_x / grid_step));
+  const int last_column = int(floorf(view_max_x / grid_step));
+  const int first_row = int(floorf(view_min_y / grid_step));
+  const int last_row = int(floorf(view_max_y / grid_step));
+  const int column_count = std::max(last_column - first_column + 1, 0);
+  const int row_count = std::max(last_row - first_row + 1, 0);
+  const int dot_count = column_count * row_count;
+
+  if (dot_count == 0) {
+    return;
+  }
 
   GPUVertFormat *format = immVertexFormat();
   uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
 
+  GPU_blend(GPU_BLEND_ALPHA);
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   immUniformColor4fv(grid_color);
 
-  /* Count grid lines */
-  int h_lines = int((view_max_y - start_y) / grid_step) + 1;
-  int v_lines = int((view_max_x - start_x) / grid_step) + 1;
-  int total_lines = h_lines + v_lines;
+  /* Filled discs avoid the varying subpixel coverage of GPU point primitives,
+   * which otherwise creates visible Moire groupings. */
+  immBegin(GPU_PRIM_TRIS, dot_count * MOODBOARD_GRID_DOT_SEGMENTS * 3);
+  for (int row = first_row; row <= last_row; row++) {
+    const float center_y = float(row) * grid_step;
+    for (int column = first_column; column <= last_column; column++) {
+      const float center_x = float(column) * grid_step;
 
-  immBegin(GPU_PRIM_LINES, total_lines * 2);
-
-  /* Draw horizontal lines */
-  for (float y = start_y; y <= view_max_y; y += grid_step) {
-    immVertex2f(pos, view_min_x, y);
-    immVertex2f(pos, view_max_x, y);
+      for (int segment = 0; segment < MOODBOARD_GRID_DOT_SEGMENTS; segment++) {
+        const float angle_a = (2.0f * float(M_PI) * float(segment)) /
+                              float(MOODBOARD_GRID_DOT_SEGMENTS);
+        const float angle_b = (2.0f * float(M_PI) * float(segment + 1)) /
+                              float(MOODBOARD_GRID_DOT_SEGMENTS);
+        immVertex2f(pos, center_x, center_y);
+        immVertex2f(pos,
+                    center_x + cosf(angle_a) * dot_radius,
+                    center_y + sinf(angle_a) * dot_radius);
+        immVertex2f(pos,
+                    center_x + cosf(angle_b) * dot_radius,
+                    center_y + sinf(angle_b) * dot_radius);
+      }
+    }
   }
-
-  /* Draw vertical lines */
-  for (float x = start_x; x <= view_max_x; x += grid_step) {
-    immVertex2f(pos, x, view_min_y);
-    immVertex2f(pos, x, view_max_y);
-  }
-
   immEnd();
   immUnbindProgram();
+  GPU_blend(GPU_BLEND_NONE);
 }
 
 /** \} */

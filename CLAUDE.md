@@ -104,13 +104,20 @@ src/
 
 ## Feature Modules
 
-**Moodboard media contract:** Moodboard items may reference still-image or movie
-`bpy.types.Image` datablocks. Movies support native file-picker and OS drag/drop,
-render as first-frame thumbnails with a centered play affordance, and open a
-fitted, auto-playing Video Sequencer preview from the affordance or a
-double-click. The preview hides the Sequencer editing tool shelf and owns an
-isolated transient scene and movie strip that are removed with the window, so it
-never mutates or persists in the user's timeline. Movies remain linked to the
+**Moodboard media contract:** The moodboard canvas is theme-independent pure
+black with a sparse neutral-gray dot grid whose spacing and filled-disc radius
+are fixed in canvas space. Zooming in therefore shows fewer, farther-apart,
+larger dots; zooming out shows more, smaller dots. Filled geometry prevents the
+subpixel Moire grouping produced by GPU point primitives, and the grid fades
+out as its projected dot diameter approaches one pixel to avoid undersampling
+bands at extreme zoom-out. Moodboard items may reference
+still-image or movie `bpy.types.Image` datablocks. Movies support native file-picker and OS drag/drop
+and play directly inside their canvas blocks. The centered play/pause affordance
+or a double-click toggles runtime-only playback at the movie's native frame rate.
+A pass-through mouse-move handler stops playback at the current frame as soon as
+the pointer leaves the originating tile; a narrow redraw timer advances frames without
+opening another editor, changing the scene timeline, or persisting playback state.
+Movies remain linked to the
 source file (Blender cannot pack movies),
 are copied in-app and exported without re-encoding, and expose stream-friendly
 source metadata in `moodboard/core/media_utils.py`. The catalog-only Video Gen

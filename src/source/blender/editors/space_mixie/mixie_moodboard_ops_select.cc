@@ -281,9 +281,9 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   }
 
   /* A movie keeps the normal image-like canvas interactions everywhere
-   * except its centered play affordance. Single-clicking that button, or
-   * double-clicking anywhere on the movie, opens Blender's native Image
-   * Editor preview without interfering with drag/resize gestures. */
+   * except its centered playback affordance. Single-clicking that button,
+   * or double-clicking anywhere on the movie, toggles playback directly in
+   * its moodboard block without interfering with drag/resize gestures. */
   if (clicked_index != -1 && element_type == MOODBOARD_ELEMENT_IMAGE &&
       clicked_handle == -1 && moodboard_item_is_video(&scene_ptr, clicked_index))
   {
@@ -297,7 +297,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
                                  play_radius * play_radius;
 
     if (event->val == KM_DBL_CLICK || play_button_hit) {
-      return moodboard_open_video_preview(C, &scene_ptr, clicked_index, op->reports) ?
+      return moodboard_toggle_video_playback(C, &scene_ptr, clicked_index, op->reports) ?
                  OPERATOR_FINISHED :
                  OPERATOR_CANCELLED;
     }
