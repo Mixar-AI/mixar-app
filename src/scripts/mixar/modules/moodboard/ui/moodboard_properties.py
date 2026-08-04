@@ -33,11 +33,18 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
     TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
+    CHARACTER_COMPONENT_IMAGE_ROLES,
 )
 
 
 class MixieMoodboardSegment(PropertyGroup):
     """Individual segment for an image (Magic Select results)"""
+
+    component_id: StringProperty(
+        name="Component ID",
+        description="Persistent identity for this character component",
+        default="",
+    )
 
     mask_image: PointerProperty(
         type=bpy.types.Image,
@@ -46,8 +53,13 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     active: BoolProperty(
         name="Active",
-        description="Whether this segment overlay is visible",
+        description="Show this segment overlay and include it in Segments to 3D",
         default=True
+    )
+    include_for_detail: BoolProperty(
+        name="Include Detail",
+        description="Include this component in batch detail-image generation",
+        default=True,
     )
     index: IntProperty(
         name="Index",
@@ -56,13 +68,20 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     name: StringProperty(
         name="Name",
-        description="Segment name",
-        default="Segment"
+        description="Component name used to guide detail-image generation",
+        default="Segment",
+        maxlen=96,
     )
 
 
 class MixieMoodboardImage(PropertyGroup):
     """Property group for moodboard reference images"""
+
+    moodboard_item_id: StringProperty(
+        name="Moodboard Item ID",
+        description="Persistent identity used by component provenance links",
+        default="",
+    )
 
     image: PointerProperty(
         name="Image",
@@ -188,6 +207,30 @@ class MixieMoodboardImage(PropertyGroup):
         name="Chain ID",
         description="Pipeline chain ID linking label → image → HP mesh → LP mesh",
         default="",
+    )
+
+    # --- Character-component provenance --------------------------------
+    component_role: EnumProperty(
+        name="Character Component Role",
+        description="How this image participates in a character component workflow",
+        items=CHARACTER_COMPONENT_IMAGE_ROLES,
+        default='NONE',
+    )
+    component_source_item_id: StringProperty(
+        name="Component Source Image",
+        description="Persistent moodboard item ID of the source character reference",
+        default="",
+    )
+    component_source_segment_id: StringProperty(
+        name="Component Source Segment",
+        description="Persistent SAM3 segment ID that guided this detail image",
+        default="",
+    )
+    component_name: StringProperty(
+        name="Component Name",
+        description="Named character component represented by this image",
+        default="",
+        maxlen=96,
     )
 
     # --- Turnaround / multi-view sets ------------------------------------

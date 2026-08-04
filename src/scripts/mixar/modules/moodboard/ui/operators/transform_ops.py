@@ -279,6 +279,15 @@ class MIXIE_OT_moodboard_duplicate(Operator):
             new_img.flip_vertical = orig_img.flip_vertical
             new_img.z_order = orig_img.z_order + 1
             new_img.generation_prompt = orig_img.generation_prompt
+            # Preserve what a generated detail represents, while leaving its
+            # moodboard_item_id empty so the duplicate receives a fresh UUID
+            # if it later becomes a provenance source itself.
+            new_img.component_role = orig_img.component_role
+            new_img.component_source_item_id = orig_img.component_source_item_id
+            new_img.component_source_segment_id = (
+                orig_img.component_source_segment_id
+            )
+            new_img.component_name = orig_img.component_name
             new_img.group_index = -1  # Don't copy group membership
             new_img.selected = True  # Select the duplicate
             duplicated_count += 1

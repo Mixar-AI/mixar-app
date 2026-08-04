@@ -425,7 +425,8 @@ def add_image_to_moodboard(
     position_y: float | None = None,
     scale: float = 1.0,
     job_handle: str = "",
-) -> None:
+    scene=None,
+):
     """Add an image to the moodboard collection at specified position.
 
     When *position_x* or *position_y* are ``None`` (the default) the image is
@@ -435,7 +436,7 @@ def add_image_to_moodboard(
     images.  Explicit float values override this behaviour and allow callers to
     place images at precise canvas coordinates (e.g. for side-by-side layouts).
     """
-    scene = bpy.context.scene
+    scene = scene or bpy.context.scene
     item = scene.mixie_moodboard_images.add()
     item.image = image
     item.scale = scale
@@ -463,6 +464,10 @@ def add_image_to_moodboard(
         item.position_y = position_y
 
     # Redraw Mixie space
-    for area in bpy.context.screen.areas:
-        if area.type == 'MIXIE':
-            area.tag_redraw()
+    try:
+        for area in bpy.context.screen.areas:
+            if area.type == 'MIXIE':
+                area.tag_redraw()
+    except Exception:
+        pass
+    return item

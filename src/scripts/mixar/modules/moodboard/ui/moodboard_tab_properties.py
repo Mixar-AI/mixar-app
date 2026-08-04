@@ -23,6 +23,7 @@ from bpy.props import (
 )
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
+from .moodboard_character_component_props import MixieCharacterComponentSettings  # noqa: F401
 from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabAnimateProps,
@@ -384,6 +385,12 @@ class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
         description="Number of active segments selected",
         default=0,
         min=0
+    )
+
+    character_components: PointerProperty(
+        type=MixieCharacterComponentSettings,
+        name="Character Component Details",
+        description="Settings for SAM3-guided component detail images",
     )
 
 

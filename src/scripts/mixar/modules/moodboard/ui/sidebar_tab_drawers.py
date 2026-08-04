@@ -79,22 +79,17 @@ def _draw_segment_to_3d(layout, context):
         box.label(text="No segments yet", icon='INFO')
         box.label(text="Use selection tools to create segments")
     else:
-        col = draw_section_box(layout, f"Segments ({num_segments})", icon='MOD_MASK')
-        for i, segment in enumerate(selected_item.segments):
-            row = col.row(align=True)
-            icon = 'CHECKBOX_HLT' if segment.active else 'CHECKBOX_DEHLT'
-            op = row.operator("mixie.toggle_segment", text="", icon=icon, emboss=False)
-            op.image_index = selected_idx
-            op.segment_index = i
-            row.label(text=segment.name)
-            op = row.operator("mixie.delete_segment", text="", icon='X')
-            op.image_index = selected_idx
-            op.segment_index = i
+        from .character_components_drawer import draw_character_components
 
-        active_count = sum(1 for s in selected_item.segments if s.active)
-        if active_count > 0:
-            col.separator(factor=SEP_INTRA)
-            draw_status_badge(col, f"{active_count} segment(s) active", 'DONE')
+        settings = (
+            scene.mixie_moodboard_sidebar.tab_segment_to_3d.character_components
+        )
+        draw_character_components(
+            layout,
+            selected_idx,
+            selected_item,
+            settings,
+        )
 
     from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
     draw_generate_footer(layout, context, "mixie.generate_scene", "segment_to_3d",

@@ -87,6 +87,70 @@ MOODBOARD_MULTI_IMAGE_GAP = 50.0
 MOODBOARD_MAX_PLACEMENT_RING = 16
 
 # ============================================================================
+# CHARACTER COMPONENT DETAIL WORKFLOW
+# ============================================================================
+
+# Image Gen receives an ordered source/cutout/mask reference set. Two inputs
+# are the minimum that can preserve both the selected pixels and the exact
+# binary SAM3 selection; models that cannot accept both fail closed.
+CHARACTER_COMPONENT_REQUIRED_REFERENCES = 2
+CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES = 3
+CHARACTER_COMPONENT_REFERENCE_ROLES = {
+    False: ("component_cutout", "selection_mask"),
+    True: ("full_context", "component_cutout", "selection_mask"),
+}
+
+# SAM3 runs on a resized upload, so its mask crop is mapped onto the original
+# source before resizing. A materially different aspect ratio means the source
+# was edited after segmentation and the mask must not be applied silently.
+CHARACTER_COMPONENT_ASPECT_TOLERANCE = 0.015
+CHARACTER_COMPONENT_MASK_THRESHOLD = 128
+CHARACTER_COMPONENT_CROP_PADDING = 0.18
+CHARACTER_COMPONENT_MIN_PADDING_PX = 16
+CHARACTER_COMPONENT_MAX_REFERENCE_DIMENSION = 2048
+CHARACTER_COMPONENT_BACKGROUND_RGB = (128, 128, 128)
+CHARACTER_COMPONENT_JPEG_QUALITY = 92
+
+CHARACTER_COMPONENT_IMAGE_ROLES = (
+    ('NONE', "Ordinary Image", "Image outside a character-component workflow"),
+    ('REFERENCE', "Reference", "Source/reference moodboard image"),
+    (
+        'COMPONENT_DETAIL',
+        "Component Detail",
+        "Detailed image generated from a named SAM3 character component",
+    ),
+)
+
+CHARACTER_COMPONENT_REFERENCE_GUIDANCE = {
+    False: (
+        "Reference image 1 is a padded cutout of the selected component on a "
+        "neutral background. Reference image 2 is its aligned binary SAM3 "
+        "selection mask; white is selected and black is excluded."
+    ),
+    True: (
+        "Reference image 1 is the full character and defines the overall "
+        "identity and design language. Reference image 2 is a padded cutout "
+        "of the selected component on a neutral background. Reference image "
+        "3 is the binary SAM3 selection mask aligned to reference image 2; "
+        "white is selected and black is excluded."
+    ),
+}
+
+CHARACTER_COMPONENT_DETAIL_PROMPT = (
+    "Create one high-detail standalone reference image of the exact character "
+    "component named {component_name}. {reference_guidance} Preserve the "
+    "selected component's silhouette, proportions, construction, colors, "
+    "materials, surface details, wear, and art style. Do not redesign it and "
+    "do not merge it with neighboring body parts, clothing, or equipment. "
+    "When overlap hides part of the component, complete only the necessary "
+    "occluded surfaces consistently with the visible design. Show the whole "
+    "component once, centered and unobstructed, as a clean orthographic-style "
+    "product reference on a plain neutral background. No character body, no "
+    "unselected gear, no extra objects, no duplicate views, and no text or "
+    "labels."
+)
+
+# ============================================================================
 # IMAGE PROPERTY DEFAULTS
 # ============================================================================
 

@@ -20,7 +20,7 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 from ...core.scene_segment_manager import get_scene_segment_manager
-from .magic_select_ops import recomposite_display_image
+from ...core.segment_overlay import recomposite_display_image
 
 
 def _redraw_all():

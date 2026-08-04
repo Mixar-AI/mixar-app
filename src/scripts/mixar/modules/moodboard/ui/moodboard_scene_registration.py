@@ -43,6 +43,7 @@ from .moodboard_properties import (
     MixieMoodboardTextBox,
 )
 from .moodboard_tab_properties import (
+    MixieCharacterComponentSettings,
     MixieMoodboardReferenceImage,
     MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabImageGenProps,
@@ -74,6 +75,7 @@ classes = (
     MixieMoodboardTabLookdevProps,
     MixieMoodboardTabLookdev360Props,
     MixieMoodboardTabImageTo3DProps,
+    MixieCharacterComponentSettings,
     MixieMoodboardTabSegmentTo3DProps,
     MixieMoodboardTabMeshSegmentProps,
     MixieMoodboardTabSceneReconProps,

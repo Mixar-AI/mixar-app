@@ -95,6 +95,12 @@ class MIXIE_PT_mask_tools_popover(Panel):
             depress=(active_tool == 'BOX_MASK'),
         )
         col.operator(
+            "mixie.moodboard_lasso_tool",
+            text="Lasso Mask",
+            icon='OUTLINER_DATA_GP_LAYER',
+            depress=(active_tool == 'LASSO'),
+        )
+        col.operator(
             "mixie.moodboard_magic_select_tool",
             text="Magic Select",
             icon='SNAP_FACE',
