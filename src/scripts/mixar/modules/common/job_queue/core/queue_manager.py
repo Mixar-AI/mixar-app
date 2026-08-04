@@ -19,6 +19,7 @@ lifecycle lives in ``queue_download.DownloadMixin``.
 """
 
 import time
+from typing import NamedTuple
 
 import bpy
 
@@ -80,6 +81,65 @@ def get_queue(feature_key: str) -> "FeatureQueue":
 
 def all_queues() -> list:
     return list(_queues.values())
+
+
+# Every state that means "this job still has work to do". PAUSED_AUTH is in
+# here on purpose — the job is stalled on a re-login, not finished, and the
+# user still has something outstanding to know about.
+ACTIVE_JOB_STATES = frozenset(
+    RUNNING_STATES | {JobState.PENDING, JobState.PAUSED_AUTH}
+)
+
+
+class QueueActivity(NamedTuple):
+    """What the queue is doing right now, for narrow status surfaces.
+
+    ``label`` is only populated when EXACTLY ONE job is active — with two
+    the name of either is misleading, and there is no room to list both.
+    It is the catalog capability label ("Image Gen"), empty when the catalog
+    cannot answer; a status pill should say "Generating" rather than show a
+    raw key like ``mesh_segment``.
+    """
+
+    count: int
+    label: str
+    started_at: float  # oldest active job's monotonic created_at, 0.0 if idle
+
+
+def active_queue_activity() -> QueueActivity:
+    """Summarise unfinished work across EVERY feature queue.
+
+    Read from the canonical FeatureQueue singletons rather than the
+    ``wm.mixie_queue`` mirror: the mirror only reflects the features
+    hand-listed in ``queue_properties._attach_listeners()``, so a queue
+    missing from that tuple runs jobs that the mirror never sees.
+    """
+    active = [
+        job
+        for queue in all_queues()
+        for job in queue.snapshot()
+        if job.state in ACTIVE_JOB_STATES
+    ]
+    if not active:
+        return QueueActivity(0, "", 0.0)
+
+    # The OLDEST job's clock, not the newest: it answers "how long has this
+    # been going", which is the question a stalled queue raises.
+    started_at = min(getattr(job, "created_at", 0.0) for job in active)
+    label = ""
+    if len(active) == 1:
+        from .labels import catalog_feature_label
+        job = active[0]
+        label = catalog_feature_label(
+            getattr(job, "origin_capability_key", ""),
+            getattr(job, "service", "") or getattr(job, "job_type", ""),
+        )
+    return QueueActivity(len(active), label, started_at)
+
+
+def active_job_count() -> int:
+    """Number of unfinished jobs across every feature queue."""
+    return active_queue_activity().count
 
 
 _JOBQ_STATE_TO_STATUS = {
@@ -451,17 +511,48 @@ class FeatureQueue(DownloadMixin):
 
     @staticmethod
     def _notify_enqueue_toast(job: Job) -> None:
-        """Confirm the enqueue with a transient viewport toast.
+        """Confirm the enqueue with a viewport toast.
 
         The agent's chat text alone is easy to miss; this covers every
         enqueue path (user- and agent-initiated) since they all funnel
-        through ``submit()``. Burst aggregation lives in enqueue_toast.
+        through ``submit()``. The toast then stays up for as long as the
+        queue has work — see enqueue_toast.
         """
         try:
             from .enqueue_toast import notify_job_enqueued
             notify_job_enqueued(job)
         except Exception as e:
             logger.debug("%s failed to push enqueue toast: %s", LOG_PREFIX, e)
+
+    @staticmethod
+    def _ensure_status_pump() -> None:
+        """Keep the 0.5 s repaint pump running while this queue has work.
+
+        The pump advances the Agent Bubble pill's elapsed clock. It was
+        previously kicked only from ``queue_properties._sync_mirror``, which
+        is attached to a hand-listed set of features — so a queue missing
+        from that tuple ran jobs the pill counted but never repainted for,
+        freezing the clock at 0:00. Starting it here covers every queue.
+        """
+        try:
+            from mixar.modules.common.job_queue.ui import queue_status_icons
+            queue_status_icons.start_blink_if_needed()
+        except Exception as e:
+            logger.debug("%s failed to start status pump: %s", LOG_PREFIX, e)
+
+    @staticmethod
+    def _refresh_queue_toast() -> None:
+        """Keep the queue-activity toast in step with live job state.
+
+        Runs on every notify (not just submit) because the toast's whole
+        job is to survive until the queue drains: it has to follow jobs
+        completing, failing and being cancelled, not only arriving.
+        """
+        try:
+            from .enqueue_toast import refresh_from_queues
+            refresh_from_queues()
+        except Exception as e:
+            logger.debug("%s failed to refresh queue toast: %s", LOG_PREFIX, e)
 
     def _notify(self) -> None:
         # Terminal jobs stay in history until the user clears them, but large
@@ -478,6 +569,8 @@ class FeatureQueue(DownloadMixin):
                         LOG_PREFIX, job.id, e,
                     )
         self._notify_failure_toasts()
+        self._refresh_queue_toast()
+        self._ensure_status_pump()
         for fn in list(self._listeners):
             try:
                 fn(self)
