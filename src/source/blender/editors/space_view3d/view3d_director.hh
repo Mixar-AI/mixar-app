@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "BLI_vector.hh"
 
 struct ARegion;
@@ -38,7 +40,10 @@ struct DirectorViewState {
   int frame_current = 0;
   int frame_start = 0;
   int frame_end = 0;
+  int scene_frame_start = 0;
   float fps = 24.0f;
+  const void *shot_identity = nullptr;
+  std::string camera_name = "Camera";
   blender::Vector<DirectorBeatView> beats;
 };
 

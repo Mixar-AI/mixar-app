@@ -87,6 +87,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   r_state->frame_current = scene->r.cfra;
   r_state->frame_start = scene->r.sfra;
   r_state->frame_end = scene->r.efra;
+  r_state->scene_frame_start = scene->r.sfra;
   r_state->fps = (scene->r.frs_sec_base > 0.0f) ? float(scene->r.frs_sec) / scene->r.frs_sec_base :
                                                   24.0f;
 
@@ -96,6 +97,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   }
 
   r_state->has_shot = true;
+  r_state->shot_identity = shot_ptr.data;
   r_state->locked = director_enum(&shot_ptr, "state", 0) == 1;
   r_state->active_beat_index = director_int(&shot_ptr, "active_beat_index", 0);
 
@@ -105,6 +107,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     Object *camera = static_cast<Object *>(camera_ptr.data);
     if (camera && camera->type == OB_CAMERA) {
       r_state->has_camera = true;
+      r_state->camera_name = camera->id.name + 2;
     }
   }
 

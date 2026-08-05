@@ -9,17 +9,11 @@
  */
 
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
-#include <cstring>
 
 #include "MEM_guardedalloc.h"
 
-#include "BLF_api.hh"
-
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
-#include "BLI_string.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -44,16 +38,13 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
-#include "view3d_director.hh"
+#include "view3d_director_timeline.hh"
 
 namespace {
 
-constexpr float DOCK_BG[4] = {0.038f, 0.041f, 0.048f, 1.0f};
-constexpr float PANEL_BG[4] = {0.065f, 0.068f, 0.078f, 1.0f};
-constexpr float PANEL_BORDER[4] = {0.23f, 0.24f, 0.28f, 1.0f};
-constexpr float TRACK_COLOR[4] = {0.36f, 0.37f, 0.42f, 1.0f};
-constexpr float MUTED_COLOR[4] = {0.61f, 0.62f, 0.67f, 1.0f};
-constexpr float PLAYHEAD_COLOR[4] = {0.62f, 0.82f, 1.0f, 1.0f};
+constexpr float DOCK_BG[4] = {0.105f, 0.108f, 0.115f, 1.0f};
+constexpr float PANEL_BG[4] = {0.195f, 0.195f, 0.195f, 1.0f};
+constexpr float PANEL_BORDER[4] = {0.27f, 0.27f, 0.28f, 1.0f};
 constexpr double PLAYBACK_REDRAW_INTERVAL = 1.0 / 30.0;
 
 wmTimer *g_playback_redraw_timer = nullptr;
@@ -97,16 +88,6 @@ void draw_dock_panel(const ARegion *region, const int margin)
   UI_draw_roundbox_corner_set(UI_CNR_ALL);
   UI_draw_roundbox_4fv_ex(
       &panel, PANEL_BG, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, 12.0f * UI_SCALE_FAC);
-}
-
-void draw_text(
-    const char *text, const float x, const float y, const float size, const float color[4])
-{
-  const int font = BLF_default();
-  BLF_size(font, size);
-  BLF_color4fv(font, color);
-  BLF_position(font, x, y, 0.0f);
-  BLF_draw(font, text, strlen(text));
 }
 
 uiBut *operator_button(uiBlock *block,
@@ -320,71 +301,6 @@ void draw_control_row(uiBlock *block,
   disable_button(capture, !state.has_camera);
 }
 
-void draw_timeline(uiBlock *block,
-                   const ARegion *region,
-                   const DirectorViewState &state,
-                   const int margin,
-                   const int unit)
-{
-  const float x_start = float(margin + unit);
-  const float x_end = float(region->winx - margin - unit);
-  const float y = float(margin + unit * 2);
-  const int default_span = std::max(1, int(std::round(state.fps * 10.0f)));
-  const int frame_start = state.frame_start;
-  const bool has_shot_span = state.beats.size() >= 2 && state.frame_end > frame_start;
-  const int frame_end = has_shot_span ? state.frame_end : frame_start + default_span;
-  const float span = float(std::max(frame_end - frame_start, 1));
-  const auto frame_x = [&](const int frame) {
-    const float t = std::clamp(float(frame - frame_start) / span, 0.0f, 1.0f);
-    return x_start + t * (x_end - x_start);
-  };
-
-  draw_rect(x_start, y, x_end, y + UI_SCALE_FAC, TRACK_COLOR);
-  const int tick_count = 10;
-  for (int tick = 0; tick <= tick_count; tick++) {
-    const float t = float(tick) / float(tick_count);
-    const float x = x_start + t * (x_end - x_start);
-    draw_rect(x, y - 4.0f * UI_SCALE_FAC, x + UI_SCALE_FAC, y + 5.0f * UI_SCALE_FAC, TRACK_COLOR);
-    char label[32];
-    const float seconds = (span * t) / std::max(state.fps, 0.001f);
-    BLI_snprintf(label, sizeof(label), "%.0fs", seconds);
-    draw_text(label,
-              x - 7.0f * UI_SCALE_FAC,
-              y + 9.0f * UI_SCALE_FAC,
-              10.0f * UI_SCALE_FAC,
-              MUTED_COLOR);
-  }
-
-  for (const DirectorBeatView &beat : state.beats) {
-    const int size = std::max(16, int(18.0f * UI_SCALE_FAC));
-    const int x = int(frame_x(beat.frame)) - size / 2;
-    uiBut *marker = operator_button(block,
-                                    "MIXAR_OT_director_jump_beat",
-                                    ICON_KEYTYPE_KEYFRAME_VEC,
-                                    "",
-                                    x,
-                                    int(y) - size / 2,
-                                    size,
-                                    size,
-                                    "View this camera beat");
-    PointerRNA *operator_ptr = UI_but_operator_ptr_ensure(marker);
-    RNA_int_set(operator_ptr, "index", beat.index);
-    if (beat.index == state.active_beat_index) {
-      UI_but_flag_enable(marker, UI_BUT_ACTIVE_DEFAULT);
-    }
-  }
-
-  const float playhead_x = frame_x(state.frame_current);
-  draw_rect(playhead_x, float(margin), playhead_x + UI_SCALE_FAC, y + unit * 2.0f, PLAYHEAD_COLOR);
-  char frame_label[32];
-  BLI_snprintf(frame_label, sizeof(frame_label), "F%d", state.frame_current);
-  draw_text(frame_label,
-            playhead_x + 5.0f * UI_SCALE_FAC,
-            float(margin),
-            10.0f * UI_SCALE_FAC,
-            PLAYHEAD_COLOR);
-}
-
 bool director_timeline_poll(const RegionPollParams *params)
 {
   DirectorViewState state;
@@ -415,7 +331,9 @@ void director_timeline_draw(const bContext *C, ARegion *region)
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
   draw_control_row(block, C, region, state, playing, margin, unit, gap);
-  draw_timeline(block, region, state, margin, unit);
+  DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
+  const int content_top = region->winy - margin - unit * 2 - gap * 2;
+  view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);
   UI_block_end(C, block);
   UI_block_draw(C, block);
   GPU_blend(GPU_BLEND_NONE);
@@ -479,7 +397,10 @@ void view3d_director_timeline_region_register(SpaceType *st)
   art->prefsizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
   art->poll = director_timeline_poll;
+  art->init = view3d_director_timeline_region_init;
   art->draw = director_timeline_draw;
+  art->free = view3d_director_timeline_region_free;
+  art->duplicate = view3d_director_timeline_region_duplicate;
   art->listener = director_timeline_listener;
   BLI_addhead(&st->regiontypes, art);
 

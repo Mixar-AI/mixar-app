@@ -52,3 +52,18 @@ def seconds_from_frame(
     """Return zero-based seconds from *origin_frame*."""
     return (int(frame) - int(origin_frame)) / effective_fps(fps, fps_base)
 
+
+def clamp_frame_delta(
+    frames: Iterable[int],
+    requested_delta: int,
+    *,
+    minimum_frame: int,
+    maximum_frame: int = 1048574,
+) -> int:
+    """Clamp a shared frame offset without changing the strip's spacing."""
+    values = [int(frame) for frame in frames]
+    if not values:
+        return 0
+    lower = int(minimum_frame) - min(values)
+    upper = int(maximum_frame) - max(values)
+    return min(max(int(requested_delta), lower), upper)

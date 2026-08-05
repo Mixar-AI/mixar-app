@@ -81,6 +81,8 @@ def test_native_viewport_surface_is_registered_from_view3d():
         "view3d_director_overlay.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
+        "view3d_director_timeline_draw.cc",
+        "view3d_director_timeline_interaction.cc",
     ):
         assert filename in cmake
     assert "view3d_director_overlay_draw" in space
@@ -146,15 +148,43 @@ def test_native_timeline_tracks_playback_and_real_beat_span():
     timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
         encoding="utf-8"
     )
+    timeline_draw = (
+        VIEW3D / "view3d_director_timeline_draw.cc"
+    ).read_text(encoding="utf-8")
     preview = _read("ui/operators/capture_ops.py")
 
     assert "WM_event_timer_add_notifier" in timeline
     assert "PLAYBACK_REDRAW_INTERVAL" in timeline
     assert "ND_ANIMPLAY" in timeline
-    assert "has_shot_span ? state.frame_end" in timeline
+    assert "state.frame_end" in timeline_draw
+    assert "runtime->view_span_frames" in timeline_draw
     assert "state.beats.size() < 2" in timeline
     assert "frames = sorted({beat.frame for beat in shot.beats})" in preview
     assert "Capture at least two camera beats to preview" in preview
+
+
+def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
+    timeline_draw = (
+        VIEW3D / "view3d_director_timeline_draw.cc"
+    ).read_text(encoding="utf-8")
+    interaction = (
+        VIEW3D / "view3d_director_timeline_interaction.cc"
+    ).read_text(encoding="utf-8")
+    timeline_ops = _read("ui/operators/timeline_ops.py")
+    timeline_core = _read("core/timeline.py")
+
+    assert "STRIP_COLOR" in timeline_draw
+    assert "major_tick_seconds" in timeline_draw
+    assert 'BLI_snprintf(label, sizeof(label), "%.2f", seconds)' in timeline_draw
+    assert "ICON_CAMERA_DATA" in timeline_draw
+    assert "MOUSEZOOM" in interaction
+    assert "MOUSEPAN" in interaction
+    assert "WHEELUPMOUSE" in interaction
+    assert '"mixar.director_drag_strip"' in interaction
+    assert "shift_camera_beats" in timeline_ops
+    assert "point.handle_left[0] += delta" in timeline_core
+    assert "point.handle_right[0] += delta" in timeline_core
+    assert "refresh_manifest(context.scene, shot)" in timeline_ops
 
 
 def test_capture_shortcut_survives_gui_keyconfig_reload():

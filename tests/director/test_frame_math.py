@@ -15,6 +15,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from mixar.modules.director.core.frame_math import (  # noqa: E402
+    clamp_frame_delta,
     effective_fps,
     frames_per_beat,
     next_beat_frame,
@@ -42,8 +43,18 @@ def test_seconds_are_relative_to_the_first_sparse_beat():
     assert seconds_from_frame(148, origin_frame=100, fps=24) == 2.0
 
 
+def test_strip_delta_clamps_as_one_unit_without_changing_spacing():
+    assert clamp_frame_delta([25, 49, 73], -40, minimum_frame=1) == -24
+    assert clamp_frame_delta([25, 49, 73], 12, minimum_frame=1) == 12
+    assert clamp_frame_delta(
+        [1048570, 1048574],
+        20,
+        minimum_frame=1,
+    ) == 0
+    assert clamp_frame_delta([], 20, minimum_frame=1) == 0
+
+
 @pytest.mark.parametrize("fps,base", [(0, 1), (-24, 1), (24, 0)])
 def test_invalid_frame_rates_fail_loudly(fps, base):
     with pytest.raises(ValueError):
         effective_fps(fps, base)
-
