@@ -242,6 +242,7 @@ EDIT_TOOL_TYPES = [
     ('BOX_MASK', "Box Mask", "Box mask selection"),
     ('LASSO', "Lasso", "Lasso selection"),
     ('MAGIC_SELECT', "Magic Select", "AI-powered object selection"),
+    ('ANNOTATE', "Annotate", "Draw freehand notes on a reference image"),
 ]
 
 # ============================================================================
@@ -253,6 +254,15 @@ LASSO_MIN_DISTANCE_THRESHOLD = 0.0001
 
 # Lasso tool minimum number of points required for mask
 LASSO_MIN_POINTS = 3
+
+# Freehand annotation defaults. Width is measured in display pixels at the
+# image's base scale and grows with image/canvas zoom.
+ANNOTATION_COLOR_DEFAULT = (1.0, 0.12, 0.04, 1.0)
+ANNOTATION_WIDTH_DEFAULT = 4.0
+ANNOTATION_WIDTH_MIN = 1.0
+ANNOTATION_WIDTH_MAX = 32.0
+ANNOTATION_MIN_DISTANCE = 0.001
+ANNOTATION_MAX_POINTS_PER_STROKE = 4096
 
 # Warning threshold for reference image count
 REFERENCE_IMAGES_MAX_WITH_WARNING = 14

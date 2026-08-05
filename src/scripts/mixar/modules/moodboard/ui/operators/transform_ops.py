@@ -288,6 +288,15 @@ class MIXIE_OT_moodboard_duplicate(Operator):
                 orig_img.component_source_segment_id
             )
             new_img.component_name = orig_img.component_name
+            new_img.show_annotations = orig_img.show_annotations
+            for original_stroke in orig_img.annotations:
+                copied_stroke = new_img.annotations.add()
+                copied_stroke.color = original_stroke.color[:]
+                copied_stroke.width = original_stroke.width
+                for original_point in original_stroke.points:
+                    copied_point = copied_stroke.points.add()
+                    copied_point.x = original_point.x
+                    copied_point.y = original_point.y
             new_img.group_index = -1  # Don't copy group membership
             new_img.selected = True  # Select the duplicate
             duplicated_count += 1

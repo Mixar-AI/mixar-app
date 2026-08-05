@@ -11,6 +11,7 @@ Left T-panel toolbar with core moodboard actions:
   • Add Text   — add a text box to the canvas
   • Crop       — crop the selected image
   • Mask Tools — popover with Box Mask, Lasso, and Magic Select
+  • Annotate   — draw persistent freehand notes on a selected image
   • Rotate     — rotate selected image 90° clockwise
   • Send to Chat — send selected image(s) to Mixie Chat
 """
@@ -117,6 +118,68 @@ class MIXIE_PT_mask_tools_popover(Panel):
             layout.label(text="Select an image first", icon='INFO')
 
 
+class MIXIE_PT_annotation_tools_popover(Panel):
+    """Freehand annotation settings and actions for one selected image."""
+
+    bl_idname = "MIXIE_PT_annotation_tools_popover"
+    bl_label = "Annotate"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'HEADER'
+    bl_ui_units_x = 10
+    bl_options = {'INSTANCED'}
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        state = scene.mixie_edit_tool_state
+        selected = [
+            item
+            for item in scene.mixie_moodboard_images
+            if item.selected and item.image
+        ]
+        image_item = selected[0] if len(selected) == 1 else None
+
+        col = layout.column(align=True)
+        col.enabled = image_item is not None
+        col.operator(
+            "mixie.moodboard_annotate_tool",
+            text="Draw on Image",
+            icon='BRUSH_DATA',
+            depress=(state.active_tool == 'ANNOTATE'),
+        )
+        col.separator(factor=0.4)
+        col.prop(state, "annotation_color", text="Color")
+        col.prop(state, "annotation_width", text="Width", slider=True)
+
+        if image_item is not None:
+            col.separator(factor=0.4)
+            col.prop(image_item, "show_annotations", text="Show Annotations")
+            row = col.row(align=True)
+            row.enabled = bool(image_item.annotations)
+            row.operator(
+                "mixie.moodboard_undo_annotation",
+                text="Undo Last",
+                icon='LOOP_BACK',
+            )
+            row.operator(
+                "mixie.moodboard_clear_annotations",
+                text="Clear",
+                icon='TRASH',
+            )
+            col.label(
+                text=f"{len(image_item.annotations)} stroke(s)",
+                icon='INFO',
+            )
+        else:
+            layout.separator(factor=0.3)
+            layout.label(text="Select exactly one image", icon='INFO')
+
+        if state.active_tool == 'ANNOTATE':
+            layout.separator(factor=0.3)
+            layout.label(text="Drag to draw; repeat for more strokes", icon='MOUSE_LMB')
+            layout.label(text="Cmd/Ctrl+Z undo • Enter/Esc finish", icon='EVENT_RETURN')
+
+
 class MIXIE_PT_moodboard_toolbar(Panel):
     """Moodboard tools panel in the T-panel (left toolbar) region"""
     bl_label = ""
@@ -181,6 +244,19 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
         col.separator(factor=0.6)
 
+        # ── Freehand Annotations ──────────────────────────────────────
+        row = col.row(align=True)
+        row.scale_x = 1.5
+        row.scale_y = 1.5
+        row.enabled = has_selected_image
+        row.popover(
+            panel="MIXIE_PT_annotation_tools_popover",
+            text="",
+            icon='BRUSH_DATA',
+        )
+
+        col.separator(factor=0.6)
+
         # ── Add Text ───────────────────────────────────────────────────
         row = col.row(align=True)
         row.scale_x = 1.5
@@ -204,5 +280,6 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 classes = (
     MIXIE_MT_add_image_menu,
     MIXIE_PT_mask_tools_popover,
+    MIXIE_PT_annotation_tools_popover,
     MIXIE_PT_moodboard_toolbar,
 ) if MIXIE_SPACE_AVAILABLE else ()

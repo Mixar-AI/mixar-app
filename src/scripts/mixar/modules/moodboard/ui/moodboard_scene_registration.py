@@ -42,6 +42,10 @@ from .moodboard_properties import (
     MixieMoodboardGroup,
     MixieMoodboardTextBox,
 )
+from .moodboard_annotation_props import (
+    MixieMoodboardAnnotationPoint,
+    MixieMoodboardAnnotationStroke,
+)
 from .moodboard_tab_properties import (
     MixieCharacterComponentSettings,
     MixieMoodboardReferenceImage,
@@ -66,6 +70,8 @@ from .moodboard_tab_properties import (
 logger = get_logger(__name__)
 
 classes = (
+    MixieMoodboardAnnotationPoint,
+    MixieMoodboardAnnotationStroke,
     MixieMoodboardSegment,
     MixieMoodboardImage,
     MixieMoodboardGroup,

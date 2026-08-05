@@ -43,7 +43,7 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
   }
 
   int active_tool = RNA_property_enum_get(&state_ptr, tool_prop);
-  /* active_tool: 0=NONE, 1=CROP, 2=BOX_MASK, 3=LASSO */
+  /* active_tool: 0=NONE, 1=CROP, 2=BOX_MASK, 3=LASSO, 4=MAGIC_SELECT, 5=ANNOTATE */
   if (active_tool == 0) {
     return;
   }
@@ -91,6 +91,9 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
   PropertyRNA *pos_x_prop = RNA_struct_find_property(&img_item_ptr, "position_x");
   PropertyRNA *pos_y_prop = RNA_struct_find_property(&img_item_ptr, "position_y");
   PropertyRNA *scale_prop = RNA_struct_find_property(&img_item_ptr, "scale");
+  PropertyRNA *rotation_prop = RNA_struct_find_property(&img_item_ptr, "rotation");
+  PropertyRNA *flip_horizontal_prop = RNA_struct_find_property(&img_item_ptr, "flip_horizontal");
+  PropertyRNA *flip_vertical_prop = RNA_struct_find_property(&img_item_ptr, "flip_vertical");
 
   if (!image_prop || !pos_x_prop || !pos_y_prop || !scale_prop) {
     return;
@@ -105,6 +108,13 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
   float pos_x = RNA_property_float_get(&img_item_ptr, pos_x_prop);
   float pos_y = RNA_property_float_get(&img_item_ptr, pos_y_prop);
   float scale = RNA_property_float_get(&img_item_ptr, scale_prop);
+  float rotation = rotation_prop ? RNA_property_float_get(&img_item_ptr, rotation_prop) : 0.0f;
+  bool flip_horizontal = flip_horizontal_prop ?
+                             RNA_property_boolean_get(&img_item_ptr, flip_horizontal_prop) :
+                             false;
+  bool flip_vertical = flip_vertical_prop ?
+                           RNA_property_boolean_get(&img_item_ptr, flip_vertical_prop) :
+                           false;
 
   /* Calculate display size */
   void *lock;
@@ -132,6 +142,16 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
   float img_right = pos_x + display_width;
   float img_bottom = pos_y;
   float img_top = pos_y + display_height;
+
+  const float center_x = pos_x + display_width / 2.0f;
+  const float center_y = pos_y + display_height / 2.0f;
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(center_x, center_y);
+  if (rotation != 0.0f) {
+    GPU_matrix_rotate_2d(rotation);
+  }
+  GPU_matrix_scale_2f(flip_horizontal ? -1.0f : 1.0f, flip_vertical ? -1.0f : 1.0f);
+  GPU_matrix_translate_2f(-center_x, -center_y);
 
   GPUVertFormat *format = immVertexFormat();
   uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
@@ -379,6 +399,7 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
 
   immUnbindProgram();
   GPU_blend(GPU_BLEND_NONE);
+  GPU_matrix_pop();
 }
 
 /** \} */

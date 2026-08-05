@@ -35,6 +35,7 @@ from mixar.modules.moodboard.constants import (
     TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
     CHARACTER_COMPONENT_IMAGE_ROLES,
 )
+from .moodboard_annotation_props import MixieMoodboardAnnotationStroke
 
 
 class MixieMoodboardSegment(PropertyGroup):
@@ -186,6 +187,17 @@ class MixieMoodboardImage(PropertyGroup):
         name="Group Index",
         description="Index of the group this image belongs to (-1 for no group)",
         default=-1
+    )
+
+    annotations: CollectionProperty(
+        type=MixieMoodboardAnnotationStroke,
+        name="Annotations",
+        description="Non-destructive freehand strokes attached to this image",
+    )
+    show_annotations: BoolProperty(
+        name="Show Annotations",
+        description="Display freehand annotations on this image",
+        default=True,
     )
 
     # Segment collection - stores all segments for this image (Magic Select)
