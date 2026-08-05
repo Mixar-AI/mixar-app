@@ -53,6 +53,7 @@ from .sidebar_tab_drawers import (
 )
 from .ai_render_drawer import _draw_ai_render
 from .animate_drawer import _draw_animate
+from .pbr_gen_drawer import _draw_pbr_gen
 from .scene_gen_drawer import _draw_scene_gen
 
 logger = get_logger(__name__)
@@ -317,6 +318,39 @@ class MIXIE_PT_gen_animate(Panel):
         _safe_draw(_draw_animate, self.layout, context)
 
 
+class MIXIE_PT_gen_pbr_generation(Panel):
+    # Capability "pbr_generation" — texture an existing mesh (Tripo
+    # /models/texture). Catalog-only, like AI Render / Auto Rig: no offline
+    # fallback identity, so poll() requires the catalog to be loaded AND to
+    # have pbr_generation services (disabling the capability in the DB hides
+    # the tab). DISTINCT from Texture Gen's pbr_gen (Hunyuan PBR maps).
+    bl_label = "PBR Generation"
+    bl_idname = "MIXIE_PT_gen_pbr_generation"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "PBR Generation"
+    bl_order = 78
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("pbr_generation"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='TEXTURE')
+
+    def draw(self, context):
+        _safe_draw(_draw_pbr_gen, self.layout, context)
+
+
 class MIXIE_PT_gen_scene_gen_exp(Panel):
     bl_label = "Scene Gen Experimental"
     bl_idname = "MIXIE_PT_gen_scene_gen_exp"
@@ -369,6 +403,7 @@ classes = (
     MIXIE_PT_gen_uv_unwrap,
     MIXIE_PT_gen_mesh_segment,
     MIXIE_PT_gen_animate,
+    MIXIE_PT_gen_pbr_generation,
     # MIXIE_PT_gen_scene_gen_exp,  # Scene Gen Experimental disabled
     MIXIE_PT_gen_queue,
 ) if MIXIE_SPACE_AVAILABLE else ()
