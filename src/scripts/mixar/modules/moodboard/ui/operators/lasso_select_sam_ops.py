@@ -9,6 +9,7 @@ Lasso Select SAM Integration Operators
 Operators for triggering SAM mask refinement after lasso selection.
 """
 
+import json
 import tempfile
 import os
 
@@ -42,7 +43,9 @@ def _reset_lasso_state(state):
     state.target_image_index = -1
 
 
-def _create_segment_from_mask(scene, image_index, mask_bytes, base_name):
+def _create_segment_from_mask(
+    scene, image_index, mask_bytes, base_name, outline_points=None
+):
     """Add segment to image's segment collection and recomposite."""
     mask_temp_path = None
     try:
@@ -71,6 +74,8 @@ def _create_segment_from_mask(scene, image_index, mask_bytes, base_name):
         # a magenta boundary so each original lasso remains identifiable.
         segment.show_overlay = True
         segment.outline_only = True
+        if outline_points:
+            segment.selection_outline = json.dumps(outline_points, separators=(",", ":"))
         segment.index = next_index
         segment.name = segment_name
 
@@ -313,7 +318,9 @@ class MIXIE_OT_lasso_select_sam(Operator):
                         for loop in captured_loops
                     ]
                     if all(mask_bytes):
-                        _perform_mask_segmentations(scene, target_idx, mask_bytes)
+                        _perform_mask_segmentations(
+                            scene, target_idx, mask_bytes, captured_loops
+                        )
                     else:
                         _reset_lasso_state(state)
                         logger.error("[LassoSelectSAM] Failed to create mask after upload")
@@ -337,11 +344,15 @@ class MIXIE_OT_lasso_select_sam(Operator):
 
         # Image ready, process loops sequentially. Each completed SAM3 result
         # is inserted immediately, so a long batch remains visibly progressive.
-        _perform_mask_segmentations(scene, state.target_image_index, mask_bytes)
+        _perform_mask_segmentations(
+            scene, state.target_image_index, mask_bytes, loops
+        )
         return {'FINISHED'}
 
 
-def _perform_mask_segmentations(scene, target_idx, masks, index=0, _retry=False):
+def _perform_mask_segmentations(
+    scene, target_idx, masks, outlines=None, index=0, _retry=False
+):
     """Refine loops one at a time and add each returned mask immediately."""
     state = scene.mixie_edit_tool_state
 
@@ -352,17 +363,18 @@ def _perform_mask_segmentations(scene, target_idx, masks, index=0, _retry=False)
 
     def on_complete(success: bool, refined_mask_bytes, message: str):
         if success and refined_mask_bytes:
+            outline = outlines[index] if outlines and index < len(outlines) else None
             _create_segment_from_mask(
-                scene, target_idx, refined_mask_bytes, "Lasso Segment"
+                scene, target_idx, refined_mask_bytes, "Lasso Segment", outline
             )
             # Continue only after the current result is visible on the board.
-            _perform_mask_segmentations(scene, target_idx, masks, index + 1)
+            _perform_mask_segmentations(scene, target_idx, masks, outlines, index + 1)
             return
 
         error_msg = message or "Unknown error"
         if error_msg == "expired" and not _retry:
             logger.error("[LassoSelectSAM] Job expired, re-uploading and retrying...")
-            _upload_and_retry_lasso(scene, target_idx, masks, index)
+            _upload_and_retry_lasso(scene, target_idx, masks, outlines, index)
             return
         elif "402" in error_msg or "credit" in error_msg.lower():
             logger.error("[LassoSelectSAM] Insufficient credits for segmentation")
@@ -372,7 +384,7 @@ def _perform_mask_segmentations(scene, target_idx, masks, index=0, _retry=False)
             logger.error("[LassoSelectSAM] Refinement failed: %s", error_msg)
 
         # A failed loop should not prevent later loops from appearing.
-        _perform_mask_segmentations(scene, target_idx, masks, index + 1)
+        _perform_mask_segmentations(scene, target_idx, masks, outlines, index + 1)
 
     img_item = scene.mixie_moodboard_images[target_idx]
     manager = get_scene_segment_manager()
@@ -386,7 +398,7 @@ def _perform_mask_segmentations(scene, target_idx, masks, index=0, _retry=False)
     _redraw_all()
 
 
-def _upload_and_retry_lasso(scene, target_idx, masks, index):
+def _upload_and_retry_lasso(scene, target_idx, masks, outlines, index):
     """Re-upload image and retry lasso segmentation after expiry."""
     state = scene.mixie_edit_tool_state
     img_item = scene.mixie_moodboard_images[target_idx]
@@ -395,7 +407,7 @@ def _upload_and_retry_lasso(scene, target_idx, masks, index):
     def on_upload_complete(success, message):
         if success:
             _perform_mask_segmentations(
-                scene, target_idx, masks, index=index, _retry=True
+                scene, target_idx, masks, outlines, index=index, _retry=True
             )
         else:
             logger.debug("[LassoSelectSAM] Re-upload failed: %s", message)

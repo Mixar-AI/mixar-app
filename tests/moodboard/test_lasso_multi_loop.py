@@ -29,5 +29,7 @@ def test_lasso_segments_keep_the_source_image_visible():
 
     assert "segment.show_overlay = True" in source
     assert "segment.outline_only = True" in source
+    assert "segment.selection_outline = json.dumps" in source
     assert 'getattr(segment, "show_overlay", True)' in overlay
     assert 'getattr(segment, "outline_only", False)' in overlay
+    assert "_original_lasso_edge" in overlay

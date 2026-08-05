@@ -66,6 +66,12 @@ class MixieMoodboardSegment(PropertyGroup):
         description="Render only the selection boundary while keeping source pixels unchanged",
         default=False,
     )
+    selection_outline: StringProperty(
+        name="Selection Outline",
+        description="Original lasso polygon stored as normalized JSON coordinates",
+        default="",
+        options={'SKIP_SAVE'},
+    )
     include_for_detail: BoolProperty(
         name="Include Detail",
         description="Include this component in batch detail-image generation",

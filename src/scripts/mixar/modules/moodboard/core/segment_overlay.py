@@ -4,7 +4,32 @@
 
 """Fast Moodboard compositing for visible SAM3 segment overlays."""
 
+import json
+
 import bpy
+
+
+def _original_lasso_edge(segment, width, height):
+    """Rasterize the user's original normalized lasso polygon boundary."""
+    import numpy as np
+
+    try:
+        points = json.loads(str(getattr(segment, "selection_outline", "") or ""))
+        points = [(float(point[0]) * width, float(point[1]) * height) for point in points]
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if len(points) < 3:
+        return None
+
+    edge = np.zeros((height, width), dtype=bool)
+    for start, end in zip(points, points[1:] + points[:1]):
+        distance = max(abs(end[0] - start[0]), abs(end[1] - start[1]))
+        samples = max(2, int(distance * 2))
+        xs = np.rint(np.linspace(start[0], end[0], samples)).astype(int)
+        ys = np.rint(np.linspace(start[1], end[1], samples)).astype(int)
+        valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+        edge[ys[valid], xs[valid]] = True
+    return edge
 
 
 def recomposite_display_image(img_item):
@@ -80,7 +105,11 @@ def recomposite_display_image(img_item):
 
         if getattr(segment, "outline_only", False) or is_lasso_segment(segment):
             # Lasso refinement should preserve the source artwork and leave a
-            # visible, non-green boundary for each selected component.
+            # visible boundary for the exact polygon the user drew. Fall back
+            # to the SAM edge for older segments without stored points.
+            original_edge = _original_lasso_edge(segment, width, height)
+            if original_edge is not None:
+                edge_mask = original_edge
             outline_color = np.array([1.0, 0.0, 1.0], dtype=np.float32)
             result_pixels[edge_mask, :3] = (
                 result_pixels[edge_mask, :3] * 0.2
