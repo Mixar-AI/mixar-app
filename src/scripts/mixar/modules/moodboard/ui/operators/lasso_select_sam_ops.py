@@ -67,9 +67,10 @@ def _create_segment_from_mask(scene, image_index, mask_bytes, base_name):
         segment = img_item.segments.add()
         segment.mask_image = mask_img
         segment.active = True
-        # Keep the source artwork visible after SAM3 refinement. The mask is
-        # retained for 3D/detail generation, but is not painted green over it.
-        segment.show_overlay = False
+        # Keep the source artwork visible after SAM3 refinement while leaving
+        # a magenta boundary so each original lasso remains identifiable.
+        segment.show_overlay = True
+        segment.outline_only = True
         segment.index = next_index
         segment.name = segment_name
 

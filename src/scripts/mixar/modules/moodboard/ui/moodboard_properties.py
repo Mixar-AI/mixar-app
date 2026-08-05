@@ -61,6 +61,11 @@ class MixieMoodboardSegment(PropertyGroup):
         description="Show the colored mask overlay on the source image",
         default=True,
     )
+    outline_only: BoolProperty(
+        name="Outline Only",
+        description="Render only the selection boundary while keeping source pixels unchanged",
+        default=False,
+    )
     include_for_detail: BoolProperty(
         name="Include Detail",
         description="Include this component in batch detail-image generation",

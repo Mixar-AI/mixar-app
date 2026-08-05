@@ -70,15 +70,24 @@ def recomposite_display_image(img_item):
         edge_mask[:, :-1] |= mask_bool[:, 1:] != mask_bool[:, :-1]
         edge_mask &= mask_bool
 
-        interior = mask_bool & ~edge_mask
-        result_pixels[interior, :3] = (
-            result_pixels[interior, :3] * (1 - overlay_alpha)
-            + theme_green * overlay_alpha
-        )
-        result_pixels[edge_mask, :3] = (
-            result_pixels[edge_mask, :3] * 0.3
-            + outline_green * 0.7
-        )
+        if getattr(segment, "outline_only", False):
+            # Lasso refinement should preserve the source artwork and leave a
+            # visible, non-green boundary for each selected component.
+            outline_color = np.array([1.0, 0.0, 1.0], dtype=np.float32)
+            result_pixels[edge_mask, :3] = (
+                result_pixels[edge_mask, :3] * 0.2
+                + outline_color * 0.8
+            )
+        else:
+            interior = mask_bool & ~edge_mask
+            result_pixels[interior, :3] = (
+                result_pixels[interior, :3] * (1 - overlay_alpha)
+                + theme_green * overlay_alpha
+            )
+            result_pixels[edge_mask, :3] = (
+                result_pixels[edge_mask, :3] * 0.3
+                + outline_green * 0.7
+            )
 
     if not img_item.display_image:
         img_item.display_image = bpy.data.images.new(

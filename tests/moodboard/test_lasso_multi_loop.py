@@ -27,5 +27,7 @@ def test_lasso_segments_keep_the_source_image_visible():
     source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
     overlay = (MOODBOARD / "core/segment_overlay.py").read_text()
 
-    assert "segment.show_overlay = False" in source
+    assert "segment.show_overlay = True" in source
+    assert "segment.outline_only = True" in source
     assert 'getattr(segment, "show_overlay", True)' in overlay
+    assert 'getattr(segment, "outline_only", False)' in overlay
