@@ -92,8 +92,11 @@ def test_annotation_tool_exposes_complete_editing_workflow():
     assert 'bl_idname = "mixie.moodboard_annotate_tool"' in operators
     assert 'bl_idname = "mixie.moodboard_undo_annotation"' in operators
     assert 'bl_idname = "mixie.moodboard_clear_annotations"' in operators
-    assert "event.ctrl or event.oskey" in operators
+    assert 'bl_options = {"REGISTER", "UNDO"}' in operators
+    assert '"BLOCKING"' not in operators
+    assert 'self.report({"INFO"}, "Annotation stroke added")' in operators
     assert 'panel="MIXIE_PT_annotation_tools_popover"' in toolbar
+    assert 'row.operator(\n            "mixie.moodboard_annotate_tool"' in toolbar
     assert 'col.prop(state, "annotation_color"' in toolbar
     assert 'col.prop(state, "annotation_width"' in toolbar
     assert "for original_stroke in orig_img.annotations" in duplicate

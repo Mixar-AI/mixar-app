@@ -58,12 +58,12 @@ def _finish_session(context, *, cancel_active=False):
 
 
 class MIXIE_OT_moodboard_annotate_tool(Operator):
-    """Draw multiple freehand annotation strokes on one reference image."""
+    """Draw one freehand annotation stroke on a reference image."""
 
     bl_idname = "mixie.moodboard_annotate_tool"
-    bl_label = "Draw Annotations"
-    bl_description = "Draw on the selected image; Enter or Esc finishes"
-    bl_options = {"REGISTER", "UNDO", "BLOCKING"}
+    bl_label = "Draw Annotation Stroke"
+    bl_description = "Draw one stroke on the selected image; release to finish"
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -93,7 +93,7 @@ class MIXIE_OT_moodboard_annotate_tool(Operator):
         _tag_redraw(context)
         self.report(
             {"INFO"},
-            "Draw strokes on the image. Cmd/Ctrl+Z undoes; Enter or Esc finishes.",
+            "Drag once on the image to annotate. Release to finish; Esc cancels.",
         )
         return {"RUNNING_MODAL"}
 
@@ -101,6 +101,10 @@ class MIXIE_OT_moodboard_annotate_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
         target_index = state.target_image_index
+
+        if state.active_tool != "ANNOTATE":
+            _finish_session(context, cancel_active=state.is_drawing)
+            return {"CANCELLED"}
 
         if target_index < 0 or target_index >= len(scene.mixie_moodboard_images):
             _finish_session(context, cancel_active=True)
@@ -112,20 +116,19 @@ class MIXIE_OT_moodboard_annotate_tool(Operator):
             _finish_session(context)
             return {"FINISHED"}
 
+        if event.type == "WINDOW_DEACTIVATE":
+            _finish_session(context, cancel_active=state.is_drawing)
+            return {"CANCELLED"}
+
         if event.value == "PRESS" and event.type in {"ESC", "RIGHTMOUSE"}:
             _finish_session(context, cancel_active=state.is_drawing)
-            return {"FINISHED"}
-
-        if event.type == "Z" and event.value == "PRESS" and (event.ctrl or event.oskey):
-            if not _remove_active_stroke(scene, state) and image_item.annotations:
-                image_item.annotations.remove(len(image_item.annotations) - 1)
-            _tag_redraw(context)
-            return {"RUNNING_MODAL"}
+            return {"CANCELLED"}
 
         if event.type == "LEFTMOUSE" and event.value == "PRESS":
             coords = mouse_to_image_coords(context, event, target_index)
             if coords is None:
-                return {"RUNNING_MODAL"}
+                _finish_session(context)
+                return {"CANCELLED"}
 
             stroke = image_item.annotations.add()
             stroke.color = state.annotation_color[:]
@@ -161,9 +164,10 @@ class MIXIE_OT_moodboard_annotate_tool(Operator):
             return {"RUNNING_MODAL"}
 
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":
-            state.annotation_active_stroke_index = -1
-            state.is_drawing = False
-            _tag_redraw(context)
+            if state.is_drawing:
+                _finish_session(context)
+                self.report({"INFO"}, "Annotation stroke added")
+                return {"FINISHED"}
             return {"RUNNING_MODAL"}
 
         return {"PASS_THROUGH"}
