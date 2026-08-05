@@ -72,8 +72,6 @@ class MIXIE_HT_header(Header):
         layout = self.layout
         layout.template_header()
 
-        # The 3D Editor / Canvas switcher was redundant with Blender's standard
-        # editor-type dropdown to its left, so the header just names the space.
         layout.label(text="Moodboard")
 
         # Add View menu (commented out)

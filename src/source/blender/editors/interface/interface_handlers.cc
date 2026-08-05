@@ -4494,29 +4494,9 @@ static int ui_do_but_textedit(
 
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;
-        bool is_moodboard_node_prompt = false;
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
-          is_moodboard_node_prompt =
-              area && area->spacetype == SPACE_MIXIE && prop_id && STREQ(prop_id, "prompt") &&
-              RNA_struct_find_property(&but->rnapoin, "node_id");
-        }
-
-        if (is_moodboard_node_prompt &&
-            (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
-        {
-          /* The canvas prompt is a single-action field: commit its latest
-           * value before invoking the exact operator behind Generate. */
-          ui_apply_but(C, block, but, data, true);
-          button_activate_state(C, but, BUTTON_STATE_EXIT);
-          WM_operator_name_call(C,
-                                "MIXIE_OT_moodboard_run_action_node",
-                                blender::wm::OpCallContext::ExecDefault,
-                                nullptr,
-                                nullptr);
-          retval = WM_UI_HANDLER_BREAK;
-          break;
         }
 
         if (ui_but_is_multiline_text(but) && (event->modifier & KM_SHIFT)) {

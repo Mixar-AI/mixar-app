@@ -130,15 +130,6 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # C-defined custom-space keymaps can be cleared by Blender's GUI
-        # keyconfig reload. Keep destructive canvas shortcuts in the addon
-        # keyconfig as well so selected media, nodes, and links remain deletable.
-        for key in ('X', 'DEL', 'BACK_SPACE'):
-            kmi = km.keymap_items.new(
-                'mixie.moodboard_delete', type=key, value='PRESS'
-            )
-            addon_keymaps.append((km, kmi))
-
         # Pie menu keymap - follows user's VIEW3D pie menu key preference
         pie_key = get_user_pie_menu_key()
         kmi = km.keymap_items.new(

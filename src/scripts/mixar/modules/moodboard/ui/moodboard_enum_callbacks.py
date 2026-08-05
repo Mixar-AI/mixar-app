@@ -11,6 +11,49 @@ Separated from property definitions to keep moodboard_properties.py focused
 on PropertyGroup class definitions.
 """
 
+_CHARACTER_COMPONENT_CATALOG_UNAVAILABLE = [(
+    "NONE",
+    "Catalog unavailable",
+    "Load the generation catalog before creating component details",
+)]
+
+
+def _get_character_component_model_items(self, context):
+    """Catalog Image Gen models able to receive a cutout and binary mask."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items,
+            get_models,
+            is_loaded,
+            memoize_enum_items,
+        )
+        if not is_loaded():
+            return get_model_enum_items("image_gen")
+
+        def _build():
+            from mixar.modules.moodboard.core.character_components import (
+                eligible_component_model_slugs,
+            )
+
+            eligible = eligible_component_model_slugs(get_models("image_gen"))
+            items = [
+                item for item in get_model_enum_items("image_gen")
+                if item[0] in eligible
+            ]
+            return items or [(
+                "NONE",
+                "No compatible models",
+                "Image models must advertise support for at least two references",
+            )]
+
+        return memoize_enum_items(
+            "character_component_model",
+            "image_gen",
+            _build,
+        )
+    except Exception:
+        return _CHARACTER_COMPONENT_CATALOG_UNAVAILABLE
+
 
 def _get_imagegen_model_items(self, context):
     """Dynamic callback for model enum items.
@@ -246,22 +289,6 @@ def _get_animate_model_items(self, context):
     return _capability_model_items(
         "animate", self,
         [("tripo_rig_v2_5", "Tripo Auto Rig 2.5", "Tripo auto-rigging")],
-    )
-
-
-def _get_video_gen_mode_items(self, context):
-    """Video Gen tab services; catalog-only with a loading-safe fallback."""
-    return _capability_mode_items(
-        "video_gen",
-        [("video_gen", "Seedance", "Generate video from text and references")],
-    )
-
-
-def _get_video_gen_model_items(self, context):
-    """Enabled Seedance models supplied by the generation catalog."""
-    return _capability_model_items(
-        "video_gen", self,
-        [("seedance-2-0", "Seedance 2.0", "Seevio Seedance 2.0")],
     )
 
 

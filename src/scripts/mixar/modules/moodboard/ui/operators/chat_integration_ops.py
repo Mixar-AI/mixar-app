@@ -19,7 +19,6 @@ hitting it just nudges the sync to run immediately, useful as a
 from bpy.types import Operator
 
 from ....common.utils.platform_utils import format_shortcut
-from ...core.media_utils import is_video_item
 
 
 def get_all_image_indices_to_send(scene):
@@ -45,9 +44,9 @@ def get_all_image_indices_to_send(scene):
 
     # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected and not is_video_item(img):
+        if img.selected:
             image_indices.add(i)
-        elif img.group_index in selected_group_indices and not is_video_item(img):
+        elif img.group_index in selected_group_indices:
             # Image belongs to a group being sent
             image_indices.add(i)
 

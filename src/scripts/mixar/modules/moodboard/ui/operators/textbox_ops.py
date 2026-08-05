@@ -299,11 +299,11 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
 
 
 class MIXIE_OT_moodboard_delete(Operator):
-    """Delete selected moodboard elements and graph connections."""
+    """Delete selected moodboard elements (images, text boxes and groups)"""
 
     bl_idname = "mixie.moodboard_delete"
     bl_label = "Delete Selected"
-    bl_description = "Remove selected content or connections from the moodboard"
+    bl_description = "Remove selected images, text boxes and groups from the moodboard"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -314,43 +314,6 @@ class MIXIE_OT_moodboard_delete(Operator):
         deleted_images = 0
         deleted_textboxes = 0
         deleted_groups = 0
-        deleted_links = 0
-        from ...core.node_deletion import delete_selected_graph_nodes
-        from ...core.node_graph import ensure_media_node_ids
-
-        # Operator context: migrate before reading ids, otherwise a pre-graph
-        # item contributes "" to the set below and matches nothing.
-        ensure_media_node_ids(scene)
-        deleted_nodes = delete_selected_graph_nodes(scene)
-        selected_media_ids = {
-            item.node_id for item in moodboard_images
-            if item.selected and item.node_id
-        }
-        affected_target_ids = set()
-
-        # Unlinking never deletes either endpoint. Removing media also cleans
-        # its incident links so saved graphs cannot retain dangling records.
-        for index in reversed(range(len(scene.mixie_moodboard_links))):
-            link = scene.mixie_moodboard_links[index]
-            if (
-                link.selected
-                or link.from_node_id in selected_media_ids
-                or link.to_node_id in selected_media_ids
-            ):
-                affected_target_ids.add(link.to_node_id)
-                scene.mixie_moodboard_links.remove(index)
-                deleted_links += 1
-
-        if affected_target_ids:
-            from mixar.modules.moodboard.core.node_graph import (
-                action_node_by_id,
-                refresh_node_socket_visibility,
-            )
-
-            for node_id in affected_target_ids:
-                node = action_node_by_id(scene, node_id)
-                if node is not None:
-                    refresh_node_socket_visibility(scene, node)
 
         # First, delete selected groups (in reverse order to maintain indices)
         groups_to_remove = []
@@ -392,7 +355,7 @@ class MIXIE_OT_moodboard_delete(Operator):
             textboxes.remove(idx)
             deleted_textboxes += 1
 
-        if not any((deleted_images, deleted_textboxes, deleted_groups, deleted_links, deleted_nodes)):
+        if deleted_images == 0 and deleted_textboxes == 0 and deleted_groups == 0:
             self.report({'WARNING'}, "No elements selected")
             return {'CANCELLED'}
 
@@ -411,10 +374,6 @@ class MIXIE_OT_moodboard_delete(Operator):
             parts.append(f"{deleted_textboxes} text box(es)")
         if deleted_groups > 0:
             parts.append(f"{deleted_groups} group(s)")
-        if deleted_links > 0:
-            parts.append(f"{deleted_links} connection(s)")
-        if deleted_nodes > 0:
-            parts.append(f"{deleted_nodes} node(s)")
         self.report({'INFO'}, f"Deleted {', '.join(parts)}")
         return {'FINISHED'}
 

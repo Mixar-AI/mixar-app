@@ -204,23 +204,12 @@ def import_file(filepath, file_type="GLB", import_options=None):
             bpy.ops.wm.obj_import(filepath=filepath)
         elif ft == "FBX":
             bpy.ops.import_scene.fbx(filepath=filepath)
-        elif ft == "VIDEO":
-            from mixar.modules.moodboard.core.media_import import (
-                import_generated_video,
-            )
-
-            options = import_options or {}
-            return import_generated_video(
-                filepath,
-                scene_name=options.get("scene_name", ""),
-                generation_prompt=options.get("generation_prompt", ""),
-            )
 
         new_objects = new_object_names(before)
         return ", ".join(new_objects) if new_objects else "Unknown"
     finally:
-        # Generated-video import moves the temp file into persistent Mixar
-        # storage. Removing the now-missing source is harmless.
+        # Always unlink the temp file even when the import itself raises,
+        # otherwise every failed import leaves a GLB/OBJ/FBX behind in /tmp.
         try:
             os.remove(filepath)
         except OSError:

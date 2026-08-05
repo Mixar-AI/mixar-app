@@ -40,10 +40,6 @@ SERVICE_SETTINGS: Dict[str, CompressionSettings] = {
     # Moderate resolution is sufficient; the model down-samples internally.
     "imagegen": CompressionSettings(max_dimension=2048, quality=85),
 
-    # Seedance visual references. Preserve detail while keeping up to nine
-    # selected stills inexpensive to stage alongside linked video files.
-    "video_gen": CompressionSettings(max_dimension=2048, quality=90),
-
     # Blockout-to-Render (Lookdev) – depth map rendered from the 3D scene.
     # Depth fidelity matters more than colour, keep resolution higher.
     "lookdev": CompressionSettings(max_dimension=2048, quality=90),

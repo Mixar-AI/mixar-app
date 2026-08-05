@@ -24,7 +24,6 @@ from bpy.props import (
 )
 
 from mixar.modules.moodboard.constants import (
-    GRAPH_NODE_ID_MAXLEN,
     IMAGE_SCALE_DEFAULT, IMAGE_SCALE_MIN, IMAGE_SCALE_MAX,
     IMAGE_ROTATION_DEFAULT, IMAGE_ROTATION_MIN, IMAGE_ROTATION_MAX,
     TEXTBOX_FONT_SIZE_DEFAULT, TEXTBOX_FONT_SIZE_MIN, TEXTBOX_FONT_SIZE_MAX,
@@ -34,11 +33,19 @@ from mixar.modules.moodboard.constants import (
     TEXTBOX_ROTATION_DEFAULT, TEXTBOX_ROTATION_MIN, TEXTBOX_ROTATION_MAX,
     TEXT_ALIGNMENTS,
     TURNAROUND_VIEW_TYPES, TURNAROUND_VIEW_DEFAULT,
+    CHARACTER_COMPONENT_IMAGE_ROLES,
 )
+from .moodboard_annotation_props import MixieMoodboardAnnotationStroke
 
 
 class MixieMoodboardSegment(PropertyGroup):
     """Individual segment for an image (Magic Select results)"""
+
+    component_id: StringProperty(
+        name="Component ID",
+        description="Persistent identity for this character component",
+        default="",
+    )
 
     mask_image: PointerProperty(
         type=bpy.types.Image,
@@ -47,8 +54,28 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     active: BoolProperty(
         name="Active",
-        description="Whether this segment overlay is visible",
+        description="Show this segment overlay and include it in Segments to 3D",
         default=True
+    )
+    show_overlay: BoolProperty(
+        name="Show Overlay",
+        description="Show the colored mask overlay on the source image",
+        default=True,
+    )
+    outline_only: BoolProperty(
+        name="Outline Only",
+        description="Render only the selection boundary while keeping source pixels unchanged",
+        default=False,
+    )
+    selection_outline: StringProperty(
+        name="Selection Outline",
+        description="Original lasso polygon stored as normalized JSON coordinates",
+        default="",
+    )
+    include_for_detail: BoolProperty(
+        name="Include Detail",
+        description="Include this component in batch detail-image generation",
+        default=True,
     )
     index: IntProperty(
         name="Index",
@@ -57,25 +84,19 @@ class MixieMoodboardSegment(PropertyGroup):
     )
     name: StringProperty(
         name="Name",
-        description="Segment name",
-        default="Segment"
+        description="Component name used to guide detail-image generation",
+        default="Segment",
+        maxlen=96,
     )
 
 
 class MixieMoodboardImage(PropertyGroup):
     """Property group for moodboard reference images"""
 
-    node_id: StringProperty(
-        name="Node ID",
-        description="Stable identifier used by moodboard graph links",
+    moodboard_item_id: StringProperty(
+        name="Moodboard Item ID",
+        description="Persistent identity used by component provenance links",
         default="",
-        maxlen=GRAPH_NODE_ID_MAXLEN,
-    )
-    embedded_node_id: StringProperty(
-        name="Embedded Node ID",
-        description="Inference node that renders this media as its inline result",
-        default="",
-        maxlen=GRAPH_NODE_ID_MAXLEN,
     )
 
     image: PointerProperty(
@@ -168,6 +189,17 @@ class MixieMoodboardImage(PropertyGroup):
         default=-1
     )
 
+    annotations: CollectionProperty(
+        type=MixieMoodboardAnnotationStroke,
+        name="Annotations",
+        description="Non-destructive freehand strokes attached to this image",
+    )
+    show_annotations: BoolProperty(
+        name="Show Annotations",
+        description="Display freehand annotations on this image",
+        default=True,
+    )
+
     # Segment collection - stores all segments for this image (Magic Select)
     segments: CollectionProperty(
         type=MixieMoodboardSegment,
@@ -202,6 +234,30 @@ class MixieMoodboardImage(PropertyGroup):
         name="Chain ID",
         description="Pipeline chain ID linking label → image → HP mesh → LP mesh",
         default="",
+    )
+
+    # --- Character-component provenance --------------------------------
+    component_role: EnumProperty(
+        name="Character Component Role",
+        description="How this image participates in a character component workflow",
+        items=CHARACTER_COMPONENT_IMAGE_ROLES,
+        default='NONE',
+    )
+    component_source_item_id: StringProperty(
+        name="Component Source Image",
+        description="Persistent moodboard item ID of the source character reference",
+        default="",
+    )
+    component_source_segment_id: StringProperty(
+        name="Component Source Segment",
+        description="Persistent SAM3 segment ID that guided this detail image",
+        default="",
+    )
+    component_name: StringProperty(
+        name="Component Name",
+        description="Named character component represented by this image",
+        default="",
+        maxlen=96,
     )
 
     # --- Turnaround / multi-view sets ------------------------------------

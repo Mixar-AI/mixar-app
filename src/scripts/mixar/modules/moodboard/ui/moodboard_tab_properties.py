@@ -23,12 +23,12 @@ from bpy.props import (
 )
 
 from .moodboard_scene_recon_tab_props import MixieMoodboardTabSceneReconProps  # noqa: F401
+from .moodboard_character_component_props import MixieCharacterComponentSettings  # noqa: F401
 from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
-    MixieMoodboardTabVideoGenProps,
 )
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
@@ -387,6 +387,12 @@ class MixieMoodboardTabSegmentTo3DProps(PropertyGroup):
         min=0
     )
 
+    character_components: PointerProperty(
+        type=MixieCharacterComponentSettings,
+        name="Character Component Details",
+        description="Settings for SAM3-guided component detail images",
+    )
+
 
 class MixieMoodboardSidebarProperties(PropertyGroup):
     """Properties for moodboard sidebar state.
@@ -475,12 +481,6 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabAnimateProps,
         name="Animate Tab",
         description="Properties for Animate tab"
-    )
-
-    tab_video_gen: PointerProperty(
-        type=MixieMoodboardTabVideoGenProps,
-        name="Video Gen Tab",
-        description="Properties for Seedance video generation",
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.
