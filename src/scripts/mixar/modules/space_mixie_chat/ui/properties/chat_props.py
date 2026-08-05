@@ -224,11 +224,15 @@ class MixieChatMessage(PropertyGroup):
     # Input type slot - indicates what kind of input the agent expects
     input_type: StringProperty(
         name="Input Type",
-        description="Type of input expected: 'text', 'choice', 'approval'",
+        description="Type of input expected: text, choice, approval, or file_save",
         default="",
         maxlen=32,
         options={'SKIP_SAVE'}
     )
+    export_format: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
+    export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
+    export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
+    export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
