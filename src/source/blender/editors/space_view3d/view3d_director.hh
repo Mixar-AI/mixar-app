@@ -13,6 +13,7 @@
 #include "BLI_vector.hh"
 
 struct ARegion;
+struct PointerRNA;
 struct Scene;
 struct ScrArea;
 struct SpaceType;
@@ -33,20 +34,21 @@ struct DirectorViewState {
   bool has_camera = false;
   bool locked = false;
   bool navigate_mode = true;
-  int version = 1;
   int active_beat_index = 0;
   int frame_current = 0;
   int frame_start = 0;
   int frame_end = 0;
   float fps = 24.0f;
-  char shot_name[128] = {};
-  char camera_name[128] = {};
   blender::Vector<DirectorBeatView> beats;
 };
 
 /** Read the Python-owned Director PropertyGroups without assuming registration.
  */
 bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state);
+
+/** Return the active Python-owned shot so native UI can bind its RNA controls.
+ */
+bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr);
 
 /** Overlay controls rendered over an active View3D main region. */
 void view3d_director_overlay_draw(const bContext *C, ARegion *region);

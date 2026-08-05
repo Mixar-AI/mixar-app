@@ -10,8 +10,6 @@
 
 #include <algorithm>
 
-#include "BLI_string.h"
-
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
@@ -42,30 +40,44 @@ static int director_enum(PointerRNA *ptr, const char *name, const int fallback)
   return prop ? RNA_property_enum_get(ptr, prop) : fallback;
 }
 
-static void director_string(PointerRNA *ptr, const char *name, char *buffer, const int buffer_size)
+static bool director_state_pointer(Scene *scene, PointerRNA *r_state_ptr)
 {
-  buffer[0] = '\0';
-  PropertyRNA *prop = director_prop(ptr, name);
-  if (!prop || RNA_property_string_length(ptr, prop) >= buffer_size) {
-    return;
-  }
-  RNA_property_string_get(ptr, prop, buffer);
-}
-
-bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
-{
-  *r_state = DirectorViewState{};
   if (!scene) {
     return false;
   }
-
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   PropertyRNA *state_prop = director_prop(&scene_ptr, "mixar_director");
   if (!state_prop) {
     return false;
   }
-  PointerRNA state_ptr = RNA_property_pointer_get(&scene_ptr, state_prop);
-  if (!state_ptr.data) {
+  *r_state_ptr = RNA_property_pointer_get(&scene_ptr, state_prop);
+  return r_state_ptr->data != nullptr;
+}
+
+static bool director_active_shot_pointer_from_state(PointerRNA *state_ptr, PointerRNA *r_shot_ptr)
+{
+  PropertyRNA *shots_prop = director_prop(state_ptr, "shots");
+  const int shot_count = shots_prop ? RNA_property_collection_length(state_ptr, shots_prop) : 0;
+  if (shot_count <= 0) {
+    return false;
+  }
+  const int shot_index = std::clamp(
+      director_int(state_ptr, "active_shot_index", 0), 0, shot_count - 1);
+  return RNA_property_collection_lookup_int(state_ptr, shots_prop, shot_index, r_shot_ptr);
+}
+
+bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr)
+{
+  PointerRNA state_ptr;
+  return r_shot_ptr && director_state_pointer(scene, &state_ptr) &&
+         director_active_shot_pointer_from_state(&state_ptr, r_shot_ptr);
+}
+
+bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
+{
+  *r_state = DirectorViewState{};
+  PointerRNA state_ptr;
+  if (!director_state_pointer(scene, &state_ptr)) {
     return false;
   }
 
@@ -78,22 +90,12 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   r_state->fps = (scene->r.frs_sec_base > 0.0f) ? float(scene->r.frs_sec) / scene->r.frs_sec_base :
                                                   24.0f;
 
-  PropertyRNA *shots_prop = director_prop(&state_ptr, "shots");
-  const int shot_count = shots_prop ? RNA_property_collection_length(&state_ptr, shots_prop) : 0;
-  if (shot_count <= 0) {
-    return true;
-  }
-
-  const int shot_index = std::clamp(
-      director_int(&state_ptr, "active_shot_index", 0), 0, shot_count - 1);
   PointerRNA shot_ptr;
-  if (!RNA_property_collection_lookup_int(&state_ptr, shots_prop, shot_index, &shot_ptr)) {
+  if (!director_active_shot_pointer_from_state(&state_ptr, &shot_ptr)) {
     return true;
   }
 
   r_state->has_shot = true;
-  director_string(&shot_ptr, "name", r_state->shot_name, sizeof(r_state->shot_name));
-  r_state->version = director_int(&shot_ptr, "version", 1);
   r_state->locked = director_enum(&shot_ptr, "state", 0) == 1;
   r_state->active_beat_index = director_int(&shot_ptr, "active_beat_index", 0);
 
@@ -103,7 +105,6 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     Object *camera = static_cast<Object *>(camera_ptr.data);
     if (camera && camera->type == OB_CAMERA) {
       r_state->has_camera = true;
-      BLI_strncpy(r_state->camera_name, camera->id.name + 2, sizeof(r_state->camera_name));
     }
   }
 

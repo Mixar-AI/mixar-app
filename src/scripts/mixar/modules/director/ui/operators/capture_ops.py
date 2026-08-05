@@ -94,10 +94,13 @@ class MIXAR_OT_director_preview(Operator):
         if shot is None or not shot.beats:
             return {'CANCELLED'}
         scene = context.scene
-        frames = [beat.frame for beat in shot.beats]
+        frames = sorted({beat.frame for beat in shot.beats})
+        if len(frames) < 2:
+            self.report({'INFO'}, "Capture at least two camera beats to preview")
+            return {'CANCELLED'}
         scene.use_preview_range = True
-        scene.frame_preview_start = min(frames)
-        scene.frame_preview_end = max(frames)
+        scene.frame_preview_start = frames[0]
+        scene.frame_preview_end = frames[-1]
         if not context.screen.is_animation_playing:
             scene.frame_set(scene.frame_preview_start)
         try:

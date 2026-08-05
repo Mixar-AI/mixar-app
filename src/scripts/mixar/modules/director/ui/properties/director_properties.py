@@ -23,17 +23,25 @@ from ...constants import (
     MIN_BEAT_SECONDS,
     SHOT_STATE_ITEMS,
 )
+from ...core.viewport import enter_camera_view
 
 
 def _camera_poll(_self, obj):
     return getattr(obj, "type", None) == 'CAMERA'
 
 
-def _activate_shot_camera(self, _context):
+def _activate_shot_camera(self, context):
     scene = getattr(self, "scene_ref", None)
     camera = getattr(self, "camera", None)
     if scene is not None and camera is not None and camera.type == 'CAMERA':
         scene.camera = camera
+        state = getattr(scene, "mixar_director", None)
+        if state is not None and state.is_directing:
+            try:
+                enter_camera_view(context or bpy.context, camera, remember=False)
+            except Exception:
+                # RNA updates can run without a usable area during file loading.
+                pass
 
 
 def _redraw_director_surface(_self, context):

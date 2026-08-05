@@ -110,7 +110,6 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
     ).read_text(encoding="utf-8")
 
     for operator in (
-        "MIXAR_OT_director_open_canvas",
         "MIXAR_OT_director_show_shots",
         "MIXAR_OT_director_show_camera",
         "MIXAR_OT_director_capture_beat",
@@ -121,6 +120,39 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
     assert "MIXAR_OT_director_toggle_immersive" in timeline
     assert "mixar.director_open_editor" in surface_ops
     assert "mixar.director_open_editor" in mixie_header
+
+
+def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
+        encoding="utf-8"
+    )
+    state = (VIEW3D / "view3d_director_state.cc").read_text(encoding="utf-8")
+    properties = _read("ui/properties/director_properties.py")
+
+    assert "draw_top_dock" not in overlay
+    assert '"3D Editor"' not in overlay
+    assert '"Canvas"' not in overlay
+    assert "uiDefAutoButR" in timeline
+    assert "view3d_director_active_shot_pointer" in timeline
+    assert 'RNA_struct_find_property(&shot_ptr, "camera")' in timeline
+    assert "view3d_director_active_shot_pointer" in state
+    assert "enter_camera_view(context or bpy.context, camera, remember=False)" in properties
+
+
+def test_native_timeline_tracks_playback_and_real_beat_span():
+    timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
+        encoding="utf-8"
+    )
+    preview = _read("ui/operators/capture_ops.py")
+
+    assert "WM_event_timer_add_notifier" in timeline
+    assert "PLAYBACK_REDRAW_INTERVAL" in timeline
+    assert "ND_ANIMPLAY" in timeline
+    assert "has_shot_span ? state.frame_end" in timeline
+    assert "state.beats.size() < 2" in timeline
+    assert "frames = sorted({beat.frame for beat in shot.beats})" in preview
+    assert "Capture at least two camera beats to preview" in preview
 
 
 def test_capture_shortcut_survives_gui_keyconfig_reload():

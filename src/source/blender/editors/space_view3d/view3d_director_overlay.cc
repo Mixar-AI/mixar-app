@@ -9,13 +9,11 @@
  */
 
 #include <algorithm>
-#include <cstdio>
 #include <cstring>
 
 #include "BLF_api.hh"
 
 #include "BLI_rect.h"
-#include "BLI_string.h"
 
 #include "BKE_context.hh"
 
@@ -97,78 +95,6 @@ void disable_button(uiBut *button, const bool disabled)
   if (disabled && button) {
     UI_but_flag_enable(button, UI_BUT_DISABLED);
   }
-}
-
-void draw_top_dock(uiBlock *block,
-                   const ARegion *region,
-                   const DirectorViewState &state,
-                   const int unit,
-                   const int gap)
-{
-  const int dock_h = unit * 2;
-  const int shot_w = unit * 8;
-  const int editor_w = unit * 6;
-  const int canvas_w = unit * 5;
-  const int icon_w = unit * 2;
-  const int dock_w = shot_w + editor_w + canvas_w + icon_w + gap * 3;
-  const int dock_x = (region->winx - dock_w) / 2;
-  const int dock_y = region->winy - dock_h - gap * 2;
-  draw_panel({float(dock_x), float(dock_x + dock_w), float(dock_y), float(dock_y + dock_h)},
-             12.0f * UI_SCALE_FAC);
-
-  char shot_label[180];
-  if (state.has_shot) {
-    BLI_snprintf(shot_label, sizeof(shot_label), "%s  ·  T%d", state.shot_name, state.version);
-  }
-  else {
-    BLI_strncpy(shot_label, "My Scene", sizeof(shot_label));
-  }
-
-  int x = dock_x + gap;
-  operator_button(block,
-                  "MIXAR_OT_director_show_shots",
-                  ICON_CAMERA_DATA,
-                  shot_label,
-                  x,
-                  dock_y + gap,
-                  shot_w,
-                  unit,
-                  "Choose a shot or start a new take");
-  x += shot_w + gap;
-
-  uiBut *editor = uiDefIconTextBut(block,
-                                   ButType::Label,
-                                   0,
-                                   ICON_VIEW3D,
-                                   "3D Editor",
-                                   x,
-                                   dock_y + gap,
-                                   editor_w,
-                                   unit,
-                                   nullptr,
-                                   "Camera-directing viewport");
-  UI_but_flag_enable(editor, UI_BUT_ACTIVE_DEFAULT);
-  x += editor_w + gap;
-
-  operator_button(block,
-                  "MIXAR_OT_director_open_canvas",
-                  ICON_IMAGE_PLANE,
-                  "Canvas",
-                  x,
-                  dock_y + gap,
-                  canvas_w,
-                  unit,
-                  "Review camera-beat captures on the Moodboard canvas");
-  x += canvas_w + gap;
-  operator_button(block,
-                  "MIXAR_OT_director_finish",
-                  ICON_X,
-                  "",
-                  x,
-                  dock_y + gap,
-                  icon_w,
-                  unit,
-                  "Exit Director and restore the previous viewport");
 }
 
 void draw_tool_rail(uiBlock *block,
@@ -316,7 +242,6 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
       C, region, "mixar_director_overlay", blender::ui::EmbossType::Emboss);
   UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
 
-  draw_top_dock(block, region, state, unit, gap);
   if (region->winy > unit * 18) {
     draw_tool_rail(block, region, state, unit, gap);
   }

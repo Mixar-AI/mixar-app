@@ -41,6 +41,7 @@
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
 
+#include "WM_api.hh"
 #include "WM_types.hh"
 
 #include "view3d_director.hh"
@@ -53,6 +54,27 @@ constexpr float PANEL_BORDER[4] = {0.23f, 0.24f, 0.28f, 1.0f};
 constexpr float TRACK_COLOR[4] = {0.36f, 0.37f, 0.42f, 1.0f};
 constexpr float MUTED_COLOR[4] = {0.61f, 0.62f, 0.67f, 1.0f};
 constexpr float PLAYHEAD_COLOR[4] = {0.62f, 0.82f, 1.0f, 1.0f};
+constexpr double PLAYBACK_REDRAW_INTERVAL = 1.0 / 30.0;
+
+wmTimer *g_playback_redraw_timer = nullptr;
+
+void playback_redraw_timer_update(const bContext *C, const bool enabled)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return;
+  }
+  if (enabled) {
+    if (!g_playback_redraw_timer && CTX_wm_window(C)) {
+      g_playback_redraw_timer = WM_event_timer_add_notifier(
+          wm, CTX_wm_window(C), NC_SPACE | ND_SPACE_VIEW3D, PLAYBACK_REDRAW_INTERVAL);
+    }
+  }
+  else if (g_playback_redraw_timer) {
+    WM_event_timer_remove(wm, nullptr, g_playback_redraw_timer);
+    g_playback_redraw_timer = nullptr;
+  }
+}
 
 void draw_rect(
     const float x1, const float y1, const float x2, const float y2, const float color[4])
@@ -130,9 +152,9 @@ void disable_button(uiBut *button, const bool disabled)
 }
 
 void draw_transport(uiBlock *block,
-                    const bContext *C,
                     const ARegion *region,
                     const DirectorViewState &state,
+                    const bool playing,
                     const int y,
                     const int size,
                     const int gap)
@@ -149,7 +171,6 @@ void draw_transport(uiBlock *block,
                                     size,
                                     "Previous camera beat");
   x += size + gap;
-  const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
   uiBut *play = operator_button(block,
                                 "MIXAR_OT_director_preview",
                                 playing ? ICON_PAUSE : ICON_PLAY,
@@ -171,7 +192,7 @@ void draw_transport(uiBlock *block,
                                 "Next camera beat");
   const bool no_beats = state.beats.is_empty();
   disable_button(previous, no_beats);
-  disable_button(play, no_beats);
+  disable_button(play, state.beats.size() < 2 || state.frame_end <= state.frame_start);
   disable_button(next, no_beats);
 }
 
@@ -179,6 +200,7 @@ void draw_control_row(uiBlock *block,
                       const bContext *C,
                       const ARegion *region,
                       const DirectorViewState &state,
+                      const bool playing,
                       const int margin,
                       const int unit,
                       const int gap)
@@ -188,18 +210,28 @@ void draw_control_row(uiBlock *block,
   const bool compact = region->winx < int(980.0f * UI_SCALE_FAC);
   int x = margin + gap * 2;
 
-  const char *camera_label = state.has_camera ? state.camera_name : "No camera";
-  operator_button(block,
-                  state.has_shot ? "MIXAR_OT_director_show_camera" : "MIXAR_OT_director_start",
-                  ICON_CAMERA_DATA,
-                  compact ? "" : camera_label,
-                  x,
-                  y,
-                  compact ? button_h : unit * 8,
-                  button_h,
-                  state.has_shot ? "Camera, lens, aspect, and timing" :
-                                   "Create a camera and start directing");
-  x += (compact ? button_h : unit * 8) + gap;
+  const int camera_w = compact ? button_h : unit * 8;
+  PointerRNA shot_ptr;
+  PropertyRNA *camera_prop = nullptr;
+  if (state.has_shot && view3d_director_active_shot_pointer(CTX_data_scene(C), &shot_ptr) &&
+      (camera_prop = RNA_struct_find_property(&shot_ptr, "camera")))
+  {
+    uiBut *camera = uiDefAutoButR(
+        block, &shot_ptr, camera_prop, -1, "", ICON_CAMERA_DATA, x, y, camera_w, button_h);
+    disable_button(camera, state.locked);
+  }
+  else {
+    operator_button(block,
+                    "MIXAR_OT_director_start",
+                    ICON_CAMERA_DATA,
+                    compact ? "" : "Create Camera",
+                    x,
+                    y,
+                    camera_w,
+                    button_h,
+                    "Create a camera and start directing");
+  }
+  x += camera_w + gap;
   operator_button(block,
                   "MIXAR_OT_director_new_shot",
                   ICON_ADD,
@@ -239,7 +271,7 @@ void draw_control_row(uiBlock *block,
   disable_button(navigate, !state.has_camera || state.locked);
   disable_button(precise, !state.has_camera || state.locked);
 
-  draw_transport(block, C, region, state, y, button_h, gap);
+  draw_transport(block, region, state, playing, y, button_h, gap);
 
   int right = region->winx - margin - gap * 2;
   operator_button(block,
@@ -299,7 +331,8 @@ void draw_timeline(uiBlock *block,
   const float y = float(margin + unit * 2);
   const int default_span = std::max(1, int(std::round(state.fps * 10.0f)));
   const int frame_start = state.frame_start;
-  const int frame_end = std::max(state.frame_end, frame_start + default_span);
+  const bool has_shot_span = state.beats.size() >= 2 && state.frame_end > frame_start;
+  const int frame_end = has_shot_span ? state.frame_end : frame_start + default_span;
   const float span = float(std::max(frame_end - frame_start, 1));
   const auto frame_x = [&](const int frame) {
     const float t = std::clamp(float(frame - frame_start) / span, 0.0f, 1.0f);
@@ -355,8 +388,12 @@ void draw_timeline(uiBlock *block,
 bool director_timeline_poll(const RegionPollParams *params)
 {
   DirectorViewState state;
-  return view3d_director_state_read(CTX_data_scene(params->context), &state) && state.active &&
-         state.timeline_expanded;
+  const bool visible = view3d_director_state_read(CTX_data_scene(params->context), &state) &&
+                       state.active && state.timeline_expanded;
+  if (!visible) {
+    playback_redraw_timer_update(params->context, false);
+  }
+  return visible;
 }
 
 void director_timeline_draw(const bContext *C, ARegion *region)
@@ -370,12 +407,14 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   const int margin = std::max(6, int(8.0f * UI_SCALE_FAC));
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
   const int gap = std::max(4, int(5.0f * UI_SCALE_FAC));
+  const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
+  playback_redraw_timer_update(C, playing);
   draw_dock_panel(region, margin);
 
   uiBlock *block = UI_block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
-  draw_control_row(block, C, region, state, margin, unit, gap);
+  draw_control_row(block, C, region, state, playing, margin, unit, gap);
   draw_timeline(block, region, state, margin, unit);
   UI_block_end(C, block);
   UI_block_draw(C, block);
@@ -385,7 +424,9 @@ void director_timeline_draw(const bContext *C, ARegion *region)
 void director_timeline_listener(const wmRegionListenerParams *params)
 {
   const wmNotifier *notifier = params->notifier;
-  if (ELEM(notifier->category, NC_SCENE, NC_ANIMATION, NC_SPACE)) {
+  if (ELEM(notifier->category, NC_SCENE, NC_ANIMATION, NC_SPACE) ||
+      (notifier->category == NC_SCREEN && notifier->data == ND_ANIMPLAY))
+  {
     ED_region_tag_redraw(params->region);
   }
 }
