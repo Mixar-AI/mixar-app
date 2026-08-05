@@ -26,6 +26,7 @@ from mixar.config.logging_config import get_logger
 from ...common.api.services.scene_segment_service import get_scene_segment_service
 from ...common.api.response import APIResponse
 from ...common.utils.image_compression_config import get_compression_settings
+from .scene_segment_poll_guard import SceneSegmentPollGuard
 
 logger = get_logger(__name__)
 
@@ -181,6 +182,8 @@ class SceneSegmentManager:
         self._poll_interval: float = 0.5
         # Single reentrant lock for all job/state access (avoids nested lock deadlocks)
         self._jobs_lock = threading.RLock()
+        # A 0.5s timer must not overlap slow status requests for the same image.
+        self._poll_guard = SceneSegmentPollGuard()
 
     # ========================================================================
     # STATUS CHECKS
@@ -666,23 +669,41 @@ class SceneSegmentManager:
 
     def _poll_job(self, image_name: str, state: JobState):
         """Poll a single job for request status updates."""
-        service = get_scene_segment_service()
+        lease = self._poll_guard.acquire(image_name)
+        if lease is None:
+            return
+
+        with self._jobs_lock:
+            job_id = state.job_id
+
+        if not job_id:
+            self._poll_guard.release(image_name, lease)
+            return
+
+        try:
+            service = get_scene_segment_service()
+        except Exception:
+            self._poll_guard.release(image_name, lease)
+            raise
 
         def poll_in_background():
             try:
-                response = service.get_job_status(state.job_id)
+                response = service.get_job_status(job_id)
                 data = response.data or {}
                 inner_data = data.get("data", data)
                 job_status = inner_data.get("status", "")
                 requests_data = inner_data.get("requests", [])
 
                 def process_on_main_thread():
-                    if job_status == "expired":
-                        self._handle_expired_job(image_name)
-                        self._fail_pending_requests(state, "expired")
+                    try:
+                        if job_status == "expired":
+                            self._handle_expired_job(image_name)
+                            self._fail_pending_requests(state, "expired")
+                            return None
+                        self._process_poll_response(state, requests_data)
                         return None
-                    self._process_poll_response(state, requests_data)
-                    return None
+                    finally:
+                        self._poll_guard.release(image_name, lease)
 
                 bpy.app.timers.register(process_on_main_thread, first_interval=0.0)
 
@@ -690,15 +711,31 @@ class SceneSegmentManager:
                 error_msg = str(e)
                 if self._is_expiry_error(error_msg):
                     def handle_expired_on_main():
-                        self._handle_expired_job(image_name)
-                        self._fail_pending_requests(state, "expired")
-                        return None
-                    bpy.app.timers.register(handle_expired_on_main, first_interval=0.0)
+                        try:
+                            self._handle_expired_job(image_name)
+                            self._fail_pending_requests(state, "expired")
+                            return None
+                        finally:
+                            self._poll_guard.release(image_name, lease)
+
+                    try:
+                        bpy.app.timers.register(
+                            handle_expired_on_main,
+                            first_interval=0.0,
+                        )
+                    except Exception:
+                        self._poll_guard.release(image_name, lease)
+                        raise
                 else:
+                    self._poll_guard.release(image_name, lease)
                     logger.error("[SceneSegment] Poll error for %s: %s", image_name, e)
 
         thread = threading.Thread(target=poll_in_background, daemon=True)
-        thread.start()
+        try:
+            thread.start()
+        except Exception:
+            self._poll_guard.release(image_name, lease)
+            raise
 
     def _process_poll_response(self, state: JobState, requests_data: List[Dict]):
         """Process poll response and update request statuses."""
@@ -831,6 +868,7 @@ class SceneSegmentManager:
 
         with self._jobs_lock:
             state = self._jobs.pop(image.name, None)
+        self._poll_guard.clear(image.name)
 
         if state and state.job_id:
             # Delete job on server in background
@@ -842,6 +880,7 @@ class SceneSegmentManager:
         with self._jobs_lock:
             self._jobs.clear()
             self._pending_api_requests.clear()
+        self._poll_guard.clear()
         if self._poll_timer_running:
             self._poll_timer_running = False
 
