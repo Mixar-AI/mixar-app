@@ -16,14 +16,27 @@ from bpy.props import (
     BoolProperty,
     EnumProperty,
     CollectionProperty,
+    FloatVectorProperty,
 )
-from mixar.modules.moodboard.constants import EDIT_TOOL_TYPES
+from mixar.modules.moodboard.constants import (
+    ANNOTATION_COLOR_DEFAULT,
+    ANNOTATION_WIDTH_DEFAULT,
+    ANNOTATION_WIDTH_MAX,
+    ANNOTATION_WIDTH_MIN,
+    EDIT_TOOL_TYPES,
+)
 
 
 class LassoPoint(PropertyGroup):
     """A single point in a lasso selection"""
     x: FloatProperty(name="X", default=0.0)
     y: FloatProperty(name="Y", default=0.0)
+
+
+class LassoLoop(PropertyGroup):
+    """One completed polygon in a multi-loop lasso capture."""
+
+    points: CollectionProperty(type=LassoPoint)
 
 
 class MoodboardEditToolState(PropertyGroup):
@@ -51,8 +64,33 @@ class MoodboardEditToolState(PropertyGroup):
     # Edges: 4=bottom, 5=right, 6=top, 7=left
     active_handle: IntProperty(name="Active Handle", default=-1)
 
+    annotation_color: FloatVectorProperty(
+        name="Color",
+        description="Color and opacity for new annotation strokes",
+        subtype='COLOR',
+        size=4,
+        default=ANNOTATION_COLOR_DEFAULT,
+        min=0.0,
+        max=1.0,
+    )
+    annotation_width: FloatProperty(
+        name="Width",
+        description="Width for new annotation strokes",
+        default=ANNOTATION_WIDTH_DEFAULT,
+        min=ANNOTATION_WIDTH_MIN,
+        max=ANNOTATION_WIDTH_MAX,
+    )
+    annotation_active_stroke_index: IntProperty(
+        name="Active Annotation Stroke",
+        default=-1,
+        options={'SKIP_SAVE'},
+    )
+
     # Lasso points collection
     lasso_points: CollectionProperty(type=LassoPoint)
+    # Completed polygons waiting for SAM3 refinement. The active polygon stays
+    # in lasso_points while it is being drawn; each release snapshots it here.
+    lasso_loops: CollectionProperty(type=LassoLoop)
 
     # Magic Select state
     magic_select_pending: BoolProperty(
@@ -93,5 +131,6 @@ class MoodboardEditToolState(PropertyGroup):
 
 classes = (
     LassoPoint,
+    LassoLoop,
     MoodboardEditToolState,
 )

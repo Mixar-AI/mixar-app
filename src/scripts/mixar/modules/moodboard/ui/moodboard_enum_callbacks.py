@@ -11,6 +11,49 @@ Separated from property definitions to keep moodboard_properties.py focused
 on PropertyGroup class definitions.
 """
 
+_CHARACTER_COMPONENT_CATALOG_UNAVAILABLE = [(
+    "NONE",
+    "Catalog unavailable",
+    "Load the generation catalog before creating component details",
+)]
+
+
+def _get_character_component_model_items(self, context):
+    """Catalog Image Gen models able to receive a cutout and binary mask."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items,
+            get_models,
+            is_loaded,
+            memoize_enum_items,
+        )
+        if not is_loaded():
+            return get_model_enum_items("image_gen")
+
+        def _build():
+            from mixar.modules.moodboard.core.character_components import (
+                eligible_component_model_slugs,
+            )
+
+            eligible = eligible_component_model_slugs(get_models("image_gen"))
+            items = [
+                item for item in get_model_enum_items("image_gen")
+                if item[0] in eligible
+            ]
+            return items or [(
+                "NONE",
+                "No compatible models",
+                "Image models must advertise support for at least two references",
+            )]
+
+        return memoize_enum_items(
+            "character_component_model",
+            "image_gen",
+            _build,
+        )
+    except Exception:
+        return _CHARACTER_COMPONENT_CATALOG_UNAVAILABLE
+
 
 def _get_imagegen_model_items(self, context):
     """Dynamic callback for model enum items.

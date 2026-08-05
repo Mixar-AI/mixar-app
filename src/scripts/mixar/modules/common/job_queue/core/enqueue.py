@@ -37,6 +37,7 @@ def enqueue_generation(
     prompt_text: str = "",
     undo_message: str = "",
     base_name: str = "",
+    on_images_added: Optional[Callable] = None,
     # Listener options
     scene_flag: str = "",
     batch_popup_title: str = "",
@@ -64,6 +65,10 @@ def enqueue_generation(
         ``fn(job, object_names)`` — GLB post-import hook.
     name_prefix, prompt_text, undo_message : str
         Image-job parameters for moodboard download.
+    on_images_added : callable, optional
+        ``fn(job, names)`` — image post-add hook, called on the main thread
+        before normal job completion. An exception rolls back the added cards
+        and fails the job.
     scene_flag : str
         If set and no explicit *listener*, auto-creates a
         ``create_scene_flag_listener`` for this property.
@@ -106,6 +111,7 @@ def enqueue_generation(
             prompt_text=prompt_text,
             undo_message=undo_message,
             base_name=base_name,
+            _on_images_added_hook=on_images_added,
         )
     else:
         raise ValueError(f"Unknown enqueue_generation kind: {kind!r}")
