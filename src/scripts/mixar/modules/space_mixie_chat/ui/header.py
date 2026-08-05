@@ -76,6 +76,20 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
 
+            # Scribble — toggles the C++-drawn ink canvas over the chat
+            # region (stylus handwriting-to-text; see ink_ops.py /
+            # mixie_chat_ink_overlay.cc). Also opens automatically on a
+            # stylus press over the composer or the chat background; this
+            # button is the discoverable/mouse path. hasattr guard:
+            # deferred UI registration pass.
+            if hasattr(bpy.types, 'MIXIE_CHAT_OT_toggle_scribble'):
+                layout.operator(
+                    "mixie_chat.toggle_scribble",
+                    text="",
+                    icon='GREASEPENCIL',
+                    depress=bool(getattr(wm, 'mixie_chat_ink_visible', False)),
+                )
+
         # Spacer
         layout.separator_spacer()
 

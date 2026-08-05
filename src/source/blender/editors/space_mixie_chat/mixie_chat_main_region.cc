@@ -59,6 +59,15 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
    * over practically the whole window. */
   const bool suppress_hand = (area->spacetype == SPACE_AGENT_BUBBLE);
 
+  /* Scribble ink overlay is modal while open — it owns the cursor (paint
+   * crosshair over the canvas) and suppresses hover behind its scrim.
+   * Checked first, matching its topmost draw slot. */
+  if (rt->ink_overlay_active &&
+      mixie_chat_ink_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
   /* Project-rules overlay is modal while open — it owns hover + cursor and
    * suppresses hover on everything behind its scrim. Checked before the
    * history overlay: it draws on top, so it wins the cursor too. */
@@ -239,6 +248,14 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
 
 static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
+  /* 0a. Scribble ink overlay — modal while open: captures pen strokes,
+   * consumes keys/clicks/scroll, runs the idle-commit timer. Checked
+   * before rules/history because it draws on top of both. Cheap no-op
+   * when closed (runtime flag check, no RNA reads). */
+  if (mixie_chat_ink_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
   /* 0. Project-rules overlay — modal while open: consumes text-editing
    * keys, clicks (incl. click-away close), scroll, and ESC. Checked
    * before the history overlay because it draws on top. Cheap no-op when
@@ -339,6 +356,14 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
           }
         }
       }
+    }
+
+    /* 8. Scribble auto-open: a stylus press that reached this point hit no
+     * interactive chat target — pen users write, they don't drag-select
+     * transcript text. The press itself seeds the first ink stroke.
+     * Mouse presses fall through to text selection / View2D as before. */
+    if (mixie_chat_ink_try_auto_open(C, event)) {
+      return WM_UI_HANDLER_BREAK;
     }
 
     /* Let text selection / View2D scrolling handle it */
@@ -487,6 +512,8 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
    * Python toggles keep the two mutually exclusive; this is belt and
    * braces for the event-order contract in mixie_chat_ui_handler). */
   mixie_chat_draw_rules_overlay(C, region);
+  /* Scribble ink overlay — topmost, matching its first-in-events slot. */
+  mixie_chat_draw_ink_overlay(C, region);
 }
 
 /* -------------------------------------------------------------------- */
@@ -559,6 +586,11 @@ void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
    * still animating, its next draw re-creates the pump (content updates keep
    * tagging it); if this was the last one, the timer must die here. */
   mixie_chat_anim_pump_shutdown(wm);
+  /* Same discipline for the scribble idle-commit timer: window close and
+   * file-load WM replacement free window-bound timers, and a dangling
+   * global pointer would block re-arming AND could match a recycled
+   * foreign wmTimer. A surviving surface re-arms on its next pen-up. */
+  mixie_chat_ink_idle_timer_remove(wm);
 }
 
 /** \} */

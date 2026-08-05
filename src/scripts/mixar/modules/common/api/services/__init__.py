@@ -11,6 +11,7 @@ Provides service classes for each API module with singleton accessors.
 from .agent_service import AgentService, get_agent_service
 from .auth_service import AuthService, get_auth_service
 from .base_service import BaseService
+from .handwriting_service import HandwritingService, get_handwriting_service
 from .images_service import ImagesService, get_images_service
 from .generation_metadata_service import GenerationMetadataService, get_generation_metadata_service
 from .generation_catalog_service import GenerationCatalogService, get_generation_catalog_service
@@ -29,6 +30,9 @@ __all__ = [
     # Agent
     "AgentService",
     "get_agent_service",
+    # Handwriting (Scribble recognition)
+    "HandwritingService",
+    "get_handwriting_service",
     # Images
     "ImagesService",
     "get_images_service",

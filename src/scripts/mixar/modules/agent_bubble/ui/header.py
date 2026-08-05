@@ -435,5 +435,21 @@ class AGENT_BUBBLE_HT_header(Header):
                 depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
             )
 
+        # Scribble — toggles the C++-drawn ink canvas over the chat region
+        # (stylus handwriting-to-text; see ink_ops.py /
+        # mixie_chat_ink_overlay.cc). Icon-only, same conventions as the
+        # Rules toggle above. Also opens automatically on a stylus press
+        # over the composer or the chat background — this button is the
+        # discoverable/mouse path.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_toggle_scribble') and not agent_running:
+            wm = context.window_manager
+            right_controls.operator(
+                "mixie_chat.toggle_scribble",
+                text="",
+                icon='GREASEPENCIL',
+                emboss=False,
+                depress=bool(getattr(wm, 'mixie_chat_ink_visible', False)),
+            )
+
 
 classes = (AGENT_BUBBLE_HT_header,)

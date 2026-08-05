@@ -133,6 +133,12 @@ void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region)
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
   WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
 
+  /* Scribble: a stylus press on the composer input box opens the ink
+   * canvas instead of entering text-edit (mixie_chat_ink_events.cc).
+   * Registered AFTER the uiBlock handlers inside ED_region_header_init —
+   * UI handlers prepend, so this one gets first look at the press. */
+  mixie_chat_ink_footer_handler_register(region);
+
   /* Set initial footer height using centralized calculation
    * This ensures the footer gets adequate space from the start */
   region->sizey = footer_layout_calculate_height(nullptr, nullptr, nullptr, 0);

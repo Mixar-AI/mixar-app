@@ -597,7 +597,51 @@ struct MixieChatRuntime {
    * the caret-follow helper after edits). */
   float rules_editor_scroll = 0.0f;
   float rules_editor_view_h = 0.0f;
+
+  /* -- Scribble ink overlay (mixie_chat_ink_overlay.cc) ---------------- */
+
+  /** Ink overlay: visibility mirrored from the Python-registered
+   * WindowManager bool during draw (events check this, never RNA). The
+   * event-side auto-open paths (stylus press on the composer / on empty
+   * chat background) pre-latch it so the very first press already draws
+   * ink — the draw only runs its opening init when it sees the RNA flag
+   * flip while this is still false. */
+  bool ink_overlay_active = false;
+
+  /** Ink overlay: flat stroke store. Points are region-local pixels
+   * (y up) + pressure 0..1; strokes index into the point array via
+   * ink_stroke_starts. Caps are a frozen contract with the Python
+   * validator (SCRIBBLE_MAX_STROKES / SCRIBBLE_MAX_POINTS). */
+  float ink_points[4096][3];
+  int ink_stroke_starts[64];
+  int ink_point_count = 0;
+  int ink_stroke_count = 0;
+
+  /** Ink overlay: true between pen-down and pen-up of the stroke being
+   * captured (the live stroke is ink_stroke_count - 1). */
+  bool ink_stroke_live = false;
+
+  /** Ink overlay: wall time of the last pen-up — the idle-commit timer
+   * converts pending strokes INK_IDLE_COMMIT_SEC after it. */
+  double ink_last_penup_time = 0.0;
+
+  /** Ink overlay: point-store-full latch, so the "canvas full" hint draws
+   * once instead of re-triggering per denied sample. */
+  bool ink_store_full = false;
+
+  /** Ink overlay: chrome hit rects + hover state (hint-bar buttons). */
+  rctf ink_close_bounds = {0, 0, 0, 0};
+  rctf ink_clear_bounds = {0, 0, 0, 0};
+  bool ink_close_hovered = false;
+  bool ink_clear_hovered = false;
+
+  /** Ink overlay: open animation start time (0 = not animating). */
+  double ink_anim_start = 0.0;
 };
+
+/** Ink stroke store capacities (the array sizes above). */
+inline constexpr int CHAT_INK_MAX_POINTS = 4096;
+inline constexpr int CHAT_INK_MAX_STROKES = 64;
 
 /**
  * Get or create runtime for a SpaceMixieChat instance.

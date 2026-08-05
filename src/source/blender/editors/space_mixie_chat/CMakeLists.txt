@@ -28,6 +28,9 @@ set(SRC
   mixie_chat_history_overlay.cc
   mixie_chat_history_util.cc
   mixie_chat_hit_testing.cc
+  mixie_chat_ink_events.cc
+  mixie_chat_ink_overlay.cc
+  mixie_chat_ink_util.cc
   mixie_chat_main_region.cc
   mixie_chat_markdown.cc
   mixie_chat_markdown_parse.cc
@@ -56,6 +59,7 @@ set(SRC
   mixie_chat_footer_constants.hh
   mixie_chat_footer_intern.hh
   mixie_chat_history_intern.hh
+  mixie_chat_ink_intern.hh
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
   mixie_chat_markdown_intern.hh
