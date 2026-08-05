@@ -133,6 +133,8 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert "draw_top_dock" not in overlay
     assert '"3D Editor"' not in overlay
     assert '"Canvas"' not in overlay
+    assert "region->winy - unit * 2 - gap * 2" in overlay
+    assert "region->winy - unit * 6" not in overlay
     assert "uiDefAutoButR" in timeline
     assert "view3d_director_active_shot_pointer" in timeline
     assert 'RNA_struct_find_property(&shot_ptr, "camera")' in timeline

@@ -182,7 +182,8 @@ void draw_context_actions(uiBlock *block,
   if (state.has_shot) {
     const int action_w = unit * 8;
     const int action_x = (region->winx - action_w) / 2;
-    const int action_y = region->winy - unit * 6;
+    /* Keep the primary action in the top safe area, above the camera gate. */
+    const int action_y = region->winy - unit * 2 - gap * 2;
     const char *operator_id = state.locked ? "MIXAR_OT_director_new_take" :
                                              "MIXAR_OT_director_capture_beat";
     const int icon = state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT;
