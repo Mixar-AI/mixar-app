@@ -257,25 +257,28 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
         # Check if image needs to be uploaded
         manager = get_scene_segment_manager()
 
+        def on_upload_complete(success, message):
+            self._upload_pending = False
+            if success:
+                self.report({'INFO'}, "Ready! Click on image to segment.")
+            else:
+                self.report({'ERROR'}, f"Upload failed: {message}")
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE':
+                        area.tag_redraw()
+
         if manager.is_uploading(image):
-            self.report({'INFO'}, "Image is uploading... Please wait")
+            self.report({'INFO'}, "Waiting for image upload...")
             self._upload_pending = True
+            # Join the existing upload. Without registering a waiter this
+            # modal remained pending forever even after the upload completed.
+            manager.queue_upload(
+                image, img_item=img_item, on_complete=on_upload_complete,
+            )
         elif not manager.is_ready(image):
-            # Upload image first
             self.report({'INFO'}, "Uploading image for segmentation...")
             self._upload_pending = True
-
-            def on_upload_complete(success, message):
-                self._upload_pending = False
-                if success:
-                    self.report({'INFO'}, "Ready! Click on image to segment.")
-                else:
-                    self.report({'ERROR'}, f"Upload failed: {message}")
-                for window in bpy.context.window_manager.windows:
-                    for area in window.screen.areas:
-                        if area.type == 'MIXIE':
-                            area.tag_redraw()
-
             manager.queue_upload(image, img_item=img_item, on_complete=on_upload_complete)
         else:
             self.report({'INFO'}, "Click on image to segment object. ESC to cancel.")

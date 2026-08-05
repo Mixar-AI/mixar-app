@@ -42,3 +42,17 @@ def test_debug_mode_adds_raw_sam3_mask_preview():
     assert "add_sam3_mask_preview" in source
     assert 'config.get("log_level", "INFO")' in debug
     assert 'preview.component_role = \'DEBUG_MASK\'' in debug
+
+
+def test_debug_preview_snapshots_source_before_collection_growth():
+    """Never dereference a CollectionProperty item after adding a sibling."""
+    debug = (MOODBOARD / "core/component_debug.py").read_text()
+    add_index = debug.index("preview = scene.mixie_moodboard_images.add()")
+    before_add = debug[:add_index]
+    after_add = debug[add_index:debug.index("return preview", add_index)]
+
+    assert "source_scale = source.scale" in before_add
+    assert "source_position_x = source.position_x" in before_add
+    assert "source_position_y = source.position_y" in before_add
+    assert "source.image" in before_add
+    assert "source." not in after_add

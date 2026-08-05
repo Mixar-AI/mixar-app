@@ -255,6 +255,14 @@ LASSO_MIN_DISTANCE_THRESHOLD = 0.0001
 # Lasso tool minimum number of points required for mask
 LASSO_MIN_POINTS = 3
 
+# A server-side inference can become stranded in queued/generating state (for
+# example after a GPU worker failure). Never leave a moodboard tool pending
+# forever. Individual status/download HTTP calls have shorter transport
+# timeouts; this is the end-to-end lifecycle deadline.
+SCENE_SEGMENT_REQUEST_TIMEOUT_SECONDS = 120.0
+SCENE_SEGMENT_POLL_INTERVAL_SECONDS = 0.5
+SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
+
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.
 ANNOTATION_COLOR_DEFAULT = (1.0, 0.12, 0.04, 1.0)

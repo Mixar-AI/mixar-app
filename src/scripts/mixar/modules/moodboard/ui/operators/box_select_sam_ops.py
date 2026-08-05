@@ -130,13 +130,12 @@ class MIXIE_OT_box_select_sam(Operator):
 
         # Check if image is uploaded
         if not manager.is_ready(img_item.image):
-            if manager.is_uploading(img_item.image):
-                self.report({'INFO'}, "Image is uploading, please wait...")
-                return {'CANCELLED'}
-
             # Queue upload first
             state.box_select_pending = True
-            self.report({'INFO'}, "Uploading image for segmentation...")
+            if manager.is_uploading(img_item.image):
+                self.report({'INFO'}, "Waiting for image upload...")
+            else:
+                self.report({'INFO'}, "Uploading image for segmentation...")
 
             target_idx = state.target_image_index
             x1 = min(state.box_start_x, state.box_end_x)

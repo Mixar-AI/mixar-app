@@ -231,10 +231,15 @@ def _get_upload_dimensions(img_item):
 
     The backend receives a possibly-resized (compressed) version of the image.
     The mask must match these dimensions so the backend can apply it correctly.
-    If a compressed image is available it represents the uploaded size; otherwise
-    the original image dimensions are used (image was small enough to skip resize).
+    Prefer the dimensions acknowledged by the upload endpoint, then the local
+    compressed cache, and finally the original image dimensions.
     """
     try:
+        uploaded_size = get_scene_segment_manager().get_uploaded_image_size(
+            img_item.image
+        )
+        if uploaded_size:
+            return uploaded_size
         if (img_item.compressed_image and
                 len(img_item.compressed_image.size) >= 2 and
                 img_item.compressed_image.size[0] > 0):
@@ -321,13 +326,12 @@ class MIXIE_OT_lasso_select_sam(Operator):
 
         # Check if image is uploaded
         if not manager.is_ready(img_item.image):
-            if manager.is_uploading(img_item.image):
-                self.report({'INFO'}, "Image is uploading, please wait...")
-                return {'CANCELLED'}
-
             # Queue upload first — capture lasso points before the async callback
             state.lasso_select_pending = True
-            self.report({'INFO'}, "Uploading image for refinement...")
+            if manager.is_uploading(img_item.image):
+                self.report({'INFO'}, "Waiting for image upload...")
+            else:
+                self.report({'INFO'}, "Uploading image for refinement...")
 
             target_idx = state.target_image_index
             # Capture loops now so the closure has stable copies.
@@ -414,6 +418,11 @@ def _perform_mask_segmentations(
             return
 
         error_msg = message or "Unknown error"
+        if "timed out" in error_msg.lower():
+            logger.error("[LassoSelectSAM] %s", error_msg)
+            _reset_lasso_state(state)
+            _redraw_all()
+            return
         if error_msg == "expired" and not _retry:
             logger.error("[LassoSelectSAM] Job expired, re-uploading and retrying...")
             _upload_and_retry_lasso(scene, target_idx, masks, outlines, index)

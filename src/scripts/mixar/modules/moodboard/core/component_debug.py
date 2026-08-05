@@ -44,31 +44,44 @@ def _add_mask_preview(scene, source_index, preview_image, segment_name, label):
         return None
 
     source = scene.mixie_moodboard_images[source_index]
+    # CollectionProperty.add() may reallocate its backing storage and
+    # invalidate every Python RNA wrapper obtained from that collection. Keep
+    # no source-item reads after adding the preview; doing so deadlocked the
+    # main thread in property_pointer_get once the collection grew during a
+    # multi-lasso batch.
+    source_scale = source.scale
+    source_position_x = source.position_x
+    source_position_y = source.position_y
+    source_width, source_height = get_moodboard_image_display_size(
+        source.image, source_scale,
+    )
+    preview_scale = max(0.2, source_scale * 0.45)
+    width, height = get_moodboard_image_display_size(
+        preview_image, preview_scale,
+    )
+    center_x = (
+        source_position_x + source_width
+        + MOODBOARD_MULTI_IMAGE_GAP + width / 2
+    )
+    center_y = source_position_y + source_height - height / 2
+    preview_index = len(scene.mixie_moodboard_images)
+    preview_z_order = max(
+        (item.z_order for item in scene.mixie_moodboard_images),
+        default=0,
+    ) + 1
     preview_image.name = f"DEBUG {label} - {segment_name}"
     preview_image.pack()
 
     preview = scene.mixie_moodboard_images.add()
     preview.image = preview_image
-    preview.scale = max(0.2, source.scale * 0.45)
+    preview.scale = preview_scale
     preview.selected = False
     preview.generation_prompt = f"Developer-only {label} preview"
     preview.component_role = 'DEBUG_MASK'
     preview.component_name = segment_name
-    preview.z_order = max(
-        (item.z_order for item in scene.mixie_moodboard_images),
-        default=0,
-    ) + 1
+    preview.z_order = preview_z_order
 
-    source_width, source_height = get_moodboard_image_display_size(
-        source.image, source.scale,
-    )
-    width, height = get_moodboard_image_display_size(
-        preview.image, preview.scale,
-    )
-    center_x = source.position_x + source_width + MOODBOARD_MULTI_IMAGE_GAP + width / 2
-    center_y = source.position_y + source_height - height / 2
-    preview_index = len(scene.mixie_moodboard_images) - 1
-    preview.position_x, preview.position_y = find_free_moodboard_position(
+    position_x, position_y = find_free_moodboard_position(
         width,
         height,
         center_x,
@@ -76,8 +89,10 @@ def _add_mask_preview(scene, source_index, preview_image, segment_name, label):
         scene=scene,
         exclude_index=preview_index,
     )
+    preview.position_x = position_x
+    preview.position_y = position_y
     ensure_moodboard_region_visible(
-        preview.position_x, preview.position_y, width, height,
+        position_x, position_y, width, height,
     )
     return preview
 
