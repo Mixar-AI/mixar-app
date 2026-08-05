@@ -240,18 +240,80 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
     GPU_line_width(1.0f);
   }
   else if (active_tool == 3) {
-    /* LASSO - draw the lasso polygon */
-    PropertyRNA *lasso_prop = RNA_struct_find_property(&state_ptr, "lasso_points");
-    if (lasso_prop) {
-      int point_count = RNA_property_collection_length(&state_ptr, lasso_prop);
+    /* LASSO - draw completed polygons and the polygon currently being drawn. */
+    auto draw_lasso_polygon = [&](PointerRNA &owner_ptr, PropertyRNA *points_prop) {
+      int point_count = RNA_property_collection_length(&owner_ptr, points_prop);
+      if (point_count < 2) {
+        return;
+      }
 
+      /* Magenta outline for lasso */
+      GPU_line_width(2.0f);
+      immUniformColor4f(1.0f, 0.0f, 1.0f, 1.0f);
+      immBegin(GPU_PRIM_LINE_STRIP, point_count);
+
+      CollectionPropertyIterator points_iter{};
+      RNA_property_collection_begin(&owner_ptr, points_prop, &points_iter);
+      while (points_iter.valid) {
+        PointerRNA point_ptr = points_iter.ptr;
+        PropertyRNA *x_prop = RNA_struct_find_property(&point_ptr, "x");
+        PropertyRNA *y_prop = RNA_struct_find_property(&point_ptr, "y");
+        if (x_prop && y_prop) {
+          float rel_x = RNA_property_float_get(&point_ptr, x_prop);
+          float rel_y = RNA_property_float_get(&point_ptr, y_prop);
+          immVertex2f(pos, pos_x + rel_x * display_width, pos_y + rel_y * display_height);
+        }
+        RNA_property_collection_next(&points_iter);
+      }
+      RNA_property_collection_end(&points_iter);
+      immEnd();
+
+      if (point_count >= 3) {
+        PointerRNA first_point_ptr;
+        PointerRNA last_point_ptr;
+        RNA_property_collection_lookup_int(&owner_ptr, points_prop, 0, &first_point_ptr);
+        RNA_property_collection_lookup_int(
+            &owner_ptr, points_prop, point_count - 1, &last_point_ptr);
+        PropertyRNA *first_x_prop = RNA_struct_find_property(&first_point_ptr, "x");
+        PropertyRNA *first_y_prop = RNA_struct_find_property(&first_point_ptr, "y");
+        PropertyRNA *last_x_prop = RNA_struct_find_property(&last_point_ptr, "x");
+        PropertyRNA *last_y_prop = RNA_struct_find_property(&last_point_ptr, "y");
+        if (first_x_prop && first_y_prop && last_x_prop && last_y_prop) {
+          immUniformColor4f(1.0f, 0.0f, 1.0f, 0.5f);
+          immBegin(GPU_PRIM_LINES, 2);
+          immVertex2f(pos,
+                      pos_x + RNA_property_float_get(&first_point_ptr, first_x_prop) * display_width,
+                      pos_y + RNA_property_float_get(&first_point_ptr, first_y_prop) * display_height);
+          immVertex2f(pos,
+                      pos_x + RNA_property_float_get(&last_point_ptr, last_x_prop) * display_width,
+                      pos_y + RNA_property_float_get(&last_point_ptr, last_y_prop) * display_height);
+          immEnd();
+        }
+      }
+    };
+
+    PropertyRNA *loops_prop = RNA_struct_find_property(&state_ptr, "lasso_loops");
+    if (loops_prop) {
+      CollectionPropertyIterator loops_iter{};
+      RNA_property_collection_begin(&state_ptr, loops_prop, &loops_iter);
+      while (loops_iter.valid) {
+        PointerRNA loop_ptr = loops_iter.ptr;
+        PropertyRNA *points_prop = RNA_struct_find_property(&loop_ptr, "points");
+        if (points_prop) {
+          draw_lasso_polygon(loop_ptr, points_prop);
+        }
+        RNA_property_collection_next(&loops_iter);
+      }
+      RNA_property_collection_end(&loops_iter);
+    }
+
+    PropertyRNA *lasso_prop = RNA_struct_find_property(&state_ptr, "lasso_points");
+    PropertyRNA *drawing_prop = RNA_struct_find_property(&state_ptr, "is_drawing");
+    if (lasso_prop && drawing_prop && RNA_property_boolean_get(&state_ptr, drawing_prop)) {
+      int point_count = RNA_property_collection_length(&state_ptr, lasso_prop);
       if (point_count >= 2) {
         GPU_line_width(2.0f);
-
-        /* Magenta outline for lasso */
         immUniformColor4f(1.0f, 0.0f, 1.0f, 1.0f);
-
-        /* Draw lasso as connected line strip */
         immBegin(GPU_PRIM_LINE_STRIP, point_count);
 
         CollectionPropertyIterator lasso_iter{};
@@ -280,7 +342,6 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
         RNA_property_collection_end(&lasso_iter);
         immEnd();
 
-        /* Close the polygon by drawing a line from last to first */
         if (point_count >= 3) {
           PointerRNA first_point_ptr;
           RNA_property_collection_lookup_int(&state_ptr, lasso_prop, 0, &first_point_ptr);
@@ -303,7 +364,6 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
             float last_y =
                 pos_y + RNA_property_float_get(&last_point_ptr, y_prop_l) * display_height;
 
-            /* Dashed closing line */
             immUniformColor4f(1.0f, 0.0f, 1.0f, 0.5f);
             immBegin(GPU_PRIM_LINES, 2);
             immVertex2f(pos, last_x, last_y);
