@@ -137,7 +137,7 @@ CHARACTER_COMPONENT_REFERENCE_GUIDANCE = {
 }
 
 CHARACTER_COMPONENT_DETAIL_PROMPT = (
-    "Create one high-detail standalone reference image of the exact character "
+    "Create high-detail standalone reference images of the exact character "
     "component named {component_name}. {reference_guidance} Preserve the "
     "selected component's silhouette, proportions, construction, colors, "
     "materials, surface details, wear, and art style. Do not redesign it and "
@@ -145,9 +145,10 @@ CHARACTER_COMPONENT_DETAIL_PROMPT = (
     "When overlap hides part of the component, complete only the necessary "
     "occluded surfaces consistently with the visible design. Show the whole "
     "component once, centered and unobstructed, as a clean orthographic-style "
-    "product reference on a plain neutral background. No character body, no "
-    "unselected gear, no extra objects, no duplicate views, and no text or "
-    "labels."
+    "product reference on a plain neutral background. If multiple outputs are "
+    "requested, make each output a distinct useful view (front, side, rear, "
+    "or close-up) rather than a collage or duplicate. No character body, no "
+    "unselected gear, no extra objects, and no text or labels."
 )
 
 # ============================================================================

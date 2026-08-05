@@ -106,6 +106,7 @@ class MIXIE_OT_generate_character_components(Operator):
         settings = (
             scene.mixie_moodboard_sidebar.tab_segment_to_3d.character_components
         )
+        views_per_component = getattr(settings, "views_per_component", 1)
         model_slug = str(settings.model or "")
         if not is_loaded():
             self.report({'ERROR'}, "Load the generation catalog before generating details")
@@ -180,6 +181,7 @@ class MIXIE_OT_generate_character_components(Operator):
                     extra_instructions=settings.instructions,
                     params=params,
                     image_name=output_name,
+                    views_per_component=views_per_component,
                 )
                 component_id = ensure_component_id(segment)
                 job = enqueue_generation(

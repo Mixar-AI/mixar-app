@@ -56,6 +56,11 @@ class MixieMoodboardSegment(PropertyGroup):
         description="Show this segment overlay and include it in Segments to 3D",
         default=True
     )
+    show_overlay: BoolProperty(
+        name="Show Overlay",
+        description="Show the colored mask overlay on the source image",
+        default=True,
+    )
     include_for_detail: BoolProperty(
         name="Include Detail",
         description="Include this component in batch detail-image generation",

@@ -19,7 +19,11 @@ def recomposite_display_image(img_item):
     if width == 0 or height == 0:
         return
 
-    if not any(segment.active for segment in img_item.segments):
+    visible_segments = [
+        segment for segment in img_item.segments
+        if segment.active and getattr(segment, "show_overlay", True)
+    ]
+    if not visible_segments:
         if img_item.display_image:
             old_display = img_item.display_image
             img_item.display_image = None
@@ -38,8 +42,8 @@ def recomposite_display_image(img_item):
     outline_green = np.array([0.1, 0.5, 0.1], dtype=np.float32)
     overlay_alpha = 0.5
 
-    for segment in img_item.segments:
-        if not segment.active or not segment.mask_image:
+    for segment in visible_segments:
+        if not segment.mask_image:
             continue
 
         mask_img = segment.mask_image

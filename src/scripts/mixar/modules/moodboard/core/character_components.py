@@ -299,6 +299,7 @@ def build_component_payload(
     extra_instructions: str,
     params: Optional[Mapping],
     image_name: str,
+    views_per_component: int = 1,
 ) -> dict:
     """Build the existing ``image_gen`` wire payload for one component."""
     ordered = references.ordered()
@@ -306,8 +307,13 @@ def build_component_payload(
         raise ValueError("Component detail generation requires source and mask references")
 
     resolved_params = dict(params or {})
-    # One component row maps to one output image and one credit multiplier.
-    resolved_params["number_of_images"] = 1
+    try:
+        # The image-generation queue currently accepts at most four outputs
+        # per job; keep the component workflow within that service contract.
+        resolved_views = max(1, min(int(views_per_component), 4))
+    except (TypeError, ValueError):
+        resolved_views = 1
+    resolved_params["number_of_images"] = resolved_views
     prompt = build_component_detail_prompt(
         component_name,
         extra_instructions,

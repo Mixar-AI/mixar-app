@@ -94,6 +94,7 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
         icon='IMAGE_DATA',
     )
     draw_dropdown(detail, settings, "model", text="Model")
+    detail.prop(settings, "views_per_component", text="Views per Component")
 
     if model_ready:
         from mixar.modules.common.generation_params import draw_service_params
@@ -121,7 +122,8 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     )
     draw_hint(
         detail,
-        "Each job uses the component cutout and its lossless SAM3 mask",
+        "Each component job generates the selected number of distinct views "
+        "from its cutout and lossless SAM3 mask",
         icon='INFO',
     )
 

@@ -86,7 +86,7 @@ def test_catalog_filter_and_reference_limit_do_not_guess_model_names():
     assert model_reference_limit({"max_reference_images": "bad"}) == 0
 
 
-def test_payload_preserves_reference_roles_and_forces_one_output():
+def test_payload_preserves_reference_roles_and_supports_multiple_outputs():
     references = ComponentReferences(
         full_source=b"full-character",
         component_cutout=b"armor-cutout",
@@ -101,6 +101,7 @@ def test_payload_preserves_reference_roles_and_forces_one_output():
         extra_instructions="Show rear fasteners",
         params={"number_of_images": 4, "resolution": "2K"},
         image_name="hero_torso_detail",
+        views_per_component=3,
     )
 
     decoded = [
@@ -112,7 +113,7 @@ def test_payload_preserves_reference_roles_and_forces_one_output():
         "component_cutout",
         "selection_mask",
     ]
-    assert payload["params"] == {"number_of_images": 1, "resolution": "2K"}
+    assert payload["params"] == {"number_of_images": 3, "resolution": "2K"}
     assert payload["image_name"] == "hero_torso_detail"
     assert "Reference image 1 is the full character" in payload["prompt"]
     assert "Do not redesign" in payload["prompt"]
@@ -132,9 +133,11 @@ def test_two_reference_prompt_never_claims_full_character_context():
         extra_instructions="",
         params=None,
         image_name="shoe_detail",
+        views_per_component=2,
     )
 
     assert len(payload["reference_images_b64"]) == 2
+    assert payload["params"]["number_of_images"] == 2
     assert payload["reference_image_roles"] == [
         "component_cutout",
         "selection_mask",

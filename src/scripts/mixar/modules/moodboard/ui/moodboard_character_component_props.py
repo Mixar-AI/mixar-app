@@ -4,7 +4,7 @@
 
 """Settings for SAM3-guided character-component detail generation."""
 
-from bpy.props import EnumProperty, StringProperty
+from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
 from .moodboard_enum_callbacks import (
@@ -28,4 +28,11 @@ class MixieCharacterComponentSettings(PropertyGroup):
         default="",
         maxlen=1024,
         options={'TEXTEDIT_UPDATE'},
+    )
+    views_per_component: IntProperty(
+        name="Views per Component",
+        description="Number of distinct Gemini detail views generated for each lasso component",
+        default=3,
+        min=1,
+        max=4,
     )

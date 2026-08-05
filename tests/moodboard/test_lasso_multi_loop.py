@@ -21,3 +21,11 @@ def test_lasso_pipeline_submits_loops_sequentially_and_adds_each_result():
     assert "Continue only after the current result is visible" in source
     assert "Draw another loop or press Enter" in mask_tool
     assert "return {'RUNNING_MODAL'}" in mask_tool
+
+
+def test_lasso_segments_keep_the_source_image_visible():
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
+    overlay = (MOODBOARD / "core/segment_overlay.py").read_text()
+
+    assert "segment.show_overlay = False" in source
+    assert 'getattr(segment, "show_overlay", True)' in overlay
