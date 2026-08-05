@@ -14,12 +14,25 @@ MAX_BEAT_SECONDS = 10.0
 
 LENS_PRESETS_MM = (18, 24, 35, 50, 85)
 
+FOV_PRESETS_DEGREES = (
+    ("ULTRA_NARROW", "Ultra Narrow", 15.0),
+    ("NARROW", "Narrow", 30.0),
+    ("STANDARD", "Standard", 45.0),
+    ("WIDE", "Wide", 60.0),
+    ("ULTRA_WIDE", "Ultra Wide", 75.0),
+    ("EXTREME", "Extreme", 90.0),
+)
+
 # Width and height are deliberately modest. They establish the native scene
 # aspect without silently opting the user into a heavyweight final render.
 ASPECT_PRESETS = {
-    "WIDE": ("16:9", 1920, 1080),
-    "VERTICAL": ("9:16", 1080, 1920),
-    "SQUARE": ("1:1", 1080, 1080),
+    "PHOTO": ("Photography / DSLR · 3:2", 1620, 1080),
+    "SMARTPHONE": ("Smartphones · 4:3", 1440, 1080),
+    "WIDE": ("Video / TV · 16:9", 1920, 1080),
+    "CINEMA_185": ("Cinema · 1.85:1", 1998, 1080),
+    "CINEMA_239": ("Cinema · 2.39:1", 2390, 1000),
+    "VERTICAL": ("Social media · 9:16", 1080, 1920),
+    "SQUARE": ("Square · 1:1", 1080, 1080),
 }
 
 DEFAULT_DIRECTION_PROMPT = (

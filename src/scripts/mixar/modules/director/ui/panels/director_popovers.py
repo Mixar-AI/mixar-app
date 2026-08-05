@@ -155,7 +155,13 @@ def _draw_camera_settings(layout, scene, state, shot):
         content.prop(camera.data, "ortho_scale", text="Scale")
 
     content.separator(factor=0.45)
-    aspect_row = content.row(align=True)
+    aspect_row = content.grid_flow(
+        row_major=True,
+        columns=2,
+        even_columns=True,
+        even_rows=True,
+        align=True,
+    )
     for preset, (label, _width, _height) in ASPECT_PRESETS.items():
         operator = aspect_row.operator(
             "mixar.director_set_aspect",
