@@ -273,6 +273,28 @@ def _get_texture_gen_model_items(self, context):
     )
 
 
+def _get_pbr_gen_mode_items(self, context):
+    """PBR Generation tab mode items (capability ``pbr_generation``).
+
+    Catalog-only tab (no offline fallback UI) — the fallback item only
+    keeps the enum valid while the catalog loads. Single service today
+    (``tripo_texture``), so ``draw_capability_selector`` hides the Mode
+    dropdown."""
+    return _capability_mode_items(
+        "pbr_generation",
+        [("tripo_texture", "PBR Generation",
+          "Texture the selected mesh (Tripo)")],
+    )
+
+
+def _get_pbr_gen_model_items(self, context):
+    """PBR Generation tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "pbr_generation", self,
+        [("tripo_texture_v3", "Tripo Texture 3.0", "Tripo texture generation")],
+    )
+
+
 def _get_animate_mode_items(self, context):
     """Animate tab mode items (capability ``animate``).
 

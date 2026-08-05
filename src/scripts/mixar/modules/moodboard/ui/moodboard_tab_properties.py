@@ -49,6 +49,8 @@ from .moodboard_enum_callbacks import (
     _get_model_gen_model_items,
     _get_texture_gen_mode_items,
     _get_texture_gen_model_items,
+    _get_pbr_gen_mode_items,
+    _get_pbr_gen_model_items,
     _get_mesh_segment_mode_items,
     _get_mesh_segment_model_items,
 )
@@ -130,6 +132,89 @@ class MixieMoodboardTabLookdev360Props(PropertyGroup):
         description="ON: Use currently selected moodboard image. "
                     "OFF: Use uploaded image",
         default=True
+    )
+
+
+class MixieMoodboardTabPBRGenProps(PropertyGroup):
+    """Properties for the PBR Generation tab (Tripo /models/texture).
+
+    Textures an existing untextured mesh. Guidance is Tripo's
+    mutually-exclusive ``texture_prompt`` — the ``multi_view`` toggle picks
+    between a single reference image (moodboard-selected or manual) and four
+    positional views (front/left/back/right). Catalog-only tab, so the
+    panel hides when the catalog carries no ``pbr_generation`` services.
+    """
+
+    # Generation mode = catalog service of capability "pbr_generation"
+    # (single service tripo_texture today — Mode dropdown auto-hides).
+    mode: EnumProperty(
+        name="Mode",
+        description="PBR generation mode",
+        items=_get_pbr_gen_mode_items,
+        update=_on_model_changed,
+    )
+
+    model: EnumProperty(
+        name="Model",
+        description="AI model for texture generation",
+        items=_get_pbr_gen_model_items,
+        update=_on_model_changed,
+    )
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Optional text guidance for the textures",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    # Single reference image ⇄ four positional views.
+    multi_view: BoolProperty(
+        name="Multiple Views",
+        description="Provide four positional reference views "
+                    "(front / left / back / right) instead of one image",
+        default=False,
+    )
+
+    # --- Single-image mode ---
+    use_selected_image: BoolProperty(
+        name="Use Selected Moodboard Image",
+        description="ON: Use the selected moodboard image. "
+                    "OFF: Pick or upload an image below",
+        default=True,
+    )
+
+    reference_image: PointerProperty(
+        type=bpy.types.Image,
+        name="Reference Image",
+        description="Reference image guiding the textures",
+    )
+
+    style_only: BoolProperty(
+        name="Use Image Style Only",
+        description="Treat the reference image as a style reference paired "
+                    "with the prompt (Tripo style_image) instead of a direct "
+                    "reference",
+        default=False,
+    )
+
+    # --- Multi-view mode (four positional views; all four required) ---
+    front_image: PointerProperty(
+        type=bpy.types.Image, name="Front",
+        description="Front view of the subject",
+    )
+    left_image: PointerProperty(
+        type=bpy.types.Image, name="Left",
+        description="Left view of the subject",
+    )
+    back_image: PointerProperty(
+        type=bpy.types.Image, name="Back",
+        description="Back view of the subject",
+    )
+    right_image: PointerProperty(
+        type=bpy.types.Image, name="Right",
+        description="Right view of the subject",
     )
 
 
@@ -481,6 +566,12 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabAnimateProps,
         name="Animate Tab",
         description="Properties for Animate tab"
+    )
+
+    tab_pbr_gen: PointerProperty(
+        type=MixieMoodboardTabPBRGenProps,
+        name="PBR Generation Tab",
+        description="Properties for PBR Generation tab"
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.

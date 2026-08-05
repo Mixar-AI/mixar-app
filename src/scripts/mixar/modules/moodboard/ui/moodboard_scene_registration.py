@@ -53,6 +53,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabImageGenProps,
     MixieMoodboardTabLookdevProps,
     MixieMoodboardTabLookdev360Props,
+    MixieMoodboardTabPBRGenProps,
     MixieMoodboardTabImageTo3DProps,
     MixieMoodboardTabSegmentTo3DProps,
     MixieMoodboardTabMeshSegmentProps,
@@ -80,6 +81,7 @@ classes = (
     MixieMoodboardTabImageGenProps,
     MixieMoodboardTabLookdevProps,
     MixieMoodboardTabLookdev360Props,
+    MixieMoodboardTabPBRGenProps,
     MixieMoodboardTabImageTo3DProps,
     MixieCharacterComponentSettings,
     MixieMoodboardTabSegmentTo3DProps,
@@ -248,6 +250,15 @@ def register():
             options={'SKIP_SAVE'},
         ),
     )
+    _safe_scene_prop(
+        'mixie_pbr_gen_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether PBR (Tripo texture) generation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
     # Tripo segmentation. Separate from mixie_mesh_segment_is_processing
     # (Jasper) so the two engines' in-flight state never masks each other.
     _safe_scene_prop(
@@ -272,7 +283,7 @@ def register():
     # Generation progress floats (session-only)
     for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate',
-                    'tripo_segment', 'smart_segment'):
+                    'pbr_gen', 'tripo_segment', 'smart_segment'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
         _safe_wm_prop(
             f'mixie_{prefix}_generate_progress',
@@ -295,6 +306,7 @@ def unregister():
         # Scene Gen Experimental flags were not registered; nothing to remove.
         'mixie_smart_segment_is_generating',
         'mixie_tripo_segment_is_generating',
+        'mixie_pbr_gen_is_generating',
         'mixie_animate_is_generating',
         'mixie_retopology_is_generating',
         'mixie_image_to_3d_is_generating',
@@ -319,7 +331,7 @@ def unregister():
     # WindowManager properties
     wm_attrs = []
     for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
-                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate'):
+                    'segment_to_3d', 'mesh_segment', 'retopology', 'animate', 'pbr_gen'):
         wm_attrs.append(f'mixie_{prefix}_generate_progress')
     for attr in wm_attrs:
         try:
