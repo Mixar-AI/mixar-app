@@ -96,6 +96,7 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     )
     draw_dropdown(detail, settings, "model", text="Model")
     detail.prop(settings, "views_per_component", text="Views per Component")
+    detail.prop(settings, "include_full_context", text="Use Full Character Context")
 
     if model_ready:
         from mixar.modules.common.generation_params import draw_service_params

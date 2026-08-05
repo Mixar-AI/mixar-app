@@ -70,7 +70,6 @@ class MixieMoodboardSegment(PropertyGroup):
         name="Selection Outline",
         description="Original lasso polygon stored as normalized JSON coordinates",
         default="",
-        options={'SKIP_SAVE'},
     )
     include_for_detail: BoolProperty(
         name="Include Detail",

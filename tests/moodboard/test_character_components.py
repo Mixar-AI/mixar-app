@@ -25,6 +25,7 @@ from mixar.modules.moodboard.core.character_components import (
     prepare_component_references,
     stamp_component_outputs,
 )
+from mixar.modules.moodboard.core.mask_guidance import constrain_refined_mask
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -142,7 +143,9 @@ def test_two_reference_prompt_never_claims_full_character_context():
         "component_cutout",
         "selection_mask",
     ]
-    assert "Reference image 1 is a padded cutout" in payload["prompt"]
+    assert "Reference image 1 is the only target appearance" in payload["prompt"]
+    assert "hard spatial constraint" in payload["prompt"]
+    assert "Never render the mask" in payload["prompt"]
     assert "full character" not in payload["prompt"]
 
 
@@ -157,6 +160,19 @@ def test_component_names_are_safe_and_prompt_text_is_normalised():
     )
     assert "Left Gauntlet" in prompt
     assert "retain scratches" in prompt
+
+
+def test_generation_defaults_to_strict_cutout_only_guidance():
+    operator = (
+        MOODBOARD / "ui/operators/character_component_ops.py"
+    ).read_text()
+    properties = (
+        MOODBOARD / "ui/moodboard_character_component_props.py"
+    ).read_text()
+
+    assert 'getattr(settings, "include_full_context", False)' in operator
+    assert "include_full_context: BoolProperty" in properties
+    assert "default=False" in properties
 
 
 def test_persistent_ids_are_lazy_stable_and_distinct():
@@ -285,6 +301,29 @@ def test_stale_or_empty_masks_are_rejected():
         prepare_component_references(source, encoded((100, 100), 255))
     with pytest.raises(ValueError, match="contains no selected pixels"):
         prepare_component_references(source, encoded((100, 50), 0))
+
+
+@pytest.mark.skipif(not PIL_AVAILABLE, reason="Pillow is supplied by Blender")
+def test_sam3_result_is_hard_clipped_to_original_lasso():
+    from PIL import Image, ImageDraw
+
+    refined = Image.new("L", (20, 20), 0)
+    ImageDraw.Draw(refined).rectangle((2, 2, 17, 17), fill=255)
+    guide = Image.new("L", (20, 20), 0)
+    ImageDraw.Draw(guide).rectangle((8, 8, 12, 12), fill=255)
+    refined_data = BytesIO()
+    guide_data = BytesIO()
+    refined.save(refined_data, format="PNG")
+    guide.save(guide_data, format="PNG")
+
+    constrained = constrain_refined_mask(
+        refined_data.getvalue(), guide_data.getvalue()
+    )
+
+    with Image.open(BytesIO(constrained)) as decoded:
+        assert decoded.getpixel((3, 3)) == 0
+        assert decoded.getpixel((10, 10)) == 255
+        assert decoded.getbbox() == (8, 8, 13, 13)
 
 
 def test_operator_uses_raw_mask_catalog_and_result_hook():

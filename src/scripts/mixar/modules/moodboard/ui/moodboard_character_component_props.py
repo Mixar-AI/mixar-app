@@ -4,7 +4,7 @@
 
 """Settings for SAM3-guided character-component detail generation."""
 
-from bpy.props import EnumProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
 from .moodboard_enum_callbacks import (
@@ -35,4 +35,12 @@ class MixieCharacterComponentSettings(PropertyGroup):
         default=3,
         min=1,
         max=4,
+    )
+    include_full_context: BoolProperty(
+        name="Use Full Character Context",
+        description=(
+            "Also send the full character for design context; disabled by default "
+            "because strict cutout-only guidance adheres to the mask more closely"
+        ),
+        default=False,
     )

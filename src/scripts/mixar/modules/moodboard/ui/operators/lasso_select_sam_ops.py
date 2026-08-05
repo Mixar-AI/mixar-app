@@ -44,7 +44,12 @@ def _reset_lasso_state(state):
 
 
 def _create_segment_from_mask(
-    scene, image_index, mask_bytes, base_name, outline_points=None
+    scene,
+    image_index,
+    mask_bytes,
+    base_name,
+    outline_points=None,
+    raw_mask_bytes=None,
 ):
     """Add segment to image's segment collection and recomposite."""
     mask_temp_path = None
@@ -80,6 +85,26 @@ def _create_segment_from_mask(
         segment.name = segment_name
 
         recomposite_display_image(img_item)
+        from ...core.component_debug import (
+            add_mask_bytes_preview,
+            add_sam3_mask_preview,
+        )
+
+        if raw_mask_bytes:
+            add_mask_bytes_preview(
+                scene,
+                image_index,
+                raw_mask_bytes,
+                segment_name,
+                "Raw SAM3 Mask",
+            )
+        add_sam3_mask_preview(
+            scene,
+            image_index,
+            mask_img,
+            segment_name,
+            label="Constrained Lasso Mask",
+        )
         logger.debug("[LassoSelectSAM] Added %s", segment_name)
         return True
 
@@ -364,8 +389,25 @@ def _perform_mask_segmentations(
     def on_complete(success: bool, refined_mask_bytes, message: str):
         if success and refined_mask_bytes:
             outline = outlines[index] if outlines and index < len(outlines) else None
+            from ...core.mask_guidance import constrain_refined_mask
+
+            try:
+                constrained_mask = constrain_refined_mask(
+                    refined_mask_bytes, masks[index]
+                )
+            except ValueError as exc:
+                logger.warning("[LassoSelectSAM] Rejected mask: %s", exc)
+                _perform_mask_segmentations(
+                    scene, target_idx, masks, outlines, index + 1
+                )
+                return
             _create_segment_from_mask(
-                scene, target_idx, refined_mask_bytes, "Lasso Segment", outline
+                scene,
+                target_idx,
+                constrained_mask,
+                "Lasso Segment",
+                outline,
+                raw_mask_bytes=refined_mask_bytes,
             )
             # Continue only after the current result is visible on the board.
             _perform_mask_segmentations(scene, target_idx, masks, outlines, index + 1)

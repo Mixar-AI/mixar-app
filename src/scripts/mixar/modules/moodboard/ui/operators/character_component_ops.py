@@ -121,7 +121,8 @@ class MIXIE_OT_generate_character_components(Operator):
 
         reference_limit = model_reference_limit(model)
         include_full_context = (
-            reference_limit >= CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES
+            bool(getattr(settings, "include_full_context", False))
+            and reference_limit >= CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES
         )
         params = collect_params("image_gen", model_slug)
         # The SAM3 mask may be 2K, but the crop helper maps it onto the

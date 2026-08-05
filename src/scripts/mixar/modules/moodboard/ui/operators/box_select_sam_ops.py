@@ -74,6 +74,9 @@ def _create_segment_from_mask(image_index, mask_bytes, base_name):
         segment.name = segment_name
 
         recomposite_display_image(img_item)
+        from ...core.component_debug import add_sam3_mask_preview
+
+        add_sam3_mask_preview(scene, image_index, mask_img, segment_name)
         logger.debug("[BoxSelectSAM] Added %s", segment_name)
         return True
 

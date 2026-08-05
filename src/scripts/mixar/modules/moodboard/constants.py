@@ -119,26 +119,36 @@ CHARACTER_COMPONENT_IMAGE_ROLES = (
         "Component Detail",
         "Detailed image generated from a named SAM3 character component",
     ),
+    (
+        'DEBUG_MASK',
+        "Debug SAM3 Mask",
+        "Developer-only raw mask returned by SAM3",
+    ),
 )
 
 CHARACTER_COMPONENT_REFERENCE_GUIDANCE = {
     False: (
-        "Reference image 1 is a padded cutout of the selected component on a "
-        "neutral background. Reference image 2 is its aligned binary SAM3 "
-        "selection mask; white is selected and black is excluded."
+        "Reference image 1 is the only target appearance: a padded cutout of "
+        "the selected component on a neutral background. Reference image 2 is "
+        "a control mask, not visual content: white pixels define the only "
+        "allowed subject and black pixels must be excluded."
     ),
     True: (
         "Reference image 1 is the full character and defines the overall "
-        "identity and design language. Reference image 2 is a padded cutout "
-        "of the selected component on a neutral background. Reference image "
-        "3 is the binary SAM3 selection mask aligned to reference image 2; "
-        "white is selected and black is excluded."
+        "identity and design language only; do not reproduce the full character. "
+        "Reference image 2 is the target appearance: a padded cutout of the "
+        "selected component on a neutral background. Reference image 3 is a "
+        "control mask, not visual content: white pixels define the only allowed "
+        "subject and black pixels must be excluded."
     ),
 }
 
 CHARACTER_COMPONENT_DETAIL_PROMPT = (
     "Create high-detail standalone reference images of the exact character "
-    "component named {component_name}. {reference_guidance} Preserve the "
+    "component named {component_name}. {reference_guidance} Treat the binary "
+    "mask as a hard spatial constraint. Never render the mask's black/white "
+    "graphics, mask edges, background, or objects outside its white region. "
+    "Preserve the "
     "selected component's silhouette, proportions, construction, colors, "
     "materials, surface details, wear, and art style. Do not redesign it and "
     "do not merge it with neighboring body parts, clothing, or equipment. "

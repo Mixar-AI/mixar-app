@@ -186,6 +186,11 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
 
             # Recomposite display image with all active segments
             recomposite_display_image(img_item)
+            from ...core.component_debug import add_sam3_mask_preview
+
+            add_sam3_mask_preview(
+                scene, self._target_image_index, mask_img, segment_name,
+            )
 
             state.magic_select_pending = False
             logger.debug("[SceneSegment] Added %s to image", segment_name)

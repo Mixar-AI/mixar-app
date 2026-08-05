@@ -33,3 +33,12 @@ def test_lasso_segments_keep_the_source_image_visible():
     assert 'getattr(segment, "show_overlay", True)' in overlay
     assert 'getattr(segment, "outline_only", False)' in overlay
     assert "_original_lasso_edge" in overlay
+
+
+def test_debug_mode_adds_raw_sam3_mask_preview():
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
+    debug = (MOODBOARD / "core/component_debug.py").read_text()
+
+    assert "add_sam3_mask_preview" in source
+    assert 'config.get("log_level", "INFO")' in debug
+    assert 'preview.component_role = \'DEBUG_MASK\'' in debug
