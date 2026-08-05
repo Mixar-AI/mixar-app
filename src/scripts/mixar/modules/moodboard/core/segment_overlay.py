@@ -19,9 +19,17 @@ def recomposite_display_image(img_item):
     if width == 0 or height == 0:
         return
 
+    def is_lasso_segment(segment):
+        # Older files stored lasso segments with show_overlay=False before
+        # outline-only rendering existed. Treat their stable display name as
+        # a compatibility signal so those selections become visible again.
+        return str(getattr(segment, "name", "")).startswith("Lasso Segment")
+
     visible_segments = [
         segment for segment in img_item.segments
-        if segment.active and getattr(segment, "show_overlay", True)
+        if segment.active and (
+            getattr(segment, "show_overlay", True) or is_lasso_segment(segment)
+        )
     ]
     if not visible_segments:
         if img_item.display_image:
@@ -70,7 +78,7 @@ def recomposite_display_image(img_item):
         edge_mask[:, :-1] |= mask_bool[:, 1:] != mask_bool[:, :-1]
         edge_mask &= mask_bool
 
-        if getattr(segment, "outline_only", False):
+        if getattr(segment, "outline_only", False) or is_lasso_segment(segment):
             # Lasso refinement should preserve the source artwork and leave a
             # visible, non-green boundary for each selected component.
             outline_color = np.array([1.0, 0.0, 1.0], dtype=np.float32)
