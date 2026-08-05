@@ -168,6 +168,20 @@ Foundation for the DB-driven moodboard tabs — the sidebar is exactly the 7 cap
 
 ## AI Agent System
 
+The deterministic export lane supports FBX, GLB, OBJ, and USD. Before its
+`file_save` interrupt, `space_mixie_chat/core/export_preflight.py` resolves the
+same selected/named/scene targets as the exporter and reports per-mesh applied
+rotation/scale, non-Armature modifiers, recursively referenced packed images,
+and active-output Mixar bake readiness. Permanent repair isolates shared mesh
+and material data from out-of-scope users, preserves Armature modifiers, packs
+images, and invokes the all-channel bake with a hidden target allowlist. Its
+session/request/task cache makes checkpoint replay idempotent. Export swaps all
+Mixar material slots to temporary Principled/image materials and restores them
+even on exporter failure. The native browser keeps local paths process-only;
+the backend receives only the opaque `export_destination_selected` resume
+action. Missing UVs remain a user-resolved residual failure; bypass never
+mutates the working scene.
+
 The backend runs a **LangGraph-based orchestrator agent** (Claude Sonnet 4.6 primary, Gemini 3.1 Pro fallback) with:
 
 - **18 tool domains** and **200+ tools** covering modeling, texturing, UV, rigging, particles, scene management, layer painting

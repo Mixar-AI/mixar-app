@@ -169,9 +169,14 @@ class MIXIE_CHAT_OT_new_session(Operator):
         session = get_session_manager()
         scene = context.scene
         scene_name = scene.name
+        from ...core.export_destination import clear_destination
+        clear_destination(session.get_session_id(scene))
 
         # Cancel any running session before clearing
         old_session_id = session.get_session_id(scene)
+        if old_session_id:
+            from ...core.export_destination import clear_destination
+            clear_destination(old_session_id)
 
         # 1. Stop any running SSE stream for this scene
         cleanup_sse_handler(scene_name)
@@ -286,6 +291,9 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         session = get_session_manager()
         scene = context.scene
         scene_name = scene.name
+
+        from ...core.export_destination import clear_destination
+        clear_destination(session.get_session_id(scene))
 
         # 1. Stop SSE stream for this scene only
         cleanup_sse_handler(scene_name)
