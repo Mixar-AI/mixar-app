@@ -50,8 +50,10 @@ class MIXIE_OT_agent_auto_rig(Operator):
     bl_options = {'REGISTER'}
 
     object_name: StringProperty(
-        name="Object Name",
-        description="Name of the mesh object in the scene to auto-rig",
+        name="Object Name(s)",
+        description="Name of the mesh object to auto-rig. To rig a segmented "
+                    "character, pass ALL its part names comma-separated — they "
+                    "are combined into ONE skeleton (e.g. 'Head,Torso,Arm_L').",
         default="",
     )
     rig_type: StringProperty(
@@ -68,23 +70,50 @@ class MIXIE_OT_agent_auto_rig(Operator):
 
     def execute(self, context):
         from mixar.modules.hunyuan.constants import (
-            ANIMATE_RIG_MODEL, ANIMATE_RIG_SERVICE,
+            ANIMATE_RIG_MODEL, ANIMATE_RIG_SERVICE, MAX_FILE_SIZE_ANIMATE_RIG,
         )
-        from mixar.modules.hunyuan.core.animate_enqueue import enqueue_rig_jobs
+        from mixar.modules.hunyuan.core.animate_enqueue import (
+            enqueue_rig_jobs, _rig_label,
+        )
 
-        name = (self.object_name or "").strip()
-        if not name:
+        raw = (self.object_name or "").strip()
+        if not raw:
             return _fail(context, "object_name is required for auto-rig")
 
-        obj = bpy.data.objects.get(name)
-        if obj is None:
-            return _fail(context, f"No object named '{name}' in the scene")
-        if obj.type != 'MESH':
+        # One name or several comma-separated (a segmented character). Resolve
+        # each; every part must exist and be a mesh — they are exported together
+        # into ONE GLB and rigged as a single skeleton by enqueue_rig_jobs.
+        names, seen = [], set()
+        for part in raw.split(","):
+            part = part.strip()
+            if part and part not in seen:
+                seen.add(part)
+                names.append(part)
+
+        meshes, missing, non_mesh = [], [], []
+        for nm in names:
+            obj = bpy.data.objects.get(nm)
+            if obj is None:
+                missing.append(nm)
+            elif obj.type != 'MESH':
+                non_mesh.append(f"'{nm}' ({obj.type})")
+            else:
+                meshes.append(obj)
+
+        if missing:
             return _fail(
                 context,
-                f"'{name}' is a {obj.type} object, not a mesh — auto-rig "
-                "needs a mesh.",
+                f"No object(s) named {', '.join(repr(m) for m in missing)} "
+                "in the scene.",
             )
+        if non_mesh:
+            return _fail(
+                context,
+                f"Not a mesh: {', '.join(non_mesh)} — auto-rig needs mesh "
+                "objects.",
+            )
+        if not meshes:
+            return _fail(context, "No mesh objects to auto-rig")
 
         rig_type = (self.rig_type or "auto").strip().lower()
         if rig_type not in _RIG_TYPES:
@@ -116,7 +145,7 @@ class MIXIE_OT_agent_auto_rig(Operator):
         try:
             enqueued = enqueue_rig_jobs(
                 context=context,
-                objects=[obj],
+                objects=meshes,
                 service_key=ANIMATE_RIG_SERVICE,
                 model=model,
                 params=params,
@@ -126,6 +155,7 @@ class MIXIE_OT_agent_auto_rig(Operator):
             logger.warning("[AgentAutoRig] enqueue failed: %s", e)
             return _fail(context, f"Auto-rig submission failed: {e}")
 
+        target = ", ".join(m.name for m in meshes)
         if not enqueued:
             # Distinguish the queue's duplicate-label rejection from a real
             # export/size failure — a wrong "export failed / too large" reason
@@ -137,8 +167,9 @@ class MIXIE_OT_agent_auto_rig(Operator):
                     get_queue,
                 )
 
+                expected_label = _rig_label(context, meshes)
                 duplicate = any(
-                    j.label == name and j.state not in TERMINAL_STATES
+                    j.label == expected_label and j.state not in TERMINAL_STATES
                     for j in get_queue(FEATURE_ANIMATE)._jobs
                 )
             except Exception:
@@ -146,13 +177,14 @@ class MIXIE_OT_agent_auto_rig(Operator):
             if duplicate:
                 return _fail(
                     context,
-                    f"An auto-rig job for '{name}' is already queued or "
+                    f"An auto-rig job for '{target}' is already queued or "
                     "running — wait for it to finish.",
                 )
             return _fail(
                 context,
-                f"Could not queue auto-rig for '{name}' (export failed or "
-                "the mesh exceeds the 100 MB limit).",
+                f"Could not queue auto-rig for '{target}' (export failed or "
+                f"the combined mesh exceeds the "
+                f"{MAX_FILE_SIZE_ANIMATE_RIG // (1024 * 1024)} MB limit).",
             )
 
         # Mirror the interactive operator: flash the Animate/Auto Rig queue.
