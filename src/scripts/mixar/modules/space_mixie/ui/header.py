@@ -72,7 +72,17 @@ class MIXIE_HT_header(Header):
         layout = self.layout
         layout.template_header()
 
-        layout.label(text="Moodboard")
+        director = getattr(context.scene, "mixar_director", None)
+        if director is not None and director.is_directing:
+            switcher = layout.row(align=True)
+            switcher.operator(
+                "mixar.director_open_editor",
+                text="3D Editor",
+                icon='VIEW3D',
+            )
+            switcher.label(text="Canvas", icon='IMAGE_PLANE')
+        else:
+            layout.label(text="Moodboard")
 
         # Add View menu (commented out)
         # layout.menu("MIXIE_MT_view")

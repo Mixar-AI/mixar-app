@@ -31,40 +31,38 @@ def test_native_drop_accepts_movies_and_validates_the_first_frame():
     assert "image->source == IMA_SRC_MOVIE" in drop
 
 
-def test_preview_is_compiled_and_reachable_from_video_clicks():
+def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     cmake = _read(SPACE_MIXIE / "CMakeLists.txt")
     select = _read(SPACE_MIXIE / "mixie_moodboard_ops_select.cc")
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 
     assert "mixie_moodboard_ops_preview.cc" in cmake
-    assert "moodboard_open_video_preview" in select
+    assert "moodboard_toggle_video_playback" in select
+    assert "play_button_hit" in select
     assert "KM_DBL_CLICK" in select
-    assert "WM_window_open_temp" in preview
-    assert "SPACE_SEQ" in preview
-    assert "seq::add_movie_strip" in preview
-    assert "SEQ_VIEW_PREVIEW" in preview
-    assert "ED_screen_animation_play" in preview
-    assert "BKE_area_find_region_type(area, RGN_TYPE_TOOLS)" in preview
-    assert "RGN_FLAG_HIDDEN | RGN_FLAG_HIDDEN_BY_USER" in preview
+    assert "BKE_image_acquire_ibuf" in preview
+    assert "MOV_get_duration_frames" in preview
+    assert "MOV_get_fps" in preview
+    assert "WM_event_timer_add_notifier" in preview
 
 
-def test_video_preview_uses_an_isolated_transient_scene():
+def test_inline_playback_is_runtime_only_and_cleans_up_on_shutdown():
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 
-    assert 'BKE_scene_add(bmain, "Mixar Video Preview")' in preview
-    assert "ID_TAG_RUNTIME" in preview
-    assert "session->workspace->sequencer_scene = preview_scene" in preview
-    assert "session->workspace->sequencer_scene = fallback_scene" in preview
-    assert "moodboard_video_preview_session_remove" in preview
-    assert "WM_event_free_ui_handler_all" in preview
-    assert "BKE_id_delete(bmain, preview_scene)" in preview
+    assert "static std::unordered_map<Image *, MoodboardVideoPlayback>" in preview
+    assert "playback_frame_at" in preview
+    assert "mixie_moodboard_video_playback_shutdown" in preview
+    assert "WM_event_timer_remove" in preview
+    assert "g_video_playback.clear()" in preview
+    assert "BKE_scene_add" not in preview
+    assert "ED_screen_animation_play" not in preview
 
 
 def test_movie_thumbnail_has_a_play_affordance():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_images.cc")
 
     assert "image->source == IMA_SRC_MOVIE" in draw
-    assert "draw_video_play_overlay" in draw
+    assert "draw_video_playback_overlay" in draw
     assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in draw
 
 

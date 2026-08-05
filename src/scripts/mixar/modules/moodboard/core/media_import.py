@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Persistent import path for generated moodboard videos."""
+"""Persistent import paths for generated and viewport-captured media."""
 
 from __future__ import annotations
 
@@ -13,6 +13,54 @@ import uuid
 import bpy
 
 from .moodboard_utils import place_new_moodboard_item
+
+
+def import_packed_still(
+    scene,
+    source_path: str,
+    *,
+    display_name: str = "",
+    generation_prompt: str = "",
+    selected: bool = False,
+):
+    """Pack a still into the blend and place it on *scene*'s moodboard.
+
+    This is the shared boundary for transient captures. Once the image is
+    packed, callers may safely delete ``source_path`` without leaving a broken
+    moodboard reference. Returns the new moodboard item and raises on failure.
+    """
+    image = None
+    item_index = -1
+    try:
+        image = bpy.data.images.load(source_path, check_existing=False)
+        if image.source == 'MOVIE' or image.size[0] <= 0 or image.size[1] <= 0:
+            raise ValueError("Captured result is not a valid still image")
+        image.colorspace_settings.name = 'sRGB'
+        image.pack()
+        if display_name:
+            image.name = display_name
+
+        item_index = len(scene.mixie_moodboard_images)
+        item = scene.mixie_moodboard_images.add()
+        item.image = image
+        item.scale = 1.0
+        item.z_order = len(scene.mixie_moodboard_images) - 1
+        item.generation_prompt = generation_prompt
+        item.selected = bool(selected)
+        place_new_moodboard_item(scene, item)
+        return item
+    except Exception:
+        if item_index >= 0 and item_index < len(scene.mixie_moodboard_images):
+            try:
+                scene.mixie_moodboard_images.remove(item_index)
+            except Exception:
+                pass
+        if image is not None:
+            try:
+                bpy.data.images.remove(image)
+            except Exception:
+                pass
+        raise
 
 
 def _generated_video_directory() -> str:

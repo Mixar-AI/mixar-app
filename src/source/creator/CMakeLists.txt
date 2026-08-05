@@ -510,6 +510,14 @@ endif()
 if(WITH_PYTHON)
   # install(CODE "message(\"copying blender scripts...\")")
 
+  # `install(DIRECTORY)` only copies files and leaves deleted overlay modules in
+  # an existing application bundle. Keep the Mixar-owned package an exact
+  # mirror so removing a Python UI module also removes it from incremental
+  # developer builds. Do not clear Blender's other bundled scripts here.
+  install(CODE
+    "file(REMOVE_RECURSE \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${TARGETDIR_VER}/scripts/mixar\")"
+  )
+
   # do not install freestyle dir if disabled
   if(NOT WITH_FREESTYLE)
     set(FREESTYLE_EXCLUDE_CONDITIONAL "freestyle/*")
