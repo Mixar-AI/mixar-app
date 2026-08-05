@@ -89,7 +89,7 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
         # Lasso Select SAM button
         if state.lasso_select_has_selection or state.lasso_select_pending:
             sam_box = layout.box()
-            sam_box.label(text="Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
+            sam_box.label(text="Multi-Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
 
             if state.lasso_select_pending:
                 row = sam_box.row()
@@ -98,7 +98,11 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
             else:
                 row = sam_box.row()
                 row.scale_y = 1.3
-                row.operator("mixie.lasso_select_sam", text="Refine selection", icon='MOD_MASK')
+                row.operator(
+                    "mixie.lasso_select_sam",
+                    text="Finish & Refine with SAM3",
+                    icon='MOD_MASK',
+                )
 
         # Show segment count
         num_segments = len(selected_item.segments)

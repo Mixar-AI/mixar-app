@@ -96,10 +96,15 @@ class MIXIE_PT_mask_tools_popover(Panel):
         )
         col.operator(
             "mixie.moodboard_lasso_tool",
-            text="Lasso Mask",
+            text="Multi-Lasso Mask",
             icon='OUTLINER_DATA_GP_LAYER',
             depress=(active_tool == 'LASSO'),
         )
+        if active_tool == 'LASSO':
+            hint = col.column()
+            hint.scale_y = 0.8
+            hint.label(text="Draw loops, release, repeat", icon='INFO')
+            hint.label(text="Press Enter to finish", icon='EVENT_RETURN')
         col.operator(
             "mixie.moodboard_magic_select_tool",
             text="Magic Select",

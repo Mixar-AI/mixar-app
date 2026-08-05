@@ -84,7 +84,8 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
         col.separator(factor=SEP_INTRA)
         draw_status_badge(
             col,
-            f"{active_count} for 3D · {included_count} for detail images",
+            f"{active_count} components for 3D · "
+            f"{included_count} components for detail",
             'DONE',
         )
 
@@ -132,7 +133,10 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     action.enabled = model_ready and included_count > 0
     generate = action.operator(
         "mixie.generate_character_components",
-        text=f"Generate {included_count} Detail Image(s)",
+        text=(
+            f"Generate {included_count} Component(s) × "
+            f"{settings.views_per_component} View(s)"
+        ),
         icon='RENDER_STILL',
     )
     generate.image_index = selected_idx

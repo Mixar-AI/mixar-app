@@ -260,8 +260,8 @@ class MIXIE_OT_moodboard_apply_box_mask(Operator):
 class MIXIE_OT_moodboard_lasso_tool(Operator):
     """Capture one or more freeform loops for SAM3 refinement."""
     bl_idname = "mixie.moodboard_lasso_tool"
-    bl_label = "Lasso Tool"
-    bl_description = "Draw multiple lasso loops and press Enter to refine them with SAM3 (L)"
+    bl_label = "Multi-Lasso Mask"
+    bl_description = "Draw loops, release after each one, then press Enter to refine with SAM3 (L)"
     bl_options = {'REGISTER', 'BLOCKING'}
 
     @classmethod
@@ -315,7 +315,7 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                         self.report(
                             {'INFO'},
                             f"Lasso loop {len(state.lasso_loops)} added. "
-                            "Draw another loop or press Enter to refine.",
+                            "Draw another loop or press Enter to finish.",
                         )
                         return {'RUNNING_MODAL'}
                     else:

@@ -62,13 +62,18 @@ def _draw_segment_to_3d(layout, context):
     # Lasso Select SAM section
     if state.lasso_select_has_selection or state.lasso_select_pending:
         sam_box = layout.box()
-        sam_box.label(text="Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
+        sam_box.label(text="Multi-Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
         if state.lasso_select_pending:
             draw_status_badge(sam_box, "Refining...", 'GENERATING')
         else:
+            sam_box.label(text="Draw another loop or press Enter to finish", icon='INFO')
             row = sam_box.row()
             row.scale_y = GENERATE_BUTTON_SCALE_Y
-            row.operator("mixie.lasso_select_sam", text="Refine selection", icon='MOD_MASK')
+            row.operator(
+                "mixie.lasso_select_sam",
+                text="Finish & Refine with SAM3",
+                icon='MOD_MASK',
+            )
 
     draw_section_separator(layout)
 
