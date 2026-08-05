@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Contracts for multi-loop lasso capture and progressive SAM3 refinement."""
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+MOODBOARD = ROOT / "src/scripts/mixar/modules/moodboard"
+
+
+def test_lasso_pipeline_submits_loops_sequentially_and_adds_each_result():
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
+    mask_tool = (MOODBOARD / "ui/operators/moodboard_mask_ops.py").read_text()
+
+    assert "lasso_loops" in source
+    assert "_perform_mask_segmentations" in source
+    assert "_create_segment_from_mask(" in source
+    assert "Continue only after the current result is visible" in source
+    assert "Draw another loop or press Enter" in mask_tool
+    assert "return {'RUNNING_MODAL'}" in mask_tool

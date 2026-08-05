@@ -516,6 +516,12 @@ def reset_tool_state(state, context):
     """
     state.active_tool = 'NONE'
     state.target_image_index = -1
+    try:
+        state.lasso_points.clear()
+        state.lasso_loops.clear()
+        state.lasso_select_has_selection = False
+    except (AttributeError, TypeError):
+        pass
     if context.area:
         context.area.tag_redraw()
 

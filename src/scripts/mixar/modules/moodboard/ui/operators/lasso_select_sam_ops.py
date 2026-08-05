@@ -19,6 +19,7 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+from ...constants import LASSO_MIN_POINTS
 from ...core.scene_segment_manager import get_scene_segment_manager
 from ...core.segment_overlay import recomposite_display_image
 
@@ -34,16 +35,15 @@ def _redraw_all():
 def _reset_lasso_state(state):
     """Reset lasso selection state."""
     state.lasso_points.clear()
+    state.lasso_loops.clear()
     state.lasso_select_has_selection = False
     state.lasso_select_pending = False
     state.active_tool = 'NONE'
     state.target_image_index = -1
 
 
-def _create_segment_from_mask(image_index, mask_bytes, base_name):
+def _create_segment_from_mask(scene, image_index, mask_bytes, base_name):
     """Add segment to image's segment collection and recomposite."""
-    scene = bpy.context.scene
-
     mask_temp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix='_mask.png', delete=False) as f:
@@ -245,7 +245,10 @@ class MIXIE_OT_lasso_select_sam(Operator):
         return (state.lasso_select_has_selection and
                 not state.lasso_select_pending and
                 state.target_image_index >= 0 and
-                len(state.lasso_points) >= 3)
+                (
+                    len(state.lasso_loops) > 0
+                    or len(state.lasso_points) >= LASSO_MIN_POINTS
+                ))
 
     def execute(self, context):
         scene = context.scene
@@ -266,10 +269,17 @@ class MIXIE_OT_lasso_select_sam(Operator):
             _reset_lasso_state(state)
             return {'CANCELLED'}
 
-        # Get lasso points and create mask
-        points = [(p.x, p.y) for p in state.lasso_points]
-        if len(points) < 3:
-            self.report({'ERROR'}, "Not enough lasso points")
+        # Read all completed loops. Keep the single-loop fallback for files
+        # created before multi-loop capture was introduced.
+        loops = [
+            [(point.x, point.y) for point in loop.points]
+            for loop in state.lasso_loops
+            if len(loop.points) >= LASSO_MIN_POINTS
+        ]
+        if not loops and len(state.lasso_points) >= LASSO_MIN_POINTS:
+            loops = [[(p.x, p.y) for p in state.lasso_points]]
+        if not loops:
+            self.report({'ERROR'}, "No valid lasso loops")
             _reset_lasso_state(state)
             return {'CANCELLED'}
 
@@ -286,17 +296,20 @@ class MIXIE_OT_lasso_select_sam(Operator):
             self.report({'INFO'}, "Uploading image for refinement...")
 
             target_idx = state.target_image_index
-            # Capture points now so the closure has a stable copy
-            captured_points = list(points)
+            # Capture loops now so the closure has stable copies.
+            captured_loops = [list(loop) for loop in loops]
 
             def on_upload_complete(success, message):
                 if success:
                     # Re-fetch img_item inside callback in case the collection
                     # changed while the upload was in flight.
-                    current_img_item = bpy.context.scene.mixie_moodboard_images[target_idx]
-                    local_mask_bytes = _build_lasso_mask(current_img_item, captured_points)
-                    if local_mask_bytes:
-                        _perform_mask_segmentation(target_idx, local_mask_bytes)
+                    current_img_item = scene.mixie_moodboard_images[target_idx]
+                    mask_bytes = [
+                        _build_lasso_mask(current_img_item, loop)
+                        for loop in captured_loops
+                    ]
+                    if all(mask_bytes):
+                        _perform_mask_segmentations(scene, target_idx, mask_bytes)
                     else:
                         _reset_lasso_state(state)
                         logger.error("[LassoSelectSAM] Failed to create mask after upload")
@@ -312,65 +325,74 @@ class MIXIE_OT_lasso_select_sam(Operator):
 
         # Image already uploaded — create mask at the correct (compressed) dimensions
         # so it matches what the backend has stored for this job.
-        local_mask_bytes = _build_lasso_mask(img_item, points)
-        if not local_mask_bytes:
-            self.report({'ERROR'}, "Failed to create mask")
+        mask_bytes = [_build_lasso_mask(img_item, loop) for loop in loops]
+        if not all(mask_bytes):
+            self.report({'ERROR'}, "Failed to create one or more lasso masks")
             _reset_lasso_state(state)
             return {'CANCELLED'}
 
-        # Image ready, perform segmentation directly
-        _perform_mask_segmentation(state.target_image_index, local_mask_bytes)
+        # Image ready, process loops sequentially. Each completed SAM3 result
+        # is inserted immediately, so a long batch remains visibly progressive.
+        _perform_mask_segmentations(scene, state.target_image_index, mask_bytes)
         return {'FINISHED'}
 
 
-def _perform_mask_segmentation(target_idx, mask_bytes, _retry=False):
-    """Request mask segmentation from SAM API."""
-    scene = bpy.context.scene
+def _perform_mask_segmentations(scene, target_idx, masks, index=0, _retry=False):
+    """Refine loops one at a time and add each returned mask immediately."""
     state = scene.mixie_edit_tool_state
 
-    state.lasso_select_pending = True
+    if index >= len(masks):
+        _reset_lasso_state(state)
+        _redraw_all()
+        return
 
     def on_complete(success: bool, refined_mask_bytes, message: str):
         if success and refined_mask_bytes:
-            _create_segment_from_mask(target_idx, refined_mask_bytes, "Lasso Segment")
-        else:
-            error_msg = message or "Unknown error"
-            if error_msg == "expired" and not _retry:
-                logger.error("[LassoSelectSAM] Job expired, re-uploading and retrying...")
-                _upload_and_retry_lasso(target_idx, mask_bytes)
-                return
-            elif "402" in error_msg or "credit" in error_msg.lower():
-                logger.error("[LassoSelectSAM] Insufficient credits for segmentation")
-            elif "no object" in error_msg.lower() or "empty" in error_msg.lower():
-                logger.warning("[LassoSelectSAM] No object detected in lasso region")
-            else:
-                logger.error("[LassoSelectSAM] Refinement failed: %s", error_msg)
+            _create_segment_from_mask(
+                scene, target_idx, refined_mask_bytes, "Lasso Segment"
+            )
+            # Continue only after the current result is visible on the board.
+            _perform_mask_segmentations(scene, target_idx, masks, index + 1)
+            return
 
-        # Reset state
-        _reset_lasso_state(state)
-        _redraw_all()
+        error_msg = message or "Unknown error"
+        if error_msg == "expired" and not _retry:
+            logger.error("[LassoSelectSAM] Job expired, re-uploading and retrying...")
+            _upload_and_retry_lasso(scene, target_idx, masks, index)
+            return
+        elif "402" in error_msg or "credit" in error_msg.lower():
+            logger.error("[LassoSelectSAM] Insufficient credits for segmentation")
+        elif "no object" in error_msg.lower() or "empty" in error_msg.lower():
+            logger.warning("[LassoSelectSAM] No object detected in lasso region")
+        else:
+            logger.error("[LassoSelectSAM] Refinement failed: %s", error_msg)
+
+        # A failed loop should not prevent later loops from appearing.
+        _perform_mask_segmentations(scene, target_idx, masks, index + 1)
 
     img_item = scene.mixie_moodboard_images[target_idx]
     manager = get_scene_segment_manager()
+    state.lasso_select_pending = True
     manager.request_mask_segmentation(
         image=img_item.image,
-        mask_bytes=mask_bytes,
+        mask_bytes=masks[index],
         on_complete=on_complete
     )
 
     _redraw_all()
 
 
-def _upload_and_retry_lasso(target_idx, mask_bytes):
+def _upload_and_retry_lasso(scene, target_idx, masks, index):
     """Re-upload image and retry lasso segmentation after expiry."""
-    scene = bpy.context.scene
     state = scene.mixie_edit_tool_state
     img_item = scene.mixie_moodboard_images[target_idx]
     manager = get_scene_segment_manager()
 
     def on_upload_complete(success, message):
         if success:
-            _perform_mask_segmentation(target_idx, mask_bytes, _retry=True)
+            _perform_mask_segmentations(
+                scene, target_idx, masks, index=index, _retry=True
+            )
         else:
             logger.debug("[LassoSelectSAM] Re-upload failed: %s", message)
             _reset_lasso_state(state)

@@ -26,6 +26,12 @@ class LassoPoint(PropertyGroup):
     y: FloatProperty(name="Y", default=0.0)
 
 
+class LassoLoop(PropertyGroup):
+    """One completed polygon in a multi-loop lasso capture."""
+
+    points: CollectionProperty(type=LassoPoint)
+
+
 class MoodboardEditToolState(PropertyGroup):
     """State for moodboard image editing tools"""
     active_tool: EnumProperty(
@@ -53,6 +59,9 @@ class MoodboardEditToolState(PropertyGroup):
 
     # Lasso points collection
     lasso_points: CollectionProperty(type=LassoPoint)
+    # Completed polygons waiting for SAM3 refinement. The active polygon stays
+    # in lasso_points while it is being drawn; each release snapshots it here.
+    lasso_loops: CollectionProperty(type=LassoLoop)
 
     # Magic Select state
     magic_select_pending: BoolProperty(
@@ -93,5 +102,6 @@ class MoodboardEditToolState(PropertyGroup):
 
 classes = (
     LassoPoint,
+    LassoLoop,
     MoodboardEditToolState,
 )
