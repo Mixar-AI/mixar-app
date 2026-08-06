@@ -78,6 +78,7 @@
 #include "DEG_depsgraph_build.hh"
 
 #include "view3d_agent_strip.hh"
+#include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
 #include "view3d_navigate.hh"
 
@@ -242,6 +243,17 @@ static SpaceLink *view3d_create(const ScrArea * /*area*/, const Scene *scene)
   region->alignment = RGN_ALIGN_BOTTOM;
   region->flag = RGN_FLAG_TEMP_REGIONDATA;
 
+  /* Director timeline (Mixar): native camera-beat controls. */
+  region = BKE_area_region_new();
+
+  BLI_addtail(&v3d->regionbase, region);
+  /* FOOTER is hard-clamped to one header row by area layout. CHANNELS is
+   * otherwise unused by View3D and honors this bottom dock's full height. */
+  region->regiontype = RGN_TYPE_CHANNELS;
+  region->alignment = RGN_ALIGN_BOTTOM;
+  region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
+  region->flag = RGN_FLAG_TEMP_REGIONDATA;
+
   /* tool shelf */
   region = BKE_area_region_new();
 
@@ -299,7 +311,11 @@ static void view3d_free(SpaceLink *sl)
 }
 
 /* spacetype; init callback */
-static void view3d_init(wmWindowManager * /*wm*/, ScrArea * /*area*/) {}
+static void view3d_init(wmWindowManager * /*wm*/, ScrArea *area)
+{
+  /* Startup files and user workspaces may predate the Director region. */
+  view3d_director_timeline_region_ensure(area);
+}
 
 static void view3d_exit(wmWindowManager * /*wm*/, ScrArea *area)
 {
@@ -1663,8 +1679,9 @@ void ED_spacetype_view3d()
   /* regions: main window */
   art = MEM_callocN<ARegionType>("spacetype view3d main region");
   art->regionid = RGN_TYPE_WINDOW;
-  art->keymapflag = ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_GPENCIL;
+  art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_GPENCIL;
   art->draw = view3d_main_region_draw;
+  art->draw_overlay = view3d_director_overlay_draw;
   art->init = view3d_main_region_init;
   art->exit = view3d_main_region_exit;
   art->free = view3d_main_region_free;
@@ -1766,6 +1783,9 @@ void ED_spacetype_view3d()
 
   /* regions: agent scene strip (Mixar) */
   view3d_agent_strip_region_register(st.get());
+
+  /* regions: Director camera-beat timeline (Mixar) */
+  view3d_director_timeline_region_register(st.get());
 
   WM_menutype_add(
       MEM_dupallocN<MenuType>(__func__, blender::ed::geometry::node_group_operator_assets_menu()));

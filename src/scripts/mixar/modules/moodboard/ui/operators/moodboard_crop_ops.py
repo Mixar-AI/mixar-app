@@ -19,6 +19,7 @@ from ...core.moodboard_utils import (
     find_crop_handle_at_mouse,
     mouse_to_image_coords_unclamped,
 )
+from ...core.media_utils import is_still_item
 
 
 # Minimum gap to prevent handles from crossing each other (in 0-1 space)
@@ -97,7 +98,7 @@ class MIXIE_OT_moodboard_crop_tool(Operator):
         if not hasattr(context.scene, 'mixie_moodboard_images'):
             return False
         selected = [i for i, img in enumerate(context.scene.mixie_moodboard_images)
-                    if img.selected and img.image]
+                    if img.selected and is_still_item(img)]
         return len(selected) == 1
 
     def modal(self, context, event):
@@ -176,7 +177,7 @@ class MIXIE_OT_moodboard_crop_tool(Operator):
         # Find the selected image
         selected_idx = -1
         for i, img in enumerate(scene.mixie_moodboard_images):
-            if img.selected and img.image:
+            if img.selected and is_still_item(img):
                 selected_idx = i
                 break
 
