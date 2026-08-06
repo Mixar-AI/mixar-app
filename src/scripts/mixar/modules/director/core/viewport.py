@@ -149,10 +149,14 @@ def restore_view(context, scene) -> None:
 
 
 def invoke_walk(context, camera):
-    """Invoke Blender's native WASD walk navigation in camera view."""
-    window, area, region, space = enter_camera_view(
-        context, camera, remember=False,
-    )
+    """Invoke Blender's native WASD walk navigation in camera view.
+
+    Returns ``(result, target)`` where target is the ``(window, area,
+    region, space)`` tuple the walk was started in, so callers can
+    supervise the running navigation.
+    """
+    target = enter_camera_view(context, camera, remember=False)
+    window, area, region, space = target
     space.lock_camera = True
     with context.temp_override(
         window=window,
@@ -160,7 +164,7 @@ def invoke_walk(context, camera):
         region=region,
         space_data=space,
     ):
-        return bpy.ops.view3d.walk('INVOKE_DEFAULT')
+        return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target
 
 
 def enter_precise_mode(context, camera) -> None:

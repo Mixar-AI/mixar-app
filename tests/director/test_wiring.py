@@ -209,6 +209,92 @@ def test_capture_shortcut_survives_gui_keyconfig_reload():
     assert "head=True" in keymap
 
 
+def test_capture_still_works_on_video_output_scenes():
+    """A legacy .blend with FFMPEG output must still capture PNG stills.
+
+    Blender 5 filters ``file_format`` by ``media_type``: selecting PNG while
+    the scene renders video raises ``enum "PNG" not found in ('FFMPEG')``.
+    The capture path must enter the IMAGE namespace first and restore the
+    media type BEFORE the saved file format, which only exists again inside
+    its own namespace.
+    """
+    capture = _read("core/capture.py")
+
+    assert '"media_type": getattr(image_settings, "media_type", None)' in capture
+    assert "image_settings.media_type = 'IMAGE'" in capture
+    set_media = capture.index("image_settings.media_type = 'IMAGE'")
+    set_format = capture.index("image_settings.file_format = 'PNG'")
+    assert set_media < set_format
+    restore_media = capture.index('image_settings.media_type = old["media_type"]')
+    restore_format = capture.index('image_settings.file_format = old["format"]')
+    assert restore_media < restore_format
+
+
+def test_navigate_supervises_walk_for_esc_and_cursor_reset():
+    """Esc must stop navigation in place and the pointer must come back.
+
+    Native walk maps Esc to CANCEL, which snaps the camera back to its
+    pre-walk pose, and it releases the pointer wherever the grab began. The
+    Navigate operator wraps the running walk in its own modal handler: it
+    re-applies the pose captured at the Esc press once walk's revert has run,
+    warps the cursor back to the middle of the viewport on every exit, and
+    draws an aim marker while the pointer is hidden.
+    """
+    camera_ops = _read("ui/operators/camera_ops.py")
+    viewport = _read("core/viewport.py")
+
+    assert "return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target" in viewport
+    assert '"VIEW3D_OT_walk"' in camera_ops
+    assert "modal_operators" in camera_ops
+    assert "'ESC'" in camera_ops
+    assert "_exit_pose" in camera_ops
+    assert "{'PASS_THROUGH'}" in camera_ops
+    assert "cursor_warp" in camera_ops
+    assert "_draw_walk_aim" in camera_ops
+    assert "'POST_PIXEL'" in camera_ops
+    assert "modal_handler_add" in camera_ops
+    assert "def cancel(self, context):" in camera_ops
+
+
+def test_directing_absorbs_object_editing_shortcuts():
+    """Transform/delete/chrome hotkeys must not leak through while directing.
+
+    The reported leak was S scaling the scene mid-shot. View3D dispatches its
+    WINDOW-region keymaps head to tail — mode keymaps ("Object Mode" owns
+    G/R/S, the Alt clears, and X/Del), then "3D View Generic" (the N/T chrome
+    toggles), then "3D View" — and a guard parked in a later keymap never
+    sees a key an earlier one binds. Every guard must therefore live in the
+    keymap that dispatches first for its key, and all of them are poll-gated
+    on ``is_directing`` so each key falls back to its native meaning the
+    moment the Director surface closes. Director binds no ``N``/``O``
+    shortcuts: they can never win against those earlier keymaps, so the
+    buttons carry no key hints either.
+    """
+    keymap = _read("ui/keymap.py")
+    camera_ops = _read("ui/operators/camera_ops.py")
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+
+    assert "class MIXAR_OT_director_block_input" in camera_ops
+    assert '"mixar.director_block_input"' in keymap
+    for guarded in (
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'G', {})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'R', {})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'S', {})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'G', {\"alt\": True})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'X', {})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'DEL', {})",
+        "(\"Object Mode\", ('EMPTY', 'WINDOW'), 'DEL', {\"shift\": True})",
+        "(\"3D View Generic\", ('VIEW_3D', 'WINDOW'), 'T', {})",
+        "(\"3D View Generic\", ('VIEW_3D', 'WINDOW'), 'N', {})",
+        "(\"3D View\", ('VIEW_3D', 'WINDOW'), 'S', {\"shift\": True})",
+    ):
+        assert guarded in keymap, guarded
+    assert '"mixar.director_navigate", \'N\'' not in keymap
+    assert '"mixar.director_precise", \'O\'' not in keymap
+    assert '"Navigate  N"' not in overlay
+    assert '"Precise  O"' not in overlay
+
+
 def test_director_native_files_follow_the_module_size_limit():
     native_files = list(VIEW3D.glob("view3d_director*"))
 

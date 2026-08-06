@@ -59,6 +59,7 @@ def _render_viewport_still(
     old = {
         "filepath": render.filepath,
         "percentage": render.resolution_percentage,
+        "media_type": getattr(image_settings, "media_type", None),
         "format": image_settings.file_format,
         "color_mode": image_settings.color_mode,
     }
@@ -68,6 +69,10 @@ def _render_viewport_still(
         render.filepath = path
         longest_edge = max(render.resolution_x, render.resolution_y, 1)
         render.resolution_percentage = min(100, max(1, round(128000 / longest_edge)))
+        # Blender 5 filters file formats by media type: a scene whose output
+        # is FFMPEG video rejects PNG until the settings return to IMAGE.
+        if old["media_type"] is not None:
+            image_settings.media_type = 'IMAGE'
         image_settings.file_format = 'PNG'
         image_settings.color_mode = 'RGB'
         with context.temp_override(
@@ -98,6 +103,10 @@ def _render_viewport_still(
     finally:
         render.filepath = old["filepath"]
         render.resolution_percentage = old["percentage"]
+        # Restore the media type first: a video file format such as FFMPEG
+        # only exists again once the settings are back in the VIDEO namespace.
+        if old["media_type"] is not None:
+            image_settings.media_type = old["media_type"]
         image_settings.file_format = old["format"]
         image_settings.color_mode = old["color_mode"]
         try:
