@@ -163,39 +163,6 @@ class MIXAR_OT_director_send_keyframes(Operator):
         return {'FINISHED'}
 
 
-class MIXAR_OT_director_send_moodboard(Operator):
-    """Choose what to send to the Moodboard"""
-
-    bl_idname = "mixar.director_send_moodboard"
-    bl_label = "Send to Moodboard"
-    bl_options = {'REGISTER'}
-
-    def invoke(self, context, _event):
-        def draw(menu, _context):
-            layout = menu.layout
-            layout.operator(
-                "mixar.director_send_keyframes",
-                text="All Keyframes",
-                icon='IMAGE_DATA',
-            )
-            layout.operator(
-                "mixar.director_show_render",
-                text="Render Shot Videos...",
-                icon='RENDER_ANIMATION',
-            )
-            layout.separator()
-            layout.operator(
-                "mixar.director_send_video",
-                text="Continue to Video Gen",
-                icon='FILE_MOVIE',
-            )
-
-        context.window_manager.popup_menu(
-            draw, title="Send to Moodboard", icon='EXPORT'
-        )
-        return {'FINISHED'}
-
-
 classes = (
     MIXAR_OT_director_capture_beat,
     MIXAR_OT_director_jump_beat,
@@ -203,5 +170,4 @@ classes = (
     MIXAR_OT_director_preview,
     MIXAR_OT_director_send_video,
     MIXAR_OT_director_send_keyframes,
-    MIXAR_OT_director_send_moodboard,
 )

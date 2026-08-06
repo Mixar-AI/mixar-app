@@ -431,14 +431,14 @@ void draw_context_actions(uiBlock *block,
                     unit * 2,
                     "Render Beauty Preview, Clay, or Depth videos to Moodboard");
     operator_button(block,
-                    "MIXAR_OT_director_send_moodboard",
+                    "MIXAR_OT_director_send_keyframes",
                     ICON_EXPORT,
                     "Moodboard",
                     region->winx - unit * 16 - gap * 3,
                     gap * 2,
                     unit * 8,
                     unit * 2,
-                    "Choose keyframes or shot renders to add to the Moodboard");
+                    "Group this shot's keyframes on the Moodboard");
     operator_button(block,
                     "MIXAR_OT_director_send_video",
                     ICON_FILE_MOVIE,

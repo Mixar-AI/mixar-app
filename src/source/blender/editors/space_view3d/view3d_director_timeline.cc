@@ -282,14 +282,14 @@ void draw_control_row(uiBlock *block,
 
   if (!state.beats.is_empty()) {
     operator_button(block,
-                    "MIXAR_OT_director_send_moodboard",
+                    "MIXAR_OT_director_send_keyframes",
                     ICON_EXPORT,
                     compact ? "" : "Send to Moodboard",
                     right - (compact ? button_h : unit * 7),
                     y,
                     compact ? button_h : unit * 7,
                     button_h,
-                    "Choose keyframes or shot renders to add to the Moodboard");
+                    "Group this shot's keyframes on the Moodboard");
     right -= (compact ? button_h : unit * 7) + gap;
   }
   uiBut *capture = operator_button(

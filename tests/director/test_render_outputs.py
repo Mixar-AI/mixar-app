@@ -112,13 +112,19 @@ def test_native_surface_opens_the_focused_render_popover():
     assert 'bl_region_type = \'HEADER\'' in panel
     assert '"mixar.director_render_videos"' in panel
     assert "to Moodboard" in panel
+    assert "classes = (" in operators
+    assert "MIXAR_OT_director_show_render," in operators
+    assert "MIXAR_OT_director_render_videos," in operators
 
 
-def test_moodboard_menu_uses_the_real_render_workflow():
+def test_native_actions_keep_render_moodboard_and_video_separate():
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
+        encoding="utf-8"
+    )
     capture_ops = _read("ui/operators/capture_ops.py")
 
-    assert '"mixar.director_send_keyframes"' in capture_ops
-    assert '"mixar.director_show_render"' in capture_ops
-    assert '"mixar.director_send_video"' in capture_ops
-    assert "Render — coming soon" not in capture_ops
-    assert "Depth Pass — coming soon" not in capture_ops
+    assert '"MIXAR_OT_director_show_render"' in overlay
+    assert '"MIXAR_OT_director_send_keyframes"' in overlay
+    assert '"MIXAR_OT_director_send_video"' in overlay
+    assert "MIXAR_OT_director_send_keyframes," in capture_ops
+    assert "director_send_moodboard" not in capture_ops

@@ -118,7 +118,7 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "MIXAR_OT_director_show_camera",
         "MIXAR_OT_director_capture_beat",
         "MIXAR_OT_director_show_render",
-        "MIXAR_OT_director_send_moodboard",
+        "MIXAR_OT_director_send_keyframes",
         "MIXAR_OT_director_send_video",
     ):
         assert operator in overlay or operator in timeline
