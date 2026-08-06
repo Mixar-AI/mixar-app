@@ -328,6 +328,12 @@ def test_tool_rail_has_accent_highlight_and_grouping():
     rail = overlay[overlay.index("void draw_tool_rail"):overlay.index("void draw_empty_state")]
     assert "director_overlay_panel_draw" not in rail
     assert '"MIXAR_OT_director_show_moves"' in overlay
+    # Camera tools never hide behind selection: a character ADDS its
+    # animation tool to the rail instead of swapping the camera tools out
+    # (the camera is only clickable via its gate rim in camera view, so
+    # selection must not gate the mode's backbone).
+    assert "character ? 6 : 5" in rail
+    assert "character_tools" not in rail
 
 
 def test_camera_moves_reuse_the_ordinary_capture_flow():

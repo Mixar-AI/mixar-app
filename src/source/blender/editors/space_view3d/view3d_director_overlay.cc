@@ -65,14 +65,16 @@ void draw_tool_rail(uiBlock *block,
     const char *tooltip;
     bool group_above;
   };
-  /* The rail follows the active object: a camera shows framing/navigation
-   * tools, a character shows the animation presets instead. Buttons float
-   * like the native navigation gizmos on the opposite edge — no container
-   * panel, so their own emboss is the only rectangle. Groups read through
-   * wider spacing, and the active mode carries the one filled accent. */
+  /* Camera tools are the mode's backbone and never hide — selection must
+   * not be load-bearing (in camera view the camera is only clickable via
+   * its gate rim, an obscure trick). Selecting a character ADDS the
+   * animation tool instead of swapping the rail. Buttons float like the
+   * native navigation gizmos on the opposite edge — no container panel,
+   * so their own emboss is the only rectangle. Groups read through wider
+   * spacing, and the active mode carries the one filled accent. */
   const Object *active = CTX_data_active_object(C);
   const bool character = active && active->type != OB_CAMERA;
-  const Tool camera_tools[] = {
+  const Tool tools[] = {
       {"MIXAR_OT_director_show_shots", ICON_CAMERA_DATA, "Shots and takes", false},
       {"MIXAR_OT_director_navigate", ICON_VIEW_PAN, "Navigate with WASD and mouse", true},
       {"MIXAR_OT_director_precise", ICON_ORIENTATION_GIMBAL, "Fine-tune with camera gizmos", false},
@@ -81,13 +83,12 @@ void draw_tool_rail(uiBlock *block,
        ICON_VIEW_CAMERA,
        "Framing, lens, timing, and direction",
        false},
+      {"MIXAR_OT_director_show_animation",
+       ICON_ARMATURE_DATA,
+       "Animation presets for the selected character",
+       true},
   };
-  const Tool character_tools[] = {
-      {"MIXAR_OT_director_show_shots", ICON_CAMERA_DATA, "Shots and takes", false},
-      {"MIXAR_OT_director_show_animation", ICON_ARMATURE_DATA, "Animation presets", true},
-  };
-  const Tool *tools = character ? character_tools : camera_tools;
-  const int button_count = character ? 2 : 5;
+  const int button_count = character ? 6 : 5;
   const int group_gap = gap * 3;
   int group_count = 0;
   for (int index = 0; index < button_count; index++) {
@@ -104,9 +105,8 @@ void draw_tool_rail(uiBlock *block,
     if (tools[index].group_above) {
       y -= group_gap;
     }
-    const bool is_active_mode = !character &&
-                                ((index == 1 && state.navigate_mode) ||
-                                 (index == 2 && !state.navigate_mode));
+    const bool is_active_mode = (index == 1 && state.navigate_mode) ||
+                                (index == 2 && !state.navigate_mode);
     if (is_active_mode) {
       const rctf active = {float(rail_x - gap / 2),
                            float(rail_x + unit * 2 + gap / 2),
@@ -125,9 +125,9 @@ void draw_tool_rail(uiBlock *block,
                                                      unit * 2,
                                                      unit * 2,
                                                      tools[index].tooltip);
+    const bool camera_tool = index > 0 && index < 5;
     director_overlay_disable_button(button,
-                                    !character && index > 0 &&
-                                        (!state.has_camera || state.locked));
+                                    camera_tool && (!state.has_camera || state.locked));
     y -= slot;
   }
 }
