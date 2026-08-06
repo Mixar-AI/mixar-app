@@ -4,14 +4,20 @@
 
 """Auto-enable the bundled KIRI 3DGS Render addon at startup.
 
-World Labs worlds arrive as Gaussian splats which we convert to a 3DGS PLY and
-import via KIRI 3DGS Render (it builds the real-time splat geometry-nodes setup
-and exposes ``sna.dgs_render_import_ply_e0a3a``). We vendor KIRI **v4.1.5**
-(supports Blender 4.3-5.0; do NOT use v5.x which targets Blender 5.1+) under
-``scripts/addons/`` so users never install anything.
+Splat environments (World Labs worlds, locally imported ``.spz``/``.ply``)
+are Gaussian splats which we convert to a 3DGS PLY and import via KIRI 3DGS
+Render (it builds the real-time splat geometry-nodes setup and exposes
+``sna.dgs_render_import_ply_e0a3a``). We vendor KIRI **v4.1.5** (supports
+Blender 4.3-5.0; do NOT use v5.x which targets Blender 5.1+) under
+``scripts/addons_core/kiri_3dgs_render`` so users never install anything —
+``addon_utils.paths()`` maps the bundled scripts dir to ``addons_core``
+(a plain ``scripts/addons`` would never be scanned there). The upstream
+extension wheels (open3d/scipy/dash, ~1 GB) are deliberately NOT vendored:
+the import + render path never touches them and the addon's only open3d
+uses are availability-guarded. See the vendored README.mixar.md.
 
 This bootstrap simply enables the addon if it is present. It is a graceful
-no-op when the addon hasn't been vendored: the World Labs importer falls back
+no-op when the addon hasn't been vendored: the splat importer falls back
 to a plain (non-splat) PLY import and logs a warning, so the rest of Mixar is
 unaffected.
 
@@ -25,7 +31,7 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Vendored addon module/folder name under scripts/addons/.
+# Vendored addon module/folder name under scripts/addons_core/.
 _ADDON_MODULE = "kiri_3dgs_render"
 
 
