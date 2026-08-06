@@ -36,6 +36,7 @@ struct DirectorViewState {
   bool has_camera = false;
   bool locked = false;
   bool navigate_mode = true;
+  bool auto_key = false;
   int active_beat_index = 0;
   int frame_current = 0;
   int frame_start = 0;

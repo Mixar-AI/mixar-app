@@ -12,15 +12,23 @@ DEFAULT_BEAT_SECONDS = 1.0
 MIN_BEAT_SECONDS = 0.1
 MAX_BEAT_SECONDS = 10.0
 
-LENS_PRESETS_MM = (18, 24, 35, 50, 85)
+# Familiar photographic focal lengths; directors think in millimetres, so
+# the surface never presents field-of-view degrees.
+LENS_PRESET_ITEMS = (
+    (18, "Ultra Wide"),
+    (24, "Wide"),
+    (35, "Classic"),
+    (50, "Standard"),
+    (85, "Portrait"),
+    (135, "Telephoto"),
+)
 
-FOV_PRESETS_DEGREES = (
-    ("ULTRA_NARROW", "Ultra Narrow", 15.0),
-    ("NARROW", "Narrow", 30.0),
-    ("STANDARD", "Standard", 45.0),
-    ("WIDE", "Wide", 60.0),
-    ("ULTRA_WIDE", "Ultra Wide", 75.0),
-    ("EXTREME", "Extreme", 90.0),
+LENS_PRESETS_MM = tuple(mm for mm, _label in LENS_PRESET_ITEMS)
+
+LENS_TYPE_ITEMS = (
+    ("PERSP", "Perspective", "Natural photographic lens projection", 0),
+    ("ORTHO", "Orthographic", "Parallel projection without perspective", 1),
+    ("PANO", "Panoramic", "Wraparound panoramic projection", 2),
 )
 
 # Width and height are deliberately modest. They establish the native scene

@@ -80,6 +80,10 @@ def _redraw_director_surface(_self, context):
         for area in getattr(screen, "areas", ()):
             if area.type in {'VIEW_3D', 'MIXIE'}:
                 area.tag_redraw()
+        # The topbar Director toggle lives in a global area, which screen
+        # iteration misses; global_areas is a Mixar RNA addition.
+        for area in getattr(window, "global_areas", ()):
+            area.tag_redraw()
 
 
 class MixarDirectorBeat(PropertyGroup):
@@ -250,6 +254,33 @@ class MixarDirectorState(PropertyGroup):
         ),
         default="NAVIGATE",
         options={'SKIP_SAVE'},
+    )
+    animation_seconds: FloatProperty(
+        name="Motion Length",
+        description="How long a character animation preset lasts",
+        default=2.0,
+        min=0.5,
+        max=10.0,
+        step=10,
+        precision=1,
+        subtype='TIME',
+    )
+    level_horizon: BoolProperty(
+        name="Fix Z",
+        description=(
+            "Keep the horizon level while navigating: the camera's roll is "
+            "removed when Navigate starts and WASD walking never adds roll"
+        ),
+        default=True,
+    )
+    auto_key: BoolProperty(
+        name="Auto Key",
+        description=(
+            "Automatically capture a keyframe after every camera move "
+            "instead of pressing F or Capture Keyframe"
+        ),
+        default=False,
+        update=_redraw_director_surface,
     )
     show_shots: BoolProperty(name="Show Shots", default=False)
 

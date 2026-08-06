@@ -105,6 +105,9 @@ def _draw_session(layout, state, shot):
             depress=state.navigation_mode == 'PRECISE',
         )
         box.label(text="Navigate: WASD + mouse · click to confirm", icon='INFO')
+        toggles = box.row(align=True)
+        toggles.prop(state, "level_horizon", text="Fix Z", toggle=True)
+        toggles.prop(state, "auto_key", text="Auto Key", toggle=True)
         if state.navigation_mode == 'PRECISE' and shot.camera is not None:
             precise = box.box().column(align=True)
             precise.label(text="Fine Tune", icon='ORIENTATION_GIMBAL')
@@ -238,7 +241,7 @@ class MIXAR_PT_director_camera_popover(Panel):
 
 
 class MIXAR_PT_director_animation_popover(Panel):
-    """Placeholder animation presets for the selected character."""
+    """Blocking-level motion presets for the selected character."""
 
     bl_idname = "MIXAR_PT_director_animation_popover"
     bl_label = "Animation"
@@ -246,14 +249,29 @@ class MIXAR_PT_director_animation_popover(Panel):
     bl_region_type = 'HEADER'
 
     def draw(self, context):
+        from ...core.animation_presets import ANIMATION_PRESETS
+
         layout = self.layout
+        state = context.scene.mixar_director
         obj = context.active_object
         box = _section(layout, "Animate", icon='ARMATURE_DATA')
-        if obj is not None:
-            box.label(text=obj.name, icon='OBJECT_DATA')
+        if obj is None or obj.type == 'CAMERA':
+            box.label(text="Select a character to animate", icon='INFO')
+            return
+        box.label(text=obj.name, icon='OBJECT_DATA')
         box.separator(factor=0.4)
-        box.label(text="Animation presets are coming soon.", icon='INFO')
-        box.label(text="Keyframe character motion here.")
+        grid = box.grid_flow(
+            row_major=True,
+            columns=2,
+            even_columns=True,
+            even_rows=True,
+            align=True,
+        )
+        for key, label, _tooltip in ANIMATION_PRESETS:
+            grid.operator("mixar.director_apply_animation", text=label).preset = key
+        box.separator(factor=0.4)
+        box.prop(state, "animation_seconds", text="Motion Length")
+        box.label(text="Keys start at the playhead", icon='TIME')
 
 
 classes = (

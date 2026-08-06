@@ -148,6 +148,29 @@ def restore_view(context, scene) -> None:
     area.tag_redraw()
 
 
+def level_camera_horizon(camera) -> bool:
+    """Remove camera roll while preserving the view direction ("Fix Z").
+
+    Walk navigation never adds roll, but it preserves any roll the camera
+    already carries, which leaves directors stuck slightly tilted with no
+    obvious way back to level. Skips near-vertical views where "level" is
+    undefined.
+    """
+    from mathutils import Vector
+
+    matrix = camera.matrix_world
+    forward = -Vector((matrix[0][2], matrix[1][2], matrix[2][2]))
+    if forward.length < 1e-6:
+        return False
+    forward.normalize()
+    if abs(forward.z) > 0.999:
+        return False
+    leveled = forward.to_track_quat('-Z', 'Y').to_matrix().to_4x4()
+    leveled.translation = matrix.translation.copy()
+    camera.matrix_world = leveled
+    return True
+
+
 def invoke_walk(context, camera):
     """Invoke Blender's native WASD walk navigation in camera view.
 
@@ -158,6 +181,9 @@ def invoke_walk(context, camera):
     target = enter_camera_view(context, camera, remember=False)
     window, area, region, space = target
     space.lock_camera = True
+    state = getattr(context.scene, "mixar_director", None)
+    if state is not None and getattr(state, "level_horizon", False):
+        level_camera_horizon(camera)
     with context.temp_override(
         window=window,
         area=area,

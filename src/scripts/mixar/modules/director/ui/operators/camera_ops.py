@@ -89,6 +89,10 @@ class MIXAR_OT_director_navigate(Operator):
         self._region = region
         self._camera = shot.camera
         self._exit_pose = None
+        self._start_pose = (
+            shot.camera.matrix_world.copy(),
+            float(shot.camera.data.lens),
+        )
         self._timer = context.window_manager.event_timer_add(
             0.05, window=window,
         )
@@ -111,11 +115,37 @@ class MIXAR_OT_director_navigate(Operator):
                 )
             return {'PASS_THROUGH'}
         self._finish(context)
+        self._auto_capture(context)
         return {'FINISHED'}
 
     def cancel(self, context):
         self._exit_pose = None
         self._finish(context, reset_cursor=False)
+
+    def _auto_capture(self, context) -> None:
+        """Capture a keyframe for the completed move when Auto Key is on."""
+        state = getattr(context.scene, "mixar_director", None)
+        if state is None or not state.auto_key or not state.is_directing:
+            return
+        shot = _editable_shot(context)
+        if shot is None or shot.camera != self._camera:
+            return
+        start_matrix, start_lens = self._start_pose
+        moved = abs(float(self._camera.data.lens) - start_lens) > 1e-3 or any(
+            abs(start_matrix[row][col] - self._camera.matrix_world[row][col]) > 1e-5
+            for row in range(4)
+            for col in range(4)
+        )
+        if not moved:
+            return
+        try:
+            from ...core.capture import capture_beat
+
+            beat = capture_beat(context, shot, state.beat_seconds)
+        except Exception as exc:
+            self.report({'WARNING'}, f"Auto Key could not capture: {exc}")
+            return
+        self.report({'INFO'}, f"Auto keyframe at frame {beat.frame}")
 
     def _walk_running(self) -> bool:
         modal_operators = getattr(self._window, "modal_operators", None)

@@ -43,6 +43,30 @@ class MIXAR_OT_director_capture_beat(Operator):
         return {'FINISHED'}
 
 
+class MIXAR_OT_director_toggle_auto_key(Operator):
+    """Toggle automatic keyframe capture after every camera move"""
+
+    bl_idname = "mixar.director_toggle_auto_key"
+    bl_label = "Auto Key"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        return bool(state and state.is_directing)
+
+    def execute(self, context):
+        state = context.scene.mixar_director
+        state.auto_key = not state.auto_key
+        self.report(
+            {'INFO'},
+            "Auto Key on: every camera move captures a keyframe"
+            if state.auto_key
+            else "Auto Key off",
+        )
+        return {'FINISHED'}
+
+
 class MIXAR_OT_director_jump_beat(Operator):
     """Jump to a captured keyframe in camera view"""
 
@@ -165,6 +189,7 @@ class MIXAR_OT_director_send_keyframes(Operator):
 
 classes = (
     MIXAR_OT_director_capture_beat,
+    MIXAR_OT_director_toggle_auto_key,
     MIXAR_OT_director_jump_beat,
     MIXAR_OT_director_remove_beat,
     MIXAR_OT_director_preview,

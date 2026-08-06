@@ -81,6 +81,7 @@ def test_native_viewport_surface_is_registered_from_view3d():
 
     for filename in (
         "view3d_director_overlay.cc",
+        "view3d_director_overlay_frame.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
         "view3d_director_timeline_draw.cc",
@@ -293,6 +294,80 @@ def test_directing_absorbs_object_editing_shortcuts():
     assert '"mixar.director_precise", \'O\'' not in keymap
     assert '"Navigate  N"' not in overlay
     assert '"Precise  O"' not in overlay
+
+
+def test_director_entry_sits_beside_the_topbar_mode_switch():
+    """The Director toggle lives next to Engine/Zen Mode, not in View3D.
+
+    The workflow module appends the mode switch to TOPBAR_MT_editor_menus;
+    Director appends after it so both sit together, and the active session
+    renders depressed. State flips also tag the topbar's global area, which
+    ordinary screen iteration misses.
+    """
+    header = _read("ui/headers/director_header.py")
+    properties = _read("ui/properties/director_properties.py")
+
+    assert "TOPBAR_MT_editor_menus" in header
+    assert "VIEW3D_HT_header" not in header
+    assert "depress=True" in header
+    assert '"global_areas"' in properties
+
+
+def test_tool_rail_has_accent_highlight_and_grouping():
+    """The rail marks the active mode with the Director accent and groups
+    tools with dividers instead of four identical floating squares."""
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+
+    assert "ACCENT_FILL" in overlay
+    assert "ACCENT_BORDER" in overlay
+    assert "RAIL_DIVIDER" in overlay
+    assert "divider_above" in overlay
+    assert '"MIXAR_OT_director_show_moves"' in overlay
+
+
+def test_camera_moves_reuse_the_ordinary_capture_flow():
+    """Presets must produce exactly what manual directing produces.
+
+    Every move funnels through capture_beat — native keys, packed stills,
+    manifest — and anchors at the current pose unless the playhead already
+    holds a keyframe of this shot.
+    """
+    moves = _read("core/camera_moves.py")
+    moves_ops = _read("ui/operators/moves_ops.py")
+    panels = _read("ui/panels/camera_surface_popovers.py")
+    surface_ops = _read("ui/operators/surface_ops.py")
+
+    for key in (
+        "ORBIT_LEFT",
+        "ORBIT_RIGHT",
+        "DOLLY_IN",
+        "DOLLY_OUT",
+        "CRANE_UP",
+        "CRANE_DOWN",
+        "PAN_LEFT",
+        "PAN_RIGHT",
+    ):
+        assert key in moves, key
+    assert "capture_beat(context, shot, state.beat_seconds)" in moves
+    assert "interest_distance" in moves
+    assert '"mixar.director_camera_move"' in panels
+    assert "MIXAR_OT_director_camera_move" in moves_ops
+    assert 'name="MIXAR_PT_director_moves_popover"' in surface_ops
+
+
+def test_character_animation_presets_are_real():
+    """The Animation popover keys blocking motion, not a placeholder."""
+    presets = _read("core/animation_presets.py")
+    moves_ops = _read("ui/operators/moves_ops.py")
+    popovers = _read("ui/panels/director_popovers.py")
+
+    for key in ("WALK", "RUN", "TURN_LEFT", "TURN_RIGHT", "TURN_AROUND", "IDLE"):
+        assert key in presets, key
+    assert 'group="Director Character"' in presets
+    assert "MIXAR_OT_director_apply_animation" in moves_ops
+    assert '"mixar.director_apply_animation"' in popovers
+    assert "coming soon" not in popovers.lower()
+    assert '"animation_seconds"' in popovers
 
 
 def test_director_native_files_follow_the_module_size_limit():

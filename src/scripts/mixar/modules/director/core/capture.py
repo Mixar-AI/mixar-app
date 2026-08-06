@@ -166,6 +166,10 @@ def capture_beat(context, shot, beat_seconds: float):
         scene.frame_end = max(scene.frame_end, target_frame)
         refresh_manifest(scene, shot)
         scope_preview_range(scene, shot)
+
+        from .auto_key import mark_captured
+
+        mark_captured(shot)
         return beat
     except Exception:
         scene.frame_set(original_frame)
