@@ -51,7 +51,7 @@ class SceneReconJob(Job):
     # Submission payload
     image_bytes_b64: str = ""
     generate_mesh: bool = True
-    min_mask_pixels: int = 2000
+    min_mask_pixels: int = 6000
     mesh_postprocess: bool = True
     texture_baking: bool = False
     vertex_color: bool = True
@@ -339,7 +339,7 @@ def enqueue_scene_recon_job(
     *,
     image_bytes: bytes,
     generate_mesh: bool = True,
-    min_mask_pixels: int = 2000,
+    min_mask_pixels: int = 6000,
     mesh_postprocess: bool = True,
     texture_baking: bool = False,
     vertex_color: bool = True,

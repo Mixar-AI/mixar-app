@@ -63,6 +63,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,
@@ -94,6 +95,7 @@ classes = (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,

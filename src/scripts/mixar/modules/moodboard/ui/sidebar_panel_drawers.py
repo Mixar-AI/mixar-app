@@ -268,6 +268,56 @@ def _draw_image_to_3d_basic(layout, context):
 
 
 # ---------------------------------------------------------------------------
+# World Labs (Marble)
+# ---------------------------------------------------------------------------
+
+def _draw_world_labs(layout, context):
+    """Draw the World Labs world-generation panel (text / image input)."""
+    scene = context.scene
+    tab = scene.mixie_moodboard_sidebar.tab_world_labs
+
+    # --- Input mode toggle ---
+    row = layout.row(align=True)
+    row.prop_enum(tab, "mode", 'IMAGE')
+    row.prop_enum(tab, "mode", 'TEXT')
+    layout.separator(factor=SEP_SECTION)
+
+    if tab.mode == 'TEXT':
+        draw_prompt_section(layout, tab, label="World Prompt", icon='WORLD')
+    else:
+        col = draw_section_box(
+            layout, "Input Image", icon='IMAGE_DATA',
+            action_op="mixie.world_labs_pick_image",
+        )
+        draw_moodboard_image_toggle(col, tab, context)
+        if not tab.use_selected_image and tab.reference_image:
+            draw_image_info_card(
+                col, tab.reference_image,
+                remove_op="mixie.world_labs_remove_image",
+            )
+        draw_section_separator(layout)
+        draw_prompt_section(layout, tab, label="Prompt (optional)", icon='TEXT')
+
+    draw_section_separator(layout)
+
+    # --- Settings ---
+    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col.use_property_split = True
+    col.use_property_decorate = False
+    draw_dropdown(col.row(align=True), tab, "model", text="Model")
+    draw_dropdown(col.row(align=True), tab, "lod", text="Quality")
+
+    # --- Generate ---
+    draw_generate_footer(layout, context, "mixie.world_labs_generate", "world_labs",
+                         feature_key="world_labs")
+
+    # --- Dev: replay a stored result without spending World Labs credits ---
+    test_row = layout.row()
+    test_op = test_row.operator("mixie.world_labs_generate", text="Test", icon='FILE_REFRESH')
+    test_op.test = True
+
+
+# ---------------------------------------------------------------------------
 # Scene Reconstruction
 # ---------------------------------------------------------------------------
 
