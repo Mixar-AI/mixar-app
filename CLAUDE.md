@@ -23,6 +23,7 @@ make install       # Install Python packages into embedded Blender Python
 - C++ env header auto-generated at `source/creator/mixar_env_config.h`
 - Python build-frozen env marker auto-generated at `source/scripts/mixar/config/_build_env.py` (gates `get_dev_bypass_credentials`; `DEV_BYPASS_ALLOWED=True` only when `MIXAR_ENV=Dev`). Setting `DEV_BYPASS_*` env vars with `MIXAR_ENV != Dev` aborts the build.
 - Python packages installed from `scripts/python_requirements.txt` into embedded Blender Python
+- **macOS dev codesign (optional)**: `MIXAR_DEV_SIGN_ID` in `.env` makes `build.sh` re-sign the built `Mixar` executable with a stable self-signed identity (one-time setup: `scripts/unix/setup_dev_codesign.sh`). Without it, every rebuild's ad-hoc signature is a new identity to macOS Keychain, so the "Mixar wants your confidential information" prompt returns after each rebuild and "Always Allow" never sticks; with a stable cert, one "Always Allow" persists. Signs with a `get-task-allow` entitlement to keep lldb attach working. Local-dev only — release signing stays in `package.sh`.
 - **Never run `cmake` or `make` directly in `source/`** — always use `make build` or `./scripts/unix/build.sh` (overlay must run first)
 
 ### Testing
