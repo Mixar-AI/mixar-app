@@ -20,7 +20,6 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -94,7 +93,7 @@ class MIXIE_OT_model_gen_generate(Operator):
         if getattr(tab, 'use_selected_image', False):
             if hasattr(scene, 'mixie_moodboard_images'):
                 for item in scene.mixie_moodboard_images:
-                    if item.selected and is_still_item(item):
+                    if item.selected and item.image:
                         return item.image
             return None
         return getattr(tab, 'reference_image', None)

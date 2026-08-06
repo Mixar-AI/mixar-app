@@ -18,7 +18,6 @@ Usage:
 """
 
 import sys
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 
@@ -28,9 +27,6 @@ def _make_bpy_mock():
 
     # bpy.types
     bpy.types.Panel = type("Panel", (), {})
-    bpy.types.Panel.bl_rna = SimpleNamespace(
-        properties={"bl_space_type": SimpleNamespace(enum_items=[])}
-    )
     bpy.types.Operator = type("Operator", (), {"bl_options": set()})
     bpy.types.PropertyGroup = type("PropertyGroup", (), {})
     bpy.types.Image = MagicMock()

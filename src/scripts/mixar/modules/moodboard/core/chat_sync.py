@@ -44,7 +44,6 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
-from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
 
@@ -92,10 +91,7 @@ def _collect_selected_image_names(scene) -> list[str]:
     names: set[str] = set()
     for mb_img in images_attr:
         img = mb_img.image
-        # Chat attachments are still-image-only today. Keep videos selected on
-        # the board for the future Seedance path without flattening a movie to
-        # a misleading single-frame chat attachment.
-        if img is None or is_video_item(mb_img):
+        if img is None:
             continue
         if mb_img.selected:
             names.add(img.name)

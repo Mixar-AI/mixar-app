@@ -38,9 +38,9 @@ _MASK_ICON_DEFAULT = 'MOD_MASK'
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Dropdown menu with media-adding options."""
+    """Dropdown menu with image-adding options."""
     bl_idname = "MIXIE_MT_add_image_menu"
-    bl_label = "Add Media"
+    bl_label = "Add Image"
 
     def draw(self, context):
         layout = self.layout
@@ -49,12 +49,12 @@ class MIXIE_MT_add_image_menu(Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
         layout.operator(
             "mixie.moodboard_add_image",
-            text="Open Image or Video",
+            text="Open Image",
             icon='FILE_FOLDER',
         )
         layout.operator(
             "mixie.moodboard_add_existing_image",
-            text="Add Existing Media",
+            text="Add Existing Image",
             icon='IMAGE_DATA',
         )
 
@@ -82,8 +82,7 @@ class MIXIE_PT_mask_tools_popover(Panel):
         has_selected_image = False
         if hasattr(scene, 'mixie_moodboard_images'):
             has_selected_image = any(
-                img.selected and img.image and img.image.source != 'MOVIE'
-                for img in scene.mixie_moodboard_images
+                img.selected and img.image for img in scene.mixie_moodboard_images
             )
 
         col = layout.column(align=True)
@@ -134,7 +133,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         has_selected_image = False
         if hasattr(scene, 'mixie_moodboard_images'):
             has_selected_image = any(
-                img.selected and img.image and img.image.source != 'MOVIE'
+                img.selected and img.image
                 for img in scene.mixie_moodboard_images
             )
 

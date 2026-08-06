@@ -32,7 +32,6 @@
 #include "UI_view2d.hh"
 
 #include "GPU_framebuffer.hh"
-#include "GPU_state.hh"
 
 #include "BLO_read_write.hh"
 
@@ -223,17 +222,11 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
 static void mixie_main_region_draw(const bContext *C, ARegion *region)
 {
-  /* Moodboard reference canvas: neutral pure black, independent of the
-   * selected Blender theme. Other Mixie regions continue using TH_BACK. */
-  GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+  /* Clear background */
+  UI_ThemeClearColor(TH_BACK);
 
   /* Always draw moodboard mode - panels are controlled via scene properties */
   mixie_draw_moodboard_mode(C, region);
-}
-
-static void mixie_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
-{
-  mixie_moodboard_video_playback_shutdown(wm);
 }
 
 static void mixie_main_region_listener(const wmRegionListenerParams *params)
@@ -296,7 +289,6 @@ static void mixie_operatortypes()
   /* Moodboard operators (from mixie_moodboard_ops.cc) */
   WM_operatortype_append(MIXIE_OT_moodboard_drop_image);
   WM_operatortype_append(MIXIE_OT_moodboard_select_image);
-  WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
@@ -308,21 +300,6 @@ static void mixie_operatortypes()
 static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 {
   wmKeyMap *keymap = WM_keymap_ensure(keyconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
-
-  /* Stateless hover checks leave normal click/drag keymap dispatch untouched. */
-  KeyMapItem_Params hover_params{};
-  hover_params.type = MOUSEMOVE;
-  hover_params.value = KM_ANY;
-  hover_params.modifier = 0;
-  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-
-  /* Entering the sidebar or header also leaves the originating video tile. */
-  wmKeyMap *sidebar_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Sidebar", SPACE_MIXIE, RGN_TYPE_UI);
-  WM_keymap_add_item(sidebar_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-  wmKeyMap *header_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Header", SPACE_MIXIE, RGN_TYPE_HEADER);
-  WM_keymap_add_item(header_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
 
   /* Select and move images in moodboard */
   KeyMapItem_Params params{};
@@ -687,7 +664,6 @@ void ED_spacetype_mixie()
   art->keymapflag = ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_FRAMES | ED_KEYMAP_VIEW2D;
 
   art->init = mixie_main_region_init;
-  art->exit = mixie_main_region_exit;
   art->draw = mixie_main_region_draw;
   art->listener = mixie_main_region_listener;
 

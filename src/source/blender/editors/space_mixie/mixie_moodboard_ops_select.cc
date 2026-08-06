@@ -280,29 +280,6 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
     }
   }
 
-  /* A movie keeps the normal image-like canvas interactions everywhere
-   * except its centered playback affordance. Single-clicking that button,
-   * or double-clicking anywhere on the movie, toggles playback directly in
-   * its moodboard block without interfering with drag/resize gestures. */
-  if (clicked_index != -1 && element_type == MOODBOARD_ELEMENT_IMAGE &&
-      clicked_handle == -1 && moodboard_item_is_video(&scene_ptr, clicked_index))
-  {
-    const float center_x = clicked_pos_x + clicked_width * 0.5f;
-    const float center_y = clicked_pos_y + clicked_height * 0.5f;
-    const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-    const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
-    const float delta_x = mouse_x - center_x;
-    const float delta_y = mouse_y - center_y;
-    const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
-                                 play_radius * play_radius;
-
-    if (event->val == KM_DBL_CLICK || play_button_hit) {
-      return moodboard_toggle_video_playback(C, &scene_ptr, clicked_index, op->reports) ?
-                 OPERATOR_FINISHED :
-                 OPERATOR_CANCELLED;
-    }
-  }
-
   if (clicked_index == -1) {
     bool extend = RNA_boolean_get(op->ptr, "extend");
 

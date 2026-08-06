@@ -46,7 +46,7 @@ from ..constants import (
 
 logger = get_logger(__name__)
 
-_EXT_MAP = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx", "VIDEO": ".mp4"}
+_EXT_MAP = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
 
 # Sleep slice while backing off, so a cancel is noticed within ~250 ms
 # instead of at the end of the backoff.

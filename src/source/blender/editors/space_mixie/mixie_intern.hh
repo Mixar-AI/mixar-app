@@ -17,7 +17,6 @@ struct ARegion;
 struct bContext;
 struct Image;
 struct PointerRNA;
-struct ReportList;
 struct Scene;
 struct SpaceMixie;
 struct View2D;
@@ -34,18 +33,15 @@ struct wmWindowManager;
 #define MOODBOARD_IMAGE_MAX_SCALE 50.0f
 #define MOODBOARD_IMAGE_SCALE_DELTA 0.1f
 #define MOODBOARD_MAX_SELECTED_IMAGES 256
-#define MOODBOARD_VIDEO_PLAY_RADIUS_PX 28.0f
 
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
 #define MOODBOARD_DRAG_THRESHOLD_PX 5.0f
 
 /* Moodboard Grid Constants */
-#define MOODBOARD_GRID_SPACING 50.0f
-#define MOODBOARD_GRID_DOT_RADIUS 2.5f
-#define MOODBOARD_GRID_DOT_SEGMENTS 12
-#define MOODBOARD_GRID_DOT_FADE_START_PX 1.5f
-#define MOODBOARD_GRID_DOT_FADE_END_PX 3.0f
+#define MOODBOARD_GRID_SMALL_SPACING 10.0f
+#define MOODBOARD_GRID_MAJOR_SPACING 100.0f
+#define MOODBOARD_GRID_MAJOR_FREQUENCY 10
 
 /* Mixie3D Mode Constants */
 #define SAM3D_PREVIEW_HEIGHT_RATIO 0.20f
@@ -124,21 +120,6 @@ int moodboard_find_textbox_under_mouse(PointerRNA *scene_ptr,
                                        float *r_width,
                                        float *r_height);
 
-/** Whether the moodboard item at \a index references a movie datablock. */
-bool moodboard_item_is_video(PointerRNA *scene_ptr, int index);
-
-/** Toggle runtime-only playback of a movie directly on its moodboard block. */
-bool moodboard_toggle_video_playback(bContext *C,
-                                     PointerRNA *scene_ptr,
-                                     int index,
-                                     ReportList *reports);
-
-/** Current inline playback frame and state for a movie image. */
-int moodboard_video_playback_frame(Image *image, bool *r_is_playing);
-
-/** Stop inline movie playback and its redraw timer. */
-void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm);
-
 /** Deselect all moodboard items (images and textboxes) */
 void moodboard_deselect_all(PointerRNA *scene_ptr);
 
@@ -176,7 +157,6 @@ void MIXIE_OT_sam3d_preview_delete(wmOperatorType *ot);
 /* mixie_moodboard_ops.cc - Moodboard operators */
 void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot);
 void MIXIE_OT_moodboard_select_image(wmOperatorType *ot);
-void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot);
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);

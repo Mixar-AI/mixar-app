@@ -17,7 +17,6 @@ from .sidebar_ui_helpers import (
     draw_toggle, draw_image_info_card, draw_status_badge,
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, SEP_SECTION
-from mixar.modules.moodboard.core.media_utils import is_still_item
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +70,7 @@ def _draw_imagegen(layout, context):
     if tab.use_reference_images:
         if hasattr(scene, 'mixie_moodboard_images'):
             for item in scene.mixie_moodboard_images:
-                if item.selected and is_still_item(item):
+                if item.selected and item.image:
                     draw_image_info_card(col, item.image)
         if selected_count == 0:
             row = col.row()
