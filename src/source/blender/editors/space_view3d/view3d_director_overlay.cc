@@ -209,11 +209,13 @@ void draw_context_actions(uiBlock *block,
   }
 
   if (!state.timeline_expanded) {
+    /* Bottom-left corner: centering collided with the right-anchored
+     * Shot Renders / Moodboard / Video Gen cluster on narrow viewports. */
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_toggle_timeline",
                                      ICON_TIME,
                                      "Timeline",
-                                     (region->winx - unit * 7) / 2,
+                                     gap * 2,
                                      gap * 2,
                                      unit * 7,
                                      unit * 2,
