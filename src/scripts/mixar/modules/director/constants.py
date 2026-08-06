@@ -62,3 +62,24 @@ GUIDANCE_STRENGTH_ITEMS = (
     ("BALANCED", "Balanced", "Balance adherence with natural motion", 1),
     ("EXPRESSIVE", "Expressive", "Allow more interpretation between beats", 2),
 )
+
+SHOT_RENDER_OUTPUT_ITEMS = (
+    (
+        "BEAUTY",
+        "Beauty Preview",
+        "Material-color preview with studio lighting",
+        1,
+    ),
+    (
+        "CLAY",
+        "Clay",
+        "Neutral clay preview that emphasizes shape and motion",
+        2,
+    ),
+    (
+        "DEPTH",
+        "Depth",
+        "Normalized camera-depth guide with near geometry shown brighter",
+        4,
+    ),
+)

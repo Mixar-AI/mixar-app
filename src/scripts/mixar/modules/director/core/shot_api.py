@@ -45,6 +45,8 @@ def create_shot(scene, camera, *, parent=None):
         shot.parent_shot_id = parent.shot_id
         shot.prompt = parent.prompt
         shot.guidance_strength = parent.guidance_strength
+        shot.render_output_types = set(parent.render_output_types)
+        shot.render_resolution_percentage = parent.render_resolution_percentage
     state.active_shot_index = len(state.shots) - 1
     scene.camera = camera
     return shot

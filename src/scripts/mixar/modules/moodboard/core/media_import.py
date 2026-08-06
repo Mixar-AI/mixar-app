@@ -80,13 +80,15 @@ def import_generated_video(
     *,
     scene_name: str = "",
     generation_prompt: str = "",
+    display_name: str = "",
+    selected: bool = False,
 ) -> str:
-    """Move a downloaded MP4 into durable storage and add it to a moodboard.
+    """Move an MP4 into durable storage and add it to a moodboard.
 
     Movies cannot be packed into a ``.blend`` file, so keeping the queue's
-    temporary path would leave a broken board item after OS cleanup.  This
-    function takes ownership of *source_path* and returns the Image datablock
-    name used by the queue completion row.
+    or renderer's temporary path would leave a broken board item after OS
+    cleanup. This function takes ownership of *source_path* and returns the
+    Image datablock name used by the queue completion row or Director shot.
     """
     directory = _generated_video_directory()
     stem = os.path.splitext(os.path.basename(source_path))[0] or "seedance"
@@ -100,7 +102,7 @@ def import_generated_video(
         image = bpy.data.images.load(destination, check_existing=False)
         if image.source != 'MOVIE' or image.frame_duration < 1:
             raise ValueError("Generated result is not a playable video")
-        image.name = f"Seedance {uuid.uuid4().hex[:6]}"
+        image.name = display_name or f"Seedance {uuid.uuid4().hex[:6]}"
 
         scene = bpy.data.scenes.get(scene_name) if scene_name else None
         scene = scene or bpy.context.scene
@@ -109,6 +111,7 @@ def import_generated_video(
         item.scale = 1.0
         item.z_order = len(scene.mixie_moodboard_images) - 1
         item.generation_prompt = generation_prompt
+        item.selected = bool(selected)
         place_new_moodboard_item(scene, item)
         return image.name
     except Exception:

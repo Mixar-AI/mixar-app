@@ -410,6 +410,15 @@ void draw_context_actions(uiBlock *block,
 
   if (!state.beats.is_empty()) {
     operator_button(block,
+                    "MIXAR_OT_director_show_render",
+                    ICON_RENDER_ANIMATION,
+                    "Shot Renders",
+                    region->winx - unit * 16 - gap * 3,
+                    gap * 2,
+                    unit * 8,
+                    unit * 2,
+                    "Render Beauty Preview, Clay, or Depth videos to Moodboard");
+    operator_button(block,
                     "MIXAR_OT_director_send_video",
                     ICON_FILE_MOVIE,
                     "Video Gen",

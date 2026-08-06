@@ -21,6 +21,7 @@ from ...constants import (
     GUIDANCE_STRENGTH_ITEMS,
     MAX_BEAT_SECONDS,
     MIN_BEAT_SECONDS,
+    SHOT_RENDER_OUTPUT_ITEMS,
     SHOT_STATE_ITEMS,
 )
 from ...core.viewport import enter_camera_view
@@ -68,6 +69,23 @@ class MixarDirectorBeat(PropertyGroup):
     )
 
 
+class MixarDirectorRenderOutput(PropertyGroup):
+    """One persistent motion-guide movie produced from a Director shot."""
+
+    output_id: StringProperty(name="Output ID", default="")
+    kind: EnumProperty(
+        name="Render Type",
+        items=SHOT_RENDER_OUTPUT_ITEMS,
+        default="CLAY",
+    )
+    image: PointerProperty(
+        name="Moodboard Video",
+        description="Persistent movie datablock placed on the Moodboard",
+        type=bpy.types.Image,
+    )
+    rendered_at: StringProperty(name="Rendered At", default="", maxlen=64)
+
+
 class MixarDirectorShot(PropertyGroup):
     """A take on a native Blender scene and camera."""
 
@@ -100,6 +118,44 @@ class MixarDirectorShot(PropertyGroup):
         description="How closely the generated video should follow the beats",
         items=GUIDANCE_STRENGTH_ITEMS,
         default="BALANCED",
+    )
+    render_output_types: EnumProperty(
+        name="Video Renders",
+        description="Shot videos to render and add to the Moodboard",
+        items=SHOT_RENDER_OUTPUT_ITEMS,
+        options={'ENUM_FLAG'},
+        default={'CLAY'},
+    )
+    render_resolution_percentage: IntProperty(
+        name="Resolution",
+        description="Percentage of the scene output resolution used for shot videos",
+        default=50,
+        min=25,
+        max=100,
+        subtype='PERCENTAGE',
+    )
+    render_outputs: CollectionProperty(
+        type=MixarDirectorRenderOutput,
+        name="Rendered Videos",
+    )
+    render_is_running: BoolProperty(
+        name="Rendering Shot",
+        default=False,
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    render_progress: FloatProperty(
+        name="Render Progress",
+        default=0.0,
+        min=0.0,
+        max=1.0,
+        subtype='FACTOR',
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    render_status: StringProperty(
+        name="Render Status",
+        default="",
+        maxlen=256,
+        options={'SKIP_SAVE', 'HIDDEN'},
     )
     beats: CollectionProperty(type=MixarDirectorBeat, name="Camera Beats")
     active_beat_index: IntProperty(name="Active Beat", default=0, min=0)
@@ -170,6 +226,7 @@ class MixarDirectorState(PropertyGroup):
 
 classes = (
     MixarDirectorBeat,
+    MixarDirectorRenderOutput,
     MixarDirectorShot,
     MixarDirectorState,
 )
