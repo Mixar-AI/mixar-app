@@ -184,6 +184,15 @@ int timeline_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
     }
     return WM_UI_HANDLER_CONTINUE;
   }
+  if (event->type == RIGHTMOUSE && event->val == KM_PRESS && state.has_shot) {
+    const int beat_index = beat_at_event(*runtime, event);
+    if ((beat_index >= 0 || point_inside(runtime->strip_bounds, event)) &&
+        dispatch_int_operator(C, "mixar.director_strip_menu", "index", beat_index))
+    {
+      return WM_UI_HANDLER_BREAK;
+    }
+    return WM_UI_HANDLER_CONTINUE;
+  }
 
   if (!point_inside(runtime->viewport_bounds, event)) {
     return WM_UI_HANDLER_CONTINUE;

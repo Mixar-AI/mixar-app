@@ -78,6 +78,47 @@ def create_shot(scene, camera, *, parent=None):
     return shot
 
 
+def split_shot(scene, shot, frame: int):
+    """Move the keyframes after *frame* into a new shot on the same camera.
+
+    Native camera keys stay put — both shots read the same camera animation
+    and each scopes its own preview range through its beats, exactly like
+    two hand-built shots sharing a camera would.
+    """
+    if shot.state != 'DRAFT':
+        raise ValueError("Create a new take before splitting a locked shot")
+    moving = [
+        index for index, beat in enumerate(shot.beats) if beat.frame > frame
+    ]
+    if not moving or len(moving) == len(shot.beats):
+        raise ValueError(
+            "Place the playhead between two keyframes to split the shot"
+        )
+    state = scene.mixar_director
+    original_index = state.active_shot_index
+    new_shot = create_shot(scene, shot.camera)
+    new_shot.prompt = shot.prompt
+    new_shot.guidance_strength = shot.guidance_strength
+    new_shot.render_output_types = set(shot.render_output_types)
+    new_shot.render_resolution_percentage = shot.render_resolution_percentage
+    for index in moving:
+        beat = shot.beats[index]
+        copy = new_shot.beats.add()
+        copy.beat_id = beat.beat_id
+        copy.frame = beat.frame
+        copy.image = beat.image
+    for index in reversed(moving):
+        shot.beats.remove(index)
+    shot.active_beat_index = max(0, len(shot.beats) - 1)
+    new_shot.active_beat_index = 0
+    refresh_manifest(scene, shot)
+    refresh_manifest(scene, new_shot)
+    # Keep directing the first half: the playhead still sits inside it.
+    state.active_shot_index = original_index
+    scope_preview_range(scene, shot)
+    return new_shot
+
+
 def create_new_take(scene, shot):
     """Create an editable child take without mutating a locked shot."""
     take = create_shot(scene, shot.camera, parent=shot)

@@ -369,6 +369,35 @@ def test_camera_moves_reuse_the_ordinary_capture_flow():
     assert "RNA_enum_set_identifier" in popup
 
 
+def test_timeline_strip_can_split_and_delete():
+    """Right-clicking the strip offers split and destructive editing.
+
+    Split moves the beats after the playhead into a new shot on the SAME
+    camera — native keys stay put, both shots scope their own preview
+    range — and the first half stays active because the playhead sits in
+    it. Clear removes every beat (keys + stills) through the ordinary
+    remove_beat path, and Remove Shot is reachable while directing (the
+    empty-state overlay takes over when the last shot goes).
+    """
+    shot_api = _read("core/shot_api.py")
+    strip_ops = _read("ui/operators/strip_ops.py")
+    session_ops = _read("ui/operators/session_ops.py")
+    interaction = (
+        VIEW3D / "view3d_director_timeline_interaction.cc"
+    ).read_text(encoding="utf-8")
+
+    assert "def split_shot" in shot_api
+    assert "state.active_shot_index = original_index" in shot_api
+    assert "class MIXAR_OT_director_split_strip" in strip_ops
+    assert "class MIXAR_OT_director_clear_strip" in strip_ops
+    assert "class MIXAR_OT_director_strip_menu" in strip_ops
+    assert "remove_beat(context.scene, shot, index)" in strip_ops
+    assert '"mixar.director_remove_shot"' in strip_ops
+    assert "state.shots and not state.is_directing" not in session_ops
+    assert "RIGHTMOUSE" in interaction
+    assert '"mixar.director_strip_menu"' in interaction
+
+
 def test_handheld_is_noise_modifiers_not_keyframes():
     """Handheld texture must never touch the captured keys.
 

@@ -210,8 +210,10 @@ class MIXAR_OT_director_remove_shot(Operator):
 
     @classmethod
     def poll(cls, context):
+        # Also reachable from the timeline strip menu while directing; the
+        # empty-state overlay takes over when the last shot goes.
         state = getattr(context.scene, "mixar_director", None)
-        return bool(state and state.shots and not state.is_directing)
+        return bool(state and state.shots)
 
     def invoke(self, context, _event):
         return context.window_manager.invoke_confirm(self, _event)
