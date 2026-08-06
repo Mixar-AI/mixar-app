@@ -281,6 +281,9 @@ def _on_catalog_swapped() -> None:
         )
 
         rebuild_from_catalog()
+        from mixar.modules.moodboard.core.node_schema import sync_all_node_schemas
+
+        sync_all_node_schemas()
     except ImportError:
         pass
     except Exception as exc:

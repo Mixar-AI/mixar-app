@@ -58,6 +58,7 @@ namespace blender::ed::mixie {
 struct MoodboardImageProps {
   PropertyRNA *image;
   PropertyRNA *display_image;  /* Segment overlay display image (if set, draw this instead) */
+  PropertyRNA *embedded_node_id;
   PropertyRNA *position_x;
   PropertyRNA *position_y;
   PropertyRNA *scale;
@@ -114,14 +115,29 @@ bool is_rect_in_view(View2D *v2d, float x, float y, float w, float h);
 /** Draw selection overlay with resize handles for a selected element */
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h);
 
+/** Draw the shared neutral node frame behind imported image/movie content. */
+void mixie_draw_moodboard_media_frame(float x, float y, float w, float h, bool selected);
+
 /** Draw moodboard images */
 void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
+
+/** Draw image/movie content fitted inside an inference-node result area. */
+void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);
 
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
 
 /** Draw moodboard groups */
 void mixie_draw_moodboard_groups(const bContext *C, View2D *v2d);
+
+/** Draw persistent graph links behind canvas nodes. */
+void mixie_draw_moodboard_links(const bContext *C, View2D *v2d);
+
+/** Draw inference blocks and generated 3D asset cards. */
+void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d);
+
+/** Draw editable catalog-backed controls directly inside inference nodes. */
+void mixie_draw_moodboard_graph_controls(const bContext *C, View2D *v2d);
 
 /** Draw edit tool overlay (crop/mask/lasso) */
 void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d);

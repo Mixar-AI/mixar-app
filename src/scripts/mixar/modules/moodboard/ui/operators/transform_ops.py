@@ -214,8 +214,13 @@ class MIXIE_OT_clear_moodboard(Operator):
         image_count = len(scene.mixie_moodboard_images)
         textbox_count = len(scene.mixie_moodboard_textboxes)
         group_count = len(scene.mixie_moodboard_groups)
+        node_count = (
+            len(scene.mixie_moodboard_action_nodes)
+            + len(scene.mixie_moodboard_asset_nodes)
+        )
+        link_count = len(scene.mixie_moodboard_links)
 
-        if image_count == 0 and textbox_count == 0 and group_count == 0:
+        if not any((image_count, textbox_count, group_count, node_count, link_count)):
             self.report({'INFO'}, "Moodboard is already empty")
             return {'CANCELLED'}
 
@@ -223,6 +228,10 @@ class MIXIE_OT_clear_moodboard(Operator):
         scene.mixie_moodboard_images.clear()
         scene.mixie_moodboard_textboxes.clear()
         scene.mixie_moodboard_groups.clear()
+        scene.mixie_moodboard_action_nodes.clear()
+        scene.mixie_moodboard_asset_nodes.clear()
+        scene.mixie_moodboard_links.clear()
+        scene.mixie_moodboard_active_node_id = ""
 
         tag_mixie_redraw(context)
 
@@ -233,6 +242,10 @@ class MIXIE_OT_clear_moodboard(Operator):
             parts.append(f"{textbox_count} text box(es)")
         if group_count > 0:
             parts.append(f"{group_count} group(s)")
+        if node_count > 0:
+            parts.append(f"{node_count} node(s)")
+        if link_count > 0:
+            parts.append(f"{link_count} connection(s)")
         self.report({'INFO'}, f"Cleared {', '.join(parts)}")
         return {'FINISHED'}
 
@@ -340,7 +353,7 @@ class MIXIE_OT_moodboard_select_all(Operator):
 
 
 class MIXIE_OT_moodboard_deselect_all(Operator):
-    """Deselect all moodboard images, text boxes and groups"""
+    """Deselect all moodboard content, graph nodes, and connections."""
 
     bl_idname = "mixie.moodboard_deselect_all"
     bl_label = "Deselect All"
@@ -355,6 +368,13 @@ class MIXIE_OT_moodboard_deselect_all(Operator):
             tb.selected = False
         for grp in scene.mixie_moodboard_groups:
             grp.selected = False
+        for node in scene.mixie_moodboard_action_nodes:
+            node.selected = False
+        for node in scene.mixie_moodboard_asset_nodes:
+            node.selected = False
+        for link in scene.mixie_moodboard_links:
+            link.selected = False
+        scene.mixie_moodboard_active_node_id = ""
         tag_mixie_redraw(context)
         self.report({'INFO'}, "Deselected all")
         return {'FINISHED'}

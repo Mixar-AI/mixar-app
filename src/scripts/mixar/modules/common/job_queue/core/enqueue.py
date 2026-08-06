@@ -28,6 +28,7 @@ def enqueue_generation(
     label: str,
     display_label: str = "",
     origin_capability_key: str = "",
+    graph_node_id: str = "",
     fail_message: str = "Generation failed",
     # GLB-only
     on_imported: Optional[Callable] = None,
@@ -65,7 +66,7 @@ def enqueue_generation(
     fail_message : str
         Shown when the backend returns FAILED.
     on_imported : callable, optional
-        ``fn(job, object_names)`` — GLB post-import hook.
+        ``fn(job, result_names)`` — GLB/image/video post-import hook.
     name_prefix, prompt_text, undo_message : str
         Image-job parameters for moodboard download.
     scene_flag : str
@@ -88,6 +89,7 @@ def enqueue_generation(
             display_label=display_label,
             service=job_type,
             origin_capability_key=origin_capability_key,
+            graph_node_id=graph_node_id,
             job_type=job_type,
             model=model,
             payload=payload,
@@ -102,6 +104,7 @@ def enqueue_generation(
             display_label=display_label,
             service=job_type,
             origin_capability_key=origin_capability_key,
+            graph_node_id=graph_node_id,
             job_type=job_type,
             model=model,
             payload=payload,
@@ -110,6 +113,7 @@ def enqueue_generation(
             prompt_text=prompt_text,
             undo_message=undo_message,
             base_name=base_name,
+            _on_imported_hook=on_imported,
         )
     elif kind == "video":
         job = StreamingVideoJob(
@@ -118,11 +122,13 @@ def enqueue_generation(
             display_label=display_label,
             service=job_type,
             origin_capability_key=origin_capability_key,
+            graph_node_id=graph_node_id,
             job_type=job_type,
             model=model,
             payload=payload,
             fail_message=fail_message,
             import_options={"generation_prompt": prompt_text},
+            _on_imported_hook=on_imported,
             image_inputs=list(image_inputs or []),
             video_inputs=list(video_inputs or []),
             max_video_duration_seconds=max_video_duration_seconds,

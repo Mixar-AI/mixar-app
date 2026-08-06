@@ -129,6 +129,7 @@ class SyncImageJob(Job):
     prompt_text: str = ""
     undo_message: str = ""
     base_name: str = ""  # agent-chosen image name (overrides name_prefix)
+    _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
 
     _image_urls: List[str] = field(default_factory=list, repr=False)
     # Backend-suggested display name (model-generated for Gemini image gen).
@@ -203,17 +204,29 @@ class SyncImageJob(Job):
             on_error("No image URLs in server response")
             return True
 
+        def _download_done(image_names: str):
+            self.on_imported(image_names)
+            on_done(image_names)
+
         download_images_to_moodboard(
             urls=list(self._image_urls),
             name_prefix=self.name_prefix,
             prompt=self.prompt_text,
             job_id=self.id,
-            on_done=on_done,
+            on_done=_download_done,
             on_error=on_error,
             undo_message=self.undo_message,
             base_name=self.base_name or self._server_image_name,
         )
         return True
+
+    def on_imported(self, image_names: str) -> None:
+        super().on_imported(image_names)
+        if self._on_imported_hook is not None:
+            try:
+                self._on_imported_hook(self, image_names)
+            except Exception as e:
+                logger.warning("on_imported hook failed: %s", e)
 
     def get_poll_interval(self):
         return 3.0

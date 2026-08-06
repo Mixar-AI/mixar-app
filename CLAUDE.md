@@ -120,6 +120,65 @@ or a double-click toggles runtime-only playback at the movie's native frame rate
 A pass-through mouse-move handler stops playback at the current frame as soon as
 the pointer leaves the originating tile; a narrow redraw timer advances frames without
 opening another editor, changing the scene timeline, or persisting playback state.
+The canvas also owns a persistent, Flora-inspired inference graph. Image,
+video, and 3D blocks use stable per-scene IDs and saved typed links; native
+drawing reuses Blender's node-editor Bézier evaluator. Prompt, model, and the
+backend catalog's parameter schema render in a compact horizontal screen-space
+toolbar immediately above the selected block; it hides when zoom makes the tile
+too small and omits Mode when only one usable backend service exists. Before
+submission the prompt and Generate control live inside the
+otherwise-empty tile. Submission locks the prompt until a result arrives, then
+the image/movie or Blender asset preview fills the tile and replaces those
+controls; plain Enter in the prompt invokes the same generation operator as the
+Generate button. A completed block's Edit & Run Again action returns it to Draft while keeping its
+current preview, restores the editable prompt, and submits only after Enter or Generate. Deselecting
+hides the toolbar. Uploaded stills and movies use the same neutral
+rounded tile boundary, compact floating media label, and output-handle language. X, Delete, and
+Backspace live in the addon keyconfig so GUI keyconfig reloads cannot disable deletion; they remove
+selected imported media or inference/asset nodes, while selected links are only unlinked. Each block exposes backend-typed
+media inputs and a `+` output handle rather than one socket per scalar parameter.
+Repeatable inputs show connected sockets plus one compatible empty socket per
+input group, growing progressively until the backend-defined limit is reached.
+Generate Image can start from an empty canvas or selected stills; Generate
+Video is hidden when the catalog has no enabled model. Queue results return to
+their originating block and remain reusable as downstream inputs. Right-click
+continuations create and connect the next block automatically. Segment nodes
+and broader graph editing are intentionally deferred.
+**Graph safety contracts** (pinned by `tests/moodboard/test_node_graph_hardening.py`):
+every graph string the C++ canvas reads declares a `maxlen` (the `GRAPH_*_MAXLEN`
+block in `moodboard/constants.py`) strictly below the `MIXIE_GRAPH_*_BUF` stack
+buffer it is read into, and reads go through `mixie_rna_string_get_clamped` —
+`RNA_string_get` is strcpy-shaped, `maxlen` is enforced only on assignment, and
+catalog labels plus agent-written `object_names` reach those buffers during draw.
+A node's service/model are read from the saved `service_key_id`/`model_slug`
+strings via `node_schema.node_service_key`/`node_model_slug`, never from the
+`service_key`/`model` dropdowns: a dynamic `EnumProperty` persists as an index
+into its items list, so it repoints at a different model after a catalog reorder
+or resolves to `LOADING` when a file opens before the 2s-delayed fetch
+(`SKIP_SAVE` does not help — it only suppresses operator-repeat and presets).
+`restore_node_selection` re-derives the dropdowns once the catalog loads. Link
+draw and link hit-testing share one `moodboard_graph_cache_build` pass; resolving
+endpoints per link was O(links × images) with a locked `BKE_image_acquire_ibuf`
+in the inner loop, every redraw. The link-drag preview is keyed on
+`scene->id.session_uid`, not a static `Scene *`, and region exit resets it.
+`media_item_by_id` is read-only — `node_output_type` reaches it from a menu draw,
+so id migration runs from the moodboard poll tick and `load_post` instead.
+Existing links can be selected at any zoom using screen-space curve hit-testing
+and unlinked with X, Delete, Backspace, or the context menu; unlinking preserves
+both endpoint blocks. Canvas box selection includes imported media, text,
+inference nodes, and 3D asset nodes while ignoring hidden node-owned preview
+media. Backend service/model input metadata projects into stable
+typed sockets, including repeatable and total-material limits. Users drag the
+offset `+` output handle onto a compatible socket; the saved link is rejected
+when its type, capacity, occupancy, duplicate, or cycle validation fails, and
+clicking the larger `+` opens a compact backend-gated continuation menu for
+Image, Video, and 3D nodes without removing drag-to-connect behavior.
+Malformed repeatable contracts fail closed. Generated image/video media are
+owned by their inference block and released with it; uploaded source media stay
+independent.
+Node services, models, typed choices, bounds, defaults, widget hints, ordering,
+and `visible_if` rules project from the same moodboard-surface backend catalog
+as the sidebar and saved nodes resynchronize after catalog swaps.
 Movies remain linked to the
 source file (Blender cannot pack movies),
 are copied in-app and exported without re-encoding, and expose stream-friendly

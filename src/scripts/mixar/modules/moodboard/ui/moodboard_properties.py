@@ -24,6 +24,7 @@ from bpy.props import (
 )
 
 from mixar.modules.moodboard.constants import (
+    GRAPH_NODE_ID_MAXLEN,
     IMAGE_SCALE_DEFAULT, IMAGE_SCALE_MIN, IMAGE_SCALE_MAX,
     IMAGE_ROTATION_DEFAULT, IMAGE_ROTATION_MIN, IMAGE_ROTATION_MAX,
     TEXTBOX_FONT_SIZE_DEFAULT, TEXTBOX_FONT_SIZE_MIN, TEXTBOX_FONT_SIZE_MAX,
@@ -63,6 +64,19 @@ class MixieMoodboardSegment(PropertyGroup):
 
 class MixieMoodboardImage(PropertyGroup):
     """Property group for moodboard reference images"""
+
+    node_id: StringProperty(
+        name="Node ID",
+        description="Stable identifier used by moodboard graph links",
+        default="",
+        maxlen=GRAPH_NODE_ID_MAXLEN,
+    )
+    embedded_node_id: StringProperty(
+        name="Embedded Node ID",
+        description="Inference node that renders this media as its inline result",
+        default="",
+        maxlen=GRAPH_NODE_ID_MAXLEN,
+    )
 
     image: PointerProperty(
         name="Image",

@@ -23,6 +23,8 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
+#include "UI_interface_c.hh"
+
 namespace blender::ed::mixie {
 
 /* -------------------------------------------------------------------- */
@@ -37,6 +39,7 @@ void init_image_property_cache(PointerRNA *itemptr)
   if (!g_img_props.initialized) {
     g_img_props.image = RNA_struct_find_property(itemptr, "image");
     g_img_props.display_image = RNA_struct_find_property(itemptr, "display_image");
+    g_img_props.embedded_node_id = RNA_struct_find_property(itemptr, "embedded_node_id");
     g_img_props.position_x = RNA_struct_find_property(itemptr, "position_x");
     g_img_props.position_y = RNA_struct_find_property(itemptr, "position_y");
     g_img_props.scale = RNA_struct_find_property(itemptr, "scale");
@@ -214,6 +217,18 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 /** \name Selection Overlay Drawing
  * \{ */
 
+void mixie_draw_moodboard_media_frame(
+    const float x, const float y, const float w, const float h, const bool selected)
+{
+  const float padding = MOODBOARD_MEDIA_FRAME_PADDING;
+  const rctf frame = {x - padding, x + w + padding, y - padding, y + h + padding};
+  const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
+  const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  UI_draw_roundbox_4fv(&frame, true, MOODBOARD_MEDIA_FRAME_RADIUS, background);
+  UI_draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+}
+
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h)
 {
   /* Draw selection outline */
@@ -224,12 +239,12 @@ void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float
 
   /* Draw selection fill (semi-transparent) */
   GPU_blend(GPU_BLEND_ALPHA);
-  immUniformColor4f(0.3f, 0.5f, 1.0f, 0.1f);
+  immUniformColor4f(0.70f, 0.71f, 0.74f, 0.06f);
 
   immRectf(pos, x, y, x + w, y + h);
 
   /* Draw selection border */
-  immUniformColor4f(0.3f, 0.5f, 1.0f, 0.8f);
+  immUniformColor4f(0.72f, 0.73f, 0.76f, 0.82f);
   GPU_line_width(2.0f);
 
   immBegin(GPU_PRIM_LINE_LOOP, 4);
@@ -294,8 +309,14 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
+  /* Draw graph connections behind every canvas block. */
+  mixie_draw_moodboard_links(C, v2d);
+
   /* Draw moodboard images */
   mixie_draw_moodboard_images(C, v2d);
+
+  /* Draw inference and 3D-result nodes above their links. */
+  mixie_draw_moodboard_graph_nodes(C, v2d);
 
   /* Draw moodboard text boxes */
   mixie_draw_moodboard_textboxes(C, v2d);
