@@ -11,6 +11,8 @@ Cross-mode operators for applying images to scene.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.moodboard.core.media_utils import is_still_item
+
 
 class MIXIE_OT_moodboard_apply_overlay(Operator):
     """Apply selected image to 3D scene"""
@@ -22,7 +24,10 @@ class MIXIE_OT_moodboard_apply_overlay(Operator):
 
     def execute(self, context):
         scene = context.scene
-        selected_moodboard_items = [img for img in scene.mixie_moodboard_images if img.selected and img.image]
+        selected_moodboard_items = [
+            img for img in scene.mixie_moodboard_images
+            if img.selected and is_still_item(img)
+        ]
 
         if not selected_moodboard_items:
             self.report({'WARNING'}, "No image selected")

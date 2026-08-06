@@ -17,6 +17,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -192,7 +193,7 @@ class MIXIE_OT_generate_scene(Operator):
         # Find selected image with segments
         img_item = None
         for item in scene.mixie_moodboard_images:
-            if item.selected and item.image:
+            if item.selected and is_still_item(item):
                 img_item = item
                 break
 

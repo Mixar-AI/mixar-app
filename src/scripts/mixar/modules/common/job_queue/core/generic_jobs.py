@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Generic Job subclasses for the two dominant queue patterns.
+"""Generic Job subclasses for the dominant queue patterns.
 
 ``AsyncGLBJob``  — submit → poll → download GLB → import (8 former subclasses)
 ``SyncImageJob`` — submit (may return inline result) → download images → moodboard (3 former subclasses)
+``StreamingVideoJob`` — stream inputs → submit → download video → moodboard
 """
 
+import io
 import time
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
@@ -215,3 +217,118 @@ class SyncImageJob(Job):
 
     def get_poll_interval(self):
         return 3.0
+
+
+# ---------------------------------------------------------------------------
+# Pattern C — streamed media inputs + video output
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class StreamingVideoJob(AsyncGLBJob):
+    """Stage large media without base64, then enqueue a video result job.
+
+    ``image_inputs`` entries carry ``filename``, ``mime_type`` and ``bytes``.
+    ``video_inputs`` carry ``filename``, ``mime_type``, ``filepath`` and
+    ``file_size_bytes``. Uploads are sequential to bound memory and network
+    pressure; each callback advances to the next input before the final queue
+    submit.
+    """
+
+    image_inputs: list = field(default_factory=list, repr=False)
+    video_inputs: list = field(default_factory=list, repr=False)
+    max_video_duration_seconds: float = 15.0
+    _upload_index: int = field(default=0, repr=False)
+    _staged_image_keys: list = field(default_factory=list, repr=False)
+    _staged_video_keys: list = field(default_factory=list, repr=False)
+    _staged_video_seconds: float = field(default=0.0, repr=False)
+
+    def _uploads(self):
+        return [
+            *(('image', item) for item in self.image_inputs),
+            *(('video', item) for item in self.video_inputs),
+        ]
+
+    @staticmethod
+    def _response_data(response):
+        outer = getattr(response, "data", None) or {}
+        data = outer.get("data", outer) if isinstance(outer, dict) else {}
+        return data if isinstance(data, dict) else {}
+
+    def submit(self, on_success, on_error) -> None:
+        uploads = self._uploads()
+        if self._upload_index >= len(uploads):
+            if self._staged_image_keys:
+                self.payload["reference_image_s3_keys"] = list(
+                    self._staged_image_keys
+                )
+            if self._staged_video_keys:
+                self.payload["reference_video_s3_keys"] = list(
+                    self._staged_video_keys
+                )
+            super().submit(on_success, on_error)
+            return
+
+        media_kind, item = uploads[self._upload_index]
+        if media_kind == 'image':
+            content = item.get("bytes") or b""
+            body_factory = lambda data=content: io.BytesIO(data)
+            content_length = len(content)
+        else:
+            filepath = item.get("filepath") or ""
+            body_factory = lambda path=filepath: open(path, "rb")
+            content_length = int(item.get("file_size_bytes") or 0)
+
+        from mixar.modules.common.api.services.job_queue_service import (
+            get_job_queue_service,
+        )
+
+        def _staged(response):
+            data = self._response_data(response)
+            key = str(data.get("s3_key") or "")
+            if not key:
+                on_error(ValueError("Media staging response omitted s3_key"))
+                return
+            if media_kind == 'image':
+                self._staged_image_keys.append(key)
+            else:
+                try:
+                    duration = float(data.get("duration_seconds") or 0.0)
+                except (TypeError, ValueError):
+                    duration = 0.0
+                if duration <= 0:
+                    on_error(ValueError("Could not determine video duration"))
+                    return
+                self._staged_video_seconds += duration
+                if self._staged_video_seconds > self.max_video_duration_seconds + 0.001:
+                    # The cap is catalog-supplied; quoting a literal would
+                    # misreport the limit the moment the DB seed changes.
+                    on_error(ValueError(
+                        "Selected videos exceed the "
+                        f"{self.max_video_duration_seconds:g}-second "
+                        "combined limit"
+                    ))
+                    return
+                self._staged_video_keys.append(key)
+            self._upload_index += 1
+            self.submit(on_success, on_error)
+
+        get_job_queue_service().stage_media(
+            media_kind=media_kind,
+            filename=item.get("filename") or f"reference.{media_kind}",
+            content_type=item.get("mime_type") or "application/octet-stream",
+            content_length=content_length,
+            body_factory=body_factory,
+            on_success=_staged,
+            on_error=on_error,
+        )
+
+    def parse_submit_response(self, response) -> None:
+        super().parse_submit_response(response)
+        self.image_inputs = []
+        self.video_inputs = []
+
+    def release_resources(self) -> None:
+        super().release_resources()
+        self.image_inputs = []
+        self.video_inputs = []

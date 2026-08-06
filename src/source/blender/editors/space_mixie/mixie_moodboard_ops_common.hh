@@ -20,6 +20,7 @@
 
 #include "BLI_time.h"
 
+#include "BLI_path_utils.hh"
 #include "BLI_string.h"
 
 #include "DNA_scene_types.h"

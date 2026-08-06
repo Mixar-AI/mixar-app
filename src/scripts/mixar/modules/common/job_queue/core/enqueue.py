@@ -11,7 +11,7 @@ and submits to the correct ``FeatureQueue``.
 from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
-from .generic_jobs import AsyncGLBJob, SyncImageJob
+from .generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
 from .helpers import create_scene_flag_listener, get_queue_with_listener
 from .job import Job
 
@@ -37,6 +37,10 @@ def enqueue_generation(
     prompt_text: str = "",
     undo_message: str = "",
     base_name: str = "",
+    # Video-only streamed inputs
+    image_inputs: Optional[list] = None,
+    video_inputs: Optional[list] = None,
+    max_video_duration_seconds: float = 15.0,
     # Listener options
     scene_flag: str = "",
     batch_popup_title: str = "",
@@ -46,7 +50,7 @@ def enqueue_generation(
 
     Parameters
     ----------
-    kind : ``"glb"`` | ``"image"``
+    kind : ``"glb"`` | ``"image"`` | ``"video"``
         Which generic Job class to use.
     feature_key : str
         Queue feature key (e.g. ``FEATURE_IMAGEGEN``).
@@ -106,6 +110,22 @@ def enqueue_generation(
             prompt_text=prompt_text,
             undo_message=undo_message,
             base_name=base_name,
+        )
+    elif kind == "video":
+        job = StreamingVideoJob(
+            feature_key=feature_key,
+            label=label,
+            display_label=display_label,
+            service=job_type,
+            origin_capability_key=origin_capability_key,
+            job_type=job_type,
+            model=model,
+            payload=payload,
+            fail_message=fail_message,
+            import_options={"generation_prompt": prompt_text},
+            image_inputs=list(image_inputs or []),
+            video_inputs=list(video_inputs or []),
+            max_video_duration_seconds=max_video_duration_seconds,
         )
     else:
         raise ValueError(f"Unknown enqueue_generation kind: {kind!r}")
