@@ -80,7 +80,12 @@ def create_shot(scene, camera, *, parent=None):
 
 def create_new_take(scene, shot):
     """Create an editable child take without mutating a locked shot."""
-    return create_shot(scene, shot.camera, parent=shot)
+    take = create_shot(scene, shot.camera, parent=shot)
+    # The take shares the parent's camera, whose F-curves already carry any
+    # handheld modifiers — inherit the setting so the toggle stays truthful.
+    take.handheld_strength = shot.handheld_strength
+    take.handheld = shot.handheld
+    return take
 
 
 def remove_shot(scene, index: int) -> bool:

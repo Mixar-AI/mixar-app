@@ -70,6 +70,17 @@ def _on_active_shot_change(self, context):
     scope_preview_range(scene, shot)
 
 
+def _on_handheld_update(self, _context):
+    from ...core.handheld import refresh_handheld
+
+    try:
+        refresh_handheld(self)
+    except Exception:
+        # Property updates can fire during file load before the camera's
+        # animation data is reachable; the next capture refreshes anyway.
+        pass
+
+
 def _redraw_director_surface(_self, context):
     """Refresh native Director overlays and poll-driven regions."""
     window_manager = getattr(context, "window_manager", None)
@@ -147,6 +158,25 @@ class MixarDirectorShot(PropertyGroup):
         description="How closely the generated video should follow the keyframes",
         items=GUIDANCE_STRENGTH_ITEMS,
         default="BALANCED",
+    )
+    handheld: BoolProperty(
+        name="Handheld",
+        description=(
+            "Add organic handheld drift on top of the captured camera path. "
+            "Keyframes stay clean; the texture rides the evaluated camera "
+            "into previews, guide videos, and sampled guidance"
+        ),
+        default=False,
+        update=_on_handheld_update,
+    )
+    handheld_strength: FloatProperty(
+        name="Handheld Intensity",
+        description="How much the handheld camera drifts and trembles",
+        default=0.5,
+        min=0.0,
+        max=1.0,
+        subtype='FACTOR',
+        update=_on_handheld_update,
     )
     render_output_types: EnumProperty(
         name="Video Renders",

@@ -137,6 +137,17 @@ class MIXAR_PT_director_moves_popover(Panel):
             icon='INFO',
         )
 
+        column.separator(factor=0.5)
+        handheld = column.row(align=True)
+        handheld.prop(shot, "handheld", toggle=True, icon='FORCE_TURBULENCE')
+        intensity = handheld.row(align=True)
+        intensity.enabled = shot.handheld
+        intensity.prop(shot, "handheld_strength", text="", slider=True)
+        column.label(
+            text="Rides previews and guide videos; keyframes stay clean",
+            icon='INFO',
+        )
+
 
 classes = (
     MIXAR_PT_director_lens_popover,

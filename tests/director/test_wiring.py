@@ -360,6 +360,33 @@ def test_camera_moves_reuse_the_ordinary_capture_flow():
     assert 'name="MIXAR_PT_director_moves_popover"' in surface_ops
 
 
+def test_handheld_is_noise_modifiers_not_keyframes():
+    """Handheld texture must never touch the captured keys.
+
+    Jitter cannot be represented by sparse keyframes, so it lives as named
+    noise F-modifiers on the camera's transform curves — keys store raw
+    values, and everything that reads the EVALUATED camera (preview, guide
+    videos, the manifest's `evaluated_get` sampling) carries the drift.
+    Captures re-apply because the first capture creates the F-curves, and
+    a new take inherits the parent's setting since it shares the camera.
+    """
+    handheld = _read("core/handheld.py")
+    properties = _read("ui/properties/director_properties.py")
+    capture = _read("core/capture.py")
+    shot_api = _read("core/shot_api.py")
+    panels = _read("ui/panels/camera_surface_popovers.py")
+
+    assert 'HANDHELD_MODIFIER_NAME = "Mixar Handheld"' in handheld
+    assert "modifiers.new(type='NOISE')" in handheld
+    assert "modifier.name == HANDHELD_MODIFIER_NAME" in handheld
+    assert "keyframe_insert" not in handheld
+    assert "handheld: BoolProperty" in properties
+    assert "handheld_strength: FloatProperty" in properties
+    assert "refresh_handheld(shot)" in capture
+    assert "take.handheld = shot.handheld" in shot_api
+    assert '"handheld"' in panels
+
+
 def test_character_animation_presets_are_real():
     """The Animation popover keys blocking motion, not a placeholder."""
     presets = _read("core/animation_presets.py")

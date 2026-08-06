@@ -158,6 +158,11 @@ def capture_beat(context, shot, beat_seconds: float):
             group_name=shot.name,
         )
         _key_camera(camera, target_frame)
+        if shot.handheld:
+            # The first capture creates the F-curves noise can attach to.
+            from .handheld import refresh_handheld
+
+            refresh_handheld(shot)
         beat = shot.beats.add()
         beat.beat_id = uuid.uuid4().hex
         beat.frame = target_frame
