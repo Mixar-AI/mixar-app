@@ -82,6 +82,7 @@ def test_native_viewport_surface_is_registered_from_view3d():
     for filename in (
         "view3d_director_overlay.cc",
         "view3d_director_overlay_frame.cc",
+        "view3d_director_popup.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
         "view3d_director_timeline_draw.cc",
@@ -327,7 +328,7 @@ def test_tool_rail_has_accent_highlight_and_grouping():
     assert "RAIL_DIVIDER" not in overlay
     rail = overlay[overlay.index("void draw_tool_rail"):overlay.index("void draw_empty_state")]
     assert "director_overlay_panel_draw" not in rail
-    assert '"MIXAR_OT_director_show_moves"' in overlay
+    assert "view3d_director_moves_popup_create" in overlay
     # Camera tools never hide behind selection: a character ADDS its
     # animation tool to the rail instead of swapping the camera tools out
     # (the camera is only clickable via its gate rim in camera view, so
@@ -345,8 +346,7 @@ def test_camera_moves_reuse_the_ordinary_capture_flow():
     """
     moves = _read("core/camera_moves.py")
     moves_ops = _read("ui/operators/moves_ops.py")
-    panels = _read("ui/panels/camera_surface_popovers.py")
-    surface_ops = _read("ui/operators/surface_ops.py")
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
 
     for key in (
         "ORBIT_LEFT",
@@ -359,11 +359,14 @@ def test_camera_moves_reuse_the_ordinary_capture_flow():
         "PAN_RIGHT",
     ):
         assert key in moves, key
+        # Identifiers are the frozen contract between the native popup rows
+        # and the Python operator's enum.
+        assert f'"{key}"' in popup, key
     assert "capture_beat(context, shot, state.beat_seconds)" in moves
     assert "interest_distance" in moves
-    assert '"mixar.director_camera_move"' in panels
     assert "MIXAR_OT_director_camera_move" in moves_ops
-    assert 'name="MIXAR_PT_director_moves_popover"' in surface_ops
+    assert '"MIXAR_OT_director_camera_move"' in popup
+    assert "RNA_enum_set_identifier" in popup
 
 
 def test_handheld_is_noise_modifiers_not_keyframes():
@@ -380,7 +383,7 @@ def test_handheld_is_noise_modifiers_not_keyframes():
     properties = _read("ui/properties/director_properties.py")
     capture = _read("core/capture.py")
     shot_api = _read("core/shot_api.py")
-    panels = _read("ui/panels/camera_surface_popovers.py")
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
 
     assert 'HANDHELD_MODIFIER_NAME = "Mixar Handheld"' in handheld
     assert "modifiers.new(type='NOISE')" in handheld
@@ -390,7 +393,8 @@ def test_handheld_is_noise_modifiers_not_keyframes():
     assert "handheld_strength: FloatProperty" in properties
     assert "refresh_handheld(shot)" in capture
     assert "take.handheld = shot.handheld" in shot_api
-    assert '"handheld"' in panels
+    assert '"handheld"' in popup
+    assert '"handheld_strength"' in popup
 
 
 def test_character_animation_presets_are_real():

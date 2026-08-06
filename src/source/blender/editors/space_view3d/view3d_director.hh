@@ -52,6 +52,9 @@ struct DirectorViewState {
  */
 bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state);
 
+/** RNA pointer to the Python-owned `scene.mixar_director` state, if any. */
+bool view3d_director_state_pointer(Scene *scene, PointerRNA *r_state_ptr);
+
 /** Return the active Python-owned shot so native UI can bind its RNA controls.
  */
 bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr);

@@ -64,6 +64,7 @@ void draw_tool_rail(uiBlock *block,
     int icon;
     const char *tooltip;
     bool group_above;
+    uiBlockCreateFunc block_func = nullptr;
   };
   /* Camera tools are the mode's backbone and never hide — selection must
    * not be load-bearing (in camera view the camera is only clickable via
@@ -78,7 +79,11 @@ void draw_tool_rail(uiBlock *block,
       {"MIXAR_OT_director_show_shots", ICON_CAMERA_DATA, "Shots and takes", false},
       {"MIXAR_OT_director_navigate", ICON_VIEW_PAN, "Navigate with WASD and mouse", true},
       {"MIXAR_OT_director_precise", ICON_ORIENTATION_GIMBAL, "Fine-tune with camera gizmos", false},
-      {"MIXAR_OT_director_show_moves", ICON_CON_CAMERASOLVER, "One-click camera moves", true},
+      {nullptr,
+       ICON_CON_CAMERASOLVER,
+       "One-click camera moves, timing, and handheld",
+       true,
+       view3d_director_moves_popup_create},
       {"MIXAR_OT_director_show_camera",
        ICON_VIEW_CAMERA,
        "Framing, lens, timing, and direction",
@@ -116,15 +121,26 @@ void draw_tool_rail(uiBlock *block,
       UI_draw_roundbox_4fv_ex(
           &active, ACCENT_FILL, nullptr, 1.0f, ACCENT_BORDER, UI_SCALE_FAC, float(unit) * 0.6f);
     }
-    uiBut *button = director_overlay_operator_button(block,
-                                                     tools[index].operator_id,
-                                                     tools[index].icon,
-                                                     "",
-                                                     rail_x,
-                                                     y,
-                                                     unit * 2,
-                                                     unit * 2,
-                                                     tools[index].tooltip);
+    uiBut *button = tools[index].block_func ?
+                        uiDefIconBlockBut(block,
+                                          tools[index].block_func,
+                                          nullptr,
+                                          0,
+                                          tools[index].icon,
+                                          rail_x,
+                                          y,
+                                          short(unit * 2),
+                                          short(unit * 2),
+                                          tools[index].tooltip) :
+                        director_overlay_operator_button(block,
+                                                         tools[index].operator_id,
+                                                         tools[index].icon,
+                                                         "",
+                                                         rail_x,
+                                                         y,
+                                                         unit * 2,
+                                                         unit * 2,
+                                                         tools[index].tooltip);
     const bool camera_tool = index > 0 && index < 5;
     director_overlay_disable_button(button,
                                     camera_tool && (!state.has_camera || state.locked));

@@ -154,15 +154,15 @@ void view3d_director_frame_controls_draw(uiBlock *block,
   camera_lens_label(CTX_wm_view3d(C), lens_label, sizeof(lens_label));
   camera_aspect_label(CTX_data_scene(C), aspect_label, sizeof(aspect_label));
 
-  uiBut *lens = director_overlay_operator_button(block,
-                                                 "MIXAR_OT_director_show_lens_presets",
-                                                 ICON_CAMERA_DATA,
-                                                 lens_label,
-                                                 left,
-                                                 top,
-                                                 lens_w,
-                                                 button_h,
-                                                 "Choose the lens type and focal length");
+  uiBut *lens = uiDefBlockBut(block,
+                              view3d_director_lens_popup_create,
+                              nullptr,
+                              lens_label,
+                              left,
+                              top,
+                              short(lens_w),
+                              short(button_h),
+                              "Choose the lens type and focal length");
   director_overlay_disable_button(lens, state.locked);
 
   uiBut *navigate = director_overlay_operator_button(block,
@@ -187,15 +187,15 @@ void view3d_director_frame_controls_draw(uiBlock *block,
   director_overlay_disable_button(navigate, state.locked);
   director_overlay_disable_button(precise, state.locked);
 
-  uiBut *aspect = director_overlay_operator_button(block,
-                                                   "MIXAR_OT_director_show_aspect_presets",
-                                                   ICON_IMAGE_PLANE,
-                                                   aspect_label,
-                                                   right - aspect_w,
-                                                   bottom,
-                                                   aspect_w,
-                                                   button_h,
-                                                   "Choose the shot output aspect ratio");
+  uiBut *aspect = uiDefBlockBut(block,
+                                view3d_director_aspect_popup_create,
+                                nullptr,
+                                aspect_label,
+                                right - aspect_w,
+                                bottom,
+                                short(aspect_w),
+                                short(button_h),
+                                "Choose the shot output aspect ratio");
   director_overlay_disable_button(aspect, state.locked);
 
   const float dot_size = std::max(7.0f, 8.0f * UI_SCALE_FAC);

@@ -35,15 +35,15 @@ def test_camera_controls_are_anchored_to_the_live_camera_gate():
     assert "border.xmax" in overlay
     assert "border.ymin" in overlay
     assert "border.ymax" in overlay
-    for operator in (
-        "MIXAR_OT_director_show_lens_presets",
-        "MIXAR_OT_director_show_aspect_presets",
+    for reference in (
+        "view3d_director_lens_popup_create",
+        "view3d_director_aspect_popup_create",
         "MIXAR_OT_director_navigate",
         "MIXAR_OT_director_precise",
         "MIXAR_OT_director_fit_frame",
         "MIXAR_OT_director_drag_frame",
     ):
-        assert operator in overlay
+        assert reference in overlay
 
 
 def test_camera_gate_speaks_millimetres_not_degrees():
@@ -55,32 +55,31 @@ def test_camera_gate_speaks_millimetres_not_degrees():
     """
     constants = _read("constants.py")
     operators = _read("ui/operators/camera_surface_ops.py")
-    panels = _read("ui/panels/camera_surface_popovers.py")
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
     overlay = _read_overlay()
 
     for name in ("Perspective", "Orthographic", "Panoramic"):
         assert name in constants
-    for mm, label in (
-        ("18", "Ultra Wide"),
-        ("24", "Wide"),
-        ("35", "Classic"),
-        ("50", "Standard"),
-        ("85", "Portrait"),
-        ("135", "Telephoto"),
-    ):
-        assert f"({mm}, \"{label}\")" in constants
+        assert name in popup
     assert "FOV_PRESETS_DEGREES" not in constants
 
     assert "camera.data.type = self.lens_type" in operators
-    assert 'name="MIXAR_PT_director_lens_popover"' in operators
     assert "angle_degrees" not in operators
 
-    assert "LENS_PRESET_ITEMS" in panels
-    assert '"mixar.director_set_lens"' in panels
-    assert '"mixar.director_set_lens_type"' in panels
-    assert 'f"{lens_mm}mm"' in panels
+    for preset in (
+        "Ultra Wide  ·  18mm",
+        "Wide  ·  24mm",
+        "Classic  ·  35mm",
+        "Standard  ·  50mm",
+        "Portrait  ·  85mm",
+        "Telephoto  ·  135mm",
+    ):
+        assert preset in popup, preset
+    assert '"MIXAR_OT_director_set_lens"' in popup
+    assert '"MIXAR_OT_director_set_lens_type"' in popup
+    assert '"lens_mm"' in popup
 
-    assert '"%dmm  \\u25be"' in overlay or '%dmm' in overlay
+    assert '%dmm' in overlay
     assert "Orthographic  " in overlay
     assert "Panoramic  " in overlay
     assert "fov_name" not in overlay
@@ -89,8 +88,7 @@ def test_camera_gate_speaks_millimetres_not_degrees():
 
 def test_camera_gate_exposes_named_output_aspects():
     constants = _read("constants.py")
-    operators = _read("ui/operators/camera_surface_ops.py")
-    panels = _read("ui/panels/camera_surface_popovers.py")
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
 
     for preset in (
         "Photography / DSLR · 3:2",
@@ -102,8 +100,18 @@ def test_camera_gate_exposes_named_output_aspects():
         "Square · 1:1",
     ):
         assert preset in constants
-    assert 'name="MIXAR_PT_director_aspect_popover"' in operators
-    assert '"mixar.director_set_aspect"' in panels
+    for label in (
+        "Photography / DSLR  ·  3:2",
+        "Video / TV  ·  16:9",
+        "Cinema  ·  2.39:1",
+        "Social media  ·  9:16",
+    ):
+        assert label in popup, label
+    assert '"MIXAR_OT_director_set_aspect"' in popup
+    # Enum identifiers are the frozen contract between the native popup
+    # and the Python operator.
+    for identifier in ("PHOTO", "SMARTPHONE", "WIDE", "CINEMA_185", "CINEMA_239", "VERTICAL", "SQUARE"):
+        assert f'"{identifier}"' in popup, identifier
 
 
 def test_navigate_offers_level_horizon_fix_z():

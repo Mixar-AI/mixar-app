@@ -40,7 +40,7 @@ static int director_enum(PointerRNA *ptr, const char *name, const int fallback)
   return prop ? RNA_property_enum_get(ptr, prop) : fallback;
 }
 
-static bool director_state_pointer(Scene *scene, PointerRNA *r_state_ptr)
+bool view3d_director_state_pointer(Scene *scene, PointerRNA *r_state_ptr)
 {
   if (!scene) {
     return false;
@@ -69,7 +69,7 @@ static bool director_active_shot_pointer_from_state(PointerRNA *state_ptr, Point
 bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr)
 {
   PointerRNA state_ptr;
-  return r_shot_ptr && director_state_pointer(scene, &state_ptr) &&
+  return r_shot_ptr && view3d_director_state_pointer(scene, &state_ptr) &&
          director_active_shot_pointer_from_state(&state_ptr, r_shot_ptr);
 }
 
@@ -77,7 +77,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
 {
   *r_state = DirectorViewState{};
   PointerRNA state_ptr;
-  if (!director_state_pointer(scene, &state_ptr)) {
+  if (!view3d_director_state_pointer(scene, &state_ptr)) {
     return false;
   }
 

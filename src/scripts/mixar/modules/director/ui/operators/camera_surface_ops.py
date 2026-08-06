@@ -4,7 +4,6 @@
 
 """Focused operators for the camera-gate controls in Director."""
 
-import bpy
 from bpy.props import EnumProperty
 from bpy.types import Operator
 
@@ -25,46 +24,6 @@ def _editable_camera(context):
     ):
         return None, None
     return shot, shot.camera
-
-
-class MIXAR_OT_director_show_lens_presets(Operator):
-    """Open lens type and focal-length presets beside the camera gate"""
-
-    bl_idname = "mixar.director_show_lens_presets"
-    bl_label = "Lens"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        shot, camera = _editable_camera(context)
-        return bool(shot and camera)
-
-    def invoke(self, _context, _event):
-        return bpy.ops.wm.call_panel(
-            'INVOKE_DEFAULT',
-            name="MIXAR_PT_director_lens_popover",
-            keep_open=True,
-        )
-
-
-class MIXAR_OT_director_show_aspect_presets(Operator):
-    """Open output-aspect presets beside the camera gate"""
-
-    bl_idname = "mixar.director_show_aspect_presets"
-    bl_label = "Aspect Ratio"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        shot, camera = _editable_camera(context)
-        return bool(shot and camera)
-
-    def invoke(self, _context, _event):
-        return bpy.ops.wm.call_panel(
-            'INVOKE_DEFAULT',
-            name="MIXAR_PT_director_aspect_popover",
-            keep_open=True,
-        )
 
 
 class MIXAR_OT_director_set_lens_type(Operator):
@@ -93,7 +52,5 @@ class MIXAR_OT_director_set_lens_type(Operator):
 
 
 classes = (
-    MIXAR_OT_director_show_lens_presets,
-    MIXAR_OT_director_show_aspect_presets,
     MIXAR_OT_director_set_lens_type,
 )

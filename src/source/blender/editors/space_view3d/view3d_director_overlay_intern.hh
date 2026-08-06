@@ -18,6 +18,12 @@ struct rctf;
 struct uiBlock;
 struct uiBut;
 
+/** Flow-styled popup blocks (view3d_director_popup.cc); presentation only —
+ * every row invokes the Python-owned `mixar.director_*` operators. */
+uiBlock *view3d_director_lens_popup_create(bContext *C, ARegion *region, void *arg);
+uiBlock *view3d_director_aspect_popup_create(bContext *C, ARegion *region, void *arg);
+uiBlock *view3d_director_moves_popup_create(bContext *C, ARegion *region, void *arg);
+
 /** Rounded Flow-style panel in the shared Director palette. */
 void director_overlay_panel_draw(const rctf &rect, float radius);
 

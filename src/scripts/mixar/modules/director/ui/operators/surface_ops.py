@@ -153,21 +153,6 @@ class MIXAR_OT_director_pick_camera(Operator):
         return {'FINISHED'}
 
 
-class MIXAR_OT_director_show_moves(Operator):
-    """Open the one-click camera move presets popover"""
-
-    bl_idname = "mixar.director_show_moves"
-    bl_label = "Camera Moves"
-    bl_options = {'REGISTER'}
-
-    def invoke(self, _context, _event):
-        return bpy.ops.wm.call_panel(
-            'INVOKE_DEFAULT',
-            name="MIXAR_PT_director_moves_popover",
-            keep_open=True,
-        )
-
-
 class MIXAR_OT_director_show_animation(Operator):
     """Open the animation presets popover for the selected character"""
 
@@ -214,7 +199,6 @@ classes = (
     MIXAR_OT_director_show_shots,
     MIXAR_OT_director_show_camera,
     MIXAR_OT_director_pick_camera,
-    MIXAR_OT_director_show_moves,
     MIXAR_OT_director_show_animation,
     MIXAR_OT_director_toggle_immersive,
 )
