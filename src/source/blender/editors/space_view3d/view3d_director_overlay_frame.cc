@@ -210,7 +210,8 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                                      top,
                                      button_h,
                                      button_h,
-                                     "Fill the viewport with the camera frame");
+                                     "Fill the viewport with the camera frame; click again to "
+                                     "shrink it back");
     director_overlay_operator_button(
         block,
         "MIXAR_OT_director_drag_frame",

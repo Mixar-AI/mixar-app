@@ -41,12 +41,35 @@ def _camera_view_target(context):
     return target
 
 
+# Per-region Full View round trip: what the framing was before the fill and
+# what the fill produced, so a second click can shrink the frame back.
+_view_memory: dict[int, dict] = {}
+
+
+def _framing(region_3d) -> tuple:
+    return (
+        tuple(region_3d.view_camera_offset),
+        float(region_3d.view_camera_zoom),
+    )
+
+
+def _same_framing(a: tuple, b: tuple) -> bool:
+    return (
+        abs(a[0][0] - b[0][0]) < 1e-4
+        and abs(a[0][1] - b[0][1]) < 1e-4
+        and abs(a[1] - b[1]) < 0.5
+    )
+
+
 class MIXAR_OT_director_fit_frame(Operator):
-    """Fit the camera frame to the full viewport"""
+    """Toggle between a viewport-filling camera frame and the framing before"""
 
     bl_idname = "mixar.director_fit_frame"
     bl_label = "Full View"
-    bl_description = "Center the camera frame and fill the viewport with it"
+    bl_description = (
+        "Fill the viewport with the camera frame; click again to shrink it "
+        "back"
+    )
 
     @classmethod
     def poll(cls, context):
@@ -58,13 +81,33 @@ class MIXAR_OT_director_fit_frame(Operator):
         if target is None:
             return {'CANCELLED'}
         window, area, region, space = target
+        region_3d = space.region_3d
+        key = region.as_pointer()
+        current = _framing(region_3d)
+        memory = _view_memory.get(key)
+        if memory is not None and _same_framing(current, memory["fitted"]):
+            region_3d.view_camera_offset = memory["before"][0]
+            region_3d.view_camera_zoom = memory["before"][1]
+            del _view_memory[key]
+            area.tag_redraw()
+            return {'FINISHED'}
         with context.temp_override(
             window=window,
             area=area,
             region=region,
             space_data=space,
         ):
-            return bpy.ops.view3d.view_center_camera()
+            result = bpy.ops.view3d.view_center_camera()
+        if 'FINISHED' in result:
+            fitted = _framing(region_3d)
+            if _same_framing(current, fitted):
+                # Already filled before the first click (file opened that
+                # way): fall back to Blender's default padded camera view so
+                # the toggle always has somewhere to shrink back to.
+                current = ((0.0, 0.0), 0.0)
+            _view_memory[key] = {"before": current, "fitted": fitted}
+        area.tag_redraw()
+        return result
 
 
 class MIXAR_OT_director_drag_frame(Operator):

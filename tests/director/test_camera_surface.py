@@ -132,6 +132,9 @@ def test_camera_frame_can_move_resize_and_fill_the_viewport():
     assert "view_camera_offset" in frame_ops
     assert "view_camera_zoom" in frame_ops
     assert "view3d.view_center_camera" in frame_ops
+    # Full View must round-trip: a second click restores the prior framing.
+    assert "_view_memory" in frame_ops
+    assert '{"before": current, "fitted": fitted}' in frame_ops
     assert "* 2.0" in frame_ops
     assert "_start_offset" in frame_ops
     assert "_start_zoom" in frame_ops
