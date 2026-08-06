@@ -314,14 +314,19 @@ def test_director_entry_sits_beside_the_topbar_mode_switch():
 
 
 def test_tool_rail_has_accent_highlight_and_grouping():
-    """The rail marks the active mode with the Director accent and groups
-    tools with dividers instead of four identical floating squares."""
+    """Rail buttons float without a container panel — their own emboss is
+    the only rectangle (a container plus embossed buttons reads as double
+    borders). Groups separate through wider spacing, and the active mode
+    carries the single filled accent."""
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
 
     assert "ACCENT_FILL" in overlay
     assert "ACCENT_BORDER" in overlay
-    assert "RAIL_DIVIDER" in overlay
-    assert "divider_above" in overlay
+    assert "group_above" in overlay
+    assert "group_gap" in overlay
+    assert "RAIL_DIVIDER" not in overlay
+    rail = overlay[overlay.index("void draw_tool_rail"):overlay.index("void draw_empty_state")]
+    assert "director_overlay_panel_draw" not in rail
     assert '"MIXAR_OT_director_show_moves"' in overlay
 
 

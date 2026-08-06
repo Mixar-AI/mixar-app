@@ -37,7 +37,6 @@ constexpr float PANEL_BORDER[4] = {0.28f, 0.29f, 0.33f, 0.8f};
 constexpr float TEXT_MUTED[4] = {0.70f, 0.71f, 0.75f, 1.0f};
 constexpr float ACCENT_FILL[4] = {0.25f, 0.92f, 0.52f, 0.22f};
 constexpr float ACCENT_BORDER[4] = {0.25f, 0.92f, 0.52f, 0.85f};
-constexpr float RAIL_DIVIDER[4] = {0.28f, 0.29f, 0.33f, 0.7f};
 
 void draw_centered_text(const char *text,
                         const float center_x,
@@ -64,10 +63,13 @@ void draw_tool_rail(uiBlock *block,
     const char *operator_id;
     int icon;
     const char *tooltip;
-    bool divider_above;
+    bool group_above;
   };
   /* The rail follows the active object: a camera shows framing/navigation
-   * tools, a character shows the animation presets instead. */
+   * tools, a character shows the animation presets instead. Buttons float
+   * like the native navigation gizmos on the opposite edge — no container
+   * panel, so their own emboss is the only rectangle. Groups read through
+   * wider spacing, and the active mode carries the one filled accent. */
   const Object *active = CTX_data_active_object(C);
   const bool character = active && active->type != OB_CAMERA;
   const Tool camera_tools[] = {
@@ -86,38 +88,28 @@ void draw_tool_rail(uiBlock *block,
   };
   const Tool *tools = character ? character_tools : camera_tools;
   const int button_count = character ? 2 : 5;
-  int divider_count = 0;
+  const int group_gap = gap * 3;
+  int group_count = 0;
   for (int index = 0; index < button_count; index++) {
-    divider_count += int(tools[index].divider_above);
+    group_count += int(tools[index].group_above);
   }
 
   const int slot = unit * 2 + gap;
-  const int rail_w = unit * 2 + gap * 2;
-  const int rail_h = button_count * slot + gap + divider_count * gap * 2;
+  const int rail_h = button_count * slot - gap + group_count * group_gap;
   const int rail_x = gap * 2;
   const int rail_y = std::max((region->winy - rail_h) / 2, gap * 3);
-  director_overlay_panel_draw(
-      {float(rail_x), float(rail_x + rail_w), float(rail_y), float(rail_y + rail_h)},
-      float(unit));
 
-  int y = rail_y + rail_h - gap - unit * 2;
+  int y = rail_y + rail_h - unit * 2;
   for (int index = 0; index < button_count; index++) {
-    if (tools[index].divider_above) {
-      const float line_y = float(y + unit * 2 + gap * 2);
-      const rctf divider = {float(rail_x + gap * 2),
-                            float(rail_x + rail_w - gap * 2),
-                            line_y,
-                            line_y + std::max(1.0f, UI_SCALE_FAC)};
-      UI_draw_roundbox_corner_set(UI_CNR_NONE);
-      UI_draw_roundbox_4fv(&divider, true, 0.0f, RAIL_DIVIDER);
-      y -= gap * 2;
+    if (tools[index].group_above) {
+      y -= group_gap;
     }
     const bool is_active_mode = !character &&
                                 ((index == 1 && state.navigate_mode) ||
                                  (index == 2 && !state.navigate_mode));
     if (is_active_mode) {
-      const rctf active = {float(rail_x + gap / 2),
-                           float(rail_x + rail_w - gap / 2),
+      const rctf active = {float(rail_x - gap / 2),
+                           float(rail_x + unit * 2 + gap / 2),
                            float(y - gap / 2),
                            float(y + unit * 2 + gap / 2)};
       UI_draw_roundbox_corner_set(UI_CNR_ALL);
@@ -128,7 +120,7 @@ void draw_tool_rail(uiBlock *block,
                                                      tools[index].operator_id,
                                                      tools[index].icon,
                                                      "",
-                                                     rail_x + gap,
+                                                     rail_x,
                                                      y,
                                                      unit * 2,
                                                      unit * 2,
