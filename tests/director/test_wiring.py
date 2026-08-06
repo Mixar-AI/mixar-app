@@ -388,6 +388,17 @@ def test_timeline_strip_can_split_and_delete():
 
     assert "def split_shot" in shot_api
     assert "state.active_shot_index = original_index" in shot_api
+    # Deleting the last reference to a camera must leave it genuinely
+    # static: per-frame key deletion misses stray keys, so the transform/
+    # lens F-curves (and handheld noise) are purged when the last beat or
+    # the last shot referencing the camera goes — but never while another
+    # take still shares the camera.
+    capture = _read("core/capture.py")
+    assert "def purge_camera_animation" in capture
+    assert "def camera_shared_elsewhere" in capture
+    assert "purge_camera_animation(shot.camera)" in capture
+    assert "purge_camera_animation(camera)" in shot_api
+    assert "camera_shared_elsewhere" in shot_api
     assert "class MIXAR_OT_director_split_strip" in strip_ops
     assert "class MIXAR_OT_director_clear_strip" in strip_ops
     assert "class MIXAR_OT_director_strip_menu" in strip_ops

@@ -130,11 +130,25 @@ def create_new_take(scene, shot):
 
 
 def remove_shot(scene, index: int) -> bool:
-    """Remove shot metadata while preserving its native camera and images."""
+    """Remove shot metadata, preserving the camera object and images.
+
+    The camera's Director-authored motion goes with the last shot that
+    references it — otherwise scrubbing keeps animating a camera whose
+    strip no longer exists. Takes sharing the camera keep the animation.
+    """
+    from .capture import camera_shared_elsewhere, purge_camera_animation
+
     state = scene.mixar_director
     if index < 0 or index >= len(state.shots):
         return False
+    shot = state.shots[index]
+    camera = shot.camera
+    release_motion = camera is not None and not camera_shared_elsewhere(
+        scene, shot
+    )
     state.shots.remove(index)
+    if release_motion:
+        purge_camera_animation(camera)
     state.active_shot_index = min(index, max(0, len(state.shots) - 1))
     scope_preview_range(scene, active_shot(scene))
     return True

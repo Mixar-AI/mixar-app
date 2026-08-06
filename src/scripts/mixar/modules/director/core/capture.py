@@ -47,6 +47,51 @@ def _delete_camera_keys(camera, frame: int) -> None:
             pass
 
 
+_CAMERA_MOTION_PATHS = {
+    "location",
+    "rotation_euler",
+    "rotation_quaternion",
+    "rotation_axis_angle",
+}
+
+
+def purge_camera_animation(camera) -> None:
+    """Delete the camera's transform/lens F-curves and handheld noise.
+
+    Per-frame key deletion leaves strays behind whenever keys exist off the
+    tracked beat frames (native auto-keying, hand-inserted keys, drifted
+    edits) — and a fully deleted strip must leave a genuinely static
+    camera. Director owns its shot cameras' motion, so when the last shot
+    referencing a camera lets go, the motion goes with it.
+    """
+    from .handheld import remove_handheld
+
+    remove_handheld(camera)
+    for owner, paths in (
+        (camera, _CAMERA_MOTION_PATHS),
+        (camera.data, {"lens"}),
+    ):
+        animation = getattr(owner, "animation_data", None)
+        action = getattr(animation, "action", None)
+        if action is None:
+            continue
+        stale = [fc for fc in action.fcurves if fc.data_path in paths]
+        for fcurve in stale:
+            action.fcurves.remove(fcurve)
+
+
+def camera_shared_elsewhere(scene, shot) -> bool:
+    """Whether another shot (any state) still directs *shot*'s camera."""
+    state = getattr(scene, "mixar_director", None)
+    if state is None or shot.camera is None:
+        return False
+    me = shot.as_pointer()
+    return any(
+        item.camera == shot.camera and item.as_pointer() != me
+        for item in state.shots
+    )
+
+
 def _render_viewport_still(
     context, scene, display_name: str, prompt: str, group_name: str = ""
 ):
@@ -207,6 +252,14 @@ def remove_beat(scene, shot, index: int) -> bool:
                 bpy.data.images.remove(image)
             except Exception:
                 pass
+    if (
+        not shot.beats
+        and shot.camera is not None
+        and not camera_shared_elsewhere(scene, shot)
+    ):
+        # The last keyframe is gone: leave a genuinely static camera
+        # instead of whatever stray keys per-frame deletion missed.
+        purge_camera_animation(shot.camera)
     refresh_manifest(scene, shot)
     scope_preview_range(scene, shot)
     return True
