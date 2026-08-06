@@ -63,7 +63,9 @@ def test_director_has_no_n_panel_implementation():
     assert 'bl_idname = "MIXAR_PT_director"' not in python_sources
 
     popovers = _read("ui/panels/director_popovers.py")
-    assert popovers.count("bl_region_type = 'HEADER'") == 2
+    render_popover = _read("ui/panels/render_popover.py")
+    assert popovers.count("bl_region_type = 'HEADER'") == 3
+    assert render_popover.count("bl_region_type = 'HEADER'") == 1
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -116,13 +118,16 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "MIXAR_OT_director_show_camera",
         "MIXAR_OT_director_capture_beat",
         "MIXAR_OT_director_show_render",
+        "MIXAR_OT_director_send_moodboard",
         "MIXAR_OT_director_send_video",
     ):
         assert operator in overlay or operator in timeline
     assert "MIXAR_OT_director_toggle_timeline" in timeline
     assert "MIXAR_OT_director_toggle_immersive" in timeline
-    assert "mixar.director_open_editor" in surface_ops
-    assert "mixar.director_open_editor" in mixie_header
+    assert "mixar.director_pick_camera" in surface_ops
+    assert "mixar.director_show_animation" in surface_ops
+    assert "mixar.director_open_editor" not in surface_ops
+    assert "mixar.director_open_editor" not in mixie_header
 
 
 def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
@@ -138,11 +143,14 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert '"Canvas"' not in overlay
     assert "region->winy - unit * 2 - gap * 2" in overlay
     assert "region->winy - unit * 6" not in overlay
-    assert "uiDefAutoButR" in timeline
-    assert "view3d_director_active_shot_pointer" in timeline
-    assert 'RNA_struct_find_property(&shot_ptr, "camera")' in timeline
+    surface_ops = _read("ui/operators/surface_ops.py")
+
+    assert '"MIXAR_OT_director_pick_camera"' in timeline
+    assert "latest_shot_index_for_camera" in surface_ops
     assert "view3d_director_active_shot_pointer" in state
     assert "enter_camera_view(context or bpy.context, camera, remember=False)" in properties
+    assert "update=_on_active_shot_change" in properties
+    assert "scope_preview_range(scene, shot)" in properties
 
 
 def test_native_timeline_tracks_playback_and_real_beat_span():
@@ -161,7 +169,7 @@ def test_native_timeline_tracks_playback_and_real_beat_span():
     assert "runtime->view_span_frames" in timeline_draw
     assert "state.beats.size() < 2" in timeline
     assert "frames = sorted({beat.frame for beat in shot.beats})" in preview
-    assert "Capture at least two camera beats to preview" in preview
+    assert "Capture at least two keyframes to preview" in preview
 
 
 def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
@@ -182,6 +190,9 @@ def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
     assert "MOUSEPAN" in interaction
     assert "WHEELUPMOUSE" in interaction
     assert '"mixar.director_drag_strip"' in interaction
+    assert '"mixar.director_scrub"' in interaction
+    assert "class MIXAR_OT_director_scrub" in timeline_ops
+    assert "self._original_frame" in timeline_ops
     assert "shift_camera_beats" in timeline_ops
     assert "point.handle_left[0] += delta" in timeline_core
     assert "point.handle_right[0] += delta" in timeline_core

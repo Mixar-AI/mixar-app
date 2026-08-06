@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Poll-driven native camera-beat timeline dock for Director mode.
+ * Poll-driven native keyframe timeline dock for Director mode.
  */
 
 #include <algorithm>
@@ -150,7 +150,7 @@ void draw_transport(uiBlock *block,
                                     y,
                                     size,
                                     size,
-                                    "Previous camera beat");
+                                    "Previous keyframe");
   x += size + gap;
   uiBut *play = operator_button(block,
                                 "MIXAR_OT_director_preview",
@@ -170,7 +170,7 @@ void draw_transport(uiBlock *block,
                                 y,
                                 size,
                                 size,
-                                "Next camera beat");
+                                "Next keyframe");
   const bool no_beats = state.beats.is_empty();
   disable_button(previous, no_beats);
   disable_button(play, state.beats.size() < 2 || state.frame_end <= state.frame_start);
@@ -178,7 +178,6 @@ void draw_transport(uiBlock *block,
 }
 
 void draw_control_row(uiBlock *block,
-                      const bContext *C,
                       const ARegion *region,
                       const DirectorViewState &state,
                       const bool playing,
@@ -192,14 +191,19 @@ void draw_control_row(uiBlock *block,
   int x = margin + gap * 2;
 
   const int camera_w = compact ? button_h : unit * 8;
-  PointerRNA shot_ptr;
-  PropertyRNA *camera_prop = nullptr;
-  if (state.has_shot && view3d_director_active_shot_pointer(CTX_data_scene(C), &shot_ptr) &&
-      (camera_prop = RNA_struct_find_property(&shot_ptr, "camera")))
-  {
-    uiBut *camera = uiDefAutoButR(
-        block, &shot_ptr, camera_prop, -1, "", ICON_CAMERA_DATA, x, y, camera_w, button_h);
-    disable_button(camera, state.locked);
+  if (state.has_shot) {
+    /* Switch between per-camera shots (each its own timeline) rather than
+     * reassigning one shot's camera, which collapsed every camera onto one
+     * strip. Wide shows the active camera's name; compact shows the icon. */
+    operator_button(block,
+                    "MIXAR_OT_director_pick_camera",
+                    ICON_CAMERA_DATA,
+                    compact ? "" : state.camera_name.c_str(),
+                    x,
+                    y,
+                    camera_w,
+                    button_h,
+                    "Switch to another camera or shot");
   }
   else {
     operator_button(block,
@@ -278,21 +282,21 @@ void draw_control_row(uiBlock *block,
 
   if (!state.beats.is_empty()) {
     operator_button(block,
-                    "MIXAR_OT_director_send_video",
-                    ICON_FILE_MOVIE,
-                    compact ? "" : "Send to Video",
+                    "MIXAR_OT_director_send_moodboard",
+                    ICON_EXPORT,
+                    compact ? "" : "Send to Moodboard",
                     right - (compact ? button_h : unit * 7),
                     y,
                     compact ? button_h : unit * 7,
                     button_h,
-                    "Use the ordered camera beats in Video Gen");
+                    "Choose keyframes or shot renders to add to the Moodboard");
     right -= (compact ? button_h : unit * 7) + gap;
   }
   uiBut *capture = operator_button(
       block,
       state.locked ? "MIXAR_OT_director_new_take" : "MIXAR_OT_director_capture_beat",
       state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT,
-      compact ? "" : (state.locked ? "New Take" : "Add Beat"),
+      compact ? "" : (state.locked ? "New Take" : "Add Keyframe"),
       right - (compact ? button_h : unit * 6),
       y,
       compact ? button_h : unit * 6,
@@ -330,7 +334,7 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   uiBlock *block = UI_block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
-  draw_control_row(block, C, region, state, playing, margin, unit, gap);
+  draw_control_row(block, region, state, playing, margin, unit, gap);
   DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
   const int content_top = region->winy - margin - unit * 2 - gap * 2;
   view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);

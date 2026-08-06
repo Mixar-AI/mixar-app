@@ -13,8 +13,13 @@ def draw_director_entry(self, context):
         return
     self.layout.separator()
     if state.is_directing:
-        row = self.layout.row(align=True)
-        row.label(text="Director", icon='CAMERA_DATA')
+        # Clicking the active entry leaves Director without losing the take.
+        self.layout.operator(
+            "mixar.director_finish",
+            text="Director",
+            icon='CAMERA_DATA',
+            depress=True,
+        )
     else:
         self.layout.operator(
             "mixar.director_enter",

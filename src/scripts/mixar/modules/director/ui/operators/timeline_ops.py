@@ -13,7 +13,7 @@ from ...core.timeline import shift_camera_beats
 
 
 class MIXAR_OT_director_drag_strip(Operator):
-    """Move the complete camera-beat strip without changing beat spacing"""
+    """Move the complete keyframe strip without changing keyframe spacing"""
 
     bl_idname = "mixar.director_drag_strip"
     bl_label = "Move Camera Strip"
@@ -134,4 +134,51 @@ class MIXAR_OT_director_drag_strip(Operator):
         return {'RUNNING_MODAL'}
 
 
-classes = (MIXAR_OT_director_drag_strip,)
+class MIXAR_OT_director_scrub(Operator):
+    """Drag the playhead across the timeline ruler to set the current frame"""
+
+    bl_idname = "mixar.director_scrub"
+    bl_label = "Scrub Timeline"
+    bl_description = "Move the playhead to pick the frame for the next keyframe"
+    bl_options = {'REGISTER', 'BLOCKING'}
+
+    frames_per_pixel: FloatProperty(
+        default=1.0,
+        min=0.000001,
+        options={'HIDDEN', 'SKIP_SAVE'},
+    )
+    origin_px: FloatProperty(default=0.0, options={'HIDDEN', 'SKIP_SAVE'})
+    start_frame: FloatProperty(default=0.0, options={'HIDDEN', 'SKIP_SAVE'})
+
+    def _apply(self, context, event):
+        scene = context.scene
+        frame = self.start_frame + (event.mouse_x - self.origin_px) * self.frames_per_pixel
+        frame = max(scene.frame_start, round(frame))
+        if frame != scene.frame_current:
+            scene.frame_set(frame)
+            area = getattr(context, "area", None)
+            if area is not None:
+                area.tag_redraw()
+
+    def invoke(self, context, event):
+        self._original_frame = int(context.scene.frame_current)
+        self._apply(context, event)
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type == 'MOUSEMOVE':
+            self._apply(context, event)
+            return {'RUNNING_MODAL'}
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            return {'FINISHED'}
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            context.scene.frame_set(self._original_frame)
+            area = getattr(context, "area", None)
+            if area is not None:
+                area.tag_redraw()
+            return {'CANCELLED'}
+        return {'RUNNING_MODAL'}
+
+
+classes = (MIXAR_OT_director_drag_strip, MIXAR_OT_director_scrub)

@@ -29,6 +29,32 @@ def active_shot(scene):
     return state.shots[index]
 
 
+def latest_shot_index_for_camera(state, camera) -> int:
+    """Return the newest take using *camera*, or ``-1`` when none does."""
+    matches = [
+        index for index, shot in enumerate(state.shots) if shot.camera == camera
+    ]
+    if not matches:
+        return -1
+    return max(matches, key=lambda index: (state.shots[index].version, index))
+
+
+def scope_preview_range(scene, shot) -> None:
+    """Loop playback within *shot*'s beats instead of the whole scene.
+
+    Every shot shares one scene timeline, so without this the playhead and
+    autoplay use the global frame range (the max across all shots) and a
+    shot's cursor runs past its own beats into another shot's range.
+    """
+    frames = sorted({int(beat.frame) for beat in shot.beats}) if shot else []
+    if frames:
+        scene.use_preview_range = True
+        scene.frame_preview_start = frames[0]
+        scene.frame_preview_end = frames[-1]
+    else:
+        scene.use_preview_range = False
+
+
 def create_shot(scene, camera, *, parent=None):
     """Create and activate a draft take referencing native scene data."""
     state = scene.mixar_director
@@ -64,6 +90,7 @@ def remove_shot(scene, index: int) -> bool:
         return False
     state.shots.remove(index)
     state.active_shot_index = min(index, max(0, len(state.shots) - 1))
+    scope_preview_range(scene, active_shot(scene))
     return True
 
 

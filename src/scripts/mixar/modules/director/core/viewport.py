@@ -99,8 +99,11 @@ def enter_director_surface(context):
         raise RuntimeError("No 3D viewport is available")
     _window, area, _region, space = target
     remember_view(context, context.scene)
+    # Only toggle a region that is actually open: setting show_region_* to a
+    # value it already holds still re-runs Blender's show/hide animation, which
+    # is the N-panel flash seen when entering or leaving Director.
     for name in ("show_region_ui", "show_region_toolbar", "show_region_hud"):
-        if hasattr(space, name):
+        if hasattr(space, name) and getattr(space, name):
             setattr(space, name, False)
     area.tag_redraw()
     return target
@@ -135,7 +138,7 @@ def restore_view(context, scene) -> None:
     if hasattr(space, "camera"):
         space.camera = state["local_camera"]
     for name, value in state.get("chrome", {}).items():
-        if hasattr(space, name):
+        if hasattr(space, name) and getattr(space, name) != value:
             setattr(space, name, value)
     region_3d.view_perspective = state["view_perspective"]
     if state["view_perspective"] != 'CAMERA':

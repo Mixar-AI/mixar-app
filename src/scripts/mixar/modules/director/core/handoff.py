@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Bridge sparse camera beats into the catalog-driven Video Gen surface."""
+"""Bridge sparse keyframes into the catalog-driven Video Gen surface."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ from .shot_api import compile_manifest
 
 def _selected_prompt(shot) -> str:
     adherence = {
-        "CONSERVATIVE": "Match every beat's framing and camera position closely.",
-        "BALANCED": "Interpolate naturally while preserving every camera beat.",
-        "EXPRESSIVE": "Use the beats as anchors for a more expressive cinematic move.",
+        "CONSERVATIVE": "Match every keyframe's framing and camera position closely.",
+        "BALANCED": "Interpolate naturally while preserving every keyframe.",
+        "EXPRESSIVE": "Use the keyframes as anchors for a more expressive cinematic move.",
     }.get(str(shot.guidance_strength), "")
     direction = str(shot.prompt or "").strip()
     parts = [DEFAULT_DIRECTION_PROMPT, adherence, direction]
@@ -33,7 +33,7 @@ def _validate_reference_limit(shot) -> None:
     if limits is not None and len(shot.beats) > limits["max_images"]:
         raise ValueError(
             f"This video model accepts {limits['max_images']} image references; "
-            f"the shot has {len(shot.beats)} beats"
+            f"the shot has {len(shot.beats)} keyframes"
         )
 
 
@@ -74,7 +74,7 @@ def focus_video_generation(context) -> bool:
 def prepare_video_generation(context, shot) -> tuple[int, bool]:
     """Compile the manifest, select beats, copy direction, and focus Video Gen."""
     if not shot.beats:
-        raise ValueError("Capture at least one camera beat first")
+        raise ValueError("Capture at least one keyframe first")
     _validate_reference_limit(shot)
     if shot.state == 'DRAFT':
         compile_manifest(context.scene, shot)
@@ -82,7 +82,7 @@ def prepare_video_generation(context, shot) -> tuple[int, bool]:
         raise ValueError("The locked take has no guidance snapshot")
     count = select_shot_beats(context.scene, shot)
     if count != len(shot.beats):
-        raise ValueError("One or more camera beat images are missing")
+        raise ValueError("One or more keyframe images are missing")
 
     sidebar = getattr(context.scene, "mixie_moodboard_sidebar", None)
     tab = getattr(sidebar, "tab_video_gen", None) if sidebar else None

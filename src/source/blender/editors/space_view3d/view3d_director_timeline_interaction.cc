@@ -83,6 +83,28 @@ bool begin_strip_drag(bContext *C, const wmEvent *event, DirectorTimelineRuntime
   return false;
 }
 
+bool begin_scrub(bContext *C,
+                 const wmEvent *event,
+                 const ARegion *region,
+                 DirectorTimelineRuntime *runtime)
+{
+  wmOperatorType *ot = WM_operatortype_find("mixar.director_scrub", true);
+  const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
+  if (!ot || width <= 0.0f) {
+    return false;
+  }
+  PointerRNA op_ptr;
+  WM_operator_properties_create_ptr(&op_ptr, ot);
+  RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
+  RNA_float_set(
+      &op_ptr, "origin_px", float(region->winrct.xmin) + runtime->viewport_bounds.xmin);
+  RNA_float_set(&op_ptr, "start_frame", runtime->view_start_frame);
+  const wmOperatorStatus result = WM_operator_name_call_ptr(
+      C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
+  WM_operator_properties_free(&op_ptr);
+  return (result & OPERATOR_RUNNING_MODAL) != 0;
+}
+
 void zoom_at_event(const DirectorViewState &state,
                    DirectorTimelineRuntime *runtime,
                    const wmEvent *event,
@@ -152,6 +174,11 @@ int timeline_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
     }
     else if (!state.locked && point_inside(runtime->strip_bounds, event) &&
              begin_strip_drag(C, event, runtime))
+    {
+      return WM_UI_HANDLER_BREAK;
+    }
+    else if (point_inside(runtime->viewport_bounds, event) &&
+             begin_scrub(C, event, region, runtime))
     {
       return WM_UI_HANDLER_BREAK;
     }

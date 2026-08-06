@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Capture camera beats as native keyframes and packed moodboard stills."""
+"""Capture camera poses as native keyframes and packed moodboard stills."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
-from .shot_api import refresh_manifest
+from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
 
 
@@ -47,7 +47,9 @@ def _delete_camera_keys(camera, frame: int) -> None:
             pass
 
 
-def _render_viewport_still(context, scene, display_name: str, prompt: str):
+def _render_viewport_still(
+    context, scene, display_name: str, prompt: str, group_name: str = ""
+):
     target = find_view3d_context(context)
     if target is None:
         raise RuntimeError("No 3D viewport is available")
@@ -90,6 +92,7 @@ def _render_viewport_still(context, scene, display_name: str, prompt: str):
             display_name=display_name,
             generation_prompt=prompt,
             selected=True,
+            group_name=group_name,
         )
         return item.image
     finally:
@@ -104,13 +107,13 @@ def _render_viewport_still(context, scene, display_name: str, prompt: str):
 
 
 def capture_beat(context, shot, beat_seconds: float):
-    """Capture the live camera pose at the next sparse timeline beat."""
+    """Capture the live camera pose at the next sparse timeline keyframe."""
     if shot.state != 'DRAFT':
         raise ValueError("Create a new take before editing a locked shot")
     camera = shot.camera
     scene = shot.scene_ref or context.scene
     if camera is None or camera.type != 'CAMERA':
-        raise ValueError("Choose a camera before capturing a beat")
+        raise ValueError("Choose a camera before capturing a keyframe")
 
     enter_camera_view(context, camera, remember=False)
     world_matrix = camera.matrix_world.copy()
@@ -121,11 +124,17 @@ def capture_beat(context, shot, beat_seconds: float):
         scene.render.fps,
         scene.render.fps_base,
     )
-    target_frame = next_beat_frame(
-        (beat.frame for beat in shot.beats),
-        frame_start=scene.frame_start,
-        stride=stride,
-    )
+    # Place the beat where the playhead sits so the slider defines its time.
+    # Fall back to the next automatic stride when the playhead is before the
+    # start or already holds a beat (the repeat-capture quick flow).
+    taken = {int(beat.frame) for beat in shot.beats}
+    target_frame = int(scene.frame_current)
+    if target_frame < scene.frame_start or target_frame in taken:
+        target_frame = next_beat_frame(
+            taken,
+            frame_start=scene.frame_start,
+            stride=stride,
+        )
     try:
         scene.frame_set(target_frame)
         camera.matrix_world = world_matrix
@@ -135,8 +144,9 @@ def capture_beat(context, shot, beat_seconds: float):
         image = _render_viewport_still(
             context,
             scene,
-            f"{shot.name} · Beat {number:02d}",
+            f"{shot.name} · Keyframe {number:02d}",
             shot.prompt,
+            group_name=shot.name,
         )
         _key_camera(camera, target_frame)
         beat = shot.beats.add()
@@ -146,6 +156,7 @@ def capture_beat(context, shot, beat_seconds: float):
         shot.active_beat_index = len(shot.beats) - 1
         scene.frame_end = max(scene.frame_end, target_frame)
         refresh_manifest(scene, shot)
+        scope_preview_range(scene, shot)
         return beat
     except Exception:
         scene.frame_set(original_frame)
@@ -155,7 +166,7 @@ def capture_beat(context, shot, beat_seconds: float):
 
 
 def remove_beat(scene, shot, index: int) -> bool:
-    """Remove one sparse beat, its camera keys, and its moodboard capture."""
+    """Remove one sparse keyframe, its camera keys, and its moodboard capture."""
     if shot.state != 'DRAFT' or index < 0 or index >= len(shot.beats):
         return False
     beat = shot.beats[index]
@@ -179,4 +190,5 @@ def remove_beat(scene, shot, index: int) -> bool:
             except Exception:
                 pass
     refresh_manifest(scene, shot)
+    scope_preview_range(scene, shot)
     return True

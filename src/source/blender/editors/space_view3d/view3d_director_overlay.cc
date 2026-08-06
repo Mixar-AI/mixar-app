@@ -294,30 +294,40 @@ void draw_camera_frame_controls(uiBlock *block,
 }
 
 void draw_tool_rail(uiBlock *block,
+                    const bContext *C,
                     const ARegion *region,
                     const DirectorViewState &state,
                     const int unit,
                     const int gap)
 {
-  const int rail_w = unit * 2 + gap * 2;
-  const int button_count = 4;
-  const int rail_h = button_count * unit * 2 + gap * (button_count + 1);
-  const int rail_x = gap * 2;
-  const int rail_y = std::max((region->winy - rail_h) / 2, gap * 3);
-  draw_panel({float(rail_x), float(rail_x + rail_w), float(rail_y), float(rail_y + rail_h)},
-             float(rail_w) * 0.5f);
-
   struct Tool {
     const char *operator_id;
     int icon;
     const char *tooltip;
   };
-  const Tool tools[] = {
+  /* The rail follows the active object: a camera shows framing/navigation
+   * tools, a character shows the animation presets instead. */
+  const Object *active = CTX_data_active_object(C);
+  const bool character = active && active->type != OB_CAMERA;
+  const Tool camera_tools[] = {
       {"MIXAR_OT_director_show_shots", ICON_CAMERA_DATA, "Shots and takes"},
       {"MIXAR_OT_director_navigate", ICON_VIEW_PAN, "Navigate with WASD and mouse"},
       {"MIXAR_OT_director_precise", ICON_ORIENTATION_GIMBAL, "Fine-tune with camera gizmos"},
       {"MIXAR_OT_director_show_camera", ICON_VIEW_CAMERA, "Framing, lens, timing, and direction"},
   };
+  const Tool character_tools[] = {
+      {"MIXAR_OT_director_show_shots", ICON_CAMERA_DATA, "Shots and takes"},
+      {"MIXAR_OT_director_show_animation", ICON_ARMATURE_DATA, "Animation presets"},
+  };
+  const Tool *tools = character ? character_tools : camera_tools;
+  const int button_count = character ? 2 : 4;
+
+  const int rail_w = unit * 2 + gap * 2;
+  const int rail_h = button_count * unit * 2 + gap * (button_count + 1);
+  const int rail_x = gap * 2;
+  const int rail_y = std::max((region->winy - rail_h) / 2, gap * 3);
+  draw_panel({float(rail_x), float(rail_x + rail_w), float(rail_y), float(rail_y + rail_h)},
+             float(rail_w) * 0.5f);
 
   int y = rail_y + rail_h - gap - unit * 2;
   for (int index = 0; index < button_count; index++, y -= unit * 2 + gap) {
@@ -330,10 +340,12 @@ void draw_tool_rail(uiBlock *block,
                                     unit * 2,
                                     unit * 2,
                                     tools[index].tooltip);
-    if ((index == 1 && state.navigate_mode) || (index == 2 && !state.navigate_mode)) {
+    if (!character && ((index == 1 && state.navigate_mode) ||
+                       (index == 2 && !state.navigate_mode)))
+    {
       UI_but_flag_enable(button, UI_BUT_ACTIVE_DEFAULT);
     }
-    disable_button(button, index > 0 && (!state.has_camera || state.locked));
+    disable_button(button, !character && index > 0 && (!state.has_camera || state.locked));
   }
 }
 
@@ -353,7 +365,7 @@ void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, con
                      white);
   draw_centered_text(
       "Explore the scene, frame a moment, then capture only the "
-      "beats that matter.",
+      "keyframes that matter.",
       float(region->winx) * 0.5f,
       float(y + panel_h - unit * 4),
       12.0f * UI_SCALE_FAC,
@@ -383,7 +395,7 @@ void draw_context_actions(uiBlock *block,
     const char *operator_id = state.locked ? "MIXAR_OT_director_new_take" :
                                              "MIXAR_OT_director_capture_beat";
     const int icon = state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT;
-    const char *label = state.locked ? "Start New Take" : "Capture Camera Beat";
+    const char *label = state.locked ? "Start New Take" : "Capture Keyframe";
     operator_button(block,
                     operator_id,
                     icon,
@@ -413,11 +425,20 @@ void draw_context_actions(uiBlock *block,
                     "MIXAR_OT_director_show_render",
                     ICON_RENDER_ANIMATION,
                     "Shot Renders",
-                    region->winx - unit * 16 - gap * 3,
+                    region->winx - unit * 24 - gap * 4,
                     gap * 2,
                     unit * 8,
                     unit * 2,
                     "Render Beauty Preview, Clay, or Depth videos to Moodboard");
+    operator_button(block,
+                    "MIXAR_OT_director_send_moodboard",
+                    ICON_EXPORT,
+                    "Moodboard",
+                    region->winx - unit * 16 - gap * 3,
+                    gap * 2,
+                    unit * 8,
+                    unit * 2,
+                    "Choose keyframes or shot renders to add to the Moodboard");
     operator_button(block,
                     "MIXAR_OT_director_send_video",
                     ICON_FILE_MOVIE,
@@ -426,7 +447,7 @@ void draw_context_actions(uiBlock *block,
                     gap * 2,
                     unit * 8,
                     unit * 2,
-                    "Use these ordered camera beats in Video Gen");
+                    "Use these ordered keyframes in Video Gen");
   }
 }
 
@@ -450,7 +471,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 
   draw_camera_frame_controls(block, C, region, state, unit, gap);
   if (region->winy > unit * 18) {
-    draw_tool_rail(block, region, state, unit, gap);
+    draw_tool_rail(block, C, region, state, unit, gap);
   }
   if (!state.has_shot) {
     draw_empty_state(block, region, unit, gap);

@@ -36,7 +36,7 @@ ASPECT_PRESETS = {
 }
 
 DEFAULT_DIRECTION_PROMPT = (
-    "Follow the selected camera beats in chronological order as the intended "
+    "Follow the selected keyframes in chronological order as the intended "
     "camera path."
 )
 
@@ -60,7 +60,7 @@ SHOT_STATE_ITEMS = (
 GUIDANCE_STRENGTH_ITEMS = (
     ("CONSERVATIVE", "Conservative", "Stay close to the directed frames", 0),
     ("BALANCED", "Balanced", "Balance adherence with natural motion", 1),
-    ("EXPRESSIVE", "Expressive", "Allow more interpretation between beats", 2),
+    ("EXPRESSIVE", "Expressive", "Allow more interpretation between keyframes", 2),
 )
 
 SHOT_RENDER_OUTPUT_ITEMS = (

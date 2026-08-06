@@ -24,6 +24,7 @@ from ...constants import (
     SHOT_RENDER_OUTPUT_ITEMS,
     SHOT_STATE_ITEMS,
 )
+from ...core.shot_api import scope_preview_range
 from ...core.viewport import enter_camera_view
 
 
@@ -45,6 +46,30 @@ def _activate_shot_camera(self, context):
                 pass
 
 
+def _on_active_shot_change(self, context):
+    """Follow the newly active shot: its camera, its view, and its range.
+
+    All shots share one scene timeline, so switching shots must re-point the
+    scene camera and the playback range or the timeline shows one shot's beats
+    while the view and playhead still belong to another.
+    """
+    scene = getattr(context, "scene", None) or bpy.context.scene
+    shots = getattr(self, "shots", None)
+    if scene is None or not shots:
+        return
+    index = min(max(0, self.active_shot_index), len(shots) - 1)
+    shot = shots[index]
+    camera = getattr(shot, "camera", None)
+    if camera is not None and getattr(camera, "type", None) == 'CAMERA':
+        scene.camera = camera
+        if self.is_directing:
+            try:
+                enter_camera_view(context or bpy.context, camera, remember=False)
+            except Exception:
+                pass
+    scope_preview_range(scene, shot)
+
+
 def _redraw_director_surface(_self, context):
     """Refresh native Director overlays and poll-driven regions."""
     window_manager = getattr(context, "window_manager", None)
@@ -64,7 +89,7 @@ class MixarDirectorBeat(PropertyGroup):
     frame: IntProperty(name="Frame", default=1, min=-1048574, max=1048574)
     image: PointerProperty(
         name="Reference Frame",
-        description="Packed viewport capture associated with this camera beat",
+        description="Packed viewport capture associated with this keyframe",
         type=bpy.types.Image,
     )
 
@@ -108,14 +133,14 @@ class MixarDirectorShot(PropertyGroup):
     )
     prompt: StringProperty(
         name="Direction",
-        description="Describe the action and motion to generate between beats",
+        description="Describe the action and motion to generate between keyframes",
         default="",
         maxlen=4096,
         options={'TEXTEDIT_UPDATE'},
     )
     guidance_strength: EnumProperty(
         name="Adherence",
-        description="How closely the generated video should follow the beats",
+        description="How closely the generated video should follow the keyframes",
         items=GUIDANCE_STRENGTH_ITEMS,
         default="BALANCED",
     )
@@ -157,7 +182,7 @@ class MixarDirectorShot(PropertyGroup):
         maxlen=256,
         options={'SKIP_SAVE', 'HIDDEN'},
     )
-    beats: CollectionProperty(type=MixarDirectorBeat, name="Camera Beats")
+    beats: CollectionProperty(type=MixarDirectorBeat, name="Keyframes")
     active_beat_index: IntProperty(name="Active Beat", default=0, min=0)
     manifest_json: StringProperty(
         name="Camera Direction Manifest",
@@ -181,10 +206,15 @@ class MixarDirectorState(PropertyGroup):
     """Per-scene shot collection plus non-persistent session controls."""
 
     shots: CollectionProperty(type=MixarDirectorShot, name="Shots")
-    active_shot_index: IntProperty(name="Active Shot", default=0, min=0)
+    active_shot_index: IntProperty(
+        name="Active Shot",
+        default=0,
+        min=0,
+        update=_on_active_shot_change,
+    )
     beat_seconds: FloatProperty(
-        name="Beat Spacing",
-        description="Time automatically placed between captured camera beats",
+        name="Keyframe Spacing",
+        description="Time automatically placed between captured keyframes",
         default=DEFAULT_BEAT_SECONDS,
         min=MIN_BEAT_SECONDS,
         max=MAX_BEAT_SECONDS,

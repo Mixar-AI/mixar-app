@@ -5,10 +5,11 @@
 """Mode-level Director surface, navigation, and contextual popovers."""
 
 import bpy
+from bpy.props import StringProperty
 from bpy.types import Operator
 
-from ...core.shot_api import active_shot
-from ...core.viewport import enter_camera_view, enter_director_surface
+from ...core.shot_api import active_shot, create_shot, latest_shot_index_for_camera
+from ...core.viewport import enter_camera_view
 
 
 def _director_state(context):
@@ -49,10 +50,10 @@ class MIXAR_OT_director_toggle_timeline(Operator):
 
 
 class MIXAR_OT_director_previous_beat(Operator):
-    """Jump to the previous sparse camera beat"""
+    """Jump to the previous sparse keyframe"""
 
     bl_idname = "mixar.director_previous_beat"
-    bl_label = "Previous Camera Beat"
+    bl_label = "Previous Keyframe"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -64,10 +65,10 @@ class MIXAR_OT_director_previous_beat(Operator):
 
 
 class MIXAR_OT_director_next_beat(Operator):
-    """Jump to the next sparse camera beat"""
+    """Jump to the next sparse keyframe"""
 
     bl_idname = "mixar.director_next_beat"
-    bl_label = "Next Camera Beat"
+    bl_label = "Next Keyframe"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -76,55 +77,6 @@ class MIXAR_OT_director_next_beat(Operator):
         except Exception as exc:
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
-
-
-class MIXAR_OT_director_open_canvas(Operator):
-    """Switch the current Director area to the Mixar canvas"""
-
-    bl_idname = "mixar.director_open_canvas"
-    bl_label = "Canvas"
-    bl_description = "Review camera beats and references on the Moodboard canvas"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        state = _director_state(context)
-        return bool(state and state.is_directing and context.area)
-
-    def execute(self, context):
-        context.area.type = 'MIXIE'
-        space = context.area.spaces.active
-        if hasattr(space, "mixie_mode"):
-            space.mixie_mode = 'MOODBOARD'
-        context.area.tag_redraw()
-        return {'FINISHED'}
-
-
-class MIXAR_OT_director_open_editor(Operator):
-    """Return from Canvas to the active Director viewport"""
-
-    bl_idname = "mixar.director_open_editor"
-    bl_label = "3D Editor"
-    bl_description = "Return to camera directing"
-    bl_options = {'REGISTER'}
-
-    @classmethod
-    def poll(cls, context):
-        state = _director_state(context)
-        return bool(state and state.is_directing and context.area)
-
-    def execute(self, context):
-        context.area.type = 'VIEW_3D'
-        try:
-            enter_director_surface(context)
-            shot = active_shot(context.scene)
-            if shot is not None and shot.camera is not None:
-                enter_camera_view(context, shot.camera, remember=False)
-        except Exception as exc:
-            self.report({'ERROR'}, str(exc))
-            return {'CANCELLED'}
-        context.area.tag_redraw()
-        return {'FINISHED'}
 
 
 class MIXAR_OT_director_show_shots(Operator):
@@ -157,6 +109,65 @@ class MIXAR_OT_director_show_camera(Operator):
         )
 
 
+class MIXAR_OT_director_pick_camera(Operator):
+    """Choose which camera this shot directs"""
+
+    bl_idname = "mixar.director_pick_camera"
+    bl_label = "Select Camera"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    camera_name: StringProperty(options={'SKIP_SAVE'})
+
+    def execute(self, context):
+        scene = context.scene
+        state = _director_state(context)
+        camera = bpy.data.objects.get(self.camera_name)
+        if state is None or camera is None or camera.type != 'CAMERA':
+            return {'CANCELLED'}
+        # Each camera is its own shot/timeline. Switch to the shot that already
+        # directs this camera, or start a fresh shot for one that has none,
+        # instead of reassigning (which collapsed every camera onto one strip).
+        index = latest_shot_index_for_camera(state, camera)
+        if index >= 0:
+            state.active_shot_index = index
+            return {'FINISHED'}
+        create_shot(scene, camera)
+        return {'FINISHED'}
+
+    def invoke(self, context, _event):
+        # A chosen name applies directly; an empty name opens the camera list.
+        if self.camera_name:
+            return self.execute(context)
+        cameras = [obj for obj in context.scene.objects if obj.type == 'CAMERA']
+
+        def draw(menu, _context):
+            column = menu.layout.column()
+            if not cameras:
+                column.label(text="No cameras in scene")
+            for obj in cameras:
+                column.operator(
+                    "mixar.director_pick_camera", text=obj.name, icon='CAMERA_DATA'
+                ).camera_name = obj.name
+
+        context.window_manager.popup_menu(draw, title="Camera", icon='CAMERA_DATA')
+        return {'FINISHED'}
+
+
+class MIXAR_OT_director_show_animation(Operator):
+    """Open the animation presets popover for the selected character"""
+
+    bl_idname = "mixar.director_show_animation"
+    bl_label = "Animation"
+    bl_options = {'REGISTER'}
+
+    def invoke(self, _context, _event):
+        return bpy.ops.wm.call_panel(
+            'INVOKE_DEFAULT',
+            name="MIXAR_PT_director_animation_popover",
+            keep_open=True,
+        )
+
+
 class MIXAR_OT_director_toggle_immersive(Operator):
     """Toggle Blender's maximized-area presentation for Director"""
 
@@ -185,9 +196,9 @@ classes = (
     MIXAR_OT_director_toggle_timeline,
     MIXAR_OT_director_previous_beat,
     MIXAR_OT_director_next_beat,
-    MIXAR_OT_director_open_canvas,
-    MIXAR_OT_director_open_editor,
     MIXAR_OT_director_show_shots,
     MIXAR_OT_director_show_camera,
+    MIXAR_OT_director_pick_camera,
+    MIXAR_OT_director_show_animation,
     MIXAR_OT_director_toggle_immersive,
 )

@@ -22,7 +22,7 @@ def render_frame_bounds(frames) -> tuple[int, int]:
     """Return the first/last distinct frame, requiring an animatable span."""
     ordered = sorted({int(frame) for frame in frames})
     if len(ordered) < 2:
-        raise ValueError("Capture at least two camera beats to render a video")
+        raise ValueError("Capture at least two keyframes to render a video")
     return ordered[0], ordered[-1]
 
 

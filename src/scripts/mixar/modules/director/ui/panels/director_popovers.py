@@ -81,7 +81,7 @@ def _draw_shot_header(layout, state, shot):
 def _draw_session(layout, state, shot):
     if shot.state == 'LOCKED':
         box = _section(layout, "Locked Take", icon='LOCKED')
-        box.label(text=f"{len(shot.beats)} camera beats are frozen.")
+        box.label(text=f"{len(shot.beats)} keyframes are frozen.")
         if shot.manifest_text_name:
             box.label(text=shot.manifest_text_name, icon='TEXT')
         button = box.row()
@@ -181,7 +181,7 @@ def _draw_camera_settings(layout, scene, state, shot):
     timing = _section(layout, "Timing", icon='TIME')
     timing.enabled = editable
     timing.prop(scene.render, "fps", text="Frame Rate")
-    timing.prop(state, "beat_seconds", text="Space Beats")
+    timing.prop(state, "beat_seconds", text="Space Keyframes")
 
 
 def _draw_direction(layout, shot):
@@ -237,7 +237,27 @@ class MIXAR_PT_director_camera_popover(Panel):
         _draw_direction(layout, shot)
 
 
+class MIXAR_PT_director_animation_popover(Panel):
+    """Placeholder animation presets for the selected character."""
+
+    bl_idname = "MIXAR_PT_director_animation_popover"
+    bl_label = "Animation"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'HEADER'
+
+    def draw(self, context):
+        layout = self.layout
+        obj = context.active_object
+        box = _section(layout, "Animate", icon='ARMATURE_DATA')
+        if obj is not None:
+            box.label(text=obj.name, icon='OBJECT_DATA')
+        box.separator(factor=0.4)
+        box.label(text="Animation presets are coming soon.", icon='INFO')
+        box.label(text="Keyframe character motion here.")
+
+
 classes = (
     MIXAR_PT_director_shots_popover,
     MIXAR_PT_director_camera_popover,
+    MIXAR_PT_director_animation_popover,
 )

@@ -15,6 +15,40 @@ import bpy
 from .moodboard_utils import place_new_moodboard_item
 
 
+def get_or_create_group_index(scene, name: str) -> int:
+    """Return the index of the moodboard group named *name*, creating it once."""
+    groups = getattr(scene, "mixie_moodboard_groups", None)
+    if groups is None or not name:
+        return -1
+    for index, group in enumerate(groups):
+        if group.name == name:
+            return index
+    group = groups.add()
+    group.name = name
+    return len(groups) - 1
+
+
+def add_packed_image_to_board(
+    scene,
+    image,
+    *,
+    group_index: int = -1,
+    generation_prompt: str = "",
+    selected: bool = False,
+):
+    """Place an already-packed Image datablock onto *scene*'s moodboard."""
+    item = scene.mixie_moodboard_images.add()
+    item.image = image
+    item.scale = 1.0
+    item.z_order = len(scene.mixie_moodboard_images) - 1
+    item.generation_prompt = generation_prompt
+    item.selected = bool(selected)
+    if group_index >= 0:
+        item.group_index = group_index
+    place_new_moodboard_item(scene, item)
+    return item
+
+
 def import_packed_still(
     scene,
     source_path: str,
@@ -22,6 +56,7 @@ def import_packed_still(
     display_name: str = "",
     generation_prompt: str = "",
     selected: bool = False,
+    group_name: str = "",
 ):
     """Pack a still into the blend and place it on *scene*'s moodboard.
 
@@ -47,6 +82,8 @@ def import_packed_still(
         item.z_order = len(scene.mixie_moodboard_images) - 1
         item.generation_prompt = generation_prompt
         item.selected = bool(selected)
+        if group_name:
+            item.group_index = get_or_create_group_index(scene, group_name)
         place_new_moodboard_item(scene, item)
         return item
     except Exception:
@@ -82,6 +119,7 @@ def import_generated_video(
     generation_prompt: str = "",
     display_name: str = "",
     selected: bool = False,
+    group_name: str = "",
 ) -> str:
     """Move an MP4 into durable storage and add it to a moodboard.
 
@@ -112,6 +150,8 @@ def import_generated_video(
         item.z_order = len(scene.mixie_moodboard_images) - 1
         item.generation_prompt = generation_prompt
         item.selected = bool(selected)
+        if group_name:
+            item.group_index = get_or_create_group_index(scene, group_name)
         place_new_moodboard_item(scene, item)
         return image.name
     except Exception:

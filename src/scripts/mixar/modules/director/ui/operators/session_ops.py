@@ -131,7 +131,7 @@ class MIXAR_OT_director_new_shot(Operator):
 
 
 class MIXAR_OT_director_finish(Operator):
-    """Leave directing mode while preserving the camera and camera beats"""
+    """Leave directing mode while preserving the camera and keyframes"""
 
     bl_idname = "mixar.director_finish"
     bl_label = "Finish Directing"

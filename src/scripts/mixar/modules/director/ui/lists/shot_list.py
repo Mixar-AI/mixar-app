@@ -24,7 +24,7 @@ class MIXAR_UL_director_shots(UIList):
         row = layout.row(align=True)
         icon = 'LOCKED' if item.state == 'LOCKED' else 'CAMERA_DATA'
         row.label(text=item.name or "Untitled Shot", icon=icon)
-        row.label(text=f"T{item.version} · {len(item.beats)} beats")
+        row.label(text=f"T{item.version} · {len(item.beats)} keyframes")
 
 
 classes = (MIXAR_UL_director_shots,)

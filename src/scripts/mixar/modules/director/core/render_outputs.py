@@ -41,7 +41,7 @@ class _RenderStartDeferred(RuntimeError):
 
 
 def shot_frame_range(shot) -> tuple[int, int]:
-    """Return the render span defined by the shot's camera beats."""
+    """Return the render span defined by the shot's keyframes."""
     return render_frame_bounds(beat.frame for beat in shot.beats)
 
 
@@ -189,6 +189,7 @@ def _record_output(scene, shot, kind: str, path: str) -> None:
         generation_prompt=prompt,
         display_name=display_name,
         selected=False,
+        group_name=shot.name,
     )
     output = shot.render_outputs.add()
     output.output_id = uuid.uuid4().hex
