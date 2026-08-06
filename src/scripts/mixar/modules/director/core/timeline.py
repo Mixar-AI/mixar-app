@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from .anim_curves import assigned_fcurves as _assigned_fcurves
 from .frame_math import clamp_frame_delta
 from .shot_api import refresh_manifest
 
@@ -17,27 +18,6 @@ _CAMERA_PATHS = {
     "rotation_axis_angle",
 }
 _FRAME_EPSILON = 1.0e-4
-
-
-def _assigned_fcurves(animated_id):
-    animation_data = getattr(animated_id, "animation_data", None)
-    action = getattr(animation_data, "action", None)
-    if action is None:
-        return ()
-
-    try:
-        from bpy_extras.anim_utils import (
-            animdata_get_channelbag_for_assigned_slot,
-        )
-
-        channelbag = animdata_get_channelbag_for_assigned_slot(animation_data)
-    except (AttributeError, ImportError, RuntimeError):
-        channelbag = None
-    if channelbag is not None:
-        return tuple(channelbag.fcurves)
-
-    # Compatibility for legacy actions opened from older Blender versions.
-    return tuple(getattr(action, "fcurves", ()))
 
 
 def _director_keyframes(animated_id, data_paths: set[str], frames: set[int]):

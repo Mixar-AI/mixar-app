@@ -32,12 +32,12 @@ _TRANSFORM_PATHS = {
 
 
 def _transform_fcurves(camera):
-    animation = getattr(camera, "animation_data", None)
-    action = getattr(animation, "action", None)
-    if action is None:
-        return ()
+    from .anim_curves import assigned_fcurves
+
     return tuple(
-        fcurve for fcurve in action.fcurves if fcurve.data_path in _TRANSFORM_PATHS
+        fcurve
+        for fcurve in assigned_fcurves(camera)
+        if fcurve.data_path in _TRANSFORM_PATHS
     )
 
 

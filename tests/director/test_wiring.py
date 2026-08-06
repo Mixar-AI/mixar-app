@@ -399,6 +399,19 @@ def test_timeline_strip_can_split_and_delete():
     assert "purge_camera_animation(shot.camera)" in capture
     assert "purge_camera_animation(camera)" in shot_api
     assert "camera_shared_elsewhere" in shot_api
+    # Blender 5 stores animation in slotted actions: Action.fcurves is
+    # gone, so every F-curve read/removal goes through core/anim_curves.py
+    # (assigned-slot channelbag, legacy fallback for old files).
+    anim_curves = _read("core/anim_curves.py")
+    handheld_source = _read("core/handheld.py")
+    timeline_source = _read("core/timeline.py")
+    assert "animdata_get_channelbag_for_assigned_slot" in anim_curves
+    assert "def remove_fcurves" in anim_curves
+    assert "action.fcurves" not in capture
+    assert "action.fcurves" not in handheld_source
+    assert "assigned_fcurves" in handheld_source
+    assert "remove_fcurves" in capture
+    assert "from .anim_curves import assigned_fcurves" in timeline_source
     assert "class MIXAR_OT_director_split_strip" in strip_ops
     assert "class MIXAR_OT_director_clear_strip" in strip_ops
     assert "class MIXAR_OT_director_strip_menu" in strip_ops

@@ -64,20 +64,12 @@ def purge_camera_animation(camera) -> None:
     camera. Director owns its shot cameras' motion, so when the last shot
     referencing a camera lets go, the motion goes with it.
     """
+    from .anim_curves import remove_fcurves
     from .handheld import remove_handheld
 
     remove_handheld(camera)
-    for owner, paths in (
-        (camera, _CAMERA_MOTION_PATHS),
-        (camera.data, {"lens"}),
-    ):
-        animation = getattr(owner, "animation_data", None)
-        action = getattr(animation, "action", None)
-        if action is None:
-            continue
-        stale = [fc for fc in action.fcurves if fc.data_path in paths]
-        for fcurve in stale:
-            action.fcurves.remove(fcurve)
+    remove_fcurves(camera, _CAMERA_MOTION_PATHS)
+    remove_fcurves(camera.data, {"lens"})
 
 
 def camera_shared_elsewhere(scene, shot) -> bool:
