@@ -370,6 +370,10 @@ class MIXIE_PT_gen_scene_gen_exp(Panel):
 
 
 class MIXIE_PT_gen_world_labs(Panel):
+    # Catalog-only capability (AI Render pattern, no offline fallback): the
+    # backend world_labs job type is not ported to the new job_queue yet, so
+    # the tab stays hidden until the catalog publishes a world_labs service.
+    # Local splat IMPORT (mixie.import_splat) works regardless of this panel.
     bl_label = "World Labs"
     bl_idname = "MIXIE_PT_gen_world_labs"
     bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
@@ -380,7 +384,15 @@ class MIXIE_PT_gen_world_labs(Panel):
 
     @classmethod
     def poll(cls, context):
-        return _moodboard_poll(context)
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("world_labs"))
+        except Exception:
+            return False
 
     def draw_header(self, context):
         self.layout.label(text="", icon='WORLD')
