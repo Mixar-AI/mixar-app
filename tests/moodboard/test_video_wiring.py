@@ -40,10 +40,23 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     assert "moodboard_toggle_video_playback" in select
     assert "play_button_hit" in select
     assert "KM_DBL_CLICK" in select
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in select
+    assert "g_video_playback" in preview
     assert "BKE_image_acquire_ibuf" in preview
     assert "MOV_get_duration_frames" in preview
     assert "MOV_get_fps" in preview
     assert "WM_event_timer_add_notifier" in preview
+    assert "moodboard_video_playback_frame" in preview
+
+
+def test_inline_playback_stops_when_the_pointer_leaves_its_tile():
+    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+
+    assert "stop_video_playback_outside_tile" in preview
+    assert "hovered_video_index_from_event" in preview
+    assert "playback.playing = false" in preview
+    assert "MIXIE_OT_moodboard_video_hover" in preview
+    assert "Stop inline moodboard video playback when the pointer leaves its tile" in preview
 
 
 def test_inline_playback_is_runtime_only_and_cleans_up_on_shutdown():
@@ -64,6 +77,7 @@ def test_movie_thumbnail_has_a_play_affordance():
     assert "image->source == IMA_SRC_MOVIE" in draw
     assert "draw_video_playback_overlay" in draw
     assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in draw
+    assert "if (is_playing)" in draw
 
 
 def test_file_picker_keeps_movies_linked_to_their_source():

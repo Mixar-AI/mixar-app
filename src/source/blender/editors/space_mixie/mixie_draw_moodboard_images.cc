@@ -146,6 +146,27 @@ static void draw_gpu_texture_quad(blender::gpu::Texture *tex,
   GPU_texture_unbind(tex);
 }
 
+void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds)
+{
+  if (!image) return;
+  ImageUser movie_user{};
+  ImageUser *image_user = nullptr;
+  if (image->source == IMA_SRC_MOVIE) {
+    bool is_playing = false;
+    BKE_imageuser_default(&movie_user);
+    movie_user.framenr = moodboard_video_playback_frame(image, &is_playing);
+    image_user = &movie_user;
+  }
+  blender::gpu::Texture *texture = get_cached_srgb_texture(image, image_user);
+  if (!texture) return;
+  const float source_w = float(GPU_texture_width(texture)), source_h = float(GPU_texture_height(texture));
+  const float scale_x = BLI_rctf_size_x(&bounds) / std::max(source_w, 1.0f);
+  const float scale_y = BLI_rctf_size_y(&bounds) / std::max(source_h, 1.0f);
+  const float scale = std::min(scale_x, scale_y);
+  const float width = source_w * scale, height = source_h * scale;
+  const float x = BLI_rctf_cent_x(&bounds) - width * 0.5f, y = BLI_rctf_cent_y(&bounds) - height * 0.5f;
+  draw_gpu_texture_quad(texture, x, y, width, height);
+}
 /** Draw a screen-size-stable play/pause affordance over a movie frame. */
 static void draw_video_playback_overlay(View2D *v2d,
                                         const float center_x,
@@ -224,6 +245,13 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
   while (iter.valid) {
     PointerRNA itemptr = iter.ptr;
 
+    if (g_img_props.embedded_node_id &&
+        RNA_property_string_length(&itemptr, g_img_props.embedded_node_id) > 0)
+    {
+      RNA_property_collection_next(&iter);
+      continue;
+    }
+
     /* Use cached property pointers for faster access */
     if (g_img_props.image && g_img_props.position_x && g_img_props.position_y &&
         g_img_props.scale)
@@ -261,6 +289,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
         bool flip_vertical = g_img_props.flip_vertical ?
                                  RNA_property_boolean_get(&itemptr, g_img_props.flip_vertical) :
                                  false;
+        const bool is_selected = g_img_props.selected &&
+                                 RNA_property_boolean_get(&itemptr, g_img_props.selected);
 
         /* Skip images that can't be drawn (like Render Result without data) */
         if (image->source == IMA_SRC_VIEWER) {
@@ -332,6 +362,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           /* Translate back from center */
           GPU_matrix_translate_2f(-center_x, -center_y);
 
+          mixie_draw_moodboard_media_frame(pos_x, pos_y, display_width, display_height, is_selected);
+
           /* Draw using cached GPU texture */
           GPU_blend(GPU_BLEND_ALPHA_PREMULT);
           GPU_texture_filter_mode(gpu_tex, true);
@@ -339,9 +371,6 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           GPU_blend(GPU_BLEND_NONE);
 
           /* Draw selection overlay if selected */
-          bool is_selected = g_img_props.selected ?
-                                 RNA_property_boolean_get(&itemptr, g_img_props.selected) :
-                                 false;
           if (is_selected) {
             mixie_draw_moodboard_selection_overlay(v2d, pos_x, pos_y, display_width, display_height);
           }
@@ -387,6 +416,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             /* Translate back from center */
             GPU_matrix_translate_2f(-center_x, -center_y);
 
+            mixie_draw_moodboard_media_frame(pos_x, pos_y, display_width, display_height, is_selected);
+
             /* Draw image using immediate mode (fallback).
              * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
             IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
@@ -426,9 +457,6 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             GPU_blend(GPU_BLEND_NONE);
 
             /* Draw selection overlay if selected */
-            bool is_selected = g_img_props.selected ?
-                                   RNA_property_boolean_get(&itemptr, g_img_props.selected) :
-                                   false;
             if (is_selected) {
               mixie_draw_moodboard_selection_overlay(
                   v2d, pos_x, pos_y, display_width, display_height);
