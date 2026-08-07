@@ -55,7 +55,11 @@ SEGMENT_JOB_PROP = "mixar_segment_job_id"
 # POLL CONFIGURATION
 # ============================================================================
 
-MAX_POLL_DURATION = 1200.0  # 20 minutes
+# Client-side ceiling on the waiting-for-the-backend phase. It must stay >= the
+# backend's own budgets (job_queue_configs: default_queue_timeout_s +
+# default_execution_timeout_s), or the client cancels a job the user has already
+# paid for while the backend is still working on it.
+MAX_POLL_DURATION = 3600.0  # 60 minutes
 
 # Maximum consecutive poll errors before marking job as FAILED
 MAX_CONSECUTIVE_POLL_ERRORS = 5
