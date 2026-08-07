@@ -25,6 +25,9 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.onboarding.constants import (
+    CATEGORY_IMAGE_GEN,
+    CATEGORY_IMAGE_TO_3D,
+    CATEGORY_RETOPOLOGY,
     OP_CARD_MODAL,
     STEP_INFO_IMAGE_TO_3D,
     STEP_INFO_IMAGEGEN,
@@ -344,15 +347,41 @@ def redraw_moodboard_regions() -> None:
 # Sidebar category switching.
 # ---------------------------------------------------------------------------
 
+# StepDef.category holds the offline fallback label; the live tab
+# category is catalog-driven, so map the fallback back to its capability
+# key and resolve the current label before switching.
+_CATEGORY_CAPABILITIES = {
+    CATEGORY_IMAGE_GEN: "image_gen",
+    CATEGORY_IMAGE_TO_3D: "model_gen",
+    CATEGORY_RETOPOLOGY: "retopology",
+}
+
+
+def _resolve_category(category_name: str) -> str:
+    """Current catalog-driven category for a fallback label. Never raises."""
+    capability_key = _CATEGORY_CAPABILITIES.get(category_name)
+    if not capability_key:
+        return category_name
+    try:
+        from mixar.modules.moodboard.ui.moodboard_sidebar_panels import (
+            get_tab_category,
+        )
+        return get_tab_category(capability_key, category_name)
+    except Exception:
+        return category_name
+
+
 def switch_sidebar_category(category_name: str) -> None:
     """Open the moodboard's N-panel sidebar (if collapsed) and
-    switch its active category to ``category_name``.
+    switch its active category to ``category_name`` (a fallback label
+    from ``constants``, resolved to the tab's current catalog label).
 
     Restricted to MIXIE areas so we don't barge into a regular 3D
     viewport whose sidebar the user had collapsed. Falls back to
     VIEW_3D only if no MIXIE area is currently visible (Mixar
     panels register there if MIXIE_SPACE_AVAILABLE is False).
     """
+    category_name = _resolve_category(category_name)
     targets = _find_target_areas()
     for area in targets:
         _ensure_sidebar_open(area)

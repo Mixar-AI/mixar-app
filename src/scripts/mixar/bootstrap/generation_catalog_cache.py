@@ -152,6 +152,7 @@ def get_catalog_version() -> Optional[str]:
 
 get_capabilities = _queries.get_capabilities
 get_capability = _queries.get_capability
+get_capability_label = _queries.get_capability_label
 get_capability_for_service = _queries.get_capability_for_service
 get_services = _queries.get_services
 get_service = _queries.get_service
@@ -288,6 +289,14 @@ def _on_catalog_swapped() -> None:
         pass
     except Exception as exc:
         logger.error("Generation param engine rebuild failed: %s", exc)
+    # Re-register moodboard sidebar tabs whose capability label was renamed
+    # (no-op until the panels module loads / when nothing changed). We are
+    # on a main-thread timer here, as bpy class re-registration requires.
+    try:
+        from mixar.modules.moodboard.ui.moodboard_tab_labels import refresh_tab_labels
+        refresh_tab_labels()
+    except Exception as exc:
+        logger.error("Moodboard tab label refresh failed: %s", exc)
     trigger_ui_redraw()
     return None
 

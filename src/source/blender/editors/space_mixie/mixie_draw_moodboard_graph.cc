@@ -143,6 +143,93 @@ static const char *state_label(const int state)
   return labels[std::clamp(state, 0, 5)];
 }
 
+static void draw_text_centered(
+    const char *text, const float center_x, const float y, const float size, const float alpha)
+{
+  const int font_id = BLF_default();
+  BLF_size(font_id, size);
+  const float width = BLF_width(font_id, text, strlen(text));
+  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
+  BLF_position(font_id, center_x - width * 0.5f, y, 0.0f);
+  BLF_draw(font_id, text, strlen(text));
+}
+
+static void draw_text_centered_clipped(const char *text,
+                                       const float center_x,
+                                       const float y,
+                                       const float max_width,
+                                       const float size,
+                                       const float alpha)
+{
+  const int font_id = BLF_default();
+  BLF_size(font_id, size);
+  const char *ellipsis = "...";
+  size_t draw_len = strlen(text);
+  float draw_width = BLF_width(font_id, text, draw_len);
+  bool clipped = false;
+  if (draw_width > max_width) {
+    const float ellipsis_width = BLF_width(font_id, ellipsis, 3);
+    draw_len = BLF_width_to_strlen(
+        font_id, text, draw_len, std::max(0.0f, max_width - ellipsis_width), &draw_width);
+    clipped = true;
+  }
+  const float x = center_x - (draw_width + (clipped ? BLF_width(font_id, ellipsis, 3) : 0.0f)) * 0.5f;
+  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
+  BLF_position(font_id, x, y, 0.0f);
+  BLF_draw(font_id, text, draw_len);
+  if (clipped) {
+    BLF_position(font_id, x + draw_width, y, 0.0f);
+    BLF_draw(font_id, ellipsis, 3);
+  }
+}
+
+/* A deselected (or too-zoomed-out) draft card would otherwise render as an
+ * unexplained empty box: its prompt field and Generate button only exist in
+ * the screen-space toolbar, which needs the node selected and large enough on
+ * screen. Echo the drafted prompt, or say how to get the controls back. */
+static void draw_draft_hint(PointerRNA *node, const rctf &rect)
+{
+  char prompt[MIXIE_GRAPH_PROMPT_PREVIEW_BUF];
+  mixie_rna_string_get_clamped(node, "prompt", prompt, sizeof(prompt));
+  const float center_x = BLI_rctf_cent_x(&rect);
+  const float center_y = BLI_rctf_cent_y(&rect);
+  const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
+  if (prompt[0]) {
+    draw_text_centered_clipped(prompt, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
+    draw_text_centered_clipped(
+        "Click to edit and generate", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+  }
+  else {
+    draw_text_centered_clipped(
+        "Describe what you want to create", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Click this block to type a prompt", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+  }
+}
+
+/* Queued/Running/Failed/Cancelled tiles without a preview get the same
+ * centered layout: the state as the headline, the prompt (or a retry hint)
+ * beneath it. The tiny corner label alone read as a broken empty card. */
+static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
+{
+  char prompt[MIXIE_GRAPH_PROMPT_PREVIEW_BUF];
+  mixie_rna_string_get_clamped(node, "prompt", prompt, sizeof(prompt));
+  const float center_x = BLI_rctf_cent_x(&rect);
+  const float center_y = BLI_rctf_cent_y(&rect);
+  const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
+  const char *title = ELEM(state, 1, 2) ?
+                          (state == 1 ? "Queued..." : "Generating...") :
+                          (state == 4 ? "Generation failed" : "Cancelled");
+  draw_text_centered_clipped(title, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
+  if (ELEM(state, 4, 5)) {
+    draw_text_centered_clipped(
+        "Click to edit the prompt and try again", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+  }
+  else if (prompt[0]) {
+    draw_text_centered_clipped(prompt, center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+  }
+}
+
 void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
 {
   Scene *scene = CTX_data_scene(C);
@@ -209,8 +296,27 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
             }
           }
         }
+        const bool has_visual = preview_image || object_ptr.data;
         if (ELEM(state, 1, 2, 4, 5)) {
-          draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
+          if (has_visual) {
+            /* Keep the unobtrusive corner label over an existing preview
+             * (Edit & Run Again keeps the previous result visible). */
+            draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
+          }
+          else {
+            draw_state_hint(&node, rect, state);
+          }
+        }
+        else if (state == 0 && !has_visual) {
+          float zoom_x, zoom_y;
+          UI_view2d_scale_get(v2d, &zoom_x, &zoom_y);
+          const bool controls_visible =
+              selected &&
+              BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
+              BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
+          if (!controls_visible) {
+            draw_draft_hint(&node, rect);
+          }
         }
       }
       RNA_property_collection_next(&iter);
