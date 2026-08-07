@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-Moodboard Image Operators
+Moodboard Media Operators
 
-Operators for adding images to the moodboard.
+Operators for adding images and videos to the moodboard.
 """
 
 import bpy
@@ -24,26 +24,39 @@ from ....common.utils.file_select_utils import file_select_guard, mark_file_sele
 from ....common.utils.platform_utils import format_shortcut
 
 
-def _load_image_from_filepath(scene, filepath, anchor=None):
-    """Load an image from filepath and add it to the moodboard.
+def _media_filter_glob():
+    """Build the file picker filter from Blender's compiled media support."""
+    image_extensions = set(getattr(bpy.path, "extensions_image", ()))
+    movie_extensions = set(getattr(bpy.path, "extensions_movie", ()))
+    return ";".join(f"*{ext}" for ext in sorted(image_extensions | movie_extensions))
 
-    Reusable helper that loads the image into Blender, packs it, appends it to
-    the moodboard collection, and positions it into visible free space centred
-    on *anchor* (canvas coords, e.g. the cursor) or the viewport centre when
-    *anchor* is ``None``.  Returns the new item on success or None.
+
+def _load_media_from_filepath(scene, filepath, anchor=None):
+    """Load an image or movie from filepath and add it to the moodboard.
+
+    Reusable helper that loads the media into Blender, packs still images,
+    keeps movies linked to their source path, appends it to the moodboard
+    collection, and positions it into visible free space centred on *anchor*
+    (canvas coords, e.g. the cursor) or the viewport centre when *anchor* is
+    ``None``. Returns the new item on success or None.
 
     Args:
         scene: The current Blender scene.
-        filepath: Absolute path to the image file.
+        filepath: Absolute path to the image or movie file.
         anchor: Optional ``(x, y)`` canvas coordinates to centre the image on.
 
     Returns:
-        The newly created moodboard item, or None on failure.
+        The newly created moodboard media item, or None on failure.
     """
     try:
         img = bpy.data.images.load(filepath, check_existing=True)
         img.colorspace_settings.name = 'sRGB'
-        img.pack()
+        # Blender cannot pack movies into the blend file. Keep their original
+        # path so a later video-generation submitter can stream the real bytes.
+        if img.source != 'MOVIE':
+            img.pack()
+        elif img.frame_duration < 1 or img.size[0] <= 0 or img.size[1] <= 0:
+            return None
     except Exception:
         return None
 
@@ -56,16 +69,19 @@ def _load_image_from_filepath(scene, filepath, anchor=None):
 
 
 class MIXIE_OT_moodboard_add_image(Operator):
-    """Import image file(s) and add them to the moodboard"""
+    """Import image or video file(s) and add them to the moodboard"""
 
     bl_idname = "mixie.moodboard_add_image"
-    bl_label = "Add Image to Moodboard"
-    bl_description = f"Import image file(s) and add them to the moodboard ({format_shortcut('I')})"
+    bl_label = "Add Media to Moodboard"
+    bl_description = (
+        f"Import image or video files and add them to the moodboard "
+        f"({format_shortcut('I')})"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     filepath: StringProperty(
         name="File Path",
-        description="Path to the image file",
+        description="Path to the image or video file",
         subtype='FILE_PATH'
     )
 
@@ -81,7 +97,7 @@ class MIXIE_OT_moodboard_add_image(Operator):
     )
 
     filter_glob: StringProperty(
-        default="*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tiff;*.webp",
+        default=_media_filter_glob(),
         options={'HIDDEN'}
     )
 
@@ -114,9 +130,8 @@ class MIXIE_OT_moodboard_add_image(Operator):
 
         added_count = 0
 
-        # Each image is dropped into the nearest free slot near the viewport
-        # centre (handled by _load_image_from_filepath) so uploads never stack
-        # on top of each other or on images already on the board.
+        # Each item is dropped into the nearest free slot near the viewport
+        # centre so uploads never stack on top of existing board media.
         for i, raw_filepath in enumerate(filepaths):
             # Validate and normalize the file path to prevent path traversal
             try:
@@ -129,20 +144,20 @@ class MIXIE_OT_moodboard_add_image(Operator):
                 self.report({'WARNING'}, f"File not found: {filepath}")
                 continue
 
-            item = _load_image_from_filepath(scene, filepath)
+            item = _load_media_from_filepath(scene, filepath)
             if item is None:
-                self.report({'WARNING'}, f"Failed to load image: {filepath}")
+                self.report({'WARNING'}, f"Failed to load media: {filepath}")
                 continue
 
             added_count += 1
 
         if added_count == 0:
-            self.report({'ERROR'}, "No images could be loaded")
+            self.report({'ERROR'}, "No media could be loaded")
             return {'CANCELLED'}
         elif added_count == 1:
-            self.report({'INFO'}, "Added 1 image to moodboard")
+            self.report({'INFO'}, "Added 1 media item to moodboard")
         else:
-            self.report({'INFO'}, f"Added {added_count} images to moodboard")
+            self.report({'INFO'}, f"Added {added_count} media items to moodboard")
 
         mark_file_select_executed(self)
         return {'FINISHED'}
@@ -179,11 +194,11 @@ def _get_existing_images(self, context):
 
 
 class MIXIE_OT_moodboard_add_existing_image(Operator):
-    """Pick an image already loaded in Blender and add it to the moodboard"""
+    """Pick image or video media already loaded in Blender"""
 
     bl_idname = "mixie.moodboard_add_existing_image"
-    bl_label = "Add Existing Image"
-    bl_description = "Pick an image already loaded in Blender and add it to the moodboard"
+    bl_label = "Add Existing Media"
+    bl_description = "Pick an image or video already loaded in Blender"
     bl_options = {'REGISTER', 'UNDO'}
     bl_property = "image_name"
 
@@ -304,7 +319,7 @@ class MIXIE_OT_moodboard_paste_image(Operator):
                 self.report({'WARNING'}, "No image found in clipboard")
                 return {'CANCELLED'}
 
-            item = _load_image_from_filepath(context.scene, filepath, anchor=anchor)
+            item = _load_media_from_filepath(context.scene, filepath, anchor=anchor)
             if item is None:
                 self.report({'ERROR'}, "Failed to load clipboard image")
                 return {'CANCELLED'}
@@ -329,7 +344,7 @@ class MIXIE_OT_moodboard_paste_image(Operator):
             return {'CANCELLED'}
 
         try:
-            item = _load_image_from_filepath(context.scene, tmp_path, anchor=anchor)
+            item = _load_media_from_filepath(context.scene, tmp_path, anchor=anchor)
         finally:
             # Clean up temp file regardless of outcome
             try:

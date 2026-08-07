@@ -13,6 +13,7 @@ import os
 
 import bpy
 from bpy.types import Operator
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.image_utils import compress_image_for_upload
@@ -192,7 +193,7 @@ class MIXIE_OT_scene_gen_exp_generate_images(Operator):
         if use_selected:
             selected_mb = [
                 item for item in scene.mixie_moodboard_images
-                if item.selected and item.image
+                if item.selected and is_still_item(item)
             ]
             if not selected_mb:
                 self.report({"WARNING"}, "Please select an image in the moodboard")
@@ -311,7 +312,7 @@ class MIXIE_OT_scene_gen_exp_extract_labels(Operator):
         if use_selected:
             selected = [
                 item for item in scene.mixie_moodboard_images
-                if item.selected and item.image
+                if item.selected and is_still_item(item)
             ]
             if not selected:
                 self.report({"WARNING"}, "Please select an image in the moodboard")

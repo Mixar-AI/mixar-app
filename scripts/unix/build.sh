@@ -188,6 +188,39 @@ else
     echo "Warning: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin"
 fi
 
+# Re-sign the dev build with a stable identity so macOS Keychain "Always
+# Allow" persists across rebuilds (opt-in via MIXAR_DEV_SIGN_ID in .env; see
+# scripts/unix/setup_dev_codesign.sh). Without this the linker's ad-hoc
+# signature changes every build, and Keychain re-prompts for the
+# MixarSafeStorage login tokens on each rebuild. Only the main executable is
+# signed — the process's code identity is what Keychain ACLs match on.
+# Release/notarization signing lives in package.sh and is unaffected.
+if [[ "$PLATFORM" == "macOS" && -n "${MIXAR_DEV_SIGN_ID:-}" ]]; then
+    MIXAR_APP_BINARY="$BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
+    # get-task-allow keeps the binary attachable by lldb, matching what an
+    # ad-hoc dev signature allows.
+    DEV_SIGN_ENTITLEMENTS="$BUILD_ENV_DIR/dev_codesign_entitlements.plist"
+    cat > "$DEV_SIGN_ENTITLEMENTS" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.get-task-allow</key>
+    <true/>
+</dict>
+</plist>
+EOF
+    echo "Signing dev build with identity: $MIXAR_DEV_SIGN_ID"
+    if codesign --force --sign "$MIXAR_DEV_SIGN_ID" \
+        --entitlements "$DEV_SIGN_ENTITLEMENTS" "$MIXAR_APP_BINARY"; then
+        echo "Dev codesign OK — Keychain 'Always Allow' will persist across rebuilds."
+    else
+        echo "Warning: dev codesign failed. The build is still usable, but Keychain"
+        echo "will re-prompt after every rebuild. Create the identity with:"
+        echo "  ./scripts/unix/setup_dev_codesign.sh"
+    fi
+fi
+
 # Done
 echo "=== Build Complete ==="
 echo "Python packages installed from: $REQUIREMENTS_FILE"
