@@ -312,6 +312,7 @@ def _enable_splat_render(splat_objs: list) -> list:
     the proxy operator isn't available, the splats stay in point-cloud preview
     and the user can create a proxy manually.
     """
+    _ensure_kiri()
     proxy_op = _resolve_op(_KIRI_PROXY_OP)
     if proxy_op is None or not splat_objs:
         if proxy_op is None:
@@ -356,8 +357,28 @@ def _new_collection(name: str) -> bpy.types.Collection:
     return collection
 
 
+def _ensure_kiri() -> None:
+    """Enable the vendored KIRI addon on demand (self-heal).
+
+    The bootstrap normally enables it via a deferred timer, but if that was
+    missed (old prefs, startup-order regressions) the import must not quietly
+    degrade to a plain point cloud when the addon is sitting in the bundle.
+    Session-only enable — prefs persistence stays the bootstrap's job.
+    """
+    if _resolve_op(_KIRI_IMPORT_PLY_OP) is not None:
+        return
+    try:
+        import addon_utils
+
+        addon_utils.enable("kiri_3dgs_render", default_set=False)
+        logger.info("[WorldLabs] enabled KIRI 3DGS Render on demand")
+    except Exception as e:  # noqa: BLE001 - addon genuinely absent/broken
+        logger.debug("[WorldLabs] on-demand KIRI enable failed: %s", e)
+
+
 def _import_splat_ply(ply_path: str) -> None:
     """Import the splat via KIRI; fall back to native PLY (mesh-only) on failure."""
+    _ensure_kiri()
     kiri_op = _resolve_op(_KIRI_IMPORT_PLY_OP)
     if kiri_op is not None:
         try:

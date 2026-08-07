@@ -16,10 +16,17 @@ extension wheels (open3d/scipy/dash, ~1 GB) are deliberately NOT vendored:
 the import + render path never touches them and the addon's only open3d
 uses are availability-guarded. See the vendored README.mixar.md.
 
-This bootstrap simply enables the addon if it is present. It is a graceful
-no-op when the addon hasn't been vendored: the splat importer falls back
-to a plain (non-splat) PLY import and logs a warning, so the rest of Mixar is
-unaffected.
+**The enable MUST be deferred to a timer.** Bootstrap ``register()`` runs
+during startup-script registration, when ``bpy.context`` is the restricted
+``_RestrictContext`` — and KIRI's own ``register()`` reaches into the window
+manager (addon keymaps), so ``addon_utils.enable`` fails there and the addon
+silently stays off (the shipped build imported splats as plain green point
+clouds). A one-shot ``bpy.app.timers`` callback runs after startup completes
+with a real context, where the same enable succeeds.
+
+The splat importer also self-heals (``world_labs_importer._ensure_kiri``)
+by enabling on demand, so a failure here degrades to a slightly slower first
+import rather than a lost feature.
 
 NOTE: the addon folder must be a valid Python module name — it cannot start
 with a digit, so the vendored folder is ``kiri_3dgs_render`` (not
@@ -34,39 +41,70 @@ logger = get_logger(__name__)
 # Vendored addon module/folder name under scripts/addons_core/.
 _ADDON_MODULE = "kiri_3dgs_render"
 
+_MAX_ATTEMPTS = 3
+_RETRY_INTERVAL_S = 2.0
+_attempts = 0
 
-def register() -> None:
-    """Enable the KIRI 3DGS Render addon if it is bundled."""
+
+def _enable_kiri():
+    """Timer callback: enable the vendored addon; retry a few times.
+
+    Returns None to stop the timer, or a float to run again later.
+    """
+    global _attempts
+    _attempts += 1
     try:
         import addon_utils
-    except Exception as exc:  # pragma: no cover - bpy/addon_utils always present in Blender
-        logger.debug("addon_utils unavailable: %s", exc)
-        return
 
-    # Is the addon discoverable? (present under a scripts/addons path)
-    available = {mod.__name__ for mod in addon_utils.modules()}
-    if _ADDON_MODULE not in available:
-        logger.info(
-            "KIRI 3DGS Render addon ('%s') not bundled; World Labs splat "
-            "rendering will be unavailable until it is vendored under "
-            "scripts/addons/. World import falls back to plain PLY.",
-            _ADDON_MODULE,
-        )
-        return
+        available = {mod.__name__ for mod in addon_utils.modules()}
+        if _ADDON_MODULE not in available:
+            if _attempts < _MAX_ATTEMPTS:
+                return _RETRY_INTERVAL_S
+            logger.info(
+                "KIRI 3DGS Render addon ('%s') not bundled; splat rendering "
+                "will be unavailable until it is vendored under "
+                "scripts/addons_core/. Splat import falls back to plain PLY.",
+                _ADDON_MODULE,
+            )
+            return None
 
-    try:
-        default_set, loaded = addon_utils.check(_ADDON_MODULE)
+        _default_set, loaded = addon_utils.check(_ADDON_MODULE)
         if not loaded:
             addon_utils.enable(_ADDON_MODULE, default_set=True, persistent=True)
             logger.info("Enabled KIRI 3DGS Render addon ('%s')", _ADDON_MODULE)
-    except Exception as exc:
+        return None
+    except Exception as exc:  # noqa: BLE001
+        if _attempts < _MAX_ATTEMPTS:
+            logger.debug(
+                "KIRI enable attempt %d failed (%s); retrying", _attempts, exc,
+            )
+            return _RETRY_INTERVAL_S
         logger.warning("Failed to enable KIRI 3DGS Render addon: %s", exc)
+        return None
+
+
+def register() -> None:
+    """Schedule the addon enable for after startup (real context)."""
+    global _attempts
+    _attempts = 0
+    try:
+        import bpy
+
+        bpy.app.timers.register(_enable_kiri, first_interval=0.5)
+    except Exception as exc:  # pragma: no cover - bpy always present in Blender
+        logger.debug("Could not schedule KIRI addon enable: %s", exc)
 
 
 def unregister() -> None:
-    """Leave the addon enabled on teardown.
+    """Cancel a pending enable; leave an already-enabled addon alone.
 
-    We intentionally do not disable it on unregister: it is a user-facing addon
-    and may be in use independently of the World Labs feature.
+    We intentionally do not disable the addon here: it is a user-facing addon
+    and may be in use independently of the splat features.
     """
-    return
+    try:
+        import bpy
+
+        if bpy.app.timers.is_registered(_enable_kiri):
+            bpy.app.timers.unregister(_enable_kiri)
+    except Exception:  # noqa: BLE001
+        pass

@@ -69,17 +69,19 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
     stem = name or os.path.splitext(os.path.basename(filepath))[0] or "Splat"
 
     ply_path = filepath
-    temp_ply = ""
+    temp_dir = ""
     if ext == ".spz":
         from mixar.modules.moodboard.core.world_labs_spz import spz_to_ply
 
         with open(filepath, "rb") as f:
             spz_bytes = f.read()
         ply_bytes = spz_to_ply(spz_bytes)  # raises SpzError (a ValueError)
-        fd, temp_ply = tempfile.mkstemp(suffix=".ply", prefix="splat_import_")
-        with os.fdopen(fd, "wb") as f:
+        # KIRI names the imported object after the PLY file, so the temp PLY
+        # keeps the source stem (a mkstemp name leaks gibberish object names).
+        temp_dir = tempfile.mkdtemp(prefix="splat_import_")
+        ply_path = os.path.join(temp_dir, f"{stem}.ply")
+        with open(ply_path, "wb") as f:
             f.write(ply_bytes)
-        ply_path = temp_ply
 
     try:
         _ensure_object_mode()
@@ -108,11 +110,10 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         )
         return [o.name for o in new_objects]
     finally:
-        if temp_ply and os.path.exists(temp_ply):
-            try:
-                os.unlink(temp_ply)
-            except OSError:
-                pass
+        if temp_dir:
+            import shutil
+
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def _new_splat_collection(name: str) -> bpy.types.Collection:
