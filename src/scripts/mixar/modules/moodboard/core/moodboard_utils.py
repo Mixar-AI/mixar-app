@@ -19,6 +19,7 @@ from ..constants import (
     MOODBOARD_MULTI_IMAGE_GAP,
     MOODBOARD_MAX_PLACEMENT_RING,
 )
+from .media_utils import describe_moodboard_media, is_video_image
 
 # Re-export common geometry utilities for convenience
 from ...common.geometry_utils import point_in_polygon
@@ -230,6 +231,7 @@ class SelectedImageInfo(TypedDict):
     index: int
     image: bpy.types.Image | None
     image_name: str
+    media_type: str
     width: int
     height: int
     channels: int
@@ -239,6 +241,11 @@ class SelectedImageInfo(TypedDict):
     file_format: str
     colorspace: str
     filepath: str
+    resolved_filepath: str
+    mime_type: str
+    file_size_bytes: int
+    source_available: bool
+    frame_count: int
     position_x: float
     position_y: float
     scale: float
@@ -346,11 +353,13 @@ def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
         SelectedImageInfo dictionary with all image details
     """
     img = moodboard_img.image
+    media_info = describe_moodboard_media(moodboard_img)
 
     image_info: SelectedImageInfo = {
         "index": index,
         "image": img,
         "image_name": img.name if img else "",
+        "media_type": media_info["media_type"],
         "width": img.size[0] if img else 0,
         "height": img.size[1] if img else 0,
         "channels": img.channels if img else 0,
@@ -360,6 +369,11 @@ def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
         "file_format": img.file_format if img else "",
         "colorspace": "",
         "filepath": img.filepath if img else "",
+        "resolved_filepath": media_info["resolved_filepath"],
+        "mime_type": media_info["mime_type"],
+        "file_size_bytes": media_info["file_size_bytes"],
+        "source_available": media_info["source_available"],
+        "frame_count": media_info["frame_count"],
         "position_x": moodboard_img.position_x,
         "position_y": moodboard_img.position_y,
         "scale": moodboard_img.scale,
@@ -401,7 +415,11 @@ def get_selected_moodboard_image_objects(
 
     images = []
     for img_info in result["images"]:
-        if img_info["image"] and img_info["has_data"]:
+        if (
+            img_info["image"]
+            and img_info["has_data"]
+            and not is_video_image(img_info["image"])
+        ):
             images.append(img_info["image"])
 
     return images

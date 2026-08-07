@@ -46,6 +46,13 @@ from .moodboard_annotation_props import (
     MixieMoodboardAnnotationPoint,
     MixieMoodboardAnnotationStroke,
 )
+from .moodboard_graph_properties import (
+    MixieMoodboardActionNode,
+    MixieMoodboardAssetNode,
+    MixieMoodboardInputSocket,
+    MixieMoodboardLink,
+    MixieMoodboardNodeParameter,
+)
 from .moodboard_tab_properties import (
     MixieCharacterComponentSettings,
     MixieMoodboardReferenceImage,
@@ -61,6 +68,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
+    MixieMoodboardTabVideoGenProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,
@@ -76,6 +84,11 @@ classes = (
     MixieMoodboardSegment,
     MixieMoodboardImage,
     MixieMoodboardGroup,
+    MixieMoodboardNodeParameter,
+    MixieMoodboardInputSocket,
+    MixieMoodboardActionNode,
+    MixieMoodboardAssetNode,
+    MixieMoodboardLink,
     MixieMoodboardReferenceImage,
     MixieMoodboardTabAIRenderProps,
     MixieMoodboardTabImageGenProps,
@@ -90,6 +103,7 @@ classes = (
     MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
+    MixieMoodboardTabVideoGenProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
     # MixieSceneGenExpLabelObject,
@@ -136,6 +150,58 @@ def register():
             description="Collection of image groups",
         ),
     )
+    _safe_scene_prop(
+        'mixie_moodboard_action_nodes',
+        CollectionProperty(
+            type=MixieMoodboardActionNode,
+            name="Moodboard Action Nodes",
+            description="Persistent generative inference blocks",
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_moodboard_asset_nodes',
+        CollectionProperty(
+            type=MixieMoodboardAssetNode,
+            name="Moodboard Asset Nodes",
+            description="Persistent canvas cards for generated 3D assets",
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_moodboard_links',
+        CollectionProperty(
+            type=MixieMoodboardLink,
+            name="Moodboard Links",
+            description="Connections between moodboard media, actions, and assets",
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_moodboard_active_node_id',
+        StringProperty(
+            name="Active Moodboard Node",
+            description="Stable identifier of the selected graph node",
+            default="",
+            options={'SKIP_SAVE'},
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_moodboard_output_source_id',
+        StringProperty(
+            name="Moodboard Output Source",
+            description="Source node used by the output-handle continuation menu",
+            default="",
+            options={'SKIP_SAVE'},
+        ),
+    )
+    for axis in ('x', 'y'):
+        _safe_scene_prop(
+            f'mixie_moodboard_context_{axis}',
+            FloatProperty(
+                name=f"Moodboard Context {axis.upper()}",
+                description="Canvas position of the latest context-menu invocation",
+                default=0.0,
+                options={'SKIP_SAVE'},
+            ),
+        )
     _safe_scene_prop(
         'mixie_moodboard_selected_index',
         IntProperty(
@@ -200,6 +266,15 @@ def register():
         BoolProperty(
             name="Is Generating",
             description="Whether image generation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_video_gen_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether video generation is in progress",
             default=False,
             options={'SKIP_SAVE'},
         ),
@@ -281,7 +356,7 @@ def register():
     )
 
     # Generation progress floats (session-only)
-    for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate',
                     'pbr_gen', 'tripo_segment', 'smart_segment'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
@@ -313,11 +388,19 @@ def unregister():
         'mixie_lookdev360_is_generating',
         'mixie_lookdev_is_generating',
         'mixie_imagegen_is_generating',
+        'mixie_video_gen_is_generating',
         'mixie_scene_recon_error',
         'mixie_scene_recon_is_generating',
         'mixie_segment_to_3d_is_generating',
         'mixie_edit_tool_state',
         'mixie_moodboard_sidebar',
+        'mixie_moodboard_output_source_id',
+        'mixie_moodboard_active_node_id',
+        'mixie_moodboard_context_y',
+        'mixie_moodboard_context_x',
+        'mixie_moodboard_links',
+        'mixie_moodboard_asset_nodes',
+        'mixie_moodboard_action_nodes',
         'mixie_moodboard_selected_index',
         'mixie_moodboard_groups',
         'mixie_moodboard_textboxes',
@@ -330,7 +413,7 @@ def unregister():
 
     # WindowManager properties
     wm_attrs = []
-    for prefix in ('imagegen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate', 'pbr_gen'):
         wm_attrs.append(f'mixie_{prefix}_generate_progress')
     for attr in wm_attrs:

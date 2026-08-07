@@ -93,6 +93,9 @@ class Job:
     # Usually the service's parent capability is correct; composite workflows
     # can override it without hardcoding any human-facing label.
     origin_capability_key: str = ""
+    # Optional moodboard inference-node owner. Runtime queue listeners use
+    # this stable ID to mirror progress/errors back onto the originating node.
+    graph_node_id: str = ""
     model: str = ""
     backend_job_id: str = ""
     backend_api_type: str = ""

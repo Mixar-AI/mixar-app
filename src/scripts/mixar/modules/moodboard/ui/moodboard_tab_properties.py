@@ -29,6 +29,7 @@ from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabAnimateProps,
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
+    MixieMoodboardTabVideoGenProps,
 )
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
@@ -572,6 +573,12 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabPBRGenProps,
         name="PBR Generation Tab",
         description="Properties for PBR Generation tab"
+    )
+
+    tab_video_gen: PointerProperty(
+        type=MixieMoodboardTabVideoGenProps,
+        name="Video Gen Tab",
+        description="Properties for Seedance video generation",
     )
 
     # Scene Gen Experimental disabled — pointer intentionally not registered.
