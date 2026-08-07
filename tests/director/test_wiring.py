@@ -63,8 +63,9 @@ def test_director_has_no_n_panel_implementation():
     assert 'bl_idname = "MIXAR_PT_director"' not in python_sources
 
     assert not (DIRECTOR / "ui/panels/director_popovers.py").exists()
-    render_popover = _read("ui/panels/render_popover.py")
-    assert render_popover.count("bl_region_type = 'HEADER'") == 1
+    # Every popup is native now; no Python panel/popover survives.
+    assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
+    assert "bl_region_type = 'HEADER'" not in python_sources
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -82,6 +83,7 @@ def test_native_viewport_surface_is_registered_from_view3d():
         "view3d_director_overlay.cc",
         "view3d_director_overlay_frame.cc",
         "view3d_director_popup.cc",
+        "view3d_director_popup_render.cc",
         "view3d_director_popup_shot.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
@@ -119,8 +121,8 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "view3d_director_shots_popup_create",
         "view3d_director_camera_popup_create",
         "view3d_director_animation_popup_create",
+        "view3d_director_render_popup_create",
         "MIXAR_OT_director_capture_beat",
-        "MIXAR_OT_director_show_render",
         "MIXAR_OT_director_send_keyframes",
         "MIXAR_OT_director_send_video",
     ):
@@ -415,6 +417,52 @@ def test_tool_rail_has_accent_highlight_and_grouping():
     assert "character ? 4 : 3" in rail
     assert "MIXAR_OT_director_navigate" not in rail
     assert "MIXAR_OT_director_precise" not in rail
+
+
+def test_camera_control_is_navigate_only_and_text_only():
+    """Precise is hidden until its role is clear; Navigate is just the word.
+
+    Artist feedback: the Precise gizmo mode confused more than it helped, and
+    the hand icon on Navigate read as a pan tool. The operator and the
+    `navigation_mode` property survive (Precise stays reachable for future
+    surfaces); no native surface draws its button, and Navigate renders as a
+    text-only button on both the camera gate and the timeline dock.
+    """
+    frame = (VIEW3D / "view3d_director_overlay_frame.cc").read_text(
+        encoding="utf-8"
+    )
+    timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
+        encoding="utf-8"
+    )
+    camera_ops = _read("ui/operators/camera_ops.py")
+
+    assert "MIXAR_OT_director_precise" not in frame
+    assert "MIXAR_OT_director_precise" not in timeline
+    assert "class MIXAR_OT_director_precise" in camera_ops
+    assert '"Navigate"' in frame
+    assert '"Navigate"' in timeline
+    # Text-only: the hand icon is gone from Navigate everywhere. The one
+    # ICON_VIEW_PAN left on the gate belongs to the drag-frame tool.
+    assert frame.count("ICON_VIEW_PAN") == 1
+    assert "ICON_VIEW_PAN" not in timeline
+    assert "ICON_ORIENTATION_GIMBAL" not in frame
+    assert "ICON_ORIENTATION_GIMBAL" not in timeline
+
+
+def test_auto_key_uses_native_timeline_record_icons():
+    """The Auto Key toggle mirrors Blender's timeline auto-keying button.
+
+    Native auto-key is `ICON_RECORD_OFF` flipping to `ICON_RECORD_ON` when
+    armed (rna_scene.cc ui_icon on `use_keyframe_insert_auto`), not a static
+    REC glyph.
+    """
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
+        encoding="utf-8"
+    )
+
+    assert "ICON_RECORD_ON" in overlay
+    assert "ICON_RECORD_OFF" in overlay
+    assert "ICON_REC," not in overlay
 
 
 def test_camera_moves_reuse_the_ordinary_capture_flow():
