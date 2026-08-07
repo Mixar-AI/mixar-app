@@ -190,7 +190,12 @@ it from the node that produced it.
 VIDEO source to a Generate Video node sets the catalog `duration` parameter to
 the TOTAL length of every connected video (`node_graph.sync_video_duration_from_inputs`),
 clamped to the schema's min/max — the flat 5s catalog default silently truncated
-longer references. It runs on connect ONLY: recomputing on disconnect would
+longer references. Integer parameters round **up** (with a 1e-6 tolerance so an
+exactly-5s clip measuring 5.0000001 after the frames/fps division does not
+inflate to 6): rounding 12.4s down to 12s is the same truncation this exists to
+stop. The integer clamp uses `ceil(min)`/`floor(max)`, not the raw float bounds —
+`int()` of a clamped float lands outside a fractional bound. Seedance 2.5's
+published contract is any integer 4–30s, which the catalog seed matches. It runs on connect ONLY: recomputing on disconnect would
 discard a duration the user had since dialled in. `VIDEO_DURATION_PARAM_NAME` in
 `moodboard/constants.py` is the one place a catalog parameter is matched by NAME
 and is a documented **KNOWN CATALOG GAP** — schemas publish type/bounds/widget

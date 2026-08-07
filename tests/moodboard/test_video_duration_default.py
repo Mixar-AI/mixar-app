@@ -25,7 +25,11 @@ def _load_sync(durations_by_name, inputs):
     body = SOURCE.split("def sync_video_duration_from_inputs(scene, node) -> bool:")[1]
     body = body.split("\ndef ")[0]
     source = "def sync_video_duration_from_inputs(scene, node) -> bool:" + body
+    import math
+
     namespace = {
+        "math": math,
+        "_DURATION_EPSILON_SECONDS": 1e-6,
         "VIDEO_DURATION_PARAM_NAME": "duration",
         "input_media_items": lambda _scene, _node: inputs,
         "video_duration_seconds": lambda item: durations_by_name.get(item.name),
@@ -79,12 +83,42 @@ def test_total_is_clamped_to_the_schema_bounds():
     assert parameter.value_integer == 30
 
 
-def test_rounding_cannot_cross_a_bound():
-    parameter = _parameter(minimum=4.0, maximum=29.0)
-    sync = _load_sync({"a": 29.4}, [_clip("a")])
+def test_a_fractional_second_rounds_up_rather_than_truncating():
+    """Rounding 12.4s down to 12s is the same silent truncation of the user's
+    footage that this seeding exists to prevent."""
+    parameter = _parameter()
+    sync = _load_sync({"a": 12.4}, [_clip("a")])
 
     sync(object(), _node([parameter]))
-    assert parameter.value_integer == 29
+    assert parameter.value_integer == 13
+
+
+def test_float_error_on_a_whole_second_clip_does_not_inflate():
+    """frames/fps on an exactly-5s clip can measure 5.0000001; a bare ceil()
+    would bill the user for a 6s output."""
+    parameter = _parameter()
+    sync = _load_sync({"a": 5.0000001}, [_clip("a")])
+
+    sync(object(), _node([parameter]))
+    assert parameter.value_integer == 5
+
+
+def test_a_fractional_bound_cannot_admit_an_integer_outside_it():
+    """int() of a clamped float lands below a fractional minimum: with min=4.5,
+    int(max(round(4.5), 4.5)) is 4."""
+    parameter = _parameter(minimum=4.5, maximum=29.5)
+    sync = _load_sync({"a": 4.5}, [_clip("a")])
+
+    sync(object(), _node([parameter]))
+    assert parameter.value_integer >= 5
+
+
+def test_bounds_with_no_representable_integer_are_a_no_op():
+    parameter = _parameter(minimum=4.2, maximum=4.8, value=5)
+    sync = _load_sync({"a": 4.5}, [_clip("a")])
+
+    assert sync(object(), _node([parameter])) is False
+    assert parameter.value_integer == 5
 
 
 def test_short_input_is_raised_to_the_minimum():

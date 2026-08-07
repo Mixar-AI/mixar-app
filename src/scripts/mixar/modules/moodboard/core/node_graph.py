@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import math
 import uuid
 
 from ..constants import GRAPH_NODE_ID_MAXLEN, VIDEO_DURATION_PARAM_NAME
@@ -22,6 +23,10 @@ from .node_schema import (
 )
 from ..ui.moodboard_graph_properties import capability_for_action
 
+
+# Tolerance for the frames/fps division: an exactly-5s clip can measure
+# 5.0000001, which a bare ceil() would inflate to a 6s output.
+_DURATION_EPSILON_SECONDS = 1e-6
 
 ACTION_NODE_GAP = 140.0
 RESULT_NODE_GAP = 140.0
@@ -457,13 +462,25 @@ def sync_video_duration_from_inputs(scene, node) -> bool:
 
     # The schema's bounds are authoritative: a 40s reference must not submit a
     # duration the model will reject after credits are held.
-    lower, upper = parameter.minimum, parameter.maximum
+    lower, upper = float(parameter.minimum), float(parameter.maximum)
     value = min(max(total, lower), upper)
-    if parameter.parameter_type == 'INTEGER':
-        # Clamp again after rounding — rounding can cross a bound.
-        parameter.value_integer = int(min(max(round(value), lower), upper))
-    else:
+    if parameter.parameter_type == 'FLOAT':
         parameter.value_float = float(value)
+        return True
+
+    # Integer models express whole seconds only (Seedance 2.5 takes any integer
+    # 4-30). Round UP rather than to nearest: rounding 12.4s down to 12s is the
+    # same silent truncation of the user's footage this seeding exists to stop.
+    # The epsilon keeps an exactly-5s clip that measures 5.0000001 after the
+    # frames/fps division from inflating to 6.
+    seconds = math.ceil(value - _DURATION_EPSILON_SECONDS)
+    # Clamp to the representable INTEGER range, not the raw float bounds: with a
+    # fractional bound, int() of a clamped float can land outside it entirely
+    # (int(max(round(4.5), 4.5)) is 4, below a 4.5 minimum).
+    low_int, high_int = math.ceil(lower), math.floor(upper)
+    if low_int > high_int:
+        return False
+    parameter.value_integer = int(min(max(seconds, low_int), high_int))
     return True
 
 
