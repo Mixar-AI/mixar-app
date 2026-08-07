@@ -11,7 +11,8 @@ Left T-panel toolbar with core moodboard actions:
   • Add Text   — add a text box to the canvas
   • Crop       — crop the selected image
   • Mask Tools — popover with Box Mask, Lasso, and Magic Select
-  • Annotate   — draw persistent freehand notes on a selected image
+  • Lasso      — direct Multi-Lasso Mask shortcut (primary gaming-workflow
+                 action; replaces the hidden Annotate button for now)
   • Rotate     — rotate selected image 90° clockwise
   • Send to Chat — send selected image(s) to Mixie Chat
 """
@@ -250,20 +251,20 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
         col.separator(factor=0.6)
 
-        # ── Freehand Annotations ──────────────────────────────────────
+        # ── Multi-Lasso Mask (direct shortcut) ────────────────────────
+        # The Annotate button/popover lived here; hidden for now — lasso
+        # segmentation is the primary gaming-workflow action, so it gets
+        # the slot. Annotation operators and the popover stay registered
+        # (moodboard UX overhaul will revisit this toolbar).
         row = col.row(align=True)
         row.scale_x = 1.5
         row.scale_y = 1.5
         row.enabled = has_selected_image
         row.operator(
-            "mixie.moodboard_annotate_tool",
+            "mixie.moodboard_lasso_tool",
             text="",
-            icon="BRUSH_DATA",
-        )
-        row.popover(
-            panel="MIXIE_PT_annotation_tools_popover",
-            text="",
-            icon="DOWNARROW_HLT",
+            icon="OUTLINER_DATA_GP_LAYER",
+            depress=(active_tool == "LASSO"),
         )
 
         col.separator(factor=0.6)

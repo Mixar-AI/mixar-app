@@ -88,22 +88,34 @@ def draw_hint(col, text, icon='NONE'):
 # Sidebar tab focus
 # ---------------------------------------------------------------------------
 
-def focus_scene_gen_segments(context):
-    """Surface the Scene Gen tab's Segments to 3D mode.
+def focus_segments_panel(context):
+    """Surface the panel hosting the Segments to 3D UI.
 
     Used by the moodboard segmentation tools (magic select, box/lasso
     mask) so their results are visible where the Generate button lives.
-    Switches the sidebar to the "Scene Gen" panel category and selects
-    the ``scene_gen`` mode when the catalog is loaded (the mode enum item
-    doesn't exist offline — silently skipped). Never raises.
+    Post-split catalogs host Segments to 3D in the dedicated "Character
+    Parts" tab; pre-split catalogs (and offline) keep it as the Scene
+    Gen tab's ``scene_gen`` mode, so the pre-split path still selects
+    that mode (the enum item doesn't exist offline — silently skipped).
+    Never raises.
     """
-    scene = context.scene
-    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
-    if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
-        try:
-            sidebar.tab_scene_recon.mode = 'scene_gen'
-        except Exception:
-            pass  # catalog not loaded / capability disabled
+    category = "Scene Gen"
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_services, is_loaded,
+        )
+        if is_loaded() and get_services("character_parts"):
+            category = "Character Parts"
+    except Exception:
+        pass
+    if category == "Scene Gen":
+        scene = context.scene
+        sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+        if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
+            try:
+                sidebar.tab_scene_recon.mode = 'scene_gen'
+            except Exception:
+                pass  # catalog not loaded / capability disabled
     try:
         space = context.space_data
         if hasattr(space, 'show_region_ui'):
@@ -113,7 +125,7 @@ def focus_scene_gen_segments(context):
             (r for r in area.regions if r.type == 'UI'), None,
         ) if area else None
         if region and hasattr(region, 'active_panel_category'):
-            region.active_panel_category = "Scene Gen"
+            region.active_panel_category = category
     except Exception:
         pass
 

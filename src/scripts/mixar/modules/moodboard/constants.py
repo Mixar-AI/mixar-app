@@ -14,7 +14,13 @@ Centralized configuration values for the moodboard module.
 # ============================================================================
 
 SCENE_GEN_CAPABILITY_KEY = "scene_gen"
-SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
+# The Segments to 3D service moved to its own "Character Parts" capability
+# (backend catalog migration); segment-flow composite jobs stamp this key so
+# their queue badge follows the Character Parts label instead of Scene Gen.
+CHARACTER_PARTS_CAPABILITY_KEY = "character_parts"
+# Frozen backend contract: the job_queue job_type / service key stays
+# "scene_gen" even though the service's capability moved to Character Parts.
+SCENE_GEN_JOB_TYPE = "scene_gen"
 # NOTE: the model slug is deliberately NOT a constant here. Model rows are
 # server-owned and change without a client release, so the submit path reads
 # the service's default from the generation catalog
