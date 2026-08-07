@@ -181,8 +181,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         Image *preview_image = static_cast<Image *>(preview_ptr.data);
         PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
         if (preview_image || object_ptr.data) {
-          rctf preview_bounds = {
-              rect.xmin + 6.0f, rect.xmax - 6.0f, rect.ymin + 6.0f, rect.ymax - 6.0f};
+          rctf preview_bounds{};
+          moodboard_graph_node_preview_bounds(rect, &preview_bounds);
           GPUVertFormat *format = immVertexFormat();
           const uint pos = GPU_vertformat_attr_add(
               format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
@@ -196,6 +196,17 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
           immUnbindProgram();
           if (preview_image) {
             mixie_draw_moodboard_media_preview(preview_image, preview_bounds);
+            if (preview_image->source == IMA_SRC_MOVIE) {
+              /* A generated movie is owned by its node, so it never draws as a
+               * standalone tile and would otherwise sit frozen on frame 1 with
+               * no way to start it. Same affordance as an uploaded movie. */
+              bool is_playing = false;
+              moodboard_video_playback_frame(preview_image, &is_playing);
+              mixie_draw_moodboard_video_overlay(v2d,
+                                                 BLI_rctf_cent_x(&preview_bounds),
+                                                 BLI_rctf_cent_y(&preview_bounds),
+                                                 is_playing);
+            }
           }
         }
         if (ELEM(state, 1, 2, 4, 5)) {

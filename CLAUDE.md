@@ -163,6 +163,29 @@ in the inner loop, every redraw. The link-drag preview is keyed on
 `scene->id.session_uid`, not a static `Scene *`, and region exit resets it.
 `media_item_by_id` is read-only — `node_output_type` reaches it from a menu draw,
 so id migration runs from the moodboard poll tick and `load_post` instead.
+**Node-owned movies play in place.** A generated video is tagged
+`embedded_node_id`, which excludes it from `moodboard_find_image_under_mouse` —
+so every seam that makes an uploaded movie playable needs a node-aware
+counterpart, or the result sits frozen on frame 1 with no way to start it:
+`mixie_draw_moodboard_graph.cc` draws the shared
+`mixie_draw_moodboard_video_overlay` over movie previews, `graph_select_invoke`
+toggles playback on the centred affordance or a double-click **before**
+installing the move modal (that branch has no drag threshold and would slide the
+card on the same click), and `hovered_video_index_from_event` also resolves node
+previews or the hover monitor stops playback on the first mouse-move. All three
+key on the `mixie_moodboard_images` index via
+`moodboard_find_node_preview_video_under_mouse` — a node index would mismatch
+`playback.item_index`. The preview rect has one definition
+(`moodboard_graph_node_preview_bounds`) so the play button's pixels and its click
+region cannot drift apart. `g_video_playback` is keyed on `Image *` and pruned
+against `bmain->images`, because deleting a node frees the movie it owns.
+The same "never `selected`" property means **selection-driven actions must
+resolve through the owning node**: `media_utils.selected_exportable_media()` is
+the one definition of that set, shared by the context menu's Export gate and
+`mixie.moodboard_export_images`, so a completed node's result can be saved to
+disk. It is deliberately scoped to read-only actions — crop/rotate/flip stay
+keyed on direct selection, since editing a result in place would desynchronise
+it from the node that produced it.
 Existing links can be selected at any zoom using screen-space curve hit-testing
 and unlinked with X, Delete, Backspace, or the context menu; unlinking preserves
 both endpoint blocks. Canvas box selection includes imported media, text,
