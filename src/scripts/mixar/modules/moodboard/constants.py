@@ -271,3 +271,18 @@ GRAPH_OBJECT_NAMES_MAXLEN = 2048   # <-> char names[4096]
 GRAPH_JOB_ID_MAXLEN = 128
 GRAPH_ERROR_MAXLEN = 512
 GRAPH_PARAM_NAME_MAXLEN = 96
+
+# ============================================================================
+# VIDEO NODE OUTPUT DURATION
+# ============================================================================
+
+# Catalog parameter carrying a video model's OUTPUT length in seconds. Keyed by
+# name, which is a KNOWN CATALOG GAP: parameter schemas publish type/bounds/
+# widget but nothing that identifies a parameter's MEANING, and "make the output
+# as long as the input" is inherently semantic. Every other consumer of the
+# schema is name-agnostic on purpose (key sets change from the DB without a
+# client release), so this is the one place a name is assumed — and it fails
+# soft: a model that renames or omits the parameter simply keeps the catalog
+# default instead of being seeded. Retire it by publishing a role/semantic hint
+# on the parameter (e.g. `"role": "output_duration"`) and matching on that.
+VIDEO_DURATION_PARAM_NAME = "duration"

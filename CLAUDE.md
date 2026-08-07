@@ -186,6 +186,22 @@ the one definition of that set, shared by the context menu's Export gate and
 disk. It is deliberately scoped to read-only actions — crop/rotate/flip stay
 keyed on direct selection, since editing a result in place would desynchronise
 it from the node that produced it.
+**Video-to-video seeds its output duration from its inputs.** Connecting a
+VIDEO source to a Generate Video node sets the catalog `duration` parameter to
+the TOTAL length of every connected video (`node_graph.sync_video_duration_from_inputs`),
+clamped to the schema's min/max — the flat 5s catalog default silently truncated
+longer references. It runs on connect ONLY: recomputing on disconnect would
+discard a duration the user had since dialled in. `VIDEO_DURATION_PARAM_NAME` in
+`moodboard/constants.py` is the one place a catalog parameter is matched by NAME
+and is a documented **KNOWN CATALOG GAP** — schemas publish type/bounds/widget
+but nothing identifying a parameter's meaning; retire it by publishing a role
+hint. It fails soft (a model without that parameter keeps the catalog default).
+`media_utils.video_duration_seconds()` derives seconds by loading the movie as a
+temporary `MovieClip` purely to read `fps` (Blender's `Image` exposes the frame
+COUNT but not the frame rate) and frees it immediately. That value is
+**advisory** — the backend still parses the uploaded file and owns the
+combined-reference-length cap, so an unreadable codec degrades to "no default",
+never to a wrong limit.
 Existing links can be selected at any zoom using screen-space curve hit-testing
 and unlinked with X, Delete, Backspace, or the context menu; unlinking preserves
 both endpoint blocks. Canvas box selection includes imported media, text,

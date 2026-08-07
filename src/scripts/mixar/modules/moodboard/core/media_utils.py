@@ -163,6 +163,45 @@ def describe_moodboard_media(
     }
 
 
+def video_duration_seconds(item: object) -> float | None:
+    """Best-effort length of a moodboard movie in seconds, or ``None``.
+
+    Blender's ``Image`` API exposes a movie's frame COUNT (``frame_duration``)
+    but not its frame rate, so seconds cannot be derived from the datablock
+    alone. Loading the same file as a temporary ``MovieClip`` is the only way
+    to read fps from Python; the clip is freed before returning.
+
+    Deliberately best-effort and advisory. The backend stays authoritative for
+    the reference-duration LIMIT — it parses the uploaded file and returns
+    ``duration_seconds``, which is what the combined-length cap is enforced
+    against. This value only seeds a UI default the user can still override,
+    so a codec Blender cannot read degrades to "no default", never to a wrong
+    limit or a rejected submission.
+    """
+    media = describe_moodboard_media(item)
+    if media["media_type"] != "VIDEO" or not media["source_available"]:
+        return None
+
+    import bpy
+
+    clip = None
+    try:
+        clip = bpy.data.movieclips.load(media["resolved_filepath"])
+        fps = float(getattr(clip, "fps", 0.0) or 0.0)
+        frames = int(getattr(clip, "frame_duration", 0) or 0)
+        if fps <= 0.0 or frames <= 0:
+            return None
+        return frames / fps
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
+        return None
+    finally:
+        if clip is not None:
+            try:
+                bpy.data.movieclips.remove(clip)
+            except (AttributeError, ReferenceError, RuntimeError):
+                pass
+
+
 def selected_exportable_media(scene) -> list:
     """Media the user has selected, including results owned by selected nodes.
 

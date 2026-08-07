@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 import uuid
 
-from ..constants import GRAPH_NODE_ID_MAXLEN
-from .media_utils import is_still_item
+from ..constants import GRAPH_NODE_ID_MAXLEN, VIDEO_DURATION_PARAM_NAME
+from .media_utils import is_still_item, video_duration_seconds
 from .moodboard_utils import get_moodboard_image_display_size
 from .node_schema import (
     output_type_for_action,
@@ -258,6 +258,10 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
         input_order=socket_index,
     )
     refresh_node_socket_visibility(scene, target)
+    if source_type == 'VIDEO':
+        # Only a video changes what "as long as the input" means; connecting a
+        # still reference must leave the duration the user sees untouched.
+        sync_video_duration_from_inputs(scene, target)
     return link
 
 
@@ -416,6 +420,51 @@ def create_connected_action(scene, action_type: str, source_node_id: str = ""):
     for item in sources:
         connect_to_next_input(scene, item.node_id, node.node_id)
     return node
+
+
+def sync_video_duration_from_inputs(scene, node) -> bool:
+    """Seed a video node's output duration from the videos feeding it.
+
+    Video-to-video generation almost always wants an output as long as what
+    was fed in, and the catalog default (a flat 5s) silently truncated longer
+    references. Runs on connect only: recomputing on disconnect would discard
+    a duration the user had since dialled in by hand, and connecting is the
+    point at which a stale default is actually misleading.
+
+    The total is used because several references read as one timeline. Returns
+    False whenever nothing could be seeded, leaving the catalog default alone.
+    """
+    if node is None or node.action_type != 'VIDEO_GEN':
+        return False
+    parameter = next(
+        (
+            item for item in node.parameters
+            if item.name == VIDEO_DURATION_PARAM_NAME
+            and item.parameter_type in {'INTEGER', 'FLOAT'}
+        ),
+        None,
+    )
+    if parameter is None:
+        return False
+
+    total = 0.0
+    for item in input_media_items(scene, node):
+        seconds = video_duration_seconds(item)
+        if seconds and seconds > 0.0:
+            total += seconds
+    if total <= 0.0:
+        return False
+
+    # The schema's bounds are authoritative: a 40s reference must not submit a
+    # duration the model will reject after credits are held.
+    lower, upper = parameter.minimum, parameter.maximum
+    value = min(max(total, lower), upper)
+    if parameter.parameter_type == 'INTEGER':
+        # Clamp again after rounding — rounding can cross a bound.
+        parameter.value_integer = int(min(max(round(value), lower), upper))
+    else:
+        parameter.value_float = float(value)
+    return True
 
 
 def input_media_items(scene, action_node) -> list:
