@@ -314,6 +314,22 @@ def _get_animate_model_items(self, context):
     )
 
 
+def _get_video_gen_mode_items(self, context):
+    """Video Gen tab services; catalog-only with a loading-safe fallback."""
+    return _capability_mode_items(
+        "video_gen",
+        [("video_gen", "Seedance", "Generate video from text and references")],
+    )
+
+
+def _get_video_gen_model_items(self, context):
+    """Enabled Seedance models supplied by the generation catalog."""
+    return _capability_model_items(
+        "video_gen", self,
+        [("seedance-2-0", "Seedance 2.0", "Seevio Seedance 2.0")],
+    )
+
+
 def _get_retopology_mode_items(self, context):
     """Retopology tab mode items (capability ``retopology``)."""
     return _capability_mode_items(

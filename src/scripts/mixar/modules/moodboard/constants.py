@@ -344,3 +344,29 @@ MIN_SIMILARITY_SCORE = 0.3
 
 # Maximum number of prompts per batch search request
 BATCH_SEARCH_CHUNK_SIZE = 20
+
+# ============================================================================
+# MOODBOARD GRAPH STRING LENGTH CONTRACT
+# ============================================================================
+
+# Frozen contract with the C++ canvas. Every value below MUST stay strictly
+# smaller than the fixed stack buffer the corresponding ``RNA_string_get`` call
+# writes into, mirroring the existing moodboard textbox pairing
+# (``maxlen=2048`` <-> ``char text_buffer[4096]``). Without a ``maxlen`` an RNA
+# string is unbounded and ``RNA_string_get`` is strcpy-shaped, so a long value —
+# a catalog-published ``label``, or ``object_names`` written by an agent script —
+# smashes the stack during draw. The C++ side additionally clamps on read
+# (``mixie_rna_string_get_clamped``), because ``maxlen`` is only enforced on
+# assignment and a .blend saved by an older build can still carry a longer value.
+GRAPH_NODE_ID_MAXLEN = 64          # <-> char node_id[128]
+GRAPH_SOCKET_ID_MAXLEN = 96        # <-> char socket_id[128] / to_socket[128]
+GRAPH_ACCEPTED_TYPES_MAXLEN = 96
+GRAPH_SERVICE_KEY_MAXLEN = 96
+GRAPH_MODEL_SLUG_MAXLEN = 128
+GRAPH_LABEL_MAXLEN = 192           # <-> char label[256] / title[256]
+GRAPH_DESCRIPTION_MAXLEN = 512
+GRAPH_WIDGET_MAXLEN = 48           # <-> char widget[64]
+GRAPH_OBJECT_NAMES_MAXLEN = 2048   # <-> char names[4096]
+GRAPH_JOB_ID_MAXLEN = 128
+GRAPH_ERROR_MAXLEN = 512
+GRAPH_PARAM_NAME_MAXLEN = 96

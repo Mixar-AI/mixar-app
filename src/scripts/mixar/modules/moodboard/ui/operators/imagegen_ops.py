@@ -15,6 +15,7 @@ from bpy.types import Operator
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.imagegen_queue import get_imagegen_listener
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -192,7 +193,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 if use_moodboard_selection:
                     # Toggle ON: use currently selected moodboard images (dynamic)
                     for item in scene.mixie_moodboard_images:
-                        if item.selected and item.image:
+                        if item.selected and is_still_item(item):
                             try:
                                 img_bytes = compress_for_service(item.image, "imagegen")
                                 reference_image_bytes.append(img_bytes)
@@ -236,7 +237,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 # Add selected moodboard images (up to remaining slots)
                 try:
                     for item in scene.mixie_moodboard_images:
-                        if item.selected and item.image:
+                        if item.selected and is_still_item(item):
                             img_bytes = compress_for_service(item.image, "imagegen")
                             reference_image_bytes.append(img_bytes)
                             if len(reference_image_bytes) >= max_refs:

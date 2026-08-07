@@ -186,11 +186,13 @@ def test_enqueue_generation_carries_origin_capability(monkeypatch):
         payload={},
         label="Scene object",
         origin_capability_key="scene_gen",
+        graph_node_id="node-123",
     )
 
     assert job is not None
     assert job.service == "image_to_3d"
     assert job.origin_capability_key == "scene_gen"
+    assert job.graph_node_id == "node-123"
 
 
 def test_compact_job_update_merges_generation_metadata(monkeypatch):

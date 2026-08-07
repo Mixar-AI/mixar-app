@@ -57,6 +57,7 @@ from .ai_render_drawer import _draw_ai_render
 from .animate_drawer import _draw_animate
 from .pbr_gen_drawer import _draw_pbr_gen
 from .scene_gen_drawer import _draw_scene_gen
+from .video_gen_drawer import _draw_video_gen
 
 logger = get_logger(__name__)
 
@@ -155,6 +156,36 @@ class MIXIE_PT_gen_ai_render(Panel):
 
     def draw(self, context):
         _safe_draw(_draw_ai_render, self.layout, context)
+
+
+class MIXIE_PT_gen_video_gen(Panel):
+    # Catalog-only capability. Seedance 2.5 remains hidden while its catalog
+    # model is disabled; the enabled Seedance 2 models route through Seevio.
+    bl_label = "Video Gen"
+    bl_idname = "MIXIE_PT_gen_video_gen"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Video Gen"
+    bl_order = 18
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("video_gen"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='FILE_MOVIE')
+
+    def draw(self, context):
+        _safe_draw(_draw_video_gen, self.layout, context)
 
 
 class MIXIE_PT_gen_image_to_3d(Panel):
@@ -434,6 +465,7 @@ class MIXIE_PT_gen_queue(Panel):
 classes = (
     MIXIE_PT_gen_imagegen,
     MIXIE_PT_gen_ai_render,
+    MIXIE_PT_gen_video_gen,
     MIXIE_PT_gen_image_to_3d,
     MIXIE_PT_gen_lookdev360,
     MIXIE_PT_gen_scene_recon,

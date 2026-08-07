@@ -24,6 +24,7 @@ FEATURE_HUNYUAN_PART = "hunyuan_part"
 FEATURE_HUNYUAN_UV = "hunyuan_uv"
 FEATURE_MODEL_3D = "model_3d"
 FEATURE_IMAGEGEN = "imagegen"
+FEATURE_VIDEO_GEN = "video_gen"
 FEATURE_LOOKDEV360 = "lookdev360"
 # PBR Generation (Tripo /v3/models/texture) — client queue bucket. Distinct
 # from FEATURE_LOOKDEV360 (self-hosted Hunyuan PBR maps → fill layers): this
@@ -135,6 +136,7 @@ __all__ = (
     "FEATURE_HUNYUAN_UV",
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
+    "FEATURE_VIDEO_GEN",
     "FEATURE_LOOKDEV360",
     "FEATURE_PBR_GEN",
     "FEATURE_SCENE_GEN",

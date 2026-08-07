@@ -57,8 +57,9 @@ class DownloadMixin:
         if job.handle_result(result_files, _custom_done, _custom_error):
             return  # Job takes responsibility
 
-        # Pick best file (GLB > OBJ > FBX)
-        preferred_order = ["GLB", "OBJ", "FBX"]
+        # Pick the output native to the job before falling back to the first
+        # vendor artifact. VIDEO matters when a response also carries a still.
+        preferred_order = ["VIDEO", "GLB", "OBJ", "FBX"]
         chosen = None
         for pref in preferred_order:
             for rf in result_files or []:
@@ -189,8 +190,15 @@ class DownloadMixin:
             return None
 
         try:
+            import_options = dict(getattr(job, "import_options", None) or {})
+            if file_type.upper() == "VIDEO":
+                import_options.setdefault("scene_name", job.scene_name)
+                import_options.setdefault(
+                    "generation_prompt",
+                    str(getattr(job, "payload", {}).get("prompt") or ""),
+                )
             obj_names = import_file(
-                filepath, file_type, getattr(job, "import_options", None),
+                filepath, file_type, import_options,
             )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
@@ -222,4 +230,3 @@ class DownloadMixin:
         self._notify()
         self._pump()
         return None  # one-shot
-

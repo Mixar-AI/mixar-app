@@ -18,7 +18,7 @@ must list these before ``MixieMoodboardSidebarProperties``).
 """
 
 from bpy.types import PropertyGroup
-from bpy.props import EnumProperty
+from bpy.props import EnumProperty, StringProperty
 
 from .moodboard_enum_callbacks import (
     _on_model_changed,
@@ -29,6 +29,8 @@ from .moodboard_enum_callbacks import (
     _get_retopology_mode_items,
     _get_retopology_model_items,
     _get_uv_unwrap_model_items,
+    _get_video_gen_mode_items,
+    _get_video_gen_model_items,
 )
 
 
@@ -112,4 +114,30 @@ class MixieMoodboardTabAnimateProps(PropertyGroup):
         description="AI model for rigging/animation",
         items=_get_animate_model_items,
         update=_on_model_changed,
+    )
+
+
+class MixieMoodboardTabVideoGenProps(PropertyGroup):
+    """Catalog-only Seedance video generation settings."""
+
+    mode: EnumProperty(
+        name="Mode",
+        description="Video generation mode",
+        items=_get_video_gen_mode_items,
+        update=_on_model_changed,
+    )
+
+    model: EnumProperty(
+        name="Model",
+        description="Video generation model",
+        items=_get_video_gen_model_items,
+        update=_on_model_changed,
+    )
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Describe the video and how selected references should be used",
+        default="",
+        maxlen=4096,
+        options={'TEXTEDIT_UPDATE'},
     )
