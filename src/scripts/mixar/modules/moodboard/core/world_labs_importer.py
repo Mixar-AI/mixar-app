@@ -29,13 +29,17 @@ logger = get_logger(__name__)
 _KIRI_IMPORT_PLY_OP = "sna.dgs_render_import_ply_e0a3a"
 _KIRI_PROXY_OP = "sna.dgs_render_create_proxy_from_mesh_d5b41"
 
-# Orientation (validated against the fixture + in-Blender): the decoded splat is
-# brought into Blender's Z-up frame with a single +90deg X rotation, which renders
-# the room right-side up (ceiling toward +Z). The GLB collider is then reconciled
-# to THIS frame in ``_align_collider_to_splat`` (the two import paths differ by a
-# fixed Rx180 — see that function). Don't add a Z yaw here: voxel registration of
-# the real fixture showed the splat<->collider mismatch is a pure Rx180, not a yaw.
-_SPLAT_ROT_EULER_DEG = (90.0, 0.0, 0.0)
+# Orientation: the SPZ decoder emits the graphdeco/INRIA 3DGS frame (RDF:
+# x-right, y-DOWN, z-forward), so Blender Z-up needs **-90deg X** — the same
+# rotation KIRI's own "Rotate for Blender Axes" applies to 3DGS PLYs. The
+# original +90 rendered worlds UPSIDE-DOWN (world-up mapped to -Z); the tell
+# was that the glTF collider — whose importer is guaranteed upright — only
+# voxel-registered onto the splat after an extra Rx180. With -90 the two
+# frames coincide directly and ``_align_collider_to_splat`` only needs the
+# translation. Validated in-app against a real Marble world (horizon level,
+# sky up, F12 render matches the viewport proxy at the same camera).
+# Don't add a Z yaw here: none was ever measured.
+_SPLAT_ROT_EULER_DEG = (-90.0, 0.0, 0.0)
 
 
 def import_world_labs_world(
@@ -179,29 +183,21 @@ def _world_bbox(objects: list):
 
 
 def _align_collider_to_splat(splat_objs: list, glb_objs: list) -> None:
-    """Rotate + translate the COLLIDER so it coincides with the splat room.
+    """Translate the COLLIDER so it coincides with the splat room.
 
-    The splat and the GLB collider are the SAME Marble room at the same scale, but
-    they arrive through different import paths whose frames differ by exactly a
-    180deg rotation about X:
-      * splat: our SPZ decoder converts RUB -> RDF (negate Y,Z = Rx180), then
-        ``_orient_splats`` adds Rx(+90) -> net Rx(+90) on RDF;
-      * collider: the glTF importer applies its own Y-up(RUB) -> Z-up (Rx+90).
-    The leftover RUB->RDF flip means the collider lands 180deg about X from the
-    splat (validated by voxel registration against the fixture: an Rx(180) on the
-    collider matched ~81% of its verts onto the dense splat occupancy, vs <47% for
-    every other axis-aligned rotation). The splat is the visual the user trusts, so
-    we move the COLLIDER onto it: rotate its roots 180deg about X, then translate so
-    its footprint centre + floor match the splat's robust centre + floor. Leave the
-    splat fixed; ``_recenter_world_to_ground`` then re-grounds the whole group.
+    The splat and the GLB collider are the SAME Marble room at the same scale.
+    With the splat imported at Rx(-90) (see ``_SPLAT_ROT_EULER_DEG``) both
+    frames agree rotationally — the historical Rx180 applied here was
+    compensating for the splat itself being imported upside-down (the voxel
+    registration that "validated" it was matching the collider onto a flipped
+    splat). Only the offset remains: translate so the collider's footprint
+    centre + floor match the splat's robust centre + floor. Leave the splat
+    fixed; ``_recenter_world_to_ground`` then re-grounds the whole group.
     """
     if not glb_objs or not splat_objs:
         return
     glb_set = set(glb_objs)
     roots = [o for o in glb_objs if o.parent is None or o.parent not in glb_set]
-    rx180 = Matrix.Rotation(math.pi, 4, "X")
-    for root in roots:
-        root.matrix_world = rx180 @ root.matrix_world
     # A child mesh's matrix_world is stale until the depsgraph re-evaluates, and we
     # read the collider mesh verts (children) for centring next — force the update.
     try:
@@ -313,6 +309,17 @@ def _enable_splat_render(splat_objs: list) -> list:
     and the user can create a proxy manually.
     """
     _ensure_kiri()
+    # Render-side setup is independent of the viewport proxy: renders draw the
+    # splat via its geometry nodes, which need camera-driven socket updates
+    # (see core/splat_render_camera.py) or F12 output is black.
+    try:
+        from mixar.modules.moodboard.core.splat_render_camera import (
+            enable_render_updates,
+        )
+        enable_render_updates(splat_objs)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[WorldLabs] render-update enable failed: %s", e)
+
     proxy_op = _resolve_op(_KIRI_PROXY_OP)
     if proxy_op is None or not splat_objs:
         if proxy_op is None:
