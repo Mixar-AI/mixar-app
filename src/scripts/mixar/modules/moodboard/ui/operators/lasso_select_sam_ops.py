@@ -41,6 +41,7 @@ def _reset_lasso_state(state):
     state.lasso_select_pending = False
     state.active_tool = 'NONE'
     state.target_image_index = -1
+    state.lasso_creates_nodes = False
 
 
 def _create_segment_from_mask(
@@ -85,6 +86,20 @@ def _create_segment_from_mask(
         segment.name = segment_name
 
         recomposite_display_image(img_item)
+
+        # Multi Lasso Mask node action: spawn one connected MASK_DETAIL node per
+        # refined loop. Best-effort — a node failure must not abort segmentation.
+        if getattr(scene.mixie_edit_tool_state, "lasso_creates_nodes", False):
+            try:
+                from ...core.node_graph import create_mask_detail_node
+
+                create_mask_detail_node(scene, img_item, segment)
+            except Exception as node_exc:
+                logger.warning(
+                    "[LassoSelectSAM] Could not create mask-detail node: %s",
+                    node_exc,
+                )
+
         from ...core.component_debug import (
             add_mask_bytes_preview,
             add_sam3_mask_preview,

@@ -357,14 +357,26 @@ bool moodboard_graph_link_endpoints(PointerRNA *scene_ptr,
 
   if (cache) {
     const rctf *from_rect = cache->outputs.lookup_ptr(from_id);
-    const PointerRNA *to_node = cache->action_nodes.lookup_ptr(to_id);
-    if (!from_rect || !to_node) {
+    if (!from_rect) {
       return false;
     }
     *r_x1 = from_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
     *r_y1 = BLI_rctf_cent_y(from_rect);
-    PointerRNA node = *to_node;
-    return socket_position_in_node(&node, to_socket, r_x2, r_y2);
+    const PointerRNA *to_node = cache->action_nodes.lookup_ptr(to_id);
+    if (to_node) {
+      PointerRNA node = *to_node;
+      return socket_position_in_node(&node, to_socket, r_x2, r_y2);
+    }
+    /* Non-action target: a generated output image (or asset) node connected
+     * from its producing action node. Images have no input sockets, so aim at
+     * the left-centre of the target tile. */
+    const rctf *to_rect = cache->outputs.lookup_ptr(to_id);
+    if (!to_rect) {
+      return false;
+    }
+    *r_x2 = to_rect->xmin - MOODBOARD_GRAPH_SOCKET_OFFSET;
+    *r_y2 = BLI_rctf_cent_y(to_rect);
+    return true;
   }
   return output_position(scene_ptr, from_id, r_x1, r_y1) &&
          input_position(scene_ptr, to_id, to_socket, r_x2, r_y2);

@@ -265,6 +265,13 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
     bl_description = "Draw loops, release after each one, then press Enter to refine with SAM3 (L)"
     bl_options = {'REGISTER', 'BLOCKING'}
 
+    create_nodes: BoolProperty(
+        name="Create Nodes",
+        description="Spawn a connected mask-detail node for each refined loop",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+
     @classmethod
     def poll(cls, context):
         if not hasattr(context.scene, 'mixie_moodboard_images'):
@@ -386,6 +393,9 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         state.is_drawing = False
         state.lasso_points.clear()
         state.lasso_loops.clear()
+        # When launched from the "Multi Lasso Mask" node action, each refined
+        # loop also spawns a connected MASK_DETAIL node.
+        state.lasso_creates_nodes = self.create_nodes
 
         context.window_manager.modal_handler_add(self)
         context.area.tag_redraw()

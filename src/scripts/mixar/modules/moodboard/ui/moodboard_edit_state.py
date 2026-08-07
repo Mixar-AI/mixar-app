@@ -127,6 +127,15 @@ class MoodboardEditToolState(PropertyGroup):
         default=False,
         options={'SKIP_SAVE'},
     )
+    # Set when the lasso tool is launched from the "Multi Lasso Mask" node
+    # action: each SAM3-refined loop then spawns a connected MASK_DETAIL node
+    # instead of only adding a component to the source image.
+    lasso_creates_nodes: BoolProperty(
+        name="Lasso Creates Nodes",
+        description="Spawn a connected mask-detail node for each refined lasso loop",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
 
 
 classes = (

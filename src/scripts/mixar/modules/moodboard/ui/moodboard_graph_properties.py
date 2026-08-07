@@ -36,6 +36,20 @@ ACTION_TYPES = (
     ('IMAGE_GEN', "Generate Image", "Generate or edit an image"),
     ('VIDEO_GEN', "Generate Video", "Generate a video from image/video references"),
     ('MODEL_3D', "Generate to 3D", "Generate a 3D asset from one image"),
+    ('MASK_DETAIL', "Multi Lasso Mask",
+     "Generate a detailed image of a lasso-masked region of the source image"),
+    # Mesh -> mesh continuations, chained off a 3D mesh node.
+    ('PBR_GEN', "PBR Generation", "Texture the connected 3D mesh"),
+    ('RETOPOLOGY', "Retopology", "Retopologize the connected 3D mesh"),
+    ('MESH_SEGMENT', "Mesh Segmentation", "Segment the connected 3D mesh into parts"),
+    ('AUTO_RIG', "Auto Rig", "Auto-rig the connected 3D mesh"),
+)
+
+# Action node types whose input is a 3D mesh (from a connected mesh node) and
+# whose output is a new 3D mesh. Kept here so both the schema and execution
+# layers agree on the set.
+MESH_FEATURE_ACTIONS = frozenset(
+    {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'}
 )
 
 ACTION_STATES = (
@@ -48,10 +62,22 @@ ACTION_STATES = (
 )
 
 
+_MESH_FEATURE_CAPABILITY = {
+    'PBR_GEN': "pbr_generation",
+    'RETOPOLOGY': "retopology",
+    'MESH_SEGMENT': "mesh_segmentation",
+    'AUTO_RIG': "animate",
+}
+
+
 def capability_for_action(action_type: str) -> str:
-    if action_type == 'IMAGE_GEN':
+    if action_type in {'IMAGE_GEN', 'MASK_DETAIL'}:
         return "image_gen"
-    return "video_gen" if action_type == 'VIDEO_GEN' else "model_gen"
+    if action_type == 'VIDEO_GEN':
+        return "video_gen"
+    if action_type in _MESH_FEATURE_CAPABILITY:
+        return _MESH_FEATURE_CAPABILITY[action_type]
+    return "model_gen"
 
 
 def _service_items(self, _context):
@@ -66,6 +92,15 @@ def _service_items(self, _context):
             return [service["item"] for service in filtered] or [
                 ('NONE', "Unavailable", "No supported 3D service is available")
             ]
+        if self.action_type == 'MASK_DETAIL':
+            # Detail generation runs on the plain image_gen service only.
+            filtered = [item for item in items if item[0] == 'image_gen']
+            return filtered or items
+        if self.action_type == 'MESH_SEGMENT':
+            # The mesh node imports segmented part meshes (Part decomposition),
+            # not the vertex-group segmenter.
+            filtered = [item for item in items if item[0] == 'hunyuan_part']
+            return filtered or items
         return items
     except Exception:
         return [('LOADING', "Loading...", "Fetching generation catalog")]
@@ -75,7 +110,23 @@ def _model_items(self, _context):
     try:
         from mixar.bootstrap.generation_catalog_cache import get_model_enum_items
 
-        return get_model_enum_items(self.service_key)
+        items = get_model_enum_items(self.service_key)
+        if self.action_type == 'MASK_DETAIL':
+            # Only models advertising mask guidance + two references can detail
+            # a cutout/mask pair; fail closed rather than offer an invalid model.
+            from mixar.bootstrap.generation_catalog_cache import get_models
+            from mixar.modules.moodboard.core.character_components import (
+                eligible_component_model_slugs,
+            )
+
+            eligible = eligible_component_model_slugs(get_models(self.service_key))
+            filtered = [item for item in items if item[0] in eligible]
+            return filtered or [(
+                'NONE',
+                "No compatible models",
+                "Image models must advertise mask guidance and two references",
+            )]
+        return items
     except Exception:
         return [('LOADING', "Loading...", "Fetching generation catalog")]
 
@@ -233,10 +284,28 @@ class MixieMoodboardActionNode(PropertyGroup):
     )
     position_x: FloatProperty(name="Position X", default=0.0)
     position_y: FloatProperty(name="Position Y", default=0.0)
-    width: FloatProperty(name="Width", default=520.0, min=360.0, max=1000.0)
-    height: FloatProperty(name="Height", default=420.0, min=260.0, max=1400.0)
+    width: FloatProperty(name="Width", default=700.0, min=140.0, max=1400.0)
+    height: FloatProperty(name="Height", default=560.0, min=140.0, max=1400.0)
     selected: BoolProperty(name="Selected", default=False)
     prompt: StringProperty(name="Prompt", default="", maxlen=4096)
+    # MASK_DETAIL in-node controls, drawn vertically inside the node card by the
+    # C++ layout. Real node props so each mask node is independent; catalog image
+    # params come from the node's own `parameters` collection.
+    views_per_component: IntProperty(
+        name="Views per Component",
+        description="Number of distinct detail views generated for this mask",
+        default=3,
+        min=1,
+        max=4,
+    )
+    include_full_context: BoolProperty(
+        name="Use Full Character Context",
+        description=(
+            "Also send the full source image for design context; off by default "
+            "so strict cutout-only guidance adheres to the mask more closely"
+        ),
+        default=False,
+    )
     # The dropdowns below are display state, never the source of truth.
     # Blender stores a dynamic ``EnumProperty`` as an index into whatever the
     # ``items`` callback returned, so its meaning drifts: a catalog reorder
@@ -298,22 +367,38 @@ class MixieMoodboardActionNode(PropertyGroup):
     result_names: StringProperty(
         name="Results", default="", maxlen=GRAPH_OBJECT_NAMES_MAXLEN
     )
+    # MASK_DETAIL nodes only: the stable id of the source-image SAM3 segment
+    # (component) this node details. The source image itself is resolved through
+    # the node's incoming link; this id pins the exact mask on that source.
+    component_id: StringProperty(
+        name="Component ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN
+    )
     preview_image: PointerProperty(name="Media Preview", type=Image)
+    # MASK_DETAIL only: the masked-cutout thumbnail shown at the bottom of the
+    # node card before generation (preview_image holds the result afterwards).
+    mask_preview: PointerProperty(name="Mask Preview", type=Image)
     preview_object: PointerProperty(name="3D Preview", type=Object)
 
 
 class MixieMoodboardAssetNode(PropertyGroup):
-    """Canvas representation of generated Blender object(s)."""
+    """Canvas representation of generated Blender object(s) — a 3D mesh node.
+
+    Holds the mesh identity (``object_names``) so the mesh-continuation features
+    (PBR / Retopology / Mesh Segmentation / Auto Rig) know which objects to
+    select and submit. ``preview_object`` renders the 3D thumbnail on the card.
+    """
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     title: StringProperty(name="Title", default="3D Asset", maxlen=GRAPH_LABEL_MAXLEN)
     object_names: StringProperty(
         name="Object Names", default="", maxlen=GRAPH_OBJECT_NAMES_MAXLEN
     )
+    preview_object: PointerProperty(name="3D Preview", type=Object)
     position_x: FloatProperty(name="Position X", default=0.0)
     position_y: FloatProperty(name="Position Y", default=0.0)
-    width: FloatProperty(name="Width", default=360.0, min=240.0, max=800.0)
-    height: FloatProperty(name="Height", default=210.0, min=150.0, max=600.0)
+    # Image-node-sized so 3D result nodes read consistently on the canvas.
+    width: FloatProperty(name="Width", default=700.0, min=140.0, max=1400.0)
+    height: FloatProperty(name="Height", default=700.0, min=140.0, max=1400.0)
     selected: BoolProperty(name="Selected", default=False)
 
 
