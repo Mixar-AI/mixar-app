@@ -9,6 +9,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.constants import CHARACTER_PARTS_CAPABILITY_KEY
 
 logger = get_logger(__name__)
 
@@ -193,9 +194,10 @@ class MIXIE_OT_generate_character_components(Operator):
                     payload=payload,
                     label=f"CharacterComponent:{source_item_id}:{component_id}",
                     display_label=f"{component_name} detail",
-                    # This composite workflow is surfaced by the Scene Gen
-                    # N-panel but submits to the Image Gen backend service.
-                    origin_capability_key="scene_gen",
+                    # This composite workflow is surfaced by the Character
+                    # Parts N-panel but submits to the Image Gen backend
+                    # service.
+                    origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
                     fail_message=f"Could not generate {component_name} detail",
                     name_prefix="component_detail",
                     prompt_text=payload["prompt"],

@@ -17,8 +17,16 @@ from .moodboard_utils import (
 )
 
 
+# Hard kill switch: the raw/constrained mask preview cards cluttered the
+# board during the gaming workflow (every lasso loop added cards beside the
+# source). Flip to True to restore the env/dev-mode gating below.
+COMPONENT_DEBUG_MASKS_ENABLED = False
+
+
 def component_debug_enabled(scene) -> bool:
     """Return whether SAM3 mask artifacts should be exposed on the board."""
+    if not COMPONENT_DEBUG_MASKS_ENABLED:
+        return False
     try:
         from mixar.config.config import get_config
 
