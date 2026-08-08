@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+
 # Vendored: 3DGS Render by KIRI Engine (v4.1.5)
 
 Upstream: https://github.com/Kiri-Innovation/3dgs-render-blender-addon

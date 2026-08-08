@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Pure-Python SPZ -> 3DGS PLY decoder.
 
 World Labs (Marble) returns Gaussian splats in Niantic's **SPZ** format, but no
