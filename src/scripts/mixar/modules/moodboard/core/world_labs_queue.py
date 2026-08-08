@@ -132,7 +132,7 @@ class WorldLabsJob(Job):
         def _bg_download():
             ply_path = ""
             try:
-                ply_path = _download_and_convert_spz(spz_url)
+                ply_path = _download_and_convert_spz(spz_url, label)
                 # The collider is secondary — never fail the whole import if it
                 # can't be fetched.
                 glb_path = ""
@@ -203,12 +203,19 @@ def _import_on_main(ply_path, glb_path, pano_url, label, semantics, on_done, on_
         logger.error("[WorldLabs] import failed: %s", e)
         on_error(f"Failed to import world: {e}")
     finally:
+        import shutil
+
         for path in (ply_path, glb_path):
-            if path and os.path.exists(path):
-                try:
+            if not path or not os.path.exists(path):
+                continue
+            try:
+                parent = os.path.dirname(path)
+                if os.path.basename(parent).startswith("worldlabs_"):
+                    shutil.rmtree(parent, ignore_errors=True)
+                else:
                     os.unlink(path)
-                except OSError:
-                    pass
+            except OSError:
+                pass
 
 
 def _import_pano_to_moodboard(pano_url: str) -> None:
@@ -235,14 +242,23 @@ def _download_bytes(url: str) -> bytes:
         return resp.read()
 
 
-def _download_and_convert_spz(url: str) -> str:
-    """Download the SPZ, convert to 3DGS PLY, write to a temp file, return path."""
+def _download_and_convert_spz(url: str, label: str = "") -> str:
+    """Download the SPZ, convert to 3DGS PLY, write to a temp file, return path.
+
+    The temp PLY keeps a human stem (the job label): the KIRI importer names
+    the created object after the PLY file, so an mkstemp name leaks gibberish
+    object names like ``worldlabs_wy9cyeh9`` into the scene.
+    """
+    import re
+
     from mixar.modules.moodboard.core.world_labs_spz import spz_to_ply
 
     spz_bytes = _download_bytes(url)
     ply_bytes = spz_to_ply(spz_bytes)
-    fd, path = tempfile.mkstemp(suffix=".ply", prefix="worldlabs_")
-    with os.fdopen(fd, "wb") as f:
+    stem = re.sub(r"[^\w\- ]+", "", label).strip() or "world"
+    temp_dir = tempfile.mkdtemp(prefix="worldlabs_")
+    path = os.path.join(temp_dir, f"{stem}.ply")
+    with open(path, "wb") as f:
         f.write(ply_bytes)
     return path
 
