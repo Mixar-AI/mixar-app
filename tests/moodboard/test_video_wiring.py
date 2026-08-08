@@ -75,7 +75,8 @@ def test_movie_thumbnail_has_a_play_affordance():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_images.cc")
 
     assert "image->source == IMA_SRC_MOVIE" in draw
-    assert "draw_video_playback_overlay" in draw
+    # Shared with the inference-node preview, hence the exported name.
+    assert "mixie_draw_moodboard_video_overlay" in draw
     assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in draw
     assert "if (is_playing)" in draw
 

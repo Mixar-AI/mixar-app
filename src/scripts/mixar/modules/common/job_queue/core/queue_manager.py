@@ -767,7 +767,9 @@ class FeatureQueue(DownloadMixin):
             if job.backend_job_id:
                 self._cancel_on_backend(job.backend_job_id)
             job.state = JobState.FAILED
-            job.error = "Job timed out after 20 minutes"
+            job.error = (
+                f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
+            )
             job.user_message = "Generation timed out — please try again"
             self._notify()
             self._pump()

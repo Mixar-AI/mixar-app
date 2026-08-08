@@ -172,7 +172,9 @@ static void add_action_toolbar(uiBlock *block,
   }
   /* The toolbar is intentionally screen-sized, like Flora's contextual
    * strip. Hide it before it becomes visually larger than its zoomed tile. */
-  if (BLI_rcti_size_x(&node_region) < 360 || BLI_rcti_size_y(&node_region) < 220) {
+  if (BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X ||
+      BLI_rcti_size_y(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y)
+  {
     return;
   }
 

@@ -61,6 +61,96 @@ def _restore_shift(
     scene.frame_set(scene_state[0])
 
 
+def move_single_beat(
+    scene,
+    shot,
+    index: int,
+    requested_delta: int,
+    *,
+    rebuild_manifest: bool = True,
+) -> int:
+    """Move one beat and its matching native camera keys by a delta.
+
+    Unlike :func:`shift_camera_beats` (which slides the whole strip), this
+    retimes a single keyframe. The beat is clamped to stay between its
+    time-neighbours — two Director keys must never share a frame, since the
+    native transform/lens keys are matched by frame value — and inside the
+    scene range. Returns the delta actually applied.
+    """
+    if shot is None or shot.state != 'DRAFT':
+        raise ValueError("Create a new take before moving a locked shot")
+    if index < 0 or index >= len(shot.beats):
+        return 0
+    beat = shot.beats[index]
+    old_frame = int(beat.frame)
+
+    lower = int(scene.frame_start)
+    upper = 1048574
+    for other_index, other in enumerate(shot.beats):
+        if other_index == index:
+            continue
+        other_frame = int(other.frame)
+        if other_frame < old_frame:
+            lower = max(lower, other_frame + 1)
+        elif other_frame > old_frame:
+            upper = min(upper, other_frame - 1)
+    new_frame = min(max(old_frame + int(requested_delta), lower), upper)
+    delta = new_frame - old_frame
+    if delta == 0:
+        return 0
+    camera = shot.camera
+    if camera is None or camera.type != 'CAMERA':
+        raise ValueError("Choose a camera before moving its shot")
+
+    object_curves, object_points = _director_keyframes(
+        camera,
+        _CAMERA_PATHS,
+        {old_frame},
+    )
+    data_curves, data_points = _director_keyframes(
+        camera.data,
+        {"lens"},
+        {old_frame},
+    )
+    curves = object_curves + data_curves
+    points = object_points + data_points
+    point_positions = [
+        (
+            point,
+            float(point.co[0]),
+            float(point.handle_left[0]),
+            float(point.handle_right[0]),
+        )
+        for point in points
+    ]
+    manifest_json = shot.manifest_json
+    original_frame_end = int(scene.frame_end)
+
+    try:
+        for point in points:
+            point.co[0] += delta
+            point.handle_left[0] += delta
+            point.handle_right[0] += delta
+        for fcurve in curves:
+            fcurve.update()
+        beat.frame = new_frame
+        scene.frame_end = max(scene.frame_end, new_frame)
+        if rebuild_manifest:
+            refresh_manifest(scene, shot)
+    except Exception:
+        for point, co_x, left_x, right_x in point_positions:
+            point.co[0] = co_x
+            point.handle_left[0] = left_x
+            point.handle_right[0] = right_x
+        for fcurve in curves:
+            fcurve.update()
+        beat.frame = old_frame
+        scene.frame_end = original_frame_end
+        shot.manifest_json = manifest_json
+        raise
+    return delta
+
+
 def shift_camera_beats(
     scene,
     shot,

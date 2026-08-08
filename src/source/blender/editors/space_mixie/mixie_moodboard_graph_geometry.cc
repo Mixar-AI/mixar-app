@@ -595,6 +595,67 @@ static int find_node_in_collection(PointerRNA *scene_ptr,
   return -1;
 }
 
+void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds)
+{
+  /* Single source of truth for the preview rect. The draw path, the floating
+   * toolbar and the playback hit-test all need it; recomputing the inset in
+   * each would let the play button's pixels and its click region drift apart
+   * without anything failing loudly. */
+  r_bounds->xmin = node_rect.xmin + MOODBOARD_GRAPH_PREVIEW_INSET;
+  r_bounds->xmax = node_rect.xmax - MOODBOARD_GRAPH_PREVIEW_INSET;
+  r_bounds->ymin = node_rect.ymin + MOODBOARD_GRAPH_PREVIEW_INSET;
+  r_bounds->ymax = node_rect.ymax - MOODBOARD_GRAPH_PREVIEW_INSET;
+}
+
+int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id)
+{
+  if (!node_id || node_id[0] == '\0') {
+    return -1;
+  }
+  PropertyRNA *media = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
+  const int count = media ? RNA_property_collection_length(scene_ptr, media) : 0;
+  for (int index = 0; index < count; index++) {
+    PointerRNA item;
+    RNA_property_collection_lookup_int(scene_ptr, media, index, &item);
+    if (string_prop_equals(&item, "embedded_node_id", node_id)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+int moodboard_find_node_preview_video_under_mouse(PointerRNA *scene_ptr,
+                                                 const float mouse_x,
+                                                 const float mouse_y,
+                                                 rctf *r_node_rect)
+{
+  /* Returns an index into `mixie_moodboard_images`, the same space
+   * `moodboard_toggle_video_playback` and the hover monitor use. Returning a
+   * node index here would make the hover monitor stop playback on the first
+   * mouse-move, because it compares against `playback.item_index`. */
+  rctf rect{};
+  const int node_index = moodboard_find_action_node_under_mouse(
+      scene_ptr, mouse_x, mouse_y, &rect);
+  if (node_index < 0) {
+    return -1;
+  }
+  PropertyRNA *nodes = RNA_struct_find_property(scene_ptr, "mixie_moodboard_action_nodes");
+  PointerRNA node;
+  if (!nodes || !RNA_property_collection_lookup_int(scene_ptr, nodes, node_index, &node)) {
+    return -1;
+  }
+  char node_id[MIXIE_GRAPH_ID_BUF];
+  mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
+  const int media_index = moodboard_find_embedded_media_index(scene_ptr, node_id);
+  if (media_index < 0 || !moodboard_item_is_video(scene_ptr, media_index)) {
+    return -1;
+  }
+  if (r_node_rect) {
+    *r_node_rect = rect;
+  }
+  return media_index;
+}
+
 int moodboard_find_action_node_under_mouse(PointerRNA *scene_ptr,
                                            const float mouse_x,
                                            const float mouse_y,
