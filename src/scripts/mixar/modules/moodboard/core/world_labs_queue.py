@@ -73,6 +73,9 @@ class WorldLabsJob(Job):
             model=self.model,
             payload=payload,
             idempotency_key=self.submit_idempotency_key,
+            # A Marble world is a multi-minute, ~1.5k-vendor-credit job; a
+            # failed submit must surface, never silently re-bill.
+            max_retries=0,
             on_success=on_success,
             on_error=on_error,
             timeout=1800.0,
