@@ -91,6 +91,28 @@ void moodboard_qa_targets(const wmWindow *win,
         r_targets.push_back(std::move(p));
       }
     }
+
+    /* Output "+" handle: same formula as moodboard_find_output_socket_under_mouse
+     * (rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, centre-y). */
+    {
+      View2D *hv2d = &const_cast<ARegion *>(region)->v2d;
+      float hx, hy;
+      UI_view2d_view_to_region_fl(hv2d,
+                                  canvas_rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+                                  BLI_rctf_cent_y(&canvas_rect),
+                                  &hx,
+                                  &hy);
+      const int radius = int(MOODBOARD_GRAPH_SOCKET_RADIUS + 5.0f);
+      MixarQATarget h;
+      h.surface = "moodboard_output";
+      h.text = node_id;
+      h.detail = "output";
+      h.rect_win.xmin = region->winrct.xmin + int(hx) - radius;
+      h.rect_win.xmax = region->winrct.xmin + int(hx) + radius;
+      h.rect_win.ymin = region->winrct.ymin + int(hy) - radius;
+      h.rect_win.ymax = region->winrct.ymin + int(hy) + radius;
+      r_targets.push_back(std::move(h));
+    }
   }
 
   /* Input sockets: same loop shape as moodboard_find_input_socket_under_mouse. */
