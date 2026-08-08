@@ -35,6 +35,7 @@ set(SRC
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
   mixie_ops.cc
+  mixie_moodboard_qa_targets.cc
   mixie_select.cc
   space_mixie.cc
 

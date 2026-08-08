@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
@@ -31,6 +32,24 @@
 
 #include "interface_intern.hh"
 #include "interface_qa_inspect.hh"
+
+struct MixarQAProviderEntry {
+  int spacetype;
+  MixarQATargetProvider fn;
+};
+
+/* Registration happens once per spacetype during startup; reads are
+ * main-thread only, so no locking is needed. */
+static std::vector<MixarQAProviderEntry> &qa_providers()
+{
+  static std::vector<MixarQAProviderEntry> providers;
+  return providers;
+}
+
+void Mixar_qa_register_target_provider(int spacetype, MixarQATargetProvider fn)
+{
+  qa_providers().push_back({spacetype, fn});
+}
 
 namespace {
 
@@ -139,6 +158,53 @@ const char *but_type_name(const ButType type)
   }
 }
 
+void qa_emit_custom_targets(std::string &out,
+                            bool &first_widget,
+                            const wmWindow *win,
+                            const ScrArea *area,
+                            const ARegion *region)
+{
+  std::vector<MixarQATarget> targets;
+  for (const MixarQAProviderEntry &entry : qa_providers()) {
+    if (entry.spacetype == area->spacetype) {
+      entry.fn(win, area, region, targets);
+    }
+  }
+  for (const MixarQATarget &t : targets) {
+    if (!first_widget) {
+      out += ',';
+    }
+    first_widget = false;
+    out += "\n{";
+    out += "\"w\":" + std::to_string(uintptr_t(win)) + ',';
+    out += "\"a\":" + std::to_string(uintptr_t(area)) + ',';
+    out += "\"at\":" + std::to_string(int(area->spacetype)) + ',';
+    out += "\"r\":" + std::to_string(uintptr_t(region)) + ',';
+    out += "\"rt\":" + std::to_string(int(region->regiontype)) + ',';
+    out += "\"type\":\"Custom\",";
+    json_str(out, "surface", t.surface);
+    out += ',';
+    json_str(out, "text", t.text);
+    out += ',';
+    if (!t.value.empty()) {
+      json_str(out, "value", t.value);
+      out += ',';
+    }
+    if (!t.detail.empty()) {
+      json_str(out, "detail", t.detail);
+      out += ',';
+    }
+    if (t.index >= 0) {
+      out += "\"index\":" + std::to_string(t.index) + ',';
+    }
+    out += "\"rect\":[" + std::to_string(t.rect_win.xmin) + ',' +
+           std::to_string(t.rect_win.ymin) + ',' + std::to_string(t.rect_win.xmax) +
+           ',' + std::to_string(t.rect_win.ymax) + "],";
+    out += std::string("\"enabled\":") + (t.enabled ? "true" : "false");
+    out += '}';
+  }
+}
+
 void qa_dump_region(std::string &out,
                     bool &first_widget,
                     const wmWindow *win,
@@ -151,6 +217,9 @@ void qa_dump_region(std::string &out,
   }
   if (BLI_rcti_size_x(&region->winrct) <= 0 || BLI_rcti_size_y(&region->winrct) <= 0) {
     return;
+  }
+  if (area != nullptr) {
+    qa_emit_custom_targets(out, first_widget, win, area, region);
   }
   if (region->runtime == nullptr) {
     return;
