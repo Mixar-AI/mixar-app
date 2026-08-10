@@ -46,7 +46,11 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
 
     assert "get_video_generation_limits" in handoff
-    assert 'region.active_panel_category = "Video Gen"' in handoff
+    # Tab labels are catalog-driven: the handoff must resolve the Video
+    # Gen tab's current category through get_tab_category("video_gen")
+    # with the literal only as the offline fallback.
+    assert 'get_tab_category("video_gen", "Video Gen")' in handoff
+    assert "region.active_panel_category = category" in handoff
     assert "MIXAR_OT_director_send_video" in overlay
     assert "seedance" not in handoff.lower()
 

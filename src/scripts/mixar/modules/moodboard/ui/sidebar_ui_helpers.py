@@ -94,8 +94,9 @@ def focus_scene_gen_segments(context):
 
     Used by the moodboard segmentation tools (magic select, box/lasso
     mask) so their results are visible where the Generate button lives.
-    Switches the sidebar to the "Scene Gen" panel category and selects
-    the ``scene_gen`` mode when the catalog is loaded (the mode enum item
+    Switches the sidebar to the Scene Gen tab's current catalog-driven
+    category (``get_tab_category("scene_gen")``) and selects the
+    ``scene_gen`` mode when the catalog is loaded (the mode enum item
     doesn't exist offline — silently skipped). Never raises.
     """
     scene = context.scene
@@ -114,7 +115,10 @@ def focus_scene_gen_segments(context):
             (r for r in area.regions if r.type == 'UI'), None,
         ) if area else None
         if region and hasattr(region, 'active_panel_category'):
-            region.active_panel_category = "Scene Gen"
+            from .moodboard_sidebar_panels import get_tab_category
+            region.active_panel_category = get_tab_category(
+                "scene_gen", "Scene Gen",
+            )
     except Exception:
         pass
 

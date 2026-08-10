@@ -64,6 +64,14 @@ struct wmWindowManager;
 #define MIXIE_GRAPH_LABEL_BUF 256  /* GRAPH_LABEL_MAXLEN */
 #define MIXIE_GRAPH_WIDGET_BUF 64  /* GRAPH_WIDGET_MAXLEN */
 #define MIXIE_GRAPH_NAMES_BUF 4096 /* GRAPH_OBJECT_NAMES_MAXLEN */
+/* Display-only echo of a draft node's prompt inside its tile. Deliberately far
+ * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
+ * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
+#define MIXIE_GRAPH_PROMPT_PREVIEW_BUF 192
+/* Minimum on-screen node size before the floating prompt/toolbar controls
+ * draw. Shared with the draft-hint text so exactly one of the two shows. */
+#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_X 360
+#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y 220
 /** Inset of a node card's media preview from the card edge. */
 #define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
 #define MOODBOARD_GRAPH_SOCKET_RADIUS 10.0f
