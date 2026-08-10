@@ -35,6 +35,26 @@ python -m pytest -q src/scripts/mixar/modules/testing  # Legacy/embedded suite (
 ```
 The default suite runs outside Blender; root `conftest.py` injects `bpy` stubs. The legacy/embedded module suite is explicit because some tests require Blender/runtime dependencies.
 
+### GUI E2E: the QA harness (MISSION-CRITICAL — this is how features ship)
+The QA harness drives the REAL built app like a human — semantic clicks by
+operator-id/prop/surface (no pixel guessing), drags, file drops, targeted
+screenshots you must actually READ — and runs replayable E2E scenarios (agent
+chat, moodboard graph, full image→3D→retopology pipeline). **A feature is DONE
+only when the running app has proven it: state asserts AND vision, plus a
+scenario left behind.** Before any feature work, read the playbook:
+- Harness: `/Users/satyam/mixar-src/scripts/qa-gui/` (private repo
+  `github.com/Mixar-AI/mixar-qa-harness`) — `README.md` (architecture +
+  hard-won gotchas), `SHIP_LOOP.md` (the build→drive→verify→encode→ship
+  contract), `UX_CHECKLIST.md` (checkable "looks right" criteria).
+- In-app C++ half (introspection RNA, custom-surface targets, drop hook):
+  branch `feature/qa-gui-harness` in THIS repo — must be in the Dev build.
+- Run: `cd ~/mixar-src/scripts/qa-gui && ./run_qa_app.sh` then
+  `python3 driver/qa_client.py status`; full suite `./run_scenarios.sh`
+  (spends real credits); MCP tools available as the `mixar-qa` server.
+- New custom-drawn UI is unshippable until it exports QA targets
+  (`Mixar_qa_register_target_provider` — read the surface's OWN hit-test
+  geometry, never duplicate it).
+
 ## Code Rules
 
 - Keep the code as modular, readable and performance efficient as possible. No file should be larger than 500 lines of code. Leverage C++ wherever needed to get maximum performance.
