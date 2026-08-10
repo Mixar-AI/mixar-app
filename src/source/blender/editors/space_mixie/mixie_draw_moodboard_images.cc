@@ -347,7 +347,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           /* Translate to center for rotation/flip */
           GPU_matrix_translate_2f(center_x, center_y);
 
-          /* Apply rotation (value is already in radians from RNA ANGLE property) */
+          /* GPU_matrix_rotate_2d and the moodboard RNA property both use degrees. */
           if (rotation != 0.0f) {
             GPU_matrix_rotate_2d(rotation);
           }
@@ -369,6 +369,9 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           GPU_texture_filter_mode(gpu_tex, true);
           draw_gpu_texture_quad(gpu_tex, pos_x, pos_y, display_width, display_height);
           GPU_blend(GPU_BLEND_NONE);
+
+          mixie_draw_moodboard_annotations(
+              &itemptr, v2d, pos_x, pos_y, display_width, display_height, scale);
 
           /* Draw selection overlay if selected */
           if (is_selected) {
@@ -401,7 +404,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             /* Translate to center for rotation/flip */
             GPU_matrix_translate_2f(center_x, center_y);
 
-            /* Apply rotation (value is already in radians from RNA ANGLE property) */
+            /* GPU_matrix_rotate_2d and the moodboard RNA property both use degrees. */
             if (rotation != 0.0f) {
               GPU_matrix_rotate_2d(rotation);
             }
@@ -455,6 +458,9 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             }
 
             GPU_blend(GPU_BLEND_NONE);
+
+            mixie_draw_moodboard_annotations(
+                &itemptr, v2d, pos_x, pos_y, display_width, display_height, scale);
 
             /* Draw selection overlay if selected */
             if (is_selected) {

@@ -78,6 +78,14 @@ struct wmWindowManager;
 #define MOODBOARD_GRAPH_OUTPUT_RADIUS 13.0f
 #define MOODBOARD_GRAPH_SOCKET_OFFSET 12.0f
 #define MOODBOARD_GRAPH_LINK_RESOLUTION 24
+/* MASK_DETAIL card split: bottom fraction is the mask/result thumbnail, the
+ * top holds the vertical control stack. Shared by the graph draw + node UI. */
+#define MOODBOARD_MASK_THUMB_FRACTION 0.45f
+/* Base on-screen width (px, before DPI scaling) of the in-node control panel.
+ * It is DPI-scaled but deliberately does NOT scale with canvas zoom — the panel
+ * width must never depend on the card's on-screen size, or the widgets would
+ * resize as the canvas is zoomed. */
+#define MOODBOARD_NODE_UI_WIDTH 320
 
 /* Mixie3D Mode Constants */
 #define SAM3D_PREVIEW_HEIGHT_RATIO 0.20f

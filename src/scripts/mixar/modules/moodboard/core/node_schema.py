@@ -28,6 +28,19 @@ _OUTPUT_TYPES = {
     'IMAGE_GEN': 'IMAGE',
     'VIDEO_GEN': 'VIDEO',
     'MODEL_3D': 'MESH',
+    'MASK_DETAIL': 'IMAGE',
+    # Mesh -> mesh continuations all output a 3D mesh.
+    'PBR_GEN': 'MESH',
+    'RETOPOLOGY': 'MESH',
+    'MESH_SEGMENT': 'MESH',
+    'AUTO_RIG': 'MESH',
+}
+
+_MESH_FEATURE_CAPABILITY = {
+    'PBR_GEN': 'pbr_generation',
+    'RETOPOLOGY': 'retopology',
+    'MESH_SEGMENT': 'mesh_segmentation',
+    'AUTO_RIG': 'animate',
 }
 
 _CONNECTABLE_TYPES = {
@@ -46,12 +59,29 @@ def output_type_for_action(action_type: str) -> str:
 
 def services_for_action(action_type: str, services) -> list:
     """Keep only catalog services executable by this canvas node type."""
+    if action_type == 'MASK_DETAIL':
+        # Component-detail generation runs on the plain image_gen service.
+        return [service for service in services if service.get("key") == 'image_gen']
+    if action_type == 'MESH_SEGMENT':
+        # The mesh node imports segmented part meshes (Part decomposition).
+        return [service for service in services if service.get("key") == 'hunyuan_part']
     if action_type != 'MODEL_3D':
         return list(services)
     return [
         service for service in services
         if service.get("key") in _MODEL_3D_SERVICE_KEYS
     ]
+
+
+def _capability_for_action(action_type: str) -> str:
+    """Local capability map (kept inline to avoid a UI-layer import cycle)."""
+    if action_type == 'VIDEO_GEN':
+        return "video_gen"
+    if action_type == 'MODEL_3D':
+        return "model_gen"
+    if action_type in _MESH_FEATURE_CAPABILITY:
+        return _MESH_FEATURE_CAPABILITY[action_type]
+    return "image_gen"
 
 
 def visible_input_socket_ids(sockets, occupied: set[str]) -> set[str]:
@@ -234,15 +264,27 @@ def refresh_node_parameter_visibility(node) -> None:
         )
 
 
+# Action nodes match the on-canvas footprint of an image node (700px wide,
+# MOODBOARD_IMAGE_BASE_SIZE) so the graph reads as one consistent size.
+MASK_DETAIL_NODE_WIDTH = 700.0
+MASK_DETAIL_NODE_HEIGHT = 700.0
+
+
 def refresh_node_height(node) -> None:
     """Keep the media tile independent from its screen-space toolbar."""
     image = getattr(node, "preview_image", None)
     size = getattr(image, "size", ()) if image else ()
+    if node.action_type == 'MASK_DETAIL':
+        # Fixed card: the control panel sits in the top, the mask/result
+        # thumbnail fills the bottom (see the C++ node draw). Square, image-sized.
+        node.width = MASK_DETAIL_NODE_WIDTH
+        node.height = MASK_DETAIL_NODE_HEIGHT
+        return
     if len(size) >= 2 and size[0] > 0 and size[1] > 0:
         aspect = float(size[1]) / float(size[0])
-        node.height = max(260.0, min(1000.0, float(node.width) * aspect))
+        node.height = max(360.0, min(1400.0, float(node.width) * aspect))
         return
-    node.height = 420.0
+    node.height = 560.0
 
 
 def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
@@ -345,11 +387,7 @@ def sync_node_schema(_scene, node) -> None:
 
         model = get_model(service_key, model_slug) or {}
         service = get_service(service_key) or {}
-        capability = (
-            "image_gen" if node.action_type == 'IMAGE_GEN'
-            else "video_gen" if node.action_type == 'VIDEO_GEN'
-            else "model_gen"
-        )
+        capability = _capability_for_action(node.action_type)
         services = services_for_action(
             node.action_type,
             get_services(capability, surface="moodboard"),
@@ -359,6 +397,28 @@ def sync_node_schema(_scene, node) -> None:
         model = {}
         service = {}
     input_contract = build_input_contract(service, model)
+    # Mesh-feature nodes take a 3D mesh from a connected 3D node. The backend
+    # services export the mesh client-side (no connectable input in their
+    # catalog spec), so inject a single MESH input socket for the connection.
+    if node.action_type in _MESH_FEATURE_CAPABILITY and not any(
+        "MESH" in socket.get("accepted_types", ())
+        for socket in input_contract["sockets"]
+    ):
+        input_contract["sockets"].insert(
+            0,
+            {
+                "id": "mesh",
+                "label": "Mesh",
+                "accepted_types": ["MESH"],
+                "required": True,
+                "group_id": "mesh",
+                "repeatable": False,
+            },
+        )
+        # connect_nodes validates against per-type input limits, so the injected
+        # socket needs a matching MESH capacity or the connection is rejected.
+        limits = input_contract.setdefault("limits", {})
+        limits["MESH"] = max(int(limits.get("MESH", 0) or 0), 1)
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}
@@ -401,6 +461,10 @@ def sync_node_schema(_scene, node) -> None:
     )
     for name, raw_spec in ordered:
         if not isinstance(raw_spec, dict) or raw_spec.get("visible") is False:
+            continue
+        # MASK_DETAIL sets number_of_images from its own "Views per Component"
+        # control, so hide the catalog's duplicate on the mask node.
+        if node.action_type == 'MASK_DETAIL' and str(name) == "number_of_images":
             continue
         spec = dict(raw_spec)
         parameter = node.parameters.add()
@@ -484,11 +548,7 @@ def sync_all_node_schemas() -> None:
 
     for scene in bpy.data.scenes:
         for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
-            capability = (
-                "image_gen" if node.action_type == 'IMAGE_GEN'
-                else "video_gen" if node.action_type == 'VIDEO_GEN'
-                else "model_gen"
-            )
+            capability = _capability_for_action(node.action_type)
             services = services_for_action(
                 node.action_type,
                 get_services(capability, surface="moodboard"),
