@@ -168,10 +168,10 @@ void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds)
   draw_gpu_texture_quad(texture, x, y, width, height);
 }
 /** Draw a screen-size-stable play/pause affordance over a movie frame. */
-static void draw_video_playback_overlay(View2D *v2d,
-                                        const float center_x,
-                                        const float center_y,
-                                        const bool is_playing)
+void mixie_draw_moodboard_video_overlay(View2D *v2d,
+                                       const float center_x,
+                                       const float center_y,
+                                       const bool is_playing)
 {
   const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
   const float radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
@@ -476,7 +476,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
         }
 
         if (media_drawn && image->source == IMA_SRC_MOVIE) {
-          draw_video_playback_overlay(v2d,
+          mixie_draw_moodboard_video_overlay(v2d,
                                       pos_x + drawn_width * 0.5f,
                                       pos_y + drawn_height * 0.5f,
                                       video_is_playing);

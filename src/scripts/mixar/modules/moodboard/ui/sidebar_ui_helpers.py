@@ -95,21 +95,24 @@ def focus_segments_panel(context):
     Used by the moodboard segmentation tools (magic select, box/lasso
     mask) so their results are visible where the Generate button lives.
     Post-split catalogs host Segments to 3D in the dedicated "Character
-    Parts" tab; pre-split catalogs (and offline) keep it as the Scene
-    Gen tab's ``scene_gen`` mode, so the pre-split path still selects
-    that mode (the enum item doesn't exist offline — silently skipped).
-    Never raises.
+    Parts" tab; pre-split catalogs (and offline) keep it as the Scene Gen
+    tab's ``scene_gen`` mode, so the pre-split path still selects that mode
+    (the enum item doesn't exist offline — silently skipped). The target
+    category is resolved through ``get_tab_category()`` so it follows catalog
+    label renames rather than a hardcoded string. Never raises.
     """
-    category = "Scene Gen"
+    capability = "scene_gen"
+    fallback_label = "Scene Gen"
     try:
         from mixar.bootstrap.generation_catalog_cache import (
             get_services, is_loaded,
         )
         if is_loaded() and get_services("character_parts"):
-            category = "Character Parts"
+            capability = "character_parts"
+            fallback_label = "Character Parts"
     except Exception:
         pass
-    if category == "Scene Gen":
+    if capability == "scene_gen":
         scene = context.scene
         sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
         if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
@@ -126,7 +129,10 @@ def focus_segments_panel(context):
             (r for r in area.regions if r.type == 'UI'), None,
         ) if area else None
         if region and hasattr(region, 'active_panel_category'):
-            region.active_panel_category = category
+            from .moodboard_sidebar_panels import get_tab_category
+            region.active_panel_category = get_tab_category(
+                capability, fallback_label,
+            )
     except Exception:
         pass
 

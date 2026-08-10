@@ -195,10 +195,11 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   }
 
   GraphNodeKind kind = GRAPH_ACTION;
-  int index = moodboard_find_action_node_under_mouse(&scene_ptr, mouse_x, mouse_y, nullptr);
+  rctf node_rect{};
+  int index = moodboard_find_action_node_under_mouse(&scene_ptr, mouse_x, mouse_y, &node_rect);
   if (index < 0) {
     kind = GRAPH_ASSET;
-    index = moodboard_find_asset_node_under_mouse(&scene_ptr, mouse_x, mouse_y, nullptr);
+    index = moodboard_find_asset_node_under_mouse(&scene_ptr, mouse_x, mouse_y, &node_rect);
   }
   if (index < 0) {
     if (moodboard_find_image_under_mouse(
@@ -223,9 +224,36 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
 
   char node_id[MIXIE_GRAPH_ID_BUF];
   mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
-  if (kind == GRAPH_ASSET && event->val == KM_DBL_CLICK) {
-    return call_node_operator(
-        C, "MIXIE_OT_moodboard_select_asset_objects", node_id, event);
+  if (kind == GRAPH_ASSET) {
+    if (event->val == KM_DBL_CLICK) {
+      return call_node_operator(
+          C, "MIXIE_OT_moodboard_select_asset_objects", node_id, event);
+    }
+  }
+  else {
+    /* A generated movie lives inside its node, so it is excluded from the
+     * standalone-tile hit-test that normally starts playback. Toggle it here
+     * from the same gestures an uploaded movie accepts — the centred
+     * play/pause affordance, or a double-click anywhere on the tile. */
+    const int media_index = moodboard_find_embedded_media_index(&scene_ptr, node_id);
+    if (media_index >= 0 && moodboard_item_is_video(&scene_ptr, media_index)) {
+      rctf preview_bounds{};
+      moodboard_graph_node_preview_bounds(node_rect, &preview_bounds);
+      const float view_scale = std::max(UI_view2d_scale_get_x(&region->v2d), 0.001f);
+      const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+      const float delta_x = mouse_x - BLI_rctf_cent_x(&preview_bounds);
+      const float delta_y = mouse_y - BLI_rctf_cent_y(&preview_bounds);
+      const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
+                                   play_radius * play_radius;
+      if (event->val == KM_DBL_CLICK || play_button_hit) {
+        /* Return before the move modal is installed: the node-move branch has
+         * no drag threshold and would slide the card on the first mouse-move
+         * of the same click. */
+        return moodboard_toggle_video_playback(C, &scene_ptr, media_index, op->reports) ?
+                   OPERATOR_FINISHED :
+                   OPERATOR_CANCELLED;
+      }
+    }
   }
 
   GraphMoveData *data = MEM_new<GraphMoveData>("MoodboardGraphMove");

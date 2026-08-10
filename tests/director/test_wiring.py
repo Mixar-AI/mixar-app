@@ -46,7 +46,11 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
 
     assert "get_video_generation_limits" in handoff
-    assert 'region.active_panel_category = "Video Gen"' in handoff
+    # Tab labels are catalog-driven: the handoff must resolve the Video
+    # Gen tab's current category through get_tab_category("video_gen")
+    # with the literal only as the offline fallback.
+    assert 'get_tab_category("video_gen", "Video Gen")' in handoff
+    assert "region.active_panel_category = category" in handoff
     assert "MIXAR_OT_director_send_video" in overlay
     assert "seedance" not in handoff.lower()
 
@@ -63,8 +67,9 @@ def test_director_has_no_n_panel_implementation():
     assert 'bl_idname = "MIXAR_PT_director"' not in python_sources
 
     assert not (DIRECTOR / "ui/panels/director_popovers.py").exists()
-    render_popover = _read("ui/panels/render_popover.py")
-    assert render_popover.count("bl_region_type = 'HEADER'") == 1
+    # Every popup is native now; no Python panel/popover survives.
+    assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
+    assert "bl_region_type = 'HEADER'" not in python_sources
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -82,6 +87,7 @@ def test_native_viewport_surface_is_registered_from_view3d():
         "view3d_director_overlay.cc",
         "view3d_director_overlay_frame.cc",
         "view3d_director_popup.cc",
+        "view3d_director_popup_render.cc",
         "view3d_director_popup_shot.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
@@ -119,8 +125,8 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "view3d_director_shots_popup_create",
         "view3d_director_camera_popup_create",
         "view3d_director_animation_popup_create",
+        "view3d_director_render_popup_create",
         "MIXAR_OT_director_capture_beat",
-        "MIXAR_OT_director_show_render",
         "MIXAR_OT_director_send_keyframes",
         "MIXAR_OT_director_send_video",
     ):
@@ -200,6 +206,82 @@ def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
     assert "point.handle_left[0] += delta" in timeline_core
     assert "point.handle_right[0] += delta" in timeline_core
     assert "refresh_manifest(context.scene, shot)" in timeline_ops
+
+
+def test_single_keyframe_is_draggable_along_the_timeline():
+    """Pressing a keyframe marker retimes it, not just jumps the playhead.
+
+    A draft beat can be dragged: the modal jumps the playhead on invoke (so a
+    click that never moves still just views the keyframe, matching the old
+    jump behaviour) and slides the beat plus its matching native camera keys
+    on MOUSEMOVE. A single beat is clamped to stay between its time-neighbours
+    because two Director keys must never share a frame. Locked shots stay
+    view-only: the C++ handler only starts the drag when the shot is unlocked
+    and otherwise falls back to jump_beat.
+    """
+    timeline_ops = _read("ui/operators/timeline_ops.py")
+    timeline_core = _read("core/timeline.py")
+    interaction = (
+        VIEW3D / "view3d_director_timeline_interaction.cc"
+    ).read_text(encoding="utf-8")
+
+    assert "class MIXAR_OT_director_drag_beat" in timeline_ops
+    assert "MIXAR_OT_director_drag_beat" in timeline_ops.split("classes = (", 1)[1]
+    assert "move_single_beat" in timeline_ops
+    assert "def move_single_beat" in timeline_core
+    assert '"mixar.director_drag_beat"' in interaction
+    assert "begin_beat_drag" in interaction
+    # Locked shots never start the drag; jump_beat is the view-only fallback.
+    assert "!state.locked && begin_beat_drag" in interaction
+    assert '"mixar.director_jump_beat"' in interaction
+
+
+def test_keyframes_delete_from_timeline_with_standard_keys():
+    """X / Delete / Backspace over the timeline remove a keyframe.
+
+    While directing, `mixar.director_block_input` (the Object Mode / WINDOW
+    keymap guard) swallows X/Del to protect scene objects, but it never sees
+    keys pressed over the timeline's own CHANNELS region. So the native
+    timeline handler deletes its own keyframe: the one under the cursor, else
+    the one under the playhead, else the active one — through the existing
+    `mixar.director_remove_beat` operator. Locked takes stay read-only.
+    """
+    interaction = (
+        VIEW3D / "view3d_director_timeline_interaction.cc"
+    ).read_text(encoding="utf-8")
+
+    for key in ("EVT_XKEY", "EVT_DELKEY", "EVT_BACKSPACEKEY"):
+        assert key in interaction, key
+    assert "beat_to_delete" in interaction
+    assert '"mixar.director_remove_beat"' in interaction
+    assert "state.has_shot && !state.locked" in interaction
+
+
+def test_orphaned_keyframes_prune_when_native_keys_deleted_elsewhere():
+    """Deleting camera keys in the Dope Sheet/Timeline must not leave stale
+    orange handles on the Director strip.
+
+    The strip draws from ``beats``, but the pose lives in native F-curves. A
+    depsgraph handler watches the native Director key count while directing
+    and, on a genuine deletion (count drops below the beat count — never a
+    move, which keeps the count), a timer prunes orphaned beats through the
+    ordinary ``remove_beat`` path. Following ``auto_key``, the handler only
+    detects; the timer mutates (editing data inside ``depsgraph_update_post``
+    is unsafe). The ``ui/`` bridge installs it like ``auto_key_watch``.
+    """
+    beat_sync = _read("core/beat_sync.py")
+    watch = _read("ui/beat_sync_watch.py")
+
+    assert "depsgraph_update_post" in beat_sync
+    assert "@persistent" in beat_sync
+    assert "def prune_orphaned_beats" in beat_sync
+    assert "from .capture import remove_beat" in beat_sync
+    assert "remove_beat(scene, shot, index)" in beat_sync
+    # Detect in the handler, mutate in the timer (never mutate in the handler).
+    assert "bpy.app.timers.register(_prune_timer" in beat_sync
+    # Never destroy a beat + its still on a MOVE (native count stays equal).
+    assert "len(native) >= len(shot.beats)" in beat_sync
+    assert "beat_sync.register()" in watch
 
 
 def test_capture_shortcut_survives_gui_keyconfig_reload():
@@ -339,6 +421,52 @@ def test_tool_rail_has_accent_highlight_and_grouping():
     assert "character ? 4 : 3" in rail
     assert "MIXAR_OT_director_navigate" not in rail
     assert "MIXAR_OT_director_precise" not in rail
+
+
+def test_camera_control_is_navigate_only_and_text_only():
+    """Precise is hidden until its role is clear; Navigate is just the word.
+
+    Artist feedback: the Precise gizmo mode confused more than it helped, and
+    the hand icon on Navigate read as a pan tool. The operator and the
+    `navigation_mode` property survive (Precise stays reachable for future
+    surfaces); no native surface draws its button, and Navigate renders as a
+    text-only button on both the camera gate and the timeline dock.
+    """
+    frame = (VIEW3D / "view3d_director_overlay_frame.cc").read_text(
+        encoding="utf-8"
+    )
+    timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
+        encoding="utf-8"
+    )
+    camera_ops = _read("ui/operators/camera_ops.py")
+
+    assert "MIXAR_OT_director_precise" not in frame
+    assert "MIXAR_OT_director_precise" not in timeline
+    assert "class MIXAR_OT_director_precise" in camera_ops
+    assert '"Navigate"' in frame
+    assert '"Navigate"' in timeline
+    # Text-only: the hand icon is gone from Navigate everywhere. The one
+    # ICON_VIEW_PAN left on the gate belongs to the drag-frame tool.
+    assert frame.count("ICON_VIEW_PAN") == 1
+    assert "ICON_VIEW_PAN" not in timeline
+    assert "ICON_ORIENTATION_GIMBAL" not in frame
+    assert "ICON_ORIENTATION_GIMBAL" not in timeline
+
+
+def test_auto_key_uses_native_timeline_record_icons():
+    """The Auto Key toggle mirrors Blender's timeline auto-keying button.
+
+    Native auto-key is `ICON_RECORD_OFF` flipping to `ICON_RECORD_ON` when
+    armed (rna_scene.cc ui_icon on `use_keyframe_insert_auto`), not a static
+    REC glyph.
+    """
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
+        encoding="utf-8"
+    )
+
+    assert "ICON_RECORD_ON" in overlay
+    assert "ICON_RECORD_OFF" in overlay
+    assert "ICON_REC," not in overlay
 
 
 def test_camera_moves_reuse_the_ordinary_capture_flow():

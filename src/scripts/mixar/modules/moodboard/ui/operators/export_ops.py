@@ -14,17 +14,21 @@ from bpy.types import Operator
 from bpy.props import StringProperty
 
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
-from ...core.media_utils import describe_moodboard_media, is_video_item
+from ...core.media_utils import (
+    describe_moodboard_media,
+    is_video_item,
+    selected_exportable_media,
+)
 
 
 _STILL_EXPORT_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.tga', '.bmp', '.tif', '.tiff')
 
 
 def _selected_media(scene):
-    return [
-        item for item in scene.mixie_moodboard_images
-        if item.selected and item.image
-    ]
+    # Includes results owned by a selected inference node: those are never
+    # `selected` themselves, so right-clicking a completed node and choosing
+    # Export used to report "No media selected to export".
+    return selected_exportable_media(scene)
 
 
 def _default_export_name(item, fallback_index=0):

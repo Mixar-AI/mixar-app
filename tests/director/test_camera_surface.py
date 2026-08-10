@@ -39,11 +39,12 @@ def test_camera_controls_are_anchored_to_the_live_camera_gate():
         "view3d_director_lens_popup_create",
         "view3d_director_aspect_popup_create",
         "MIXAR_OT_director_navigate",
-        "MIXAR_OT_director_precise",
         "MIXAR_OT_director_fit_frame",
         "MIXAR_OT_director_drag_frame",
     ):
         assert reference in overlay
+    # Precise is hidden from every surface until its role is clear.
+    assert "MIXAR_OT_director_precise" not in overlay
 
 
 def test_camera_gate_speaks_millimetres_not_degrees():
@@ -175,4 +176,5 @@ def test_auto_key_captures_after_camera_moves():
     assert "auto_key.register()" in watch
     assert '"auto_key"' in state_cc
     assert "MIXAR_OT_director_toggle_auto_key" in overlay
-    assert "ICON_REC" in overlay
+    # Native timeline record icons, not a static REC glyph.
+    assert "ICON_RECORD_ON : ICON_RECORD_OFF" in overlay
