@@ -13,10 +13,13 @@ explicit user choice (any non-NONE backend, or deliberately disabled
 devices) is never overridden; the probe/override policy lives in
 ``common/utils/cycles_device_utils.py``.
 
-Scenes whose ``cycles.device`` property was never written (factory 'CPU')
-are switched to 'GPU' once a backend is live. ``is_property_set()``
-distinguishes "the user chose CPU" (stored in the .blend / set via UI)
-from "never touched", so an explicit CPU choice survives.
+Scenes whose ``cycles.device`` property was never written are switched to
+'GPU' once a backend is live. ``is_property_set()`` distinguishes "the
+user chose CPU" (stored in the .blend / set via UI) from "never touched",
+so an explicit CPU choice survives. Mixar builds also flip the native
+default to 'GPU' (the ``src/intern/cycles/blender/addon/properties.py``
+overlay), which makes this scene pass a no-op there — it stays as the
+fallback for builds without the overlay and for files predating it.
 
 Preferences are configured in-session on every launch rather than saved to
 userpref.blend — the probe is idempotent and cheap, and never persisting
