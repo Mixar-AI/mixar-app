@@ -84,6 +84,21 @@ def enable_render_updates(objects) -> None:
                 mat.surface_render_method = "BLENDED"
         except Exception as e:  # noqa: BLE001 - enum identifiers changed?
             logger.warning("[SplatRender] enable failed on %s: %s", obj.name, e)
+    # Renders of splat scenes MUST lock the interface: the per-frame camera
+    # pushes below mutate original IDs from the render job while a live
+    # viewport would concurrently evaluate the 500k-point GN for drawing —
+    # that race crashed in mesh_calc_modifiers (Director shot render,
+    # 2026-08-10). This is Blender's documented requirement for mutating
+    # scene data from frame handlers during renders, and it must be set
+    # BEFORE the render job starts, so it is a property of the splat scene.
+    try:
+        scene = bpy.context.scene
+        if scene is not None and not scene.render.use_lock_interface:
+            scene.render.use_lock_interface = True
+            logger.info("[SplatRender] enabled Lock Interface for splat scene %s",
+                        scene.name)
+    except Exception:  # noqa: BLE001 - no context scene (headless edge)
+        pass
 
 
 def _splat_objects(scene):
@@ -95,6 +110,60 @@ def _splat_objects(scene):
             yield obj
 
 
+def _projection_matrix(cam, width, height, scale_x=1.0, scale_y=1.0):
+    """Blender-equivalent camera projection matrix, no depsgraph needed.
+
+    Port of BKE_camera_params_compute_viewplane + the frustum matrix, for
+    the render handlers that receive no depsgraph. Small deviations only
+    affect splat quad footprints (visual), never stability.
+    """
+    from mathutils import Matrix
+
+    sensor_fit = cam.sensor_fit
+    if sensor_fit == "AUTO":
+        horizontal = (scale_x * width) >= (scale_y * height)
+    else:
+        horizontal = sensor_fit == "HORIZONTAL"
+    sensor = cam.sensor_height if sensor_fit == "VERTICAL" else cam.sensor_width
+
+    clip_start, clip_end = cam.clip_start, cam.clip_end
+    is_ortho = cam.type == "ORTHO"
+    if is_ortho:
+        pixsize = cam.ortho_scale
+        clip_start = max(clip_start, 1e-4)
+    else:
+        pixsize = (sensor * clip_start) / max(cam.lens, 1e-4)
+
+    viewfac = width if horizontal else (scale_y / scale_x) * height
+    pixsize /= viewfac
+
+    xmax = 0.5 * width * pixsize
+    ymax = 0.5 * height * (scale_y / scale_x) * pixsize
+    xmin, ymin = -xmax, -ymax
+    dx = cam.shift_x * viewfac * pixsize
+    dy = cam.shift_y * viewfac * pixsize
+    xmin += dx; xmax += dx; ymin += dy; ymax += dy
+
+    m = Matrix.Identity(4)
+    if is_ortho:
+        m[0][0] = 2.0 / (xmax - xmin)
+        m[1][1] = 2.0 / (ymax - ymin)
+        m[2][2] = -2.0 / (clip_end - clip_start)
+        m[0][3] = -(xmax + xmin) / (xmax - xmin)
+        m[1][3] = -(ymax + ymin) / (ymax - ymin)
+        m[2][3] = -(clip_end + clip_start) / (clip_end - clip_start)
+    else:
+        m[0][0] = 2.0 * clip_start / (xmax - xmin)
+        m[1][1] = 2.0 * clip_start / (ymax - ymin)
+        m[0][2] = (xmax + xmin) / (xmax - xmin)
+        m[1][2] = (ymax + ymin) / (ymax - ymin)
+        m[2][2] = -(clip_end + clip_start) / (clip_end - clip_start)
+        m[2][3] = -2.0 * clip_end * clip_start / (clip_end - clip_start)
+        m[3][2] = -1.0
+        m[3][3] = 0.0
+    return m
+
+
 def push_camera_to_splats(scene, depsgraph=None) -> int:
     """Write the scene camera's matrices into every enabled splat. Returns count."""
     camera = scene.camera
@@ -104,17 +173,25 @@ def push_camera_to_splats(scene, depsgraph=None) -> int:
     if not splats:
         return 0
 
-    if depsgraph is None:
-        depsgraph = bpy.context.evaluated_depsgraph_get()
     render = scene.render
     scale = render.resolution_percentage / 100.0
     width = max(1, int(render.resolution_x * scale))
     height = max(1, int(render.resolution_y * scale))
     view = camera.matrix_world.inverted()
-    proj = camera.calc_matrix_camera(
-        depsgraph, x=width, y=height,
-        scale_x=render.pixel_aspect_x, scale_y=render.pixel_aspect_y,
-    )
+    if depsgraph is not None:
+        # frame_change_pre hands us the render depsgraph — evaluated camera.
+        proj = camera.evaluated_get(depsgraph).calc_matrix_camera(
+            depsgraph, x=width, y=height,
+            scale_x=render.pixel_aspect_x, scale_y=render.pixel_aspect_y,
+        )
+    else:
+        # render_init / render_pre have NO depsgraph, and fetching one via
+        # bpy.context.evaluated_depsgraph_get() mid-render is itself a
+        # crash risk — compute the projection from camera data directly.
+        proj = _projection_matrix(
+            camera.data, width, height,
+            render.pixel_aspect_x, render.pixel_aspect_y,
+        )
 
     for obj in splats:
         mod = obj.modifiers[SPLAT_GN_MODIFIER]
@@ -126,6 +203,31 @@ def push_camera_to_splats(scene, depsgraph=None) -> int:
         mod["Socket_35"] = float(height)
         obj.update_tag(refresh={"DATA"})
     return len(splats)
+
+
+@persistent
+def on_load_post(_filepath=None):
+    """Lock the interface on every scene that already contains splats.
+
+    Files saved before this guard existed carry splat scenes WITHOUT
+    use_lock_interface; rendering those with a live viewport is the
+    mesh_calc_modifiers crash. Import-time covers new worlds; this covers
+    every pre-existing file on load.
+    """
+    try:
+        for sc in bpy.data.scenes:
+            if sc.render.use_lock_interface:
+                continue
+            for obj in sc.objects:
+                if obj.type == "MESH" and SPLAT_GN_MODIFIER in obj.modifiers:
+                    sc.render.use_lock_interface = True
+                    logger.info(
+                        "[SplatRender] Lock Interface enabled for splat scene %s",
+                        sc.name,
+                    )
+                    break
+    except Exception:  # noqa: BLE001 - never break file load
+        logger.debug("[SplatRender] load-post lock sweep failed", exc_info=True)
 
 
 @persistent

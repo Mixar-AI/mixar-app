@@ -15,6 +15,7 @@ from mixar.modules.moodboard.core import splat_render_camera as src
 
 
 _HANDLERS = (
+    ("load_post", src.on_load_post),
     ("render_init", src.on_render_init),
     ("render_pre", src.on_render_pre),
     ("render_complete", src.on_render_done),
@@ -28,6 +29,8 @@ def register():
         handler_list = getattr(bpy.app.handlers, name)
         if fn not in handler_list:
             handler_list.append(fn)
+    # The file may already be open when this registers (script reload).
+    src.on_load_post()
 
 
 def unregister():
