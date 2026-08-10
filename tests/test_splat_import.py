@@ -82,6 +82,7 @@ def _load(recorder, spz_to_ply, install):
         setattr(importer_stub, name, recorder.make(name))
     importer_stub._recenter_world_to_ground = recorder.make("_recenter")
     importer_stub._enable_splat_render = recorder.make("_proxy", ret=[])
+    importer_stub.RAW_PLY_ROT_EULER_DEG = (-90.0, 0.0, 0.0)
 
     def _import_splat_ply(ply_path):
         recorder.calls.append("_import_splat_ply")

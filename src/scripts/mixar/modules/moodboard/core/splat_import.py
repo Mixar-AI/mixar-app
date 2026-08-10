@@ -90,7 +90,16 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         splat_objs = _import_tracked(lambda: _import_splat_ply(ply_path))
         if not splat_objs:
             raise ValueError(f"No objects imported from {os.path.basename(filepath)}")
-        _orient_splats(splat_objs)
+        # Converted .spz (our decoder negates Y/Z → effectively y-up) takes the
+        # World Labs +90 X; a raw 3DGS .ply keeps the vendor y-DOWN frame and
+        # needs the opposite rotation (KIRI's "Rotate for Blender Axes").
+        from mixar.modules.moodboard.core.world_labs_importer import (
+            RAW_PLY_ROT_EULER_DEG,
+        )
+        _orient_splats(
+            splat_objs,
+            RAW_PLY_ROT_EULER_DEG if ext == ".ply" else None,
+        )
         if recenter:
             _recenter_world_to_ground(splat_objs, [])
 
