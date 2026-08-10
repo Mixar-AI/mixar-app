@@ -2,18 +2,34 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Per-shot motion-guide render operators for Director.
+"""Per-shot motion-guide render operators for Director."""
 
-The Shot Renders popup itself is a native block
-(``view3d_director_popup_render.cc``): its toggles and slider bind shot RNA
-directly and its action row invokes the operator below, so behavior keeps a
-single Python owner.
-"""
-
+import bpy
 from bpy.types import Operator
 
 from ...core.render_outputs import render_job_active, start_shot_render
 from ...core.shot_api import active_shot
+
+
+class MIXAR_OT_director_show_render(Operator):
+    """Open render choices for the active Director shot"""
+
+    bl_idname = "mixar.director_show_render"
+    bl_label = "Shot Renders"
+    bl_description = "Render Beauty, Clay, or Depth videos for this shot"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        return bool(state and state.is_directing and active_shot(context.scene))
+
+    def invoke(self, _context, _event):
+        return bpy.ops.wm.call_panel(
+            'INVOKE_DEFAULT',
+            name="MIXAR_PT_director_render_popover",
+            keep_open=True,
+        )
 
 
 class MIXAR_OT_director_render_videos(Operator):
@@ -56,5 +72,6 @@ class MIXAR_OT_director_render_videos(Operator):
 
 
 classes = (
+    MIXAR_OT_director_show_render,
     MIXAR_OT_director_render_videos,
 )

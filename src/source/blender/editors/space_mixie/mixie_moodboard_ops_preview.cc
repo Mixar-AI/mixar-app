@@ -11,8 +11,6 @@
 
 #include <unordered_map>
 
-#include "BLI_listbase.h"
-
 #include "MOV_read.hh"
 
 namespace blender::ed::mixie {
@@ -78,30 +76,8 @@ static bool any_video_playing()
   return false;
 }
 
-static void prune_dead_playback_entries(bContext *C)
-{
-  /* Playback state is keyed on `Image *`. Generated movies are owned by their
-   * inference node and freed with it, so deleting a node mid-playback would
-   * otherwise leave an entry keyed on a dangling pointer — which a later
-   * datablock allocated at the same address would inherit, appearing to start
-   * mid-playback. Validate against Main instead of trusting the key. */
-  Main *bmain = CTX_data_main(C);
-  if (!bmain) {
-    return;
-  }
-  for (auto it = g_video_playback.begin(); it != g_video_playback.end();) {
-    if (BLI_findindex(&bmain->images, it->first) == -1) {
-      it = g_video_playback.erase(it);
-    }
-    else {
-      ++it;
-    }
-  }
-}
-
 static void video_redraw_timer_update(bContext *C)
 {
-  prune_dead_playback_entries(C);
   wmWindowManager *wm = CTX_wm_manager(C);
   if (!wm) {
     return;
@@ -165,14 +141,7 @@ static int hovered_video_index_from_event(bContext *C,
   float pos_x, pos_y, scale, width, height;
   const int index = moodboard_find_image_under_mouse(
       scene_ptr, mouse_x, mouse_y, &pos_x, &pos_y, &scale, &width, &height);
-  if (index >= 0 && moodboard_item_is_video(scene_ptr, index)) {
-    return index;
-  }
-  /* Node-owned movies are skipped by the standalone-tile hit-test above, so
-   * without this the pointer would read as "outside every video tile" the
-   * moment it moves and stop the playback it just started. */
-  return moodboard_find_node_preview_video_under_mouse(
-      scene_ptr, mouse_x, mouse_y, nullptr);
+  return index >= 0 && moodboard_item_is_video(scene_ptr, index) ? index : -1;
 }
 
 static wmOperatorStatus moodboard_video_hover_invoke(bContext *C,

@@ -61,10 +61,8 @@ DEFAULT_STEP = STEP_WELCOME
 TOTAL_INFO_STEPS = 6
 
 # ---------------------------------------------------------------------------
-# Sidebar category names — offline FALLBACK labels only. The moodboard
-# panels' bl_category values are catalog-driven now, so the tour driver
-# resolves these through moodboard_sidebar_panels.get_tab_category()
-# (capability key → current label) before switching the sidebar.
+# Sidebar category names — must match the corresponding moodboard
+# panels' bl_category values exactly.
 # ---------------------------------------------------------------------------
 CATEGORY_IMAGE_GEN = "Image Gen"
 CATEGORY_IMAGE_TO_3D = "Model Gen"

@@ -182,12 +182,10 @@ void draw_context_actions(uiBlock *block,
         state.locked ? "Create an editable child of this locked take" :
                        "Key this camera pose and capture its reference frame (F)");
     if (!state.locked) {
-      /* Blender's timeline auto-key flips RECORD_OFF to RECORD_ON when armed
-       * (rna_scene.cc ui_icon); mirror that instead of a static REC glyph. */
       uiBut *auto_key = director_overlay_operator_button(
           block,
           "MIXAR_OT_director_toggle_auto_key",
-          state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
+          ICON_REC,
           "",
           action_x + action_w + gap,
           action_y,
@@ -202,7 +200,7 @@ void draw_context_actions(uiBlock *block,
 
   if (!state.timeline_expanded) {
     /* Bottom-left corner: centering collided with the right-anchored
-     * Shot Renders / Moodboard / Video Gen cluster on narrow viewports. */
+     * Export to Moodboard button on narrow viewports. */
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_toggle_timeline",
                                      ICON_TIME,
@@ -215,34 +213,20 @@ void draw_context_actions(uiBlock *block,
   }
 
   if (!state.beats.is_empty()) {
-    /* Native block popup like the lens dropdown; the Python popover is gone. */
-    uiDefBlockBut(block,
-                  view3d_director_render_popup_create,
-                  nullptr,
-                  "Shot Renders",
-                  region->winx - unit * 24 - gap * 4,
-                  gap * 2,
-                  short(unit * 8),
-                  short(unit * 2),
-                  "Render Beauty Preview, Clay, or Depth videos to Moodboard");
-    director_overlay_operator_button(block,
-                                     "MIXAR_OT_director_send_keyframes",
-                                     ICON_EXPORT,
-                                     "Moodboard",
-                                     region->winx - unit * 16 - gap * 3,
-                                     gap * 2,
-                                     unit * 8,
-                                     unit * 2,
-                                     "Group this shot's keyframes on the Moodboard");
-    director_overlay_operator_button(block,
-                                     "MIXAR_OT_director_send_video",
-                                     ICON_FILE_MOVIE,
-                                     "Video Gen",
-                                     region->winx - unit * 8 - gap * 2,
-                                     gap * 2,
-                                     unit * 8,
-                                     unit * 2,
-                                     "Use these ordered keyframes in Video Gen");
+    /* One combined export menu: keyframe stills and rendered Beauty/Clay/Depth
+     * guides both reach the Moodboard from here (view3d_director popover
+     * MIXAR_PT_director_render_popover). Video Gen was removed from this
+     * cluster. */
+    director_overlay_operator_button(
+        block,
+        "MIXAR_OT_director_show_render",
+        ICON_EXPORT,
+        "Export to Moodboard",
+        region->winx - unit * 11 - gap * 2,
+        gap * 2,
+        unit * 11,
+        unit * 2,
+        "Export keyframes and rendered guides to the Moodboard");
   }
 }
 

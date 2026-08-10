@@ -80,6 +80,56 @@ def _model_items(self, _context):
         return [('LOADING', "Loading...", "Fetching generation catalog")]
 
 
+# The Mode/Model/enum dropdowns are dynamic enums that persist a fragile INDEX,
+# so Blender cannot reliably resolve them back to a name at draw time and blanks
+# the menu. The C++ node overlay therefore shows a Python-cached human label
+# instead, derived from the saved slug (service/model) or choices (params).
+def _service_label_for_slug(action_type, service_key) -> str:
+    if not service_key:
+        return ""
+    try:
+        from mixar.modules.common.generation_params import get_service_enum_items
+
+        for item in get_service_enum_items(capability_for_action(action_type)):
+            if item and item[0] == service_key:
+                return str(item[1])
+    except Exception:
+        pass
+    return str(service_key)
+
+
+def _model_label_for_slug(service_key, model_slug) -> str:
+    if not model_slug:
+        return ""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model_enum_items
+
+        for item in get_model_enum_items(service_key):
+            if item and item[0] == model_slug:
+                return str(item[1])
+    except Exception:
+        pass
+    return str(model_slug)
+
+
+def _enum_label_from_choices(choices_json, value) -> str:
+    if not value:
+        return ""
+    try:
+        for choice in json.loads(choices_json or "[]"):
+            if isinstance(choice, dict) and str(choice.get("value")) == str(value):
+                return str(choice.get("label") or choice.get("value") or "")
+    except (TypeError, ValueError):
+        pass
+    return str(value)
+
+
+def refresh_node_dropdown_labels(node) -> None:
+    """Cache the Mode/Model dropdown labels (read by the C++ node overlay)."""
+    node.service_label = _service_label_for_slug(node.action_type, node.service_key_id)
+    node.model_label = _model_label_for_slug(node.service_key_id, node.model_slug)
+
+
 _SUPPRESS_ENUM_MIRROR = False
 
 
@@ -99,6 +149,7 @@ def _service_changed(self, _context):
     if _SUPPRESS_ENUM_MIRROR:
         return
     self.service_key_id = str(self.service_key or "")
+    self.service_label = _service_label_for_slug(self.action_type, self.service_key)
     try:
         from mixar.bootstrap.generation_catalog_cache import get_default_model_slug
 
@@ -109,6 +160,8 @@ def _service_changed(self, _context):
 
 def _parameter_changed(self, context):
     """Re-evaluate backend ``visible_if`` rules for this node's controls."""
+    if self.parameter_type == 'ENUM':
+        self.value_label = _enum_label_from_choices(self.choices_json, self.value_enum)
     scene = getattr(context, "scene", None) if context else None
     if scene is None:
         return
@@ -130,6 +183,7 @@ def _model_changed(self, context):
     if _SUPPRESS_ENUM_MIRROR:
         return
     self.model_slug = str(self.model or "")
+    self.model_label = _model_label_for_slug(self.service_key_id, self.model)
     if context is None or getattr(context, "scene", None) is None:
         return
     try:
@@ -206,6 +260,9 @@ class MixieMoodboardNodeParameter(PropertyGroup):
     value_enum: EnumProperty(
         name="Value", items=_parameter_enum_items, update=_parameter_changed
     )
+    # Human label of the current enum value, cached for the C++ node overlay:
+    # dynamic enums don't reliably self-display (see refresh_node_dropdown_labels).
+    value_label: StringProperty(name="Value Label", default="", maxlen=GRAPH_LABEL_MAXLEN)
 
 
 class MixieMoodboardInputSocket(PropertyGroup):
@@ -259,6 +316,10 @@ class MixieMoodboardActionNode(PropertyGroup):
         default="",
         maxlen=GRAPH_SERVICE_KEY_MAXLEN,
     )
+    # Human labels of the current Mode/Model, cached for the C++ node overlay
+    # because the dynamic enums above don't reliably self-display.
+    service_label: StringProperty(name="Mode Label", default="", maxlen=GRAPH_LABEL_MAXLEN)
+    model_label: StringProperty(name="Model Label", default="", maxlen=GRAPH_LABEL_MAXLEN)
     show_mode: BoolProperty(
         name="Show Mode",
         description="The backend capability currently exposes multiple moodboard services",

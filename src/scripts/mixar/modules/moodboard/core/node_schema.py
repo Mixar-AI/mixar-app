@@ -253,6 +253,15 @@ def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
             valid = [str(choice["value"]) for choice in choices]
             selected = str(value) if value is not None else (valid[0] if valid else "NONE")
             parameter.value_enum = selected if selected in valid else (valid[0] if valid else "NONE")
+            chosen = parameter.value_enum
+            parameter.value_label = next(
+                (
+                    str(choice.get("label") or choice.get("value"))
+                    for choice in choices
+                    if str(choice.get("value")) == chosen
+                ),
+                chosen,
+            )
         elif kind == 'BOOLEAN':
             parameter.value_boolean = bool(value)
         elif kind == 'INTEGER':
@@ -292,7 +301,10 @@ def node_model_slug(node) -> str:
 
 def set_node_selection(node, service_key: str, model_slug: str) -> None:
     """Write both the saved slugs and the dropdowns they back."""
-    from ..ui.moodboard_graph_properties import suppress_enum_mirror
+    from ..ui.moodboard_graph_properties import (
+        refresh_node_dropdown_labels,
+        suppress_enum_mirror,
+    )
 
     node.service_key_id = str(service_key or "")
     node.model_slug = str(model_slug or "")
@@ -310,6 +322,9 @@ def set_node_selection(node, service_key: str, model_slug: str) -> None:
                 pass
     finally:
         suppress_enum_mirror(False)
+    # The suppressed dropdown writes above skip the enum change callbacks, so
+    # refresh the cached human labels the C++ overlay shows.
+    refresh_node_dropdown_labels(node)
 
 
 def restore_node_selection(node) -> None:
@@ -430,6 +445,32 @@ def sync_node_schema(_scene, node) -> None:
         from .node_graph import reconcile_node_links
 
         reconcile_node_links(_scene, node)
+
+
+def reset_node_parameters(node) -> None:
+    """Restore this node's parameters to the catalog model defaults.
+
+    Backs the toolbar's Reset action: for every current parameter it re-derives
+    the catalog spec's default (``_assign_default`` with ``old_value=None`` so the
+    saved value is discarded), then re-evaluates ``visible_if``. The prompt is
+    intentionally left untouched — it is user text, not a catalog parameter.
+    """
+    service_key = node_service_key(node)
+    model_slug = node_model_slug(node)
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        model = get_model(service_key, model_slug) or {}
+    except Exception:
+        model = {}
+    parameters = model.get("parameters")
+    if not isinstance(parameters, dict):
+        parameters = {}
+    for parameter in node.parameters:
+        raw_spec = parameters.get(parameter.name)
+        spec = dict(raw_spec) if isinstance(raw_spec, dict) else {}
+        _assign_default(parameter, spec, _choices(spec), None)
+    refresh_node_parameter_visibility(node)
 
 
 def sync_all_node_schemas() -> None:

@@ -92,57 +92,44 @@ def test_completed_movies_are_persisted_and_placed_on_originating_moodboard():
     assert "scene_name=scene.name" in job
     assert "display_name=display_name" in job
     assert "selected=False" in job
-    assert "group_name=shot.name" in job
-    assert "get_or_create_group_index(scene, group_name)" in media_import
+    # Guides land as loose board items, never a formal group.
+    assert "group_name=shot.name" not in job
     assert "shutil.move(source_path, destination)" in media_import
     assert "scene.mixie_moodboard_images.add()" in media_import
     assert "place_new_moodboard_item" in media_import
 
 
-def test_native_surface_hosts_the_render_popup_natively():
-    """Shot Renders is a native block popup like the lens dropdown.
-
-    The Python popover and its `mixar.director_show_render` opener are gone.
-    Presentation stays native (kind toggles and the resolution slider bind
-    shot RNA directly); behavior keeps its single Python owner because the
-    action row invokes `mixar.director_render_videos`.
-    """
+def test_native_surface_opens_the_focused_render_popover():
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
         encoding="utf-8"
     )
-    popup = (VIEW3D / "view3d_director_popup_render.cc").read_text(
-        encoding="utf-8"
-    )
     operators = _read("ui/operators/render_ops.py")
+    panel = _read("ui/panels/render_popover.py")
 
-    assert "view3d_director_render_popup_create" in overlay
-    assert "MIXAR_OT_director_show_render" not in overlay
-    assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
-    assert "show_render" not in operators
-    assert '"render_output_types"' in popup
-    assert '"render_resolution_percentage"' in popup
-    assert '"render_status"' in popup
-    assert '"MIXAR_OT_director_render_videos"' in popup
-    assert "to Moodboard" in popup
-    # Multi-select contract: picking a render kind must not dismiss the
-    # popup (KEEP_OPEN); only click-outside, Esc, or Render closes it —
-    # Render via its explicit close callback, since KEEP_OPEN would
-    # otherwise keep the popup up after the action too.
-    assert "UI_BLOCK_KEEP_OPEN" in popup
-    assert "render_popup_close" in popup
-    assert "UI_popup_menu_retval_set" in popup
+    assert "MIXAR_OT_director_show_render" in overlay
+    assert 'bl_idname = "mixar.director_show_render"' in operators
+    assert 'name="MIXAR_PT_director_render_popover"' in operators
+    assert 'bl_region_type = \'HEADER\'' in panel
+    assert '"mixar.director_render_videos"' in panel
+    assert "to Moodboard" in panel
     assert "classes = (" in operators
+    assert "MIXAR_OT_director_show_render," in operators
     assert "MIXAR_OT_director_render_videos," in operators
 
 
-def test_native_actions_keep_render_moodboard_and_video_separate():
+def test_native_export_is_a_single_moodboard_menu():
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
         encoding="utf-8"
     )
     capture_ops = _read("ui/operators/capture_ops.py")
+    panel = _read("ui/panels/render_popover.py")
 
-    assert "view3d_director_render_popup_create" in overlay
-    assert '"MIXAR_OT_director_send_keyframes"' in overlay
-    assert '"MIXAR_OT_director_send_video"' in overlay
+    # One combined Export button opens the popover; the old separate Moodboard
+    # and Video Gen overlay buttons are gone.
+    assert '"MIXAR_OT_director_show_render"' in overlay
+    assert '"MIXAR_OT_director_send_keyframes"' not in overlay
+    assert '"MIXAR_OT_director_send_video"' not in overlay
+    # Keyframe export now lives inside the Export popover.
+    assert '"mixar.director_send_keyframes"' in panel
     assert "MIXAR_OT_director_send_keyframes," in capture_ops
     assert "director_send_moodboard" not in capture_ops

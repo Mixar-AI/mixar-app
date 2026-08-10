@@ -58,13 +58,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "mixie_draw_moodboard_graph_controls" in renderer
     assert '"prompt",' in controls
     assert 'node, "model", "Model"' in controls
-    assert "BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in controls
-    # The draft hint draws exactly when the floating controls do not, so both
-    # sides must share the same on-screen size thresholds.
-    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in renderer
-    assert "draw_draft_hint" in renderer
-    assert "draw_state_hint" in renderer
-    assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
+    assert "BLI_rcti_size_x(&node_region) < 360" in controls
     assert "generation_running" in controls
     assert 'RNA_boolean_get(&iter.ptr, "visible")' in controls
     assert 'STREQ(widget, "slider")' in controls

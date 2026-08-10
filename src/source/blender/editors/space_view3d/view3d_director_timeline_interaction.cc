@@ -48,24 +48,6 @@ int beat_at_event(const DirectorTimelineRuntime &runtime, const wmEvent *event)
   return -1;
 }
 
-/* Which keyframe X / Delete removes: the one under the cursor, else the one
- * under the playhead, else the active keyframe — mirroring the strip menu. */
-int beat_to_delete(const DirectorTimelineRuntime &runtime,
-                   const DirectorViewState &state,
-                   const wmEvent *event)
-{
-  const int hovered = beat_at_event(runtime, event);
-  if (hovered >= 0) {
-    return hovered;
-  }
-  for (const DirectorBeatView &beat : state.beats) {
-    if (beat.frame == state.frame_current) {
-      return beat.index;
-    }
-  }
-  return state.beats.is_empty() ? -1 : state.active_beat_index;
-}
-
 bool dispatch_int_operator(bContext *C, const char *idname, const char *property, const int value)
 {
   wmOperatorType *ot = WM_operatortype_find(idname, true);
@@ -99,26 +81,6 @@ bool begin_strip_drag(bContext *C, const wmEvent *event, DirectorTimelineRuntime
     return true;
   }
   return false;
-}
-
-bool begin_beat_drag(bContext *C,
-                     const wmEvent *event,
-                     DirectorTimelineRuntime *runtime,
-                     const int beat_index)
-{
-  wmOperatorType *ot = WM_operatortype_find("mixar.director_drag_beat", true);
-  const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
-  if (!ot || width <= 0.0f) {
-    return false;
-  }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
-  RNA_int_set(&op_ptr, "index", beat_index);
-  RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
-  const wmOperatorStatus result = WM_operator_name_call_ptr(
-      C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
-  WM_operator_properties_free(&op_ptr);
-  return (result & OPERATOR_RUNNING_MODAL) != 0;
 }
 
 bool begin_scrub(bContext *C,
@@ -205,11 +167,6 @@ int timeline_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     const int beat_index = beat_at_event(*runtime, event);
     if (beat_index >= 0) {
-      // A draft keyframe is draggable (the modal jumps on invoke, so a click
-      // that never moves still just views it); a locked shot is view-only.
-      if (!state.locked && begin_beat_drag(C, event, runtime, beat_index)) {
-        return WM_UI_HANDLER_BREAK;
-      }
       if (dispatch_int_operator(C, "mixar.director_jump_beat", "index", beat_index)) {
         ED_region_tag_redraw(region);
         return WM_UI_HANDLER_BREAK;
@@ -232,21 +189,6 @@ int timeline_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
     if ((beat_index >= 0 || point_inside(runtime->strip_bounds, event)) &&
         dispatch_int_operator(C, "mixar.director_strip_menu", "index", beat_index))
     {
-      return WM_UI_HANDLER_BREAK;
-    }
-    return WM_UI_HANDLER_CONTINUE;
-  }
-  /* Standard delete keys remove a keyframe when the pointer is over the
-   * timeline. The `mixar.director_block_input` guard (Object Mode / WINDOW
-   * keymap) swallows X/Del while directing to protect scene objects, but it
-   * never sees keys pressed over this CHANNELS region — so the timeline must
-   * handle its own deletion. Locked takes stay read-only. */
-  if (ELEM(event->type, EVT_XKEY, EVT_DELKEY, EVT_BACKSPACEKEY) && event->val == KM_PRESS &&
-      state.has_shot && !state.locked)
-  {
-    const int target = beat_to_delete(*runtime, state, event);
-    if (target >= 0 && dispatch_int_operator(C, "mixar.director_remove_beat", "index", target)) {
-      ED_region_tag_redraw(region);
       return WM_UI_HANDLER_BREAK;
     }
     return WM_UI_HANDLER_CONTINUE;

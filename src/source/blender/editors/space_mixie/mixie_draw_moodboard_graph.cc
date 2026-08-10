@@ -9,9 +9,12 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
+#include <cmath>
+
 #include "BKE_curve.hh"
 
 #include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "GPU_immediate_util.hh"
 
@@ -97,6 +100,27 @@ static void draw_card_background(const rctf &rect, const bool selected)
   UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
 }
 
+static void draw_running_glow(const rctf &rect)
+{
+  /* Subtle "generating" pulse while a node is QUEUED/RUNNING: an accent border
+   * that breathes in alpha plus a faint outset halo. Kept deliberately dim —
+   * never a harsh bright ring. The Python pulse timer
+   * (node_job_bridge.ensure_pulse_timer) supplies the continuous redraws; the
+   * wall clock supplies the phase (~2.9s breathe). */
+  const float pulse = 0.5f + 0.5f * float(std::sin(BLI_time_now_seconds() * 2.2));
+  const float accent[3] = {0.32f, 0.72f, 0.55f}; /* muted Mixar green */
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  rctf halo = rect;
+  halo.xmin -= 3.0f;
+  halo.ymin -= 3.0f;
+  halo.xmax += 3.0f;
+  halo.ymax += 3.0f;
+  const float halo_color[4] = {accent[0], accent[1], accent[2], 0.05f + 0.10f * pulse};
+  UI_draw_roundbox_4fv(&halo, false, 25.0f, halo_color);
+  const float border[4] = {accent[0], accent[1], accent[2], 0.24f + 0.30f * pulse};
+  UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
+}
+
 static void draw_socket(const float x, const float y, const float color[3])
 {
   GPUVertFormat *format = immVertexFormat();
@@ -143,93 +167,6 @@ static const char *state_label(const int state)
   return labels[std::clamp(state, 0, 5)];
 }
 
-static void draw_text_centered(
-    const char *text, const float center_x, const float y, const float size, const float alpha)
-{
-  const int font_id = BLF_default();
-  BLF_size(font_id, size);
-  const float width = BLF_width(font_id, text, strlen(text));
-  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
-  BLF_position(font_id, center_x - width * 0.5f, y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-}
-
-static void draw_text_centered_clipped(const char *text,
-                                       const float center_x,
-                                       const float y,
-                                       const float max_width,
-                                       const float size,
-                                       const float alpha)
-{
-  const int font_id = BLF_default();
-  BLF_size(font_id, size);
-  const char *ellipsis = "...";
-  size_t draw_len = strlen(text);
-  float draw_width = BLF_width(font_id, text, draw_len);
-  bool clipped = false;
-  if (draw_width > max_width) {
-    const float ellipsis_width = BLF_width(font_id, ellipsis, 3);
-    draw_len = BLF_width_to_strlen(
-        font_id, text, draw_len, std::max(0.0f, max_width - ellipsis_width), &draw_width);
-    clipped = true;
-  }
-  const float x = center_x - (draw_width + (clipped ? BLF_width(font_id, ellipsis, 3) : 0.0f)) * 0.5f;
-  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
-  BLF_position(font_id, x, y, 0.0f);
-  BLF_draw(font_id, text, draw_len);
-  if (clipped) {
-    BLF_position(font_id, x + draw_width, y, 0.0f);
-    BLF_draw(font_id, ellipsis, 3);
-  }
-}
-
-/* A deselected (or too-zoomed-out) draft card would otherwise render as an
- * unexplained empty box: its prompt field and Generate button only exist in
- * the screen-space toolbar, which needs the node selected and large enough on
- * screen. Echo the drafted prompt, or say how to get the controls back. */
-static void draw_draft_hint(PointerRNA *node, const rctf &rect)
-{
-  char prompt[MIXIE_GRAPH_PROMPT_PREVIEW_BUF];
-  mixie_rna_string_get_clamped(node, "prompt", prompt, sizeof(prompt));
-  const float center_x = BLI_rctf_cent_x(&rect);
-  const float center_y = BLI_rctf_cent_y(&rect);
-  const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
-  if (prompt[0]) {
-    draw_text_centered_clipped(prompt, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
-    draw_text_centered_clipped(
-        "Click to edit and generate", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-  }
-  else {
-    draw_text_centered_clipped(
-        "Describe what you want to create", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
-    draw_text_centered_clipped(
-        "Click this block to type a prompt", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-  }
-}
-
-/* Queued/Running/Failed/Cancelled tiles without a preview get the same
- * centered layout: the state as the headline, the prompt (or a retry hint)
- * beneath it. The tiny corner label alone read as a broken empty card. */
-static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
-{
-  char prompt[MIXIE_GRAPH_PROMPT_PREVIEW_BUF];
-  mixie_rna_string_get_clamped(node, "prompt", prompt, sizeof(prompt));
-  const float center_x = BLI_rctf_cent_x(&rect);
-  const float center_y = BLI_rctf_cent_y(&rect);
-  const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
-  const char *title = ELEM(state, 1, 2) ?
-                          (state == 1 ? "Queued..." : "Generating...") :
-                          (state == 4 ? "Generation failed" : "Cancelled");
-  draw_text_centered_clipped(title, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
-  if (ELEM(state, 4, 5)) {
-    draw_text_centered_clipped(
-        "Click to edit the prompt and try again", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-  }
-  else if (prompt[0]) {
-    draw_text_centered_clipped(prompt, center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-  }
-}
-
 void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
 {
   Scene *scene = CTX_data_scene(C);
@@ -251,6 +188,9 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         const bool selected = RNA_boolean_get(&node, "selected");
         const int state = RNA_enum_get(&node, "state");
         draw_card_background(rect, selected);
+        if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
+          draw_running_glow(rect);
+        }
         PropertyRNA *sockets = RNA_struct_find_property(&node, "input_sockets");
         const int socket_count = sockets ? RNA_property_collection_length(&node, sockets) : 0;
         for (int socket_index = 0; socket_index < socket_count; socket_index++) {
@@ -268,8 +208,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         Image *preview_image = static_cast<Image *>(preview_ptr.data);
         PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
         if (preview_image || object_ptr.data) {
-          rctf preview_bounds{};
-          moodboard_graph_node_preview_bounds(rect, &preview_bounds);
+          rctf preview_bounds = {
+              rect.xmin + 6.0f, rect.xmax - 6.0f, rect.ymin + 6.0f, rect.ymax - 6.0f};
           GPUVertFormat *format = immVertexFormat();
           const uint pos = GPU_vertformat_attr_add(
               format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
@@ -283,40 +223,10 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
           immUnbindProgram();
           if (preview_image) {
             mixie_draw_moodboard_media_preview(preview_image, preview_bounds);
-            if (preview_image->source == IMA_SRC_MOVIE) {
-              /* A generated movie is owned by its node, so it never draws as a
-               * standalone tile and would otherwise sit frozen on frame 1 with
-               * no way to start it. Same affordance as an uploaded movie. */
-              bool is_playing = false;
-              moodboard_video_playback_frame(preview_image, &is_playing);
-              mixie_draw_moodboard_video_overlay(v2d,
-                                                 BLI_rctf_cent_x(&preview_bounds),
-                                                 BLI_rctf_cent_y(&preview_bounds),
-                                                 is_playing);
-            }
           }
         }
-        const bool has_visual = preview_image || object_ptr.data;
         if (ELEM(state, 1, 2, 4, 5)) {
-          if (has_visual) {
-            /* Keep the unobtrusive corner label over an existing preview
-             * (Edit & Run Again keeps the previous result visible). */
-            draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
-          }
-          else {
-            draw_state_hint(&node, rect, state);
-          }
-        }
-        else if (state == 0 && !has_visual) {
-          float zoom_x, zoom_y;
-          UI_view2d_scale_get(v2d, &zoom_x, &zoom_y);
-          const bool controls_visible =
-              selected &&
-              BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
-              BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
-          if (!controls_visible) {
-            draw_draft_hint(&node, rect);
-          }
+          draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
         }
       }
       RNA_property_collection_next(&iter);

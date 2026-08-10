@@ -88,9 +88,7 @@ def camera_shared_elsewhere(scene, shot) -> bool:
     )
 
 
-def _render_viewport_still(
-    context, scene, display_name: str, prompt: str, group_name: str = ""
-):
+def _render_viewport_still(context, scene, display_name: str):
     target = find_view3d_context(context)
     if target is None:
         raise RuntimeError("No 3D viewport is available")
@@ -130,17 +128,12 @@ def _render_viewport_still(
         if 'FINISHED' not in result or not os.path.isfile(path):
             raise RuntimeError("Viewport capture did not produce an image")
 
-        from mixar.modules.moodboard.core.media_import import import_packed_still
+        # Pack the still into the blend WITHOUT boarding it. Captures used to
+        # land on the moodboard immediately, which cluttered the board; stills
+        # now reach the board only through an explicit Export.
+        from mixar.modules.moodboard.core.media_import import pack_still_image
 
-        item = import_packed_still(
-            scene,
-            path,
-            display_name=display_name,
-            generation_prompt=prompt,
-            selected=True,
-            group_name=group_name,
-        )
-        return item.image
+        return pack_still_image(path, display_name=display_name)
     finally:
         render.filepath = old["filepath"]
         render.resolution_percentage = old["percentage"]
@@ -195,8 +188,6 @@ def capture_beat(context, shot, beat_seconds: float):
             context,
             scene,
             f"{shot.name} · Keyframe {number:02d}",
-            shot.prompt,
-            group_name=shot.name,
         )
         _key_camera(camera, target_frame)
         if shot.handheld:

@@ -101,18 +101,6 @@ uiBut *operator_button(uiBlock *block,
                        const char *tooltip)
 {
   if (label && label[0]) {
-    if (icon == ICON_NONE) {
-      return uiDefButO(block,
-                       ButType::But,
-                       operator_id,
-                       blender::wm::OpCallContext::InvokeRegionWin,
-                       label,
-                       x,
-                       y,
-                       width,
-                       height,
-                       tooltip);
-    }
     return uiDefIconTextButO(block,
                              ButType::But,
                              operator_id,
@@ -238,23 +226,9 @@ void draw_control_row(uiBlock *block,
                   button_h,
                   button_h,
                   "Add a new shot camera from this view");
-  x += button_h + gap * 2;
-
-  /* Precise stays hidden until its role is clear; Navigate keeps its text
-   * even in compact rows because the word is the whole affordance. */
-  uiBut *navigate = operator_button(block,
-                                    "MIXAR_OT_director_navigate",
-                                    ICON_NONE,
-                                    "Navigate",
-                                    x,
-                                    y,
-                                    unit * 5,
-                                    button_h,
-                                    "Navigate with WASD and mouse");
-  if (state.navigate_mode) {
-    UI_but_flag_enable(navigate, UI_BUT_ACTIVE_DEFAULT);
-  }
-  disable_button(navigate, !state.has_camera || state.locked);
+  /* Navigate/Precise deliberately removed from the timeline dock — they
+   * duplicated the camera-gate controls (artist feedback). They now live only
+   * on the live camera gate. */
 
   draw_transport(block, region, state, playing, y, button_h, gap);
 

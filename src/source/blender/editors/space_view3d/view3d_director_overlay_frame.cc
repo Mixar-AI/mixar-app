@@ -135,8 +135,11 @@ void view3d_director_frame_controls_draw(uiBlock *block,
   const int aspect_w = unit * 8;
   const int inset = gap * 2;
   const int border_w = int(BLI_rctf_size_x(&border));
-  const int navigate_w = unit * 5;
-  if (border_w < navigate_w + aspect_w + inset * 2 + gap ||
+  const int compact_navigation_w = button_h * 2 + gap;
+  const int full_navigation_w = unit * 10 + gap;
+  const bool compact_navigation = border_w < full_navigation_w + aspect_w + inset * 2 + gap;
+  const int navigation_button_w = compact_navigation ? button_h : unit * 5;
+  if (border_w < compact_navigation_w + aspect_w + inset * 2 + gap ||
       BLI_rctf_size_y(&border) < button_h * 3)
   {
     return;
@@ -162,22 +165,27 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                               "Choose the lens type and focal length");
   director_overlay_disable_button(lens, state.locked);
 
-  /* Precise stays hidden until its role is clear; Navigate is a plain text
-   * action — no icon, so the gate reads as one word. */
-  uiBut *navigate = uiDefButO(block,
-                              ButType::But,
-                              "MIXAR_OT_director_navigate",
-                              blender::wm::OpCallContext::InvokeRegionWin,
-                              "Navigate",
-                              left,
-                              bottom,
-                              short(navigate_w),
-                              short(button_h),
-                              "Navigate with WASD and mouse");
-  if (state.navigate_mode) {
-    UI_but_flag_enable(navigate, UI_BUT_ACTIVE_DEFAULT);
-  }
+  uiBut *navigate = director_overlay_operator_button(block,
+                                                     "MIXAR_OT_director_navigate",
+                                                     ICON_VIEW_PAN,
+                                                     compact_navigation ? "" : "Navigate",
+                                                     left,
+                                                     bottom,
+                                                     navigation_button_w,
+                                                     button_h,
+                                                     "Navigate with WASD and mouse");
+  uiBut *precise = director_overlay_operator_button(block,
+                                                    "MIXAR_OT_director_precise",
+                                                    ICON_ORIENTATION_GIMBAL,
+                                                    compact_navigation ? "" : "Precise",
+                                                    left + navigation_button_w + gap,
+                                                    bottom,
+                                                    navigation_button_w,
+                                                    button_h,
+                                                    "Fine-tune with native camera gizmos");
+  UI_but_flag_enable(state.navigate_mode ? navigate : precise, UI_BUT_ACTIVE_DEFAULT);
   director_overlay_disable_button(navigate, state.locked);
+  director_overlay_disable_button(precise, state.locked);
 
   uiBut *aspect = uiDefBlockBut(block,
                                 view3d_director_aspect_popup_create,

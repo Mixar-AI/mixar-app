@@ -21,23 +21,6 @@ def _scene_key(scene) -> int:
         return id(scene)
 
 
-def _live_id(reference):
-    """Return *reference* only while its underlying ID is still alive.
-
-    ``_VIEW_STATES`` keeps Python ID references for an entire directing
-    session. Deleting the datablock meanwhile (outliner delete, undo
-    swapping Main) frees the StructRNA underneath, after which any attribute
-    access raises ``ReferenceError: StructRNA ... has been removed``.
-    """
-    if reference is None:
-        return None
-    try:
-        reference.name
-    except ReferenceError:
-        return None
-    return reference
-
-
 def find_view3d_context(context):
     """Return ``(window, area, window_region, space)`` for a 3D viewport."""
     current_area = getattr(context, "area", None)
@@ -90,16 +73,13 @@ def remember_view(context, scene) -> None:
         return
     _window, _area, _region, space = target
     region_3d = space.region_3d
-    local_camera = getattr(space, "camera", None)
     _VIEW_STATES[_scene_key(scene)] = {
         "view_perspective": region_3d.view_perspective,
         "view_location": region_3d.view_location.copy(),
         "view_rotation": region_3d.view_rotation.copy(),
         "view_distance": region_3d.view_distance,
         "lock_camera": space.lock_camera,
-        "local_camera": local_camera,
-        # Undo can free-and-recreate the object; the name recovers it then.
-        "local_camera_name": getattr(local_camera, "name", ""),
+        "local_camera": getattr(space, "camera", None),
         "chrome": {
             name: getattr(space, name)
             for name in (
@@ -156,15 +136,7 @@ def restore_view(context, scene) -> None:
     region_3d = space.region_3d
     space.lock_camera = state["lock_camera"]
     if hasattr(space, "camera"):
-        camera = _live_id(state.get("local_camera"))
-        if camera is None and state.get("local_camera_name"):
-            camera = bpy.data.objects.get(state["local_camera_name"])
-        try:
-            space.camera = camera
-        except Exception:
-            # A dead reference must not strand the viewport half-restored:
-            # the chrome and view restore below still have to run.
-            pass
+        space.camera = state["local_camera"]
     for name, value in state.get("chrome", {}).items():
         if hasattr(space, name) and getattr(space, name) != value:
             setattr(space, name, value)

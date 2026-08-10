@@ -57,8 +57,8 @@ DOWNLOAD_SOCKET_TIMEOUT_S = 120.0
 # of MB. 600 s covers ~150 MB at 250 KB/s (a 2 Mbit/s effective home line) or
 # ~50 MB at 85 KB/s. Slower than that floor is a stall, not a slow connection,
 # and the user is better served by a failure they can retry than by an
-# unbounded spinner holding a concurrency slot. It also bounds a job's whole
-# worst case at ~70 min, since MAX_POLL_DURATION (3600 s) is the other half.
+# unbounded spinner holding a concurrency slot. It also keeps a job's whole
+# worst case inside ~30 min, since MAX_POLL_DURATION (1200 s) is the other half.
 DOWNLOAD_TOTAL_DEADLINE_S = 600.0
 
 # Retry budget for one transfer. Connection resets, read timeouts, 5xx/408/429

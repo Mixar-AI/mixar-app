@@ -32,20 +32,6 @@ class GenerationCatalogQueries:
                 return capability
         return None
 
-    def get_capability_label(
-        self, capability_key: str, default: str,
-    ) -> str:
-        """Capability label for UI surfaces (e.g. sidebar tab names).
-
-        Returns ``default`` when the catalog isn't loaded, the key is
-        absent, or the payload's label is empty/malformed.
-        """
-        capability = self.get_capability(capability_key) or {}
-        label = capability.get("label")
-        if isinstance(label, str) and label.strip():
-            return label.strip()
-        return default
-
     def get_capability_for_service(
         self, service_key: str,
     ) -> Optional[Dict[str, Any]]:

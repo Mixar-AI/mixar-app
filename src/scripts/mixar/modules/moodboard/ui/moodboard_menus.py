@@ -66,14 +66,6 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         selected_links = sum(
             1 for link in scene.mixie_moodboard_links if link.selected
         )
-        try:
-            from mixar.modules.moodboard.core.media_utils import (
-                selected_exportable_media,
-            )
-
-            exportable_media = selected_exportable_media(scene)
-        except Exception:
-            exportable_media = []
 
         if selected_links:
             layout.operator(
@@ -230,12 +222,9 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         layout.separator()
 
-        # Export. Gated on the same set the operator exports, which includes a
-        # selected node's generated result — that media is never `selected`
-        # itself, so gating on selected_images left the row greyed out with no
-        # other way to get a generated video off the canvas.
+        # Export (only enabled when images are selected)
         row = layout.row()
-        row.enabled = bool(exportable_media)
+        row.enabled = selected_images > 0
         row.operator("mixie.moodboard_export_images", text="Export", icon='EXPORT')
 
         layout.separator()

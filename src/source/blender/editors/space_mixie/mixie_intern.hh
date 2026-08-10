@@ -64,16 +64,6 @@ struct wmWindowManager;
 #define MIXIE_GRAPH_LABEL_BUF 256  /* GRAPH_LABEL_MAXLEN */
 #define MIXIE_GRAPH_WIDGET_BUF 64  /* GRAPH_WIDGET_MAXLEN */
 #define MIXIE_GRAPH_NAMES_BUF 4096 /* GRAPH_OBJECT_NAMES_MAXLEN */
-/* Display-only echo of a draft node's prompt inside its tile. Deliberately far
- * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
- * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
-#define MIXIE_GRAPH_PROMPT_PREVIEW_BUF 192
-/* Minimum on-screen node size before the floating prompt/toolbar controls
- * draw. Shared with the draft-hint text so exactly one of the two shows. */
-#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_X 360
-#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y 220
-/** Inset of a node card's media preview from the card edge. */
-#define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
 #define MOODBOARD_GRAPH_SOCKET_RADIUS 10.0f
 #define MOODBOARD_GRAPH_OUTPUT_RADIUS 13.0f
 #define MOODBOARD_GRAPH_SOCKET_OFFSET 12.0f
@@ -160,19 +150,6 @@ int moodboard_find_action_node_under_mouse(PointerRNA *scene_ptr,
                                            float mouse_x,
                                            float mouse_y,
                                            rctf *r_rect);
-/** Media-preview rect of a node card. Shared by draw, toolbar and hit-test. */
-void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds);
-/** Index into `mixie_moodboard_images` of the media a node owns, or -1. */
-int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id);
-/**
- * Index into `mixie_moodboard_images` of the movie rendered inside the action
- * node under the cursor, or -1. Deliberately the media index, not the node
- * index: playback state and the hover monitor are both keyed on it.
- */
-int moodboard_find_node_preview_video_under_mouse(PointerRNA *scene_ptr,
-                                                  float mouse_x,
-                                                  float mouse_y,
-                                                  rctf *r_node_rect);
 int moodboard_find_asset_node_under_mouse(PointerRNA *scene_ptr,
                                           float mouse_x,
                                           float mouse_y,
