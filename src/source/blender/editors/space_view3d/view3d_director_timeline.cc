@@ -101,6 +101,18 @@ uiBut *operator_button(uiBlock *block,
                        const char *tooltip)
 {
   if (label && label[0]) {
+    if (icon == ICON_NONE) {
+      return uiDefButO(block,
+                       ButType::But,
+                       operator_id,
+                       blender::wm::OpCallContext::InvokeRegionWin,
+                       label,
+                       x,
+                       y,
+                       width,
+                       height,
+                       tooltip);
+    }
     return uiDefIconTextButO(block,
                              ButType::But,
                              operator_id,

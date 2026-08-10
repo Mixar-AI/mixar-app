@@ -163,6 +163,31 @@ def describe_moodboard_media(
     }
 
 
+def selected_exportable_media(scene) -> list:
+    """Media the user has selected, including results owned by selected nodes.
+
+    A generated result is deliberately never ``selected`` itself: its inference
+    node owns it and carries the selection, and the canvas hit-tests skip
+    ``embedded_node_id`` items so they cannot be picked directly. Any
+    selection-driven action that should still reach them has to resolve through
+    the owning node — otherwise right-clicking a completed node offers an
+    action that can only report "nothing selected".
+
+    Deliberately limited to read-only actions such as export. Editing a result
+    in place (crop, rotate, flip) would desynchronise it from the node that
+    produced it, so those stay keyed on direct selection.
+    """
+    owners = {
+        str(node.node_id) for node in getattr(scene, "mixie_moodboard_action_nodes", ())
+        if node.selected and node.node_id
+    }
+    return [
+        item for item in getattr(scene, "mixie_moodboard_images", ())
+        if getattr(item, "image", None)
+        and (item.selected or (item.embedded_node_id and item.embedded_node_id in owners))
+    ]
+
+
 def get_selected_moodboard_video_inputs(context=None) -> SelectedVideoInputs:
     """Return selected video inputs without loading their bytes into memory."""
     if context is None:

@@ -65,7 +65,16 @@ def focus_video_generation(context) -> bool:
                 None,
             )
             if region is not None and hasattr(region, "active_panel_category"):
-                region.active_panel_category = "Video Gen"
+                # Tab labels are catalog-driven — resolve the Video Gen
+                # tab's current category instead of hardcoding it.
+                try:
+                    from mixar.modules.moodboard.ui.moodboard_sidebar_panels import (
+                        get_tab_category,
+                    )
+                    category = get_tab_category("video_gen", "Video Gen")
+                except Exception:
+                    category = "Video Gen"
+                region.active_panel_category = category
             area.tag_redraw()
             focused = True
     return focused

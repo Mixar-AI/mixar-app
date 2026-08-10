@@ -124,6 +124,10 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
 /** Draw image/movie content fitted inside an inference-node result area. */
 void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);
 
+/** Draw the screen-size-stable play/pause affordance over a movie frame. */
+void mixie_draw_moodboard_video_overlay(
+    View2D *v2d, float center_x, float center_y, bool is_playing);
+
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
 

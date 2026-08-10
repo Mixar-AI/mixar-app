@@ -19,19 +19,27 @@ capability; ``mixie.queue_view`` keys on its "Queue" category). AI
 Render is catalog-only (no offline fallback): its panel hides unless the
 loaded catalog has ``ai_render`` services.
 
-Design decision — static panels, catalog-driven content:
-Blender resolves ``bl_category``/``bl_label`` at class registration, so
-relabelling tabs from the catalog at runtime would require unregistering
-and re-registering panel classes on every catalog swap (fragile: it
-loses panel expand state, races draw code, and reorders tabs mid-frame).
-Instead the seven panels are STATIC, with labels matching the backend
-catalog's capability labels exactly (fallback table below == the DB
-labels). Everything inside each panel — mode selector, model dropdowns,
-schema params — is catalog-driven, and each panel's ``poll()`` hides the
-tab when the loaded catalog has no moodboard services for its capability
+Design decision — catalog-driven labels, two resolution points:
+Blender consumes ``bl_category``/``bl_label`` once at class registration
+(there is no draw-time callback for tab names), so dynamic labels work
+in two stages. (1) At module load — after the bootstrap has already
+loaded the persisted catalog payload — each capability panel's label is
+resolved through ``generation_catalog_cache.get_capability_label``; the
+hardcoded strings in ``_CAPABILITY_TABS`` are only the offline/pre-auth
+fallbacks. (2) When a catalog revalidation swaps in a payload with a
+renamed capability label, ``refresh_tab_labels()`` (invoked from the
+cache's main-thread swap callback) unregisters and re-registers ONLY the
+affected panel classes with the new label — a rare event, so losing that
+panel's expand state at that moment is acceptable. ``bl_idname``s never
+change (the tour driver and other code key on them). Other modules that
+switch ``region.active_panel_category`` to a capability tab must resolve
+the category through ``get_tab_category()`` instead of a literal.
+Everything inside each panel — mode selector, model dropdowns, schema
+params — is catalog-driven, and each panel's ``poll()`` hides the tab
+when the loaded catalog has no moodboard services for its capability
 (i.e. a capability disabled in the DB hides its tab). When the catalog
-isn't loaded (offline / pre-auth) all seven tabs show their legacy
-fallback UIs so the sidebar never goes blank.
+isn't loaded (offline / pre-auth) the legacy tabs show their fallback
+UIs so the sidebar never goes blank.
 """
 
 from bpy.types import Panel
@@ -97,8 +105,10 @@ def _safe_draw(drawer, layout, context):
 
 # ---------------------------------------------------------------------------
 # Panel classes — each bl_category = separate vertical tab.
-# Labels + order mirror the backend catalog's capability labels/sort
-# order (see module docstring for the static-vs-dynamic decision).
+# The class-body bl_label/bl_category strings are the offline fallbacks;
+# _apply_catalog_labels() below overwrites them from the loaded catalog
+# before registration, and refresh_tab_labels() re-registers renamed
+# tabs after a catalog swap (see module docstring).
 # ---------------------------------------------------------------------------
 
 class MIXIE_PT_gen_imagegen(Panel):
@@ -387,6 +397,41 @@ class MIXIE_PT_gen_queue(Panel):
 
     def draw(self, context):
         _safe_draw(_draw_queue, self.layout, context)
+
+
+# ---------------------------------------------------------------------------
+# Catalog-driven tab labels — machinery lives in moodboard_tab_labels;
+# the mapping stays here, next to the classes. get_tab_category and
+# refresh_tab_labels are re-exported so consumers (catalog cache swap
+# hook, sidebar_ui_helpers, director handoff, onboarding tour) have one
+# import point.
+# ---------------------------------------------------------------------------
+
+from .moodboard_tab_labels import (  # noqa: E402
+    apply_catalog_labels as _apply_catalog_labels,
+    get_tab_category,
+    init_capability_tabs as _init_capability_tabs,
+    refresh_tab_labels,
+)
+
+# Declarative map: capability key -> (panel class, offline fallback label).
+# The Queue panel is a utility, not a capability — its label stays static.
+_init_capability_tabs({
+    "image_gen": (MIXIE_PT_gen_imagegen, "Image Gen"),
+    "ai_render": (MIXIE_PT_gen_ai_render, "AI Render"),
+    "video_gen": (MIXIE_PT_gen_video_gen, "Video Gen"),
+    "model_gen": (MIXIE_PT_gen_image_to_3d, "Model Gen"),
+    "texture_gen": (MIXIE_PT_gen_lookdev360, "Texture Gen"),
+    "scene_gen": (MIXIE_PT_gen_scene_recon, "Scene Gen"),
+    "retopology": (MIXIE_PT_gen_retopology, "Retopology"),
+    "uv_unwrapping": (MIXIE_PT_gen_uv_unwrap, "UV Unwrapping"),
+    "mesh_segmentation": (MIXIE_PT_gen_mesh_segment, "Mesh Segmentation"),
+    "animate": (MIXIE_PT_gen_animate, "Auto Rig"),
+})
+
+# Resolve labels from the already-loaded persisted catalog before the
+# classes tuple below is auto-registered (offline: fallbacks stand).
+_apply_catalog_labels()
 
 
 # Only register if MIXIE space is available.

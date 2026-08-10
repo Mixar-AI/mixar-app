@@ -182,10 +182,12 @@ void draw_context_actions(uiBlock *block,
         state.locked ? "Create an editable child of this locked take" :
                        "Key this camera pose and capture its reference frame (F)");
     if (!state.locked) {
+      /* Blender's timeline auto-key flips RECORD_OFF to RECORD_ON when armed
+       * (rna_scene.cc ui_icon); mirror that instead of a static REC glyph. */
       uiBut *auto_key = director_overlay_operator_button(
           block,
           "MIXAR_OT_director_toggle_auto_key",
-          ICON_REC,
+          state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
           "",
           action_x + action_w + gap,
           action_y,
