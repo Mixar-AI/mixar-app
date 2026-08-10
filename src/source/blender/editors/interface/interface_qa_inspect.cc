@@ -27,6 +27,8 @@
 
 #include "RNA_access.hh"
 
+#include "UI_interface_c.hh"
+
 #include "WM_api.hh"
 #include "WM_types.hh"
 
@@ -165,6 +167,29 @@ void qa_emit_custom_targets(std::string &out,
                             const ARegion *region)
 {
   std::vector<MixarQATarget> targets;
+
+  /* Sidebar category tabs (the vertical "Image Gen / Video Gen / ..." strip):
+   * drawn by the panel-category system, not uiButs — export their stored
+   * rects so tab switching is a semantic click. */
+  if (region->runtime != nullptr &&
+      !BLI_listbase_is_empty(&region->runtime->panels_category))
+  {
+    const char *active = UI_panel_category_active_get(const_cast<ARegion *>(region),
+                                                     false);
+    LISTBASE_FOREACH (const PanelCategoryDyn *, pc, &region->runtime->panels_category)
+    {
+      MixarQATarget t;
+      t.surface = "panel_tab";
+      t.text = pc->idname;
+      t.sel = (active != nullptr && STREQ(active, pc->idname));
+      t.rect_win.xmin = region->winrct.xmin + pc->rect.xmin;
+      t.rect_win.xmax = region->winrct.xmin + pc->rect.xmax;
+      t.rect_win.ymin = region->winrct.ymin + pc->rect.ymin;
+      t.rect_win.ymax = region->winrct.ymin + pc->rect.ymax;
+      targets.push_back(std::move(t));
+    }
+  }
+
   for (const MixarQAProviderEntry &entry : qa_providers()) {
     if (entry.spacetype == area->spacetype) {
       entry.fn(win, area, region, targets);
@@ -201,6 +226,9 @@ void qa_emit_custom_targets(std::string &out,
            std::to_string(t.rect_win.ymin) + ',' + std::to_string(t.rect_win.xmax) +
            ',' + std::to_string(t.rect_win.ymax) + "],";
     out += std::string("\"enabled\":") + (t.enabled ? "true" : "false");
+    if (t.sel) {
+      out += ",\"sel\":true";
+    }
     out += '}';
   }
 }

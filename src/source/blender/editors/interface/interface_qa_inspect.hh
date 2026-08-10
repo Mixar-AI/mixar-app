@@ -53,6 +53,8 @@ struct MixarQATarget {
   /** WINDOW pixels, origin bottom-left — ready for Window.event_simulate. */
   rcti rect_win = {};
   bool enabled = true;
+  /** Active/selected state (e.g. the active sidebar category tab). */
+  bool sel = false;
 };
 
 using MixarQATargetProvider = void (*)(const wmWindow *win,
