@@ -311,10 +311,23 @@ def _draw_world_labs(layout, context):
     draw_generate_footer(layout, context, "mixie.world_labs_generate", "world_labs",
                          feature_key="world_labs")
 
-    # --- Dev: replay a stored result without spending World Labs credits ---
-    test_row = layout.row()
-    test_op = test_row.operator("mixie.world_labs_generate", text="Test", icon='FILE_REFRESH')
-    test_op.test = True
+    # --- Dev builds ONLY: replay a stored result without spending credits.
+    # Gated on the build-frozen _build_env marker (same tamper-proof gate as
+    # the dev login bypass — editing the bundled mixar.json cannot show it in
+    # a Prod build; falls closed when the marker is absent). The backend also
+    # fails closed: the marble-test model is catalog-seeded disabled outside
+    # dev databases, so even a forged submit is rejected server-side.
+    try:
+        from mixar.config._build_env import DEV_BYPASS_ALLOWED as _dev_build
+    except Exception:
+        _dev_build = False
+    if _dev_build:
+        test_row = layout.row()
+        test_op = test_row.operator(
+            "mixie.world_labs_generate", text="Test (dev fixture)",
+            icon='FILE_REFRESH',
+        )
+        test_op.test = True
 
 
 # ---------------------------------------------------------------------------
