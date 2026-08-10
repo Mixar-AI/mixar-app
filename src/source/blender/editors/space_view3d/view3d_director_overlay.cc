@@ -161,7 +161,33 @@ void draw_context_actions(uiBlock *block,
                           const int unit,
                           const int gap)
 {
-  if (state.has_shot) {
+  if (state.has_shot && state.explore_mode) {
+    /* Free-fly exploration: the shot camera is parked, so capturing makes no
+     * sense — the primary action is planting a new shot camera at this view,
+     * which is how directors cover ground inside imported worlds. */
+    const int action_w = unit * 9;
+    const int action_x = (region->winx - action_w) / 2;
+    const int action_y = region->winy - unit * 2 - gap * 2;
+    director_overlay_operator_button(block,
+                                     "MIXAR_OT_director_new_shot",
+                                     ICON_ADD,
+                                     "Add Camera Here",
+                                     action_x,
+                                     action_y,
+                                     action_w,
+                                     unit * 2,
+                                     "Create a new shot camera exactly at this view");
+    director_overlay_operator_button(block,
+                                     "MIXAR_OT_director_return_to_shot",
+                                     ICON_LOOP_BACK,
+                                     "",
+                                     action_x + action_w + gap,
+                                     action_y,
+                                     unit * 2,
+                                     unit * 2,
+                                     "Back to the active shot camera without adding");
+  }
+  else if (state.has_shot) {
     const int action_w = unit * 8;
     const int action_x = (region->winx - action_w) / 2;
     /* Keep the primary action in the top safe area, above the camera gate. */

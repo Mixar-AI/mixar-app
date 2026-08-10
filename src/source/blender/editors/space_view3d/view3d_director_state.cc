@@ -112,7 +112,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     }
   }
 
-  r_state->navigate_mode = director_enum(&state_ptr, "navigation_mode", 0) == 0;
+  const int navigation_mode = director_enum(&state_ptr, "navigation_mode", 0);
+  r_state->navigate_mode = navigation_mode == 0;
+  r_state->explore_mode = navigation_mode == 2;
   PropertyRNA *beats_prop = director_prop(&shot_ptr, "beats");
   const int beat_count = beats_prop ? RNA_property_collection_length(&shot_ptr, beats_prop) : 0;
   r_state->beats.reserve(beat_count);

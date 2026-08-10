@@ -255,6 +255,27 @@ void draw_control_row(uiBlock *block,
     UI_but_flag_enable(navigate, UI_BUT_ACTIVE_DEFAULT);
   }
   disable_button(navigate, !state.has_camera || state.locked);
+  x += unit * 5 + gap;
+
+  if (state.has_shot) {
+    /* Unlike Navigate, Explore works on locked takes: flying the viewport
+     * touches no camera, and Add Camera Here starts a fresh shot anyway.
+     * That is the escape hatch for huge imported worlds — travel first,
+     * then plant a camera where the frame is right. */
+    uiBut *explore = operator_button(block,
+                                     "MIXAR_OT_director_explore",
+                                     ICON_NONE,
+                                     "Explore",
+                                     x,
+                                     y,
+                                     unit * 5,
+                                     button_h,
+                                     "Fly the scene freely without moving the shot camera; "
+                                     "Add Camera Here then starts a new shot at that view");
+    if (state.explore_mode) {
+      UI_but_flag_enable(explore, UI_BUT_ACTIVE_DEFAULT);
+    }
+  }
 
   draw_transport(block, region, state, playing, y, button_h, gap);
 

@@ -10,7 +10,12 @@ from bpy.types import Operator
 
 from ...constants import ASPECT_PRESETS
 from ...core.shot_api import active_shot, refresh_manifest
-from ...core.viewport import enter_precise_mode, invoke_walk
+from ...core.viewport import (
+    enter_camera_view,
+    enter_precise_mode,
+    invoke_explore_walk,
+    invoke_walk,
+)
 
 
 def _editable_shot(context):
@@ -189,6 +194,62 @@ class MIXAR_OT_director_navigate(Operator):
             pass
 
 
+class MIXAR_OT_director_explore(Operator):
+    """Fly the scene freely without moving the shot camera"""
+
+    bl_idname = "mixar.director_explore"
+    bl_label = "Explore"
+    bl_description = (
+        "Leave the camera view and fly the scene with WASD and the mouse; "
+        "frame a spot, then Add Camera Here starts a new shot there"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        return bool(state and state.is_directing)
+
+    def invoke(self, context, _event):
+        context.scene.mixar_director.navigation_mode = 'EXPLORE'
+        try:
+            invoke_explore_walk(context)
+        except Exception as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
+        self.report(
+            {'INFO'}, "Exploring — frame a view, then Add Camera Here"
+        )
+        return {'FINISHED'}
+
+
+class MIXAR_OT_director_return_to_shot(Operator):
+    """Snap the viewport back to the active shot camera"""
+
+    bl_idname = "mixar.director_return_to_shot"
+    bl_label = "Back to Shot"
+    bl_description = (
+        "Stop exploring and return to the active shot camera's view"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        if not (state and state.is_directing):
+            return False
+        shot = active_shot(context.scene)
+        return bool(shot is not None and shot.camera is not None)
+
+    def execute(self, context):
+        shot = active_shot(context.scene)
+        try:
+            # enter_camera_view flips EXPLORE back to NAVIGATE itself.
+            enter_camera_view(context, shot.camera, remember=False)
+        except Exception as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+
 class MIXAR_OT_director_block_input(Operator):
     """Absorb object-editing shortcuts while the Director surface is active"""
 
@@ -284,6 +345,8 @@ class MIXAR_OT_director_set_aspect(Operator):
 classes = (
     MIXAR_OT_director_navigate,
     MIXAR_OT_director_precise,
+    MIXAR_OT_director_explore,
+    MIXAR_OT_director_return_to_shot,
     MIXAR_OT_director_block_input,
     MIXAR_OT_director_set_lens,
     MIXAR_OT_director_set_aspect,
