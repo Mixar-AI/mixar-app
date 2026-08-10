@@ -7,6 +7,8 @@
 
 import bpy
 
+from mixar.config.logging_config import get_logger
+
 from ....core.element.get_elements import get_multires_modifier
 from ....core.layer.layer_utils import get_uv_layers
 from ....utils.blender_commons import (
@@ -21,6 +23,8 @@ from .bake_scene_settings import (
 )
 from ..operators.bake_uv_ops import add_active_render_uv_node
 from .bake_validation import get_problematic_modifiers
+
+logger = get_logger(__name__)
 
 # Constants
 EMPTY_IMG_NODE = "___EMPTY_IMAGE__"
@@ -114,7 +118,19 @@ def prepare_bake_settings(
     # Configure bake type settings
     _configure_bake_type(scene, bake_type, bake_from_multires, margin, normal_space)
 
-    # Old blender will always use CPU
+    # A GPU bake needs a Cycles compute backend enabled in preferences —
+    # otherwise device='GPU' silently renders on CPU. ensure_gpu_compute()
+    # enables one on factory prefs and respects an explicit user choice;
+    # when no GPU is usable, fall back loudly instead of pretending.
+    if bake_device == "GPU":
+        from mixar.modules.common.utils.cycles_device_utils import ensure_gpu_compute
+
+        if ensure_gpu_compute() is None:
+            logger.warning(
+                "GPU bake requested but no Cycles GPU backend is available; "
+                "baking on CPU"
+            )
+            bake_device = "CPU"
     scene.cycles.device = bake_device
 
     # Configure object visibility and selection

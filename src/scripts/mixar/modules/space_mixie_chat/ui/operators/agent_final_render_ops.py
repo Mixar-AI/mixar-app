@@ -104,27 +104,15 @@ def _apply_settings(scene, engine, samples, resolution_percentage, device, path)
         scene.cycles.device = dev
         if dev == "GPU":
             try:
-                prefs = bpy.context.preferences.addons["cycles"].preferences
-                saved["compute_type"] = prefs.compute_device_type
-                picked = None
-                for ctype in ("OPTIX", "CUDA", "HIP", "METAL", "ONEAPI"):
-                    try:
-                        prefs.compute_device_type = ctype
-                    except Exception:
-                        continue
-                    try:
-                        prefs.get_devices()
-                    except Exception:
-                        pass
-                    gpus = [
-                        d for d in getattr(prefs, "devices", [])
-                        if getattr(d, "type", "CPU") != "CPU"
-                    ]
-                    if gpus:
-                        for d in gpus:
-                            d.use = True
-                        picked = ctype
-                        break
+                from mixar.modules.common.utils.cycles_device_utils import (
+                    cycles_preferences,
+                    ensure_gpu_compute,
+                )
+
+                prefs = cycles_preferences()
+                if prefs is not None:
+                    saved["compute_type"] = prefs.compute_device_type
+                picked = ensure_gpu_compute(prefs)
                 if picked is None:
                     scene.cycles.device = "CPU"
                     device_note = "no GPU compute device found — rendering on CPU"
