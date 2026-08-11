@@ -35,6 +35,7 @@ def test_camera_beats_key_native_data_and_pack_stills():
 
     assert 'camera.keyframe_insert(data_path="location"' in capture
     assert 'camera.data.keyframe_insert(data_path="lens"' in capture
+    assert "repair_euler_rotation_continuity(camera)" in capture
     assert "bpy.ops.render.opengl" in capture
     # Capture packs the still into the blend but never boards it — stills reach
     # the moodboard only through the explicit Director export.
@@ -42,6 +43,20 @@ def test_camera_beats_key_native_data_and_pack_stills():
     assert "import_packed_still" not in capture
     assert "image.pack()" in media_import
     assert "place_new_moodboard_item" in media_import
+
+
+def test_camera_euler_continuity_is_repaired_at_every_output_boundary():
+    capture = _read("core/capture.py")
+    preview = _read("ui/operators/capture_ops.py")
+    render = _read("core/render_outputs.py")
+    shot_api = _read("core/shot_api.py")
+
+    # New or deleted keys normalize immediately. Existing files normalize at
+    # every action that evaluates an in-between camera pose.
+    assert capture.count("repair_euler_rotation_continuity(camera)") == 2
+    assert "repair_euler_rotation_continuity(shot.camera)" in preview
+    assert "repair_euler_rotation_continuity(shot.camera)" in render
+    assert "repair_euler_rotation_continuity(shot.camera)" in shot_api
 
 
 def test_video_handoff_remains_catalog_driven_and_provider_neutral():
