@@ -7,6 +7,7 @@
 
 from mixar.config.logging_config import get_logger
 
+import json
 import time
 
 import bpy
@@ -230,11 +231,27 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
         name="Bake Disabled Layers", description="Take disabled layers into account when baking", default=False,
     )
 
+    export_target_names: StringProperty(
+        default="", options={'HIDDEN', 'SKIP_SAVE'},
+        description="JSON mesh-name allowlist used by deterministic export baking",
+    )
+
     @classmethod
     def poll(cls, context):
         return get_active_mpaint_node() and get_active_object().type == "MESH"
 
     def invoke(self, context, event):
+        self._initialize_for_execution(context)
+        node = get_active_mpaint_node()
+        mp = node.node_tree.mp
+
+        if (get_user_preferences().skip_property_popups and not event.shift) or len(self.channels) == 0 or self.no_layer_using:
+            return self.execute(context)
+
+        return context.window_manager.invoke_props_dialog(self, width=320)
+
+    def _initialize_for_execution(self, context):
+        """Initialize defaults for both INVOKE_DEFAULT and EXEC_DEFAULT."""
         self.invoke_operator(context)
         node = get_active_mpaint_node()
         mp = node.node_tree.mp
@@ -246,11 +263,7 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
 
         if self.vcol_force_first_ch_idx == "":
             self.vcol_force_first_ch_idx = "Do Nothing"
-
-        if (get_user_preferences().skip_property_popups and not event.shift) or len(self.channels) == 0 or self.no_layer_using:
-            return self.execute(context)
-
-        return context.window_manager.invoke_props_dialog(self, width=320)
+        self._mixar_initialized = True
 
     def _setup_uv_map(self, obj, mp):
         """Setup UV map collection."""
@@ -316,6 +329,8 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
         draw_bake_channels_ui(self, context, self.layout)
 
     def execute(self, context):
+        if not getattr(self, "_mixar_initialized", False):
+            self._initialize_for_execution(context)
         if not self.is_cycles_exist(context):
             return {"CANCELLED"}
 
@@ -342,6 +357,13 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
             mp.use_baked = False
 
         objs, _ = get_bake_objects(obj, mat, get_scene_objects, get_uv_layers)
+        if self.export_target_names:
+            try:
+                allowed = set(json.loads(self.export_target_names))
+                objs = [candidate for candidate in objs if candidate.name in allowed]
+            except (TypeError, ValueError):
+                self.report({"ERROR"}, "Invalid export bake target restriction")
+                return {"CANCELLED"}
         if not objs:
             self.report({"ERROR"}, "No valid objects to bake!")
             return {"CANCELLED"}

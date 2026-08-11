@@ -33,7 +33,11 @@ def _draw_animate(layout, context):
     # --- Mesh info ---
     col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
     draw_mesh_info(col, context, max_mb=150)
-    draw_hint(layout, "Select the meshes you want to auto-rig", icon='INFO')
+    draw_hint(
+        layout,
+        "Select all parts of one character — rigged as a single skeleton",
+        icon='INFO',
+    )
     draw_section_separator(layout)
 
     # --- Settings (Model / schema params from the catalog) ---

@@ -25,6 +25,11 @@ def remove_action_node(scene, node_id: str) -> bool:
     from .image_lifecycle import release_moodboard_image_entry
 
     node = scene.mixie_moodboard_action_nodes[index]
+    # A MASK_DETAIL node owns a cutout thumbnail datablock (mask_preview) that no
+    # moodboard entry references, so it must be freed explicitly here.
+    from .node_graph import release_mask_node_cutout
+
+    release_mask_node_cutout(getattr(node, "mask_preview", None))
     node.preview_image = None
     owned_media = [
         media_index for media_index, media in enumerate(scene.mixie_moodboard_images)

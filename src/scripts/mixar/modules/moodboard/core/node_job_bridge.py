@@ -18,6 +18,48 @@ _STATE_MAP = {
     JobState.CANCELLED: 'CANCELLED',
 }
 
+# ~30 fps redraw pump so the running-node glow (C++ draw_running_glow) animates
+# smoothly. Job-state changes alone only repaint on discrete edges.
+_PULSE_INTERVAL_S = 1.0 / 30.0
+
+
+def _redraw_mixie_areas() -> None:
+    try:
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE':
+                    area.tag_redraw()
+    except Exception:
+        pass
+
+
+def _any_node_generating() -> bool:
+    for scene in bpy.data.scenes:
+        for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
+            if node.state in {'QUEUED', 'RUNNING'}:
+                return True
+    return False
+
+
+def _pulse_tick():
+    """Repaint the moodboard while any node generates; self-stop when none do."""
+    if not _any_node_generating():
+        return None
+    _redraw_mixie_areas()
+    return _PULSE_INTERVAL_S
+
+
+def ensure_pulse_timer() -> None:
+    """Start the glow redraw pump if a node is generating and it isn't already
+    running. ``_pulse_tick`` unregisters itself once nothing is generating."""
+    try:
+        if bpy.app.timers.is_registered(_pulse_tick):
+            return
+        if _any_node_generating():
+            bpy.app.timers.register(_pulse_tick)
+    except Exception:
+        pass
+
 
 def sync_graph_jobs(queue) -> None:
     changed = False
@@ -45,13 +87,10 @@ def sync_graph_jobs(queue) -> None:
             changed = True
 
     if changed:
-        try:
-            for window in bpy.context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'MIXIE':
-                        area.tag_redraw()
-        except Exception:
-            pass
+        _redraw_mixie_areas()
+    # A node that just entered QUEUED/RUNNING needs the continuous pump so its
+    # glow animates; self-gates and no-ops when nothing is generating.
+    ensure_pulse_timer()
 
 
 def ensure_graph_listener(feature_key: str) -> None:

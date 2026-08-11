@@ -11,6 +11,49 @@ Separated from property definitions to keep moodboard_properties.py focused
 on PropertyGroup class definitions.
 """
 
+_CHARACTER_COMPONENT_CATALOG_UNAVAILABLE = [(
+    "NONE",
+    "Catalog unavailable",
+    "Load the generation catalog before creating component details",
+)]
+
+
+def _get_character_component_model_items(self, context):
+    """Catalog Image Gen models able to receive a cutout and binary mask."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items,
+            get_models,
+            is_loaded,
+            memoize_enum_items,
+        )
+        if not is_loaded():
+            return get_model_enum_items("image_gen")
+
+        def _build():
+            from mixar.modules.moodboard.core.character_components import (
+                eligible_component_model_slugs,
+            )
+
+            eligible = eligible_component_model_slugs(get_models("image_gen"))
+            items = [
+                item for item in get_model_enum_items("image_gen")
+                if item[0] in eligible
+            ]
+            return items or [(
+                "NONE",
+                "No compatible models",
+                "Image models must advertise support for at least two references",
+            )]
+
+        return memoize_enum_items(
+            "character_component_model",
+            "image_gen",
+            _build,
+        )
+    except Exception:
+        return _CHARACTER_COMPONENT_CATALOG_UNAVAILABLE
+
 
 def _get_imagegen_model_items(self, context):
     """Dynamic callback for model enum items.
@@ -227,6 +270,28 @@ def _get_texture_gen_model_items(self, context):
     return _capability_model_items(
         "texture_gen", self,
         [("hunyuan-pbr", "Hunyuan PBR", "Hunyuan PBR texture generation")],
+    )
+
+
+def _get_pbr_gen_mode_items(self, context):
+    """PBR Generation tab mode items (capability ``pbr_generation``).
+
+    Catalog-only tab (no offline fallback UI) — the fallback item only
+    keeps the enum valid while the catalog loads. Single service today
+    (``tripo_texture``), so ``draw_capability_selector`` hides the Mode
+    dropdown."""
+    return _capability_mode_items(
+        "pbr_generation",
+        [("tripo_texture", "PBR Generation",
+          "Texture the selected mesh (Tripo)")],
+    )
+
+
+def _get_pbr_gen_model_items(self, context):
+    """PBR Generation tab model items (models of the selected mode)."""
+    return _capability_model_items(
+        "pbr_generation", self,
+        [("tripo_texture_v3", "Tripo Texture 3.0", "Tripo texture generation")],
     )
 
 

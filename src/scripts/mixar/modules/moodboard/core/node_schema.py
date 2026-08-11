@@ -28,6 +28,19 @@ _OUTPUT_TYPES = {
     'IMAGE_GEN': 'IMAGE',
     'VIDEO_GEN': 'VIDEO',
     'MODEL_3D': 'MESH',
+    'MASK_DETAIL': 'IMAGE',
+    # Mesh -> mesh continuations all output a 3D mesh.
+    'PBR_GEN': 'MESH',
+    'RETOPOLOGY': 'MESH',
+    'MESH_SEGMENT': 'MESH',
+    'AUTO_RIG': 'MESH',
+}
+
+_MESH_FEATURE_CAPABILITY = {
+    'PBR_GEN': 'pbr_generation',
+    'RETOPOLOGY': 'retopology',
+    'MESH_SEGMENT': 'mesh_segmentation',
+    'AUTO_RIG': 'animate',
 }
 
 _CONNECTABLE_TYPES = {
@@ -38,6 +51,13 @@ _CONNECTABLE_TYPES = {
 }
 _MAX_INPUT_SOCKETS = 32
 _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
+# Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
+# Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
+# keeps it — Tripo texturing accepts a texture prompt.
+_PROMPTLESS_ACTION_TYPES = frozenset({'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
+# PBR texturing accepts a single style/reference image OR exactly four
+# turnaround views, so the node offers up to four optional image sockets.
+_PBR_MAX_IMAGE_REFS = 4
 
 
 def output_type_for_action(action_type: str) -> str:
@@ -46,12 +66,29 @@ def output_type_for_action(action_type: str) -> str:
 
 def services_for_action(action_type: str, services) -> list:
     """Keep only catalog services executable by this canvas node type."""
+    if action_type == 'MASK_DETAIL':
+        # Component-detail generation runs on the plain image_gen service.
+        return [service for service in services if service.get("key") == 'image_gen']
+    if action_type == 'MESH_SEGMENT':
+        # The mesh node imports segmented part meshes (Part decomposition).
+        return [service for service in services if service.get("key") == 'hunyuan_part']
     if action_type != 'MODEL_3D':
         return list(services)
     return [
         service for service in services
         if service.get("key") in _MODEL_3D_SERVICE_KEYS
     ]
+
+
+def _capability_for_action(action_type: str) -> str:
+    """Local capability map (kept inline to avoid a UI-layer import cycle)."""
+    if action_type == 'VIDEO_GEN':
+        return "video_gen"
+    if action_type == 'MODEL_3D':
+        return "model_gen"
+    if action_type in _MESH_FEATURE_CAPABILITY:
+        return _MESH_FEATURE_CAPABILITY[action_type]
+    return "image_gen"
 
 
 def visible_input_socket_ids(sockets, occupied: set[str]) -> set[str]:
@@ -234,15 +271,27 @@ def refresh_node_parameter_visibility(node) -> None:
         )
 
 
+# Action nodes match the on-canvas footprint of an image node (700px wide,
+# MOODBOARD_IMAGE_BASE_SIZE) so the graph reads as one consistent size.
+MASK_DETAIL_NODE_WIDTH = 700.0
+MASK_DETAIL_NODE_HEIGHT = 700.0
+
+
 def refresh_node_height(node) -> None:
     """Keep the media tile independent from its screen-space toolbar."""
     image = getattr(node, "preview_image", None)
     size = getattr(image, "size", ()) if image else ()
+    if node.action_type == 'MASK_DETAIL':
+        # Fixed card: the control panel sits in the top, the mask/result
+        # thumbnail fills the bottom (see the C++ node draw). Square, image-sized.
+        node.width = MASK_DETAIL_NODE_WIDTH
+        node.height = MASK_DETAIL_NODE_HEIGHT
+        return
     if len(size) >= 2 and size[0] > 0 and size[1] > 0:
         aspect = float(size[1]) / float(size[0])
-        node.height = max(260.0, min(1000.0, float(node.width) * aspect))
+        node.height = max(360.0, min(1400.0, float(node.width) * aspect))
         return
-    node.height = 420.0
+    node.height = 560.0
 
 
 def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
@@ -253,6 +302,15 @@ def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
             valid = [str(choice["value"]) for choice in choices]
             selected = str(value) if value is not None else (valid[0] if valid else "NONE")
             parameter.value_enum = selected if selected in valid else (valid[0] if valid else "NONE")
+            chosen = parameter.value_enum
+            parameter.value_label = next(
+                (
+                    str(choice.get("label") or choice.get("value"))
+                    for choice in choices
+                    if str(choice.get("value")) == chosen
+                ),
+                chosen,
+            )
         elif kind == 'BOOLEAN':
             parameter.value_boolean = bool(value)
         elif kind == 'INTEGER':
@@ -292,7 +350,10 @@ def node_model_slug(node) -> str:
 
 def set_node_selection(node, service_key: str, model_slug: str) -> None:
     """Write both the saved slugs and the dropdowns they back."""
-    from ..ui.moodboard_graph_properties import suppress_enum_mirror
+    from ..ui.moodboard_graph_properties import (
+        refresh_node_dropdown_labels,
+        suppress_enum_mirror,
+    )
 
     node.service_key_id = str(service_key or "")
     node.model_slug = str(model_slug or "")
@@ -310,6 +371,9 @@ def set_node_selection(node, service_key: str, model_slug: str) -> None:
                 pass
     finally:
         suppress_enum_mirror(False)
+    # The suppressed dropdown writes above skip the enum change callbacks, so
+    # refresh the cached human labels the C++ overlay shows.
+    refresh_node_dropdown_labels(node)
 
 
 def restore_node_selection(node) -> None:
@@ -330,11 +394,7 @@ def sync_node_schema(_scene, node) -> None:
 
         model = get_model(service_key, model_slug) or {}
         service = get_service(service_key) or {}
-        capability = (
-            "image_gen" if node.action_type == 'IMAGE_GEN'
-            else "video_gen" if node.action_type == 'VIDEO_GEN'
-            else "model_gen"
-        )
+        capability = _capability_for_action(node.action_type)
         services = services_for_action(
             node.action_type,
             get_services(capability, surface="moodboard"),
@@ -343,7 +403,52 @@ def sync_node_schema(_scene, node) -> None:
     except Exception:
         model = {}
         service = {}
+    # Prompt visibility depends only on the node type, not the catalog, so set it
+    # regardless of whether the catalog lookup above succeeded.
+    node.show_prompt = node.action_type not in _PROMPTLESS_ACTION_TYPES
     input_contract = build_input_contract(service, model)
+    # Mesh-feature nodes take a 3D mesh from a connected 3D node. The backend
+    # services export the mesh client-side (no connectable input in their
+    # catalog spec), so inject a single MESH input socket for the connection.
+    if node.action_type in _MESH_FEATURE_CAPABILITY and not any(
+        "MESH" in socket.get("accepted_types", ())
+        for socket in input_contract["sockets"]
+    ):
+        input_contract["sockets"].insert(
+            0,
+            {
+                "id": "mesh",
+                "label": "Mesh",
+                "accepted_types": ["MESH"],
+                "required": True,
+                "group_id": "mesh",
+                "repeatable": False,
+            },
+        )
+        # connect_nodes validates against per-type input limits, so the injected
+        # socket needs a matching MESH capacity or the connection is rejected.
+        limits = input_contract.setdefault("limits", {})
+        limits["MESH"] = max(int(limits.get("MESH", 0) or 0), 1)
+    # PBR texturing optionally takes reference image(s) in ADDITION to the mesh
+    # (a Tripo style/reference image, or four turnaround views). The backend
+    # consumes these client-side, so — like the mesh socket — they are not in
+    # the catalog input spec and are injected here as an optional, progressive
+    # image group.
+    if node.action_type == 'PBR_GEN' and not any(
+        "IMAGE" in socket.get("accepted_types", ())
+        for socket in input_contract["sockets"]
+    ):
+        for index in range(_PBR_MAX_IMAGE_REFS):
+            input_contract["sockets"].append({
+                "id": f"reference:{index}",
+                "label": f"Reference {index + 1}",
+                "accepted_types": ["IMAGE"],
+                "required": False,
+                "group_id": "reference",
+                "repeatable": True,
+            })
+        limits = input_contract.setdefault("limits", {})
+        limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), _PBR_MAX_IMAGE_REFS)
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}
@@ -369,7 +474,24 @@ def sync_node_schema(_scene, node) -> None:
             reconcile_node_links(_scene, node)
         return
 
-    old_values = {parameter.name: _parameter_value(parameter) for parameter in node.parameters}
+    # Preserve user-edited values across a SAME-model refresh (catalog reload,
+    # visibility change) — but when the service/model actually changes, reset
+    # every parameter to the NEW model's defaults. Otherwise a param shared by
+    # name across models (e.g. face_count) kept the previous model's value while
+    # model-specific params reset, an inconsistent, stale field.
+    try:
+        previous_schema = json.loads(node.schema_json or "{}")
+    except (TypeError, ValueError):
+        previous_schema = {}
+    model_changed = (
+        previous_schema.get("service") != service_key
+        or previous_schema.get("model") != model_slug
+    )
+    old_values = (
+        {}
+        if model_changed
+        else {parameter.name: _parameter_value(parameter) for parameter in node.parameters}
+    )
     node.parameters.clear()
     node.input_sockets.clear()
     for spec in input_contract["sockets"]:
@@ -386,6 +508,10 @@ def sync_node_schema(_scene, node) -> None:
     )
     for name, raw_spec in ordered:
         if not isinstance(raw_spec, dict) or raw_spec.get("visible") is False:
+            continue
+        # MASK_DETAIL sets number_of_images from its own "Views per Component"
+        # control, so hide the catalog's duplicate on the mask node.
+        if node.action_type == 'MASK_DETAIL' and str(name) == "number_of_images":
             continue
         spec = dict(raw_spec)
         parameter = node.parameters.add()
@@ -432,6 +558,32 @@ def sync_node_schema(_scene, node) -> None:
         reconcile_node_links(_scene, node)
 
 
+def reset_node_parameters(node) -> None:
+    """Restore this node's parameters to the catalog model defaults.
+
+    Backs the toolbar's Reset action: for every current parameter it re-derives
+    the catalog spec's default (``_assign_default`` with ``old_value=None`` so the
+    saved value is discarded), then re-evaluates ``visible_if``. The prompt is
+    intentionally left untouched — it is user text, not a catalog parameter.
+    """
+    service_key = node_service_key(node)
+    model_slug = node_model_slug(node)
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        model = get_model(service_key, model_slug) or {}
+    except Exception:
+        model = {}
+    parameters = model.get("parameters")
+    if not isinstance(parameters, dict):
+        parameters = {}
+    for parameter in node.parameters:
+        raw_spec = parameters.get(parameter.name)
+        spec = dict(raw_spec) if isinstance(raw_spec, dict) else {}
+        _assign_default(parameter, spec, _choices(spec), None)
+    refresh_node_parameter_visibility(node)
+
+
 def sync_all_node_schemas() -> None:
     """Refresh saved nodes after the backend catalog is atomically swapped."""
     import bpy
@@ -443,11 +595,7 @@ def sync_all_node_schemas() -> None:
 
     for scene in bpy.data.scenes:
         for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
-            capability = (
-                "image_gen" if node.action_type == 'IMAGE_GEN'
-                else "video_gen" if node.action_type == 'VIDEO_GEN'
-                else "model_gen"
-            )
+            capability = _capability_for_action(node.action_type)
             services = services_for_action(
                 node.action_type,
                 get_services(capability, surface="moodboard"),

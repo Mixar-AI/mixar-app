@@ -89,6 +89,11 @@ def prepare_video_generation(context, shot) -> tuple[int, bool]:
         compile_manifest(context.scene, shot)
     elif not shot.snapshot_json:
         raise ValueError("The locked take has no guidance snapshot")
+    # Captures no longer auto-board, so ensure this shot's stills are on the
+    # board (grouped) before selecting them as the Video Gen references.
+    from .board_export import send_keyframes_to_board
+
+    send_keyframes_to_board(context.scene, shot)
     count = select_shot_beats(context.scene, shot)
     if count != len(shot.beats):
         raise ValueError("One or more keyframe images are missing")

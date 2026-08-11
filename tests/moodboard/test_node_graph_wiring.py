@@ -57,7 +57,10 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "BKE_curve_forward_diff_bezier" in geometry
     assert "mixie_draw_moodboard_graph_controls" in renderer
     assert '"prompt",' in controls
-    assert 'node, "model", "Model"' in controls
+    # Mode/Model draw the Python-cached human labels (dynamic enums can't
+    # self-display); the static word is only the empty-label fallback.
+    assert 'model_label[0] ? model_label : "Model"' in controls
+    assert 'mode_label[0] ? mode_label : "Mode"' in controls
     assert "BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in controls
     # The draft hint draws exactly when the floating controls do not, so both
     # sides must share the same on-screen size thresholds.
@@ -67,7 +70,10 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
     assert "generation_running" in controls
     assert 'RNA_boolean_get(&iter.ptr, "visible")' in controls
-    assert 'STREQ(widget, "slider")' in controls
+    # Numeric parameters are plain manual number fields: the catalog's wide
+    # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
+    assert 'STREQ(widget, "slider")' not in controls
+    assert "button_type = ButType::Num;" in controls
     assert 'RNA_struct_find_property(node, "parameters")' in controls
     assert "uiDefButO" in controls
     assert '"MIXIE_OT_moodboard_run_action_node"' in controls

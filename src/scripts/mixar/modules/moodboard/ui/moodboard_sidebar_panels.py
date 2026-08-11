@@ -13,11 +13,12 @@ Item / Tool / View in the 3D Viewport N-panel.
 Tab structure (Stage 3)
 -----------------------
 One panel per generation-catalog capability, in catalog sort order:
-Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Retopology,
-UV Unwrapping, Mesh Segmentation — plus the Queue utility panel (not a
-capability; ``mixie.queue_view`` keys on its "Queue" category). AI
-Render is catalog-only (no offline fallback): its panel hides unless the
-loaded catalog has ``ai_render`` services.
+Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character
+Parts, Retopology, UV Unwrapping, Mesh Segmentation — plus the Queue
+utility panel (not a capability; ``mixie.queue_view`` keys on its
+"Queue" category). AI Render, Character Parts, Auto Rig and PBR
+Generation are catalog-only (no offline fallback): each panel hides
+unless the loaded catalog has services for its capability.
 
 Design decision — catalog-driven labels, two resolution points:
 Blender consumes ``bl_category``/``bl_label`` once at class registration
@@ -58,10 +59,12 @@ from .sidebar_panel_drawers import (
 from .sidebar_tab_drawers import (
     _draw_mesh_segment,
     _draw_retopology,
+    _draw_segment_to_3d,
     _draw_uv_unwrap,
 )
 from .ai_render_drawer import _draw_ai_render
 from .animate_drawer import _draw_animate
+from .pbr_gen_drawer import _draw_pbr_gen
 from .scene_gen_drawer import _draw_scene_gen
 from .video_gen_drawer import _draw_video_gen
 
@@ -262,6 +265,42 @@ class MIXIE_PT_gen_scene_recon(Panel):
         _safe_draw(_draw_scene_gen, self.layout, context)
 
 
+class MIXIE_PT_gen_character_parts(Panel):
+    # Capability "character_parts" — Segments to 3D (lasso/box/magic-select
+    # segmentation results → per-part 3D models), split out of Scene Gen so
+    # the gaming character workflow has its own tab. Catalog-only, like AI
+    # Render: poll() requires the catalog to be loaded AND to have
+    # character_parts services. Pre-split catalogs (the scene_gen service
+    # still under the scene_gen capability) hide this tab and keep Segments
+    # to 3D as a Scene Gen mode — the split is DB-driven and revertible
+    # from the DB alone.
+    bl_label = "Character Parts"
+    bl_idname = "MIXIE_PT_gen_character_parts"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Character Parts"
+    bl_order = 45
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("character_parts"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='OUTLINER_OB_ARMATURE')
+
+    def draw(self, context):
+        _safe_draw(_draw_segment_to_3d, self.layout, context)
+
+
 class MIXIE_PT_gen_retopology(Panel):
     # Capability "retopology" — Hunyuan / Tripo engines.
     bl_label = "Retopology"
@@ -357,6 +396,39 @@ class MIXIE_PT_gen_animate(Panel):
 
     def draw(self, context):
         _safe_draw(_draw_animate, self.layout, context)
+
+
+class MIXIE_PT_gen_pbr_generation(Panel):
+    # Capability "pbr_generation" — texture an existing mesh (Tripo
+    # /models/texture). Catalog-only, like AI Render / Auto Rig: no offline
+    # fallback identity, so poll() requires the catalog to be loaded AND to
+    # have pbr_generation services (disabling the capability in the DB hides
+    # the tab). DISTINCT from Texture Gen's pbr_gen (Hunyuan PBR maps).
+    bl_label = "PBR Generation"
+    bl_idname = "MIXIE_PT_gen_pbr_generation"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "PBR Generation"
+    bl_order = 78
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("pbr_generation"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='TEXTURE')
+
+    def draw(self, context):
+        _safe_draw(_draw_pbr_gen, self.layout, context)
 
 
 class MIXIE_PT_gen_scene_gen_exp(Panel):
@@ -475,10 +547,12 @@ classes = (
     MIXIE_PT_gen_image_to_3d,
     MIXIE_PT_gen_lookdev360,
     MIXIE_PT_gen_scene_recon,
+    MIXIE_PT_gen_character_parts,
     MIXIE_PT_gen_retopology,
     MIXIE_PT_gen_uv_unwrap,
     MIXIE_PT_gen_mesh_segment,
     MIXIE_PT_gen_animate,
+    MIXIE_PT_gen_pbr_generation,
     # MIXIE_PT_gen_scene_gen_exp,  # Scene Gen Experimental disabled
     MIXIE_PT_gen_world_labs,
     MIXIE_PT_gen_queue,

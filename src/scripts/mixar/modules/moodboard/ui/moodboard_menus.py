@@ -36,6 +36,51 @@ def _capability_available(capability: str) -> bool:
         return False
 
 
+def _mask_detail_available() -> bool:
+    """Whether an image_gen model can detail a cutout/mask pair.
+
+    Gates the "Multi Lasso Mask" action: without a mask-guidance model the
+    spawned node's Generate would fail closed, so the action stays hidden.
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_models, is_loaded
+        from mixar.modules.moodboard.core.character_components import (
+            eligible_component_model_slugs,
+        )
+
+        return is_loaded() and bool(
+            eligible_component_model_slugs(get_models("image_gen"))
+        )
+    except Exception:
+        return False
+
+
+_MESH_CONTINUATIONS = (
+    ('PBR_GEN', "PBR Generation", 'TEXTURE', "pbr_generation"),
+    ('RETOPOLOGY', "Retopology", 'MOD_REMESH', "retopology"),
+    ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', "mesh_segmentation"),
+    ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', "animate"),
+)
+
+
+def _mesh_source_id(scene) -> str:
+    """Node id of the active/selected node that currently holds a 3D mesh."""
+    try:
+        from mixar.modules.moodboard.core.node_graph import node_holds_mesh
+    except Exception:
+        return ""
+    active = str(getattr(scene, "mixie_moodboard_active_node_id", "") or "")
+    if active and node_holds_mesh(scene, active):
+        return active
+    for asset in getattr(scene, "mixie_moodboard_asset_nodes", ()):
+        if asset.selected and node_holds_mesh(scene, asset.node_id):
+            return asset.node_id
+    for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
+        if node.selected and node_holds_mesh(scene, node.node_id):
+            return node.node_id
+    return ""
+
+
 def _connected_action(layout, action_type: str, text: str, icon: str, source=""):
     op = layout.operator(
         "mixie.moodboard_create_connected_action", text=text, icon=icon
@@ -133,6 +178,21 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     )
                 layout.separator()
 
+        # 3D mesh continuations: available whenever a node holding a 3D mesh is
+        # active/selected (a Generate-to-3D result, an imported/pasted mesh, or a
+        # mesh produced by an earlier 3D feature — so features chain).
+        mesh_source = _mesh_source_id(scene)
+        if mesh_source:
+            drew_mesh = False
+            for action_type, text, icon, capability in _MESH_CONTINUATIONS:
+                if _capability_available(capability):
+                    if not drew_mesh:
+                        layout.label(text="Continue in 3D")
+                        drew_mesh = True
+                    _connected_action(layout, action_type, text, icon, mesh_source)
+            if drew_mesh:
+                layout.separator()
+
         if selected_images > 0:
             layout.label(text="Create Connected Node")
             _connected_action(
@@ -145,6 +205,17 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                 _connected_action(
                     layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'
                 )
+            # Multi Lasso Mask launches the lasso tool on the one selected still;
+            # each SAM3-refined loop spawns a connected mask-detail node.
+            if selected_stills == 1 and _mask_detail_available():
+                mask_row = layout.row()
+                mask_row.operator_context = 'INVOKE_DEFAULT'
+                mask_op = mask_row.operator(
+                    "mixie.moodboard_lasso_tool",
+                    text="Multi Lasso Mask",
+                    icon='MOD_MASK',
+                )
+                mask_op.create_nodes = True
             layout.separator()
         elif action_node is None:
             layout.label(text="Create Node")
@@ -280,6 +351,17 @@ class MIXIE_MT_moodboard_output_menu(Menu):
                 layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id
             )
             added = True
+        # A 3D mesh output continues into the mesh -> mesh features, matching the
+        # right-click "Continue in 3D" section.
+        if source_type == 'MESH':
+            drew_mesh = False
+            for action_type, text, icon, capability in _MESH_CONTINUATIONS:
+                if _capability_available(capability):
+                    if not drew_mesh:
+                        layout.label(text="Continue in 3D")
+                        drew_mesh = True
+                    _connected_action(layout, action_type, text, icon, source_id)
+                    added = True
         if not added:
             layout.label(text="No compatible continuation", icon='INFO')
 

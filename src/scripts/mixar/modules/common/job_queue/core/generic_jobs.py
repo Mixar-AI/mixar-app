@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
-from .job import FAILED_BACKEND_STATUSES, Job
+from .job import FAILED_BACKEND_STATUSES, Job, JobState
 from .helpers import (
     download_images_to_moodboard,
     extract_image_name,
@@ -119,6 +119,10 @@ class SyncImageJob(Job):
         Prefix for ``bpy.data.images`` names (e.g. ``"imagegen"``).
     undo_message : str
         If set, pushes an undo step after adding images.
+    _on_images_added_hook : callable | None
+        ``fn(job, names)`` called on the main thread after moodboard images
+        are added and before the queue marks the job complete. Hook failure is
+        terminal so required metadata cannot be silently omitted.
     """
 
     job_type: str = ""
@@ -129,6 +133,7 @@ class SyncImageJob(Job):
     prompt_text: str = ""
     undo_message: str = ""
     base_name: str = ""  # agent-chosen image name (overrides name_prefix)
+    _on_images_added_hook: Optional[Callable] = field(default=None, repr=False)
     _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
 
     _image_urls: List[str] = field(default_factory=list, repr=False)
@@ -172,6 +177,7 @@ class SyncImageJob(Job):
     def release_resources(self) -> None:
         self.payload = {}
         self._image_urls = []
+        self._on_images_added_hook = None
 
     def should_skip_poll(self) -> bool:
         return bool(self._image_urls)
@@ -204,6 +210,10 @@ class SyncImageJob(Job):
             on_error("No image URLs in server response")
             return True
 
+        def _on_images_added(names: str) -> None:
+            if self._on_images_added_hook is not None:
+                self._on_images_added_hook(self, names)
+
         def _download_done(image_names: str):
             self.on_imported(image_names)
             on_done(image_names)
@@ -213,10 +223,13 @@ class SyncImageJob(Job):
             name_prefix=self.name_prefix,
             prompt=self.prompt_text,
             job_id=self.id,
+            on_added=_on_images_added,
             on_done=_download_done,
             on_error=on_error,
             undo_message=self.undo_message,
             base_name=self.base_name or self._server_image_name,
+            scene_name=self.scene_name,
+            should_apply=lambda: self.state == JobState.RUNNING_DOWNLOAD,
         )
         return True
 

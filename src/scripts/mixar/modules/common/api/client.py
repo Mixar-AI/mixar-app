@@ -548,6 +548,10 @@ class HTTPClient:
                     data=response_data,
                     message="Success" if response.ok else str(response_data),
                     headers=dict(response.headers),
+                    # Keep async response parity with request(). Binary
+                    # endpoints (notably SAM3 mask downloads) need content;
+                    # parsing them as text corrupts the PNG bytes.
+                    raw=response,
                 )
 
             except requests.exceptions.Timeout:
