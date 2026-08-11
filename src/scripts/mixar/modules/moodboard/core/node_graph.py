@@ -146,8 +146,24 @@ def _initialize_catalog_selection(scene, node) -> None:
             model_slug = get_default_model_slug(service_key) or ""
         except Exception:
             model_slug = ""
+        if node.action_type == 'MASK_DETAIL':
+            model_slug = _default_component_model_slug(service_key, model_slug)
     set_node_selection(node, service_key, model_slug)
     sync_node_schema(scene, node)
+
+
+def _default_component_model_slug(service_key: str, catalog_default: str) -> str:
+    """Pick a mask-guidance-eligible model, preferring the catalog default."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_models
+        from .character_components import eligible_component_model_slugs
+
+        eligible = eligible_component_model_slugs(get_models(service_key))
+    except Exception:
+        return catalog_default
+    if catalog_default in eligible:
+        return catalog_default
+    return sorted(eligible)[0] if eligible else ""
 
 
 def node_output_type(scene, node_id: str) -> str:
@@ -361,41 +377,52 @@ def add_link(
     return link
 
 
+_ACCEPTED_SOURCE_TYPES = {
+    'IMAGE_GEN': {'IMAGE'},
+    'MODEL_3D': {'IMAGE'},
+    'VIDEO_GEN': {'IMAGE', 'VIDEO'},
+    'PBR_GEN': {'MESH'},
+    'RETOPOLOGY': {'MESH'},
+    'MESH_SEGMENT': {'MESH'},
+    'AUTO_RIG': {'MESH'},
+}
+
+MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
+
+
+def _graph_node_by_id(scene, node_id: str):
+    """Resolve a source node object: media item, action node, or asset node."""
+    media = media_item_by_id(scene, node_id)
+    if media is not None:
+        return media
+    action = action_node_by_id(scene, node_id)
+    if action is not None:
+        return action
+    return asset_node_by_id(scene, node_id)
+
+
 def create_connected_action(scene, action_type: str, source_node_id: str = ""):
     # Operator context, so the migrating write is safe here — and required,
     # since the new node's links key off media ids.
     ensure_media_node_ids(scene)
+    accepted = _ACCEPTED_SOURCE_TYPES.get(action_type, {'IMAGE'})
+    mesh_feature = action_type in MESH_FEATURE_ACTIONS
     sources = []
     if source_node_id:
-        source_action = action_node_by_id(scene, source_node_id)
-        if source_action is not None:
-            output_type = output_type_for_action(source_action.action_type)
-            accepted = (
-                output_type == 'IMAGE'
-                if action_type in {'IMAGE_GEN', 'MODEL_3D'}
-                else output_type in {'IMAGE', 'VIDEO'}
-            )
-            if accepted:
-                sources = [source_action]
-        else:
-            source_media = media_item_by_id(scene, source_node_id)
-            if source_media is not None:
-                is_still = is_still_item(source_media)
-                accepted = (
-                    is_still
-                    if action_type in {'IMAGE_GEN', 'MODEL_3D'}
-                    else action_type == 'VIDEO_GEN'
-                )
-                if accepted:
-                    sources = [source_media]
-    if not sources:
+        source = _graph_node_by_id(scene, source_node_id)
+        if source is not None and node_output_type(scene, source_node_id) in accepted:
+            sources = [source]
+    if not sources and not mesh_feature:
         sources = _selected_media(scene, action_type)
-    if not sources and action_type != 'IMAGE_GEN':
-        raise ValueError(
-            "Generate to 3D needs one selected image"
-            if action_type == 'MODEL_3D'
-            else "Create Video needs at least one selected image or video"
-        )
+    if not sources:
+        if mesh_feature:
+            raise ValueError("Connect this from a 3D mesh node")
+        if action_type != 'IMAGE_GEN':
+            raise ValueError(
+                "Generate to 3D needs one selected image"
+                if action_type == 'MODEL_3D'
+                else "Create Video needs at least one selected image or video"
+            )
 
     node = scene.mixie_moodboard_action_nodes.add()
     node.node_id = new_node_id()
@@ -435,32 +462,66 @@ def input_media_items(scene, action_node) -> list:
         source_action = action_node_by_id(scene, link.from_node_id)
         if source_action is None:
             continue
-        names = [
-            name.strip() for name in source_action.result_names.split(",")
-            if name.strip()
-        ]
-        for name in names:
-            media = next(
-                (
-                    candidate for candidate in scene.mixie_moodboard_images
-                    if candidate.image and candidate.image.name == name
-                ),
-                None,
-            )
-            if media is not None:
-                resolved.append(media)
+        # A producer node contributes the single image it represents on the
+        # canvas (its preview / embedded result), NOT every image a multi-image
+        # generation embedded behind it. Expanding result_names here made one
+        # connection surface N images, so a downstream "exactly one image" node
+        # (Generate to 3D) rejected a perfectly valid single connection.
+        media = _action_node_output_media(scene, source_action)
+        if media is not None:
+            resolved.append(media)
     return resolved
 
 
+def _action_node_output_media(scene, source_action):
+    """Resolve the one media item a producer node outputs to the graph.
+
+    Prefers the node's shown preview, then its embedded result, and finally the
+    legacy result-name match — so a stale or empty ``result_names`` still
+    resolves as long as the node visibly holds a result.
+    """
+    embedded = [
+        media for media in scene.mixie_moodboard_images
+        if media.image and media.embedded_node_id == source_action.node_id
+    ]
+    preview = getattr(source_action, "preview_image", None)
+    if preview is not None:
+        chosen = next((media for media in embedded if media.image == preview), None)
+        if chosen is not None:
+            return chosen
+    if embedded:
+        return embedded[0]
+    names = [
+        name.strip() for name in source_action.result_names.split(",")
+        if name.strip()
+    ]
+    return next(
+        (
+            candidate for candidate in scene.mixie_moodboard_images
+            if candidate.image and candidate.image.name in names
+        ),
+        None,
+    )
+
+
 def create_asset_result(scene, action_node, object_names: str):
+    """Embed an imported mesh result INTO the producing node (like Generate 3D).
+
+    The node's generate UI is replaced by the result thumbnail: the C++ draw
+    renders ``preview_object`` via BKE_icon_preview_ensure. ``result_names`` keeps
+    every imported object so the node can be chained onward, while the thumbnail
+    prefers a MESH — an auto-rig result also imports an armature, whose preview
+    is unrecognisable sticks.
+    """
     names = [name.strip() for name in object_names.split(",") if name.strip()]
     action_node.result_names = object_names
     try:
         import bpy
 
+        objects = [obj for obj in (bpy.data.objects.get(name) for name in names) if obj]
         action_node.preview_object = next(
-            (bpy.data.objects.get(name) for name in names if bpy.data.objects.get(name)),
-            None,
+            (obj for obj in objects if obj.type == 'MESH'),
+            objects[0] if objects else None,
         )
         if action_node.preview_object is not None:
             action_node.preview_object.asset_generate_preview()
@@ -489,6 +550,166 @@ def connect_image_result(scene, action_node, image_names: str):
     return items[0] if items else None
 
 
+MASK_NODE_CUTOUT_PREFIX = "mask_node_cutout_"
+
+
+def _load_png_bytes_as_image(png_bytes: bytes, name: str):
+    """Load PNG bytes into a packed, blend-embedded Blender image."""
+    import os
+    import tempfile
+
+    import bpy
+
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+            handle.write(png_bytes)
+            path = handle.name
+        image = bpy.data.images.load(path, check_existing=False)
+        image.name = name
+        image.pack()
+        return image
+    except Exception:
+        return None
+    finally:
+        if path:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+
+def _build_mask_cutout_preview(source_item, segment):
+    """Best-effort masked-cutout tile preview for a mask-detail node.
+
+    Falls back to the raw mask, then None, so node creation never fails on a
+    preview problem — the node is still runnable without a tile image.
+    """
+    try:
+        from mixar.modules.common.utils.image_utils import image_to_png_bytes
+        from .character_components import prepare_component_references
+
+        source_bytes = image_to_png_bytes(source_item.image)
+        mask_bytes = image_to_png_bytes(segment.mask_image)
+        references = prepare_component_references(
+            source_bytes, mask_bytes, include_full_context=False
+        )
+        name = f"{MASK_NODE_CUTOUT_PREFIX}{new_node_id()[:8]}"
+        image = _load_png_bytes_as_image(references.component_cutout, name)
+        if image is not None:
+            return image
+    except Exception:
+        pass
+    return getattr(segment, "mask_image", None)
+
+
+def release_mask_node_cutout(image) -> None:
+    """Remove a node-owned cutout thumbnail datablock (no-op for other images)."""
+    if image is None:
+        return
+    try:
+        if str(getattr(image, "name", "")).startswith(MASK_NODE_CUTOUT_PREFIX):
+            import bpy
+
+            bpy.data.images.remove(image)
+    except Exception:
+        pass
+
+
+def create_mask_detail_node(scene, source_item, segment):
+    """Create a MASK_DETAIL node from one SAM3 segment on a source image.
+
+    The node reuses the component-detail generation path: its incoming link
+    carries the source image and ``component_id`` pins the exact mask. Its card
+    shows the property controls with the masked-cutout thumbnail at the bottom
+    (``mask_preview``); Generate fills ``preview_image`` with the result.
+    """
+    from .character_components import ensure_component_id
+
+    ensure_media_node_ids(scene)
+
+    node = scene.mixie_moodboard_action_nodes.add()
+    node.node_id = new_node_id()
+    node.action_type = 'MASK_DETAIL'
+    node.component_id = ensure_component_id(segment)
+    _initialize_catalog_selection(scene, node)
+
+    node.mask_preview = _build_mask_cutout_preview(source_item, segment)
+    refresh_node_height(node)
+
+    right, center_y = _source_right_and_center([source_item])
+    node.position_x = right + ACTION_NODE_GAP
+    node.position_y = center_y - node.height * 0.5
+
+    deselect_graph_nodes(scene)
+    node.selected = True
+    scene.mixie_moodboard_active_node_id = node.node_id
+    try:
+        connect_to_next_input(scene, source_item.node_id, node.node_id)
+    except ValueError:
+        # No compatible socket yet (catalog still loading). The node keeps its
+        # component_id and source is re-resolvable once links can be made.
+        pass
+    return node
+
+
+def connect_image_outputs_as_nodes(scene, action_node, image_names: str):
+    """Attach generated images as standalone nodes linked from ``action_node``.
+
+    Unlike ``connect_image_result`` (which embeds the result inside the producing
+    node), each output image here becomes its own moodboard node placed to the
+    right of the producer and linked from its output handle. Additive: a later
+    generation adds new output nodes and links without disturbing earlier ones,
+    and the producing node keeps its own tile (e.g. a mask node keeps its mask).
+    """
+    ensure_media_node_ids(scene)
+    from .moodboard_utils import find_free_moodboard_position
+
+    names = [name.strip() for name in image_names.split(",") if name.strip()]
+    outputs = [
+        (index, item)
+        for index, item in enumerate(scene.mixie_moodboard_images)
+        if item.image and item.image.name in names
+    ]
+    if not outputs:
+        return []
+
+    base_x = action_node.position_x + action_node.width + RESULT_NODE_GAP
+    top_y = action_node.position_y + action_node.height
+    created = []
+    for index, item in outputs:
+        # Ensure the output stands on its own rather than hiding inside the node.
+        item.embedded_node_id = ""
+        item.selected = False
+        width, height = get_moodboard_image_display_size(item.image, item.scale)
+        item.position_x, item.position_y = find_free_moodboard_position(
+            width,
+            height,
+            base_x + width * 0.5,
+            top_y - height * 0.5,
+            scene=scene,
+            exclude_index=index,
+        )
+        add_link(scene, action_node.node_id, item.node_id, from_socket="image", to_socket="")
+        created.append(item)
+    return created
+
+
+def connect_image_results(scene, action_node, image_names: str):
+    """Attach an image node's generated outputs to the graph.
+
+    A single result stays embedded in the producing node (its tile shows it).
+    Two or more results each become their own output node linked from the
+    producer, because one embedded preview would hide the rest. Each output
+    keeps a single link back to the producing node only.
+    """
+    names = [name.strip() for name in image_names.split(",") if name.strip()]
+    if len(names) <= 1:
+        return connect_image_result(scene, action_node, image_names)
+    outputs = connect_image_outputs_as_nodes(scene, action_node, image_names)
+    return outputs[0] if outputs else None
+
+
 def connect_video_result(scene, action_node, image_name: str):
     ensure_media_node_ids(scene)
     for media in scene.mixie_moodboard_images:
@@ -510,3 +731,46 @@ def connect_video_result(scene, action_node, image_name: str):
     action_node.preview_image = item.image
     refresh_node_height(action_node)
     return item
+
+
+# --------------------------------------------------------------------------- #
+# 3D mesh nodes: mesh-continuation source resolution and output nodes
+# --------------------------------------------------------------------------- #
+
+
+def mesh_source_object_names(scene, node_id: str) -> list:
+    """Blender object names held by a 3D mesh node.
+
+    A mesh node is either an action node that produced a mesh (``result_names``)
+    or a standalone asset node (``object_names``). Returns [] for anything else.
+    """
+    action = action_node_by_id(scene, node_id)
+    if action is not None and output_type_for_action(action.action_type) == 'MESH':
+        return [name.strip() for name in action.result_names.split(",") if name.strip()]
+    asset = asset_node_by_id(scene, node_id)
+    if asset is not None:
+        return [name.strip() for name in asset.object_names.split(",") if name.strip()]
+    return []
+
+
+def node_holds_mesh(scene, node_id: str) -> bool:
+    """Whether a node currently holds one or more 3D mesh objects."""
+    return bool(mesh_source_object_names(scene, node_id))
+
+
+def input_source_object_names(scene, action_node) -> list:
+    """Resolve the mesh object names feeding a mesh-feature node via its link.
+
+    Scans for the MESH-bearing link specifically: a PBR node also carries image
+    reference links, so taking the first incoming link would miss the mesh when
+    an image happened to be connected first.
+    """
+    for link in scene.mixie_moodboard_links:
+        if link.to_node_id != action_node.node_id:
+            continue
+        names = mesh_source_object_names(scene, link.from_node_id)
+        if names:
+            return names
+    return []
+
+

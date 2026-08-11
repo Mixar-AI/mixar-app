@@ -26,111 +26,8 @@ from ...core.moodboard_utils import (
     mouse_to_image_coords,
 )
 from ...core.scene_segment_manager import get_scene_segment_manager
+from ...core.segment_overlay import recomposite_display_image
 from ...core.media_utils import is_still_item
-
-
-def recomposite_display_image(img_item):
-    """
-    Composite all active segments onto the original image.
-    Creates or updates img_item.display_image with overlays applied.
-    Adds a darker green outline around segment edges.
-    Uses NumPy (bundled with Blender) for fast vectorized operations.
-    """
-    import numpy as np
-
-    original = img_item.image
-    if not original:
-        return
-
-    width, height = original.size[0], original.size[1]
-    if width == 0 or height == 0:
-        return
-
-    # Check if any segments are active
-    has_active_segments = any(seg.active for seg in img_item.segments)
-
-    if not has_active_segments:
-        # No active segments - clear display image so original is shown
-        if img_item.display_image:
-            old_display = img_item.display_image
-            img_item.display_image = None
-            try:
-                bpy.data.images.remove(old_display)
-            except:
-                pass
-        return
-
-    # Fast pixel access using foreach_get
-    pixel_count = width * height * 4
-    original_pixels = np.empty(pixel_count, dtype=np.float32)
-    original.pixels.foreach_get(original_pixels)
-    result_pixels = original_pixels.copy().reshape(height, width, 4)
-
-    theme_green = np.array([0.2, 0.8, 0.2], dtype=np.float32)
-    outline_green = np.array([0.1, 0.5, 0.1], dtype=np.float32)
-    overlay_alpha = 0.5
-
-    # Apply each active segment
-    for segment in img_item.segments:
-        if not segment.active or not segment.mask_image:
-            continue
-
-        mask_img = segment.mask_image
-        mask_width, mask_height = mask_img.size[0], mask_img.size[1]
-
-        if mask_width == 0 or mask_height == 0:
-            continue
-
-        # Fast mask pixel access
-        mask_pixel_count = mask_width * mask_height * 4
-        mask_pixels = np.empty(mask_pixel_count, dtype=np.float32)
-        mask_img.pixels.foreach_get(mask_pixels)
-        mask_pixels = mask_pixels.reshape(mask_height, mask_width, 4)
-        mask_r = mask_pixels[:, :, 0]
-
-        # Resize mask if needed using nearest neighbor
-        if mask_width != width or mask_height != height:
-            y_indices = (np.arange(height) * mask_height / height).astype(int)
-            x_indices = (np.arange(width) * mask_width / width).astype(int)
-            mask_r = mask_r[y_indices][:, x_indices]
-
-        # Create binary mask
-        mask_bool = mask_r > 0.5
-
-        # Simple edge detection: shift mask and XOR to find boundaries
-        edge_mask = np.zeros_like(mask_bool)
-        edge_mask[1:, :] |= mask_bool[1:, :] != mask_bool[:-1, :]  # vertical edges
-        edge_mask[:-1, :] |= mask_bool[1:, :] != mask_bool[:-1, :]
-        edge_mask[:, 1:] |= mask_bool[:, 1:] != mask_bool[:, :-1]  # horizontal edges
-        edge_mask[:, :-1] |= mask_bool[:, 1:] != mask_bool[:, :-1]
-        edge_mask = edge_mask & mask_bool  # Only edges inside mask
-
-        # Apply green overlay to interior (mask minus edges)
-        interior = mask_bool & ~edge_mask
-        result_pixels[interior, :3] = (
-            result_pixels[interior, :3] * (1 - overlay_alpha) +
-            theme_green * overlay_alpha
-        )
-
-        # Apply darker green to edges
-        result_pixels[edge_mask, :3] = (
-            result_pixels[edge_mask, :3] * 0.3 +
-            outline_green * 0.7
-        )
-
-    # Create or update display image
-    if not img_item.display_image:
-        display_name = f"{original.name}_display"
-        img_item.display_image = bpy.data.images.new(
-            name=display_name,
-            width=width,
-            height=height,
-            alpha=True
-        )
-
-    # Fast pixel write using foreach_set
-    img_item.display_image.pixels.foreach_set(result_pixels.flatten())
-    img_item.display_image.pack()
 
 
 class MIXIE_OT_moodboard_magic_select_tool(Operator):
@@ -290,6 +187,11 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
 
             # Recomposite display image with all active segments
             recomposite_display_image(img_item)
+            from ...core.component_debug import add_sam3_mask_preview
+
+            add_sam3_mask_preview(
+                scene, self._target_image_index, mask_img, segment_name,
+            )
 
             state.magic_select_pending = False
             logger.debug("[SceneSegment] Added %s to image", segment_name)
@@ -328,9 +230,9 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Surface the Scene Gen tab's Segments to 3D mode
-        from ..sidebar_ui_helpers import focus_scene_gen_segments
-        focus_scene_gen_segments(context)
+        # Surface the segments panel (Character Parts / Scene Gen fallback)
+        from ..sidebar_ui_helpers import focus_segments_panel
+        focus_segments_panel(context)
 
         # Find the selected image
         selected_idx = -1
@@ -356,25 +258,28 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
         # Check if image needs to be uploaded
         manager = get_scene_segment_manager()
 
+        def on_upload_complete(success, message):
+            self._upload_pending = False
+            if success:
+                self.report({'INFO'}, "Ready! Click on image to segment.")
+            else:
+                self.report({'ERROR'}, f"Upload failed: {message}")
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE':
+                        area.tag_redraw()
+
         if manager.is_uploading(image):
-            self.report({'INFO'}, "Image is uploading... Please wait")
+            self.report({'INFO'}, "Waiting for image upload...")
             self._upload_pending = True
+            # Join the existing upload. Without registering a waiter this
+            # modal remained pending forever even after the upload completed.
+            manager.queue_upload(
+                image, img_item=img_item, on_complete=on_upload_complete,
+            )
         elif not manager.is_ready(image):
-            # Upload image first
             self.report({'INFO'}, "Uploading image for segmentation...")
             self._upload_pending = True
-
-            def on_upload_complete(success, message):
-                self._upload_pending = False
-                if success:
-                    self.report({'INFO'}, "Ready! Click on image to segment.")
-                else:
-                    self.report({'ERROR'}, f"Upload failed: {message}")
-                for window in bpy.context.window_manager.windows:
-                    for area in window.screen.areas:
-                        if area.type == 'MIXIE':
-                            area.tag_redraw()
-
             manager.queue_upload(image, img_item=img_item, on_complete=on_upload_complete)
         else:
             self.report({'INFO'}, "Click on image to segment object. ESC to cancel.")

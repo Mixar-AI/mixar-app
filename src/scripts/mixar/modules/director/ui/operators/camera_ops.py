@@ -10,7 +10,12 @@ from bpy.types import Operator
 
 from ...constants import ASPECT_PRESETS
 from ...core.shot_api import active_shot, refresh_manifest
-from ...core.viewport import enter_precise_mode, invoke_walk
+from ...core.viewport import (
+    enter_camera_view,
+    enter_precise_mode,
+    invoke_explore_walk,
+    invoke_walk,
+)
 
 
 def _editable_shot(context):
@@ -60,7 +65,98 @@ def _draw_walk_aim(region_pointer):
     gpu.state.blend_set('NONE')
 
 
-class MIXAR_OT_director_navigate(Operator):
+class _WalkSupervisor:
+    """Shared modal supervision around a running native walk session.
+
+    Native walk grabs and HIDES the pointer for its whole run; when it dies
+    the pointer reappears wherever the OS physically left it — after a lot
+    of mouse steering that can be anywhere, including outside the window,
+    and it stays invisible until wiggled. Supervision fixes the exit for
+    every walk the Director starts: an aim reticle marks the focus while
+    the pointer is hidden, Esc stops in place instead of walk's native
+    snap-back (the pose captured at the Esc press is re-applied after
+    walk's revert), and the cursor is warped back to the middle of the
+    viewport on every exit so it is always visible and where the eye is.
+    """
+
+    def _supervise(self, context, window, area, region) -> None:
+        self._window = window
+        self._area = area
+        self._region = region
+        self._exit_pose = None
+        self._timer = context.window_manager.event_timer_add(
+            0.05, window=window,
+        )
+        self._draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+            _draw_walk_aim, (region.as_pointer(),), 'WINDOW', 'POST_PIXEL',
+        )
+        context.window_manager.modal_handler_add(self)
+        area.tag_redraw()
+
+    def modal(self, context, event):
+        if self._walk_running():
+            if event.type == 'ESC' and event.value == 'PRESS':
+                # Native walk cancel snaps back to where the walk began.
+                # Directors expect Esc to simply stop here, so keep this
+                # pose and re-apply it after walk's revert.
+                self._exit_pose = self._snapshot_exit_pose()
+            return {'PASS_THROUGH'}
+        self._finish(context)
+        self._on_walk_finished(context)
+        return {'FINISHED'}
+
+    def cancel(self, context):
+        self._exit_pose = None
+        self._finish(context, reset_cursor=False)
+
+    def _snapshot_exit_pose(self):
+        raise NotImplementedError
+
+    def _apply_exit_pose(self, pose) -> None:
+        raise NotImplementedError
+
+    def _on_walk_finished(self, _context) -> None:
+        pass
+
+    def _walk_running(self) -> bool:
+        modal_operators = getattr(self._window, "modal_operators", None)
+        if modal_operators is None:
+            return False
+        try:
+            return modal_operators.get("VIEW3D_OT_walk") is not None
+        except (AttributeError, ReferenceError):
+            return False
+
+    def _finish(self, context, *, reset_cursor: bool = True) -> None:
+        if self._exit_pose is not None:
+            self._apply_exit_pose(self._exit_pose)
+            self._exit_pose = None
+        if self._timer is not None:
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+        if self._draw_handle is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(
+                self._draw_handle, 'WINDOW',
+            )
+            self._draw_handle = None
+        if reset_cursor:
+            # The pointer reappears wherever the OS left it — often off in
+            # a corner or outside the window; hand it back in the middle of
+            # the frame where it is visible and useful.
+            try:
+                self._window.cursor_warp(
+                    self._region.x + self._region.width // 2,
+                    self._region.y + self._region.height // 2,
+                )
+            except (AttributeError, ReferenceError):
+                pass
+        try:
+            self._area.tag_redraw()
+        except (AttributeError, ReferenceError):
+            pass
+
+
+class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
     """Rough-in the camera with Blender's native WASD walk navigation"""
 
     bl_idname = "mixar.director_navigate"
@@ -87,43 +183,27 @@ class MIXAR_OT_director_navigate(Operator):
             # Walk refused to start, or runs in another window where this
             # operator's modal handler would never receive events.
             return result
-        self._window = window
-        self._area = area
-        self._region = region
         self._camera = shot.camera
-        self._exit_pose = None
         self._start_pose = (
             shot.camera.matrix_world.copy(),
             float(shot.camera.data.lens),
         )
-        self._timer = context.window_manager.event_timer_add(
-            0.05, window=window,
-        )
-        self._draw_handle = bpy.types.SpaceView3D.draw_handler_add(
-            _draw_walk_aim, (region.as_pointer(),), 'WINDOW', 'POST_PIXEL',
-        )
-        context.window_manager.modal_handler_add(self)
-        area.tag_redraw()
+        self._supervise(context, window, area, region)
         return {'RUNNING_MODAL'}
 
-    def modal(self, context, event):
-        if self._walk_running():
-            if event.type == 'ESC' and event.value == 'PRESS':
-                # Native walk cancel snaps the camera back to where the walk
-                # began. Directors expect Esc to simply stop here, so keep
-                # this pose and re-apply it after walk's revert.
-                self._exit_pose = (
-                    self._camera.matrix_world.copy(),
-                    float(self._camera.data.lens),
-                )
-            return {'PASS_THROUGH'}
-        self._finish(context)
-        self._auto_capture(context)
-        return {'FINISHED'}
+    def _snapshot_exit_pose(self):
+        return (
+            self._camera.matrix_world.copy(),
+            float(self._camera.data.lens),
+        )
 
-    def cancel(self, context):
-        self._exit_pose = None
-        self._finish(context, reset_cursor=False)
+    def _apply_exit_pose(self, pose) -> None:
+        matrix, lens = pose
+        self._camera.matrix_world = matrix
+        self._camera.data.lens = lens
+
+    def _on_walk_finished(self, context) -> None:
+        self._auto_capture(context)
 
     def _auto_capture(self, context) -> None:
         """Capture a keyframe for the completed move when Auto Key is on."""
@@ -150,43 +230,86 @@ class MIXAR_OT_director_navigate(Operator):
             return
         self.report({'INFO'}, f"Auto keyframe at frame {beat.frame}")
 
-    def _walk_running(self) -> bool:
-        modal_operators = getattr(self._window, "modal_operators", None)
-        if modal_operators is None:
-            return False
-        try:
-            return modal_operators.get("VIEW3D_OT_walk") is not None
-        except (AttributeError, ReferenceError):
-            return False
 
-    def _finish(self, context, *, reset_cursor: bool = True) -> None:
-        if self._exit_pose is not None:
-            matrix, lens = self._exit_pose
-            self._camera.matrix_world = matrix
-            self._camera.data.lens = lens
-            self._exit_pose = None
-        if self._timer is not None:
-            context.window_manager.event_timer_remove(self._timer)
-            self._timer = None
-        if self._draw_handle is not None:
-            bpy.types.SpaceView3D.draw_handler_remove(
-                self._draw_handle, 'WINDOW',
-            )
-            self._draw_handle = None
-        if reset_cursor:
-            # The pointer reappears wherever walk grabbed it, which is often
-            # off in a corner; hand it back in the middle of the frame.
-            try:
-                self._window.cursor_warp(
-                    self._region.x + self._region.width // 2,
-                    self._region.y + self._region.height // 2,
-                )
-            except (AttributeError, ReferenceError):
-                pass
+class MIXAR_OT_director_explore(_WalkSupervisor, Operator):
+    """Fly the scene freely without moving the shot camera"""
+
+    bl_idname = "mixar.director_explore"
+    bl_label = "Explore"
+    bl_description = (
+        "Leave the camera view and fly the scene with WASD and the mouse; "
+        "frame a spot, then Add Camera Here starts a new shot there"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        return bool(state and state.is_directing)
+
+    def invoke(self, context, _event):
+        context.scene.mixar_director.navigation_mode = 'EXPLORE'
         try:
-            self._area.tag_redraw()
-        except (AttributeError, ReferenceError):
+            result, target = invoke_explore_walk(context)
+        except Exception as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
+        window, area, region, space = target
+        if 'RUNNING_MODAL' not in result or window != context.window:
+            # Walk refused to start (the free view is still usable with
+            # ordinary navigation), or runs in another window where this
+            # operator's modal handler would never receive events.
+            return result
+        self._region_3d = space.region_3d
+        self._supervise(context, window, area, region)
+        self.report(
+            {'INFO'}, "Exploring — frame a view, then Add Camera Here"
+        )
+        return {'RUNNING_MODAL'}
+
+    def _snapshot_exit_pose(self):
+        region_3d = self._region_3d
+        return (
+            region_3d.view_location.copy(),
+            region_3d.view_rotation.copy(),
+            float(region_3d.view_distance),
+        )
+
+    def _apply_exit_pose(self, pose) -> None:
+        location, rotation, distance = pose
+        try:
+            self._region_3d.view_location = location
+            self._region_3d.view_rotation = rotation
+            self._region_3d.view_distance = distance
+        except ReferenceError:
             pass
+
+
+class MIXAR_OT_director_return_to_shot(Operator):
+    """Snap the viewport back to the active shot camera"""
+
+    bl_idname = "mixar.director_return_to_shot"
+    bl_label = "Back to Shot"
+    bl_description = (
+        "Stop exploring and return to the active shot camera's view"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, "mixar_director", None)
+        if not (state and state.is_directing):
+            return False
+        shot = active_shot(context.scene)
+        return bool(shot is not None and shot.camera is not None)
+
+    def execute(self, context):
+        shot = active_shot(context.scene)
+        try:
+            # enter_camera_view flips EXPLORE back to NAVIGATE itself.
+            enter_camera_view(context, shot.camera, remember=False)
+        except Exception as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
+        return {'FINISHED'}
 
 
 class MIXAR_OT_director_block_input(Operator):
@@ -284,6 +407,8 @@ class MIXAR_OT_director_set_aspect(Operator):
 classes = (
     MIXAR_OT_director_navigate,
     MIXAR_OT_director_precise,
+    MIXAR_OT_director_explore,
+    MIXAR_OT_director_return_to_shot,
     MIXAR_OT_director_block_input,
     MIXAR_OT_director_set_lens,
     MIXAR_OT_director_set_aspect,

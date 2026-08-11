@@ -40,7 +40,10 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
     bl_description = "Submit this inference node to the generation queue"
     bl_options = {'REGISTER'}
 
-    node_id: bpy.props.StringProperty(default="")
+    # SKIP_SAVE: this is a REGISTER operator, so saved last-used properties
+    # are re-applied to any invocation that passes no properties — a stale
+    # remembered node_id would silently re-run a different node.
+    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
     edit_before_run: bpy.props.BoolProperty(
         default=False,
         options={'SKIP_SAVE'},
@@ -81,6 +84,39 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
                 context.area.tag_redraw()
             return {'CANCELLED'}
         self.report({'INFO'}, "Node added to the generation queue")
+        if context.area:
+            context.area.tag_redraw()
+        return {'FINISHED'}
+
+
+class MIXIE_OT_moodboard_reset_node_params(Operator):
+    bl_idname = "mixie.moodboard_reset_node_params"
+    bl_label = "Reset Settings"
+    bl_description = "Restore this node's settings to the model defaults"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
+    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
+
+    def execute(self, context):
+        from mixar.modules.moodboard.core.node_graph import (
+            action_node_by_id,
+            active_action_node,
+        )
+        from mixar.modules.moodboard.core.node_schema import reset_node_parameters
+
+        node = (
+            action_node_by_id(context.scene, self.node_id)
+            if self.node_id else active_action_node(context.scene)
+        )
+        if node is None:
+            self.report({'WARNING'}, "Select an inference node")
+            return {'CANCELLED'}
+        if node.state in {'QUEUED', 'RUNNING'}:
+            self.report({'WARNING'}, "This node is already running")
+            return {'CANCELLED'}
+        reset_node_parameters(node)
+        self.report({'INFO'}, "Settings reset to defaults")
         if context.area:
             context.area.tag_redraw()
         return {'FINISHED'}
@@ -175,6 +211,7 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
 classes = (
     MIXIE_OT_moodboard_create_connected_action,
     MIXIE_OT_moodboard_run_action_node,
+    MIXIE_OT_moodboard_reset_node_params,
     MIXIE_OT_moodboard_delete_action_node,
     MIXIE_OT_moodboard_connect_nodes,
     MIXIE_OT_moodboard_select_asset_objects,

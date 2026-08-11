@@ -38,6 +38,7 @@ def enqueue_generation(
     prompt_text: str = "",
     undo_message: str = "",
     base_name: str = "",
+    on_images_added: Optional[Callable] = None,
     # Video-only streamed inputs
     image_inputs: Optional[list] = None,
     video_inputs: Optional[list] = None,
@@ -69,6 +70,10 @@ def enqueue_generation(
         ``fn(job, result_names)`` — GLB/image/video post-import hook.
     name_prefix, prompt_text, undo_message : str
         Image-job parameters for moodboard download.
+    on_images_added : callable, optional
+        ``fn(job, names)`` — image post-add hook, called on the main thread
+        before normal job completion. An exception rolls back the added cards
+        and fails the job.
     scene_flag : str
         If set and no explicit *listener*, auto-creates a
         ``create_scene_flag_listener`` for this property.
@@ -113,6 +118,7 @@ def enqueue_generation(
             prompt_text=prompt_text,
             undo_message=undo_message,
             base_name=base_name,
+            _on_images_added_hook=on_images_added,
             _on_imported_hook=on_imported,
         )
     elif kind == "video":

@@ -29,21 +29,23 @@ def test_director_state_is_persistent_but_session_flag_is_not():
     assert 'options={\'SKIP_SAVE\', \'HIDDEN\'}' in source
 
 
-def test_camera_beats_key_native_data_and_capture_to_moodboard():
+def test_camera_beats_key_native_data_and_pack_stills():
     capture = _read("core/capture.py")
     media_import = MOODBOARD_IMPORT.read_text(encoding="utf-8")
 
     assert 'camera.keyframe_insert(data_path="location"' in capture
     assert 'camera.data.keyframe_insert(data_path="lens"' in capture
     assert "bpy.ops.render.opengl" in capture
-    assert "import_packed_still" in capture
+    # Capture packs the still into the blend but never boards it — stills reach
+    # the moodboard only through the explicit Director export.
+    assert "pack_still_image" in capture
+    assert "import_packed_still" not in capture
     assert "image.pack()" in media_import
     assert "place_new_moodboard_item" in media_import
 
 
 def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     handoff = _read("core/handoff.py")
-    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
 
     assert "get_video_generation_limits" in handoff
     # Tab labels are catalog-driven: the handoff must resolve the Video
@@ -51,7 +53,6 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     # with the literal only as the offline fallback.
     assert 'get_tab_category("video_gen", "Video Gen")' in handoff
     assert "region.active_panel_category = category" in handoff
-    assert "MIXAR_OT_director_send_video" in overlay
     assert "seedance" not in handoff.lower()
 
 
@@ -87,7 +88,6 @@ def test_native_viewport_surface_is_registered_from_view3d():
         "view3d_director_overlay.cc",
         "view3d_director_overlay_frame.cc",
         "view3d_director_popup.cc",
-        "view3d_director_popup_render.cc",
         "view3d_director_popup_shot.cc",
         "view3d_director_state.cc",
         "view3d_director_timeline.cc",
@@ -127,10 +127,13 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "view3d_director_animation_popup_create",
         "view3d_director_render_popup_create",
         "MIXAR_OT_director_capture_beat",
-        "MIXAR_OT_director_send_keyframes",
-        "MIXAR_OT_director_send_video",
     ):
         assert reference in overlay or reference in timeline
+    # Keyframe export lives inside the native Export popup, not the overlay.
+    popup_render = (VIEW3D / "view3d_director_popup_render.cc").read_text(
+        encoding="utf-8"
+    )
+    assert "MIXAR_OT_director_send_keyframes" in popup_render
     assert "MIXAR_OT_director_toggle_timeline" in timeline
     assert "MIXAR_OT_director_toggle_immersive" in timeline
     assert "mixar.director_pick_camera" in surface_ops
@@ -430,7 +433,8 @@ def test_camera_control_is_navigate_only_and_text_only():
     the hand icon on Navigate read as a pan tool. The operator and the
     `navigation_mode` property survive (Precise stays reachable for future
     surfaces); no native surface draws its button, and Navigate renders as a
-    text-only button on both the camera gate and the timeline dock.
+    text-only button on the camera gate only — the timeline dock's copy
+    duplicated it and was removed (same artist feedback).
     """
     frame = (VIEW3D / "view3d_director_overlay_frame.cc").read_text(
         encoding="utf-8"
@@ -444,7 +448,7 @@ def test_camera_control_is_navigate_only_and_text_only():
     assert "MIXAR_OT_director_precise" not in timeline
     assert "class MIXAR_OT_director_precise" in camera_ops
     assert '"Navigate"' in frame
-    assert '"Navigate"' in timeline
+    assert "MIXAR_OT_director_navigate" not in timeline
     # Text-only: the hand icon is gone from Navigate everywhere. The one
     # ICON_VIEW_PAN left on the gate belongs to the drag-frame tool.
     assert frame.count("ICON_VIEW_PAN") == 1
