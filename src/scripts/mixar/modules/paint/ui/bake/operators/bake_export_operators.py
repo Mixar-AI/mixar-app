@@ -16,6 +16,7 @@ from bpy.props import EnumProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.analytics.export_events import capture_export
 
 logger = get_logger(__name__)
 
@@ -25,6 +26,13 @@ from ....utils.bake_constants import (
     EXPORT_FILE_FORMAT_ITEMS,
 )
 from ....utils.bake_utils import sanitize_filename
+
+
+def _capture_export(context, export_format, success, **extra):
+    try:
+        capture_export(context, export_format=export_format, success=success, extra=extra)
+    except Exception:
+        pass
 
 
 def _save_image_to_file(image, filepath, file_format):
@@ -210,9 +218,11 @@ class MExportBakedChannel(bpy.types.Operator, ExportHelper):
 
                     if _save_image_to_file(image, self.filepath, self.file_format):
                         self.report({'INFO'}, f"Exported '{self.channel_name}' to {self.filepath}")
+                        _capture_export(context, "BAKED_CHANNEL", True, channel_name=self.channel_name, file_format=self.file_format)
                         return {'FINISHED'}
                     else:
                         self.report({'ERROR'}, f"Failed to export '{self.channel_name}'")
+                        _capture_export(context, "BAKED_CHANNEL", False, channel_name=self.channel_name, file_format=self.file_format)
                         return {'CANCELLED'}
 
         self.report({'ERROR'}, f"Channel '{self.channel_name}' not found or not baked")
@@ -308,6 +318,7 @@ class MExportAllBakedChannels(bpy.types.Operator, ExportHelper):
                 os.makedirs(directory)
             except OSError as e:
                 self.report({'ERROR'}, f"Cannot create directory: {e}")
+                _capture_export(context, "BAKED_CHANNELS_ALL", False, file_format=self.file_format, image_count=0)
                 return {'CANCELLED'}
 
         baked_channels = _get_baked_channel_images(mp, tree)
@@ -323,9 +334,11 @@ class MExportAllBakedChannels(bpy.types.Operator, ExportHelper):
 
         if exported_count > 0:
             self.report({'INFO'}, f"Exported {exported_count} channel(s) to {directory}")
+            _capture_export(context, "BAKED_CHANNELS_ALL", True, file_format=self.file_format, image_count=exported_count)
             return {'FINISHED'}
         else:
             self.report({'WARNING'}, "No channels were exported")
+            _capture_export(context, "BAKED_CHANNELS_ALL", False, file_format=self.file_format, image_count=0)
             return {'CANCELLED'}
 
 
@@ -411,9 +424,11 @@ class MExportBakedTexture(bpy.types.Operator, ExportHelper):
 
         if _save_image_to_file(image, self.filepath, self.file_format):
             self.report({'INFO'}, f"Exported '{self.image_name}' to {self.filepath}")
+            _capture_export(context, "BAKED_TEXTURE", True, file_format=self.file_format)
             return {'FINISHED'}
         else:
             self.report({'ERROR'}, f"Failed to export '{self.image_name}'")
+            _capture_export(context, "BAKED_TEXTURE", False, file_format=self.file_format)
             return {'CANCELLED'}
 
 
@@ -484,6 +499,7 @@ class MExportAllBakedTextures(bpy.types.Operator, ExportHelper):
                 os.makedirs(directory)
             except OSError as e:
                 self.report({'ERROR'}, f"Cannot create directory: {e}")
+                _capture_export(context, "BAKED_TEXTURES_ALL", False, file_format=self.file_format, image_count=0)
                 return {'CANCELLED'}
 
         baked_images = _get_baked_mesh_map_images()
@@ -499,9 +515,11 @@ class MExportAllBakedTextures(bpy.types.Operator, ExportHelper):
 
         if exported_count > 0:
             self.report({'INFO'}, f"Exported {exported_count} texture(s) to {directory}")
+            _capture_export(context, "BAKED_TEXTURES_ALL", True, file_format=self.file_format, image_count=exported_count)
             return {'FINISHED'}
         else:
             self.report({'WARNING'}, "No textures were exported")
+            _capture_export(context, "BAKED_TEXTURES_ALL", False, file_format=self.file_format, image_count=0)
             return {'CANCELLED'}
 
 
