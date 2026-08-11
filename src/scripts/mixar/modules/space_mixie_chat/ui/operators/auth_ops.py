@@ -37,6 +37,19 @@ logger = get_logger(__name__)
 _auto_connect_scheduled = False
 
 
+def _capture_session_started(method: str, refreshed=None) -> None:
+    """Telemetry only — auth must never break because of it."""
+    try:
+        from mixar.modules.common.analytics.session_events import (
+            capture_session_started,
+        )
+        capture_session_started(
+            method, refreshed=refreshed, context=bpy.context,
+        )
+    except Exception as exc:
+        logger.debug("session_started capture failed: %s", exc)
+
+
 def _auto_connect_websocket():
     """Connect WebSocket after login (with small delay to ensure UI is ready).
 
@@ -177,6 +190,7 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             scene.mixie_chat_credits = user_info["data"].get("credits", 0)
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
+            _capture_session_started("startup_token", refreshed=refreshed)
             refresh_generation_caches()
             maybe_show_onboarding(email)
             _auto_connect_websocket()
@@ -293,6 +307,8 @@ def _auth_check_background() -> None:
                 if hasattr(wm, 'mixie_chat_session_expired'):
                     wm.mixie_chat_session_expired = False
                 wm.mixie_chat_login_error = ""
+
+                _capture_session_started("sso_relogin")
 
                 if user_info and user_info.get("status") == "success":
                     email = user_info["data"].get("email", "")
@@ -418,6 +434,7 @@ class MIXIE_CHAT_OT_login(Operator):
                         live_wm.mixie_chat_is_logged_in = True
                         if hasattr(live_wm, 'mixie_chat_session_expired'):
                             live_wm.mixie_chat_session_expired = False
+                        _capture_session_started("interactive_login")
 
                         if user_info and user_info.get("status") == "success":
                             email = user_info["data"].get("email", "")
@@ -472,6 +489,16 @@ class MIXIE_CHAT_OT_logout(Operator):
         # Allow auth check to run again on next login
         _auth_check_started = False
         _auto_connect_scheduled = False
+
+        # Session-end telemetry MUST run before the credentials are
+        # cleared: capture() drops events without an auth token. The
+        # once-guard in capture_session_ended is correct here — a logout
+        # ends the session, and a later atexit must not double-fire.
+        try:
+            from mixar.bootstrap.analytics_module import capture_session_ended
+            capture_session_ended("logout")
+        except Exception as exc:
+            logger.debug("logout session-end capture failed: %s", exc)
 
         # Delete tokens from keyring
         clear_credentials()

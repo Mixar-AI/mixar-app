@@ -390,6 +390,8 @@ def switch_sidebar_category(category_name: str) -> None:
             continue
         try:
             if hasattr(ui_region, "active_panel_category"):
+                from mixar.bootstrap.analytics_module import note_programmatic_panel_change
+                note_programmatic_panel_change(ui_region, category_name)
                 ui_region.active_panel_category = category_name
         except Exception as exc:
             logger.debug(
@@ -458,4 +460,3 @@ def _invoke_card(step_id: str) -> None:
             "Onboarding tour_driver: failed to invoke card for %s: %s",
             step_id, exc,
         )
-

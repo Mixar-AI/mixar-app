@@ -17,8 +17,26 @@ from ...core.node.node_utils import get_active_mpaint_node
 from ...core.asset_export.bake_and_assign import create_export_material
 from ...core.asset_export.revert_material import revert_to_original_material
 from .export_utils import export_poll, settings_to_kwargs
+from mixar.modules.common.analytics.export_events import (
+    capture_export,
+    normalized_settings,
+    scene_counts,
+)
 
 logger = get_logger(__name__)
+
+
+def _capture_fbx_export(context, settings, success, filepath):
+    try:
+        selected_only = bool(getattr(settings, "use_selection", False))
+        capture_export(
+            context, export_format="FBX", success=success, filepath=filepath,
+            extra={
+                **normalized_settings("FBX", settings),
+                **scene_counts(context, selected_only=selected_only),
+            })
+    except Exception:
+        pass
 
 # Properties that should not be forwarded to the native export operator.
 _EXCLUDE = {'batch_mode', 'use_batch_own_dir'}
@@ -91,10 +109,12 @@ class MExportFbx(bpy.types.Operator):
             logger.error("FBX export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")
             self._revert(context)
+            _capture_fbx_export(context, fs, False, self.filepath)
             return {'CANCELLED'}
 
         self._revert(context)
         self.report({'INFO'}, f"Exported FBX to {self.filepath}")
+        _capture_fbx_export(context, fs, True, self.filepath)
         return {'FINISHED'}
 
     def cancel(self, context):

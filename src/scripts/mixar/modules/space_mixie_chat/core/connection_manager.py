@@ -276,7 +276,13 @@ class ConnectionManager:
             run_on_main_thread(_set_offline)
             logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
 
-        def on_script_execute(script: str, request_id: Optional[str] = None, tool_name: str = "unknown", session_id: str = "") -> Optional[dict]:
+        def on_script_execute(
+            script: str,
+            request_id: Optional[str] = None,
+            tool_name: str = "unknown",
+            session_id: str = "",
+            agent_ctx: Optional[dict] = None,
+        ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
             if not session.has_active_session():
                 logger.warning(
@@ -287,10 +293,14 @@ class ConnectionManager:
 
             from .main_thread_executor import queue_script_request
             if request_id:
-                queue_script_request(script, request_id, tool_name, session_id)
+                queue_script_request(
+                    script, request_id, tool_name, session_id, agent_ctx
+                )
                 return None
             else:
-                queue_script_request(script, "notification", tool_name, session_id)
+                queue_script_request(
+                    script, "notification", tool_name, session_id, agent_ctx
+                )
                 return None
 
         def on_tool_start(params: dict):
