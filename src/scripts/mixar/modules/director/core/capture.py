@@ -13,6 +13,7 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
+from .rotation_curves import repair_euler_rotation_continuity
 from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
 
@@ -33,6 +34,7 @@ def _key_camera(camera, frame: int) -> None:
         group="Director",
     )
     camera.data.keyframe_insert(data_path="lens", frame=frame, group="Director")
+    repair_euler_rotation_continuity(camera)
 
 
 def _delete_camera_keys(camera, frame: int) -> None:
@@ -49,6 +51,7 @@ def _delete_camera_keys(camera, frame: int) -> None:
             target.keyframe_delete(data_path=data_path, frame=frame)
         except (RuntimeError, TypeError):
             pass
+    repair_euler_rotation_continuity(camera)
 
 
 _CAMERA_MOTION_PATHS = {

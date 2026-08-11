@@ -11,6 +11,7 @@ from bpy.types import Operator
 from ...core.board_export import send_keyframes_to_board
 from ...core.capture import capture_beat, remove_beat
 from ...core.handoff import prepare_video_generation
+from ...core.rotation_curves import repair_euler_rotation_continuity
 from ...core.shot_api import active_shot
 from ...core.viewport import enter_camera_view
 
@@ -115,7 +116,7 @@ class MIXAR_OT_director_preview(Operator):
     bl_idname = "mixar.director_preview"
     bl_label = "Preview Shot"
     bl_description = "Play this shot between its first and last keyframes"
-    bl_options = {'REGISTER'}
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         shot = active_shot(context.scene)
@@ -126,6 +127,7 @@ class MIXAR_OT_director_preview(Operator):
         if len(frames) < 2:
             self.report({'INFO'}, "Capture at least two keyframes to preview")
             return {'CANCELLED'}
+        repair_euler_rotation_continuity(shot.camera)
         scene.use_preview_range = True
         scene.frame_preview_start = frames[0]
         scene.frame_preview_end = frames[-1]
