@@ -24,8 +24,6 @@ import sys
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.common.analytics.bubble_events import capture_bubble_state
-
 _IS_WINDOWS = sys.platform == "win32"
 
 
@@ -59,11 +57,6 @@ class MIXAR_OT_bubble_header_drag(Operator):
                     result = bpy.ops.mixar.bubble_minimise()
                     if result == {'CANCELLED'}:
                         bpy.ops.mixar.bubble_restore_user()
-                    elif result == {'FINISHED'}:
-                        try:
-                            capture_bubble_state("minimized", context=context)
-                        except Exception:
-                            pass
                     return {'FINISHED'}
                 except Exception as e:  # noqa: BLE001
                     print(f"[agent_bubble] pill toggle failed: {e!r}")

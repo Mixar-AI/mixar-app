@@ -13,9 +13,8 @@ import bpy
 import requests
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
-from ..constants import CHARACTER_PARTS_CAPABILITY_KEY, SCENE_GEN_JOB_TYPE
+from ..constants import SCENE_GEN_JOB_TYPE
 from mixar.modules.common.job_queue.core.helpers import (
     create_scene_flag_listener,
     get_queue_with_listener,
@@ -204,24 +203,6 @@ def _get_scene_gen_listener():
     return _scene_gen_listener
 
 
-def _hosting_capability() -> str:
-    """Capability whose tab hosts Segments-to-3D on the live catalog.
-
-    Character Parts on post-split catalogs, Scene Gen before the split —
-    the same resolution ``sidebar_ui_helpers.focus_segments_panel`` uses.
-    Feeds only the draft-abandonment suppression marker.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_services, is_loaded,
-        )
-        if is_loaded() and get_services(CHARACTER_PARTS_CAPABILITY_KEY):
-            return CHARACTER_PARTS_CAPABILITY_KEY
-    except Exception:
-        pass
-    return "scene_gen"
-
-
 def enqueue_scene_gen_job(
     *,
     label: str,
@@ -252,9 +233,6 @@ def enqueue_scene_gen_job(
         _on_download_failed=on_download_failed,
     )
     queue = get_queue_with_listener(FEATURE_SCENE_GEN, _get_scene_gen_listener())
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted(_hosting_capability())
     if not queue.submit(job):
         logger.warning("[SceneGen] duplicate queue job rejected: %s", label)
         return None

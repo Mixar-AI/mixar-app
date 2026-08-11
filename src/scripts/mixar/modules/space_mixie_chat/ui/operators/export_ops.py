@@ -123,12 +123,6 @@ class MIXIE_CHAT_OT_export_without_chat(Operator, ExportHelper):
         except Exception as e:
             logger.error(f"[EXPORT_WITHOUT_CHAT] save_as_mainfile failed: {e}")
             self.report({'ERROR'}, f"Export failed: {e}")
-            try:
-                from mixar.modules.common.analytics.export_events import capture_export
-                capture_export(context, export_format="BLEND_NO_CHAT", success=False,
-                               filepath=self.filepath, extra={"scene_count": len(scenes), "messages_dropped": dropped})
-            except Exception:
-                pass
             return {'CANCELLED'}
         finally:
             # Always restore the in-memory chat, even on failure.
@@ -137,12 +131,6 @@ class MIXIE_CHAT_OT_export_without_chat(Operator, ExportHelper):
             # working session.
             _restore_chat(snapshot)
 
-        try:
-            from mixar.modules.common.analytics.export_events import capture_export
-            capture_export(context, export_format="BLEND_NO_CHAT", success=True,
-                           filepath=self.filepath, extra={"scene_count": len(scenes), "messages_dropped": dropped})
-        except Exception:
-            pass
         return {'FINISHED'}
 
 

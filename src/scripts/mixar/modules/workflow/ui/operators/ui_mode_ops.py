@@ -22,7 +22,6 @@ from bpy.types import Operator
 from mixar.config.config import (
     UI_MODE_AI,
     UI_MODE_PRO,
-    get_ui_mode,
     set_ui_mode,
 )
 from mixar.config.logging_config import get_logger
@@ -35,19 +34,6 @@ from ...core.workspace_loader import (
 )
 
 _logger = get_logger(__name__)
-
-
-def _capture_mode_changed(context, mode: str, previous_mode) -> None:
-    """Telemetry only — mode switching must never fail because of it."""
-    try:
-        from mixar.modules.common.analytics.capture import capture
-        from mixar.modules.common.analytics.constants import EVENT_UI_MODE
-        capture(EVENT_UI_MODE, {
-            "mode": mode,
-            "previous_mode": previous_mode,
-        }, context=context)
-    except Exception as exc:
-        _logger.debug("mode_changed capture failed: %s", exc)
 
 
 def _redraw_topbar(context):
@@ -147,12 +133,7 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
     bl_options = {"REGISTER", "INTERNAL"}
 
     def execute(self, context):
-        try:
-            previous_mode = get_ui_mode()
-        except Exception:
-            previous_mode = None
         set_ui_mode(UI_MODE_AI)
-        _capture_mode_changed(context, UI_MODE_AI, previous_mode)
         # Materialize the dedicated Zen Mode workspace if this is the
         # user's first switch (or they previously deleted it). Independent
         # from the legacy "AI Mode" tab, so deleting that tab in Engine
@@ -189,12 +170,7 @@ class MIXAR_OT_set_ui_mode_pro(Operator):
     bl_options = {"REGISTER", "INTERNAL"}
 
     def execute(self, context):
-        try:
-            previous_mode = get_ui_mode()
-        except Exception:
-            previous_mode = None
         set_ui_mode(UI_MODE_PRO)
-        _capture_mode_changed(context, UI_MODE_PRO, previous_mode)
         if not apply_ui_mode(UI_MODE_PRO):
             self.report({"WARNING"}, "Modeling workspace not found")
         _redraw_topbar(context)

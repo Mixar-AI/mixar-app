@@ -15,7 +15,6 @@ from typing import Dict, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -207,9 +206,6 @@ def enqueue_mesh_segment_job(
         mesh_object_name=mesh_object_name,
     )
     queue = _get_mesh_segment_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("mesh_segmentation")
     if not queue.submit(job):
         logger.warning("[MeshSegment] duplicate job rejected: %s", job.label)
         return None

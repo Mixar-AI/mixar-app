@@ -34,6 +34,7 @@ def register():
 
 
 def unregister():
+    src.cancel_splat_viewport_restore()
     for name, fn in _HANDLERS:
         handler_list = getattr(bpy.app.handlers, name)
         if fn in handler_list:

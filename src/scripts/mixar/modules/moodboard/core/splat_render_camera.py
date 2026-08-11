@@ -29,6 +29,8 @@ the proxy in the viewport, and re-tagging 500k-point geometry nodes on every
 interactive frame-change (Director scrubbing) would be wasted work.
 """
 
+import importlib
+
 import bpy
 from bpy.app.handlers import persistent
 
@@ -39,11 +41,194 @@ logger = get_logger(__name__)
 SPLAT_GN_MODIFIER = "KIRI_3DGS_Render_GN"
 _ENABLE_MODE = "Enable Camera Updates"
 
+# KIRI's viewport renderer is process-local: these caches, GPU textures, and
+# its SpaceView3D draw handler are deliberately not Blender datablocks.  The
+# proxy Empty *is* saved (including its packed ``gaussian_data`` ID property),
+# so every .blend load must reconstruct that runtime after KIRI has registered.
+# Function names are frozen against the vendored KIRI v4.1.5, just like the
+# operator/socket contract used by world_labs_importer and this module.
+_KIRI_ADDON_MODULE = "kiri_3dgs_render"
+_KIRI_CLEANUP_FN = "sna_clean_up_scene_5F1F1"
+_KIRI_SHADER_FN = "sna_shader_system_A4AED"
+_KIRI_TEXTURE_FN = "sna_texture_creation_FD1B2"
+_KIRI_VIEWPORT_FN = "sna_viewport_render_A3941"
+_KIRI_RUNTIME_ATTRS = (
+    "gaussian_draw_handle",
+    "gaussian_object_cache",
+    "gaussian_texture",
+    "gaussian_quad_shader",
+)
+
+_RESTORE_FIRST_DELAY_S = 1.0
+_RESTORE_RETRY_DELAY_S = 1.0
+_RESTORE_MAX_ATTEMPTS = 8
+_restore_attempts = 0
+
 _VIEW_BASE = 2    # Socket_2..17
 _PROJ_BASE = 18   # Socket_18..33
 
 # True between render_init and render_complete/render_cancel.
 _rendering = False
+
+
+def _saved_splat_proxies() -> list:
+    """Return saved KIRI proxy Empties without reading their large byte blobs."""
+    try:
+        return [
+            obj for obj in bpy.data.objects
+            if bool(obj.get("is_gaussian_splat", False))
+            and int(obj.get("gaussian_count", 0) or 0) > 0
+        ]
+    except Exception:  # noqa: BLE001 - bpy.data can be restricted at startup
+        return []
+
+
+def _has_kiri_runtime() -> bool:
+    """Whether process-local KIRI state survived from the previously open file."""
+    return any(hasattr(bpy, name) for name in _KIRI_RUNTIME_ATTRS)
+
+
+def _ready_kiri_module():
+    """Return the registered vendored KIRI module, or None while it starts."""
+    try:
+        import addon_utils
+
+        _enabled, loaded = addon_utils.check(_KIRI_ADDON_MODULE)
+        if not loaded:
+            return None
+        module = importlib.import_module(_KIRI_ADDON_MODULE)
+        required = (
+            _KIRI_CLEANUP_FN,
+            _KIRI_SHADER_FN,
+            _KIRI_TEXTURE_FN,
+            _KIRI_VIEWPORT_FN,
+        )
+        if not all(callable(getattr(module, name, None)) for name in required):
+            return None
+        return module
+    except Exception:  # noqa: BLE001 - addon enable is intentionally deferred
+        return None
+
+
+def _show_source_point_clouds(proxies: list) -> int:
+    """Unhide saved source meshes if GPU restoration ultimately cannot run."""
+    source_ids = {
+        str(proxy.get("source_mesh_uuid", "") or "") for proxy in proxies
+    }
+    source_ids.discard("")
+    if not source_ids:
+        return 0
+
+    shown = 0
+    for obj in bpy.data.objects:
+        try:
+            if str(obj.get("gaussian_source_uuid", "") or "") not in source_ids:
+                continue
+            obj.hide_viewport = False
+            obj.hide_set(False)
+            shown += 1
+        except Exception:  # noqa: BLE001 - object may not be in the active view layer
+            continue
+    return shown
+
+
+def _retry_or_fallback(reason: str, proxies: list):
+    """Timer return helper: retry transient startup, then reveal source data."""
+    if _restore_attempts < _RESTORE_MAX_ATTEMPTS:
+        logger.debug(
+            "[SplatRender] viewport restore attempt %d/%d deferred: %s",
+            _restore_attempts,
+            _RESTORE_MAX_ATTEMPTS,
+            reason,
+        )
+        return _RESTORE_RETRY_DELAY_S
+
+    shown = _show_source_point_clouds(proxies)
+    logger.warning(
+        "[SplatRender] could not restore KIRI viewport after %d attempts (%s); "
+        "revealed %d source point-cloud object(s) instead",
+        _restore_attempts,
+        reason,
+        shown,
+    )
+    return None
+
+
+def restore_splat_viewport():
+    """Timer callback rebuilding KIRI's non-persistent viewport runtime.
+
+    A file load invalidates object pointers held in ``bpy.gaussian_object_cache``
+    even when Mixar stays open, and a full application restart removes all GPU
+    state.  Clear either form of stale runtime first, then let KIRI reconstruct
+    its cache from the proxy Empties' saved ``gaussian_data`` properties.
+    """
+    global _restore_attempts
+
+    proxies = _saved_splat_proxies()
+    if not proxies and not _has_kiri_runtime():
+        return None
+
+    _restore_attempts += 1
+    kiri = _ready_kiri_module()
+    if kiri is None:
+        return _retry_or_fallback("KIRI addon is not registered yet", proxies)
+
+    try:
+        getattr(kiri, _KIRI_CLEANUP_FN)(False)
+        if not proxies:
+            logger.debug("[SplatRender] cleared stale KIRI runtime for splat-free file")
+            return None
+
+        getattr(kiri, _KIRI_SHADER_FN)()
+        getattr(kiri, _KIRI_TEXTURE_FN)()
+        getattr(kiri, _KIRI_VIEWPORT_FN)()
+
+        cache = getattr(bpy, "gaussian_object_cache", {})
+        missing = [proxy.name for proxy in proxies if proxy.name not in cache]
+        if missing:
+            raise RuntimeError(f"proxy cache missing {', '.join(missing[:3])}")
+        if not hasattr(bpy, "gaussian_draw_handle"):
+            raise RuntimeError("viewport draw handler was not created")
+
+        logger.info(
+            "[SplatRender] restored %d saved splat proxy/proxies after file load",
+            len(proxies),
+        )
+        return None
+    except Exception as exc:  # noqa: BLE001 - GPU context may not be ready yet
+        return _retry_or_fallback(str(exc), proxies)
+
+
+def schedule_splat_viewport_restore() -> None:
+    """Schedule one delayed restore for the current file, replacing stale work."""
+    global _restore_attempts
+
+    # Background renders use the saved geometry-nodes splat, not KIRI's
+    # SpaceView3D GPU proxy, and may have no drawable GPU context at all.
+    if bool(getattr(bpy.app, "background", False)):
+        return
+    if not _saved_splat_proxies() and not _has_kiri_runtime():
+        return
+
+    _restore_attempts = 0
+    try:
+        if bpy.app.timers.is_registered(restore_splat_viewport):
+            bpy.app.timers.unregister(restore_splat_viewport)
+        bpy.app.timers.register(
+            restore_splat_viewport,
+            first_interval=_RESTORE_FIRST_DELAY_S,
+        )
+    except Exception:  # noqa: BLE001 - restricted context during early startup
+        logger.debug("[SplatRender] could not schedule viewport restore", exc_info=True)
+
+
+def cancel_splat_viewport_restore() -> None:
+    """Cancel a pending restore when the Mixar UI module unregisters."""
+    try:
+        if bpy.app.timers.is_registered(restore_splat_viewport):
+            bpy.app.timers.unregister(restore_splat_viewport)
+    except Exception:  # noqa: BLE001 - full interpreter shutdown
+        pass
 
 
 def enable_render_updates(objects) -> None:
@@ -207,12 +392,14 @@ def push_camera_to_splats(scene, depsgraph=None) -> int:
 
 @persistent
 def on_load_post(_filepath=None):
-    """Lock the interface on every scene that already contains splats.
+    """Restore saved splats and lock their scenes after every file load.
 
     Files saved before this guard existed carry splat scenes WITHOUT
     use_lock_interface; rendering those with a live viewport is the
     mesh_calc_modifiers crash. Import-time covers new worlds; this covers
-    every pre-existing file on load.
+    every pre-existing file on load. The visible KIRI proxy also owns a
+    process-local GPU runtime, so schedule its rebuild after the UI and the
+    deferred KIRI addon registration are ready.
     """
     try:
         for sc in bpy.data.scenes:
@@ -228,6 +415,7 @@ def on_load_post(_filepath=None):
                     break
     except Exception:  # noqa: BLE001 - never break file load
         logger.debug("[SplatRender] load-post lock sweep failed", exc_info=True)
+    schedule_splat_viewport_restore()
 
 
 @persistent

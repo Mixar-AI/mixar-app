@@ -20,8 +20,6 @@ from bpy.types import Operator
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.capture import capture
-from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
@@ -93,11 +91,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Check if Generate mode - delegate to generate_ops
         if scene.mixie_chat_mode == 'GENERATE':
-            capture(EVENT_MESSAGE_SENT, {
-                "mode": "generate",
-                "has_attachments": bool(len(scene.mixie_chat_pending_attachments)),
-                "generate_type": getattr(scene, "mixie_chat_generate_type", "") or None,
-            }, context=context)
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
@@ -124,15 +117,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 f"Message too long: {len(message_text)} chars (max {MAX_MESSAGE_LENGTH})"
             )
             return {'CANCELLED'}
-
-        capture(EVENT_MESSAGE_SENT, {
-            "mode": "agent",
-            "has_attachments": bool(len(pending_attachments)),
-            "is_modify": is_modify,
-            "is_awaiting_input": is_awaiting_input,
-            "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
-            "model": getattr(scene, "mixie_chat_model", "") or None,
-        }, context=context)
 
         # Dev mode: simulate response without backend
         if DEV_MODE:

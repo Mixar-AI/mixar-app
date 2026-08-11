@@ -17,7 +17,6 @@ from mixar.modules.uv_editor.common.uv_utils import (
     with_uv_context,
     get_operator_properties,
 )
-from mixar.modules.common.analytics.export_events import capture_export
 
 
 class MIXAR_OT_export_uv_layout(Operator):
@@ -46,18 +45,6 @@ class MIXAR_OT_export_uv_layout(Operator):
                 modified=op_props.modified,
                 export_tiles=op_props.export_tiles,
             )
-        try:
-            size = getattr(op_props, "size", ())
-            capture_export(context, export_format="UV_LAYOUT", success=True, extra={
-                "mode": getattr(op_props, "mode", ""),
-                "size_x": int(size[0]), "size_y": int(size[1]),
-                "opacity": float(getattr(op_props, "opacity", 0.0)),
-                "export_all": bool(getattr(op_props, "export_all", False)),
-                "modified": bool(getattr(op_props, "modified", False)),
-                "export_tiles": getattr(op_props, "export_tiles", ""),
-            })
-        except Exception:
-            pass
         return {'FINISHED'}
 
 

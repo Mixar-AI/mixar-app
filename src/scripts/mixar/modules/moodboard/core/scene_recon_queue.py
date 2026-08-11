@@ -20,7 +20,6 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -368,9 +367,6 @@ def enqueue_scene_recon_job(
         _on_error_callback=on_error,
     )
     queue = _get_scene_recon_queue()
-    # Non-emitting marker only — the backend emits generation.submitted
-    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
-    note_generation_submitted("scene_gen")
     if not queue.submit(job):
         logger.warning("[SceneRecon] duplicate job rejected")
         return None

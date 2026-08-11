@@ -116,17 +116,6 @@ def onboarding_can_start() -> bool:
 _bubble_hidden_for_splash = False
 
 
-def _note_bubble_state(state: str) -> None:
-    """Keep telemetry's dedup guard in step with splash-driven bubble changes."""
-    try:
-        from mixar.modules.common.analytics.bubble_events import (
-            note_programmatic_bubble_state,
-        )
-        note_programmatic_bubble_state(state)
-    except Exception:  # noqa: BLE001 — telemetry must never break the splash
-        pass
-
-
 def _hide_bubble_for_splash():
     """Hide the agent bubble/pill while the splash is on screen."""
     global _bubble_hidden_for_splash
@@ -135,8 +124,7 @@ def _hide_bubble_for_splash():
             bpy.app.timers.register(_restore_bubble_after_splash, first_interval=0.5)
         return
     try:
-        if bpy.ops.mixar.bubble_minimise() == {'FINISHED'}:
-            _note_bubble_state("minimized")
+        bpy.ops.mixar.bubble_minimise()
     except Exception:
         pass
     _bubble_hidden_for_splash = True
@@ -151,8 +139,7 @@ def _restore_bubble_after_splash():
         return 0.3
     if _bubble_hidden_for_splash:
         try:
-            if bpy.ops.mixar.bubble_restore() == {'FINISHED'}:
-                _note_bubble_state("maximized")
+            bpy.ops.mixar.bubble_restore()
         except Exception:
             pass
         _bubble_hidden_for_splash = False

@@ -17,26 +17,8 @@ from ...core.node.node_utils import get_active_mpaint_node
 from ...core.asset_export.bake_and_assign import create_export_material
 from ...core.asset_export.revert_material import revert_to_original_material
 from .export_utils import export_poll, settings_to_kwargs
-from mixar.modules.common.analytics.export_events import (
-    capture_export,
-    normalized_settings,
-    scene_counts,
-)
 
 logger = get_logger(__name__)
-
-
-def _capture_gltf_export(context, settings, success, filepath):
-    try:
-        selected_only = bool(getattr(settings, "use_selection", False))
-        capture_export(
-            context, export_format="GLTF", success=success, filepath=filepath,
-            extra={
-                **normalized_settings("GLTF", settings),
-                **scene_counts(context, selected_only=selected_only),
-            })
-    except Exception:
-        pass
 
 # Properties that should not be forwarded to the native export operator.
 _EXCLUDE = {
@@ -116,12 +98,10 @@ class MExportGltf(bpy.types.Operator):
             logger.error("glTF export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")
             self._revert(context)
-            _capture_gltf_export(context, gs, False, self.filepath)
             return {'CANCELLED'}
 
         self._revert(context)
         self.report({'INFO'}, f"Exported glTF to {self.filepath}")
-        _capture_gltf_export(context, gs, True, self.filepath)
         return {'FINISHED'}
 
     def cancel(self, context):

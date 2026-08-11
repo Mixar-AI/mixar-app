@@ -11,7 +11,6 @@ and submits to the correct ``FeatureQueue``.
 from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from .generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
 from .helpers import create_scene_flag_listener, get_queue_with_listener
 from .job import Job
@@ -155,9 +154,6 @@ def enqueue_generation(
         from .queue_manager import get_queue
         queue = get_queue(feature_key)
 
-    # Non-emitting marker only — the backend emits generation.submitted at
-    # the job-queue submit endpoint. This feeds draft-abandonment suppression.
-    note_generation_submitted(origin_capability_key or feature_key)
     if not queue.submit(job):
         logger.warning("Duplicate job rejected: %s", label)
         return None
