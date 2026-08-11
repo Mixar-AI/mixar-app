@@ -14,6 +14,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty
 
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
+from mixar.modules.common.analytics.export_events import capture_export
 from ...core.media_utils import (
     describe_moodboard_media,
     is_video_item,
@@ -22,6 +23,14 @@ from ...core.media_utils import (
 
 
 _STILL_EXPORT_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.tga', '.bmp', '.tif', '.tiff')
+
+
+def _capture_moodboard_export(context, success, image_count, filepath=None):
+    try:
+        capture_export(context, export_format="MOODBOARD_IMAGE", success=success,
+                       filepath=filepath, extra={"image_count": image_count})
+    except Exception:
+        pass
 
 
 def _selected_media(scene):
@@ -116,11 +125,13 @@ class MIXIE_OT_moodboard_export_images(Operator):
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
             self.report({'ERROR'}, f"Invalid path: {e}")
+            _capture_moodboard_export(context, False, len(selected_media))
             return {'CANCELLED'}
 
         output_dir = os.path.dirname(filepath)
         if not os.path.isdir(output_dir):
             self.report({'ERROR'}, f"Invalid directory: {output_dir}")
+            _capture_moodboard_export(context, False, len(selected_media))
             return {'CANCELLED'}
 
         # Single item: honor the exact destination selected by the user.
@@ -129,8 +140,10 @@ class MIXIE_OT_moodboard_export_images(Operator):
                 _export_media_item(selected_media[0], filepath, scene)
             except Exception as e:
                 self.report({'ERROR'}, f"Failed to export: {e}")
+                _capture_moodboard_export(context, False, 1, filepath)
                 return {'CANCELLED'}
             self.report({'INFO'}, f"Exported media to {filepath}")
+            _capture_moodboard_export(context, True, 1, filepath)
             return {'FINISHED'}
 
         # Multiple items: export to the chosen directory with original names.
@@ -156,6 +169,7 @@ class MIXIE_OT_moodboard_export_images(Operator):
                 self.report({'ERROR'}, f"Failed to save {name}: {e}")
 
         self.report({'INFO'}, f"Exported {count} media items to {output_dir}")
+        _capture_moodboard_export(context, count > 0, count)
         return {'FINISHED'}
 
 

@@ -13,6 +13,7 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
+from .rotation_curves import repair_euler_rotation_continuity
 from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
 
@@ -33,6 +34,7 @@ def _key_camera(camera, frame: int) -> None:
         group="Director",
     )
     camera.data.keyframe_insert(data_path="lens", frame=frame, group="Director")
+    repair_euler_rotation_continuity(camera)
 
 
 def _delete_camera_keys(camera, frame: int) -> None:
@@ -49,6 +51,7 @@ def _delete_camera_keys(camera, frame: int) -> None:
             target.keyframe_delete(data_path=data_path, frame=frame)
         except (RuntimeError, TypeError):
             pass
+    repair_euler_rotation_continuity(camera)
 
 
 _CAMERA_MOTION_PATHS = {
@@ -88,9 +91,7 @@ def camera_shared_elsewhere(scene, shot) -> bool:
     )
 
 
-def _render_viewport_still(
-    context, scene, display_name: str, prompt: str, group_name: str = ""
-):
+def _render_viewport_still(context, scene, display_name: str):
     target = find_view3d_context(context)
     if target is None:
         raise RuntimeError("No 3D viewport is available")
@@ -130,17 +131,12 @@ def _render_viewport_still(
         if 'FINISHED' not in result or not os.path.isfile(path):
             raise RuntimeError("Viewport capture did not produce an image")
 
-        from mixar.modules.moodboard.core.media_import import import_packed_still
+        # Pack the still into the blend WITHOUT boarding it. Captures used to
+        # land on the moodboard immediately, which cluttered the board; stills
+        # now reach the board only through an explicit Export.
+        from mixar.modules.moodboard.core.media_import import pack_still_image
 
-        item = import_packed_still(
-            scene,
-            path,
-            display_name=display_name,
-            generation_prompt=prompt,
-            selected=True,
-            group_name=group_name,
-        )
-        return item.image
+        return pack_still_image(path, display_name=display_name)
     finally:
         render.filepath = old["filepath"]
         render.resolution_percentage = old["percentage"]
@@ -195,8 +191,6 @@ def capture_beat(context, shot, beat_seconds: float):
             context,
             scene,
             f"{shot.name} · Keyframe {number:02d}",
-            shot.prompt,
-            group_name=shot.name,
         )
         _key_camera(camera, target_frame)
         if shot.handheld:

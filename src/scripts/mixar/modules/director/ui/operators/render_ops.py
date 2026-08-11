@@ -4,10 +4,10 @@
 
 """Per-shot motion-guide render operators for Director.
 
-The Shot Renders popup itself is a native block
+The Export to Moodboard popup itself is a native block
 (``view3d_director_popup_render.cc``): its toggles and slider bind shot RNA
-directly and its action row invokes the operator below, so behavior keeps a
-single Python owner.
+directly and its action rows invoke `mixar.director_send_keyframes` and the
+operator below, so behavior keeps a single Python owner.
 """
 
 from bpy.types import Operator

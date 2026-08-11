@@ -66,6 +66,8 @@ struct MoodboardImageProps {
   PropertyRNA *flip_horizontal;
   PropertyRNA *flip_vertical;
   PropertyRNA *selected;
+  PropertyRNA *annotations;
+  PropertyRNA *show_annotations;
   bool initialized;
 };
 
@@ -120,6 +122,15 @@ void mixie_draw_moodboard_media_frame(float x, float y, float w, float h, bool s
 
 /** Draw moodboard images */
 void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
+
+/** Draw persistent freehand annotations over one moodboard image */
+void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
+                                      View2D *v2d,
+                                      float pos_x,
+                                      float pos_y,
+                                      float display_width,
+                                      float display_height,
+                                      float image_scale);
 
 /** Draw image/movie content fitted inside an inference-node result area. */
 void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);

@@ -428,6 +428,16 @@ class FeatureQueue(DownloadMixin):
         self._jobs = [j for j in self._jobs if j.state not in TERMINAL_STATES]
         self._notify()
 
+    def clear_all(self) -> None:
+        """Drop every job — used when a new file is opened.
+
+        The queue is process-global session state, not stored in the .blend, so
+        a freshly opened file must start empty rather than inheriting the
+        previous file's jobs (whose scene/node references are now stale).
+        """
+        self._jobs = []
+        self._notify()
+
     def snapshot(self) -> list:
         return list(self._jobs)
 

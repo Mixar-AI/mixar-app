@@ -9,9 +9,12 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
+#include <cmath>
+
 #include "BKE_curve.hh"
 
 #include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "GPU_immediate_util.hh"
 
@@ -94,6 +97,27 @@ static void draw_card_background(const rctf &rect, const bool selected)
   const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
   UI_draw_roundbox_corner_set(UI_CNR_ALL);
   UI_draw_roundbox_4fv(&rect, true, 22.0f, background);
+  UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
+}
+
+static void draw_running_glow(const rctf &rect)
+{
+  /* Subtle "generating" pulse while a node is QUEUED/RUNNING: an accent border
+   * that breathes in alpha plus a faint outset halo. Kept deliberately dim —
+   * never a harsh bright ring. The Python pulse timer
+   * (node_job_bridge.ensure_pulse_timer) supplies the continuous redraws; the
+   * wall clock supplies the phase (~2.9s breathe). */
+  const float pulse = 0.5f + 0.5f * float(std::sin(BLI_time_now_seconds() * 2.2));
+  const float accent[3] = {0.32f, 0.72f, 0.55f}; /* muted Mixar green */
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  rctf halo = rect;
+  halo.xmin -= 3.0f;
+  halo.ymin -= 3.0f;
+  halo.xmax += 3.0f;
+  halo.ymax += 3.0f;
+  const float halo_color[4] = {accent[0], accent[1], accent[2], 0.05f + 0.10f * pulse};
+  UI_draw_roundbox_4fv(&halo, false, 25.0f, halo_color);
+  const float border[4] = {accent[0], accent[1], accent[2], 0.24f + 0.30f * pulse};
   UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
 }
 
@@ -251,6 +275,9 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         const bool selected = RNA_boolean_get(&node, "selected");
         const int state = RNA_enum_get(&node, "state");
         draw_card_background(rect, selected);
+        if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
+          draw_running_glow(rect);
+        }
         PropertyRNA *sockets = RNA_struct_find_property(&node, "input_sockets");
         const int socket_count = sockets ? RNA_property_collection_length(&node, sockets) : 0;
         for (int socket_index = 0; socket_index < socket_count; socket_index++) {
@@ -267,7 +294,17 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         PointerRNA preview_ptr = RNA_pointer_get(&node, "preview_image");
         Image *preview_image = static_cast<Image *>(preview_ptr.data);
         PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
-        if (preview_image || object_ptr.data) {
+        /* A MASK_DETAIL node has no embedded result (its outputs become
+         * separate nodes), so it falls back to its pre-generation mask cutout
+         * — the card always shows what it represents, drawn by the SAME preview
+         * path as every other node. The focused control panel floats over this
+         * tile with its own background, so no cross-pass stitching is needed. */
+        Image *tile_image = preview_image;
+        if (!tile_image) {
+          PointerRNA mask_ptr = RNA_pointer_get(&node, "mask_preview");
+          tile_image = static_cast<Image *>(mask_ptr.data);
+        }
+        if (tile_image || object_ptr.data) {
           rctf preview_bounds{};
           moodboard_graph_node_preview_bounds(rect, &preview_bounds);
           GPUVertFormat *format = immVertexFormat();
@@ -281,14 +318,14 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
                    preview_bounds.xmax,
                    preview_bounds.ymax);
           immUnbindProgram();
-          if (preview_image) {
-            mixie_draw_moodboard_media_preview(preview_image, preview_bounds);
-            if (preview_image->source == IMA_SRC_MOVIE) {
+          if (tile_image) {
+            mixie_draw_moodboard_media_preview(tile_image, preview_bounds);
+            if (tile_image->source == IMA_SRC_MOVIE) {
               /* A generated movie is owned by its node, so it never draws as a
                * standalone tile and would otherwise sit frozen on frame 1 with
                * no way to start it. Same affordance as an uploaded movie. */
               bool is_playing = false;
-              moodboard_video_playback_frame(preview_image, &is_playing);
+              moodboard_video_playback_frame(tile_image, &is_playing);
               mixie_draw_moodboard_video_overlay(v2d,
                                                  BLI_rctf_cent_x(&preview_bounds),
                                                  BLI_rctf_cent_y(&preview_bounds),
@@ -341,12 +378,35 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
         draw_card_background(rect, RNA_boolean_get(&node, "selected"));
         draw_output_handle(
             rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, BLI_rctf_cent_y(&rect), neutral);
-        char title[MIXIE_GRAPH_LABEL_BUF], names[MIXIE_GRAPH_NAMES_BUF];
+        char title[MIXIE_GRAPH_LABEL_BUF];
         mixie_rna_string_get_clamped(&node, "title", title, sizeof(title));
-        mixie_rna_string_get_clamped(&node, "object_names", names, sizeof(names));
-        draw_text("Legacy 3D Result", rect.xmin + 28.0f, rect.ymax - 44.0f, 16.0f, 0.58f);
-        draw_text(title, rect.xmin + 28.0f, rect.ymax - 82.0f, 22.0f, 1.0f);
-        draw_text(names, rect.xmin + 28.0f, rect.ymax - 120.0f, 15.0f, 0.65f);
+        /* 3D mesh node: the object preview icon is drawn in the node-UI pass
+         * (like action nodes' 3D results). Here we lay down its dark backdrop
+         * and a title strip; nodes without a preview object still show text. */
+        PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
+        if (object_ptr.data) {
+          rctf preview_bounds = {
+              rect.xmin + 8.0f, rect.xmax - 8.0f, rect.ymin + 8.0f, rect.ymax - 44.0f};
+          GPUVertFormat *format = immVertexFormat();
+          const uint pos = GPU_vertformat_attr_add(
+              format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+          immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+          immUniformColor4f(0.025f, 0.027f, 0.032f, 1.0f);
+          immRectf(pos,
+                   preview_bounds.xmin,
+                   preview_bounds.ymin,
+                   preview_bounds.xmax,
+                   preview_bounds.ymax);
+          immUnbindProgram();
+          draw_text(title, rect.xmin + 18.0f, rect.ymax - 30.0f, 15.0f, 0.9f);
+        }
+        else {
+          char names[MIXIE_GRAPH_NAMES_BUF];
+          mixie_rna_string_get_clamped(&node, "object_names", names, sizeof(names));
+          draw_text("3D Result", rect.xmin + 28.0f, rect.ymax - 44.0f, 16.0f, 0.58f);
+          draw_text(title, rect.xmin + 28.0f, rect.ymax - 82.0f, 22.0f, 1.0f);
+          draw_text(names, rect.xmin + 28.0f, rect.ymax - 120.0f, 15.0f, 0.65f);
+        }
       }
       RNA_property_collection_next(&iter);
     }

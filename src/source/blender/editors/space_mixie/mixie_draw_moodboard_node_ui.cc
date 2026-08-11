@@ -16,6 +16,8 @@
 #include "BLI_vector.hh"
 
 #include "DNA_object_types.h"
+#include "DNA_theme_types.h"   /* UI_SCALE_FAC */
+#include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
@@ -91,25 +93,24 @@ static uiBut *add_parameter_button(uiBlock *block,
                                    const int height)
 {
   char label[MIXIE_GRAPH_LABEL_BUF];
-  char widget[MIXIE_GRAPH_WIDGET_BUF];
   mixie_rna_string_get_clamped(parameter, "label", label, sizeof(label));
-  mixie_rna_string_get_clamped(parameter, "widget", widget, sizeof(widget));
   const int parameter_type = RNA_enum_get(parameter, "parameter_type");
   const char *value_property = "value_string";
   ButType button_type = ButType::Text;
   float minimum = 0.0f;
   float maximum = 0.0f;
-  if (parameter_type == 1) {
-    value_property = "value_integer";
-    button_type = STREQ(widget, "slider") ? ButType::NumSlider : ButType::Num;
+  if (parameter_type == 1 || parameter_type == 2) {
+    value_property = parameter_type == 1 ? "value_integer" : "value_float";
     minimum = RNA_float_get(parameter, "minimum");
     maximum = RNA_float_get(parameter, "maximum");
-  }
-  else if (parameter_type == 2) {
-    value_property = "value_float";
-    button_type = STREQ(widget, "slider") ? ButType::NumSlider : ButType::Num;
-    minimum = RNA_float_get(parameter, "minimum");
-    maximum = RNA_float_get(parameter, "maximum");
+    /* Plain manual number field (click to type, drag to nudge), clamped to the
+     * catalog range. NOT a slider even when the catalog marks widget="slider":
+     * a slider's drag range comes from the shared value_integer/value_float RNA
+     * property (which has no per-param range, so ~±INT_MAX), while the catalog
+     * min/max only clamp on release — the slider dragged to huge values and
+     * snapped back. A correct slider needs a per-param property range (as the
+     * N-panel engine builds); the node deliberately uses Num until then. */
+    button_type = ButType::Num;
   }
   else if (parameter_type == 3) {
     value_property = "value_boolean";
@@ -119,10 +120,25 @@ static uiBut *add_parameter_button(uiBlock *block,
     value_property = "value_enum";
     button_type = ButType::Menu;
   }
+  /* Show the VALUE, not the param name. The enum can't self-display (it stores
+   * a fragile index; a null label blanks the menu), so the current choice's
+   * human label is cached in ``value_label`` (moodboard_graph_properties) and
+   * shown here, falling back to the param name only if it isn't populated yet.
+   * Numeric/text fields draw the bare value with an empty label. Checkboxes
+   * keep their label — a lone tick is meaningless. */
+  char value_label[MIXIE_GRAPH_LABEL_BUF];
+  const char *display_label = label;
+  if (button_type == ButType::Menu) {
+    mixie_rna_string_get_clamped(parameter, "value_label", value_label, sizeof(value_label));
+    display_label = value_label[0] ? value_label : label;
+  }
+  else if (ELEM(button_type, ButType::Num, ButType::NumSlider, ButType::Text)) {
+    display_label = "";
+  }
   return screen_prop_button(block,
                             parameter,
                             value_property,
-                            label,
+                            display_label,
                             button_type,
                             x,
                             y,
@@ -195,36 +211,71 @@ static void add_action_toolbar(uiBlock *block,
   }
   const bool show_mode = RNA_boolean_get(node, "show_mode");
   const int control_count = 1 + (show_mode ? 1 : 0) + parameter_count;
-  const int panel_width = std::clamp(
-      24 + control_count * 132, 420, std::min(900, std::max(420, region->winx - 16)));
-  const int panel_height = 58;
-  const int panel_x = std::clamp(BLI_rcti_cent_x(&node_region) - panel_width / 2,
+
+  /* Vertical control panel to the LEFT of the node. Each control occupies its
+   * own full-width row so long labels ("Aspect Ratio", model names) stay
+   * legible — the previous single horizontal strip forced every control to
+   * panel_width / control_count and clipped the text once a handful of
+   * parameters were present. A Reset row at the bottom restores catalog
+   * defaults. */
+  const int inset = 14;
+  const int row_h = 32;
+  const int gap = 6;
+  const int reset_gap = 12;
+  const int panel_width = 244;
+  const int field_width = panel_width - inset * 2;
+  const int panel_height =
+      inset * 2 + control_count * row_h + (control_count - 1) * gap + reset_gap + row_h;
+
+  /* Always dock the panel to the LEFT of the node — never flip sides. A
+   * side-dependent fallback made image and video nodes disagree on where their
+   * controls appeared; clamping (rather than flipping) keeps it reachable when
+   * the node is panned against the left edge. */
+  const int panel_x = std::clamp(node_region.xmin - 12 - panel_width,
                                  8,
                                  std::max(8, region->winx - panel_width - 8));
-  const int desired_y = node_region.ymax + 10;
-  const int panel_y = std::clamp(desired_y, 8, std::max(8, region->winy - panel_height - 8));
+  const int panel_y = std::clamp(
+      node_region.ymax - panel_height, 8, std::max(8, region->winy - panel_height - 8));
   rctf panel_rect = {float(panel_x),
                      float(panel_x + panel_width),
                      float(panel_y),
                      float(panel_y + panel_height)};
   draw_floating_background(panel_rect);
 
-  const int inset = 12;
-  const int gap = 6;
   const int content_x = panel_x + inset;
-  const int content_width = panel_width - inset * 2;
-  const int field_width = (content_width - gap * (control_count - 1)) / control_count;
-  int x = content_x;
+  /* Rows are laid out top-down; y tracks the bottom edge of the next control. */
+  int y = panel_y + panel_height - inset - row_h;
+  /* The Mode/Model menus show the SELECTED service/model name from the cached
+   * labels (the dynamic enums can't self-display); fall back to the static word
+   * only until the catalog populates them. */
   if (show_mode) {
-    uiBut *mode = screen_prop_button(
-        block, node, "service_key", "Mode", ButType::Menu, x, panel_y + 12, field_width, 34);
+    char mode_label[MIXIE_GRAPH_LABEL_BUF];
+    mixie_rna_string_get_clamped(node, "service_label", mode_label, sizeof(mode_label));
+    uiBut *mode = screen_prop_button(block,
+                                     node,
+                                     "service_key",
+                                     mode_label[0] ? mode_label : "Mode",
+                                     ButType::Menu,
+                                     content_x,
+                                     y,
+                                     field_width,
+                                     row_h);
     disable_while_submitted(mode, generation_running);
-    x += field_width + gap;
+    y -= row_h + gap;
   }
-  uiBut *model = screen_prop_button(
-      block, node, "model", "Model", ButType::Menu, x, panel_y + 12, field_width, 34);
+  char model_label[MIXIE_GRAPH_LABEL_BUF];
+  mixie_rna_string_get_clamped(node, "model_label", model_label, sizeof(model_label));
+  uiBut *model = screen_prop_button(block,
+                                    node,
+                                    "model",
+                                    model_label[0] ? model_label : "Model",
+                                    ButType::Menu,
+                                    content_x,
+                                    y,
+                                    field_width,
+                                    row_h);
   disable_while_submitted(model, generation_running);
-  x += field_width + gap;
+  y -= row_h + gap;
 
   if (parameters) {
     CollectionPropertyIterator iter{};
@@ -232,32 +283,66 @@ static void add_action_toolbar(uiBlock *block,
     while (iter.valid) {
       if (RNA_boolean_get(&iter.ptr, "visible")) {
         uiBut *parameter = add_parameter_button(
-            block, &iter.ptr, x, panel_y + 12, field_width, 34);
+            block, &iter.ptr, content_x, y, field_width, row_h);
         disable_while_submitted(parameter, generation_running);
-        x += field_width + gap;
+        y -= row_h + gap;
       }
       RNA_property_collection_next(&iter);
     }
     RNA_property_collection_end(&iter);
   }
 
+  y -= reset_gap - gap;
+  char reset_node_id[MIXIE_GRAPH_ID_BUF];
+  mixie_rna_string_get_clamped(node, "node_id", reset_node_id, sizeof(reset_node_id));
+  uiBut *reset = uiDefButO(block,
+                           ButType::But,
+                           "MIXIE_OT_moodboard_reset_node_params",
+                           blender::wm::OpCallContext::ExecDefault,
+                           "Reset",
+                           content_x,
+                           y,
+                           field_width,
+                           row_h,
+                           nullptr);
+  RNA_string_set(UI_but_operator_ptr_ensure(reset), "node_id", reset_node_id);
+  disable_while_submitted(reset, generation_running);
+
   if (!has_result || state == 0) {
     const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    const int prompt_height = 46;
-    const int prompt_y = node_region.ymax - prompt_margin - prompt_height;
-    uiBut *prompt = screen_prop_button(block,
-                                       node,
-                                       "prompt",
-                                       "",
-                                       ButType::Text,
-                                       node_region.xmin + prompt_margin,
-                                       prompt_y,
-                                       BLI_rcti_size_x(&node_region) - prompt_margin * 2,
-                                       prompt_height);
-    if (prompt) {
-      UI_but_placeholder_set(prompt, "Describe what you want to create...");
-      UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
-      disable_while_submitted(prompt, generation_running);
+    /* Scale ONLY the Generate button by the UI factor: the label renders at
+     * UI_SCALE_FAC, so a fixed 118px clipped "Generate" to "Gener..." at high
+     * UI scale. Everything else on the node is left untouched. */
+    const int generate_h = int(36 * UI_SCALE_FAC);
+    const int generate_w = int(118 * UI_SCALE_FAC);
+    /* Make the prompt a tall multi-line text area: it spans from the top margin
+     * down to just above the Generate button. Height comfortably exceeds
+     * UI_UNIT_Y * 1.5 at any UI scale, which is what flips the native text
+     * button into the word-wrapping, scrollable multi-line renderer
+     * (ui_but_is_multiline_text). A fixed short band stayed single-line on
+     * high-DPI displays where UI_UNIT_Y is large. */
+    /* Mesh-only nodes (Retopology / Mesh Segmentation / Auto Rig) take no text
+     * guidance, so they hide the prompt field entirely; the Generate button
+     * below is still drawn. */
+    if (RNA_boolean_get(node, "show_prompt")) {
+      const int prompt_top = node_region.ymax - prompt_margin;
+      const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
+      const int prompt_height = std::max(46, prompt_top - prompt_bottom);
+      const int prompt_y = prompt_top - prompt_height;
+      uiBut *prompt = screen_prop_button(block,
+                                         node,
+                                         "prompt",
+                                         "",
+                                         ButType::Text,
+                                         node_region.xmin + prompt_margin,
+                                         prompt_y,
+                                         BLI_rcti_size_x(&node_region) - prompt_margin * 2,
+                                         prompt_height);
+      if (prompt) {
+        UI_but_placeholder_set(prompt, "Describe what you want to create...");
+        UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
+        disable_while_submitted(prompt, generation_running);
+      }
     }
 
     char node_id[MIXIE_GRAPH_ID_BUF];
@@ -268,10 +353,10 @@ static void add_action_toolbar(uiBlock *block,
                                 "MIXIE_OT_moodboard_run_action_node",
                                 blender::wm::OpCallContext::ExecDefault,
                                 button_label,
-                                node_region.xmax - prompt_margin - 118,
+                                node_region.xmax - prompt_margin - generate_w,
                                 node_region.ymin + prompt_margin,
-                                118,
-                                36,
+                                generate_w,
+                                generate_h,
                                 nullptr);
     RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
     if (generation_running) {

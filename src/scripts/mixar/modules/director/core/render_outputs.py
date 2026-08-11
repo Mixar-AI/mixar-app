@@ -21,6 +21,7 @@ from .render_passes import (
     restore_render_settings,
     snapshot_render_settings,
 )
+from .rotation_curves import repair_euler_rotation_continuity
 from .render_spec import ordered_render_kinds, render_frame_bounds
 
 
@@ -183,13 +184,14 @@ def _record_output(scene, shot, kind: str, path: str) -> None:
     prompt = f"{label} motion guide for {shot.name}"
     if shot.prompt:
         prompt = f"{prompt}\n\n{shot.prompt}"
+    # No group_name: guide videos land as loose board items, not a formal group
+    # (the user groups exports manually if they want).
     image_name = import_generated_video(
         path,
         scene_name=scene.name,
         generation_prompt=prompt,
         display_name=display_name,
         selected=False,
-        group_name=shot.name,
     )
     output = shot.render_outputs.add()
     output.output_id = uuid.uuid4().hex
@@ -325,6 +327,7 @@ def start_shot_render(context, shot) -> int:
         raise RuntimeError("Another render is already in progress")
     if shot.camera is None or shot.camera.type != 'CAMERA':
         raise ValueError("Choose a shot camera first")
+    repair_euler_rotation_continuity(shot.camera)
     kinds = ordered_render_kinds(shot.render_output_types)
     if not kinds:
         raise ValueError("Select at least one shot render")

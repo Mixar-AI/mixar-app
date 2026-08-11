@@ -18,7 +18,7 @@ from mixar.modules.common.utils.image_utils import compress_for_service
 from .media_utils import describe_moodboard_media, is_still_item
 from .node_graph import (
     action_node_by_id,
-    connect_image_result,
+    connect_image_results,
     connect_video_result,
     create_asset_result,
     input_media_items,
@@ -48,7 +48,7 @@ def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
                     resolved = [renamed]
             create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
-            connect_image_result(scene, node, result_names)
+            connect_image_results(scene, node, result_names)
         else:
             connect_video_result(scene, node, result_names)
 
@@ -133,7 +133,11 @@ def _run_model_3d(context, node, operator):
     inputs = input_media_items(context.scene, node)
     stills = [item for item in inputs if is_still_item(item)]
     if len(stills) != 1:
-        raise ValueError("Generate to 3D currently requires exactly one image connection")
+        detail = "connect one image" if not stills else "connect only one image"
+        raise ValueError(
+            f"Generate to 3D needs exactly one image connection ({detail}; "
+            f"found {len(stills)})"
+        )
     image = stills[0].image
 
     service_key = resolve_service_key("model_gen", node_service_key(node))
@@ -284,6 +288,287 @@ def _run_video(context, node, operator):
     return job, params
 
 
+def _mask_result_hook(scene_name: str, node_id: str):
+    """Attach mask-detail outputs as standalone nodes linked from the mask node.
+
+    Additive: each generation adds new output image nodes; the mask node keeps
+    its own mask tile rather than swallowing the result.
+    """
+    def _hook(job, result_names: str):
+        scene = bpy.data.scenes.get(scene_name)
+        if scene is None:
+            return
+        node = action_node_by_id(scene, node_id)
+        if node is None:
+            return
+        from .node_graph import connect_image_outputs_as_nodes
+
+        connect_image_outputs_as_nodes(scene, node, result_names)
+
+    return _hook
+
+
+def _run_mask_detail(context, node, operator):
+    from mixar.bootstrap.generation_catalog_cache import get_model, is_loaded
+    from mixar.modules.common.generation_params import (
+        resolve_model_slug,
+        resolve_service_key,
+    )
+    from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
+    from mixar.modules.common.utils.image_utils import image_to_png_bytes
+    from mixar.modules.moodboard.constants import (
+        CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES,
+    )
+    from .character_components import (
+        build_component_payload,
+        component_output_name,
+        model_reference_limit,
+        model_supports_component_details,
+        prepare_component_references,
+    )
+
+    scene = context.scene
+    service_key = resolve_service_key("image_gen", node_service_key(node))
+    if service_key != "image_gen":
+        raise ValueError("Mask detail generation runs on the image service")
+    model_slug = resolve_model_slug(service_key, node_model_slug(node))
+    if not model_slug:
+        raise ValueError("No enabled image model is available")
+    if not is_loaded():
+        raise ValueError("Load the generation catalog before generating details")
+    model = get_model(service_key, model_slug)
+    if not model_supports_component_details(model):
+        raise ValueError(
+            "Choose an Image Gen model with mask guidance and two references"
+        )
+
+    sources = [item for item in input_media_items(scene, node) if is_still_item(item)]
+    if not sources:
+        raise ValueError("Connect the source image to this mask node")
+    source_item = sources[0]
+    segment = next(
+        (
+            seg for seg in source_item.segments
+            if str(getattr(seg, "component_id", "")) == node.component_id
+            and seg.mask_image
+        ),
+        None,
+    )
+    if segment is None:
+        raise ValueError("The lasso mask for this node no longer exists")
+
+    # This node's own catalog params (edited in its panel); views/full-context
+    # are per-node props. number_of_images is driven by Views per Component.
+    params = collect_node_params(node)
+    params.pop("number_of_images", None)
+    try:
+        views = max(1, min(int(node.views_per_component), 4))
+    except (TypeError, ValueError):
+        views = 3
+    include_full_context = bool(node.include_full_context) and (
+        model_reference_limit(model) >= CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES
+    )
+
+    source_bytes = image_to_png_bytes(source_item.image)
+    mask_bytes = image_to_png_bytes(segment.mask_image)
+    references = prepare_component_references(
+        source_bytes, mask_bytes, include_full_context=include_full_context
+    )
+    component_name = str(segment.name or "Component").strip() or "Component"
+    output_name = component_output_name(source_item.image.name, component_name)
+    payload = build_component_payload(
+        references,
+        component_name=component_name,
+        extra_instructions=node.prompt,
+        params=params,
+        image_name=output_name,
+        views_per_component=views,
+    )
+
+    ensure_graph_listener(FEATURE_IMAGEGEN)
+    hook = _mask_result_hook(scene.name, node.node_id)
+    job = enqueue_generation(
+        kind="image",
+        feature_key=FEATURE_IMAGEGEN,
+        job_type=service_key,
+        model=model_slug,
+        payload=payload,
+        label=f"MaskNode:{node.node_id[:8]}:{component_name[:24]}",
+        display_label=f"{component_name} detail",
+        origin_capability_key="image_gen",
+        graph_node_id=node.node_id,
+        fail_message="Component detail generation failed",
+        name_prefix="component_detail",
+        prompt_text=payload["prompt"],
+        undo_message="Generate Mask Detail",
+        base_name=output_name,
+        on_imported=hook,
+    )
+    return job, params
+
+
+_MESH_FEATURE_ROUTING = {
+    'PBR_GEN': {
+        'capability': 'pbr_generation',
+        'feature_key': 'pbr_generation',
+        'scene_flag': 'mixie_pbr_gen_is_generating',
+    },
+    'RETOPOLOGY': {
+        'capability': 'retopology',
+        'feature_key': 'retopology',
+        'scene_flag': 'mixie_retopology_is_generating',
+    },
+    'MESH_SEGMENT': {
+        'capability': 'mesh_segmentation',
+        'feature_key': 'hunyuan_part',
+        'scene_flag': 'mixie_hunyuan_part_is_generating',
+    },
+    'AUTO_RIG': {
+        'capability': 'animate',
+        'feature_key': 'animate',
+        'scene_flag': 'mixie_animate_is_generating',
+        'import_options': {"bone_heuristic": "BLENDER", "guess_original_bind_pose": False},
+    },
+}
+
+
+def _mesh_result_hook(scene_name: str, node_id: str):
+    """Embed the imported result mesh INTO the producing node.
+
+    Like Generate 3D, the feature node's generate UI is replaced by the result
+    thumbnail (``create_asset_result`` sets ``preview_object`` + ``result_names``),
+    rather than spawning a separate asset node. The node stays a MESH source so
+    it can be chained onward.
+    """
+    def _hook(job, object_names: str):
+        scene = bpy.data.scenes.get(scene_name)
+        if scene is None:
+            return
+        node = action_node_by_id(scene, node_id)
+        if node is None:
+            return
+        from .node_graph import create_asset_result
+
+        create_asset_result(scene, node, object_names)
+
+    return _hook
+
+
+def _attach_pbr_reference_images(scene, node, payload, operator):
+    """Attach connected reference image(s) to a PBR texture payload.
+
+    Mirrors ``enqueue_pbr_texture_job``'s guidance precedence: exactly four
+    connected images become Tripo's turnaround views (by input order); one to
+    three become a single reference image (the first). The mesh input is
+    resolved separately and never appears here (``input_media_items`` yields
+    only still images, not mesh nodes).
+    """
+    from mixar.modules.common.utils.image_utils import compress_image_for_upload
+
+    images = [
+        item.image for item in input_media_items(scene, node)
+        if is_still_item(item)
+    ]
+    if not images:
+        return
+    if len(images) == 4:
+        payload["reference_images_b64"] = [
+            base64.b64encode(compress_image_for_upload(img)).decode()
+            for img in images
+        ]
+        return
+    if len(images) > 1 and operator is not None:
+        operator.report(
+            {'WARNING'},
+            "PBR uses the first connected reference; connect exactly four for "
+            "turnaround views",
+        )
+    payload["reference_image_bytes_b64"] = base64.b64encode(
+        compress_image_for_upload(images[0])
+    ).decode()
+
+
+def _run_mesh_feature(context, node, operator):
+    """Run a mesh -> mesh continuation (PBR / Retopology / Segment / Auto Rig).
+
+    The input mesh comes from the connected 3D node; the result imports as a new
+    standalone 3D asset node linked from this feature node. PBR additionally
+    accepts optional reference image(s) from its image sockets.
+    """
+    import base64
+
+    from mixar.modules.common.generation_params import (
+        assemble_payload,
+        resolve_model_slug,
+        resolve_service_key,
+    )
+    from mixar.modules.common.job_queue.core.model_io import export_selected_mesh
+    from .node_graph import input_source_object_names
+
+    routing = _MESH_FEATURE_ROUTING[node.action_type]
+    capability = routing['capability']
+    service_key = resolve_service_key(capability, node_service_key(node))
+    if not service_key:
+        raise ValueError("This 3D feature is unavailable in the generation catalog")
+    model = resolve_model_slug(service_key, node_model_slug(node))
+    if not model:
+        raise ValueError("No enabled model is available for this feature")
+
+    names = input_source_object_names(context.scene, node)
+    objects = [bpy.data.objects.get(name) for name in names]
+    objects = [obj for obj in objects if obj is not None]
+    meshes = [obj for obj in objects if obj.type == 'MESH']
+    if not meshes:
+        raise ValueError("Connect this node to a 3D mesh node")
+
+    # Export the exact source objects, not whatever the user last clicked.
+    view_layer = context.view_layer
+    try:
+        for obj in view_layer.objects:
+            obj.select_set(False)
+        for obj in objects:
+            if obj.name in view_layer.objects:
+                obj.select_set(True)
+        view_layer.objects.active = meshes[0]
+    except (AttributeError, RuntimeError) as exc:
+        raise ValueError(f"Could not select the source mesh: {exc}")
+
+    file_bytes, filename = export_selected_mesh(context, "GLB")
+    payload = {
+        "file_bytes_b64": base64.b64encode(file_bytes).decode(),
+        "file_filename": filename,
+    }
+    if node.action_type == 'PBR_GEN':
+        _attach_pbr_reference_images(context.scene, node, payload, operator)
+    params = collect_node_params(node)
+    prompt = node.prompt.strip()
+    if prompt:
+        params["prompt"] = prompt
+    payload = assemble_payload(service_key, params, payload, model)
+
+    ensure_graph_listener(routing['feature_key'])
+    hook = _mesh_result_hook(context.scene.name, node.node_id)
+    extra = {}
+    if routing.get('import_options'):
+        extra['import_options'] = routing['import_options']
+    job = enqueue_generation(
+        kind="glb",
+        feature_key=routing['feature_key'],
+        job_type=service_key,
+        model=model,
+        payload=payload,
+        label=meshes[0].name,
+        display_label=node.action_type.replace('_', ' ').title(),
+        origin_capability_key=capability,
+        graph_node_id=node.node_id,
+        fail_message="3D generation failed",
+        scene_flag=routing['scene_flag'],
+        on_imported=hook,
+        **extra,
+    )
+    return job, params
+
+
 def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
         raise ValueError("This node is already running")
@@ -292,6 +577,10 @@ def run_action_node(context, node, operator):
         job, params = _run_image(context, node, operator)
     elif node.action_type == 'VIDEO_GEN':
         job, params = _run_video(context, node, operator)
+    elif node.action_type == 'MASK_DETAIL':
+        job, params = _run_mask_detail(context, node, operator)
+    elif node.action_type in _MESH_FEATURE_ROUTING:
+        job, params = _run_mesh_feature(context, node, operator)
     else:
         job, params = _run_model_3d(context, node, operator)
     if job is None:

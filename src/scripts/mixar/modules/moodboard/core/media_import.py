@@ -35,8 +35,14 @@ def add_packed_image_to_board(
     group_index: int = -1,
     generation_prompt: str = "",
     selected: bool = False,
+    anchor: tuple[float, float] | None = None,
 ):
-    """Place an already-packed Image datablock onto *scene*'s moodboard."""
+    """Place an already-packed Image datablock onto *scene*'s moodboard.
+
+    *anchor* (canvas coords) drops the item centred exactly there — used to lay
+    a batch out in a deliberate cluster; omit it for the default free-space
+    auto-placement near the viewport centre.
+    """
     item = scene.mixie_moodboard_images.add()
     item.image = image
     item.scale = 1.0
@@ -45,58 +51,33 @@ def add_packed_image_to_board(
     item.selected = bool(selected)
     if group_index >= 0:
         item.group_index = group_index
-    place_new_moodboard_item(scene, item)
+    place_new_moodboard_item(scene, item, anchor=anchor)
     return item
 
 
-def import_packed_still(
-    scene,
-    source_path: str,
-    *,
-    display_name: str = "",
-    generation_prompt: str = "",
-    selected: bool = False,
-    group_name: str = "",
-):
-    """Pack a still into the blend and place it on *scene*'s moodboard.
+def pack_still_image(source_path: str, *, display_name: str = ""):
+    """Load and pack a still into the blend, returning the Image datablock.
 
-    This is the shared boundary for transient captures. Once the image is
-    packed, callers may safely delete ``source_path`` without leaving a broken
-    moodboard reference. Returns the new moodboard item and raises on failure.
+    The pack-only boundary for transient viewport captures: the image is
+    embedded so the caller may safely delete ``source_path``, but NOTHING is
+    placed on the moodboard. Boarding is a separate, explicit step
+    (``add_packed_image_to_board`` / the Director export) so captures never
+    clutter the moodboard. Raises on failure.
     """
-    image = None
-    item_index = -1
+    image = bpy.data.images.load(source_path, check_existing=False)
     try:
-        image = bpy.data.images.load(source_path, check_existing=False)
         if image.source == 'MOVIE' or image.size[0] <= 0 or image.size[1] <= 0:
             raise ValueError("Captured result is not a valid still image")
         image.colorspace_settings.name = 'sRGB'
         image.pack()
         if display_name:
             image.name = display_name
-
-        item_index = len(scene.mixie_moodboard_images)
-        item = scene.mixie_moodboard_images.add()
-        item.image = image
-        item.scale = 1.0
-        item.z_order = len(scene.mixie_moodboard_images) - 1
-        item.generation_prompt = generation_prompt
-        item.selected = bool(selected)
-        if group_name:
-            item.group_index = get_or_create_group_index(scene, group_name)
-        place_new_moodboard_item(scene, item)
-        return item
+        return image
     except Exception:
-        if item_index >= 0 and item_index < len(scene.mixie_moodboard_images):
-            try:
-                scene.mixie_moodboard_images.remove(item_index)
-            except Exception:
-                pass
-        if image is not None:
-            try:
-                bpy.data.images.remove(image)
-            except Exception:
-                pass
+        try:
+            bpy.data.images.remove(image)
+        except Exception:
+            pass
         raise
 
 
