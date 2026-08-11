@@ -39,9 +39,10 @@ The default suite runs outside Blender; root `conftest.py` injects `bpy` stubs. 
 The QA harness drives the REAL built app like a human — semantic clicks by
 operator-id/prop/surface (no pixel guessing), drags, file drops, targeted
 screenshots you must actually READ — and runs replayable E2E scenarios (agent
-chat, moodboard graph, full image→3D→retopology pipeline). **A feature is DONE
-only when the running app has proven it: state asserts AND vision, plus a
-scenario left behind.** Before any feature work, read the playbook:
+chat, Agent Bubble custom targets, moodboard graph, Director timeline, full
+image→3D→retopology pipeline). **A feature is DONE only when the running app
+has proven it: state asserts AND vision, plus a scenario left behind.** Before
+any feature work, read the playbook:
 - Harness: `/Users/satyam/mixar-src/scripts/qa-gui/` (private repo
   `github.com/Mixar-AI/mixar-qa-harness`) — `README.md` (architecture +
   hard-won gotchas), `SHIP_LOOP.md` (the build→drive→verify→encode→ship
@@ -50,7 +51,8 @@ scenario left behind.** Before any feature work, read the playbook:
   branch `feature/qa-gui-harness` in THIS repo — must be in the Dev build.
 - Run: `cd ~/mixar-src/scripts/qa-gui && ./run_qa_app.sh` then
   `python3 driver/qa_client.py status`; full suite `./run_scenarios.sh`
-  (spends real credits); MCP tools available as the `mixar-qa` server.
+  (spends real credits; one isolated app reloads clean startup state between
+  scenarios); MCP tools available as the `mixar-qa` server.
 - New custom-drawn UI is unshippable until it exports QA targets
   (`Mixar_qa_register_target_provider` — read the surface's OWN hit-test
   geometry, never duplicate it).
