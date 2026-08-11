@@ -24,6 +24,42 @@ def _get_world_labs_tab(context):
     return getattr(sidebar, "tab_world_labs", None) if sidebar else None
 
 
+def _catalog_settings(
+    selected_model: str = "", selected_mode: str = "", selected_lod: str = "",
+):
+    """Resolve World Labs model parameters exclusively from the live catalog."""
+    from mixar.bootstrap.generation_catalog_cache import (
+        get_default_model_slug,
+        get_model,
+    )
+    from mixar.modules.common.generation_params import collect_params
+
+    placeholders = {"", "LOADING", "NONE", "ERROR"}
+    requested = selected_model or ""
+    if requested not in placeholders and get_model("world_labs", requested) is None:
+        raise ValueError(f"World Labs model '{requested}' is not enabled")
+    model = (
+        requested if requested not in placeholders
+        else (get_default_model_slug("world_labs") or "")
+    )
+    model_row = get_model("world_labs", model) if model else None
+    if not model_row:
+        raise ValueError("No enabled World Labs model is available")
+
+    values = collect_params("world_labs", model)
+    schema = model_row.get("parameters") or {}
+
+    def _value(name, explicit):
+        spec = schema.get(name) or {}
+        value = explicit or values.get(name) or spec.get("default")
+        allowed = spec.get("enum")
+        if value is None or (allowed is not None and value not in allowed):
+            raise ValueError(f"World Labs catalog parameter '{name}' is unavailable")
+        return str(value)
+
+    return model, _value("mode", selected_mode), _value("lod", selected_lod)
+
+
 class MIXIE_OT_world_labs_pick_image(Operator):
     """Pick an input image for World Labs world generation"""
 
@@ -105,14 +141,6 @@ class MIXIE_OT_world_labs_generate(Operator):
     bl_description = "Generate a 3D world from a text prompt or image"
     bl_options = {"REGISTER"}
 
-    test: bpy.props.BoolProperty(
-        name="Test (fixture replay)",
-        description="Replay a stored World Labs result without calling the API "
-                    "(no credits used) — for development",
-        default=False,
-        options={"SKIP_SAVE"},
-    )
-
     # Agent-direct invocation params (set by enqueue_generation). `from_agent`
     # marks the agent path (set via the spec const_args) so we route to
     # _execute_direct and surface a clean agent_feedback reason even when no
@@ -130,19 +158,6 @@ class MIXIE_OT_world_labs_generate(Operator):
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
         from mixar.modules.moodboard.core.world_labs_queue import enqueue_world_labs_job
 
-        # Dev path: replay the stored fixture via the backend (model marble-test).
-        if self.test:
-            job = enqueue_world_labs_job(
-                mode="text", prompt="fixture replay", model="marble-test",
-                lod="500k", label="World Labs Test",
-            )
-            if not job:
-                self.report({"WARNING"}, "A test world is already queued")
-                return {"CANCELLED"}
-            mark_enqueued(FEATURE_WORLD_LABS)
-            self.report({"INFO"}, "Test world added to queue (no API call)")
-            return {"FINISHED"}
-
         # Agent-direct path: explicit params from enqueue_generation. Route here
         # whenever the agent invoked us (from_agent) so empty params yield a clean
         # agent_feedback reason rather than the "no sidebar tab" path.
@@ -154,10 +169,14 @@ class MIXIE_OT_world_labs_generate(Operator):
             self.report({"ERROR"}, "World Labs tab not available")
             return {"CANCELLED"}
 
-        mode = getattr(tab, "mode", "TEXT").lower()
         prompt = (getattr(tab, "prompt", "") or "").strip()
-        model = getattr(tab, "model", "marble-1.1")
-        lod = getattr(tab, "lod", "500k")
+        try:
+            model, mode, lod = _catalog_settings(
+                selected_model=getattr(tab, "model", ""),
+            )
+        except ValueError as e:
+            self.report({"ERROR"}, str(e))
+            return {"CANCELLED"}
 
         image_b64 = ""
         label = prompt[:40] if prompt else "World"
@@ -209,10 +228,17 @@ class MIXIE_OT_world_labs_generate(Operator):
         )
 
         clear_agent_gen_reason(context)
-        mode = (self.mode or ("image" if self.image_name else "text")).lower()
         prompt = (self.prompt or "").strip()
-        model = self.model or "marble-1.1"
-        lod = self.lod or "500k"
+        try:
+            model, mode, lod = _catalog_settings(
+                selected_model=self.model,
+                selected_mode=self.mode or ("image" if self.image_name else "text"),
+                selected_lod=self.lod,
+            )
+        except ValueError as e:
+            set_agent_gen_reason(context, str(e))
+            self.report({"ERROR"}, str(e))
+            return {"CANCELLED"}
 
         image_b64 = ""
         label = prompt[:40] if prompt else "World"

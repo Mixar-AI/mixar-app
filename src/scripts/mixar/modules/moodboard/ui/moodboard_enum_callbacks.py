@@ -265,6 +265,22 @@ def _get_video_gen_model_items(self, context):
     )
 
 
+def _get_world_labs_model_items(self, context):
+    """Enabled World Labs models from the catalog, with no live-slug fallback.
+
+    The panel itself is catalog-gated. Returning only a loading placeholder on
+    cache failure ensures a bundled client can never resurrect a disabled or
+    removed Marble model from a hardcoded enum.
+    """
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_model_enum_items as get_catalog_model_items,
+        )
+        return get_catalog_model_items("world_labs")
+    except Exception:
+        return [("LOADING", "Loading...", "Loading World Labs models")]
+
+
 def _get_retopology_mode_items(self, context):
     """Retopology tab mode items (capability ``retopology``)."""
     return _capability_mode_items(

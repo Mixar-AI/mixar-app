@@ -34,8 +34,8 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 # image_x → collider X, image_y → collider Y(depth). If a future World Labs frame
-# change flips an axis, adjust these signs (validated against the marble-test
-# fixture). +1 keeps the mapping; -1 flips that axis.
+# change flips an axis, adjust these signs (validated against a real Marble 1.1
+# world). +1 keeps the mapping; -1 flips that axis.
 _AXIS_X_SIGN = 1.0
 _AXIS_Y_SIGN = 1.0
 

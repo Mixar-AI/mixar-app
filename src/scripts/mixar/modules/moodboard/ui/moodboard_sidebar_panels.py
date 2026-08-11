@@ -381,8 +381,8 @@ class MIXIE_PT_gen_scene_gen_exp(Panel):
 
 class MIXIE_PT_gen_world_labs(Panel):
     # Catalog-only capability (AI Render pattern, no offline fallback): the
-    # backend world_labs job type is not ported to the new job_queue yet, so
-    # the tab stays hidden until the catalog publishes a world_labs service.
+    # tab stays hidden until the unified backend catalog publishes an enabled
+    # world_labs service and model.
     # Local splat IMPORT (mixie.import_splat) works regardless of this panel.
     bl_label = "World Labs"
     bl_idname = "MIXIE_PT_gen_world_labs"

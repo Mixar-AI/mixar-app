@@ -39,6 +39,7 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 spz_to_ply = _mod.spz_to_ply
 SpzError = _mod.SpzError
+_rotate_sh_rub_to_rdf = _mod._rotate_sh_rub_to_rdf
 
 _NGSP_MAGIC = 0x5053474E
 _COLOR_SCALE = 0.15
@@ -163,9 +164,28 @@ def test_decode_degree1_sh_channel_major():
     assert "f_rest_8" in names and "f_rest_9" not in names  # exactly 9 coeffs
 
     # PLY f_rest is channel-major: [R0,R1,R2, G0,G1,G2, B0,B1,B2]
-    expected = np.array([10, 40, 70, 20, 50, 80, 30, 60, 90]) / 128.0
+    # RUB -> RDF negates the l=1 coefficients [Y, Z] and keeps X.
+    expected = np.array([-10, -40, 70, -20, -50, 80, -30, -60, 90]) / 128.0
     got = np.array([data[0, idx[f"f_rest_{i}"]] for i in range(9)])
     np.testing.assert_allclose(got, expected, atol=1e-4)
+
+
+def test_rub_to_rdf_rotates_all_supported_sh_bands():
+    """Pin Niantic's canonical degree 1-4 RUB -> RDF ``flipSh`` table."""
+    coeffs = np.arange(1, 25, dtype=np.float32).reshape(1, 24, 1)
+    rgb = np.repeat(coeffs, 3, axis=2)
+    signs = np.array([
+        -1, -1, 1,
+        -1, 1, 1, -1, 1,
+        -1, 1, -1, -1, 1, -1, 1,
+        -1, 1, -1, 1, 1, -1, 1, -1, -1,
+    ], dtype=np.float32)
+
+    rotated = _rotate_sh_rub_to_rdf(rgb)
+
+    np.testing.assert_array_equal(rotated[0, :, 0], np.arange(1, 25) * signs)
+    np.testing.assert_array_equal(rotated[0, :, 1], rotated[0, :, 0])
+    np.testing.assert_array_equal(rotated[0, :, 2], rotated[0, :, 0])
 
 
 def test_rejects_zstd_v4():

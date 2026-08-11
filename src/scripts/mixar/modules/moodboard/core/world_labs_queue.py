@@ -39,10 +39,10 @@ class WorldLabsJob(Job):
     """Concrete Job for World Labs world generation (async)."""
 
     # Submission payload
-    mode: str = "text"            # "text" | "image"
+    mode: str = ""                # live catalog: "text" | "image"
     prompt: str = ""
-    model: str = "marble-1.1"
-    lod: str = "500k"
+    model: str = ""
+    lod: str = ""
     image_bytes_b64: str = ""
 
     # Internal: capture the converted-asset URLs from the DONE result.
@@ -58,9 +58,10 @@ class WorldLabsJob(Job):
 
     def submit(self, on_success, on_error) -> None:
         payload = {
-            "mode": self.mode,
             "prompt": self.prompt,
-            "lod": self.lod,
+            # Model parameters are validated and defaulted by the same catalog
+            # schema that rendered the UI. Inputs remain top-level wire fields.
+            "params": {"mode": self.mode, "lod": self.lod},
         }
         if self.mode == "image" and self.image_bytes_b64:
             payload["image_bytes_b64"] = self.image_bytes_b64
@@ -131,24 +132,28 @@ class WorldLabsJob(Job):
 
         def _bg_download():
             ply_path = ""
+            glb_path = ""
+            pano_path = ""
             try:
                 ply_path = _download_and_convert_spz(spz_url, label)
                 # The collider is secondary — never fail the whole import if it
                 # can't be fetched.
-                glb_path = ""
                 if glb_url:
                     try:
                         glb_path = _download_glb(glb_url)
                     except Exception as e:  # noqa: BLE001
                         logger.warning("[WorldLabs] collider GLB download failed: %s", e)
+                # Network I/O must stay off Blender's main thread. The pano is
+                # optional, so a failed download never blocks the world import.
+                if pano_url:
+                    try:
+                        pano_path = _download_pano(pano_url)
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("[WorldLabs] pano download failed: %s", e)
             except Exception as e:  # noqa: BLE001
                 err = f"Failed to download/convert world: {e}"
                 logger.error("[WorldLabs] %s", err)
-                if ply_path and os.path.exists(ply_path):
-                    try:
-                        os.unlink(ply_path)
-                    except OSError:
-                        pass
+                _cleanup_temp_paths(ply_path, glb_path, pano_path)
                 bpy.app.timers.register(
                     lambda: (on_error(err), None)[1], first_interval=0.0
                 )
@@ -156,7 +161,7 @@ class WorldLabsJob(Job):
 
             def _import():
                 _import_on_main(
-                    ply_path, glb_path, pano_url, label, semantics, on_done, on_error,
+                    ply_path, glb_path, pano_path, label, semantics, on_done, on_error,
                 )
                 return None
 
@@ -177,7 +182,7 @@ class WorldLabsJob(Job):
         self._semantics = {}
 
 
-def _import_on_main(ply_path, glb_path, pano_url, label, semantics, on_done, on_error):
+def _import_on_main(ply_path, glb_path, pano_path, label, semantics, on_done, on_error):
     """Run the import on the main thread, then clean up temp files."""
     try:
         from mixar.modules.moodboard.core.world_labs_importer import (
@@ -192,8 +197,8 @@ def _import_on_main(ply_path, glb_path, pano_url, label, semantics, on_done, on_
         # The pano is a 360 interior of the room Marble rendered from the input
         # viewpoint. Drop it on the moodboard as a room-appearance reference the
         # agent can inspect ("world_interior"). Never fail the import over it.
-        if pano_url:
-            _import_pano_to_moodboard(pano_url)
+        if pano_path:
+            _import_pano_to_moodboard(pano_path)
         try:
             bpy.ops.ed.undo_push(message="World Labs: Import World")
         except Exception:  # noqa: BLE001
@@ -203,33 +208,22 @@ def _import_on_main(ply_path, glb_path, pano_url, label, semantics, on_done, on_
         logger.error("[WorldLabs] import failed: %s", e)
         on_error(f"Failed to import world: {e}")
     finally:
-        import shutil
-
-        for path in (ply_path, glb_path):
-            if not path or not os.path.exists(path):
-                continue
-            try:
-                parent = os.path.dirname(path)
-                if os.path.basename(parent).startswith("worldlabs_"):
-                    shutil.rmtree(parent, ignore_errors=True)
-                else:
-                    os.unlink(path)
-            except OSError:
-                pass
+        _cleanup_temp_paths(ply_path, glb_path, pano_path)
 
 
-def _import_pano_to_moodboard(pano_url: str) -> None:
-    """Load the World Labs pano and add it to the moodboard as ``world_interior``.
+def _import_pano_to_moodboard(pano_path: str) -> None:
+    """Load a downloaded World Labs pano into ``world_interior``.
 
-    Best-effort: the pano is a nice-to-have appearance reference, so any failure
-    is logged and swallowed rather than surfaced to the user.
+    This runs on Blender's main thread, but performs Blender datablock work only;
+    the URL download completed in ``_bg_download``. The image is packed before
+    the temporary file is removed.
     """
     try:
         from mixar.modules.common.utils.image_utils import (
             add_image_to_moodboard,
-            load_image_from_url,
+            load_image_from_file,
         )
-        image = load_image_from_url(pano_url, name="world_interior")
+        image = load_image_from_file(pano_path, name="world_interior")
         if image is None:
             return
         add_image_to_moodboard(image, prompt="World interior (360 pano)")
@@ -271,6 +265,34 @@ def _download_glb(url: str) -> str:
     return path
 
 
+def _download_pano(url: str) -> str:
+    pano_bytes = _download_bytes(url)
+    fd, path = tempfile.mkstemp(suffix=".png", prefix="worldlabs_")
+    with os.fdopen(fd, "wb") as f:
+        f.write(pano_bytes)
+    return path
+
+
+def _cleanup_temp_paths(*paths: str) -> None:
+    """Remove World Labs temp files and private conversion directories."""
+    import shutil
+
+    removed_dirs = set()
+    for path in paths:
+        if not path or not os.path.exists(path):
+            continue
+        try:
+            parent = os.path.dirname(path)
+            if os.path.basename(parent).startswith("worldlabs_"):
+                if parent not in removed_dirs:
+                    shutil.rmtree(parent, ignore_errors=True)
+                    removed_dirs.add(parent)
+            else:
+                os.unlink(path)
+        except OSError:
+            pass
+
+
 # ---------------------------------------------------------------------------
 # Enqueue helper + queue listener
 # ---------------------------------------------------------------------------
@@ -283,7 +305,7 @@ def enqueue_world_labs_job(
     mode: str,
     prompt: str,
     model: str,
-    lod: str = "500k",
+    lod: str,
     image_bytes_b64: str = "",
     label: str = "",
 ) -> Optional[WorldLabsJob]:

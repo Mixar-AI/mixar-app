@@ -95,3 +95,21 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Unmodified KIRI 3DGS Render distribution files that cannot safely carry
+# inline SPDX comments (binary assets and shader payloads). The vendored
+# distribution includes its upstream Apache-2.0 license.
+[[annotations]]
+path = [
+  "src/scripts/addons_core/kiri_3dgs_render/Important",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/3DGS Render APPEND V4.blend",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/Addon speel 2.png",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/SuperHive Logo White.png",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/composite_frag.glsl",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/composite_vert.glsl",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/frag.glsl",
+  "src/scripts/addons_core/kiri_3dgs_render/assets/vert.glsl",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "KIRI Engine contributors"
+SPDX-License-Identifier = "Apache-2.0"

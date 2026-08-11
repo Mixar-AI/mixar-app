@@ -41,6 +41,21 @@ _FLAG_HAS_EXTENSIONS = 0x2
 _COLOR_SCALE = 0.15  # colorScale in load-spz.cc
 _SQRT1_2 = float(np.sqrt(0.5))
 
+# Niantic SPZ ``coordinateConverter(RUB, RDF)`` sign mask, coefficient order
+# exactly as stored by SPZ (bands l=1..4, excluding DC).  RUB -> RDF keeps X
+# and negates Y/Z, so view-dependent colour must rotate with the geometry.
+# Leaving these coefficients untouched makes degree>0 splats change colour
+# from the wrong viewing directions.
+_RUB_TO_RDF_SH_SIGNS = np.asarray(
+    [
+        -1, -1, 1,                         # l=1
+        -1, 1, 1, -1, 1,                  # l=2
+        -1, 1, -1, -1, 1, -1, 1,         # l=3
+        -1, 1, -1, 1, 1, -1, 1, -1, -1, # l=4
+    ],
+    dtype=np.float32,
+)
+
 
 def _dim_for_degree(degree: int) -> int:
     """SH coefficient count per channel for a given SH degree (excl. DC)."""
@@ -217,6 +232,19 @@ def _decode_smallest_three(rotations: np.ndarray, n: int) -> np.ndarray:
     return quat
 
 
+def _rotate_sh_rub_to_rdf(sh: np.ndarray) -> np.ndarray:
+    """Rotate SPZ SH coefficients with the RUB -> RDF coordinate change.
+
+    ``sh`` is coefficient-major ``(N, D, 3)``.  A 180-degree X rotation is a
+    sign-only transform in the real-SH basis used by SPZ/3DGS; the mask above
+    is Niantic's canonical ``flipSh`` table for this exact conversion.
+    """
+    sh_dim = sh.shape[1]
+    if sh_dim > len(_RUB_TO_RDF_SH_SIGNS):
+        raise SpzError(f"Unsupported SH coefficient count: {sh_dim}")
+    return sh * _RUB_TO_RDF_SH_SIGNS[:sh_dim][None, :, None]
+
+
 def _build_ply(arrays: dict, h: dict) -> bytes:
     """Dequantize all fields and serialise to a 3DGS binary PLY."""
     n = h["num_points"]
@@ -233,9 +261,9 @@ def _build_ply(arrays: dict, h: dict) -> bytes:
     # but the standard 3DGS PLY consumed by KIRI / viewers is RDF (Right-Down-
     # Front, Y-down, Z-forward) — this is what Niantic's own save_splat_to_ply
     # emits. RUB->RDF is a 180-deg rotation about X: negate Y,Z on positions and
-    # negate the y,z components of each quaternion. (DC colour is direction-
-    # independent; SH rest coeffs would need parity sign-flips for view-dependent
-    # colour, but World Labs 500k splats are shDegree=0, so there are none.)
+    # negate the y,z components of each quaternion. DC colour is direction-
+    # independent; higher-order SH coefficients are rotated below with
+    # Niantic's canonical per-coefficient sign mask.
     positions[:, 1] *= -1.0
     positions[:, 2] *= -1.0
     rotations[:, 2] *= -1.0  # quaternion y
@@ -260,6 +288,7 @@ def _build_ply(arrays: dict, h: dict) -> bytes:
         # [R0..R(D-1), G0.., B0..] -> transpose to (N, 3, sh_dim) then flatten.
         sh = arrays["sh"].reshape(n, sh_dim, 3).astype(np.float32)
         sh = (sh - 128.0) / 128.0
+        sh = _rotate_sh_rub_to_rdf(sh)
         f_rest = np.transpose(sh, (0, 2, 1)).reshape(n, sh_dim * 3)
         columns.append(f_rest)
         prop_names += [f"f_rest_{i}" for i in range(sh_dim * 3)]

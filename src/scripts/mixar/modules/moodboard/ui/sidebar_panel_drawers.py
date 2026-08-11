@@ -18,6 +18,8 @@ from .sidebar_ui_helpers import (
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, SEP_SECTION
 from mixar.modules.moodboard.core.media_utils import is_still_item
+from .queue_drawer import draw_queue as _draw_queue
+from .world_labs_drawer import draw_world_labs as _draw_world_labs
 
 
 # ---------------------------------------------------------------------------
@@ -268,69 +270,6 @@ def _draw_image_to_3d_basic(layout, context):
 
 
 # ---------------------------------------------------------------------------
-# World Labs (Marble)
-# ---------------------------------------------------------------------------
-
-def _draw_world_labs(layout, context):
-    """Draw the World Labs world-generation panel (text / image input)."""
-    scene = context.scene
-    tab = scene.mixie_moodboard_sidebar.tab_world_labs
-
-    # --- Input mode toggle ---
-    row = layout.row(align=True)
-    row.prop_enum(tab, "mode", 'IMAGE')
-    row.prop_enum(tab, "mode", 'TEXT')
-    layout.separator(factor=SEP_SECTION)
-
-    if tab.mode == 'TEXT':
-        draw_prompt_section(layout, tab, label="World Prompt", icon='WORLD')
-    else:
-        col = draw_section_box(
-            layout, "Input Image", icon='IMAGE_DATA',
-            action_op="mixie.world_labs_pick_image",
-        )
-        draw_moodboard_image_toggle(col, tab, context)
-        if not tab.use_selected_image and tab.reference_image:
-            draw_image_info_card(
-                col, tab.reference_image,
-                remove_op="mixie.world_labs_remove_image",
-            )
-        draw_section_separator(layout)
-        draw_prompt_section(layout, tab, label="Prompt (optional)", icon='TEXT')
-
-    draw_section_separator(layout)
-
-    # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
-    col.use_property_split = True
-    col.use_property_decorate = False
-    draw_dropdown(col.row(align=True), tab, "model", text="Model")
-    draw_dropdown(col.row(align=True), tab, "lod", text="Quality")
-
-    # --- Generate ---
-    draw_generate_footer(layout, context, "mixie.world_labs_generate", "world_labs",
-                         feature_key="world_labs")
-
-    # --- Dev builds ONLY: replay a stored result without spending credits.
-    # Gated on the build-frozen _build_env marker (same tamper-proof gate as
-    # the dev login bypass — editing the bundled mixar.json cannot show it in
-    # a Prod build; falls closed when the marker is absent). The backend also
-    # fails closed: the marble-test model is catalog-seeded disabled outside
-    # dev databases, so even a forged submit is rejected server-side.
-    try:
-        from mixar.config._build_env import DEV_BYPASS_ALLOWED as _dev_build
-    except Exception:
-        _dev_build = False
-    if _dev_build:
-        test_row = layout.row()
-        test_op = test_row.operator(
-            "mixie.world_labs_generate", text="Test (dev fixture)",
-            icon='FILE_REFRESH',
-        )
-        test_op.test = True
-
-
-# ---------------------------------------------------------------------------
 # Scene Reconstruction
 # ---------------------------------------------------------------------------
 
@@ -540,38 +479,3 @@ def _draw_scene_gen_exp(layout, context):
 
     # Step 5 — Place in Scene
     draw_step5_place(layout, context, tab)
-
-
-# ---------------------------------------------------------------------------
-# Queue (all features combined)
-# ---------------------------------------------------------------------------
-
-def _draw_queue(layout, context):
-    """Draw the unified Generation Queue: filter chips + one flat list."""
-    try:
-        from mixar.modules.common.job_queue.core.queue_manager import all_queues
-        from mixar.modules.common.job_queue.core.job import JobState
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
-            draw_unified_queue_panel,
-        )
-    except Exception:
-        layout.label(text="Queue system not available", icon='INFO')
-        return
-
-    # Per-status counts live in the filter chips inside the unified list;
-    # only the terminal count is needed here, to gate the Clear button.
-    terminal_states = (JobState.SUCCESS, JobState.FAILED, JobState.CANCELLED)
-    done_terminal = sum(
-        1 for q in all_queues() for j in q.snapshot()
-        if j.state in terminal_states
-    )
-
-    # Unified list (filter chips + template_list).
-    draw_unified_queue_panel(layout, context)
-
-    if done_terminal:
-        layout.separator(factor=SEP_INTRA)
-        layout.operator(
-            "mixie.queue_clear_all_completed",
-            text="Clear All Completed", icon='TRASH',
-        )

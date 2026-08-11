@@ -29,6 +29,7 @@ from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabWorldLabsProps,
 )
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
 # from .moodboard_scene_gen_exp_tab_props import (  # noqa: F401
@@ -362,64 +363,6 @@ class MixieMoodboardTabImageTo3DProps(PropertyGroup):
             "when the image being generated from is the set's own input image"
         ),
         default="",
-    )
-
-
-class MixieMoodboardTabWorldLabsProps(PropertyGroup):
-    """Properties for World Labs (Marble) world-generation tab"""
-
-    mode: EnumProperty(
-        name="Input",
-        description="Generate a world from a text prompt or a single image",
-        items=[
-            ('IMAGE', "Image", "Generate a world from a single image", 'IMAGE_DATA', 0),
-            ('TEXT', "Text", "Generate a world from a text prompt", 'OUTLINER_OB_FONT', 1),
-        ],
-        default='IMAGE',
-    )
-
-    prompt: StringProperty(
-        name="Prompt",
-        description="Text description of the world (or optional refinement for "
-                    "image mode)",
-        default="",
-        maxlen=2048,
-        options={'TEXTEDIT_UPDATE'},
-    )
-
-    # ON: use selected moodboard image; OFF: use uploaded image.
-    use_selected_image: BoolProperty(
-        name="Use Selected Moodboard Image",
-        description="ON: Use currently selected moodboard image. "
-                    "OFF: Use uploaded image",
-        default=True,
-    )
-
-    reference_image: PointerProperty(
-        type=bpy.types.Image,
-        name="Input Image",
-        description="Uploaded image for world generation (used when toggle is OFF)",
-    )
-
-    model: EnumProperty(
-        name="Model",
-        description="Marble model. Plus generates larger worlds",
-        items=[
-            ('marble-1.1', "Marble 1.1", "Standard world generation"),
-            ('marble-1.1-plus', "Marble 1.1 Plus", "Larger / higher-detail worlds"),
-        ],
-        default='marble-1.1',
-    )
-
-    lod: EnumProperty(
-        name="Quality",
-        description="Gaussian-splat level of detail to import",
-        items=[
-            ('500k', "Balanced (500k)", "Medium resolution — good quality/size tradeoff"),
-            ('100k', "Fast (100k)", "Lower resolution, fastest to load"),
-            ('full_res', "Max (full res)", "Maximum detail — large download / import"),
-        ],
-        default='500k',
     )
 
 
