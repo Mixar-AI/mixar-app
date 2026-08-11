@@ -40,7 +40,10 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
     bl_description = "Submit this inference node to the generation queue"
     bl_options = {'REGISTER'}
 
-    node_id: bpy.props.StringProperty(default="")
+    # SKIP_SAVE: this is a REGISTER operator, so saved last-used properties
+    # are re-applied to any invocation that passes no properties — a stale
+    # remembered node_id would silently re-run a different node.
+    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
     edit_before_run: bpy.props.BoolProperty(
         default=False,
         options={'SKIP_SAVE'},
@@ -92,7 +95,8 @@ class MIXIE_OT_moodboard_reset_node_params(Operator):
     bl_description = "Restore this node's settings to the model defaults"
     bl_options = {'REGISTER', 'UNDO'}
 
-    node_id: bpy.props.StringProperty(default="")
+    # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
+    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
 
     def execute(self, context):
         from mixar.modules.moodboard.core.node_graph import (

@@ -130,7 +130,11 @@ submission the prompt and Generate control live inside the
 otherwise-empty tile. Submission locks the prompt until a result arrives, then
 the image/movie or Blender asset preview fills the tile and replaces those
 controls; plain Enter in the prompt invokes the same generation operator as the
-Generate button. A completed block's Edit & Run Again action returns it to Draft while keeping its
+Generate button, passing the owning node's id EXPLICITLY (interface_handlers.cc)
+— a prop-less `WM_operator_name_call` re-applies a REGISTER operator's saved
+last-used properties, so Enter used to resubmit whichever node Generate last
+ran; `run_action_node`/`reset_node_params` keep `node_id` `SKIP_SAVE` for the
+same reason. A completed block's Edit & Run Again action returns it to Draft while keeping its
 current preview, restores the editable prompt, and submits only after Enter or Generate. Deselecting
 hides the toolbar; a draft block whose controls are hidden (deselected, or too small on screen for
 the screen-space toolbar — same `MOODBOARD_GRAPH_CONTROLS_MIN_PX_*` thresholds) never renders as an
