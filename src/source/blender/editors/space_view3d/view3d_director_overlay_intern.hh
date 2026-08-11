@@ -49,6 +49,7 @@ uiBlock *view3d_director_moves_popup_create(bContext *C, ARegion *region, void *
 uiBlock *view3d_director_shots_popup_create(bContext *C, ARegion *region, void *arg);
 uiBlock *view3d_director_camera_popup_create(bContext *C, ARegion *region, void *arg);
 uiBlock *view3d_director_animation_popup_create(bContext *C, ARegion *region, void *arg);
+uiBlock *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg);
 
 /** Rounded Flow-style panel in the shared Director palette. */
 void director_overlay_panel_draw(const rctf &rect, float radius);

@@ -27,8 +27,11 @@ class MIXAR_OT_director_capture_beat(Operator):
     def poll(cls, context):
         state = getattr(context.scene, "mixar_director", None)
         shot = active_shot(context.scene) if state else None
+        # While exploring, the shot camera is not being framed — a capture
+        # would key its stale pose, so the F shortcut stays inert.
         return bool(
             state and state.is_directing and shot and shot.state == 'DRAFT'
+            and state.navigation_mode != 'EXPLORE'
         )
 
     def execute(self, context):

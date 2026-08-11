@@ -161,7 +161,33 @@ void draw_context_actions(uiBlock *block,
                           const int unit,
                           const int gap)
 {
-  if (state.has_shot) {
+  if (state.has_shot && state.explore_mode) {
+    /* Free-fly exploration: the shot camera is parked, so capturing makes no
+     * sense — the primary action is planting a new shot camera at this view,
+     * which is how directors cover ground inside imported worlds. */
+    const int action_w = unit * 9;
+    const int action_x = (region->winx - action_w) / 2;
+    const int action_y = region->winy - unit * 2 - gap * 2;
+    director_overlay_operator_button(block,
+                                     "MIXAR_OT_director_new_shot",
+                                     ICON_ADD,
+                                     "Add Camera Here",
+                                     action_x,
+                                     action_y,
+                                     action_w,
+                                     unit * 2,
+                                     "Create a new shot camera exactly at this view");
+    director_overlay_operator_button(block,
+                                     "MIXAR_OT_director_return_to_shot",
+                                     ICON_LOOP_BACK,
+                                     "",
+                                     action_x + action_w + gap,
+                                     action_y,
+                                     unit * 2,
+                                     unit * 2,
+                                     "Back to the active shot camera without adding");
+  }
+  else if (state.has_shot) {
     const int action_w = unit * 8;
     const int action_x = (region->winx - action_w) / 2;
     /* Keep the primary action in the top safe area, above the camera gate. */
@@ -216,19 +242,18 @@ void draw_context_actions(uiBlock *block,
 
   if (!state.beats.is_empty()) {
     /* One combined export menu: keyframe stills and rendered Beauty/Clay/Depth
-     * guides both reach the Moodboard from here (view3d_director popover
-     * MIXAR_PT_director_render_popover). Video Gen was removed from this
-     * cluster. */
-    director_overlay_operator_button(
-        block,
-        "MIXAR_OT_director_show_render",
-        ICON_EXPORT,
-        "Export to Moodboard",
-        region->winx - unit * 11 - gap * 2,
-        gap * 2,
-        unit * 11,
-        unit * 2,
-        "Export keyframes and rendered guides to the Moodboard");
+     * guides both reach the Moodboard from here. A native block popup like the
+     * lens dropdown — the Python popover looked foreign over the calm surface.
+     * Video Gen was removed from this cluster. */
+    uiDefBlockBut(block,
+                  view3d_director_render_popup_create,
+                  nullptr,
+                  "Export to Moodboard",
+                  region->winx - unit * 11 - gap * 2,
+                  gap * 2,
+                  short(unit * 11),
+                  short(unit * 2),
+                  "Export keyframes and rendered guides to the Moodboard");
   }
 }
 

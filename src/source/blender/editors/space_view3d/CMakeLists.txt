@@ -30,6 +30,7 @@ set(SRC
   view3d_director_overlay.cc
   view3d_director_overlay_frame.cc
   view3d_director_popup.cc
+  view3d_director_popup_render.cc
   view3d_director_popup_shot.cc
   view3d_director_state.cc
   view3d_director_timeline.cc

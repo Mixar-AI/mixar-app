@@ -68,10 +68,9 @@ def test_director_has_no_n_panel_implementation():
     assert 'bl_idname = "MIXAR_PT_director"' not in python_sources
 
     assert not (DIRECTOR / "ui/panels/director_popovers.py").exists()
-    # Every rail popup is native; the combined Export to Moodboard popover is
-    # the one surviving Python panel.
-    render_popover = _read("ui/panels/render_popover.py")
-    assert render_popover.count("bl_region_type = 'HEADER'") == 1
+    # Every popup is native now; no Python panel/popover survives.
+    assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
+    assert "bl_region_type = 'HEADER'" not in python_sources
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -126,11 +125,15 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         "view3d_director_shots_popup_create",
         "view3d_director_camera_popup_create",
         "view3d_director_animation_popup_create",
-        "MIXAR_OT_director_show_render",
+        "view3d_director_render_popup_create",
         "MIXAR_OT_director_capture_beat",
-        "MIXAR_OT_director_send_keyframes",
     ):
         assert reference in overlay or reference in timeline
+    # Keyframe export lives inside the native Export popup, not the overlay.
+    popup_render = (VIEW3D / "view3d_director_popup_render.cc").read_text(
+        encoding="utf-8"
+    )
+    assert "MIXAR_OT_director_send_keyframes" in popup_render
     assert "MIXAR_OT_director_toggle_timeline" in timeline
     assert "MIXAR_OT_director_toggle_immersive" in timeline
     assert "mixar.director_pick_camera" in surface_ops
