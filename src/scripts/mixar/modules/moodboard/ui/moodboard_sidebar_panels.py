@@ -53,6 +53,7 @@ from .sidebar_panel_drawers import (
     _draw_lookdev360,
     _draw_image_to_3d,
     _draw_scene_gen_exp,
+    _draw_world_labs,
     _draw_queue,
 )
 from .sidebar_tab_drawers import (
@@ -450,6 +451,38 @@ class MIXIE_PT_gen_scene_gen_exp(Panel):
         _safe_draw(_draw_scene_gen_exp, self.layout, context)
 
 
+class MIXIE_PT_gen_world_labs(Panel):
+    # Catalog-only capability (AI Render pattern, no offline fallback): the
+    # tab stays hidden until the unified backend catalog publishes an enabled
+    # world_labs service and model.
+    # Local splat IMPORT (mixie.import_splat) works regardless of this panel.
+    bl_label = "World Labs"
+    bl_idname = "MIXIE_PT_gen_world_labs"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "World Labs"
+    bl_order = 25  # between Image to 3D (20) and Retopology (30)
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("world_labs"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='WORLD')
+
+    def draw(self, context):
+        _safe_draw(_draw_world_labs, self.layout, context)
+
+
 class MIXIE_PT_gen_queue(Panel):
     # Utility panel (not a catalog capability) — ``mixie.queue_view``
     # switches the sidebar to this category.
@@ -521,5 +554,6 @@ classes = (
     MIXIE_PT_gen_animate,
     MIXIE_PT_gen_pbr_generation,
     # MIXIE_PT_gen_scene_gen_exp,  # Scene Gen Experimental disabled
+    MIXIE_PT_gen_world_labs,
     MIXIE_PT_gen_queue,
 ) if MIXIE_SPACE_AVAILABLE else ()

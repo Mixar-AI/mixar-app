@@ -195,6 +195,7 @@ def _attach_listeners() -> None:
         FEATURE_SCENE_RECON,
         FEATURE_SMART_SEGMENT,
         FEATURE_TRIPO_SEGMENT,
+        FEATURE_WORLD_LABS,
     )
 
     # NOTE: a queue missing from this tuple still accepts and runs jobs — the
@@ -208,7 +209,7 @@ def _attach_listeners() -> None:
         FEATURE_LOOKDEV, FEATURE_LOOKDEV360, FEATURE_MATGEN, FEATURE_BRUSH_GEN,
         FEATURE_MESH_SEGMENT, FEATURE_SCENE_GEN, FEATURE_SCENE_RECON,
         FEATURE_ANIMATE, FEATURE_PBR_GEN, FEATURE_TRIPO_SEGMENT,
-        FEATURE_SMART_SEGMENT,
+        FEATURE_SMART_SEGMENT, FEATURE_WORLD_LABS,
     )
     for feat in _FEATURES:
         try:

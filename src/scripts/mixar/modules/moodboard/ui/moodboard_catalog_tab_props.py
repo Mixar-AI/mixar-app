@@ -17,8 +17,9 @@ Registered by ``moodboard_scene_registration.py`` (its ``classes`` tuple
 must list these before ``MixieMoodboardSidebarProperties``).
 """
 
+import bpy
 from bpy.types import PropertyGroup
-from bpy.props import EnumProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, PointerProperty, StringProperty
 
 from .moodboard_enum_callbacks import (
     _on_model_changed,
@@ -31,6 +32,7 @@ from .moodboard_enum_callbacks import (
     _get_uv_unwrap_model_items,
     _get_video_gen_mode_items,
     _get_video_gen_model_items,
+    _get_world_labs_model_items,
 )
 
 
@@ -140,4 +142,35 @@ class MixieMoodboardTabVideoGenProps(PropertyGroup):
         default="",
         maxlen=4096,
         options={'TEXTEDIT_UPDATE'},
+    )
+
+
+class MixieMoodboardTabWorldLabsProps(PropertyGroup):
+    """Catalog-authoritative World Labs world-generation settings."""
+
+    model: EnumProperty(
+        name="Model",
+        description="World Labs model published by the generation catalog",
+        items=_get_world_labs_model_items,
+        update=_on_model_changed,
+    )
+
+    prompt: StringProperty(
+        name="Prompt",
+        description="Text description of the world or optional image refinement",
+        default="",
+        maxlen=2048,
+        options={'TEXTEDIT_UPDATE'},
+    )
+
+    use_selected_image: BoolProperty(
+        name="Use Selected Moodboard Image",
+        description="ON: use the selected moodboard image; OFF: use an upload",
+        default=True,
+    )
+
+    reference_image: PointerProperty(
+        type=bpy.types.Image,
+        name="Input Image",
+        description="Uploaded image for World Labs image mode",
     )
