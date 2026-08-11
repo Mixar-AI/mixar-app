@@ -10,6 +10,10 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 _UI = _ROOT / "src/scripts/mixar/modules/moodboard/ui"
 _CORE = _ROOT / "src/scripts/mixar/modules/moodboard/core"
+_QUEUE_PROPERTIES = (
+    _ROOT
+    / "src/scripts/mixar/modules/common/job_queue/ui/properties/queue_properties.py"
+)
 
 
 def _source(path):
@@ -47,6 +51,27 @@ def test_world_labs_queue_sends_catalog_parameters_under_params():
     )
     assert 'model: str = "marble-1.1"' not in source
     assert 'lod: str = "500k"' not in source
+
+
+def test_world_labs_queue_updates_unified_queue_mirror():
+    source = _source(_QUEUE_PROPERTIES)
+    tree = ast.parse(source)
+    attach_listeners = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_attach_listeners"
+    )
+    features = next(
+        node.value for node in attach_listeners.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "_FEATURES"
+            for target in node.targets
+        )
+    )
+
+    assert "FEATURE_WORLD_LABS" in {
+        node.id for node in ast.walk(features) if isinstance(node, ast.Name)
+    }
 
 
 def test_pano_network_download_stays_off_blender_main_thread():
