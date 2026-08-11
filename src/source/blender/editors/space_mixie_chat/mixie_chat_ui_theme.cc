@@ -237,15 +237,14 @@ ChatBubbleStyle chat_ui_get_user_bubble_style(const ChatLayoutMetrics *metrics)
   }
 
   /* Flat minimal palette — a clean dark pill for the user message, overriding
-   * the theme so the product look is consistent across themes. */
-  style.bg_color[0] = 0.165f;
-  style.bg_color[1] = 0.175f;
-  style.bg_color[2] = 0.200f;
-  style.bg_color[3] = 1.0f;
-  style.text_color[0] = 0.96f;
-  style.text_color[1] = 0.96f;
-  style.text_color[2] = 0.97f;
-  style.text_color[3] = 1.0f;
+   * the theme so the product look is consistent across themes. The pill is
+   * the FIELD token: what the user typed keeps the same surface after it is
+   * sent as it had in the composer, so a turn reads as the input moving up
+   * the transcript rather than changing into a different kind of object. */
+  chat_tok_field(style.bg_color);
+  chat_tok_ink(style.text_color);
+  style.corner_radius = CHAT_RADIUS_PILL * metrics->scale_factor;
+  chat_tok_hover(style.hover_color);
 
   return style;
 }
@@ -288,10 +287,11 @@ ChatBubbleStyle chat_ui_get_agent_bubble_style(const ChatLayoutMetrics *metrics)
   style.bg_color[1] = 0.0f;
   style.bg_color[2] = 0.0f;
   style.bg_color[3] = 0.0f;
-  style.text_color[0] = 0.90f;
-  style.text_color[1] = 0.91f;
-  style.text_color[2] = 0.93f;
-  style.text_color[3] = 1.0f;
+  /* Agent prose is primary reading content, so it takes the full ink tier —
+   * the same value as the user pill's text. Dimming it was making the reply
+   * read as secondary to the question that prompted it. */
+  chat_tok_ink(style.text_color);
+  chat_tok_hover(style.hover_color);
 
   return style;
 }
@@ -312,81 +312,57 @@ ChatImageStyle chat_ui_get_image_style(const ChatLayoutMetrics *metrics)
 /** \name Theme Color Getters
  * \{ */
 
+/* NOTE on the forced overrides below: these deliberately ignore the theme
+ * read. User preferences are persisted, so editing a DNA default would never
+ * reach an existing user — forcing in C++ is the only path that actually
+ * changes what people see. See mixie_chat_ui_tokens.hh. */
+
 void chat_ui_get_button_bg_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_button_bg, out_color);
-  }
-  else {
-    out_color[0] = 0.3f; out_color[1] = 0.3f; out_color[2] = 0.3f; out_color[3] = 0.6f;
-  }
+  /* Secondary controls sit on a raised surface, not a translucent gray wash —
+   * a wash picked up whatever was behind it and made buttons read differently
+   * inside a block than on the flat transcript. */
+  chat_tok_surface(out_color);
 }
 
 void chat_ui_get_button_text_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_button_text, out_color);
-  }
-  else {
-    out_color[0] = 0.8f; out_color[1] = 0.8f; out_color[2] = 0.8f; out_color[3] = 1.0f;
-  }
+  chat_tok_ink_2(out_color);
 }
 
 void chat_ui_get_label_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_label_color, out_color);
-  }
-  else {
-    out_color[0] = 0.7f; out_color[1] = 0.7f; out_color[2] = 0.7f; out_color[3] = 1.0f;
-  }
+  /* Sender labels are supporting meta, not content: ink_2. */
+  chat_tok_ink_2(out_color);
 }
 
 void chat_ui_get_prompt_button_color(float out_color[4])
 {
   /* Flat minimal palette — special blocks (steps / thinking / todo / plan) sit
    * in a subtle container just a touch above the editor background, instead of
-   * a heavy filled card. Forced over the theme for a consistent product look. */
-  out_color[0] = 0.125f;
-  out_color[1] = 0.135f;
-  out_color[2] = 0.155f;
-  out_color[3] = 1.0f;
+   * a heavy filled card. INSET rather than SURFACE: these blocks are process
+   * record the user reads past, so they recede below the transcript rather
+   * than lifting above it. */
+  chat_tok_inset(out_color);
 }
 
 void chat_ui_get_placeholder_text_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_placeholder_text, out_color);
-  }
-  else {
-    out_color[0] = 0.5f; out_color[1] = 0.5f; out_color[2] = 0.5f; out_color[3] = 1.0f;
-  }
+  /* Placeholders must recede far enough that an empty composer does not read
+   * as already containing a message: the lowest ink tier. */
+  chat_tok_ink_3(out_color);
 }
 
 void chat_ui_get_thumbnail_border_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_thumbnail_border, out_color);
-  }
-  else {
-    out_color[0] = 0.4f; out_color[1] = 0.4f; out_color[2] = 0.4f; out_color[3] = 1.0f;
-  }
+  chat_tok_line_2(out_color);
 }
 
 void chat_ui_get_button_hover_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_button_hover, out_color);
-  }
-  else {
-    out_color[0] = 0.4f; out_color[1] = 0.55f; out_color[2] = 0.7f; out_color[3] = 1.0f;
-  }
+  /* Hover is a surface change, never a hue change — a blue-tinted hover read
+   * as a selected/active state on rows that were merely under the cursor. */
+  chat_tok_hover(out_color);
 }
 
 void chat_ui_get_history_row_hover_color(float out_color[4])
@@ -405,23 +381,22 @@ void chat_ui_get_history_row_hover_color(float out_color[4])
 
 void chat_ui_get_toggle_on_color(float out_color[4])
 {
-  const ThemeSpace *ts = chat_ui_get_theme_space();
-  if (ts) {
-    theme_color_to_float(ts->chat_plan_toggle_on, out_color);
-  }
-  else {
-    out_color[0] = 0.25f; out_color[1] = 0.35f; out_color[2] = 0.50f; out_color[3] = 1.0f;
-  }
+  /* The interactive accent, NOT the live green: Plan is a mode the user set
+   * and left on, while green is reserved for what is executing right now. */
+  chat_tok_accent(out_color);
 }
 
 void chat_ui_get_toggle_off_color(float out_color[4])
 {
-  chat_ui_get_button_bg_color(out_color);
+  /* An off track is an empty field, not a button — it should read as the
+   * slot the knob travels in. */
+  chat_tok_field(out_color);
 }
 
 void chat_ui_get_toggle_knob_color(float out_color[4])
 {
-  chat_ui_get_button_text_color(out_color);
+  /* Full ink so the knob stays legible on both the accent and field tracks. */
+  chat_tok_ink(out_color);
 }
 
 void chat_ui_get_toggle_label_color(float out_color[4])

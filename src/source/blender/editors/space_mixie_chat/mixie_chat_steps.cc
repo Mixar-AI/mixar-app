@@ -229,8 +229,8 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
   const float chevron_indent = chat_ui_chevron_indent();
 
   /* --- Header: chevron icon + summary, muted (secondary UI, not content) --- */
-  const float header_col[4] = {card.text_color[0], card.text_color[1],
-                               card.text_color[2], card.text_color[3] * 0.65f};
+  float header_col[4];
+  chat_tok_ink_2(header_col);
   const char *summary = layout->steps_summary[0] ? layout->steps_summary : "Steps";
   float hw, hh;
   chat_ui_calc_text_bounds(summary, content_width - chevron_indent,
@@ -298,22 +298,15 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     /* Kind glyph on the row's first text line. State is the ONLY use of
      * color here: running = the single live accent, failed = a muted ✕,
      * settled = quiet gray — a finished list reads uniformly calm. */
-    float glyph_col[4] = {card.text_color[0], card.text_color[1],
-                          card.text_color[2], card.text_color[3] * 0.55f};
+    float glyph_col[4];
+    chat_tok_ink_3(glyph_col);
     const char *glyph = step_kind_glyph(step.kind);
     if (step.status == 1) { /* running */
-      const float live[4] = CHAT_ACCENT_LIVE;
-      glyph_col[0] = live[0];
-      glyph_col[1] = live[1];
-      glyph_col[2] = live[2];
-      glyph_col[3] = live[3];
+      chat_tok_green(glyph_col);
     }
     else if (step.status == 3) { /* failed */
       glyph = "\xE2\x9C\x95"; /* ✕ */
-      glyph_col[0] = 0.85f;
-      glyph_col[1] = 0.40f;
-      glyph_col[2] = 0.35f;
-      glyph_col[3] = 1.0f;
+      chat_tok_red(glyph_col);
     }
     /* Deterministic optical placement, anchored to the TEXT, not the line
      * box (see chat_ui_wrapped_first_line_center): centering on the
@@ -348,8 +341,8 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
      * independently expandable, pinned to the content's right edge and on
      * the same text-anchored center as the kind glyph. */
     if (step.detail[0] != '\0') {
-      const float dim_chev[4] = {card.text_color[0], card.text_color[1],
-                                 card.text_color[2], card.text_color[3] * 0.6f};
+      float dim_chev[4];
+      chat_tok_ink_3(dim_chev);
       const float chev_x = x + card.h_padding + content_width -
                            CHAT_CHEVRON_SIZE * UI_SCALE_FAC;
       chat_ui_draw_chevron(chev_x, glyph_center_y, !step.expanded, dim_chev);
@@ -371,8 +364,8 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
       const float detail_top = cursor - STEPS_DETAIL_GAP * UI_SCALE_FAC;
       const float detail_bottom = detail_top - dh;
 
-      float dim[4] = {card.text_color[0], card.text_color[1],
-                      card.text_color[2], card.text_color[3] * 0.6f};
+      float dim[4];
+      chat_tok_ink_2(dim);
       rctf detail_rect;
       detail_rect.xmin = x + card.h_padding + text_indent;
       detail_rect.xmax = detail_rect.xmin + detail_width;

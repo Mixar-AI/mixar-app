@@ -60,6 +60,7 @@ set(SRC
   mixie_chat_layout_data.hh
   mixie_chat_markdown_intern.hh
   mixie_chat_rules_intern.hh
+  mixie_chat_ui_tokens.hh
   mixie_chat_ui_types.hh
 )
 

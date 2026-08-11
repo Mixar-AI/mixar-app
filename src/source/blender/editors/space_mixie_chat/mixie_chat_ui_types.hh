@@ -14,6 +14,8 @@
 
 #include "BLI_rect.h"
 
+#include "mixie_chat_ui_tokens.hh"
+
 /* -------------------------------------------------------------------- */
 /** \name UI Element Types
  * \{ */
@@ -218,14 +220,18 @@ struct ChatLayoutMetrics {
  * every settled block shares ONE quiet structural rail (ground); the single
  * accent is reserved for what is alive RIGHT NOW (the streaming/live blocks
  * and the running step), so a turn reads "working" while exactly one green
- * element is on screen and "done" the moment everything is neutral. */
+ * element is on screen and "done" the moment everything is neutral.
+ *
+ * Both are tokens (see mixie_chat_ui_tokens.hh): the rail is the same edge
+ * value as every container hairline, so structure reads as one system rather
+ * than a rail color that happens to sit near the borders. */
 #define CHAT_RAIL_NEUTRAL \
   { \
-    0.30f, 0.32f, 0.35f, 0.9f \
+    CHAT_TOK_LINE_2, 1.0f \
   }
 #define CHAT_ACCENT_LIVE \
   { \
-    0.20f, 0.80f, 0.62f, 1.0f \
+    CHAT_TOK_GREEN, 1.0f \
   }
 /* Block aliases — all settled rails are the neutral ground. */
 #define CHAT_ACCENT_PLAN CHAT_RAIL_NEUTRAL

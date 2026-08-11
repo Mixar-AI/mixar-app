@@ -167,7 +167,10 @@ void mixie_chat_render_feedback(const bContext *C,
     const float bar_bottom = has_submitted_comment ?
         fb_y - layout.feedback_row_height - layout.feedback_submitted_comment_height :
         fb_y - star_size * 0.5f;
-    float bar_color[4] = {0.35f, 0.75f, 0.45f, 0.6f};
+    /* The shared neutral rail, not a green one: feedback is a settled block,
+     * and the accent hue is reserved for what is executing right now. A green
+     * rail here read as "something is running" on a finished turn. */
+    const float bar_color[4] = CHAT_RAIL_NEUTRAL;
     chat_ui_draw_accent_bar(
         layout.bubble_x, bar_bottom, bar_top - bar_bottom, bar_color, metrics.scale_factor);
   }
@@ -261,29 +264,26 @@ void mixie_chat_render_feedback(const bContext *C,
    * are for, and rated users whether their feedback reached the server. */
   const float label_x = star_x + star_gap * 2.0f;
   const char *status_text = nullptr;
-  float status_color[4] = {0.6f, 0.6f, 0.6f, 0.9f};
+  float status_color[4];
+  chat_tok_ink_2(status_color);
   switch (layout.feedback_status) {
     case FEEDBACK_STATUS_SENDING:
       status_text = "Sending\xe2\x80\xa6"; /* Sending… */
       break;
     case FEEDBACK_STATUS_RECEIVED:
       status_text = "\xe2\x9c\x93 Feedback received"; /* ✓ */
-      status_color[0] = 0.35f;
-      status_color[1] = 0.75f;
-      status_color[2] = 0.45f;
-      status_color[3] = 1.0f;
+      chat_tok_green(status_color);
       break;
     case FEEDBACK_STATUS_FAILED:
       status_text = "Couldn't send \xe2\x80\x94 try again"; /* — */
-      status_color[0] = 0.85f;
-      status_color[1] = 0.45f;
-      status_color[2] = 0.4f;
-      status_color[3] = 1.0f;
+      chat_tok_red(status_color);
       break;
     default:
       if (layout.feedback_rating == 0) {
+        /* An unprompted invitation, so it sits at the lowest tier — it must
+         * not compete with the response it is asking about. */
         status_text = "Rate this response";
-        status_color[3] = 0.7f;
+        chat_tok_ink_3(status_color);
       }
       break;
   }
@@ -311,7 +311,8 @@ void mixie_chat_render_feedback(const bContext *C,
     text_rect.xmax = layout.bubble_x + layout.content_width;
     text_rect.ymin = block_top - submitted_h;
     text_rect.ymax = block_top;
-    float text_color[4] = {0.75f, 0.75f, 0.75f, 0.95f};
+    float text_color[4];
+    chat_tok_ink_2(text_color);
     chat_ui_draw_text_wrapped(layout.feedback_submitted_comment,
                               &text_rect,
                               layout.style.font_size - 1,

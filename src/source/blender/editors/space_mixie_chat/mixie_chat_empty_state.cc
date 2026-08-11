@@ -98,16 +98,20 @@ void mixie_chat_draw_empty_state(const bContext *C,
     prompt_mouse_y = float(prompt_win->eventstate->xy[1] - region->winrct.ymin);
   }
 
-  /* Get theme colors */
+  /* Suggestion-chip colors. NOTE these are all FOREGROUND values — the same
+   * variable paints the outline and, on hover, the label. Do not source them
+   * from the surface-hover getter: that returns a fill, and a fill used as
+   * text drew near-invisible on this dark ground.
+   *
+   * Resting state is deliberately quiet (line edge, ink_3 label): these are
+   * an offer, not an instruction. Hover raises BOTH to full ink so the chip
+   * under the cursor is unambiguous without introducing a hue. */
   float outline_color[4];
   float hover_color[4];
   float text_color[4];
-  chat_ui_get_placeholder_text_color(outline_color);
-  chat_ui_get_button_hover_color(hover_color);
-  text_color[0] = outline_color[0];
-  text_color[1] = outline_color[1];
-  text_color[2] = outline_color[2];
-  text_color[3] = 1.0f;
+  chat_tok_line_2(outline_color);
+  chat_tok_ink(hover_color);
+  chat_tok_ink_3(text_color);
 
   /* Layout parameters */
   const float bubble_padding_h = 20.0f * metrics.scale_factor;

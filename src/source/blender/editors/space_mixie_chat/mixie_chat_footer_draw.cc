@@ -49,8 +49,14 @@ void footer_draw_send_button_glow(ARegion *region,
   if (input_prop && RNA_property_string_length(scene_ptr, input_prop) > 0) {
     ED_region_pixelspace(region);
     GPU_blend(GPU_BLEND_ALPHA);
+    /* The interactive accent, not a block fill: this halo exists to say "there
+     * is something to send". The previous source was the special-block INSET
+     * token — a near-black on a near-black footer, so the affordance was
+     * effectively invisible and the pulse animated nothing the user could see.
+     * Alpha stays low so it reads as a halo behind the button, not a second
+     * button; the sine keeps it breathing rather than blinking. */
     float gc[4];
-    chat_ui_get_prompt_button_color(gc);
+    chat_tok_accent(gc);
     gc[3] = 0.2f + 0.12f * std::sin(float(BLI_time_now_seconds() * 3.5));
     float gp = 4.0f * scale;
     rctf gr;

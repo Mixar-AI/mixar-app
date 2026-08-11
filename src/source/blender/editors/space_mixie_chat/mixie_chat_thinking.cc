@@ -335,8 +335,10 @@ void chat_ui_draw_live_thinking(const ChatBubbleStyle *style,
   char line[640];
   BLI_snprintf(line, sizeof(line), "%s %s", spinner, thinking_text);
 
-  float col[4] = {style->text_color[0], style->text_color[1],
-                  style->text_color[2], style->text_color[3] * 0.8f};
+  /* A live status line is transient chrome, not the answer — ink_2 keeps it
+   * readable while the prose that replaces it still arrives at full ink. */
+  float col[4];
+  chat_tok_ink_2(col);
   rctf line_rect;
   line_rect.xmin = x + style->h_padding;
   line_rect.xmax = x + style->h_padding + content_width;
@@ -411,9 +413,9 @@ void chat_ui_draw_thinking_dropdown(const ChatBubbleStyle *style,
   float header_top = rect.ymax - style->v_padding;
   float header_y = header_top - line_height;
 
-  /* 0.65 matches the steps-block header — same secondary-caption role. */
-  float dim[4] = {style->text_color[0], style->text_color[1],
-                  style->text_color[2], style->text_color[3] * 0.65f};
+  /* ink_2 matches the steps-block header — same secondary-caption role. */
+  float dim[4];
+  chat_tok_ink_2(dim);
   /* Chevron on the header text's first-line visual center (the text draw
    * bottom-aligns its ink box; the geometric line center reads high). */
   const float header_center = chat_ui_wrapped_first_line_center(
@@ -440,11 +442,12 @@ void chat_ui_draw_thinking_dropdown(const ChatBubbleStyle *style,
     return;
   }
 
-  /* Expanded reasoning body (dimmed further), indented under the header
-   * label so it reads as the chevron's disclosure content. */
-  /* 0.6 matches the steps-block detail body — same disclosure-body role. */
-  float body_dim[4] = {style->text_color[0], style->text_color[1],
-                       style->text_color[2], style->text_color[3] * 0.6f};
+  /* Expanded reasoning body, indented under the header label so it reads as
+   * the chevron's disclosure content. Same ink_2 tier as the steps-block
+   * detail body — reasoning is supporting material, not prose to read first,
+   * but it must stay comfortably readable once deliberately opened. */
+  float body_dim[4];
+  chat_tok_ink_2(body_dim);
   rctf body_rect;
   body_rect.xmin = x + style->h_padding + chevron_indent;
   body_rect.xmax = x + style->h_padding + content_width;

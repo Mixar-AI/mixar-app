@@ -416,21 +416,28 @@ void chat_ui_draw_action_buttons(float bubble_x,
 
   int button_count = 0;
 
-  /* Get button colors from theme */
+  /* Get button colors from theme.
+   *
+   * NOTE the hover fill is hover_2, not the shared chat_ui_get_button_hover_color
+   * (= hover). That getter is tuned for a row wash directly on the flat
+   * transcript ground; these buttons already sit on a SURFACE fill, so the
+   * same value would be a ~0.03 luminance step and read as no hover at all.
+   * Hover also lifts the label a full ink tier — on a dark palette the fill
+   * delta alone is too weak to carry an affordance, so brightness does the
+   * work and hue stays out of it. */
   float btn_bg[4];
   float btn_hover[4];
   float btn_text[4];
+  float btn_text_hover[4];
   chat_ui_get_button_bg_color(btn_bg);
-  chat_ui_get_button_hover_color(btn_hover);
+  chat_tok_hover_2(btn_hover);
   chat_ui_get_button_text_color(btn_text);
+  chat_tok_ink(btn_text_hover);
 
   /* For copied feedback, use a green-tinted text color */
   float copied_text[4];
   if (show_copied) {
-    copied_text[0] = 0.3f;
-    copied_text[1] = 0.8f;
-    copied_text[2] = 0.4f;
-    copied_text[3] = 1.0f;
+    chat_tok_green(copied_text);
   }
 
   /* Check existing hover states before overwriting */
@@ -440,7 +447,8 @@ void chat_ui_draw_action_buttons(float bubble_x,
   /* Copy button (or "copied" feedback) */
   float copy_width = draw_compact_action_button(
       btn_x, btn_y, btn_height, btn_padding, btn_radius, font_size,
-      btn_bg, btn_hover, show_copied ? copied_text : btn_text,
+      btn_bg, btn_hover,
+      show_copied ? copied_text : (copy_hovered ? btn_text_hover : btn_text),
       copy_label, CHAT_ACTION_COPY, copy_hovered,
       out_buttons, &button_count, alpha);
   btn_x += copy_width + btn_spacing;
@@ -449,7 +457,7 @@ void chat_ui_draw_action_buttons(float bubble_x,
   if (show_retry) {
     draw_compact_action_button(
         btn_x, btn_y, btn_height, btn_padding, btn_radius, font_size,
-        btn_bg, btn_hover, btn_text,
+        btn_bg, btn_hover, retry_hovered ? btn_text_hover : btn_text,
         ACTION_LABEL_RETRY, CHAT_ACTION_RETRY, retry_hovered,
         out_buttons, &button_count, alpha);
   }

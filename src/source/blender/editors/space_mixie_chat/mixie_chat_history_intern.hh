@@ -17,6 +17,8 @@
 
 #include "BLI_vector.hh"
 
+#include "mixie_chat_ui_tokens.hh"
+
 struct ARegion;
 struct bContext;
 struct MixieChatRuntime;
@@ -59,24 +61,35 @@ inline constexpr float HIST_SCROLL_APPROACH_RATE = 16.0f;
 /** \name Colors (Mixar dark surface language; alpha scaled by open anim)
  * \{ */
 
-inline constexpr float HIST_COL_SCRIM[4] = {0.02f, 0.03f, 0.04f, 0.42f};
-inline constexpr float HIST_COL_PANEL[4] = {0.105f, 0.115f, 0.135f, 0.995f};
-inline constexpr float HIST_COL_PANEL_OUTLINE[4] = {1.0f, 1.0f, 1.0f, 0.075f};
+/* These are the same design tokens the transcript uses (mixie_chat_ui_tokens.hh)
+ * so an overlay opened over the chat reads as the same surface lifted, not as a
+ * separate panel that happens to be dark. Shared by BOTH the past-chats and the
+ * Project Rules overlays — an edit here moves both.
+ *
+ * The white-alpha values that remain (divider, scroll thumb, armed-delete wash)
+ * are deliberate: they are washes over an already-composited panel, so they must
+ * track whatever is beneath them rather than pin to an opaque value. */
+inline constexpr float HIST_COL_SCRIM[4] = {CHAT_TOK_PAGE, 0.42f};
+inline constexpr float HIST_COL_PANEL[4] = {CHAT_TOK_SURFACE, 0.995f};
+inline constexpr float HIST_COL_PANEL_OUTLINE[4] = {CHAT_TOK_LINE_2, 1.0f};
 inline constexpr float HIST_COL_PANEL_SHADOW[4] = {0.0f, 0.0f, 0.0f, 0.35f};
-inline constexpr float HIST_COL_HEADER_TEXT[4] = {0.92f, 0.94f, 0.97f, 1.0f};
-inline constexpr float HIST_COL_MUTED[4] = {0.52f, 0.56f, 0.61f, 1.0f};
+inline constexpr float HIST_COL_HEADER_TEXT[4] = {CHAT_TOK_INK, 1.0f};
+inline constexpr float HIST_COL_MUTED[4] = {CHAT_TOK_INK_3, 1.0f};
 inline constexpr float HIST_COL_DIVIDER[4] = {1.0f, 1.0f, 1.0f, 0.06f};
 /* Row hover comes from the theme: theme.space_mixie_chat.chat_history_row_hover
  * (chat_ui_get_history_row_hover_color), seeded by the Python bootstrap. */
-inline constexpr float HIST_COL_TITLE[4] = {0.86f, 0.88f, 0.91f, 0.96f};
-inline constexpr float HIST_COL_TITLE_CURRENT[4] = {0.97f, 0.98f, 1.0f, 1.0f};
-inline constexpr float HIST_COL_DELETE[4] = {0.55f, 0.58f, 0.62f, 0.75f};
-inline constexpr float HIST_COL_DELETE_HOVER[4] = {0.95f, 0.42f, 0.42f, 1.0f};
+/* Row titles are the PRIMARY content of the picker — the text you read to
+ * choose — so they take full ink, not the meta tier. The current chat is
+ * distinguished by its row background, not by dimming every other row. */
+inline constexpr float HIST_COL_TITLE[4] = {CHAT_TOK_INK, 1.0f};
+inline constexpr float HIST_COL_TITLE_CURRENT[4] = {CHAT_TOK_INK, 1.0f};
+inline constexpr float HIST_COL_DELETE[4] = {CHAT_TOK_INK_3, 1.0f};
+inline constexpr float HIST_COL_DELETE_HOVER[4] = {CHAT_TOK_RED, 1.0f};
 inline constexpr float HIST_COL_DELETE_HOVER_BG[4] = {1.0f, 1.0f, 1.0f, 0.09f};
-inline constexpr float HIST_COL_DELETE_ARMED_BG[4] = {0.95f, 0.42f, 0.42f, 0.18f};
+inline constexpr float HIST_COL_DELETE_ARMED_BG[4] = {CHAT_TOK_RED, 0.18f};
 inline constexpr float HIST_COL_SCROLL_THUMB[4] = {1.0f, 1.0f, 1.0f, 0.16f};
-inline constexpr float HIST_COL_SEARCH_BG[4] = {1.0f, 1.0f, 1.0f, 0.045f};
-inline constexpr float HIST_COL_SEARCH_OUTLINE[4] = {1.0f, 1.0f, 1.0f, 0.08f};
+inline constexpr float HIST_COL_SEARCH_BG[4] = {CHAT_TOK_FIELD, 1.0f};
+inline constexpr float HIST_COL_SEARCH_OUTLINE[4] = {CHAT_TOK_LINE, 1.0f};
 
 /** \} */
 
