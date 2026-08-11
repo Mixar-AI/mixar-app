@@ -14,12 +14,15 @@ def _install_bpy_stubs():
     # Register top-level and all known sub-modules that Mixar code imports.
     stub_names = [
         'bpy', 'bpy.types', 'bpy.props', 'bpy.utils', 'bpy.app',
-        'bpy.app.timers', 'bpy.context', 'bpy.data', 'bpy.ops',
-        'bpy.ops.mixar',
+        'bpy.app.handlers', 'bpy.app.timers', 'bpy.context', 'bpy.data',
+        'bpy.ops', 'bpy.ops.mixar',
     ]
     for name in stub_names:
         if name not in sys.modules:
             sys.modules[name] = MagicMock(name=name)
+    # @persistent must stay a transparent decorator, or every decorated
+    # handler imports as a MagicMock and can never be exercised in tests.
+    sys.modules['bpy.app.handlers'].persistent = lambda func: func
     # Ensure top-level 'bpy' is the same mock (not two separate ones)
     if 'bpy' not in sys.modules:
         sys.modules['bpy'] = bpy_mock

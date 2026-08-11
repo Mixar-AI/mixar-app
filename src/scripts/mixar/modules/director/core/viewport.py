@@ -258,16 +258,39 @@ def invoke_walk(context, camera):
         return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target
 
 
+def select_camera_object(context, camera) -> None:
+    """Make *camera* the only selected, active object in the view layer.
+
+    Precise gizmos and transform hotkeys follow the selection, so every
+    deliberate switch of the directed camera must hand it over — otherwise
+    a gizmo drag or G/R keeps editing the previous shot's camera. Called
+    from shot/camera switches only, never from plain view entry: captures
+    re-enter the camera view too, and stealing the selection there would
+    break flows that act on the selected object (character Animation
+    presets).
+    """
+    view_layer = getattr(context, "view_layer", None)
+    objects = getattr(view_layer, "objects", None)
+    if objects is None or camera is None:
+        return
+    try:
+        for obj in list(getattr(objects, "selected", ()) or ()):
+            obj.select_set(False)
+        camera.select_set(True)
+        objects.active = camera
+    except (AttributeError, RuntimeError, ReferenceError):
+        # Not linked into the active view layer (cross-scene shot) or a
+        # dying reference during load/undo — selection is meaningless then.
+        pass
+
+
 def enter_precise_mode(context, camera) -> None:
     """Select the camera and expose native transform gizmos."""
     _window, area, _region, space = enter_camera_view(
         context, camera, remember=False,
     )
     space.lock_camera = False
-    for obj in getattr(context, "selected_objects", ()):
-        obj.select_set(False)
-    camera.select_set(True)
-    context.view_layer.objects.active = camera
+    select_camera_object(context, camera)
     space.show_gizmo = True
     for attr in ("show_gizmo_object_translate", "show_gizmo_object_rotate"):
         if hasattr(space, attr):

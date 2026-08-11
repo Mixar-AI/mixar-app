@@ -19,6 +19,7 @@ from ...core.viewport import (
     enter_camera_view,
     enter_director_surface,
     restore_view,
+    select_camera_object,
 )
 
 
@@ -95,6 +96,9 @@ class MIXAR_OT_director_start(Operator):
         except Exception as exc:
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
+        # The property-update selection is gated on is_directing, which is
+        # still False while the session starts — select explicitly here.
+        select_camera_object(context, shot.camera)
         state.is_directing = True
         state.timeline_expanded = True
         state.navigation_mode = 'NAVIGATE'
@@ -124,6 +128,7 @@ class MIXAR_OT_director_new_shot(Operator):
         except Exception as exc:
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
+        select_camera_object(context, camera)
         context.scene.mixar_director.is_directing = True
         context.scene.mixar_director.timeline_expanded = True
         self.report({'INFO'}, f"Created {shot.name}")
@@ -195,6 +200,7 @@ class MIXAR_OT_director_new_take(Operator):
         except Exception as exc:
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
+        select_camera_object(context, new_take.camera)
         context.scene.mixar_director.is_directing = True
         self.report({'INFO'}, f"Started take {new_take.version}")
         return {'FINISHED'}

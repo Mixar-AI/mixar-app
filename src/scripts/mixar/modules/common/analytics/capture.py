@@ -240,6 +240,40 @@ def _successful(result) -> bool:
     return isinstance(result, set) and bool(result & {"FINISHED", "RUNNING_MODAL"})
 
 
+def _operator_wrapper(original, op_id: str, *, with_event: bool):
+    """Build a wrapper with the exact RNA method signature.
+
+    register_class validates each overridden method's code object by its
+    positional-argument count. A ``*args`` shim therefore registers for
+    ``execute`` (2 args) but rejects every invoke-only operator (``invoke``
+    expects 3): "expected Operator ... function to have 3 args, found 2" —
+    which silently disabled modal operators like Director's Navigate.
+    """
+    if with_event:
+
+        @functools.wraps(original)
+        def wrapped(self, context, event):
+            result = original(self, context, event)
+            capture(EVENT_OPERATOR, {
+                "operator": op_id,
+                "success": _successful(result),
+            }, context=context)
+            return result
+
+    else:
+
+        @functools.wraps(original)
+        def wrapped(self, context):
+            result = original(self, context)
+            capture(EVENT_OPERATOR, {
+                "operator": op_id,
+                "success": _successful(result),
+            }, context=context)
+            return result
+
+    return wrapped
+
+
 def instrument_operator_classes(classes) -> None:
     """Wrap Mixar-owned operators once, preferring execute over invoke.
 
@@ -258,15 +292,8 @@ def instrument_operator_classes(classes) -> None:
         original = getattr(cls, method_name, None)
         if not callable(original):
             continue
-
-        @functools.wraps(original)
-        def wrapped(self, context, *args, __original=original, __op_id=op_id, **kwargs):
-            result = __original(self, context, *args, **kwargs)
-            capture(EVENT_OPERATOR, {
-                "operator": __op_id,
-                "success": _successful(result),
-            }, context=context)
-            return result
-
+        wrapped = _operator_wrapper(
+            original, op_id, with_event=method_name == "invoke"
+        )
         setattr(cls, method_name, wrapped)
         cls.__mixar_analytics_wrapped__ = True
