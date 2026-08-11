@@ -19,6 +19,8 @@ of automatic handles for the now-continuous curve.
 
 from __future__ import annotations
 
+import math
+
 from .anim_curves import assigned_fcurves
 
 
@@ -59,17 +61,56 @@ def _aligned_key_rows(curves) -> tuple:
     return tuple(rows)
 
 
-def _compatible_euler_values(values, previous, order: str) -> tuple[float, ...]:
-    """Represent *values* on the Euler branch nearest *previous*."""
-    from mathutils import Euler
+_TWO_PI = 2.0 * math.pi
 
-    raw = Euler(values, order)
-    reference = Euler(previous, order)
-    # Avoid a matrix round-trip here.  Euler.make_compatible() performs the
-    # same branch selection without introducing enough floating-point drift to
-    # make an already-repaired curve appear dirty on the next preview.
-    raw.make_compatible(reference)
-    return tuple(float(value) for value in raw)
+
+def _nearest_turn(value: float, reference: float) -> float:
+    return value + round((reference - value) / _TWO_PI) * _TWO_PI
+
+
+def _flipped_branch(values, order: str) -> tuple[float, ...]:
+    """The alternate Euler decomposition of the same rotation.
+
+    Every Tait-Bryan triple has exactly one other representation: the
+    order's middle axis takes the supplement while both outer axes shift by
+    a half turn.  Matrix assignment (``Object.matrix_world = ...``) stores
+    whichever of the two branches the decomposition happened to pick.
+    """
+    middle = "XYZ".index(order[1])
+    return tuple(
+        math.pi - value if axis == middle else value + math.pi
+        for axis, value in enumerate(values)
+    )
+
+
+def _compatible_euler_values(values, previous, order: str) -> tuple[float, ...]:
+    """Represent *values* on the Euler branch nearest *previous*.
+
+    Mirrors Blender's own compatible decomposition: both candidate branches
+    are corrected by whole turns toward *previous* and the closer one (by
+    summed per-axis distance) wins.  Euler.make_compatible() is not enough
+    here — it only removes whole-turn jumps and leaves half-turn branch
+    flips in place.  Pure +/-pi arithmetic keeps ties exact: an
+    already-continuous key keeps its raw values bit for bit, so a repaired
+    curve never appears dirty on the next pass.
+    """
+
+    def _aligned(candidate):
+        aligned = tuple(
+            _nearest_turn(value, reference)
+            for value, reference in zip(candidate, previous)
+        )
+        distance = sum(
+            abs(value - reference)
+            for value, reference in zip(aligned, previous)
+        )
+        return aligned, distance
+
+    raw, raw_distance = _aligned(tuple(float(value) for value in values))
+    flipped, flipped_distance = _aligned(_flipped_branch(values, order))
+    if flipped_distance < raw_distance:
+        return flipped
+    return raw
 
 
 def _move_point_value(point, value: float) -> bool:

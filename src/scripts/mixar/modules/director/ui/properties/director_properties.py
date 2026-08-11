@@ -25,11 +25,28 @@ from ...constants import (
     SHOT_STATE_ITEMS,
 )
 from ...core.shot_api import scope_preview_range
-from ...core.viewport import enter_camera_view
+from ...core.viewport import enter_camera_view, select_camera_object
 
 
 def _camera_poll(_self, obj):
     return getattr(obj, "type", None) == 'CAMERA'
+
+
+def _request_beat_reconcile() -> None:
+    """Adopt/prune native camera keys for the newly watched shot right away.
+
+    The beat_sync watcher only ticks on depsgraph updates, which entering
+    Director or switching shots does not cause — without this, a camera
+    keyed through the native timeline shows an empty Director strip until
+    some unrelated edit happens to tick the handler.
+    """
+    from ...core import beat_sync
+
+    try:
+        beat_sync.request_reconcile()
+    except Exception:
+        # Never let a reconcile request break the camera-switch update.
+        pass
 
 
 def _activate_shot_camera(self, context):
@@ -39,19 +56,22 @@ def _activate_shot_camera(self, context):
         scene.camera = camera
         state = getattr(scene, "mixar_director", None)
         if state is not None and state.is_directing:
+            select_camera_object(context or bpy.context, camera)
             try:
                 enter_camera_view(context or bpy.context, camera, remember=False)
             except Exception:
                 # RNA updates can run without a usable area during file loading.
                 pass
+        _request_beat_reconcile()
 
 
 def _on_active_shot_change(self, context):
-    """Follow the newly active shot: its camera, its view, and its range.
+    """Follow the newly active shot: its camera, view, selection, and range.
 
     All shots share one scene timeline, so switching shots must re-point the
     scene camera and the playback range or the timeline shows one shot's beats
-    while the view and playhead still belong to another.
+    while the view and playhead still belong to another. The selection follows
+    while directing so gizmos and transform keys edit the new shot's camera.
     """
     scene = getattr(context, "scene", None) or bpy.context.scene
     shots = getattr(self, "shots", None)
@@ -63,11 +83,13 @@ def _on_active_shot_change(self, context):
     if camera is not None and getattr(camera, "type", None) == 'CAMERA':
         scene.camera = camera
         if self.is_directing:
+            select_camera_object(context or bpy.context, camera)
             try:
                 enter_camera_view(context or bpy.context, camera, remember=False)
             except Exception:
                 pass
     scope_preview_range(scene, shot)
+    _request_beat_reconcile()
 
 
 def _on_handheld_update(self, _context):
@@ -79,6 +101,19 @@ def _on_handheld_update(self, _context):
         # Property updates can fire during file load before the camera's
         # animation data is reachable; the next capture refreshes anyway.
         pass
+
+
+def _on_directing_update(self, context):
+    """Directing entry: refresh the surface and reconcile the watched shot.
+
+    All four entry operators set ``is_directing = True``; none of them
+    causes a depsgraph update, so without an explicit request the strip
+    ignores natively keyed cameras until an unrelated edit ticks the
+    beat_sync handler.
+    """
+    _redraw_director_surface(self, context)
+    if self.is_directing:
+        _request_beat_reconcile()
 
 
 def _redraw_director_surface(_self, context):
@@ -260,7 +295,7 @@ class MixarDirectorState(PropertyGroup):
         name="Directing",
         default=False,
         options={'SKIP_SAVE', 'HIDDEN'},
-        update=_redraw_director_surface,
+        update=_on_directing_update,
     )
     timeline_expanded: BoolProperty(
         name="Timeline",

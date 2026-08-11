@@ -296,10 +296,49 @@ def test_orphaned_keyframes_prune_when_native_keys_deleted_elsewhere():
     assert "from .capture import remove_beat" in beat_sync
     assert "remove_beat(scene, shot, index)" in beat_sync
     # Detect in the handler, mutate in the timer (never mutate in the handler).
-    assert "bpy.app.timers.register(_prune_timer" in beat_sync
+    assert "bpy.app.timers.register(_sync_timer" in beat_sync
     # Never destroy a beat + its still on a MOVE (native count stays equal).
     assert "len(native) >= len(shot.beats)" in beat_sync
+    # Mirror native insertion: keys the strip never saw become beats.
+    assert "def adopt_native_keyframes" in beat_sync
+    assert "native - covered" in beat_sync
     assert "beat_sync.register()" in watch
+
+    # Directing entry and shot/camera switches cause no depsgraph tick, so
+    # they must request reconciliation explicitly or a natively keyed
+    # camera keeps an empty strip until an unrelated edit ticks the watcher.
+    assert "def request_reconcile" in beat_sync
+    properties = _read("ui/properties/director_properties.py")
+    # One definition plus the three switch paths: shot activation, camera
+    # assignment, and directing entry.
+    assert properties.count("_request_beat_reconcile()") == 4
+    assert "update=_on_directing_update" in properties
+
+
+def test_camera_switches_hand_the_selection_to_the_new_camera():
+    """Precise gizmos and transform keys follow the selection.
+
+    Every deliberate camera switch — shot activation, camera assignment,
+    session start, new shot, new take — selects the new camera. Plain view
+    entry must NOT: captures re-enter the camera view, and stealing the
+    selection there breaks flows acting on the selected object (character
+    Animation presets).
+    """
+    viewport = _read("core/viewport.py")
+    properties = _read("ui/properties/director_properties.py")
+    session = _read("ui/operators/session_ops.py")
+
+    assert "def select_camera_object" in viewport
+    # Precise mode reuses the one selection helper.
+    assert "select_camera_object(context, camera)" in viewport
+    # Both switch callbacks select, gated on an active directing session.
+    assert properties.count("select_camera_object(") == 2
+    # Session entry selects explicitly: is_directing is still False there.
+    assert session.count("select_camera_object(") == 3
+    # enter_camera_view runs on every capture — it never touches selection.
+    enter_view = viewport.split("def enter_camera_view", 1)[1]
+    enter_view = enter_view.split("\ndef ", 1)[0]
+    assert "select_camera_object" not in enter_view
 
 
 def test_capture_shortcut_survives_gui_keyconfig_reload():
