@@ -196,7 +196,7 @@ class TestExecutorHoldsForPrefetch:
                 return self.is_ready
 
         pf = FakePrefetch()
-        ex._request_queue.put_nowait(("req-1", "print('apply')", "create_layered_material", "", pf))
+        ex._request_queue.put_nowait(("req-1", "print('apply')", "create_layered_material", "", None, pf))
 
         # Assets still downloading: held, nothing executed, timer keeps ticking.
         assert ex._process_one_request() is not None
@@ -213,7 +213,7 @@ class TestExecutorHoldsForPrefetch:
 
     def test_script_without_prefetch_runs_immediately(self, executor_mod):
         ex, sent, executed = executor_mod
-        ex._request_queue.put_nowait(("req-2", "print('now')", "execute_bpy_script", "", None))
+        ex._request_queue.put_nowait(("req-2", "print('now')", "execute_bpy_script", "", None, None))
         ex._process_one_request()
         assert executed == ["print('now')"]
         assert sent == [("req-2", {"success": True})]

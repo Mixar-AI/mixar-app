@@ -318,7 +318,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 no_tooltip=True,
             )
             traffic.operator(
-                "mixar.bubble_toggle_expand",
+                "mixar.bubble_toggle_expand_tracked",
                 text="",
                 icon='FULLSCREEN_ENTER',
                 emboss=False,
@@ -337,7 +337,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 )
             if green_id:
                 traffic.operator(
-                    "mixar.bubble_toggle_expand",
+                    "mixar.bubble_toggle_expand_tracked",
                     text="",
                     icon_value=green_id,
                     emboss=False,

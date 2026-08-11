@@ -129,10 +129,11 @@ def focus_segments_panel(context):
             (r for r in area.regions if r.type == 'UI'), None,
         ) if area else None
         if region and hasattr(region, 'active_panel_category'):
+            from mixar.bootstrap.analytics_module import note_programmatic_panel_change
             from .moodboard_sidebar_panels import get_tab_category
-            region.active_panel_category = get_tab_category(
-                capability, fallback_label,
-            )
+            category = get_tab_category(capability, fallback_label)
+            note_programmatic_panel_change(region, category)
+            region.active_panel_category = category
     except Exception:
         pass
 
