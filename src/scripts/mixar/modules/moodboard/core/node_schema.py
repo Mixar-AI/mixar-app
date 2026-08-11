@@ -51,6 +51,9 @@ _CONNECTABLE_TYPES = {
 }
 _MAX_INPUT_SOCKETS = 32
 _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
+# PBR texturing accepts a single style/reference image OR exactly four
+# turnaround views, so the node offers up to four optional image sockets.
+_PBR_MAX_IMAGE_REFS = 4
 
 
 def output_type_for_action(action_type: str) -> str:
@@ -419,6 +422,26 @@ def sync_node_schema(_scene, node) -> None:
         # socket needs a matching MESH capacity or the connection is rejected.
         limits = input_contract.setdefault("limits", {})
         limits["MESH"] = max(int(limits.get("MESH", 0) or 0), 1)
+    # PBR texturing optionally takes reference image(s) in ADDITION to the mesh
+    # (a Tripo style/reference image, or four turnaround views). The backend
+    # consumes these client-side, so — like the mesh socket — they are not in
+    # the catalog input spec and are injected here as an optional, progressive
+    # image group.
+    if node.action_type == 'PBR_GEN' and not any(
+        "IMAGE" in socket.get("accepted_types", ())
+        for socket in input_contract["sockets"]
+    ):
+        for index in range(_PBR_MAX_IMAGE_REFS):
+            input_contract["sockets"].append({
+                "id": f"reference:{index}",
+                "label": f"Reference {index + 1}",
+                "accepted_types": ["IMAGE"],
+                "required": False,
+                "group_id": "reference",
+                "repeatable": True,
+            })
+        limits = input_contract.setdefault("limits", {})
+        limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), _PBR_MAX_IMAGE_REFS)
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}

@@ -351,6 +351,17 @@ class MIXIE_MT_moodboard_output_menu(Menu):
                 layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id
             )
             added = True
+        # A 3D mesh output continues into the mesh -> mesh features, matching the
+        # right-click "Continue in 3D" section.
+        if source_type == 'MESH':
+            drew_mesh = False
+            for action_type, text, icon, capability in _MESH_CONTINUATIONS:
+                if _capability_available(capability):
+                    if not drew_mesh:
+                        layout.label(text="Continue in 3D")
+                        drew_mesh = True
+                    _connected_action(layout, action_type, text, icon, source_id)
+                    added = True
         if not added:
             layout.label(text="No compatible continuation", icon='INFO')
 

@@ -18,7 +18,7 @@ from mixar.modules.common.utils.image_utils import compress_for_service
 from .media_utils import describe_moodboard_media, is_still_item
 from .node_graph import (
     action_node_by_id,
-    connect_image_result,
+    connect_image_results,
     connect_video_result,
     create_asset_result,
     input_media_items,
@@ -48,7 +48,7 @@ def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
                     resolved = [renamed]
             create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
-            connect_image_result(scene, node, result_names)
+            connect_image_results(scene, node, result_names)
         else:
             connect_video_result(scene, node, result_names)
 
@@ -133,7 +133,11 @@ def _run_model_3d(context, node, operator):
     inputs = input_media_items(context.scene, node)
     stills = [item for item in inputs if is_still_item(item)]
     if len(stills) != 1:
-        raise ValueError("Generate to 3D currently requires exactly one image connection")
+        detail = "connect one image" if not stills else "connect only one image"
+        raise ValueError(
+            f"Generate to 3D needs exactly one image connection ({detail}; "
+            f"found {len(stills)})"
+        )
     image = stills[0].image
 
     service_key = resolve_service_key("model_gen", node_service_key(node))
@@ -408,32 +412,34 @@ _MESH_FEATURE_ROUTING = {
         'capability': 'pbr_generation',
         'feature_key': 'pbr_generation',
         'scene_flag': 'mixie_pbr_gen_is_generating',
-        'title': 'Textured Mesh',
     },
     'RETOPOLOGY': {
         'capability': 'retopology',
         'feature_key': 'retopology',
         'scene_flag': 'mixie_retopology_is_generating',
-        'title': 'Retopo Mesh',
     },
     'MESH_SEGMENT': {
         'capability': 'mesh_segmentation',
         'feature_key': 'hunyuan_part',
         'scene_flag': 'mixie_hunyuan_part_is_generating',
-        'title': 'Mesh Parts',
     },
     'AUTO_RIG': {
         'capability': 'animate',
         'feature_key': 'animate',
         'scene_flag': 'mixie_animate_is_generating',
-        'title': 'Rigged Mesh',
         'import_options': {"bone_heuristic": "BLENDER", "guess_original_bind_pose": False},
     },
 }
 
 
-def _mesh_result_hook(scene_name: str, node_id: str, title: str):
-    """Create a standalone 3D asset node from the imported result mesh(es)."""
+def _mesh_result_hook(scene_name: str, node_id: str):
+    """Embed the imported result mesh INTO the producing node.
+
+    Like Generate 3D, the feature node's generate UI is replaced by the result
+    thumbnail (``create_asset_result`` sets ``preview_object`` + ``result_names``),
+    rather than spawning a separate asset node. The node stays a MESH source so
+    it can be chained onward.
+    """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
         if scene is None:
@@ -441,18 +447,53 @@ def _mesh_result_hook(scene_name: str, node_id: str, title: str):
         node = action_node_by_id(scene, node_id)
         if node is None:
             return
-        from .node_graph import create_mesh_output_node
+        from .node_graph import create_asset_result
 
-        create_mesh_output_node(scene, node, object_names, title)
+        create_asset_result(scene, node, object_names)
 
     return _hook
+
+
+def _attach_pbr_reference_images(scene, node, payload, operator):
+    """Attach connected reference image(s) to a PBR texture payload.
+
+    Mirrors ``enqueue_pbr_texture_job``'s guidance precedence: exactly four
+    connected images become Tripo's turnaround views (by input order); one to
+    three become a single reference image (the first). The mesh input is
+    resolved separately and never appears here (``input_media_items`` yields
+    only still images, not mesh nodes).
+    """
+    from mixar.modules.common.utils.image_utils import compress_image_for_upload
+
+    images = [
+        item.image for item in input_media_items(scene, node)
+        if is_still_item(item)
+    ]
+    if not images:
+        return
+    if len(images) == 4:
+        payload["reference_images_b64"] = [
+            base64.b64encode(compress_image_for_upload(img)).decode()
+            for img in images
+        ]
+        return
+    if len(images) > 1 and operator is not None:
+        operator.report(
+            {'WARNING'},
+            "PBR uses the first connected reference; connect exactly four for "
+            "turnaround views",
+        )
+    payload["reference_image_bytes_b64"] = base64.b64encode(
+        compress_image_for_upload(images[0])
+    ).decode()
 
 
 def _run_mesh_feature(context, node, operator):
     """Run a mesh -> mesh continuation (PBR / Retopology / Segment / Auto Rig).
 
     The input mesh comes from the connected 3D node; the result imports as a new
-    standalone 3D asset node linked from this feature node.
+    standalone 3D asset node linked from this feature node. PBR additionally
+    accepts optional reference image(s) from its image sockets.
     """
     import base64
 
@@ -497,6 +538,8 @@ def _run_mesh_feature(context, node, operator):
         "file_bytes_b64": base64.b64encode(file_bytes).decode(),
         "file_filename": filename,
     }
+    if node.action_type == 'PBR_GEN':
+        _attach_pbr_reference_images(context.scene, node, payload, operator)
     params = collect_node_params(node)
     prompt = node.prompt.strip()
     if prompt:
@@ -504,7 +547,7 @@ def _run_mesh_feature(context, node, operator):
     payload = assemble_payload(service_key, params, payload, model)
 
     ensure_graph_listener(routing['feature_key'])
-    hook = _mesh_result_hook(context.scene.name, node.node_id, routing['title'])
+    hook = _mesh_result_hook(context.scene.name, node.node_id)
     extra = {}
     if routing.get('import_options'):
         extra['import_options'] = routing['import_options']

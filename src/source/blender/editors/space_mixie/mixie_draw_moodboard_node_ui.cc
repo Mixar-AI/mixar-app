@@ -16,6 +16,8 @@
 #include "BLI_vector.hh"
 
 #include "DNA_object_types.h"
+#include "DNA_theme_types.h"   /* UI_SCALE_FAC */
+#include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
@@ -307,7 +309,11 @@ static void add_action_toolbar(uiBlock *block,
 
   if (!has_result || state == 0) {
     const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    const int generate_h = 36;
+    /* Scale ONLY the Generate button by the UI factor: the label renders at
+     * UI_SCALE_FAC, so a fixed 118px clipped "Generate" to "Gener..." at high
+     * UI scale. Everything else on the node is left untouched. */
+    const int generate_h = int(36 * UI_SCALE_FAC);
+    const int generate_w = int(118 * UI_SCALE_FAC);
     /* Make the prompt a tall multi-line text area: it spans from the top margin
      * down to just above the Generate button. Height comfortably exceeds
      * UI_UNIT_Y * 1.5 at any UI scale, which is what flips the native text
@@ -341,10 +347,10 @@ static void add_action_toolbar(uiBlock *block,
                                 "MIXIE_OT_moodboard_run_action_node",
                                 blender::wm::OpCallContext::ExecDefault,
                                 button_label,
-                                node_region.xmax - prompt_margin - 118,
+                                node_region.xmax - prompt_margin - generate_w,
                                 node_region.ymin + prompt_margin,
-                                118,
-                                36,
+                                generate_w,
+                                generate_h,
                                 nullptr);
     RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
     if (generation_running) {

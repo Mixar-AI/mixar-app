@@ -462,32 +462,66 @@ def input_media_items(scene, action_node) -> list:
         source_action = action_node_by_id(scene, link.from_node_id)
         if source_action is None:
             continue
-        names = [
-            name.strip() for name in source_action.result_names.split(",")
-            if name.strip()
-        ]
-        for name in names:
-            media = next(
-                (
-                    candidate for candidate in scene.mixie_moodboard_images
-                    if candidate.image and candidate.image.name == name
-                ),
-                None,
-            )
-            if media is not None:
-                resolved.append(media)
+        # A producer node contributes the single image it represents on the
+        # canvas (its preview / embedded result), NOT every image a multi-image
+        # generation embedded behind it. Expanding result_names here made one
+        # connection surface N images, so a downstream "exactly one image" node
+        # (Generate to 3D) rejected a perfectly valid single connection.
+        media = _action_node_output_media(scene, source_action)
+        if media is not None:
+            resolved.append(media)
     return resolved
 
 
+def _action_node_output_media(scene, source_action):
+    """Resolve the one media item a producer node outputs to the graph.
+
+    Prefers the node's shown preview, then its embedded result, and finally the
+    legacy result-name match — so a stale or empty ``result_names`` still
+    resolves as long as the node visibly holds a result.
+    """
+    embedded = [
+        media for media in scene.mixie_moodboard_images
+        if media.image and media.embedded_node_id == source_action.node_id
+    ]
+    preview = getattr(source_action, "preview_image", None)
+    if preview is not None:
+        chosen = next((media for media in embedded if media.image == preview), None)
+        if chosen is not None:
+            return chosen
+    if embedded:
+        return embedded[0]
+    names = [
+        name.strip() for name in source_action.result_names.split(",")
+        if name.strip()
+    ]
+    return next(
+        (
+            candidate for candidate in scene.mixie_moodboard_images
+            if candidate.image and candidate.image.name in names
+        ),
+        None,
+    )
+
+
 def create_asset_result(scene, action_node, object_names: str):
+    """Embed an imported mesh result INTO the producing node (like Generate 3D).
+
+    The node's generate UI is replaced by the result thumbnail: the C++ draw
+    renders ``preview_object`` via BKE_icon_preview_ensure. ``result_names`` keeps
+    every imported object so the node can be chained onward, while the thumbnail
+    prefers a MESH — an auto-rig result also imports an armature, whose preview
+    is unrecognisable sticks.
+    """
     names = [name.strip() for name in object_names.split(",") if name.strip()]
     action_node.result_names = object_names
     try:
         import bpy
 
+        objects = [obj for obj in (bpy.data.objects.get(name) for name in names) if obj]
         action_node.preview_object = next(
-            (bpy.data.objects.get(name) for name in names if bpy.data.objects.get(name)),
-            None,
+            (obj for obj in objects if obj.type == 'MESH'),
+            objects[0] if objects else None,
         )
         if action_node.preview_object is not None:
             action_node.preview_object.asset_generate_preview()
@@ -638,11 +672,11 @@ def connect_image_outputs_as_nodes(scene, action_node, image_names: str):
         if item.image and item.image.name in names
     ]
     if not outputs:
-        return None
+        return []
 
     base_x = action_node.position_x + action_node.width + RESULT_NODE_GAP
     top_y = action_node.position_y + action_node.height
-    first = None
+    created = []
     for index, item in outputs:
         # Ensure the output stands on its own rather than hiding inside the node.
         item.embedded_node_id = ""
@@ -657,9 +691,23 @@ def connect_image_outputs_as_nodes(scene, action_node, image_names: str):
             exclude_index=index,
         )
         add_link(scene, action_node.node_id, item.node_id, from_socket="image", to_socket="")
-        if first is None:
-            first = item
-    return first
+        created.append(item)
+    return created
+
+
+def connect_image_results(scene, action_node, image_names: str):
+    """Attach an image node's generated outputs to the graph.
+
+    A single result stays embedded in the producing node (its tile shows it).
+    Two or more results each become their own output node linked from the
+    producer, because one embedded preview would hide the rest. Each output
+    keeps a single link back to the producing node only.
+    """
+    names = [name.strip() for name in image_names.split(",") if name.strip()]
+    if len(names) <= 1:
+        return connect_image_result(scene, action_node, image_names)
+    outputs = connect_image_outputs_as_nodes(scene, action_node, image_names)
+    return outputs[0] if outputs else None
 
 
 def connect_video_result(scene, action_node, image_name: str):
@@ -711,53 +759,18 @@ def node_holds_mesh(scene, node_id: str) -> bool:
 
 
 def input_source_object_names(scene, action_node) -> list:
-    """Resolve the mesh object names feeding a mesh-feature node via its link."""
-    link = next(
-        (
-            link for link in scene.mixie_moodboard_links
-            if link.to_node_id == action_node.node_id
-        ),
-        None,
-    )
-    if link is None:
-        return []
-    return mesh_source_object_names(scene, link.from_node_id)
+    """Resolve the mesh object names feeding a mesh-feature node via its link.
 
-
-def create_mesh_output_node(scene, feature_node, object_names: str, title: str = "3D Result"):
-    """Create a standalone 3D asset node from imported objects, linked from the
-    producing feature node. Multiple objects (e.g. segmented parts) are grouped
-    into one node and shown together.
+    Scans for the MESH-bearing link specifically: a PBR node also carries image
+    reference links, so taking the first incoming link would miss the mesh when
+    an image happened to be connected first.
     """
-    import bpy
-    from .moodboard_utils import find_free_moodboard_position
+    for link in scene.mixie_moodboard_links:
+        if link.to_node_id != action_node.node_id:
+            continue
+        names = mesh_source_object_names(scene, link.from_node_id)
+        if names:
+            return names
+    return []
 
-    names = [name.strip() for name in object_names.split(",") if name.strip()]
-    if not names:
-        return None
 
-    asset = scene.mixie_moodboard_asset_nodes.add()
-    asset.node_id = new_node_id()
-    asset.object_names = ", ".join(names)
-    asset.title = title
-    asset.preview_object = next(
-        (bpy.data.objects.get(name) for name in names if bpy.data.objects.get(name)),
-        None,
-    )
-    if asset.preview_object is not None:
-        try:
-            asset.preview_object.asset_generate_preview()
-        except Exception:
-            pass
-
-    base_x = feature_node.position_x + feature_node.width + RESULT_NODE_GAP
-    top_y = feature_node.position_y + feature_node.height
-    asset.position_x, asset.position_y = find_free_moodboard_position(
-        asset.width,
-        asset.height,
-        base_x + asset.width * 0.5,
-        top_y - asset.height * 0.5,
-        scene=scene,
-    )
-    add_link(scene, feature_node.node_id, asset.node_id, from_socket="mesh", to_socket="")
-    return asset
