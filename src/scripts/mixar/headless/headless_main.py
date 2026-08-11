@@ -95,11 +95,15 @@ def _run() -> None:
     from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
     from mixar.modules.space_mixie_chat.core.executor import get_executor
 
-    def on_script_execute(script, request_id, tool_name="unknown", session_id=""):
+    def on_script_execute(
+        script, request_id, tool_name="unknown", session_id="", agent_ctx=None
+    ):
         # Sandbox has no fork "agent session"; queue unconditionally and let the
         # pump below execute + respond. (Production's handler gates on an active
         # session; the sandbox is its own dedicated process so that gate is moot.)
-        mte.queue_script_request(script, request_id, tool_name, session_id)
+        mte.queue_script_request(
+            script, request_id, tool_name, session_id, agent_ctx
+        )
         return None
 
     client = jc.create_jsonrpc_client(

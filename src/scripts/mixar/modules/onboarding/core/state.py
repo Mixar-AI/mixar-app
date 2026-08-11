@@ -22,8 +22,14 @@ Every transition funnels through ``transition_to``, which lets
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.analytics.constants import (
+    EVENT_ONBOARDING_FINISHED,
+    EVENT_ONBOARDING_STARTED,
+    EVENT_ONBOARDING_STEP,
+)
 from mixar.modules.onboarding.constants import (
     DEFAULT_STEP,
+    STEP_COMPLETION,
     STEP_DONE,
     WM_PROP_OPTED_OUT,
     WM_PROP_STEP,
@@ -31,6 +37,15 @@ from mixar.modules.onboarding.constants import (
 from mixar.modules.onboarding.core.steps import get_step
 
 logger = get_logger(__name__)
+
+
+def _capture_funnel(event: str, properties: dict, context=None) -> None:
+    """Telemetry only — onboarding must never break because of it."""
+    try:
+        from mixar.modules.common.analytics.capture import capture
+        capture(event, properties, context=context)
+    except Exception as exc:
+        logger.debug("Onboarding: telemetry capture skipped: %s", exc)
 
 
 def _wm(context=None):
@@ -62,11 +77,24 @@ def transition_to(step_id: str, context=None) -> None:
     set_step_id(step_id, context)
     logger.info("Onboarding: %s → %s", previous, step_id)
 
+    _capture_funnel(EVENT_ONBOARDING_STEP, {
+        "from_step": previous,
+        "to_step": step_id,
+    }, context)
+
     # Reaching DONE means the tour is over for this user — record
     # them in the seen-list so it doesn't open again on next launch.
     # Both completion (advance from COMPLETION → DONE) and skip_tour
     # funnel through here, so this single hook covers both exits.
     if step_id == STEP_DONE and previous != STEP_DONE:
+        try:
+            completed = previous == STEP_COMPLETION and not is_opted_out(context)
+        except Exception:
+            completed = False
+        _capture_funnel(EVENT_ONBOARDING_FINISHED, {
+            "outcome": "completed" if completed else "skipped",
+            "last_step": previous,
+        }, context)
         _mark_current_user_seen(context)
 
     tour_driver.apply_step(step_id, context)
@@ -145,6 +173,12 @@ def begin(context=None) -> None:
         overlay_renderer,
         overlay_state,
     )
+
+    try:
+        restarted = get_step_id(context) != DEFAULT_STEP
+    except Exception:
+        restarted = False
+    _capture_funnel(EVENT_ONBOARDING_STARTED, {"restarted": restarted}, context)
 
     set_step_id(DEFAULT_STEP, context)
     set_opted_out(False, context)

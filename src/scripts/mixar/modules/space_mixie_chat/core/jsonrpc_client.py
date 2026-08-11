@@ -58,7 +58,9 @@ class JSONRPCWebSocketClient:
         reconnect_delay: float = 1.0,
         max_reconnect_delay: float = 30.0,
         ping_interval: float = 15.0,
-        on_script_execute: Optional[Callable[[str, Optional[str]], dict]] = None,
+        on_script_execute: Optional[
+            Callable[[str, Optional[str], str, str, Optional[dict]], Optional[dict]]
+        ] = None,
         on_tool_start: Optional[Callable[[dict], None]] = None,
         on_tool_executing: Optional[Callable[[dict], None]] = None,
         on_tool_end: Optional[Callable[[dict], None]] = None,
@@ -255,6 +257,18 @@ class JSONRPCWebSocketClient:
                 if refreshed:
                     token = refreshed
             headers = [f"Authorization: Bearer {token}"] if token else []
+            # Extend the "Share Usage Data" toggle to the backend's
+            # server-side ws-connect/agent telemetry. Guarded: an
+            # analytics failure must never block the connection.
+            try:
+                from mixar.modules.common.analytics.preferences import (
+                    is_enabled as _telemetry_enabled,
+                )
+                headers.append(
+                    f"x-telemetry-consent: {'1' if _telemetry_enabled() else '0'}"
+                )
+            except Exception:
+                pass
 
             if not token:
                 logger.warning("No auth token available - connection may fail")
@@ -583,10 +597,13 @@ class JSONRPCWebSocketClient:
         script = params.get("script", "")
         tool_name = params.get("tool_name", "unknown")
         session_id = params.get("session_id", "")
+        agent_ctx = params.get("agent_ctx")
 
         if self._on_script_execute:
             try:
-                result = self._on_script_execute(script, request_id, tool_name, session_id)
+                result = self._on_script_execute(
+                    script, request_id, tool_name, session_id, agent_ctx
+                )
                 if result is None:
                     # Async handling - response will be sent via response queue
                     return
