@@ -68,6 +68,45 @@ def test_operator_wrapper_skips_ignored_operator_and_wraps_normal_one() -> None:
     assert NormalOperator.__mixar_analytics_wrapped__ is True
 
 
+def test_wrapped_methods_keep_exact_rna_signatures() -> None:
+    """register_class validates each method's positional-argument count.
+
+    Regression: a ``*args`` shim (2 positional args) registered fine for
+    ``execute`` but was rejected for ``invoke`` (expects 3), which silently
+    unregistered every invoke-only modal operator — Director's Navigate and
+    Explore drew as disabled buttons.
+    """
+    import inspect
+
+    class ModalOperator:
+        bl_idname = "mixar.modal_action"
+
+        def invoke(self, context, event):
+            return {"RUNNING_MODAL"}
+
+    class SimpleOperator:
+        bl_idname = "mixar.simple_action"
+
+        def execute(self, context):
+            return {"FINISHED"}
+
+    instrument_operator_classes((ModalOperator, SimpleOperator))
+
+    varargs = inspect.CO_VARARGS | inspect.CO_VARKEYWORDS
+    assert ModalOperator.invoke.__code__.co_argcount == 3
+    assert not ModalOperator.invoke.__code__.co_flags & varargs
+    assert SimpleOperator.execute.__code__.co_argcount == 2
+    assert not SimpleOperator.execute.__code__.co_flags & varargs
+
+    with patch("mixar.modules.common.analytics.capture.capture") as emit:
+        result = ModalOperator().invoke(SimpleNamespace(), SimpleNamespace())
+    assert result == {"RUNNING_MODAL"}
+    assert emit.call_args.args[1] == {
+        "operator": "mixar.modal_action",
+        "success": True,
+    }
+
+
 def test_native_export_wrapper_captures_initiated_without_filepath() -> None:
     from mixar.modules.common.ui.operators import native_export_ops
     from mixar.modules.common.analytics import export_events

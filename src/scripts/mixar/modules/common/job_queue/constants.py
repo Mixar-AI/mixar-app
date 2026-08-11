@@ -42,6 +42,7 @@ FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"
 FEATURE_LOOKDEV = "lookdev"
 FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
+FEATURE_WORLD_LABS = "world_labs"
 
 # ============================================================================
 # RESULT DOWNLOAD
@@ -146,6 +147,7 @@ __all__ = (
     "FEATURE_BRUSH_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
+    "FEATURE_WORLD_LABS",
     "QUEUE_TOAST_ID",
     "QUEUE_ACTIVE_TOAST_TTL_MS",
     "QUEUE_READY_TOAST_TTL_MS",

@@ -2,23 +2,29 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Prune Director beats whose native camera keys were deleted elsewhere.
+"""Reconcile Director beats with the native camera keys they mirror.
 
 The timeline strip and its orange handles are drawn from the ``beats``
 collection, but a keyframe's actual pose lives in native camera F-curves.
-Deleting keys in the Dope Sheet or Timeline editor removes the F-curve keys
-without touching the ``beats``, so the orange handles linger and the manifest
-still references poses that no longer exist.
+Editing those keys in the Dope Sheet or Timeline editor never touches the
+``beats``, so the strip can drift from the animation in both directions:
+deleted keys leave orphaned handles and stale manifest poses, while keys
+inserted natively (I-key, native auto-keying, pasted curves) animate the
+camera through a strip that shows nothing.
 
-A depsgraph handler watches the native Director key count while directing and,
-when it drops below the beat count (a genuine deletion — never a move, which
-keeps the count), a debounced timer prunes the orphaned beats through the
-ordinary ``remove_beat`` path. Following ``auto_key``: the handler only
-*detects*, the timer *mutates*, because editing scene data inside
+A depsgraph handler watches the native Director key count while directing.
+A drop below the beat count (a genuine deletion — never a move, which keeps
+the count) prunes orphaned beats through the ordinary ``remove_beat`` path;
+growth — or a shot freshly under watch — adopts keys the strip has never
+seen as beats of the active draft shot, mirroring the native timeline's
+insertion behavior. Following ``auto_key``: the handler only *detects*, the
+debounced timer *mutates*, because editing scene data inside
 ``depsgraph_update_post`` is unsafe (re-entrancy / crashes).
 """
 
 from __future__ import annotations
+
+import uuid
 
 import bpy
 from bpy.app.handlers import persistent
@@ -26,7 +32,7 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 
 from .anim_curves import assigned_fcurves
-from .shot_api import active_shot
+from .shot_api import active_shot, refresh_manifest, scope_preview_range
 
 logger = get_logger(__name__)
 
@@ -39,7 +45,7 @@ _CAMERA_PATHS = {
     "rotation_axis_angle",
 }
 
-_state = {"count": None, "dirty": False}
+_state = {"key": None, "count": None, "prune": False, "adopt": False}
 
 
 def _native_key_frames(camera) -> set[int]:
@@ -90,6 +96,44 @@ def prune_orphaned_beats(scene, shot) -> int:
     return removed
 
 
+def adopt_native_keyframes(scene, shot) -> int:
+    """Create beats for native camera keys the strip has never seen.
+
+    Keys inserted straight into the native timeline (Dope Sheet I-key,
+    native auto-keying, pasted F-curves) never pass ``capture_beat``, so
+    the camera animated while Director showed no keyframes. Adopted beats
+    carry no packed still — only a capture can render one. Frames already
+    claimed by any shot directing the same camera stay put: takes and
+    split shots deliberately share one camera timeline.
+    """
+    camera = getattr(shot, "camera", None)
+    if camera is None or shot.state != 'DRAFT':
+        return 0
+    native = _native_key_frames(camera)
+    if not native:
+        return 0
+    state = getattr(scene, "mixar_director", None)
+    shots = state.shots if state is not None else (shot,)
+    covered = {
+        int(beat.frame)
+        for item in shots
+        if item.camera == camera
+        for beat in item.beats
+    }
+    missing = sorted(native - covered)
+    if not missing:
+        return 0
+    for frame in missing:
+        beat = shot.beats.add()
+        beat.beat_id = uuid.uuid4().hex
+        beat.frame = frame
+    shot.active_beat_index = len(shot.beats) - 1
+    scene.frame_end = max(scene.frame_end, missing[-1])
+    refresh_manifest(scene, shot)
+    scope_preview_range(scene, shot)
+    return len(missing)
+
+
 def _watchable_shot(scene):
     state = getattr(scene, "mixar_director", None)
     if state is None or not state.is_directing:
@@ -113,40 +157,74 @@ def _redraw() -> None:
 def _on_depsgraph_update(scene, _depsgraph) -> None:
     shot = _watchable_shot(scene)
     if shot is None:
+        _state["key"] = None
         _state["count"] = None
         return
+    # Counts are only comparable while the same camera stays under watch;
+    # switching shots resets the baseline instead of faking an edit.
+    key = (scene.as_pointer(), shot.camera.name)
+    previous = _state["count"] if _state["key"] == key else None
     count = len(_native_key_frames(shot.camera))
-    previous = _state["count"]
+    _state["key"] = key
     _state["count"] = count
     # A drop below the beat count is a deletion the timeline hasn't followed.
     if previous is not None and count < previous and count < len(shot.beats):
-        _state["dirty"] = True
+        _state["prune"] = True
+        _ensure_timer()
+    # Growth — or a shot freshly under watch — may carry native keys the
+    # strip has never seen. An unchanged count is a MOVE and adopts nothing:
+    # the moved key's beat still exists, only its frame went stale.
+    if count and (previous is None or count > previous):
+        _state["adopt"] = True
         _ensure_timer()
 
 
-def _prune_timer():
-    if not _state["dirty"]:
+def _sync_timer():
+    prune, adopt = _state["prune"], _state["adopt"]
+    _state["prune"] = _state["adopt"] = False
+    if not (prune or adopt):
         return None
-    _state["dirty"] = False
     scene = getattr(bpy.context, "scene", None)
     shot = _watchable_shot(scene) if scene is not None else None
     if shot is None:
         return None
+    pruned = adopted = 0
     try:
-        removed = prune_orphaned_beats(scene, shot)
+        if prune:
+            pruned = prune_orphaned_beats(scene, shot)
+        if adopt:
+            adopted = adopt_native_keyframes(scene, shot)
     except Exception:
-        logger.exception("Beat sync could not prune orphaned keyframes")
+        logger.exception("Beat sync could not reconcile native keyframes")
         return None
-    if removed:
-        logger.info("Beat sync pruned %s orphaned keyframe(s)", removed)
+    if pruned or adopted:
+        if pruned:
+            logger.info("Beat sync pruned %s orphaned keyframe(s)", pruned)
+        if adopted:
+            logger.info("Beat sync adopted %s native keyframe(s)", adopted)
         _state["count"] = len(_native_key_frames(shot.camera))
         _redraw()
     return None
 
 
 def _ensure_timer() -> None:
-    if not bpy.app.timers.is_registered(_prune_timer):
-        bpy.app.timers.register(_prune_timer, first_interval=_TIMER_INTERVAL)
+    if not bpy.app.timers.is_registered(_sync_timer):
+        bpy.app.timers.register(_sync_timer, first_interval=_TIMER_INTERVAL)
+
+
+def request_reconcile() -> None:
+    """Reconcile now instead of waiting for the next depsgraph event.
+
+    The watcher only ticks inside ``depsgraph_update_post``, but entering
+    Director or switching shots changes which camera is under watch without
+    causing a depsgraph update — an already-keyed camera showed an empty
+    strip until some unrelated edit (an outliner rename) happened to tick
+    the handler. Resets the baseline and runs the adopt pass immediately;
+    the timer still gates on an active directing session.
+    """
+    _state["key"] = None
+    _state["adopt"] = True
+    _ensure_timer()
 
 
 def register() -> None:
@@ -159,6 +237,6 @@ def unregister() -> None:
     handlers = bpy.app.handlers.depsgraph_update_post
     if _on_depsgraph_update in handlers:
         handlers.remove(_on_depsgraph_update)
-    if bpy.app.timers.is_registered(_prune_timer):
-        bpy.app.timers.unregister(_prune_timer)
-    _state.update({"count": None, "dirty": False})
+    if bpy.app.timers.is_registered(_sync_timer):
+        bpy.app.timers.unregister(_sync_timer)
+    _state.update({"key": None, "count": None, "prune": False, "adopt": False})
