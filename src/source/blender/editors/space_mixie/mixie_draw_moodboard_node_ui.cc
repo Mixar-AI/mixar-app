@@ -103,12 +103,13 @@ static uiBut *add_parameter_button(uiBlock *block,
     value_property = parameter_type == 1 ? "value_integer" : "value_float";
     minimum = RNA_float_get(parameter, "minimum");
     maximum = RNA_float_get(parameter, "maximum");
-    /* Always a plain manual number field (ButType::Num — click to type, drag to
-     * nudge), never a slider, even when the catalog marks the param
-     * widget="slider". A slider stretches the param's full range across the
-     * button, which made Duration (catalog max 3000) unusable for a 30s cap and
-     * the tiny image-count range fiddly. The node deliberately ignores the
-     * slider widget hint for numerics. */
+    /* Plain manual number field (click to type, drag to nudge), clamped to the
+     * catalog range. NOT a slider even when the catalog marks widget="slider":
+     * a slider's drag range comes from the shared value_integer/value_float RNA
+     * property (which has no per-param range, so ~±INT_MAX), while the catalog
+     * min/max only clamp on release — the slider dragged to huge values and
+     * snapped back. A correct slider needs a per-param property range (as the
+     * N-panel engine builds); the node deliberately uses Num until then. */
     button_type = ButType::Num;
   }
   else if (parameter_type == 3) {
@@ -320,23 +321,28 @@ static void add_action_toolbar(uiBlock *block,
      * button into the word-wrapping, scrollable multi-line renderer
      * (ui_but_is_multiline_text). A fixed short band stayed single-line on
      * high-DPI displays where UI_UNIT_Y is large. */
-    const int prompt_top = node_region.ymax - prompt_margin;
-    const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
-    const int prompt_height = std::max(46, prompt_top - prompt_bottom);
-    const int prompt_y = prompt_top - prompt_height;
-    uiBut *prompt = screen_prop_button(block,
-                                       node,
-                                       "prompt",
-                                       "",
-                                       ButType::Text,
-                                       node_region.xmin + prompt_margin,
-                                       prompt_y,
-                                       BLI_rcti_size_x(&node_region) - prompt_margin * 2,
-                                       prompt_height);
-    if (prompt) {
-      UI_but_placeholder_set(prompt, "Describe what you want to create...");
-      UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
-      disable_while_submitted(prompt, generation_running);
+    /* Mesh-only nodes (Retopology / Mesh Segmentation / Auto Rig) take no text
+     * guidance, so they hide the prompt field entirely; the Generate button
+     * below is still drawn. */
+    if (RNA_boolean_get(node, "show_prompt")) {
+      const int prompt_top = node_region.ymax - prompt_margin;
+      const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
+      const int prompt_height = std::max(46, prompt_top - prompt_bottom);
+      const int prompt_y = prompt_top - prompt_height;
+      uiBut *prompt = screen_prop_button(block,
+                                         node,
+                                         "prompt",
+                                         "",
+                                         ButType::Text,
+                                         node_region.xmin + prompt_margin,
+                                         prompt_y,
+                                         BLI_rcti_size_x(&node_region) - prompt_margin * 2,
+                                         prompt_height);
+      if (prompt) {
+        UI_but_placeholder_set(prompt, "Describe what you want to create...");
+        UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
+        disable_while_submitted(prompt, generation_running);
+      }
     }
 
     char node_id[MIXIE_GRAPH_ID_BUF];

@@ -21,6 +21,7 @@ neither undo nor .blend persistence, matching ``generation_params``.
 import time
 
 import bpy
+from bpy.app.handlers import persistent
 from bpy.props import (
     CollectionProperty,
     EnumProperty,
@@ -216,6 +217,27 @@ def _attach_listeners() -> None:
             pass
 
 
+@persistent
+def _reset_queues_on_file_load(_filepath):
+    """Start every opened file with an empty queue.
+
+    The FeatureQueue singletons and this WindowManager mirror are process-global
+    and not stored in the .blend, so without this the previous file's completed/
+    failed (and any in-flight) jobs linger in the Queue panel after opening
+    another file, with now-stale scene/node references.
+    """
+    try:
+        for queue in all_queues():
+            queue.clear_all()
+    except Exception:
+        pass
+    # Guarantee the mirror reflects the now-empty queues even if none exist yet.
+    try:
+        _sync_mirror(None)
+    except Exception:
+        pass
+
+
 def _force_list_text_sel_white():
     """Make the highlighted UIList row's text white.
 
@@ -250,6 +272,9 @@ def register():
 
     _attach_listeners()
 
+    if _reset_queues_on_file_load not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_reset_queues_on_file_load)
+
     # Deferred preview-icon load — mutates bpy.data via bpy.utils.previews,
     # so it MUST run on a timer tick, never inside a draw_item callback.
     try:
@@ -261,6 +286,11 @@ def register():
 
 def unregister():
     from bpy.utils import unregister_class
+
+    try:
+        bpy.app.handlers.load_post.remove(_reset_queues_on_file_load)
+    except ValueError:
+        pass
 
     try:
         from mixar.modules.common.job_queue.ui import queue_status_icons

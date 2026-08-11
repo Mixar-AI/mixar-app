@@ -51,6 +51,10 @@ _CONNECTABLE_TYPES = {
 }
 _MAX_INPUT_SOCKETS = 32
 _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
+# Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
+# Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
+# keeps it — Tripo texturing accepts a texture prompt.
+_PROMPTLESS_ACTION_TYPES = frozenset({'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -399,6 +403,9 @@ def sync_node_schema(_scene, node) -> None:
     except Exception:
         model = {}
         service = {}
+    # Prompt visibility depends only on the node type, not the catalog, so set it
+    # regardless of whether the catalog lookup above succeeded.
+    node.show_prompt = node.action_type not in _PROMPTLESS_ACTION_TYPES
     input_contract = build_input_contract(service, model)
     # Mesh-feature nodes take a 3D mesh from a connected 3D node. The backend
     # services export the mesh client-side (no connectable input in their
@@ -467,7 +474,24 @@ def sync_node_schema(_scene, node) -> None:
             reconcile_node_links(_scene, node)
         return
 
-    old_values = {parameter.name: _parameter_value(parameter) for parameter in node.parameters}
+    # Preserve user-edited values across a SAME-model refresh (catalog reload,
+    # visibility change) — but when the service/model actually changes, reset
+    # every parameter to the NEW model's defaults. Otherwise a param shared by
+    # name across models (e.g. face_count) kept the previous model's value while
+    # model-specific params reset, an inconsistent, stale field.
+    try:
+        previous_schema = json.loads(node.schema_json or "{}")
+    except (TypeError, ValueError):
+        previous_schema = {}
+    model_changed = (
+        previous_schema.get("service") != service_key
+        or previous_schema.get("model") != model_slug
+    )
+    old_values = (
+        {}
+        if model_changed
+        else {parameter.name: _parameter_value(parameter) for parameter in node.parameters}
+    )
     node.parameters.clear()
     node.input_sockets.clear()
     for spec in input_contract["sockets"]:

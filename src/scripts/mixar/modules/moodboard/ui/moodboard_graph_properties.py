@@ -394,6 +394,11 @@ class MixieMoodboardActionNode(PropertyGroup):
         description="The backend capability currently exposes multiple moodboard services",
         default=True,
     )
+    show_prompt: BoolProperty(
+        name="Show Prompt",
+        description="This node type takes a text prompt",
+        default=True,
+    )
     model: EnumProperty(
         name="Model",
         description="Generation model supplied by the backend catalog",
