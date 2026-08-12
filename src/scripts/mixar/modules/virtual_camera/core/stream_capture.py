@@ -82,19 +82,19 @@ class ViewportCapture:
             depsgraph, x=width, y=height
         )
 
+        # GPU work below may raise when no GPU context is current in the
+        # timer tick — the caller counts failures and disables streaming
+        # rather than letting one dead subsystem kill camera control.
         offscreen = self._ensure_offscreen(width, height)
-        try:
-            offscreen.draw_view3d(
-                bpy.context.scene,
-                bpy.context.view_layer,
-                space,
-                region,
-                view_matrix,
-                projection_matrix,
-                do_color_management=True,
-            )
-        except Exception:
-            return None
+        offscreen.draw_view3d(
+            bpy.context.scene,
+            bpy.context.view_layer,
+            space,
+            region,
+            view_matrix,
+            projection_matrix,
+            do_color_management=True,
+        )
 
         with offscreen.bind():
             fb = gpu.state.active_framebuffer_get()

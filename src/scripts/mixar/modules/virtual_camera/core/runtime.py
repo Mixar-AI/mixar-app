@@ -16,6 +16,8 @@ import time
 
 import bpy
 
+from mixar.config.logging_config import get_logger
+
 from ..constants import (
     APPLY_TIMER_INTERVAL,
     STATE_SYNC_INTERVAL,
@@ -26,6 +28,12 @@ from . import stream_encode
 from .camera_driver import CameraDriver
 from .server import get_server
 from .stream_capture import ViewportCapture
+
+logger = get_logger(__name__)
+
+# Consecutive capture failures before streaming is disabled for the session
+# (camera control must survive a dead GPU-capture path).
+_CAPTURE_FAILURE_LIMIT = 3
 
 
 class _EncoderWorker:
@@ -83,12 +91,18 @@ class Runtime:
         self._last_sync = 0.0
         self._last_state: dict | None = None
         self._was_connected = False
+        self._capture_failures = 0
+        self.capture_disabled = False
+        self.last_error = ""
 
     # ---- lifecycle ----------------------------------------------------------
 
     def start(self) -> bool:
         if not self.server.start():
             return False
+        self._capture_failures = 0
+        self.capture_disabled = False
+        self.last_error = ""
         if self._encoder is None:
             self._encoder = _EncoderWorker(self.server.send_stream_frame)
         if not self._timer_registered:
@@ -112,6 +126,18 @@ class Runtime:
     # ---- timer --------------------------------------------------------------
 
     def _tick(self):
+        """Guarded timer entry: an unhandled exception would make Blender
+        silently unregister the timer, freezing camera control while the
+        panel still shows a connected phone (same rationale as the bootstrap
+        UI loader's batch tick)."""
+        try:
+            return self._tick_inner()
+        except Exception:
+            logger.exception("virtual_camera: control tick failed")
+            self.last_error = "Internal error in control tick — see console"
+            return APPLY_TIMER_INTERVAL
+
+    def _tick_inner(self):
         if not self.server.state.running:
             self._timer_registered = False
             self.capture.free()
@@ -182,6 +208,8 @@ class Runtime:
                 self.driver.revert()
 
     def _pump_stream(self, session, now: float) -> None:
+        if self.capture_disabled:
+            return
         settings = session.snapshot_settings()
         fps = float(settings.get("stream_fps") or 0)
         if fps <= 0 or self._encoder is None:
@@ -192,7 +220,22 @@ class Runtime:
         camera = self.driver.camera()
         quality = int(settings.get("stream_quality", 2))
         short_edge = STREAM_QUALITY_SIZES.get(quality, 720)
-        result = self.capture.capture(camera, short_edge)
+        try:
+            result = self.capture.capture(camera, short_edge)
+        except Exception:
+            self._capture_failures += 1
+            if self._capture_failures >= _CAPTURE_FAILURE_LIMIT:
+                self.capture_disabled = True
+                self.last_error = "Viewport streaming unavailable — camera control still active"
+                logger.exception(
+                    "virtual_camera: capture failed %d times, streaming disabled",
+                    self._capture_failures,
+                )
+                self.server.send_json(
+                    {"t": "toast", "msg": "Live view unavailable on this system"}
+                )
+            return
+        self._capture_failures = 0
         if result is not None:
             raw, width, height = result
             self._encoder.submit(raw, width, height, quality)

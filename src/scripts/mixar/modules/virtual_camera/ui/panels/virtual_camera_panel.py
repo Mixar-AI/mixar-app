@@ -77,6 +77,11 @@ class MIXAR_PT_virtual_camera(Panel):
                 rec.alert = True
                 rec.label(text="Recording keyframes", icon='REC')
 
+        if runtime.last_error:
+            err = layout.row()
+            err.alert = True
+            err.label(text=runtime.last_error, icon='ERROR')
+
         layout.separator()
         layout.operator("mixar.virtual_camera_stop", icon='PAUSE')
 
