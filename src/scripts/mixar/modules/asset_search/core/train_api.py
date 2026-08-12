@@ -32,10 +32,15 @@ from mixar.modules.asset_search.constants import (
 
 logger = get_logger(__name__)
 
-# Images per training POST. Small enough that each request finishes in tens of
-# seconds (progress ticks, timeouts are per batch), large enough to amortize
-# request overhead and give the server a reasonable GPU batch.
-UPLOAD_BATCH_SIZE = 25
+# Images per training POST. Matches the server's per-request ceiling
+# (MAX_TRAIN_IMAGES = 500) so a typical library trains in ONE request. The
+# server endpoint is rate-limited (5/minute; 30/hour) AND credit-metered PER
+# REQUEST — the old value of 25 turned any real library into many back-to-back
+# requests that 429'd mid-run and multiplied the credit charge N-fold.
+UPLOAD_BATCH_SIZE = 500
+# And a byte ceiling under the server's 300MB/request cap, so an unusually large
+# set of previews splits before it 413s. Whichever cap trips first ends a batch.
+UPLOAD_BATCH_MAX_BYTES = 250 * 1024 * 1024
 
 
 def prepare_api(metadata, operator):
@@ -85,14 +90,21 @@ def build_upload_batches(assets, files_by_image):
         if info.get("image_name") and info["image_name"] in files_by_image
     ]
     batches = []
-    for i in range(0, len(paired), UPLOAD_BATCH_SIZE):
-        chunk = paired[i:i + UPLOAD_BATCH_SIZE]
-        batches.append({
-            "metadata": [info for info, _ in chunk],
-            "files": [
-                (f"{info['image_name']}.jpg", data) for info, data in chunk
-            ],
-        })
+    cur_meta, cur_files, cur_bytes = [], [], 0
+    for info, data in paired:
+        # Flush before adding an item that would exceed EITHER cap — but never
+        # emit an empty batch (a single oversized item still ships alone).
+        if cur_meta and (
+            len(cur_meta) >= UPLOAD_BATCH_SIZE
+            or cur_bytes + len(data) > UPLOAD_BATCH_MAX_BYTES
+        ):
+            batches.append({"metadata": cur_meta, "files": cur_files})
+            cur_meta, cur_files, cur_bytes = [], [], 0
+        cur_meta.append(info)
+        cur_files.append((f"{info['image_name']}.jpg", data))
+        cur_bytes += len(data)
+    if cur_meta:
+        batches.append({"metadata": cur_meta, "files": cur_files})
     return batches
 
 
