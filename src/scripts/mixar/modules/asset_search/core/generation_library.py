@@ -42,6 +42,11 @@ _saved_job_ids: set = set()
 _batch_dirty = False
 _retrain_scheduled = False
 _MAX_RETRAIN_WAIT_TICKS = 60  # ~60 * 2s = 2 min max wait for a busy manual train
+# Deferred-archive queue: newly-succeeded jobs are archived one-per-timer-tick
+# OFF the synchronous queue-notify path, so a completing generation never blocks
+# the queue and each preview render is separated by a UI frame.
+_archive_queue: list = []
+_archive_timer_running = False
 
 
 # --------------------------------------------------------------------------- #
@@ -82,6 +87,17 @@ def ensure_registered() -> None:
         new_lib = libs.new(name=GENERATION_LIBRARY_NAME)
         new_lib.path = path
         logger.info("[GenLibrary] Registered '%s' -> %s", GENERATION_LIBRARY_NAME, path)
+        # Auto-enroll our OWN library the first time it is registered, so
+        # archived generations are actually embedded and become reusable out of
+        # the box (archival is a platform default, not an opt-in). Only on NEW
+        # registration — a later deliberate un-enroll by the user is respected.
+        try:
+            from mixar.modules.asset_search.core.library_enrollment import (
+                set_enrolled,
+            )
+            set_enrolled(GENERATION_LIBRARY_NAME, True)
+        except Exception as exc:  # noqa: BLE001 — best-effort
+            logger.debug("[GenLibrary] auto-enroll skipped: %s", exc)
     except Exception:
         logger.exception("[GenLibrary] Could not register the generations library")
 
@@ -157,6 +173,7 @@ def _on_queue_changed(queue) -> None:
     try:
         from mixar.modules.common.job_queue.core.job import JobState
 
+        enqueued = False
         for job in queue.snapshot():
             if job.id in _saved_job_ids:
                 continue
@@ -167,12 +184,58 @@ def _on_queue_changed(queue) -> None:
             if not (job.imported_object_names or "").strip():
                 continue
             _saved_job_ids.add(job.id)  # mark first — never retry a bad save
-            _save_job(job)
+            # Archive OFF this synchronous notify call — the actual save renders
+            # a 512² preview on the main thread, which must not block the queue.
+            _archive_queue.append(job)
+            enqueued = True
 
-        if _batch_dirty and _all_qualifying_queues_idle():
+        if enqueued:
+            _ensure_archive_timer()
+        elif _batch_dirty and not _archive_queue and _all_qualifying_queues_idle():
+            # No new archives pending and the queues have drained — kick the
+            # retrain now (otherwise it fires when the archive queue empties).
             _schedule_retrain()
     except Exception:
         logger.exception("[GenLibrary] listener error")
+
+
+def _ensure_archive_timer() -> None:
+    global _archive_timer_running
+    if _archive_timer_running:
+        return
+    _archive_timer_running = True
+    bpy.app.timers.register(_process_archive_queue, first_interval=0.0)
+
+
+def _process_archive_queue():
+    """Archive ONE queued generation per tick, then reschedule if more remain.
+
+    Runs on the main thread (bpy.data / rendering require it) but OFF the
+    synchronous queue listener, so a completing generation returns immediately
+    and the UI gets a frame between preview renders instead of freezing through
+    a back-to-back burst."""
+    global _archive_timer_running
+    if not _archive_queue:
+        _archive_timer_running = False
+        if _batch_dirty and _all_qualifying_queues_idle():
+            _schedule_retrain()
+        return None
+
+    job = _archive_queue.pop(0)
+    try:
+        _save_job(job)
+    except Exception:
+        logger.exception(
+            "[GenLibrary] deferred archive failed for job %s",
+            getattr(job, "id", "?")[:8],
+        )
+
+    if _archive_queue:
+        return 0.0  # more to archive — next tick (UI redraws between)
+    _archive_timer_running = False
+    if _batch_dirty and _all_qualifying_queues_idle():
+        _schedule_retrain()
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -258,6 +321,18 @@ def _schedule_retrain() -> None:
     global _retrain_scheduled
     if _retrain_scheduled:
         return
+    # Nothing enrolled → a train reports "No libraries selected" and paints a RED
+    # failure banner in the asset panel after every unrelated generation. Skip
+    # silently; the archived .blends stay on disk and get embedded whenever the
+    # user next enrolls a library and trains.
+    try:
+        from mixar.modules.asset_search.core.library_enrollment import (
+            enrolled_names,
+        )
+        if not enrolled_names():
+            return
+    except Exception:  # noqa: BLE001 — if we can't tell, fall through and train
+        pass
     _retrain_scheduled = True
 
     state = {"ticks": 0}
