@@ -483,6 +483,16 @@ class MIXIE_OT_train_asset_model(Operator):
         self._removed_assets = []
         self._metadata_checksum = None
 
+        # A completed train changed the indexed libraries — drop the Library
+        # chat-mode browse cache so its next search re-scans and reflects the
+        # new/removed assets (fixes "search still shows the old library").
+        if success:
+            try:
+                from mixar.modules.space_mixie_chat.core import library_browse
+                library_browse.invalidate()
+            except Exception:
+                pass
+
         if not silent:
             self.report({"INFO" if success else "WARNING"}, message)
         logger.debug("[Asset Training] %s%s", message, " (auto)" if silent else "")

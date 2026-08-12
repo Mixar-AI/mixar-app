@@ -111,19 +111,39 @@ def _redraw():
                 area.tag_redraw()
 
 
-def _remove_grid_bubbles(scene) -> None:
-    """Drop any prior library-browse bubble so the grid refreshes in place."""
+def _grid_bubble(scene):
+    """The ONE library-browse bubble, updated in place. Reuses the first found
+    and removes any extras (freeing their thumbnails) so a search, a mode-entry
+    'show all', and their timers can never leave a second stale grid behind —
+    the race that showed a previous asset card under a 'No matches' message."""
+    keep = None
     for i in range(len(scene.mixie_chat_messages) - 1, -1, -1):
-        bid = getattr(scene.mixie_chat_messages[i], "bubble_id", "") or ""
-        if bid.startswith(LIBRARY_BUBBLE_PREFIX):
+        msg = scene.mixie_chat_messages[i]
+        if not (getattr(msg, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
+            continue
+        if keep is None:
+            keep = msg
+        else:
+            _cleanup_bubble(msg)
             scene.mixie_chat_messages.remove(i)
+    if keep is None:
+        keep = scene.mixie_chat_messages.add()
+        keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
+        keep.sender = "AGENT"
+        keep.message_type = "AGENT"
+    return keep
 
 
-def _post_bubble(scene, content: str):
-    msg = scene.mixie_chat_messages.add()
-    msg.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
-    msg.sender = "AGENT"
-    msg.message_type = "AGENT"
+def _cleanup_bubble(bubble) -> None:
+    """Free the thumbnail images a grid bubble generated."""
+    try:
+        from . import asset_choice_previews
+        asset_choice_previews.cleanup_bubble(bubble)
+    except Exception:
+        pass
+
+
+def _set_content(msg, content: str) -> None:
     msg.content = content
     msg.text = content
     try:
@@ -134,22 +154,28 @@ def _post_bubble(scene, content: str):
         )
     except Exception:
         pass
-    return msg
 
 
 def build_library_grid(context, query: str = "", force: bool = False) -> None:
-    """(Re)build the in-chat asset grid for *query* ("" = show everything)."""
+    """(Re)build the in-chat asset grid for *query* ("" = show everything).
+
+    Everything lands in ONE reused bubble, so a fresh search fully replaces the
+    prior grid (no leftover asset cards) and the enumeration re-scans when forced
+    or when the cache was invalidated (e.g. after a train indexed a new library).
+    """
     scene = context.scene
     if not hasattr(scene, "mixie_chat_messages"):
         return
     query = (query or "").strip()
 
     assets = _enumerate_assets(context, force=force)
-    _remove_grid_bubbles(scene)
+    msg = _grid_bubble(scene)
+    _cleanup_bubble(msg)
+    msg.action_items.clear()
 
     if not assets:
-        _post_bubble(
-            scene,
+        _set_content(
+            msg,
             "**Your library is empty.** Enroll an asset library in the Assets "
             "workspace — it trains automatically, then its assets show up here.",
         )
@@ -166,14 +192,11 @@ def build_library_grid(context, query: str = "", force: bool = False) -> None:
     if len(filtered) > len(shown):
         header += f" · showing the first {len(shown)}, refine your search"
     if not shown:
-        header += "\n\nNo matches — try a different search."
-        _post_bubble(scene, header)
+        _set_content(msg, header + "\n\nNo matches — try a different search.")
         _redraw()
         return
-    header += "\n\nClick an asset to add it to the scene at the 3D cursor."
 
-    msg = _post_bubble(scene, header)
-    msg.action_items.clear()
+    _set_content(msg, header + "\n\nClick an asset to add it to the scene at the 3D cursor.")
     for i, asset in enumerate(shown):
         action = msg.action_items.add()
         action.label = asset["name"]

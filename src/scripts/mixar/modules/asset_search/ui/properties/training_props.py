@@ -35,6 +35,11 @@ def _enrolled_update(self, context):
         schedule_auto_train("enrollment", allow_empty=not self.enabled)
     except Exception:  # noqa: BLE001 — enrollment persistence must never fail
         pass
+    try:
+        from mixar.modules.space_mixie_chat.core import library_browse
+        library_browse.invalidate()  # enrolled set changed — refresh the browse grid
+    except Exception:
+        pass
 
 
 class MixieAssetLibraryItem(PropertyGroup):
