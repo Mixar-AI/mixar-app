@@ -142,8 +142,45 @@ def enter_camera_view(context, camera, *, remember: bool = True):
         space.camera = camera
     space.region_3d.view_perspective = 'CAMERA'
     space.lock_camera = True
+    # Camera view and free-fly exploration are mutually exclusive; every
+    # path back into a camera (shot switch, keyframe jump, new take) must
+    # end Explore or the overlay keeps offering Add Camera Here in-frame.
+    state = getattr(context.scene, "mixar_director", None)
+    if state is not None and state.navigation_mode == 'EXPLORE':
+        state.navigation_mode = 'NAVIGATE'
     area.tag_redraw()
     return target
+
+
+def enter_free_view(context):
+    """Leave camera lock so navigation moves the viewpoint, not the camera."""
+    target = find_view3d_context(context)
+    if target is None:
+        raise RuntimeError("No 3D viewport is available")
+    _window, area, _region, space = target
+    space.lock_camera = False
+    if space.region_3d.view_perspective == 'CAMERA':
+        space.region_3d.view_perspective = 'PERSP'
+    area.tag_redraw()
+    return target
+
+
+def invoke_explore_walk(context):
+    """Fly the viewport with WASD walk while no camera is being driven.
+
+    Generated worlds import at a scale where orbit/zoom alone cannot reach
+    an interior vantage point comfortably; walk is the travel tool. The
+    shot camera stays untouched — Add Camera Here captures the view later.
+    """
+    target = enter_free_view(context)
+    window, area, region, space = target
+    with context.temp_override(
+        window=window,
+        area=area,
+        region=region,
+        space_data=space,
+    ):
+        return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target
 
 
 def restore_view(context, scene) -> None:
@@ -221,16 +258,39 @@ def invoke_walk(context, camera):
         return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target
 
 
+def select_camera_object(context, camera) -> None:
+    """Make *camera* the only selected, active object in the view layer.
+
+    Precise gizmos and transform hotkeys follow the selection, so every
+    deliberate switch of the directed camera must hand it over — otherwise
+    a gizmo drag or G/R keeps editing the previous shot's camera. Called
+    from shot/camera switches only, never from plain view entry: captures
+    re-enter the camera view too, and stealing the selection there would
+    break flows that act on the selected object (character Animation
+    presets).
+    """
+    view_layer = getattr(context, "view_layer", None)
+    objects = getattr(view_layer, "objects", None)
+    if objects is None or camera is None:
+        return
+    try:
+        for obj in list(getattr(objects, "selected", ()) or ()):
+            obj.select_set(False)
+        camera.select_set(True)
+        objects.active = camera
+    except (AttributeError, RuntimeError, ReferenceError):
+        # Not linked into the active view layer (cross-scene shot) or a
+        # dying reference during load/undo — selection is meaningless then.
+        pass
+
+
 def enter_precise_mode(context, camera) -> None:
     """Select the camera and expose native transform gizmos."""
     _window, area, _region, space = enter_camera_view(
         context, camera, remember=False,
     )
     space.lock_camera = False
-    for obj in getattr(context, "selected_objects", ()):
-        obj.select_set(False)
-    camera.select_set(True)
-    context.view_layer.objects.active = camera
+    select_camera_object(context, camera)
     space.show_gizmo = True
     for attr in ("show_gizmo_object_translate", "show_gizmo_object_rotate"):
         if hasattr(space, attr):

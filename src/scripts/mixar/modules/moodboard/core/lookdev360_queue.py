@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
@@ -381,6 +382,9 @@ def enqueue_lookdev360_job(
         stored_obj_path=stored_obj_path,
     )
     queue = _get_lookdev360_queue()
+    # Non-emitting marker only — the backend emits generation.submitted
+    # at the job-queue submit endpoint (feeds draft-abandonment suppression).
+    note_generation_submitted("texture_gen")
     if not queue.submit(job):
         logger.warning("[Lookdev360] duplicate job rejected: %s", job.label)
         return None

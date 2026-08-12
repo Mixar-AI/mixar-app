@@ -252,10 +252,13 @@ def download_images_to_moodboard(
     name_prefix: str,
     prompt: str,
     job_id: str,
+    on_added=None,
     on_done,
     on_error,
     undo_message: str = "",
     base_name: str = "",
+    scene_name: str = "",
+    should_apply=None,
 ) -> None:
     """Download images from URLs in bg thread, add to moodboard on main thread.
 
@@ -271,10 +274,20 @@ def download_images_to_moodboard(
         Job ID for moodboard handle tracking.
     on_done : callable(names_str)
         Called on main thread with comma-separated image names.
+    on_added : callable(names_str), optional
+        Called after moodboard insertion but before the undo snapshot. Use for
+        durable metadata/placement that redo must restore with the image.
+        Failure rolls back the new cards and image datablocks.
     on_error : callable(error_str)
         Called on main thread if all downloads fail.
     undo_message : str, optional
         If set, pushes an undo step with this message after adding images.
+    scene_name : str, optional
+        Originating Blender scene. Queue jobs set this so changing the active
+        scene while a download runs cannot redirect the generated images.
+    should_apply : callable, optional
+        Main-thread cancellation guard. When false, downloaded temp files are
+        discarded without inserting images or firing completion callbacks.
     """
 
     def _bg_download():
@@ -328,6 +341,11 @@ def download_images_to_moodboard(
                     load_image_from_file,
                 )
 
+                if should_apply is not None and not should_apply():
+                    for temp_path, _name, _byte_count in downloaded_files:
+                        cleanup_temp_image(temp_path)
+                    return None
+
                 loaded_images = []
                 for temp_path, name, byte_count in downloaded_files:
                     load_started_at = time.time()
@@ -353,23 +371,88 @@ def download_images_to_moodboard(
                     on_error("Failed to load generated images")
                     return None
 
+                target_scene = None
+                if scene_name:
+                    try:
+                        target_scene = bpy.data.scenes.get(scene_name)
+                    except Exception:
+                        target_scene = None
+                    if target_scene is None:
+                        for img in loaded_images:
+                            try:
+                                bpy.data.images.remove(img)
+                            except Exception:
+                                pass
+                        on_error(f"Originating scene '{scene_name}' no longer exists")
+                        return None
+                else:
+                    target_scene = getattr(bpy.context, "scene", None)
+                if target_scene is None:
+                    for img in loaded_images:
+                        try:
+                            bpy.data.images.remove(img)
+                        except Exception:
+                            pass
+                    on_error("No Blender scene is available for generated images")
+                    return None
+
+                added_images = []
                 for img in loaded_images:
                     try:
                         add_image_to_moodboard(
-                            img, prompt, job_handle=job_id,
+                            img,
+                            prompt,
+                            job_handle=job_id,
+                            scene=target_scene,
                         )
+                        added_images.append(img)
                     except Exception as e:
                         logger.error(
                             "Failed to add image to moodboard: %s", e,
                         )
+                        try:
+                            bpy.data.images.remove(img)
+                        except Exception:
+                            pass
 
-                names = ", ".join(img.name for img in loaded_images)
+                if not added_images:
+                    on_error("Failed to add generated images to the moodboard")
+                    return None
+
+                names = ", ".join(img.name for img in added_images)
+                if on_added is not None:
+                    try:
+                        on_added(names)
+                    except Exception as e:
+                        # Metadata hooks may be part of the result contract
+                        # (for example, character-component provenance). Roll
+                        # back the cards and their freshly loaded datablocks so
+                        # a failed hook cannot leave a successful-looking,
+                        # untraceable result on the moodboard.
+                        items = target_scene.mixie_moodboard_images
+                        for index in range(len(items) - 1, -1, -1):
+                            try:
+                                item = items[index]
+                                if (
+                                    getattr(item, "mixar_job_handle", "") == job_id
+                                    and getattr(item, "image", None) in added_images
+                                ):
+                                    items.remove(index)
+                            except Exception:
+                                pass
+                        for img in added_images:
+                            try:
+                                bpy.data.images.remove(img)
+                            except Exception:
+                                pass
+                        on_error(f"Could not finalize generated images: {e}")
+                        return None
                 if undo_message:
                     bpy.ops.ed.undo_push(message=undo_message)
                 logger.debug(
                     "[Queue] image moodboard update completed job=%s count=%d total=%.3fs",
                     job_id,
-                    len(loaded_images),
+                    len(added_images),
                     time.time() - batch_started_at,
                 )
                 on_done(names)

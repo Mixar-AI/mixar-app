@@ -33,7 +33,7 @@ from mixar.modules.hunyuan.constants import (
     RETOPOLOGY_HUNYUAN_SERVICE as RETOPOLOGY_JOB_TYPE,
     RETOPOLOGY_HUNYUAN_MODEL,
 )
-from mixar.modules.moodboard.constants import SCENE_GEN_CAPABILITY_KEY
+from mixar.modules.moodboard.constants import CHARACTER_PARTS_CAPABILITY_KEY
 
 logger = get_logger(__name__)
 
@@ -297,7 +297,7 @@ def enqueue_scene_gen_hp_jobs(
             model=model_key,
             payload=payload,
             label=image.name,
-            origin_capability_key=SCENE_GEN_CAPABILITY_KEY,
+            origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
             fail_message="Scene generation failed",
             on_imported=_make_hp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_hp_is_generating",
@@ -377,7 +377,7 @@ def enqueue_scene_gen_lp_jobs(
             model=model,
             payload=payload,
             label=obj.name,
-            origin_capability_key=SCENE_GEN_CAPABILITY_KEY,
+            origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
             fail_message="Scene generation failed",
             on_imported=_make_lp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_lp_is_generating",

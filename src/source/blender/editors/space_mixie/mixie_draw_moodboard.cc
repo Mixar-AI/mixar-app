@@ -47,6 +47,8 @@ void init_image_property_cache(PointerRNA *itemptr)
     g_img_props.flip_horizontal = RNA_struct_find_property(itemptr, "flip_horizontal");
     g_img_props.flip_vertical = RNA_struct_find_property(itemptr, "flip_vertical");
     g_img_props.selected = RNA_struct_find_property(itemptr, "selected");
+    g_img_props.annotations = RNA_struct_find_property(itemptr, "annotations");
+    g_img_props.show_annotations = RNA_struct_find_property(itemptr, "show_annotations");
     g_img_props.initialized = true;
   }
 }

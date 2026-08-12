@@ -74,7 +74,7 @@ class MixieMoodboardTabSceneReconProps(PropertyGroup):
     min_mask_pixels: IntProperty(
         name="Min Object Size",
         description="Minimum segment size in pixels. Higher values filter out small objects",
-        default=2000,
+        default=6000,
         min=100,
         max=50000,
     )

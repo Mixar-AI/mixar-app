@@ -356,24 +356,27 @@ class TOPBAR_MT_file_import(Menu):
          # Add Blend file import at the top of the menu
         props = self.layout.operator("wm.open_mainfile", text="Blend (.blend)", icon='FILE_BLEND')
         props.file_extension = 'BLEND'
+        # Native importers route through mixar.import_native_* telemetry
+        # shims (modules/common/ui/operators/native_import_ops.py): they
+        # capture import.initiated, then delegate to the real wm operator.
         if bpy.app.build_options.alembic:
-            self.layout.operator("wm.alembic_import", text="Alembic (.abc)")
+            self.layout.operator("mixar.import_native_alembic", text="Alembic (.abc)")
         if bpy.app.build_options.usd:
             self.layout.operator(
-                "wm.usd_import", text="Universal Scene Description (.usd*)")
+                "mixar.import_native_usd", text="Universal Scene Description (.usd*)")
 
         if bpy.app.build_options.io_gpencil:
             self.layout.operator("wm.grease_pencil_import_svg", text="SVG as Grease Pencil")
 
         if bpy.app.build_options.io_wavefront_obj:
-            self.layout.operator("wm.obj_import", text="Wavefront (.obj)")
+            self.layout.operator("mixar.import_native_obj", text="Wavefront (.obj)")
         if bpy.app.build_options.io_ply:
-            self.layout.operator("wm.ply_import", text="Stanford PLY (.ply)")
+            self.layout.operator("mixar.import_native_ply", text="Stanford PLY (.ply)")
         if bpy.app.build_options.io_stl:
-            self.layout.operator("wm.stl_import", text="STL (.stl)")
+            self.layout.operator("mixar.import_native_stl", text="STL (.stl)")
 
         if bpy.app.build_options.io_fbx:
-            self.layout.operator("wm.fbx_import", text="FBX (.fbx)")
+            self.layout.operator("mixar.import_native_fbx", text="FBX (.fbx)")
 
 
 class TOPBAR_MT_file_export(Menu):
@@ -386,10 +389,10 @@ class TOPBAR_MT_file_export(Menu):
         props = self.layout.operator("wm.save_as_mainfile", text="Blend (.blend)", icon='FILE_BLEND')
         props.file_extension = 'BLEND'
         if bpy.app.build_options.alembic:
-            self.layout.operator("wm.alembic_export", text="Alembic (.abc)")
+            self.layout.operator("mixar.export_native_alembic", text="Alembic (.abc)")
         if bpy.app.build_options.usd:
             self.layout.operator(
-                "wm.usd_export", text="Universal Scene Description (.usd*)")
+                "mixar.export_native_usd", text="Universal Scene Description (.usd*)")
 
         if bpy.app.build_options.io_gpencil:
             # PUGIXML library dependency.
@@ -400,11 +403,11 @@ class TOPBAR_MT_file_export(Menu):
                 self.layout.operator("wm.grease_pencil_export_pdf", text="Grease Pencil as PDF")
 
         if bpy.app.build_options.io_wavefront_obj:
-            self.layout.operator("wm.obj_export", text="Wavefront (.obj)")
+            self.layout.operator("mixar.export_native_obj", text="Wavefront (.obj)")
         if bpy.app.build_options.io_ply:
-            self.layout.operator("wm.ply_export", text="Stanford PLY (.ply)")
+            self.layout.operator("mixar.export_native_ply", text="Stanford PLY (.ply)")
         if bpy.app.build_options.io_stl:
-            self.layout.operator("wm.stl_export", text="STL (.stl)")
+            self.layout.operator("mixar.export_native_stl", text="STL (.stl)")
 
 
 class TOPBAR_MT_file_external_data(Menu):

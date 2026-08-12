@@ -5,10 +5,11 @@
 /** \file
  * \ingroup spview3d
  *
- * Native Flow-styled Shot Renders popup for the Director overlay.
+ * Native Flow-styled "Export to Moodboard" popup for the Director overlay.
  * Presentation only: the render-kind toggles and the resolution slider bind
- * the registered shot RNA directly, and the action row invokes the
- * Python-owned `mixar.director_render_videos` operator.
+ * the registered shot RNA directly, and the action rows invoke the
+ * Python-owned `mixar.director_send_keyframes` and
+ * `mixar.director_render_videos` operators.
  */
 
 #include <algorithm>
@@ -48,8 +49,9 @@ int render_kind_icon(const char *identifier)
   return ICON_NONE;
 }
 
-/* The block is KEEP_OPEN so kind toggles multi-select; the Render action
- * still has to dismiss the popup, which KEEP_OPEN otherwise prevents. */
+/* The block is KEEP_OPEN so kind toggles multi-select; the Export and Render
+ * actions still have to dismiss the popup, which KEEP_OPEN otherwise
+ * prevents. */
 void render_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
 {
   UI_popup_menu_retval_set(static_cast<uiBlock *>(arg_block), UI_RETURN_OK, true);
@@ -115,7 +117,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 {
   uiBlock *block = director_popup_block_begin(C, region, __func__);
   /* Multi-select: picking Beauty/Clay/Depth must not dismiss the popup —
-   * it closes on click-outside, Esc, or the Render action below. */
+   * it closes on click-outside, Esc, or the Export/Render actions below. */
   UI_block_flag_enable(block, UI_BLOCK_KEEP_OPEN);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
@@ -145,8 +147,33 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   const bool running = RNA_boolean_get(&data.shot_ptr, "render_is_running");
   const int beat_count = int(data.state.beats.size());
 
+  /* Keyframe stills → Moodboard: the only path that boards captures, since
+   * capture itself packs without boarding. */
   y -= gap + label_h;
-  director_popup_section_label(block, "Render Videos", y, width);
+  director_popup_section_label(block, "Keyframes", y, width);
+  y -= row_h;
+  char export_label[64];
+  BLI_snprintf(export_label,
+               sizeof(export_label),
+               "Export %d Keyframe%s",
+               beat_count,
+               beat_count == 1 ? "" : "s");
+  uiBut *export_stills = director_overlay_operator_button(
+      block,
+      "MIXAR_OT_director_send_keyframes",
+      ICON_EXPORT,
+      export_label,
+      0,
+      y,
+      width,
+      row_h,
+      "Place this shot's keyframe stills together on the Moodboard");
+  director_overlay_disable_button(export_stills, beat_count < 1);
+  UI_but_func_set(export_stills, render_popup_close, block, nullptr);
+
+  /* Rendered motion-guide videos → Moodboard. */
+  y -= gap + label_h;
+  director_popup_section_label(block, "Render Guides", y, width);
   y -= row_h;
   const int enabled_count = draw_kind_toggles(C, block, data, running, y, width, gap);
 

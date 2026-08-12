@@ -17,6 +17,7 @@ set(INC_SYS
 set(SRC
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
+  mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_groups.cc
   mixie_draw_moodboard_graph.cc
   mixie_moodboard_graph_geometry.cc

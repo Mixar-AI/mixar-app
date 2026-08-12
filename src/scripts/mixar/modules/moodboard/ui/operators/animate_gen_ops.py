@@ -4,9 +4,10 @@
 
 """Auto Rig Generate Operator (catalog-driven tab).
 
-Resolves the Auto Rig tab's catalog service/model and fans out one Tripo
-auto-rig job per selected mesh (GLB export, size cap, import hook stamps
-the rig job id on every imported object).
+Resolves the Auto Rig tab's catalog service/model and submits ONE Tripo
+auto-rig job for ALL selected meshes combined into a single GLB (size cap,
+import hook stamps the rig job id on every imported object) — so a
+segmented character is rigged as one skeleton, not one rig per part.
 """
 
 from bpy.types import Operator
@@ -21,7 +22,7 @@ class MIXIE_OT_animate_generate(Operator):
 
     bl_idname = "mixie.animate_generate"
     bl_label = "Auto Rig"
-    bl_description = "Auto-rig the selected meshes (one job per mesh)"
+    bl_description = "Auto-rig the selected meshes as a single combined rig"
     bl_options = {"REGISTER"}
 
     def execute(self, context):

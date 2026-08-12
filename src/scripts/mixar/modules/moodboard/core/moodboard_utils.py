@@ -23,6 +23,7 @@ from .media_utils import describe_moodboard_media, is_video_image
 
 # Re-export common geometry utilities for convenience
 from ...common.geometry_utils import point_in_polygon
+from .annotation_geometry import canvas_to_image_normalized
 
 
 def get_moodboard_image_display_size(image, scale: float) -> tuple[float, float]:
@@ -534,6 +535,17 @@ def reset_tool_state(state, context):
     """
     state.active_tool = 'NONE'
     state.target_image_index = -1
+    try:
+        state.annotation_active_stroke_index = -1
+        state.is_drawing = False
+    except (AttributeError, TypeError):
+        pass
+    try:
+        state.lasso_points.clear()
+        state.lasso_loops.clear()
+        state.lasso_select_has_selection = False
+    except (AttributeError, TypeError):
+        pass
     if context.area:
         context.area.tag_redraw()
 
@@ -585,9 +597,20 @@ def mouse_to_image_coords(context, event, target_image_index):
     view = region.view2d
     view_x, view_y = view.region_to_view(event.mouse_region_x, event.mouse_region_y)
 
-    # Convert to image-relative (0-1)
-    img_rel_x = (view_x - pos_x) / display_width
-    img_rel_y = (view_y - pos_y) / display_height
+    coords = canvas_to_image_normalized(
+        view_x,
+        view_y,
+        pos_x,
+        pos_y,
+        display_width,
+        display_height,
+        rotation=img_item.rotation,
+        flip_horizontal=img_item.flip_horizontal,
+        flip_vertical=img_item.flip_vertical,
+    )
+    if coords is None:
+        return None
+    img_rel_x, img_rel_y = coords
 
     # Check if click is outside image bounds
     if img_rel_x < 0.0 or img_rel_x > 1.0 or img_rel_y < 0.0 or img_rel_y > 1.0:
@@ -625,10 +648,17 @@ def mouse_to_image_coords_unclamped(context, event, target_image_index):
     view = region.view2d
     view_x, view_y = view.region_to_view(event.mouse_region_x, event.mouse_region_y)
 
-    img_rel_x = (view_x - img_item.position_x) / display_width
-    img_rel_y = (view_y - img_item.position_y) / display_height
-
-    return (img_rel_x, img_rel_y)
+    return canvas_to_image_normalized(
+        view_x,
+        view_y,
+        img_item.position_x,
+        img_item.position_y,
+        display_width,
+        display_height,
+        rotation=img_item.rotation,
+        flip_horizontal=img_item.flip_horizontal,
+        flip_vertical=img_item.flip_vertical,
+    )
 
 
 def find_crop_handle_at_mouse(context, event, state, target_image_index):

@@ -4506,15 +4506,27 @@ static int ui_do_but_textedit(
         if (is_moodboard_node_prompt &&
             (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
         {
+          /* Run the node that OWNS this prompt field. A prop-less call would
+           * re-apply the operator's remembered last-used properties (it is a
+           * REGISTER operator), re-submitting whichever node the Generate
+           * button last ran instead of the node being edited. Read the id
+           * before ui_apply_but/exit while the button's RNA pointer is
+           * guaranteed live. */
+          const std::string node_id = RNA_string_get(&but->rnapoin, "node_id");
           /* The canvas prompt is a single-action field: commit its latest
            * value before invoking the exact operator behind Generate. */
           ui_apply_but(C, block, but, data, true);
           button_activate_state(C, but, BUTTON_STATE_EXIT);
-          WM_operator_name_call(C,
-                                "MIXIE_OT_moodboard_run_action_node",
-                                blender::wm::OpCallContext::ExecDefault,
-                                nullptr,
-                                nullptr);
+          if (wmOperatorType *run_ot = WM_operatortype_find("MIXIE_OT_moodboard_run_action_node",
+                                                            false))
+          {
+            PointerRNA run_props;
+            WM_operator_properties_create_ptr(&run_props, run_ot);
+            RNA_string_set(&run_props, "node_id", node_id.c_str());
+            WM_operator_name_call_ptr(
+                C, run_ot, blender::wm::OpCallContext::ExecDefault, &run_props, nullptr);
+            WM_operator_properties_free(&run_props);
+          }
           retval = WM_UI_HANDLER_BREAK;
           break;
         }

@@ -315,6 +315,9 @@ def lock_shot(scene, shot) -> str:
         return shot.snapshot_json
     if not shot.beats:
         raise ValueError("Capture at least one camera beat before locking")
+    from .rotation_curves import repair_euler_rotation_continuity
+
+    repair_euler_rotation_continuity(shot.camera)
     serialized = compile_manifest(scene, shot)
     shot.snapshot_json = serialized
     shot.locked_at = str(json.loads(serialized)["exported_at"])

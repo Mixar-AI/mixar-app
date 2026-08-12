@@ -349,6 +349,16 @@ def _register_single_ui_module(ui_file, modules_path):
 
             spec.loader.exec_module(module)
 
+        # Product analytics wraps Mixar-owned operator classes before Blender
+        # registers them. It records only operator identity/success, never RNA
+        # arguments (which may contain prompts, paths, or scene content).
+        try:
+            from mixar.modules.common.analytics import instrument_operator_classes
+            instrument_operator_classes(getattr(module, 'classes', ()))
+        except Exception as analytics_error:
+            logger.debug("Operator analytics unavailable for %s: %s",
+                         module_name, analytics_error)
+
         if hasattr(module, 'register') and callable(module.register):
             module.register()
             _loaded_ui_modules.append(module)

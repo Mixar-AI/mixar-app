@@ -173,6 +173,16 @@ class HTTPClient:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
+        # The backend emits server-side telemetry (generation lifecycle,
+        # agent turns, ws connects) and honors this header, extending the
+        # user's "Share Usage Data" toggle to those events. Guarded: an
+        # analytics failure must never break an API call.
+        try:
+            from mixar.modules.common.analytics.preferences import is_enabled
+            headers["x-telemetry-consent"] = "1" if is_enabled() else "0"
+        except Exception:
+            pass
+
         return headers
 
     def _build_url(self, endpoint: str) -> str:
@@ -548,6 +558,10 @@ class HTTPClient:
                     data=response_data,
                     message="Success" if response.ok else str(response_data),
                     headers=dict(response.headers),
+                    # Keep async response parity with request(). Binary
+                    # endpoints (notably SAM3 mask downloads) need content;
+                    # parsing them as text corrupts the PNG bytes.
+                    raw=response,
                 )
 
             except requests.exceptions.Timeout:

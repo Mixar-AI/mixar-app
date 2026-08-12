@@ -57,6 +57,10 @@ def snapshot_render_settings(scene, view_layer) -> dict:
                 None,
             ),
         },
+        "eevee": _property_snapshot(
+            scene.eevee,
+            ("taa_render_samples",),
+        ),
         "render": _property_snapshot(
             render,
             (
@@ -125,6 +129,8 @@ def restore_render_settings(
     _safe_set(scene, "use_nodes", scene_values["use_nodes"])
     for name, value in saved["render"].items():
         _safe_set(scene.render, name, value)
+    for name, value in saved.get("eevee", {}).items():
+        _safe_set(scene.eevee, name, value)
     for name, value in saved["image"].items():
         _safe_set(scene.render.image_settings, name, value)
     for name, value in saved["ffmpeg"].items():
@@ -253,6 +259,14 @@ def _configure_common(scene, shot, frame_start: int, frame_end: int, path: str) 
     _safe_set(shading, "show_object_outline", False)
 
 
+def _scene_has_splats(scene) -> bool:
+    """True when any mesh carries the KIRI splat geometry-nodes modifier."""
+    return any(
+        o.type == 'MESH' and 'KIRI_3DGS_Render_GN' in o.modifiers
+        for o in scene.objects
+    )
+
+
 def configure_render_pass(scene, view_layer, shot, kind: str, path: str) -> str:
     """Configure one Workbench or normalized-depth movie pass."""
     frame_start, frame_end = render_frame_bounds(beat.frame for beat in shot.beats)
@@ -262,6 +276,15 @@ def configure_render_pass(scene, view_layer, shot, kind: str, path: str) -> str:
     if kind == "BEAUTY":
         shading.color_type = 'MATERIAL'
         shading.show_specular_highlight = True
+        if _scene_has_splats(scene):
+            # Workbench cannot evaluate the splat material's attribute-driven
+            # node tree — gaussians come out as flat grey cards. EEVEE renders
+            # them correctly (the splat_render_camera handlers push per-frame
+            # camera matrices into the GN during the render, and splat scenes
+            # run with Lock Interface). Modest TAA samples: this is a guide
+            # video, and gaussian quads are emission-flat anyway.
+            scene.render.engine = 'BLENDER_EEVEE'
+            scene.eevee.taa_render_samples = 16
         return ""
     shading.color_type = 'SINGLE'
     shading.single_color = (0.58, 0.58, 0.58)

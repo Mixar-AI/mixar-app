@@ -102,6 +102,23 @@ def _collect_selected_image_names(scene) -> list[str]:
         elif mb_img.group_index in selected_group_indices:
             names.add(img.name)
 
+    # 3. Selected inference nodes contribute their generated still output.
+    # A node's output lives as an *embedded* media item (its `.selected` is
+    # pinned False, node_graph.connect_image_result) plus `node.preview_image`,
+    # and clicking a node flips `node.selected` instead of any media item's
+    # flag. Without this, a selected generated node — unlike a selected upload —
+    # never reaches the agent. Videos/3D previews are skipped (attachments are
+    # still-image-only, and model nodes carry a preview_object, not an image).
+    nodes_attr = getattr(scene, "mixie_moodboard_action_nodes", None)
+    if nodes_attr is not None:
+        for node in nodes_attr:
+            if not getattr(node, "selected", False):
+                continue
+            preview = getattr(node, "preview_image", None)
+            if preview is None or getattr(preview, "source", "") == 'MOVIE':
+                continue
+            names.add(preview.name)
+
     return sorted(names)
 
 

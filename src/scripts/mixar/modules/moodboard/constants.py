@@ -14,7 +14,13 @@ Centralized configuration values for the moodboard module.
 # ============================================================================
 
 SCENE_GEN_CAPABILITY_KEY = "scene_gen"
-SCENE_GEN_JOB_TYPE = SCENE_GEN_CAPABILITY_KEY
+# The Segments to 3D service moved to its own "Character Parts" capability
+# (backend catalog migration); segment-flow composite jobs stamp this key so
+# their queue badge follows the Character Parts label instead of Scene Gen.
+CHARACTER_PARTS_CAPABILITY_KEY = "character_parts"
+# Frozen backend contract: the job_queue job_type / service key stays
+# "scene_gen" even though the service's capability moved to Character Parts.
+SCENE_GEN_JOB_TYPE = "scene_gen"
 # NOTE: the model slug is deliberately NOT a constant here. Model rows are
 # server-owned and change without a client release, so the submit path reads
 # the service's default from the generation catalog
@@ -85,6 +91,87 @@ MOODBOARD_MULTI_IMAGE_GAP = 50.0
 # Maximum number of concentric rings searched when looking for a free slot to
 # drop a newly added image so it does not overlap existing moodboard images.
 MOODBOARD_MAX_PLACEMENT_RING = 16
+
+# ============================================================================
+# CHARACTER COMPONENT DETAIL WORKFLOW
+# ============================================================================
+
+# Image Gen receives an ordered source/cutout/mask reference set. Two inputs
+# are the minimum that can preserve both the selected pixels and the exact
+# binary SAM3 selection; models that cannot accept both fail closed.
+CHARACTER_COMPONENT_REQUIRED_REFERENCES = 2
+CHARACTER_COMPONENT_FULL_CONTEXT_REFERENCES = 3
+CHARACTER_COMPONENT_REFERENCE_ROLES = {
+    False: ("component_cutout", "selection_mask"),
+    True: ("full_context", "component_cutout", "selection_mask"),
+}
+
+# SAM3 runs on a resized upload, so its mask crop is mapped onto the original
+# source before resizing. A materially different aspect ratio means the source
+# was edited after segmentation and the mask must not be applied silently.
+CHARACTER_COMPONENT_ASPECT_TOLERANCE = 0.015
+CHARACTER_COMPONENT_MASK_THRESHOLD = 128
+CHARACTER_COMPONENT_CROP_PADDING = 0.18
+CHARACTER_COMPONENT_MIN_PADDING_PX = 16
+CHARACTER_COMPONENT_MAX_REFERENCE_DIMENSION = 2048
+# White, not mid-gray: this cutout is both the node-card preview the user reads
+# as "what I selected" and the component_cutout reference sent to image gen.
+# A neutral gray reads as part of the subject, so the model kept treating the
+# backdrop as material to reinterpret, and every view invented a different one.
+# White is the same backdrop the generated views are asked to render on, which
+# keeps the reference and its outputs on one consistent ground.
+CHARACTER_COMPONENT_BACKGROUND_RGB = (255, 255, 255)
+CHARACTER_COMPONENT_JPEG_QUALITY = 92
+
+CHARACTER_COMPONENT_IMAGE_ROLES = (
+    ('NONE', "Ordinary Image", "Image outside a character-component workflow"),
+    ('REFERENCE', "Reference", "Source/reference moodboard image"),
+    (
+        'COMPONENT_DETAIL',
+        "Component Detail",
+        "Detailed image generated from a named SAM3 character component",
+    ),
+    (
+        'DEBUG_MASK',
+        "Debug SAM3 Mask",
+        "Developer-only raw mask returned by SAM3",
+    ),
+)
+
+CHARACTER_COMPONENT_REFERENCE_GUIDANCE = {
+    False: (
+        "Reference image 1 is the only target appearance: a padded cutout of "
+        "the selected component on a neutral background. Reference image 2 is "
+        "a control mask, not visual content: white pixels define the only "
+        "allowed subject and black pixels must be excluded."
+    ),
+    True: (
+        "Reference image 1 is the full character and defines the overall "
+        "identity and design language only; do not reproduce the full character. "
+        "Reference image 2 is the target appearance: a padded cutout of the "
+        "selected component on a neutral background. Reference image 3 is a "
+        "control mask, not visual content: white pixels define the only allowed "
+        "subject and black pixels must be excluded."
+    ),
+}
+
+CHARACTER_COMPONENT_DETAIL_PROMPT = (
+    "Create high-detail standalone reference images of the exact character "
+    "component named {component_name}. {reference_guidance} Treat the binary "
+    "mask as a hard spatial constraint. Never render the mask's black/white "
+    "graphics, mask edges, background, or objects outside its white region. "
+    "Preserve the "
+    "selected component's silhouette, proportions, construction, colors, "
+    "materials, surface details, wear, and art style. Do not redesign it and "
+    "do not merge it with neighboring body parts, clothing, or equipment. "
+    "When overlap hides part of the component, complete only the necessary "
+    "occluded surfaces consistently with the visible design. Show the whole "
+    "component once, centered and unobstructed, as a clean orthographic-style "
+    "product reference on a plain neutral background. If multiple outputs are "
+    "requested, make each output a distinct useful view (front, side, rear, "
+    "or close-up) rather than a collage or duplicate. No character body, no "
+    "unselected gear, no extra objects, and no text or labels."
+)
 
 # ============================================================================
 # IMAGE PROPERTY DEFAULTS
@@ -167,6 +254,7 @@ EDIT_TOOL_TYPES = [
     ('BOX_MASK', "Box Mask", "Box mask selection"),
     ('LASSO', "Lasso", "Lasso selection"),
     ('MAGIC_SELECT', "Magic Select", "AI-powered object selection"),
+    ('ANNOTATE', "Annotate", "Draw freehand notes on a reference image"),
 ]
 
 # ============================================================================
@@ -178,6 +266,23 @@ LASSO_MIN_DISTANCE_THRESHOLD = 0.0001
 
 # Lasso tool minimum number of points required for mask
 LASSO_MIN_POINTS = 3
+
+# A server-side inference can become stranded in queued/generating state (for
+# example after a GPU worker failure). Never leave a moodboard tool pending
+# forever. Individual status/download HTTP calls have shorter transport
+# timeouts; this is the end-to-end lifecycle deadline.
+SCENE_SEGMENT_REQUEST_TIMEOUT_SECONDS = 120.0
+SCENE_SEGMENT_POLL_INTERVAL_SECONDS = 0.5
+SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
+
+# Freehand annotation defaults. Width is measured in display pixels at the
+# image's base scale and grows with image/canvas zoom.
+ANNOTATION_COLOR_DEFAULT = (1.0, 0.12, 0.04, 1.0)
+ANNOTATION_WIDTH_DEFAULT = 4.0
+ANNOTATION_WIDTH_MIN = 1.0
+ANNOTATION_WIDTH_MAX = 32.0
+ANNOTATION_MIN_DISTANCE = 0.001
+ANNOTATION_MAX_POINTS_PER_STROKE = 4096
 
 # Warning threshold for reference image count
 REFERENCE_IMAGES_MAX_WITH_WARNING = 14
