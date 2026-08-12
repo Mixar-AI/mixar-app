@@ -111,15 +111,27 @@ def _redraw():
                 area.tag_redraw()
 
 
+def _is_library_bubble(msg) -> bool:
+    """A library-browse bubble by its id prefix OR by carrying library-add
+    action buttons. The second check catches a stale card left by an earlier
+    build whose bubble_id predates the prefix, so it still gets swept up."""
+    if (getattr(msg, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
+        return True
+    for action in getattr(msg, "action_items", []):
+        if (getattr(action, "value", "") or "").startswith(LIB_ADD_PREFIX):
+            return True
+    return False
+
+
 def _grid_bubble(scene):
-    """The ONE library-browse bubble, updated in place. Reuses the first found
+    """The ONE library-browse bubble, updated in place. Reuses the newest found
     and removes any extras (freeing their thumbnails) so a search, a mode-entry
     'show all', and their timers can never leave a second stale grid behind —
     the race that showed a previous asset card under a 'No matches' message."""
     keep = None
     for i in range(len(scene.mixie_chat_messages) - 1, -1, -1):
         msg = scene.mixie_chat_messages[i]
-        if not (getattr(msg, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
+        if not _is_library_bubble(msg):
             continue
         if keep is None:
             keep = msg
@@ -131,6 +143,11 @@ def _grid_bubble(scene):
         keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
         keep.sender = "AGENT"
         keep.message_type = "AGENT"
+    else:
+        # Normalize a reused legacy bubble onto the current prefix so future
+        # sweeps find it by id.
+        if not (getattr(keep, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
+            keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
     return keep
 
 
