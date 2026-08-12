@@ -1,0 +1,127 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Mixar Virtual Camera</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <!-- ====== Connect / permission gate (iOS sensor access needs a user gesture) ====== -->
+  <div id="gate" class="gate">
+    <div class="gate-card">
+      <div class="gate-logo">MIXAR</div>
+      <div class="gate-title">Virtual Camera</div>
+      <div id="gate-status" class="gate-status">Ready to pair with Mixar.</div>
+      <button id="btn-connect" class="btn-primary">Connect</button>
+      <div class="gate-hint">
+        Keep this phone on the same Wi-Fi network as the computer running Mixar.
+        Motion control needs sensor permission &mdash; you will be asked once.
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Main control surface ====== -->
+  <div id="main" class="main hidden">
+    <!-- Live viewport stream (camera POV), fills the screen behind controls -->
+    <img id="stream" class="stream" alt="" draggable="false" />
+    <div id="stream-off" class="stream-off">Live view is off</div>
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div id="conn-dot" class="conn-dot"></div>
+      <select id="camera-select" class="camera-select"></select>
+      <button id="btn-new-camera" class="btn-chip" title="New camera">+</button>
+      <button id="btn-revert" class="btn-chip" title="Revert camera to state at pairing">&#8634;</button>
+      <div class="topbar-spacer"></div>
+      <div id="frame-readout" class="frame-readout">0</div>
+      <button id="btn-play" class="btn-chip">&#9654;</button>
+      <button id="btn-stop" class="btn-chip">&#9632;</button>
+      <button id="btn-record" class="btn-record" title="Record keyframes">&#9679;</button>
+      <button id="btn-settings" class="btn-chip">&#9881;</button>
+    </div>
+
+    <!-- Recenter + motion enable -->
+    <div class="midbar">
+      <button id="btn-motion" class="btn-pill">Motion: off</button>
+      <button id="btn-recenter" class="btn-pill">Recenter</button>
+    </div>
+
+    <!-- Focal length slider (right edge, vertical) -->
+    <div class="lens-rail">
+      <div id="lens-value" class="lens-value">50mm</div>
+      <input id="lens-slider" class="vslider" type="range"
+             min="8" max="250" step="1" value="50" orient="vertical" />
+      <div class="lens-presets">
+        <button class="btn-preset" data-lens="24">24</button>
+        <button class="btn-preset" data-lens="35">35</button>
+        <button class="btn-preset" data-lens="50">50</button>
+        <button class="btn-preset" data-lens="85">85</button>
+      </div>
+    </div>
+
+    <!-- Joystick zones -->
+    <div id="joy-left" class="joy-zone joy-left">
+      <div class="joy-base"><div class="joy-knob"></div></div>
+      <div class="joy-label">truck / dolly</div>
+    </div>
+    <div id="joy-right" class="joy-zone joy-right">
+      <div class="joy-base"><div class="joy-knob"></div></div>
+      <div class="joy-label">boom / pan</div>
+    </div>
+
+    <!-- Settings sheet -->
+    <div id="sheet" class="sheet hidden">
+      <div class="sheet-grab" id="sheet-close"></div>
+      <div class="sheet-row">
+        <label>Movement scale</label>
+        <input id="set-scale" type="range" min="-2" max="2" step="0.1" value="0" />
+        <span id="set-scale-val">1.0&times;</span>
+      </div>
+      <div class="sheet-row">
+        <label>Steady-cam smoothing</label>
+        <input id="set-smooth" type="range" min="0" max="0.95" step="0.05" value="0.4" />
+        <span id="set-smooth-val">0.40</span>
+      </div>
+      <div class="sheet-row">
+        <label>Send rate</label>
+        <input id="set-rate" type="range" min="10" max="60" step="5" value="60" />
+        <span id="set-rate-val">60 Hz</span>
+      </div>
+      <div class="sheet-row">
+        <label>Stream FPS</label>
+        <input id="set-fps" type="range" min="0" max="60" step="5" value="30" />
+        <span id="set-fps-val">30</span>
+      </div>
+      <div class="sheet-row">
+        <label>Stream quality</label>
+        <input id="set-quality" type="range" min="1" max="3" step="1" value="2" />
+        <span id="set-quality-val">medium</span>
+      </div>
+      <div class="sheet-row">
+        <label>Vertigo (dolly zoom)</label>
+        <input id="set-vertigo" type="checkbox" />
+        <span></span>
+      </div>
+      <div class="sheet-hint">
+        Vertigo keeps the subject framed while the focal slider zooms &mdash;
+        the camera dollies to compensate (Hitchcock effect).
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="js/quat.js"></script>
+  <script src="js/sensors.js"></script>
+  <script src="js/joystick.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
