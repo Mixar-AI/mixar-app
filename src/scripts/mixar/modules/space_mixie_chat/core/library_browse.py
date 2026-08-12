@@ -217,11 +217,19 @@ def _debug_dump(scene, label: str) -> None:
             state = get_session_manager().get_state(scene).name
         except Exception:
             pass
-        logger.info(
-            "[LibraryDbg] %s | mode=%s state=%s n=%d %s",
-            label, getattr(scene, "mixie_chat_mode", "?"), state,
-            len(msgs), "  ".join(parts),
+        line = (
+            f"[LibraryDbg] {label} | mode={getattr(scene, 'mixie_chat_mode', '?')} "
+            f"state={state} n={len(msgs)} " + "  ".join(parts)
         )
+        logger.info("%s", line)
+        # Also append to a file so it's easy to capture without a console.
+        try:
+            import os
+            path = os.path.join(os.path.expanduser("~"), "mixar_library_debug.log")
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+        except Exception:
+            pass
     except Exception:
         logger.exception("[LibraryDbg] dump failed")
 
