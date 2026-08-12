@@ -192,6 +192,40 @@ def _set_content(msg, content: str) -> None:
         pass
 
 
+def _debug_dump(scene, label: str) -> None:
+    """Log the full chat-bubble state so we can see exactly what lingers."""
+    try:
+        msgs = scene.mixie_chat_messages
+        parts = []
+        for m in msgs:
+            bid = (getattr(m, "bubble_id", "") or "")[:22]
+            acts = list(getattr(m, "action_items", []))
+            asset_n = sum(1 for a in acts if getattr(a, "asset_name", ""))
+            libadd = sum(
+                1 for a in acts
+                if (getattr(a, "value", "") or "").startswith(LIB_ADD_PREFIX)
+            )
+            content = (getattr(m, "content", "") or "").replace("\n", " ")[:30]
+            parts.append(
+                f"<id={bid!r} acts={len(acts)} asset={asset_n} "
+                f"libadd={libadd} sender={getattr(m,'sender','?')} "
+                f"input={getattr(m,'input_type','')!r} content={content!r}>"
+            )
+        state = "?"
+        try:
+            from .session import get_session_manager
+            state = get_session_manager().get_state(scene).name
+        except Exception:
+            pass
+        logger.info(
+            "[LibraryDbg] %s | mode=%s state=%s n=%d %s",
+            label, getattr(scene, "mixie_chat_mode", "?"), state,
+            len(msgs), "  ".join(parts),
+        )
+    except Exception:
+        logger.exception("[LibraryDbg] dump failed")
+
+
 def build_library_grid(context, query: str = "", force: bool = False) -> None:
     """(Re)build the in-chat asset grid for *query* ("" = show everything).
 
@@ -204,10 +238,13 @@ def build_library_grid(context, query: str = "", force: bool = False) -> None:
         return
     query = (query or "").strip()
 
+    _debug_dump(scene, f"build_library_grid ENTER query={query!r} force={force}")
+
     assets = _enumerate_assets(context, force=force)
     msg = _grid_bubble(scene)
     _cleanup_bubble(msg)
     msg.action_items.clear()
+    _debug_dump(scene, f"build_library_grid AFTER _grid_bubble kept={msg.bubble_id!r}")
 
     if not assets:
         _set_content(
@@ -229,6 +266,7 @@ def build_library_grid(context, query: str = "", force: bool = False) -> None:
         header += f" · showing the first {len(shown)}, refine your search"
     if not shown:
         _set_content(msg, header + "\n\nNo matches — try a different search.")
+        _debug_dump(scene, "build_library_grid EXIT no-match")
         _redraw()
         return
 
