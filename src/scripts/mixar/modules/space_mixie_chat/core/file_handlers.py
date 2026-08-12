@@ -145,7 +145,7 @@ def _on_load_post(*_args) -> None:
             if not hasattr(scene, "mixie_chat_mode"):
                 continue
             # Invalid persisted ints read back as "" (no matching item).
-            if scene.mixie_chat_mode not in ('AGENT', 'GENERATE'):
+            if scene.mixie_chat_mode not in ('AGENT', 'GENERATE', 'LIBRARY'):
                 scene.mixie_chat_mode = 'AGENT'
                 logger.info(
                     "Sanitized stale mixie_chat_mode on scene %r (legacy "

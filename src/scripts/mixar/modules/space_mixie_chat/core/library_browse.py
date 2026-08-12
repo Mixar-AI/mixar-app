@@ -21,11 +21,13 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Thumbnails shown at once. The chat renders action buttons as a vertical list
-# of thumbnail-left + label rows, so this is capped low to keep the bubble
-# legible; typing narrows the set. (A compact multi-column grid would need a
-# C++ layout change — tracked as a follow-up.)
-_MAX_GRID = 12
+# Thumbnails shown at once. HARD-CAPPED by the C++ slot reader, which copies at
+# most SLOT_MAX_ACTION_ITEMS (10) action items and SILENTLY TRUNCATES past it —
+# so stay under 10 or assets vanish with no indicator. The chat also renders
+# action buttons as a vertical list of thumbnail-left + label rows, so a low cap
+# keeps the bubble legible; typing narrows the set. (A compact multi-column grid
+# that shows more would need a new C++ slot type — tracked as a follow-up.)
+_MAX_GRID = 9
 LIBRARY_BUBBLE_PREFIX = "libbrowse:"
 LIB_ADD_PREFIX = "lib_add:"
 
@@ -231,6 +233,36 @@ def schedule_show_all() -> None:
 _MEASURABLE = {"MESH", "CURVE", "SURFACE", "META", "FONT"}
 
 
+def _accumulate_bbox_points(ob, xform, depth, pts):
+    """World-space bound-box corners for *ob*, recursing THROUGH collection
+    instancers (BlenderKit-style assets hide geometry behind an EMPTY instancer,
+    so a naive AABB sees nothing and the import lands unscaled at the origin)."""
+    import mathutils
+
+    if ob.type in _MEASURABLE and len(ob.bound_box):
+        m = xform @ ob.matrix_world
+        pts.extend(m @ mathutils.Vector(c) for c in ob.bound_box)
+    if (ob.type == "EMPTY" and depth < 4
+            and getattr(ob, "instance_type", "") == "COLLECTION"
+            and getattr(ob, "instance_collection", None) is not None):
+        ic = ob.instance_collection
+        inner = (xform @ ob.matrix_world
+                 @ mathutils.Matrix.Translation(-mathutils.Vector(ic.instance_offset)))
+        for child in ic.all_objects:
+            _accumulate_bbox_points(child, inner, depth + 1, pts)
+
+
+def _world_bbox(objs):
+    """Aggregate world AABB (min/max tuples) over *objs*, instancer-aware."""
+    import mathutils
+
+    pts = []
+    identity = mathutils.Matrix.Identity(4)
+    for ob in objs:
+        _accumulate_bbox_points(ob, identity, 0, pts)
+    return pts
+
+
 def add_asset_to_scene(context, library, blend_file, asset_name, asset_type):
     """Append the asset (object OR collection) at the 3D cursor. Returns
     (ok, message)."""
@@ -276,13 +308,38 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type):
 
         context.view_layer.update()
 
+        # Realize collection-instance empties (BlenderKit-style assets keep their
+        # geometry behind instancers — unrealized they read as ~zero-size and
+        # land at the origin). Linked duplicates, so mesh data is shared/cheap.
+        instancers = [
+            o for o in members
+            if o.type == "EMPTY"
+            and getattr(o, "instance_type", "") == "COLLECTION"
+            and getattr(o, "instance_collection", None) is not None
+        ]
+        if instancers:
+            try:
+                view_layer = context.view_layer
+                for o in list(context.selected_objects):
+                    o.select_set(False)
+                for o in instancers:
+                    o.select_set(True)
+                view_layer.objects.active = instancers[0]
+                before = set(bpy.data.objects)
+                bpy.ops.object.duplicates_make_real(
+                    use_base_parent=True, use_hierarchy=True
+                )
+                members.extend(o for o in bpy.data.objects if o not in before)
+                for o in list(context.selected_objects):
+                    o.select_set(False)
+                context.view_layer.update()
+            except Exception:
+                pass  # fall back to the instancer-aware bbox below
+
         # Move so the aggregate footprint's bottom-centre sits at the 3D cursor.
         member_set = set(members)
         roots = [o for o in members if o.parent is None or o.parent not in member_set]
-        pts = []
-        for o in members:
-            if o.type in _MEASURABLE and len(o.bound_box):
-                pts.extend(o.matrix_world @ mathutils.Vector(c) for c in o.bound_box)
+        pts = _world_bbox(members)
         cursor = context.scene.cursor.location
         if pts:
             xs = [p.x for p in pts]
