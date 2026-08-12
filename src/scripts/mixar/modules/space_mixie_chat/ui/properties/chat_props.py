@@ -633,6 +633,17 @@ def on_generate_type_changed(self, context):
         redraw_chat_areas()
 
 
+def _on_chat_mode_changed(self, context):
+    """When the user switches INTO Library mode, show the full asset grid so the
+    browse experience is immediate (no need to press Enter first)."""
+    if getattr(self, "mixie_chat_mode", "") == 'LIBRARY':
+        try:
+            from ...core import library_browse
+            library_browse.schedule_show_all()
+        except Exception:
+            pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -690,8 +701,10 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks and assistance", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
+            ('LIBRARY', "Library", "Browse your asset library and add assets to the scene", 'ASSET_MANAGER', 2),
         ],
         default='AGENT',
+        update=_on_chat_mode_changed,
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
