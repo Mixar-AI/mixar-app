@@ -503,6 +503,17 @@ def _start_generation_library():
     return None  # one-shot
 
 
+@bpy.app.handlers.persistent
+def _auto_train_on_load(_dummy):
+    """After a file loads, catch library changes made while the app was closed
+    by scheduling a debounced auto-train (silent no-op if nothing changed)."""
+    try:
+        from mixar.modules.asset_search.core.auto_train import schedule_auto_train
+        schedule_auto_train("file_load")
+    except Exception:  # noqa: BLE001 — a load handler must never raise
+        pass
+
+
 classes = (
     MIXIE_OT_search_assets,
     MIXIE_OT_refresh_asset_status,
@@ -522,10 +533,16 @@ def register():
     bpy.app.timers.register(
         _start_generation_library, first_interval=3.0, persistent=True,
     )
+    # Auto-train on file open so a library altered while the app was closed is
+    # re-embedded without a manual Train click.
+    if _auto_train_on_load not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_auto_train_on_load)
 
 
 def unregister():
     """Unregister operator classes and timers"""
+    if _auto_train_on_load in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_auto_train_on_load)
     for fn in (_start_auto_check, _auto_check_poll, _start_generation_library):
         if bpy.app.timers.is_registered(fn):
             bpy.app.timers.unregister(fn)

@@ -71,6 +71,11 @@ class MIXIE_OT_train_asset_model(Operator):
     _upload_total = 0
     _upload_embedded = 0
 
+    # Set True by the auto-train scheduler (enrollment change / file load /
+    # generation drain). Suppresses the "nothing to do" panel summary so a
+    # background check that finds no changes leaves no banner behind.
+    auto: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
+
     @classmethod
     def poll(cls, context):
         state = getattr(context.scene, 'mixie_asset_training', None)
@@ -182,7 +187,7 @@ class MIXIE_OT_train_asset_model(Operator):
         if action == "skip":
             state.needs_retraining = False
             state.retraining_message = ""
-            self._finish(context, success=True,
+            self._finish(context, success=True, silent=self.auto,
                          message="Embeddings are up to date — nothing to do")
             return {"FINISHED"}
 
@@ -429,7 +434,7 @@ class MIXIE_OT_train_asset_model(Operator):
     # Teardown
     # ------------------------------------------------------------------ #
 
-    def _finish(self, context, success, message):
+    def _finish(self, context, success, message, silent=False):
         from .asset_inspect_ops import clear_render_filter
 
         if self._session is not None:
@@ -453,12 +458,16 @@ class MIXIE_OT_train_asset_model(Operator):
         if not success:
             state.progress = 0.0
 
-        elapsed = fmt_duration(time.time() - self._started_at)
-        skipped = f", {state.failed_count} skipped" if state.failed_count else ""
-        state.last_summary = f"{message}{skipped} — {elapsed}"
-        state.last_summary_success = success
-        if success:
-            state.last_trained_at = time.strftime("%d %b %H:%M")
+        # A silent finish (auto-train that found nothing to do) leaves no panel
+        # banner — a background check must not spam the UI. Real training still
+        # reports its summary even under auto.
+        if not silent:
+            elapsed = fmt_duration(time.time() - self._started_at)
+            skipped = f", {state.failed_count} skipped" if state.failed_count else ""
+            state.last_summary = f"{message}{skipped} — {elapsed}"
+            state.last_summary_success = success
+            if success:
+                state.last_trained_at = time.strftime("%d %b %H:%M")
 
         wm = context.window_manager
         if self._timer:
@@ -470,8 +479,9 @@ class MIXIE_OT_train_asset_model(Operator):
         self._removed_assets = []
         self._metadata_checksum = None
 
-        self.report({"INFO" if success else "WARNING"}, message)
-        logger.debug("[Asset Training] %s", message)
+        if not silent:
+            self.report({"INFO" if success else "WARNING"}, message)
+        logger.debug("[Asset Training] %s%s", message, " (auto)" if silent else "")
         self._redraw(context)
 
     def _redraw(self, context):

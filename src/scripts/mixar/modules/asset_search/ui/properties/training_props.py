@@ -21,9 +21,18 @@ from bpy.types import PropertyGroup
 
 
 def _enrolled_update(self, context):
-    """Persist a library tick to the per-user enrollment file."""
+    """Persist a library tick to the per-user enrollment file, then auto-train.
+
+    Enrolling a library must make its assets searchable without a manual Train
+    click; unenrolling must drop them. Either way the enrolled set changed, so
+    schedule a debounced auto-train (silent no-op if there's nothing to embed)."""
     from mixar.modules.asset_search.core.library_enrollment import set_enrolled
     set_enrolled(self.name, self.enabled)
+    try:
+        from mixar.modules.asset_search.core.auto_train import schedule_auto_train
+        schedule_auto_train("enrollment")
+    except Exception:  # noqa: BLE001 — enrollment persistence must never fail
+        pass
 
 
 class MixieAssetLibraryItem(PropertyGroup):
