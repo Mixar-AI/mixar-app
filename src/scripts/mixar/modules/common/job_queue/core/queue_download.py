@@ -33,6 +33,49 @@ from .model_io import import_file
 logger = get_logger(__name__)
 
 
+def _split_object_names(object_names) -> list:
+    """``import_file`` returns comma-joined names; custom jobs may pass lists."""
+    if isinstance(object_names, (list, tuple, set)):
+        return [name for name in object_names if name]
+    if isinstance(object_names, str) and object_names:
+        return [part for part in (p.strip() for p in object_names.split(",")) if part]
+    return []
+
+
+def _record_output_landed(job: Job, file_type: str, object_names, *,
+                          resolve_uids: bool) -> None:
+    """Telemetry only — must never fail (or slow) a finishing import.
+
+    Captures ``generation.output_landed`` (identifiers and counts only —
+    never object names or payload contents) and registers the landing with
+    the rejection tracker. Object names are resolved to ``session_uid``s
+    immediately and then discarded.
+    """
+    try:
+        names = _split_object_names(object_names)
+        uids = None
+        if resolve_uids:
+            uids = set()
+            for name in names:
+                obj = bpy.data.objects.get(name)
+                uid = getattr(obj, "session_uid", None)
+                if uid is not None:
+                    uids.add(uid)
+        from mixar.modules.common.analytics import rejection_events
+        from mixar.modules.common.analytics.capture import capture
+        from mixar.modules.common.analytics.constants import EVENT_OUTPUT_LANDED
+        capture(EVENT_OUTPUT_LANDED, {
+            "feature_key": getattr(job, "feature_key", "") or "",
+            "service": getattr(job, "service", "")
+            or getattr(job, "job_type", "") or "",
+            "file_type": str(file_type),
+            "object_count": len(names),
+        }, context=bpy.context)
+        rejection_events.note_output_landed("generation", uids or None)
+    except Exception:
+        pass
+
+
 class DownloadMixin:
     """``FeatureQueue`` methods covering RUNNING_DOWNLOAD through terminal."""
 
@@ -42,6 +85,8 @@ class DownloadMixin:
             return None
         job.imported_object_names = object_names
         job.state = JobState.SUCCESS
+        # Image/texture results create no scene objects — land without uids.
+        _record_output_landed(job, "CUSTOM", object_names, resolve_uids=False)
         self._notify()
         self._pump()
         return None
@@ -57,8 +102,9 @@ class DownloadMixin:
         if job.handle_result(result_files, _custom_done, _custom_error):
             return  # Job takes responsibility
 
-        # Pick best file (GLB > OBJ > FBX)
-        preferred_order = ["GLB", "OBJ", "FBX"]
+        # Pick the output native to the job before falling back to the first
+        # vendor artifact. VIDEO matters when a response also carries a still.
+        preferred_order = ["VIDEO", "GLB", "OBJ", "FBX"]
         chosen = None
         for pref in preferred_order:
             for rf in result_files or []:
@@ -189,11 +235,19 @@ class DownloadMixin:
             return None
 
         try:
+            import_options = dict(getattr(job, "import_options", None) or {})
+            if file_type.upper() == "VIDEO":
+                import_options.setdefault("scene_name", job.scene_name)
+                import_options.setdefault(
+                    "generation_prompt",
+                    str(getattr(job, "payload", {}).get("prompt") or ""),
+                )
             obj_names = import_file(
-                filepath, file_type, getattr(job, "import_options", None),
+                filepath, file_type, import_options,
             )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
+            _record_output_landed(job, file_type, obj_names, resolve_uids=True)
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
@@ -222,4 +276,3 @@ class DownloadMixin:
         self._notify()
         self._pump()
         return None  # one-shot
-

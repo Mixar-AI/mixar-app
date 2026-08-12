@@ -70,6 +70,47 @@ static bool apply_selection_mode(PointerRNA *item_ptr,
   return false;
 }
 
+static bool select_rect_items(PointerRNA *scene_ptr,
+                              const char *collection_name,
+                              const int select_mode,
+                              const float box_min_x,
+                              const float box_min_y,
+                              const float box_max_x,
+                              const float box_max_y)
+{
+  PropertyRNA *collection = RNA_struct_find_property(scene_ptr, collection_name);
+  if (!collection) {
+    return false;
+  }
+
+  bool changed = false;
+  CollectionPropertyIterator iter{};
+  RNA_property_collection_begin(scene_ptr, collection, &iter);
+  while (iter.valid) {
+    PropertyRNA *selected = RNA_struct_find_property(&iter.ptr, "selected");
+    PropertyRNA *position_x = RNA_struct_find_property(&iter.ptr, "position_x");
+    PropertyRNA *position_y = RNA_struct_find_property(&iter.ptr, "position_y");
+    PropertyRNA *width = RNA_struct_find_property(&iter.ptr, "width");
+    PropertyRNA *height = RNA_struct_find_property(&iter.ptr, "height");
+    if (selected && position_x && position_y && width && height) {
+      const float x = RNA_property_float_get(&iter.ptr, position_x);
+      const float y = RNA_property_float_get(&iter.ptr, position_y);
+      const bool intersects = box_intersects_aabb(box_min_x,
+                                                  box_min_y,
+                                                  box_max_x,
+                                                  box_max_y,
+                                                  x,
+                                                  y,
+                                                  x + RNA_property_float_get(&iter.ptr, width),
+                                                  y + RNA_property_float_get(&iter.ptr, height));
+      changed |= apply_selection_mode(&iter.ptr, selected, select_mode, intersects);
+    }
+    RNA_property_collection_next(&iter);
+  }
+  RNA_property_collection_end(&iter);
+  return changed;
+}
+
 static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
 {
   Scene *scene = CTX_data_scene(C);
@@ -124,6 +165,11 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
       PointerRNA item_ptr;
       RNA_property_collection_lookup_int(&scene_ptr, img_prop, i, &item_ptr);
 
+      PropertyRNA *embedded_prop = RNA_struct_find_property(&item_ptr, "embedded_node_id");
+      if (embedded_prop && RNA_property_string_length(&item_ptr, embedded_prop) > 0) {
+        continue;
+      }
+
       PropertyRNA *image_prop = RNA_struct_find_property(&item_ptr, "image");
       PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
       PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
@@ -162,37 +208,23 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
     }
   }
 
-  /* Process text boxes */
-  PropertyRNA *textbox_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_textboxes");
-  if (textbox_prop) {
-    int textbox_count = RNA_property_collection_length(&scene_ptr, textbox_prop);
+  /* Text boxes and graph nodes all expose the same rectangular canvas contract. */
+  for (const char *collection_name : {"mixie_moodboard_textboxes",
+                                      "mixie_moodboard_action_nodes",
+                                      "mixie_moodboard_asset_nodes"})
+  {
+    changed |= select_rect_items(&scene_ptr,
+                                 collection_name,
+                                 select_mode,
+                                 box_min_x,
+                                 box_min_y,
+                                 box_max_x,
+                                 box_max_y);
+  }
 
-    for (int i = 0; i < textbox_count; i++) {
-      PointerRNA item_ptr;
-      RNA_property_collection_lookup_int(&scene_ptr, textbox_prop, i, &item_ptr);
-
-      PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
-      PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
-      PropertyRNA *width_prop = RNA_struct_find_property(&item_ptr, "width");
-      PropertyRNA *height_prop = RNA_struct_find_property(&item_ptr, "height");
-      PropertyRNA *selected_prop = RNA_struct_find_property(&item_ptr, "selected");
-
-      if (!pos_x_prop || !pos_y_prop || !width_prop || !height_prop || !selected_prop) {
-        continue;
-      }
-
-      float pos_x = RNA_property_float_get(&item_ptr, pos_x_prop);
-      float pos_y = RNA_property_float_get(&item_ptr, pos_y_prop);
-      float width = RNA_property_float_get(&item_ptr, width_prop);
-      float height = RNA_property_float_get(&item_ptr, height_prop);
-
-      bool intersects = box_intersects_aabb(
-          box_min_x, box_min_y, box_max_x, box_max_y, pos_x, pos_y, pos_x + width, pos_y + height);
-
-      if (apply_selection_mode(&item_ptr, selected_prop, select_mode, intersects)) {
-        changed = true;
-      }
-    }
+  /* A box may select multiple nodes, so no single graph node remains active. */
+  if (RNA_struct_find_property(&scene_ptr, "mixie_moodboard_active_node_id")) {
+    RNA_string_set(&scene_ptr, "mixie_moodboard_active_node_id", "");
   }
 
   if (changed) {
@@ -240,7 +272,7 @@ void MIXIE_OT_moodboard_box_select(wmOperatorType *ot)
 {
   ot->name = "Box Select";
   ot->idname = "MIXIE_OT_moodboard_box_select";
-  ot->description = "Select multiple images using box selection";
+  ot->description = "Select multiple moodboard items using box selection";
 
   ot->invoke = blender::ed::mixie::moodboard_box_select_invoke;
   ot->exec = blender::ed::mixie::moodboard_box_select_exec;

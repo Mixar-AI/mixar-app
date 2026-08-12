@@ -6,12 +6,15 @@
 
 Two job kinds behind the Animate moodboard tab:
 
-* **Auto Rig** (``tripo_rig``): each selected mesh is exported alone as
-  GLB (Tripo's rig-check accepts GLB only) and submitted through the
-  unified queue. The import hook stamps every imported object with
-  :data:`ANIMATE_RIG_JOB_PROP` — OUR queue job id — which is the retarget
-  input; the backend resolves it to Tripo's task id with an ownership
-  check, so vendor task ids never reach the client.
+* **Auto Rig** (``tripo_rig``): ALL selected meshes are exported together
+  into ONE GLB and submitted as a SINGLE job, so a segmented character
+  (a mesh split into parts) is rigged as one skeleton instead of one
+  independent rig per part — and Tripo runs a single rig-check over the
+  whole body plan rather than misreading each isolated part. The import
+  hook stamps every imported object with :data:`ANIMATE_RIG_JOB_PROP` —
+  OUR queue job id — which is the retarget input; the backend resolves it
+  to Tripo's task id with an ownership check, so vendor task ids never
+  reach the client.
 
 * **Animate** (``tripo_retarget``): no file upload — the payload carries
   the ``rig_job_id`` read from a previously imported rigged object plus
@@ -30,7 +33,6 @@ from ..constants import (
     ANIMATE_RETARGET_SERVICE,
     MAX_FILE_SIZE_ANIMATE_RIG,
 )
-from .retopology_enqueue import _export_single_object
 
 logger = get_logger(__name__)
 
@@ -111,6 +113,73 @@ def find_rig_job_id(obj) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _export_objects_together(context, objects: list) -> tuple:
+    """Export EVERY mesh in ``objects`` into ONE GLB. Returns ``(bytes,
+    filename)``.
+
+    Snapshots the current selection, isolates the target meshes, exports them
+    as a single GLB (so a segmented character rigs as one model), then restores
+    the original selection / active object.
+    """
+    from mixar.modules.common.job_queue.core.model_io import export_selected_mesh
+
+    view_layer = context.view_layer
+    prev_selected = list(context.selected_objects)
+    prev_active = view_layer.objects.active
+
+    def _deselect_all():
+        for o in list(view_layer.objects):
+            try:
+                if o.select_get():
+                    o.select_set(False)
+            except (RuntimeError, ReferenceError):
+                pass
+
+    try:
+        _deselect_all()
+        active = None
+        for o in objects:
+            try:
+                o.select_set(True)
+                active = o
+            except (RuntimeError, ReferenceError):
+                pass
+        if active is not None:
+            view_layer.objects.active = active
+        return export_selected_mesh(context, "GLB")
+    finally:
+        _deselect_all()
+        for o in prev_selected:
+            try:
+                o.select_set(True)
+            except (RuntimeError, ReferenceError):
+                pass
+        try:
+            view_layer.objects.active = prev_active
+        except (ReferenceError, AttributeError):
+            pass
+
+
+def _rig_label(context, meshes: list) -> str:
+    """Queue label for the combined rig job: the active mesh's name (or the
+    first selected), suffixed with the extra part count when several meshes
+    are combined into one rig. A single mesh keeps its bare name so the agent
+    operator's duplicate-label check still matches."""
+    view_layer = getattr(context, "view_layer", None)
+    active_obj = getattr(getattr(view_layer, "objects", None), "active", None)
+    mesh_names = [m.name for m in meshes]
+    active_name = getattr(active_obj, "name", None)
+    if active_name in mesh_names:
+        base = active_name
+    elif mesh_names:
+        base = mesh_names[0]
+    else:
+        base = "Auto Rig"
+    if len(meshes) > 1:
+        return f"{base} +{len(meshes) - 1}"
+    return base
+
+
 def enqueue_rig_jobs(
     *,
     context,
@@ -120,59 +189,64 @@ def enqueue_rig_jobs(
     params: dict,
     operator=None,
 ) -> list:
-    """Fan out selected meshes into per-object Auto Rig jobs."""
+    """Export ALL selected meshes into ONE GLB and submit a SINGLE Auto Rig
+    job, so a segmented character (mesh split into parts) rigs as one skeleton
+    rather than one independent rig per part.
+
+    Returns a one-element list with the enqueued job (empty on failure), so
+    callers can keep testing the result truthily.
+    """
     from mixar.modules.common.generation_params import assemble_payload
 
-    enqueued: list = []
-    for obj in objects:
-        if obj.type != 'MESH':
-            continue
-        try:
-            file_bytes, filename = _export_single_object(context, obj)
-        except Exception as e:
-            msg = f"Failed to export '{obj.name}': {e}"
-            logger.warning(msg)
-            if operator is not None:
-                operator.report({'WARNING'}, msg)
-            continue
+    meshes = [o for o in objects if getattr(o, "type", None) == 'MESH']
+    if not meshes:
+        return []
 
-        if len(file_bytes) > MAX_FILE_SIZE_ANIMATE_RIG:
-            size_mb = len(file_bytes) / (1024 * 1024)
-            msg = (
-                f"Skipping '{obj.name}': exported file is {size_mb:.1f}MB "
-                f"(max {MAX_FILE_SIZE_ANIMATE_RIG // (1024 * 1024)}MB)"
-            )
-            logger.warning(msg)
-            if operator is not None:
-                operator.report({'WARNING'}, msg)
-            continue
+    try:
+        file_bytes, filename = _export_objects_together(context, meshes)
+    except Exception as e:
+        msg = f"Failed to export selected mesh(es): {e}"
+        logger.warning(msg)
+        if operator is not None:
+            operator.report({'WARNING'}, msg)
+        return []
 
-        payload = assemble_payload(
-            service_key,
-            dict(params),
-            {
-                "input_name": obj.name,
-                "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
-                "file_filename": filename,
-            },
-            model,
+    if len(file_bytes) > MAX_FILE_SIZE_ANIMATE_RIG:
+        size_mb = len(file_bytes) / (1024 * 1024)
+        msg = (
+            f"Skipping Auto Rig: combined export is {size_mb:.1f}MB "
+            f"(max {MAX_FILE_SIZE_ANIMATE_RIG // (1024 * 1024)}MB)"
         )
-        job = enqueue_generation(
-            kind="glb",
-            feature_key=FEATURE_ANIMATE,
-            job_type=service_key or ANIMATE_RIG_SERVICE,
-            model=model,
-            payload=payload,
-            label=obj.name,
-            fail_message="Auto Rig failed",
-            on_imported=_rig_on_imported,
-            import_options=_ANIMATE_IMPORT_OPTIONS,
-            scene_flag=ANIMATE_SCENE_FLAG,
-            batch_popup_title="Auto Rig batch complete",
-        )
-        if job is not None:
-            enqueued.append(job)
-    return enqueued
+        logger.warning(msg)
+        if operator is not None:
+            operator.report({'WARNING'}, msg)
+        return []
+
+    label = _rig_label(context, meshes)
+    payload = assemble_payload(
+        service_key,
+        dict(params),
+        {
+            "input_name": label,
+            "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
+            "file_filename": filename,
+        },
+        model,
+    )
+    job = enqueue_generation(
+        kind="glb",
+        feature_key=FEATURE_ANIMATE,
+        job_type=service_key or ANIMATE_RIG_SERVICE,
+        model=model,
+        payload=payload,
+        label=label,
+        fail_message="Auto Rig failed",
+        on_imported=_rig_on_imported,
+        import_options=_ANIMATE_IMPORT_OPTIONS,
+        scene_flag=ANIMATE_SCENE_FLAG,
+        batch_popup_title="Auto Rig complete",
+    )
+    return [job] if job is not None else []
 
 
 def enqueue_retarget_job(

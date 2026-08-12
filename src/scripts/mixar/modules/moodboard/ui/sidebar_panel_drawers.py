@@ -17,6 +17,9 @@ from .sidebar_ui_helpers import (
     draw_toggle, draw_image_info_card, draw_status_badge,
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, SEP_SECTION
+from mixar.modules.moodboard.core.media_utils import is_still_item
+from .queue_drawer import draw_queue as _draw_queue
+from .world_labs_drawer import draw_world_labs as _draw_world_labs
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +73,7 @@ def _draw_imagegen(layout, context):
     if tab.use_reference_images:
         if hasattr(scene, 'mixie_moodboard_images'):
             for item in scene.mixie_moodboard_images:
-                if item.selected and item.image:
+                if item.selected and is_still_item(item):
                     draw_image_info_card(col, item.image)
         if selected_count == 0:
             row = col.row()
@@ -476,38 +479,3 @@ def _draw_scene_gen_exp(layout, context):
 
     # Step 5 — Place in Scene
     draw_step5_place(layout, context, tab)
-
-
-# ---------------------------------------------------------------------------
-# Queue (all features combined)
-# ---------------------------------------------------------------------------
-
-def _draw_queue(layout, context):
-    """Draw the unified Generation Queue: filter chips + one flat list."""
-    try:
-        from mixar.modules.common.job_queue.core.queue_manager import all_queues
-        from mixar.modules.common.job_queue.core.job import JobState
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
-            draw_unified_queue_panel,
-        )
-    except Exception:
-        layout.label(text="Queue system not available", icon='INFO')
-        return
-
-    # Per-status counts live in the filter chips inside the unified list;
-    # only the terminal count is needed here, to gate the Clear button.
-    terminal_states = (JobState.SUCCESS, JobState.FAILED, JobState.CANCELLED)
-    done_terminal = sum(
-        1 for q in all_queues() for j in q.snapshot()
-        if j.state in terminal_states
-    )
-
-    # Unified list (filter chips + template_list).
-    draw_unified_queue_panel(layout, context)
-
-    if done_terminal:
-        layout.separator(factor=SEP_INTRA)
-        layout.operator(
-            "mixie.queue_clear_all_completed",
-            text="Clear All Completed", icon='TRASH',
-        )

@@ -254,6 +254,24 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if self.action_value.startswith("chat_model:"):
             return self._apply_model_choice(context)
 
+        if self.action_value == "export_destination_selected":
+            from ...core import get_session_manager
+            from ...core.export_destination import has_destination
+            session_id = get_session_manager().get_session_id(context.scene)
+            if not has_destination(session_id):
+                bubble = next((m for m in context.scene.mixie_chat_messages
+                               if getattr(m, "bubble_id", "") == self.bubble_id), None)
+                if bubble is None or getattr(bubble, "input_type", "") != "file_save":
+                    self.report({'WARNING'}, "Export request is no longer available")
+                    return {'CANCELLED'}
+                return bpy.ops.mixie_chat.choose_export_location(
+                    'INVOKE_DEFAULT', bubble_id=self.bubble_id,
+                    session_id=session_id,
+                    export_format=bubble.export_format,
+                    target_scope=bubble.export_scope,
+                    suggested_filename=bubble.export_suggested_filename,
+                )
+
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it
@@ -274,6 +292,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         from ...core import get_session_manager
         session = get_session_manager()
         if not session.is_connected(context.scene):
+            if self.action_value == "export_destination_selected":
+                from ...core.export_destination import clear_destination
+                clear_destination(session.get_session_id(context.scene))
             logger.warning("[SLOT ACTION] CANCELLED: Not connected to server")
             self.report({'WARNING'}, "Not connected to server. Please reconnect.")
             return {'CANCELLED'}
@@ -353,6 +374,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     session.clear_streaming()
                 else:
                     logger.error("Failed to start input stream for slot action")
+                    if self.action_value == "export_destination_selected":
+                        from ...core.export_destination import clear_destination
+                        clear_destination(session.get_session_id(scene))
                     self.report({'ERROR'}, "Failed to send action")
 
         except Exception as e:

@@ -10,6 +10,7 @@ from bpy.types import UIList
 
 from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
 from mixar.modules.common.job_queue.core.job import JobState
+from mixar.modules.common.job_queue.core.labels import feature_label, format_elapsed
 from mixar.modules.common.job_queue.core.queue_manager import get_queue
 
 # Tracks when the last enqueue happened per feature_key (epoch seconds).
@@ -53,44 +54,10 @@ _QUEUE_FILTER_GAP = 0.55
 _QUEUE_LIST_ROWS = 8
 
 
-def _format_elapsed(seconds: float) -> str:
-    if seconds < 0:
-        seconds = 0.0
-    m, s = divmod(int(seconds), 60)
-    if m >= 60:
-        h, m = divmod(m, 60)
-        return f"{h}:{m:02d}:{s:02d}"
-    return f"{m}:{s:02d}"
-
-
-def _feature_label(
-    origin_capability_key: str,
-    service: str,
-    feature_key: str,
-) -> str:
-    """Backend catalog capability label, with exact identifier fallback."""
-    capability_key = (origin_capability_key or "").strip()
-    service_key = (service or "").strip()
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_capability,
-            get_capability_for_service,
-            get_service,
-        )
-
-        if capability_key:
-            origin = get_capability(capability_key)
-            if origin and origin.get("label"):
-                return origin["label"]
-        capability = get_capability_for_service(service_key)
-        if capability and capability.get("label"):
-            return capability["label"]
-        catalog_service = get_service(service_key)
-        if catalog_service and catalog_service.get("label"):
-            return catalog_service["label"]
-    except Exception:
-        pass
-    return capability_key or service_key or (feature_key or "").strip()
+# Shared with the Agent Bubble status pill — the same job must not be named
+# two different things on two surfaces. See job_queue/core/labels.py.
+_format_elapsed = format_elapsed
+_feature_label = feature_label
 
 
 def _model_label(service: str, model: str) -> str:

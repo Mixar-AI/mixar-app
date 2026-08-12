@@ -2,13 +2,24 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Transient "generation queued" toast raised by FeatureQueue.submit().
+"""Queue-activity toast — sticky while work is outstanding, summary on drain.
 
-Covers burst aggregation: jobs enqueued rapidly OR at ~1s intervals must
-collapse into one counting toast (each re-push restarts the TTL), while a
-gap longer than the toast lifetime starts a fresh burst. Also covers the
-toast's "View Queue" action working without area context (toast buttons
-fire from a bpy.app.timers callback where context.area is None).
+The contract these pin, in order of why they exist:
+
+  * the in-progress toast is STICKY. An auto-fading confirmation was the
+    original bug: the agent enqueues, goes IDLE, and nothing on screen says
+    a paid multi-minute job is still running.
+  * its count is DERIVED from live queue snapshots, so it follows jobs
+    completing and failing, not just arriving.
+  * it is not re-pushed when nothing changed (``_notify`` fires twice a
+    second during downloads).
+  * a user dismissal is respected until the next enqueue.
+  * draining the queue replaces it with a transient completion summary, and
+    an all-failed batch dismisses instead (failures self-toast already).
+
+Also covers the toast's "View Queue" action working without area context
+(toast buttons fire from a bpy.app.timers callback where context.area is
+None).
 """
 
 import sys
@@ -25,133 +36,300 @@ from mixar.modules.testing.mock_bpy import install_bpy_mock
 install_bpy_mock()
 
 from mixar.modules.common.job_queue.constants import (
-    ENQUEUE_TOAST_ID,
-    ENQUEUE_TOAST_TTL_MS,
+    QUEUE_ACTIVE_TOAST_TTL_MS,
+    QUEUE_READY_TOAST_TTL_MS,
+    QUEUE_TOAST_ID,
 )
 from mixar.modules.common.job_queue.core import enqueue_toast as ET
+from mixar.modules.common.job_queue.core import labels as QM_LABELS
 from mixar.modules.common.job_queue.core import queue_manager as QM
-from mixar.modules.common.job_queue.core.job import Job
+from mixar.modules.common.job_queue.core.job import Job, JobState
 from mixar.modules.common.job_queue.ui.operators import queue_ops as QO
 from mixar.modules.common.notifications.store import get_notification_store
 
 
-class _Clock:
-    """Injectable monotonic clock for enqueue_toast."""
-
-    def __init__(self):
-        self.t = 1000.0
-
-    def monotonic(self):
-        return self.t
-
-
-def _setup(monkeypatch):
-    clock = _Clock()
-    monkeypatch.setattr(ET, "time", clock)
-    ET.reset_burst()
-    store = get_notification_store()
-    store.clear_all()
-    return clock, store
-
-
-def _toast(store):
-    items = [i for i in store.get_visible() if i.id == ENQUEUE_TOAST_ID]
-    assert len(items) <= 1
-    return items[0] if items else None
-
-
-def _job(label="ImageGen: a hero"):
-    return Job(label=label)
-
-
-def test_single_enqueue_shows_transient_toast(monkeypatch):
-    _, store = _setup(monkeypatch)
-    ET.notify_job_enqueued(_job())
-    item = _toast(store)
-    assert item is not None
-    assert item.title == "Generation queued"
-    assert item.body == "ImageGen: a hero"
-    assert item.ttl_ms == ENQUEUE_TOAST_TTL_MS
-    assert not item.is_sticky
-    assert len(item.actions) == 1
-    action = item.actions[0]
-    assert action.label == "View Queue"
-    assert action.operator == "mixie.queue_view"
-    assert action.style == "primary"
-
-
-def test_display_label_preferred_over_raw_label(monkeypatch):
-    _, store = _setup(monkeypatch)
-    job = _job("ImageGen: a hero [3f2a]")
-    job.display_label = "ImageGen: a hero"
-    ET.notify_job_enqueued(job)
-    assert _toast(store).body == "ImageGen: a hero"
-
-
-def test_rapid_burst_aggregates_into_one_counting_toast(monkeypatch):
-    _, store = _setup(monkeypatch)
-    for i in range(3):
-        ET.notify_job_enqueued(_job(f"Retopo: mesh_{i}"))
-    item = _toast(store)
-    assert item.title == "3 generations queued"
-    assert item.body == "Latest: Retopo: mesh_2"
-
-
-def test_one_second_interval_burst_still_aggregates(monkeypatch):
-    clock, store = _setup(monkeypatch)
-    for i in range(5):
-        ET.notify_job_enqueued(_job(f"Model: part_{i}"))
-        clock.t += 1.0  # slower than "instant", faster than the TTL window
-    item = _toast(store)
-    assert item.title == "5 generations queued"
-
-
-def test_gap_longer_than_ttl_starts_fresh_burst(monkeypatch):
-    clock, store = _setup(monkeypatch)
-    ET.notify_job_enqueued(_job("first"))
-    ET.notify_job_enqueued(_job("second"))
-    assert _toast(store).title == "2 generations queued"
-
-    clock.t += (ENQUEUE_TOAST_TTL_MS / 1000.0) + 0.5
-    ET.notify_job_enqueued(_job("third"))
-    item = _toast(store)
-    assert item.title == "Generation queued"
-    assert item.body == "third"
-
-
-def test_repush_restarts_toast_lifetime(monkeypatch):
-    clock, store = _setup(monkeypatch)
-    ET.notify_job_enqueued(_job("first"))
-    first = _toast(store)
-    clock.t += 3.0
-    ET.notify_job_enqueued(_job("second"))
-    second = _toast(store)
-    # The store replaces the item wholesale, so created_at (and with it the
-    # TTL countdown) restarts on every push within a burst.
-    assert second is not first
-    assert second.created_at >= first.created_at
-
-
 class _InertJob(Job):
-    """Job whose submit never resolves — stays non-terminal, no timers."""
+    """Job whose submit never resolves — stays PENDING, starts no timers."""
 
     def submit(self, on_success, on_error):
         pass
 
 
-def test_feature_queue_submit_raises_toast_once_per_accepted_job(monkeypatch):
-    _, store = _setup(monkeypatch)
-    queue = QM.FeatureQueue("test_enqueue_toast")
+def _setup(monkeypatch, *, queues=()):
+    """Isolate toast + queue state; ``queues`` become the only live queues."""
+    ET.reset_state()
+    store = get_notification_store()
+    store.clear_all()
+    monkeypatch.setattr(QM, "_queues", {q.feature_key: q for q in queues})
+    return store
 
-    assert queue.submit(_InertJob(label="job-a")) is True
-    assert _toast(store).title == "Generation queued"
 
-    # Duplicate (same label, still active) is rejected — no second count.
-    assert queue.submit(_InertJob(label="job-a")) is False
-    assert _toast(store).title == "Generation queued"
+def _queue(name="test_queue_toast"):
+    return QM.FeatureQueue(name)
 
-    assert queue.submit(_InertJob(label="job-b")) is True
-    assert _toast(store).title == "2 generations queued"
+
+def _toast(store):
+    items = [i for i in store.get_visible() if i.id == QUEUE_TOAST_ID]
+    assert len(items) <= 1
+    return items[0] if items else None
+
+
+def _job(label="ImageGen: a hero"):
+    return _InertJob(label=label)
+
+
+# ---------------------------------------------------------------------------
+# In-progress phase
+# ---------------------------------------------------------------------------
+
+
+def test_single_enqueue_shows_sticky_toast(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    assert queue.submit(_job()) is True
+
+    item = _toast(store)
+    assert item is not None
+    assert item.title == "Generation in progress"
+    assert item.body == "ImageGen: a hero"
+    assert item.ttl_ms == QUEUE_ACTIVE_TOAST_TTL_MS
+    assert item.is_sticky
+    action = item.actions[0]
+    assert (action.label, action.operator, action.style) == (
+        "View Queue", "mixie.queue_view", "primary",
+    )
+
+
+def test_display_label_preferred_over_raw_label(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    job = _job("ImageGen: a hero [3f2a]")
+    job.display_label = "ImageGen: a hero"
+    queue.submit(job)
+
+    assert _toast(store).body == "ImageGen: a hero"
+
+
+def test_count_aggregates_across_queues(monkeypatch):
+    a, b = _queue("feat_a"), _queue("feat_b")
+    store = _setup(monkeypatch, queues=[a, b])
+
+    a.submit(_job("Retopo: mesh_0"))
+    b.submit(_job("Model: part_0"))
+
+    assert _toast(store).title == "2 generations in progress"
+
+
+def test_duplicate_submit_does_not_inflate_count(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    assert queue.submit(_job("job-a")) is True
+    assert queue.submit(_job("job-a")) is False  # same label, still active
+    assert _toast(store).title == "Generation in progress"
+
+    assert queue.submit(_job("job-b")) is True
+    assert _toast(store).title == "2 generations in progress"
+
+
+def test_count_derives_from_live_state_not_a_running_total(monkeypatch):
+    """A finished job leaves the count — a burst counter got this wrong."""
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    first, second = _job("job-a"), _job("job-b")
+    queue.submit(first)
+    queue.submit(second)
+    assert _toast(store).title == "2 generations in progress"
+
+    first.state = JobState.SUCCESS
+    queue._notify()
+    assert _toast(store).title == "Generation in progress"
+
+
+def test_unchanged_state_does_not_republish(monkeypatch):
+    """_notify fires on every 0.5s download tick; a re-push resets the item."""
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    queue.submit(_job())
+    first = _toast(store)
+    queue._notify()
+    queue._notify()
+
+    assert _toast(store) is first
+
+
+def test_dismissal_respected_until_next_enqueue(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    queue.submit(_job("job-a"))
+    store.dismiss(QUEUE_TOAST_ID)
+
+    queue._notify()
+    assert _toast(store) is None  # a sticky toast can only be gone if closed
+
+    queue.submit(_job("job-b"))
+    assert _toast(store).title == "2 generations in progress"
+
+
+# ---------------------------------------------------------------------------
+# Drain phase
+# ---------------------------------------------------------------------------
+
+
+def test_drain_replaces_sticky_toast_with_transient_summary(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    first, second = _job("job-a"), _job("job-b")
+    queue.submit(first)
+    queue.submit(second)
+
+    first.state = JobState.SUCCESS
+    second.state = JobState.SUCCESS
+    queue._notify()
+
+    item = _toast(store)
+    assert item.title == "2 generations ready"
+    assert item.ttl_ms == QUEUE_READY_TOAST_TTL_MS
+    assert not item.is_sticky
+    assert item.actions[0].operator == "mixie.queue_view"
+
+
+def test_summary_reports_partial_failure(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    ok, bad = _job("job-a"), _job("job-b")
+    queue.submit(ok)
+    queue.submit(bad)
+
+    ok.state = JobState.SUCCESS
+    bad.state = JobState.FAILED
+    queue._notify()
+
+    item = _toast(store)
+    assert item.title == "Generation ready"
+    assert item.body == "1 failed"
+
+
+def test_all_failed_batch_dismisses_instead_of_summarising(monkeypatch):
+    """Each failure already raised its own toast — don't double-report."""
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    job.state = JobState.FAILED
+    queue._notify()
+
+    assert _toast(store) is None
+
+
+def test_summary_fires_once_then_stays_quiet(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    job.state = JobState.SUCCESS
+    queue._notify()
+    assert _toast(store).title == "Generation ready"
+
+    store.clear_all()
+    queue._notify()
+    assert _toast(store) is None
+
+
+def test_new_batch_after_drain_starts_a_fresh_count(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    first = _job("job-a")
+    queue.submit(first)
+    first.state = JobState.SUCCESS
+    queue._notify()
+
+    queue.submit(_job("job-b"))
+    item = _toast(store)
+    assert item.title == "Generation in progress"
+    assert item.body == "job-b"
+
+
+# ---------------------------------------------------------------------------
+# active_job_count — the pill reads this
+# ---------------------------------------------------------------------------
+
+
+def test_active_job_count_spans_queues_and_ignores_terminal(monkeypatch):
+    a, b = _queue("feat_a"), _queue("feat_b")
+    _setup(monkeypatch, queues=[a, b])
+
+    done, running, pending = _job("job-a"), _job("job-b"), _job("job-c")
+    a.submit(done)
+    a.submit(running)
+    b.submit(pending)
+
+    done.state = JobState.SUCCESS
+    running.state = JobState.RUNNING_POLL
+
+    assert QM.active_job_count() == 2
+
+
+def test_active_job_count_includes_paused_auth(monkeypatch):
+    """PAUSED_AUTH is stalled work the user still has outstanding."""
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    job.state = JobState.PAUSED_AUTH
+
+    assert QM.active_job_count() == 1
+
+
+def test_activity_names_the_job_only_when_there_is_exactly_one(monkeypatch):
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+    monkeypatch.setattr(
+        QM_LABELS, "catalog_feature_label", lambda cap, svc: "Image Gen",
+    )
+
+    queue.submit(_job("job-a"))
+    assert QM.active_queue_activity().label == "Image Gen"
+
+    # With two active, naming either one misrepresents the other.
+    queue.submit(_job("job-b"))
+    assert QM.active_queue_activity().label == ""
+
+
+def test_activity_clock_starts_from_the_oldest_job(monkeypatch):
+    """"How long has this been going" is a question about the oldest job."""
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+
+    old, new = _job("job-a"), _job("job-b")
+    old.created_at = 100.0
+    new.created_at = 500.0
+    queue.submit(old)
+    queue.submit(new)
+
+    assert QM.active_queue_activity().started_at == 100.0
+
+
+def test_activity_is_empty_when_the_queue_is_idle(monkeypatch):
+    queue = _queue()
+    _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    job.state = JobState.SUCCESS
+
+    assert QM.active_queue_activity() == (0, "", 0.0)
 
 
 # ---------------------------------------------------------------------------

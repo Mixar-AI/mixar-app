@@ -44,6 +44,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
 
@@ -91,12 +92,32 @@ def _collect_selected_image_names(scene) -> list[str]:
     names: set[str] = set()
     for mb_img in images_attr:
         img = mb_img.image
-        if img is None:
+        # Chat attachments are still-image-only today. Keep videos selected on
+        # the board for the future Seedance path without flattening a movie to
+        # a misleading single-frame chat attachment.
+        if img is None or is_video_item(mb_img):
             continue
         if mb_img.selected:
             names.add(img.name)
         elif mb_img.group_index in selected_group_indices:
             names.add(img.name)
+
+    # 3. Selected inference nodes contribute their generated still output.
+    # A node's output lives as an *embedded* media item (its `.selected` is
+    # pinned False, node_graph.connect_image_result) plus `node.preview_image`,
+    # and clicking a node flips `node.selected` instead of any media item's
+    # flag. Without this, a selected generated node — unlike a selected upload —
+    # never reaches the agent. Videos/3D previews are skipped (attachments are
+    # still-image-only, and model nodes carry a preview_object, not an image).
+    nodes_attr = getattr(scene, "mixie_moodboard_action_nodes", None)
+    if nodes_attr is not None:
+        for node in nodes_attr:
+            if not getattr(node, "selected", False):
+                continue
+            preview = getattr(node, "preview_image", None)
+            if preview is None or getattr(preview, "source", "") == 'MOVIE':
+                continue
+            names.add(preview.name)
 
     return sorted(names)
 
@@ -221,6 +242,35 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
 # ----------------------------------------------------------------- #
 # Polling tick
 # ----------------------------------------------------------------- #
+def _ensure_graph_node_ids(scene) -> None:
+    """Backfill missing moodboard graph node ids. Never raises."""
+    try:
+        from .node_graph import ensure_media_node_ids
+
+        ensure_media_node_ids(scene)
+    except Exception as e:  # noqa: BLE001 — timer must never raise
+        _logger.debug("moodboard node id migration failed: %s", e, exc_info=True)
+
+
+def _restore_graph_node_selections(scene) -> None:
+    """Re-derive each node's Mode/Model dropdown from its saved slugs.
+
+    The dropdowns are dynamic enums stored as an index into the items list, so
+    a freshly loaded file shows whatever that index now resolves to. The
+    catalog-swap callback restores them, but only when a swap actually happens
+    — opening a .blend while the catalog is already loaded produces no swap, so
+    without this the node would display the wrong model (while still
+    submitting the right one, which is the more confusing failure).
+    """
+    try:
+        from .node_schema import restore_node_selection
+
+        for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
+            restore_node_selection(node)
+    except Exception as e:  # noqa: BLE001 — handler must never raise
+        _logger.debug("moodboard node selection restore failed: %s", e, exc_info=True)
+
+
 def _poll_tick():
     """bpy.app.timers callback: detect selection changes and sync.
 
@@ -231,6 +281,14 @@ def _poll_tick():
         scene = bpy.context.scene
         if scene is None:
             return _POLL_INTERVAL_S
+
+        # Graph node ids are minted only by this migration, and the canvas
+        # lookups are read-only by design (assigning ids from a draw or
+        # menu-draw path would write scene data mid-redraw). This tick is the
+        # moodboard's existing main-thread hook, so it is where ids get
+        # backfilled for images added by any of the collection's writers —
+        # including the C++ drop operator. No-ops once every id is present.
+        _ensure_graph_node_ids(scene)
 
         key = scene.name
         signature = _compute_selection_signature(scene)
@@ -381,6 +439,15 @@ def _on_file_load_post(*_args) -> None:
     let the next poll perform a full sync.
     """
     _last_signatures.clear()
+    # Old .blend files predate the graph and carry no node ids. Migrate every
+    # scene once on load so a link drag started before the first poll tick
+    # still resolves its source.
+    try:
+        for scene in bpy.data.scenes:
+            _ensure_graph_node_ids(scene)
+            _restore_graph_node_selections(scene)
+    except Exception as e:  # noqa: BLE001 — handler must never raise
+        _logger.debug("moodboard node id load migration failed: %s", e, exc_info=True)
 
 
 def register() -> None:

@@ -24,7 +24,12 @@ FEATURE_HUNYUAN_PART = "hunyuan_part"
 FEATURE_HUNYUAN_UV = "hunyuan_uv"
 FEATURE_MODEL_3D = "model_3d"
 FEATURE_IMAGEGEN = "imagegen"
+FEATURE_VIDEO_GEN = "video_gen"
 FEATURE_LOOKDEV360 = "lookdev360"
+# PBR Generation (Tripo /v3/models/texture) — client queue bucket. Distinct
+# from FEATURE_LOOKDEV360 (self-hosted Hunyuan PBR maps → fill layers): this
+# one imports a textured GLB, so it must not share the lookdev queue.
+FEATURE_PBR_GEN = "pbr_generation"
 FEATURE_SCENE_GEN = "scene_gen"
 FEATURE_MESH_SEGMENT = "mesh_segment"
 # Tripo segmentation. Separate queues from FEATURE_MESH_SEGMENT (Jasper) so a
@@ -37,6 +42,7 @@ FEATURE_MATGEN = "matgen"
 FEATURE_BRUSH_GEN = "brush_gen"
 FEATURE_LOOKDEV = "lookdev"
 FEATURE_SCENE_GEN_EXP_LABELS = "scene_gen_exp_labels"
+FEATURE_WORLD_LABS = "world_labs"
 
 # ============================================================================
 # RESULT DOWNLOAD
@@ -56,8 +62,8 @@ DOWNLOAD_SOCKET_TIMEOUT_S = 120.0
 # of MB. 600 s covers ~150 MB at 250 KB/s (a 2 Mbit/s effective home line) or
 # ~50 MB at 85 KB/s. Slower than that floor is a stall, not a slow connection,
 # and the user is better served by a failure they can retry than by an
-# unbounded spinner holding a concurrency slot. It also keeps a job's whole
-# worst case inside ~30 min, since MAX_POLL_DURATION (1200 s) is the other half.
+# unbounded spinner holding a concurrency slot. It also bounds a job's whole
+# worst case at ~70 min, since MAX_POLL_DURATION (3600 s) is the other half.
 DOWNLOAD_TOTAL_DEADLINE_S = 600.0
 
 # Retry budget for one transfer. Connection resets, read timeouts, 5xx/408/429
@@ -87,11 +93,24 @@ DOWNLOAD_PROGRESS_REFRESH_S = 0.5
 # granularity plus the retry backoff tail.
 DOWNLOAD_WATCHDOG_DEADLINE_S = DOWNLOAD_TOTAL_DEADLINE_S + 120.0
 
-# Enqueue toast — transient "generation queued" viewport feedback.
-# One stable id so bursts collapse into a single counting toast; the TTL is
-# also the burst window (a re-push resets the store item's created_at).
-ENQUEUE_TOAST_ID = "jobq_enqueued"
-ENQUEUE_TOAST_TTL_MS = 8000
+# Queue-activity toast — one stable id, so every push replaces the previous
+# item instead of stacking a toast per job.
+QUEUE_TOAST_ID = "jobq_enqueued"
+
+# The in-progress toast is STICKY (ttl <= 0 never expires). An auto-fading
+# confirmation was the original problem: the agent enqueues a generation,
+# reports back, and goes IDLE, leaving the user with nothing on screen to
+# tell them work is still running or where to check it. The toast lives for
+# as long as the queue has unfinished work and carries the "View Queue"
+# action the whole time.
+QUEUE_ACTIVE_TOAST_TTL_MS = 0
+
+# Completion summary shown when the queue drains. Transient — it reports a
+# finished fact, and the results themselves are already in the scene.
+QUEUE_READY_TOAST_TTL_MS = 10000
+
+# Backwards-compatible alias — the id string is unchanged.
+ENQUEUE_TOAST_ID = QUEUE_TOAST_ID
 
 # Logging prefix
 LOG_PREFIX = "[JobQueue]"
@@ -118,7 +137,9 @@ __all__ = (
     "FEATURE_HUNYUAN_UV",
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
+    "FEATURE_VIDEO_GEN",
     "FEATURE_LOOKDEV360",
+    "FEATURE_PBR_GEN",
     "FEATURE_SCENE_GEN",
     "FEATURE_MESH_SEGMENT",
     "FEATURE_SCENE_RECON",
@@ -126,7 +147,10 @@ __all__ = (
     "FEATURE_BRUSH_GEN",
     "FEATURE_LOOKDEV",
     "FEATURE_SCENE_GEN_EXP_LABELS",
+    "FEATURE_WORLD_LABS",
+    "QUEUE_TOAST_ID",
+    "QUEUE_ACTIVE_TOAST_TTL_MS",
+    "QUEUE_READY_TOAST_TTL_MS",
     "ENQUEUE_TOAST_ID",
-    "ENQUEUE_TOAST_TTL_MS",
     "LOG_PREFIX",
 )

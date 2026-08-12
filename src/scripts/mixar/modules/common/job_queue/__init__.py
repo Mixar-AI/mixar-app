@@ -18,7 +18,7 @@ Public surface:
 
 from .core.job import Job, JobState, TERMINAL_STATES, RUNNING_STATES
 from .core.queue_manager import get_queue, FeatureQueue
-from .core.generic_jobs import AsyncGLBJob, SyncImageJob
+from .core.generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
 from .core.enqueue import enqueue_generation
 from .core.helpers import (
     create_scene_flag_listener,
@@ -38,6 +38,7 @@ __all__ = (
     # Generic jobs
     "AsyncGLBJob",
     "SyncImageJob",
+    "StreamingVideoJob",
     "enqueue_generation",
     # Helpers
     "create_scene_flag_listener",

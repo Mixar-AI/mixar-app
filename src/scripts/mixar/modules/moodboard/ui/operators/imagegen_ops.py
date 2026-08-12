@@ -13,49 +13,11 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.utils.image_utils import compress_for_service
+from mixar.modules.moodboard.core.imagegen_queue import get_imagegen_listener
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
-
-_imagegen_listener = None
-
-
-def _get_imagegen_listener():
-    """Lazily create the imagegen queue listener (cached singleton).
-
-    Replicates the old imagegen_queue.py listener behaviour:
-    - on_start: clear ``mixie_imagegen_error``
-    - on_finish: redraw MIXIE areas
-    """
-    global _imagegen_listener
-    if _imagegen_listener is not None:
-        return _imagegen_listener
-
-    from mixar.modules.common.job_queue.core.helpers import (
-        create_scene_flag_listener,
-    )
-
-    def _on_start(scene):
-        try:
-            scene.mixie_imagegen_error = ""
-        except (AttributeError, TypeError):
-            pass
-
-    def _on_finish(scene):
-        try:
-            for area in bpy.context.screen.areas:
-                if area.type == 'MIXIE':
-                    area.tag_redraw()
-        except Exception:
-            pass
-
-    _imagegen_listener = create_scene_flag_listener(
-        "mixie_imagegen_is_generating",
-        on_start=_on_start,
-        on_finish=_on_finish,
-    )
-    return _imagegen_listener
-
 
 def _get_max_refs(model_name: str) -> int:
     """Get maximum reference images for a model (catalog, then hardcoded)."""
@@ -231,7 +193,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 if use_moodboard_selection:
                     # Toggle ON: use currently selected moodboard images (dynamic)
                     for item in scene.mixie_moodboard_images:
-                        if item.selected and item.image:
+                        if item.selected and is_still_item(item):
                             try:
                                 img_bytes = compress_for_service(item.image, "imagegen")
                                 reference_image_bytes.append(img_bytes)
@@ -275,7 +237,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 # Add selected moodboard images (up to remaining slots)
                 try:
                     for item in scene.mixie_moodboard_images:
-                        if item.selected and item.image:
+                        if item.selected and is_still_item(item):
                             img_bytes = compress_for_service(item.image, "imagegen")
                             reference_image_bytes.append(img_bytes)
                             if len(reference_image_bytes) >= max_refs:
@@ -363,7 +325,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 name_prefix="imagegen",
                 prompt_text=stored_prompt,
                 undo_message="Generate Image",
-                listener=_get_imagegen_listener(),
+                listener=get_imagegen_listener(),
             )
             if not job:
                 self.report({"WARNING"}, "A duplicate image generation is already queued")
@@ -451,7 +413,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             prompt_text=prompt,
             undo_message="Generate Image",
             base_name=self.name.strip(),
-            listener=_get_imagegen_listener(),
+            listener=get_imagegen_listener(),
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate image generation is already queued")

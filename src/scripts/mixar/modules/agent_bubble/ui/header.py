@@ -23,6 +23,8 @@ main bubble) — DPI-invariant, unlike pixel-width thresholds.
 """
 
 import sys
+import time
+from typing import NamedTuple
 
 import bpy
 from bpy.types import Header
@@ -41,6 +43,34 @@ from mixar.modules.agent_bubble.core.pill_icons import (
 _RUNNING_STATES = {"BUSY", "MODIFYING"}
 
 _IS_WINDOWS = sys.platform == "win32"
+
+# Largest job count the pill spells out; beyond it the label reads "9+".
+# Past a handful the exact number stops mattering — the user is going to open
+# the Queue panel either way — and an uncapped count would widen the label
+# without bound.
+_QUEUE_COUNT_CAP = 9
+
+# Character budget for the queue label. The pill window is a FIXED 148 px
+# wide (AGENT_BUBBLE_PILL_WIDTH in space_agent_bubble.cc) with the text
+# centred beside an icon, and "Awaiting Input" (14) is the widest label
+# already shipping there. Anything over this budget — a long capability name
+# like "Mesh Segmentation" — falls back to generic wording rather than being
+# clipped mid-word by Blender's layout.
+_QUEUE_TEXT_BUDGET = 16
+
+
+class PillStatus(NamedTuple):
+    """What the pill renders. ``animate`` drives the trailing-dot pulse.
+
+    Queue states set it False: their elapsed clock ticks once a second, and a
+    live number is a better "still working" signal than dots — running both
+    reads as two competing animations in a 148 px window.
+    """
+
+    label: str
+    colour: str
+    fallback_icon: str
+    animate: bool = False
 
 
 def _transport_down() -> bool:
@@ -65,26 +95,101 @@ def _transport_down() -> bool:
         return False
 
 
-def _get_status(scene) -> tuple[str, str, str]:
-    """Return (label, custom icon colour, fallback icon) for the pill."""
+def _queue_activity():
+    """Live queue summary, or None when nothing is outstanding.
+
+    Read-only and cheap (a pass over in-memory job lists) — safe to call
+    from a header draw, which must never write RNA or raise.
+    """
+    try:
+        from mixar.modules.common.job_queue.core.queue_manager import (
+            active_queue_activity,
+        )
+        activity = active_queue_activity()
+        return activity if activity.count else None
+    except Exception:
+        return None
+
+
+def _queue_clock(started_at: float) -> str:
+    """Elapsed text for the oldest active job."""
+    if not started_at:
+        return ""
+    try:
+        from mixar.modules.common.job_queue.core.labels import (
+            format_elapsed_compact,
+        )
+        return format_elapsed_compact(time.monotonic() - started_at)
+    except Exception:
+        return ""
+
+
+def _queue_count_text(count: int) -> str:
+    capped = f"{_QUEUE_COUNT_CAP}+" if count > _QUEUE_COUNT_CAP else str(count)
+    return f"{capped} jobs"
+
+
+def _queue_label(activity) -> str:
+    """Pill text for outstanding generations: what, and for how long.
+
+    One job is named ("Image Gen 1:24") because that is the case where a
+    name is both unambiguous and useful. Several become a count ("3 jobs
+    1:24") — naming one of them would misrepresent the rest, and there is no
+    room to list them.
+
+    The clock is the load-bearing half: it is the difference between "this
+    is slow" and "this is stuck", the same reason the download substate
+    shows moving byte counts instead of a fixed "Downloading…".
+    """
+    clock = _queue_clock(activity.started_at)
+    if activity.count == 1:
+        # Empty label = the catalog could not answer. Generic wording beats
+        # leaking a raw service key like "mesh_segment" into the pill.
+        subject = activity.label or "Generating"
+    else:
+        subject = _queue_count_text(activity.count)
+
+    text = f"{subject} {clock}".strip()
+    if len(text) <= _QUEUE_TEXT_BUDGET:
+        return text
+    # Long capability names ("Mesh Segmentation") don't fit beside a clock.
+    # Keep the clock — it carries more information than the name here.
+    return f"Generating {clock}".strip()
+
+
+def _get_status(scene) -> PillStatus:
+    """Return what the status pill should render."""
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
     if state == "OFFLINE":
-        return "Disconnected", "red", 'CANCEL'
+        return PillStatus("Disconnected", "red", 'CANCEL')
     if state == "CONNECTING":
-        return "Connecting", "blue", 'SORTTIME'
+        return PillStatus("Connecting", "blue", 'SORTTIME')
     if _transport_down():
         # Any non-offline state with the transport gone means the client is
         # auto-reconnecting (and, mid-turn, will re-attach to the stream).
-        return "Reconnecting", "red", 'CANCEL'
+        return PillStatus("Reconnecting", "red", 'CANCEL')
     if state in _RUNNING_STATES:
-        return "Running", "green", 'RECORD_ON'
+        return PillStatus("Running", "green", 'RECORD_ON', animate=True)
     if state == "AWAITING_INPUT":
         # Blue instead of yellow — yellow is already the macOS close
         # traffic-light button. CONNECTING and AWAITING_INPUT can't be
         # active simultaneously, so reusing the same blue is safe and
         # avoids the visual collision.
-        return "Awaiting Input", "blue", 'QUESTION'
-    return "Idle", "grey", 'RECORD_OFF'
+        return PillStatus("Awaiting Input", "blue", 'QUESTION')
+
+    # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
+    # enqueues a multi-minute generation, answers in chat and drops to IDLE
+    # while the job runs — at which point every surface claimed nothing was
+    # happening. Surfacing it here, in the Idle branch ONLY, is deliberate:
+    # the states above are ones the user must act on (connection lost, agent
+    # asking a question), and background work must never mask them. The
+    # repaint pump that advances the clock is the queue blink timer
+    # (queue_status_icons), which ticks every 0.5 s while jobs are active.
+    activity = _queue_activity()
+    if activity is not None:
+        return PillStatus(_queue_label(activity), "green", 'RECORD_ON')
+
+    return PillStatus("Idle", "grey", 'RECORD_OFF')
 
 
 def _is_pill_window(context) -> bool:
@@ -101,16 +206,21 @@ def _is_pill_window(context) -> bool:
     return True
 
 
+def _pill_text(status: PillStatus) -> str:
+    """Final label text, with the trailing-dot pulse where it applies."""
+    if status.animate:
+        return status.label + get_running_text_suffix()
+    return status.label
+
+
 def _draw_status(layout, scene) -> None:
     """Render the connection / activity status pill (icon + text)."""
-    label, icon_name, fallback_icon = _get_status(scene)
-    if icon_name == "green":
-        label = label + get_running_text_suffix()
-    icon_id = get_pill_icon_id_named(icon_name)
+    status = _get_status(scene)
+    icon_id = get_pill_icon_id_named(status.colour)
     if icon_id:
-        layout.label(text=label, icon_value=icon_id)
+        layout.label(text=_pill_text(status), icon_value=icon_id)
     else:
-        layout.label(text=label, icon=fallback_icon)
+        layout.label(text=_pill_text(status), icon=status.fallback_icon)
 
 
 class AGENT_BUBBLE_HT_header(Header):
@@ -156,10 +266,9 @@ class AGENT_BUBBLE_HT_header(Header):
             # layout's flex pass and squashes the spacers). Detect
             # LARGE pill via context.window.height — SMALL is 28 px,
             # LARGE is 44 px, so any height ≥ 36 is the LARGE state.
-            label, icon_name, fallback_icon = _get_status(scene)
-            if icon_name == "green":
-                label = label + get_running_text_suffix()
-            icon_id = get_pill_icon_id_named(icon_name)
+            status = _get_status(scene)
+            label = _pill_text(status)
+            icon_id = get_pill_icon_id_named(status.colour)
 
             # Centre the operator in the header.  separator_spacer()
             # pairs don't centre accurately because the header has
@@ -186,7 +295,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 row.operator(
                     "mixar.bubble_restore_user",
                     text=label,
-                    icon=fallback_icon,
+                    icon=status.fallback_icon,
                     emboss=False,
                     no_tooltip=True,
                 )
@@ -209,7 +318,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 no_tooltip=True,
             )
             traffic.operator(
-                "mixar.bubble_toggle_expand",
+                "mixar.bubble_toggle_expand_tracked",
                 text="",
                 icon='FULLSCREEN_ENTER',
                 emboss=False,
@@ -228,7 +337,7 @@ class AGENT_BUBBLE_HT_header(Header):
                 )
             if green_id:
                 traffic.operator(
-                    "mixar.bubble_toggle_expand",
+                    "mixar.bubble_toggle_expand_tracked",
                     text="",
                     icon_value=green_id,
                     emboss=False,

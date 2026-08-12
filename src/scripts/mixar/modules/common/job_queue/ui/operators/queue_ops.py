@@ -148,6 +148,8 @@ class MIXIE_OT_queue_view(Operator):
         )
         try:
             if region and hasattr(region, 'active_panel_category'):
+                from mixar.bootstrap.analytics_module import note_programmatic_panel_change
+                note_programmatic_panel_change(region, "Queue")
                 region.active_panel_category = "Queue"
         except Exception:
             pass  # sidebar just opened — category list not built yet

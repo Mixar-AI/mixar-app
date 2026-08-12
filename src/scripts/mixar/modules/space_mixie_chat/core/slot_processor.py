@@ -153,6 +153,7 @@ class SlotEventProcessor:
         # Each slot is wrapped in try/except so one failure never blocks others.
         slot_handlers = [
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
+            ("interrupt_context", lambda: self._apply_interrupt_context_slot(bubble, event_data["interrupt_context"])),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
             ("content", lambda: self._apply_content_slot(bubble, event_data["content"], scene)),
             ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
@@ -356,7 +357,7 @@ class SlotEventProcessor:
         input_type = input_type or ""
         bubble.input_type = input_type
 
-        if input_type in ('text', 'choice', 'approval'):
+        if input_type in ('text', 'choice', 'approval', 'file_save'):
             # Agent has paused for the user — free-form text, a choice
             # button, or an approval button. All three use AWAITING_INPUT:
             # the state survives SSE stream completion (see
@@ -373,6 +374,17 @@ class SlotEventProcessor:
             )
         else:
             logger.warning(f"[SLOT:INPUT_TYPE] Unknown input_type: {input_type}")
+
+    @staticmethod
+    def _apply_interrupt_context_slot(bubble: Any, context: dict) -> None:
+        """Store only the non-sensitive picker configuration on a transient bubble."""
+        context = context if isinstance(context, dict) else {}
+        bubble.export_format = str(context.get("format") or "")[:8]
+        bubble.export_scope = str(context.get("scope") or "")[:16]
+        bubble.export_extension = str(context.get("extension") or "")[:8]
+        bubble.export_suggested_filename = str(
+            context.get("suggested_filename") or "export"
+        )[:96]
 
     def _apply_todo_slot(self, bubble: Any, todo_items: list) -> None:
         """

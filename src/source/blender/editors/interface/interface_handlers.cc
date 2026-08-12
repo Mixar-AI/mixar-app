@@ -4494,9 +4494,41 @@ static int ui_do_but_textedit(
 
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;
+        bool is_moodboard_node_prompt = false;
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
+          is_moodboard_node_prompt =
+              area && area->spacetype == SPACE_MIXIE && prop_id && STREQ(prop_id, "prompt") &&
+              RNA_struct_find_property(&but->rnapoin, "node_id");
+        }
+
+        if (is_moodboard_node_prompt &&
+            (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
+        {
+          /* Run the node that OWNS this prompt field. A prop-less call would
+           * re-apply the operator's remembered last-used properties (it is a
+           * REGISTER operator), re-submitting whichever node the Generate
+           * button last ran instead of the node being edited. Read the id
+           * before ui_apply_but/exit while the button's RNA pointer is
+           * guaranteed live. */
+          const std::string node_id = RNA_string_get(&but->rnapoin, "node_id");
+          /* The canvas prompt is a single-action field: commit its latest
+           * value before invoking the exact operator behind Generate. */
+          ui_apply_but(C, block, but, data, true);
+          button_activate_state(C, but, BUTTON_STATE_EXIT);
+          if (wmOperatorType *run_ot = WM_operatortype_find("MIXIE_OT_moodboard_run_action_node",
+                                                            false))
+          {
+            PointerRNA run_props;
+            WM_operator_properties_create_ptr(&run_props, run_ot);
+            RNA_string_set(&run_props, "node_id", node_id.c_str());
+            WM_operator_name_call_ptr(
+                C, run_ot, blender::wm::OpCallContext::ExecDefault, &run_props, nullptr);
+            WM_operator_properties_free(&run_props);
+          }
+          retval = WM_UI_HANDLER_BREAK;
+          break;
         }
 
         if (ui_but_is_multiline_text(but) && (event->modifier & KM_SHIFT)) {

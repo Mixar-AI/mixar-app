@@ -17,7 +17,11 @@ set(INC_SYS
 set(SRC
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
+  mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_groups.cc
+  mixie_draw_moodboard_graph.cc
+  mixie_moodboard_graph_geometry.cc
+  mixie_draw_moodboard_node_ui.cc
   mixie_draw_moodboard_images.cc
   mixie_draw_moodboard_textboxes.cc
   mixie_draw_moodboard_tools.cc
@@ -26,7 +30,9 @@ set(SRC
   mixie_moodboard_ops_box_select.cc
   mixie_moodboard_ops_crop.cc
   mixie_moodboard_ops_drop.cc
+  mixie_moodboard_ops_graph.cc
   mixie_moodboard_ops_masks.cc
+  mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
   mixie_ops.cc
@@ -48,6 +54,7 @@ set(LIB
   PRIVATE bf::dna
   PRIVATE bf::gpu
   PRIVATE bf::imbuf
+  PRIVATE bf::imbuf::movie
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::extern::fmtlib
   PRIVATE bf::windowmanager

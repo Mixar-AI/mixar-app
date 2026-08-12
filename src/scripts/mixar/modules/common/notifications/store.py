@@ -217,6 +217,18 @@ class NotificationStore:
             active = [i for i in self._items if not i.is_expired]
             return list(reversed(active[-MAX_VISIBLE_TOASTS:]))
 
+    def contains(self, nid: str) -> bool:
+        """True when a live (non-expired) notification with this id is held.
+
+        Lets an owner of a sticky toast tell "still on screen" from "the user
+        dismissed it" — a sticky item never expires, so its absence after a
+        push can only mean dismissal. ``get_visible()`` can't answer this: it
+        caps at MAX_VISIBLE_TOASTS, so a held-but-not-rendered item reads as
+        gone.
+        """
+        with self._lock:
+            return any(i.id == nid and not i.is_expired for i in self._items)
+
     def expire_old(self) -> int:
         """Remove expired items. Returns count of remaining items."""
         with self._lock:

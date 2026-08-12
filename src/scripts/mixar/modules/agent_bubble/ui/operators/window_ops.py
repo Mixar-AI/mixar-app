@@ -74,6 +74,15 @@ class MIXAR_OT_agent_bubble_open_window(Operator):
                 restore_op()
             except Exception as exc:  # noqa: BLE001 — never block the open path
                 print(f"[agent_bubble] open_window: restore raised: {exc!r}")
+            # Programmatic pre-focus restore, not a user maximise. Record it so
+            # telemetry's dedup guard doesn't swallow the next genuine change.
+            try:
+                from mixar.modules.common.analytics.bubble_events import (
+                    note_programmatic_bubble_state,
+                )
+                note_programmatic_bubble_state("maximized")
+            except Exception:  # noqa: BLE001 — never block the open path
+                pass
 
         # The C++ op handles deduplication: WM_window_open detects an
         # existing temp window of the same space type and reuses /

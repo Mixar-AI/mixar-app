@@ -529,7 +529,11 @@ def _downloading_job(queue, age_s):
     job = _StubJob(label="job", feature_key="test_download")
     job.state = JobState.RUNNING_DOWNLOAD
     job.backend_job_id = "backend-1"
-    job.download_started_at = QM.time.monotonic() - age_s
+    # The watchdog ignores a non-positive download_started_at, so the start
+    # stamp has to stay above zero. time.monotonic() counts from boot and is
+    # only a few hundred seconds on a freshly started machine, which made
+    # "now - deadline" go negative and silently skipped the deadline check.
+    job.download_started_at = max(QM.time.monotonic() - age_s, 1e-6)
     queue._jobs.append(job)
     return job
 

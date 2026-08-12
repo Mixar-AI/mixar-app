@@ -19,9 +19,11 @@ from ..constants import (
     MOODBOARD_MULTI_IMAGE_GAP,
     MOODBOARD_MAX_PLACEMENT_RING,
 )
+from .media_utils import describe_moodboard_media, is_video_image
 
 # Re-export common geometry utilities for convenience
 from ...common.geometry_utils import point_in_polygon
+from .annotation_geometry import canvas_to_image_normalized
 
 
 def get_moodboard_image_display_size(image, scale: float) -> tuple[float, float]:
@@ -229,6 +231,7 @@ class SelectedImageInfo(TypedDict):
     index: int
     image: bpy.types.Image | None
     image_name: str
+    media_type: str
     width: int
     height: int
     channels: int
@@ -238,6 +241,11 @@ class SelectedImageInfo(TypedDict):
     file_format: str
     colorspace: str
     filepath: str
+    resolved_filepath: str
+    mime_type: str
+    file_size_bytes: int
+    source_available: bool
+    frame_count: int
     position_x: float
     position_y: float
     scale: float
@@ -345,11 +353,13 @@ def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
         SelectedImageInfo dictionary with all image details
     """
     img = moodboard_img.image
+    media_info = describe_moodboard_media(moodboard_img)
 
     image_info: SelectedImageInfo = {
         "index": index,
         "image": img,
         "image_name": img.name if img else "",
+        "media_type": media_info["media_type"],
         "width": img.size[0] if img else 0,
         "height": img.size[1] if img else 0,
         "channels": img.channels if img else 0,
@@ -359,6 +369,11 @@ def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
         "file_format": img.file_format if img else "",
         "colorspace": "",
         "filepath": img.filepath if img else "",
+        "resolved_filepath": media_info["resolved_filepath"],
+        "mime_type": media_info["mime_type"],
+        "file_size_bytes": media_info["file_size_bytes"],
+        "source_available": media_info["source_available"],
+        "frame_count": media_info["frame_count"],
         "position_x": moodboard_img.position_x,
         "position_y": moodboard_img.position_y,
         "scale": moodboard_img.scale,
@@ -400,7 +415,11 @@ def get_selected_moodboard_image_objects(
 
     images = []
     for img_info in result["images"]:
-        if img_info["image"] and img_info["has_data"]:
+        if (
+            img_info["image"]
+            and img_info["has_data"]
+            and not is_video_image(img_info["image"])
+        ):
             images.append(img_info["image"])
 
     return images
@@ -516,6 +535,17 @@ def reset_tool_state(state, context):
     """
     state.active_tool = 'NONE'
     state.target_image_index = -1
+    try:
+        state.annotation_active_stroke_index = -1
+        state.is_drawing = False
+    except (AttributeError, TypeError):
+        pass
+    try:
+        state.lasso_points.clear()
+        state.lasso_loops.clear()
+        state.lasso_select_has_selection = False
+    except (AttributeError, TypeError):
+        pass
     if context.area:
         context.area.tag_redraw()
 
@@ -567,9 +597,20 @@ def mouse_to_image_coords(context, event, target_image_index):
     view = region.view2d
     view_x, view_y = view.region_to_view(event.mouse_region_x, event.mouse_region_y)
 
-    # Convert to image-relative (0-1)
-    img_rel_x = (view_x - pos_x) / display_width
-    img_rel_y = (view_y - pos_y) / display_height
+    coords = canvas_to_image_normalized(
+        view_x,
+        view_y,
+        pos_x,
+        pos_y,
+        display_width,
+        display_height,
+        rotation=img_item.rotation,
+        flip_horizontal=img_item.flip_horizontal,
+        flip_vertical=img_item.flip_vertical,
+    )
+    if coords is None:
+        return None
+    img_rel_x, img_rel_y = coords
 
     # Check if click is outside image bounds
     if img_rel_x < 0.0 or img_rel_x > 1.0 or img_rel_y < 0.0 or img_rel_y > 1.0:
@@ -607,10 +648,17 @@ def mouse_to_image_coords_unclamped(context, event, target_image_index):
     view = region.view2d
     view_x, view_y = view.region_to_view(event.mouse_region_x, event.mouse_region_y)
 
-    img_rel_x = (view_x - img_item.position_x) / display_width
-    img_rel_y = (view_y - img_item.position_y) / display_height
-
-    return (img_rel_x, img_rel_y)
+    return canvas_to_image_normalized(
+        view_x,
+        view_y,
+        img_item.position_x,
+        img_item.position_y,
+        display_width,
+        display_height,
+        rotation=img_item.rotation,
+        flip_horizontal=img_item.flip_horizontal,
+        flip_vertical=img_item.flip_vertical,
+    )
 
 
 def find_crop_handle_at_mouse(context, event, state, target_image_index):

@@ -93,6 +93,9 @@ class Job:
     # Usually the service's parent capability is correct; composite workflows
     # can override it without hardcoding any human-facing label.
     origin_capability_key: str = ""
+    # Optional moodboard inference-node owner. Runtime queue listeners use
+    # this stable ID to mirror progress/errors back onto the originating node.
+    graph_node_id: str = ""
     model: str = ""
     backend_job_id: str = ""
     backend_api_type: str = ""
@@ -136,6 +139,25 @@ class Job:
     # Set once a FAILED toast has been surfaced for this job, so the queue's
     # per-notify failure sweep shows the toast exactly once (edge-detected).
     _failure_notified: bool = field(default=False, repr=False)
+    # Captured at construction while an agent script's synchronous execution
+    # marker is active. Bespoke jobs can forward this from submit().
+    agent_context: dict | None = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Capture agent provenance while construction is still synchronous."""
+        try:
+            from mixar.modules.common.agent_execution_context import (
+                get_agent_execution_context,
+                stamp_agent_context,
+            )
+
+            payload = getattr(self, "payload", None)
+            if isinstance(payload, dict):
+                self.agent_context = stamp_agent_context(payload)
+            else:
+                self.agent_context = get_agent_execution_context()
+        except Exception:
+            self.agent_context = None
 
     # ------------------------------------------------------------------ #
     # Subclass interface

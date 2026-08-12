@@ -19,6 +19,7 @@ from mixar.modules.moodboard.constants import (
     HINT_SCALE_Y,
 )
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 
 # ---------------------------------------------------------------------------
@@ -88,22 +89,37 @@ def draw_hint(col, text, icon='NONE'):
 # Sidebar tab focus
 # ---------------------------------------------------------------------------
 
-def focus_scene_gen_segments(context):
-    """Surface the Scene Gen tab's Segments to 3D mode.
+def focus_segments_panel(context):
+    """Surface the panel hosting the Segments to 3D UI.
 
     Used by the moodboard segmentation tools (magic select, box/lasso
     mask) so their results are visible where the Generate button lives.
-    Switches the sidebar to the "Scene Gen" panel category and selects
-    the ``scene_gen`` mode when the catalog is loaded (the mode enum item
-    doesn't exist offline — silently skipped). Never raises.
+    Post-split catalogs host Segments to 3D in the dedicated "Character
+    Parts" tab; pre-split catalogs (and offline) keep it as the Scene Gen
+    tab's ``scene_gen`` mode, so the pre-split path still selects that mode
+    (the enum item doesn't exist offline — silently skipped). The target
+    category is resolved through ``get_tab_category()`` so it follows catalog
+    label renames rather than a hardcoded string. Never raises.
     """
-    scene = context.scene
-    sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
-    if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
-        try:
-            sidebar.tab_scene_recon.mode = 'scene_gen'
-        except Exception:
-            pass  # catalog not loaded / capability disabled
+    capability = "scene_gen"
+    fallback_label = "Scene Gen"
+    try:
+        from mixar.bootstrap.generation_catalog_cache import (
+            get_services, is_loaded,
+        )
+        if is_loaded() and get_services("character_parts"):
+            capability = "character_parts"
+            fallback_label = "Character Parts"
+    except Exception:
+        pass
+    if capability == "scene_gen":
+        scene = context.scene
+        sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
+        if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
+            try:
+                sidebar.tab_scene_recon.mode = 'scene_gen'
+            except Exception:
+                pass  # catalog not loaded / capability disabled
     try:
         space = context.space_data
         if hasattr(space, 'show_region_ui'):
@@ -113,7 +129,11 @@ def focus_scene_gen_segments(context):
             (r for r in area.regions if r.type == 'UI'), None,
         ) if area else None
         if region and hasattr(region, 'active_panel_category'):
-            region.active_panel_category = "Scene Gen"
+            from mixar.bootstrap.analytics_module import note_programmatic_panel_change
+            from .moodboard_sidebar_panels import get_tab_category
+            category = get_tab_category(capability, fallback_label)
+            note_programmatic_panel_change(region, category)
+            region.active_panel_category = category
     except Exception:
         pass
 
@@ -151,7 +171,7 @@ def get_selected_moodboard_image(context):
     scene = context.scene
     if hasattr(scene, 'mixie_moodboard_images'):
         for item in scene.mixie_moodboard_images:
-            if item.selected and item.image:
+            if item.selected and is_still_item(item):
                 return item.image
     return None
 
@@ -199,7 +219,7 @@ def draw_moodboard_image_toggle(col, prop_owner, context, *, multi=False):
             scene = context.scene
             if hasattr(scene, 'mixie_moodboard_images'):
                 for item in scene.mixie_moodboard_images:
-                    if item.selected and item.image:
+                    if item.selected and is_still_item(item):
                         draw_image_info_card(col, item.image)
                         shown += 1
             if shown == 0:

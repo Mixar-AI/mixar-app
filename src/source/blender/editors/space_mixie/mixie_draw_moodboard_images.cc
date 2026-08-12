@@ -10,6 +10,8 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
+#include "GPU_immediate_util.hh"
+
 #include <unordered_map>
 
 namespace blender::ed::mixie {
@@ -31,6 +33,7 @@ struct CachedImageTex {
   blender::gpu::Texture *tex;
   int width;
   int height;
+  int frame;
   uint64_t last_used_frame;
 };
 
@@ -42,12 +45,13 @@ static uint64_t s_cache_frame = 0;
  * The texture stores the raw byte pixels without any color-space conversion
  * so that GPU_SHADER_3D_IMAGE displays the original sRGB values.
  */
-static blender::gpu::Texture *get_cached_srgb_texture(Image *image)
+static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *image_user)
 {
   auto it = s_srgb_tex_cache.find(image);
+  const int requested_frame = image_user ? image_user->framenr : 0;
 
   void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
+  ImBuf *ibuf = BKE_image_acquire_ibuf(image, image_user, &lock);
   if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
     BKE_image_release_ibuf(image, ibuf, lock);
     return nullptr;
@@ -57,10 +61,18 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image)
   if (it != s_srgb_tex_cache.end()) {
     if (ibuf->x == it->second.width && ibuf->y == it->second.height) {
       it->second.last_used_frame = s_cache_frame;
-      BKE_image_release_ibuf(image, ibuf, lock);
-      return it->second.tex;
+      if (it->second.frame == requested_frame) {
+        BKE_image_release_ibuf(image, ibuf, lock);
+        return it->second.tex;
+      }
+      if (ibuf->byte_buffer.data) {
+        GPU_texture_update(it->second.tex, GPU_DATA_UBYTE, ibuf->byte_buffer.data);
+        it->second.frame = requested_frame;
+        BKE_image_release_ibuf(image, ibuf, lock);
+        return it->second.tex;
+      }
     }
-    /* Stale (e.g. after crop) — recreate. */
+    /* Stale dimensions, or a float frame unsupported by this byte cache. */
     GPU_texture_free(it->second.tex);
     s_srgb_tex_cache.erase(it);
   }
@@ -74,7 +86,7 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image)
         blender::gpu::TextureFormat::UNORM_8_8_8_8, usage, nullptr);
     if (tex) {
       GPU_texture_update(tex, GPU_DATA_UBYTE, ibuf->byte_buffer.data);
-      s_srgb_tex_cache[image] = {tex, ibuf->x, ibuf->y, s_cache_frame};
+      s_srgb_tex_cache[image] = {tex, ibuf->x, ibuf->y, requested_frame, s_cache_frame};
     }
   }
 
@@ -134,6 +146,75 @@ static void draw_gpu_texture_quad(blender::gpu::Texture *tex,
   GPU_texture_unbind(tex);
 }
 
+void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds)
+{
+  if (!image) return;
+  ImageUser movie_user{};
+  ImageUser *image_user = nullptr;
+  if (image->source == IMA_SRC_MOVIE) {
+    bool is_playing = false;
+    BKE_imageuser_default(&movie_user);
+    movie_user.framenr = moodboard_video_playback_frame(image, &is_playing);
+    image_user = &movie_user;
+  }
+  blender::gpu::Texture *texture = get_cached_srgb_texture(image, image_user);
+  if (!texture) return;
+  const float source_w = float(GPU_texture_width(texture)), source_h = float(GPU_texture_height(texture));
+  const float scale_x = BLI_rctf_size_x(&bounds) / std::max(source_w, 1.0f);
+  const float scale_y = BLI_rctf_size_y(&bounds) / std::max(source_h, 1.0f);
+  const float scale = std::min(scale_x, scale_y);
+  const float width = source_w * scale, height = source_h * scale;
+  const float x = BLI_rctf_cent_x(&bounds) - width * 0.5f, y = BLI_rctf_cent_y(&bounds) - height * 0.5f;
+  draw_gpu_texture_quad(texture, x, y, width, height);
+}
+/** Draw a screen-size-stable play/pause affordance over a movie frame. */
+void mixie_draw_moodboard_video_overlay(View2D *v2d,
+                                       const float center_x,
+                                       const float center_y,
+                                       const bool is_playing)
+{
+  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+  const float radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  GPU_blend(GPU_BLEND_ALPHA);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+
+  immUniformColor4f(0.02f, 0.02f, 0.025f, 0.78f);
+  imm_draw_circle_fill_2d(pos, center_x, center_y, radius, 40);
+
+  immUniformColor4f(1.0f, 1.0f, 1.0f, 0.96f);
+  if (is_playing) {
+    const float bar_half_gap = radius * 0.12f;
+    const float bar_width = radius * 0.18f;
+    const float bar_half_height = radius * 0.42f;
+    immRectf(pos,
+             center_x - bar_half_gap - bar_width,
+             center_y - bar_half_height,
+             center_x - bar_half_gap,
+             center_y + bar_half_height);
+    immRectf(pos,
+             center_x + bar_half_gap,
+             center_y - bar_half_height,
+             center_x + bar_half_gap + bar_width,
+             center_y + bar_half_height);
+  }
+  else {
+    const float triangle_half_height = radius * 0.46f;
+    const float triangle_left = center_x - radius * 0.20f;
+    const float triangle_right = center_x + radius * 0.43f;
+    immBegin(GPU_PRIM_TRIS, 3);
+    immVertex2f(pos, triangle_left, center_y - triangle_half_height);
+    immVertex2f(pos, triangle_right, center_y);
+    immVertex2f(pos, triangle_left, center_y + triangle_half_height);
+    immEnd();
+  }
+
+  immUnbindProgram();
+  GPU_blend(GPU_BLEND_NONE);
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -164,6 +245,13 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
   while (iter.valid) {
     PointerRNA itemptr = iter.ptr;
 
+    if (g_img_props.embedded_node_id &&
+        RNA_property_string_length(&itemptr, g_img_props.embedded_node_id) > 0)
+    {
+      RNA_property_collection_next(&iter);
+      continue;
+    }
+
     /* Use cached property pointers for faster access */
     if (g_img_props.image && g_img_props.position_x && g_img_props.position_y &&
         g_img_props.scale)
@@ -180,6 +268,15 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
       }
 
       if (image) {
+        ImageUser movie_user{};
+        ImageUser *image_user = nullptr;
+        bool video_is_playing = false;
+        if (image->source == IMA_SRC_MOVIE) {
+          BKE_imageuser_default(&movie_user);
+          movie_user.framenr = moodboard_video_playback_frame(image, &video_is_playing);
+          image_user = &movie_user;
+        }
+
         float pos_x = RNA_property_float_get(&itemptr, g_img_props.position_x);
         float pos_y = RNA_property_float_get(&itemptr, g_img_props.position_y);
         float scale = RNA_property_float_get(&itemptr, g_img_props.scale);
@@ -192,6 +289,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
         bool flip_vertical = g_img_props.flip_vertical ?
                                  RNA_property_boolean_get(&itemptr, g_img_props.flip_vertical) :
                                  false;
+        const bool is_selected = g_img_props.selected &&
+                                 RNA_property_boolean_get(&itemptr, g_img_props.selected);
 
         /* Skip images that can't be drawn (like Render Result without data) */
         if (image->source == IMA_SRC_VIEWER) {
@@ -216,12 +315,16 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
                               strcmp(image->colorspace_settings.name, data_colorspace) != 0);
 
         blender::gpu::Texture *gpu_tex = nullptr;
-        if (is_srgb_image) {
-          gpu_tex = get_cached_srgb_texture(image);
+        if (is_srgb_image || image->source == IMA_SRC_MOVIE) {
+          gpu_tex = get_cached_srgb_texture(image, image_user);
         }
         else {
-          gpu_tex = BKE_image_get_gpu_texture(image, nullptr);
+          gpu_tex = BKE_image_get_gpu_texture(image, image_user);
         }
+
+        bool media_drawn = false;
+        float drawn_width = 0.0f;
+        float drawn_height = 0.0f;
 
         if (gpu_tex) {
           /* Use cached GPU texture - much faster than recreating texture every frame */
@@ -232,6 +335,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
           const float display_height =
               (MOODBOARD_IMAGE_BASE_SIZE * float(tex_h) / float(tex_w)) * scale;
+          drawn_width = display_width;
+          drawn_height = display_height;
 
           /* Apply transforms (rotation and flips) */
           const float center_x = pos_x + display_width / 2.0f;
@@ -242,7 +347,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           /* Translate to center for rotation/flip */
           GPU_matrix_translate_2f(center_x, center_y);
 
-          /* Apply rotation (value is already in radians from RNA ANGLE property) */
+          /* GPU_matrix_rotate_2d and the moodboard RNA property both use degrees. */
           if (rotation != 0.0f) {
             GPU_matrix_rotate_2d(rotation);
           }
@@ -257,33 +362,38 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
           /* Translate back from center */
           GPU_matrix_translate_2f(-center_x, -center_y);
 
+          mixie_draw_moodboard_media_frame(pos_x, pos_y, display_width, display_height, is_selected);
+
           /* Draw using cached GPU texture */
           GPU_blend(GPU_BLEND_ALPHA_PREMULT);
           GPU_texture_filter_mode(gpu_tex, true);
           draw_gpu_texture_quad(gpu_tex, pos_x, pos_y, display_width, display_height);
           GPU_blend(GPU_BLEND_NONE);
 
+          mixie_draw_moodboard_annotations(
+              &itemptr, v2d, pos_x, pos_y, display_width, display_height, scale);
+
           /* Draw selection overlay if selected */
-          bool is_selected = g_img_props.selected ?
-                                 RNA_property_boolean_get(&itemptr, g_img_props.selected) :
-                                 false;
           if (is_selected) {
             mixie_draw_moodboard_selection_overlay(v2d, pos_x, pos_y, display_width, display_height);
           }
 
           GPU_matrix_pop();
+          media_drawn = true;
         }
         else {
           /* Fallback: acquire image buffer and draw with immediate mode (slower path)
            * This handles cases where GPU texture cache isn't available */
           void *lock;
-          ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
+          ImBuf *ibuf = BKE_image_acquire_ibuf(image, image_user, &lock);
 
           if (ibuf) {
             /* Calculate display size */
             const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
             const float display_height =
                 (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale;
+            drawn_width = display_width;
+            drawn_height = display_height;
 
             /* Apply transforms (rotation and flips) */
             const float center_x = pos_x + display_width / 2.0f;
@@ -294,7 +404,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
             /* Translate to center for rotation/flip */
             GPU_matrix_translate_2f(center_x, center_y);
 
-            /* Apply rotation (value is already in radians from RNA ANGLE property) */
+            /* GPU_matrix_rotate_2d and the moodboard RNA property both use degrees. */
             if (rotation != 0.0f) {
               GPU_matrix_rotate_2d(rotation);
             }
@@ -308,6 +418,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
 
             /* Translate back from center */
             GPU_matrix_translate_2f(-center_x, -center_y);
+
+            mixie_draw_moodboard_media_frame(pos_x, pos_y, display_width, display_height, is_selected);
 
             /* Draw image using immediate mode (fallback).
              * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
@@ -347,19 +459,27 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
 
             GPU_blend(GPU_BLEND_NONE);
 
+            mixie_draw_moodboard_annotations(
+                &itemptr, v2d, pos_x, pos_y, display_width, display_height, scale);
+
             /* Draw selection overlay if selected */
-            bool is_selected = g_img_props.selected ?
-                                   RNA_property_boolean_get(&itemptr, g_img_props.selected) :
-                                   false;
             if (is_selected) {
               mixie_draw_moodboard_selection_overlay(
                   v2d, pos_x, pos_y, display_width, display_height);
             }
 
             GPU_matrix_pop();
+            media_drawn = true;
 
             BKE_image_release_ibuf(image, ibuf, lock);
           }
+        }
+
+        if (media_drawn && image->source == IMA_SRC_MOVIE) {
+          mixie_draw_moodboard_video_overlay(v2d,
+                                      pos_x + drawn_width * 0.5f,
+                                      pos_y + drawn_height * 0.5f,
+                                      video_is_playing);
         }
       }
     }

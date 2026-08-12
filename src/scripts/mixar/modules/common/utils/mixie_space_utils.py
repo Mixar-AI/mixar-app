@@ -19,7 +19,11 @@ try:
         item.identifier
         for item in bpy.types.Panel.bl_rna.properties['bl_space_type'].enum_items
     ]
-except (TypeError, KeyError):
+except (AttributeError, TypeError, KeyError):
+    # AttributeError covers the standalone pytest suite: mock_bpy installs a
+    # plain `type("Panel", (), {})` with no bl_rna, so this import — which
+    # every moodboard/queue UI module pulls in transitively — raised at
+    # collection time and interrupted the whole run.
     MIXIE_SPACE_AVAILABLE = False
 
 
@@ -62,17 +66,20 @@ def show_generation_error(scene, prefix, message, generating_attr, error_attr):
 
 
 def count_selected_moodboard_images(scene):
-    """Return the number of selected images on the moodboard."""
+    """Return the number of selected still images on the moodboard."""
     if not hasattr(scene, 'mixie_moodboard_images'):
         return 0
-    return sum(1 for img in scene.mixie_moodboard_images if img.selected)
+    return sum(
+        1 for item in scene.mixie_moodboard_images
+        if item.selected and item.image and item.image.source != 'MOVIE'
+    )
 
 
 def get_first_selected_moodboard_image(scene):
-    """Return the first selected moodboard image datablock, or None."""
+    """Return the first selected still-image datablock, or None."""
     if hasattr(scene, 'mixie_moodboard_images'):
         for item in scene.mixie_moodboard_images:
-            if item.selected and item.image:
+            if item.selected and item.image and item.image.source != 'MOVIE':
                 return item.image
     return None
 
