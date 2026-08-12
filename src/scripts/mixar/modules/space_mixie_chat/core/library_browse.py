@@ -112,9 +112,7 @@ def _redraw():
 
 
 def _is_library_bubble(msg) -> bool:
-    """A library-browse bubble by its id prefix OR by carrying library-add
-    action buttons. The second check catches a stale card left by an earlier
-    build whose bubble_id predates the prefix, so it still gets swept up."""
+    """OUR library-browse bubble: the id prefix, or library-add action buttons."""
     if (getattr(msg, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
         return True
     for action in getattr(msg, "action_items", []):
@@ -123,19 +121,45 @@ def _is_library_bubble(msg) -> bool:
     return False
 
 
+def _is_asset_card_bubble(msg) -> bool:
+    """ANY asset-card bubble — ours OR a stale agent asset-picker (its action
+    items carry an ``asset_name``). Used to sweep leftover cards so a previous
+    search's card can't linger under the current result."""
+    if _is_library_bubble(msg):
+        return True
+    for action in getattr(msg, "action_items", []):
+        if getattr(action, "asset_name", ""):
+            return True
+    return False
+
+
+def _agent_awaiting_input(scene) -> bool:
+    """True when the agent is paused on a live question — then a picker bubble is
+    real and must NOT be swept. Defaults to False (safe to sweep) if unknown; the
+    caller only sweeps NON-library cards when this is False."""
+    try:
+        from ..constants import SessionState
+        from .session import get_session_manager
+        return get_session_manager().get_state(scene) == SessionState.AWAITING_INPUT
+    except Exception:
+        return False
+
+
 def _grid_bubble(scene):
-    """The ONE library-browse bubble, updated in place. Reuses the newest found
-    and removes any extras (freeing their thumbnails) so a search, a mode-entry
-    'show all', and their timers can never leave a second stale grid behind —
-    the race that showed a previous asset card under a 'No matches' message."""
+    """The ONE library bubble, updated in place. Keeps the newest library bubble
+    and removes every OTHER asset-card bubble (extra library grids AND a stale
+    agent asset-picker), so a fresh search fully replaces the last — the leftover
+    card under a 'No matches' result. A LIVE agent picker (awaiting input) is
+    left alone."""
+    protect_pickers = _agent_awaiting_input(scene)
     keep = None
     for i in range(len(scene.mixie_chat_messages) - 1, -1, -1):
         msg = scene.mixie_chat_messages[i]
-        if not _is_library_bubble(msg):
-            continue
-        if keep is None:
+        ours = _is_library_bubble(msg)
+        if ours and keep is None:
             keep = msg
-        else:
+            continue
+        if ours or (_is_asset_card_bubble(msg) and not protect_pickers):
             _cleanup_bubble(msg)
             scene.mixie_chat_messages.remove(i)
     if keep is None:
@@ -143,11 +167,6 @@ def _grid_bubble(scene):
         keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
         keep.sender = "AGENT"
         keep.message_type = "AGENT"
-    else:
-        # Normalize a reused legacy bubble onto the current prefix so future
-        # sweeps find it by id.
-        if not (getattr(keep, "bubble_id", "") or "").startswith(LIBRARY_BUBBLE_PREFIX):
-            keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
     return keep
 
 
