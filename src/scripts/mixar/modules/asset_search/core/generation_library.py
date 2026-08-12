@@ -109,6 +109,21 @@ def ensure_library_dirs() -> None:
             root = bpy.path.abspath(lib.path or "").strip()
             if not root or os.path.isdir(root):
                 continue
+            # NEVER materialize a missing dir over a removable/unmounted volume:
+            # an unplugged external drive's mount point (e.g. /Volumes/Assets on
+            # macOS) is "not a directory", and creating a real folder there
+            # blocks the drive from remounting. Only self-heal a library whose
+            # PARENT already exists — that's the stale-Mixar-default case the
+            # heal is for — OR our own Generations library, whose path lives
+            # under the user resource dir and is always safe to create.
+            is_mixar = lib.name == GENERATION_LIBRARY_NAME
+            if not (is_mixar or os.path.isdir(os.path.dirname(root))):
+                logger.debug(
+                    "[GenLibrary] Skipped missing library '%s' -> %s "
+                    "(parent absent — likely an unmounted volume)",
+                    getattr(lib, "name", "?"), root,
+                )
+                continue
             os.makedirs(root, exist_ok=True)
             logger.info("[GenLibrary] Created missing library dir for '%s' -> %s",
                         lib.name, root)
@@ -249,15 +264,22 @@ def _schedule_retrain() -> None:
 
     def _tick():
         global _retrain_scheduled, _batch_dirty
-        try:
-            training = getattr(bpy.context.scene, "mixie_asset_training", None)
-            if training is not None and getattr(training, "is_training", False):
-                state["ticks"] += 1
-                if state["ticks"] > _MAX_RETRAIN_WAIT_TICKS:
-                    _retrain_scheduled = False
-                    return None  # give up; next generation will retry
-                return 2.0  # a train is running — poll back
+        # Poll-back path FIRST, OUTSIDE the try/finally: while a manual train is
+        # running we return 2.0 to poll again, and the latch MUST stay set — the
+        # timer is still pending. Clearing it here (the old `finally` ran on this
+        # return too) released the guard mid-flight, so every queue change
+        # registered ANOTHER _tick timer and several could fire the operator in
+        # one frame.
+        training = getattr(bpy.context.scene, "mixie_asset_training", None)
+        if training is not None and getattr(training, "is_training", False):
+            state["ticks"] += 1
+            if state["ticks"] > _MAX_RETRAIN_WAIT_TICKS:
+                _retrain_scheduled = False
+                return None  # give up; next generation will retry
+            return 2.0  # a train is running — poll back (latch stays SET)
 
+        # Terminal from here: fire (or fail) once, then release the latch.
+        try:
             win = bpy.context.window
             if win is None:
                 wm = bpy.context.window_manager

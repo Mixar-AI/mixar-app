@@ -311,6 +311,14 @@ class MIXIE_OT_train_asset_model(Operator):
         set_failures(state, failures)
         state.current_item = ""
         state.eta_text = ""
+        # The full-library checksum marks the library FULLY embedded at this
+        # content hash — the server then returns "skip" on the next train. Never
+        # stamp it when assets are still un-embedded (any render/embed failure),
+        # or those assets are marked trained and become unreachable until the
+        # library's contents change. A clean run stamps it; a partial run leaves
+        # it unstamped so the next train retries the remainder.
+        if failures:
+            self._metadata_checksum = None
         if reused:
             state.prepare_note = (
                 (state.prepare_note + " · " if state.prepare_note else "")
@@ -334,6 +342,12 @@ class MIXIE_OT_train_asset_model(Operator):
         if teardown is not None:
             teardown()
         clear_render_filter()
+
+        # A cancelled run is partial by definition: keep the finished assets
+        # (incremental uploads are durable server-side) but NEVER stamp the
+        # full-library checksum, or the un-rendered remainder is marked trained
+        # and never retried.
+        self._metadata_checksum = None
 
         if self._train_mode == "incremental" and collected:
             set_collected_asset_data(collected)
