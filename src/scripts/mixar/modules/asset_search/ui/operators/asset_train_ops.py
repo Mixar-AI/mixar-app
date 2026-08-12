@@ -141,7 +141,7 @@ class MIXIE_OT_train_asset_model(Operator):
         from .asset_search_ops import _scan_asset_library_metadata
 
         self._scan_metadata = _scan_asset_library_metadata(context)
-        if not self._scan_metadata:
+        if not self._scan_metadata and not self.auto:
             from mixar.modules.asset_search.core.library_enrollment import (
                 enrolled_names,
             )
@@ -153,6 +153,10 @@ class MIXIE_OT_train_asset_model(Operator):
                        "Edit > Preferences > File Paths")
             self._finish(context, success=False, message=msg)
             return {"CANCELLED"}
+        # An AUTO train with an empty scan (e.g. the last enrolled library was
+        # unenrolled) still proceeds to /train/prepare: the backend reports the
+        # now-orphaned assets as removed and the removal path drops their
+        # embeddings, so search stops returning them.
 
         state.progress = _W_SCAN_END
         state.phase_text = (

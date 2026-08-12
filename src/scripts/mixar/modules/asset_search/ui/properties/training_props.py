@@ -30,7 +30,9 @@ def _enrolled_update(self, context):
     set_enrolled(self.name, self.enabled)
     try:
         from mixar.modules.asset_search.core.auto_train import schedule_auto_train
-        schedule_auto_train("enrollment")
+        # Unenrolling the LAST library leaves nothing enrolled; allow_empty lets
+        # the train still run so the removed library's embeddings are dropped.
+        schedule_auto_train("enrollment", allow_empty=not self.enabled)
     except Exception:  # noqa: BLE001 — enrollment persistence must never fail
         pass
 

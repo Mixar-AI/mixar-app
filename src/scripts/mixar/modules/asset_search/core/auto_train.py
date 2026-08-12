@@ -24,21 +24,23 @@ _scheduled = False
 _MAX_WAIT_TICKS = 60
 
 
-def schedule_auto_train(reason: str = "") -> None:
-    """Schedule ONE debounced auto-train. No-op when already scheduled or when
-    nothing is enrolled (a train with no enrolled library only reports an error
-    banner)."""
+def schedule_auto_train(reason: str = "", allow_empty: bool = False) -> None:
+    """Schedule ONE debounced auto-train. No-op when already scheduled, or when
+    nothing is enrolled UNLESS ``allow_empty`` — which the unenroll trigger sets
+    so unenrolling the LAST library still runs a train that drops its now-orphaned
+    embeddings (an auto-train with an empty scan takes the removal path)."""
     global _scheduled
     if _scheduled:
         return
-    try:
-        from mixar.modules.asset_search.core.library_enrollment import (
-            enrolled_names,
-        )
-        if not enrolled_names():
-            return
-    except Exception:  # noqa: BLE001 — if we can't tell, fall through and train
-        pass
+    if not allow_empty:
+        try:
+            from mixar.modules.asset_search.core.library_enrollment import (
+                enrolled_names,
+            )
+            if not enrolled_names():
+                return
+        except Exception:  # noqa: BLE001 — if we can't tell, fall through and train
+            pass
 
     _scheduled = True
     state = {"ticks": 0}
