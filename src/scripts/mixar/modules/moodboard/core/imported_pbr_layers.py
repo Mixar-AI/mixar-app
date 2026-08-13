@@ -88,7 +88,14 @@ def _build_paint_material(obj, images):
     from mixar.modules.paint.layered_build.pbr_layer import (
         build_pbr_layer_from_images,
     )
-    layer = build_pbr_layer_from_images(images, obj=obj, layer_name=obj.name)
+    # QUICK FIX: only bind Base Color + Normal for now. Metallic/Roughness are
+    # still extracted/split (see logs) but come in black, so they are left off
+    # the fill layer — those channels keep their scalar defaults.
+    layer_images = {
+        k: v for k, v in images.items() if k in ("basecolor", "normal")
+    }
+    layer = build_pbr_layer_from_images(
+        layer_images, obj=obj, layer_name=obj.name)
     if layer is None:
         logger.warning(
             "[ImportedPBR] Fill-layer build returned None for '%s'", obj.name)

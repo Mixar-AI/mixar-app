@@ -740,6 +740,26 @@ def _grayscale_from_channel(src_img, channel_idx, name):
     src_img.pixels.foreach_get(src)
     val = src.reshape(n, 4)[:, channel_idx]
 
+    # A freshly-imported packed glTF image may not have realised its pixel
+    # buffer yet, so foreach_get returns all zeros — the cause of a completely
+    # BLACK split roughness/metallic map. If the read looks empty, force a
+    # reload (re-decodes from the packed bytes) and read once more.
+    if float(val.max()) == 0.0:
+        try:
+            src_img.reload()
+            src_img.pixels.foreach_get(src)
+            val = src.reshape(n, 4)[:, channel_idx]
+        except Exception as e:
+            logger.warning(
+                "[ModelIO] reload of packed image '%s' failed: %s",
+                getattr(src_img, "name", "?"), e)
+
+    logger.info(
+        "[ModelIO] extract ch%d of '%s' (%dx%d): min=%.3f max=%.3f mean=%.3f",
+        channel_idx, getattr(src_img, "name", "?"), w, h,
+        float(val.min()), float(val.max()), float(val.mean()),
+    )
+
     out = np.empty((n, 4), dtype=np.float32)
     out[:, 0] = val
     out[:, 1] = val

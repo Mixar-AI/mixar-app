@@ -49,7 +49,7 @@ _asset_cache = None
 # a new query before the previous request returns.
 _search_token = 0
 _search_thread = None
-_search_payload = None  # (token, query, had_image, {"success", "message", "results"})
+_search_payload = None  # (token, query, {"success", "message", "results"})
 
 
 def invalidate() -> None:
@@ -322,67 +322,18 @@ def build_library_grid(
     _redraw()
 
 
-def _pending_query_image(context):
-    """First pending chat attachment as ``(filename, bytes, mime)``, else None.
-
-    Main thread only (touches bpy.data / disk). FILE attachments are read
-    straight from disk; BLEND_DATA ones go through the browser panel's
-    ``_extract_search_image_bytes`` (packed data, else a temp save_render),
-    so both search boxes send the backend the same kind of query image.
-    """
-    attachments = getattr(context.scene, "mixie_chat_pending_attachments", None)
-    if not attachments or len(attachments) == 0:
-        return None
-    att = attachments[0]
-    try:
-        if att.image_source == 'FILE':
-            path = Path(bpy.path.abspath(att.image_path or ""))
-            if not path.is_file():
-                logger.warning("[LibraryMode] attachment missing: %s", path)
-                return None
-            import mimetypes
-            mime = mimetypes.guess_type(path.name)[0] or "image/jpeg"
-            return (path.name, path.read_bytes(), mime)
-        img = bpy.data.images.get(att.image_path)
-        if img is None:
-            return None
-        from mixar.modules.asset_search.ui.operators.asset_search_ops import (
-            _extract_search_image_bytes,
-        )
-        data = _extract_search_image_bytes(img)
-        if not data:
-            return None
-        return ("search_query.jpg", data, "image/jpeg")
-    except Exception:
-        logger.exception("[LibraryMode] could not read attached search image")
-        return None
-
-
 def execute_library_mode(operator, context):
     """Composer send in LIBRARY mode. Empty text browses everything (local
-    scan); typed text and/or an attached image runs the SAME backend semantic
-    search as the asset browser panel, so both search boxes return the same
-    assets."""
+    scan); typed text runs the SAME backend semantic search as the asset
+    browser panel, so both search boxes return the same assets."""
     scene = context.scene
     query = (getattr(scene, "mixie_chat_input", "") or "").strip()
-    image_pack = _pending_query_image(context)
-    if query or image_pack:
-        _start_semantic_search(context, query, image_pack=image_pack)
+    if query:
+        _start_semantic_search(context, query)
     else:
         build_library_grid(context, "", force=False)
     try:
         scene.mixie_chat_input = ""  # clear the composer
-        # Deselect moodboard-origin attachments BEFORE clearing, or the
-        # moodboard polling sync re-adds them on the next tick (same order
-        # as the agent send path).
-        try:
-            from mixar.modules.moodboard.core.chat_sync import (
-                deselect_all_moodboard_origin_attachments,
-            )
-            deselect_all_moodboard_origin_attachments(scene)
-        except Exception:  # noqa: BLE001 — moodboard module may not be loaded
-            pass
-        scene.mixie_chat_pending_attachments.clear()
     except Exception:
         pass
     return {'FINISHED'}
@@ -392,13 +343,8 @@ def execute_library_mode(operator, context):
 # Semantic search (backend /asset-search/search — same as the browser panel)
 # --------------------------------------------------------------------------- #
 
-def _start_semantic_search(context, query: str, image_pack=None) -> None:
-    """Kick a background semantic search and show a searching state.
-
-    ``image_pack`` is an optional ``(filename, bytes, mime)`` query image —
-    resolved on the main thread already, so the worker thread never touches
-    bpy data.
-    """
+def _start_semantic_search(context, query: str) -> None:
+    """Kick a background semantic search and show a searching state."""
     global _search_token, _search_thread
     _search_token += 1
     token = _search_token
@@ -407,18 +353,11 @@ def _start_semantic_search(context, query: str, image_pack=None) -> None:
     msg = _grid_bubble(scene)
     _cleanup_bubble(msg)
     msg.action_items.clear()
-    if query and image_pack:
-        status = f"Searching your library for “{query}” + attached image…"
-    elif image_pack:
-        status = "Searching your library by attached image…"
-    else:
-        status = f"Searching your library for “{query}”…"
-    _set_content(msg, status)
+    _set_content(msg, f"Searching your library for “{query}”…")
     _redraw()
 
     _search_thread = threading.Thread(
-        target=_semantic_search_worker, args=(query, token, image_pack),
-        daemon=True,
+        target=_semantic_search_worker, args=(query, token), daemon=True,
     )
     _search_thread.start()
     # A rapid second search can land while the previous poll timer is still
@@ -427,26 +366,23 @@ def _start_semantic_search(context, query: str, image_pack=None) -> None:
         bpy.app.timers.register(_poll_semantic_search, first_interval=0.2)
 
 
-def _semantic_search_worker(query: str, token: int, image_pack=None) -> None:
+def _semantic_search_worker(query: str, token: int) -> None:
     """Background thread: POST /asset-search/search (no bpy access here)."""
     global _search_payload
-    had_image = image_pack is not None
     try:
         from mixar.config.config import get_server_url
         from mixar.modules.asset_search.constants import ASSET_SEARCH_ENDPOINT
         from mixar.modules.common.api.client import HTTPClient
 
         client = HTTPClient(base_url=get_server_url())
-        files = {"image": image_pack} if image_pack else None
         resp = client.post(
             ASSET_SEARCH_ENDPOINT,
             data={"prompt": query, "top_k": str(_MAX_GRID)},
-            files=files,
             timeout=30,
             raise_for_status=False,
         )
         if not resp.success:
-            _search_payload = (token, query, had_image, {
+            _search_payload = (token, query, {
                 "success": False,
                 "message": resp.message or f"Server returned {resp.status_code}",
             })
@@ -462,9 +398,9 @@ def _semantic_search_worker(query: str, token: int, image_pack=None) -> None:
                 "blend_file": meta.get("blend_file", ""),
                 "type": meta.get("type", ""),
             })
-        _search_payload = (token, query, had_image, {"success": True, "results": rows})
+        _search_payload = (token, query, {"success": True, "results": rows})
     except Exception as exc:  # noqa: BLE001 — worker must never raise
-        _search_payload = (token, query, had_image, {"success": False, "message": str(exc)})
+        _search_payload = (token, query, {"success": False, "message": str(exc)})
 
 
 def _poll_semantic_search():
@@ -476,7 +412,7 @@ def _poll_semantic_search():
     _search_payload = None
     if payload is None:
         return None
-    token, query, had_image, result = payload
+    token, query, result = payload
     if token != _search_token:
         return None  # a newer search superseded this one
 
@@ -487,37 +423,20 @@ def _poll_semantic_search():
 
     if not result.get("success"):
         # Backend unavailable (offline, not trained, stale model) — fall back
-        # to the local name filter so the tab still works, and say so. An
-        # image-only query has no text to name-match, so just report the
-        # failure instead of dumping the whole library as fake "matches".
+        # to the local name filter so the tab still works, and say so.
         note = result.get("message") or "search unavailable"
         logger.warning("[LibraryMode] semantic search failed: %s", note)
-        if had_image and not query:
-            msg = _grid_bubble(scene)
-            _cleanup_bubble(msg)
-            msg.action_items.clear()
-            _set_content(
-                msg,
-                f"**Image search unavailable** ({note}).\n\n"
-                "Try again in a moment, or type a text search instead.",
-            )
-            _redraw()
-            return None
         build_library_grid(
             context, query, force=False,
             header_note=f"Showing name matches only ({note}).",
         )
         return None
 
-    _apply_semantic_results(
-        context, query, result.get("results") or [], had_image=had_image,
-    )
+    _apply_semantic_results(context, query, result.get("results") or [])
     return None
 
 
-def _apply_semantic_results(
-    context, query: str, rows: list, had_image: bool = False,
-) -> None:
+def _apply_semantic_results(context, query: str, rows: list) -> None:
     """Render backend hits (same identity tuple as the browser panel) as the
     clickable thumbnail grid."""
     scene = context.scene
@@ -525,18 +444,11 @@ def _apply_semantic_results(
     _cleanup_bubble(msg)
     msg.action_items.clear()
 
-    if query and had_image:
-        what = f"“{query}” + your image"
-    elif had_image:
-        what = "your image"
-    else:
-        what = f"“{query}”"
-
     usable = [r for r in rows if r.get("name") and r.get("blend_file")][:_MAX_GRID]
     if not usable:
         _set_content(
             msg,
-            f"**0** asset(s) matching {what}\n\n"
+            f"**0** asset(s) matching “{query}”\n\n"
             "No matches — try a different search.",
         )
         _redraw()
@@ -544,7 +456,7 @@ def _apply_semantic_results(
 
     _set_content(
         msg,
-        f"**{len(usable)}** asset(s) matching {what}\n\n"
+        f"**{len(usable)}** asset(s) matching “{query}”\n\n"
         "Click an asset to add it to the scene at the 3D cursor.",
     )
     for i, row in enumerate(usable):
