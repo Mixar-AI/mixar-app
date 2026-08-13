@@ -49,6 +49,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
     image_name: bpy.props.StringProperty(default="")
     model: bpy.props.StringProperty(default="")
     prompt: bpy.props.StringProperty(default="")
+    # Agent-chosen name for the imported mesh; empty falls back to the input
+    # image name, then a prompt slug (see generation_enqueue.derive_model_name).
+    name: bpy.props.StringProperty(default="")
 
     # Trellis-specific
     texture_size: bpy.props.IntProperty(default=0, min=0, max=4096)
@@ -184,6 +187,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             from mixar.modules.common.job_queue import enqueue_generation
             from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
 
+            from mixar.modules.moodboard.core.generation_enqueue import (
+                derive_model_name, make_model_rename_on_imported,
+                model_front_zrot,
+            )
+
             job_label = image.name if image else model_name
             payload = {}
             if turnaround_payload:
@@ -194,6 +202,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if prompt:
                 payload["prompt"] = prompt
 
+            mesh_name = derive_model_name(image, prompt or "")
             job = enqueue_generation(
                 kind="glb",
                 feature_key=FEATURE_MODEL_3D,
@@ -202,6 +211,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 payload=payload,
                 label=job_label or "model_3d",
                 fail_message="3D model generation failed",
+                on_imported=make_model_rename_on_imported(
+                    mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
                 batch_popup_title="Image to 3D batch complete",
             )
@@ -349,6 +360,14 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         # chained ImageGen → Image-to-3D).
         job_label = prompt[:40] if prompt else (self.image_name.strip() or "model_3d")
 
+        # Mesh name: agent-chosen (self.name) wins, else the input image name,
+        # else a prompt slug. Applied to the import (Trellis empty + mesh, or
+        # a single Hunyuan/Tripo mesh) with origin/world-origin normalization.
+        from mixar.modules.moodboard.core.generation_enqueue import (
+            derive_model_name, make_model_rename_on_imported, model_front_zrot,
+        )
+        mesh_name = derive_model_name(img, prompt or "", explicit=self.name)
+
         job = enqueue_generation(
             kind="glb",
             feature_key=FEATURE_MODEL_3D,
@@ -357,6 +376,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             payload=payload,
             label=job_label,
             fail_message="3D model generation failed",
+            on_imported=make_model_rename_on_imported(
+                mesh_name, model_front_zrot(model_name)),
             scene_flag="mixie_image_to_3d_is_generating",
             batch_popup_title="Image to 3D batch complete",
         )

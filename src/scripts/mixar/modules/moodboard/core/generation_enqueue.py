@@ -43,23 +43,140 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
+# Only these trailing extensions are stripped from a label — a bare "." in a
+# name (e.g. "R2.D2", "v1.5") must NOT be treated as a file extension.
+_STRIPPABLE_EXTS = (
+    ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
+    ".glb", ".gltf", ".fbx", ".obj", ".usd", ".usdz",
+)
+
+
 def _sanitize_label(label: str) -> str:
-    base = os.path.splitext(label)[0] if "." in label else label
+    base = label or ""
+    lower = base.lower()
+    for ext in _STRIPPABLE_EXTS:
+        if lower.endswith(ext):
+            base = base[: -len(ext)]
+            break
     base = re.sub(r'[^a-zA-Z0-9_]', '_', base)
     base = re.sub(r'_+', '_', base).strip('_') or "object"
     return base
 
 
-def _pro_on_imported(job, object_names: str) -> None:
-    """Rename imported mesh to ``{label}_high`` and set up origin."""
-    target = _sanitize_label(job.label) + "_high"
-    try:
-        from mixar.modules.common.job_queue.core.model_io import (
-            post_import_rename_and_setup,
-        )
-        post_import_rename_and_setup(object_names, target)
-    except Exception as e:
-        logger.warning("[ImageTo3DPro] post_import_rename_and_setup failed: %s", e)
+def _slug_from_prompt(prompt: str, max_words: int = 6, max_len: int = 40) -> str:
+    """Concise underscore slug from a prompt.
+
+    Mirrors the backend imagegen naming (`_derive_image_name_from_prompt`)
+    so a mesh generated from a prompt reads like its image-gen twin:
+    'A red sports car on a road' -> 'red_sports_car_on_a_road'. Returns ''
+    when the prompt has no usable words.
+    """
+    if not prompt:
+        return ""
+    words = re.findall(r"[a-z0-9]+", prompt.lower())
+    # Drop a single leading article so 'a wizard' -> 'wizard'.
+    if words and words[0] in ("a", "an", "the"):
+        words = words[1:]
+    name = ""
+    for word in words[:max_words]:
+        candidate = f"{name}_{word}" if name else word
+        if len(candidate) > max_len:
+            break
+        name = candidate
+    return name
+
+
+def derive_model_name(image=None, prompt: str = "", explicit: str = "") -> str:
+    """Resolve the object name for a generated 3D mesh.
+
+    Priority: an explicit (agent-supplied) name, else the input image's
+    name, else a semantic slug derived from the prompt. Returns '' when
+    nothing usable is available — the caller's on_imported hook then falls
+    back to the queue label.
+    """
+    if explicit and explicit.strip():
+        return _sanitize_label(explicit)
+    if image is not None and getattr(image, "name", ""):
+        return _sanitize_label(image.name)
+    slug = _slug_from_prompt(prompt or "")
+    return _sanitize_label(slug) if slug else ""
+
+
+def model_front_zrot(model_slug: str) -> float:
+    """Z rotation (radians) that makes an engine's import face world -Y.
+
+    Front-facing convention differs per engine: Tripo imports facing +X,
+    while every other supported engine (Hunyuan, Trellis, Rodin) already
+    imports facing -Y. Rotating +X onto -Y about world Z is -90 degrees.
+
+    Assumes Rodin (and any future engine) faces -Y — only Tripo, the one
+    known-offset engine, is corrected. Extend the check if another engine
+    turns out to import on a different axis.
+    """
+    from math import radians
+
+    if "tripo" in (model_slug or "").lower():
+        return radians(-90)
+    return 0.0
+
+
+def make_model_rename_on_imported(
+    mesh_name: str, front_zrot: float = 0.0,
+) -> Callable:
+    """Build an on_imported hook that renames + normalizes a Model Gen import.
+
+    Handles both provider mesh shapes (single mesh for Hunyuan/Tripo, an
+    Empty-parented mesh for Trellis) via ``rename_generated_model``. Falls
+    back to the queue label when *mesh_name* is empty (e.g. an image whose
+    name sanitized away). *front_zrot* (see :func:`model_front_zrot`) rotates
+    the result about world Z so every engine's front faces -Y.
+    """
+
+    def _hook(job, object_names: str) -> None:
+        target = mesh_name or _sanitize_label(job.label)
+        try:
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_generated_model,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            final = rename_generated_model(
+                object_names, target, front_zrot=front_zrot)
+            convert_imported_material_to_paint_layers(final or target)
+        except Exception as e:
+            logger.warning(
+                "[ModelGen] post-import processing failed: %s", e)
+
+    return _hook
+
+
+def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
+    """on_imported hook for re-texture imports (PBR Generation / Texture Edit).
+
+    Renames the imported mesh to *mesh_name* (else the queue label, i.e. the
+    source mesh name) and runs the material finalize (rename material + texture
+    images, split any packed metallicRoughness map), but DELIBERATELY does not
+    normalize placement or orientation: the geometry is the user's own mesh
+    re-textured and must keep its pose.
+    """
+
+    def _hook(job, object_names: str) -> None:
+        target = mesh_name or _sanitize_label(job.label)
+        try:
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_imported_object,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            final = rename_imported_object(object_names, target)
+            convert_imported_material_to_paint_layers(final or target)
+        except Exception as e:
+            logger.warning(
+                "[TextureGen] post-import processing failed: %s", e)
+
+    return _hook
 
 
 def _make_hp_on_imported(chain_id: str) -> Callable:
@@ -212,12 +329,18 @@ def enqueue_pro_job(
     label: str,
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
     turnaround: Optional[dict] = None,
+    mesh_name: str = "",
 ) -> Optional[Job]:
     """Build an Image-to-3D Pro job and submit it to the queue.
 
     Pass *turnaround* (see :func:`_build_pro_payload`) to submit already-staged
     turnaround crops by S3 key; *image* is then only used for the queue label
     and is never re-uploaded.
+
+    The imported mesh is named from *mesh_name* (agent-supplied) when given,
+    else derived from the input *image* name, else from the prompt — see
+    :func:`derive_model_name`. Pro always returns a single mesh, so it takes
+    the standalone-mesh naming + origin/world-origin normalization path.
     """
     image_bytes = b""
     if image is not None and not turnaround:
@@ -225,6 +348,9 @@ def enqueue_pro_job(
 
     payload, model_key = _build_pro_payload(
         image_bytes, shared, multi_views, turnaround)
+
+    resolved_name = derive_model_name(
+        image, shared.get("prompt") or "", explicit=mesh_name)
 
     return enqueue_generation(
         kind="glb",
@@ -234,7 +360,8 @@ def enqueue_pro_job(
         payload=payload,
         label=label,
         fail_message="Image to 3D failed",
-        on_imported=_pro_on_imported,
+        on_imported=make_model_rename_on_imported(
+            resolved_name, model_front_zrot(model_key)),
         scene_flag="mixie_image_to_3d_is_generating",
         batch_popup_title="Image to 3D batch complete",
     )

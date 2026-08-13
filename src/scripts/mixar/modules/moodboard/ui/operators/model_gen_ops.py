@@ -49,13 +49,11 @@ def _routing(service_key):
             batch_popup_title="Image to 3D batch complete",
         )
     if service_key == "image_to_3d":
-        from mixar.modules.moodboard.core.generation_enqueue import (
-            _pro_on_imported,
-        )
+        # on_imported is set by the operator (mesh naming + normalization),
+        # so it is intentionally omitted here.
         return dict(
             feature_key=FEATURE_IMAGE_TO_3D_PRO,
             fail_message="Image to 3D failed",
-            on_imported=_pro_on_imported,
             scene_flag="mixie_image_to_3d_is_generating",
             batch_popup_title="Image to 3D batch complete",
         )
@@ -255,6 +253,17 @@ class MIXIE_OT_model_gen_generate(Operator):
         route = _routing(service_key)
         feature_key = route.pop("feature_key")
         label = image.name if image else ((prompt or model)[:40])
+
+        # Name the imported mesh from the input image (or a prompt slug for
+        # text-to-3D) and normalize its placement. Overrides any service
+        # default hook (e.g. image_to_3d's legacy "_high" rename) so every
+        # Model Gen provider names + grounds its result consistently.
+        from mixar.modules.moodboard.core.generation_enqueue import (
+            derive_model_name, make_model_rename_on_imported, model_front_zrot,
+        )
+        mesh_name = derive_model_name(image, prompt or "")
+        route["on_imported"] = make_model_rename_on_imported(
+            mesh_name, model_front_zrot(model))
 
         try:
             from mixar.modules.common.job_queue import enqueue_generation
