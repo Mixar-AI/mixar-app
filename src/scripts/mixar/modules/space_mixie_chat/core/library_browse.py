@@ -11,11 +11,16 @@ asset-browser space needed.
 
 Reuses infrastructure already built for the agent asset-picker: thumbnails come
 from ``asset_choice_previews`` (append → embedded preview or EEVEE render →
-bpy.data.images), rendered on the same C++ action-button path. Search is a local,
-instant, credit-free substring filter (semantic search stays in AGENT mode). The
-asset list is the same enrolled-library scan the trainer uses.
+bpy.data.images), rendered on the same C++ action-button path.
+
+Search parity: a typed query runs the SAME backend semantic search as the asset
+browser panel (``/api/v1/asset-search/search`` over the trained embeddings), so
+the two search boxes return the same assets — "globe" finds a globe-shaped asset
+whose NAME is a UUID. An empty send still browses everything locally, and the
+local name filter remains only as the offline fallback (with a note).
 """
 
+import threading
 import uuid
 from pathlib import Path
 
@@ -39,6 +44,12 @@ LIB_ADD_PREFIX = "lib_add:"
 # because the scan opens every .blend on the main thread; rebuilt on mode entry
 # and whenever invalidate() is called (e.g. after a train).
 _asset_cache = None
+
+# In-flight semantic search: a token discards stale results when the user types
+# a new query before the previous request returns.
+_search_token = 0
+_search_thread = None
+_search_payload = None  # (token, query, {"success", "message", "results"})
 
 
 def invalidate() -> None:
@@ -238,12 +249,17 @@ def _debug_dump(scene, label: str) -> None:
         logger.exception("[LibraryDbg] dump failed")
 
 
-def build_library_grid(context, query: str = "", force: bool = False) -> None:
-    """(Re)build the in-chat asset grid for *query* ("" = show everything).
+def build_library_grid(
+    context, query: str = "", force: bool = False, header_note: str = "",
+) -> None:
+    """(Re)build the in-chat asset grid from the LOCAL library scan.
 
-    Everything lands in ONE reused bubble, so a fresh search fully replaces the
-    prior grid (no leftover asset cards) and the enumeration re-scans when forced
-    or when the cache was invalidated (e.g. after a train indexed a new library).
+    Used for the empty-query "browse everything" view and as the offline
+    fallback when the backend semantic search is unavailable (``header_note``
+    then says so). A typed query normally goes through
+    ``_start_semantic_search`` instead. Everything lands in ONE reused bubble,
+    so a fresh search fully replaces the prior grid, and the enumeration
+    re-scans when forced or invalidated (e.g. after a train).
     """
     scene = context.scene
     if not hasattr(scene, "mixie_chat_messages"):
@@ -274,6 +290,8 @@ def build_library_grid(context, query: str = "", force: bool = False) -> None:
         header = f"**{len(filtered)}** asset(s) matching “{query}”"
     else:
         header = f"**Your library** — {len(assets)} asset(s)"
+    if header_note:
+        header += f"\n\n_{header_note}_"
     if len(filtered) > len(shown):
         header += f" · showing the first {len(shown)}, refine your search"
     if not shown:
@@ -305,16 +323,161 @@ def build_library_grid(context, query: str = "", force: bool = False) -> None:
 
 
 def execute_library_mode(operator, context):
-    """Composer send in LIBRARY mode: the typed text is a search over the
-    library ("" shows everything). Called from chat_ops.execute."""
+    """Composer send in LIBRARY mode. Empty text browses everything (local
+    scan); typed text runs the SAME backend semantic search as the asset
+    browser panel, so both search boxes return the same assets."""
     scene = context.scene
     query = (getattr(scene, "mixie_chat_input", "") or "").strip()
-    build_library_grid(context, query, force=False)
+    if query:
+        _start_semantic_search(context, query)
+    else:
+        build_library_grid(context, "", force=False)
     try:
         scene.mixie_chat_input = ""  # clear the composer
     except Exception:
         pass
     return {'FINISHED'}
+
+
+# --------------------------------------------------------------------------- #
+# Semantic search (backend /asset-search/search — same as the browser panel)
+# --------------------------------------------------------------------------- #
+
+def _start_semantic_search(context, query: str) -> None:
+    """Kick a background semantic search and show a searching state."""
+    global _search_token, _search_thread
+    _search_token += 1
+    token = _search_token
+
+    scene = context.scene
+    msg = _grid_bubble(scene)
+    _cleanup_bubble(msg)
+    msg.action_items.clear()
+    _set_content(msg, f"Searching your library for “{query}”…")
+    _redraw()
+
+    _search_thread = threading.Thread(
+        target=_semantic_search_worker, args=(query, token), daemon=True,
+    )
+    _search_thread.start()
+    # A rapid second search can land while the previous poll timer is still
+    # registered — re-registering the same function raises.
+    if not bpy.app.timers.is_registered(_poll_semantic_search):
+        bpy.app.timers.register(_poll_semantic_search, first_interval=0.2)
+
+
+def _semantic_search_worker(query: str, token: int) -> None:
+    """Background thread: POST /asset-search/search (no bpy access here)."""
+    global _search_payload
+    try:
+        from mixar.config.config import get_server_url
+        from mixar.modules.asset_search.constants import ASSET_SEARCH_ENDPOINT
+        from mixar.modules.common.api.client import HTTPClient
+
+        client = HTTPClient(base_url=get_server_url())
+        resp = client.post(
+            ASSET_SEARCH_ENDPOINT,
+            data={"prompt": query, "top_k": str(_MAX_GRID)},
+            timeout=30,
+            raise_for_status=False,
+        )
+        if not resp.success:
+            _search_payload = (token, query, {
+                "success": False,
+                "message": resp.message or f"Server returned {resp.status_code}",
+            })
+            return
+        inner = (resp.data or {}).get("data", resp.data or {})
+        rows = []
+        for r in inner.get("results", []):
+            meta = r.get("metadata", {}) or {}
+            rows.append({
+                "name": meta.get("name") or r.get("model_name", "?"),
+                "score": float(r.get("similarity_score", 0) or 0),
+                "library": meta.get("library", ""),
+                "blend_file": meta.get("blend_file", ""),
+                "type": meta.get("type", ""),
+            })
+        _search_payload = (token, query, {"success": True, "results": rows})
+    except Exception as exc:  # noqa: BLE001 — worker must never raise
+        _search_payload = (token, query, {"success": False, "message": str(exc)})
+
+
+def _poll_semantic_search():
+    """Main-thread timer: apply the finished search to the grid bubble."""
+    global _search_payload
+    if _search_thread is not None and _search_thread.is_alive():
+        return 0.2
+    payload = _search_payload
+    _search_payload = None
+    if payload is None:
+        return None
+    token, query, result = payload
+    if token != _search_token:
+        return None  # a newer search superseded this one
+
+    context = bpy.context
+    scene = getattr(context, "scene", None)
+    if scene is None or getattr(scene, "mixie_chat_mode", "") != 'LIBRARY':
+        return None
+
+    if not result.get("success"):
+        # Backend unavailable (offline, not trained, stale model) — fall back
+        # to the local name filter so the tab still works, and say so.
+        note = result.get("message") or "search unavailable"
+        logger.warning("[LibraryMode] semantic search failed: %s", note)
+        build_library_grid(
+            context, query, force=False,
+            header_note=f"Showing name matches only ({note}).",
+        )
+        return None
+
+    _apply_semantic_results(context, query, result.get("results") or [])
+    return None
+
+
+def _apply_semantic_results(context, query: str, rows: list) -> None:
+    """Render backend hits (same identity tuple as the browser panel) as the
+    clickable thumbnail grid."""
+    scene = context.scene
+    msg = _grid_bubble(scene)
+    _cleanup_bubble(msg)
+    msg.action_items.clear()
+
+    usable = [r for r in rows if r.get("name") and r.get("blend_file")][:_MAX_GRID]
+    if not usable:
+        _set_content(
+            msg,
+            f"**0** asset(s) matching “{query}”\n\n"
+            "No matches — try a different search.",
+        )
+        _redraw()
+        return
+
+    _set_content(
+        msg,
+        f"**{len(usable)}** asset(s) matching “{query}”\n\n"
+        "Click an asset to add it to the scene at the 3D cursor.",
+    )
+    for i, row in enumerate(usable):
+        action = msg.action_items.add()
+        score = max(0.0, min(1.0, float(row.get("score", 0.0))))
+        action.label = f"{row['name']} · {int(round(score * 100))}%"
+        action.value = f"{LIB_ADD_PREFIX}{i}"
+        action.style = "DEFAULT"
+        action.asset_name = row["name"]
+        action.library = row.get("library", "")
+        action.blend_file = row.get("blend_file", "")
+        action.asset_type = row.get("type", "")
+
+    try:
+        from . import asset_choice_previews
+        asset_choice_previews.schedule(scene, msg)
+    except Exception:
+        logger.exception("[LibraryMode] preview scheduling failed")
+
+    scene.mixie_chat_user_has_engaged = True
+    _redraw()
 
 
 def schedule_show_all() -> None:
