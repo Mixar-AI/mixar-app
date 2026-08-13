@@ -361,20 +361,24 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
         scene_flag = "mixie_image_to_3d_is_generating"
         error_attr = "mixie_image_to_3d_error"
         loader_text = "Generating 3D model (Pro)"
-        route_extra = {}
-        try:
-            from mixar.modules.moodboard.core.generation_enqueue import (
-                _pro_on_imported,
-            )
-            route_extra["on_imported"] = _pro_on_imported
-        except Exception:
-            pass
     else:
         feature_key = FEATURE_HUNYUAN_RAPID
         scene_flag = "mixie_hunyuan_rapid_is_generating"
         error_attr = "mixie_hunyuan_rapid_error"
         loader_text = "Generating 3D model (Rapid)"
-        route_extra = {}
+
+    # Name the imported mesh from the input image (or a prompt slug for
+    # text-to-3D) and normalize its placement — same as model_gen_ops.
+    route_extra = {}
+    try:
+        from mixar.modules.moodboard.core.generation_enqueue import (
+            derive_model_name, make_model_rename_on_imported, model_front_zrot,
+        )
+        mesh_name = derive_model_name(img, prompt or "")
+        route_extra["on_imported"] = make_model_rename_on_imported(
+            mesh_name, model_front_zrot(model))
+    except Exception as e:
+        logger.debug("Failed to attach 3D naming hook: %s", e)
 
     bubble_id = add_slot_loader(scene, loader_text)
 

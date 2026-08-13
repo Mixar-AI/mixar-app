@@ -140,6 +140,9 @@ class MIXIE_OT_texture_edit_generate(Operator):
 
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
+        from mixar.modules.moodboard.core.generation_enqueue import (
+            make_texture_reimport_on_imported,
+        )
 
         try:
             job = enqueue_generation(
@@ -150,6 +153,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
                 payload=payload,
                 label=meshes[0].name,
                 fail_message="Texture edit failed",
+                on_imported=make_texture_reimport_on_imported(),
                 scene_flag="mixie_lookdev360_is_generating",
             )
             if not job:
