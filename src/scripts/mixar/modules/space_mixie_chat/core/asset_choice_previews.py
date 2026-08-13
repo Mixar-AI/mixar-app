@@ -58,8 +58,14 @@ def image_name_for(candidate):
 def schedule(scene, bubble):
     """Resolve/queue previews for every asset option on *bubble*.
 
-    Already-generated images are wired up immediately; the rest are queued
-    for one-per-tick generation on a timer.
+    LAYOUT IS RESERVED UP FRONT: every asset action gets its deterministic
+    image name immediately — the C++ layout keys the thumbnail-sized row on
+    ``image[0] != '\\0'`` (a not-yet-generated image just draws blank in the
+    reserved square), so cards render at their FINAL size from the first frame
+    and lazily filling thumbnails never reflows the bubble. Previously rows
+    started at text height and grew one by one as images landed, making the
+    grid jump on every tick. Generation failure clears the name, collapsing
+    that one row back to a text button (single reflow, rare).
     """
     global _timer_running
 
@@ -76,17 +82,16 @@ def schedule(scene, bubble):
             "type": action.asset_type,
         }
         name = image_name_for(candidate)
+        action.image = name  # reserve the thumbnail row NOW (skeleton)
         if bpy.data.images.get(name) is not None:
-            action.image = name
-            continue
+            continue  # already generated — paints immediately
         _queue.append((scene.name, bubble.bubble_id, action.value, candidate))
         queued += 1
 
-    if queued:
-        bump_layout_epoch(scene)
-        if not _timer_running:
-            _timer_running = True
-            bpy.app.timers.register(_process_next, first_interval=0.05)
+    bump_layout_epoch(scene)
+    if queued and not _timer_running:
+        _timer_running = True
+        bpy.app.timers.register(_process_next, first_interval=0.05)
     logger.debug(
         "[AssetChoice] scheduled %d preview(s) for bubble %s",
         queued, bubble.bubble_id,
@@ -116,6 +121,14 @@ def _process_next():
             _assign_image(scene_name, bubble_id, action_value, name)
         except Exception:
             logger.exception("[AssetChoice] could not assign preview image")
+    else:
+        # Generation failed and the row's height was reserved at schedule()
+        # time — clear the name so this one row collapses to a text button
+        # instead of showing a permanently blank square.
+        try:
+            _assign_image(scene_name, bubble_id, action_value, "")
+        except Exception:
+            logger.exception("[AssetChoice] could not clear reserved preview")
 
     if _queue:
         return 0.05
