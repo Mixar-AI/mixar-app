@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Debounced, single-flight auto-training.
 
 Kicks an incremental embedding train — ``mixie.train_asset_model(auto=True)``,

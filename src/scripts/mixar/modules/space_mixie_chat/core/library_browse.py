@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Library chat mode — browse, search, and place library assets from chat.
 
 Switch Mixie to LIBRARY mode and the chat shows a grid of clickable asset
