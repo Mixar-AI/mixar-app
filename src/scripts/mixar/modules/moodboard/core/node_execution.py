@@ -260,10 +260,17 @@ def _run_video(context, node, operator):
     limits = get_video_generation_limits(service_key)
     if limits is None:
         raise ValueError("Video generation catalog config is incomplete")
-    if len(images) > limits["max_images"] or len(videos) > limits["max_videos"]:
-        raise ValueError("Connected references exceed this model's limits")
-    if len(descriptions) > limits["max_materials"]:
-        raise ValueError("Connected references exceed the total material limit")
+    params = collect_node_params(node)
+    from .video_generation_catalog import seedance_reference_count_error
+
+    count_error = seedance_reference_count_error(
+        limits,
+        image_count=len(images),
+        video_count=len(videos),
+        image_mode=(params or {}).get("image_mode"),
+    )
+    if count_error:
+        raise ValueError(count_error)
     if any(not item["source_available"] for item in videos):
         raise ValueError("A connected video was moved or deleted")
 
@@ -280,15 +287,18 @@ def _run_video(context, node, operator):
             "file_size_bytes": video["file_size_bytes"],
         })
 
-    image_inputs = [
-        {
+    image_inputs = []
+    for index, item in enumerate(images):
+        payload = compress_for_service(item["image"], "video_gen")
+        if len(payload) > limits["max_image_bytes"]:
+            raise ValueError(
+                f"Image is too large after compression: {item.get('filename') or 'reference'}"
+            )
+        image_inputs.append({
             "filename": f"reference_{index + 1}.jpg",
             "mime_type": "image/jpeg",
-            "bytes": compress_for_service(item["image"], "video_gen"),
-        }
-        for index, item in enumerate(images)
-    ]
-    params = collect_node_params(node)
+            "bytes": payload,
+        })
     ensure_graph_listener(FEATURE_VIDEO_GEN)
     hook = _result_hook(context.scene.name, node.node_id, 'VIDEO')
     job = enqueue_generation(

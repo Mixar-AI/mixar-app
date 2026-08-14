@@ -56,23 +56,23 @@ class MIXIE_OT_video_gen_generate(Operator):
         refs = get_selected_moodboard_media_inputs(context)
         from mixar.modules.moodboard.core.video_generation_catalog import (
             get_video_generation_limits,
+            seedance_reference_count_error,
         )
 
         limits = get_video_generation_limits(service_key)
         if limits is None:
             self.report({'ERROR'}, "Video generation catalog config is incomplete")
             return {'CANCELLED'}
-        if len(refs["images"]) > limits["max_images"]:
-            self.report({'WARNING'}, f"Select at most {limits['max_images']} images")
-            return {'CANCELLED'}
-        if len(refs["videos"]) > limits["max_videos"]:
-            self.report({'WARNING'}, f"Select at most {limits['max_videos']} videos")
-            return {'CANCELLED'}
-        if refs["count"] > limits["max_materials"]:
-            self.report(
-                {'WARNING'},
-                f"Select at most {limits['max_materials']} reference materials",
-            )
+
+        params = collect_params(service_key, model)
+        count_error = seedance_reference_count_error(
+            limits,
+            image_count=len(refs["images"]),
+            video_count=len(refs["videos"]),
+            image_mode=(params or {}).get("image_mode"),
+        )
+        if count_error:
+            self.report({'WARNING'}, count_error)
             return {'CANCELLED'}
         if not refs["all_video_sources_available"]:
             self.report({'ERROR'}, "A selected video was moved or deleted")
@@ -104,10 +104,18 @@ class MIXIE_OT_video_gen_generate(Operator):
             from mixar.modules.common.utils.image_utils import compress_for_service
 
             for index, image in enumerate(refs["images"]):
+                payload = compress_for_service(image["image"], "video_gen")
+                if len(payload) > limits["max_image_bytes"]:
+                    self.report(
+                        {'ERROR'},
+                        f"Image is too large after compression: "
+                        f"{image.get('filename') or image['image'].name}",
+                    )
+                    return {'CANCELLED'}
                 image_inputs.append({
                     "filename": f"reference_{index + 1}.jpg",
                     "mime_type": "image/jpeg",
-                    "bytes": compress_for_service(image["image"], "video_gen"),
+                    "bytes": payload,
                 })
         except Exception as exc:
             logger.exception("Could not prepare Seedance image references")
@@ -115,7 +123,6 @@ class MIXIE_OT_video_gen_generate(Operator):
             return {'CANCELLED'}
 
         try:
-            params = collect_params(service_key, model)
             from mixar.modules.common.job_queue import enqueue_generation
             from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
 

@@ -171,18 +171,32 @@ class MIXIE_OT_world_labs_generate(Operator):
 
         prompt = (getattr(tab, "prompt", "") or "").strip()
         try:
-            model, mode, lod = _catalog_settings(
+            model, catalog_mode, lod = _catalog_settings(
                 selected_model=getattr(tab, "model", ""),
             )
         except ValueError as e:
             self.report({"ERROR"}, str(e))
             return {"CANCELLED"}
 
+        from mixar.modules.moodboard.core.world_labs_mode import (
+            resolve_world_labs_mode,
+        )
+
+        image = None
+        if catalog_mode == "image":
+            image = self._resolve_image(context, tab, quiet=bool(prompt))
+            # Catalog default is image. A prompt-only submit must not keep
+            # that default — the backend would charge and then 422.
+            if image is None and not prompt:
+                return {"CANCELLED"}
+        mode = resolve_world_labs_mode(
+            catalog_mode, has_image=image is not None, has_prompt=bool(prompt),
+        )
+
         image_b64 = ""
         label = prompt[:40] if prompt else "World"
 
         if mode == "image":
-            image = self._resolve_image(context, tab)
             if image is None:
                 return {"CANCELLED"}
             try:
@@ -229,16 +243,26 @@ class MIXIE_OT_world_labs_generate(Operator):
 
         clear_agent_gen_reason(context)
         prompt = (self.prompt or "").strip()
+        from mixar.modules.moodboard.core.world_labs_mode import (
+            resolve_world_labs_mode,
+        )
+
+        requested_mode = self.mode or ("image" if self.image_name else "text")
         try:
-            model, mode, lod = _catalog_settings(
+            model, catalog_mode, lod = _catalog_settings(
                 selected_model=self.model,
-                selected_mode=self.mode or ("image" if self.image_name else "text"),
+                selected_mode=requested_mode,
                 selected_lod=self.lod,
             )
         except ValueError as e:
             set_agent_gen_reason(context, str(e))
             self.report({"ERROR"}, str(e))
             return {"CANCELLED"}
+        mode = resolve_world_labs_mode(
+            catalog_mode,
+            has_image=bool(self.image_name),
+            has_prompt=bool(prompt),
+        )
 
         image_b64 = ""
         label = prompt[:40] if prompt else "World"
@@ -278,7 +302,7 @@ class MIXIE_OT_world_labs_generate(Operator):
         self.report({"INFO"}, "Added to queue")
         return {"FINISHED"}
 
-    def _resolve_image(self, context, tab):
+    def _resolve_image(self, context, tab, quiet=False):
         """Return the chosen image (selected moodboard image or uploaded)."""
         if getattr(tab, "use_selected_image", True):
             scene = context.scene
@@ -287,12 +311,14 @@ class MIXIE_OT_world_labs_generate(Operator):
                 if item.selected and item.image
             ]
             if not selected:
-                self.report({"WARNING"}, "Please select an image in the moodboard")
+                if not quiet:
+                    self.report({"WARNING"}, "Please select an image in the moodboard")
                 return None
             return selected[0]
         image = getattr(tab, "reference_image", None)
         if not image:
-            self.report({"WARNING"}, "Please add an input image")
+            if not quiet:
+                self.report({"WARNING"}, "Please add an input image")
             return None
         return image
 
