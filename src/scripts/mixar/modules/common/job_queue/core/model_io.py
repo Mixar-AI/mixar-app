@@ -735,6 +735,29 @@ def _grayscale_from_channel(src_img, channel_idx, name):
         )
         return None
 
+    # glTF-imported images are PACKED but lazily decoded: `size` comes from
+    # metadata, but the pixel buffer (ImBuf) is not acquired until the image is
+    # displayed/used — so `foreach_get` here would copy an all-zero buffer,
+    # producing a completely BLACK split roughness/metallic map. Realize the
+    # buffer first. Idioms: image_utils.image_to_png_bytes uses reload() for
+    # not-decoded packed images; bake ops touch pixels[0] to force acquisition.
+    if not getattr(src_img, "has_data", True):
+        try:
+            src_img.reload()
+        except Exception:
+            pass
+    # Roughness/metallic are DATA maps — read as Non-Color so no sRGB->linear
+    # decode corrupts the values.
+    if src_img.colorspace_settings.name != 'Non-Color':
+        try:
+            src_img.colorspace_settings.name = 'Non-Color'
+        except Exception:
+            pass
+    try:
+        _ = src_img.pixels[0]  # force ImBuf acquisition before foreach_get
+    except Exception:
+        pass
+
     n = w * h
     src = np.empty(n * 4, dtype=np.float32)
     src_img.pixels.foreach_get(src)
@@ -750,7 +773,9 @@ def _grayscale_from_channel(src_img, channel_idx, name):
         name, width=w, height=h, alpha=False,
         float_buffer=bool(getattr(src_img, "is_float", False)),
     )
-    img.pixels.foreach_set(out.ravel())
+    # Colorspace BEFORE writing pixels so the raw values aren't round-tripped
+    # through a color transform.
     img.colorspace_settings.name = 'Non-Color'
+    img.pixels.foreach_set(out.ravel())
     img.pack()
     return img
