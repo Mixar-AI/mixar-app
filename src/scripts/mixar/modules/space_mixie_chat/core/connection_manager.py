@@ -332,6 +332,53 @@ class ConnectionManager:
             from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
             return handle_sandbox_control(params)
 
+        def on_llm_request(params: dict, request_id) -> None:
+            """Relay one backend llm.request to the user's local model server.
+
+            Runs on the WS receive thread — which must never block — so the
+            blocking localhost HTTP call happens on its own daemon thread and
+            the reply goes back through client.queue_response (thread-safe
+            Queue). Returning None tells the JSON-RPC client the response is
+            deferred. The worker never touches Blender state.
+            """
+            import threading
+
+            def _respond(result: dict) -> None:
+                if not request_id:
+                    return  # notification — nothing to answer
+                from .jsonrpc_client import get_jsonrpc_client
+                ws_client = get_jsonrpc_client()
+                if ws_client and ws_client.is_connected:
+                    ws_client.queue_response(request_id, result)
+                else:
+                    logger.warning(
+                        "llm.request %s finished after disconnect — reply dropped",
+                        request_id,
+                    )
+
+            def _relay():
+                responded = {"done": False}
+
+                def _respond_once(result: dict) -> None:
+                    if responded["done"]:
+                        return
+                    responded["done"] = True
+                    _respond(result)
+
+                try:
+                    from ...local_models.core.relay import handle_llm_request
+                    handle_llm_request(params, _respond_once)
+                except Exception as exc:  # noqa: BLE001 - must always answer
+                    logger.error("llm.request relay failed: %s", exc, exc_info=True)
+                    _respond_once({
+                        "error": {"code": "relay_internal", "message": str(exc)},
+                    })
+
+            threading.Thread(
+                target=_relay, daemon=True, name="MixarLocalLLMRelay"
+            ).start()
+            return None  # deferred — _respond() replies from the worker
+
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         # Re-arm the script executor: a prior disconnect(update_session_state=
@@ -355,6 +402,7 @@ class ConnectionManager:
             on_notification=on_notifications_push,
             on_job_update=on_job_update,
             on_sandbox_control=on_sandbox_control,
+            on_llm_request=on_llm_request,
         )
 
         # Connect

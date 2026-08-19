@@ -349,6 +349,8 @@ class SSEStreamHandler:
         session_id: str,
         action: str,
         text: str = "",
+        answers: Optional[dict[str, str]] = None,
+        interrupt_id: Optional[str] = None,
         auth_token: Optional[str] = None,
     ) -> bool:
         """
@@ -358,6 +360,8 @@ class SSEStreamHandler:
             session_id: Session ID for the input
             action: Action type ("approve", "modify", "abort", "retry", "submit", or custom)
             text: Optional text payload (used with "modify", "submit")
+            answers: Complete answer map for a batched choice interrupt
+            interrupt_id: Checkpointed interrupt to resume
             auth_token: Optional auth token for request
 
         Returns:
@@ -379,7 +383,7 @@ class SSEStreamHandler:
         self._running.set()
         self._thread = threading.Thread(
             target=self._input_stream_loop,
-            args=(session_id, action, text, auth_token),
+            args=(session_id, action, text, answers, interrupt_id, auth_token),
             daemon=True,
         )
         self._thread.name = "MixarInputStream"
@@ -393,6 +397,8 @@ class SSEStreamHandler:
         session_id: str,
         action: str,
         text: str,
+        answers: Optional[dict[str, str]],
+        interrupt_id: Optional[str],
         auth_token: Optional[str],
         _connect_attempt: int = 0,
     ) -> None:
@@ -405,6 +411,23 @@ class SSEStreamHandler:
                 "action": action,
                 "text": text,
             }
+            if answers:
+                payload["answers"] = answers
+            if interrupt_id:
+                payload["interrupt_id"] = interrupt_id
+
+            # A LOCAL BYOK provider relays LLM calls back over the agent
+            # WebSocket, and an interrupt resume builds a fresh run config —
+            # the backend needs the CURRENT connection id to rebind the
+            # relay. Harmless for cloud providers (optional field).
+            try:
+                from .jsonrpc_client import get_jsonrpc_client
+
+                ws_client = get_jsonrpc_client()
+                if ws_client is not None and ws_client.connection_id:
+                    payload["instance_id"] = ws_client.connection_id
+            except Exception:
+                pass
 
             logger.debug(f"Starting input SSE request to {self.input_url}")
 
@@ -483,6 +506,8 @@ class SSEStreamHandler:
                     session_id,
                     action,
                     text,
+                    answers,
+                    interrupt_id,
                     auth_token,
                     _connect_attempt + 1,
                 )

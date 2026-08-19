@@ -719,6 +719,7 @@ def get_user_info():
         "message": "No access token found",
         "data": {
             "email": "Unknown",
+            "name": "",
             "credits": 0,
         },
     }
@@ -748,6 +749,9 @@ def get_user_info():
             response_data["status"] = "success"
             response_data["message"] = "User info fetched successfully"
             response_data["data"]["email"] = user_data.get("email", "Unknown")
+            # Optional on the backend (most SSO signups never set one) —
+            # the profile card falls back to the email's local part.
+            response_data["data"]["name"] = user_data.get("name") or ""
             response_data["data"]["credits"] = user_data.get("credits", 0)
             return response_data
         else:

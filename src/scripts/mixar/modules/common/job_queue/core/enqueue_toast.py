@@ -159,6 +159,17 @@ def _push_summary() -> None:
     from .job import JobState, TERMINAL_STATES
     from .queue_manager import all_queues
 
+    # Generations are what actually spend credits, so a drained queue is the
+    # moment the top-bar meter is most likely to be wrong. Ask for a refresh
+    # on every drain (including all-failed batches — a partial charge still
+    # moves the balance); the poller's rate floor absorbs bursts.
+    try:
+        from mixar.modules.common.usage.core import poller as _usage_poller
+
+        _usage_poller.request_refresh()
+    except Exception:  # noqa: BLE001 — the toast must not depend on billing
+        pass
+
     succeeded = 0
     failed = 0
     for queue in all_queues():

@@ -40,6 +40,8 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_palette.hh"
+#include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 
 #include "GPU_batch.hh"
@@ -129,6 +131,8 @@ enum uiWidgetTypeEnum {
   UI_WTYPE_MIXAR_ACTION,
   UI_WTYPE_MIXAR_TOGGLE,
   UI_WTYPE_MIXAR_INPUT,
+  /* Account-card elements — every kind paints its own glyphs. */
+  UI_WTYPE_MIXAR_CARD,
 };
 
 /**
@@ -4954,40 +4958,9 @@ static void widget_optionbut(uiWidgetColors *wcol,
 }
 
 /* -------------------------------------------------------------------- */
-/* Mixar design-system palette (--mx-* tokens).
- *
- * Shared by every widget_mixar_* draw function so the whole app speaks one
- * visual language (global design system). Values are the exact hex tokens
- * from the Mixar design spec — keep them here as the single source of truth
- * rather than re-hardcoding per widget. */
-/* [[maybe_unused]]: the full palette is defined up front as the single
- * source of truth; individual tokens land as each widget phase uses them. */
-[[maybe_unused]] static constexpr uchar MX_BG[4]            = {20, 20, 20, 255};   /* #141414 raised/panel   */
-[[maybe_unused]] static constexpr uchar MX_BG_SUNKEN[4]     = {15, 15, 15, 255};   /* #0f0f0f sunken card    */
-[[maybe_unused]] static constexpr uchar MX_GRAY_800[4]      = {31, 31, 31, 255};   /* #1f1f1f input/select   */
-[[maybe_unused]] static constexpr uchar MX_GRAY_700[4]      = {42, 42, 42, 255};   /* #2a2a2a toggle-off     */
-[[maybe_unused]] static constexpr uchar MX_BORDER[4]        = {38, 38, 38, 255};   /* #262626                */
-[[maybe_unused]] static constexpr uchar MX_BORDER_STRONG[4] = {46, 46, 46, 255};   /* #2e2e2e                */
-[[maybe_unused]] static constexpr uchar MX_ACCENT[4]        = {0, 192, 199, 255};  /* #00C0C7 brand accent   */
-[[maybe_unused]] static constexpr uchar MX_TOGGLE_ON[4]     = {0, 192, 199, 255};  /* #00C0C7 toggle ON      */
-[[maybe_unused]] static constexpr uchar MX_WARNING[4]       = {224, 160, 48, 255}; /* amber semantic         */
-[[maybe_unused]] static constexpr uchar MX_INK[4]           = {10, 10, 10, 255};   /* near-black on gradient  */
-[[maybe_unused]] static constexpr uchar MX_FG_1[4]          = {230, 230, 230, 255};
-[[maybe_unused]] static constexpr uchar MX_FG_2[4]          = {200, 200, 200, 255}; /* #c8c8c8 label         */
-[[maybe_unused]] static constexpr uchar MX_FG_4[4]          = {90, 90, 90, 255};   /* #5a5a5a muted glyph    */
-
-/* --mx-gradient: the ONE gradient in the app (Generate button), 90deg
- * lime -> green -> teal -> cyan. Stops are evenly spaced. */
-[[maybe_unused]] static constexpr uchar MX_GRADIENT[4][4] = {
-    {106, 163, 18, 255},  /* lime  #6aa312 (dimmed ~80%) */
-    {27, 158, 75, 255},   /* green #1b9e4b (dimmed ~80%) */
-    {34, 150, 122, 255},  /* teal  #22967a (dimmed ~80%) */
-    {5, 146, 170, 255},   /* cyan  #0592aa (dimmed ~80%) */
-};
-
-/* Corner radii in px @ 1x DPI (scaled by UI_SCALE_FAC at draw time). */
-[[maybe_unused]] static constexpr float MX_R_SM = 4.0f; /* --mx-r-sm: inputs / selects */
-[[maybe_unused]] static constexpr float MX_R_MD = 8.0f; /* --mx-r-md: grouped cards    */
+/* Mixar design-system palette (--mx-* tokens) now lives in
+ * interface_mixar_palette.hh so the profile card and any future Mixar
+ * surface read the same MX_* values instead of re-declaring them. */
 
 /* Mixar pill-shaped toggle switch. */
 static void widget_mixar_toggle(uiWidgetColors *wcol,
@@ -5483,6 +5456,28 @@ static void widget_mixar_action_button(uiBut * /*but*/,
   copy_v4_v4_uchar(wcol->inner_sel, MX_INK);
 }
 
+/* -- Mixar Account Card --------------------------------------------------- */
+
+/**
+ * Bridge to `interface_mixar_profile_card_draw.cc`.
+ *
+ * `uiWidgetStateInfo` is private to this file, so the card's drawing
+ * takes the two flags it actually needs instead of the struct.
+ */
+static void widget_mixar_card(uiBut *but,
+                              uiWidgetColors *wcol,
+                              rcti *rect,
+                              const uiWidgetStateInfo *state,
+                              int /*roundboxalign*/,
+                              const float /*zoom*/)
+{
+  UI_mixar_profile_card_draw_element(but,
+                                     wcol,
+                                     rect,
+                                     (state->but_flag & UI_HOVER) != 0,
+                                     (state->but_flag & UI_SELECT) != 0);
+}
+
 /* -------------------------------------------------------------------- */
 
 static void widget_but(uiWidgetColors *wcol,
@@ -5808,6 +5803,18 @@ static uiWidgetType *widget_type(uiWidgetTypeEnum type)
       wt.draw = widget_mixar_input;
       break;
 
+    case UI_WTYPE_MIXAR_CARD:
+      wt.wcol_theme = &btheme->tui.wcol_menu_back;
+      /* Card elements own their glyphs entirely — the heading needs a
+       * size the generic text path can't give it, and the buttons need
+       * their icon and label to travel as one group rather than being
+       * pinned to opposite ends. Suppress both stock passes. */
+      wt.draw = nullptr;
+      wt.text = nullptr;
+      wt.state = widget_state_nothing;
+      wt.custom = widget_mixar_card;
+      break;
+
     case UI_WTYPE_RGB_PICKER:
       break;
 
@@ -5943,8 +5950,15 @@ void ui_draw_but(const bContext *C, ARegion *region, uiStyle *style, uiBut *but,
   const uiFontStyle *fstyle = &style->widget;
   uiWidgetType *wt = nullptr;
 
+  /* Account-card elements are claimed before the emboss/type chain: they
+   * span several ButTypes (labels and operator buttons), and the card is
+   * responsible for all of their chrome regardless of the emboss the
+   * surrounding layout happens to be using. */
+  if (UI_mixar_card_element_get(but) != MixarCardElement::None) {
+    wt = widget_type(UI_WTYPE_MIXAR_CARD);
+  }
   /* handle menus separately */
-  if (but->emboss == blender::ui::EmbossType::Pulldown) {
+  else if (but->emboss == blender::ui::EmbossType::Pulldown) {
     switch (but->type) {
       case ButType::Label:
         widget_draw_text_icon(&style->widget, &tui->wcol_menu_back, but, rect);

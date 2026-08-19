@@ -37,15 +37,36 @@ from ..core import avatar_icon
 
 
 class MIXAR_PT_profile(Panel):
-    """Profile / account dropdown — opened from the global top bar."""
+    """Profile / account dropdown — opened from the global top bar.
+
+    The contents are drawn natively by `layout.mixar_profile_card()`
+    (`interface_mixar_profile_card.cc`): a greeting, the plan chip, the
+    credit usage meter and the account actions, laid out as one card
+    rather than a menu. Python still owns registration and every
+    operator the card invokes — C++ owns only pixels.
+    """
 
     bl_label = "Profile"
     bl_idname = "MIXAR_PT_profile"
     bl_space_type = 'TOPBAR'
     bl_region_type = 'HEADER'
+    #: Narrow enough that the card reads as a card rather than a wide,
+    #: sparse strip — at 17 the content sat in the left third and every
+    #: label looked undersized for the surface it was on.
+    bl_ui_units_x = 15
 
     def draw(self, context):
         layout = self.layout
+
+        try:
+            layout.mixar_profile_card()
+        except AttributeError:
+            # Build whose C++ predates the card item — fall back to the
+            # plain menu so the account actions are never unreachable.
+            self._draw_fallback_menu(context, layout)
+
+    @staticmethod
+    def _draw_fallback_menu(context, layout) -> None:
         wm = context.window_manager
 
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
