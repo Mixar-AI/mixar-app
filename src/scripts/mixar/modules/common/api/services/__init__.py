@@ -19,6 +19,7 @@ from .scene_recon_service import SceneReconService, get_scene_recon_service
 from .scene_segment_service import SceneSegmentService, get_scene_segment_service
 from .update_service import UpdateService, get_update_service
 from .job_queue_service import JobQueueService, get_job_queue_service
+from .subscription_service import SubscriptionService, get_subscription_service
 
 __all__ = [
     # Base
@@ -53,4 +54,7 @@ __all__ = [
     # Job Queue
     "JobQueueService",
     "get_job_queue_service",
+    # Subscriptions (billing status / usage quota)
+    "SubscriptionService",
+    "get_subscription_service",
 ]

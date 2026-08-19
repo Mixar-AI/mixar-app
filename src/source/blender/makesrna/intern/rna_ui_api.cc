@@ -45,6 +45,7 @@ const EnumPropertyItem rna_enum_icon_items[] = {
 #  include "WM_api.hh"
 
 /* Mixar custom section widget. */
+#  include "../../editors/interface/interface_mixar_profile_card.hh"
 #  include "../../editors/interface/interface_mixar_section.hh"
 
 
@@ -848,6 +849,11 @@ static uiLayout *rna_uiLayoutMixarSection(uiLayout *layout)
   return UI_layout_mixar_section(layout);
 }
 
+static void rna_uiLayoutMixarProfileCard(uiLayout *layout, bContext *C)
+{
+  UI_layout_mixar_profile_card(layout, C);
+}
+
 static void rna_uiItemR_mixar_dropdown(uiLayout *layout,
                                        PointerRNA *ptr,
                                        const char *propname,
@@ -1484,6 +1490,13 @@ void RNA_api_ui_layout(StructRNA *srna)
   RNA_def_function_ui_description(func,
                                   "Sublayout (items placed in this sublayout are placed "
                                   "under each other in a column and are surrounded by a box)");
+
+  /* Mixar account card — the profile dropdown's whole contents. */
+  func = RNA_def_function(srna, "mixar_profile_card", "rna_uiLayoutMixarProfileCard");
+  RNA_def_function_flag(func, FUNC_USE_CONTEXT);
+  RNA_def_function_ui_description(func,
+                                  "Draw the Mixar account card: greeting, plan, credit usage "
+                                  "meter and account actions (Mixar custom widget)");
 
   /* Mixar section layout */
   func = RNA_def_function(srna, "mixar_section", "rna_uiLayoutMixarSection");
