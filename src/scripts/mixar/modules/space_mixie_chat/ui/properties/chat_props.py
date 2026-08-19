@@ -229,6 +229,27 @@ class MixieChatMessage(PropertyGroup):
         maxlen=32,
         options={'SKIP_SAVE'}
     )
+    batched_questions: StringProperty(
+        name="Batched Questions",
+        description="Runtime JSON for a local multi-choice input wizard",
+        default="",
+        maxlen=16384,
+        options={'SKIP_SAVE'},
+    )
+    batched_answers: StringProperty(
+        name="Batched Answers",
+        description="Runtime JSON answers collected by a local input wizard",
+        default="",
+        maxlen=16384,
+        options={'SKIP_SAVE'},
+    )
+    interrupt_id: StringProperty(
+        name="Interrupt ID",
+        description="Checkpointed backend interrupt represented by this bubble",
+        default="",
+        maxlen=200,
+        options={'SKIP_SAVE'},
+    )
     export_format: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})

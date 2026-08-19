@@ -152,6 +152,8 @@ class SlotEventProcessor:
         # Apply each slot if present in the event.
         # Each slot is wrapped in try/except so one failure never blocks others.
         slot_handlers = [
+            ("questions", lambda: self._apply_questions_slot(bubble, event_data["questions"])),
+            ("interrupt_id", lambda: self._apply_interrupt_id_slot(bubble, event_data["interrupt_id"])),
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
             ("interrupt_context", lambda: self._apply_interrupt_context_slot(bubble, event_data["interrupt_context"])),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
@@ -168,6 +170,30 @@ class SlotEventProcessor:
                     handler()
                 except Exception as e:
                     logger.error(f"[SLOT] Failed to apply {slot_name}: {e}")
+
+    @staticmethod
+    def _apply_questions_slot(bubble: Any, questions: list) -> None:
+        """Store a validated batched-choice wizard payload on its bubble."""
+        import json
+
+        valid = (
+            isinstance(questions, list)
+            and 1 < len(questions) <= 4
+            and all(
+                isinstance(item, dict)
+                and isinstance(item.get("question"), str)
+                and item["question"].strip()
+                and isinstance(item.get("options"), list)
+                and item["options"]
+                for item in questions
+            )
+        )
+        bubble.batched_questions = json.dumps(questions) if valid else ""
+        bubble.batched_answers = ""
+
+    @staticmethod
+    def _apply_interrupt_id_slot(bubble: Any, interrupt_id: str) -> None:
+        bubble.interrupt_id = interrupt_id or ""
 
     def _get_or_create_bubble(self, bubble_id: str, scene) -> Optional[Any]:
         """
