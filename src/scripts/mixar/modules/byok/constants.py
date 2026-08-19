@@ -67,3 +67,23 @@ CODEX_PROVIDER_ITEM = (
 )
 # Prefilled model slug — the current Codex lineup; the user can edit it.
 CODEX_DEFAULT_MODEL = "gpt-5.5"
+
+# "Local (this computer)" — a client-side-only provider option: the agent's
+# LLM calls are relayed over the agent WebSocket to a model server running on
+# the user's own machine (managed llama-server via modules/local_models, or a
+# custom OpenAI-compatible server like Ollama / LM Studio). No cloud key.
+LOCAL_PROVIDER_ID = 'local'
+LOCAL_PROVIDER_ITEM = (
+    LOCAL_PROVIDER_ID,
+    "Local (this computer)",
+    "Run the agent on a model on this computer — private, no API key required",
+)
+
+# Managed vs custom sub-mode of the Local provider form.
+LOCAL_MODE_ITEMS = (
+    ('MANAGED', "Managed by Mixar",
+     "Mixar downloads and runs a curated model on this computer"),
+    ('CUSTOM', "Custom local server",
+     "Point Mixar at an OpenAI-compatible server you already run "
+     "(Ollama, LM Studio, llama.cpp, ...)"),
+)

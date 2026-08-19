@@ -139,14 +139,21 @@ def fetch_state(
 def save_credentials(
     provider: str,
     model: str,
-    api_key: str,
+    api_key: Optional[str],
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+    base_url: Optional[str] = None,
+    supports_vision: Optional[bool] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s."""
+    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+
+    ``base_url`` / ``supports_vision`` are forwarded only when provided
+    (the "local" provider's relay-target registration).
+    """
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
                 provider=provider, model=model, api_key=api_key,
+                base_url=base_url, supports_vision=supports_vision,
             )
             success, data, err = _translate(response)
         except Exception as e:

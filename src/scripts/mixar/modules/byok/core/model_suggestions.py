@@ -36,6 +36,8 @@ combination of "no real selection yet".
 from ..constants import (
     CODEX_PROVIDER_ID,
     CODEX_PROVIDER_ITEM,
+    LOCAL_PROVIDER_ID,
+    LOCAL_PROVIDER_ITEM,
     MODEL_EMPTY_SENTINEL,
     OPENROUTER_PROVIDER_ID,
     OPENROUTER_PROVIDER_ITEM,
@@ -64,13 +66,19 @@ def is_codex(provider: str) -> bool:
     return provider == CODEX_PROVIDER_ID
 
 
+def is_local(provider: str) -> bool:
+    """True when ``provider`` is the client-side Local (this computer) option."""
+    return provider == LOCAL_PROVIDER_ID
+
+
 def get_provider_items() -> list[tuple[str, str, str]]:
     """EnumProperty items for the provider dropdown.
 
-    Always ends with the client-side "OpenRouter" and "Codex (ChatGPT sub)"
-    options (neither is part of the backend catalog), so a user can pick either
-    even offline / before the catalog loads. The cloud providers come first (the
-    cached catalog list, or a sentinel while it loads).
+    Always ends with the client-side "OpenRouter", "Codex (ChatGPT sub)" and
+    "Local (this computer)" options (none is part of the backend catalog), so a
+    user can pick any of them even offline / before the catalog loads. The
+    cloud providers come first (the cached catalog list, or a sentinel while it
+    loads).
     """
     if _provider_cache:
         cloud = list(_provider_cache)
@@ -80,7 +88,9 @@ def get_provider_items() -> list[tuple[str, str, str]]:
         cloud = [PROVIDER_LOADING_SENTINEL]
     items = list(cloud)
     identifiers = {item[0] for item in items}
-    for client_item in (OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM):
+    for client_item in (
+        OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM, LOCAL_PROVIDER_ITEM,
+    ):
         if client_item[0] not in identifiers:
             items.append(client_item)
     return items

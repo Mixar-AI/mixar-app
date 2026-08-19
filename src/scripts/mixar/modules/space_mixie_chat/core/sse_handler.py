@@ -416,6 +416,19 @@ class SSEStreamHandler:
             if interrupt_id:
                 payload["interrupt_id"] = interrupt_id
 
+            # A LOCAL BYOK provider relays LLM calls back over the agent
+            # WebSocket, and an interrupt resume builds a fresh run config —
+            # the backend needs the CURRENT connection id to rebind the
+            # relay. Harmless for cloud providers (optional field).
+            try:
+                from .jsonrpc_client import get_jsonrpc_client
+
+                ws_client = get_jsonrpc_client()
+                if ws_client is not None and ws_client.connection_id:
+                    payload["instance_id"] = ws_client.connection_id
+            except Exception:
+                pass
+
             logger.debug(f"Starting input SSE request to {self.input_url}")
 
             timeout_config = httpx.Timeout(

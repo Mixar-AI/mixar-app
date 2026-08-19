@@ -154,6 +154,9 @@ def _clear_byok_state_on_logout(wm):
         ('byok_form_api_key', ''),
         ('byok_form_openrouter_model', ''),
         ('byok_form_codex_bundle', ''),
+        ('byok_form_local_custom_base', ''),
+        ('byok_form_local_custom_model', ''),
+        ('byok_form_local_custom_key', ''),
         ('byok_dialog_state', 'IDLE'),
         ('byok_last_error', ''),
     ):
@@ -168,6 +171,26 @@ def _clear_byok_state_on_logout(wm):
         model_suggestions.clear()
     except Exception as e:
         logger.debug("Failed clearing models-catalog cache on logout: %s", e)
+
+    # Local provider: stop the managed llama-server and drop transient
+    # relay grants + UI mirrors. Downloaded model files stay on disk.
+    try:
+        from mixar.modules.local_models.core import orchestrator
+        orchestrator.on_logout()
+    except Exception as e:
+        logger.debug("Failed stopping local model server on logout: %s", e)
+    try:
+        from mixar.modules.byok.core import local_provider
+        local_provider.clear()
+    except Exception as e:
+        logger.debug("Failed clearing local provider caches on logout: %s", e)
+    try:
+        from mixar.modules.local_models.ui.properties.local_models_props import (
+            wipe_transient_state,
+        )
+        wipe_transient_state(wm)
+    except Exception as e:
+        logger.debug("Failed clearing local model mirrors on logout: %s", e)
 
 
 def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
