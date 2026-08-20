@@ -278,7 +278,7 @@ void ZstdWriteWrap::write_task(ZstdWriteBlockTask *task)
   size_t out_size = ZSTD_compress(
       out_buf, out_buf_len, task->data, task->size, ZSTD_COMPRESSION_LEVEL);
 
-  MEM_delete_void(task->data);
+  MEM_delete_void(static_cast<void *>(task->data));
 
   BLI_mutex_lock(&mutex);
 
@@ -306,7 +306,7 @@ void ZstdWriteWrap::write_task(ZstdWriteBlockTask *task)
   BLI_mutex_unlock(&mutex);
   BLI_condition_notify_all(&condition);
 
-  MEM_delete_void(out_buf);
+  MEM_delete_void(static_cast<void *>(out_buf));
 }
 
 bool ZstdWriteWrap::open(const char *filepath)

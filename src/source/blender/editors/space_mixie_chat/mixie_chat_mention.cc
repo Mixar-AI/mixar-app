@@ -167,7 +167,7 @@ void mixie_chat_mention_publish(bContext *C, Scene *scene, const char *query)
       &scene_ptr, prop, fixed, sizeof(fixed), &current_len);
   const bool unchanged = current && STREQ(current, query);
   if (current && current != fixed) {
-    MEM_delete_void(current);
+    MEM_delete_void(static_cast<void *>(current));
   }
   if (unchanged) {
     return;

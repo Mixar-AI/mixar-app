@@ -58,7 +58,7 @@ static void history_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, i
   if (value) {
     BLI_strncpy(buf, value, buf_maxncpy);
     if (value != fixed) {
-      MEM_delete_void(value);
+      MEM_delete_void(static_cast<void *>(value));
     }
   }
 }

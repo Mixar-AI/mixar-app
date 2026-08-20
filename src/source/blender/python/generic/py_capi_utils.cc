@@ -2170,7 +2170,7 @@ static void bpy_memoryview_buffer_dealloc(BPyMemoryViewOwned *self)
 {
   /* `info.buf` is asserted non-null at construction.
    * #MEM_delete_void also accepts null defensively. */
-  MEM_delete_void(self->info.buf);
+  MEM_delete_void(static_cast<void *>(self->info.buf));
   Py_TYPE(self)->tp_free(self);
 }
 
@@ -2238,13 +2238,13 @@ PyObject *PyC_MemoryView_FromBufferOwned(const Py_buffer *info)
   BLI_assert(info->strides != nullptr);
 
   if (PyType_Ready(&BPyMemoryViewOwned_Type) < 0) [[unlikely]] {
-    MEM_delete_void(info->buf);
+    MEM_delete_void(static_cast<void *>(info->buf));
     return nullptr;
   }
   BPyMemoryViewOwned *wrapper = PyObject_NewVar(
       BPyMemoryViewOwned, &BPyMemoryViewOwned_Type, Py_ssize_t(2) * info->ndim);
   if (wrapper == nullptr) [[unlikely]] {
-    MEM_delete_void(info->buf);
+    MEM_delete_void(static_cast<void *>(info->buf));
     return nullptr;
   }
   wrapper->info = *info;

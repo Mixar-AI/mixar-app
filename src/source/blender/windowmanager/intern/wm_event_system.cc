@@ -240,7 +240,7 @@ static void wm_event_custom_free(wmEvent *event)
     WM_drag_free_list(lb);
   }
   else {
-    MEM_delete_void(event->customdata);
+    MEM_delete_void(static_cast<void *>(event->customdata));
   }
 }
 
@@ -4762,7 +4762,7 @@ void WM_event_consecutive_data_free(wmWindow *win)
   }
 
   if (cdata->custom_data) {
-    MEM_delete_void(cdata->custom_data);
+    MEM_delete_void(static_cast<void *>(cdata->custom_data));
   }
   MEM_delete(cdata);
   win->event_queue_consecutive_gesture_data = nullptr;

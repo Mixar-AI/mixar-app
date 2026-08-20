@@ -131,7 +131,7 @@ void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, chat_keymap);
 
   /* Register dropbox handler for image drag-and-drop onto the footer. */
-  ListBase *dropboxes = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(dropboxes));
@@ -275,7 +275,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
         ui::button_placeholder_set(input_but, mixie_chat_footer_next_placeholder(input_is_empty));
 
         /* Place cursor at end instead of selecting all text when re-activating. */
-        UI_but_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+        ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
 
         /* Enable ui::BUT_TEXTEDIT_UPDATE so interface_handlers.cc inserts \x1F on Enter.
          * Shift+Enter inserts a real newline for multi-line input.
@@ -339,7 +339,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                       std::nullopt);
 
     if (free_items) {
-      MEM_delete_void((void *)items);
+      MEM_delete_void(static_cast<void *>((void *)items));
     }
   }
 
@@ -392,7 +392,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                         std::nullopt);
 
       if (gen_free_items) {
-        MEM_delete_void((void *)gen_items);
+        MEM_delete_void(static_cast<void *>((void *)gen_items));
       }
     }
   }
@@ -493,7 +493,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
         }
       }
       if (gen_free_chk) {
-        MEM_delete_void((void *)gen_items_chk);
+        MEM_delete_void(static_cast<void *>((void *)gen_items_chk));
       }
       if (gen_flag_name) {
         PropertyRNA *gflag = RNA_struct_find_property(&scene_ptr, gen_flag_name);

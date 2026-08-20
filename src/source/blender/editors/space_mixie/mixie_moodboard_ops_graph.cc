@@ -436,6 +436,9 @@ static wmOperatorStatus graph_context_invoke(bContext *C,
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 void MIXIE_OT_moodboard_graph_select(wmOperatorType *ot)
 {
   ot->name = "Select Moodboard Graph Node";
@@ -456,3 +459,4 @@ void MIXIE_OT_moodboard_context_menu(wmOperatorType *ot)
   ot->invoke = blender::ed::mixie::graph_context_invoke;
   ot->poll = blender::ed::mixie::moodboard_poll;
 }
+}  // namespace blender

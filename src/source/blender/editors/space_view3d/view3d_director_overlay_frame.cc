@@ -63,7 +63,7 @@ void camera_lens_label(const View3D *v3d, char *label, const int label_size)
 {
   const Object *object = v3d ? v3d->camera : nullptr;
   const Camera *camera = object && object->type == OB_CAMERA ?
-                             static_cast<const Camera *>(object->data) :
+                             id_cast<const Camera *>(object->data) :
                              nullptr;
   if (!camera) {
     BLI_strncpy(label, "Camera Lens", label_size);

@@ -266,7 +266,7 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
           &scene_ptr, sid_prop, current_id, sizeof(current_id), nullptr);
       if (value && value != current_id) {
         BLI_strncpy(current_id, value, sizeof(current_id));
-        MEM_delete_void(value);
+        MEM_delete_void(static_cast<void *>(value));
       }
     }
   }

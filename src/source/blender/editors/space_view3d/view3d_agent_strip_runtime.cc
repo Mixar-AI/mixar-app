@@ -539,7 +539,6 @@ void view3d_agent_strip_region_register(SpaceType *st)
   art->draw = view3d_agent_strip_region_draw;
   art->free = agent_strip_region_free;
   art->duplicate = agent_strip_region_duplicate;
-  art->keymap = view3d_agent_strip_keymap;
   BLI_addhead(&st->regiontypes, art);
 }
 

@@ -49,8 +49,7 @@ static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
 
   /* Forward to the Python operator that handles validation, duplicate
    * checking, and attachment management. By drop time Python is loaded. */
-  PointerRNA props = PointerRNA_NULL;
-  WM_operator_properties_create(&props, "MIXIE_CHAT_OT_add_image_from_file");
+  PointerRNA props = WM_operator_properties_create("MIXIE_CHAT_OT_add_image_from_file");
   RNA_string_set(&props, "filepath", filepath);
 
   int result = WM_operator_name_call(C,
@@ -136,7 +135,7 @@ static void mixie_chat_image_drop_copy(bContext * /*C*/,
 void mixie_chat_dropboxes()
 {
   /* Main region (chat messages area). */
-  ListBase *lb = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *lb = WM_dropboxmap_find(
       "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
 
   WM_dropbox_add(lb,
@@ -148,7 +147,7 @@ void mixie_chat_dropboxes()
 
   /* Footer region (input area, implemented as TOOLS region).
    * Users naturally drag images onto the input field. */
-  ListBase *lb_footer = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *lb_footer = WM_dropboxmap_find(
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
 
   WM_dropbox_add(lb_footer,

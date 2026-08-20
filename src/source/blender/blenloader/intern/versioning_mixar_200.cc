@@ -53,7 +53,7 @@ void blo_do_versions_mixar(Main *bmain)
 
           /* Add TOOLS region to MIXIE spaces (ensures toolbar region exists). */
           if (sl->spacetype == SPACE_MIXIE) {
-            ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+            ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                    &sl->regionbase;
             if (ARegion *new_tools = do_versions_add_region_if_not_found(
                     regionbase, RGN_TYPE_TOOLS, "tools region", RGN_TYPE_UI))
@@ -85,7 +85,7 @@ void blo_do_versions_mixar(Main *bmain)
             continue;
           }
 
-          ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                  &sl->regionbase;
           ARegion *new_header = do_versions_add_region_if_not_found(
               regionbase, RGN_TYPE_HEADER, "header for texturing space", RGN_TYPE_WINDOW);
@@ -118,7 +118,7 @@ void blo_do_versions_mixar(Main *bmain)
           if (sl->spacetype != SPACE_VIEW3D) {
             continue;
           }
-          ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                  &sl->regionbase;
           if (ARegion *strip = do_versions_add_region_if_not_found(
                   regionbase, RGN_TYPE_EXECUTE, "agent scene strip region",

@@ -37,7 +37,7 @@ void mixie_rna_property_string_get_clamped(PointerRNA *ptr,
   char *value = RNA_property_string_get_alloc(ptr, prop, nullptr, 0, &allocated_length);
   if (value) {
     BLI_strncpy(dst, value, dst_maxncpy);
-    MEM_delete_void(value);
+    MEM_delete_void(static_cast<void *>(value));
   }
 }
 

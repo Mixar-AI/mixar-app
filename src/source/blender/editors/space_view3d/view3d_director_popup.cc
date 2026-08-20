@@ -45,7 +45,7 @@ bool director_popup_data_get(bContext *C, DirectorPopupData *r_data)
       Object *object = static_cast<Object *>(camera_ptr.data);
       if (object && object->type == OB_CAMERA) {
         r_data->camera_object = object;
-        r_data->camera = static_cast<Camera *>(object->data);
+        r_data->camera = id_cast<Camera *>(object->data);
         r_data->camera_data_ptr = RNA_id_pointer_create(&r_data->camera->id);
       }
     }
@@ -63,7 +63,7 @@ ui::Block *director_popup_block_begin(bContext *C, ARegion *region, const char *
 
 void director_popup_block_end(ui::Block *block)
 {
-  ui::block_direction_set(block, UI_DIR_DOWN);
+  ui::block_direction_set(block, ui::UI_DIR_DOWN);
   ui::block_bounds_set_normal(block, int(0.4f * UI_UNIT_X));
 }
 

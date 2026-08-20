@@ -1147,6 +1147,9 @@ static void moodboard_select_image_cancel(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -1171,3 +1174,4 @@ void MIXIE_OT_moodboard_select_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

@@ -60,7 +60,7 @@ void draw_tool_rail(ui::Block *block,
                     const int gap)
 {
   struct Tool {
-    uiBlockCreateFunc block_func;
+    ui::BlockCreateFunc block_func;
     int icon;
     const char *tooltip;
     bool group_above;

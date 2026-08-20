@@ -77,7 +77,7 @@ float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float 
     }
     line_count = std::min(line_count, FEEDBACK_COMMENT_MAX_LINES);
 
-    MEM_delete_void(text);
+    MEM_delete_void(static_cast<void *>(text));
   }
 
   /* N full lines plus the top inset and a matching bottom margin. The margins

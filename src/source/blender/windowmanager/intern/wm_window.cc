@@ -2738,7 +2738,7 @@ void wm_window_timers_delete_removed(wmWindowManager *wm)
 void WM_event_timer_free_data(wmTimer *timer)
 {
   if (timer->customdata != nullptr && (timer->flags & WM_TIMER_NO_FREE_CUSTOM_DATA) == 0) {
-    MEM_delete_void(timer->customdata);
+    MEM_delete_void(static_cast<void *>(timer->customdata));
     timer->customdata = nullptr;
   }
 }

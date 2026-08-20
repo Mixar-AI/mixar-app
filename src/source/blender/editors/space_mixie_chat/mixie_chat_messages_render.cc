@@ -406,7 +406,7 @@ void mixie_chat_render_messages(const bContext *C,
         GPU_matrix_pop();
       }
 
-      MEM_delete_void(text_buffer);
+      MEM_delete_void(static_cast<void *>(text_buffer));
       message_index++;
     }
 

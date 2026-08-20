@@ -89,7 +89,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       }
 
       if (slot_meta_d) {
-        MEM_delete_void(slot_meta_d);
+        MEM_delete_void(static_cast<void *>(slot_meta_d));
       }
     } else if (layout.has_ephemeral) {
       /* Ephemeral text - read fresh from RNA and draw with FIFO scrolling */
@@ -121,7 +121,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                     layout.bubble_height,
                                     layout.content_width);
       if (fresh_ephemeral) {
-        MEM_delete_void(fresh_ephemeral);
+        MEM_delete_void(static_cast<void *>(fresh_ephemeral));
       }
     } else if (layout.has_loader) {
       /* Loader only - spinner + current loader text */
@@ -161,7 +161,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
 
     /* Free slot content if allocated */
     if (slot_content) {
-      MEM_delete_void(slot_content);
+      MEM_delete_void(static_cast<void *>(slot_content));
     }
   }
   /* Legacy text-based message rendering */
@@ -208,7 +208,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
     }
 
     if (meta_buf) {
-      MEM_delete_void(meta_buf);
+      MEM_delete_void(static_cast<void *>(meta_buf));
     }
   }
 }

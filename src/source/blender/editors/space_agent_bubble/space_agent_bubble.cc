@@ -1422,7 +1422,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
                 ED_region_exit(C, region);
                 BLI_remlink(&pill_area->regionbase, region);
                 BKE_area_region_free(st, region);
-                MEM_delete_void(region);
+                MEM_delete_void(static_cast<void *>(region));
               }
               else if (region->regiontype == RGN_TYPE_HEADER) {
                 /* Stretch the HEADER to fill the entire pill window.

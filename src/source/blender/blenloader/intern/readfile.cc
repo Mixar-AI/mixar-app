@@ -332,7 +332,7 @@ static void oldnewmap_clear(OldNewMap *onm)
   /* Free unused data. */
   for (NewAddress &new_addr : onm->map.values()) {
     if (new_addr.nr == 0) {
-      MEM_delete_void(new_addr.newp);
+      MEM_delete_void(static_cast<void *>(new_addr.newp));
     }
   }
   onm->map.clear();
@@ -1869,7 +1869,7 @@ static void *read_struct(FileData *fd, BHead *bh, const char *blockname, const i
            * read the data from the file directly into the memory. */
           if (UNLIKELY(!blo_bhead_read_data(fd, bh, temp))) {
             fd->flags &= ~FD_FLAGS_FILE_OK;
-            MEM_delete_void(temp);
+            MEM_delete_void(static_cast<void *>(temp));
             temp = nullptr;
           }
         }
@@ -6109,7 +6109,7 @@ bool blo_read_pointer_array_impl(BlendDataReader *reader, const int64_t array_si
                                    array_size,
                                    static_cast<uint64_t *>(orig_array),
                                    static_cast<uint32_t *>(final_array));
-    MEM_delete_void(orig_array);
+    MEM_delete_void(static_cast<void *>(orig_array));
   }
   else if (file_pointer_size == 4 && current_pointer_size == 8) {
     /* Convert pointers from 32 to 64 bit. */
@@ -6118,7 +6118,7 @@ bool blo_read_pointer_array_impl(BlendDataReader *reader, const int64_t array_si
                                    array_size,
                                    static_cast<uint32_t *>(orig_array),
                                    static_cast<uint64_t *>(final_array));
-    MEM_delete_void(orig_array);
+    MEM_delete_void(static_cast<void *>(orig_array));
   }
   else {
     BLI_assert_unreachable();

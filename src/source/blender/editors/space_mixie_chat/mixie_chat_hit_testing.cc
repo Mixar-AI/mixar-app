@@ -207,7 +207,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
       total_height += bubble_height;
       total_height += metrics.bubble_spacing;
 
-      MEM_delete_void(text_buffer);
+      MEM_delete_void(static_cast<void *>(text_buffer));
     }
     RNA_property_collection_next(&iter);
   }
@@ -302,7 +302,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
         *r_message_index = message_index;
         *r_char_offset = char_offset;
 
-        MEM_delete_void(text_buffer);
+        MEM_delete_void(static_cast<void *>(text_buffer));
         RNA_property_collection_end(&iter);
         return true;
       }
@@ -310,7 +310,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
       y_pos -= metrics.bubble_spacing;
       message_index++;
 
-      MEM_delete_void(text_buffer);
+      MEM_delete_void(static_cast<void *>(text_buffer));
     }
     RNA_property_collection_next(&iter);
   }

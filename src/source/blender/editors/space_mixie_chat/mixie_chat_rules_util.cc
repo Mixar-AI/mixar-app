@@ -60,7 +60,7 @@ static void rules_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, int
   if (value) {
     BLI_strncpy_utf8(buf, value, size_t(buf_maxncpy));
     if (value != fixed) {
-      MEM_delete_void(value);
+      MEM_delete_void(static_cast<void *>(value));
     }
   }
 }

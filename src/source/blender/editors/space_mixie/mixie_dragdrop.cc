@@ -145,7 +145,7 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
 
 void mixie_dropboxes()
 {
-  ListBase *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
+  ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
 
   WM_dropbox_add(lb,
                  "MIXIE_OT_moodboard_drop_image",
