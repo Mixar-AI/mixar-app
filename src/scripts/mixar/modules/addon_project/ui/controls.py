@@ -5,16 +5,19 @@
 """Shared project controls for the chat editor and floating Agent Bubble."""
 
 
-def draw_project_controls(layout, scene, *, compact=False) -> None:
+def draw_project_controls(layout, scene, *, compact=False, inline=False) -> None:
     if scene is None or getattr(scene, "mixie_chat_mode", "") != "ADDON_PROJECT":
         return
 
-    row = layout.row(align=True)
+    # The Agent Bubble tools region has a fixed two-row height.  Its compact
+    # controls must therefore share the existing composer row instead of
+    # allocating a third row that Blender clips below the window.
+    row = layout if inline else layout.row(align=True)
     project_id = getattr(scene, "mixie_addon_project_id", "") or ""
     if not project_id:
         row.operator(
             "mixar.addon_project_link",
-            text="Link Project" if compact else "Link Project Folder",
+            text="Create / Link" if compact else "Create or Link Project Folder",
             icon='FILE_FOLDER',
         )
         return

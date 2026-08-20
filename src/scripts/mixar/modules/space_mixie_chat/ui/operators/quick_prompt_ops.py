@@ -65,8 +65,9 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         wm = context.window_manager
         scene = context.scene
 
-        # Clear previous input
-        wm.mixie_chat_quick_prompt_input = ""
+        # Successful sends clear this property.  Preserve any non-empty draft
+        # left by Cancel or Add-on Project folder setup so reopening the quick
+        # prompt never destroys unsent work.
 
         # Initialize quick prompt mode from current footer mode
         wm.mixie_chat_quick_prompt_mode = scene.mixie_chat_mode
@@ -181,6 +182,12 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
 
         project_context = None
         if scene.mixie_chat_mode == 'ADDON_PROJECT':
+            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
+                from mixar.modules.addon_project.ui.operators import (
+                    prompt_for_addon_project_link,
+                )
+                prompt_for_addon_project_link(self)
+                return {'CANCELLED'}
             try:
                 from mixar.modules.addon_project.context import build_project_context
                 project_context = build_project_context(scene)

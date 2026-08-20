@@ -13,6 +13,28 @@ from ..manifest import entrypoint_source_path, infer_entrypoint
 from ..service import get_addon_project_service
 
 
+def prompt_for_addon_project_link(operator) -> bool:
+    """Open Blender's folder picker while leaving the current draft intact."""
+    try:
+        result = bpy.ops.mixar.addon_project_link('INVOKE_DEFAULT')
+    except Exception as exc:
+        operator.report(
+            {'ERROR'},
+            f"Could not open the add-on project folder picker: {exc}",
+        )
+        return False
+
+    if 'RUNNING_MODAL' not in result:
+        operator.report({'ERROR'}, "Could not open the add-on project folder picker")
+        return False
+
+    operator.report(
+        {'INFO'},
+        "Choose or create an add-on folder; your draft is preserved for Send",
+    )
+    return True
+
+
 class MIXAR_OT_addon_project_link(Operator):
     bl_idname = "mixar.addon_project_link"
     bl_label = "Create or Link Add-on Project"

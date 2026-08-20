@@ -14,8 +14,8 @@ Two stacked rows:
        * Shift+Enter inserts a newline; Enter submits (the
          interface_handlers.cc \\x1F submit-marker patch already
          covers SPACE_AGENT_BUBBLE)
-  2. Action row with the Mode dropdown on the left and the Send
-     icon-button on the right.
+  2. Action row with the Mode dropdown, inline project/attachment
+     controls, and the Send icon-button on the right.
 
 The C++ footer region prefsizey is sized to host the 1-line default
 plus the action row (≈ 90 px). When the input expands past 1 line,
@@ -78,12 +78,18 @@ class AGENT_BUBBLE_PT_footer(Panel):
             mode_sub.scale_x = 0.4
             mode_sub.prop(scene, "mixie_chat_mode", text="")
 
+        # Project setup must live inside the fixed-height action row.  A
+        # separate row is clipped by the Agent Bubble tools region, leaving
+        # first-time users with an error but no visible way to link a folder.
+        from mixar.modules.addon_project.ui.controls import draw_project_controls
+        draw_project_controls(action_row, scene, compact=True, inline=True)
+
         # Paperclip — attach an image / file to the next message.
-        # Placed immediately after the mode dropdown (no spacer) so
-        # the two read as a single composer-controls cluster on the
-        # left, matching the Figma layout. Reuses the chat editor's
-        # add_image_from_file operator so attachments end up in the
-        # same collection.
+        # Placed immediately after the mode/project controls (no spacer)
+        # so they read as a single composer-controls cluster on the left,
+        # matching the Figma layout. Reuses the chat editor's
+        # add_image_from_file operator so attachments end up in the same
+        # collection.
         action_row.operator(
             "mixie_chat.add_image_from_file",
             text="",
@@ -100,9 +106,6 @@ class AGENT_BUBBLE_PT_footer(Panel):
             text="",
             icon='PLAY',
         )
-
-        from mixar.modules.addon_project.ui.controls import draw_project_controls
-        draw_project_controls(layout, scene, compact=True)
 
 
 classes = (AGENT_BUBBLE_PT_footer,)

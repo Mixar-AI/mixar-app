@@ -113,6 +113,13 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         project_context = None
         if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
+            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
+                from mixar.modules.addon_project.ui.operators import (
+                    prompt_for_addon_project_link,
+                )
+                prompt_for_addon_project_link(self)
+                metrics.stop_timer('send_message_total')
+                return {'CANCELLED'}
             try:
                 from mixar.modules.addon_project.context import build_project_context
                 project_context = build_project_context(scene)
