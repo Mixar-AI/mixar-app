@@ -19,6 +19,10 @@ import bpy
 from mathutils import Matrix, Vector
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.core.splat_lifecycle import (
+    finalize_splat_handles,
+    note_splats_imported,
+)
 
 logger = get_logger(__name__)
 
@@ -111,8 +115,10 @@ def import_world_labs_world(
     new_objects = splat_objs + proxy_objs + glb_objs
     _move_to_collection(new_objects, collection)
     _finalize_visibility(splat_objs, glb_objs, proxy_objs)
+    finalize_splat_handles(collection, splat_objs, proxy_objs)
     _frame_objects(proxy_objs or splat_objs)
 
+    note_splats_imported()
     logger.info(
         "[WorldLabs] imported into '%s' (%d splat, %d proxy, %d collider)",
         collection.name, len(splat_objs), len(proxy_objs), len(glb_objs),
@@ -433,18 +439,30 @@ def _move_to_collection(objects: list, collection: bpy.types.Collection) -> None
 
 
 def _frame_objects(objects: list) -> None:
-    """Select the imported objects and make the first mesh active."""
+    """Select the imported objects and leave the world's handle active.
+
+    Callers pass the proxy (an Empty) when there is one — the splat mesh and
+    collider are hidden by ``_finalize_visibility`` and a hidden object can be
+    neither selected nor made active, so preferring MESH here used to leave the
+    scene with nothing selected and nothing active at all.
+    """
     try:
         bpy.ops.object.select_all(action="DESELECT")
     except Exception:  # noqa: BLE001 - no object mode / no view layer
         pass
+    active = None
     for obj in objects:
         try:
             obj.select_set(True)
         except Exception:  # noqa: BLE001
             continue
-        if obj.type == "MESH":
-            bpy.context.view_layer.objects.active = obj
+        if active is None or (active.type != "EMPTY" and obj.type == "EMPTY"):
+            active = obj
+    if active is not None:
+        try:
+            bpy.context.view_layer.objects.active = active
+        except Exception:  # noqa: BLE001 - object not in the view layer
+            pass
 
 
 def _resolve_op(idname: str):

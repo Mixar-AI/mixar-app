@@ -52,6 +52,49 @@ from typing import Optional
 
 addon_keymaps = {}
 _icons = None
+
+
+# --- MIXAR PATCH (see README.mixar.md, "What was changed vs upstream") -------
+# Upstream hardcodes the metadata texture's visibility slot to 1.0 at every
+# writer, so the splats are drawn by the SpaceView3D handler no matter what the
+# user does in the outliner. assets/vert.glsl already culls a gaussian whose
+# object visibility is < 0.5 -- this helper is what finally feeds it.
+def mixar_object_visibility(obj):
+    """Return the vert.glsl visibility flag (1.0 / 0.0) for a proxy object.
+
+    Reads real Blender visibility: hide_set (outliner eye), hide_viewport
+    (monitor icon), and the collection/view-layer state that `visible_get()`
+    folds in. An object outside the active view layer -- an excluded
+    collection, or another scene -- is not visible here, and a proxy whose
+    datablock was already freed is not visible either.
+    """
+    try:
+        if obj is None:
+            return 0.0
+        if obj.hide_viewport:
+            return 0.0
+        try:
+            return 1.0 if obj.visible_get() else 0.0
+        except RuntimeError:
+            # Not in the active view layer (excluded collection / other scene).
+            return 0.0
+    except ReferenceError:
+        # Datablock freed since the cache was built.
+        return 0.0
+    except Exception:
+        return 1.0
+
+
+def mixar_visibility_signature():
+    """Per-object visibility of every cached proxy, for change detection."""
+    try:
+        return tuple(
+            mixar_object_visibility(m['object'])
+            for m in getattr(bpy, 'gaussian_object_metadata', ())
+        )
+    except Exception:
+        return ()
+# --- END MIXAR PATCH --------------------------------------------------------
 dgs_render__active_3dgs_object = {'sna_apply_modifier_list': [], 'sna_in_camera_view': False, }
 dgs_render__collection_snippets = {'sna_collections_temp_list': [], }
 dgs_render__hq_mode = {'sna_lq_object_list': [], }
@@ -3613,6 +3656,8 @@ def sna_clean_up_scene_5F1F1(REMOVE_ALL_GAUSSIAN_OBJECTS):
                 'gaussian_last_camera_pos',        # Camera position for depth sorting
                 # Update flags
                 'gaussian_global_needs_update',    # Global data update flag
+                # MIXAR PATCH: per-proxy visibility signature (hide/unhide)
+                'mixar_last_visibility',
             ]
             removed_count = 0
             for attr in multi_object_attrs:
@@ -4292,7 +4337,7 @@ def sna_render_comp_0DAEE(RENDER_ANIMATION, RENDER_COLOR, RENDER_DEPTH, COMP_WIT
                 uint32_start_idx = np.uint32(obj_meta['start_idx'])
                 metadata_data[base_idx + 0] = uint32_start_idx.view(np.float32)
                 metadata_data[base_idx + 1] = float(obj_meta['gaussian_count'])
-                metadata_data[base_idx + 2] = 1.0  # Visible
+                metadata_data[base_idx + 2] = mixar_object_visibility(obj_meta['object'])  # MIXAR: real visibility
                 transform = obj_meta['object'].matrix_world
                 matrix_idx = 0
                 for col in range(4):
@@ -4761,7 +4806,7 @@ def sna_render_comp_0DAEE(RENDER_ANIMATION, RENDER_COLOR, RENDER_DEPTH, COMP_WIT
                 uint32_start_idx = np.uint32(obj_meta['start_idx'])
                 metadata_data[base_idx + 0] = uint32_start_idx.view(np.float32)
                 metadata_data[base_idx + 1] = float(obj_meta['gaussian_count'])
-                metadata_data[base_idx + 2] = 1.0  # Visible
+                metadata_data[base_idx + 2] = mixar_object_visibility(obj)  # MIXAR: real visibility
                 # CURRENT object transform matrix
                 current_transform = obj.matrix_world
                 matrix_idx = 0
@@ -5554,7 +5599,7 @@ def sna_viewport_render_A3941():
                 uint32_start_idx = np.uint32(obj_meta['start_idx'])
                 metadata_data[base_idx + 0] = uint32_start_idx.view(np.float32)
                 metadata_data[base_idx + 1] = float(obj_meta['gaussian_count'])
-                metadata_data[base_idx + 2] = 1.0  # Visible
+                metadata_data[base_idx + 2] = mixar_object_visibility(obj)  # MIXAR: real visibility
                 # CURRENT object transform matrix
                 current_transform = obj.matrix_world
                 matrix_idx = 0
@@ -5683,8 +5728,15 @@ def sna_viewport_render_A3941():
                     return
             # Check if any object transforms changed
             transforms_changed = check_any_transforms_changed()
-            # Update metadata texture if any object moved
-            if transforms_changed:
+            # MIXAR PATCH: a hide/unhide changes no transform, so the metadata
+            # texture would keep the stale visibility flags forever. Cheap:
+            # one bool per cached proxy, compared per redraw.
+            visibility = mixar_visibility_signature()
+            visibility_changed = visibility != getattr(bpy, 'mixar_last_visibility', None)
+            if visibility_changed:
+                bpy.mixar_last_visibility = visibility
+            # Update metadata texture if any object moved or changed visibility
+            if transforms_changed or visibility_changed:
                 update_metadata_texture()
             # Update global depth sorting
             sorting_updated = update_depth_sorting()
@@ -6224,7 +6276,7 @@ def sna_texture_creation_FD1B2():
             uint32_start_idx = np.uint32(obj_meta['start_idx'])
             metadata_data[base_idx + 0] = uint32_start_idx.view(np.float32)
             metadata_data[base_idx + 1] = float(obj_meta['gaussian_count'])
-            metadata_data[base_idx + 2] = 1.0  # Visible
+            metadata_data[base_idx + 2] = mixar_object_visibility(obj_meta['object'])  # MIXAR: real visibility
             # Object transform matrix (3x4 = 12 floats)
             transform = obj_meta['object'].matrix_world
             matrix_idx = 0

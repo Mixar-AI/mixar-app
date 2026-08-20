@@ -40,6 +40,8 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_palette.hh"
+#include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 
 #include "GPU_batch.hh"
@@ -129,6 +131,8 @@ enum uiWidgetTypeEnum {
   UI_WTYPE_MIXAR_ACTION,
   UI_WTYPE_MIXAR_TOGGLE,
   UI_WTYPE_MIXAR_INPUT,
+  /* Account-card elements — every kind paints its own glyphs. */
+  UI_WTYPE_MIXAR_CARD,
 };
 
 /**
@@ -2093,6 +2097,33 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   const int fontid = chat_fstyle.uifont_id;
   const char *drawstr = but->editstr ? but->editstr : but->drawstr.c_str();
 
+#ifdef WITH_INPUT_IME
+  /* While an IME composition is in progress (Korean/Japanese/Chinese input),
+   * the preedit text lives only in ime_data->composite — editstr is untouched
+   * until the syllable commits. Splice it in at the cursor so the user sees
+   * what they are composing; mirrors the single-line widget_draw_text(). */
+  const wmIMEData *ime_data = but->editstr ? ui_but_ime_data_get(but) : nullptr;
+  std::string ime_drawstr;
+  int ime_composite_len = 0;
+  if (ime_data && ime_data->composite.size()) {
+    ime_composite_len = int(ime_data->composite.size());
+    const int splice_pos = std::clamp(int(but->pos), 0, int(strlen(but->editstr)));
+    ime_drawstr.assign(but->editstr, size_t(splice_pos));
+    ime_drawstr.append(ime_data->composite);
+    ime_drawstr.append(but->editstr + splice_pos);
+    drawstr = ime_drawstr.c_str();
+  }
+#endif
+
+  /* Cursor position within drawstr. During IME composition the caret sits
+   * inside the spliced preedit text, not at but->pos. */
+  int cursor_pos = but->pos;
+#ifdef WITH_INPUT_IME
+  if (ime_composite_len) {
+    cursor_pos += (ime_data->cursor_pos != -1) ? ime_data->cursor_pos : ime_composite_len;
+  }
+#endif
+
   if (!drawstr || !drawstr[0]) {
     if (but->editstr) {
       /* Editing an empty string — fall through to draw the cursor.
@@ -2194,11 +2225,11 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 
   /* Find which line contains the cursor */
   int cursor_line = num_lines - 1;
-  if (but->editstr && but->pos >= 0) {
+  if (but->editstr && cursor_pos >= 0) {
     for (int i = 0; i < num_lines; i++) {
       const int line_start = line_byte_offsets[i];
       const int next_start = (i + 1 < num_lines) ? line_byte_offsets[i + 1] : (drawstr_len + 1);
-      if (but->pos >= line_start && (but->pos < next_start || i == num_lines - 1)) {
+      if (cursor_pos >= line_start && (cursor_pos < next_start || i == num_lines - 1)) {
         cursor_line = i;
         break;
       }
@@ -2220,11 +2251,11 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   }
   g_multiline_was_editing = is_editing;
 
-  if (is_editing && but->pos >= 0) {
+  if (is_editing && cursor_pos >= 0) {
     /* Only auto-scroll when the cursor actually moves — otherwise manual
      * scroll (wheel / touchpad) gets overridden every frame. */
-    const bool cursor_moved = (but->pos != g_multiline_prev_cursor_pos);
-    g_multiline_prev_cursor_pos = but->pos;
+    const bool cursor_moved = (cursor_pos != g_multiline_prev_cursor_pos);
+    g_multiline_prev_cursor_pos = cursor_pos;
     if (cursor_moved) {
       if (cursor_line < g_multiline_scroll_offset) {
         g_multiline_scroll_offset = cursor_line;
@@ -2287,8 +2318,8 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   }
 
   /* Draw cursor if editing */
-  if (but->editstr && but->pos >= 0) {
-    const int local_pos = std::min(but->pos - line_byte_offsets[cursor_line],
+  if (but->editstr && cursor_pos >= 0) {
+    const int local_pos = std::min(cursor_pos - line_byte_offsets[cursor_line],
                                    int(lines[cursor_line].size()));
     const int cursor_x = BLF_str_offset_to_cursor(fontid,
                                                    drawstr + line_byte_offsets[cursor_line],
@@ -2317,8 +2348,56 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                cursor_top - U.pixelsize);
 
       immUnbindProgram();
+
+#ifdef WITH_INPUT_IME
+      /* Keep the IME candidate window anchored to the caret (the single-line
+       * path does this from widget_draw_text; without it the popup floats at
+       * wherever the mouse was when editing started). */
+      ui_but_ime_reposition(but, rect->xmin + cursor_x + 5, int(cursor_bottom) + 3, false);
+#endif
     }
   }
+
+#ifdef WITH_INPUT_IME
+  /* Underline the in-progress composition, wrapping across lines. */
+  if (ime_composite_len && but->editstr && but->pos >= 0) {
+    float fcol[4];
+    rgba_uchar_to_float(fcol, wcol->text);
+
+    const int comp_start = but->pos;
+    const int comp_end = but->pos + ime_composite_len;
+
+    for (int i = g_multiline_scroll_offset;
+         i < min_ii(g_multiline_scroll_offset + visible_lines, num_lines);
+         i++)
+    {
+      const int line_start = line_byte_offsets[i];
+      const int line_len = int(lines[i].size());
+      const int line_end = line_start + line_len;
+
+      if (comp_end <= line_start || comp_start >= line_end) {
+        continue;
+      }
+
+      const int local_start = max_ii(comp_start - line_start, 0);
+      const int local_end = min_ii(comp_end - line_start, line_len);
+
+      const float ul_x_start = (local_start > 0) ?
+                                   BLF_width(fontid, drawstr + line_start, local_start) :
+                                   0.0f;
+      const float ul_x_end = BLF_width(fontid, drawstr + line_start, local_end);
+
+      const int visual_line = i - g_multiline_scroll_offset;
+      const float line_bottom = rect->ymax - (visual_line + 1) * line_height;
+
+      UI_draw_text_underline(rect->xmin + int(ul_x_start),
+                             int(line_bottom) + int(2.0f * U.pixelsize),
+                             min_ii(int(ul_x_end), BLI_rcti_size_x(rect) - 2) - int(ul_x_start),
+                             1,
+                             fcol);
+    }
+  }
+#endif
 
   /* Draw text line by line */
   for (int i = g_multiline_scroll_offset;
@@ -4954,40 +5033,9 @@ static void widget_optionbut(uiWidgetColors *wcol,
 }
 
 /* -------------------------------------------------------------------- */
-/* Mixar design-system palette (--mx-* tokens).
- *
- * Shared by every widget_mixar_* draw function so the whole app speaks one
- * visual language (global design system). Values are the exact hex tokens
- * from the Mixar design spec — keep them here as the single source of truth
- * rather than re-hardcoding per widget. */
-/* [[maybe_unused]]: the full palette is defined up front as the single
- * source of truth; individual tokens land as each widget phase uses them. */
-[[maybe_unused]] static constexpr uchar MX_BG[4]            = {20, 20, 20, 255};   /* #141414 raised/panel   */
-[[maybe_unused]] static constexpr uchar MX_BG_SUNKEN[4]     = {15, 15, 15, 255};   /* #0f0f0f sunken card    */
-[[maybe_unused]] static constexpr uchar MX_GRAY_800[4]      = {31, 31, 31, 255};   /* #1f1f1f input/select   */
-[[maybe_unused]] static constexpr uchar MX_GRAY_700[4]      = {42, 42, 42, 255};   /* #2a2a2a toggle-off     */
-[[maybe_unused]] static constexpr uchar MX_BORDER[4]        = {38, 38, 38, 255};   /* #262626                */
-[[maybe_unused]] static constexpr uchar MX_BORDER_STRONG[4] = {46, 46, 46, 255};   /* #2e2e2e                */
-[[maybe_unused]] static constexpr uchar MX_ACCENT[4]        = {0, 192, 199, 255};  /* #00C0C7 brand accent   */
-[[maybe_unused]] static constexpr uchar MX_TOGGLE_ON[4]     = {0, 192, 199, 255};  /* #00C0C7 toggle ON      */
-[[maybe_unused]] static constexpr uchar MX_WARNING[4]       = {224, 160, 48, 255}; /* amber semantic         */
-[[maybe_unused]] static constexpr uchar MX_INK[4]           = {10, 10, 10, 255};   /* near-black on gradient  */
-[[maybe_unused]] static constexpr uchar MX_FG_1[4]          = {230, 230, 230, 255};
-[[maybe_unused]] static constexpr uchar MX_FG_2[4]          = {200, 200, 200, 255}; /* #c8c8c8 label         */
-[[maybe_unused]] static constexpr uchar MX_FG_4[4]          = {90, 90, 90, 255};   /* #5a5a5a muted glyph    */
-
-/* --mx-gradient: the ONE gradient in the app (Generate button), 90deg
- * lime -> green -> teal -> cyan. Stops are evenly spaced. */
-[[maybe_unused]] static constexpr uchar MX_GRADIENT[4][4] = {
-    {106, 163, 18, 255},  /* lime  #6aa312 (dimmed ~80%) */
-    {27, 158, 75, 255},   /* green #1b9e4b (dimmed ~80%) */
-    {34, 150, 122, 255},  /* teal  #22967a (dimmed ~80%) */
-    {5, 146, 170, 255},   /* cyan  #0592aa (dimmed ~80%) */
-};
-
-/* Corner radii in px @ 1x DPI (scaled by UI_SCALE_FAC at draw time). */
-[[maybe_unused]] static constexpr float MX_R_SM = 4.0f; /* --mx-r-sm: inputs / selects */
-[[maybe_unused]] static constexpr float MX_R_MD = 8.0f; /* --mx-r-md: grouped cards    */
+/* Mixar design-system palette (--mx-* tokens) now lives in
+ * interface_mixar_palette.hh so the profile card and any future Mixar
+ * surface read the same MX_* values instead of re-declaring them. */
 
 /* Mixar pill-shaped toggle switch. */
 static void widget_mixar_toggle(uiWidgetColors *wcol,
@@ -5483,6 +5531,28 @@ static void widget_mixar_action_button(uiBut * /*but*/,
   copy_v4_v4_uchar(wcol->inner_sel, MX_INK);
 }
 
+/* -- Mixar Account Card --------------------------------------------------- */
+
+/**
+ * Bridge to `interface_mixar_profile_card_draw.cc`.
+ *
+ * `uiWidgetStateInfo` is private to this file, so the card's drawing
+ * takes the two flags it actually needs instead of the struct.
+ */
+static void widget_mixar_card(uiBut *but,
+                              uiWidgetColors *wcol,
+                              rcti *rect,
+                              const uiWidgetStateInfo *state,
+                              int /*roundboxalign*/,
+                              const float /*zoom*/)
+{
+  UI_mixar_profile_card_draw_element(but,
+                                     wcol,
+                                     rect,
+                                     (state->but_flag & UI_HOVER) != 0,
+                                     (state->but_flag & UI_SELECT) != 0);
+}
+
 /* -------------------------------------------------------------------- */
 
 static void widget_but(uiWidgetColors *wcol,
@@ -5808,6 +5878,18 @@ static uiWidgetType *widget_type(uiWidgetTypeEnum type)
       wt.draw = widget_mixar_input;
       break;
 
+    case UI_WTYPE_MIXAR_CARD:
+      wt.wcol_theme = &btheme->tui.wcol_menu_back;
+      /* Card elements own their glyphs entirely — the heading needs a
+       * size the generic text path can't give it, and the buttons need
+       * their icon and label to travel as one group rather than being
+       * pinned to opposite ends. Suppress both stock passes. */
+      wt.draw = nullptr;
+      wt.text = nullptr;
+      wt.state = widget_state_nothing;
+      wt.custom = widget_mixar_card;
+      break;
+
     case UI_WTYPE_RGB_PICKER:
       break;
 
@@ -5943,8 +6025,15 @@ void ui_draw_but(const bContext *C, ARegion *region, uiStyle *style, uiBut *but,
   const uiFontStyle *fstyle = &style->widget;
   uiWidgetType *wt = nullptr;
 
+  /* Account-card elements are claimed before the emboss/type chain: they
+   * span several ButTypes (labels and operator buttons), and the card is
+   * responsible for all of their chrome regardless of the emboss the
+   * surrounding layout happens to be using. */
+  if (UI_mixar_card_element_get(but) != MixarCardElement::None) {
+    wt = widget_type(UI_WTYPE_MIXAR_CARD);
+  }
   /* handle menus separately */
-  if (but->emboss == blender::ui::EmbossType::Pulldown) {
+  else if (but->emboss == blender::ui::EmbossType::Pulldown) {
     switch (but->type) {
       case ButType::Label:
         widget_draw_text_icon(&style->widget, &tui->wcol_menu_back, but, rect);

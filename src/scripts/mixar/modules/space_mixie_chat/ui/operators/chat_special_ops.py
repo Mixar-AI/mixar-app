@@ -312,6 +312,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
 
         scene = context.scene
 
+        # A batched choice interrupt is a client-local wizard. Each click
+        # updates the existing card immediately; only the final selection
+        # resumes the backend graph, removing the network delay between cards.
+        batch = self._advance_batched_choice(scene)
+        if batch is not None and batch["handled"]:
+            redraw_chat_areas()
+            return {'FINISHED'}
+
         # Find the bubble by bubble_id and get the action label for user message
         action_label = self.action_value
         for msg in scene.mixie_chat_messages:
@@ -418,6 +426,69 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             return {'FINISHED'}
         self.report({'WARNING'}, message)
         return {'CANCELLED'}
+
+    def _advance_batched_choice(self, scene):
+        """Advance a batch locally, returning None when this is a normal action."""
+        from ...core import batched_choice
+
+        bubble = next(
+            (msg for msg in scene.mixie_chat_messages
+             if getattr(msg, 'bubble_id', '') == self.bubble_id),
+            None,
+        )
+        if bubble is None:
+            return None
+        step = batched_choice.record_choice(bubble, self.action_value)
+        if step is None:
+            return None
+
+        if step["status"] == "stale":
+            # Already answered and submitted — swallow so a button left on
+            # screen by a re-delivered event cannot fire a stray single answer.
+            return {'handled': True}
+
+        if step["status"] == "advanced":
+            # Draw the next card through the normal slot pipeline so it is
+            # identical to a backend-sent one — a bare bubble.content write
+            # leaves the old question rendered (stale markdown segments and
+            # layout cache) and the wizard appears frozen.
+            batched_choice.render_question(self.bubble_id, step["question"], scene)
+            return {'handled': True}
+
+        # The batch is complete. Submit exactly once, carrying its original
+        # interrupt id so parallel pending prompts cannot be resumed by mistake.
+        from ...constants import SessionState
+        from ...core.queue_processor import queue_sse_event, queue_sse_error, queue_sse_complete
+        from ...core.sse_handler import create_sse_handler
+        from mixar.config.config import get_server_url
+        from ...core import get_session_manager
+        session = get_session_manager()
+        bubble.action_items.clear()
+        try:
+            from mixar.modules.auth.core.auth import get_access_token
+            auth_token = get_access_token() or ''
+        except Exception:
+            auth_token = ''
+        target_scene_name = scene.name
+        handler = create_sse_handler(
+            scene_name=target_scene_name,
+            host=get_server_url(),
+            on_event=lambda event: queue_sse_event(event, target_scene_name),
+            on_error=lambda error: queue_sse_error(error, target_scene_name),
+            on_complete=lambda: queue_sse_complete(target_scene_name),
+        )
+        if handler.start_input_stream(
+            session_id=session.get_session_id(scene),
+            action='submit',
+            answers=step["answers"],
+            interrupt_id=getattr(bubble, 'interrupt_id', '') or None,
+            auth_token=auth_token,
+        ):
+            session.set_state(scene, SessionState.BUSY)
+            session.clear_streaming()
+        else:
+            self.report({'ERROR'}, 'Failed to submit choices')
+        return {'handled': True}
 
     def _apply_model_choice(self, context):
         """Handle a chat_model:<service>:<slug> button click locally."""

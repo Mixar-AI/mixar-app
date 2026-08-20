@@ -66,6 +66,7 @@ class APIModule(Enum):
     JOB_QUEUE = "job-queue"
     GENERATION_CATALOG = "generation-catalog"
     TELEMETRY = "telemetry"
+    SUBSCRIPTIONS = "subscriptions"
 
 
 # ============================================================================

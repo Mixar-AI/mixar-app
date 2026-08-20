@@ -69,6 +69,12 @@ class JSONRPCWebSocketClient:
         on_notification: Optional[Callable[[dict], None]] = None,
         on_job_update: Optional[Callable[[dict], None]] = None,
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
+        on_llm_request: Optional[
+            Callable[[dict, Optional[str]], Optional[dict]]
+        ] = None,
+        on_addon_project_request: Optional[
+            Callable[[str, dict, Optional[str]], Optional[dict]]
+        ] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -93,6 +99,8 @@ class JSONRPCWebSocketClient:
         self._on_notification = on_notification
         self._on_job_update = on_job_update
         self._on_sandbox_control = on_sandbox_control
+        self._on_llm_request = on_llm_request
+        self._on_addon_project_request = on_addon_project_request
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -345,12 +353,22 @@ class JSONRPCWebSocketClient:
 
     def _perform_handshake(self) -> bool:
         """Send handshake request and wait for response."""
+        from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
+
         request_id = f"handshake_{self._next_request_id()}"
 
         params = {
             "blender_version": self._blender_version,
             "addon_version": self._addon_version,
-            "capabilities": ["script_execution", "notifications"],
+            # "local_llm": this client can execute llm.request relays against
+            # a local model server (modules/local_models) — the backend only
+            # sends them when the user's BYOK provider is "local".
+            "capabilities": [
+                "script_execution",
+                "notifications",
+                "local_llm",
+                ADDON_PROJECT_CAPABILITY,
+            ],
         }
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:
@@ -550,6 +568,12 @@ class JSONRPCWebSocketClient:
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
+        elif method == JSONRPCMethod.LLM_REQUEST:
+            self._handle_llm_request(params, request_id)
+
+        elif isinstance(method, str) and method.startswith(JSONRPCMethod.ADDON_PROJECT_PREFIX):
+            self._handle_addon_project_request(method, params, request_id)
+
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
                 try:
@@ -587,6 +611,41 @@ class JSONRPCWebSocketClient:
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
+
+    def _handle_addon_project_request(
+        self, method: str, params: dict, request_id: Optional[str]
+    ) -> None:
+        """Handle a capability-scoped local project operation.
+
+        The callback normally defers disk work to a worker and replies through
+        ``queue_response``. A synchronous result remains useful in tests and
+        for immediate refusals.
+        """
+        result = None
+        if self._on_addon_project_request:
+            try:
+                result = self._on_addon_project_request(method, params, request_id)
+                if result is None:
+                    return
+            except Exception as exc:
+                logger.error("add-on project request failed: %s", exc)
+                result = {
+                    "success": False,
+                    "error": {
+                        "code": "handler_error",
+                        "message": "The local add-on project handler failed",
+                    },
+                }
+        else:
+            result = {
+                "success": False,
+                "error": {
+                    "code": "capability_unavailable",
+                    "message": "Add-on Project Mode is unavailable in this client",
+                },
+            }
+        if request_id and result is not None:
+            self.queue_response(request_id, result)
 
     def _handle_execute_script(self, params: dict, request_id: Optional[str]) -> None:
         """Handle script execution request.
@@ -627,6 +686,43 @@ class JSONRPCWebSocketClient:
                 "result": result,
             }
             self._outbound.put(json.dumps(response))
+
+    def _handle_llm_request(self, params: dict, request_id: Optional[str]) -> None:
+        """Handle a server-initiated llm.request (local model relay).
+
+        Mirrors ``_handle_execute_script``'s deferred contract: the callback
+        returns ``None`` to indicate async handling — it spawns its own worker
+        thread and replies later via ``queue_response(request_id, result)``.
+        The WS receive thread must NEVER run the (up to ~minutes-long) local
+        HTTP call itself; a synchronous return here is only used for
+        immediate refusals.
+
+        Failure results reuse the shape the relay layer defines —
+        ``{"error": {"code", "message"}}`` — sent through the same
+        ``queue_response`` path as every other response (matching how
+        execute_script failures travel as result payloads).
+        """
+        result: Optional[dict] = None
+        if self._on_llm_request:
+            try:
+                result = self._on_llm_request(params, request_id)
+                if result is None:
+                    # Deferred — the handler responds via queue_response later.
+                    return
+            except Exception as e:
+                logger.error(f"llm.request handler error: {e}")
+                result = {
+                    "error": {"code": "relay_internal", "message": str(e)},
+                }
+        else:
+            result = {
+                "error": {
+                    "code": "relay_unavailable",
+                    "message": "No local LLM relay handler registered",
+                },
+            }
+        if request_id and result is not None:
+            self.queue_response(request_id, result)
 
     def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
         """Handle a server-initiated agent.sandbox_control request (parent side).

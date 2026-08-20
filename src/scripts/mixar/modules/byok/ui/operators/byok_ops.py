@@ -58,7 +58,11 @@ def _clear_cached_state(wm):
 
 def _wipe_form_secrets(wm):
     """Remove transient API/token material from the live WindowManager."""
-    for attr in ('byok_form_api_key', 'byok_form_codex_bundle'):
+    for attr in (
+        'byok_form_api_key',
+        'byok_form_codex_bundle',
+        'byok_form_local_custom_key',
+    ):
         try:
             setattr(wm, attr, '')
         except Exception:
@@ -143,6 +147,8 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                 # Codex uses a free-text model slug, not the catalog dropdown.
                 if wm.byok_current_model:
                     wm.byok_form_codex_model = wm.byok_current_model
+            elif model_suggestions.is_local(wm.byok_current_provider):
+                pass  # prefilled below by byok_local_ops.prepare_dialog
             elif wm.byok_current_model:
                 try:
                     wm.byok_form_model = wm.byok_current_model
@@ -156,6 +162,14 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # and-suspenders — the auth login hook normally fires this already.)
         if not model_suggestions.is_loaded():
             byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
+        # Local provider: refresh the managed-model item cache and prefill
+        # mode/model from the last registration (cheap; guarded — the local
+        # runtime module may be unavailable in stripped builds).
+        try:
+            from . import byok_local_ops
+            byok_local_ops.prepare_dialog(wm)
+        except Exception as e:
+            logger.debug("Local provider dialog prep failed: %s", e)
         # invoke_props_dialog (not invoke_popup) so the dialog redraws
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
@@ -284,6 +298,8 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             self._draw_openrouter_fields(box, col, wm)
         elif model_suggestions.is_codex(wm.byok_form_provider):
             self._draw_codex_fields(box, col, wm)
+        elif model_suggestions.is_local(wm.byok_form_provider):
+            self._draw_local_fields(box, col, wm)
         else:
             self._draw_cloud_fields(box, col, wm)
 
@@ -366,6 +382,13 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
             row.enabled = False
             row.label(text=line, icon='INFO')
 
+    def _draw_local_fields(self, box, col, wm):
+        """Local (this computer) — managed model or custom local server.
+
+        The whole branch lives in byok_local_ops (500-line rule)."""
+        from . import byok_local_ops
+        byok_local_ops.draw_local_fields(self, box, col, wm)
+
     def _draw_tall_prop(self, layout, data, prop_name: str, label: str):
         label_row = layout.row()
         label_row.enabled = False
@@ -435,6 +458,11 @@ class MIXAR_BYOK_OT_save(Operator):
             return bool(wm.byok_form_codex_model.strip()) and bool(
                 wm.byok_form_codex_bundle.strip()
             )
+        if model_suggestions.is_local(wm.byok_form_provider):
+            # Managed: blocks until the selected model's server is healthy.
+            # Custom: blocks until base URL + model are filled in.
+            from . import byok_local_ops
+            return byok_local_ops.poll_local(wm)
         return (
             wm.byok_form_provider != 'NONE'   # block while only a sentinel is selectable
             and model_suggestions.is_valid_model(
@@ -451,6 +479,8 @@ class MIXAR_BYOK_OT_save(Operator):
             return self._execute_openrouter(wm)
         if model_suggestions.is_codex(provider):
             return self._execute_codex(wm)
+        if model_suggestions.is_local(provider):
+            return self._execute_local(wm)
 
         model = wm.byok_form_model
         api_key = wm.byok_form_api_key.strip()
@@ -498,6 +528,16 @@ class MIXAR_BYOK_OT_save(Operator):
         )
         return {'FINISHED'}
 
+    def _execute_local(self, wm):
+        """Local save: managed requires the supervised server healthy;
+        custom pings the user's server off-thread first. Both end in the
+        same PUT /agent/byok (with base_url + supports_vision) and the
+        shared _on_save_done callback."""
+        from . import byok_local_ops
+        result = byok_local_ops.execute_local(self, wm, on_done=_on_save_done)
+        _redraw_mixie_chat_areas()
+        return result
+
     def _execute_codex(self, wm):
         """Codex save: send the pasted auth.json bundle as the credential. The
         backend refreshes the token (validating it) and stores the bundle."""
@@ -521,6 +561,25 @@ class MIXAR_BYOK_OT_save(Operator):
         return {'FINISHED'}
 
 
+def _deregister_local_if_switched_away(active_provider):
+    """The credential set now points at ``active_provider`` (None = removed).
+    If a managed local registration is still on disk, tear it down — the
+    backend will never relay to it again, so keeping llama-server running
+    (and resurrecting it every startup) would waste the user's RAM.
+    Main thread."""
+    try:
+        from mixar.modules.byok.constants import LOCAL_PROVIDER_ID
+        if active_provider == LOCAL_PROVIDER_ID:
+            return
+        from mixar.modules.local_models.core import manifest, orchestrator
+        if manifest.get_registered() is None:
+            return
+        logger.info("BYOK switched off local — deregistering local runtime")
+        orchestrator.deregister()
+    except Exception as e:
+        logger.warning("Local deregistration skipped: %s", e)
+
+
 def _on_save_done(success: bool, data, err):
     """Main-thread save callback."""
     try:
@@ -531,6 +590,7 @@ def _on_save_done(success: bool, data, err):
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
+            _deregister_local_if_switched_away(wm.byok_current_provider)
         else:
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or "Save failed."
@@ -662,6 +722,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
             wm.byok_dialog_state = 'IDLE'
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)
+            _deregister_local_if_switched_away(None)
         else:
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or "Remove failed."

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "BLI_sys_types.h" /* uchar, for the card flag accessors below. */
+
 struct uiLayout;
 
 /* -------------------------------------------------------------------- */
@@ -26,6 +28,22 @@ struct uiLayout;
 #define UI_BUT2_MIXAR_TOGGLE (1 << 5)
 /** Marks a Text button as a Mixar styled input (visible border + focus glow). */
 #define UI_BUT2_MIXAR_INPUT (1 << 6)
+/**
+ * Marks any button as an element of the Mixar account card; the element
+ * kind lives in `uiBut::hardmin` (see #MixarCardElement).
+ *
+ * NOTE: `uiBut::flag2` is a signed `char`, and this is bit 7 — its sign
+ * bit, and the last one free (upstream owns 0-1, Mixar 2-6). Always set
+ * and test it through #UI_BUT2_MIXAR_CARD_SET / #UI_BUT2_MIXAR_CARD_TEST
+ * so the value round-trips through `uchar` instead of relying on
+ * implementation-defined narrowing. If a further bit is ever needed,
+ * widen the field rather than adding another sign-bit special case.
+ */
+#define UI_BUT2_MIXAR_CARD (1 << 7)
+
+#define UI_BUT2_MIXAR_CARD_SET(but) \
+  ((but)->flag2 = char(uchar((but)->flag2) | uchar(UI_BUT2_MIXAR_CARD)))
+#define UI_BUT2_MIXAR_CARD_TEST(but) ((uchar((but)->flag2) & uchar(UI_BUT2_MIXAR_CARD)) != 0)
 
 /* -------------------------------------------------------------------- */
 /* Layout helpers                                                        */

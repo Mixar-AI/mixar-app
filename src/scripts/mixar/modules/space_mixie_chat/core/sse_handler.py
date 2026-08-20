@@ -286,6 +286,7 @@ class SSEStreamHandler:
         auth_token: Optional[str] = None,
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        project_context: Optional[dict] = None,
     ) -> bool:
         """
         Start SSE stream for V2 agent chat.
@@ -305,6 +306,8 @@ class SSEStreamHandler:
                 resolved to a bpy.data.images entry). Sent to the backend so it
                 can inline the names into the user message and the agent can
                 pass them straight to generation tools without a tool round-trip.
+            project_context: Opaque project ID, lease, revision, and protocol.
+                Never contains the local project root.
 
         Returns:
             True if stream started successfully
@@ -329,7 +332,7 @@ class SSEStreamHandler:
         user_preferences = self._collect_user_preferences()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, user_preferences),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context, user_preferences),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
@@ -369,6 +372,8 @@ class SSEStreamHandler:
         session_id: str,
         action: str,
         text: str = "",
+        answers: Optional[dict[str, str]] = None,
+        interrupt_id: Optional[str] = None,
         auth_token: Optional[str] = None,
     ) -> bool:
         """
@@ -378,6 +383,8 @@ class SSEStreamHandler:
             session_id: Session ID for the input
             action: Action type ("approve", "modify", "abort", "retry", "submit", or custom)
             text: Optional text payload (used with "modify", "submit")
+            answers: Complete answer map for a batched choice interrupt
+            interrupt_id: Checkpointed interrupt to resume
             auth_token: Optional auth token for request
 
         Returns:
@@ -399,7 +406,7 @@ class SSEStreamHandler:
         self._running.set()
         self._thread = threading.Thread(
             target=self._input_stream_loop,
-            args=(session_id, action, text, auth_token),
+            args=(session_id, action, text, answers, interrupt_id, auth_token),
             daemon=True,
         )
         self._thread.name = "MixarInputStream"
@@ -413,6 +420,8 @@ class SSEStreamHandler:
         session_id: str,
         action: str,
         text: str,
+        answers: Optional[dict[str, str]],
+        interrupt_id: Optional[str],
         auth_token: Optional[str],
         _connect_attempt: int = 0,
     ) -> None:
@@ -425,6 +434,23 @@ class SSEStreamHandler:
                 "action": action,
                 "text": text,
             }
+            if answers:
+                payload["answers"] = answers
+            if interrupt_id:
+                payload["interrupt_id"] = interrupt_id
+
+            # A LOCAL BYOK provider relays LLM calls back over the agent
+            # WebSocket, and an interrupt resume builds a fresh run config —
+            # the backend needs the CURRENT connection id to rebind the
+            # relay. Harmless for cloud providers (optional field).
+            try:
+                from .jsonrpc_client import get_jsonrpc_client
+
+                ws_client = get_jsonrpc_client()
+                if ws_client is not None and ws_client.connection_id:
+                    payload["instance_id"] = ws_client.connection_id
+            except Exception:
+                pass
 
             logger.debug(f"Starting input SSE request to {self.input_url}")
 
@@ -503,6 +529,8 @@ class SSEStreamHandler:
                     session_id,
                     action,
                     text,
+                    answers,
+                    interrupt_id,
                     auth_token,
                     _connect_attempt + 1,
                 )
@@ -527,6 +555,7 @@ class SSEStreamHandler:
         auth_token: Optional[str],
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        project_context: Optional[dict] = None,
         user_preferences: Optional[dict] = None,
         _connect_attempt: int = 0,
     ) -> None:
@@ -563,6 +592,9 @@ class SSEStreamHandler:
             # empty strings when an attachment did not resolve to a name.
             if attachment_names:
                 payload["attachment_names"] = [n for n in attachment_names if n]
+
+            if project_context:
+                payload["project_context"] = project_context
 
             # Session preferences (e.g. the asset-library match threshold) the
             # backend merges into the agent scratchpad for this turn.
@@ -658,6 +690,7 @@ class SSEStreamHandler:
                     auth_token,
                     image_attachments,
                     attachment_names,
+                    project_context,
                     user_preferences,
                     _connect_attempt + 1,
                 )
