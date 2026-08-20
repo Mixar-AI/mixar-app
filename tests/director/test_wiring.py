@@ -114,7 +114,10 @@ def test_native_viewport_surface_is_registered_from_view3d():
     assert "view3d_director_timeline_region_register" in space
     assert "view3d_director_timeline_region_ensure" in space
     assert "ED_KEYMAP_UI" in space
-    assert "st->keymap = view3d_keymap;" in space
+    # 5.2: ARegionType::keymap is gone, so the space keymap is a wrapper that
+    # also ensures the Agent Scene Strip default keymap items.
+    assert "view3d_keymap(keyconf);" in space
+    assert "view3d_agent_strip_keymap(keyconf);" in space
     assert '"Director View"' not in space
 
     timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
