@@ -30,7 +30,7 @@ def prompt_for_addon_project_link(operator) -> bool:
 
     operator.report(
         {'INFO'},
-        "Choose or create an add-on folder; your draft is preserved for Send",
+        "Choose a folder named like my_addon; your draft is preserved for Send",
     )
     return True
 
@@ -38,7 +38,10 @@ def prompt_for_addon_project_link(operator) -> bool:
 class MIXAR_OT_addon_project_link(Operator):
     bl_idname = "mixar.addon_project_link"
     bl_label = "Create or Link Add-on Project"
-    bl_description = "Choose an add-on folder; Mixar stores only its project ID in the scene"
+    bl_description = (
+        "Choose an add-on folder named with letters, numbers, and underscores; "
+        "Mixar stores only its project ID in the scene"
+    )
     bl_options = {'REGISTER'}
 
     directory: StringProperty(name="Project Folder", subtype='DIR_PATH')
@@ -64,6 +67,7 @@ class MIXAR_OT_addon_project_link(Operator):
 class MIXAR_OT_addon_project_unlink(Operator):
     bl_idname = "mixar.addon_project_unlink"
     bl_label = "Unlink Add-on Project"
+    bl_description = "Stop using this local folder in the current Mixar project"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -78,7 +82,8 @@ class MIXAR_OT_addon_project_unlink(Operator):
 
 class MIXAR_OT_addon_project_open_entrypoint(Operator):
     bl_idname = "mixar.addon_project_open_entrypoint"
-    bl_label = "Open Add-on Entrypoint"
+    bl_label = "Open Add-on Source"
+    bl_description = "Open the add-on entrypoint in Blender's Text Editor"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -104,7 +109,7 @@ class MIXAR_OT_addon_project_open_entrypoint(Operator):
 
 class MIXAR_OT_addon_project_set_entrypoint(Operator):
     bl_idname = "mixar.addon_project_set_entrypoint"
-    bl_label = "Set Add-on Entrypoint"
+    bl_label = "Choose Add-on Entrypoint"
     bl_description = "Choose the import module that owns bl_info, register, and unregister"
     bl_options = {'REGISTER'}
 
@@ -144,7 +149,7 @@ class MIXAR_OT_addon_project_set_entrypoint(Operator):
 
 class MIXAR_OT_addon_project_run_checks(Operator):
     bl_idname = "mixar.addon_project_run_checks"
-    bl_label = "Compile and Reload Add-on"
+    bl_label = "Test and Reload Add-on"
     bl_description = "Compile every Python file and exercise the add-on registration lifecycle"
     bl_options = {'REGISTER'}
 
@@ -166,8 +171,8 @@ class MIXAR_OT_addon_project_run_checks(Operator):
 
 class MIXAR_OT_addon_project_rollback_last(Operator):
     bl_idname = "mixar.addon_project_rollback_last"
-    bl_label = "Rollback Last Agent Change"
-    bl_description = "Restore the files from the latest committed Mixar transaction if they are unchanged"
+    bl_label = "Undo Last AI Change"
+    bl_description = "Restore files from the latest committed Mixar change if they are unchanged"
     # External source files are not part of Blender's undo stack. The client
     # transaction journal is the only truthful rollback mechanism here.
     bl_options = {'REGISTER'}

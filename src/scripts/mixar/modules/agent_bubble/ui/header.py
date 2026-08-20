@@ -33,6 +33,7 @@ from mixar.modules.agent_bubble.core.pill_icons import (
     get_pill_icon_id_named,
     get_running_text_suffix,
 )
+from mixar.modules.addon_project.ui.controls import draw_project_controls
 
 
 # Session-state values that mean the agent is actively working — these
@@ -304,7 +305,7 @@ class AGENT_BUBBLE_HT_header(Header):
         # Main bubble window header (left → right):
         #   * Minimise button (+ close on macOS — routes to minimise)
         #   * Expand/collapse toggle button
-        #   * Centred drag handle ▬▬▬▬
+        #   * Centred Add-on Project actions or drag handle ▬▬▬▬
         #
         # On macOS: coloured traffic-light circles (custom pill icons).
         # On Windows: minimise + expand icon buttons only.
@@ -347,7 +348,21 @@ class AGENT_BUBBLE_HT_header(Header):
         layout.separator_spacer()
         handle_row = layout.row()
         handle_row.alignment = 'CENTER'
-        handle_row.label(text="▬▬▬▬")
+        # Project mode uses the natural centre slot for its persistent actions
+        # instead of pushing the drag handle off-centre with a wide left-side
+        # cluster. The composer retains only first-run Create / Link.
+        if (
+            getattr(scene, "mixie_chat_mode", "") == "ADDON_PROJECT"
+            and getattr(scene, "mixie_addon_project_id", "")
+        ):
+            draw_project_controls(
+                handle_row,
+                scene,
+                compact=True,
+                inline=True,
+            )
+        else:
+            handle_row.label(text="▬▬▬▬")
         layout.separator_spacer()
 
         # Right-side buttons (left → right): reconnect, new chat, past chats.

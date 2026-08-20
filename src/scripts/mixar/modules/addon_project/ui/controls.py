@@ -5,7 +5,22 @@
 """Shared project controls for the chat editor and floating Agent Bubble."""
 
 
-def draw_project_controls(layout, scene, *, compact=False, inline=False) -> None:
+_BUSY_STATES = {"BUSY", "MODIFYING", "CONNECTING"}
+_MORE_MENU = "MIXAR_MT_addon_project_more"
+
+
+def _compact_project_name(name: str, limit: int = 18) -> str:
+    return name if len(name) <= limit else f"{name[:limit - 3]}..."
+
+
+def draw_project_controls(
+    layout,
+    scene,
+    *,
+    compact=False,
+    inline=False,
+    setup_only=False,
+) -> None:
     if scene is None or getattr(scene, "mixie_chat_mode", "") != "ADDON_PROJECT":
         return
 
@@ -21,37 +36,29 @@ def draw_project_controls(layout, scene, *, compact=False, inline=False) -> None
             icon='FILE_FOLDER',
         )
         return
+    if setup_only:
+        return
 
     project_name = getattr(scene, "mixie_addon_project_name", "") or "Project linked"
-    if not compact:
-        row.label(text=project_name, icon='FILE_SCRIPT')
+    row.label(
+        text=_compact_project_name(project_name) if compact else project_name,
+        icon='FILE_SCRIPT',
+    )
     row.operator(
         "mixar.addon_project_open_entrypoint",
-        text="" if compact else "Open",
+        text="Open" if compact else "Open Source",
         icon='TEXT',
     )
 
     mutable = row.row(align=True)
-    mutable.enabled = getattr(scene, "mixie_chat_state", "IDLE") not in {
-        "BUSY", "MODIFYING", "CONNECTING",
-    }
-    mutable.operator(
-        "mixar.addon_project_set_entrypoint",
-        text="",
-        icon='PREFERENCES',
-    )
+    mutable.enabled = getattr(scene, "mixie_chat_state", "IDLE") not in _BUSY_STATES
     mutable.operator(
         "mixar.addon_project_run_checks",
-        text="" if compact else "Check",
+        text="Test" if compact else "Test & Reload",
         icon='CHECKMARK',
     )
-    mutable.operator(
-        "mixar.addon_project_rollback_last",
-        text="",
-        icon='LOOP_BACK',
-    )
-    mutable.operator(
-        "mixar.addon_project_unlink",
-        text="",
-        icon='UNLINKED',
+    mutable.menu(
+        _MORE_MENU,
+        text="More",
+        icon='DOWNARROW_HLT',
     )

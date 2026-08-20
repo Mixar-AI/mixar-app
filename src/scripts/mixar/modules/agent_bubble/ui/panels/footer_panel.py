@@ -24,7 +24,6 @@ composer beyond the region, the wrapper's own scroll handles
 overflow rather than clipping content out of view.
 """
 
-import bpy
 from bpy.types import Panel
 
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
@@ -82,7 +81,13 @@ class AGENT_BUBBLE_PT_footer(Panel):
         # separate row is clipped by the Agent Bubble tools region, leaving
         # first-time users with an error but no visible way to link a folder.
         from mixar.modules.addon_project.ui.controls import draw_project_controls
-        draw_project_controls(action_row, scene, compact=True, inline=True)
+        draw_project_controls(
+            action_row,
+            scene,
+            compact=True,
+            inline=True,
+            setup_only=True,
+        )
 
         # Paperclip — attach an image / file to the next message.
         # Placed immediately after the mode/project controls (no spacer)

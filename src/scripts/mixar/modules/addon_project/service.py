@@ -24,7 +24,12 @@ from .constants import (
 )
 from .errors import AddonProjectError, public_error
 from .indexer import build_index, read_files, search_project
-from .manifest import ensure_manifest, refresh_entrypoint, set_entrypoint
+from .manifest import (
+    ensure_manifest,
+    refresh_entrypoint,
+    set_entrypoint,
+    validate_project_root,
+)
 from .registry import ProjectRegistry
 from .transactions import TransactionStore
 
@@ -45,6 +50,7 @@ class AddonProjectService:
             if not root.is_dir():
                 raise AddonProjectError("invalid_root", "Choose an existing add-on project folder")
             root = root.resolve(strict=True)
+            validate_project_root(root, entrypoint=entrypoint)
             manifest = ensure_manifest(root, name=name, entrypoint=entrypoint)
             self.registry.register(root, manifest)
             description = self.describe(manifest["project_id"])

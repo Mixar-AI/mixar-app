@@ -4,6 +4,7 @@
 
 """Path-free metadata stored with an add-on project."""
 
+import keyword
 import re
 import uuid
 from pathlib import Path
@@ -13,6 +14,7 @@ from .errors import AddonProjectError
 from .storage import read_json, write_json_atomic
 
 _MODULE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
+_FOLDER_MODULE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def manifest_path(root: Path) -> Path:
@@ -107,6 +109,54 @@ def load_manifest(root: Path) -> dict:
         "name": str(payload.get("name") or root.name),
         "entrypoint": entrypoint,
     }
+
+
+def _suggest_folder_module_name(name: str) -> str:
+    """Return an import-safe ASCII replacement without exposing a full path."""
+    suggestion = re.sub(r"[^A-Za-z0-9_]+", "_", str(name)).strip("_").lower()
+    if not suggestion:
+        return "my_addon"
+    if suggestion[0].isdigit():
+        suggestion = f"addon_{suggestion}"
+    if keyword.iskeyword(suggestion):
+        suggestion = f"addon_{suggestion}"
+    return suggestion
+
+
+def validate_project_root(root: Path, *, entrypoint=None) -> None:
+    """Reject a new root that cannot become a Blender import module.
+
+    Repository folders may legitimately contain dashes when they already own a
+    valid inner add-on package or configured entrypoint. The invalid-root guard
+    therefore applies only when Mixar would otherwise create a root-package
+    project and later leave Blender unable to import it.
+    """
+    chosen_entrypoint = entrypoint
+    path = manifest_path(root)
+    if chosen_entrypoint is None and path.exists():
+        chosen_entrypoint = load_manifest(root).get("entrypoint") or None
+
+    if chosen_entrypoint:
+        if not _MODULE_RE.match(chosen_entrypoint):
+            raise AddonProjectError(
+                "invalid_entrypoint",
+                "The add-on module name is invalid",
+            )
+        return
+    if infer_entrypoint(root):
+        return
+    if _FOLDER_MODULE_RE.match(root.name) and not keyword.iskeyword(root.name):
+        return
+
+    suggestion = _suggest_folder_module_name(root.name)
+    raise AddonProjectError(
+        "invalid_project_folder_name",
+        (
+            f"Folder name {root.name!r} cannot be used as a Blender add-on module. "
+            f"Rename it to '{suggestion}' using letters, numbers, and underscores, "
+            "then link it again."
+        ),
+    )
 
 
 def ensure_manifest(root: Path, name=None, entrypoint=None) -> dict:
