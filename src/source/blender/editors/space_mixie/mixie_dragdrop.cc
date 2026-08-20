@@ -87,8 +87,8 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
 
   /* Get window-absolute mouse coordinates */
   int xy[2];
-  xy[0] = win->eventstate->xy[0];
-  xy[1] = win->eventstate->xy[1];
+  xy[0] = win->runtime->eventstate->xy[0];
+  xy[1] = win->runtime->eventstate->xy[1];
 
   /* Convert to region-local coordinates */
   int mval[2];

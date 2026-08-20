@@ -45,8 +45,8 @@ namespace blender {
 void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
 {
   int mval[2];
-  mval[0] = win->eventstate->xy[0] - region->winrct.xmin;
-  mval[1] = win->eventstate->xy[1] - region->winrct.ymin;
+  mval[0] = win->runtime->eventstate->xy[0] - region->winrct.xmin;
+  mval[1] = win->runtime->eventstate->xy[1] - region->winrct.ymin;
 
   bool needs_redraw = false;
   bool any_hovered = false;

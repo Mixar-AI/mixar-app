@@ -96,8 +96,8 @@ void mixie_chat_draw_empty_state(const bContext *C,
   float prompt_mouse_x = -1000.0f;
   float prompt_mouse_y = -1000.0f;
   if (prompt_win) {
-    prompt_mouse_x = float(prompt_win->eventstate->xy[0] - region->winrct.xmin);
-    prompt_mouse_y = float(prompt_win->eventstate->xy[1] - region->winrct.ymin);
+    prompt_mouse_x = float(prompt_win->runtime->eventstate->xy[0] - region->winrct.xmin);
+    prompt_mouse_y = float(prompt_win->runtime->eventstate->xy[1] - region->winrct.ymin);
   }
 
   /* Get theme colors */
