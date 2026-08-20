@@ -30,10 +30,14 @@
 #else
 #include <unistd.h>
 #include <openssl/sha.h>
-
-/* Mixar 5.2 port: global + using-directive. */
-using namespace blender;
 #endif
+
+/* Mixar 5.2 port: creator code stays in the global namespace; blender::
+ * symbols (BKE_appdir etc.) are reached through a using-directive. Declare
+ * the namespace first — depending on platform, no Blender header may have
+ * been included yet at this point. */
+namespace blender {}
+using namespace blender;
 
 // Response data structure for curl callback
 struct CurlResponse {
@@ -1102,6 +1106,14 @@ bool show_startup_dialog(void) {
     }
     compute_code_challenge(code_verifier, code_challenge, sizeof(code_challenge));
 
+    // Generate the OAuth state nonce (matches the macOS/Windows flows).
+    char state[64] = {0};
+    if (!generate_state(state, sizeof(state))) {
+        std::system("zenity --error --title=\"Authentication Failed\" "
+                    "--text=\"Failed to generate SSO state nonce.\" --width=300");
+        return false;
+    }
+
     // Bind auth server first to get actual port
     int actual_port = 0;
     intptr_t server_handle = auth_server_start(51731, &actual_port);
@@ -1120,7 +1132,8 @@ bool show_startup_dialog(void) {
 
     // Wait for auth code from localhost callback
     char received_code[128] = {0};
-    bool got_code = auth_server_wait_for_code(server_handle, received_code, sizeof(received_code));
+    bool got_code = auth_server_wait_for_code(
+        server_handle, state, received_code, sizeof(received_code));
     bool result = got_code && exchange_desktop_code(received_code, code_verifier);
 
     if (!result) {
