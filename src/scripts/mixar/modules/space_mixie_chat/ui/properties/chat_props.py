@@ -654,6 +654,17 @@ def on_generate_type_changed(self, context):
         redraw_chat_areas()
 
 
+def _on_chat_mode_changed(self, context):
+    """When the user switches INTO Library mode, show the full asset grid so the
+    browse experience is immediate (no need to press Enter first)."""
+    if getattr(self, "mixie_chat_mode", "") == 'LIBRARY':
+        try:
+            from ...core import library_browse
+            library_browse.schedule_show_all()
+        except Exception:
+            pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -713,10 +724,14 @@ def register():
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
             # Value 2 belonged to the removed legacy ASK mode and can still be
             # persisted in old .blend files. Never reuse it: doing so would
-            # silently turn those files into Add-on Project Mode on load.
+            # silently turn those files into another mode on load. Library was
+            # authored against 2 before Add-on Project landed and is moved to 4
+            # here for exactly that reason.
             ('ADDON_PROJECT', "Add-on Project", "Build and maintain a linked multi-file Blender add-on", 'FILE_SCRIPT', 3),
+            ('LIBRARY', "Library", "Browse your asset library and add assets to the scene", 'ASSET_MANAGER', 4),
         ],
         default='AGENT',
+        update=_on_chat_mode_changed,
     )
 
     bpy.types.Scene.mixie_addon_project_id = StringProperty(

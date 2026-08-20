@@ -101,6 +101,14 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
+        # Library mode: the typed text searches the asset library (empty = show
+        # everything); results render as clickable thumbnails, no backend call.
+        if scene.mixie_chat_mode == 'LIBRARY':
+            from ...core import library_browse
+            capture(EVENT_MESSAGE_SENT, {"mode": "library"}, context=context)
+            metrics.stop_timer('send_message_total')
+            return library_browse.execute_library_mode(self, context)
+
         message_text = scene.mixie_chat_input.strip()
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
@@ -183,6 +191,16 @@ class MIXIE_CHAT_OT_send_message(Operator):
                     stale_placeholders.append(i)
             for i in reversed(stale_placeholders):
                 scene.mixie_chat_messages.remove(i)
+
+            # A fresh turn is also the reliable point to sweep asset-picker
+            # preview thumbnails no bubble references anymore (an abandoned
+            # picker never gets the empty-actions replacement that normally
+            # cleans them).
+            try:
+                from ...core import asset_choice_previews
+                asset_choice_previews.cleanup_orphans(scene)
+            except Exception:
+                pass
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()

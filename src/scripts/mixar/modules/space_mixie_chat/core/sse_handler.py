@@ -327,15 +327,35 @@ class SSEStreamHandler:
         self._last_seq = -1
         self._resume_unavailable = False
         self._running.set()
+        # Read session preferences on the main thread (bpy access is unsafe from
+        # the stream thread); forwarded in the request payload.
+        user_preferences = self._collect_user_preferences()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context, user_preferences),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
         self._thread.start()
 
         return True
+
+    def _collect_user_preferences(self) -> Optional[dict]:
+        """Session preferences to forward to the agent (main-thread bpy read).
+
+        Currently the asset-library match threshold set in the Assets workspace —
+        the similarity cutoff the modelling lanes use to reuse a library asset
+        instead of modelling it. Returns None if the setting isn't available.
+        """
+        try:
+            import bpy
+
+            state = getattr(bpy.context.scene, "mixie_asset_training", None)
+            if state is None:
+                return None
+            return {"asset_match_threshold": round(float(state.match_threshold), 4)}
+        except Exception:
+            return None
 
     def stop_stream(self) -> None:
         """Stop the SSE stream."""
@@ -536,6 +556,7 @@ class SSEStreamHandler:
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
         project_context: Optional[dict] = None,
+        user_preferences: Optional[dict] = None,
         _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
@@ -574,6 +595,11 @@ class SSEStreamHandler:
 
             if project_context:
                 payload["project_context"] = project_context
+
+            # Session preferences (e.g. the asset-library match threshold) the
+            # backend merges into the agent scratchpad for this turn.
+            if user_preferences:
+                payload["user_preferences"] = user_preferences
 
             logger.debug(f"Starting SSE request to {self.chat_url}")
 
@@ -665,6 +691,7 @@ class SSEStreamHandler:
                     image_attachments,
                     attachment_names,
                     project_context,
+                    user_preferences,
                     _connect_attempt + 1,
                 )
             self._on_error(f"Connection error: {e}")

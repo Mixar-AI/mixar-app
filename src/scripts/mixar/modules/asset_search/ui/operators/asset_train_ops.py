@@ -3,42 +3,38 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Asset Training Operators — modal with prepare/diff step for incremental training."""
+"""Asset Training Operators — chunked/off-process training with live progress.
 
-import json
+Phases: INIT -> SCANNING -> PREPARING -> (RENDERING | RENDER_WORKER) -> WAITING,
+with UPLOADING inserted only when uploads cannot be streamed.
+
+This module is the modal state machine and its lifecycle; the phases live
+beside it — ``asset_train_render_phase`` (planning, in-process ticks,
+completion/cancel), ``asset_train_worker_phase`` (the headless fan-out) and
+``asset_train_upload_phase`` (streamed and barrier uploads). Small plans render
+in-process, a few assets per timer tick (embedded-preview reuse makes most
+instant); large plans render across HEADLESS WORKER processes
+(core/preview_worker) so the app never freezes. Batches upload WHILE rendering
+continues (core/train_stream). State PropertyGroups live in
+ui/properties/training_props.py.
+"""
+
 import threading
+import time
 
 import bpy
-from bpy.props import BoolProperty, FloatProperty, PointerProperty, StringProperty
-from bpy.types import Operator, PropertyGroup
+from bpy.types import Operator
 
-from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.client import HTTPClient
-
-logger = get_logger(__name__)
-from mixar.modules.asset_search.constants import (
-    ASSET_TRAIN_ENDPOINT,
-    ASSET_TRAIN_PREPARE_ENDPOINT,
+from mixar.modules.asset_search.core import preview_worker
+from mixar.modules.asset_search.core.train_api import prepare_api
+from mixar.modules.asset_search.core.train_support import (
+    W_RENDER_END,
+    W_SCAN_END,
+    fmt_duration,
 )
 
-
-class MixieAssetTrainingState(PropertyGroup):
-    """Scene-level properties tracking asset training progress."""
-
-    is_training: BoolProperty(name="Is Training", default=False)
-    progress: FloatProperty(
-        name="Training Progress", default=0.0, min=0.0, max=1.0, subtype='FACTOR',
-    )
-    search_prompt: StringProperty(name="Search", default="")
-    needs_retraining: BoolProperty(name="Needs Retraining", default=False)
-    retraining_message: StringProperty(name="Retraining Message", default="")
-    search_message: StringProperty(name="Search Message", default="")
-    is_searching: BoolProperty(name="Is Searching", default=False)
-    is_refreshing: BoolProperty(name="Is Refreshing", default=False)
-    has_model: BoolProperty(name="Has Trained Model", default=False)
-    auto_check_done: BoolProperty(name="Auto Check Done", default=False)
-    search_image: PointerProperty(type=bpy.types.Image, name="Search Image")
+logger = get_logger(__name__)
 
 
 class MIXIE_OT_train_asset_model(Operator):
@@ -53,26 +49,61 @@ class MIXIE_OT_train_asset_model(Operator):
     bl_options = {"REGISTER"}
 
     _timer = None
-    # INIT -> SCANNING -> PREPARING -> RENDERING -> UPLOADING -> WAITING -> DONE
     _phase = 'INIT'
     _bg_thread = None
     _bg_result = None
     _scan_metadata = None
     _train_mode = "full"
     _removed_assets = []
-    _metadata_checksum = None  # Full-library checksum from /train/prepare
+    _metadata_checksum = None
+    _session = None              # in-process RenderSession
+    _worker = None               # headless preview_worker handle
+    # Directory holding this run's preview JPEGs. Previews are files, not
+    # packed datablocks, so it must live until the upload has read them —
+    # _finish owns its removal.
+    _image_dir = None
+    # Streaming upload (see core/train_stream): batches are posted WHILE the
+    # remaining assets render, so the upload cost hides inside the render time.
+    _stream = None
+    _builder = None
+    _collected = None            # finished assets, in arrival order
+    _used_names = None           # image_name uniqueness across the whole run
+    _stream_uploads = False      # safe to upload while rendering?
+    _worker_failures = []
+    _render_started_at = 0.0
+    _started_at = 0.0
+    # Upload progress fields written by the post_batches thread:
+    _upload_done = 0
+    _upload_total = 0
+    _upload_embedded = 0
+
+    # Set True by the auto-train scheduler (enrollment change / file load /
+    # generation drain). Suppresses the "nothing to do" panel summary so a
+    # background check that finds no changes leaves no banner behind.
+    auto: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
         state = getattr(context.scene, 'mixie_asset_training', None)
-        if state and state.is_training:
-            return False
-        return True
+        return not (state and state.is_training)
 
     def execute(self, context):
         state = context.scene.mixie_asset_training
         state.is_training = True
         state.progress = 0.0
+        state.phase_text = "Starting…"
+        state.current_item = ""
+        state.assets_done = 0
+        state.assets_total = 0
+        state.upload_done = 0
+        state.upload_total = 0
+        state.eta_text = ""
+        state.prepare_note = ""
+        state.failed_count = 0
+        state.failed_list = ""
+        state.cancel_requested = False
+        state.last_summary = ""
+
         self._phase = 'INIT'
         self._bg_thread = None
         self._bg_result = None
@@ -80,6 +111,19 @@ class MIXIE_OT_train_asset_model(Operator):
         self._train_mode = "full"
         self._removed_assets = []
         self._metadata_checksum = None
+        self._session = None
+        self._worker = None
+        self._image_dir = None
+        self._stream = None
+        self._builder = None
+        self._collected = []
+        self._used_names = set()
+        self._stream_uploads = False
+        self._worker_failures = []
+        self._started_at = time.time()
+        self._upload_done = 0
+        self._upload_total = 0
+        self._upload_embedded = 0
 
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, window=context.window)
@@ -87,54 +131,52 @@ class MIXIE_OT_train_asset_model(Operator):
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
+        state = context.scene.mixie_asset_training
+        if event.type == 'ESC':
+            state.cancel_requested = True
         if event.type != 'TIMER':
             return {"PASS_THROUGH"}
 
-        state = context.scene.mixie_asset_training
-
         if self._phase == 'INIT':
-            state.progress = 0.0
+            state.phase_text = "Scanning libraries…"
             self._phase = 'SCANNING'
             self._redraw(context)
             return {"RUNNING_MODAL"}
+        handler = getattr(self, f"_handle_{self._phase.lower()}", None)
+        return handler(context, state) if handler else {"RUNNING_MODAL"}
 
-        if self._phase == 'SCANNING':
-            return self._handle_scanning(context, state)
-
-        if self._phase == 'PREPARING':
-            return self._handle_preparing(context, state)
-
-        if self._phase == 'RENDERING':
-            return self._handle_rendering(context, state)
-
-        if self._phase == 'UPLOADING':
-            return self._handle_uploading(context, state)
-
-        if self._phase == 'WAITING':
-            return self._handle_waiting(context, state)
-
-        return {"RUNNING_MODAL"}
+    # ------------------------------------------------------------------ #
+    # Scan + prepare
+    # ------------------------------------------------------------------ #
 
     def _handle_scanning(self, context, state):
-        """Lightweight scan of asset libraries (no rendering)."""
         from .asset_search_ops import _scan_asset_library_metadata
 
         self._scan_metadata = _scan_asset_library_metadata(context)
-        if not self._scan_metadata:
-            self._finish(context, success=False,
-                         message="No asset library found — add one "
-                                 "from Edit > Preferences > File Paths")
+        if not self._scan_metadata and not self.auto:
+            from mixar.modules.asset_search.core.library_enrollment import (
+                enrolled_names,
+            )
+            if context.preferences.filepaths.asset_libraries and not enrolled_names():
+                msg = ("No libraries selected — tick the libraries to train "
+                       "in the list below, then train")
+            else:
+                msg = ("No asset library found — add one from "
+                       "Edit > Preferences > File Paths")
+            self._finish(context, success=False, message=msg)
             return {"CANCELLED"}
+        # An AUTO train with an empty scan (e.g. the last enrolled library was
+        # unenrolled) still proceeds to /train/prepare: the backend reports the
+        # now-orphaned assets as removed and the removal path drops their
+        # embeddings, so search stops returning them.
 
-        state.progress = 0.1
-        logger.debug("[Asset Training] Scanned %d assets", len(self._scan_metadata))
-
-        # Launch prepare request in background
+        state.progress = W_SCAN_END
+        state.phase_text = (
+            f"Checking what's new ({len(self._scan_metadata)} assets scanned)…"
+        )
         self._bg_result = None
         self._bg_thread = threading.Thread(
-            target=_prepare_api,
-            args=(self._scan_metadata, self),
-            daemon=True,
+            target=prepare_api, args=(self._scan_metadata, self), daemon=True,
         )
         self._bg_thread.start()
         self._phase = 'PREPARING'
@@ -142,28 +184,35 @@ class MIXIE_OT_train_asset_model(Operator):
         return {"RUNNING_MODAL"}
 
     def _handle_preparing(self, context, state):
-        """Wait for /train/prepare response, decide next action."""
         if self._bg_thread and self._bg_thread.is_alive():
             return {"RUNNING_MODAL"}
 
         res = self._bg_result or {}
+        scanned = len(self._scan_metadata or [])
         if not res.get("success"):
-            # Prepare failed — fall back to full train
-            logger.warning("[Asset Training] Prepare failed: %s, falling back to full train",
-                          res.get('message'))
+            logger.warning("[Asset Training] Prepare failed: %s — full train",
+                           res.get('message'))
             self._train_mode = "full"
             self._removed_assets = []
-            self._setup_rendering_phase(context, state, filter_assets=None)
-            return {"RUNNING_MODAL"}
+            # Prepare failed, so we do NOT know whether the user already has an
+            # index. A streamed mode="full" first batch would REPLACE it before
+            # the run can be cancelled, so this path keeps the old barrier:
+            # render everything, then upload.
+            self._stream_uploads = False
+            state.prepare_note = f"{scanned} assets — full training"
+            return self._start_rendering(context, state, filter_assets=None)
 
         action = res.get("action", "full_train")
         self._metadata_checksum = res.get("metadata_checksum")
-        logger.debug("[Asset Training] Prepare result: action=%s", action)
+        # Safe to upload while rendering: an incremental run is durable
+        # server-side (that is already the cancel contract), and "full_train"
+        # is the server telling us there is no existing index to lose.
+        self._stream_uploads = action in ("incremental", "full_train")
 
         if action == "skip":
             state.needs_retraining = False
             state.retraining_message = ""
-            self._finish(context, success=True,
+            self._finish(context, success=True, silent=self.auto,
                          message="Embeddings are up to date — nothing to do")
             return {"FINISHED"}
 
@@ -171,167 +220,162 @@ class MIXIE_OT_train_asset_model(Operator):
             new_assets = res.get("new_assets", [])
             self._removed_assets = res.get("removed_assets", [])
             self._train_mode = "incremental"
-
+            unchanged = res.get("unchanged_count", scanned - len(new_assets))
+            state.prepare_note = (
+                f"{scanned} scanned · {unchanged} already embedded · "
+                f"{len(new_assets)} new · {len(self._removed_assets)} removed"
+            )
             if not new_assets and not self._removed_assets:
                 self._finish(context, success=True,
                              message="Embeddings are up to date — nothing to do")
                 return {"FINISHED"}
-
             if not new_assets:
-                # Only removals — skip rendering, go straight to upload
-                logger.debug("[Asset Training] Only removals (%d), skipping render",
-                             len(self._removed_assets))
-                state.progress = 0.5
+                state.progress = W_RENDER_END
+                state.phase_text = "Removing deleted assets…"
                 self._phase = 'UPLOADING'
                 self._redraw(context)
                 return {"RUNNING_MODAL"}
+            return self._start_rendering(context, state, filter_assets=new_assets)
 
-            self._setup_rendering_phase(context, state, filter_assets=new_assets)
-            return {"RUNNING_MODAL"}
-
-        # full_train or unknown action
         self._train_mode = "full"
         self._removed_assets = []
-        self._setup_rendering_phase(context, state, filter_assets=None)
-        return {"RUNNING_MODAL"}
+        state.prepare_note = f"{scanned} assets — full training"
+        return self._start_rendering(context, state, filter_assets=None)
 
-    def _setup_rendering_phase(self, context, state, filter_assets):
-        """Set render filter and advance to RENDERING phase."""
-        from .asset_inspect_ops import clear_render_filter, set_render_filter
+    # ------------------------------------------------------------------ #
+    # Rendering — headless worker for large plans, in-process for small
+    # ------------------------------------------------------------------ #
 
-        if filter_assets is not None:
-            set_render_filter(filter_assets)
-            logger.debug("[Asset Training] Render filter set: %d assets", len(filter_assets))
-        else:
-            clear_render_filter()
+    def _start_rendering(self, context, state, filter_assets):
+        from .asset_train_render_phase import start_rendering
+        return start_rendering(self, context, state, filter_assets)
 
-        state.progress = 0.2
-        self._phase = 'RENDERING'
-        self._redraw(context)
+    def _start_inprocess_session(self, context, state, items):
+        from .asset_train_render_phase import start_inprocess_session
+        return start_inprocess_session(self, context, state, items)
+
+    def _update_render_progress(self, state, done, total, current):
+        from .asset_train_render_phase import update_progress
+        update_progress(self, state, done, total, current)
 
     def _handle_rendering(self, context, state):
-        """Run the inspect operator to render previews."""
-        from .asset_inspect_ops import clear_render_filter, get_collected_asset_data
+        from .asset_train_render_phase import handle_rendering
+        return handle_rendering(self, context, state)
 
-        result = bpy.ops.mixie.inspect_asset_libraries()
-        clear_render_filter()
+    def _handle_render_worker(self, context, state):
+        from .asset_train_worker_phase import handle_render_worker
+        return handle_render_worker(self, context, state)
 
-        if result != {"FINISHED"}:
-            self._finish(context, success=False,
-                         message="No asset library found — add one "
-                                 "from Edit > Preferences > File Paths")
-            return {"CANCELLED"}
+    def _renders_complete(self, context, state, collected, failures, reused=0):
+        from .asset_train_render_phase import complete
+        return complete(self, context, state, collected, failures, reused=reused)
 
-        collected = get_collected_asset_data()
-        if not collected and self._train_mode == "full":
-            self._finish(context, success=False,
-                         message="No objects or collections found "
-                                 "in asset libraries")
-            return {"CANCELLED"}
+    def _cancel_render(self, context, state, collected, teardown=None):
+        from .asset_train_render_phase import cancel
+        return cancel(self, context, state, collected, teardown=teardown)
 
-        state.progress = 0.5
-        self._phase = 'UPLOADING'
-        self._redraw(context)
-        return {"RUNNING_MODAL"}
+    # ------------------------------------------------------------------ #
+    # Upload — thin delegates; the phase logic lives in the upload module
+    # ------------------------------------------------------------------ #
+
+    def _start_upload_stream(self):
+        from .asset_train_upload_phase import start_stream
+        start_stream(self)
+
+    def _feed_collected(self, infos):
+        from .asset_train_upload_phase import feed
+        feed(self, infos)
+
+    def _upload_note(self):
+        from .asset_train_upload_phase import note
+        return note(self)
+
+    def _stop_upload_stream(self, drop=False):
+        from .asset_train_upload_phase import stop_stream
+        stop_stream(self, drop=drop)
 
     def _handle_uploading(self, context, state):
-        """Build payload and launch upload thread."""
-        payload = self._prepare_payload()
-
-        # For incremental with only removals, payload may be None but that's OK
-        if payload is None and self._train_mode == "full":
-            self._finish(context, success=False, message="No images to upload")
-            return {"FINISHED"}
-
-        self._bg_result = None
-        self._bg_thread = threading.Thread(
-            target=_post_to_api,
-            args=(payload, self._train_mode, self._removed_assets,
-                  self._metadata_checksum, self),
-            daemon=True,
-        )
-        self._bg_thread.start()
-        logger.debug("[Asset Training] Upload thread started (mode=%s)", self._train_mode)
-        self._phase = 'WAITING'
-        self._redraw(context)
-        return {"RUNNING_MODAL"}
+        from .asset_train_upload_phase import handle_uploading
+        return handle_uploading(self, context, state)
 
     def _handle_waiting(self, context, state):
-        """Poll for upload thread completion."""
-        if self._bg_thread and self._bg_thread.is_alive():
-            return {"RUNNING_MODAL"}
+        from .asset_train_upload_phase import handle_waiting
+        return handle_waiting(self, context, state)
 
-        res = self._bg_result or {}
-        success = res.get("success", False)
-        state.progress = 1.0
-        self._redraw(context)
+    # ------------------------------------------------------------------ #
+    # Teardown
+    # ------------------------------------------------------------------ #
 
-        if success:
-            state.needs_retraining = False
-            state.retraining_message = ""
-
-        msg = res.get("message", "API upload failed")
-        self._finish(context, success=success, message=msg)
-        return {"FINISHED"}
-
-    def _prepare_payload(self):
-        """Extract images + metadata on the main thread."""
-        from .asset_inspect_ops import get_collected_asset_data
-
-        assets = get_collected_asset_data()
-        if not assets:
-            logger.debug("[Asset Training] No asset data collected")
-            return None
-
-        logger.debug("[Asset Training] Collected %d assets, preparing...", len(assets))
-
-        files = []
-        for asset_info in assets:
-            img_name = asset_info.get("image_name", "")
-            if not img_name:
-                continue
-            img = bpy.data.images.get(img_name)
-            if img is None:
-                continue
-            jpeg_bytes = _extract_image_bytes(img)
-            if jpeg_bytes is None:
-                continue
-            files.append((f"{img_name}.jpg", jpeg_bytes))
-
-        if not files:
-            logger.warning("[Asset Training] No images could be extracted")
-            return None
-
-        return {
-            "metadata_json": json.dumps(assets),
-            "files": files,
-        }
-
-    def _finish(self, context, success, message):
-        """Clean up timer and reset training state."""
+    def _finish(self, context, success, message, silent=False):
         from .asset_inspect_ops import clear_render_filter
 
+        if self._session is not None:
+            try:
+                self._session.finish()
+            except Exception:
+                pass
+            self._session = None
+        if self._worker is not None:
+            preview_worker.stop(self._worker)
+            preview_worker.cleanup(self._worker)
+            self._worker = None
+        # An uploader thread still reading previews must not race the rmtree
+        # below. WAITING only finishes once the thread is dead; the error and
+        # stall paths land here with it alive, so drop and wait it out.
+        self._stop_upload_stream(drop=True)
+        self._stream = None
+        if self._bg_thread is not None and self._bg_thread.is_alive():
+            self._bg_thread.join(timeout=5.0)
+        # The run is over either way — the preview JPEGs have been uploaded,
+        # discarded, or abandoned, so the directory goes with it.
+        if self._image_dir:
+            preview_worker.cleanup(self._image_dir)
+            self._image_dir = None
         clear_render_filter()
 
         state = context.scene.mixie_asset_training
         state.is_training = False
+        state.phase_text = ""
+        state.current_item = ""
+        state.eta_text = ""
+        state.cancel_requested = False
         if not success:
             state.progress = 0.0
+
+        # A silent finish (auto-train that found nothing to do) leaves no panel
+        # banner — a background check must not spam the UI. Real training still
+        # reports its summary even under auto.
+        if not silent:
+            elapsed = fmt_duration(time.time() - self._started_at)
+            skipped = f", {state.failed_count} skipped" if state.failed_count else ""
+            state.last_summary = f"{message}{skipped} — {elapsed}"
+            state.last_summary_success = success
+            if success:
+                state.last_trained_at = time.strftime("%d %b %H:%M")
 
         wm = context.window_manager
         if self._timer:
             wm.event_timer_remove(self._timer)
             self._timer = None
-
         self._bg_thread = None
         self._bg_result = None
         self._scan_metadata = None
         self._removed_assets = []
         self._metadata_checksum = None
 
-        report_type = "INFO" if success else "WARNING"
-        self.report({report_type}, message)
-        logger.debug("[Asset Training] %s", message)
+        # A completed train changed the indexed libraries — drop the Library
+        # chat-mode browse cache so its next search re-scans and reflects the
+        # new/removed assets (fixes "search still shows the old library").
+        if success:
+            try:
+                from mixar.modules.space_mixie_chat.core import library_browse
+                library_browse.invalidate()
+            except Exception:
+                pass
+
+        if not silent:
+            self.report({"INFO" if success else "WARNING"}, message)
+        logger.debug("[Asset Training] %s%s", message, " (auto)" if silent else "")
         self._redraw(context)
 
     def _redraw(self, context):
@@ -340,150 +384,40 @@ class MIXIE_OT_train_asset_model(Operator):
                 area.tag_redraw()
 
 
-def _prepare_api(metadata, operator):
-    """POST metadata to /train/prepare in a background thread."""
-    try:
-        client = HTTPClient(base_url=get_server_url())
-        resp = client.post(
-            ASSET_TRAIN_PREPARE_ENDPOINT,
-            data={"metadata": json.dumps(metadata)},
-            timeout=30,
-            raise_for_status=False,
-        )
+class MIXIE_OT_cancel_asset_training(Operator):
+    """Cancel the running training after the current asset finishes"""
 
-        if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
-            operator._bg_result = {"success": False, "message": msg}
-            return
+    bl_idname = "mixie.cancel_asset_training"
+    bl_label = "Cancel Training"
+    bl_description = (
+        "Stop training after the current asset. Incremental runs keep the "
+        "already-embedded assets; a full run is discarded unchanged"
+    )
+    bl_options = {"REGISTER"}
 
-        data = resp.data or {}
-        inner = data.get("data", data)
-        operator._bg_result = {
-            "success": True,
-            "action": inner.get("action", "full_train"),
-            "new_assets": inner.get("new_assets", []),
-            "removed_assets": inner.get("removed_assets", []),
-            "asset_count": inner.get("asset_count", 0),
-            "unchanged_count": inner.get("unchanged_count", 0),
-            "metadata_checksum": inner.get("metadata_checksum"),
-        }
-    except Exception as exc:
-        logger.error("[Asset Training] Prepare error: %s", exc)
-        operator._bg_result = {
-            "success": False,
-            "message": f"Prepare failed: {exc}",
-        }
+    @classmethod
+    def poll(cls, context):
+        state = getattr(context.scene, 'mixie_asset_training', None)
+        return bool(state and state.is_training and not state.cancel_requested)
 
-
-def _post_to_api(payload, mode, removed_assets, metadata_checksum, operator):
-    """POST images + metadata to the training API in a background thread."""
-    files_list = []
-    form_data = {
-        "mode": mode,
-        "removed_assets": json.dumps(removed_assets),
-    }
-    if metadata_checksum:
-        form_data["metadata_checksum"] = metadata_checksum
-
-    if payload:
-        files_list = [
-            ("images", (fname, data, "image/jpeg"))
-            for fname, data in payload["files"]
-        ]
-        form_data["metadata"] = payload["metadata_json"]
-        total_bytes = sum(len(d) for _, d in payload["files"])
-        logger.debug("[Asset Training] Sending %d images (%d bytes) via backend proxy (mode=%s)",
-                     len(files_list), total_bytes, mode)
-    else:
-        form_data["metadata"] = "[]"
-        logger.debug("[Asset Training] Sending removal-only request (%d to remove)",
-                     len(removed_assets))
-
-    try:
-        client = HTTPClient(base_url=get_server_url())
-        resp = client.post(
-            ASSET_TRAIN_ENDPOINT,
-            data=form_data,
-            files=files_list if files_list else None,
-            timeout=300,
-            raise_for_status=False,
-        )
-
-        if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
-            logger.error("[Asset Training] Server error: %s", msg)
-            operator._bg_result = {"success": False, "message": msg}
-            return
-
-        result = resp.data or {}
-        inner = result.get("data", result)
-        logger.debug("[Asset Training] Server response received")
-        images_embedded = inner.get("images_embedded", 0)
-        removed = inner.get("removed", 0)
-
-        if mode == "incremental":
-            total = inner.get("total", images_embedded)
-            msg = (f"Incremental update — {images_embedded} added, "
-                   f"{removed} removed, {total} total")
-        else:
-            msg = f"Training data sent — {images_embedded} images embedded"
-
-        operator._bg_result = {
-            "success": result.get("status") == "success",
-            "message": msg,
-        }
-    except Exception as exc:
-        logger.error("[Asset Training] Upload error: %s", exc)
-        operator._bg_result = {
-            "success": False,
-            "message": f"Upload failed: {exc}",
-        }
-
-
-def _extract_image_bytes(img):
-    """Extract JPEG bytes from a Blender image."""
-    if img.packed_file and img.packed_file.data:
-        return bytes(img.packed_file.data)
-
-    import os
-    import tempfile
-
-    tmp_path = os.path.join(tempfile.gettempdir(), f"_mixar_tmp_{img.name}.jpg")
-    try:
-        img.save_render(filepath=tmp_path)
-        with open(tmp_path, "rb") as fh:
-            return fh.read()
-    except Exception as exc:
-        logger.error("[Asset Training] Fallback save failed for %s: %s", img.name, exc)
-        return None
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+    def execute(self, context):
+        context.scene.mixie_asset_training.cancel_requested = True
+        return {"FINISHED"}
 
 
 classes = (
-    MixieAssetTrainingState,
     MIXIE_OT_train_asset_model,
+    MIXIE_OT_cancel_asset_training,
 )
 
 
 def register():
-    """Register operator classes and scene properties"""
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Scene.mixie_asset_training = bpy.props.PointerProperty(
-        type=MixieAssetTrainingState,
-    )
-
 
 def unregister():
-    """Unregister operator classes and scene properties"""
     from bpy.utils import unregister_class
-
-    if hasattr(bpy.types.Scene, 'mixie_asset_training'):
-        del bpy.types.Scene.mixie_asset_training
-
     for cls in reversed(classes):
         unregister_class(cls)
