@@ -23,7 +23,10 @@
 #ifdef HAVE_LIBSECRET
 #include <libsecret/secret.h>
 
-/* Mixar 5.2 port: global + using-directive. */
+/* Mixar 5.2 port: creator code stays in the global namespace; blender::
+ * symbols are reached through a using-directive (declare the namespace
+ * first — only system headers may precede this point). */
+namespace blender {}
 using namespace blender;
 #endif
 #endif
