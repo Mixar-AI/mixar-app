@@ -61,7 +61,7 @@ static wmOperatorStatus dilate_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -130,7 +130,7 @@ static wmOperatorStatus erode_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -196,7 +196,7 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -249,6 +249,10 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -306,3 +310,4 @@ void BAKING_OT_sobel_edge_detect(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

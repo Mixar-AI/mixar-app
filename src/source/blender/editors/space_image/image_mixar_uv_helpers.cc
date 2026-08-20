@@ -326,7 +326,7 @@ void do_mixar_uvedit_transform(bContext *C, void * /*arg*/, int event)
   float center[2];
 
   Vector<Object *> objects = BKE_view_layer_array_from_objects_in_edit_mode_unique_data_with_uvs(
-      scene, CTX_data_view_layer(C), CTX_wm_view3d(C));
+      *CTX_data_main(C), scene, CTX_data_view_layer(C), CTX_wm_view3d(C));
 
   mixar_uvedit_center(scene, objects, center);
 

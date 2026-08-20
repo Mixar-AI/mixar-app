@@ -211,7 +211,8 @@ static void image_init(wmWindowManager * /*wm*/, ScrArea *area)
   ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Image", SPACE_IMAGE, RGN_TYPE_WINDOW);
 
   /* add drop boxes */
-  WM_event_add_dropbox_handler(&area->handlers, lb);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&area->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(lb));
 
   /* Ensure Mixar UV properties region exists (for pre-existing Image Editor areas) */
   bool has_channels = false;

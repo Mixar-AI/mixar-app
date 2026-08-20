@@ -207,7 +207,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
       total_height += bubble_height;
       total_height += metrics.bubble_spacing;
 
-      MEM_freeN(text_buffer);
+      MEM_delete_void(text_buffer);
     }
     RNA_property_collection_next(&iter);
   }
@@ -302,7 +302,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
         *r_message_index = message_index;
         *r_char_offset = char_offset;
 
-        MEM_freeN(text_buffer);
+        MEM_delete_void(text_buffer);
         RNA_property_collection_end(&iter);
         return true;
       }
@@ -310,7 +310,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
       y_pos -= metrics.bubble_spacing;
       message_index++;
 
-      MEM_freeN(text_buffer);
+      MEM_delete_void(text_buffer);
     }
     RNA_property_collection_next(&iter);
   }
@@ -338,8 +338,7 @@ static bool dispatch_slot_action(bContext *C,
   if (!ot) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
   RNA_string_set(&op_ptr, "action_value", action.value);
   WM_operator_name_call_ptr(
@@ -390,8 +389,7 @@ static bool dispatch_toggle(bContext *C,
   if (!ot) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&op_ptr, "bubble_id", bubble_id);
   if (item_id) {
     RNA_string_set(&op_ptr, "item_id", item_id);
@@ -476,8 +474,7 @@ bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mous
     if (BLI_rctf_isect_pt(&rt->empty_prompts[i].bounds, mouse_x, mouse_y)) {
       wmOperatorType *ot = WM_operatortype_find("mixie_chat.insert_prompt_text", true);
       if (ot) {
-        PointerRNA op_ptr;
-        WM_operator_properties_create_ptr(&op_ptr, ot);
+        PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
         RNA_string_set(&op_ptr, "text", rt->empty_prompts[i].text);
         RNA_string_set(&op_ptr, "mode", g_empty_prompt_modes[i]);
         RNA_string_set(&op_ptr, "generate_type", g_empty_prompt_generate_types[i]);

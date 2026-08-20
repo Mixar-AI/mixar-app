@@ -73,7 +73,7 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
     char *multi_paths_cstr = RNA_string_get_alloc(op->ptr, "multi_filepaths", nullptr, 0, nullptr);
     if (multi_paths_cstr) {
       std::string multi_paths(multi_paths_cstr);
-      MEM_freeN(multi_paths_cstr);
+      MEM_delete_void(multi_paths_cstr);
 
       std::stringstream ss(multi_paths);
       std::string segment;

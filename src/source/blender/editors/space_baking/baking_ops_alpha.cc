@@ -51,7 +51,7 @@ static wmOperatorStatus multiply_rgb_by_alpha_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
 #ifdef _OPENMP
 #  pragma omp parallel for if (region_height > 64)
@@ -102,7 +102,7 @@ static wmOperatorStatus divide_rgb_by_alpha_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
 #ifdef _OPENMP
 #  pragma omp parallel for if (region_height > 64)
@@ -132,6 +132,10 @@ static wmOperatorStatus divide_rgb_by_alpha_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -177,3 +181,4 @@ void BAKING_OT_divide_rgb_by_alpha(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

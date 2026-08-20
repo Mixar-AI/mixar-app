@@ -146,7 +146,7 @@ void draw_heading(Button *but, rcti *rect)
             UI_STYLE_TEXT_LEFT);
 }
 
-void draw_muted(Button *but, rcti *rect, const eFontStyle_Align align, const uchar col[4])
+void draw_muted(Button *but, rcti *rect, const FontStyleAlign align, const uchar col[4])
 {
   rcti text_rect = *rect;
   text_rect.xmin += mixar_card_text_pad();

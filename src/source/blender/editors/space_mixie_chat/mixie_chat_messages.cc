@@ -121,19 +121,19 @@ void mixie_chat_free_runtime(SpaceMixieChat *smixie)
     /* Free all allocated text buffers in layout cache */
     for (MessageLayoutData &layout : rt->layout_cache) {
       if (layout.todo_combined_text) {
-        MEM_freeN(layout.todo_combined_text);
+        MEM_delete_void(layout.todo_combined_text);
         layout.todo_combined_text = nullptr;
       }
       if (layout.copy_text) {
-        MEM_freeN(layout.copy_text);
+        MEM_delete_void(layout.copy_text);
         layout.copy_text = nullptr;
       }
       if (layout.content_text) {
-        MEM_freeN(layout.content_text);
+        MEM_delete_void(layout.content_text);
         layout.content_text = nullptr;
       }
       if (layout.ephemeral_text) {
-        MEM_freeN(layout.ephemeral_text);
+        MEM_delete_void(layout.ephemeral_text);
         layout.ephemeral_text = nullptr;
       }
     }
@@ -155,21 +155,21 @@ void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
   /* Free any allocated todo_combined_text before clearing */
   for (MessageLayoutData &layout : rt->layout_cache) {
     if (layout.todo_combined_text) {
-      MEM_freeN(layout.todo_combined_text);
+      MEM_delete_void(layout.todo_combined_text);
       layout.todo_combined_text = nullptr;
     }
     /* Free cached copy text */
     if (layout.copy_text) {
-      MEM_freeN(layout.copy_text);
+      MEM_delete_void(layout.copy_text);
       layout.copy_text = nullptr;
     }
     /* Free slot-based text buffers */
     if (layout.content_text) {
-      MEM_freeN(layout.content_text);
+      MEM_delete_void(layout.content_text);
       layout.content_text = nullptr;
     }
     if (layout.ephemeral_text) {
-      MEM_freeN(layout.ephemeral_text);
+      MEM_delete_void(layout.ephemeral_text);
       layout.ephemeral_text = nullptr;
     }
   }

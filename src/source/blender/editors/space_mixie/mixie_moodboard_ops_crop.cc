@@ -130,7 +130,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
   }
 
   /* Copy pixels - fast C++ loop */
-  float *dst_pixels = crop_ibuf->float_buffer.data;
+  float *dst_pixels = crop_ibuf->float_data_for_write();
   bool src_has_float = (src_ibuf->float_buffer.data != nullptr);
 
   for (int y = 0; y < crop_height; y++) {
@@ -142,7 +142,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
       if (src_has_float) {
         /* Source is float */
         int src_idx = (src_y * src_width + src_x) * 4;
-        float *src_pixels = src_ibuf->float_buffer.data;
+        float *src_pixels = src_ibuf->float_data_for_write();
         dst_pixels[dst_idx + 0] = src_pixels[src_idx + 0];
         dst_pixels[dst_idx + 1] = src_pixels[src_idx + 1];
         dst_pixels[dst_idx + 2] = src_pixels[src_idx + 2];
@@ -151,7 +151,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
       else if (src_ibuf->byte_buffer.data) {
         /* Source is byte, convert to float */
         int src_idx = (src_y * src_width + src_x) * 4;
-        uchar *src_bytes = src_ibuf->byte_buffer.data;
+        uchar *src_bytes = src_ibuf->byte_data_for_write();
         dst_pixels[dst_idx + 0] = src_bytes[src_idx + 0] / 255.0f;
         dst_pixels[dst_idx + 1] = src_bytes[src_idx + 1] / 255.0f;
         dst_pixels[dst_idx + 2] = src_bytes[src_idx + 2] / 255.0f;

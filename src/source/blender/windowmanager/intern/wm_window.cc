@@ -1330,7 +1330,8 @@ static void wm_window_ghostwindow_ensure(wmWindowManager *wm, wmWindow *win, boo
   /* Add drop boxes. */
   {
     ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Window", SPACE_EMPTY, RGN_TYPE_WINDOW);
-    WM_event_add_dropbox_handler(&win->runtime->handlers, lb);
+    WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&win->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(lb));
   }
 
   if (new_window) {

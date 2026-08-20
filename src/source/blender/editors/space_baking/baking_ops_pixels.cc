@@ -68,8 +68,8 @@ static wmOperatorStatus copy_image_pixels_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *src_pixels = src_ibuf->float_buffer.data;
-  float *dest_pixels = dest_ibuf->float_buffer.data;
+  float *src_pixels = src_ibuf->float_data_for_write();
+  float *dest_pixels = dest_ibuf->float_data_for_write();
 
   /* Fast path: full image copy with matching dimensions. */
   if (start_x == 0 && start_y == 0 && src_start_x == 0 && src_start_y == 0 &&
@@ -152,8 +152,8 @@ static wmOperatorStatus copy_image_channel_pixels_exec(bContext *C, wmOperator *
     return OPERATOR_CANCELLED;
   }
 
-  const float *src_pixels = src_ibuf->float_buffer.data;
-  float *dest_pixels = dest_ibuf->float_buffer.data;
+  const float *src_pixels = src_ibuf->float_data_for_write();
+  float *dest_pixels = dest_ibuf->float_data_for_write();
 
   /* Copy channel data. */
 #ifdef _OPENMP
@@ -220,7 +220,7 @@ static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const float r = color[0], g = color[1], b = color[2], a = color[3];
 
   /* Fill pixels. */
@@ -252,6 +252,10 @@ static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -335,3 +339,4 @@ void BAKING_OT_set_image_pixels(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

@@ -489,7 +489,8 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
   /* add drop boxes */
   lb = WM_dropboxmap_find("View3D", SPACE_VIEW3D, RGN_TYPE_WINDOW);
 
-  WM_event_add_dropbox_handler(&region->runtime->handlers, lb);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(lb));
 }
 
 static void view3d_main_region_exit(wmWindowManager *wm, ARegion *region)

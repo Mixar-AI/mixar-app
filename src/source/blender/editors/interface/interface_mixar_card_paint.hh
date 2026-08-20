@@ -56,7 +56,7 @@ inline void mixar_card_draw_text(const uiFontStyle &fs,
                                  const rcti *rect,
                                  const char *str,
                                  const uchar col[4],
-                                 const eFontStyle_Align align)
+                                 const FontStyleAlign align)
 {
   if (str == nullptr || str[0] == '\0') {
     return;

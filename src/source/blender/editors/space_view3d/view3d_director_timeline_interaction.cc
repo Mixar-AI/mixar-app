@@ -74,8 +74,7 @@ bool dispatch_int_operator(bContext *C, const char *idname, const char *property
   if (!ot) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, property, value);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
@@ -90,8 +89,7 @@ bool begin_strip_drag(bContext *C, const wmEvent *event, DirectorTimelineRuntime
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
@@ -113,8 +111,7 @@ bool begin_beat_drag(bContext *C,
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, "index", beat_index);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
@@ -133,8 +130,7 @@ bool begin_scrub(bContext *C,
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   RNA_float_set(
       &op_ptr, "origin_px", float(region->winrct.xmin) + runtime->viewport_bounds.xmin);

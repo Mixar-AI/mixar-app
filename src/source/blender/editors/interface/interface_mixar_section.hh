@@ -96,4 +96,11 @@ void UI_layout_mixar_mark_last_input(Layout *layout);
  * dark background, accent-blue active pill with glow, subtle inactive tabs.
  */
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active);
+/**
+ * Idname of the Mixar-drawn category tab under  mval (region-relative),
+ * or null. Rects are recorded by #UI_panel_category_draw_all_mixar at draw
+ * time; used by the MIXAR click hook in interface_panel.cc.
+ */
+const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mval[2]);
+
 }  // namespace blender::ui
