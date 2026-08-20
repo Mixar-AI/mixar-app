@@ -173,23 +173,15 @@ class SlotEventProcessor:
 
     @staticmethod
     def _apply_questions_slot(bubble: Any, questions: list) -> None:
-        """Store a validated batched-choice wizard payload on its bubble."""
-        import json
+        """Store a batched-choice wizard payload, keeping answers already given.
 
-        valid = (
-            isinstance(questions, list)
-            and 1 < len(questions) <= 4
-            and all(
-                isinstance(item, dict)
-                and isinstance(item.get("question"), str)
-                and item["question"].strip()
-                and isinstance(item.get("options"), list)
-                and item["options"]
-                for item in questions
-            )
-        )
-        bubble.batched_questions = json.dumps(questions) if valid else ""
-        bubble.batched_answers = ""
+        Re-delivery of the same interrupt (reconnect replay, or a still-pending
+        interrupt re-emitted when a later stream leg ends) must not reset the
+        user's progress — see batched_choice.store_batch.
+        """
+        from .batched_choice import store_batch
+
+        store_batch(bubble, questions)
 
     @staticmethod
     def _apply_interrupt_id_slot(bubble: Any, interrupt_id: str) -> None:

@@ -409,7 +409,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if step is None:
             return None
 
-        if not step["complete"]:
+        if step["status"] == "stale":
+            # Already answered and submitted — swallow so a button left on
+            # screen by a re-delivered event cannot fire a stray single answer.
+            return {'handled': True}
+
+        if step["status"] == "advanced":
             # Draw the next card through the normal slot pipeline so it is
             # identical to a backend-sent one — a bare bubble.content write
             # leaves the old question rendered (stale markdown segments and
@@ -426,7 +431,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         from ...core import get_session_manager
         session = get_session_manager()
         bubble.action_items.clear()
-        batched_choice.clear_batch(bubble)
         try:
             from mixar.modules.auth.core.auth import get_access_token
             auth_token = get_access_token() or ''

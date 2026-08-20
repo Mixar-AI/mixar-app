@@ -47,16 +47,16 @@ def test_each_click_advances_locally_and_only_the_last_one_completes():
     bubble = _Bubble(QUESTIONS)
 
     first = wizard.record_choice(bubble, "Cycles")
-    assert first["complete"] is False
+    assert first["status"] == "advanced"
     assert first["question"]["question"] == "Which resolution?"
 
     second = wizard.record_choice(bubble, "4K")
-    assert second["complete"] is False
+    assert second["status"] == "advanced"
     assert second["question"]["question"] == "Denoise?"
 
     # Only the final click carries a complete answer map to the backend.
     final = wizard.record_choice(bubble, "Yes")
-    assert final["complete"] is True
+    assert final["status"] == "complete"
     assert final["answers"] == {
         "Which engine?": "Cycles",
         "Which resolution?": "4K",
@@ -100,13 +100,80 @@ def test_corrupt_wizard_state_never_swallows_the_click():
     assert wizard.record_choice(bubble, "Cycles") is None
 
 
-def test_completed_batch_cannot_re_advance():
+def test_completed_batch_swallows_a_late_click_instead_of_resubmitting():
+    """A button left by a re-delivered event must not send a stray answer."""
     wizard = _load_wizard()
     bubble = _Bubble(QUESTIONS)
     for choice in ("Cycles", "4K", "Yes"):
         wizard.record_choice(bubble, choice)
-    wizard.clear_batch(bubble)
-    assert wizard.record_choice(bubble, "Cycles") is None
+    late = wizard.record_choice(bubble, "Cycles")
+    assert late["status"] == "stale"
+    # A click that belongs to no question in the batch still falls through.
+    assert wizard.record_choice(bubble, "unrelated-action") is None
+
+
+def test_redelivered_batch_keeps_answers_already_given():
+    """The same interrupt arrives twice on reconnect replay; progress stays."""
+    wizard = _load_wizard()
+    bubble = _Bubble(QUESTIONS)
+    wizard.record_choice(bubble, "Cycles")
+
+    wizard.store_batch(bubble, QUESTIONS)
+
+    assert json.loads(bubble.batched_answers) == {"Which engine?": "Cycles"}
+    step = wizard.record_choice(bubble, "4K")
+    assert step["status"] == "advanced"
+    assert step["question"]["question"] == "Denoise?"
+
+
+def test_redelivered_completed_batch_does_not_re_ask():
+    wizard = _load_wizard()
+    bubble = _Bubble(QUESTIONS)
+    for choice in ("Cycles", "4K", "Yes"):
+        wizard.record_choice(bubble, choice)
+
+    wizard.store_batch(bubble, QUESTIONS)
+
+    questions, answers = wizard.parse_batch(bubble)
+    assert wizard.next_unanswered(questions, answers) is None
+
+
+def test_backend_reasking_only_unmatched_questions_keeps_the_rest():
+    """A shrunk re-ask carries over the answers the backend did accept."""
+    wizard = _load_wizard()
+    bubble = _Bubble(QUESTIONS)
+    wizard.record_choice(bubble, "Cycles")
+    wizard.record_choice(bubble, "4K")
+
+    remaining = [QUESTIONS[1], QUESTIONS[2]]
+    wizard.store_batch(bubble, remaining)
+
+    questions, answers = wizard.parse_batch(bubble)
+    # "Which engine?" is gone from the batch, so its answer drops with it.
+    assert answers == {"Which resolution?": "4K"}
+    assert wizard.next_unanswered(questions, answers)["question"] == "Denoise?"
+
+
+def test_a_genuinely_new_batch_starts_clean():
+    wizard = _load_wizard()
+    bubble = _Bubble(QUESTIONS)
+    wizard.record_choice(bubble, "Cycles")
+
+    wizard.store_batch(bubble, [
+        {"question": "Which format?", "options": ["FBX", "GLB"]},
+        {"question": "Which scope?", "options": ["Selected", "Scene"]},
+    ])
+
+    assert bubble.batched_answers == ""
+
+
+def test_a_non_batch_payload_clears_wizard_state():
+    wizard = _load_wizard()
+    bubble = _Bubble(QUESTIONS)
+    # A single-item array is an ordinary choice, not a wizard.
+    wizard.store_batch(bubble, [QUESTIONS[0]])
+    assert bubble.batched_questions == ""
+    assert bubble.batched_answers == ""
 
 
 def test_every_card_offers_its_options_plus_cancel():
@@ -181,6 +248,9 @@ def test_operator_delegates_to_the_wizard_and_submits_once():
     # The advance path renders locally and must not touch the network.
     assert "batched_choice.render_question(" in block
     assert "bubble.content =" not in block
+    # A completed batch must stay on the bubble so a re-delivered copy of the
+    # same interrupt is a no-op instead of restarting the wizard.
+    assert "clear_batch" not in block
     # The completion path submits the whole map against its own interrupt.
     assert "answers=step[\"answers\"]" in block
     assert "interrupt_id=getattr(bubble, 'interrupt_id', '') or None" in block
