@@ -18,7 +18,7 @@ from typing import Optional, Tuple
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import ANNOUNCED_VERSION_FILENAME, INSTALL_ID_FILENAME, PLATFORM_MAP
+from ..constants import INSTALL_ID_FILENAME, PLATFORM_MAP, SKIPPED_VERSION_FILENAME
 from .state import UpdateInfo
 
 logger = get_logger(__name__)
@@ -149,10 +149,8 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
     """Convert the raw API ``/check`` response dict into an ``UpdateInfo``.
 
     Handles the server envelope: ``{"status": "success", "data": {...}}``.
-    The nested ``download`` object carries the installer artifact for this
-    platform; a release published without one (or with a type this
-    platform can't apply) still yields an ``UpdateInfo`` — the update is
-    real, it just routes to the browser instead of the in-app installer.
+    Only metadata is consumed — the update flow is browser-based, so the
+    nested ``download`` binary object is ignored entirely.
 
     Returns ``None`` when the response indicates *no update available*.
     """
@@ -167,22 +165,6 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         logger.error("Rejecting update: malformed latest_version %r", latest_version)
         return None
 
-    download = data.get("download")
-    if not isinstance(download, dict):
-        download = {}
-
-    # Only https installer URLs are ever fetched: this file is about to be
-    # run, elevated, on the user's machine.
-    download_url = str(download.get("url") or "")
-    if download_url and not download_url.startswith("https://"):
-        logger.error("Ignoring non-https installer URL for %s", latest_version)
-        download_url = ""
-
-    try:
-        download_size = int(download.get("size_bytes") or 0)
-    except (TypeError, ValueError):
-        download_size = 0
-
     return UpdateInfo(
         latest_version=latest_version,
         current_version=data.get("current_version", ""),
@@ -192,80 +174,48 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         changelog_summary=data.get("changelog_summary", ""),
         changelog_url=data.get("changelog_url", ""),
         browser_download_url=data.get("browser_download_url", ""),
-        download_url=download_url,
-        download_sha256=str(download.get("sha256") or "").strip().lower(),
-        download_size=download_size,
-        installer_type=str(download.get("installer_type") or "").strip().lower(),
     )
 
 
 # ============================================================================
-# Severity
+# Skip-version persistence
 # ============================================================================
 
 
-def is_forced(info) -> bool:
-    """A forced or unsupported update must be installed — no skipping."""
-    return bool(info.force_update or info.unsupported)
-
-
-# ============================================================================
-# Announcement persistence
-# ============================================================================
-#
-# The topbar badge shows update status permanently, so the toast only has
-# to announce the news — repeating it on every launch would be nagging,
-# not information.  What is persisted is therefore "we already told them
-# about X", not "the user refused X": the update is never withheld, only
-# demoted from an interrupt to the badge, which re-opens the toast on
-# click.  Two stages earn an interruption per version — the update
-# becoming available, and the installer becoming ready to apply.
-
-ANNOUNCE_AVAILABLE = "available"
-ANNOUNCE_READY = "ready"
-
-
-def _announced_version_path() -> str:
+def _skipped_version_path() -> str:
     import bpy
 
     config_dir = os.path.join(bpy.utils.resource_path("USER"), "config")
     os.makedirs(config_dir, exist_ok=True)
-    return os.path.join(config_dir, ANNOUNCED_VERSION_FILENAME)
+    return os.path.join(config_dir, SKIPPED_VERSION_FILENAME)
 
 
-def get_announced_stage(version: str) -> str:
-    """Return the last stage announced for *version*, or ``""``.
-
-    A different version reads back as never announced, so a new release
-    always gets its toast without anything needing to be cleared.
-    """
-    if not version:
-        return ""
+def get_skipped_version() -> str:
+    """Return the version the user chose to skip, or ``""``."""
+    path = _skipped_version_path()
     try:
-        path = _announced_version_path()
-        if not os.path.isfile(path):
-            return ""
-        with open(path, "r") as f:
-            recorded, _, stage = f.read().strip().partition("=")
+        if os.path.isfile(path):
+            with open(path, "r") as f:
+                return f.read().strip()
     except OSError:
-        return ""
-    return stage if recorded == version else ""
+        pass
+    return ""
 
 
-def set_announced_stage(version: str, stage: str) -> None:
-    """Record that *stage* has been announced for *version*.
-
-    The write is monotonic per version: a recorded ``ready`` — the one
-    announcement that survives dismissal — is never demoted back to
-    ``available`` by a later interactive check, which would let a
-    re-completed download interrupt the user a second time.
-    """
-    if not version:
-        return
-    if stage != ANNOUNCE_READY and get_announced_stage(version) == ANNOUNCE_READY:
-        return
+def set_skipped_version(version: str) -> None:
+    """Persist *version* so future checks skip it."""
     try:
-        with open(_announced_version_path(), "w") as f:
-            f.write(f"{version}={stage}")
+        with open(_skipped_version_path(), "w") as f:
+            f.write(version)
+    except OSError:
+        pass
+
+
+def clear_skipped_version() -> None:
+    """Remove the skip file so all versions are eligible again."""
+    try:
+        path = _skipped_version_path()
+        if os.path.isfile(path):
+            os.remove(path)
     except OSError:
         pass

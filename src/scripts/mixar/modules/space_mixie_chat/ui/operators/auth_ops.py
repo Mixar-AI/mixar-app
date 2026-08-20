@@ -30,7 +30,6 @@ from ....auth.core.auth_hooks import (
     refresh_generation_caches,
 )
 from ....auth.core.sso import sso_login
-from ....auth.utils.constants import SSO_LOGIN_TIMEOUT_S
 
 logger = get_logger(__name__)
 
@@ -376,10 +375,9 @@ def _auth_check_background() -> None:
                     logger.info("Auto SSO re-login completed successfully")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
-                    # Keep the real reason: a classified network failure
-                    # (support code included) is what the customer quotes.
-                    reason = result.get('message') or "Please log in again."
-                    wm.mixie_chat_login_error = f"Session expired. {reason}"
+                    wm.mixie_chat_login_error = (
+                        "Session expired. Please log in again."
+                    )
                 logger.warning("Auto SSO re-login failed: %s", result.get('message'))
         except Exception as e:
             logger.warning("SSO result apply failed: %s", e)
@@ -446,41 +444,6 @@ def check_auth_on_startup(_):
     ).start()
 
 
-# Grace added to the SSO timeout before the UI watchdog gives up on a login
-# thread that never reported back.
-_LOGIN_WATCHDOG_GRACE_S = 30
-_login_attempt_id = 0
-
-
-def _release_stuck_login(attempt_id, thread):
-    """Timer: clear "Waiting for browser..." if the SSO thread is still running.
-
-    The SSO flow has its own deadline, so this only fires if something below
-    it wedged (it did once: a silent peer on the callback socket). Scoped to
-    one attempt so a stale timer can never clobber a newer login.
-    """
-    if attempt_id != _login_attempt_id or not thread.is_alive():
-        return None
-    logger.error(
-        "SSO login thread still running %ss after its deadline; releasing the UI",
-        SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
-    )
-    try:
-        wm = bpy.context.window_manager
-        if wm.mixie_chat_is_logging_in:
-            wm.mixie_chat_is_logging_in = False
-            wm.mixie_chat_login_error = (
-                "Browser login did not complete. Please try again."
-            )
-            for window in wm.windows:
-                for area in window.screen.areas:
-                    if area.type == 'MIXIE_CHAT':
-                        area.tag_redraw()
-    except Exception as e:
-        logger.warning("Login watchdog could not update UI: %s", e)
-    return None
-
-
 class MIXIE_CHAT_OT_login(Operator):
     """Login to Mixie Chat via browser SSO"""
     bl_idname = "mixie_chat.login"
@@ -488,10 +451,7 @@ class MIXIE_CHAT_OT_login(Operator):
     bl_description = "Login to Mixie Chat via browser SSO"
 
     def execute(self, context):
-        global _login_attempt_id
         wm = context.window_manager
-        _login_attempt_id += 1
-        attempt_id = _login_attempt_id
 
         # Set loading state and force redraw
         wm.mixie_chat_is_logging_in = True
@@ -556,14 +516,9 @@ class MIXIE_CHAT_OT_login(Operator):
 
             bpy.app.timers.register(_apply_result, first_interval=0.0)
 
-        sso_thread = threading.Thread(
+        threading.Thread(
             target=_sso_thread, daemon=True, name="MixarSSOLogin"
-        )
-        sso_thread.start()
-        bpy.app.timers.register(
-            lambda: _release_stuck_login(attempt_id, sso_thread),
-            first_interval=SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
-        )
+        ).start()
         return {'FINISHED'}
 
 

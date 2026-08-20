@@ -39,6 +39,8 @@
 #include "WM_types.hh"
 
 #include "view3d_agent_strip.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Shared Helpers
@@ -408,3 +410,4 @@ void view3d_agent_strip_keymap(wmKeyConfig *keyconf)
 }
 
 /** \} */
+}  // namespace blender

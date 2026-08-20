@@ -14,7 +14,6 @@ from bpy.types import Operator
 from bpy.props import FloatProperty
 
 from ...core.image_lifecycle import release_all_moodboard_images
-from ...core.moodboard_utils import stamp_moodboard_item_added
 
 
 def get_selected_group_indices(scene):
@@ -313,10 +312,6 @@ class MIXIE_OT_moodboard_duplicate(Operator):
                     copied_point.y = original_point.y
             new_img.group_index = -1  # Don't copy group membership
             new_img.selected = True  # Select the duplicate
-            # A duplicate is a NEW board entry, so it is stamped now rather
-            # than inheriting the original's age — otherwise it sorts as if it
-            # had always been there in every recency-ordered listing.
-            stamp_moodboard_item_added(new_img)
             duplicated_count += 1
 
         # Duplicate text boxes (no offset - grab mode will handle positioning)

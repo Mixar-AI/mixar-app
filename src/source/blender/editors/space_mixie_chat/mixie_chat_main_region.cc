@@ -35,6 +35,8 @@
 #include "UI_view2d.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Cursor / Hover Tracking
@@ -116,7 +118,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   /* Convert to View2D coords for message option bubbles */
   View2D *v2d = &region->v2d;
   float mouse_x, mouse_y;
-  UI_view2d_region_to_view(v2d, mval[0], mval[1], &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, mval[0], mval[1], &mouse_x, &mouse_y);
 
   blender::Vector<MessageLayoutData> &layout_cache =
       const_cast<blender::Vector<MessageLayoutData> &>(mixie_chat_get_layout_cache(smixie));
@@ -160,7 +162,6 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         any_hovered = true;
       }
     }
-
 
     /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
      * interactive, so it gets no hover affordance either. */
@@ -218,17 +219,6 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         BLI_rctf_isect_pt(&layout.thinking_header_bounds, mouse_x, mouse_y))
     {
       any_hovered = true;
-    }
-  }
-
-  /* Code-block copy chips (hover state lives in mixie_chat_code_copy.cc) */
-  {
-    bool chip_hover_changed = false;
-    if (mixie_chat_code_hits_hover(rt, mouse_x, mouse_y, &chip_hover_changed)) {
-      any_hovered = true;
-    }
-    if (chip_hover_changed) {
-      needs_redraw = true;
     }
   }
 
@@ -304,11 +294,6 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
       return WM_UI_HANDLER_BREAK;
     }
 
-    /* 3b. Code-block copy chip clicks */
-    if (mixie_chat_handle_code_copy_click(C, region, mx, my)) {
-      return WM_UI_HANDLER_BREAK;
-    }
-
     /* 4. Steps/thinking collapse toggle clicks */
     if (mixie_chat_handle_steps_click(C, region, mx, my)) {
       return WM_UI_HANDLER_BREAK;
@@ -331,7 +316,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
 
       View2D *v2d = &region->v2d;
       float view_x, view_y;
-      UI_view2d_region_to_view(v2d, int(mx), int(my), &view_x, &view_y);
+      ui::view2d_region_to_view(v2d, int(mx), int(my), &view_x, &view_y);
 
       for (const MessageLayoutData &layout : layout_cache) {
         for (int i = 0; i < layout.option_bubble_count; i++) {
@@ -379,7 +364,7 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
 {
   const float prev_y_min = region->v2d.cur.ymin;
 
-  UI_view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
+  ui::view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
 
   View2D *v2d = &region->v2d;
 
@@ -402,16 +387,16 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   v2d->align = V2D_ALIGN_NO_NEG_X | V2D_ALIGN_NO_NEG_Y;
   v2d->keeptot = V2D_KEEPTOT_STRICT;
 
-  /* Register uiBlock event handler so embedded text inputs (feedback comment)
+  /* Register ui::Block event handler so embedded text inputs (feedback comment)
    * can receive clicks and keyboard events. NOTE: both this and
    * WM_event_add_ui_handler below PREPEND (BLI_addhead), so registering the
-   * uiBlock handler first actually makes it run AFTER the chat handler —
+   * ui::Block handler first actually makes it run AFTER the chat handler —
    * mixie_chat_ui_handler gets first look at every mouse press. That works
    * today only because no chat hit-target overlaps the feedback text field
    * (and active textedit grabs keys via the window modal handler); if a chat
-   * hit-target ever overlaps a uiBlock button, the click will be stolen from
+   * hit-target ever overlaps a ui::Block button, the click will be stolen from
    * the button unless this ordering is revisited. */
-  UI_region_handlers_add(&region->runtime->handlers);
+  ui::region_handlers_add(&region->runtime->handlers);
 
   /* Register our direct UI click handler.
    * UI handlers run before ALL keymap handlers in Blender's event dispatch.
@@ -489,7 +474,7 @@ static void mixie_chat_clear_background()
         s_bg_override_rgba[2], s_bg_override_rgba[3]);
   }
   else {
-    UI_ThemeClearColor(TH_BACK);
+    ui::theme::frame_buffer_clear(TH_BACK);
   }
 }
 
@@ -657,3 +642,4 @@ void mixie_chat_main_region_layout(const bContext * /*C*/, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

@@ -136,24 +136,12 @@ class HTTPClient:
         # to retry because it carries an idempotency key; other POST callers
         # should ensure their endpoints are idempotent or guard against
         # duplicate work themselves.
-        #
-        # retry_count=0 means "hand me the 5xx, don't retry it" — for endpoints
-        # that are expensive, metered or non-idempotent. It must clear
-        # status_forcelist rather than just zeroing `total`: urllib3 counts a
-        # forced-status response as a retry attempt, so Retry(total=0,
-        # status_forcelist=[500]) still raises MaxRetryError("too many 500
-        # error responses") instead of returning the response, and the server's
-        # actual error never reaches the caller.
-        if self._retry_count <= 0:
-            retry_strategy = Retry(total=0, status_forcelist=[],
-                                   raise_on_status=False)
-        else:
-            retry_strategy = Retry(
-                total=self._retry_count,
-                backoff_factor=self._retry_delay,
-                status_forcelist=[500, 502, 503, 504],
-                allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-            )
+        retry_strategy = Retry(
+            total=self._retry_count,
+            backoff_factor=self._retry_delay,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        )
 
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
@@ -326,13 +314,9 @@ class HTTPClient:
 
             self._log("debug", f"Response: {response.status_code}")
 
-            # Handle 401 with automatic token refresh — on ANY 401, not just
-            # raise_for_status=True callers: raise_for_status=False call
-            # sites (asset_search metered endpoints etc.) need an expired
-            # token refreshed and the request retried too, or they fail raw
-            # 401 until some other module happens to refresh it.
+            # Handle 401 with automatic token refresh
             # Skip refresh if _skip_token_refresh is True to prevent infinite recursion
-            if response.status_code == 401 and not _skip_token_refresh:
+            if response.status_code == 401 and raise_for_status and not _skip_token_refresh:
                 self._log("debug", "Got 401, attempting token refresh")
                 refresh_result = refresh_access_token()
 
@@ -357,9 +341,10 @@ class HTTPClient:
                     )
                     self._log("debug", f"Retry response: {response.status_code}")
 
-            # If still not ok after the refresh attempt, raise for
-            # raise_for_status callers (non-401 errors land here too)
-            if raise_for_status and not response.ok:
+                # If still not ok after refresh attempt, raise the error
+                if not response.ok:
+                    raise self._map_exception(response)
+            elif raise_for_status and not response.ok:
                 raise self._map_exception(response)
 
             # Parse response

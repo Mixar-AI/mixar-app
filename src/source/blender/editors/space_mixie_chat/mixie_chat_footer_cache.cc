@@ -24,6 +24,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Footer Cache Storage
@@ -379,3 +381,4 @@ int footer_cache_get_attachment_count(Scene *scene)
 }
 
 /** \} */
+}  // namespace blender

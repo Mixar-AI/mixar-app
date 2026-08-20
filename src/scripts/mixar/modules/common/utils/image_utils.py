@@ -35,30 +35,6 @@ def _png_signature() -> bytes:
     return b'\x89PNG\r\n\x1a\n'
 
 
-def image_to_rgba_array(image: bpy.types.Image):
-    """Read a Blender Image's pixels as a top-down ``(height, width, 4)`` uint8
-    array — the ONE definition of "these are the image's bytes".
-
-    Shared by :func:`image_to_png_bytes` and the chat-attachment JPEG path, so
-    a compressed upload carries exactly the pixels the PNG upload would have.
-    Blender stores rows bottom-to-top; the returned array is flipped to the
-    top-down order every image encoder expects.
-
-    Reads via numpy ``foreach_get``. Copying ``image.pixels`` into a Python
-    list and running per-pixel passes cost multi-second UI freezes for 1K+
-    images on every chat / brush-gen / moodboard upload; ``foreach_get`` is a
-    single memcpy-style bulk read, and the conversion below matches the old
-    ``int()`` truncation semantics exactly.
-    """
-    import numpy as np
-
-    width, height = image.size
-    flat = np.empty(width * height * 4, dtype=np.float32)
-    image.pixels.foreach_get(flat)
-    rgba = np.clip(flat * 255.0, 0.0, 255.0).astype(np.uint8)
-    return rgba.reshape(height, width, 4)[::-1]
-
-
 def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     """Convert a Blender Image to PNG bytes."""
     import struct
@@ -86,10 +62,19 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     # Get image dimensions
     width, height = image.size
 
+    # Read + convert pixels with numpy via foreach_get. The previous
+    # implementation copied image.pixels into a Python list and ran two
+    # pure-Python per-pixel passes (float→byte conversion, then scanline
+    # assembly) — multi-second UI freezes for 1K+ images on every chat /
+    # brush-gen / moodboard upload. foreach_get is a single memcpy-style
+    # bulk read; the conversion below matches the old int() truncation
+    # semantics exactly.
     import numpy as np
 
-    # Already top-down; PNG needs top-to-bottom scanlines.
-    rgba = image_to_rgba_array(image).reshape(height, width * 4)
+    flat = np.empty(width * height * 4, dtype=np.float32)
+    image.pixels.foreach_get(flat)
+    rgba = np.clip(flat * 255.0, 0.0, 255.0).astype(np.uint8)
+    rgba = rgba.reshape(height, width * 4)
 
     def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
         chunk = chunk_type + data
@@ -104,8 +89,9 @@ def image_to_png_bytes(image: bpy.types.Image) -> bytes:
     ihdr_chunk = png_chunk(b'IHDR', ihdr_data)
 
     # IDAT chunk - raw scanlines, filter byte 0 (None) per row.
+    # Blender stores rows bottom-to-top; PNG needs top-to-bottom.
     raw = np.zeros((height, 1 + width * 4), dtype=np.uint8)
-    raw[:, 1:] = rgba
+    raw[:, 1:] = rgba[::-1]
 
     # Level 6 instead of 9: the payload is a network upload, and level 9
     # costs several times the CPU for a few percent smaller output.

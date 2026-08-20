@@ -29,26 +29,3 @@ def _install_bpy_stubs():
 
 
 _install_bpy_stubs()
-
-
-def _preload_real_optional_modules():
-    """Import the real Pillow/numpy before any test module can stub them.
-
-    ``mixar.modules.testing.mock_bpy`` stubs "third-party modules that may not
-    be available" only when they are ABSENT from ``sys.modules``, so whichever
-    test imports it first decides whether PIL is real for the whole session.
-    Collection order then silently decided whether the image tests ran against
-    Pillow or against a MagicMock that hands back empty bytes. Importing the
-    real packages here — conftest runs before any test module — makes the mock
-    the fallback it was meant to be.
-    """
-    import importlib
-
-    for name in ("numpy", "PIL", "PIL.Image", "PIL.ImageOps"):
-        try:
-            importlib.import_module(name)
-        except ImportError:
-            pass
-
-
-_preload_real_optional_modules()

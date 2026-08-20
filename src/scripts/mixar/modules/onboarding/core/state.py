@@ -115,35 +115,6 @@ def _mark_current_user_seen(context=None) -> None:
         logger.debug("Onboarding: mark-seen skipped: %s", exc)
 
 
-def _resolve_available(step_id: str, forward: bool) -> str:
-    """Walk past steps that decline to be shown.
-
-    A step whose ``available`` predicate is False must be stepped over in
-    BOTH directions, or Back from the following card lands on a hidden
-    step and the tour dead-ends. Returns the first showable step id, or
-    "" if the chain runs out.
-    """
-    from mixar.modules.onboarding.core import steps as steps_mod
-
-    seen = set()
-    current = step_id
-    while current and current not in seen:
-        seen.add(current)
-        if steps_mod.is_available(current):
-            return current
-        step = get_step(current)
-        if step is None:
-            return current
-        nxt = step.continue_step if forward else step.back_step
-        if not nxt or nxt == current:
-            return ""
-        logger.info(
-            "Onboarding: skipping unavailable step %s → %s", current, nxt,
-        )
-        current = nxt
-    return current or ""
-
-
 def advance(context=None) -> None:
     """Continue from the current step to its declared next step."""
     current = get_step_id(context)
@@ -151,8 +122,8 @@ def advance(context=None) -> None:
     if step is None:
         logger.warning("Onboarding: advance() from unknown step %r", current)
         return
-    next_id = _resolve_available(step.continue_step, forward=True)
-    if not next_id or next_id == current:
+    next_id = step.continue_step
+    if next_id == current:
         return
     transition_to(next_id, context)
 
@@ -164,7 +135,7 @@ def go_back(context=None) -> None:
     if step is None:
         logger.warning("Onboarding: go_back() from unknown step %r", current)
         return
-    prev_id = _resolve_available(step.back_step, forward=False)
+    prev_id = step.back_step
     if not prev_id or prev_id == current:
         return
     transition_to(prev_id, context)

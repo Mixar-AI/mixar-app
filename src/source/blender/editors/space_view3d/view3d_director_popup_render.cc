@@ -32,6 +32,8 @@
 
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -54,14 +56,14 @@ int render_kind_icon(const char *identifier)
  * prevents. */
 void render_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
 {
-  UI_popup_menu_retval_set(static_cast<uiBlock *>(arg_block), UI_RETURN_OK, true);
+  ui::popup_menu_retval_set(static_cast<ui::Block *>(arg_block), ui::RETURN_OK, true);
 }
 
 /* Enum-flag rows bound straight to `render_output_types`: a Row button whose
  * value is one flag bit draws pushed while the bit is set and XORs it on
  * click (native PROP_ENUM_FLAG behavior), so selection needs no operator. */
 int draw_kind_toggles(bContext *C,
-                      uiBlock *block,
+                      ui::Block *block,
                       DirectorPopupData &data,
                       const bool running,
                       const int y,
@@ -86,8 +88,8 @@ int draw_kind_toggles(bContext *C,
     if (!items[index].identifier || !items[index].identifier[0]) {
       continue;
     }
-    uiBut *toggle = uiDefIconTextButR_prop(block,
-                                           ButType::Row,
+    ui::Button *toggle = ui::uiDefIconTextButR_prop(block,
+                                           ui::ButtonType::Row,
                                            0,
                                            render_kind_icon(items[index].identifier),
                                            items[index].name,
@@ -102,7 +104,7 @@ int draw_kind_toggles(bContext *C,
                                            float(items[index].value),
                                            items[index].description);
     if (running) {
-      UI_but_flag_enable(toggle, UI_BUT_DISABLED);
+      ui::button_flag_enable(toggle, ui::BUT_DISABLED);
     }
     enabled_count += int((flags & items[index].value) != 0);
     drawn++;
@@ -113,12 +115,12 @@ int draw_kind_toggles(bContext *C,
   return enabled_count;
 }
 
-uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 {
-  uiBlock *block = director_popup_block_begin(C, region, __func__);
+  ui::Block *block = director_popup_block_begin(C, region, __func__);
   /* Multi-select: picking Beauty/Clay/Depth must not dismiss the popup —
    * it closes on click-outside, Esc, or the Export/Render actions below. */
-  UI_block_flag_enable(block, UI_BLOCK_KEEP_OPEN);
+  ui::block_flag_enable(block, ui::BLOCK_KEEP_OPEN);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
     director_popup_section_label(block, "No active Director shot", 0, UI_UNIT_X * 10);
@@ -158,7 +160,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                "Export %d Keyframe%s",
                beat_count,
                beat_count == 1 ? "" : "s");
-  uiBut *export_stills = director_overlay_operator_button(
+  ui::Button *export_stills = director_overlay_operator_button(
       block,
       "MIXAR_OT_director_send_keyframes",
       ICON_EXPORT,
@@ -169,7 +171,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       row_h,
       "Place this shot's keyframe stills together on the Moodboard");
   director_overlay_disable_button(export_stills, beat_count < 1);
-  UI_but_func_set(export_stills, render_popup_close, block, nullptr);
+  ui::button_func_set(export_stills, render_popup_close, block, nullptr);
 
   /* Rendered motion-guide videos → Moodboard. */
   y -= gap + label_h;
@@ -178,8 +180,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   const int enabled_count = draw_kind_toggles(C, block, data, running, y, width, gap);
 
   y -= gap + row_h;
-  uiBut *resolution = uiDefButR(block,
-                                ButType::NumSlider,
+  ui::Button *resolution = ui::uiDefButR(block,
+                                ui::ButtonType::NumSlider,
                                 0,
                                 "Resolution",
                                 0,
@@ -193,7 +195,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                 0,
                                 std::nullopt);
   if (running) {
-    UI_but_flag_enable(resolution, UI_BUT_DISABLED);
+    ui::button_flag_enable(resolution, ui::BUT_DISABLED);
   }
 
   y -= label_h;
@@ -231,7 +233,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                  "Render %d Video%s to Moodboard",
                  enabled_count,
                  enabled_count == 1 ? "" : "s");
-    uiBut *render = director_overlay_operator_button(
+    ui::Button *render = director_overlay_operator_button(
         block,
         "MIXAR_OT_director_render_videos",
         ICON_RENDER_ANIMATION,
@@ -242,7 +244,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
         row_h,
         "Render the shot beat span and add each video to Moodboard");
     director_overlay_disable_button(render, beat_count < 2 || enabled_count == 0);
-    UI_but_func_set(render, render_popup_close, block, nullptr);
+    ui::button_func_set(render, render_popup_close, block, nullptr);
   }
 
   PropertyRNA *outputs_prop = RNA_struct_find_property(&data.shot_ptr, "render_outputs");
@@ -262,8 +264,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                           PointerRNA_NULL;
       const ID *image_id = static_cast<const ID *>(image_ptr.data);
       y -= label_h;
-      uiDefIconTextBut(block,
-                       ButType::Label,
+      ui::uiDefIconTextBut(block,
+                       ui::ButtonType::Label,
                        0,
                        ICON_FILE_MOVIE,
                        image_id ? image_id->name + 2 : "Missing video",
@@ -282,7 +284,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 
 }  // namespace
 
-uiBlock *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg)
+ui::Block *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg)
 {
   return render_popup_create(C, region, arg);
 }
+}  // namespace blender

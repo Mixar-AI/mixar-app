@@ -9,6 +9,8 @@
 
 #pragma once
 
+namespace blender {
+
 struct ARegion;
 struct ARegionType;
 struct bContext;
@@ -71,11 +73,11 @@ void ED_agent_bubble_windows_closed();
  * window-manager on file load (#wm_close_and_free) and application exit. */
 void ED_agent_bubble_window_freed(const void *ghostwin);
 
-namespace blender::ed::vse {
+namespace ed::vse {
 void ED_spacetype_sequencer();
 }
 
-namespace blender::ed::spreadsheet {
+namespace ed::spreadsheet {
 void register_spacetype();
 }
 
@@ -101,6 +103,8 @@ void *ED_region_draw_cb_activate(ARegionType *art,
                                  void *customdata,
                                  int type);
 void ED_region_draw_cb_draw(const bContext *C, ARegion *region, int type);
-void ED_region_surface_draw_cb_draw(ARegionType *art, int type);
+void ED_region_surface_draw_cb_draw(const bContext *C, ARegionType *art, int type);
 bool ED_region_draw_cb_exit(ARegionType *art, void *handle);
 void ED_region_draw_cb_remove_by_type(ARegionType *art, void *draw_fn, void (*free)(void *));
+
+}  // namespace blender

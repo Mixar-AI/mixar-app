@@ -32,9 +32,6 @@ EVENT_GENERATION_REJECTED = "generation.rejected"
 EVENT_ONBOARDING_STARTED = "onboarding.started"
 EVENT_ONBOARDING_STEP = "onboarding.step_changed"
 EVENT_ONBOARDING_FINISHED = "onboarding.finished"
-EVENT_UPDATE_DOWNLOAD = "update.download_finished"
-EVENT_UPDATE_STARTED = "update.install_started"
-EVENT_UPDATE_RESULT = "update.install_result"
 
 # generation.rejected only fires when an undo / delete lands within this
 # many seconds of a generation or agent output arriving in the scene.

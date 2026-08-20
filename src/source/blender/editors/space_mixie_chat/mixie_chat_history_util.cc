@@ -38,6 +38,8 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA Readers (Python-owned WindowManager data)
@@ -220,3 +222,4 @@ void hist_draw_x_glyph(float cx, float cy, float half, const float color[4], flo
 }
 
 /** \} */
+}  // namespace blender

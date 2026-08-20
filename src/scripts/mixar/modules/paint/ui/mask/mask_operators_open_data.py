@@ -105,8 +105,7 @@ class MOpenAvailableDataAsMask(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        node = get_active_mpaint_node()
-        return node is not None and node.node_tree is not None
+        return True
 
     def invoke(self, context, event):
         obj = get_active_object()

@@ -67,10 +67,6 @@ class HTTPExecutor:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
-            # Eagerly initialize state (_pool/_lock/_pending_futures) so
-            # is_running/pending_count/cancel/stop work before the first
-            # explicit start() instead of raising AttributeError.
-            cls._instance._initialize()
         return cls._instance
 
     def _initialize(self) -> None:

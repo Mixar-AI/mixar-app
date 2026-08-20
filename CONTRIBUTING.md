@@ -44,27 +44,6 @@ Follow the same structure used by the repo:
 - Use the build scripts instead of building directly from generated `source/`
 - Keep environment variables in `.env` locally and never commit `.env`
 
-## Branch Naming
-
-Branch off `develop`; `main` holds released code.
-
-| Prefix | Use for | Example |
-|---|---|---|
-| `feature/**` | A new feature or capability | `feature/procedural-material-nodes` |
-| `bugfix/**` | A non-urgent bug found in development or testing | `bugfix/moodboard-video-playback` |
-| `hotfix/**` | An urgent production issue that must ship quickly | `hotfix/update-installer-signature` |
-| `refactor/**` | Restructuring without changing behaviour | `refactor/paint-layer-stack` |
-| `chore/**` | Dependencies, configuration, tooling | `chore/bump-upstream-blender` |
-| `test/**` | Tests only, no feature or fix | `test/job-queue-download` |
-| `release/**` | Release preparation and version bumps | `release/v3.4.0` |
-| `experiment/**` | A proof of concept that may never merge | `experiment/gpu-brush-cache` |
-| `task/**` | Anything that fits none of the above | `task/update-api-docs` |
-| `claude/**` | Work created or assisted by Claude | `claude/refactor-export-agent` |
-
-- Lowercase kebab-case, short and descriptive.
-- Use the most specific prefix — `bugfix/`, not `task/`, for a bug fix.
-- No ticket IDs, no personal names, nothing vague like `task/changes` or `bugfix/fix`.
-
 ## License Requirements
 
 Every new file must carry SPDX license metadata.

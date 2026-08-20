@@ -9,7 +9,6 @@ set(INC
 )
 
 set(INC_SYS
-
 )
 
 # Part of the `blender` binary (sources for data-files are appended).
@@ -25,6 +24,7 @@ set(LIB
 # See: `make icons_geom` and the script `./release/datafiles/mixar_icons_geom_update.py`.
 set_property(GLOBAL PROPERTY ICON_GEOM_NAMES
   # BEGIN ICON_GEOM_NAMES
+  brush.draw
   brush.generic
   brush.gpencil_draw.erase
   brush.gpencil_draw.fill
@@ -51,6 +51,7 @@ set_property(GLOBAL PROPERTY ICON_GEOM_NAMES
   brush.sculpt.displacement_smear
   brush.sculpt.draw_face_sets
   brush.sculpt.mask
+  brush.sculpt
   brush.sculpt.paint
   brush.sculpt.simplify
   brush.uv_sculpt.grab
@@ -328,6 +329,8 @@ if(WITH_BLENDER)
       documents
       dot
       downarrow_hlt
+      download
+      download_done
       driver
       driver_distance
       driver_rotational_difference
@@ -383,6 +386,7 @@ if(WITH_BLENDER)
       file_tick
       file_volume
       filter
+      filter_filled
       fixed_size
       folder_redirect
       fontpreview
@@ -418,6 +422,9 @@ if(WITH_BLENDER)
       gizmo
       gp_caps_flat
       gp_caps_round
+      gp_draw_stroke
+      gp_draw_fill
+      gp_draw_both
       gp_multiframe_editing
       gp_only_selected
       gp_select_between_strokes
@@ -429,6 +436,7 @@ if(WITH_BLENDER)
       grid
       grip
       grip_v
+      grip_corner_bottom_right
       group
       group_bone
       group_uvs
@@ -772,6 +780,7 @@ if(WITH_BLENDER)
       preview_loading
       preview_range
       prev_keyframe
+      project
       properties
       prop_con
       prop_off
@@ -791,6 +800,7 @@ if(WITH_BLENDER)
       render_animation
       render_result
       render_still
+      render_swap_dimensions
       restrict_color_off
       restrict_color_on
       restrict_instanced_off
@@ -872,6 +882,12 @@ if(WITH_BLENDER)
       split_horizontal
       split_vertical
       spreadsheet
+      status_error
+      status_error_filled
+      status_info
+      status_info_filled
+      status_warning
+      status_warning_filled
       statusbar
       sticky_uvs_disable
       sticky_uvs_loc
@@ -926,6 +942,8 @@ if(WITH_BLENDER)
       unlocked
       unpinned
       url
+      usb_drive
+      usb_drive_large
       user
       uv
       uv_data
@@ -1009,8 +1027,8 @@ if(WITH_BLENDER)
       cursor_zoom_out
     )
 
-    set(SVG_CONTENTS_H)
-    set(SVG_CONTENTS_C)
+    set(SVG_CONTENTS_H "")
+    set(SVG_CONTENTS_C "")
     foreach(svg ${SVG_FILENAMES_NOEXT})
       data_to_c_simple(../../../../release/datafiles/icons_svg/${svg}.svg SRC)
       string(TOUPPER ${svg} svg_name_upper)
@@ -1018,7 +1036,7 @@ if(WITH_BLENDER)
         "extern const char datatoc_${svg}_svg[]\;\n"
       )
       list(APPEND SVG_CONTENTS_C
-        "case ICON_${svg_name_upper}: return datatoc_${svg}_svg\;\n"
+        "case blender::ICON_${svg_name_upper}: return datatoc_${svg}_svg\;\n"
       )
     endforeach()
     unset(svg_name_upper)
@@ -1042,7 +1060,7 @@ if(WITH_BLENDER)
     list(APPEND SRC ${CMAKE_CURRENT_BINARY_DIR}/svg_icons.h)
     list(APPEND SRC ${CMAKE_CURRENT_BINARY_DIR}/svg_icons.cc)
 
-    set(SVG_CURSORS_CONTENTS_H)
+    set(SVG_CURSORS_CONTENTS_H "")
     foreach(svg ${SVG_CURSORS_FILENAMES_NOEXT})
       data_to_c_simple(../../../../release/datafiles/cursors/${svg}.svg SRC)
       list(APPEND SVG_CURSORS_CONTENTS_H

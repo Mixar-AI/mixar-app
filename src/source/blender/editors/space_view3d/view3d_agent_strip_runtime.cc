@@ -61,6 +61,8 @@
 #include "WM_types.hh"
 
 #include "view3d_agent_strip.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Agent Busy Flag
@@ -210,7 +212,8 @@ static void agent_strip_camera_init_default(AgentStripCamera *cam)
 static blender::Vector<Scene *> agent_strip_scenes(Main *bmain, const Scene *scene_active)
 {
   blender::Vector<Scene *> scenes;
-  LISTBASE_FOREACH (Scene *, scene, &bmain->scenes) {
+  for (Scene &scene_iter : bmain->scenes) {
+    Scene *scene = &scene_iter;
     if (scene != scene_active) {
       scenes.append(scene);
     }
@@ -415,7 +418,8 @@ void view3d_agent_strip_space_listener(const wmSpaceTypeListenerParams *params)
 
 static bool scene_is_window_active(const wmWindowManager *wm, const Scene *scene)
 {
-  LISTBASE_FOREACH (const wmWindow *, win, &wm->windows) {
+  for (const wmWindow &win_iter : wm->windows) {
+    const wmWindow *win = &win_iter;
     if (WM_window_get_active_scene(win) == scene) {
       return true;
     }
@@ -525,7 +529,7 @@ void view3d_agent_strip_region_register(SpaceType *st)
   /* Agent strip: fully custom GPU drawing — no ED_KEYMAP_UI, its
    * ui_region_handler could consume LEFTMOUSE before our keymap (same
    * reasoning as the Mixie Chat main region). */
-  ARegionType *art = MEM_callocN<ARegionType>("spacetype view3d agent strip region");
+  ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype view3d agent strip region");
   art->regionid = RGN_TYPE_EXECUTE;
   art->prefsizey = AGENT_STRIP_PREFSIZEY;
   art->keymapflag = 0;
@@ -540,3 +544,4 @@ void view3d_agent_strip_region_register(SpaceType *st)
 }
 
 /** \} */
+}  // namespace blender

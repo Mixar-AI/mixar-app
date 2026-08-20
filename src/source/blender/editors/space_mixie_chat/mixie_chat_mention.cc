@@ -50,6 +50,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA Property Helpers
@@ -446,7 +448,7 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
 
     /* Type icon at the left edge (same aspect convention as
      * footer_draw_submit_icon: 16 / target pixel size). */
-    UI_icon_draw_ex(row->xmin + inner_pad,
+    ui::icon_draw_ex(row->xmin + inner_pad,
                     row_cy - icon_size * 0.5f,
                     mention_kind_icon(kind),
                     16.0f / icon_size,
@@ -476,3 +478,4 @@ void mixie_chat_mention_draw(Scene *scene, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

@@ -17,28 +17,7 @@ from . import utils
 from .constants import *
 
 # Update Event Function for Changing Size of Texture
-
-# Debounced TD recalculation after texture size changes. custom_width and
-# custom_height fire their update on every keystroke, and a full multi-object
-# recalculation per keystroke froze the UI while typing e.g. "2048". Schedule
-# the recalculation via a timer ~0.3s after the last edit instead, and only
-# when automatic_recalc is enabled.
-_texture_size_recalc_pending = False
-
-
-def _recalc_td_after_texture_size_change():
-	global _texture_size_recalc_pending
-	_texture_size_recalc_pending = False
-	try:
-		bpy.ops.texel_density.check()
-	except Exception as e:
-		print(f"[WARNING] Failed to recalculate TD after texture size change {e}")
-	# Returning None runs the timer once
-	return None
-
-
 def change_texture_size(_, context):
-	global _texture_size_recalc_pending
 	td = context.scene.td
 
 	# Check exist texture image
@@ -55,14 +34,7 @@ def change_texture_size(_, context):
 		td_checker_texture.generated_height = checker_resolution_y
 		td_checker_texture.generated_type = td.checker_type
 
-	if not utils.get_preferences().automatic_recalc:
-		return
-
-	# Debounce: only the last edit within the interval triggers the recalc
-	if _texture_size_recalc_pending:
-		return
-	_texture_size_recalc_pending = True
-	bpy.app.timers.register(_recalc_td_after_texture_size_change, first_interval=0.3)
+	bpy.ops.texel_density.check()
 
 
 def change_units(_, __):
@@ -439,10 +411,6 @@ def unregister():
 	if draw_info["handler"] is not None:
 		bpy.types.SpaceView3D.draw_handler_remove(draw_info["handler"], 'WINDOW')
 		draw_info["handler"] = None
-
-	if _texture_size_recalc_pending:
-		bpy.app.timers.unregister(_recalc_td_after_texture_size_change)
-		_texture_size_recalc_pending = False
 
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)

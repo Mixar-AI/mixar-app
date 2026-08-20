@@ -25,6 +25,8 @@
 #include "WM_api.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
 {
@@ -49,7 +51,7 @@ bool mixie_chat_handle_action_button_click(bContext *C,
   const blender::Vector<MessageLayoutData> &layout_cache = mixie_chat_get_layout_cache(smixie);
 
   View2D *v2d = &region->v2d;
-  UI_view2d_region_to_view(v2d, mouse_x, mouse_y, &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, mouse_x, mouse_y, &mouse_x, &mouse_y);
 
   for (const MessageLayoutData &layout : layout_cache) {
     if (layout.action_button_count == 0) {
@@ -93,3 +95,4 @@ bool mixie_chat_handle_action_button_click(bContext *C,
 
   return false;
 }
+}  // namespace blender

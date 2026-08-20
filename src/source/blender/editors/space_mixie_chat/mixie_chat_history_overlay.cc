@@ -7,7 +7,7 @@
  *
  * Past-chats overlay: a Mixar-styled floating card listing archived chat
  * sessions, drawn in screen-space on top of the message area (after
- * UI_view2d_view_restore, like the scroll indicator).
+ * ui::view2d_view_restore, like the scroll indicator).
  *
  * Data flows one way from Python:
  *   - visibility:  WindowManager.mixie_chat_history_visible (bool, toggled
@@ -63,6 +63,8 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static const float COL_ACCENT[4] = CHAT_ACCENT_LIVE;
 
@@ -684,3 +686,4 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

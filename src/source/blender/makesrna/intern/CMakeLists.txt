@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-if(CMAKE_COMPILER_IS_GNUCC)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   # add here so we fail early.
   string(APPEND CMAKE_C_FLAGS " -Werror=implicit-function-declaration")
 endif()
@@ -163,17 +163,17 @@ set_source_files_properties(${GENSRC} PROPERTIES GENERATED TRUE)
 # CFLAGS for Generated Files
 #
 # less strict flags for generated source
-set(GENSRC_FLAGS)
-set(GENSRC_CFLAGS)
-set(GENSRC_CXXFLAGS)
-if(CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
+set(GENSRC_FLAGS "")
+set(GENSRC_CFLAGS "")
+set(GENSRC_CXXFLAGS "")
+if((CMAKE_C_COMPILER_ID STREQUAL "GNU") OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
   set(GENSRC_CFLAGS "-Wno-missing-prototypes")
   set(GENSRC_CXXFLAGS "-Wno-missing-declarations")
 endif()
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   string(APPEND GENSRC_FLAGS " -Wno-missing-variable-declarations")
 elseif(MSVC)
-  remove_cc_flag(
+  remove_c_and_cxx_flag(
     # Restore warn C4100 (unreferenced formal parameter) back to w4.
     "/w34100"
   )
@@ -227,13 +227,14 @@ set(SRC_RNA_INC
 
 set(SRC
   makesrna.cc
+  makesrna_utils.cc
   rna_define.cc
   ${DEFSRC}
   ${APISRC}
   ../../../../intern/clog/clog.cc
-  # Needed for defaults.
-  ../../../../release/datafiles/userdef/userdef_default.c
-  ../../../../release/datafiles/userdef/userdef_default_theme.c
+  ../../makesdna/intern/dna_parse.cc
+
+  makesrna_utils.hh
 )
 
 set(INC
@@ -255,6 +256,7 @@ set(INC
   ../../imbuf
   ../../imbuf/movie
   ../../io/usd
+  ../../makesdna/intern
   ../../modifiers
   ../../nodes
   ../../nodes/composite/include
@@ -271,13 +273,13 @@ set(INC
   ../../../../intern/memutil
   ../../../../intern/mantaflow/extern
 
-
   # RNA_prototypes.hh
   ${CMAKE_CURRENT_BINARY_DIR}/../../makesrna/
+  # dna_includes_as_strings.h
+  ${CMAKE_BINARY_DIR}/source/blender/makesdna
 )
 
 set(INC_SYS
-  ../../../../extern/fmtlib/include
 )
 
 if(WITH_CYCLES)
@@ -291,10 +293,6 @@ if(WITH_PYTHON)
   )
 endif()
 
-if(WITH_IMAGE_OPENEXR)
-  add_definitions(-DWITH_IMAGE_OPENEXR)
-endif()
-
 if(WITH_IMAGE_OPENJPEG)
   add_definitions(-DWITH_IMAGE_OPENJPEG)
 endif()
@@ -305,19 +303,6 @@ endif()
 
 if(WITH_IMAGE_WEBP)
   add_definitions(-DWITH_IMAGE_WEBP)
-endif()
-
-if(WITH_AUDASPACE)
-  list(APPEND INC_SYS
-    ${AUDASPACE_C_INCLUDE_DIRS}
-  )
-  if(WITH_SYSTEM_AUDASPACE)
-    list(APPEND LIB
-      ${AUDASPACE_C_LIBRARIES}
-      ${AUDASPACE_PY_LIBRARIES}
-    )
-  endif()
-  add_definitions(-DWITH_AUDASPACE)
 endif()
 
 if(WITH_CODEC_FFMPEG)
@@ -417,7 +402,7 @@ if(WITH_GMP)
 endif()
 
 # Build `makesrna` executable.
-add_cc_flags_custom_test(makesrna)
+add_c_and_cxx_flags_custom_test(makesrna)
 
 add_executable(makesrna ${SRC} ${SRC_RNA_INC} ${SRC_DNA_INC})
 setup_platform_linker_flags(makesrna)
@@ -429,13 +414,11 @@ target_link_libraries(makesrna PRIVATE bf_dna)
 target_link_libraries(makesrna PRIVATE bf::intern::atomic)
 target_link_libraries(makesrna PRIVATE bf::intern::guardedalloc)
 target_link_libraries(makesrna PRIVATE bf_dna_blenlib)
+target_link_libraries(makesrna PRIVATE bf_dna_defaults)
+target_link_libraries(makesrna PRIVATE bf::dependencies::optional::openvdb)
 target_link_libraries(makesrna PRIVATE bf::dependencies::optional::tbb)
-
-if(WIN32 AND NOT UNIX)
-  if(DEFINED PTHREADS_LIBRARIES)
-    target_link_libraries(makesrna PRIVATE ${PTHREADS_LIBRARIES})
-  endif()
-endif()
+target_link_libraries(makesrna PRIVATE bf::dependencies::pthreads)
+target_link_libraries(makesrna PRIVATE bf::dependencies::fmt)
 
 # Output `rna_*_gen.cc`.
 # NOTE: (Linux only): with crashes try add this after COMMAND:
@@ -444,7 +427,7 @@ add_custom_command(
   OUTPUT ${GENSRC}
   COMMAND
     ${CMAKE_COMMAND} -E env ${PLATFORM_ENV_BUILD}
-    "$<TARGET_FILE:makesrna>" ${CMAKE_CURRENT_BINARY_DIR}/ ${CMAKE_CURRENT_BINARY_DIR}/../
+    "$<TARGET_FILE:makesrna>" ${CMAKE_SOURCE_DIR}/source/blender/makesdna/ ${CMAKE_CURRENT_BINARY_DIR}/ ${CMAKE_CURRENT_BINARY_DIR}/../
   DEPENDS makesrna
 )
 
@@ -452,23 +435,23 @@ add_custom_command(
 set(SRC
   rna_access.cc
   rna_access_compare_override.cc
+  rna_define.cc
   rna_path.cc
   ${GENSRC}
 
   ${SRC_RNA_INC}
   rna_access_internal.hh
   rna_curves_utils.hh
+  rna_defaults.hh
   rna_internal.hh
   rna_internal_types.hh
-  rna_mesh_utils.hh
+  rna_screen_utils.hh
 )
 
 set(LIB
   PRIVATE bf::animrig
+  PRIVATE bf::blenlib
   PRIVATE bf::dna
-  PRIVATE bf::dependencies::optional::openvdb
-  PRIVATE bf::dependencies::optional::tbb
-  PRIVATE extern_fmtlib
   bf_editor_space_api
 
   bf_editor_animation
@@ -490,6 +473,26 @@ set(LIB
   bf_editor_transform
   bf_editor_undo
   PRIVATE bf::intern::guardedalloc
+  PRIVATE bf::dependencies::optional::openvdb
+  PRIVATE bf::dependencies::optional::tbb
+  PRIVATE bf::dependencies::optional::audaspace
+  PUBLIC bf::dependencies::fmt
+  PRIVATE bf::nodes::shader
 )
 
 blender_add_lib(bf_rna "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
+
+target_compile_definitions(bf_rna PRIVATE RNA_RUNTIME)
+
+if(WITH_GTESTS)
+  set(TEST_SRC
+    makesrna_test.cc
+  )
+  set(TEST_LIB
+    ${LIB}
+  )
+  set(TEST_COMMON_SRC
+    makesrna_utils.cc
+  )
+  blender_add_test_suite_lib(bf_makesrna "${TEST_SRC}" "${INC}" "${INC_SYS}" "${TEST_LIB}" "${TEST_COMMON_SRC}")
+endif()

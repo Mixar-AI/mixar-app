@@ -66,8 +66,6 @@ def update_channel_ui(self, context):
         None
     """
     # Check both halt flags - mpui (old system) and mixar_ui (new system)
-    if not hasattr(context.window_manager, 'mpui'):
-        return
     mpui = context.window_manager.mpui
     if mpui.halt_prop_update:
         return
@@ -148,8 +146,6 @@ def update_modifier_ui(self, context):
         None
     """
     # Check both halt flags - mpui (old system) and mixar_ui (new system)
-    if not hasattr(context.window_manager, 'mpui'):
-        return
     mpui = context.window_manager.mpui
     if mpui.halt_prop_update:
         return
@@ -173,53 +169,31 @@ def update_modifier_ui(self, context):
     match5 = re.match(
         r"mpui\.layer_ui\.masks\[(\d+)\]\.modifiers\[(\d+)\]", self.path_from_id()
     )
-
-    # Resolve the layer once with bounds checking (indices can be stale
-    # after undo/refresh while the mpui path still references old entries)
-    layer = get_active_layer_safe(mp)
-
-    mod = None
     if match1:
-        ch_idx = int(match1.group(1))
-        mod_idx = int(match1.group(2))
-        if (
-            layer
-            and ch_idx < len(layer.channels)
-            and mod_idx < len(layer.channels[ch_idx].modifiers)
-        ):
-            mod = layer.channels[ch_idx].modifiers[mod_idx]
+        mod = (
+            mp.layers[mp.active_layer_index]
+            .channels[int(match1.group(1))]
+            .modifiers[int(match1.group(2))]
+        )
     elif match2:
-        ch_idx = int(match2.group(1))
-        mod_idx = int(match2.group(2))
-        if (
-            layer
-            and ch_idx < len(layer.channels)
-            and mod_idx < len(layer.channels[ch_idx].modifiers_1)
-        ):
-            mod = layer.channels[ch_idx].modifiers_1[mod_idx]
+        mod = (
+            mp.layers[mp.active_layer_index]
+            .channels[int(match2.group(1))]
+            .modifiers_1[int(match2.group(2))]
+        )
     elif match3:
-        ch_idx = mp.active_channel_index
-        mod_idx = int(match3.group(1))
-        if 0 <= ch_idx < len(mp.channels) and mod_idx < len(mp.channels[ch_idx].modifiers):
-            mod = mp.channels[ch_idx].modifiers[mod_idx]
+        mod = mp.channels[mp.active_channel_index].modifiers[int(match3.group(1))]
     elif match4:
-        mod_idx = int(match4.group(1))
-        if layer and mod_idx < len(layer.modifiers):
-            mod = layer.modifiers[mod_idx]
+        mod = mp.layers[mp.active_layer_index].modifiers[int(match4.group(1))]
     elif match5:
-        mask_idx = int(match5.group(1))
-        mod_idx = int(match5.group(2))
-        if (
-            layer
-            and mask_idx < len(layer.masks)
-            and mod_idx < len(layer.masks[mask_idx].modifiers)
-        ):
-            mod = layer.masks[mask_idx].modifiers[mod_idx]
-    else:
-        return
+        mod = (
+            mp.layers[mp.active_layer_index]
+            .masks[int(match5.group(1))]
+            .modifiers[int(match5.group(2))]
+        )
+    # else: return #yolo
 
-    if mod:
-        mod.expand_content = self.expand_content
+    mod.expand_content = self.expand_content
 
 
 def update_noncontextual_channel_ui(self, context):
@@ -245,10 +219,7 @@ def update_noncontextual_channel_ui(self, context):
     m = re.match(r"mpui\.channels\[(\d+)\]", self.path_from_id())
 
     if m:
-        ch_idx = int(m.group(1))
-        if ch_idx >= len(mp.channels):
-            return
-        ch = mp.channels[ch_idx]
+        ch = mp.channels[int(m.group(1))]
     else:
         return
 
@@ -269,8 +240,6 @@ def update_mask_ui(self, context):
         None
     """
     # Check both halt flags - mpui (old system) and mixar_ui (new system)
-    if not hasattr(context.window_manager, 'mpui'):
-        return
     mpui = context.window_manager.mpui
     if mpui.halt_prop_update:
         return
@@ -285,17 +254,7 @@ def update_mask_ui(self, context):
     # if len(mp.channels) == 0: return
 
     match = re.match(r"mpui\.layer_ui\.masks\[(\d+)\]", self.path_from_id())
-    if not match:
-        return
-
-    layer = get_active_layer_safe(mp)
-    if not layer:
-        return
-
-    mask_idx = int(match.group(1))
-    if mask_idx >= len(layer.masks):
-        return
-    mask = layer.masks[mask_idx]
+    mask = mp.layers[mp.active_layer_index].masks[int(match.group(1))]
 
     mask.expand_content = self.expand_content
     mask.expand_channels = self.expand_channels
@@ -345,8 +304,6 @@ def update_mask_channel_ui(self, context):
         None
     """
     # Check both halt flags - mpui (old system) and mixar_ui (new system)
-    if not hasattr(context.window_manager, 'mpui'):
-        return
     mpui = context.window_manager.mpui
     if mpui.halt_prop_update:
         return
@@ -363,21 +320,7 @@ def update_mask_channel_ui(self, context):
     match = re.match(
         r"mpui\.layer_ui\.masks\[(\d+)\]\.channels\[(\d+)\]", self.path_from_id()
     )
-    if not match:
-        return
-
-    layer = get_active_layer_safe(mp)
-    if not layer:
-        return
-
-    mask_idx = int(match.group(1))
-    if mask_idx >= len(layer.masks):
-        return
-    mask = layer.masks[mask_idx]
-
-    ch_idx = int(match.group(2))
-    if ch_idx >= len(mask.channels):
-        return
-    mask_ch = mask.channels[ch_idx]
+    mask = mp.layers[mp.active_layer_index].masks[int(match.group(1))]
+    mask_ch = mask.channels[int(match.group(2))]
 
     mask_ch.expand_content = self.expand_content

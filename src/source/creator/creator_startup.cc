@@ -30,6 +30,9 @@
 #else
 #include <unistd.h>
 #include <openssl/sha.h>
+
+/* Mixar 5.2 port: global + using-directive. */
+using namespace blender;
 #endif
 
 // Response data structure for curl callback
@@ -1089,18 +1092,12 @@ bool show_startup_dialog(void) {
         return true; // Already authenticated
     }
 
-    // Generate PKCE verifier + challenge + OAuth state (CSRF defense)
+    // Generate PKCE verifier + challenge
     char code_verifier[64] = {0};
     char code_challenge[64] = {0};
-    char state[64] = {0};
     if (!generate_code_verifier(code_verifier, sizeof(code_verifier))) {
         std::system("zenity --error --title=\"Authentication Failed\" "
                     "--text=\"Failed to generate secure random bytes.\" --width=300");
-        return false;
-    }
-    if (!generate_state(state, sizeof(state))) {
-        std::system("zenity --error --title=\"Authentication Failed\" "
-                    "--text=\"Failed to generate SSO state nonce.\" --width=300");
         return false;
     }
     compute_code_challenge(code_verifier, code_challenge, sizeof(code_challenge));
@@ -1114,17 +1111,16 @@ bool show_startup_dialog(void) {
         return false;
     }
 
-    // Auto-open browser for SSO with actual port + state
+    // Auto-open browser for SSO with actual port
     char url[512];
     snprintf(url, sizeof(url),
              "%s/app/desktop-login?port=%d&code_challenge=%s&code_challenge_method=S256&state=%s",
              MIXAR_FRONTEND_BASE_URL, actual_port, code_challenge, state);
     open_browser_url(url);
 
-    // Wait for auth code from localhost callback (validates state)
+    // Wait for auth code from localhost callback
     char received_code[128] = {0};
-    bool got_code = auth_server_wait_for_code(server_handle, state,
-                                              received_code, sizeof(received_code));
+    bool got_code = auth_server_wait_for_code(server_handle, received_code, sizeof(received_code));
     bool result = got_code && exchange_desktop_code(received_code, code_verifier);
 
     if (!result) {
@@ -1144,5 +1140,3 @@ bool show_startup_dialog(void) {
     return true;
 }
 #endif
-
-

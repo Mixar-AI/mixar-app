@@ -131,40 +131,39 @@ GHOST_WindowWin32::GHOST_WindowWin32(GHOST_SystemWin32 *system,
   h_DC_ = ::GetDC(h_wnd_);
 
   if (!setDrawingContextType(type)) {
-    const char *title = "Mixar - Unsupported Graphics Card Configuration";
-    const char *text = "";
+    if (type == GHOST_kDrawingContextTypeOpenGL) {
+      const char *title = "Mixar - Unsupported Graphics Card Configuration";
+      const char *text = "";
 #if defined(WIN32)
-    if (strncmp(BLI_getenv("PROCESSOR_IDENTIFIER"), "ARM", 3) == 0 &&
-        strstr(BLI_getenv("PROCESSOR_IDENTIFIER"), "Qualcomm") != NULL)
-    {
-      text =
-          "A driver with support for OpenGL 4.3 or higher is required.\n\n"
-          "Qualcomm devices require the \"OpenCL™, OpenGL®, and Vulkan® Compatibility Pack\" "
-          "from the Microsoft Store.\n\n"
-          "Devices using processors older than a Qualcomm Snapdragon 8cx Gen3 are incompatible, "
-          "but may be able to run an emulated x64 copy of Mixar, such as a 3.x LTS release.";
-    }
-    else
+      if (strncmp(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "ARM", 3) == 0 &&
+          strstr(blender::BLI_getenv("PROCESSOR_IDENTIFIER"), "Qualcomm") != NULL)
+      {
+        text =
+            "A driver with support for OpenGL 4.3 or higher is required.\n\n"
+            "Qualcomm devices require the \"OpenCL™, OpenGL®, and Vulkan® Compatibility Pack\" "
+            "from the Microsoft Store.\n\n"
+            "Devices using processors older than a Qualcomm Snapdragon 8cx Gen3 are incompatible, "
+            "but may be able to run an emulated x64 copy of Mixar, such as a 3.x LTS release.";
+      }
+      else
 #endif
-    {
-      text =
-          "A graphics card and driver with support for OpenGL 4.3 or higher is "
-          "required.\n\nInstalling the latest driver for your graphics card might resolve the "
-          "issue.";
-      if (GetSystemMetrics(SM_CMONITORS) > 1) {
+      {
         text =
             "A graphics card and driver with support for OpenGL 4.3 or higher is "
-            "required.\n\nPlugging all monitors into your primary graphics card might resolve "
-            "this issue. Installing the latest driver for your graphics card could also help.";
+            "required.\n\nInstalling the latest driver for your graphics card might resolve the "
+            "issue.";
+        if (GetSystemMetrics(SM_CMONITORS) > 1) {
+          text =
+              "A graphics card and driver with support for OpenGL 4.3 or higher is "
+              "required.\n\nPlugging all monitors into your primary graphics card might resolve "
+              "this issue. Installing the latest driver for your graphics card could also help.";
+        }
       }
+      MessageBox(h_wnd_, text, title, MB_OK | MB_ICONERROR);
     }
-    MessageBox(h_wnd_, text, title, MB_OK | MB_ICONERROR);
     ::ReleaseDC(h_wnd_, h_DC_);
     ::DestroyWindow(h_wnd_);
     h_wnd_ = nullptr;
-    if (!parent_window) {
-      exit(0);
-    }
     return;
   }
 
@@ -325,11 +324,15 @@ void GHOST_WindowWin32::adjustWindowRectForClosestMonitor(LPRECT win_rect,
   GetMonitorInfo(hmonitor, &monitor);
 
   /* Constrain requested size and position to fit within this monitor. */
-  LONG width = min(monitor.rcWork.right - monitor.rcWork.left, win_rect->right - win_rect->left);
-  LONG height = min(monitor.rcWork.bottom - monitor.rcWork.top, win_rect->bottom - win_rect->top);
-  win_rect->left = min(max(monitor.rcWork.left, win_rect->left), monitor.rcWork.right - width);
+  LONG width = std::min(monitor.rcWork.right - monitor.rcWork.left,
+                        win_rect->right - win_rect->left);
+  LONG height = std::min(monitor.rcWork.bottom - monitor.rcWork.top,
+                         win_rect->bottom - win_rect->top);
+  win_rect->left = std::min(std::max(monitor.rcWork.left, win_rect->left),
+                            monitor.rcWork.right - width);
   win_rect->right = win_rect->left + width;
-  win_rect->top = min(max(monitor.rcWork.top, win_rect->top), monitor.rcWork.bottom - height);
+  win_rect->top = std::min(std::max(monitor.rcWork.top, win_rect->top),
+                           monitor.rcWork.bottom - height);
   win_rect->bottom = win_rect->top + height;
 
   /* With Windows 10 and newer we can adjust for chrome that differs with DPI and scale. */
@@ -351,7 +354,7 @@ void GHOST_WindowWin32::adjustWindowRectForClosestMonitor(LPRECT win_rect,
   }
 
   /* But never allow a top position that can hide part of the title bar. */
-  win_rect->top = max(monitor.rcWork.top, win_rect->top);
+  win_rect->top = std::max(monitor.rcWork.top, win_rect->top);
 }
 
 bool GHOST_WindowWin32::getValid() const
@@ -959,7 +962,7 @@ void GHOST_WindowWin32::loadWintab(bool enable)
 {
   if (!wintab_) {
     WINTAB_PRINTF("Loading Wintab for window %p\n", h_wnd_);
-    if (wintab_ = GHOST_Wintab::loadWintab(h_wnd_)) {
+    if ((wintab_ = GHOST_Wintab::loadWintab(h_wnd_))) {
       if (enable) {
         wintab_->enable();
 
@@ -1044,7 +1047,7 @@ void GHOST_WindowWin32::updateDPI()
 
 uint16_t GHOST_WindowWin32::getDPIHint()
 {
-  if (user32_) {
+  if (user32_ && system_->native_pixel_) {
     GHOST_WIN32_GetDpiForWindow fpGetDpiForWindow = (GHOST_WIN32_GetDpiForWindow)::GetProcAddress(
         user32_, "GetDpiForWindow");
 
@@ -1357,7 +1360,7 @@ void GHOST_WindowWin32::updateHDRInfo()
 
       if (::DisplayConfigGetDeviceInfo(&white_level.header) == ERROR_SUCCESS) {
         if (white_level.SDRWhiteLevel > 0) {
-          /* Windows assumes 1.0 = 80 nits, so multipley by that to get the absolute
+          /* Windows assumes 1.0 = 80 nits, so multiply by that to get the absolute
            * value in nits if we need it in the future. */
           info.sdr_white_level = static_cast<float>(white_level.SDRWhiteLevel) / 1000.0f;
         }

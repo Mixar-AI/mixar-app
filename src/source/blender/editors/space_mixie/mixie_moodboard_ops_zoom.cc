@@ -70,8 +70,8 @@ static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, 
     v2d->cur.ymin = center_y - new_height / 2.0f;
     v2d->cur.ymax = center_y + new_height / 2.0f;
 
-    UI_view2d_curRect_validate(v2d);
-    UI_view2d_curRect_changed(C, v2d);
+    ui::view2d_curRect_validate(v2d);
+    ui::view2d_curRect_changed(C, v2d);
     ED_area_tag_redraw(CTX_wm_area(C));
 
     return OPERATOR_FINISHED;
@@ -143,7 +143,7 @@ static bool ensure_rect_visible_in_region(ARegion *region,
   v2d->cur.ymin = std::min(v2d->cur.ymin, ty_min);
   v2d->cur.ymax = std::max(v2d->cur.ymax, ty_max);
 
-  UI_view2d_curRect_validate(v2d);
+  ui::view2d_curRect_validate(v2d);
   ED_region_tag_redraw(region);
   return true;
 }

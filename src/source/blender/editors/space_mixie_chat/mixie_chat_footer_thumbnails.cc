@@ -35,6 +35,8 @@
 
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Image Loading
@@ -224,10 +226,11 @@ void footer_thumbnails_draw_border(float x, float y, float size, const float col
   rect.ymax = y + size;
 
   /* Set all corners to be rounded */
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
 
   /* Draw unfilled rounded box (border only) */
-  UI_draw_roundbox_4fv(&rect, false, border_radius, color);
+  ui::draw_roundbox_4fv(&rect, false, border_radius, color);
 }
 
 /** \} */
+}  // namespace blender

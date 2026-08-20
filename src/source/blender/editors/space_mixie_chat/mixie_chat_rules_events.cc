@@ -58,6 +58,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Edit Helpers
@@ -726,3 +728,4 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
 }
 
 /** \} */
+}  // namespace blender

@@ -29,6 +29,8 @@
 #include "ED_screen.hh"
 
 #include "mixie_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 using namespace blender::ed::mixie;
 
@@ -169,3 +171,4 @@ void MIXIE_OT_sam3d_preview_delete(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

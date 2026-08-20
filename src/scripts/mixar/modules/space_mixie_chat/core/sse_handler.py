@@ -286,8 +286,6 @@ class SSEStreamHandler:
         auth_token: Optional[str] = None,
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
-        imported_object_names: Optional[list] = None,
-        project_context: Optional[dict] = None,
     ) -> bool:
         """
         Start SSE stream for V2 agent chat.
@@ -307,11 +305,6 @@ class SSEStreamHandler:
                 resolved to a bpy.data.images entry). Sent to the backend so it
                 can inline the names into the user message and the agent can
                 pass them straight to generation tools without a tool round-trip.
-            imported_object_names: #1268 — names of the scene objects an attached
-                3D model file (MODEL_FILE attachment) created at attach time.
-                Names only — the local path never leaves the addon.
-            project_context: Opaque project ID, lease, revision, and protocol.
-                Never contains the local project root.
 
         Returns:
             True if stream started successfully
@@ -331,35 +324,15 @@ class SSEStreamHandler:
         self._last_seq = -1
         self._resume_unavailable = False
         self._running.set()
-        # Read session preferences on the main thread (bpy access is unsafe from
-        # the stream thread); forwarded in the request payload.
-        user_preferences = self._collect_user_preferences()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, imported_object_names, project_context, user_preferences),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
         self._thread.start()
 
         return True
-
-    def _collect_user_preferences(self) -> Optional[dict]:
-        """Session preferences to forward to the agent (main-thread bpy read).
-
-        Currently the asset-library match threshold set in the Assets workspace —
-        the similarity cutoff the modelling lanes use to reuse a library asset
-        instead of modelling it. Returns None if the setting isn't available.
-        """
-        try:
-            import bpy
-
-            state = getattr(bpy.context.scene, "mixie_asset_training", None)
-            if state is None:
-                return None
-            return {"asset_match_threshold": round(float(state.match_threshold), 4)}
-        except Exception:
-            return None
 
     def stop_stream(self) -> None:
         """Stop the SSE stream."""
@@ -370,56 +343,6 @@ class SSEStreamHandler:
                 self._client.close()
             except Exception:
                 pass
-
-    def resume_stream(self, session_id: str, after_seq: int = None) -> bool:
-        """Adopt an orphaned turn and resume it via the attach endpoint (#1258).
-
-        Called from the WS-reconnect prompt ("Resume previous task"): the
-        backend kept the turn running and buffered the events we missed; this
-        replays them and follows live until the turn ends. The per-scene
-        callback wiring (queue → slot processor → completion) is identical to
-        a primary stream, so the bubble simply continues.
-
-        Args:
-            session_id: The chat session whose turn is still live server-side
-            after_seq: Attach cursor. ``None`` adopts the handler's carried
-                cursor when it matches the session; a full-replay ``-1`` is
-                only ever used when the caller explicitly asks (a stale or
-                lost cursor otherwise risks re-rendering the whole turn).
-        """
-        if httpx is None:
-            self._on_error("httpx library not available")
-            return False
-        if self._running.is_set():
-            logger.warning("resume_stream: stream already running")
-            return False
-        if after_seq is None:
-            after_seq = self._last_seq if self._session_id == session_id else -1
-
-        self._user_aborted = False
-        self._session_id = session_id
-        self._last_seq = after_seq
-        self._resume_unavailable = False
-        self._running.set()
-        self._thread = threading.Thread(
-            target=self._resume_thread_body,
-            args=(session_id,),
-            daemon=True,
-        )
-        self._thread.name = "MixarSSEResume"
-        self._thread.start()
-        logger.info(
-            "resume_stream: attaching to session %s after seq %s",
-            session_id[:8], after_seq,
-        )
-        return True
-
-    def _resume_thread_body(self, session_id: str) -> None:
-        try:
-            self._resume_via_attach("resume")
-        except Exception as e:
-            logger.error(f"resume_stream error: {e}")
-            self._on_error(f"Could not resume the previous task: {e}")
 
     def start_input_stream(
         self,
@@ -609,9 +532,7 @@ class SSEStreamHandler:
         auth_token: Optional[str],
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
-        imported_object_names: Optional[list] = None,
-        project_context: Optional[dict] = None,
-        user_preferences: Optional[dict] = None,
+        _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
         try:
@@ -646,18 +567,6 @@ class SSEStreamHandler:
             # empty strings when an attachment did not resolve to a name.
             if attachment_names:
                 payload["attachment_names"] = [n for n in attachment_names if n]
-            # #1268: names of objects an attached model file created in the
-            # scene. Names only — the local path never leaves the addon.
-            if imported_object_names:
-                payload["imported_object_names"] = [n for n in imported_object_names if n]
-
-            if project_context:
-                payload["project_context"] = project_context
-
-            # Session preferences (e.g. the asset-library match threshold) the
-            # backend merges into the agent scratchpad for this turn.
-            if user_preferences:
-                payload["user_preferences"] = user_preferences
 
             logger.debug(f"Starting SSE request to {self.chat_url}")
 
@@ -748,8 +657,6 @@ class SSEStreamHandler:
                     auth_token,
                     image_attachments,
                     attachment_names,
-                    project_context,
-                    user_preferences,
                     _connect_attempt + 1,
                 )
             self._on_error(f"Connection error: {e}")

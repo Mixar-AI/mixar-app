@@ -22,15 +22,20 @@
 
 #include "versioning_common.hh"
 #include "versioning_mixar_200.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 void blo_do_versions_mixar(Main *bmain)
 {
   /* Pre-versioning files have mixar_versionfile == 0.
    * All existing migrations must run on those files. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 1)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
 
           /* Remap old Mixar space type values (24-31) to new range (100-107).
            * The enum values were moved to avoid collisions with upstream Blender. */
@@ -66,9 +71,12 @@ void blo_do_versions_mixar(Main *bmain)
    * stored in the bundled startup file keep their saved (header-less) regions
    * and the space switcher dropdown stays hidden. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 2)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
           if (!ELEM(sl->spacetype,
                     SPACE_MIXAR_PROPERTIES,
                     SPACE_MIXAR_ASSETS,
@@ -101,9 +109,12 @@ void blo_do_versions_mixar(Main *bmain)
    * is no longer registered, so `direct_link_area()` already falls those
    * areas back to SPACE_EMPTY on read. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 3)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
           if (sl->spacetype != SPACE_VIEW3D) {
             continue;
           }
@@ -123,3 +134,4 @@ void blo_do_versions_mixar(Main *bmain)
 
   /* Future versioning blocks go here, guarded by MAIN_MIXAR_VERSION_FILE_ATLEAST. */
 }
+}  // namespace blender

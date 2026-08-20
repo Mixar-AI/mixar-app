@@ -36,7 +36,7 @@ void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   GPU_blend(GPU_BLEND_ALPHA);
 
-  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+  const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
   CollectionPropertyIterator stroke_iter{};
   RNA_property_collection_begin(itemptr, g_img_props.annotations, &stroke_iter);
   while (stroke_iter.valid) {

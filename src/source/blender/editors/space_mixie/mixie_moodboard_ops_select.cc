@@ -212,7 +212,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   View2D *v2d = &region->v2d;
 
   float mouse_x, mouse_y;
-  UI_view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
 
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
 
@@ -224,7 +224,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   /* FIRST: Check if click is on a resize handle of any selected element.
    * This must be done before checking for elements under mouse, because
    * handles extend outside the element bounds. */
-  float handle_tolerance = MOODBOARD_HANDLE_TOLERANCE_PX / UI_view2d_scale_get_x(v2d);
+  float handle_tolerance = MOODBOARD_HANDLE_TOLERANCE_PX / ui::view2d_scale_get_x(v2d);
   clicked_handle = moodboard_find_resize_handle_at_mouse(&scene_ptr,
                                                           mouse_x,
                                                           mouse_y,
@@ -289,7 +289,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   {
     const float center_x = clicked_pos_x + clicked_width * 0.5f;
     const float center_y = clicked_pos_y + clicked_height * 0.5f;
-    const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+    const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
     const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
     const float delta_x = mouse_x - center_x;
     const float delta_y = mouse_y - center_y;
@@ -474,12 +474,12 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
 
     case MOUSEMOVE: {
       float mouse_x, mouse_y;
-      UI_view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
+      ui::view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
 
       float delta_x = mouse_x - move_data->initial_mouse_x;
       float delta_y = mouse_y - move_data->initial_mouse_y;
 
-      float drag_threshold = MOODBOARD_DRAG_THRESHOLD_PX / UI_view2d_scale_get_x(v2d);
+      float drag_threshold = MOODBOARD_DRAG_THRESHOLD_PX / ui::view2d_scale_get_x(v2d);
 
       if (!move_data->is_dragging) {
         float distance_sq = delta_x * delta_x + delta_y * delta_y;

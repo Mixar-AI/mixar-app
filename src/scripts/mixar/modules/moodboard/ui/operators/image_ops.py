@@ -19,15 +19,9 @@ from bpy.props import (
     BoolProperty,
 )
 
-from ...core.media_import import load_media_file_to_board
 from ...core.moodboard_utils import place_new_moodboard_item
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ....common.utils.platform_utils import format_shortcut
-
-# The loader lives in ``core/media_import.py`` so non-UI callers (the chat
-# composer's attachment mirroring) can reuse it without importing an operator
-# module. Kept under the local name the operators below already use.
-_load_media_from_filepath = load_media_file_to_board
 
 
 def _media_filter_glob():
@@ -35,6 +29,43 @@ def _media_filter_glob():
     image_extensions = set(getattr(bpy.path, "extensions_image", ()))
     movie_extensions = set(getattr(bpy.path, "extensions_movie", ()))
     return ";".join(f"*{ext}" for ext in sorted(image_extensions | movie_extensions))
+
+
+def _load_media_from_filepath(scene, filepath, anchor=None):
+    """Load an image or movie from filepath and add it to the moodboard.
+
+    Reusable helper that loads the media into Blender, packs still images,
+    keeps movies linked to their source path, appends it to the moodboard
+    collection, and positions it into visible free space centred on *anchor*
+    (canvas coords, e.g. the cursor) or the viewport centre when *anchor* is
+    ``None``. Returns the new item on success or None.
+
+    Args:
+        scene: The current Blender scene.
+        filepath: Absolute path to the image or movie file.
+        anchor: Optional ``(x, y)`` canvas coordinates to centre the image on.
+
+    Returns:
+        The newly created moodboard media item, or None on failure.
+    """
+    try:
+        img = bpy.data.images.load(filepath, check_existing=True)
+        img.colorspace_settings.name = 'sRGB'
+        # Blender cannot pack movies into the blend file. Keep their original
+        # path so a later video-generation submitter can stream the real bytes.
+        if img.source != 'MOVIE':
+            img.pack()
+        elif img.frame_duration < 1 or img.size[0] <= 0 or img.size[1] <= 0:
+            return None
+    except Exception:
+        return None
+
+    item = scene.mixie_moodboard_images.add()
+    item.image = img
+    item.scale = 1.0
+    item.z_order = len(scene.mixie_moodboard_images) - 1
+    place_new_moodboard_item(scene, item, anchor=anchor)
+    return item
 
 
 class MIXIE_OT_moodboard_add_image(Operator):

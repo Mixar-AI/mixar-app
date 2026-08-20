@@ -99,12 +99,6 @@ def refresh_udim_atlas(image, mp=None, check_uv=True, remove_index=-1):
     # Actual tilenums from the image
     cur_tilenums = [t.number for t in image.tiles]
 
-    # Remember the segment to remove by name, as its index can shift when
-    # out of bound segments are removed before the final removal below
-    remove_segment_name = ""
-    if 0 <= remove_index < len(image.yua.segments):
-        remove_segment_name = image.yua.segments[remove_index].name
-
     if not mp:
         mp = get_active_mpaint_node().node_tree.mp
 
@@ -215,13 +209,8 @@ def refresh_udim_atlas(image, mp=None, check_uv=True, remove_index=-1):
         image.yua.segments.remove(index)
 
     # If remove index exists
-    if remove_segment_name != "":
-        # Re-resolve the index as it may have shifted after the removals above
-        index = [
-            i for i, s in enumerate(image.yua.segments) if s.name == remove_segment_name
-        ]
-        if len(index) > 0:
-            image.yua.segments.remove(index[0])
+    if remove_index != -1:
+        image.yua.segments.remove(remove_index)
 
     # Set new tilenums
     for segment in image.yua.segments:
@@ -271,12 +260,9 @@ def refresh_udim_atlas(image, mp=None, check_uv=True, remove_index=-1):
             if entity.segment_name in oob_dict:
                 # Set entity that are using newly create segment on other image
                 source = get_entity_source(entity)
-                if source is None:
-                    continue
-                seg = oob_dict[entity.segment_name]
-                source.image = seg.id_data
-                entity.segment_name = seg.name
-                set_udim_segment_mapping(entity, seg, seg.id_data)
+                source.image = new_segment.id_data
+                entity.segment_name = new_segment.name
+                set_udim_segment_mapping(entity, new_segment, new_segment.id_data)
             else:
                 segment = image.yua.segments.get(entity.segment_name)
                 if segment:
@@ -286,12 +272,11 @@ def refresh_udim_atlas(image, mp=None, check_uv=True, remove_index=-1):
             if entity.baked_segment_name in oob_dict:
                 # Set entity that are using newly create segment on other image
                 source = get_entity_source(entity, get_baked=True)
-                if source is None:
-                    continue
-                seg = oob_dict[entity.baked_segment_name]
-                source.image = seg.id_data
-                entity.baked_segment_name = seg.name
-                set_udim_segment_mapping(entity, seg, seg.id_data, use_baked=True)
+                source.image = new_segment.id_data
+                entity.baked_segment_name = new_segment.name
+                set_udim_segment_mapping(
+                    entity, new_segment, new_segment.id_data, use_baked=True
+                )
             else:
                 segment = image.yua.segments.get(entity.baked_segment_name)
                 if segment:

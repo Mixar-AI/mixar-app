@@ -20,10 +20,6 @@ from ...utils.blender_commons import get_active_material
 from ...utils.common import get_channel_index, get_node, is_valid_bsdf_node
 from ...utils.constants import io_suffix
 
-from .....config.logging_config import get_logger
-
-logger = get_logger(__name__)
-
 
 def set_input_default_value(group_node, channel, custom_value=None):
     """Set default value for channel input on group node.
@@ -162,13 +158,6 @@ def update_channel_alpha(self, context):
 
         # Set node default_value
         node = get_active_mpaint_node()
-        if node is None:
-            logger.warning(
-                "update_channel_alpha: no active MPaint node, "
-                "skipping alpha setup for channel '%s'",
-                self.name,
-            )
-            return
         node.inputs[alpha_name].default_value = self.ori_alpha_value
 
         alpha_connected = False
@@ -220,9 +209,6 @@ def do_alpha_setup(mat, node, channel):
         node: MPaint group node.
         channel: Channel to setup alpha for.
     """
-    if not mat or not mat.node_tree or not node or not node.node_tree:
-        return
-
     tree = mat.node_tree
     mp = node.node_tree.mp
 

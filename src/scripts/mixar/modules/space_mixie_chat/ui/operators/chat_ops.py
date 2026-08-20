@@ -26,8 +26,8 @@ from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
 from ...core import (
-    encode_attachment_for_upload,
     get_session_manager,
+    image_to_base64,
 )
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
@@ -101,14 +101,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
-        # Library mode: the typed text searches the asset library (empty = show
-        # everything); results render as clickable thumbnails, no backend call.
-        if scene.mixie_chat_mode == 'LIBRARY':
-            from ...core import library_browse
-            capture(EVENT_MESSAGE_SENT, {"mode": "library"}, context=context)
-            metrics.stop_timer('send_message_total')
-            return library_browse.execute_library_mode(self, context)
-
         message_text = scene.mixie_chat_input.strip()
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
@@ -118,25 +110,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
-
-        project_context = None
-        if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
-            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
-                from mixar.modules.addon_project.ui.operators import (
-                    ensure_addon_project_ready,
-                )
-                # Zero-question setup: default root + link, then this SAME
-                # send proceeds to build_project_context below.
-                if not ensure_addon_project_ready(self):
-                    metrics.stop_timer('send_message_total')
-                    return {'CANCELLED'}
-            try:
-                from mixar.modules.addon_project.context import build_project_context
-                project_context = build_project_context(scene)
-            except Exception as exc:
-                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
-                metrics.stop_timer('send_message_total')
-                return {'CANCELLED'}
 
         # Mark the user as engaged so the "Hi I'm Mixie" greeting
         # stops re-appearing whenever the message list transiently
@@ -153,7 +126,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         capture(EVENT_MESSAGE_SENT, {
-            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
+            "mode": "agent",
             "has_attachments": bool(len(pending_attachments)),
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
@@ -191,16 +164,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                     stale_placeholders.append(i)
             for i in reversed(stale_placeholders):
                 scene.mixie_chat_messages.remove(i)
-
-            # A fresh turn is also the reliable point to sweep asset-picker
-            # preview thumbnails no bubble references anymore (an abandoned
-            # picker never gets the empty-actions replacement that normally
-            # cleans them).
-            try:
-                from ...core import asset_choice_previews
-                asset_choice_previews.cleanup_orphans(scene)
-            except Exception:
-                pass
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
@@ -260,44 +223,49 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 attachment_data.append(att_data)
 
                 if att.image_source == 'FILE':
-                    # FILE images (read + PIL compress) are safe off the main thread
-                    future = executor.submit(
-                        encode_attachment_for_upload, att.image_path, att.image_source
-                    )
+                    # FILE images are safe to encode off the main thread
+                    future = executor.submit(image_to_base64, att.image_path, att.image_source)
                     encoding_futures.append(future)
                 else:
                     # BLEND_DATA images access bpy.data — must stay on main thread
                     encoding_futures.append(None)
 
-            # Per-image budget. Compression bounds the work (a 12MP photo is
-            # decoded at reduced scale and re-encoded in well under a second),
-            # so a timeout here means something is genuinely wrong with that
-            # one image — drop it and send the rest, never the whole set.
-            timeout_per_image = 10.0
+            # Wait for all encodings with timeout (5s per image)
+            timeout_per_image = 5.0
 
-            for idx, future in enumerate(encoding_futures):
-                att_path, att_source = attachment_data[idx]
-                try:
+            try:
+                for idx, future in enumerate(encoding_futures):
                     if future is None:
                         # BLEND_DATA: encode on main thread (bpy.data access)
-                        encoded = encode_attachment_for_upload(att_path, att_source)
+                        att_path, att_source = attachment_data[idx]
+                        b64 = image_to_base64(att_path, att_source)
                     else:
-                        encoded = future.result(timeout=timeout_per_image)
-                except FuturesTimeoutError:
-                    logger.error(f"Image encoding timeout for {att_path}")
-                    self.report({'WARNING'},
-                                f"Skipped slow image: {os.path.basename(att_path)}")
-                    continue
-                except Exception as e:
-                    logger.error(f"Image encoding error for {att_path}: {e}")
-                    self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
-                    continue
+                        b64 = future.result(timeout=timeout_per_image)
+                    if b64:
+                        att_path, att_source = attachment_data[idx]
+                        ext = os.path.splitext(att_path)[1].lower() if att_source == 'FILE' else '.png'
+                        mime_map = {
+                            '.png': 'image/png',
+                            '.jpg': 'image/jpeg',
+                            '.jpeg': 'image/jpeg',
+                            '.bmp': 'image/bmp',
+                            '.tiff': 'image/tiff',
+                            '.tif': 'image/tiff'
+                        }
+                        mime_type = mime_map.get(ext, 'image/png')
+                        encoded_attachments.append({"base64": b64, "mime_type": mime_type})
+                    else:
+                        logger.warning(f"Failed to encode attachment index {idx}")
 
-                if encoded:
-                    b64, mime_type = encoded
-                    encoded_attachments.append({"base64": b64, "mime_type": mime_type})
-                else:
-                    logger.warning(f"Failed to encode attachment index {idx}")
+            except FuturesTimeoutError:
+                # Timeout - proceed without attachments
+                logger.error("Image encoding timeout - sending without attachments")
+                self.report({'WARNING'}, "Image encoding timeout - message sent without images")
+                encoded_attachments = []
+            except Exception as e:
+                logger.error(f"Image encoding error: {e}")
+                self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
+                encoded_attachments = []
 
             total_encode_time = metrics.stop_timer('image_encoding_total')
             if encoded_attachments and total_encode_time is not None:
@@ -311,20 +279,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # message, so the agent can pass image_name to generation tools
         # without a get_last_user_message round-trip.
         attachment_names: list = []
-        # #1268: MODEL_FILE attachments are NOT images — they are imported
-        # scene objects. Their names ride a parallel field so the backend
-        # annotates the message without touching the vision gate.
-        imported_object_names: list = []
         if not is_modify and not is_awaiting_input and len(pending_attachments) > 0:
             for att in pending_attachments:
-                if att.image_source == 'MODEL_FILE':
-                    names = [
-                        n for n in str(att.imported_object_names or "").split(",")
-                        if n.strip()
-                    ]
-                    imported_object_names.extend(names)
-                    attachment_names.append("")  # keep index alignment
-                    continue
                 resolved_name = ""
                 try:
                     if att.image_source == 'BLEND_DATA':
@@ -396,8 +352,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
                 attachment_names=attachment_names if attachment_names else None,
-                imported_object_names=imported_object_names or None,
-                project_context=project_context,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to start chat stream")

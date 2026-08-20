@@ -29,6 +29,8 @@
 
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -50,7 +52,7 @@ void draw_centered_text(const char *text,
   BLF_draw(font_id, text, strlen(text));
 }
 
-void draw_tool_rail(uiBlock *block,
+void draw_tool_rail(ui::Block *block,
                     const bContext *C,
                     const ARegion *region,
                     const DirectorViewState &state,
@@ -105,7 +107,7 @@ void draw_tool_rail(uiBlock *block,
     if (tools[index].group_above) {
       y -= group_gap;
     }
-    uiBut *button = uiDefIconBlockBut(block,
+    ui::Button *button = ui::uiDefIconBlockBut(block,
                                       tools[index].block_func,
                                       nullptr,
                                       0,
@@ -122,7 +124,7 @@ void draw_tool_rail(uiBlock *block,
   }
 }
 
-void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, const int gap)
+void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, const int gap)
 {
   const int panel_w = std::min(unit * 22, region->winx - gap * 12);
   const int panel_h = unit * 8;
@@ -155,7 +157,7 @@ void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, con
                                    "Create a camera aligned to this view and start directing");
 }
 
-void draw_context_actions(uiBlock *block,
+void draw_context_actions(ui::Block *block,
                           const ARegion *region,
                           const DirectorViewState &state,
                           const int unit,
@@ -210,7 +212,7 @@ void draw_context_actions(uiBlock *block,
     if (!state.locked) {
       /* Blender's timeline auto-key flips RECORD_OFF to RECORD_ON when armed
        * (rna_scene.cc ui_icon); mirror that instead of a static REC glyph. */
-      uiBut *auto_key = director_overlay_operator_button(
+      ui::Button *auto_key = director_overlay_operator_button(
           block,
           "MIXAR_OT_director_toggle_auto_key",
           state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
@@ -221,7 +223,7 @@ void draw_context_actions(uiBlock *block,
           unit * 2,
           "Auto Key: capture a keyframe automatically after every camera move");
       if (state.auto_key) {
-        UI_but_flag_enable(auto_key, UI_BUT_ACTIVE_DEFAULT);
+        ui::button_flag_enable(auto_key, ui::BUT_ACTIVE_DEFAULT);
       }
     }
   }
@@ -245,7 +247,7 @@ void draw_context_actions(uiBlock *block,
      * guides both reach the Moodboard from here. A native block popup like the
      * lens dropdown — the Python popover looked foreign over the calm surface.
      * Video Gen was removed from this cluster. */
-    uiDefBlockBut(block,
+    ui::uiDefBlockBut(block,
                   view3d_director_render_popup_create,
                   nullptr,
                   "Export to Moodboard",
@@ -261,11 +263,11 @@ void draw_context_actions(uiBlock *block,
 
 void director_overlay_panel_draw(const rctf &rect, const float radius)
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv_ex(&rect, PANEL_COLOR, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, radius);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv_ex(&rect, PANEL_COLOR, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, radius);
 }
 
-uiBut *director_overlay_operator_button(uiBlock *block,
+ui::Button *director_overlay_operator_button(ui::Block *block,
                                         const char *operator_id,
                                         const int icon,
                                         const char *label,
@@ -276,8 +278,8 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                                         const char *tooltip)
 {
   if (label && label[0]) {
-    return uiDefIconTextButO(block,
-                             ButType::But,
+    return ui::uiDefIconTextButO(block,
+                             ui::ButtonType::But,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
                              icon,
@@ -288,8 +290,8 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                              height,
                              tooltip);
   }
-  return uiDefIconButO(block,
-                       ButType::But,
+  return ui::uiDefIconButO(block,
+                       ui::ButtonType::But,
                        operator_id,
                        blender::wm::OpCallContext::InvokeRegionWin,
                        icon,
@@ -300,10 +302,10 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                        tooltip);
 }
 
-void director_overlay_disable_button(uiBut *button, const bool disabled)
+void director_overlay_disable_button(ui::Button *button, const bool disabled)
 {
   if (disabled && button) {
-    UI_but_flag_enable(button, UI_BUT_DISABLED);
+    ui::button_flag_enable(button, ui::BUT_DISABLED);
   }
 }
 
@@ -319,9 +321,9 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
   const int gap = std::max(4, int(6.0f * UI_SCALE_FAC));
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "mixar_director_overlay", blender::ui::EmbossType::Emboss);
-  UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
+  ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
 
   view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
   if (region->winy > unit * 18) {
@@ -332,7 +334,8 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
   }
   draw_context_actions(block, region, state, unit, gap);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
   GPU_blend(GPU_BLEND_NONE);
 }
+}  // namespace blender

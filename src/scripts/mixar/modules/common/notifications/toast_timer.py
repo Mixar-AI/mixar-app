@@ -89,6 +89,8 @@ def ensure_toast_timer_running() -> None:
     global _timer_active
 
     with _timer_lock:
+        if _timer_active:
+            return
         _timer_active = True
 
     def _start_on_main() -> None:
@@ -100,12 +102,7 @@ def ensure_toast_timer_running() -> None:
         if not bpy.app.timers.is_registered(_toast_tick):
             bpy.app.timers.register(_toast_tick, first_interval=TIMER_INTERVAL)
 
-    # bpy.app.timers.register is main-thread-only, so schedule it. This runs
-    # on EVERY push (no _timer_active gate): gating here raced with a tick
-    # that was about to self-stop, silently dropping the toast that arrived
-    # in that window. _start_on_main is idempotent — install_draw_handler
-    # guards on its stored handle and is_registered guards the tick — so
-    # re-scheduling is always safe.
+    # bpy.app.timers.register is main-thread-only, so schedule it
     bpy.app.timers.register(_start_on_main, first_interval=0)
 
 

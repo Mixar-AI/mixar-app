@@ -65,9 +65,8 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         wm = context.window_manager
         scene = context.scene
 
-        # Successful sends clear this property.  Preserve any non-empty draft
-        # left by Cancel or Add-on Project folder setup so reopening the quick
-        # prompt never destroys unsent work.
+        # Clear previous input
+        wm.mixie_chat_quick_prompt_input = ""
 
         # Initialize quick prompt mode from current footer mode
         wm.mixie_chat_quick_prompt_mode = scene.mixie_chat_mode
@@ -180,23 +179,6 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
                 wm.mixie_chat_quick_prompt_input = ""
             return result
 
-        project_context = None
-        if scene.mixie_chat_mode == 'ADDON_PROJECT':
-            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
-                from mixar.modules.addon_project.ui.operators import (
-                    ensure_addon_project_ready,
-                )
-                # Zero-question setup: default root + link, then this SAME
-                # send proceeds to build_project_context below.
-                if not ensure_addon_project_ready(self):
-                    return {'CANCELLED'}
-            try:
-                from mixar.modules.addon_project.context import build_project_context
-                project_context = build_project_context(scene)
-            except Exception as exc:
-                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
-                return {'CANCELLED'}
-
         # Add user message to history WITH attachments from pending
         user_msg = scene.mixie_chat_messages.add()
         user_msg.sender = 'USER'
@@ -265,7 +247,6 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             instance_id=ws_client.connection_id,
             session_id=session_id,
             auth_token=auth_token,
-            project_context=project_context,
         )
 
         if not success:

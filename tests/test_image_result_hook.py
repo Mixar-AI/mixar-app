@@ -104,9 +104,7 @@ def test_image_result_targets_origin_scene_and_has_cancel_guard(monkeypatch):
 
 
 def test_post_add_metadata_precedes_undo_snapshot_and_completion():
-    source = Path(GENERIC_JOBS.__file__).with_name(
-        "image_results.py"
-    ).read_text()
+    source = Path(GENERIC_JOBS.__file__).with_name("helpers.py").read_text()
     apply_body = source[source.index("def _apply():"):]
 
     assert apply_body.index("on_added(names)") < apply_body.index(

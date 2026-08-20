@@ -190,8 +190,15 @@ def add_lookdev360_fill_layer(
         The created layer, or None on failure
     """
     from mixar.modules.paint.ui.layer.helpers.layer_create_helpers import add_new_layer
-    from mixar.modules.paint.core.node.check_nodes import (
-        finalize_layer_channel_overrides,
+    from mixar.modules.paint.core.io.connections.layer_connections import (
+        reconnect_layer_nodes,
+        reconnect_mp_nodes,
+    )
+    from mixar.modules.paint.core.io.arrangements.layer_arrangements import (
+        rearrange_layer_nodes,
+    )
+    from mixar.modules.paint.core.io.arrangements.layer_arrangements_mp import (
+        rearrange_mp_nodes,
     )
     from mixar.modules.paint.core.subtree.get_subtree import get_tree
     from mixar.modules.paint.ui.list_item.list_item_operators_helper import (
@@ -254,15 +261,16 @@ def add_lookdev360_fill_layer(
                         ch, root_ch, layer, tree, normal_img
                     )
 
+        # Reconnect and rearrange the layer's internal nodes
+        reconnect_layer_nodes(layer)
+        rearrange_layer_nodes(layer)
+
     finally:
         mp.halt_update = False
 
-    # Wire and rearrange the tree, and run the node check the halted override
-    # callbacks skipped -- that check is what creates the layer's Mapping node
-    # now that its IMAGE overrides make it vector-using. Without it the AI
-    # textures land wired straight to the UV input and the layer's UV
-    # offset/rotation/scale controls do nothing.
-    finalize_layer_channel_overrides(layer)
+    # Reconnect and rearrange the entire MPaint tree
+    reconnect_mp_nodes(group_tree)
+    rearrange_mp_nodes(group_tree)
 
     # Refresh UI
     refresh_list_items(mp)

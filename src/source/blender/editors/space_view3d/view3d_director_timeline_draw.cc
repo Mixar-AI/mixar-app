@@ -31,6 +31,8 @@
 #include "UI_resources.hh"
 
 #include "view3d_director_timeline.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -58,8 +60,8 @@ void draw_rect(
 
 void draw_round_rect(const rctf &rect, const float radius, const float color[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, radius, color);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, true, radius, color);
 }
 
 void draw_text(
@@ -83,7 +85,7 @@ float text_width(const char *text, const float size)
 void draw_camera_icon(const float x, const float y, const float size)
 {
   const uchar color[4] = {255, 250, 245, 255};
-  UI_icon_draw_ex(
+  ui::icon_draw_ex(
       x, y, ICON_CAMERA_DATA, 16.0f / size, 1.0f, 0.0f, color, false, UI_NO_ICON_OVERLAY_TEXT);
   GPU_blend(GPU_BLEND_ALPHA);
 }
@@ -105,13 +107,10 @@ void sync_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
   const int last = state.beats.is_empty() ? state.scene_frame_start : state.frame_end;
   const int count = int(state.beats.size());
   const bool shot_changed = runtime->shot_identity != state.shot_identity;
-  /* Shot or beat-count changes are new content and may need a re-fit.
-   * Retiming the first or last keyframe is not: auto-fitting would keep that
-   * handle glued to the same pixel, so end keys look undraggable while
-   * middle ones slide. */
-  const bool count_changed = runtime->content_count != count;
+  const bool content_changed = runtime->content_first != first || runtime->content_last != last ||
+                               runtime->content_count != count;
   if (!runtime->view_initialized || shot_changed ||
-      (count_changed && !runtime->view_user_modified))
+      (content_changed && !runtime->view_user_modified))
   {
     reset_view(state, runtime);
   }
@@ -241,17 +240,9 @@ void draw_strip(const DirectorViewState &state,
   }
 
   const float handle_w = std::max(9.0f, 11.0f * UI_SCALE_FAC);
-  const float hit_pad = 10.0f * UI_SCALE_FAC;
   for (const DirectorBeatView &beat : state.beats) {
     const float x = frame_x(float(beat.frame));
-    const float hit_xmin = x - hit_pad;
-    const float hit_xmax = x + hit_pad;
-    /* Keep a partly-visible handle hittable. The last keyframe sits on the
-     * strip's right edge; dropping it when its centre crosses xmax made
-     * that handle undraggable. */
-    if (hit_xmax < runtime->viewport_bounds.xmin ||
-        hit_xmin > runtime->viewport_bounds.xmax)
-    {
+    if (x < runtime->viewport_bounds.xmin || x > runtime->viewport_bounds.xmax) {
       continue;
     }
     const rctf handle = {x - handle_w * 0.5f, x + handle_w * 0.5f, strip_y, strip_y + strip_h};
@@ -259,8 +250,8 @@ void draw_strip(const DirectorViewState &state,
                              beat.index == runtime->hovered_beat;
     draw_round_rect(handle, handle_w * 0.48f, highlighted ? HANDLE_ACTIVE_COLOR : HANDLE_COLOR);
     DirectorTimelineBeatHit hit;
-    hit.bounds = {hit_xmin,
-                  hit_xmax,
+    hit.bounds = {x - 10.0f * UI_SCALE_FAC,
+                  x + 10.0f * UI_SCALE_FAC,
                   strip_y - 4.0f * UI_SCALE_FAC,
                   strip_y + strip_h + 4.0f * UI_SCALE_FAC};
     hit.index = beat.index;
@@ -328,3 +319,4 @@ void view3d_director_timeline_draw_content(const ARegion *region,
   draw_strip(state, runtime, strip_y, strip_h);
   draw_playhead(state, *runtime, float(margin), float(content_top));
 }
+}  // namespace blender

@@ -75,18 +75,13 @@ def _ensure_catalog_entry(library_path, label):
     return cat_uuid
 
 
-def _create_clean_copy(obj, asset_name=None):
+def _create_clean_copy(obj):
     """Create a clean standalone mesh copy for asset export.
 
     - Bakes the full world transform into mesh vertices
     - No parent-child relationships
     - Centered at bounding-box center with identity transform
     - Materials and textures preserved
-
-    ``asset_name`` overrides the copy's datablock name (the SEARCHABLE asset
-    name); defaults to the source object's name. Callers that archive many
-    same-typed objects (e.g. generations) pass a unique name so the embedding
-    index — keyed on (name, library, blend_file) — doesn't collide.
 
     Returns the temporary object (caller must clean up via _remove_temp).
     """
@@ -113,10 +108,8 @@ def _create_clean_copy(obj, asset_name=None):
         center = (bbox_min + bbox_max) / 2
         clean_mesh.transform(Matrix.Translation(-center))
 
-    name = asset_name or obj.name
-    clean_mesh.name = name
     # Create standalone object at origin with identity transform
-    clean_obj = bpy.data.objects.new(name, clean_mesh)
+    clean_obj = bpy.data.objects.new(obj.name, clean_mesh)
     return clean_obj
 
 
@@ -145,76 +138,7 @@ def _collect_datablocks(clean_obj):
     return blocks
 
 
-def _attach_preview(clean_obj):
-    """Render a 512² thumbnail and embed it as the asset's datablock preview.
-
-    Reuses the same rig as the embedding-training flow (EEVEE, transparent
-    film, 3/4-view camera, key/fill lights) so generated assets (e.g.
-    image-to-3D results) get a real thumbnail instead of the placeholder
-    icon. The preview is written into the .blend by the caller's
-    ``libraries.write`` — no extra file I/O.
-
-    Best-effort: any failure (missing context, render error) leaves the
-    asset preview-less rather than aborting the export.
-    """
-    try:
-        from mixar.modules.asset_search.utils.preview_render import (
-            PreviewRenderRig,
-            frame_camera,
-            render_to_image,
-        )
-    except Exception as e:
-        logger.debug("[AssetExporter] Preview helpers unavailable: %s", e)
-        return
-
-    scene = bpy.context.scene
-    if scene is None:
-        return
-
-    img = None
-    linked = False
-    try:
-        with PreviewRenderRig(scene, size=512) as rig:
-            scene.collection.objects.link(clean_obj)
-            linked = True
-            bpy.context.view_layer.update()
-            frame_camera(rig.camera, [clean_obj])
-            # pack=True so the pixels survive render_to_image deleting its temp file
-            img = render_to_image(scene, f"_asset_preview_{clean_obj.name}", pack=True)
-
-        if not img:
-            return
-        w, h = img.size
-        if not (w and h):
-            return
-        pixels = [0.0] * (w * h * 4)
-        img.pixels.foreach_get(pixels)
-        preview = clean_obj.preview_ensure()
-        preview.image_size = (w, h)
-        preview.image_pixels_float.foreach_set(pixels)
-        logger.debug(
-            "[AssetExporter] Attached %dx%d preview to '%s'", w, h, clean_obj.name
-        )
-    except Exception as e:
-        logger.debug(
-            "[AssetExporter] Preview render failed for '%s': %s", clean_obj.name, e
-        )
-    finally:
-        if linked and clean_obj.name in bpy.data.objects:
-            try:
-                scene.collection.objects.unlink(clean_obj)
-            except Exception:
-                pass
-        if img is not None:
-            try:
-                bpy.data.images.remove(img)
-            except Exception:
-                pass
-
-
-def export_object_to_asset_library(
-    obj, label, library_path, *, asset_name=None, description="", tags=None
-):
+def export_object_to_asset_library(obj, label, library_path):
     """Export a Blender object to an asset library as a clean .blend file.
 
     The exported asset is a flat mesh (no hierarchy, no empties) with its
@@ -224,11 +148,6 @@ def export_object_to_asset_library(
         obj: The Blender object to export (must be MESH type).
         label: Human-readable label for the asset (e.g. "wooden table").
         library_path: Root directory of the asset library.
-        asset_name: Override for the SEARCHABLE asset (datablock) name. Defaults
-            to the source object's name. Pass a unique value when archiving many
-            same-typed objects so the embedding index doesn't collide on name.
-        description: Optional asset description (feeds embedding-search text).
-        tags: Optional list of tag strings (also feed embedding-search text).
 
     Returns:
         True on success, False on failure.
@@ -263,32 +182,12 @@ def export_object_to_asset_library(
         catalog_id = None
 
     # Create a clean, flat copy (no hierarchy, baked transform, at origin)
-    clean_obj = _create_clean_copy(obj, asset_name=asset_name)
+    clean_obj = _create_clean_copy(obj)
 
     # Mark the clean copy as asset
     clean_obj.asset_mark()
     if catalog_id and clean_obj.asset_data:
         clean_obj.asset_data.catalog_id = catalog_id
-    # Optional metadata — improves embedding-search relevance (name alone is
-    # often generic for generated meshes).
-    if clean_obj.asset_data:
-        if description:
-            try:
-                clean_obj.asset_data.description = description
-            except Exception:
-                pass
-        for tag in (tags or []):
-            if tag:
-                try:
-                    clean_obj.asset_data.tags.new(str(tag), skip_if_exists=True)
-                except TypeError:
-                    clean_obj.asset_data.tags.new(str(tag))
-                except Exception:
-                    pass
-
-    # Best-effort: render a thumbnail and embed it as the asset preview so
-    # library assets (e.g. image-to-3D generations) aren't preview-less.
-    _attach_preview(clean_obj)
 
     # Collect datablocks from the clean copy only
     datablocks = _collect_datablocks(clean_obj)

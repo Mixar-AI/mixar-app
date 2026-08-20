@@ -17,24 +17,13 @@ class MIXIE_OT_moodboard_create_connected_action(Operator):
 
     action_type: bpy.props.EnumProperty(items=ACTION_TYPES)
     source_node_id: bpy.props.StringProperty(default="")
-    # SKIP_SAVE: this is a REGISTER operator, so any property the caller leaves
-    # unset is re-filled from the last run. Without it, one node created by
-    # dropping a noodle would pin every later menu entry to that same spot.
-    use_drop_position: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
-    drop_x: bpy.props.FloatProperty(default=0.0, options={'SKIP_SAVE'})
-    drop_y: bpy.props.FloatProperty(default=0.0, options={'SKIP_SAVE'})
 
     def execute(self, context):
         from mixar.modules.moodboard.core.node_graph import create_connected_action
 
         try:
             node = create_connected_action(
-                context.scene,
-                self.action_type,
-                self.source_node_id,
-                drop_position=(
-                    (self.drop_x, self.drop_y) if self.use_drop_position else None
-                ),
+                context.scene, self.action_type, self.source_node_id
             )
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
@@ -61,10 +50,7 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
     )
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.node_execution import (
-            mark_run_failed,
-            run_action_node,
-        )
+        from mixar.modules.moodboard.core.node_execution import run_action_node
         from mixar.modules.moodboard.core.node_graph import (
             action_node_by_id,
             active_action_node,
@@ -91,53 +77,13 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
         try:
             run_action_node(context, node, self)
         except Exception as exc:
-            # A node that is genuinely generating keeps its state; marking a
-            # live job FAILED (e.g. on this second click) is a false alarm.
-            marked = mark_run_failed(node, str(exc))
-            self.report({'ERROR' if marked else 'WARNING'}, str(exc))
+            node.state = 'FAILED'
+            node.error = str(exc)
+            self.report({'ERROR'}, str(exc))
             if context.area:
                 context.area.tag_redraw()
             return {'CANCELLED'}
         self.report({'INFO'}, "Node added to the generation queue")
-        if context.area:
-            context.area.tag_redraw()
-        return {'FINISHED'}
-
-
-class MIXIE_OT_moodboard_cancel_action_node(Operator):
-    bl_idname = "mixie.moodboard_cancel_action_node"
-    bl_label = "Cancel Generation"
-    bl_description = "Cancel the generation this node is waiting on"
-    bl_options = {'REGISTER'}
-
-    # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
-    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
-
-    def execute(self, context):
-        from mixar.modules.moodboard.core.node_graph import (
-            action_node_by_id,
-            active_action_node,
-        )
-        from mixar.modules.moodboard.core.node_job_bridge import cancel_node_job
-
-        node = (
-            action_node_by_id(context.scene, self.node_id)
-            if self.node_id else active_action_node(context.scene)
-        )
-        if node is None:
-            self.report({'WARNING'}, "Select an inference node")
-            return {'CANCELLED'}
-        if cancel_node_job(node.node_id):
-            self.report({'INFO'}, "Generation cancelled")
-        elif node.state in {'QUEUED', 'RUNNING'}:
-            # No live queue job backs this state (a stale .blend, or the queue
-            # was cleared by a file load) — reconcile the node so it stops
-            # claiming work that no longer exists.
-            node.state = 'CANCELLED'
-            self.report({'INFO'}, "This node was no longer generating")
-        else:
-            self.report({'WARNING'}, "This node is not generating")
-            return {'CANCELLED'}
         if context.area:
             context.area.tag_redraw()
         return {'FINISHED'}
@@ -207,29 +153,18 @@ class MIXIE_OT_moodboard_connect_nodes(Operator):
 
     from_node_id: bpy.props.StringProperty(default="")
     to_node_id: bpy.props.StringProperty(default="")
-    # Empty means "whichever input fits": a noodle released on a card's body
-    # rather than precisely on one of its sockets still has an unambiguous
-    # target, so it resolves to the first free compatible slot.
     to_socket: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.node_graph import (
-            connect_nodes,
-            connect_to_next_input,
-        )
+        from mixar.modules.moodboard.core.node_graph import connect_nodes
 
         try:
-            if self.to_socket:
-                connect_nodes(
-                    context.scene,
-                    self.from_node_id,
-                    self.to_node_id,
-                    self.to_socket,
-                )
-            else:
-                connect_to_next_input(
-                    context.scene, self.from_node_id, self.to_node_id
-                )
+            connect_nodes(
+                context.scene,
+                self.from_node_id,
+                self.to_node_id,
+                self.to_socket,
+            )
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
@@ -276,7 +211,6 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
 classes = (
     MIXIE_OT_moodboard_create_connected_action,
     MIXIE_OT_moodboard_run_action_node,
-    MIXIE_OT_moodboard_cancel_action_node,
     MIXIE_OT_moodboard_reset_node_params,
     MIXIE_OT_moodboard_delete_action_node,
     MIXIE_OT_moodboard_connect_nodes,

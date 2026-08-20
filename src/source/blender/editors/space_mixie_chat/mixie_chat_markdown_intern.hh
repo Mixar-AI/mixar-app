@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* Maximum segments to parse from JSON - keep small to avoid stack overflow */
 #define MARKDOWN_MAX_SEGMENTS 64
 /* Maximum list items per list segment */
@@ -53,13 +56,6 @@ int parse_markdown_segments(const char *metadata_json,
                             int max_segments);
 
 /**
- * Cached variant keyed on the metadata JSON (LRU, main-thread only —
- * mixie_chat_markdown_parse.cc). The returned pointer is valid until the
- * entry is evicted; consume it before the next cache access.
- */
-const MarkdownSegment *markdown_segments_get_cached(const char *metadata_json, int *r_count);
-
-/**
  * Table segment rendering (mixie_chat_table.cc).
  * Table text is tab-delimited columns, newline-delimited rows.
  * First row is always the header.
@@ -74,3 +70,5 @@ float chat_ui_draw_table(const MarkdownSegment *seg,
                           float content_width,
                           const struct ChatBubbleStyle *style,
                           float scale_factor);
+
+}  // namespace blender

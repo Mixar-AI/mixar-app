@@ -61,63 +61,12 @@ _shutdown_requested = False
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
 
-# Render jobs never gate scripts. The agent's final render is fire-and-forget
-# on Blender's job thread and the render evaluates its OWN depsgraph, so the
-# agent keeps working (and the user keeps clicking) while it runs — exactly
-# as a user's F12 does with Lock Interface off. A hold here (3.4.2) parked
-# the head-of-queue script while Blender reported a RENDER job alive, for up
-# to 20 s, then failed it — which stalled every turn for the whole render (the
-# render lane's own post-render verification script included) and turned any
-# render longer than a quick EEVEE preview into a guaranteed failed turn.
-# Removed in 3.4.4; do not bring it back for ANY job type. Full write-up and
-# the pinning tests: docs/render-job-contract.md.
-
 # The user's genuine foreground scene — the one window.scene should return to
 # after a per-scene-routed (or lane) script flips away from it. Tracked by name
 # because Scene datablocks are not safe to hold across undo/file-load. Updated
 # only when an active-scene-follow script runs (agent:/empty session), i.e. the
 # scene the user is actually looking at (see _process_one_request).
 _user_foreground_scene_name: str = ""
-
-# In-flight script marker for the blender.liveness probe. Set on the main
-# thread around ScriptExecutor.execute() and read from the WebSocket thread:
-# a long bpy op holds the GIL so the probe can ONLY be answered while the
-# C-level call releases it — which is exactly what "busy, not frozen" means.
-# Lock-guarded because it crosses threads.
-_inflight_lock = threading.Lock()
-_inflight: Optional[dict] = None
-
-
-def _set_inflight(tool_name: str, request_id: str, session_id: str) -> None:
-    global _inflight
-    with _inflight_lock:
-        _inflight = {
-            "tool_name": tool_name,
-            "request_id": request_id,
-            "session_id": session_id,
-            "_started": time.monotonic(),
-        }
-
-
-def _clear_inflight() -> None:
-    global _inflight
-    with _inflight_lock:
-        _inflight = None
-
-
-def get_inflight_script() -> Optional[dict]:
-    """Snapshot of the currently executing agent script (thread-safe).
-
-    Returns None when the main thread is idle; otherwise the tool name,
-    request id, session id and elapsed seconds — consumed by the
-    blender.liveness handler answered on the WebSocket thread.
-    """
-    with _inflight_lock:
-        if not _inflight:
-            return None
-        info = dict(_inflight)
-    info["elapsed_s"] = round(time.monotonic() - info.pop("_started"), 1)
-    return info
 
 
 def _resolve_agent_context_ids(
@@ -341,9 +290,6 @@ def _process_one_request() -> Optional[float]:
         return _stop_timer_if_idle()
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
-    # Visible to the WebSocket thread's blender.liveness probe while this
-    # tick's bpy work holds the main thread (busy != frozen).
-    _set_inflight(tool_name, request_id, session_id)
 
     # --- Scene context routing ---
     # A per-scene routing session (the user's main scene UUID, or an
@@ -468,10 +414,6 @@ def _process_one_request() -> Optional[float]:
     # Complete the step row with status / touched objects / output.
     if chat_scene:
         record_step_end(chat_scene, request_id, result_dict)
-
-    # Main-thread work for this script is done — the liveness probe reports
-    # idle from here on.
-    _clear_inflight()
 
     # Send response directly via WebSocket client (thread-safe)
     # This avoids cross-thread queue polling which caused segfaults

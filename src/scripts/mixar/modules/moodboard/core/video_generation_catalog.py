@@ -4,8 +4,6 @@
 
 """Read the Video Gen input contract from the backend generation catalog."""
 
-import os
-
 
 def get_video_generation_limits(service_key):
     """Return normalized reference limits, or ``None`` for invalid config.
@@ -95,50 +93,3 @@ def seedance_reference_count_error(
     if image_count + video_count > limits["max_materials"]:
         return f"Select at most {limits['max_materials']} reference materials"
     return None
-
-
-def build_video_reference_inputs(videos, limits) -> list[dict]:
-    """Validate and shape streamed movie references, or raise ValueError.
-
-    One definition for BOTH submit paths (node graph and sidebar drawer): a
-    second copy of these checks diverged once already (different error text,
-    one path silently accepting a different image-fallback label). Movies
-    stream from ``filepath`` at upload time, so only path/size/extension are
-    resolved here — never the bytes.
-    """
-    inputs = []
-    for video in videos:
-        if video["file_size_bytes"] > limits["max_video_bytes"]:
-            raise ValueError(f"Video is too large: {video['filename']}")
-        extension = os.path.splitext(video["filename"])[1].lower()
-        if extension not in limits["video_extensions"]:
-            raise ValueError(f"Unsupported video reference: {video['filename']}")
-        inputs.append({
-            "filename": video["filename"],
-            "mime_type": video["mime_type"],
-            "filepath": video["resolved_filepath"],
-            "file_size_bytes": video["file_size_bytes"],
-        })
-    return inputs
-
-
-def build_image_reference_inputs(images, limits, compress) -> list[dict]:
-    """Compress and validate still references into upload-ready dicts.
-
-    *compress* is injected (``compress_for_service``) so this stays pure: no
-    bpy, no PIL, and the byte cap is exercised by the standalone suite.
-    """
-    inputs = []
-    for index, item in enumerate(images):
-        payload = compress(item["image"], "video_gen")
-        if len(payload) > limits["max_image_bytes"]:
-            raise ValueError(
-                "Image is too large after compression: "
-                f"{item.get('filename') or item.get('image_name') or 'reference'}"
-            )
-        inputs.append({
-            "filename": f"reference_{index + 1}.jpg",
-            "mime_type": "image/jpeg",
-            "bytes": payload,
-        })
-    return inputs

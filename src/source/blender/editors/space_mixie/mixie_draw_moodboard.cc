@@ -144,8 +144,8 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
    * screen-space density. */
   const float grid_step = MOODBOARD_GRID_SPACING;
   const float dot_radius = MOODBOARD_GRID_DOT_RADIUS;
-  const float view_scale = std::min(UI_view2d_scale_get_x(v2d),
-                                    UI_view2d_scale_get_y(v2d));
+  const float view_scale = std::min(ui::view2d_scale_get_x(v2d),
+                                    ui::view2d_scale_get_y(v2d));
   const float dot_diameter_px = dot_radius * 2.0f * view_scale;
 
   /* A regular grid below pixel resolution produces circular Moire bands as
@@ -226,9 +226,9 @@ void mixie_draw_moodboard_media_frame(
   const rctf frame = {x - padding, x + w + padding, y - padding, y + h + padding};
   const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
   const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&frame, true, MOODBOARD_MEDIA_FRAME_RADIUS, background);
-  UI_draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&frame, true, MOODBOARD_MEDIA_FRAME_RADIUS, background);
+  ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
 }
 
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h)
@@ -258,7 +258,7 @@ void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float
 
   /* Draw resize handles */
   float handle_size_px = 12.0f;
-  float handle_size = handle_size_px / UI_view2d_scale_get_x(v2d);
+  float handle_size = handle_size_px / ui::view2d_scale_get_x(v2d);
 
   /* 8 handle positions: 4 corners + 4 edge midpoints */
   float handle_positions[8][2] = {
@@ -306,27 +306,19 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Setup View2D for infinite canvas */
   View2D *v2d = &region->v2d;
 
-  UI_view2d_view_ortho(v2d);
+  ui::view2d_view_ortho(v2d);
 
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
-  /* One rect/link cache for every graph pass of this frame. Each pass
-   * building its own re-acquired every image's ImBuf (aspect lookup) several
-   * times per redraw — at the generating-glow repaint rate that was the
-   * dominant per-frame cost on a large board. */
-  MoodboardGraphCache graph_cache;
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  moodboard_graph_cache_build(&scene_ptr, &graph_cache);
-
   /* Draw graph connections behind every canvas block. */
-  mixie_draw_moodboard_links(C, v2d, &graph_cache);
+  mixie_draw_moodboard_links(C, v2d);
 
   /* Draw moodboard images */
   mixie_draw_moodboard_images(C, v2d);
 
   /* Draw inference and 3D-result nodes above their links. */
-  mixie_draw_moodboard_graph_nodes(C, v2d, &graph_cache);
+  mixie_draw_moodboard_graph_nodes(C, v2d);
 
   /* Draw moodboard text boxes */
   mixie_draw_moodboard_textboxes(C, v2d);
@@ -338,10 +330,10 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   mixie_draw_edit_tool_overlay(C, v2d);
 
   /* Reset view */
-  UI_view2d_view_restore(C);
+  ui::view2d_view_restore(C);
 
   /* Draw View2D scrollers */
-  UI_view2d_scrollers_draw(v2d, nullptr);
+  ui::view2d_scrollers_draw(v2d, nullptr);
 }
 
 /** \} */

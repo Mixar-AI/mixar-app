@@ -39,6 +39,8 @@
 #include "RNA_access.hh"
 
 #include "image_mixar_uv_panels.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 using blender::Span;
 using blender::Vector;
@@ -437,3 +439,4 @@ void do_mixar_uvedit_transform(bContext *C, void * /*arg*/, int event)
 }
 
 /** \} */
+}  // namespace blender

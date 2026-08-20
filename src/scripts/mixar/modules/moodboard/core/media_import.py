@@ -55,39 +55,6 @@ def add_packed_image_to_board(
     return item
 
 
-def load_media_file_to_board(scene, filepath, anchor=None):
-    """Load an image or movie from *filepath* and add it to the moodboard.
-
-    The single definition of "import a media file onto the board": loads the
-    media into Blender, packs still images, keeps movies linked to their source
-    path (Blender cannot pack them), appends it to the moodboard collection and
-    positions it in visible free space centred on *anchor* (canvas coords, e.g.
-    the cursor) or the viewport centre when *anchor* is ``None``.
-
-    Shared by the moodboard's own import/paste/drop operators and by the chat
-    composer's attachment mirroring.
-
-    Returns:
-        The newly created moodboard media item, or None on failure.
-    """
-    try:
-        img = bpy.data.images.load(filepath, check_existing=True)
-        img.colorspace_settings.name = 'sRGB'
-        if img.source != 'MOVIE':
-            img.pack()
-        elif img.frame_duration < 1 or img.size[0] <= 0 or img.size[1] <= 0:
-            return None
-    except Exception:
-        return None
-
-    item = scene.mixie_moodboard_images.add()
-    item.image = img
-    item.scale = 1.0
-    item.z_order = len(scene.mixie_moodboard_images) - 1
-    place_new_moodboard_item(scene, item, anchor=anchor)
-    return item
-
-
 def pack_still_image(source_path: str, *, display_name: str = ""):
     """Load and pack a still into the blend, returning the Image datablock.
 

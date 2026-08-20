@@ -46,6 +46,8 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Helpers
@@ -385,3 +387,4 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
 }
 
 /** \} */
+}  // namespace blender

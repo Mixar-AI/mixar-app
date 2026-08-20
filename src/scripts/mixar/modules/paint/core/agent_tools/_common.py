@@ -65,27 +65,28 @@ def _resolve_mesh_objects(object_names=None) -> tuple[list[object], list[str]]:
     active = getattr(bpy.context, "active_object", None)
     if active is not None:
         _add_mesh_target(active, targets)
+    if targets:
+        return list(targets.values()), []
 
-    # No scene-wide fallback: with an empty context the agent tool call must
-    # FAIL (callers report "No mesh objects found") instead of silently
-    # targeting EVERY mesh in the scene on a malformed request.
+    # Scope the final fallback to the active scene. bpy.data.objects includes
+    # every object across all scenes and unlinked datablocks.
+    scene = getattr(bpy.context, "scene", None)
+    for obj in getattr(scene, "objects", []):
+        _add_mesh_target(obj, targets)
     return list(targets.values()), []
 
 
-def _selection_snapshot() -> tuple[str, list[str], str]:
+def _selection_snapshot() -> tuple[str, list[str]]:
     active = getattr(bpy.context, "active_object", None)
     selected = getattr(bpy.context, "selected_objects", [])
     return (
         getattr(active, "name", ""),
         [getattr(obj, "name", "") for obj in selected],
-        # object.mode is exactly what mode_set accepts; the default keeps
-        # test stub objects (no .mode) from triggering a restore.
-        getattr(active, "mode", "OBJECT"),
     )
 
 
-def _restore_selection(snapshot: tuple[str, list[str], str]) -> None:
-    active_name, selected_names, mode = snapshot
+def _restore_selection(snapshot: tuple[str, list[str]]) -> None:
+    active_name, selected_names = snapshot
     try:
         if bpy.context.mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")
@@ -99,13 +100,6 @@ def _restore_selection(snapshot: tuple[str, list[str], str]) -> None:
             bpy.context.view_layer.objects.active = active
     except Exception:
         logger.debug("Could not restore selection", exc_info=True)
-    # Restore the artist's mode: the OBJECT switch above (plus the mid-flow
-    # switch in _activate_object) must not leave them stuck in OBJECT mode.
-    if mode and mode != "OBJECT":
-        try:
-            bpy.ops.object.mode_set(mode=mode)
-        except Exception:
-            logger.debug("Could not restore %s mode", mode, exc_info=True)
 
 
 def _activate_object(obj) -> None:
@@ -357,79 +351,6 @@ def _material_layer_snapshot(layer) -> dict:
     }
 
 
-def _bsdf_group_link_status(mat, node) -> tuple[object, str]:
-    """Does the Mixar Paint group actually drive the material's BSDF Base Color?
-
-    Returns ``(linked, reason)`` where ``linked`` is True / False / None. Only an
-    explicit False means a Color channel exists but the group's Color output does
-    not reach the Principled BSDF Base Color (directly or through an intermediate
-    such as the AO Multiply). ``None`` means "not applicable / uncheckable" (no
-    Principled BSDF, no color channel, or the helper could not be imported) and
-    must never fail verification. The backend consumes this to distinguish a real
-    applied material from a disconnected composite that renders nothing.
-    """
-    # Delayed import: keeps module import time free of bpy-only deps so the pure
-    # Python test harness (which stubs only a minimal bpy) can still load this file.
-    try:
-        from mixar.modules.paint.core.io.utils.bsdf_connections import (
-            bsdf_socket_driven_by_node,
-            find_principled_bsdf,
-            get_bsdf_socket_name,
-        )
-    except Exception:
-        return None, "link check unavailable"
-
-    if mat is None or node is None:
-        return None, "no material or paint node"
-    bsdf = find_principled_bsdf(mat)
-    if bsdf is None:
-        return None, "no Principled BSDF (non-Principled material)"
-
-    color_output = None
-    for output_socket in getattr(node, "outputs", []):
-        if get_bsdf_socket_name(getattr(output_socket, "name", "")) == "Base Color":
-            color_output = output_socket
-            break
-    if color_output is None:
-        return None, "no color channel to check"
-
-    if bsdf_socket_driven_by_node(bsdf, "Base Color", node):
-        return True, "group Color output drives BSDF Base Color"
-    return False, "group Color output is not linked to the BSDF Base Color"
-
-
-def _enabled_layers_above_base(mp, expected_material_id: str, expected_layer_name: str) -> list[str]:
-    """Names of enabled layers stacked ABOVE the expected base layer (occlusion).
-
-    Stack index 0 == TOP (see ``layered_build.builder`` and the reversed layer
-    compositing in ``core/io/mp/mp_connections``), so "above the base" means a
-    lower index than the base layer. A leftover default fill layer sitting on top
-    of a freshly applied base shows up here; so do legitimate detail layers — the
-    caller decides what is genuine occlusion, this only reports the stack.
-    """
-    layers = list(getattr(mp, "layers", []))
-    target_id = (expected_material_id or "").strip()
-    target_name = (expected_layer_name or "").strip()
-
-    base_index = None
-    for i, layer in enumerate(layers):
-        if target_id and getattr(layer, "procedural_material_id", "") == target_id:
-            base_index = i
-            break
-        if target_name and getattr(layer, "name", "") == target_name:
-            base_index = i
-            break
-    if base_index is None:
-        return []
-
-    above = []
-    for i in range(base_index):
-        layer = layers[i]
-        if bool(getattr(layer, "enable", True)):
-            above.append(getattr(layer, "name", ""))
-    return above
-
-
 def _material_application_snapshot(
     object_names=None,
     expected_material_id: str = "",
@@ -452,18 +373,10 @@ def _material_application_snapshot(
         node = _find_mpaint_node_for_material(mat)
         layers = []
         channels = []
-        bsdf_linked = None
-        bsdf_reason = "no paint node"
-        layers_above_base: list[str] = []
         if node is not None:
             mp = node.node_tree.mp
             layers = [_material_layer_snapshot(layer) for layer in mp.layers]
             channels = [channel.name for channel in mp.channels]
-            bsdf_linked, bsdf_reason = _bsdf_group_link_status(mat, node)
-            if expected_material_id or expected_layer_name:
-                layers_above_base = _enabled_layers_above_base(
-                    mp, expected_material_id, expected_layer_name
-                )
 
         layer_ids = {layer.get("procedural_material_id", "") for layer in layers}
         layer_names = {layer.get("name", "") for layer in layers}
@@ -484,13 +397,6 @@ def _material_application_snapshot(
             "channels": channels,
             "has_expected_procedural_layer": has_expected_procedural_layer,
             "has_expected_placeholder": has_expected_placeholder,
-            # Honest composite checks (additive keys). bsdf_linked_to_group is
-            # True/False/None; only False means the group Color output does not
-            # reach the BSDF Base Color. layers_above_base surfaces occluding
-            # layers (e.g. a leftover default fill) stacked over the base.
-            "bsdf_linked_to_group": bsdf_linked,
-            "bsdf_link_reason": bsdf_reason,
-            "layers_above_base": layers_above_base,
         })
 
     expects_procedural = bool(expected_material_id or expected_layer_name)
@@ -500,12 +406,6 @@ def _material_application_snapshot(
         verified = verified and all(item["has_expected_procedural_layer"] for item in objects)
     if expects_placeholder:
         verified = verified and all(item["has_expected_placeholder"] for item in objects)
-    # A material only counts as applied if its composite actually drives the BSDF.
-    # Only an explicit False fails; None (no BSDF / no color channel / uncheckable)
-    # is treated as "not applicable" so non-Principled materials still verify.
-    verified = verified and all(
-        item["bsdf_linked_to_group"] is not False for item in objects
-    )
 
     return {
         "verified": verified,

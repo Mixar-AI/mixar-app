@@ -33,8 +33,6 @@ def update_mask_name(self, context):
     if mp.halt_update:
         return
     match = re.match(r"mp\.layers\[(\d+)\]\.masks\[(\d+)\]", self.path_from_id())
-    if not match:
-        return
     layer = mp.layers[int(match.group(1))]
     src = get_mask_source(self)
 
@@ -74,8 +72,6 @@ def update_layer_mask_enable(self, context):
         return
 
     match = re.match(r"mp\.layers\[(\d+)\]\.masks\[(\d+)\]", self.path_from_id())
-    if not match:
-        return
     layer = mp.layers[int(match.group(1))]
     tree = get_tree(layer)
 

@@ -17,6 +17,8 @@
 #pragma once
 
 #include "BLI_sys_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 /* [[maybe_unused]]: the full palette is defined up front as the single
  * source of truth; individual tokens land as each widget phase uses them. */
@@ -49,3 +51,4 @@
 [[maybe_unused]] inline constexpr float MX_R_SM = 4.0f; /* --mx-r-sm: inputs / selects */
 [[maybe_unused]] inline constexpr float MX_R_MD = 8.0f; /* --mx-r-md: grouped cards    */
 [[maybe_unused]] inline constexpr float MX_R_PILL = 999.0f; /* fully rounded; clamped to h/2 */
+}  // namespace blender::ui

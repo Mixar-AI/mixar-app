@@ -13,6 +13,8 @@
 #include <string>
 
 #include "BLI_vector.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct PointerRNA;
@@ -66,3 +68,4 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region);
 /** Register and materialize the poll-driven bottom timeline region. */
 void view3d_director_timeline_region_register(SpaceType *st);
 void view3d_director_timeline_region_ensure(ScrArea *area);
+}  // namespace blender

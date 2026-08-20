@@ -22,8 +22,10 @@
 #pragma once
 
 #include "BLI_sys_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
-/** Card glyphs. Values are persisted in `uiBut::hardmax`, so append only. */
+/** Card glyphs. Values are persisted in `Button::hardmax`, so append only. */
 enum class MixarCardIcon : int {
   None = 0,
   /** 2x2 tiles — Dashboard. */
@@ -47,3 +49,4 @@ enum class MixarCardIcon : int {
  */
 void UI_mixar_card_icon_draw(
     MixarCardIcon icon, float cx, float cy, float size, const uchar col[4]);
+}  // namespace blender::ui

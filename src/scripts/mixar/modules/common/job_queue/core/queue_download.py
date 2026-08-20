@@ -226,13 +226,7 @@ class DownloadMixin:
         # Cancelled, or already failed by the RUNNING_DOWNLOAD watchdog while
         # this thread was still running: drop the file, free the slot, and
         # never resurrect a job that has already reached a terminal state.
-        # The membership check covers clear_all() (e.g. a load_post file
-        # switch): a job dropped from the queue must not import its result
-        # into the newly opened file even if its state read as
-        # RUNNING_DOWNLOAD just before the drop.
-        if job.state != JobState.RUNNING_DOWNLOAD or not any(
-            j is job for j in self._jobs
-        ):
+        if job.state != JobState.RUNNING_DOWNLOAD:
             try:
                 os.remove(filepath)
             except OSError:

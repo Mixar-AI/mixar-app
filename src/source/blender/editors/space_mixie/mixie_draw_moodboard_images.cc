@@ -57,15 +57,6 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *i
     return nullptr;
   }
 
-  /* A >8-bit movie frame (e.g. a 10-bit HEVC video-gen result) decodes to a
-   * scene-linear float buffer with NO byte buffer, which this byte cache
-   * cannot upload — node previews then drew nothing (a black tile). Convert
-   * to display bytes once per decoded frame; the byte buffer lands on the
-   * movie-cache ibuf, so a paused frame pays this exactly once. */
-  if (ibuf->byte_buffer.data == nullptr && ibuf->float_buffer.data != nullptr) {
-    IMB_byte_from_float(ibuf);
-  }
-
   /* Return cached texture if dimensions still match. */
   if (it != s_srgb_tex_cache.end()) {
     if (ibuf->x == it->second.width && ibuf->y == it->second.height) {
@@ -81,7 +72,7 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *i
         return it->second.tex;
       }
     }
-    /* Stale dimensions, or a frame this byte cache cannot represent. */
+    /* Stale dimensions, or a float frame unsupported by this byte cache. */
     GPU_texture_free(it->second.tex);
     s_srgb_tex_cache.erase(it);
   }
@@ -182,7 +173,7 @@ void mixie_draw_moodboard_video_overlay(View2D *v2d,
                                        const float center_y,
                                        const bool is_playing)
 {
-  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+  const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
   const float radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
   GPU_blend(GPU_BLEND_ALPHA);
   GPUVertFormat *format = immVertexFormat();

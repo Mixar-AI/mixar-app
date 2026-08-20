@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct wmOperatorType;
@@ -77,3 +80,5 @@ void MIXAR_OT_bubble_toggle_expand(wmOperatorType *ot);
 void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot);
 
 /** \} */
+
+}  // namespace blender

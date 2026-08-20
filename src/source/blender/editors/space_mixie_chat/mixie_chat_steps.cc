@@ -39,6 +39,8 @@
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Vertical gap between consecutive rows. */
 #define STEPS_ROW_GAP 6.0f
@@ -91,7 +93,7 @@ void chat_ui_draw_chevron(float x, float center_y, bool collapsed, const float c
                          uchar(color[2] * 255.0f),
                          uchar(color[3] * 255.0f)};
   GPU_blend(GPU_BLEND_ALPHA);
-  UI_icon_draw_ex(x,
+  ui::icon_draw_ex(x,
                   icon_y,
                   collapsed ? ICON_TRIA_RIGHT : ICON_TRIA_DOWN,
                   16.0f / icon_px,
@@ -386,3 +388,4 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
 }
 
 /** \} */
+}  // namespace blender

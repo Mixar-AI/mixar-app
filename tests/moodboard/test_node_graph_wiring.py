@@ -73,17 +73,17 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     # Numeric parameters are plain manual number fields: the catalog's wide
     # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
     assert 'STREQ(widget, "slider")' not in controls
-    assert "button_type = ButType::Num;" in controls
+    assert "button_type = ui::ButtonType::Num;" in controls
     assert 'RNA_struct_find_property(node, "parameters")' in controls
     assert "uiDefButO" in controls
     assert '"MIXIE_OT_moodboard_run_action_node"' in controls
-    assert controls.index("UI_view2d_view_restore(C)") < controls.index(
-        "UI_block_begin("
+    assert controls.index("view2d_view_restore(C)") < controls.index(
+        "block_begin("
     )
-    assert "UI_region_handlers_add" in space
+    assert "region_handlers_add" in space
     assert "ED_KEYMAP_UI | ED_KEYMAP_GIZMO" in space
     assert "moodboard_action_run_button_rect" not in renderer
-    assert "UI_draw_roundbox_4fv" in renderer
+    assert "draw_roundbox_4fv" in renderer
 
 
 def test_context_actions_create_connected_nodes_and_execute_through_queue():

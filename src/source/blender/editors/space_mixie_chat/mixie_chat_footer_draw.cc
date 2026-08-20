@@ -35,6 +35,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Send Button Pulse Glow
@@ -58,8 +60,8 @@ void footer_draw_send_button_glow(ARegion *region,
     gr.xmax = float(pos.send_btn_x + pos.btn_size) + gp;
     gr.ymin = float(pos.buttons_y) - gp;
     gr.ymax = float(pos.buttons_y + pos.btn_size) + gp;
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
-    UI_draw_roundbox_4fv(&gr, true, (float(pos.btn_size) + gp * 2.0f) * 0.5f, gc);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&gr, true, (float(pos.btn_size) + gp * 2.0f) * 0.5f, gc);
     GPU_blend(GPU_BLEND_NONE);
     ED_region_tag_redraw(region);
   }
@@ -77,7 +79,7 @@ void footer_draw_submit_icon(ARegion *region, const FooterElementPositions &pos)
   float icon_x = float(pos.send_btn_x);
   float icon_y = float(pos.buttons_y);
   float aspect = 16.0f / float(pos.btn_size);
-  UI_icon_draw_ex(
+  ui::icon_draw_ex(
       icon_x, icon_y, ICON_SUBMIT_ARROW, aspect, 1.0f, 0.0f, nullptr, false, UI_NO_ICON_OVERLAY_TEXT);
 }
 
@@ -123,8 +125,8 @@ void footer_draw_plan_toggle(ARegion *region,
   track_rect.xmax = track_x + float(switch_track_w);
   track_rect.ymax = track_y + float(switch_track_h);
 
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&track_rect, true, float(switch_track_h) * 0.5f, track_color);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&track_rect, true, float(switch_track_h) * 0.5f, track_color);
 
   /* Draw knob: left when OFF, right when ON */
   const float *knob_color = theme->toggle_knob_color;
@@ -143,8 +145,8 @@ void footer_draw_plan_toggle(ARegion *region,
   knob_rect.xmax = knob_x + float(knob_diameter);
   knob_rect.ymax = knob_y + float(knob_diameter);
 
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&knob_rect, true, float(knob_diameter) * 0.5f, knob_color);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&knob_rect, true, float(knob_diameter) * 0.5f, knob_color);
 
   /* Draw "Plan" label text to the left of the switch */
   const float *text_color = theme->toggle_label_color;
@@ -205,7 +207,7 @@ void footer_draw_thumbnails(const bContext *C,
 
   /* Draw remove buttons (separate UI block for z-order) */
   if (pending_count > 0) {
-    uiBlock *remove_block = UI_block_begin(
+    ui::Block *remove_block = ui::block_begin(
         C, region, "remove_buttons", blender::ui::EmbossType::Emboss);
 
     int thumb_btn_x = pos.side_padding;
@@ -218,8 +220,8 @@ void footer_draw_thumbnails(const bContext *C,
       const int max_buttons = (count < FOOTER_MAX_ATTACHMENTS) ? count : FOOTER_MAX_ATTACHMENTS;
 
       for (int index = 0; index < max_buttons; index++) {
-        uiBut *remove_but = uiDefIconButO(remove_block,
-                                          ButType::But,
+        ui::Button *remove_but = ui::uiDefIconButO(remove_block,
+                                          ui::ButtonType::But,
                                           "MIXIE_CHAT_OT_remove_attachment",
                                           blender::wm::OpCallContext::InvokeDefault,
                                           ICON_X,
@@ -228,15 +230,16 @@ void footer_draw_thumbnails(const bContext *C,
                                           remove_btn_size,
                                           remove_btn_size,
                                           std::nullopt);
-        RNA_int_set(UI_but_operator_ptr_ensure(remove_but), "index", index);
+        RNA_int_set(ui::button_operator_ptr_ensure(remove_but), "index", index);
 
         thumb_btn_x += pos.thumb_size + pos.thumb_spacing;
       }
     }
 
-    UI_block_end(C, remove_block);
-    UI_block_draw(C, remove_block);
+    ui::block_end(C, remove_block);
+    ui::block_draw(C, remove_block);
   }
 }
 
 /** \} */
+}  // namespace blender

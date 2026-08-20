@@ -40,6 +40,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA Bridge (Python-owned properties)
@@ -392,3 +394,4 @@ void rules_draw_edit_glyph(float cx, float cy, float half, const float color[4],
 }
 
 /** \} */
+}  // namespace blender

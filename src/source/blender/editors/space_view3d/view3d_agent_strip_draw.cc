@@ -60,6 +60,8 @@
 #include "WM_api.hh"
 
 #include "view3d_agent_strip.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Region Init / Exit
@@ -337,7 +339,7 @@ void view3d_agent_strip_region_draw(const bContext *C, ARegion *region)
   else {
     /* Region overlap disabled in the preferences — the region is docked
      * opaque, fall back to the editor background. */
-    UI_ThemeClearColor(TH_BACK);
+    ui::theme::frame_buffer_clear(TH_BACK);
   }
 
   AgentStripRuntime *runtime = view3d_agent_strip_runtime_ensure(region);
@@ -448,3 +450,4 @@ void view3d_agent_strip_region_draw(const bContext *C, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender
