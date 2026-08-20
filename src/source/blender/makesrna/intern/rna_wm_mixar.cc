@@ -65,12 +65,12 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
    * runtime Blender binary, so ``RNA_struct_find`` (which queries
    * the runtime registry) isn't available here. Look up the
    * Window struct directly in ``brna->structs_map`` — the same
-   * GHash used internally by the RNA define system. */
-  if (brna == nullptr || brna->structs_map == nullptr) {
+   * map used internally by the RNA define system (a
+   * blender::Map<StringRef, StructRNA *> since 5.2). */
+  if (brna == nullptr) {
     return;
   }
-  StructRNA *srna = static_cast<StructRNA *>(
-      BLI_ghash_lookup(brna->structs_map, "Window"));
+  StructRNA *srna = brna->structs_map.lookup_default("Window", nullptr);
   if (srna == nullptr) {
     /* Window struct must already be registered; runs after RNA_def_wm. */
     return;
