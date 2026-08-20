@@ -98,7 +98,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
     }
   }
 
-  MEM_freeN(text);
+  MEM_delete_void(text);
 
   return std::max(FOOTER_INPUT_LINE_COUNT,
                   std::min(visual_line_count, FOOTER_INPUT_MAX_LINE_COUNT));

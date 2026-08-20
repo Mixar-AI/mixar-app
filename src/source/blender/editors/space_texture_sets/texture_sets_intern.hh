@@ -11,11 +11,18 @@
 
 #include "RNA_types.hh"
 
+namespace blender {
 struct ARegion;
 struct bContext;
 struct SpaceTextureSets;
 struct wmOperatorType;
 struct wmWindowManager;
+}  // namespace blender
+using ARegion = blender::ARegion;
+using bContext = blender::bContext;
+using SpaceTextureSets = blender::SpaceTextureSets;
+using wmOperatorType = blender::wmOperatorType;
+using wmWindowManager = blender::wmWindowManager;
 
 namespace blender::ed::texture_sets {
 

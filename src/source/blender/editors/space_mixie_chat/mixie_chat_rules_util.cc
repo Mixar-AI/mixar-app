@@ -60,7 +60,7 @@ static void rules_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, int
   if (value) {
     BLI_strncpy_utf8(buf, value, size_t(buf_maxncpy));
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete_void(value);
     }
   }
 }
@@ -136,8 +136,7 @@ void mixie_chat_rules_dispatch_op(
   if (!ot) {
     return;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   if (index >= 0) {
     RNA_int_set(&op_ptr, "index", index);
   }

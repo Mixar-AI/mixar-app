@@ -5509,7 +5509,7 @@ static void widget_mixar_input(uiWidgetColors *wcol,
                                int roundboxalign,
                                const float /*zoom*/)
 {
-  uiWidgetBase wtb;
+  WidgetBase wtb;
   widget_init(&wtb);
 
   /* --mx-r-sm: fixed 4px, not theme-roundness driven. */
@@ -5646,7 +5646,7 @@ static void widget_mixar_section(Button *but,
                                  int roundboxalign,
                                  const float zoom)
 {
-  uiWidgetBase wtb;
+  WidgetBase wtb;
   widget_init(&wtb);
 
   /* --mx-r-md: 8px flat card. */
@@ -5687,7 +5687,7 @@ static void widget_mixar_dropdown(uiWidgetColors *wcol,
                                   int roundboxalign,
                                   const float zoom)
 {
-  uiWidgetBase wtb;
+  WidgetBase wtb;
   widget_init(&wtb);
 
   /* --mx-r-sm: 4px, same chrome as the input field. */
@@ -5938,7 +5938,7 @@ static void widget_but(uiWidgetColors *wcol,
 #if 0
 static void widget_roundbut(uiWidgetColors *wcol, rcti *rect, int /*state*/ int roundboxalign)
 {
-  uiWidgetBase wtb;
+  WidgetBase wtb;
   const float rad = wcol->roundness * U.widget_unit;
 
   widget_init(&wtb);

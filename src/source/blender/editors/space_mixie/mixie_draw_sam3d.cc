@@ -90,15 +90,14 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
 
   /* Set up image drawing.
    * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
-  IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
 
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
   /* Choose the appropriate buffer */
   if (ibuf->float_buffer.data) {
     /* Draw float buffer */
-    immDrawPixelsTexScaledFullSize(&state,
-                                   float(x),
+    drawer.draw(float(x),
                                    float(y),
                                    ibuf->x,
                                    ibuf->y,
@@ -106,15 +105,11 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
                                    true,
                                    ibuf->float_buffer.data,
                                    float(width) / float(ibuf->x),
-                                   float(height) / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   float(height) / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
     /* Draw byte buffer */
-    immDrawPixelsTexScaledFullSize(&state,
-                                   float(x),
+    drawer.draw(float(x),
                                    float(y),
                                    ibuf->x,
                                    ibuf->y,
@@ -122,10 +117,7 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
                                    false,
                                    ibuf->byte_buffer.data,
                                    float(width) / float(ibuf->x),
-                                   float(height) / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   float(height) / float(ibuf->y), nullptr);
   }
 
   GPU_blend(GPU_BLEND_NONE);
@@ -249,15 +241,14 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
 
       /* Set up image drawing.
        * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
-      IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+      PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
 
       GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
       /* Choose the appropriate buffer */
       if (ibuf->float_buffer.data) {
         /* Draw float buffer */
-        immDrawPixelsTexScaledFullSize(&state,
-                                       display_x,
+        drawer.draw(display_x,
                                        display_y,
                                        ibuf->x,
                                        ibuf->y,
@@ -265,15 +256,11 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
                                        true,
                                        ibuf->float_buffer.data,
                                        display_width / img_width,
-                                       display_height / img_height,
-                                       1.0f,
-                                       1.0f,
-                                       nullptr);
+                                       display_height / img_height, nullptr);
       }
       else if (ibuf->byte_buffer.data) {
         /* Draw byte buffer */
-        immDrawPixelsTexScaledFullSize(&state,
-                                       display_x,
+        drawer.draw(display_x,
                                        display_y,
                                        ibuf->x,
                                        ibuf->y,
@@ -281,10 +268,7 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
                                        false,
                                        ibuf->byte_buffer.data,
                                        display_width / img_width,
-                                       display_height / img_height,
-                                       1.0f,
-                                       1.0f,
-                                       nullptr);
+                                       display_height / img_height, nullptr);
       }
 
       GPU_blend(GPU_BLEND_NONE);

@@ -247,7 +247,7 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
   mixar_uv_pivot_point = sima->around;
 
   Vector<Object *> objects = BKE_view_layer_array_from_objects_in_edit_mode_unique_data_with_uvs(
-      scene, CTX_data_view_layer(C), CTX_wm_view3d(C));
+      *CTX_data_main(C), scene, CTX_data_view_layer(C), CTX_wm_view3d(C));
 
   ED_space_image_get_size(sima, &imx, &imy);
 
@@ -335,7 +335,8 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
     /* ---- Row 1: Move | X | Y ---- */
     ui::Layout *move_wrapper = &xform_col->column(false);
     move_wrapper->active_set(has_selection);
-    ui::Block *move_block = move_wrapper->absolute_block();
+    ui::Block *move_block = move_wrapper->block();
+move_wrapper->absolute(false);
     ui::block_func_handle_set(move_block, do_mixar_uvedit_transform, nullptr);
 
     ui::Button *but;
@@ -347,7 +348,7 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
              nullptr, 0.0f, 0.0f, "");
     but = ui::uiDefButV(move_block, ui::ButtonType::Num, "",
                      row_label_w + xy_label_w, y, xy_input_w, UI_UNIT_Y,
-                     &mixar_uv_vertex_old_center[0], UNPACK2(range_xy[0]), "";
+                     &mixar_uv_vertex_old_center[0], UNPACK2(range_xy[0]), "");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_VERTEX);
     ui::button_number_step_size_set(but, step);
     ui::button_number_precision_set(but, digits);
@@ -357,7 +358,7 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
     but = ui::uiDefButV(move_block, ui::ButtonType::Num, "",
                      row_label_w + half_content + xy_gap + xy_label_w, y,
                      xy_input_w, UI_UNIT_Y,
-                     &mixar_uv_vertex_old_center[1], UNPACK2(range_xy[1]), "";
+                     &mixar_uv_vertex_old_center[1], UNPACK2(range_xy[1]), "");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_VERTEX);
     ui::button_number_step_size_set(but, step);
     ui::button_number_precision_set(but, digits);
@@ -379,7 +380,8 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
     xform_col->separator(0.5f);
     ui::Layout *angle_wrapper = &xform_col->column(false);
     angle_wrapper->active_set(has_selection);
-    ui::Block *angle_block = angle_wrapper->absolute_block();
+    ui::Block *angle_block = angle_wrapper->block();
+angle_wrapper->absolute(false);
     ui::block_func_handle_set(angle_block, do_mixar_uvedit_transform, nullptr);
 
     const int angle_input_w = control_width - row_label_w;
@@ -399,7 +401,8 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
     xform_col->separator(0.5f);
     ui::Layout *scale_wrapper = &xform_col->column(false);
     scale_wrapper->active_set(has_bounds);
-    ui::Block *scale_block = scale_wrapper->absolute_block();
+    ui::Block *scale_block = scale_wrapper->block();
+scale_wrapper->absolute(false);
     ui::block_func_handle_set(scale_block, do_mixar_uvedit_transform, nullptr);
 
     y = -UI_UNIT_Y;
@@ -459,11 +462,21 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
 
       ui::Layout *row = &axis_col->row(false);
       row->scale_y_set(1.3f);
-      ui::Block *apply_move_block = row->absolute_block();
+      ui::Block *apply_move_block = row->block();
+row->absolute(false);
       ui::block_func_handle_set(apply_move_block, do_mixar_uvedit_transform, nullptr);
-      ui::uiDefBut(apply_move_block, ui::ButtonType::But, B_MIXAR_UVEDIT_MOVE_AXIS,
-               IFACE_("Apply Move"), 0, 0, control_width, UI_UNIT_Y * 1.3f,
-               nullptr, 0.0f, 0.0f, "Apply move with current distance");
+      ui::Button *apply_move_but = ui::uiDefBut(apply_move_block,
+                                                ui::ButtonType::But,
+                                                IFACE_("Apply Move"),
+                                                0,
+                                                0,
+                                                control_width,
+                                                UI_UNIT_Y * 1.3f,
+                                                nullptr,
+                                                0.0f,
+                                                0.0f,
+                                                "Apply move with current distance");
+      ui::button_retval_set(apply_move_but, B_MIXAR_UVEDIT_MOVE_AXIS);
     }
   }
 
@@ -482,7 +495,8 @@ static void mixar_uv_transform_panel_draw(const bContext *C, Panel *panel)
       mixar_uv_cursor_edit[1] = sima->cursor[1] * float(imy);
     }
 
-    ui::Block *cursor_block = cursor_col->absolute_block();
+    ui::Block *cursor_block = cursor_col->block();
+cursor_col->absolute(false);
     ui::block_func_handle_set(cursor_block, do_mixar_uvedit_transform, nullptr);
 
     /* X and Y on one row with external labels. A horizontal gutter

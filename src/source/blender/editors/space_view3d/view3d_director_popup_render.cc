@@ -90,7 +90,6 @@ int draw_kind_toggles(bContext *C,
     }
     ui::Button *toggle = ui::uiDefIconTextButR_prop(block,
                                            ui::ButtonType::Row,
-                                           0,
                                            render_kind_icon(items[index].identifier),
                                            items[index].name,
                                            drawn * (third_w + gap),
@@ -110,7 +109,7 @@ int draw_kind_toggles(bContext *C,
     drawn++;
   }
   if (free_items && items) {
-    MEM_freeN(items);
+    MEM_delete_void(items);
   }
   return enabled_count;
 }
@@ -182,7 +181,6 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= gap + row_h;
   ui::Button *resolution = ui::uiDefButR(block,
                                 ui::ButtonType::NumSlider,
-                                0,
                                 "Resolution",
                                 0,
                                 y,
@@ -266,7 +264,6 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       y -= label_h;
       ui::uiDefIconTextBut(block,
                        ui::ButtonType::Label,
-                       0,
                        ICON_FILE_MOVIE,
                        image_id ? image_id->name + 2 : "Missing video",
                        0,

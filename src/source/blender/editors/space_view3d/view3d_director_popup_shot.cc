@@ -88,7 +88,6 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     y -= gap + row_h;
     ui::Button *name = ui::uiDefButR(block,
                             ui::ButtonType::Text,
-                            0,
                             "",
                             0,
                             y,
@@ -198,7 +197,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= row_h;
   ui::Button *prompt = ui::uiDefButR(block,
                             ui::ButtonType::Text,
-                            0,
                             "",
                             0,
                             y,
@@ -214,7 +212,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= row_h;
   ui::Button *adherence = ui::uiDefButR(block,
                                ui::ButtonType::Menu,
-                               0,
                                std::nullopt,
                                0,
                                y,
@@ -233,7 +230,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= row_h;
   ui::Button *fps = ui::uiDefButR(block,
                          ui::ButtonType::Num,
-                         0,
                          "Frame Rate",
                          0,
                          y,
@@ -248,7 +244,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   director_popup_state(fps, false, data.editable);
   ui::Button *spacing = ui::uiDefButR(block,
                              ui::ButtonType::NumSlider,
-                             0,
                              "Spacing",
                              half_w + gap,
                              y,
@@ -269,7 +264,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     const int third_w = (width - gap * 2) / 3;
     ui::Button *thirds = ui::uiDefButR(block,
                               ui::ButtonType::Toggle,
-                              0,
                               "Thirds",
                               0,
                               y,
@@ -284,7 +278,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     director_popup_state(thirds, false, true);
     ui::Button *safe = ui::uiDefButR(block,
                             ui::ButtonType::Toggle,
-                            0,
                             "Safe Areas",
                             third_w + gap,
                             y,
@@ -299,7 +292,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     director_popup_state(safe, false, true);
     ui::Button *path = ui::uiDefButR(block,
                             ui::ButtonType::Toggle,
-                            0,
                             "Path",
                             (third_w + gap) * 2,
                             y,
@@ -392,7 +384,6 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     y -= row_h;
     ui::Button *seconds = ui::uiDefButR(block,
                                ui::ButtonType::NumSlider,
-                               0,
                                "Motion Length",
                                0,
                                y,

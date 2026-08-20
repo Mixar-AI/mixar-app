@@ -4870,8 +4870,7 @@ static int do_but_textedit(
           if (wmOperatorType *run_ot = WM_operatortype_find("MIXIE_OT_moodboard_run_action_node",
                                                             false))
           {
-            PointerRNA run_props;
-            WM_operator_properties_create_ptr(&run_props, run_ot);
+            PointerRNA run_props = WM_operator_properties_create_ptr(run_ot);
             RNA_string_set(&run_props, "node_id", node_id.c_str());
             WM_operator_name_call_ptr(
                 C, run_ot, blender::wm::OpCallContext::ExecDefault, &run_props, nullptr);

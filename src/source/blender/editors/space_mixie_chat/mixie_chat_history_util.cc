@@ -58,7 +58,7 @@ static void history_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, i
   if (value) {
     BLI_strncpy(buf, value, buf_maxncpy);
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete_void(value);
     }
   }
 }
@@ -136,8 +136,7 @@ void mixie_chat_history_dispatch_session_op(bContext *C,
   if (!ot || session_id[0] == '\0') {
     return;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&op_ptr, "session_id", session_id);
   WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);

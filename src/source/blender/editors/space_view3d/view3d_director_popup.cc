@@ -84,7 +84,6 @@ void director_popup_section_label(ui::Block *block,
 {
   ui::uiDefBut(block,
            ui::ButtonType::Label,
-           0,
            text,
            0,
            y,
@@ -188,7 +187,6 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     y -= gap + row_h;
     ui::Button *slider = ui::uiDefButR(block,
                               ui::ButtonType::NumSlider,
-                              0,
                               "Focal Length",
                               0,
                               y,
@@ -209,7 +207,6 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
         ortho ? std::optional<blender::StringRef>("Scale") : std::nullopt;
     ui::Button *value = ui::uiDefButR(block,
                              ortho ? ui::ButtonType::NumSlider : ui::ButtonType::Menu,
-                             0,
                              value_label,
                              0,
                              y,
@@ -351,7 +348,6 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= gap + row_h;
   ui::Button *spacing = ui::uiDefButR(block,
                              ui::ButtonType::NumSlider,
-                             0,
                              "Keyframe Spacing",
                              0,
                              y,
@@ -368,7 +364,6 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= gap + row_h;
   ui::Button *handheld = ui::uiDefIconTextButR(block,
                                       ui::ButtonType::Toggle,
-                                      0,
                                       ICON_FORCE_TURBULENCE,
                                       "Handheld",
                                       0,
@@ -382,7 +377,6 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   director_popup_state(handheld, false, data.editable);
   ui::Button *intensity = ui::uiDefButR(block,
                                ui::ButtonType::NumSlider,
-                               0,
                                "",
                                half_w + gap,
                                y,

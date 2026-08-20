@@ -60,7 +60,7 @@ static wmOperatorStatus height_to_normal_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Copy height values (use red channel as height). */
   std::vector<float> height_map(width * height);
@@ -186,8 +186,8 @@ static wmOperatorStatus blend_normal_maps_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *base_pixels = base_ibuf->float_buffer.data;
-  const float *detail_pixels = detail_ibuf->float_buffer.data;
+  float *base_pixels = base_ibuf->float_data_for_write();
+  const float *detail_pixels = detail_ibuf->float_data_for_write();
 
   /* Reoriented Normal Mapping (RNM) blend. */
 #ifdef _OPENMP
@@ -248,6 +248,10 @@ static wmOperatorStatus blend_normal_maps_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -288,3 +292,4 @@ void BAKING_OT_blend_normal_maps(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

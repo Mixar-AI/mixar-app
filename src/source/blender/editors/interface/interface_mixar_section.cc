@@ -28,6 +28,10 @@
 
 #include "BKE_screen.hh"
 
+#include "BLI_map.hh"
+#include "BLI_string.h"
+#include "BLI_vector.hh"
+
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
@@ -49,8 +53,8 @@ Layout *UI_layout_mixar_section(Layout *layout)
 
   /* Walk backwards through the block's buttons to find the Roundbox button
    * that was just created by box(). It should be the most recently added. */
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    Button *but = block->buttons[i].get();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::Roundbox) {
       but->flag2 |= UI_BUT2_MIXAR_SECTION;
       break;
@@ -65,8 +69,8 @@ void UI_layout_mixar_mark_last_dropdown(Layout *layout)
   Block *block = layout->block();
 
   /* Walk backwards to find the most recently created Menu button. */
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    Button *but = block->buttons[i].get();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
     if (ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)) {
       but->flag2 |= UI_BUT2_MIXAR_DROPDOWN;
       break;
@@ -78,8 +82,8 @@ void UI_layout_mixar_mark_last_action(Layout *layout)
 {
   Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    Button *but = block->buttons[i].get();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::But) {
       but->flag2 |= UI_BUT2_MIXAR_ACTION;
       break;
@@ -91,8 +95,8 @@ void UI_layout_mixar_mark_last_toggle(Layout *layout)
 {
   Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    Button *but = block->buttons[i].get();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
     if (ELEM(but->type, ButtonType::Checkbox, ButtonType::CheckboxN)) {
       but->flag2 |= UI_BUT2_MIXAR_TOGGLE;
       break;
@@ -104,8 +108,8 @@ void UI_layout_mixar_mark_last_input(Layout *layout)
 {
   Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    Button *but = block->buttons[i].get();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::Text) {
       but->flag2 |= UI_BUT2_MIXAR_INPUT;
       break;
@@ -129,8 +133,44 @@ static void ubyte4_to_float4(float dst[4], const unsigned char src[4])
 #define MIXAR_TAB_PAD_TEXT 8.0f
 #define MIXAR_TAB_PAD_BETWEEN 6.0f
 
+/* -------------------------------------------------------------------- */
+/* Mixar tab hit-rects.
+ *
+ * Blender 5.2 removed `PanelCategoryDyn::rect` (upstream tabs became real
+ * buttons), so the rects of the Mixar-drawn strip are recorded here at draw
+ * time and hit-tested by the MIXAR hook in interface_panel.cc. Entries are
+ * overwritten on every draw; a stale entry for a freed region can only be
+ * read if a click arrives for a region that never drew, which cannot
+ * happen for a visible strip. */
+
+struct MixarCategoryTabRect {
+  char idname[64];
+  rcti rect;
+};
+
+static Map<const ARegion *, Vector<MixarCategoryTabRect>> &mixar_category_tab_rects()
+{
+  static Map<const ARegion *, Vector<MixarCategoryTabRect>> map;
+  return map;
+}
+
+const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mval[2])
+{
+  const Vector<MixarCategoryTabRect> *tabs = mixar_category_tab_rects().lookup_ptr(region);
+  if (tabs == nullptr) {
+    return nullptr;
+  }
+  for (const MixarCategoryTabRect &tab : *tabs) {
+    if (BLI_rcti_isect_pt(&tab.rect, mval[0], mval[1])) {
+      return tab.idname;
+    }
+  }
+  return nullptr;
+}
+
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active)
 {
+  Vector<MixarCategoryTabRect> tab_rects;
   const bool is_left = RGN_ALIGN_ENUM_FROM_MASK(region->alignment) != RGN_ALIGN_RIGHT;
   View2D *v2d = &region->v2d;
   const uiStyle *style = style_get();
@@ -184,7 +224,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
   BLF_enable(fontid, BLF_ROTATION);
   BLF_rotation(fontid, is_left ? M_PI_2 : -M_PI_2);
-  ui_fontscale(&fstyle_points, aspect);
+  fontscale(&fstyle_points, aspect);
   BLF_size(fontid, fstyle_points * UI_SCALE_FAC);
 
   /* Tab strip position. */
@@ -196,7 +236,9 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
   /* Calculate tab rectangles. */
   for (PanelCategoryDyn &pc_dyn_iter : region->runtime->panels_category) {
     PanelCategoryDyn *pc_dyn = &pc_dyn_iter;
-    rcti *rct = &pc_dyn->rect;
+    MixarCategoryTabRect tab = {};
+    STRNCPY(tab.idname, pc_dyn->idname);
+    rcti *rct = &tab.rect;
     const char *category_id_draw = IFACE_(pc_dyn->idname);
     const int category_width = round_fl_to_int(
         BLF_width(fontid, category_id_draw, BLF_DRAW_STR_DUMMY_MAX));
@@ -207,17 +249,16 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     rct->ymax = v2d->mask.ymax - y_ofs;
 
     y_ofs += category_width + tab_v_pad + (tab_v_pad_text * 2);
+    tab_rects.append(tab);
   }
 
   /* Scrolling. */
   const int max_scroll = std::max(y_ofs - BLI_rcti_size_y(&v2d->mask), 0);
   const int scroll = std::clamp(region->category_scroll, 0, max_scroll);
   region->category_scroll = scroll;
-  for (PanelCategoryDyn &pc_dyn_iter : region->runtime->panels_category) {
-    PanelCategoryDyn *pc_dyn = &pc_dyn_iter;
-    rcti *rct = &pc_dyn->rect;
-    rct->ymin += scroll;
-    rct->ymax += scroll;
+  for (MixarCategoryTabRect &tab : tab_rects) {
+    tab.rect.ymin += scroll;
+    tab.rect.ymax += scroll;
   }
 
   /* --- Draw background strip --- */
@@ -255,9 +296,11 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
   GPU_line_smooth(true);
 
   /* --- Draw each tab --- */
+  int tab_index = -1;
   for (PanelCategoryDyn &pc_dyn_iter : region->runtime->panels_category) {
     PanelCategoryDyn *pc_dyn = &pc_dyn_iter;
-    const rcti *rct = &pc_dyn->rect;
+    tab_index++;
+    const rcti *rct = &tab_rects[tab_index].rect;
 
     if (rct->ymin > v2d->mask.ymax) {
       continue;
@@ -341,12 +384,14 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
     /* Extend hit area to region edge. */
     if (is_left) {
-      pc_dyn->rect.xmin = v2d->mask.xmin;
+      tab_rects[tab_index].rect.xmin = v2d->mask.xmin;
     }
     else {
-      pc_dyn->rect.xmax = v2d->mask.xmax;
+      tab_rects[tab_index].rect.xmax = v2d->mask.xmax;
     }
   }
+
+  mixar_category_tab_rects().add_overwrite(region, std::move(tab_rects));
 
   GPU_blend(GPU_BLEND_NONE);
   GPU_line_smooth(false);

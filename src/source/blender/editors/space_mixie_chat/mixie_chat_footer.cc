@@ -133,7 +133,8 @@ void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region)
   /* Register dropbox handler for image drag-and-drop onto the footer. */
   ListBase *dropboxes = WM_dropboxmap_find(
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
-  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(dropboxes));
 
   /* Set initial footer height using centralized calculation
    * This ensures the footer gets adequate space from the start */
@@ -254,7 +255,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     if (input_prop) {
       ui::Button *input_but = ui::uiDefButR(block,
                                    ui::ButtonType::Text,
-                                   0,
                                    "",  /* Empty label - placeholder will be set below */
                                    pos.input_x,
                                    pos.input_y,
@@ -327,7 +327,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     std::string padded_mode_name = " " + mode_name + " ";
     ui::uiDefIconTextButR(block,
                       ui::ButtonType::Menu,
-                      0,
                       icon_id,
                       padded_mode_name.c_str(),  /* Display current enum value's name with padding */
                       pos.dropdown_x,
@@ -340,7 +339,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                       std::nullopt);
 
     if (free_items) {
-      MEM_freeN((void *)items);
+      MEM_delete_void((void *)items);
     }
   }
 
@@ -381,7 +380,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
       std::string padded_gen_type_name = " " + gen_type_name + " ";
       ui::uiDefIconTextButR(block,
                         ui::ButtonType::Menu,
-                        0,
                         gen_icon_id,
                         padded_gen_type_name.c_str(),  /* Display current enum value's name with padding */
                         generate_dropdown_x,
@@ -394,7 +392,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                         std::nullopt);
 
       if (gen_free_items) {
-        MEM_freeN((void *)gen_items);
+        MEM_delete_void((void *)gen_items);
       }
     }
   }
@@ -495,7 +493,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
         }
       }
       if (gen_free_chk) {
-        MEM_freeN((void *)gen_items_chk);
+        MEM_delete_void((void *)gen_items_chk);
       }
       if (gen_flag_name) {
         PropertyRNA *gflag = RNA_struct_find_property(&scene_ptr, gen_flag_name);

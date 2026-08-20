@@ -59,7 +59,7 @@ static wmOperatorStatus get_image_minmax_exec(bContext * /*C*/, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  const float *pixels = ibuf->float_buffer.data;
+  const float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   float min_val = std::numeric_limits<float>::max();
@@ -123,7 +123,7 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* First pass: find min/max. */
@@ -177,6 +177,10 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -223,3 +227,4 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

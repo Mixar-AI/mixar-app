@@ -53,7 +53,7 @@ static wmOperatorStatus pixels_to_srgb_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Convert linear to sRGB. */
 #ifdef _OPENMP
@@ -110,7 +110,7 @@ static wmOperatorStatus pixels_to_linear_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Convert sRGB to linear. */
 #ifdef _OPENMP
@@ -167,7 +167,7 @@ static wmOperatorStatus batch_srgb_to_linear_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* Convert sRGB to linear for selected channels. */
@@ -228,7 +228,7 @@ static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* Convert linear to sRGB for selected channels. */
@@ -263,6 +263,10 @@ static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -350,3 +354,4 @@ void BAKING_OT_batch_linear_to_srgb(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

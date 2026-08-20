@@ -114,8 +114,8 @@ static wmOperatorStatus blend_images_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *base_pixels = base_ibuf->float_buffer.data;
-  const float *blend_pixels = blend_ibuf->float_buffer.data;
+  float *base_pixels = base_ibuf->float_data_for_write();
+  const float *blend_pixels = blend_ibuf->float_data_for_write();
 
 #ifdef _OPENMP
 #  pragma omp parallel for if (height > 64)
@@ -178,7 +178,7 @@ static wmOperatorStatus dither_image_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Use deterministic noise based on seed for reproducibility. */
 #ifdef _OPENMP
@@ -223,6 +223,10 @@ static wmOperatorStatus dither_image_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Blend Mode Enum Items
  * \{ */
@@ -291,3 +295,4 @@ void BAKING_OT_dither_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

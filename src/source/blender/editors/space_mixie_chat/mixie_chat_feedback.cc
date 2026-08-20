@@ -77,7 +77,7 @@ float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float 
     }
     line_count = std::min(line_count, FEEDBACK_COMMENT_MAX_LINES);
 
-    MEM_freeN(text);
+    MEM_delete_void(text);
   }
 
   /* N full lines plus the top inset and a matching bottom margin. The margins
@@ -347,7 +347,6 @@ void mixie_chat_render_feedback(const bContext *C,
 
   ui::Button *comment_but = ui::uiDefButR(block,
                                  ui::ButtonType::Text,
-                                 0,
                                  "",
                                  rx1,
                                  ry1,
@@ -436,8 +435,7 @@ bool mixie_chat_handle_feedback_click(bContext *C,
       if (has_bounds && BLI_rctf_isect_pt(&star.bounds, view_x, view_y)) {
         wmOperatorType *ot = WM_operatortype_find("mixie_chat.set_feedback_rating", true);
         if (ot) {
-          PointerRNA op_ptr;
-          WM_operator_properties_create_ptr(&op_ptr, ot);
+          PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
           RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
           RNA_int_set(&op_ptr, "rating", star.star_index);
           WM_operator_name_call_ptr(
@@ -456,8 +454,7 @@ bool mixie_chat_handle_feedback_click(bContext *C,
     {
       wmOperatorType *ot = WM_operatortype_find("mixie_chat.toggle_feedback_comment", true);
       if (ot) {
-        PointerRNA op_ptr;
-        WM_operator_properties_create_ptr(&op_ptr, ot);
+        PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
         RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
         WM_operator_name_call_ptr(
             C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);

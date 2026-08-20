@@ -40,7 +40,7 @@ static void read_rna_string_bounded(PointerRNA *ptr,
   char *buf = RNA_property_string_get_alloc(ptr, prop, dst, int(dstsize), nullptr);
   if (buf != dst) {
     BLI_strncpy(dst, buf, dstsize);
-    MEM_freeN(buf);
+    MEM_delete_void(buf);
   }
 }
 
@@ -148,7 +148,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (*p == '{' || *p == '[') {
       layout->has_ephemeral = false;
     }
-    MEM_freeN(eph_probe);
+    MEM_delete_void(eph_probe);
   }
 
   /* Check todo items collection */
@@ -218,7 +218,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
             ptr++;
           }
         }
-        MEM_freeN(texts_json);
+        MEM_delete_void(texts_json);
       }
     }
   }
@@ -394,7 +394,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
           sizeof(layout->thinking_text), nullptr);
       if (tbuf != layout->thinking_text) {
         BLI_strncpy(layout->thinking_text, tbuf, sizeof(layout->thinking_text));
-        MEM_freeN(tbuf);
+        MEM_delete_void(tbuf);
       }
     }
     if (g_msg_props.thinking_collapsed) {

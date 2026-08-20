@@ -132,10 +132,10 @@ float card_units_for_text(const char *text,
 void mark_last(Layout *layout, const MixarCardElement element, const float payload = 0.0f)
 {
   Block *block = layout->block();
-  if (block->buttons.is_empty()) {
+  if (block->buttons_ptrs.is_empty()) {
     return;
   }
-  Button *but = block->buttons[block->buttons.size() - 1].get();
+  Button *but = block->buttons_ptrs.last().get();
   UI_BUT2_MIXAR_CARD_SET(but);
   /* `hardmin`/`hardmax` are inert on the label and operator buttons used
    * here — neither carries a data pointer or RNA property, so
@@ -177,7 +177,7 @@ void read_string(PointerRNA *ptr, const char *name, char *dst, const int dst_max
   char *value = RNA_property_string_get_alloc(ptr, prop, dst, dst_maxncpy, &len);
   if (value != nullptr && value != dst) {
     BLI_strncpy(dst, value, dst_maxncpy);
-    MEM_freeN(value);
+    MEM_delete_void(value);
   }
 }
 

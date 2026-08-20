@@ -61,7 +61,7 @@ static wmOperatorStatus gaussian_blur_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Generate 1D Gaussian kernel. */
   std::vector<float> kernel = generate_gaussian_kernel_1d(radius, sigma);
@@ -166,7 +166,7 @@ static wmOperatorStatus box_blur_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int kernel_size = 2 * radius + 1;
 
   std::vector<float> temp(width * height * CHANNELS);
@@ -259,7 +259,7 @@ static wmOperatorStatus bilateral_filter_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -350,7 +350,7 @@ static wmOperatorStatus fxaa_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -450,6 +450,10 @@ static wmOperatorStatus fxaa_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -525,3 +529,4 @@ void BAKING_OT_fxaa(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

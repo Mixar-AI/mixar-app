@@ -266,8 +266,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   {
     wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_edit_textbox", false);
     if (ot) {
-      PointerRNA ptr;
-      WM_operator_properties_create_ptr(&ptr, ot);
+      PointerRNA ptr = WM_operator_properties_create_ptr(ot);
       RNA_int_set(&ptr, "index", clicked_index);
 
       /* Pass the real double-click event (not nullptr) so the edit operator's
@@ -313,8 +312,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
 
     wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_box_select", false);
     if (ot) {
-      PointerRNA ptr;
-      WM_operator_properties_create_ptr(&ptr, ot);
+      PointerRNA ptr = WM_operator_properties_create_ptr(ot);
       RNA_boolean_set(&ptr, "wait_for_input", false);
       RNA_enum_set(&ptr, "mode", extend ? SEL_OP_ADD : SEL_OP_SET);
 

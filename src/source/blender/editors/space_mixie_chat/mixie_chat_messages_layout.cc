@@ -128,7 +128,7 @@ static float calculate_attachments_height(
       }
 
       /* Free dynamically allocated path buffer */
-      MEM_freeN(path_buffer);
+      MEM_delete_void(path_buffer);
     }
 
     RNA_property_collection_next(&att_iter);
@@ -262,7 +262,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           }
 
           if (slot_meta_h) {
-            MEM_freeN(slot_meta_h);
+            MEM_delete_void(slot_meta_h);
           }
         } else if (layout.has_ephemeral) {
           /* Ephemeral text - wrapped status line + fixed 4-line FIFO body.
@@ -323,7 +323,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
         }
 
         if (meta_buf_height) {
-          MEM_freeN(meta_buf_height);
+          MEM_delete_void(meta_buf_height);
         }
       }
 
@@ -507,7 +507,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       rt->layout_cache.append(layout);
 
       /* Free dynamically allocated text buffer */
-      MEM_freeN(text_buffer);
+      MEM_delete_void(text_buffer);
       message_index++;
     }
 

@@ -22,8 +22,10 @@ struct Camera;
 struct Object;
 struct bContext;
 struct rctf;
-struct ui::Block;
-struct ui::Button;
+namespace ui {
+struct Block;
+struct Button;
+}  // namespace ui
 
 /** Everything a Director popup reads, resolved once at block-create time. */
 struct DirectorPopupData {

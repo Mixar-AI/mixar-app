@@ -20,6 +20,7 @@
 
 /* internal exports only */
 
+namespace blender {
 struct ARegion;
 struct bContext;
 struct Image;
@@ -30,6 +31,17 @@ struct View2D;
 struct wmOperatorType;
 struct wmRegionListenerParams;
 struct wmWindowManager;
+}  // namespace blender
+using ARegion = blender::ARegion;
+using bContext = blender::bContext;
+using Image = blender::Image;
+using ReportList = blender::ReportList;
+using Scene = blender::Scene;
+using SpaceMixie = blender::SpaceMixie;
+using View2D = blender::View2D;
+using wmOperatorType = blender::wmOperatorType;
+using wmRegionListenerParams = blender::wmRegionListenerParams;
+using wmWindowManager = blender::wmWindowManager;
 
 /* Mixie Mode Constants */
 #define MIXIE_MODE_MOODBOARD 0

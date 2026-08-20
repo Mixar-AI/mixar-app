@@ -328,8 +328,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
              * option text as the action value. Dispatch via Python operator. */
             wmOperatorType *ot = WM_operatortype_find("mixie_chat.select_slot_action", true);
             if (ot && layout.bubble_id[0] != '\0') {
-              PointerRNA op_ptr;
-              WM_operator_properties_create_ptr(&op_ptr, ot);
+              PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
               RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
               RNA_string_set(&op_ptr, "action_value", bubble.option_text);
               WM_operator_name_call_ptr(
@@ -433,7 +432,8 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   /* Register dropbox handler for image drag-and-drop. */
   ListBase *dropboxes = WM_dropboxmap_find(
       "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
-  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(dropboxes));
 }
 
 /* ---- Background colour override for Agent Bubble -------------------- */

@@ -448,7 +448,7 @@ bool mixie_chat_pos_to_text(const bContext *C,
                             int *r_message_index,
                             int *r_char_offset);
 
-/* Get selected text string (must be freed with MEM_freeN) */
+/* Get selected text string (must be freed with MEM_delete_void) */
 char *mixie_chat_get_selected_text(const bContext *C);
 
 /* Draw selection highlight over text */
