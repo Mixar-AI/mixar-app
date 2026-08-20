@@ -19,6 +19,8 @@
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_markdown_intern.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Table Parsing Helpers
@@ -430,3 +432,4 @@ float chat_ui_draw_table(const MarkdownSegment *seg,
 }
 
 /** \} */
+}  // namespace blender

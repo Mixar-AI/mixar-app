@@ -32,10 +32,12 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceLink *mixar_layers_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
-  SpaceMixarLayers *slayers = MEM_callocN<SpaceMixarLayers>("initmixarlayers");
+  SpaceMixarLayers *slayers = MEM_new<SpaceMixarLayers>("initmixarlayers");
   slayers->spacetype = SPACE_MIXAR_LAYERS;
 
   /* Top bar region (using RGN_TYPE_TOOL_PROPS for custom height) */
@@ -66,7 +68,7 @@ static void mixar_layers_init(wmWindowManager * /*wm*/, ScrArea * /*area*/) {}
 
 static SpaceLink *mixar_layers_duplicate(SpaceLink *sl)
 {
-  return (SpaceLink *)MEM_dupallocN(sl);
+  return (SpaceLink *)MEM_dupalloc_void(sl);
 }
 
 static void mixar_layers_main_region_init(wmWindowManager *wm, ARegion *region)
@@ -161,7 +163,7 @@ static void mixar_layers_bottombar_region_listener(const wmRegionListenerParams 
 
 static void mixar_layers_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
-  BLO_write_struct(writer, SpaceMixarLayers, sl);
+  writer->write_struct_cast<SpaceMixarLayers>(sl);
 }
 
 void ED_spacetype_mixar_layers()
@@ -180,7 +182,7 @@ void ED_spacetype_mixar_layers()
   st->blend_write = mixar_layers_blend_write;
 
   /* Main region */
-  art = MEM_callocN<ARegionType>("spacetype mixar_layers main");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixar_layers main");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = ED_KEYMAP_UI;
   art->init = mixar_layers_main_region_init;
@@ -190,7 +192,7 @@ void ED_spacetype_mixar_layers()
   BLI_addhead(&st->regiontypes, art);
 
   /* Top bar region - custom height, non-scrollable */
-  art = MEM_callocN<ARegionType>("spacetype mixar_layers topbar");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixar_layers topbar");
   art->regionid = RGN_TYPE_TOOL_PROPS;
   art->prefsizey = 40;  /* Custom height in pixels - adjustable */
   art->keymapflag = ED_KEYMAP_UI;
@@ -200,7 +202,7 @@ void ED_spacetype_mixar_layers()
   BLI_addhead(&st->regiontypes, art);
 
   /* Bottom bar region - custom height, non-scrollable */
-  art = MEM_callocN<ARegionType>("spacetype mixar_layers bottombar");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixar_layers bottombar");
   art->regionid = RGN_TYPE_EXECUTE;
   art->prefsizey = 30;  /* Custom height in pixels - adjustable */
   art->keymapflag = ED_KEYMAP_UI;
@@ -211,3 +213,4 @@ void ED_spacetype_mixar_layers()
 
   BKE_spacetype_register(std::move(st));
 }
+}  // namespace blender

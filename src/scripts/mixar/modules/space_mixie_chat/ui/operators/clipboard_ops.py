@@ -32,7 +32,6 @@ from ...constants import (
     SUPPORTED_IMAGE_FORMATS,
 )
 from ...core import validate_image_file
-from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.image_utils import get_mixar_screenshots_dir
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
@@ -130,10 +129,6 @@ class MIXIE_CHAT_OT_paste_image(Operator):
             attachment.image_path = img_path
             attachment.image_source = 'FILE'
             attachment.display_name = os.path.basename(img_path)
-
-            # The pasted file lives in the temp directory; the moodboard's
-            # import path packs it, so the board item survives cleanup.
-            mirror_attachment_to_moodboard(scene, img_path, 'FILE')
 
             redraw_chat_areas()
             sync_bubble_attachment_size_deferred(force_attachment_height=True)

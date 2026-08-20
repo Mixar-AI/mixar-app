@@ -25,7 +25,7 @@ namespace blender::ed::texture_sets {
 void texture_sets_draw_main_region(const bContext * /*C*/, ARegion *region)
 {
   /* Clear background with theme color */
-  UI_ThemeClearColor(TH_BACK);
+  ui::theme::frame_buffer_clear(TH_BACK);
 
   /* Draw placeholder text in center */
   const int center_x = region->winx / 2;
@@ -37,7 +37,7 @@ void texture_sets_draw_main_region(const bContext * /*C*/, ARegion *region)
 
   /* Set text color */
   float text_color[4];
-  UI_GetThemeColor4fv(TH_TEXT, text_color);
+  ui::theme::get_color_4fv(TH_TEXT, text_color);
   BLF_color4fv(font_id, text_color);
 
   /* Draw centered placeholder text */
@@ -53,7 +53,7 @@ void texture_sets_draw_main_region(const bContext * /*C*/, ARegion *region)
   text_width = BLF_width(font_id, subtitle, strlen(subtitle));
 
   float subtitle_color[4];
-  UI_GetThemeColor4fv(TH_TEXT_HI, subtitle_color);
+  ui::theme::get_color_4fv(TH_TEXT_HI, subtitle_color);
   subtitle_color[3] = 0.6f;
   BLF_color4fv(font_id, subtitle_color);
 

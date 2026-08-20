@@ -70,12 +70,6 @@ static uint32_t scene_drag_uid(const Scene *scene)
   return scene ? scene->id.session_uid : 0;
 }
 
-std::string moodboard_graph_socket_key(const char *node_id, const char *socket_id)
-{
-  /* '|' cannot appear in a uuid-hex node id, so the pair cannot collide. */
-  return std::string(node_id) + "|" + socket_id;
-}
-
 static bool string_prop_equals(PointerRNA *ptr, const char *name, const char *value)
 {
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
@@ -300,23 +294,6 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
    * the inner loop, every redraw. */
   cache->outputs.clear();
   cache->action_nodes.clear();
-  cache->occupied_inputs.clear();
-
-  PropertyRNA *links = RNA_struct_find_property(scene_ptr, "mixie_moodboard_links");
-  if (links) {
-    CollectionPropertyIterator link_iter{};
-    RNA_property_collection_begin(scene_ptr, links, &link_iter);
-    while (link_iter.valid) {
-      char to_id[MIXIE_GRAPH_ID_BUF], to_socket[MIXIE_GRAPH_ID_BUF];
-      mixie_rna_string_get_clamped(&link_iter.ptr, "to_node_id", to_id, sizeof(to_id));
-      mixie_rna_string_get_clamped(&link_iter.ptr, "to_socket", to_socket, sizeof(to_socket));
-      if (to_id[0] != '\0') {
-        cache->occupied_inputs.add(moodboard_graph_socket_key(to_id, to_socket));
-      }
-      RNA_property_collection_next(&link_iter);
-    }
-    RNA_property_collection_end(&link_iter);
-  }
 
   PropertyRNA *media = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
   if (media) {
@@ -450,10 +427,10 @@ int moodboard_find_link_under_mouse(PointerRNA *scene_ptr,
       float coords[MOODBOARD_GRAPH_LINK_RESOLUTION + 1][2];
       moodboard_graph_link_curve_coords(x1, y1, x2, y2, coords);
       float previous_x, previous_y;
-      UI_view2d_view_to_region_fl(v2d, coords[0][0], coords[0][1], &previous_x, &previous_y);
+      ui::view2d_view_to_region_fl(v2d, coords[0][0], coords[0][1], &previous_x, &previous_y);
       for (int segment = 1; segment <= MOODBOARD_GRAPH_LINK_RESOLUTION; segment++) {
         float current_x, current_y;
-        UI_view2d_view_to_region_fl(
+        ui::view2d_view_to_region_fl(
             v2d, coords[segment][0], coords[segment][1], &current_x, &current_y);
         const float distance = point_segment_distance_squared(float(mouse_region_x),
                                                               float(mouse_region_y),
@@ -483,14 +460,10 @@ static bool region_socket_hit(View2D *v2d,
                               const float socket_y)
 {
   float region_x, region_y;
-  UI_view2d_view_to_region_fl(v2d, socket_x, socket_y, &region_x, &region_y);
+  ui::view2d_view_to_region_fl(v2d, socket_x, socket_y, &region_x, &region_y);
   const float dx = float(mouse_x) - region_x;
   const float dy = float(mouse_y) - region_y;
-  /* The drawn socket is CANVAS-sized (it zooms), so the clickable disc must
-   * follow the view scale — a fixed pixel radius left the rim of a zoomed-in
-   * socket unclickable. The floor keeps zoomed-out sockets grabbable. */
-  const float scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-  const float radius = std::max(MOODBOARD_GRAPH_SOCKET_RADIUS * scale, 9.0f) + 5.0f;
+  const float radius = MOODBOARD_GRAPH_SOCKET_RADIUS + 5.0f;
   return dx * dx + dy * dy <= radius * radius;
 }
 
@@ -552,13 +525,6 @@ bool moodboard_find_output_socket_under_mouse(PointerRNA *scene_ptr,
     RNA_property_collection_lookup_int(scene_ptr, media, index, &item);
     PropertyRNA *embedded = RNA_struct_find_property(&item, "embedded_node_id");
     if (embedded && RNA_property_string_length(&item, embedded) > 0) {
-      continue;
-    }
-    /* Media that never got a graph id (a board saved before the migration ran)
-     * has no addressable output: a hit would start a link drag whose
-     * from_node_id is empty, minting a permanently unresolvable link. */
-    PropertyRNA *id_prop = RNA_struct_find_property(&item, "node_id");
-    if (!id_prop || RNA_property_string_length(&item, id_prop) == 0) {
       continue;
     }
     rctf rect{};

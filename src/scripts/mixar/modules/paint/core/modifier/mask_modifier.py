@@ -90,7 +90,7 @@ def add_modifier_nodes(mod, tree, ref_tree=None):
 
         invert = new_node(tree, mod, 'invert', 'ShaderNodeInvert', 'Invert')
 
-        if ref_tree and invert_ref:
+        if ref_tree:
             copy_node_props(invert_ref, invert)
             ref_tree.nodes.remove(invert_ref)
 
@@ -103,12 +103,11 @@ def add_modifier_nodes(mod, tree, ref_tree=None):
         ramp_mix = new_mix_node(tree, mod, 'ramp_mix', 'Ramp Mix', 'FLOAT')
 
         if ref_tree:
-            if ramp_ref:
-                copy_node_props(ramp_ref, ramp)
-                ref_tree.nodes.remove(ramp_ref)
-            if ramp_mix_ref:
-                copy_node_props(ramp_mix_ref, ramp_mix)
-                ref_tree.nodes.remove(ramp_mix_ref)
+            copy_node_props(ramp_ref, ramp)
+            copy_node_props(ramp_mix_ref, ramp_mix)
+
+            ref_tree.nodes.remove(ramp_ref)
+            ref_tree.nodes.remove(ramp_mix_ref)
         else:
             ramp_mix.inputs[0].default_value = 1.0
 
@@ -118,7 +117,7 @@ def add_modifier_nodes(mod, tree, ref_tree=None):
 
         curve = new_node(tree, mod, 'curve', 'ShaderNodeRGBCurve', 'Curve')
 
-        if ref_tree and curve_ref:
+        if ref_tree:
             copy_node_props(curve_ref, curve)
 
             ref_tree.nodes.remove(curve_ref)

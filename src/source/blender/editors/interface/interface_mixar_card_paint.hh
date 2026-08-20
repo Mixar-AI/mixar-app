@@ -25,6 +25,8 @@
 #include "DNA_userdef_types.h"
 
 #include "UI_interface_c.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 inline void mixar_card_to_float(const uchar src[4], float dst[4])
 {
@@ -39,7 +41,7 @@ inline void mixar_card_rect_to_rctf(const rcti *src, rctf *dst)
 /** Theme widget font, optionally rescaled/reweighted. */
 inline uiFontStyle mixar_card_font(const float scale, const int weight)
 {
-  uiFontStyle fs = UI_style_get()->widget;
+  uiFontStyle fs = style_get()->widget;
   fs.points *= scale;
   if (weight > 0) {
     fs.character_weight = weight;
@@ -59,9 +61,9 @@ inline void mixar_card_draw_text(const uiFontStyle &fs,
   if (str == nullptr || str[0] == '\0') {
     return;
   }
-  UI_fontstyle_set(&fs);
-  const uiFontStyleDraw_Params params{align, 0};
-  UI_fontstyle_draw(&fs, rect, str, strlen(str), col, &params);
+  fontstyle_set(&fs);
+  const FontStyleDrawParams params{align, 0};
+  fontstyle_draw(&fs, rect, str, strlen(str), col, &params);
 }
 
 /** Horizontal inset so content never touches the popover edge. */
@@ -106,8 +108,8 @@ inline void mixar_card_fill_round(const rctf *rect,
   float c[4];
   mixar_card_to_float(col, c);
   c[3] *= alpha;
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, rad, c);
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv(rect, true, rad, c);
 }
 
 inline void mixar_card_outline_round(const rctf *rect,
@@ -118,6 +120,7 @@ inline void mixar_card_outline_round(const rctf *rect,
   float c[4];
   mixar_card_to_float(col, c);
   c[3] = alpha;
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, false, rad, c);
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv(rect, false, rad, c);
 }
+}  // namespace blender::ui

@@ -49,21 +49,9 @@ class MixieChatAttachment(PropertyGroup):
         name="Image Source",
         items=[
             ('FILE', "File", "Image from file system"),
-            ('BLEND_DATA', "Blend Data", "Image from blend file"),
-            # #1268: an attached 3D model file, imported into the scene at
-            # attach time. image_path holds the local path (never sent);
-            # imported_object_names carries what the agent may reference.
-            ('MODEL_FILE', "Model File", "3D model imported into the scene"),
+            ('BLEND_DATA', "Blend Data", "Image from blend file")
         ],
         default='FILE'
-    )
-    # #1268: comma-separated names of the objects a MODEL_FILE import created
-    # (captured at attach time). Only these names ever reach the backend.
-    imported_object_names: StringProperty(
-        name="Imported Object Names",
-        description="Objects the attached model file created in the scene",
-        default="",
-        options={'SKIP_SAVE'},
     )
     display_name: StringProperty(
         name="Display Name",
@@ -266,9 +254,6 @@ class MixieChatMessage(PropertyGroup):
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
-    # #1251 import picker: comma-separated extensions offered by the native
-    # open dialog. Picker configuration only — never a path.
-    import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
@@ -669,22 +654,6 @@ def on_generate_type_changed(self, context):
         redraw_chat_areas()
 
 
-def _on_chat_mode_changed(self, context):
-    """When the user switches INTO Library mode, show the full asset grid so the
-    browse experience is immediate (no need to press Enter first).
-
-    Currently unreachable: LIBRARY is not offered by the mode enum (see
-    ``register()``). Kept, like the rest of ``core/library_browse.py``, so
-    re-listing the item is the only change needed to bring the mode back.
-    """
-    if getattr(self, "mixie_chat_mode", "") == 'LIBRARY':
-        try:
-            from ...core import library_browse
-            library_browse.schedule_show_all()
-        except Exception:
-            pass
-
-
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -742,36 +711,8 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks and assistance", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
-            # Values 2 and 4 belong to retired modes and can still be persisted
-            # in old .blend files. Never reuse either: doing so would silently
-            # turn those files into another mode on load. 2 was the legacy ASK
-            # mode. 4 was LIBRARY, which is no longer offered — the item is
-            # unlisted here so it cannot be drawn in any mode dropdown (the
-            # chat footer, the bubble footer and the bubble menu all enumerate
-            # this property) nor entered by any other route. Library was
-            # authored against 2 before Add-on Project landed and was moved to
-            # 4 for exactly this reason.
-            #
-            # `core/library_browse.py` is left intact and fully dormant — every
-            # one of its entry points is gated on this mode — so restoring the
-            # feature is just re-listing the item below.
-            ('ADDON_PROJECT', "Add-on Project", "Build and maintain a linked multi-file Blender add-on", 'FILE_SCRIPT', 3),
         ],
         default='AGENT',
-        update=_on_chat_mode_changed,
-    )
-
-    bpy.types.Scene.mixie_addon_project_id = StringProperty(
-        name="Add-on Project ID",
-        description="Opaque project identity; the local folder path is stored only on this machine",
-        default="",
-    )
-
-    bpy.types.Scene.mixie_addon_project_name = StringProperty(
-        name="Add-on Project Name",
-        description="Cached display name for the locally linked add-on project",
-        default="",
-        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
@@ -937,7 +878,6 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate content", 'GENERATE', 1),
-            ('ADDON_PROJECT', "Add-on Project", "Work on the linked Blender add-on", 'FILE_SCRIPT', 3),
         ],
         default='AGENT',
     )
@@ -1003,7 +943,7 @@ def unregister():
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
-        'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
+        'mixie_chat_mode',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
         if hasattr(bpy.types.Scene, attr):

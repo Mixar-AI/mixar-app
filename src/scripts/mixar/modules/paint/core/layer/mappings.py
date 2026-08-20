@@ -213,23 +213,11 @@ def update_mapping(entity, use_baked=False):
         mapping.vector_type = 'POINT'
 
         image = source.image
-        if image is None:
-            # Image datablock was deleted (or never bound) — nothing to map.
-            return
-
         if image.source == 'TILED':
             segment = image.yua.segments.get(segment_name)
-            if segment is None:
-                # Segment removed/renamed since the mapping was written.
-                return
             offset_y = get_udim_segment_mapping_offset(segment) 
         else:
             segment = image.yia.segments.get(segment_name)
-            if segment is None or image.size[0] == 0 or image.size[1] == 0:
-                # Segment missing, or image has no pixels yet (e.g. reopened
-                # without packed files) — this fires per property update tick,
-                # so skip instead of raising AttributeError/ZeroDivisionError.
-                return
 
             scale_x = segment.width / image.size[0] * scale_x
             scale_y = segment.height / image.size[1] * scale_y

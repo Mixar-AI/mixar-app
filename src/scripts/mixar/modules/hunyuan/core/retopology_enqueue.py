@@ -53,7 +53,7 @@ def snapshot_shared_params(topo) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _retopology_on_imported(job, object_names: str):
+def _retopology_on_imported(job, object_names: str) -> None:
     """Post-import for retopology: detect post-processed mesh or fallback.
 
     Either branch also runs ``finalize_generated_material`` on the result so a
@@ -93,8 +93,6 @@ def _retopology_on_imported(job, object_names: str):
         except Exception as e:
             logger.warning("[Retopology] material finalize failed: %s", e)
 
-    return final  # see AsyncGLBJob.on_imported
-
 
 def _strip_high_suffix(name: str) -> str:
     """Drop a trailing ``_high`` (any case) and any file extension from a name."""
@@ -114,7 +112,7 @@ def _make_tripo_on_imported(bake: bool):
     UVs, so re-unwrapping would discard them.
     """
 
-    def _on_imported(job, object_names: str):
+    def _on_imported(job, object_names: str) -> None:
         from mixar.modules.common.job_queue.core.model_io import (
             post_import_rename_and_setup,
         )
@@ -136,8 +134,6 @@ def _make_tripo_on_imported(bake: bool):
                 convert_imported_material_to_paint_layers(final)
             except Exception as e:
                 logger.warning("[Retopology/Tripo] material finalize failed: %s", e)
-
-        return final  # see AsyncGLBJob.on_imported
 
     return _on_imported
 

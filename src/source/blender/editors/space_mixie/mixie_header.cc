@@ -19,6 +19,8 @@
 #include "WM_types.hh"
 
 #include "mixie_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* add handlers, stuff you only do once or on area/region changes */
 void mixie_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
@@ -30,3 +32,4 @@ void mixie_header_region_draw(const bContext *C, ARegion *region)
 {
   ED_region_header(C, region);
 }
+}  // namespace blender

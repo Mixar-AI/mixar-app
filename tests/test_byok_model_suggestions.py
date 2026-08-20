@@ -114,9 +114,7 @@ def test_save_rejects_stale_model_from_another_provider(monkeypatch):
         ),
     )
 
-    # Save is clickable (poll only guards in-flight requests); the stale
-    # combo is rejected in execute() and never reaches the network.
-    assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is True
+    assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is False
     assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
     assert wm.byok_dialog_state == "ERROR"
     model_suggestions.clear()

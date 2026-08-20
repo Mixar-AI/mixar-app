@@ -30,6 +30,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Drop Image Operator
@@ -158,3 +160,4 @@ void mixie_chat_dropboxes()
 }
 
 /** \} */
+}  // namespace blender

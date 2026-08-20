@@ -13,7 +13,7 @@
  * registration, poll and every operator the card invokes; this layer
  * owns only pixels.
  *
- * Elements are built through the ordinary #uiLayout API so Blender
+ * Elements are built through the ordinary #Layout API so Blender
  * computes sizes and the popover auto-fits, then tagged with
  * #UI_BUT2_MIXAR_CARD so widget dispatch routes them to
  * #UI_mixar_profile_card_draw_element instead of the stock widget. That
@@ -27,11 +27,13 @@
 #pragma once
 
 #include "BLI_sys_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 struct bContext;
 struct rcti;
-struct uiBut;
-struct uiLayout;
+struct Button;
+struct Layout;
 struct uiWidgetColors;
 
 /**
@@ -63,8 +65,6 @@ enum class MixarCardElement : int {
   GhostButton,
   /** Horizontal rule between card sections. */
   Divider,
-  /** Danger-tinted body text — inline error copy in card-styled dialogs. */
-  DangerText,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
@@ -77,37 +77,10 @@ enum class MixarCardElement : int {
  * card degrades to the parts it can populate rather than drawing
  * placeholder numbers.
  */
-void UI_layout_mixar_profile_card(uiLayout *layout, bContext *C);
+void UI_layout_mixar_profile_card(Layout *layout, bContext *C);
 
 /** Element kind a button was tagged with, or None if it is not a card element. */
-MixarCardElement UI_mixar_card_element_get(const uiBut *but);
-
-/**
- * Tag the most recently created button in \a layout's block as card
- * element \a element (any kind; \a payload is the #MixarCardIcon for
- * button kinds, the fill fraction for the quota bar, 0 otherwise).
- *
- * Exposed so card-styled surfaces built from Python — the AI Provider
- * Settings dialog — can reuse the profile card's element painters
- * instead of re-hardcoding the design. See `rna_ui_api.cc`
- * (`mixar_card_label`).
- */
-void UI_layout_mixar_card_tag_last(uiLayout *layout, MixarCardElement element, float payload);
-
-/**
- * Style the most recently created operator/push button (#ButType::But)
- * in \a layout's block as one of the card's action-button kinds, and
- * set or clear #UI_BUT_ACTIVE_DEFAULT on it.
- *
- * The active-default flag is what lets a dialog own its confirm row:
- * #wm_block_dialog_create only appends the automatic OK/Cancel pair
- * when the block has no active-default button. Non-button \a element
- * kinds are ignored (the tag would draw a label as chrome-less text
- * inside a clickable rect).
- */
-void UI_layout_mixar_card_style_last_button(uiLayout *layout,
-                                            MixarCardElement element,
-                                            bool active_default);
+MixarCardElement UI_mixar_card_element_get(const Button *but);
 
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);
@@ -120,14 +93,15 @@ bool UI_mixar_card_element_is_button(MixarCardElement element);
  * the card's drawing code.
  */
 void UI_mixar_card_button_draw(
-    uiBut *but, rcti *rect, MixarCardElement element, bool is_hover, bool is_active);
+    Button *but, rcti *rect, MixarCardElement element, bool is_hover, bool is_active);
 
 /**
  * Draw one tagged card element.
  *
  * Called from `interface_widgets.cc` widget dispatch. Takes the unpacked
- * hover/active flags rather than `uiWidgetStateInfo`, which is private to
+ * hover/active flags rather than `WidgetStateInfo`, which is private to
  * that translation unit.
  */
 void UI_mixar_profile_card_draw_element(
-    uiBut *but, uiWidgetColors *wcol, rcti *rect, bool is_hover, bool is_active);
+    Button *but, uiWidgetColors *wcol, rcti *rect, bool is_hover, bool is_active);
+}  // namespace blender::ui

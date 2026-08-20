@@ -203,7 +203,7 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
     immEnd();
 
     /* Draw crop handles: L-shaped corners + edge midpoint lines */
-    float inv_zoom = 1.0f / UI_view2d_scale_get_x(v2d);
+    float inv_zoom = 1.0f / ui::view2d_scale_get_x(v2d);
     float corner_len = 20.0f * inv_zoom;   /* Length of each L arm */
     float edge_len = 14.0f * inv_zoom;     /* Length of edge midpoint lines */
     float mid_x = (crop_x1 + crop_x2) / 2;

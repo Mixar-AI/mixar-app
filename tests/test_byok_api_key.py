@@ -101,4 +101,9 @@ def test_native_password_field_buffer_matches_byok_key_limit():
         / "interface_handlers.cc"
     )
 
-    assert "#define UI_MAX_PASSWORD_STR 256" in handlers.read_text()
+    # Blender 5.2 replaced the fixed UI_MAX_PASSWORD_STR char buffer with an
+    # unbounded std::string, so long BYOK keys can no longer be truncated by
+    # the native password field. Pin the std::string-based implementation.
+    text = handlers.read_text()
+    assert "UI_MAX_PASSWORD_STR" not in text
+    assert "std::string password_str" in text

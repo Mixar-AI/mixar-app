@@ -29,6 +29,8 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 /* Buttons — background, glyph and label are all drawn here             */
 
@@ -41,7 +43,7 @@
  * middle of a wide button. Owning both lets the glyph and label travel
  * as one group.
  */
-void UI_mixar_card_button_draw(uiBut *but,
+void UI_mixar_card_button_draw(Button *but,
                                rcti *rect,
                                const MixarCardElement element,
                                const bool is_hover,
@@ -106,14 +108,14 @@ void UI_mixar_card_button_draw(uiBut *but,
   if (is_active) {
     /* Blender has no press transform; approximate the dip with a wash. */
     const float dim[4] = {0.0f, 0.0f, 0.0f, 0.15f};
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
-    UI_draw_roundbox_4fv(&box, true, rad, dim);
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&box, true, rad, dim);
   }
 
   /* --- Contents --------------------------------------------------------- */
   const MixarCardIcon icon = MixarCardIcon(std::max(0, int(but->hardmax)));
   const uiFontStyle fs = mixar_card_font(1.0f, 0);
-  UI_fontstyle_set(&fs);
+  fontstyle_set(&fs);
 
   const float label_w = but->drawstr.empty() ?
                             0.0f :
@@ -126,7 +128,7 @@ void UI_mixar_card_button_draw(uiBut *but,
    * (#mixar_card_button_chrome), so the nominal padding normally fits.
    * When it cannot — a row whose width the layout capped, a translation
    * longer than the measurement, a tiny UI scale — spend the padding
-   * down before the glyphs, because #UI_fontstyle_draw clips without an
+   * down before the glyphs, because #fontstyle_draw clips without an
    * ellipsis and a silently shortened label reads as a wrong word. */
   const float box_w = box.xmax - box.xmin;
   const float content_w = label_w + (has_icon ? icon_size + icon_gap : 0.0f);
@@ -161,3 +163,4 @@ void UI_mixar_card_button_draw(uiBut *but,
     mixar_card_draw_text(fs, &text_rect, but->drawstr.c_str(), text_col, UI_STYLE_TEXT_LEFT);
   }
 }
+}  // namespace blender::ui

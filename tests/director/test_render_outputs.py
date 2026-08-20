@@ -129,9 +129,9 @@ def test_native_surface_hosts_the_export_popup_natively():
     # popup (KEEP_OPEN); only click-outside, Esc, or an action closes it —
     # Export/Render via their explicit close callback, since KEEP_OPEN would
     # otherwise keep the popup up after the action too.
-    assert "UI_BLOCK_KEEP_OPEN" in popup
+    assert "BLOCK_KEEP_OPEN" in popup
     assert "render_popup_close" in popup
-    assert "UI_popup_menu_retval_set" in popup
+    assert "popup_menu_retval_set" in popup
     assert "classes = (" in operators
     assert "MIXAR_OT_director_render_videos," in operators
 

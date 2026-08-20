@@ -19,7 +19,6 @@ button, dev state-cycler).
 import bpy
 from bpy.types import Header
 
-from ...addon_project.ui.controls import draw_project_controls
 from ..constants import DEV_MODE, SessionState
 from ..core import get_session_manager
 
@@ -76,10 +75,6 @@ class MIXIE_CHAT_HT_header(Header):
                     icon='TEXT',
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
-
-            if getattr(scene, 'mixie_chat_mode', '') == 'ADDON_PROJECT':
-                layout.separator()
-                draw_project_controls(layout, scene)
 
         # Spacer
         layout.separator_spacer()

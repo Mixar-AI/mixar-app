@@ -16,23 +16,9 @@ client-side enum left here is the dialog state machine.
 BYOK_API_KEY_MAX_LENGTH = 256
 
 # Dialog state machine — drives what the dialog renders on each draw.
-# The dialog owns its whole footer (the native OK/Cancel row is
-# suppressed — see ui/operators/byok_dialog_ui.py), so every state must
-# resolve to exactly one primary action:
-#
-#   IDLE            form + [Cancel][Save & Activate]
-#   SAVING          disabled form + progress pill (validation in flight)
-#   REMOVING        config card + progress pill (delete in flight)
-#   SAVED           recap card + [Done] — the explicit "it saved" moment
-#   REMOVED         recap card + [Done]
-#   ERROR           form + inline error + [Cancel][Try Again]
-#   CONFIRM_REMOVE  config card + warning + [Keep My Key][Remove API Key]
 DIALOG_STATE_ITEMS = (
     ('IDLE',            "Idle",            "Ready for input"),
-    ('SAVING',          "Saving",          "Save request in flight"),
-    ('REMOVING',        "Removing",        "Delete request in flight"),
-    ('SAVED',           "Saved",           "Save confirmed — showing the recap"),
-    ('REMOVED',         "Removed",         "Delete confirmed — showing the recap"),
+    ('SAVING',          "Saving",          "Request in flight"),
     ('ERROR',           "Error",           "Last request failed"),
     ('CONFIRM_REMOVE',  "Confirm Remove",  "Awaiting delete confirmation"),
 )

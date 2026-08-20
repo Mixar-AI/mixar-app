@@ -144,8 +144,8 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
 
   /* Convert region coordinates to view coordinates */
   float view_x1, view_y1, view_x2, view_y2;
-  UI_view2d_region_to_view(v2d, rect.xmin, rect.ymin, &view_x1, &view_y1);
-  UI_view2d_region_to_view(v2d, rect.xmax, rect.ymax, &view_x2, &view_y2);
+  ui::view2d_region_to_view(v2d, rect.xmin, rect.ymin, &view_x1, &view_y1);
+  ui::view2d_region_to_view(v2d, rect.xmax, rect.ymax, &view_x2, &view_y2);
 
   /* Normalize box bounds (handle any drag direction) */
   float box_min_x = std::min(view_x1, view_x2);

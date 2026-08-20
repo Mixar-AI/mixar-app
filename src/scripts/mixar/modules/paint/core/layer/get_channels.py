@@ -33,7 +33,7 @@ def get_write_height_normal_channels(layer):
     Returns:
         list: A list of channel objects that are normal channels with write_height enabled.
     """
-    mp = layer.id_data.mp
+    mp = layer.id_data.yps
 
     channels = []
 

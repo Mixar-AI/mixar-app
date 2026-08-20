@@ -51,6 +51,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Animation Registry
@@ -188,7 +190,7 @@ void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
 
 /**
  * Update View2D dimensions and mask to match current region size.
- * Must be called BEFORE UI_view2d_view_ortho() to ensure correct
+ * Must be called BEFORE ui::view2d_view_ortho() to ensure correct
  * coordinate transformations for scrollbar interactions.
  */
 static void mixie_chat_region_set_view2d(MixieChatRuntime *rt,
@@ -511,7 +513,7 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   }
 
   /* Setup View2D for drawing */
-  UI_view2d_view_ortho(v2d);
+  ui::view2d_view_ortho(v2d);
 
   /* Delegate rendering to mixie_chat_messages_render.cc */
   mixie_chat_render_messages(
@@ -521,13 +523,13 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   GPU_blend(GPU_BLEND_NONE);
   GPU_line_smooth(false);
 
-  UI_view2d_view_restore(C);
+  ui::view2d_view_restore(C);
 
   /* Scroll-to-bottom indicator (drawn in screen-space after view restore) */
   mixie_chat_update_scroll_indicator(smixie, region, msg_count);
   mixie_chat_draw_scroll_indicator(smixie, region);
 
-  UI_view2d_scrollers_draw(v2d, nullptr);
+  ui::view2d_scrollers_draw(v2d, nullptr);
 
   /* Keep frames coming while anything on this surface animates: streaming
    * loader/ephemeral content (spinner + live status), a bubble slide-in, or
@@ -540,3 +542,4 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
 }
 
 /** \} */
+}  // namespace blender

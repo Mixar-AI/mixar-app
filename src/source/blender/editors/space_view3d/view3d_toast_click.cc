@@ -31,6 +31,8 @@
 #include "WM_api.hh"
 
 #include "view3d_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Set by the Python toast timer (toast_timer.py) while any toast is visible.
  * Must stay in sync with TOASTS_VISIBLE_WM_PROP in notifications/constants.py. */
@@ -124,3 +126,4 @@ void view3d_toast_click_register(ARegion *region)
                           nullptr,
                           eWM_EventHandlerFlag(0));
 }
+}  // namespace blender

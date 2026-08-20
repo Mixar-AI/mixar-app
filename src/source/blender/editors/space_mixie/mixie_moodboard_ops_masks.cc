@@ -208,7 +208,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   }
 
   /* Extract polygon coordinates into array */
-  float *polygon = (float *)MEM_mallocN(sizeof(float) * num_points * 2, "lasso_polygon");
+  float *polygon = (float *)MEM_new_uninitialized(sizeof(float) * num_points * 2, "lasso_polygon");
 
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&state_ptr, lasso_points_prop, &iter);

@@ -18,6 +18,8 @@
 #include "BLI_vector.hh"
 
 #include "mixie_chat_footer_constants.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct Main;
@@ -341,3 +343,4 @@ void footer_draw_thumbnails(const bContext *C,
                              float scale);
 
 /** \} */
+}  // namespace blender

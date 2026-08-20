@@ -195,7 +195,7 @@ void mixie_draw_moodboard_groups(const bContext *C, View2D *v2d)
       /* Draw resize handles on group bounding box (only when group itself is selected) */
       if (is_group_selected) {
         float handle_size_px = 12.0f;
-        float handle_size = handle_size_px / UI_view2d_scale_get_x(v2d);
+        float handle_size = handle_size_px / ui::view2d_scale_get_x(v2d);
 
         float width = max_x - min_x;
         float height = max_y - min_y;

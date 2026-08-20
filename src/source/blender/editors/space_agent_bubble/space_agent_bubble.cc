@@ -52,6 +52,8 @@
 #include "DNA_userdef_types.h"
 
 #include "agent_bubble_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Slim region sizing + bubble window dimensions.
  *
@@ -242,7 +244,7 @@ static void agent_bubble_main_region_draw(const bContext *C, ARegion *region)
    * in the Agent Bubble theme.  Push it as an override so the shared
    * mixie_chat draw path uses the agent-bubble colour, not the
    * mixie-chat one. */
-  bTheme *btheme = UI_GetTheme();
+  bTheme *btheme = ui::theme::theme_get();
   const unsigned char *bk = btheme->space_agent_bubble.back;
   float body_bg[4] = {bk[0] / 255.0f, bk[1] / 255.0f, bk[2] / 255.0f, bk[3] / 255.0f};
   mixie_chat_set_bg_override(body_bg);
@@ -313,8 +315,9 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin != ghostwin) {
       continue;
     }
     w->sizex = pixel_width;
@@ -376,11 +379,12 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
 #if defined(__APPLE__) || defined(_WIN32)
   wmWindow *win = CTX_wm_window(C);
   ARegion *sync_region = region;
-  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr || win->runtime->ghostwin != g_bubble_ghostwin) {
     wmWindowManager *wm = CTX_wm_manager(C);
     if (wm != nullptr) {
-      LISTBASE_FOREACH (wmWindow *, candidate, &wm->windows) {
-        if (candidate->ghostwin != g_bubble_ghostwin) {
+      for (wmWindow &candidate_iter : wm->windows) {
+        wmWindow *candidate = &candidate_iter;
+        if (candidate->runtime->ghostwin != g_bubble_ghostwin) {
           continue;
         }
         win = candidate;
@@ -389,7 +393,8 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
         if (screen != nullptr && BLI_listbase_is_single(&screen->areabase)) {
           ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
           if (area != nullptr && area->spacetype == SPACE_AGENT_BUBBLE) {
-            LISTBASE_FOREACH (ARegion *, candidate_region, &area->regionbase) {
+            for (ARegion &candidate_region_iter : area->regionbase) {
+              ARegion *candidate_region = &candidate_region_iter;
               if (candidate_region->regiontype == RGN_TYPE_TOOLS) {
                 sync_region = candidate_region;
                 break;
@@ -401,7 +406,7 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
       }
     }
   }
-  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin ||
+  if (win == nullptr || win->runtime->ghostwin == nullptr || win->runtime->ghostwin != g_bubble_ghostwin ||
       g_bubble_minimised)
   {
     return;
@@ -409,7 +414,7 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
 
   const int attachment_count = agent_bubble_pending_attachment_count(C);
   const int height_floor = agent_bubble_height_floor_for_attachments(attachment_count);
-  bubble_set_min_content_size(win->ghostwin, height_floor);
+  bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
 
   const bool has_attachments = (attachment_count > 0);
   const bool was_had_pending = g_bubble_had_pending_attachments;
@@ -441,7 +446,7 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
 
   /* Clamp to screen boundary. */
   const int max_height = Mixar_WindowGetMaxHeightToScreenTop(
-      win->ghostwin, AGENT_BUBBLE_AUTOGROW_TOP_RESERVE);
+      win->runtime->ghostwin, AGENT_BUBBLE_AUTOGROW_TOP_RESERVE);
   if (max_height > 0 && target_height > max_height) {
     target_height = max_height;
   }
@@ -450,8 +455,8 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
       (has_attachments && !was_had_pending && !g_bubble_expanded))
   {
     bubble_force_size_and_refresh(
-        const_cast<bContext *>(C), win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
-    bubble_set_min_content_size(win->ghostwin, height_floor);
+        const_cast<bContext *>(C), win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
+    bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
   }
 #else
   (void)C;
@@ -467,7 +472,7 @@ static void agent_bubble_footer_region_draw(const bContext *C, ARegion *region)
    * stored as uchar[4] (0-255) and the override API expects float (0-1).
    * If the theme field is still at its zero-init default (alpha == 0),
    * fall back to the space's main `back` colour. */
-  bTheme *btheme = UI_GetTheme();
+  bTheme *btheme = ui::theme::theme_get();
   const unsigned char *fb = btheme->space_agent_bubble.chat_footer_bg;
   float footer_bg[4];
   if (fb[3] == 0) {
@@ -550,8 +555,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != g_pill_ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin != g_pill_ghostwin) {
       continue;
     }
     w->sizex = pixel_width;
@@ -604,7 +610,8 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
     /* region->sizey is in unscaled units (Blender multiplies by
      * UI_SCALE_FAC internally) — pass the point value here, not
      * the pixel value. */
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (region->regiontype == RGN_TYPE_HEADER) {
         region->sizey = height;
         break;
@@ -701,8 +708,9 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
   void *repaired_bubble = nullptr;
   void *repaired_pill = nullptr;
 
-  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
-    if (win->ghostwin == nullptr) {
+  for (wmWindow &win_iter : wm->windows) {
+    wmWindow *win = &win_iter;
+    if (win->runtime->ghostwin == nullptr) {
       continue;
     }
 
@@ -717,7 +725,8 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
     }
 
     bool has_body_or_footer = false;
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (ELEM(region->regiontype, RGN_TYPE_WINDOW, RGN_TYPE_TOOLS)) {
         has_body_or_footer = true;
         break;
@@ -726,52 +735,52 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
 
     if (has_body_or_footer) {
 #ifdef __APPLE__
-      Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+      Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
-      Mixar_WindowSetChromeless(win->ghostwin, true);
-      Mixar_WindowSetFloatingLevel(win->ghostwin);
-      Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
-      Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+      Mixar_WindowSetChromeless(win->runtime->ghostwin, true);
+      Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
+      Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
+      Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
       const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
       bubble_force_size_and_refresh(
-          C, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-      bubble_set_min_content_size(win->ghostwin, collapsed_height);
+          C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
+      bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 #ifdef _WIN32
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSetParentTracked(win->ghostwin, g_host_ghostwin);
+        Mixar_WindowSetParentTracked(win->runtime->ghostwin, g_host_ghostwin);
       }
 #endif
 #ifdef __APPLE__
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSetParentPlain(win->ghostwin, g_host_ghostwin);
+        Mixar_WindowSetParentPlain(win->runtime->ghostwin, g_host_ghostwin);
       }
-      Mixar_WindowOrderFront(win->ghostwin);
+      Mixar_WindowOrderFront(win->runtime->ghostwin);
 #endif
       /* Snap the bubble back to the host's centre-bottom so the
        * "Open Agent" button always brings it to a predictable location
        * — even if the user previously dragged it off-screen or onto
        * another monitor. Mirrors the first-open and restore paths. */
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSnapToCentreBottomOfWindow(win->ghostwin,
+        Mixar_WindowSnapToCentreBottomOfWindow(win->runtime->ghostwin,
                                                g_host_ghostwin,
                                                AGENT_BUBBLE_BOTTOM_MARGIN);
       }
-      g_bubble_ghostwin = win->ghostwin;
+      g_bubble_ghostwin = win->runtime->ghostwin;
       g_bubble_minimised = false;
-      repaired_bubble = win->ghostwin;
+      repaired_bubble = win->runtime->ghostwin;
       found_bubble = true;
     }
     else {
 #ifdef __APPLE__
-      Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+      Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
-      Mixar_WindowSetBorderless(win->ghostwin);
-      Mixar_WindowSetFloatingLevel(win->ghostwin);
-      Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
-      Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
-      Mixar_WindowSetMinContentSize(win->ghostwin, 40, 20);
-      g_pill_ghostwin = win->ghostwin;
-      repaired_pill = win->ghostwin;
+      Mixar_WindowSetBorderless(win->runtime->ghostwin);
+      Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
+      Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
+      Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
+      Mixar_WindowSetMinContentSize(win->runtime->ghostwin, 40, 20);
+      g_pill_ghostwin = win->runtime->ghostwin;
+      repaired_pill = win->runtime->ghostwin;
     }
   }
 
@@ -798,7 +807,8 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
     return false;
   }
 
-  LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
+  for (ScrArea &area_iter : screen->areabase) {
+    ScrArea *area = &area_iter;
     if (area->spacetype == SPACE_AGENT_BUBBLE) {
       return true;
     }
@@ -877,7 +887,8 @@ static int agent_bubble_close_all_windows(bContext *C)
   bool closed_one = true;
   while (closed_one) {
     closed_one = false;
-    LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+    for (wmWindow &win_iter : wm->windows) {
+      wmWindow *win = &win_iter;
       if (!agent_bubble_window_contains_space(win)) {
         continue;
       }
@@ -904,8 +915,8 @@ static int agent_bubble_close_all_windows(bContext *C)
     else {
       /* Fallback: pick the first remaining window. */
       wmWindow *first = static_cast<wmWindow *>(wm->windows.first);
-      if (first != nullptr && first->ghostwin != nullptr) {
-        Mixar_WindowMakeKey(first->ghostwin);
+      if (first != nullptr && first->runtime->ghostwin != nullptr) {
+        Mixar_WindowMakeKey(first->runtime->ghostwin);
       }
     }
   }
@@ -924,7 +935,8 @@ static int agent_bubble_close_all_windows(bContext *C)
    * to the first surviving non-bubble window so we never dereference a freed
    * pointer in CTX_wm_window_set. */
   bool ctx_win_alive = false;
-  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+  for (wmWindow &win_iter : wm->windows) {
+    wmWindow *win = &win_iter;
     if (win == ctx_win) {
       ctx_win_alive = true;
       break;
@@ -932,7 +944,8 @@ static int agent_bubble_close_all_windows(bContext *C)
   }
   if (!ctx_win_alive) {
     ctx_win = nullptr;
-    LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+    for (wmWindow &win_iter : wm->windows) {
+      wmWindow *win = &win_iter;
       if (!agent_bubble_window_contains_space(win)) {
         ctx_win = win;
         break;
@@ -953,7 +966,7 @@ static int agent_bubble_close_all_windows(bContext *C)
 static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
   ARegion *region;
-  SpaceAgentBubble *sbubble = MEM_callocN<SpaceAgentBubble>("initagentbubble");
+  SpaceAgentBubble *sbubble = MEM_new<SpaceAgentBubble>("initagentbubble");
   sbubble->spacetype = SPACE_AGENT_BUBBLE;
   /* Mirror SpaceMixieChat init — sel_message_index = -1 means no
    * active selection. The struct is laid out identically to
@@ -1039,7 +1052,7 @@ static void agent_bubble_init(wmWindowManager * /*wm*/, ScrArea * /*area*/)
 
 static SpaceLink *agent_bubble_duplicate(SpaceLink *sl)
 {
-  SpaceAgentBubble *new_sbubble = static_cast<SpaceAgentBubble *>(MEM_dupallocN(sl));
+  SpaceAgentBubble *new_sbubble = static_cast<SpaceAgentBubble *>(MEM_dupalloc_void(sl));
   new_sbubble->runtime = nullptr;
   return (SpaceLink *)new_sbubble;
 }
@@ -1118,11 +1131,11 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
    * bubble has focus) — we only want a "main" window pointer here. */
   {
     wmWindow *invoker = CTX_wm_window(C);
-    if (invoker != nullptr && invoker->ghostwin != nullptr &&
-        invoker->ghostwin != g_bubble_ghostwin &&
-        invoker->ghostwin != g_pill_ghostwin)
+    if (invoker != nullptr && invoker->runtime->ghostwin != nullptr &&
+        invoker->runtime->ghostwin != g_bubble_ghostwin &&
+        invoker->runtime->ghostwin != g_pill_ghostwin)
     {
-      g_host_ghostwin = invoker->ghostwin;
+      g_host_ghostwin = invoker->runtime->ghostwin;
     }
   }
 
@@ -1224,7 +1237,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   }
 
 #if defined(__APPLE__) || defined(_WIN32)
-  if (win->ghostwin != nullptr) {
+  if (win->runtime->ghostwin != nullptr) {
 #ifdef __APPLE__
     /* Tag this NSWindow as a non-blocking floating dock so
      * hasDialogWindow() exempts it from the modal-dialog gate.
@@ -1233,19 +1246,19 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * bubble is open — meaning viewport shortcuts and mixie chat
      * typing receive no keystrokes. Must be set BEFORE any user
      * interaction (clicking back on the main window). */
-    Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+    Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 
     /* Pin the bubble to its parent's Space so it doesn't leak onto
      * another Space when the user swipes away from a full-screen
      * Mixar (the three-finger gesture / Mission Control). Without
      * this the floating bubble surfaces on top of whatever window is
      * in the Space the user switched to. See Mixar_WindowBindToParentSpace. */
-    Mixar_WindowBindToParentSpace(win->ghostwin);
+    Mixar_WindowBindToParentSpace(win->runtime->ghostwin);
 #endif
 
     /* Strip traffic lights + title bar. Safe to call on the dedup-
      * reused window too — chromeless state persists. */
-    Mixar_WindowSetChromeless(win->ghostwin, true);
+    Mixar_WindowSetChromeless(win->runtime->ghostwin, true);
 
     /* Pin the bubble to NSFloatingWindowLevel so it stays visible
      * above the rest of Mixar's interface no matter where the user
@@ -1253,20 +1266,20 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * to do this but kept losing the bubble behind the main window
      * across various click scenarios — Floating level is the
      * reliable OS-level mechanism. */
-    Mixar_WindowSetFloatingLevel(win->ghostwin);
+    Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
 
     /* Hide the bubble when Mixar deactivates (user alt-tabs to
      * another app). Without this, the floating level keeps the
      * bubble visible above other apps' windows too — the
      * cross-app leak the user reported. AppKit handles the
      * orderOut/orderFront automatically based on app activation. */
-    Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
+    Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
 
     /* Round the window corners to match the Figma's soft popup look.
      * Done after Chromeless so the title-bar style mask is already
      * settled — corner-rounding sets opaque=NO + clearColor which
      * doesn't play nicely with subsequent style-mask changes. */
-    Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+    Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
 
     /* Force the actual NSWindow size to our requested dimensions.
      * Without this, WM_window_open's std::max-with-{200,150} clamping
@@ -1275,8 +1288,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * asked for, causing the footer to collapse). */
     const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
     bubble_force_size_and_refresh(
-        C, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-    bubble_set_min_content_size(win->ghostwin, collapsed_height);
+        C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
+    bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 
     /* Anchor the bubble at the centre-bottom of Mixar's HOST
      * window (not the screen). WM_window_open used
@@ -1290,25 +1303,25 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * builds that snapped to the screen put the bubble visually
      * "below Mixar" if Mixar didn't fill the screen. */
     if (g_host_ghostwin != nullptr) {
-      Mixar_WindowSnapToCentreBottomOfWindow(win->ghostwin,
+      Mixar_WindowSnapToCentreBottomOfWindow(win->runtime->ghostwin,
                                              g_host_ghostwin,
                                              AGENT_BUBBLE_BOTTOM_MARGIN);
     }
     else {
-      Mixar_WindowSnapToCentreBottom(win->ghostwin,
+      Mixar_WindowSnapToCentreBottom(win->runtime->ghostwin,
                                      AGENT_BUBBLE_BOTTOM_MARGIN);
     }
 
     /* Pin the OS-level minimum to the current collapsed bubble size so the
      * attachment-aware layout is also the smallest manually resizable layout. */
-    bubble_set_min_content_size(win->ghostwin, collapsed_height);
+    bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 
     /* Stash the bubble's ghostwin pointer so the
      * minimise / restore / expand ops can address it later
      * regardless of which window the user invokes them from. Reset
      * the minimised flag because a freshly-opened bubble starts
      * visible. */
-    g_bubble_ghostwin = win->ghostwin;
+    g_bubble_ghostwin = win->runtime->ghostwin;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
     g_bubble_had_pending_attachments = false;
@@ -1355,7 +1368,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      *      tracks the bubble's position automatically when the user
      *      drags the bubble around the screen, and closes when the
      *      bubble closes. */
-    if (!Mixar_WindowHasChildWindow(win->ghostwin)) {
+    if (!Mixar_WindowHasChildWindow(win->runtime->ghostwin)) {
       rcti pill_rect;
       pill_rect.xmin = 0;
       pill_rect.ymin = 0;
@@ -1428,18 +1441,18 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
           }
         }
 
-        if (pill_win->ghostwin != nullptr) {
+        if (pill_win->runtime->ghostwin != nullptr) {
 #ifdef __APPLE__
           /* Tag the pill as a non-blocking floating dock too — same
            * reason as the bubble: keeps hasDialogWindow() from
            * blocking the main window's key-window eligibility. */
-          Mixar_WindowMarkAsFloatingDock(pill_win->ghostwin);
+          Mixar_WindowMarkAsFloatingDock(pill_win->runtime->ghostwin);
 
           /* Pin the pill to its parent's Space too — when the bubble
            * is minimised the pill is detached and re-parented onto the
            * host window, so it must carry the same Space-binding to
            * avoid leaking onto another Space in full-screen Mixar. */
-          Mixar_WindowBindToParentSpace(pill_win->ghostwin);
+          Mixar_WindowBindToParentSpace(pill_win->runtime->ghostwin);
 #endif
 
           /* Borderless (NOT chromeless): chromeless leaves the
@@ -1449,46 +1462,46 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
            * reported). Borderless removes the title bar entirely so
            * the pill's contentView fills the frame with a single
            * solid colour. */
-          Mixar_WindowSetBorderless(pill_win->ghostwin);
+          Mixar_WindowSetBorderless(pill_win->runtime->ghostwin);
 
           /* Pin the pill to floating level too. As a child window of
            * the bubble it'd inherit the bubble's level, but when the
            * user minimises the bubble we detach the pill and need
            * it to stay above other windows on its own. */
-          Mixar_WindowSetFloatingLevel(pill_win->ghostwin);
+          Mixar_WindowSetFloatingLevel(pill_win->runtime->ghostwin);
 
           /* Pill also hides when Mixar deactivates — same anti-leak
            * treatment as the bubble. */
-          Mixar_WindowSetHidesOnDeactivate(pill_win->ghostwin, true);
+          Mixar_WindowSetHidesOnDeactivate(pill_win->runtime->ghostwin, true);
 
           /* Half-height corner radius gives a true pill silhouette
            * (fully rounded left + right ends) rather than a small
            * rounded rectangle. */
-          Mixar_WindowSetCornerRadius(pill_win->ghostwin,
+          Mixar_WindowSetCornerRadius(pill_win->runtime->ghostwin,
                                       AGENT_BUBBLE_PILL_CORNER_RADIUS);
 
           /* Override macOS contentMinSize so setFrame can shrink to
            * the small pill dimensions. 40×20 is well below our 80×26
            * target so the resize isn't clamped. */
-          Mixar_WindowSetMinContentSize(pill_win->ghostwin, 40, 20);
-          Mixar_WindowForceSize(pill_win->ghostwin,
+          Mixar_WindowSetMinContentSize(pill_win->runtime->ghostwin, 40, 20);
+          Mixar_WindowForceSize(pill_win->runtime->ghostwin,
                                 AGENT_BUBBLE_PILL_WIDTH,
                                 AGENT_BUBBLE_PILL_HEIGHT);
 
           /* Position pill above bubble's top-left, with the gap. */
-          Mixar_WindowPositionAboveParent(pill_win->ghostwin,
-                                          win->ghostwin,
+          Mixar_WindowPositionAboveParent(pill_win->runtime->ghostwin,
+                                          win->runtime->ghostwin,
                                           /*offset_x=*/0,
                                           /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
 
           /* Attach as macOS child window — pill follows bubble's
            * frame automatically and closes with it. */
-          Mixar_WindowSetParent(pill_win->ghostwin, win->ghostwin);
+          Mixar_WindowSetParent(pill_win->runtime->ghostwin, win->runtime->ghostwin);
 
           /* Stash the pill ghostwin too — needed by the minimise /
            * restore ops which detach + re-attach the pill from the
            * bubble. */
-          g_pill_ghostwin = pill_win->ghostwin;
+          g_pill_ghostwin = pill_win->runtime->ghostwin;
         }
       }
     }
@@ -1651,7 +1664,7 @@ void MIXAR_OT_agent_bubble_purge_windows(wmOperatorType *ot)
 static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 
@@ -1659,9 +1672,9 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
   const int height = RNA_int_get(op->ptr, "height");
 
 #if defined(__APPLE__) || defined(_WIN32)
-  bubble_force_size_and_refresh(C, win->ghostwin, width, height);
+  bubble_force_size_and_refresh(C, win->runtime->ghostwin, width, height);
 #  ifdef __APPLE__
-  Mixar_WindowOrderFront(win->ghostwin);
+  Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
 #else
   /* Non-macOS: best-effort no-op for now. Windows / Linux GHOST
@@ -1718,8 +1731,9 @@ static void agent_bubble_force_redraw(bContext *C)
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != g_bubble_ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin != g_bubble_ghostwin) {
       continue;
     }
     bScreen *screen = WM_window_get_active_screen(w);
@@ -1794,12 +1808,12 @@ void MIXAR_OT_bubble_sync_attachment_size(wmOperatorType *ot)
 static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 
 #if defined(__APPLE__) || defined(_WIN32)
-  Mixar_WindowBeginDrag(win->ghostwin);
+  Mixar_WindowBeginDrag(win->runtime->ghostwin);
 #endif
 
   return OPERATOR_FINISHED;
@@ -1817,11 +1831,11 @@ static wmOperatorStatus mixar_bubble_window_update_drag_exec(bContext *C,
                                                              wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 #ifdef _WIN32
-  Mixar_WindowUpdateDrag(win->ghostwin);
+  Mixar_WindowUpdateDrag(win->runtime->ghostwin);
 #endif
   return OPERATOR_FINISHED;
 }
@@ -1838,11 +1852,11 @@ static wmOperatorStatus mixar_bubble_window_end_drag_exec(bContext *C,
                                                           wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 #ifdef _WIN32
-  Mixar_WindowEndDrag(win->ghostwin);
+  Mixar_WindowEndDrag(win->runtime->ghostwin);
 #endif
   return OPERATOR_FINISHED;
 }
@@ -2258,7 +2272,7 @@ static void agent_bubble_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   /* Don't save runtime pointer — regenerated on load. */
   void *runtime_backup = sbubble->runtime;
   sbubble->runtime = nullptr;
-  BLO_write_struct(writer, SpaceAgentBubble, sl);
+  writer->write_struct_cast<SpaceAgentBubble>(sl);
   sbubble->runtime = runtime_backup;
 }
 
@@ -2308,7 +2322,7 @@ void ED_spacetype_agent_bubble()
    * consumes LEFTMOUSE before our text-selection / option-chip
    * keymap can see it. The custom region's init function attaches
    * the appropriate handlers itself. */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble main region");
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble main region");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = 0;
   art->init = mixie_chat_main_region_init;
@@ -2325,7 +2339,7 @@ void ED_spacetype_agent_bubble()
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region (status pill). */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble header region");
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble header region");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = AGENT_BUBBLE_HEADER_HEIGHT;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
@@ -2349,7 +2363,7 @@ void ED_spacetype_agent_bubble()
    * mixie_chat_footer_region_init does NOT call ED_region_panels_init,
    * so the panel system isn't set up for this region; Python panels
    * registered for AGENT_BUBBLE TOOLS never get a draw call. */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble footer region");
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble footer region");
   art->regionid = RGN_TYPE_TOOLS;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FOOTER;
   art->init = mixie_chat_footer_region_init;
@@ -2364,3 +2378,4 @@ void ED_spacetype_agent_bubble()
 }
 
 /** \} */
+}  // namespace blender

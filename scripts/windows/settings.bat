@@ -51,7 +51,7 @@ if not defined MIXAR_BUNDLE_IDENTIFIER set "MIXAR_BUNDLE_IDENTIFIER=com.mixar.mi
 if not defined MIXAR_BUNDLE_COPYRIGHT set "MIXAR_BUNDLE_COPYRIGHT=© 2025 Mixar"
 
 REM Build settings (constants)
-if not defined BLENDER_VERSION set "BLENDER_VERSION=5.0"
+if not defined BLENDER_VERSION set "BLENDER_VERSION=5.2"
 if not defined PYTHON_VERSION set "PYTHON_VERSION=3.11"
 if not defined REQUIRED_CMAKE_VERSION set "REQUIRED_CMAKE_VERSION=3.16"
 

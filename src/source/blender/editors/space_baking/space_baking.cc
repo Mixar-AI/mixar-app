@@ -39,10 +39,12 @@ CLG_LOGREF_DECLARE_GLOBAL(LOG_BAKING, "ed.baking");
 #include "DNA_userdef_types.h"
 
 #include "baking_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceLink *baking_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
-  SpaceBaking *sbaking = MEM_callocN<SpaceBaking>("initbaking");
+  SpaceBaking *sbaking = MEM_new<SpaceBaking>("initbaking");
   sbaking->spacetype = SPACE_BAKING;
 
   /* Header (hosts the editor-type switch dropdown) */
@@ -65,7 +67,7 @@ static void baking_init(wmWindowManager * /*wm*/, ScrArea * /*area*/) {}
 
 static SpaceLink *baking_duplicate(SpaceLink *sl)
 {
-  return (SpaceLink *)MEM_dupallocN(sl);
+  return (SpaceLink *)MEM_dupalloc_void(sl);
 }
 
 static void baking_main_region_init(wmWindowManager *wm, ARegion *region)
@@ -119,7 +121,7 @@ static void baking_header_region_listener(const wmRegionListenerParams *params)
 
 static void baking_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
-  BLO_write_struct(writer, SpaceBaking, sl);
+  writer->write_struct_cast<SpaceBaking>(sl);
 }
 
 static void baking_operatortypes()
@@ -179,7 +181,7 @@ void ED_spacetype_baking()
   st->blend_write = baking_blend_write;
 
   /* Main region */
-  ARegionType *art = MEM_callocN<ARegionType>("spacetype baking main");
+  ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype baking main");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = ED_KEYMAP_UI;
   art->init = baking_main_region_init;
@@ -189,7 +191,7 @@ void ED_spacetype_baking()
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region */
-  art = MEM_callocN<ARegionType>("spacetype baking header");
+  art = MEM_new_zeroed<ARegionType>("spacetype baking header");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
@@ -200,3 +202,4 @@ void ED_spacetype_baking()
 
   BKE_spacetype_register(std::move(st));
 }
+}  // namespace blender

@@ -278,10 +278,13 @@ def _handle_unset_displacement(mat, node, ctx, height_ch):
 
     if vdisp:
         vdisp_inp = node.inputs.get(height_ch.name + io_suffix["VDISP"])
+        # Note: Original code had a bug here using height_inp instead of vdisp_inp
+        # in break_input_link. Preserving the original behavior.
+        height_inp = node.inputs.get(height_ch.name + io_suffix["HEIGHT"])
         if vdisp_inp and len(vdisp_inp.links) > 0:
             soc = vdisp_inp.links[0].from_socket
             create_link(mat.node_tree, soc, vdisp.inputs["Vector"])
-            break_input_link(mat.node_tree, vdisp_inp)
+            break_input_link(mat.node_tree, height_inp)
 
 
 def check_displacement_node(

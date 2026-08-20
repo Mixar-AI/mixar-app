@@ -8,7 +8,7 @@
  *
  * Scroll-to-bottom floating indicator for the chat main region.
  * Appears when the user scrolls up from the newest messages.
- * Draws in screen-space after UI_view2d_view_restore().
+ * Draws in screen-space after ui::view2d_view_restore().
  */
 
 #include <algorithm>
@@ -26,6 +26,8 @@
 #include "UI_view2d.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Constants
@@ -252,3 +254,4 @@ bool mixie_chat_handle_scroll_indicator_click(SpaceMixieChat *smixie,
 }
 
 /** \} */
+}  // namespace blender

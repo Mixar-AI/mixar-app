@@ -14,6 +14,8 @@
 #include "BLI_vector.hh"
 
 #include "view3d_director.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
@@ -52,3 +54,4 @@ void view3d_director_timeline_draw_content(const ARegion *region,
                                            int margin,
                                            int unit,
                                            int content_top);
+}  // namespace blender

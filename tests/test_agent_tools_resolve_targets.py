@@ -64,10 +64,8 @@ def _load_common(monkeypatch, *, selected=None, active=None, scene_objs=None, da
     return mod
 
 
-def test_resolve_targets_empty_context_resolves_nothing(monkeypatch):
-    """No selection + no active object resolves NO targets — the tool call
-    must fail (callers report "No mesh objects found") instead of silently
-    targeting every mesh in the scene."""
+def test_resolve_targets_fallback_is_scene_scoped(monkeypatch):
+    """No selection + no active object falls back to the scene, not bpy.data."""
     in_scene = [_mesh("A"), _mesh("B")]
     other_scene_only = _mesh("C")
     common = _load_common(
@@ -78,7 +76,7 @@ def test_resolve_targets_empty_context_resolves_nothing(monkeypatch):
         data_objs=in_scene + [other_scene_only],
     )
     targets, missing = common._resolve_mesh_objects()
-    assert targets == []
+    assert sorted(o.name for o in targets) == ["A", "B"]
     assert missing == []
 
 

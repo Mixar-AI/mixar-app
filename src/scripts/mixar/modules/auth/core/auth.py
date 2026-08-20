@@ -18,7 +18,6 @@ import webbrowser
 import requests
 
 from ....config.config import get_server_url
-from ...common.network import classify_network_error, log_network_failure
 from ....config.logging_config import get_logger
 from ..utils.constants import AUTH_BASE_URL
 from .device import get_device_id
@@ -380,13 +379,15 @@ def login(username, password):
                 "message": error_message,
             }
 
-    except requests.exceptions.RequestException as e:
-        failure = classify_network_error(e, url=url)
-        log_network_failure(logger, failure, "Login")
+    except requests.exceptions.Timeout:
         return {
             "success": False,
-            "message": failure.user_text,
-            "failure_kind": failure.kind,
+            "message": "Connection timed out",
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "success": False,
+            "message": "Unable to connect to server",
         }
     except Exception as e:
         return {
@@ -684,15 +685,16 @@ def _refresh_access_token_locked(refresh_token, idempotency_key):
             }
             return result, response.status_code not in (401, 403)
 
-    except requests.exceptions.RequestException as e:
-        # Transport failure: the refresh token was not consumed, keep the
-        # attempt so the same idempotency key is replayed later.
-        failure = classify_network_error(e, url=url)
-        log_network_failure(logger, failure, "Token refresh")
+    except requests.exceptions.Timeout:
         return ({
             "success": False,
-            "message": failure.user_text,
-            "failure_kind": failure.kind,
+            "message": "Connection timed out",
+            "retryable": True,
+        }, True)
+    except requests.exceptions.ConnectionError:
+        return ({
+            "success": False,
+            "message": "Unable to connect to server",
             "retryable": True,
         }, True)
     except Exception as e:
@@ -762,15 +764,6 @@ def get_user_info():
             response_data["data"]["credits"] = 0
             return response_data
 
-    except requests.exceptions.RequestException as e:
-        failure = classify_network_error(e, url=url)
-        log_network_failure(logger, failure, "User info")
-        response_data["status"] = "failure"
-        response_data["message"] = failure.user_text
-        response_data["failure_kind"] = failure.kind
-        response_data["data"]["email"] = "Unknown"
-        response_data["data"]["credits"] = 0
-        return response_data
     except Exception as e:
         logger.warning(f"Error getting user info: {e}")
         response_data["status"] = "failure"

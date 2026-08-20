@@ -166,7 +166,7 @@ def is_uvmap_udim(objs, uv_name):
         ori_mode = obj.mode
         bpy.ops.object.mode_set(mode="OBJECT")
 
-    uv_arrays = []
+    arr = numpy.empty(0, dtype=numpy.float32)
 
     # Get all uv coordinates
     for o in objs:
@@ -178,15 +178,10 @@ def is_uvmap_udim(objs, uv_name):
 
         uv_arr = numpy.zeros(len(o.data.loops) * 2, dtype=numpy.float32)
         uv.data.foreach_get("uv", uv_arr)
-        uv_arrays.append(uv_arr)
+        arr = numpy.append(arr, uv_arr)
 
     if ori_mode != "OBJECT":
         bpy.ops.object.mode_set(mode=ori_mode)
-
-    if uv_arrays:
-        arr = numpy.concatenate(uv_arrays)
-    else:
-        arr = numpy.empty(0, dtype=numpy.float32)
 
     # Use optimized C++ backend (2-5x faster)
     is_udim = is_uvmap_udim_cpp(arr, UV_TOLERANCE)
@@ -336,14 +331,7 @@ def copy_udim_pixels(src, dest, convert_colorspace=False):
         if convert_colorspace:
             copy_image_pixels_with_conversion(src, dest)
         else:
-            # Bulk copy with numpy foreach access instead of converting
-            # the pixels to a Python list
-            pixels = numpy.empty(len(src.pixels), dtype=numpy.float32)
-            src.pixels.foreach_get(pixels)
-            dest.pixels.foreach_set(pixels)
-
-            # Update image to refresh GPU texture
-            dest.update()
+            dest.pixels = list(src.pixels)
 
         # Swap back
         if tilenum != 1001:
@@ -373,7 +361,7 @@ def get_tile_numbers(objs, uv_name):
         ori_mode = obj.mode
         bpy.ops.object.mode_set(mode="OBJECT")
 
-    uv_arrays = []
+    arr = numpy.empty(0, dtype=numpy.float32)
 
     # Get all uv coordinates
     for o in objs:
@@ -385,15 +373,10 @@ def get_tile_numbers(objs, uv_name):
 
         uv_arr = numpy.zeros(len(o.data.loops) * 2, dtype=numpy.float32)
         uv.data.foreach_get("uv", uv_arr)
-        uv_arrays.append(uv_arr)
+        arr = numpy.append(arr, uv_arr)
 
     if ori_mode != "OBJECT":
         bpy.ops.object.mode_set(mode=ori_mode)
-
-    if uv_arrays:
-        arr = numpy.concatenate(uv_arrays)
-    else:
-        arr = numpy.empty(0, dtype=numpy.float32)
 
     # Use optimized C++ backend (5-10x faster)
     tiles = get_tile_numbers_cpp(arr, UV_TOLERANCE)

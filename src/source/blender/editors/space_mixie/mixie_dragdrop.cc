@@ -24,6 +24,8 @@
 
 #include <string>
 #include <vector>
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Moodboard Media Drop Poll
@@ -95,7 +97,7 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
 
   /* Convert region coordinates to View2D canvas coordinates */
   float pos_x, pos_y;
-  UI_view2d_region_to_view(v2d, mval[0], mval[1], &pos_x, &pos_y);
+  ui::view2d_region_to_view(v2d, mval[0], mval[1], &pos_x, &pos_y);
 
   /* Set drop position in operator properties */
   RNA_float_set(drop->ptr, "position_x", pos_x);
@@ -154,3 +156,4 @@ void mixie_dropboxes()
 }
 
 /** \} */
+}  // namespace blender

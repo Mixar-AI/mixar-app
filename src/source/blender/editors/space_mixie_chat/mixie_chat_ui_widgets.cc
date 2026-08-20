@@ -34,6 +34,8 @@
 
 #include "mixie_chat_ui_types.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Forward declarations for primitives */
 void chat_ui_draw_rounded_rect(const rctf *rect, float radius, const float color[4]);
@@ -503,3 +505,4 @@ void chat_ui_draw_sender_label(const char *label,
 }
 
 /** \} */
+}  // namespace blender

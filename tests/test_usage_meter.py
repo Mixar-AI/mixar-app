@@ -443,7 +443,7 @@ class TestCardSizingContract:
     """The card suppresses the stock text pass and paints with its own
     font scale and padding, but `uiLayout` still sizes every button from
     the default widget font. Anything the painter spends beyond that
-    estimate is clipped by `UI_fontstyle_draw` with no ellipsis — the
+    estimate is clipped by `fontstyle_draw` with no ellipsis — the
     failure mode is a label quietly reading "Log" instead of "Logout",
     which no runtime signal reports."""
 

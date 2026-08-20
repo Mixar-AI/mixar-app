@@ -68,46 +68,6 @@ _execution_gate_until: float = 0.0
 # scene the user is actually looking at (see _process_one_request).
 _user_foreground_scene_name: str = ""
 
-# In-flight script marker for the blender.liveness probe. Set on the main
-# thread around ScriptExecutor.execute() and read from the WebSocket thread:
-# a long bpy op holds the GIL so the probe can ONLY be answered while the
-# C-level call releases it — which is exactly what "busy, not frozen" means.
-# Lock-guarded because it crosses threads.
-_inflight_lock = threading.Lock()
-_inflight: Optional[dict] = None
-
-
-def _set_inflight(tool_name: str, request_id: str, session_id: str) -> None:
-    global _inflight
-    with _inflight_lock:
-        _inflight = {
-            "tool_name": tool_name,
-            "request_id": request_id,
-            "session_id": session_id,
-            "_started": time.monotonic(),
-        }
-
-
-def _clear_inflight() -> None:
-    global _inflight
-    with _inflight_lock:
-        _inflight = None
-
-
-def get_inflight_script() -> Optional[dict]:
-    """Snapshot of the currently executing agent script (thread-safe).
-
-    Returns None when the main thread is idle; otherwise the tool name,
-    request id, session id and elapsed seconds — consumed by the
-    blender.liveness handler answered on the WebSocket thread.
-    """
-    with _inflight_lock:
-        if not _inflight:
-            return None
-        info = dict(_inflight)
-    info["elapsed_s"] = round(time.monotonic() - info.pop("_started"), 1)
-    return info
-
 
 def _resolve_agent_context_ids(
     agent_ctx: Optional[dict], session_id: str, request_id: str
@@ -330,9 +290,6 @@ def _process_one_request() -> Optional[float]:
         return _stop_timer_if_idle()
 
     logger.info(f"Executing {tool_name} (id: {request_id})")
-    # Visible to the WebSocket thread's blender.liveness probe while this
-    # tick's bpy work holds the main thread (busy != frozen).
-    _set_inflight(tool_name, request_id, session_id)
 
     # --- Scene context routing ---
     # A per-scene routing session (the user's main scene UUID, or an
@@ -457,10 +414,6 @@ def _process_one_request() -> Optional[float]:
     # Complete the step row with status / touched objects / output.
     if chat_scene:
         record_step_end(chat_scene, request_id, result_dict)
-
-    # Main-thread work for this script is done — the liveness probe reports
-    # idle from here on.
-    _clear_inflight()
 
     # Send response directly via WebSocket client (thread-safe)
     # This avoids cross-thread queue polling which caused segfaults

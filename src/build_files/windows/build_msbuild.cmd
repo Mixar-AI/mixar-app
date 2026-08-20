@@ -5,7 +5,7 @@ REM SPDX-License-Identifier: GPL-2.0-or-later
 if "%NOBUILD%"=="1" goto EOF
 echo %TIME% > %BUILD_DIR%\buildtime.txt
 msbuild ^
-	%BUILD_DIR%\Mixar.sln ^
+	%BUILD_DIR%\Mixar.%VS_SLN_EXT% ^
 	/target:build ^
 	/property:Configuration=%BUILD_TYPE% ^
 	/maxcpucount:2 ^

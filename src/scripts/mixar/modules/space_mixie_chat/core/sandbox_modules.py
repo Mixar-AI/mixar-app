@@ -131,8 +131,7 @@ class RestrictedUrllib:
         self._parse = _parse
         self._allowed = _allowed_asset_hosts()
 
-    def _check_url(self, url):
-        """Shared transport + host gate for urlopen and prefetch."""
+    def urlopen(self, url, timeout=120):
         parsed = self._parse(str(url))
         # Restrict the TRANSPORT first: urllib's default opener includes FileHandler, so
         # a file:// URL whose hostname satisfies the allowlist (file://amazonaws.com/etc/
@@ -147,67 +146,12 @@ class RestrictedUrllib:
                 f"urllib.urlopen: host '{host}' is not allowed (asset hosts only: "
                 f"{', '.join(self._allowed)})"
             )
-
-    def urlopen(self, url, timeout=120):
-        self._check_url(url)
         return _UrlResponse(self._urlopen(str(url), timeout=timeout))
-
-    def prefetch(self, urls, timeout=120):
-        """Concurrently GET a batch of allowlisted URLs into temp files.
-
-        Returns {url: local_path or None}. Bulk companion to urlopen: agent
-        scripts run on Blender's main thread, and downloading a texture/asset
-        set one-by-one froze the app past the backend tool timeout (the
-        terrain Patina apply pulls ~12 maps). The same scheme/host gate
-        applies per URL; a disallowed or failed URL maps to None instead of
-        raising, so one bad entry never voids the batch. Worker threads and
-        the real open() live HERE, outside the sandbox namespace — the script
-        only ever receives file paths in the temp directory.
-        """
-        import concurrent.futures as _futures
-        import hashlib as _hashlib
-        import tempfile as _tf
-
-        out = {}
-        allowed = []
-        seen = set()
-        for url in list(urls or [])[:32]:
-            u = str(url)
-            if u in seen:
-                continue
-            seen.add(u)
-            try:
-                self._check_url(u)
-                allowed.append(u)
-            except Exception:
-                out[u] = None
-
-        tmp = _tf.gettempdir().rstrip("/\\")
-
-        def _fetch(u):
-            try:
-                data = self._urlopen(u, timeout=timeout).read()
-                if not data:
-                    return u, None
-                name = "mixar_prefetch_" + _hashlib.sha1(u.encode()).hexdigest()[:16] + ".bin"
-                path = tmp + "/" + name
-                with open(path, "wb") as fh:
-                    fh.write(data)
-                return u, path
-            except Exception:
-                return u, None
-
-        if allowed:
-            workers = min(6, len(allowed))
-            with _futures.ThreadPoolExecutor(max_workers=workers) as pool:
-                for u, path in pool.map(_fetch, allowed):
-                    out[u] = path
-        return out
 
     def __getattr__(self, name):
         raise AttributeError(
             "urllib." + name + " is not available in the sandbox. "
-            "Allowed: urlopen(url) GET and prefetch(urls) to asset hosts only"
+            "Allowed: urlopen(url) GET to asset hosts only"
         )
 
 

@@ -213,11 +213,7 @@ def test_save_custom_rejects_non_local_base():
 
 
 # ---------------------------------------------------------------------------
-# Save gating + dialog dispatch
-#
-# Gating deliberately lives in execute(), not poll(): an invalid form
-# routes to the ERROR state with an actionable message instead of a
-# silently disabled Save button. poll() only guards in-flight requests.
+# Save poll gating + dialog dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -238,31 +234,26 @@ def _local_context(**extra):
     return SimpleNamespace(window_manager=wm), wm
 
 
-def test_save_execute_managed_errors_until_server_healthy(monkeypatch):
-    context, wm = _local_context()
+def test_save_poll_blocks_until_managed_server_healthy(monkeypatch):
+    context, _wm = _local_context()
     monkeypatch.setattr(server_supervisor, "is_healthy", lambda: False)
     monkeypatch.setattr(server_supervisor, "current", lambda: None)
+    assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is False
 
-    # Save is clickable (poll only guards in-flight requests) and the
-    # unhealthy server routes to ERROR with the actionable message.
+    monkeypatch.setattr(server_supervisor, "is_healthy", lambda: True)
+    monkeypatch.setattr(
+        server_supervisor, "current",
+        lambda: {"model_id": "qwen3.5-4b", "base_url": "http://127.0.0.1:11500"},
+    )
     assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is True
-    assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
-    assert wm.byok_dialog_state == 'ERROR'
-    assert "Start the local model" in wm.byok_last_error
 
 
-def test_save_execute_custom_requires_base_and_model():
+def test_save_poll_custom_requires_base_and_model():
     context, wm = _local_context(byok_form_local_mode="CUSTOM")
-    assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
-    assert wm.byok_dialog_state == 'ERROR'
-    assert "Base URL and model" in wm.byok_last_error
-
-
-def test_save_poll_blocks_while_request_in_flight():
-    for busy in ('SAVING', 'REMOVING'):
-        context, _wm = _local_context(byok_dialog_state=busy)
-        assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is False
-        assert byok_ops.MIXAR_BYOK_OT_save().execute(context) == {'CANCELLED'}
+    assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is False
+    wm.byok_form_local_custom_base = "http://127.0.0.1:11434"
+    wm.byok_form_local_custom_model = "qwen3:4b"
+    assert byok_ops.MIXAR_BYOK_OT_save.poll(context) is True
 
 
 def test_save_execute_dispatches_local(monkeypatch):

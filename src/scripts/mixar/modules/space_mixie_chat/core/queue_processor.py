@@ -496,13 +496,6 @@ class EventProcessor:
         All events use slot-based format with bubble_id.
         Does NOT call _redraw_ui() - the timer handles that after batch.
         """
-        # Every streamed event belongs to the live agent turn. Mark it so the
-        # executor groups/caps its undo checkpoints per turn (idempotent —
-        # the turn begins with the first event and ends on stream
-        # complete/error below, or on abort / file load).
-        from .executor import get_executor
-        get_executor().begin_agent_turn()
-
         data = event.data
 
         # In-band terminal error (backend refused the request before any slot
@@ -723,12 +716,6 @@ class EventProcessor:
 
     def _handle_sse_complete_internal(self, scene) -> None:
         """Handle SSE stream completion (called from main thread timer)."""
-        # The stream is over: end the executor's undo turn whether the session
-        # settles to IDLE or pauses for input (the user's answer starts a new
-        # stream, and with it a new turn / fresh checkpoint budget).
-        from .executor import get_executor
-        get_executor().end_agent_turn()
-
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —
         # so the pill keeps reading "Awaiting input" instead of "Idle")

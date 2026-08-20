@@ -35,6 +35,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Empty Chat Prompt Data
@@ -295,3 +297,4 @@ void mixie_chat_draw_empty_state(const bContext *C,
 }
 
 /** \} */
+}  // namespace blender

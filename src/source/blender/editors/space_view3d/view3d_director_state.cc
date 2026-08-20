@@ -16,6 +16,8 @@
 #include "RNA_access.hh"
 
 #include "view3d_director.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static PropertyRNA *director_prop(PointerRNA *ptr, const char *name)
 {
@@ -140,3 +142,4 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   }
   return true;
 }
+}  // namespace blender

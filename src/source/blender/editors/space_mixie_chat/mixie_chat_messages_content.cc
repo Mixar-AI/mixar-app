@@ -25,6 +25,8 @@
 #include "UI_interface.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Message Content Rendering
@@ -41,7 +43,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
     int slot_content_len = g_msg_props.content ?
         RNA_property_string_length(msg_ptr, g_msg_props.content) : 0;
     if (slot_content_len > 0) {
-      slot_content = static_cast<char *>(MEM_mallocN(slot_content_len + 1, "slot_content"));
+      slot_content = static_cast<char *>(MEM_new_uninitialized(slot_content_len + 1, "slot_content"));
       RNA_property_string_get(msg_ptr, g_msg_props.content, slot_content);
     }
 
@@ -52,7 +54,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       if (g_msg_props.metadata) {
         int meta_len = RNA_property_string_length(msg_ptr, g_msg_props.metadata);
         if (meta_len > 0) {
-          slot_meta_d = static_cast<char *>(MEM_mallocN(meta_len + 1, "slot_meta_d"));
+          slot_meta_d = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "slot_meta_d"));
           RNA_property_string_get(msg_ptr, g_msg_props.metadata, slot_meta_d);
           slot_draw_md = chat_ui_has_markdown_segments(slot_meta_d);
         }
@@ -74,14 +76,11 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         chat_ui_draw_accent_bar(layout.bubble_x, layout.y_pos,
                                 layout.bubble_height, plan_accent, UI_SCALE_FAC);
 
-        /* Draw markdown content (code blocks register their copy chips
-         * against this message index). */
+        /* Draw markdown content */
         float content_x = layout.bubble_x + layout.style.h_padding;
         float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
-        mixie_chat_code_hits_set_message(layout.message_index);
         chat_ui_draw_markdown(slot_meta_d, content_x, content_y,
                               layout.content_width, &layout.style, 1.0f);
-        mixie_chat_code_hits_set_message(-1);
       } else {
         /* Fallback: plain text bubble */
         chat_ui_draw_bubble(&layout.style, slot_content, layout.bubble_x,
@@ -98,7 +97,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       int eph_len = g_msg_props.ephemeral ?
           RNA_property_string_length(msg_ptr, g_msg_props.ephemeral) : 0;
       if (eph_len > 0) {
-        fresh_ephemeral = static_cast<char *>(MEM_mallocN(eph_len + 1, "eph_draw"));
+        fresh_ephemeral = static_cast<char *>(MEM_new_uninitialized(eph_len + 1, "eph_draw"));
         RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, fresh_ephemeral);
       }
       const char *eph_text = fresh_ephemeral ? fresh_ephemeral : "";
@@ -172,7 +171,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
     if (g_msg_props.metadata) {
       int meta_len = RNA_property_string_length(msg_ptr, g_msg_props.metadata);
       if (meta_len > 0) {
-        meta_buf = static_cast<char *>(MEM_mallocN(meta_len + 1, "meta_draw"));
+        meta_buf = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "meta_draw"));
         RNA_property_string_get(msg_ptr, g_msg_props.metadata, meta_buf);
       }
     }
@@ -195,14 +194,11 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                 layout.bubble_height, plan_accent, UI_SCALE_FAC);
       }
 
-      /* Draw markdown content (code blocks register their copy chips
-       * against this message index). */
+      /* Draw markdown content */
       float content_x = layout.bubble_x + layout.style.h_padding;
       float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
-      mixie_chat_code_hits_set_message(layout.message_index);
       chat_ui_draw_markdown(meta_buf, content_x, content_y,
                             layout.content_width, &layout.style, 1.0f);
-      mixie_chat_code_hits_set_message(-1);
     } else {
       /* Draw bubble with text and attachment offset */
       chat_ui_draw_bubble(&layout.style, display_text, layout.bubble_x,
@@ -218,3 +214,4 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
 }
 
 /** \} */
+}  // namespace blender

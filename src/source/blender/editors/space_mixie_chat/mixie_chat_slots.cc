@@ -19,6 +19,8 @@
 #include "RNA_access.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA String Helpers
@@ -137,7 +139,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       RNA_property_string_length(msg_ptr, g_msg_props.ephemeral) : 0;
   layout->has_ephemeral = ephemeral_len > 0;
   if (ephemeral_len > 0) {
-    char *eph_probe = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "eph_probe"));
+    char *eph_probe = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "eph_probe"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, eph_probe);
     const char *p = eph_probe;
     while (*p == ' ' || *p == '\n' || *p == '\t' || *p == '\r') {
@@ -192,7 +194,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (g_msg_props.loader_texts) {
       int texts_len = RNA_property_string_length(msg_ptr, g_msg_props.loader_texts);
       if (texts_len > 0) {
-        char *texts_json = static_cast<char *>(MEM_mallocN(texts_len + 1, "loader_texts"));
+        char *texts_json = static_cast<char *>(MEM_new_uninitialized(texts_len + 1, "loader_texts"));
         RNA_property_string_get(msg_ptr, g_msg_props.loader_texts, texts_json);
 
         /* Simple JSON array parsing - just count texts for now */
@@ -224,14 +226,14 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
   /* Read content text if present */
   if (layout->has_content) {
     int content_len = RNA_property_string_length(msg_ptr, g_msg_props.content);
-    layout->content_text = static_cast<char *>(MEM_mallocN(content_len + 1, "content_text"));
+    layout->content_text = static_cast<char *>(MEM_new_uninitialized(content_len + 1, "content_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.content, layout->content_text);
   }
 
   /* Read ephemeral text if present */
   if (layout->has_ephemeral) {
     int ephemeral_len = RNA_property_string_length(msg_ptr, g_msg_props.ephemeral);
-    layout->ephemeral_text = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "ephemeral_text"));
+    layout->ephemeral_text = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "ephemeral_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, layout->ephemeral_text);
   }
 
@@ -259,7 +261,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       action.label[0] = '\0';
       action.value[0] = '\0';
       action.style = 1; /* default */
-      action.image[0] = '\0';
       action.height = 0.0f;
       action.is_hovered = false;
       memset(&action.bounds, 0, sizeof(action.bounds));
@@ -272,9 +273,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       }
       if (g_action_props.style) {
         action.style = RNA_property_enum_get(&action_ptr, g_action_props.style);
-      }
-      if (g_action_props.image) {
-        RNA_property_string_get(&action_ptr, g_action_props.image, action.image);
       }
 
       layout->slot_action_count++;
@@ -497,3 +495,4 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
 }
 
 /** \} */
+}  // namespace blender

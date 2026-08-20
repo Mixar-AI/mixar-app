@@ -22,6 +22,9 @@
 // Linux
 #ifdef HAVE_LIBSECRET
 #include <libsecret/secret.h>
+
+/* Mixar 5.2 port: global + using-directive. */
+using namespace blender;
 #endif
 #endif
 

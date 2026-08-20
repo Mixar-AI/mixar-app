@@ -27,6 +27,8 @@
 #include "BLI_map.hh"
 #include "BLI_rect.h"
 #include "BLI_vector.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct GPUOffScreen;
@@ -207,3 +209,4 @@ void view3d_agent_strip_operatortypes();
 void view3d_agent_strip_keymap(wmKeyConfig *keyconf);
 
 /** \} */
+}  // namespace blender

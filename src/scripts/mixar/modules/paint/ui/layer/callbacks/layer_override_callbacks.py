@@ -120,11 +120,9 @@ def update_layer_channel_override_1(self, context):
 
     # Disable active edit if override is off
     if not ch.override_1:
-        mp.halt_update = True
-        try:
-            ch.active_edit_1 = False
-        finally:
-            mp.halt_update = False
+        ch.halt_update = True
+        ch.active_edit_1 = False
+        ch.halt_update = False
 
     check_all_layer_channel_io_and_nodes(layer)
     check_uv_nodes(mp)
@@ -284,11 +282,9 @@ def update_layer_channel_override(self, context):
 
     # Disable active edit if override is off
     if not ch.override:
-        mp.halt_update = True
-        try:
-            ch.active_edit = False
-        finally:
-            mp.halt_update = False
+        ch.halt_update = True
+        ch.active_edit = False
+        ch.halt_update = False
 
     check_all_layer_channel_io_and_nodes(layer)
     check_uv_nodes(mp)

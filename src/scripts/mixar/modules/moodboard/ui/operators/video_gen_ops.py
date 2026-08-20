@@ -4,6 +4,8 @@
 
 """Submit selected moodboard images/videos to catalogued video generation."""
 
+import os
+
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -51,10 +53,8 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, "No enabled video model is available")
             return {'CANCELLED'}
 
-        refs = get_selected_moodboard_media_inputs(context, fresh=True)
+        refs = get_selected_moodboard_media_inputs(context)
         from mixar.modules.moodboard.core.video_generation_catalog import (
-            build_image_reference_inputs,
-            build_video_reference_inputs,
             get_video_generation_limits,
             seedance_reference_count_error,
         )
@@ -78,22 +78,45 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, "A selected video was moved or deleted")
             return {'CANCELLED'}
 
-        try:
-            video_inputs = build_video_reference_inputs(refs["videos"], limits)
-        except ValueError as exc:
-            self.report({'ERROR'}, str(exc))
-            return {'CANCELLED'}
+        video_inputs = []
+        for video in refs["videos"]:
+            if video["file_size_bytes"] > limits["max_video_bytes"]:
+                self.report({'ERROR'}, f"Video is too large: {video['filename']}")
+                return {'CANCELLED'}
+            if (
+                os.path.splitext(video["filename"])[1].lower()
+                not in limits["video_extensions"]
+            ):
+                self.report(
+                    {'ERROR'},
+                    f"Unsupported video reference: {video['filename']}",
+                )
+                return {'CANCELLED'}
+            video_inputs.append({
+                "filename": video["filename"],
+                "mime_type": video["mime_type"],
+                "filepath": video["resolved_filepath"],
+                "file_size_bytes": video["file_size_bytes"],
+            })
 
         image_inputs = []
         try:
             from mixar.modules.common.utils.image_utils import compress_for_service
 
-            image_inputs = build_image_reference_inputs(
-                refs["images"], limits, compress_for_service
-            )
-        except ValueError as exc:
-            self.report({'ERROR'}, str(exc))
-            return {'CANCELLED'}
+            for index, image in enumerate(refs["images"]):
+                payload = compress_for_service(image["image"], "video_gen")
+                if len(payload) > limits["max_image_bytes"]:
+                    self.report(
+                        {'ERROR'},
+                        f"Image is too large after compression: "
+                        f"{image.get('filename') or image['image'].name}",
+                    )
+                    return {'CANCELLED'}
+                image_inputs.append({
+                    "filename": f"reference_{index + 1}.jpg",
+                    "mime_type": "image/jpeg",
+                    "bytes": payload,
+                })
         except Exception as exc:
             logger.exception("Could not prepare Seedance image references")
             self.report({'ERROR'}, f"Could not prepare image references: {exc}")

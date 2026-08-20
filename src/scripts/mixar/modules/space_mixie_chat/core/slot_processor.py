@@ -387,7 +387,7 @@ class SlotEventProcessor:
         input_type = input_type or ""
         bubble.input_type = input_type
 
-        if input_type in ('text', 'choice', 'approval', 'file_save', 'file_open'):
+        if input_type in ('text', 'choice', 'approval', 'file_save'):
             # Agent has paused for the user — free-form text, a choice
             # button, or an approval button. All three use AWAITING_INPUT:
             # the state survives SSE stream completion (see
@@ -415,9 +415,6 @@ class SlotEventProcessor:
         bubble.export_suggested_filename = str(
             context.get("suggested_filename") or "export"
         )[:96]
-        # #1251 import picker: the offered extensions (comma-separated), so
-        # the native open dialog can filter. Never a path.
-        bubble.import_formats = str(context.get("formats") or "")[:120]
 
     def _apply_todo_slot(self, bubble: Any, todo_items: list) -> None:
         """
@@ -482,25 +479,16 @@ class SlotEventProcessor:
 
         Args:
             bubble: Message PropertyGroup
-            actions: List of dicts with label, value, style, and (for
-                asset-picker options) asset_name/library/blend_file/asset_type
+            actions: List of dicts with label, value, style
             scene: The Blender scene (for the AWAITING_INPUT state set)
         """
-        from . import asset_choice_previews
-
         prev_count = len(bubble.action_items)
-
-        # An answered picker is replaced with an empty actions list — that is
-        # the moment its locally generated preview images become garbage.
-        if prev_count and any(item.image for item in bubble.action_items):
-            asset_choice_previews.cleanup_bubble(bubble)
 
         # Clear existing items
         bubble.action_items.clear()
 
         # Add new items
         action_labels = []
-        has_asset_options = False
         for action_data in actions:
             action = bubble.action_items.add()
             # Handle None values - Blender properties don't accept None for strings
@@ -515,21 +503,7 @@ class SlotEventProcessor:
             else:
                 action.style = 'DEFAULT'
 
-            # Asset-picker identity (multi-match HITL): lets the client
-            # generate a local preview thumbnail for this option.
-            action.asset_name = action_data.get("asset_name") or ""
-            action.library = action_data.get("library") or ""
-            action.blend_file = action_data.get("blend_file") or ""
-            action.asset_type = action_data.get("asset_type") or ""
-            if action.asset_name and action.blend_file:
-                has_asset_options = True
-
             action_labels.append(f"{action.label}({action.style})")
-
-        # Kick off local preview generation for asset-picker options (embedded
-        # .blend preview first, render fallback) — thumbnails pop in per tick.
-        if has_asset_options and scene is not None:
-            asset_choice_previews.schedule(scene, bubble)
 
         # Non-empty action buttons (choice / approval, e.g. Yes / No /
         # Cancel) unambiguously mean the agent has paused for the user.

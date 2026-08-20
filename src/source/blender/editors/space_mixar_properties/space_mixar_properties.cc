@@ -32,10 +32,12 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceLink *mixar_properties_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
-  SpaceMixarProperties *sprops = MEM_callocN<SpaceMixarProperties>("initmixarproperties");
+  SpaceMixarProperties *sprops = MEM_new<SpaceMixarProperties>("initmixarproperties");
   sprops->spacetype = SPACE_MIXAR_PROPERTIES;
 
   /* Header (hosts the editor-type switch dropdown) */
@@ -58,7 +60,7 @@ static void mixar_properties_init(wmWindowManager * /*wm*/, ScrArea * /*area*/) 
 
 static SpaceLink *mixar_properties_duplicate(SpaceLink *sl)
 {
-  return (SpaceLink *)MEM_dupallocN(sl);
+  return (SpaceLink *)MEM_dupalloc_void(sl);
 }
 
 static void mixar_properties_main_region_init(wmWindowManager *wm, ARegion *region)
@@ -113,7 +115,7 @@ static void mixar_properties_header_region_listener(const wmRegionListenerParams
 
 static void mixar_properties_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
-  BLO_write_struct(writer, SpaceMixarProperties, sl);
+  writer->write_struct_cast<SpaceMixarProperties>(sl);
 }
 
 void ED_spacetype_mixar_properties()
@@ -131,7 +133,7 @@ void ED_spacetype_mixar_properties()
   st->blend_write = mixar_properties_blend_write;
 
   /* Main region */
-  ARegionType *art = MEM_callocN<ARegionType>("spacetype mixar_properties main");
+  ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype mixar_properties main");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = ED_KEYMAP_UI;
   art->init = mixar_properties_main_region_init;
@@ -141,7 +143,7 @@ void ED_spacetype_mixar_properties()
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region */
-  art = MEM_callocN<ARegionType>("spacetype mixar_properties header");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixar_properties header");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
@@ -152,3 +154,4 @@ void ED_spacetype_mixar_properties()
 
   BKE_spacetype_register(std::move(st));
 }
+}  // namespace blender

@@ -12,6 +12,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Layout Constants
  * \{ */
@@ -114,3 +117,5 @@
 #define FOOTER_DEFAULT_MAIN_GAP 4.0f
 
 /** \} */
+
+}  // namespace blender

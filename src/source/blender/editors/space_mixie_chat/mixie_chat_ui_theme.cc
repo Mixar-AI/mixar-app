@@ -18,6 +18,8 @@
 #include "UI_interface.hh"
 
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Theme Helpers
@@ -430,3 +432,4 @@ void chat_ui_get_toggle_label_color(float out_color[4])
 }
 
 /** \} */
+}  // namespace blender

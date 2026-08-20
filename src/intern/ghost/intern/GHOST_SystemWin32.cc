@@ -326,29 +326,20 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext(GHOST_GPUSettings gpu_
 #ifdef WITH_OPENGL_BACKEND
     case GHOST_kDrawingContextTypeOpenGL: {
 
-      /* OpenGL needs a dummy window to create a context on windows. */
-      HWND wnd = CreateWindowA("STATIC",
-                               "MixarGLEW",
-                               WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               64,
-                               64,
-                               nullptr,
-                               nullptr,
-                               GetModuleHandle(nullptr),
-                               nullptr);
-
-      HDC mHDC = GetDC(wnd);
-      HDC prev_hdc = wglGetCurrentDC();
+      /* MIXAR TODO(5.2): the offscreen dummy window (previously created here as
+       * "BlenderGLEW", branded "MixarGLEW" in the 5.0 overlay) moved into
+       * GHOST_ContextWGL.cc (OffscreenWindowHandle constructor), which Mixar does
+       * not overlay. The hidden helper window is never user-visible; overlay
+       * GHOST_ContextWGL.cc if the branding rename is still wanted. */
       HGLRC prev_context = wglGetCurrentContext();
+      HDC prev_hdc = wglGetCurrentDC();
 
       for (int minor = 6; minor >= 3; --minor) {
-        GHOST_Context *context = new GHOST_ContextWGL(
+        GHOST_ContextWGL *context = new GHOST_ContextWGL(
             context_params_offscreen,
             true,
-            wnd,
-            mHDC,
+            nullptr,
+            nullptr,
             WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
             4,
             minor,
@@ -625,7 +616,9 @@ GHOST_TCapabilityFlag GHOST_SystemWin32::getCapabilities() const
            * it's possible another modifier could be optionally used in it's place. */
           GHOST_kCapabilityKeyboardHyperKey |
           /* No support yet for cursors generated on demand. */
-          GHOST_kCapabilityCursorGenerator));
+          GHOST_kCapabilityCursorGenerator |
+          /* No support for window path meta-data. */
+          GHOST_kCapabilityWindowPath));
 }
 
 GHOST_TSuccess GHOST_SystemWin32::init()
@@ -929,9 +922,9 @@ GHOST_TKey GHOST_SystemWin32::convertKey(short vKey, short scanCode, short exten
   return key;
 }
 
-GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
-                                                         GHOST_WindowWin32 *window,
-                                                         GHOST_TButton mask)
+std::unique_ptr<GHOST_EventButton> GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
+                                                                         GHOST_WindowWin32 *window,
+                                                                         GHOST_TButton mask)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -944,8 +937,8 @@ GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
     DWORD msgPos = ::GetMessagePos();
     int msgPosX = GET_X_LPARAM(msgPos);
     int msgPosY = GET_Y_LPARAM(msgPos);
-    system->pushEvent(
-        new GHOST_EventCursor(event_ms, GHOST_kEventCursorMove, window, msgPosX, msgPosY, td));
+    system->pushEvent(std::make_unique<GHOST_EventCursor>(
+        event_ms, GHOST_kEventCursorMove, window, msgPosX, msgPosY, td));
 
     if (type == GHOST_kEventButtonDown) {
       WINTAB_PRINTF("HWND %p OS button down\n", window->getHWND());
@@ -956,7 +949,7 @@ GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
   }
 
   window->updateMouseCapture(type == GHOST_kEventButtonDown ? MousePressed : MouseReleased);
-  return new GHOST_EventButton(event_ms, type, window, mask, td);
+  return std::make_unique<GHOST_EventButton>(event_ms, type, window, mask, td);
 }
 
 void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
@@ -989,7 +982,7 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
         }
 
         wt->mapWintabToSysCoordinates(info.x, info.y, info.x, info.y);
-        system->pushEvent(new GHOST_EventCursor(
+        system->pushEvent(std::make_unique<GHOST_EventCursor>(
             info.time, GHOST_kEventCursorMove, window, info.x, info.y, info.tabletData));
 
         break;
@@ -1035,12 +1028,12 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
           /* Move cursor to button location, to prevent incorrect cursor position when
            * transitioning from unsynchronized Win32 to Wintab cursor control. */
           wt->mapWintabToSysCoordinates(info.x, info.y, info.x, info.y);
-          system->pushEvent(new GHOST_EventCursor(
+          system->pushEvent(std::make_unique<GHOST_EventCursor>(
               info.time, GHOST_kEventCursorMove, window, info.x, info.y, info.tabletData));
 
           window->updateMouseCapture(MousePressed);
-          system->pushEvent(
-              new GHOST_EventButton(info.time, info.type, window, info.button, info.tabletData));
+          system->pushEvent(std::make_unique<GHOST_EventButton>(
+              info.time, info.type, window, info.button, info.tabletData));
 
           mouseMoveHandled = true;
         }
@@ -1081,8 +1074,8 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
 
           WINTAB_PRINTF(" ... associated to system button\n");
           window->updateMouseCapture(MouseReleased);
-          system->pushEvent(
-              new GHOST_EventButton(info.time, info.type, window, info.button, info.tabletData));
+          system->pushEvent(std::make_unique<GHOST_EventButton>(
+              info.time, info.type, window, info.button, info.tabletData));
         }
         else {
           WINTAB_PRINTF(" ... but no system button\n");
@@ -1101,8 +1094,8 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
     int y = GET_Y_LPARAM(pos);
     GHOST_TabletData td = wt->getLastTabletData();
 
-    system->pushEvent(
-        new GHOST_EventCursor(getMessageTime(system), GHOST_kEventCursorMove, window, x, y, td));
+    system->pushEvent(std::make_unique<GHOST_EventCursor>(
+        getMessageTime(system), GHOST_kEventCursorMove, window, x, y, td));
   }
 }
 
@@ -1127,12 +1120,12 @@ void GHOST_SystemWin32::processPointerEvent(
       /* Coalesced pointer events are reverse chronological order, reorder chronologically.
        * Only contiguous move events are coalesced. */
       for (uint32_t i = pointerInfo.size(); i-- > 0;) {
-        system->pushEvent(new GHOST_EventCursor(pointerInfo[i].time,
-                                                GHOST_kEventCursorMove,
-                                                window,
-                                                pointerInfo[i].pixelLocation.x,
-                                                pointerInfo[i].pixelLocation.y,
-                                                pointerInfo[i].tabletData));
+        system->pushEvent(std::make_unique<GHOST_EventCursor>(pointerInfo[i].time,
+                                                              GHOST_kEventCursorMove,
+                                                              window,
+                                                              pointerInfo[i].pixelLocation.x,
+                                                              pointerInfo[i].pixelLocation.y,
+                                                              pointerInfo[i].tabletData));
       }
 
       /* Leave event unhandled so that system cursor is moved. */
@@ -1141,17 +1134,17 @@ void GHOST_SystemWin32::processPointerEvent(
     }
     case WM_POINTERDOWN: {
       /* Move cursor to point of contact because GHOST_EventButton does not include position. */
-      system->pushEvent(new GHOST_EventCursor(pointerInfo[0].time,
-                                              GHOST_kEventCursorMove,
-                                              window,
-                                              pointerInfo[0].pixelLocation.x,
-                                              pointerInfo[0].pixelLocation.y,
-                                              pointerInfo[0].tabletData));
-      system->pushEvent(new GHOST_EventButton(pointerInfo[0].time,
-                                              GHOST_kEventButtonDown,
-                                              window,
-                                              pointerInfo[0].buttonMask,
-                                              pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventCursor>(pointerInfo[0].time,
+                                                            GHOST_kEventCursorMove,
+                                                            window,
+                                                            pointerInfo[0].pixelLocation.x,
+                                                            pointerInfo[0].pixelLocation.y,
+                                                            pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventButton>(pointerInfo[0].time,
+                                                            GHOST_kEventButtonDown,
+                                                            window,
+                                                            pointerInfo[0].buttonMask,
+                                                            pointerInfo[0].tabletData));
       window->updateMouseCapture(MousePressed);
 
       /* Mark event handled so that mouse button events are not generated. */
@@ -1160,11 +1153,11 @@ void GHOST_SystemWin32::processPointerEvent(
       break;
     }
     case WM_POINTERUP: {
-      system->pushEvent(new GHOST_EventButton(pointerInfo[0].time,
-                                              GHOST_kEventButtonUp,
-                                              window,
-                                              pointerInfo[0].buttonMask,
-                                              pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventButton>(pointerInfo[0].time,
+                                                            GHOST_kEventButtonUp,
+                                                            window,
+                                                            pointerInfo[0].buttonMask,
+                                                            pointerInfo[0].tabletData));
       window->updateMouseCapture(MouseReleased);
 
       /* Mark event handled so that mouse button events are not generated. */
@@ -1178,8 +1171,8 @@ void GHOST_SystemWin32::processPointerEvent(
   }
 }
 
-GHOST_EventCursor *GHOST_SystemWin32::processCursorEvent(GHOST_WindowWin32 *window,
-                                                         const int32_t screen_co[2])
+std::unique_ptr<GHOST_EventCursor> GHOST_SystemWin32::processCursorEvent(
+    GHOST_WindowWin32 *window, const int32_t screen_co[2])
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -1256,12 +1249,12 @@ GHOST_EventCursor *GHOST_SystemWin32::processCursorEvent(GHOST_WindowWin32 *wind
     y_screen += y_accum;
   }
 
-  return new GHOST_EventCursor(getMessageTime(system),
-                               GHOST_kEventCursorMove,
-                               window,
-                               x_screen,
-                               y_screen,
-                               GHOST_TABLET_DATA_NONE);
+  return std::make_unique<GHOST_EventCursor>(getMessageTime(system),
+                                             GHOST_kEventCursorMove,
+                                             window,
+                                             x_screen,
+                                             y_screen,
+                                             GHOST_TABLET_DATA_NONE);
 }
 
 void GHOST_SystemWin32::processWheelEventVertical(GHOST_WindowWin32 *window,
@@ -1282,7 +1275,7 @@ void GHOST_SystemWin32::processWheelEventVertical(GHOST_WindowWin32 *window,
   acc = abs(acc);
 
   while (acc >= WHEEL_DELTA) {
-    system->pushEvent(new GHOST_EventWheel(
+    system->pushEvent(std::make_unique<GHOST_EventWheel>(
         getMessageTime(system), window, GHOST_kEventWheelAxisVertical, direction));
     acc -= WHEEL_DELTA;
   }
@@ -1308,20 +1301,21 @@ void GHOST_SystemWin32::processWheelEventHorizontal(GHOST_WindowWin32 *window,
   acc = abs(acc);
 
   while (acc >= WHEEL_DELTA) {
-    system->pushEvent(new GHOST_EventWheel(
+    system->pushEvent(std::make_unique<GHOST_EventWheel>(
         getMessageTime(system), window, GHOST_kEventWheelAxisHorizontal, direction));
     acc -= WHEEL_DELTA;
   }
   system->wheel_delta_accum_horizontal_ = acc * direction;
 }
 
-GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RAWINPUT const &raw)
+std::unique_ptr<GHOST_EventKey> GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window,
+                                                                   RAWINPUT const &raw)
 {
   const char vk = raw.data.keyboard.VKey;
   bool key_down = false;
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
   GHOST_TKey key = system->hardKey(raw, &key_down);
-  GHOST_EventKey *event;
+  std::unique_ptr<GHOST_EventKey> event;
 
   /* Scan code (device-dependent identifier for the key on the keyboard) for the Alt key.
    * https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes */
@@ -1406,12 +1400,12 @@ GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RA
     }
 #endif /* WITH_INPUT_IME */
 
-    event = new GHOST_EventKey(getMessageTime(system),
-                               key_down ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-                               window,
-                               key,
-                               is_repeat,
-                               utf8_char);
+    event = std::make_unique<GHOST_EventKey>(getMessageTime(system),
+                                             key_down ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
+                                             window,
+                                             key,
+                                             is_repeat,
+                                             utf8_char);
 
 #if 0 /* we already get this info via EventPrinter. */
     GHOST_PRINTF("%c\n", ascii);
@@ -1424,14 +1418,15 @@ GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RA
   return event;
 }
 
-GHOST_Event *GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  GHOST_Event *sizeEvent = new GHOST_Event(getMessageTime(system), GHOST_kEventWindowSize, window);
+  auto sizeEvent = std::make_unique<GHOST_Event>(
+      getMessageTime(system), GHOST_kEventWindowSize, window);
 
   /* We get WM_SIZE before we fully init. Do not dispatch before we are continuously resizing. */
   if (window->in_live_resize_) {
-    system->pushEvent(sizeEvent);
+    system->pushEvent(std::move(sizeEvent));
     system->dispatchEvents();
     return nullptr;
   }
@@ -1440,8 +1435,8 @@ GHOST_Event *GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window
   return sizeEvent;
 }
 
-GHOST_Event *GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
-                                                   GHOST_WindowWin32 *window)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
+                                                                   GHOST_WindowWin32 *window)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -1452,16 +1447,16 @@ GHOST_Event *GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
     system->getWindowManager()->setWindowInactive(window);
   }
 
-  return new GHOST_Event(getMessageTime(system), type, window);
+  return std::make_unique<GHOST_Event>(getMessageTime(system), type, window);
 }
 
 #ifdef WITH_INPUT_IME
-GHOST_Event *GHOST_SystemWin32::processImeEvent(GHOST_TEventType type,
-                                                GHOST_WindowWin32 *window,
-                                                const GHOST_TEventImeData *data)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processImeEvent(GHOST_TEventType type,
+                                                                GHOST_WindowWin32 *window,
+                                                                const GHOST_TEventImeData *data)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  return new GHOST_EventIME(getMessageTime(system), type, window, data);
+  return std::make_unique<GHOST_EventIME>(getMessageTime(system), type, window, data);
 }
 #endif
 
@@ -1473,7 +1468,7 @@ GHOST_TSuccess GHOST_SystemWin32::pushDragDropEvent(GHOST_TEventType eventType,
                                                     void *data)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  return system->pushEvent(new GHOST_EventDragnDrop(
+  return system->pushEvent(std::make_unique<GHOST_EventDragnDrop>(
       getMessageTime(system), eventType, draggedObjectType, window, mouseX, mouseY, data));
 }
 
@@ -1618,7 +1613,8 @@ void GHOST_SystemWin32::processTrackpad()
   system->getCursorPosition(cursor_x, cursor_y);
 
   if (trackpad_info.x != 0 || trackpad_info.y != 0) {
-    system->pushEvent(new GHOST_EventTrackpad(getMessageTime(system),
+    system->pushEvent(
+        std::make_unique<GHOST_EventTrackpad>(getMessageTime(system),
                                               active_window,
                                               GHOST_kTrackpadEventScroll,
                                               cursor_x,
@@ -1628,20 +1624,20 @@ void GHOST_SystemWin32::processTrackpad()
                                               trackpad_info.isScrollDirectionInverted));
   }
   if (trackpad_info.scale != 0) {
-    system->pushEvent(new GHOST_EventTrackpad(getMessageTime(system),
-                                              active_window,
-                                              GHOST_kTrackpadEventMagnify,
-                                              cursor_x,
-                                              cursor_y,
-                                              trackpad_info.scale,
-                                              0,
-                                              false));
+    system->pushEvent(std::make_unique<GHOST_EventTrackpad>(getMessageTime(system),
+                                                            active_window,
+                                                            GHOST_kTrackpadEventMagnify,
+                                                            cursor_x,
+                                                            cursor_y,
+                                                            trackpad_info.scale,
+                                                            0,
+                                                            false));
   }
 }
 
 LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, LPARAM lParam)
 {
-  GHOST_Event *event = nullptr;
+  std::unique_ptr<GHOST_Event> event = nullptr;
   bool eventHandled = false;
 
   LRESULT lResult = 0;
@@ -2416,7 +2412,7 @@ LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, 
   }
 
   if (event) {
-    system->pushEvent(event);
+    system->pushEvent(std::move(event));
     eventHandled = true;
   }
 
@@ -2524,11 +2520,13 @@ GHOST_TSuccess GHOST_SystemWin32::hasClipboardImage(void) const
             WCHAR lpszFile[MAX_PATH] = {0};
             DragQueryFileW(hDrop, 0, lpszFile, MAX_PATH);
             char *filepath = alloc_utf_8_from_16(lpszFile, 0);
-            ImBuf *ibuf = IMB_load_image_from_filepath(filepath,
-                                                       IB_byte_data | IB_multilayer | IB_test);
+            blender::ImBuf *ibuf = blender::IMB_load_image_from_filepath(
+                filepath,
+                blender::ImBufFlags::ByteData | blender::ImBufFlags::MultiLayer |
+                    blender::ImBufFlags::Test);
             free(filepath);
             if (ibuf) {
-              IMB_freeImBuf(ibuf);
+              blender::IMB_freeImBuf(ibuf);
               result = GHOST_kSuccess;
             }
           }
@@ -2561,7 +2559,8 @@ static uint *getClipboardImageFilepath(int *r_width, int *r_height)
   }
 
   if (filepath) {
-    ImBuf *ibuf = IMB_load_image_from_filepath(filepath, IB_byte_data | IB_multilayer);
+    blender::ImBuf *ibuf = blender::IMB_load_image_from_filepath(
+        filepath, blender::ImBufFlags::ByteData | blender::ImBufFlags::MultiLayer);
     free(filepath);
     if (ibuf) {
       *r_width = ibuf->x;
@@ -2569,9 +2568,9 @@ static uint *getClipboardImageFilepath(int *r_width, int *r_height)
       const uint64_t byte_count = static_cast<uint64_t>(ibuf->x) * ibuf->y * 4;
       uint *rgba = static_cast<uint *>(malloc(byte_count));
       if (rgba) {
-        memcpy(rgba, ibuf->byte_buffer.data, byte_count);
+        memcpy(rgba, ibuf->byte_data(), byte_count);
       }
-      IMB_freeImBuf(ibuf);
+      blender::IMB_freeImBuf(ibuf);
       return rgba;
     }
   }
@@ -2608,26 +2607,38 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
   *r_width = width;
   *r_height = height;
 
-  DWORD ColorMasks[4];
-  ColorMasks[0] = bitmapV5Header->bV5RedMask ? bitmapV5Header->bV5RedMask : 0xff;
-  ColorMasks[1] = bitmapV5Header->bV5GreenMask ? bitmapV5Header->bV5GreenMask : 0xff00;
-  ColorMasks[2] = bitmapV5Header->bV5BlueMask ? bitmapV5Header->bV5BlueMask : 0xff0000;
-  ColorMasks[3] = bitmapV5Header->bV5AlphaMask ? bitmapV5Header->bV5AlphaMask : 0xff000000;
-
-  /* Bit shifts needed for the ColorMasks. */
-  DWORD ColorShifts[4];
-  for (int i = 0; i < 4; i++) {
-    _BitScanForward(&ColorShifts[i], ColorMasks[i]);
-  }
-
   uchar *source = (uchar *)buffer;
   uint *rgba = (uint *)malloc(uint64_t(width) * height * 4);
   uint8_t *target = (uint8_t *)rgba;
 
   if (bitmapV5Header->bV5Compression == BI_BITFIELDS && bitcount == 32) {
+    /* It is unclear from the MSDN documentation whether or not the 3 RGB mask values are always
+     * written as part of the main BITMAPV5HEADER header or if they are included after the
+     * structure. In reality there are applications (Windows Snipping Tool) that write both,
+     * and there are applications (Krita, Paint.NET) that only set the header values. Handle
+     * both by checking against our expected size. */
+    const SIZE_T mask_size = sizeof(DWORD) * 3;
+    const SIZE_T actual_size = GlobalSize(hGlobal);
+    const SIZE_T expected_size = offset + (SIZE_T(width) * height * 4);
+    if (expected_size == actual_size - mask_size) {
+      source += mask_size; /* Skip redundant color masks. */
+    }
+
+    DWORD ColorMasks[4];
+    ColorMasks[0] = bitmapV5Header->bV5RedMask ? bitmapV5Header->bV5RedMask : 0xff;
+    ColorMasks[1] = bitmapV5Header->bV5GreenMask ? bitmapV5Header->bV5GreenMask : 0xff00;
+    ColorMasks[2] = bitmapV5Header->bV5BlueMask ? bitmapV5Header->bV5BlueMask : 0xff0000;
+    ColorMasks[3] = bitmapV5Header->bV5AlphaMask ? bitmapV5Header->bV5AlphaMask : 0xff000000;
+
+    /* Bit shifts needed for the ColorMasks. */
+    DWORD ColorShifts[4];
+    for (int i = 0; i < 4; i++) {
+      _BitScanForward(&ColorShifts[i], ColorMasks[i]);
+    }
+
     for (int h = 0; h < height; h++) {
       for (int w = 0; w < width; w++, target += 4, source += 4) {
-        DWORD *pix = (DWORD *)source;
+        const DWORD *pix = (DWORD *)source;
         target[0] = uint8_t((*pix & ColorMasks[0]) >> ColorShifts[0]);
         target[1] = uint8_t((*pix & ColorMasks[1]) >> ColorShifts[1]);
         target[2] = uint8_t((*pix & ColorMasks[2]) >> ColorShifts[2]);
@@ -2638,7 +2649,7 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
   else if (bitmapV5Header->bV5Compression == BI_RGB && bitcount == 32) {
     for (int h = 0; h < height; h++) {
       for (int w = 0; w < width; w++, target += 4, source += 4) {
-        RGBQUAD *quad = (RGBQUAD *)source;
+        const RGBQUAD *quad = (RGBQUAD *)source;
         target[0] = uint8_t(quad->rgbRed);
         target[1] = uint8_t(quad->rgbGreen);
         target[2] = uint8_t(quad->rgbBlue);
@@ -2651,7 +2662,7 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
     int slack = bytes_per_row - (width * 3);
     for (int h = 0; h < height; h++, source += slack) {
       for (int w = 0; w < width; w++, target += 4, source += 3) {
-        RGBTRIPLE *triple = (RGBTRIPLE *)source;
+        const RGBTRIPLE *triple = (RGBTRIPLE *)source;
         target[0] = uint8_t(triple->rgbtRed);
         target[1] = uint8_t(triple->rgbtGreen);
         target[2] = uint8_t(triple->rgbtBlue);
@@ -2679,16 +2690,16 @@ static uint *getClipboardImageImBuf(int *r_width, int *r_height, UINT format)
 
   uint *rgba = nullptr;
 
-  ImBuf *ibuf = IMB_load_image_from_memory(
-      (uchar *)pMem, GlobalSize(hGlobal), IB_byte_data, "<clipboard>");
+  blender::ImBuf *ibuf = blender::IMB_load_image_from_memory(
+      (uchar *)pMem, GlobalSize(hGlobal), blender::ImBufFlags::ByteData, "<clipboard>");
 
   if (ibuf) {
     *r_width = ibuf->x;
     *r_height = ibuf->y;
     const uint64_t byte_count = uint64_t(ibuf->x) * ibuf->y * 4;
     rgba = (uint *)malloc(byte_count);
-    memcpy(rgba, ibuf->byte_buffer.data, byte_count);
-    IMB_freeImBuf(ibuf);
+    memcpy(rgba, ibuf->byte_data(), byte_count);
+    blender::IMB_freeImBuf(ibuf);
   }
 
   GlobalUnlock(hGlobal);
@@ -2788,31 +2799,34 @@ static bool putClipboardImagePNG(uint *rgba, int width, int height)
   UINT cf = RegisterClipboardFormat("PNG");
 
   /* Load buffer into ImBuf, convert to PNG. */
-  ImBuf *ibuf = IMB_allocFromBuffer(reinterpret_cast<uint8_t *>(rgba), nullptr, width, height, 32);
-  ibuf->ftype = IMB_FTYPE_PNG;
+  blender::ImBuf *ibuf = blender::IMB_allocFromBuffer(
+      reinterpret_cast<uint8_t *>(rgba), nullptr, width, height, 32);
+  ibuf->ftype = blender::IMB_FTYPE_PNG;
   ibuf->foptions.quality = 15;
-  if (!IMB_save_image(ibuf, "<memory>", IB_byte_data | IB_mem)) {
-    IMB_freeImBuf(ibuf);
+  blender::Vector<uint8_t> encoded = blender::IMB_save_image_to_buffer(
+      ibuf, blender::ImBufFlags::ByteData);
+  if (encoded.is_empty()) {
+    blender::IMB_freeImBuf(ibuf);
     return false;
   }
 
-  HGLOBAL hMem = GlobalAlloc(GHND, ibuf->encoded_buffer_size);
+  HGLOBAL hMem = GlobalAlloc(GHND, encoded.size());
   if (!hMem) {
-    IMB_freeImBuf(ibuf);
+    blender::IMB_freeImBuf(ibuf);
     return false;
   }
 
   LPVOID pMem = GlobalLock(hMem);
   if (!pMem) {
-    IMB_freeImBuf(ibuf);
+    blender::IMB_freeImBuf(ibuf);
     GlobalFree(hMem);
     return false;
   }
 
-  memcpy(pMem, ibuf->encoded_buffer.data, ibuf->encoded_buffer_size);
+  memcpy(pMem, encoded.data(), encoded.size());
 
   GlobalUnlock(hMem);
-  IMB_freeImBuf(ibuf);
+  blender::IMB_freeImBuf(ibuf);
 
   if (!SetClipboardData(cf, hMem)) {
     GlobalFree(hMem);

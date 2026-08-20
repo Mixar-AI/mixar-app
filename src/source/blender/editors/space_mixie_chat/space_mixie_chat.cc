@@ -40,6 +40,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_footer_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Operators
@@ -107,7 +109,7 @@ static SpaceLink *mixie_chat_create(const ScrArea * /*area*/, const Scene * /*sc
   ARegion *region;
   SpaceMixieChat *smixie_chat;
 
-  smixie_chat = MEM_callocN<SpaceMixieChat>("initmixiechat");
+  smixie_chat = MEM_new<SpaceMixieChat>("initmixiechat");
   smixie_chat->spacetype = SPACE_MIXIE_CHAT;
 
   /* Initialize selection state */
@@ -161,7 +163,8 @@ static void mixie_chat_init(wmWindowManager * /*wm*/, ScrArea *area)
 {
   /* Initialize footer (TOOLS) region size */
   if (area) {
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (region->regiontype == RGN_TYPE_TOOLS && region->alignment == RGN_ALIGN_BOTTOM) {
         region->sizey = 50;  /* Compact height for input + mode buttons */
         region->flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_TOO_SMALL);  /* Ensure visible */
@@ -173,7 +176,7 @@ static void mixie_chat_init(wmWindowManager * /*wm*/, ScrArea *area)
 
 static SpaceLink *mixie_chat_duplicate(SpaceLink *sl)
 {
-  SpaceMixieChat *smixie_chat_new = static_cast<SpaceMixieChat *>(MEM_dupallocN(sl));
+  SpaceMixieChat *smixie_chat_new = static_cast<SpaceMixieChat *>(MEM_dupalloc_void(sl));
   /* New instance gets its own fresh runtime — don't share with source */
   smixie_chat_new->runtime = nullptr;
   return (SpaceLink *)smixie_chat_new;
@@ -279,7 +282,7 @@ static void mixie_chat_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   /* Don't save runtime pointer — it's regenerated on load */
   void *runtime_backup = smixie->runtime;
   smixie->runtime = nullptr;
-  BLO_write_struct(writer, SpaceMixieChat, sl);
+  writer->write_struct_cast<SpaceMixieChat>(sl);
   smixie->runtime = runtime_backup;
 }
 
@@ -309,11 +312,11 @@ void ED_spacetype_mixie_chat()
   st->listener = mixie_chat_space_listener;
 
   /* regions: main window (custom chat drawing) */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat region");
   art->regionid = RGN_TYPE_WINDOW;
   /* NO keymapflag here: most of the region uses custom GPU drawing. ED_KEYMAP_UI
    * would also add the broad "User Interface" keymap, which can consume LEFTMOUSE
-   * before the chat handler. main_region_init installs only the uiBlock handler
+   * before the chat handler. main_region_init installs only the ui::Block handler
    * needed by the embedded feedback text field, then adds chat-specific handlers. */
   art->keymapflag = 0;
 
@@ -332,7 +335,7 @@ void ED_spacetype_mixie_chat()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: header */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat header region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat header region");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
 
@@ -344,7 +347,7 @@ void ED_spacetype_mixie_chat()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: footer (implemented as TOOLS region for dynamic sizing) */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat footer region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat footer region");
   art->regionid = RGN_TYPE_TOOLS;  /* CRITICAL: Use TOOLS not FOOTER for dynamic sizing */
   /* Footer uses ultra-compact sizing:
    * - Input row (~20px)
@@ -363,11 +366,8 @@ void ED_spacetype_mixie_chat()
 
   BLI_addhead(&st->regiontypes, art);
 
-  /* QA harness: export chat action/gate buttons + feedback stars as targets. */
-  void mixie_chat_qa_targets_register();
-  mixie_chat_qa_targets_register();
-
   BKE_spacetype_register(std::move(st));
 }
 
 /** \} */
+}  // namespace blender

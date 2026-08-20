@@ -27,6 +27,8 @@
 #include "UI_interface_c.hh"
 
 #include "interface_mixar_card_icons.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 namespace {
 
@@ -44,8 +46,8 @@ void box_fill(const float xmin,
               const float col[4])
 {
   const rctf rect = {xmin, xmax, ymin, ymax};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, rad, col);
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv(&rect, true, rad, col);
 }
 
 void box_outline(const float xmin,
@@ -56,8 +58,8 @@ void box_outline(const float xmin,
                  const float col[4])
 {
   const rctf rect = {xmin, xmax, ymin, ymax};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, false, rad, col);
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv(&rect, false, rad, col);
 }
 
 /** Horizontal stroke centred on \a cy, drawn as a capsule. */
@@ -213,3 +215,4 @@ void UI_mixar_card_icon_draw(
       break;
   }
 }
+}  // namespace blender::ui

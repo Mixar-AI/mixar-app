@@ -38,6 +38,8 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 namespace {
 
@@ -118,7 +120,7 @@ void fill_ramp(const rctf *rect, float rad, const uchar from[4], const uchar to[
 /* -------------------------------------------------------------------- */
 /* Elements                                                              */
 
-void draw_heading(uiBut *but, rcti *rect)
+void draw_heading(Button *but, rcti *rect)
 {
   rcti text_rect = *rect;
   text_rect.xmin += mixar_card_text_pad();
@@ -131,7 +133,7 @@ void draw_heading(uiBut *but, rcti *rect)
    * enough that one measurement lands it. */
   float scale = CARD_HEADING_SCALE;
   const uiFontStyle probe = mixar_card_font(scale, CARD_HEADING_WEIGHT);
-  const float width = float(UI_fontstyle_string_width(&probe, but->drawstr.c_str()));
+  const float width = float(fontstyle_string_width(&probe, but->drawstr.c_str()));
   const float avail = float(BLI_rcti_size_x(&text_rect));
   if (width > avail && width > 0.0f) {
     scale = std::max(1.0f, scale * avail / width);
@@ -144,7 +146,7 @@ void draw_heading(uiBut *but, rcti *rect)
             UI_STYLE_TEXT_LEFT);
 }
 
-void draw_muted(uiBut *but, rcti *rect, const eFontStyle_Align align, const uchar col[4])
+void draw_muted(Button *but, rcti *rect, const eFontStyle_Align align, const uchar col[4])
 {
   rcti text_rect = *rect;
   text_rect.xmin += mixar_card_text_pad();
@@ -152,10 +154,10 @@ void draw_muted(uiBut *but, rcti *rect, const eFontStyle_Align align, const ucha
   mixar_card_draw_text(mixar_card_font(0.9f, 0), &text_rect, but->drawstr.c_str(), col, align);
 }
 
-void draw_pill(uiBut *but, rcti *rect)
+void draw_pill(Button *but, rcti *rect)
 {
   const uiFontStyle fs = mixar_card_font(MIXAR_CARD_PILL_SCALE, 0);
-  UI_fontstyle_set(&fs);
+  fontstyle_set(&fs);
 
   const char *label = but->drawstr.c_str();
   const float label_w = BLF_width(fs.uifont_id, label, but->drawstr.size());
@@ -206,7 +208,7 @@ void draw_divider(rcti *rect)
  * when it matters — at the extremes. A reserved slot is legible at every
  * value and lets the track keep a constant width.
  */
-void draw_usage_bar(uiBut *but, rcti *rect)
+void draw_usage_bar(Button *but, rcti *rect)
 {
   const float factor = std::clamp(float(but->hardmax), 0.0f, 1.0f);
 
@@ -222,7 +224,7 @@ void draw_usage_bar(uiBut *but, rcti *rect)
 
   /* Measure the label first; the track takes whatever is left. */
   const uiFontStyle fs = mixar_card_font(1.0f, CARD_HEADING_WEIGHT);
-  UI_fontstyle_set(&fs);
+  fontstyle_set(&fs);
   const float label_w = but->drawstr.empty() ?
                             0.0f :
                             BLF_width(fs.uifont_id, but->drawstr.c_str(), but->drawstr.size());
@@ -289,7 +291,7 @@ bool UI_mixar_card_element_is_button(const MixarCardElement element)
 }
 
 void UI_mixar_profile_card_draw_element(
-    uiBut *but, uiWidgetColors *wcol, rcti *rect, const bool is_hover, const bool is_active)
+    Button *but, uiWidgetColors *wcol, rcti *rect, const bool is_hover, const bool is_active)
 {
   const MixarCardElement element = UI_mixar_card_element_get(but);
 
@@ -325,10 +327,8 @@ void UI_mixar_profile_card_draw_element(
     case MixarCardElement::Divider:
       draw_divider(rect);
       break;
-    case MixarCardElement::DangerText:
-      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, MX_DANGER);
-      break;
     default:
       break;
   }
 }
+}  // namespace blender::ui

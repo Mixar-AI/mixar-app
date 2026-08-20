@@ -21,16 +21,7 @@ Correctness details:
 
 Public API:
     place_objects(placements, collection_name="") -> dict
-        placements: [{"object_name": str, "image_x": 0..1, "image_y": 0..1,
-                      "size_m": optional real-world longest dimension}, ...]
-
-``size_m`` seeds each object's SCALE from scene evidence: generated meshes
-arrive at an arbitrary normalized size, and the world-level metric factor alone
-cannot know that a sofa is 2.2 m and a mug is 0.1 m. When the caller (the agent,
-reading the source image against known-size anchors) supplies ``size_m``, the
-object is uniformly scaled so its longest dimension matches before it is rested
-on the collider — so the seed layout starts near-correct instead of every
-object landing at the same default size.
+        placements: [{"object_name": str, "image_x": 0..1, "image_y": 0..1}, ...]
 """
 
 import math
@@ -162,48 +153,10 @@ def _raycast_down(collider, x: float, y: float, z_top: float, z_bottom: float):
     return lowest
 
 
-def _refresh_matrices() -> None:
-    """Re-evaluate the depsgraph so ``matrix_world`` reflects a just-changed
-    ``scale``. Without this, the hierarchy bbox read right after ``_scale_root``
-    is computed from STALE matrices — the rest height and footprint radius are
-    then derived from the unscaled object."""
-    try:
-        bpy.context.view_layer.update()
-    except Exception as e:  # noqa: BLE001
-        logger.debug("[WorldLabs] view_layer.update failed: %s", e)
-
-
 def _scale_root(root, factor: float) -> None:
     """Uniformly scale the import root about its own origin."""
     if factor and abs(factor - 1.0) > 1e-4:
         root.scale = root.scale * factor
-        _refresh_matrices()
-
-
-# Sanity bounds for a caller-supplied real-world size (metres): outside this
-# range it is more likely a units/reasoning error than a real object, and a
-# wild scale factor is far harder to recover from than the default size.
-_SIZE_M_MIN = 0.01
-_SIZE_M_MAX = 100.0
-
-
-def _seed_scale_factor(size_m, extent_x: float, extent_y: float, extent_z: float) -> float:
-    """Uniform factor that makes the largest bbox extent equal ``size_m``.
-
-    Returns 1.0 (no-op) when ``size_m`` is missing/invalid or the current
-    extents are degenerate. Pure math — unit-testable without bpy.
-    """
-    try:
-        target = float(size_m)
-    except (TypeError, ValueError):
-        return 1.0
-    if not (target > 0.0) or target != target:  # non-positive or NaN
-        return 1.0
-    target = min(max(target, _SIZE_M_MIN), _SIZE_M_MAX)
-    extent = max(extent_x, extent_y, extent_z)
-    if not (extent > 1e-6):
-        return 1.0
-    return target / extent
 
 
 def _rest_root_at(root, bbox, point: Vector) -> None:
@@ -263,18 +216,6 @@ def place_objects(placements, collection_name: str = "") -> dict:
         if bbox is None:
             missed.append({"object_name": name, "reason": "no mesh geometry"})
             continue
-
-        # Seed scale from scene evidence: the caller's estimated real-world
-        # size (longest dimension, metres) for THIS object. See module docstring.
-        seed = _seed_scale_factor(
-            p.get("size_m"),
-            bbox[1].x - bbox[0].x,
-            bbox[1].y - bbox[0].y,
-            bbox[1].z - bbox[0].z,
-        )
-        if abs(seed - 1.0) > 1e-4:
-            _scale_root(root, seed)
-            bbox = _hierarchy_bbox(root) or bbox
 
         nx = min(max(float(p.get("image_x", 0.5)), 0.0), 1.0)
         ny = min(max(float(p.get("image_y", 0.5)), 0.0), 1.0)

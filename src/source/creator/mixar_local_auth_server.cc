@@ -20,6 +20,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+
+/* Mixar 5.2 port: global + using-directive. */
+using namespace blender;
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1

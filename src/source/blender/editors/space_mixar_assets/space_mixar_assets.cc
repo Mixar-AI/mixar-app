@@ -32,10 +32,12 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceLink *mixar_assets_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
-  SpaceMixarAssets *sassets = MEM_callocN<SpaceMixarAssets>("initmixarassets");
+  SpaceMixarAssets *sassets = MEM_new<SpaceMixarAssets>("initmixarassets");
   sassets->spacetype = SPACE_MIXAR_ASSETS;
 
   /* Header (hosts the editor-type switch dropdown) */
@@ -58,7 +60,7 @@ static void mixar_assets_init(wmWindowManager * /*wm*/, ScrArea * /*area*/) {}
 
 static SpaceLink *mixar_assets_duplicate(SpaceLink *sl)
 {
-  return (SpaceLink *)MEM_dupallocN(sl);
+  return (SpaceLink *)MEM_dupalloc_void(sl);
 }
 
 static void mixar_assets_main_region_init(wmWindowManager *wm, ARegion *region)
@@ -111,7 +113,7 @@ static void mixar_assets_header_region_listener(const wmRegionListenerParams *pa
 
 static void mixar_assets_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
-  BLO_write_struct(writer, SpaceMixarAssets, sl);
+  writer->write_struct_cast<SpaceMixarAssets>(sl);
 }
 
 void ED_spacetype_mixar_assets()
@@ -129,7 +131,7 @@ void ED_spacetype_mixar_assets()
   st->blend_write = mixar_assets_blend_write;
 
   /* Main region */
-  ARegionType *art = MEM_callocN<ARegionType>("spacetype mixar_assets main");
+  ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype mixar_assets main");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = ED_KEYMAP_UI;
   art->init = mixar_assets_main_region_init;
@@ -139,7 +141,7 @@ void ED_spacetype_mixar_assets()
   BLI_addhead(&st->regiontypes, art);
 
   /* Header region */
-  art = MEM_callocN<ARegionType>("spacetype mixar_assets header");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixar_assets header");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
@@ -150,3 +152,4 @@ void ED_spacetype_mixar_assets()
 
   BKE_spacetype_register(std::move(st));
 }
+}  // namespace blender

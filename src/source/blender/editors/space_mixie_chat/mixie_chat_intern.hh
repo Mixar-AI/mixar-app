@@ -9,12 +9,16 @@
 
 #pragma once
 
-#include "BLF_enums.hh"
-
 #include "BLI_rect.h"
 
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
+namespace blender::gpu {
+class Texture;
+}
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
@@ -28,9 +32,6 @@ struct wmRegionListenerParams;
 struct wmWindow;
 struct wmWindowManager;
 
-namespace blender::gpu {
-class Texture;
-}
 
 /* -------------------------------------------------------------------- */
 /** \name Region Callbacks
@@ -187,25 +188,21 @@ float chat_ui_draw_text_wrapped(const char *text,
 
 /* Font-parameterized variants — pass a specific BLF font id (e.g.
  * chat_ui_mono_font() for code). The plain variants above wrap these with
- * BLF_default(). `wrap_mode` must match between measure, draw, and the
- * selection mapping — code blocks use BLFWrapMode::HardLimit so unbreakable
- * tokens wrap at the card edge instead of overflowing it. */
+ * BLF_default(). */
 void chat_ui_calc_text_bounds_font(const char *text,
                                    float max_width,
                                    int font_size,
                                    int flags,
                                    int font_id,
                                    float *out_width,
-                                   float *out_height,
-                                   BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
+                                   float *out_height);
 
 float chat_ui_draw_text_wrapped_font(const char *text,
                                      const rctf *rect,
                                      int font_size,
                                      int flags,
                                      int font_id,
-                                     const float color[4],
-                                     BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
+                                     const float color[4]);
 
 /* Lazily-loaded monospace font id for code rendering. */
 int chat_ui_mono_font();
@@ -396,57 +393,6 @@ void chat_ui_draw_markdown(const char *metadata_json,
                            const ChatBubbleStyle *style,
                            float scale_factor);
 
-/* Raw text of the text-bearing segment at `seg_index` (paragraph, heading,
- * code block, quote), or nullptr when out of range or not a text segment.
- * Served from the markdown parse cache; the pointer is only valid until the
- * next parse-cache access, so consume it immediately. Pass `code_only` to
- * restrict to code blocks (the copy chips). */
-const char *chat_ui_markdown_segment_text(const char *metadata_json,
-                                          int seg_index,
-                                          bool code_only);
-
-/* Resolve a message's markdown segment text through Scene RNA + the parse
- * cache (mixie_chat_code_copy.cc). Same lifetime caveat as above. */
-const char *mixie_chat_message_segment_text(const bContext *C,
-                                            int message_index,
-                                            int seg_index,
-                                            bool code_only);
-
-/* Code-block copy chips (mixie_chat_code_copy.cc).
- * Collector: the messages render pass resets the hit list, then brackets
- * every chat_ui_draw_markdown call with set_message(index)/set_message(-1);
- * draw_code_block registers each chip through mixie_chat_code_chip_draw. */
-void mixie_chat_code_hits_reset(MixieChatRuntime *rt);
-void mixie_chat_code_hits_set_message(int message_index);
-void mixie_chat_code_hits_set_segment(int seg_index);
-/* Draw the Copy button for the current (message, segment) into the code
- * card whose top-right inner corner is (right_x, top_y), and register its
- * hit rect. Sized from `font_size` (the code text size) — the markdown
- * draw path always passes scale_factor 1.0, so px constants scaled by it
- * would ignore the UI scale entirely. */
-void mixie_chat_code_chip_draw(float right_x, float top_y, float scale_factor, int font_size);
-/* Record the rendered text rect of the current (message, segment) so
- * selection can map clicks against the segment's own text/font/wrap. */
-void mixie_chat_md_seg_record(const rctf *text_rect, bool mono, int font_size);
-/* Find the recorded rect for (message, segment); false when not drawn. */
-bool mixie_chat_md_seg_find(MixieChatRuntime *rt,
-                            int message_index,
-                            int seg_index,
-                            MarkdownSegHit *r_hit);
-/* True while a recent chip copy should keep repainting (the ✔ flash). */
-bool mixie_chat_code_copy_feedback_pending();
-/* Hover tracking from the region cursor callback (view coords). Returns
- * true when a chip is hovered; sets *r_changed when hover state moved. */
-bool mixie_chat_code_hits_hover(MixieChatRuntime *rt,
-                                float view_x,
-                                float view_y,
-                                bool *r_changed);
-/* LEFTMOUSE dispatch (region coords) — copies the clicked code block. */
-bool mixie_chat_handle_code_copy_click(bContext *C,
-                                       ARegion *region,
-                                       float mouse_x,
-                                       float mouse_y);
-
 /* Image attachment */
 float chat_ui_calc_image_attachment_height(Main *bmain,
                                            const char *image_path,
@@ -495,40 +441,22 @@ void chat_ui_draw_sender_label(const char *label,
 void MIXIE_CHAT_OT_select_text(wmOperatorType *ot);
 void MIXIE_CHAT_OT_copy(wmOperatorType *ot);
 
-/* Text selection helper — converts a mouse position to a message index, a
- * byte offset, and (for markdown bubbles) the segment the offset indexes
- * (*r_seg_index = -1 means the offset indexes the message's copy text). */
+/* Text selection helper - converts mouse position to message index and character offset */
 bool mixie_chat_pos_to_text(const bContext *C,
                             ARegion *region,
                             const int mval[2],
                             int *r_message_index,
-                            int *r_seg_index,
                             int *r_char_offset);
-
-/* True when the position lands inside any message bubble rect (used to eat
- * clicks on non-selectable parts of a bubble instead of passing them to
- * window-level handlers — in the Agent Bubble those start a window drag). */
-bool mixie_chat_pos_in_message_bubble(const bContext *C, ARegion *region, const int mval[2]);
-
-/* Text rect of a cached message layout, matching where the draw pass
- * actually places the wrapped text (mixie_chat_hit_testing.cc). Returns
- * false when the message has no selectable text. */
-bool mixie_chat_layout_text_rect(const MessageLayoutData *layout, rctf *r_rect);
 
 /* Get selected text string (must be freed with MEM_freeN) */
 char *mixie_chat_get_selected_text(const bContext *C);
 
-/* Draw selection highlight over wrapped text drawn with `font_id`.
- * `line_height` <= 0 derives the plain BLF line height (rich-text segments
- * pass their 1.15x line height so rows land on the drawn lines). */
+/* Draw selection highlight over text */
 void chat_ui_draw_text_selection(const rctf *text_rect,
                                  const char *text,
                                  int sel_start,
                                  int sel_end,
-                                 int font_size,
-                                 int font_id,
-                                 float line_height,
-                                 BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
+                                 int font_size);
 
 /* Scroll-to-bottom indicator (mixie_chat_scroll_indicator.cc) */
 void mixie_chat_update_scroll_indicator(struct SpaceMixieChat *smixie,
@@ -602,3 +530,4 @@ void MIXIE_CHAT_OT_agent_bubble_show(wmOperatorType *ot);
 /* Property cache, layout data, runtime state: see mixie_chat_layout_data.hh */
 
 /** \} */
+}  // namespace blender

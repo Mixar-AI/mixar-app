@@ -10,8 +10,6 @@ Provides centralized configuration loading for all Mixar modules.
 
 import os
 import json
-import tempfile
-import time
 import bpy
 
 from .logging_config import get_logger
@@ -29,55 +27,17 @@ def get_config_path():
     return os.path.join(bpy.utils.resource_path('LOCAL'), 'config', 'mixar.json')
 
 
-def _backup_corrupt_config(config_path, error):
-    """Move a corrupt config file aside (mixar.json.corrupt-<ts>) so reads can
-    rebuild from defaults and the next write cannot erase its contents."""
-    stamp = time.strftime('%Y%m%d-%H%M%S')
-    backup_path = '%s.corrupt-%s' % (config_path, stamp)
-    counter = 1
-    while os.path.exists(backup_path):
-        # Same-second collision: never clobber an earlier backup.
-        backup_path = '%s.corrupt-%s.%d' % (config_path, stamp, counter)
-        counter += 1
-    try:
-        os.replace(config_path, backup_path)
-        logger.error("Corrupt config %s (%s); backed up to %s, rebuilding "
-                     "from defaults", config_path, error, backup_path)
-    except OSError as exc:
-        logger.error("Corrupt config %s (%s); could not back up to %s: %s",
-                     config_path, error, backup_path, exc)
-
-
-def _read_config_file(config_path, warn_missing=False):
-    """Parse the config file. Returns a dict; {} when missing or corrupt.
-
-    A corrupt file is backed up and treated as missing so reads rebuild
-    from defaults instead of failing, and so the next write cannot erase
-    the keys that could not be parsed."""
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        if warn_missing:
-            logger.warning("Config file not found at: %s", config_path)
-        return {}
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        _backup_corrupt_config(config_path, e)
-        return {}
-    except Exception as e:
-        logger.error("Error loading config: %s", e)
-        return {}
-    if not isinstance(config, dict):
-        # Valid JSON but not an object -- unusable as config, same treatment.
-        _backup_corrupt_config(config_path, "not a JSON object")
-        return {}
-    return config
-
-
 def load_mixar_config():
     """Load Mixar configuration from JSON file"""
     try:
-        return _read_config_file(get_config_path(), warn_missing=True)
+        config_path = get_config_path()
+
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        else:
+            logger.warning("Config file not found at: %s", config_path)
+            return {}
     except Exception as e:
         logger.error("Error loading config: %s", e)
         return {}
@@ -101,37 +61,16 @@ def add_config(key, value):
         _config = load_mixar_config()
     _config[key] = value
 
-    # Persist to file, merging over what is currently on disk so keys this
-    # process did not parse (e.g. after a corrupt read) or that changed since
-    # the last load are not silently erased by a write of only the caller's
-    # keys. In-memory values win for keys present in both.
+    # Persist to file
     try:
         config_path = get_config_path()
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        merged = {**_read_config_file(config_path), **_config}
-        _write_config_file(config_path, merged)
+        with open(config_path, 'w') as f:
+            json.dump(_config, f, indent=2)
         return True
     except Exception as e:
         logger.error("Error saving config: %s", e)
         return False
-
-
-def _write_config_file(config_path, config):
-    """Atomically write the config file (mkstemp + os.replace, the Mixar
-    idiom) so a crash mid-write cannot leave a corrupt mixar.json behind."""
-    fd, tmp_path = tempfile.mkstemp(
-        dir=os.path.dirname(config_path), prefix='.mixar.json.', suffix='.tmp'
-    )
-    try:
-        with os.fdopen(fd, 'w') as f:
-            json.dump(config, f, indent=2)
-        os.replace(tmp_path, config_path)
-    except Exception:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
 
 
 def get_environment():

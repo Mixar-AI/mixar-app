@@ -169,12 +169,7 @@ def _default_component_model_slug(service_key: str, catalog_default: str) -> str
 def node_output_type(scene, node_id: str) -> str:
     media = media_item_by_id(scene, node_id)
     if media is not None:
-        if media.image is None:
-            # A purged datablock: the card is visibly dead, so it must report
-            # no type. Reporting IMAGE let connections and continuations be
-            # built on nothing, only to fail at run time.
-            return ''
-        return 'VIDEO' if media.image.source == 'MOVIE' else 'IMAGE'
+        return 'VIDEO' if media.image and media.image.source == 'MOVIE' else 'IMAGE'
     action = action_node_by_id(scene, node_id)
     if action is not None:
         return output_type_for_action(action.action_type)
@@ -286,8 +281,6 @@ def connect_to_next_input(scene, from_node_id: str, to_node_id: str):
     """Connect an automatic continuation to its first compatible free slot."""
     target = action_node_by_id(scene, to_node_id)
     source_type = node_output_type(scene, from_node_id)
-    if not source_type:
-        raise ValueError("The source node is no longer available")
     occupied = {
         link.to_socket for link in scene.mixie_moodboard_links
         if link.to_node_id == to_node_id
@@ -408,19 +401,7 @@ def _graph_node_by_id(scene, node_id: str):
     return asset_node_by_id(scene, node_id)
 
 
-def create_connected_action(
-    scene,
-    action_type: str,
-    source_node_id: str = "",
-    drop_position: tuple[float, float] | None = None,
-):
-    """Create a continuation node and wire it to its source.
-
-    ``drop_position`` is the canvas point where a dragged link was released.
-    When given it wins over the source-relative placement: the user already
-    said where the node goes, so the card is centred on that point with its
-    input edge under the cursor.
-    """
+def create_connected_action(scene, action_type: str, source_node_id: str = ""):
     # Operator context, so the migrating write is safe here — and required,
     # since the new node's links key off media ids.
     ensure_media_node_ids(scene)
@@ -429,10 +410,7 @@ def create_connected_action(
     sources = []
     if source_node_id:
         source = _graph_node_by_id(scene, source_node_id)
-        source_type = node_output_type(scene, source_node_id)
-        if not source_type:
-            raise ValueError("The source node is no longer available")
-        if source is not None and source_type in accepted:
+        if source is not None and node_output_type(scene, source_node_id) in accepted:
             sources = [source]
     if not sources and not mesh_feature:
         sources = _selected_media(scene, action_type)
@@ -451,10 +429,7 @@ def create_connected_action(
     node.action_type = action_type
     _initialize_catalog_selection(scene, node)
     refresh_node_height(node)
-    if drop_position is not None:
-        node.position_x = float(drop_position[0])
-        node.position_y = float(drop_position[1]) - node.height * 0.5
-    elif sources:
+    if sources:
         right, center_y = _source_right_and_center(sources)
         node.position_x = right + ACTION_NODE_GAP
         node.position_y = center_y - node.height * 0.5
@@ -465,29 +440,8 @@ def create_connected_action(
     deselect_graph_nodes(scene)
     node.selected = True
     scene.mixie_moodboard_active_node_id = node.node_id
-    try:
-        for item in sources:
-            connect_to_next_input(scene, item.node_id, node.node_id)
-    except ValueError:
-        # Wiring the fresh card failed (e.g. the catalog has not published its
-        # sockets yet). Leave no orphan: the operator reports the failure, and
-        # an unlinked card the user never agreed to would survive it.
-        for link_index in reversed(range(len(scene.mixie_moodboard_links))):
-            link = scene.mixie_moodboard_links[link_index]
-            if link.from_node_id == node.node_id or link.to_node_id == node.node_id:
-                scene.mixie_moodboard_links.remove(link_index)
-        node_index = next(
-            (
-                index for index, existing in enumerate(scene.mixie_moodboard_action_nodes)
-                if existing.node_id == node.node_id
-            ),
-            None,
-        )
-        if node_index is not None:
-            scene.mixie_moodboard_action_nodes.remove(node_index)
-        if scene.mixie_moodboard_active_node_id == node.node_id:
-            scene.mixie_moodboard_active_node_id = ""
-        raise
+    for item in sources:
+        connect_to_next_input(scene, item.node_id, node.node_id)
     return node
 
 
@@ -522,12 +476,9 @@ def input_media_items(scene, action_node) -> list:
 def _action_node_output_media(scene, source_action):
     """Resolve the one media item a producer node outputs to the graph.
 
-    Prefers the node's shown preview, then its embedded result, then the
-    standalone output node most recently linked from it (multi-output and
-    mask nodes keep no embed — their results stand beside the producer),
-    and finally the legacy result-name match — so a stale or empty
-    ``result_names`` still resolves as long as the node visibly holds a
-    result.
+    Prefers the node's shown preview, then its embedded result, and finally the
+    legacy result-name match — so a stale or empty ``result_names`` still
+    resolves as long as the node visibly holds a result.
     """
     embedded = [
         media for media in scene.mixie_moodboard_images
@@ -540,12 +491,6 @@ def _action_node_output_media(scene, source_action):
             return chosen
     if embedded:
         return embedded[0]
-    for link in reversed(list(scene.mixie_moodboard_links)):
-        if link.from_node_id != source_action.node_id:
-            continue
-        output = media_item_by_id(scene, link.to_node_id)
-        if output is not None and output.image is not None:
-            return output
     names = [
         name.strip() for name in source_action.result_names.split(",")
         if name.strip()

@@ -72,9 +72,6 @@ class JSONRPCWebSocketClient:
         on_llm_request: Optional[
             Callable[[dict, Optional[str]], Optional[dict]]
         ] = None,
-        on_addon_project_request: Optional[
-            Callable[[str, dict, Optional[str]], Optional[dict]]
-        ] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -100,7 +97,6 @@ class JSONRPCWebSocketClient:
         self._on_job_update = on_job_update
         self._on_sandbox_control = on_sandbox_control
         self._on_llm_request = on_llm_request
-        self._on_addon_project_request = on_addon_project_request
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -353,8 +349,6 @@ class JSONRPCWebSocketClient:
 
     def _perform_handshake(self) -> bool:
         """Send handshake request and wait for response."""
-        from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
-
         request_id = f"handshake_{self._next_request_id()}"
 
         params = {
@@ -363,16 +357,7 @@ class JSONRPCWebSocketClient:
             # "local_llm": this client can execute llm.request relays against
             # a local model server (modules/local_models) — the backend only
             # sends them when the user's BYOK provider is "local".
-            "capabilities": [
-                "script_execution",
-                "notifications",
-                "local_llm",
-                # Client answers blender.liveness on the WS thread; the
-                # backend only probes instances that advertise it (older
-                # clients would silently never reply).
-                "liveness",
-                ADDON_PROJECT_CAPABILITY,
-            ],
+            "capabilities": ["script_execution", "notifications", "local_llm"],
         }
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:
@@ -545,26 +530,6 @@ class JSONRPCWebSocketClient:
         logger.debug(f"Queued request {request_id} ({method})")
         return request_id
 
-    def send_notification(self, method: str, params: dict) -> bool:
-        """Queue a JSON-RPC notification (no id, no response expected).
-
-        Fire-and-forget client -> server reporting (e.g. the final-render
-        outcome). Thread-safe: the payload only enters the outbound queue,
-        which the WS thread drains. Returns False immediately when the client
-        is not connected — the caller decides whether that matters (reporting
-        is best-effort; the server's pending marker expires instead).
-        """
-        if not self._connected:
-            return False
-        notification = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-        }
-        self._outbound.put(json.dumps(notification))
-        logger.debug(f"Queued notification ({method})")
-        return True
-
     def _handle_message(self, msg: dict) -> None:
         """Handle incoming JSON-RPC message."""
         # Check if it's a response (to our ping, handshake, or send_request)
@@ -589,17 +554,11 @@ class JSONRPCWebSocketClient:
         if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
 
-        elif method == JSONRPCMethod.BLENDER_LIVENESS:
-            self._handle_liveness(request_id)
-
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
         elif method == JSONRPCMethod.LLM_REQUEST:
             self._handle_llm_request(params, request_id)
-
-        elif isinstance(method, str) and method.startswith(JSONRPCMethod.ADDON_PROJECT_PREFIX):
-            self._handle_addon_project_request(method, params, request_id)
 
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
@@ -638,67 +597,6 @@ class JSONRPCWebSocketClient:
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
-
-    def _handle_addon_project_request(
-        self, method: str, params: dict, request_id: Optional[str]
-    ) -> None:
-        """Handle a capability-scoped local project operation.
-
-        The callback normally defers disk work to a worker and replies through
-        ``queue_response``. A synchronous result remains useful in tests and
-        for immediate refusals.
-        """
-        result = None
-        if self._on_addon_project_request:
-            try:
-                result = self._on_addon_project_request(method, params, request_id)
-                if result is None:
-                    return
-            except Exception as exc:
-                logger.error("add-on project request failed: %s", exc)
-                result = {
-                    "success": False,
-                    "error": {
-                        "code": "handler_error",
-                        "message": "The local add-on project handler failed",
-                    },
-                }
-        else:
-            result = {
-                "success": False,
-                "error": {
-                    "code": "capability_unavailable",
-                    "message": "Add-on Project Mode is unavailable in this client",
-                },
-            }
-        if request_id and result is not None:
-            self.queue_response(request_id, result)
-
-    def _handle_liveness(self, request_id: Optional[str]) -> None:
-        """Answer blender.liveness WITHOUT touching bpy or the main thread.
-
-        The backend sends this before counting a script timeout toward its
-        "Blender stopped responding" breaker. A legitimately long script
-        holds the main thread (and mostly the GIL) while Blender is perfectly
-        alive; this handler runs entirely on the WebSocket receive thread and
-        answers whenever the GIL is acquirable at all — answering AT ALL is
-        the proof of life the backend needs. Never import bpy-dependent
-        modules on this path beyond the lock-guarded in-flight snapshot.
-        """
-        if request_id is None:
-            return
-        try:
-            from .main_thread_executor import get_inflight_script, has_pending_requests
-
-            inflight = get_inflight_script()
-            self.queue_response(request_id, {
-                "alive": True,
-                "script_in_flight": inflight,
-                "queue_pending": has_pending_requests(),
-                "handshake_complete": self._handshake_complete,
-            })
-        except Exception as e:  # never let a probe raise inside the recv loop
-            logger.error(f"Error in liveness handler: {e}")
 
     def _handle_execute_script(self, params: dict, request_id: Optional[str]) -> None:
         """Handle script execution request.

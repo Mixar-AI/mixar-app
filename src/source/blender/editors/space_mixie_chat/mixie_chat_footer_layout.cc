@@ -26,6 +26,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Dynamic Input Line Count
@@ -48,7 +50,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
     return FOOTER_INPUT_LINE_COUNT;
   }
 
-  char *text = static_cast<char *>(MEM_mallocN(text_len + 1, __func__));
+  char *text = static_cast<char *>(MEM_new_uninitialized(text_len + 1, __func__));
   RNA_property_string_get(&scene_ptr, prop, text);
 
   /* Calculate available width for text wrapping.
@@ -63,10 +65,10 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
   int visual_line_count;
   if (rect_width > 10) {
     /* Use the same font setup as widget_draw_text_multiline():
-     *   font = UI_style_get()->widget with points * 1.2f */
-    uiFontStyle fstyle = UI_style_get()->widget;
+     *   font = ui::style_get()->widget with points * 1.2f */
+    uiFontStyle fstyle = ui::style_get()->widget;
     fstyle.points *= 1.2f;
-    UI_fontstyle_set(&fstyle);
+    ui::fontstyle_set(&fstyle);
     const int fontid = fstyle.uifont_id;
 
     /* Use BLF_string_wrap with the same mode as the widget rendering */
@@ -298,3 +300,4 @@ void footer_layout_calculate_positions(int region_width,
 }
 
 /** \} */
+}  // namespace blender

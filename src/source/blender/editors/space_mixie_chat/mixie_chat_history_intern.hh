@@ -16,6 +16,8 @@
 #include <cstddef>
 
 #include "BLI_vector.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
@@ -114,3 +116,4 @@ void hist_text_ellipsis(
 void hist_draw_x_glyph(float cx, float cy, float half, const float color[4], float scale);
 
 /** \} */
+}  // namespace blender

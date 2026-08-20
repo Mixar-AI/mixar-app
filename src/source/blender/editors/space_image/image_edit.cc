@@ -38,6 +38,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+namespace blender {
+
 Image *ED_space_image(const SpaceImage *sima)
 {
   /* NOTE: image_panel_properties() uses pointer to `sima->image` directly. */
@@ -64,22 +66,28 @@ void ED_space_image_set(Main *bmain, SpaceImage *sima, Image *ima, bool automati
     BKE_image_signal(bmain, sima->image, &sima->iuser, IMA_SIGNAL_USER_NEW_IMAGE);
   }
 
-  id_us_ensure_real((ID *)sima->image);
+  id_us_ensure_real(id_cast<ID *>(sima->image));
+
+  if (ima) {
+    sima->xof = ima->runtime->view_offset[0];
+    sima->yof = ima->runtime->view_offset[1];
+    sima->zoom = ima->runtime->view_zoom;
+  }
 
   WM_main_add_notifier(NC_SPACE | ND_SPACE_IMAGE, nullptr);
 }
 
 void ED_space_image_sync(Main *bmain, Image *image, bool ignore_render_viewer)
 {
-  wmWindowManager *wm = (wmWindowManager *)bmain->wm.first;
-  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
-    const bScreen *screen = WM_window_get_active_screen(win);
-    LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-      LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
-        if (sl->spacetype != SPACE_IMAGE) {
+  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  for (wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    for (ScrArea &area : screen->areabase) {
+      for (SpaceLink &sl : area.spacedata) {
+        if (sl.spacetype != SPACE_IMAGE) {
           continue;
         }
-        SpaceImage *sima = (SpaceImage *)sl;
+        SpaceImage *sima = reinterpret_cast<SpaceImage *>(&sl);
         if (sima->pin) {
           continue;
         }
@@ -123,6 +131,7 @@ void ED_space_image_auto_set(const bContext *C, SpaceImage *sima)
     if (sima->image) {
       Main *bmain = CTX_data_main(C);
       BKE_image_signal(bmain, sima->image, &sima->iuser, IMA_SIGNAL_USER_NEW_IMAGE);
+      WM_main_add_notifier(NC_SPACE | ND_SPACE_IMAGE, sima);
     }
   }
 }
@@ -137,14 +146,17 @@ void ED_space_image_set_mask(bContext *C, SpaceImage *sima, Mask *mask)
   sima->mask_info.mask = mask;
 
   /* weak, but same as image/space */
-  id_us_ensure_real((ID *)sima->mask_info.mask);
+  id_us_ensure_real(id_cast<ID *>(sima->mask_info.mask));
 
   if (C) {
     WM_event_add_notifier(C, NC_MASK | NA_SELECTED, mask);
   }
 }
 
-ImBuf *ED_space_image_acquire_buffer(SpaceImage *sima, void **r_lock, int tile)
+ImBuf *ED_space_image_acquire_buffer(SpaceImage *sima,
+                                     void **r_lock,
+                                     int tile,
+                                     const bool ensure_host_buffer)
 {
   ImBuf *ibuf;
 
@@ -159,7 +171,12 @@ ImBuf *ED_space_image_acquire_buffer(SpaceImage *sima, void **r_lock, int tile)
 #endif
     {
       sima->iuser.tile = tile;
-      ibuf = BKE_image_acquire_ibuf(sima->image, &sima->iuser, r_lock);
+      if (ensure_host_buffer) {
+        ibuf = BKE_image_acquire_ibuf(sima->image, &sima->iuser, r_lock);
+      }
+      else {
+        ibuf = BKE_image_acquire_ibuf_gpu(sima->image, &sima->iuser, r_lock);
+      }
       sima->iuser.tile = 0;
     }
 
@@ -170,7 +187,7 @@ ImBuf *ED_space_image_acquire_buffer(SpaceImage *sima, void **r_lock, int tile)
         return ibuf;
       }
 
-      if (ibuf->byte_buffer.data || ibuf->float_buffer.data) {
+      if (ibuf->byte_data() || ibuf->float_data() || ibuf->gpu.texture) {
         return ibuf;
       }
       BKE_image_release_ibuf(sima->image, ibuf, *r_lock);
@@ -220,7 +237,7 @@ bool ED_space_image_has_buffer(SpaceImage *sima)
   void *lock;
   bool has_buffer;
 
-  ibuf = ED_space_image_acquire_buffer(sima, &lock, 0);
+  ibuf = ED_space_image_acquire_buffer(sima, &lock, 0, false);
   has_buffer = (ibuf != nullptr);
   ED_space_image_release_buffer(sima, ibuf, lock);
 
@@ -234,7 +251,7 @@ void ED_space_image_get_size(SpaceImage *sima, int *r_width, int *r_height)
   void *lock;
 
   /* TODO(lukas): Support tiled images with different sizes */
-  ibuf = ED_space_image_acquire_buffer(sima, &lock, 0);
+  ibuf = ED_space_image_acquire_buffer(sima, &lock, 0, false);
 
   if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
     *r_width = ibuf->x;
@@ -333,7 +350,7 @@ void ED_image_mouse_pos(SpaceImage *sima, const ARegion *region, const int mval[
   ED_space_image_get_zoom(sima, region, &zoomx, &zoomy);
   ED_space_image_get_size(sima, &width, &height);
 
-  UI_view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
+  ui::view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
 
   co[0] = ((mval[0] - sx) / zoomx) / width;
   co[1] = ((mval[1] - sy) / zoomy) / height;
@@ -360,7 +377,7 @@ void ED_image_point_pos(
   ED_space_image_get_zoom(sima, region, &zoomx, &zoomy);
   ED_space_image_get_size(sima, &width, &height);
 
-  UI_view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
+  ui::view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
 
   *r_x = ((x - sx) / zoomx) / width;
   *r_y = ((y - sy) / zoomy) / height;
@@ -375,7 +392,7 @@ void ED_image_point_pos__reverse(SpaceImage *sima,
   int width, height;
   int sx, sy;
 
-  UI_view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
+  ui::view2d_view_to_region(&region->v2d, 0.0f, 0.0f, &sx, &sy);
   ED_space_image_get_size(sima, &width, &height);
   ED_space_image_get_zoom(sima, region, &zoomx, &zoomy);
 
@@ -390,7 +407,7 @@ bool ED_image_slot_cycle(Image *image, int direction)
 
   BLI_assert(ELEM(direction, -1, 1));
 
-  int num_slots = BLI_listbase_count(&image->renderslots);
+  int num_slots = image->renderslots.count();
   for (i = 1; i < num_slots; i++) {
     slot = (cur + ((direction == -1) ? -i : i)) % num_slots;
     if (slot < 0) {
@@ -505,9 +522,10 @@ bool ED_space_image_maskedit_poll(bContext *C)
   SpaceImage *sima = CTX_wm_space_image(C);
 
   if (sima) {
+    const Main *bmain = CTX_data_main(C);
     Scene *scene = CTX_data_scene(C);
     ViewLayer *view_layer = CTX_data_view_layer(C);
-    BKE_view_layer_synced_ensure(scene, view_layer);
+    BKE_view_layer_synced_ensure(*bmain, scene, view_layer);
     Object *obedit = BKE_view_layer_edit_object_get(view_layer);
     return ED_space_image_check_show_maskedit(sima, obedit);
   }
@@ -532,7 +550,7 @@ bool ED_space_image_paint_curve(const bContext *C)
   if (sima && sima->mode == SI_MODE_PAINT) {
     Brush *br = BKE_paint_brush(&CTX_data_tool_settings(C)->imapaint.paint);
 
-    if (br && (br->flag & BRUSH_CURVE)) {
+    if (br && (br->stroke_method == BRUSH_STROKE_CURVE)) {
       return true;
     }
   }
@@ -565,3 +583,14 @@ bool ED_space_image_cursor_poll(bContext *C)
   return ED_operator_uvedit_space_image(C) || ED_space_image_maskedit_poll(C) ||
          ED_space_image_paint_curve(C);
 }
+
+bool ED_space_image_region_cursor_poll(bContext *C)
+{
+  const ARegion *region = CTX_wm_region(C);
+  if (!(region && region->regiontype == RGN_TYPE_WINDOW)) {
+    return false;
+  }
+  return ED_space_image_cursor_poll(C);
+}
+
+}  // namespace blender

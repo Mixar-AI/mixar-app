@@ -18,11 +18,11 @@ from .image_utils import (
     cleanup_preview_collection,
     clear_thumbnail_cache,
     collect_message_file_image_paths,
-    encode_attachment_for_upload,
     get_blend_images,
     get_image_display_name,
     get_image_thumbnail_id,
     get_mixar_screenshots_dir,
+    image_to_base64,
     validate_image_file,
 )
 from .jsonrpc_client import (
@@ -74,7 +74,7 @@ __all__ = [
     "populate_dev_session",
     # Image Utils
     "validate_image_file",
-    "encode_attachment_for_upload",
+    "image_to_base64",
     "get_image_thumbnail_id",
     "get_blend_images",
     "get_image_display_name",

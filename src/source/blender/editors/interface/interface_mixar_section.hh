@@ -12,8 +12,10 @@
 #pragma once
 
 #include "BLI_sys_types.h" /* uchar, for the card flag accessors below. */
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
-struct uiLayout;
+struct Layout;
 
 /* -------------------------------------------------------------------- */
 /* Custom flag2 bits — checked in interface_widgets.cc widget dispatch.  */
@@ -30,9 +32,9 @@ struct uiLayout;
 #define UI_BUT2_MIXAR_INPUT (1 << 6)
 /**
  * Marks any button as an element of the Mixar account card; the element
- * kind lives in `uiBut::hardmin` (see #MixarCardElement).
+ * kind lives in `Button::hardmin` (see #MixarCardElement).
  *
- * NOTE: `uiBut::flag2` is a signed `char`, and this is bit 7 — its sign
+ * NOTE: `Button::flag2` is a signed `char`, and this is bit 7 — its sign
  * bit, and the last one free (upstream owns 0-1, Mixar 2-6). Always set
  * and test it through #UI_BUT2_MIXAR_CARD_SET / #UI_BUT2_MIXAR_CARD_TEST
  * so the value round-trips through `uchar` instead of relying on
@@ -52,7 +54,7 @@ struct uiLayout;
  * Create a styled section box layout.
  * \return Sub-layout to place items in, identical API to layout.box().
  */
-uiLayout *UI_layout_mixar_section(uiLayout *layout);
+Layout *UI_layout_mixar_section(Layout *layout);
 
 /**
  * Mark the most recently created Menu/Block/Popover button in the layout's
@@ -60,25 +62,25 @@ uiLayout *UI_layout_mixar_section(uiLayout *layout);
  *
  * Call this immediately after layout->prop() for an enum property.
  */
-void UI_layout_mixar_mark_last_dropdown(uiLayout *layout);
+void UI_layout_mixar_mark_last_dropdown(Layout *layout);
 
 /**
  * Mark the most recently created But (operator) button with
  * #UI_BUT2_MIXAR_ACTION so it renders as an accent action button.
  */
-void UI_layout_mixar_mark_last_action(uiLayout *layout);
+void UI_layout_mixar_mark_last_action(Layout *layout);
 
 /**
  * Mark the most recently created Checkbox button with
  * #UI_BUT2_MIXAR_TOGGLE so it renders as a pill-shaped toggle switch.
  */
-void UI_layout_mixar_mark_last_toggle(uiLayout *layout);
+void UI_layout_mixar_mark_last_toggle(Layout *layout);
 
 /**
  * Mark the most recently created Text button with
  * #UI_BUT2_MIXAR_INPUT so it renders with visible border and focus glow.
  */
-void UI_layout_mixar_mark_last_input(uiLayout *layout);
+void UI_layout_mixar_mark_last_input(Layout *layout);
 
 /* -------------------------------------------------------------------- */
 /* Custom panel category tab drawing for MIXIE space                     */
@@ -91,3 +93,4 @@ struct ARegion;
  * dark background, accent-blue active pill with glow, subtle inactive tabs.
  */
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active);
+}  // namespace blender::ui

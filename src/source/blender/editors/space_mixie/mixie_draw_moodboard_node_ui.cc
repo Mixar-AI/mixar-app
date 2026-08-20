@@ -30,14 +30,14 @@ struct ObjectPreviewDraw {
   rcti rect;
 };
 
-bool moodboard_view_rect_to_region(View2D *v2d,
-                                   ARegion *region,
-                                   const rctf &view_rect,
-                                   rcti *r_region_rect)
+static bool view_rect_to_region(View2D *v2d,
+                                ARegion *region,
+                                const rctf &view_rect,
+                                rcti *r_region_rect)
 {
-  UI_view2d_view_to_region(
+  ui::view2d_view_to_region(
       v2d, view_rect.xmin, view_rect.ymin, &r_region_rect->xmin, &r_region_rect->ymin);
-  UI_view2d_view_to_region(
+  ui::view2d_view_to_region(
       v2d, view_rect.xmax, view_rect.ymax, &r_region_rect->xmax, &r_region_rect->ymax);
   return r_region_rect->xmax > 0 && r_region_rect->xmin < region->winx &&
          r_region_rect->ymax > 0 && r_region_rect->ymin < region->winy &&
@@ -45,11 +45,11 @@ bool moodboard_view_rect_to_region(View2D *v2d,
          r_region_rect->ymax > r_region_rect->ymin;
 }
 
-static uiBut *screen_prop_button(uiBlock *block,
+static ui::Button *screen_prop_button(ui::Block *block,
                                  PointerRNA *ptr,
                                  const char *property,
                                  const char *label,
-                                 const ButType type,
+                                 const ui::ButtonType type,
                                  const int x,
                                  const int y,
                                  const int width,
@@ -60,7 +60,7 @@ static uiBut *screen_prop_button(uiBlock *block,
   if (!RNA_struct_find_property(ptr, property)) {
     return nullptr;
   }
-  return uiDefButR(block,
+  return ui::uiDefButR(block,
                    type,
                    0,
                    label,
@@ -76,16 +76,16 @@ static uiBut *screen_prop_button(uiBlock *block,
                    nullptr);
 }
 
-void moodboard_draw_floating_background(const rctf &rect)
+static void draw_floating_background(const rctf &rect)
 {
   const float background[4] = {0.14f, 0.14f, 0.15f, 0.98f};
   const float border[4] = {0.34f, 0.35f, 0.38f, 0.88f};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, 16.0f, background);
-  UI_draw_roundbox_4fv(&rect, false, 16.0f, border);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, true, 16.0f, background);
+  ui::draw_roundbox_4fv(&rect, false, 16.0f, border);
 }
 
-static uiBut *add_parameter_button(uiBlock *block,
+static ui::Button *add_parameter_button(ui::Block *block,
                                    PointerRNA *parameter,
                                    const int x,
                                    const int y,
@@ -96,7 +96,7 @@ static uiBut *add_parameter_button(uiBlock *block,
   mixie_rna_string_get_clamped(parameter, "label", label, sizeof(label));
   const int parameter_type = RNA_enum_get(parameter, "parameter_type");
   const char *value_property = "value_string";
-  ButType button_type = ButType::Text;
+  ui::ButtonType button_type = ui::ButtonType::Text;
   float minimum = 0.0f;
   float maximum = 0.0f;
   if (parameter_type == 1 || parameter_type == 2) {
@@ -110,15 +110,15 @@ static uiBut *add_parameter_button(uiBlock *block,
      * min/max only clamp on release — the slider dragged to huge values and
      * snapped back. A correct slider needs a per-param property range (as the
      * N-panel engine builds); the node deliberately uses Num until then. */
-    button_type = ButType::Num;
+    button_type = ui::ButtonType::Num;
   }
   else if (parameter_type == 3) {
     value_property = "value_boolean";
-    button_type = ButType::Checkbox;
+    button_type = ui::ButtonType::Checkbox;
   }
   else if (parameter_type == 4) {
     value_property = "value_enum";
-    button_type = ButType::Menu;
+    button_type = ui::ButtonType::Menu;
   }
   /* Show the VALUE, not the param name. The enum can't self-display (it stores
    * a fragile index; a null label blanks the menu), so the current choice's
@@ -128,11 +128,11 @@ static uiBut *add_parameter_button(uiBlock *block,
    * keep their label — a lone tick is meaningless. */
   char value_label[MIXIE_GRAPH_LABEL_BUF];
   const char *display_label = label;
-  if (button_type == ButType::Menu) {
+  if (button_type == ui::ButtonType::Menu) {
     mixie_rna_string_get_clamped(parameter, "value_label", value_label, sizeof(value_label));
     display_label = value_label[0] ? value_label : label;
   }
-  else if (ELEM(button_type, ButType::Num, ButType::NumSlider, ButType::Text)) {
+  else if (ELEM(button_type, ui::ButtonType::Num, ui::ButtonType::NumSlider, ui::ButtonType::Text)) {
     display_label = "";
   }
   return screen_prop_button(block,
@@ -148,14 +148,14 @@ static uiBut *add_parameter_button(uiBlock *block,
                             maximum);
 }
 
-static void disable_while_submitted(uiBut *button, const bool submitted)
+static void disable_while_submitted(ui::Button *button, const bool submitted)
 {
   if (button && submitted) {
-    UI_but_disable(button, "Settings are locked while this generation is running");
+    ui::button_disable(button, "Settings are locked while this generation is running");
   }
 }
 
-static void add_action_toolbar(uiBlock *block,
+static void add_action_toolbar(ui::Block *block,
                                View2D *v2d,
                                ARegion *region,
                                PointerRNA *node,
@@ -167,7 +167,7 @@ static void add_action_toolbar(uiBlock *block,
   node_rect.xmax = node_rect.xmin + RNA_float_get(node, "width");
   node_rect.ymax = node_rect.ymin + RNA_float_get(node, "height");
   rcti node_region;
-  if (!moodboard_view_rect_to_region(v2d, region, node_rect, &node_region)) {
+  if (!view_rect_to_region(v2d, region, node_rect, &node_region)) {
     return;
   }
 
@@ -178,7 +178,7 @@ static void add_action_toolbar(uiBlock *block,
                          node_rect.ymin + 6.0f,
                          node_rect.ymax - 6.0f};
     rcti preview_region;
-    if (moodboard_view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
+    if (view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
       object_previews.append({static_cast<Object *>(object_ptr.data), preview_region});
     }
   }
@@ -211,26 +211,21 @@ static void add_action_toolbar(uiBlock *block,
   }
   const bool show_mode = RNA_boolean_get(node, "show_mode");
   const int control_count = 1 + (show_mode ? 1 : 0) + parameter_count;
-  /* A finished/failed/cancelled node that shows its result hides the tile's
-   * prompt + Generate, so the panel carries the way back into the flow. */
-  const bool show_rerun = has_result && ELEM(state, 3, 4, 5);
 
   /* Vertical control panel to the LEFT of the node. Each control occupies its
    * own full-width row so long labels ("Aspect Ratio", model names) stay
    * legible — the previous single horizontal strip forced every control to
    * panel_width / control_count and clipped the text once a handful of
    * parameters were present. A Reset row at the bottom restores catalog
-   * defaults. All metrics scale with the UI factor: labels render at
-   * UI_SCALE_FAC, so fixed pixel rows clipped every label on high-DPI. */
-  const float ui_scale = UI_SCALE_FAC;
-  const int inset = int(14 * ui_scale);
-  const int row_h = int(32 * ui_scale);
-  const int gap = int(6 * ui_scale);
-  const int reset_gap = int(12 * ui_scale);
-  const int panel_width = int(244 * ui_scale);
+   * defaults. */
+  const int inset = 14;
+  const int row_h = 32;
+  const int gap = 6;
+  const int reset_gap = 12;
+  const int panel_width = 244;
   const int field_width = panel_width - inset * 2;
-  const int panel_height = inset * 2 + control_count * row_h + (control_count - 1) * gap +
-                           (show_rerun ? row_h + gap : 0) + reset_gap + row_h;
+  const int panel_height =
+      inset * 2 + control_count * row_h + (control_count - 1) * gap + reset_gap + row_h;
 
   /* Always dock the panel to the LEFT of the node — never flip sides. A
    * side-dependent fallback made image and video nodes disagree on where their
@@ -245,7 +240,7 @@ static void add_action_toolbar(uiBlock *block,
                      float(panel_x + panel_width),
                      float(panel_y),
                      float(panel_y + panel_height)};
-  moodboard_draw_floating_background(panel_rect);
+  draw_floating_background(panel_rect);
 
   const int content_x = panel_x + inset;
   /* Rows are laid out top-down; y tracks the bottom edge of the next control. */
@@ -256,11 +251,11 @@ static void add_action_toolbar(uiBlock *block,
   if (show_mode) {
     char mode_label[MIXIE_GRAPH_LABEL_BUF];
     mixie_rna_string_get_clamped(node, "service_label", mode_label, sizeof(mode_label));
-    uiBut *mode = screen_prop_button(block,
+    ui::Button *mode = screen_prop_button(block,
                                      node,
                                      "service_key",
                                      mode_label[0] ? mode_label : "Mode",
-                                     ButType::Menu,
+                                     ui::ButtonType::Menu,
                                      content_x,
                                      y,
                                      field_width,
@@ -270,11 +265,11 @@ static void add_action_toolbar(uiBlock *block,
   }
   char model_label[MIXIE_GRAPH_LABEL_BUF];
   mixie_rna_string_get_clamped(node, "model_label", model_label, sizeof(model_label));
-  uiBut *model = screen_prop_button(block,
+  ui::Button *model = screen_prop_button(block,
                                     node,
                                     "model",
                                     model_label[0] ? model_label : "Model",
-                                    ButType::Menu,
+                                    ui::ButtonType::Menu,
                                     content_x,
                                     y,
                                     field_width,
@@ -287,7 +282,7 @@ static void add_action_toolbar(uiBlock *block,
     RNA_property_collection_begin(node, parameters, &iter);
     while (iter.valid) {
       if (RNA_boolean_get(&iter.ptr, "visible")) {
-        uiBut *parameter = add_parameter_button(
+        ui::Button *parameter = add_parameter_button(
             block, &iter.ptr, content_x, y, field_width, row_h);
         disable_while_submitted(parameter, generation_running);
         y -= row_h + gap;
@@ -300,27 +295,8 @@ static void add_action_toolbar(uiBlock *block,
   y -= reset_gap - gap;
   char reset_node_id[MIXIE_GRAPH_ID_BUF];
   mixie_rna_string_get_clamped(node, "node_id", reset_node_id, sizeof(reset_node_id));
-  if (show_rerun) {
-    /* Same action as the context menu's "Edit & Run Again": back to DRAFT with
-     * the prompt editable — discoverable from the node itself, not only from
-     * a right-click. */
-    uiBut *rerun = uiDefButO(block,
-                             ButType::But,
-                             "MIXIE_OT_moodboard_run_action_node",
-                             blender::wm::OpCallContext::ExecDefault,
-                             "Edit & Run Again",
-                             content_x,
-                             y,
-                             field_width,
-                             row_h,
-                             nullptr);
-    PointerRNA *rerun_props = UI_but_operator_ptr_ensure(rerun);
-    RNA_string_set(rerun_props, "node_id", reset_node_id);
-    RNA_boolean_set(rerun_props, "edit_before_run", true);
-    y -= row_h + gap;
-  }
-  uiBut *reset = uiDefButO(block,
-                           ButType::But,
+  ui::Button *reset = ui::uiDefButO(block,
+                           ui::ButtonType::But,
                            "MIXIE_OT_moodboard_reset_node_params",
                            blender::wm::OpCallContext::ExecDefault,
                            "Reset",
@@ -329,32 +305,14 @@ static void add_action_toolbar(uiBlock *block,
                            field_width,
                            row_h,
                            nullptr);
-  RNA_string_set(UI_but_operator_ptr_ensure(reset), "node_id", reset_node_id);
+  RNA_string_set(ui::button_operator_ptr_ensure(reset), "node_id", reset_node_id);
   disable_while_submitted(reset, generation_running);
 
-  if (generation_running) {
-    /* The tile already carries the Queued/Generating hint and the glow; the
-     * prompt and Generate would draw disabled straight over that text. The
-     * one action that makes sense mid-flight is stopping it. */
+  if (!has_result || state == 0) {
     const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    const int cancel_h = int(36 * UI_SCALE_FAC);
-    const int cancel_w = int(118 * UI_SCALE_FAC);
-    uiBut *cancel = uiDefButO(block,
-                              ButType::But,
-                              "MIXIE_OT_moodboard_cancel_action_node",
-                              blender::wm::OpCallContext::ExecDefault,
-                              "Cancel",
-                              node_region.xmax - prompt_margin - cancel_w,
-                              node_region.ymin + prompt_margin,
-                              cancel_w,
-                              cancel_h,
-                              nullptr);
-    RNA_string_set(UI_but_operator_ptr_ensure(cancel), "node_id", reset_node_id);
-  }
-  else if (!has_result || state == 0) {
-    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    /* UI-factor sized like the left panel: the label renders at UI_SCALE_FAC,
-     * so a fixed 118px clipped "Generate" to "Gener..." at high UI scale. */
+    /* Scale ONLY the Generate button by the UI factor: the label renders at
+     * UI_SCALE_FAC, so a fixed 118px clipped "Generate" to "Gener..." at high
+     * UI scale. Everything else on the node is left untouched. */
     const int generate_h = int(36 * UI_SCALE_FAC);
     const int generate_w = int(118 * UI_SCALE_FAC);
     /* Make the prompt a tall multi-line text area: it spans from the top margin
@@ -371,40 +329,113 @@ static void add_action_toolbar(uiBlock *block,
       const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
       const int prompt_height = std::max(46, prompt_top - prompt_bottom);
       const int prompt_y = prompt_top - prompt_height;
-      uiBut *prompt = screen_prop_button(block,
+      ui::Button *prompt = screen_prop_button(block,
                                          node,
                                          "prompt",
                                          "",
-                                         ButType::Text,
+                                         ui::ButtonType::Text,
                                          node_region.xmin + prompt_margin,
                                          prompt_y,
                                          BLI_rcti_size_x(&node_region) - prompt_margin * 2,
                                          prompt_height);
       if (prompt) {
-        UI_but_placeholder_set(prompt, "Describe what you want to create...");
-        UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
+        ui::button_placeholder_set(prompt, "Describe what you want to create...");
+        ui::button_flag_enable(prompt, ui::BUT_TEXTEDIT_UPDATE);
+        disable_while_submitted(prompt, generation_running);
       }
     }
 
     char node_id[MIXIE_GRAPH_ID_BUF];
     mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
-    uiBut *generate = uiDefButO(block,
-                                ButType::But,
+    const char *button_label = generation_running ? "Generating..." : "Generate";
+    ui::Button *generate = ui::uiDefButO(block,
+                                ui::ButtonType::But,
                                 "MIXIE_OT_moodboard_run_action_node",
                                 blender::wm::OpCallContext::ExecDefault,
-                                "Generate",
+                                button_label,
                                 node_region.xmax - prompt_margin - generate_w,
                                 node_region.ymin + prompt_margin,
                                 generate_w,
                                 generate_h,
                                 nullptr);
-    RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
+    RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
+    if (generation_running) {
+      ui::button_disable(generate, "Generation is already running");
+    }
   }
 }
 
-void mixie_draw_moodboard_graph_controls(const bContext *C,
-                                         View2D *v2d,
-                                         const MoodboardGraphCache *cache)
+static void add_selected_media_toolbar(ui::Block *block,
+                                       View2D *v2d,
+                                       ARegion *region,
+                                       PointerRNA *scene_ptr)
+{
+  PropertyRNA *images = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
+  if (!images) {
+    return;
+  }
+  CollectionPropertyIterator iter{};
+  RNA_property_collection_begin(scene_ptr, images, &iter);
+  while (iter.valid) {
+    PointerRNA media = iter.ptr;
+    PropertyRNA *embedded = RNA_struct_find_property(&media, "embedded_node_id");
+    if (!RNA_boolean_get(&media, "selected") ||
+        (embedded && RNA_property_string_length(&media, embedded) > 0))
+    {
+      RNA_property_collection_next(&iter);
+      continue;
+    }
+    PointerRNA image_ptr = RNA_pointer_get(&media, "image");
+    Image *image = static_cast<Image *>(image_ptr.data);
+    if (!image) {
+      RNA_property_collection_next(&iter);
+      continue;
+    }
+    float aspect = 1.0f;
+    void *lock = nullptr;
+    ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
+    if (ibuf && ibuf->x > 0) {
+      aspect = float(ibuf->y) / float(ibuf->x);
+    }
+    BKE_image_release_ibuf(image, ibuf, lock);
+    const float width = MOODBOARD_IMAGE_BASE_SIZE * RNA_float_get(&media, "scale");
+    rctf media_rect;
+    media_rect.xmin = RNA_float_get(&media, "position_x");
+    media_rect.ymin = RNA_float_get(&media, "position_y");
+    media_rect.xmax = media_rect.xmin + width;
+    media_rect.ymax = media_rect.ymin + width * aspect;
+    rcti media_region;
+    if (view_rect_to_region(v2d, region, media_rect, &media_region)) {
+      if (BLI_rcti_size_x(&media_region) < 180 || BLI_rcti_size_y(&media_region) < 120) {
+        RNA_property_collection_next(&iter);
+        continue;
+      }
+      const int bar_width = std::clamp(BLI_rcti_size_x(&media_region), 180, 420);
+      const int bar_x = std::clamp(BLI_rcti_cent_x(&media_region) - bar_width / 2,
+                                   8,
+                                   std::max(8, region->winx - bar_width - 8));
+      const int bar_y = std::clamp(media_region.ymax + 10, 8, std::max(8, region->winy - 54));
+      rctf bar_rect = {float(bar_x), float(bar_x + bar_width), float(bar_y), float(bar_y + 44)};
+      draw_floating_background(bar_rect);
+      ui::uiDefBut(block,
+               ui::ButtonType::Label,
+               0,
+               image->source == IMA_SRC_MOVIE ? "Video" : "Image",
+               bar_x + 12,
+               bar_y + 10,
+               bar_width - 24,
+               24,
+               nullptr,
+               0,
+               0,
+               nullptr);
+    }
+    RNA_property_collection_next(&iter);
+  }
+  RNA_property_collection_end(&iter);
+}
+
+void mixie_draw_moodboard_graph_controls(const bContext *C, View2D *v2d)
 {
   ARegion *region = CTX_wm_region(C);
   Scene *scene = CTX_data_scene(C);
@@ -417,8 +448,8 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     return;
   }
 
-  UI_view2d_view_restore(C);
-  uiBlock *block = UI_block_begin(
+  ui::view2d_view_restore(C);
+  ui::Block *block = ui::block_begin(
       C, region, "moodboard_floating_node_controls", blender::ui::EmbossType::Emboss);
   blender::Vector<ObjectPreviewDraw> object_previews;
   CollectionPropertyIterator iter{};
@@ -428,19 +459,19 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
-  mixie_draw_moodboard_selected_media_labels(block, v2d, region, &scene_ptr, cache);
+  add_selected_media_toolbar(block, v2d, region, &scene_ptr);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
   for (const ObjectPreviewDraw &preview : object_previews) {
     PreviewImage *preview_image = BKE_previewimg_id_ensure(&preview.object->id);
     const int icon_id = BKE_icon_preview_ensure(&preview.object->id, preview_image);
     const int size = std::max(
         16, std::min(BLI_rcti_size_x(&preview.rect), BLI_rcti_size_y(&preview.rect)));
-    UI_icon_draw_preview(
+    ui::icon_draw_preview(
         preview.rect.xmin, preview.rect.ymin, icon_id, 1.0f, 1.0f, size);
   }
-  UI_view2d_view_ortho(v2d);
+  ui::view2d_view_ortho(v2d);
 }
 
 }  // namespace blender::ed::mixie

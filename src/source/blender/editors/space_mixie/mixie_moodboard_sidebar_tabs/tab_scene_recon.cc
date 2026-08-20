@@ -70,7 +70,7 @@ static bool get_tab_properties(Scene *scene, PointerRNA &tab_ptr)
  * Shows filename if set, or a pick button.
  * Returns the total height used.
  */
-static int draw_file_picker_image_section(uiBlock *block,
+static int draw_file_picker_image_section(ui::Block *block,
                                           PointerRNA *tab_ptr,
                                           int x,
                                           int y,
@@ -100,8 +100,8 @@ static int draw_file_picker_image_section(uiBlock *block,
     total_height += row_h;
 
     /* Icon */
-    uiDefIconBut(block,
-                 ButType::Label,
+    ui::uiDefIconBut(block,
+                 ui::ButtonType::Label,
                  0,
                  ICON_IMAGE_DATA,
                  x,
@@ -117,8 +117,8 @@ static int draw_file_picker_image_section(uiBlock *block,
     const int info_width = width - icon_w - remove_btn_w - spacing;
     char name_label[280];
     BLI_snprintf(name_label, sizeof(name_label), "  %s", image_name);
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              name_label,
              x + icon_w,
@@ -131,8 +131,8 @@ static int draw_file_picker_image_section(uiBlock *block,
              "Input image for scene reconstruction");
 
     /* Remove button */
-    uiDefIconButO(block,
-                  ButType::But,
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
                   "MIXIE_OT_scene_recon_remove_image",
                   blender::wm::OpCallContext::InvokeDefault,
                   ICON_X,
@@ -147,8 +147,8 @@ static int draw_file_picker_image_section(uiBlock *block,
     current_y -= row_h;
     total_height += row_h;
 
-    uiDefIconTextButO(block,
-                      ButType::But,
+    ui::uiDefIconTextButO(block,
+                      ui::ButtonType::But,
                       "MIXIE_OT_scene_recon_pick_image",
                       blender::wm::OpCallContext::InvokeDefault,
                       ICON_ADD,
@@ -168,7 +168,7 @@ static int draw_file_picker_image_section(uiBlock *block,
  * Shows the first selected moodboard image (max 1).
  * Returns the total height used.
  */
-static int draw_selected_moodboard_image(uiBlock *block,
+static int draw_selected_moodboard_image(ui::Block *block,
                                          Scene *scene,
                                          int x,
                                          int y,
@@ -227,8 +227,8 @@ static int draw_selected_moodboard_image(uiBlock *block,
     current_y -= row_h;
     total_height += row_h;
 
-    uiDefIconBut(block,
-                 ButType::Label,
+    ui::uiDefIconBut(block,
+                 ui::ButtonType::Label,
                  0,
                  ICON_IMAGE_DATA,
                  x,
@@ -242,8 +242,8 @@ static int draw_selected_moodboard_image(uiBlock *block,
 
     char name_label[280];
     BLI_snprintf(name_label, sizeof(name_label), "  %s", image_name);
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              name_label,
              x + icon_w,
@@ -261,8 +261,8 @@ static int draw_selected_moodboard_image(uiBlock *block,
 
       char res_label[128];
       BLI_snprintf(res_label, sizeof(res_label), "    %s", image_resolution);
-      uiDefBut(block,
-               ButType::Label,
+      ui::uiDefBut(block,
+               ui::ButtonType::Label,
                0,
                res_label,
                x,
@@ -279,8 +279,8 @@ static int draw_selected_moodboard_image(uiBlock *block,
     current_y -= row_h;
     total_height += row_h;
 
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              "Select an image in moodboard",
              x,
@@ -305,7 +305,7 @@ static int draw_selected_moodboard_image(uiBlock *block,
  * Handles both Phase 1 (GPU stages) and Phase 2 (3D model generation).
  * Returns the total height used.
  */
-static int draw_status_section(uiBlock *block,
+static int draw_status_section(ui::Block *block,
                                PointerRNA *tab_ptr,
                                int x,
                                int y,
@@ -368,8 +368,8 @@ static int draw_status_section(uiBlock *block,
 
     char stage_label[300];
     BLI_snprintf(stage_label, sizeof(stage_label), "Stage: %s", stage_name);
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              stage_label,
              x,
@@ -387,8 +387,8 @@ static int draw_status_section(uiBlock *block,
     current_y -= row_h;
     total_height += row_h;
 
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              stage_detail,
              x,
@@ -409,8 +409,8 @@ static int draw_status_section(uiBlock *block,
 
     char progress_text[64];
     BLI_snprintf(progress_text, sizeof(progress_text), "Models: %d / %d completed", completed_objects, total_objects);
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              progress_text,
              x,
@@ -432,8 +432,8 @@ static int draw_status_section(uiBlock *block,
     int seconds = int(elapsed) % 60;
     char time_label[64];
     BLI_snprintf(time_label, sizeof(time_label), "Elapsed: %d:%02d", minutes, seconds);
-    uiDefBut(block,
-             ButType::Label,
+    ui::uiDefBut(block,
+             ui::ButtonType::Label,
              0,
              time_label,
              x,
@@ -451,8 +451,8 @@ static int draw_status_section(uiBlock *block,
   current_y -= row_h;
   total_height += spacing + row_h;
 
-  uiDefIconTextButO(block,
-                    ButType::But,
+  ui::uiDefIconTextButO(block,
+                    ui::ButtonType::But,
                     "MIXIE_OT_scene_recon_cancel",
                     blender::wm::OpCallContext::InvokeDefault,
                     ICON_CANCEL,
@@ -474,7 +474,7 @@ static int draw_status_section(uiBlock *block,
  * Draw the completion section showing scene complete status.
  * Returns the total height used.
  */
-static int draw_completion_section(uiBlock *block,
+static int draw_completion_section(ui::Block *block,
                                    PointerRNA *tab_ptr,
                                    int x,
                                    int y,
@@ -507,8 +507,8 @@ static int draw_completion_section(uiBlock *block,
   current_y -= row_h;
   total_height += row_h;
 
-  uiDefIconBut(block,
-               ButType::Label,
+  ui::uiDefIconBut(block,
+               ui::ButtonType::Label,
                0,
                ICON_CHECKMARK,
                x,
@@ -522,8 +522,8 @@ static int draw_completion_section(uiBlock *block,
 
   char complete_label[128];
   BLI_snprintf(complete_label, sizeof(complete_label), "  Scene Complete (%d objects)", total_objects);
-  uiDefBut(block,
-           ButType::Label,
+  ui::uiDefBut(block,
+           ui::ButtonType::Label,
            0,
            complete_label,
            x + dpi_scale(20),
@@ -546,7 +546,7 @@ static int draw_completion_section(uiBlock *block,
  * Draw the error section if an error occurred.
  * Returns the total height used.
  */
-static int draw_error_section(uiBlock *block,
+static int draw_error_section(ui::Block *block,
                               PointerRNA *tab_ptr,
                               int x,
                               int y,
@@ -566,8 +566,8 @@ static int draw_error_section(uiBlock *block,
 
   int current_y = y - row_h;
 
-  uiDefIconBut(block,
-               ButType::Label,
+  ui::uiDefIconBut(block,
+               ui::ButtonType::Label,
                0,
                ICON_ERROR,
                x,
@@ -579,8 +579,8 @@ static int draw_error_section(uiBlock *block,
                0.0f,
                std::nullopt);
 
-  uiDefBut(block,
-           ButType::Label,
+  ui::uiDefBut(block,
+           ui::ButtonType::Label,
            0,
            error_text,
            x + dpi_scale(20),
@@ -599,7 +599,7 @@ static int draw_error_section(uiBlock *block,
  * TAB CONTENT DRAWING
  * ============================================================================ */
 
-void draw_tab_scene_recon(const bContext *C, uiBlock *block, const TabContentLayout &layout)
+void draw_tab_scene_recon(const bContext *C, ui::Block *block, const TabContentLayout &layout)
 {
   Scene *scene = CTX_data_scene(C);
   if (!scene) {
@@ -722,8 +722,8 @@ void draw_tab_scene_recon(const bContext *C, uiBlock *block, const TabContentLay
     y -= row_h;
     PropertyRNA *min_mask_prop = RNA_struct_find_property(&tab_ptr, "min_mask_pixels");
     if (min_mask_prop) {
-      uiDefButR(block,
-                ButType::Num,
+      ui::uiDefButR(block,
+                ui::ButtonType::Num,
                 0,
                 "Min Object Size (px)",
                 x,
@@ -799,8 +799,8 @@ void draw_tab_scene_recon(const bContext *C, uiBlock *block, const TabContentLay
       y -= row_h;
       PropertyRNA *lib_path_prop = RNA_struct_find_property(&tab_ptr, "asset_library_path");
       if (lib_path_prop) {
-        uiDefButR(block,
-                  ButType::Text,
+        ui::uiDefButR(block,
+                  ui::ButtonType::Text,
                   0,
                   "Library Path",
                   x,

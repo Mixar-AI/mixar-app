@@ -74,42 +74,6 @@ class MixieChatActionItem(PropertyGroup):
         ],
         default='DEFAULT'
     )
-    # Asset-picker fields (multi-match HITL). The asset_* identity comes from
-    # the wire; `image` is set LOCALLY ONLY by asset_choice_previews after it
-    # generates/finds the preview in bpy.data.images — never from the backend.
-    image: StringProperty(
-        name="Preview Image",
-        description="bpy.data.images name of the locally generated preview "
-                    "thumbnail (empty = plain text button)",
-        default="",
-        # Must match ActionSlotData::image (char[64]) in mixie_chat_ui_types.hh
-        # — the C++ slot reader copies this string into that fixed buffer.
-        maxlen=64
-    )
-    asset_name: StringProperty(
-        name="Asset Name",
-        description="Library asset (object/collection) name inside the .blend",
-        default="",
-        maxlen=256
-    )
-    library: StringProperty(
-        name="Library",
-        description="Asset library name (preferences.filepaths.asset_libraries)",
-        default="",
-        maxlen=256
-    )
-    blend_file: StringProperty(
-        name="Blend File",
-        description="Library-relative .blend path holding the asset",
-        default="",
-        maxlen=1024
-    )
-    asset_type: StringProperty(
-        name="Asset Type",
-        description="Asset type hint from search metadata",
-        default="",
-        maxlen=32
-    )
 
 
 class MixieChatImageItem(PropertyGroup):

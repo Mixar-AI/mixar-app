@@ -15,7 +15,11 @@
 #include <string>
 #include <string_view>
 
-#include "GHOST_Types.h"
+#include "BLI_string.h"
+#include "BLI_string_ref.hh"
+#include "BLI_vector.hh"
+
+#include "GHOST_Types.hh"
 #include "GHOST_XrException.hh"
 #include "GHOST_XrSession.hh"
 #include "GHOST_Xr_intern.hh"
@@ -74,10 +78,8 @@ void GHOST_XrContext::initialize(const GHOST_XrContextCreateInfo *create_info)
 {
   initApiLayers();
   initExtensions();
-  if (isDebugMode()) {
-    printSDKVersion();
-    printAvailableAPILayersAndExtensionsInfo();
-  }
+  printSDKVersion();
+  printAvailableAPILayersAndExtensionsInfo();
 
   /* Multiple graphics binding extensions can be enabled, but only one will actually be used
    * (determined later on). */
@@ -92,9 +94,7 @@ void GHOST_XrContext::initialize(const GHOST_XrContextCreateInfo *create_info)
   gpu_binding_type_ = determineGraphicsBindingTypeToUse(graphics_binding_types, create_info);
 
   printInstanceInfo();
-  if (isDebugMode()) {
-    initDebugMessenger();
-  }
+  initDebugMessenger();
 }
 
 void GHOST_XrContext::createOpenXRInstance(
@@ -102,9 +102,15 @@ void GHOST_XrContext::createOpenXRInstance(
 {
   XrInstanceCreateInfo create_info = {XR_TYPE_INSTANCE_CREATE_INFO};
 
-  std::string("Mixar").copy(create_info.applicationInfo.applicationName,
-                              XR_MAX_APPLICATION_NAME_SIZE);
+  blender::STRNCPY(create_info.applicationInfo.applicationName, "Mixar");
+
+  /* Explicitly target OpenXR API version 1.0. Note that the API_VERSION_1_0 macro is only
+   * available in 1.1+ SDKs. For 1.0 SDKs, target the current SDK version. */
+#ifdef XR_API_VERSION_1_0
+  create_info.applicationInfo.apiVersion = XR_API_VERSION_1_0;
+#else
   create_info.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
+#endif
 
   getAPILayersToEnable(enabled_layers_);
   getExtensionsToEnable(graphics_binding_types, enabled_extensions_);
@@ -112,12 +118,10 @@ void GHOST_XrContext::createOpenXRInstance(
   create_info.enabledApiLayerNames = enabled_layers_.data();
   create_info.enabledExtensionCount = enabled_extensions_.size();
   create_info.enabledExtensionNames = enabled_extensions_.data();
-  if (isDebugMode()) {
-    printExtensionsAndAPILayersToEnable();
-  }
+  printExtensionsAndAPILayersToEnable();
 
   CHECK_XR(xrCreateInstance(&create_info, &oxr_->instance),
-           "Failed to connect to an OpenXR runtime.");
+           "Failed to create OpenXR instance, check active OpenXR runtime.");
 }
 
 void GHOST_XrContext::storeInstanceProperties()
@@ -150,41 +154,43 @@ void GHOST_XrContext::printSDKVersion()
 {
   const XrVersion sdk_version = XR_CURRENT_API_VERSION;
 
-  printf("OpenXR SDK Version: %u.%u.%u\n",
-         XR_VERSION_MAJOR(sdk_version),
-         XR_VERSION_MINOR(sdk_version),
-         XR_VERSION_PATCH(sdk_version));
+  CLOG_INFO(LOG_GHOST_XR,
+            "OpenXR SDK Version: %u.%u.%u",
+            XR_VERSION_MAJOR(sdk_version),
+            XR_VERSION_MINOR(sdk_version),
+            XR_VERSION_PATCH(sdk_version));
 }
 
 void GHOST_XrContext::printInstanceInfo()
 {
   assert(oxr_->instance != XR_NULL_HANDLE);
 
-  printf("Connected to OpenXR runtime: %s (Version %u.%u.%u)\n",
-         oxr_->instance_properties.runtimeName,
-         XR_VERSION_MAJOR(oxr_->instance_properties.runtimeVersion),
-         XR_VERSION_MINOR(oxr_->instance_properties.runtimeVersion),
-         XR_VERSION_PATCH(oxr_->instance_properties.runtimeVersion));
+  CLOG_INFO(LOG_GHOST_XR,
+            "Connected to OpenXR runtime: %s (Version %u.%u.%u)",
+            oxr_->instance_properties.runtimeName,
+            XR_VERSION_MAJOR(oxr_->instance_properties.runtimeVersion),
+            XR_VERSION_MINOR(oxr_->instance_properties.runtimeVersion),
+            XR_VERSION_PATCH(oxr_->instance_properties.runtimeVersion));
 }
 
 void GHOST_XrContext::printAvailableAPILayersAndExtensionsInfo()
 {
-  puts("Available OpenXR API-layers/extensions:");
+  CLOG_INFO(LOG_GHOST_XR, "Available OpenXR API-layers/extensions:");
   for (const XrApiLayerProperties &layer_info : oxr_->layers) {
-    printf("Layer: %s\n", layer_info.layerName);
+    CLOG_INFO(LOG_GHOST_XR, "Layer: %s", layer_info.layerName);
   }
   for (const XrExtensionProperties &ext_info : oxr_->extensions) {
-    printf("Extension: %s\n", ext_info.extensionName);
+    CLOG_INFO(LOG_GHOST_XR, "Extension: %s", ext_info.extensionName);
   }
 }
 
 void GHOST_XrContext::printExtensionsAndAPILayersToEnable()
 {
   for (const char *layer_name : enabled_layers_) {
-    printf("Enabling OpenXR API-Layer: %s\n", layer_name);
+    CLOG_INFO(LOG_GHOST_XR, "Enabling OpenXR API-Layer: %s", layer_name);
   }
   for (const char *ext_name : enabled_extensions_) {
-    printf("Enabling OpenXR Extension: %s\n", ext_name);
+    CLOG_INFO(LOG_GHOST_XR, "Enabling OpenXR Extension: %s", ext_name);
   }
 }
 
@@ -193,8 +199,7 @@ static XrBool32 debug_messenger_func(XrDebugUtilsMessageSeverityFlagsEXT /*messa
                                      const XrDebugUtilsMessengerCallbackDataEXT *callbackData,
                                      void * /*user_data*/)
 {
-  puts("OpenXR Debug Message:");
-  puts(callbackData->message);
+  CLOG_INFO(LOG_GHOST_XR, "OpenXR Debug Message: %s", callbackData->message);
   return XR_FALSE; /* OpenXR spec suggests always returning false. */
 }
 
@@ -215,9 +220,9 @@ void GHOST_XrContext::initDebugMessenger()
     oxr_->s_xrCreateDebugUtilsMessengerEXT_fn = nullptr;
     oxr_->s_xrDestroyDebugUtilsMessengerEXT_fn = nullptr;
 
-    fprintf(stderr,
-            "Could not use XR_EXT_debug_utils to enable debug prints. Not a fatal error, "
-            "continuing without the messenger.\n");
+    CLOG_WARN(LOG_GHOST_XR,
+              "Could not use XR_EXT_debug_utils to enable debug prints. Not a fatal error, "
+              "continuing without the messenger.");
     return;
   }
 
@@ -233,9 +238,9 @@ void GHOST_XrContext::initDebugMessenger()
   if (XR_FAILED(oxr_->s_xrCreateDebugUtilsMessengerEXT_fn(
           oxr_->instance, &create_info, &oxr_->debug_messenger)))
   {
-    fprintf(stderr,
-            "Failed to create OpenXR debug messenger. Not a fatal error, continuing without the "
-            "messenger.\n");
+    CLOG_WARN(LOG_GHOST_XR,
+              "Failed to create OpenXR debug messenger. Not a fatal error, continuing without the "
+              "messenger.");
     return;
   }
 }
@@ -253,15 +258,19 @@ void GHOST_XrContext::dispatchErrorMessage(const GHOST_XrException *exception) c
   error.user_message = exception->msg_.data();
   error.customdata = s_error_handler_customdata;
 
-  char error_string_buf[XR_MAX_RESULT_STRING_SIZE];
-  xrResultToString(getInstance(), static_cast<XrResult>(exception->result_), error_string_buf);
-
-  if (isDebugMode()) {
-    fprintf(stderr,
-            "Error: \t%s\n\tOpenXR error: %s (error value: %i)\n",
-            error.user_message,
-            error_string_buf,
-            exception->result_);
+  XrInstance instance = getInstance();
+  if (instance) {
+    char error_string_buf[XR_MAX_RESULT_STRING_SIZE];
+    xrResultToString(instance, static_cast<XrResult>(exception->result_), error_string_buf);
+    CLOG_ERROR(LOG_GHOST_XR,
+               "%s (OpenXR error: %s, value: %i)",
+               error.user_message,
+               error_string_buf,
+               exception->result_);
+  }
+  else {
+    CLOG_ERROR(
+        LOG_GHOST_XR, "%s (OpenXR error value: %i)", error.user_message, exception->result_);
   }
 
   /* Potentially destroys GHOST_XrContext */
@@ -387,22 +396,34 @@ void GHOST_XrContext::getAPILayersToEnable(std::vector<const char *> &r_ext_name
   }
 }
 
-static const char *openxr_ext_name_from_wm_gpu_binding(GHOST_TXrGraphicsBinding binding)
+/**
+ * \brief Return a list of extension names where at least one must be available to use a graphics
+ * binding.
+ */
+static blender::Vector<blender::StringRefNull> openxr_ext_names_from_wm_gpu_binding(
+    GHOST_TXrGraphicsBinding binding)
 {
+  blender::Vector<blender::StringRefNull> extension_names;
+
   switch (binding) {
     case GHOST_kXrGraphicsOpenGL:
 #ifdef WITH_OPENGL_BACKEND
-      return XR_KHR_OPENGL_ENABLE_EXTENSION_NAME;
-#else
-      return nullptr;
+      extension_names.append(XR_KHR_OPENGL_ENABLE_EXTENSION_NAME);
 #endif
+      break;
 
     case GHOST_kXrGraphicsVulkan:
 #ifdef WITH_VULKAN_BACKEND
-      return XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME;
-#else
-      return nullptr;
+      extension_names.append(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
+      extension_names.append(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
 #endif
+      break;
+
+    case GHOST_kXrGraphicsMetal:
+#ifdef WITH_METAL_BACKEND
+      extension_names.append(XR_KHR_METAL_ENABLE_EXTENSION_NAME);
+#endif
+      break;
 
 #ifdef WIN32
 #  ifdef WITH_OPENGL_BACKEND
@@ -411,14 +432,15 @@ static const char *openxr_ext_name_from_wm_gpu_binding(GHOST_TXrGraphicsBinding 
 #  ifdef WITH_VULKAN_BACKEND
     case GHOST_kXrGraphicsVulkanD3D11:
 #  endif
-      return XR_KHR_D3D11_ENABLE_EXTENSION_NAME;
+      extension_names.append(XR_KHR_D3D11_ENABLE_EXTENSION_NAME);
+      break;
 #endif
     case GHOST_kXrGraphicsUnknown:
       assert(!"Could not identify graphics binding to choose.");
-      return nullptr;
+      break;
   }
 
-  return nullptr;
+  return extension_names;
 }
 
 /**
@@ -455,14 +477,24 @@ void GHOST_XrContext::getExtensionsToEnable(
   /* Meta/Facebook passthrough extension. */
   try_ext.push_back(XR_FB_PASSTHROUGH_EXTENSION_NAME);
 
+  /* Multi-vendor local floor extension. */
+  try_ext.push_back(XR_EXT_LOCAL_FLOOR_EXTENSION_NAME);
+
   r_ext_names.reserve(try_ext.size() + graphics_binding_types.size());
 
   /* Add graphics binding extensions (may be multiple ones, we'll settle for one to use later, once
    * we have more info about the runtime). */
   for (GHOST_TXrGraphicsBinding type : graphics_binding_types) {
-    const char *gpu_binding = openxr_ext_name_from_wm_gpu_binding(type);
-    assert(openxr_extension_is_available(oxr_->extensions, gpu_binding));
-    r_ext_names.push_back(gpu_binding);
+    blender::Vector<blender::StringRefNull> extension_names = openxr_ext_names_from_wm_gpu_binding(
+        type);
+    if (extension_names.size() == 1) {
+      r_ext_names.push_back(extension_names.first().c_str());
+    }
+    else {
+      for (blender::StringRefNull extension_name : extension_names) {
+        try_ext.push_back(extension_name);
+      }
+    }
   }
 
 #if defined(WITH_GHOST_X11)
@@ -492,10 +524,14 @@ std::vector<GHOST_TXrGraphicsBinding> GHOST_XrContext::determineGraphicsBindingT
 
   for (uint32_t i = 0; i < create_info->gpu_binding_candidates_count; i++) {
     assert(create_info->gpu_binding_candidates[i] != GHOST_kXrGraphicsUnknown);
-    const char *ext_name = openxr_ext_name_from_wm_gpu_binding(
+    blender::Vector<blender::StringRefNull> extension_names = openxr_ext_names_from_wm_gpu_binding(
         create_info->gpu_binding_candidates[i]);
-    if (openxr_extension_is_available(oxr_->extensions, ext_name)) {
-      result.push_back(create_info->gpu_binding_candidates[i]);
+    /* Vulkan has 2 extensions if any of these are available we should select the binding. */
+    for (blender::StringRefNull extension_name : extension_names) {
+      if (openxr_extension_is_available(oxr_->extensions, extension_name)) {
+        result.push_back(create_info->gpu_binding_candidates[i]);
+        break;
+      }
     }
   }
 
@@ -548,7 +584,7 @@ void GHOST_XrContext::startSession(const GHOST_XrSessionBeginInfo *begin_info)
   if (session_ == nullptr) {
     session_ = std::make_unique<GHOST_XrSession>(*this);
   }
-  session_->start(begin_info);
+  session_->start();
 }
 
 void GHOST_XrContext::endSession()

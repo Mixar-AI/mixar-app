@@ -14,7 +14,7 @@ import sys
 import math
 from collections import defaultdict
 
-from .cpp_interface import TDCoreWrapper, resolve_calculation_backend
+from .cpp_interface import TDCoreWrapper
 # get_addon_props function moved here to avoid circular imports
 
 def sync_uv_selection():
@@ -24,32 +24,20 @@ def sync_uv_selection():
 	uv_layer = bm.loops.layers.uv.active
 	td = bpy.context.scene.td
 
-	version = bpy.app.version
-
 	uv_selected_faces = []
 
 	for face in bm.faces:
 		if face.select:
-			if version < (5, 0, 0):
-				if all(loop[uv_layer].select for loop in face.loops):
-					uv_selected_faces.append(face.index)
-			else:
-				if all(loop.uv_select_vert for loop in face.loops):
-					uv_selected_faces.append(face.index)
+			if all(loop[uv_layer].select for loop in face.loops):
+				uv_selected_faces.append(face.index)
 
 	for face in bm.faces:
 		for loop in face.loops:
-			if version < (5, 0, 0):
-				loop[uv_layer].select = False
-			else:
-				loop.uv_select_vert = False
+			loop[uv_layer].select = False
 
 	for face_id in uv_selected_faces:
 		for loop in bm.faces[face_id].loops:
-			if version < (5, 0, 0):
-				loop[uv_layer].select = True
-			else:
-				loop.uv_select_vert = True
+			loop[uv_layer].select = True
 
 	for face in bm.faces:
 		face.select_set(not td.selected_faces)
@@ -64,51 +52,30 @@ def calculate_geometry_areas(obj):
 	mesh = obj.data
 	world_matrix = obj.matrix_world
 
-	poly_count = len(mesh.polygons)
-	if poly_count == 0:
-		return []
+	areas = []
 
-	# Batch-read everything with foreach_get and compute fan areas vectorized
-	# with numpy — the per-corner Python matrix multiplies took multiple
-	# seconds on 1M-poly meshes. Translation does not affect areas, so the
-	# 3x3 part of the world matrix is enough.
-	m3 = np.array(world_matrix.to_3x3(), dtype=np.float64)
+	for poly in mesh.polygons:
+		verts_world = [world_matrix @ obj.data.vertices[i].co for i in poly.vertices]
 
-	vert_count = len(mesh.vertices)
-	verts = np.empty(vert_count * 3, dtype=np.float32)
-	mesh.vertices.foreach_get("co", verts)
-	verts = verts.reshape(vert_count, 3).astype(np.float64) @ m3.T
+		if len(verts_world) == 3:
+			v1 = verts_world[1] - verts_world[0]
+			v2 = verts_world[2] - verts_world[0]
+			area = 0.5 * (v1.cross(v2)).length
 
-	loop_total = np.empty(poly_count, dtype=np.int32)
-	mesh.polygons.foreach_get("loop_total", loop_total)
-	loop_start = np.empty(poly_count, dtype=np.int32)
-	mesh.polygons.foreach_get("loop_start", loop_start)
+		else:
+			area = 0
+			for i in range(1, len(verts_world) - 1):
+				v1 = verts_world[i] - verts_world[0]
+				v2 = verts_world[i + 1] - verts_world[0]
+				area += 0.5 * (v1.cross(v2)).length
 
-	loop_vertex = np.empty(len(mesh.loops), dtype=np.int32)
-	mesh.loops.foreach_get("vertex_index", loop_vertex)
+		areas.append(area)
 
-	# Fan-triangulate each polygon from its first corner:
-	# triangles (v0, v[i], v[i+1]) for i in 1..loop_total-2
-	tri_counts = np.maximum(loop_total.astype(np.int64) - 2, 0)
-	poly_of_tri = np.repeat(np.arange(poly_count), tri_counts)
-	tri_base = np.repeat(np.cumsum(tri_counts) - tri_counts, tri_counts)
-	tri_offset = np.arange(int(tri_counts.sum())) - tri_base
-
-	second_loop = loop_start[poly_of_tri] + 1 + tri_offset
-	v0 = loop_vertex[loop_start[poly_of_tri]]
-	v1 = loop_vertex[second_loop]
-	v2 = loop_vertex[second_loop + 1]
-
-	cross = np.cross(verts[v1] - verts[v0], verts[v2] - verts[v0])
-	tri_areas = 0.5 * np.sqrt((cross * cross).sum(axis=1))
-
-	areas = np.bincount(poly_of_tri, weights=tri_areas, minlength=poly_count)
-
-	return areas.tolist()
+	return areas
 
 
 def calculate_td_area_to_list(tdcore):
-	backend = resolve_calculation_backend(get_preferences().calculation_backend)
+	backend = get_preferences().calculation_backend
 	td = bpy.context.scene.td
 
 	start_obj = bpy.context.active_object
@@ -237,7 +204,7 @@ def get_texture_resolution():
 # Value by range to Color gradient by hue
 def value_to_color(values, range_min, range_max, tdcore):
 	td = bpy.context.scene.td
-	backend = resolve_calculation_backend(get_preferences().calculation_backend)
+	backend = get_preferences().calculation_backend
 
 	result = []
 
@@ -383,10 +350,3 @@ def get_addon_props(context=None):
 def get_preferences():
 	"""Get the addon properties from the current scene"""
 	return get_addon_props()
-
-
-def get_tdcore_wrapper():
-	"""Return a TDCoreWrapper when the native backend is usable, else None"""
-	if resolve_calculation_backend(get_preferences().calculation_backend) == 'CPP':
-		return TDCoreWrapper()
-	return None

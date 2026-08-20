@@ -185,10 +185,6 @@ def _watch(proc, gen: int, port: int, variant: str, on_state: OnState) -> None:
             proc.terminate()
         except Exception:
             pass
-        # Reap the terminated child off-thread so it doesn't linger as a zombie
-        # (mirrors _stop_locked); the file handle is released by
-        # _report_startup_death below.
-        threading.Thread(target=_reap, args=(proc,), daemon=True).start()
         _report_startup_death(
             gen, variant, on_state,
             f"no healthy response within {HEALTH_TIMEOUT_S}s",
@@ -204,28 +200,11 @@ def _watch(proc, gen: int, port: int, variant: str, on_state: OnState) -> None:
         _restart_count += 1
         _current["state"] = "crashed"
         count = _restart_count
-        # Release our log handle: the crash left _proc dead but set, so the next
-        # start_server (auto-restart) skips _stop_locked() and would otherwise
-        # reassign _logf, leaking this one. Guarded by the gen check above so we
-        # never close a newer generation's handle.
-        _close_logfile_locked()
     logger.warning(
         "%s llama-server exited unexpectedly (code %s, crash #%d, log: %s)",
         LOG_PREFIX, proc.returncode, count, server_log_path(),
     )
     on_state("crashed", f"exit code {proc.returncode}")
-
-
-def _close_logfile_locked() -> None:
-    """Close and drop the current server's log handle. Caller holds ``_lock``
-    and has already confirmed this is the current generation."""
-    global _logf
-    if _logf is not None:
-        try:
-            _logf.close()
-        except Exception:
-            pass
-        _logf = None
 
 
 def _report_startup_death(gen: int, variant: str, on_state: OnState,
@@ -234,9 +213,6 @@ def _report_startup_death(gen: int, variant: str, on_state: OnState,
         if gen != _generation:
             return
         _current["state"] = "failed"
-        # Release our log handle before the orchestrator's fallback/restart runs
-        # (the dead-but-set _proc makes start_server skip _stop_locked()).
-        _close_logfile_locked()
     fallback = runtime.next_fallback_variant(variant) if variant else None
     logger.error(
         "%s llama-server failed to become healthy (%s); log: %s",

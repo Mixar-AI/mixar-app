@@ -8,9 +8,7 @@
  * Do not hand edit this file!
  */
 
-#include "DNA_userdef_types.h"
-
-#include "BLO_userdef_default.h"
+#include "DNA_theme_types.h"
 
 /* clang-format off */
 
@@ -253,8 +251,9 @@ const bTheme U_theme_default = {
       .shadedown = -10,
       .roundness = 0.5f,
     },
+    .link = RGBA(0x6FA9E6ff),
     .wcol_state = {
-      .error = RGBA(0x771111ff),
+      .error = RGBA(0x991616ff),
       .warning = RGBA(0xac8737ff),
       .info = RGBA(0x365e1cff),
       .success = RGBA(0x188625ff),
@@ -395,6 +394,8 @@ const bTheme U_theme_default = {
     .header_text = RGBA(0xeeeeeeff),
     .header_text_hi = RGBA(0xffffffff),
     .grid = RGBA(0x66666614),
+    .grid_major = RGBA(0x545454ff),
+    .grid_axis_brightness = 0.46f,
     .wire = RGBA(0x5c9a3aff),
     .wire_edit = RGBA(0x000000ff),
     .select = RGBA(0xff99aeff),
@@ -447,6 +448,7 @@ const bTheme U_theme_default = {
     .clipping_border_3d = RGBA(0x313131ff),
     .bundle_solid = RGBA(0xc8c8c8ff),
     .camera_path = RGBA(0x000000ff),
+    .gp_wire_edit = RGBA(0x99999980),
     .gp_vertex_size = 3,
     .gp_vertex = RGBA(0x000000ff),
     .gp_vertex_select = RGBA(0xff8500ff),
@@ -516,7 +518,9 @@ const bTheme U_theme_default = {
     .header_text_hi = RGBA(0xffffffff),
     .shade1 = RGBA(0xc0c0c000),
     .grid = RGBA(0x1c2228ff),
-    .ds_ipoline = RGBA(0x94e575cc),
+    .anim_interpolation_linear = RGBA(0x94e575cc),
+    .anim_interpolation_constant = RGBA(0xe59c7bcc),
+    .anim_interpolation_other = RGBA(0x5dbabeb3),
     .keyborder = RGBA(0x000000ff),
     .keyborder_select = RGBA(0x000000ff),
     .vertex_size = 3,
@@ -721,6 +725,7 @@ const bTheme U_theme_default = {
     .vertex_size = 3,
     .outline_width = 1,
     .facedot_size = 4,
+    .match = RGBA(0x4772b3ff),
   },
   .space_console = {
     .back = RGBA(0x141414ff),

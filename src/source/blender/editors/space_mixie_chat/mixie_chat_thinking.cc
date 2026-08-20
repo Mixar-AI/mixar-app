@@ -25,6 +25,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Maximum visible lines in thinking bubble */
 #define THINKING_BUBBLE_MAX_LINES 4
@@ -454,3 +456,4 @@ void chat_ui_draw_thinking_dropdown(const ChatBubbleStyle *style,
 }
 
 /** \} */
+}  // namespace blender

@@ -19,6 +19,7 @@ from datetime import datetime
 from . import utils
 from . import props
 from .constants import *
+from .cpp_interface import TDCoreWrapper
 
 # Gradient shader compiled once and reused. Building it inside the draw
 # callback recompiled a GPU shader on every viewport redraw while the
@@ -214,11 +215,8 @@ class CheckerAssign(bpy.types.Operator):
 	def execute(self, context):
 		start_time = datetime.now()
 		td = context.scene.td
-		start_active_obj = context.active_object
-		if start_active_obj is None:
-			return {"CANCELLED"}
-
 		start_mode = context.object.mode
+		start_active_obj = context.active_object
 		need_select_again_obj = context.selected_objects
 		start_selected_obj = context.objects_in_mode if start_mode == 'EDIT' else context.selected_objects
 
@@ -349,11 +347,8 @@ class CheckerRestore(bpy.types.Operator):
 
 	def execute(self, context):
 		start_time = datetime.now()
-		start_active_obj = context.active_object
-		if start_active_obj is None:
-			return {"CANCELLED"}
-
 		start_mode = context.object.mode
+		start_active_obj = context.active_object
 		need_select_again_obj = context.selected_objects
 		start_selected_obj = context.objects_in_mode if start_mode == 'EDIT' else context.selected_objects
 
@@ -416,10 +411,6 @@ class ClearSavedMaterials(bpy.types.Operator):
 
 	def execute(self, context):
 		start_time = datetime.now()
-		start_active_obj = context.active_object
-		if start_active_obj is None:
-			return {"CANCELLED"}
-
 		start_mode = context.object.mode
 		start_selected_obj = context.objects_in_mode if start_mode == 'EDIT' else context.selected_objects
 
@@ -448,9 +439,6 @@ class BakeTDToVC(bpy.types.Operator):
 		td = context.scene.td
 		version = bpy.app.version
 		start_active_obj = context.active_object
-		if start_active_obj is None:
-			return {"CANCELLED"}
-
 		start_mode = context.object.mode
 		need_select_again_obj = context.selected_objects
 		start_selected_obj = context.objects_in_mode if start_mode == 'EDIT' else context.selected_objects
@@ -469,7 +457,7 @@ class BakeTDToVC(bpy.types.Operator):
 		# Calculate TD and UV Area for all objects
 		td_area_map = {}
 
-		tdcore_lib = utils.get_tdcore_wrapper()
+		tdcore_lib = TDCoreWrapper() if utils.get_preferences().calculation_backend == 'CPP' else None
 
 		for obj in start_selected_obj:
 			if obj.type != 'MESH' or len(obj.data.uv_layers) == 0 or len(obj.data.polygons) == 0:
@@ -609,9 +597,7 @@ class BakeTDToVC(bpy.types.Operator):
 							loop[color_layer] = color
 
 			elif td.bake_vc_mode == 'DISTORTION':
-				# World-space areas: p.area is object-local, and the ratio must
-				# match every other TD computation which uses matrix_world
-				geom_areas = utils.calculate_geometry_areas(obj)
+				geom_areas = [p.area for p in mesh_data.polygons]
 				uv_areas = [uv_area for _, uv_area in face_td_area_list]
 
 				geom_area_total = sum(geom_areas)
@@ -658,16 +644,7 @@ class BakeTDToVC(bpy.types.Operator):
 			bpy.ops.object.mode_set(mode='EDIT')
 
 		# Activate VC shading in viewport and show gradient line
-		# shading settings only exist on SpaceView3D — the operator can be
-		# invoked from the UV editor header, where space_data is a
-		# SpaceImageEditor; fall back to the first VIEW_3D area instead
-		if context.space_data and context.space_data.type == 'VIEW_3D':
-			context.space_data.shading.color_type = 'VERTEX'
-		else:
-			for area in context.screen.areas:
-				if area.type == 'VIEW_3D':
-					area.spaces.active.shading.color_type = 'VERTEX'
-					break
+		context.space_data.shading.color_type = 'VERTEX'
 		if td.bake_vc_mode in {'TD_FACES_TO_VC', 'TD_ISLANDS_TO_VC', 'UV_SPACE_TO_VC', 'DISTORTION'}:
 			props.show_gradient(self, context)
 
@@ -685,11 +662,8 @@ class ClearTDFromVC(bpy.types.Operator):
 	def execute(self, context):
 		start_time = datetime.now()
 		version = bpy.app.version
-		start_active_obj = context.active_object
-		if start_active_obj is None:
-			return {"CANCELLED"}
-
 		start_mode = context.object.mode
+		start_active_obj = context.active_object
 		need_select_again_obj = context.selected_objects
 		start_selected_obj = context.objects_in_mode if start_mode == 'EDIT' else context.selected_objects
 

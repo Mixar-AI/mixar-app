@@ -130,10 +130,6 @@ src/source/blender/editors/space_mixie_chat/ C++ in-tree Blender editor (renderi
 
 **Auth refresh (K5):** when a 401 fires, `_try_refresh_token` delegates to `refresh_access_token_shared` (mutex + 2s result cache) in `jsonrpc_auth.py`. The SSE handler uses the same helper. Both channels stay in lock-step on token rotation.
 
-**Reconnect turn recovery (#1258):** on every WS reconnect, `core/turn_resume.py` (`check_orphaned_turns`, called from `connection_manager.on_connected`) asks the server `turn.status` for the idle scenes' session ids — the backend reports which sessions still have a live or replayable turn (ownership-scoped Redis state from the resume buffer). A hit surfaces ONE deduplicated chat bubble ("A previous task is still running") with a `resume_task:<session_id>` PRIMARY action; confirming runs `mixie_chat.resume_previous_task`, which adopts the session into a per-scene SSE handler and replays + follows via the existing attach endpoint (`SSEStreamHandler.resume_stream` — the carried per-scene cursor is adopted when it matches the session, otherwise the stream is followed from now instead of replaying the whole turn). Dismiss removes the bubble; scenes already streaming are skipped (their own attach loop owns recovery).
-
-**Client -> server notifications:** `send_notification(method, params)` queues a responseless JSON-RPC notification on the outbound queue. Used by the fire-and-forget final render (`ui/operators/agent_final_render_ops.py`): when the background render job completes, is cancelled, or its completion is lost (stale-job self-heal), the operator reports `render.final_render_result` echoing the kickoff's `job_key` — the backend's only server-side evidence of the outcome (Langfuse observation + Loki event). Best-effort: no client / pre-reporting job = no send, never a crash. Local render paths never leave the machine.
-
 ### Channel B — HTTP/SSE
 
 **File:** `core/sse_handler.py`. One short-lived `httpx.Client` per agent turn. Reopened per `/agent/chat` or `/agent/input` call.

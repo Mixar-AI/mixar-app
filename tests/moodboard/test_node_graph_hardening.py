@@ -22,11 +22,8 @@ SPACE_MIXIE = ROOT / "src/source/blender/editors/space_mixie"
 GRAPH_SOURCES = (
     "mixie_moodboard_graph_geometry.cc",
     "mixie_draw_moodboard_graph.cc",
-    "mixie_draw_moodboard_graph_sockets.cc",
-    "mixie_draw_moodboard_media_labels.cc",
     "mixie_draw_moodboard_node_ui.cc",
     "mixie_moodboard_ops_graph.cc",
-    "mixie_moodboard_ops_graph_link.cc",
 )
 
 
@@ -59,11 +56,9 @@ def test_graph_strings_declare_a_maxlen_smaller_than_their_cpp_buffer():
     pairs = (
         ("GRAPH_NODE_ID_MAXLEN", "MIXIE_GRAPH_ID_BUF"),
         ("GRAPH_SOCKET_ID_MAXLEN", "MIXIE_GRAPH_ID_BUF"),
-        ("GRAPH_ACCEPTED_TYPES_MAXLEN", "MIXIE_GRAPH_ID_BUF"),
         ("GRAPH_LABEL_MAXLEN", "MIXIE_GRAPH_LABEL_BUF"),
         ("GRAPH_WIDGET_MAXLEN", "MIXIE_GRAPH_WIDGET_BUF"),
         ("GRAPH_OBJECT_NAMES_MAXLEN", "MIXIE_GRAPH_NAMES_BUF"),
-        ("GRAPH_ERROR_MAXLEN", "MIXIE_GRAPH_ERROR_BUF"),
     )
     for python_name, c_name in pairs:
         maxlen = _int_constant(constants, python_name)
@@ -140,24 +135,13 @@ def test_link_drag_preview_is_not_keyed_on_a_raw_scene_pointer():
 
 def test_link_endpoints_and_hit_testing_share_one_pass_cache():
     """Resolving each endpoint independently was O(links * images) per redraw,
-    with a locked ``BKE_image_acquire_ibuf`` in the inner loop. The draw side
-    goes further: ONE cache per frame, built at the mode entry and passed to
-    every graph pass — each pass building its own tripled the per-frame
-    ImBuf acquires."""
+    with a locked ``BKE_image_acquire_ibuf`` in the inner loop."""
     geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
-    draw_mode = _read(SPACE_MIXIE / "mixie_draw_moodboard.cc")
 
     assert "void moodboard_graph_cache_build(" in geometry
     assert "moodboard_graph_cache_build(scene_ptr, &cache)" in geometry
-    assert "moodboard_graph_cache_build(&scene_ptr, &graph_cache)" in draw_mode
-    assert "mixie_draw_moodboard_links(C, v2d, &graph_cache)" in draw_mode
-    assert "mixie_draw_moodboard_graph_nodes(C, v2d, &graph_cache)" in draw_mode
-    # The passes consume the shared cache, never build their own.
-    assert "moodboard_graph_cache_build" not in draw
-    # The nodes pass reads media rects from the cache instead of re-acquiring
-    # every image's ImBuf for its aspect.
-    assert "BKE_image_acquire_ibuf" not in draw
+    assert "moodboard_graph_cache_build(&scene_ptr, &cache)" in draw
     # Links are culled before their curve is evaluated.
     assert "moodboard_graph_link_bounds" in draw
     assert "is_rect_in_view" in draw

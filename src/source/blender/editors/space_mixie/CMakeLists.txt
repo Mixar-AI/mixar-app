@@ -20,8 +20,6 @@ set(SRC
   mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_groups.cc
   mixie_draw_moodboard_graph.cc
-  mixie_draw_moodboard_graph_sockets.cc
-  mixie_draw_moodboard_media_labels.cc
   mixie_moodboard_graph_geometry.cc
   mixie_draw_moodboard_node_ui.cc
   mixie_draw_moodboard_images.cc
@@ -33,13 +31,11 @@ set(SRC
   mixie_moodboard_ops_crop.cc
   mixie_moodboard_ops_drop.cc
   mixie_moodboard_ops_graph.cc
-  mixie_moodboard_ops_graph_link.cc
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
   mixie_ops.cc
-  mixie_moodboard_qa_targets.cc
   mixie_select.cc
   space_mixie.cc
 

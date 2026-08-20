@@ -83,14 +83,10 @@ def test_movie_thumbnail_has_a_play_affordance():
 
 def test_file_picker_keeps_movies_linked_to_their_source():
     image_ops = _read(MOODBOARD / "ui/operators/image_ops.py")
-    # The loader itself lives in core/ so non-UI callers (the chat composer's
-    # attachment mirroring) can reuse it without importing an operator module.
-    media_import = _read(MOODBOARD / "core/media_import.py")
 
     assert 'getattr(bpy.path, "extensions_movie", ())' in image_ops
-    assert "load_media_file_to_board" in image_ops
-    assert "if img.source != 'MOVIE':" in media_import
-    assert "img.pack()" in media_import
+    assert "if img.source != 'MOVIE':" in image_ops
+    assert "img.pack()" in image_ops
 
 
 def test_video_generation_streams_selected_movies_and_imports_the_result():

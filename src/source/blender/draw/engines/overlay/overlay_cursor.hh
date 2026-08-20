@@ -68,8 +68,8 @@ class Cursor : Overlay {
       }
     }
     else {
-      const SpaceImage *sima = (SpaceImage *)state.space_data;
-      UI_view2d_view_to_region(
+      const SpaceImage *sima = reinterpret_cast<const SpaceImage *>(state.space_data);
+      ui::view2d_view_to_region(
           &state.region->v2d, sima->cursor[0], sima->cursor[1], &pixel_coord[0], &pixel_coord[1]);
     }
 
@@ -159,7 +159,8 @@ class Cursor : Overlay {
       }
       /* exception: object in texture paint mode, clone brush, use_clone_layer disabled */
       else if (state.object_mode & OB_MODE_TEXTURE_PAINT) {
-        const Paint *paint = BKE_paint_get_active(const_cast<Scene *>(state.scene),
+        const Paint *paint = BKE_paint_get_active(*DEG_get_bmain(state.depsgraph),
+                                                  const_cast<Scene *>(state.scene),
                                                   const_cast<ViewLayer *>(state.view_layer));
         const Brush *brush = (paint) ? BKE_paint_brush_for_read(paint) : nullptr;
 
@@ -184,14 +185,14 @@ class Cursor : Overlay {
 
   static bool is_cursor_visible_2d(const State &state)
   {
-    SpaceInfo *space_data = (SpaceInfo *)state.space_data;
-    if (space_data == nullptr) {
+    SpaceLink *space_link = const_cast<SpaceLink *>(state.space_data);
+    if (space_link == nullptr) {
       return false;
     }
-    if (space_data->spacetype != SPACE_IMAGE) {
+    if (space_link->spacetype != SPACE_IMAGE) {
       return false;
     }
-    SpaceImage *sima = (SpaceImage *)space_data;
+    SpaceImage *sima = reinterpret_cast<SpaceImage *>(space_link);
     switch (sima->mode) {
       case SI_MODE_VIEW:
         return false;

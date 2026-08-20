@@ -18,6 +18,8 @@
 #include "WM_api.hh"
 
 #include "texture_sets_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 void texture_sets_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
@@ -28,3 +30,4 @@ void texture_sets_header_region_draw(const bContext *C, ARegion *region)
 {
   ED_region_header(C, region);
 }
+}  // namespace blender

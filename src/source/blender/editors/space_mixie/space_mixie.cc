@@ -42,6 +42,8 @@
 #include "DNA_space_types.h"
 
 #include "mixie_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 using namespace blender::ed::mixie;
 
@@ -84,7 +86,7 @@ static SpaceLink *mixie_create(const ScrArea * /*area*/, const Scene * /*scene*/
   ARegion *region;
   SpaceMixie *smixie;
 
-  smixie = MEM_callocN<SpaceMixie>("initmixie");
+  smixie = MEM_new<SpaceMixie>("initmixie");
   smixie->spacetype = SPACE_MIXIE;
 
   /* header */
@@ -157,7 +159,7 @@ static void mixie_init(wmWindowManager * /*wm*/, ScrArea * /*area*/)
 
 static SpaceLink *mixie_duplicate(SpaceLink *sl)
 {
-  SpaceMixie *smixien = static_cast<SpaceMixie *>(MEM_dupallocN(sl));
+  SpaceMixie *smixien = static_cast<SpaceMixie *>(MEM_dupalloc_void(sl));
   return (SpaceLink *)smixien;
 }
 
@@ -177,7 +179,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
   rctf saved_cur = region->v2d.cur;
 
   /* Initialize View2D using standard Blender pattern */
-  UI_view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
+  ui::view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
 
   /* Custom View2D settings for moodboard infinite canvas */
   region->v2d.tot.xmin = -10000.0f;
@@ -212,7 +214,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
   /* Let uiBlocks drawn over the canvas receive pointer and keyboard events
    * before the moodboard's canvas keymaps. */
-  UI_region_handlers_add(&region->runtime->handlers);
+  ui::region_handlers_add(&region->runtime->handlers);
 
   /* Setup keymap */
   wmKeyMap *keymap = WM_keymap_ensure(
@@ -351,17 +353,11 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   params_dbl.modifier = 0;
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_select_image", &params_dbl);
 
-  /* Multi-select with Shift+LEFTMOUSE. Graph cards get first refusal (same
-   * ordering as the plain click above): the graph operator toggles the card
-   * under the pointer and passes through everywhere else, so media extend
-   * keeps working. */
+  /* Multi-select with Shift+LEFTMOUSE */
   KeyMapItem_Params params_extend{};
   params_extend.type = LEFTMOUSE;
   params_extend.value = KM_PRESS;
   params_extend.modifier = KM_SHIFT;
-  wmKeyMapItem *kmi_extend_graph = WM_keymap_add_item(
-      keymap, "MIXIE_OT_moodboard_graph_select", &params_extend);
-  RNA_boolean_set(kmi_extend_graph->ptr, "extend", true);
   wmKeyMapItem *kmi_extend = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend);
   RNA_boolean_set(kmi_extend->ptr, "extend", true);
@@ -378,9 +374,6 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 #else
   params_extend_native.modifier = KM_CTRL;
 #endif
-  wmKeyMapItem *kmi_extend_native_graph = WM_keymap_add_item(
-      keymap, "MIXIE_OT_moodboard_graph_select", &params_extend_native);
-  RNA_boolean_set(kmi_extend_native_graph->ptr, "extend", true);
   wmKeyMapItem *kmi_extend_native = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend_native);
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
@@ -680,7 +673,7 @@ static void mixie_ui_region_listener(const wmRegionListenerParams *params)
 
 static void mixie_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
-  BLO_write_struct(writer, SpaceMixie, sl);
+  writer->write_struct_cast<SpaceMixie>(sl);
 }
 
 /** \} */
@@ -708,7 +701,7 @@ void ED_spacetype_mixie()
   st->blend_write = mixie_space_blend_write;
 
   /* regions: main window */
-  art = MEM_callocN<ARegionType>("spacetype mixie region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie region");
   art->regionid = RGN_TYPE_WINDOW;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_GIZMO | ED_KEYMAP_TOOL | ED_KEYMAP_FRAMES |
                     ED_KEYMAP_VIEW2D;
@@ -721,7 +714,7 @@ void ED_spacetype_mixie()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: tools (T-panel toolbar) */
-  art = MEM_callocN<ARegionType>("spacetype mixie tools region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie tools region");
   art->regionid = RGN_TYPE_TOOLS;
   art->prefsizex = int(UI_TOOLBAR_WIDTH);
   art->prefsizey = 50;
@@ -735,7 +728,7 @@ void ED_spacetype_mixie()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: footer (dock strip) */
-  art = MEM_callocN<ARegionType>("spacetype mixie footer region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie footer region");
   art->regionid = RGN_TYPE_FOOTER;
   art->prefsizey = HEADERY;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_VIEW2D | ED_KEYMAP_FOOTER;
@@ -747,7 +740,7 @@ void ED_spacetype_mixie()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: UI sidebar (N-panel on right side) */
-  art = MEM_callocN<ARegionType>("spacetype mixie ui region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie ui region");
   art->regionid = RGN_TYPE_UI;
   art->prefsizex = MIXIE_SIDEBAR_PANEL_WIDTH;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
@@ -760,7 +753,7 @@ void ED_spacetype_mixie()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: header */
-  art = MEM_callocN<ARegionType>("spacetype mixie region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie region");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
 
@@ -771,11 +764,8 @@ void ED_spacetype_mixie()
 
   BLI_addhead(&st->regiontypes, art);
 
-  /* QA harness: export moodboard canvas nodes/media/sockets as targets. */
-  void mixie_moodboard_qa_targets_register();
-  mixie_moodboard_qa_targets_register();
-
   BKE_spacetype_register(std::move(st));
 }
 
 /** \} */
+}  // namespace blender

@@ -17,6 +17,8 @@
 
 #include "BLI_utildefines.h" /* for bool */
 
+#include "DNA_vec_types.h" /* for rcti */
+
 #include "py_capi_utils.hh"
 
 #include "python_utildefines.hh"
@@ -31,15 +33,12 @@
 #  include "BLI_math_base.h" /* isfinite() */
 #endif
 
-#if PY_VERSION_HEX < 0x030d0000 /* <3.13 */
-#  define PyLong_AsInt _PyLong_AsInt
-#endif
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Fast Python to C Array Conversion for Primitive Types
  * \{ */
 
-/* array utility function */
 int PyC_AsArray_FAST(void *array,
                      const size_t array_item_size,
                      PyObject *value_fast,
@@ -301,7 +300,6 @@ int PyC_AsArray_Multi(void *array,
  * \note See #PyC_Tuple_Pack_* macros that take multiple arguments.
  * \{ */
 
-/* array utility function */
 PyObject *PyC_Tuple_PackArray_F32(const float *array, uint len)
 {
   PyObject *tuple = PyTuple_New(len);
@@ -513,6 +511,125 @@ int PyC_ParseBool(PyObject *o, void *p)
   return 1;
 }
 
+int PyC_ParseTypeOrNone(PyObject *o, void *p)
+{
+  PyC_TypeOrNone *data = static_cast<PyC_TypeOrNone *>(p);
+  if (o == Py_None) {
+    *data->value_p = nullptr;
+    return 1;
+  }
+  if (!PyObject_TypeCheck(o, data->type)) {
+    PyErr_Format(PyExc_TypeError,
+                 "expected %.200s or None, not %.200s",
+                 data->type->tp_name,
+                 Py_TYPE(o)->tp_name);
+    return 0;
+  }
+  *data->value_p = o;
+  return 1;
+}
+
+int PyC_ParseOptionalInt(PyObject *o, void *p)
+{
+  std::optional<int> *value_p = static_cast<std::optional<int> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  const int value = PyC_Long_AsI32(o);
+  if (value == -1 && PyErr_Occurred()) {
+    return 0;
+  }
+  *value_p = value;
+  return 1;
+}
+
+int PyC_ParseOptionalDouble(PyObject *o, void *p)
+{
+  std::optional<double> *value_p = static_cast<std::optional<double> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  const double value = PyFloat_AsDouble(o);
+  if (value == -1.0 && PyErr_Occurred()) {
+    return 0;
+  }
+  *value_p = value;
+  return 1;
+}
+
+int PyC_ParseOptionalFloat(PyObject *o, void *p)
+{
+  std::optional<float> *value_p = static_cast<std::optional<float> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  const double value = PyFloat_AsDouble(o);
+  if (value == -1.0 && PyErr_Occurred()) {
+    return 0;
+  }
+  *value_p = float(value);
+  return 1;
+}
+
+int PyC_ParseOptionalUInt(PyObject *o, void *p)
+{
+  std::optional<uint> *value_p = static_cast<std::optional<uint> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  const uint value = PyC_Long_AsU32(o);
+  if (value == uint(-1) && PyErr_Occurred()) {
+    return 0;
+  }
+  *value_p = value;
+  return 1;
+}
+
+int PyC_ParseOptionalBool(PyObject *o, void *p)
+{
+  std::optional<bool> *value_p = static_cast<std::optional<bool> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  long value;
+  if (((value = PyLong_AsLong(o)) == -1) || !ELEM(value, 0, 1)) {
+    PyErr_Format(
+        PyExc_ValueError, "expected a bool, int (0/1), or None, got %s", Py_TYPE(o)->tp_name);
+    return 0;
+  }
+  *value_p = value ? true : false;
+  return 1;
+}
+
+int PyC_ParseRectI(PyObject *o, void *p)
+{
+  rcti *rect = static_cast<rcti *>(p);
+  if (!PyArg_ParseTuple(o, "(ii)(ii)", &rect->xmin, &rect->ymin, &rect->xmax, &rect->ymax)) {
+    return 0;
+  }
+  return 1;
+}
+
+int PyC_ParseOptionalRectI(PyObject *o, void *p)
+{
+  std::optional<rcti> *value_p = static_cast<std::optional<rcti> *>(p);
+  if (o == Py_None) {
+    value_p->reset();
+    return 1;
+  }
+  rcti rect;
+  if (!PyC_ParseRectI(o, &rect)) {
+    return 0;
+  }
+  *value_p = rect;
+  return 1;
+}
+
 int PyC_ParseStringEnum(PyObject *o, void *p)
 {
   PyC_StringEnum *e = static_cast<PyC_StringEnum *>(p);
@@ -580,7 +697,7 @@ void PyC_ObSpit(const char *name, PyObject *var)
     fprintf(stderr,
             " ref:%d, ptr:%p, type: %s\n",
             int(var->ob_refcnt),
-            (void *)var,
+            static_cast<void *>(var),
             type ? type->tp_name : null_str);
   }
 }
@@ -604,7 +721,7 @@ void PyC_ObSpitStr(char *result, size_t result_maxncpy, PyObject *var)
                       result_maxncpy,
                       " ref=%d, ptr=%p, type=%s, value=%.200s",
                       int(var->ob_refcnt),
-                      (void *)var,
+                      static_cast<void *>(var),
                       type ? type->tp_name : null_str,
                       var_str ? PyUnicode_AsUTF8(var_str) : "<error>");
     if (var_str != nullptr) {
@@ -703,6 +820,8 @@ void PyC_FileAndNum(const char **r_filename, int *r_lineno)
   if (r_lineno) {
     *r_lineno = PyFrame_GetLineNumber(frame);
   }
+
+  Py_DECREF(code);
 }
 
 void PyC_FileAndNum_Safe(const char **r_filename, int *r_lineno)
@@ -831,7 +950,7 @@ PyObject *PyC_Err_SetString_Prefix(PyObject *exception_type_prefix, const char *
 void PyC_Err_PrintWithFunc(PyObject *py_func)
 {
   /* since we return to C code we can't leave the error */
-  PyCodeObject *f_code = (PyCodeObject *)PyFunction_GET_CODE(py_func);
+  PyCodeObject *f_code = reinterpret_cast<PyCodeObject *>(PyFunction_GET_CODE(py_func));
   PyErr_Print();
 
   /* use py style error */
@@ -839,7 +958,7 @@ void PyC_Err_PrintWithFunc(PyObject *py_func)
           "File \"%s\", line %d, in %s\n",
           PyUnicode_AsUTF8(f_code->co_filename),
           f_code->co_firstlineno,
-          PyUnicode_AsUTF8(((PyFunctionObject *)py_func)->func_name));
+          PyUnicode_AsUTF8((reinterpret_cast<PyFunctionObject *>(py_func))->func_name));
 }
 
 /** \} */
@@ -847,6 +966,32 @@ void PyC_Err_PrintWithFunc(PyObject *py_func)
 /* -------------------------------------------------------------------- */
 /** \name Exception Buffer Access
  * \{ */
+
+/**
+ * Get exit code `sys.exit(..)` was called with, see #pyc_exception_buffer_handle_system_exit.
+ */
+static std::optional<int> g_system_exit_code;
+std::optional<int> PyC_ExceptionSystemExitCode()
+{
+  return g_system_exit_code;
+}
+
+bool PyC_Err_CaptureSystemExitCode()
+{
+  if (!PyErr_ExceptionMatches(PyExc_SystemExit)) {
+    return false;
+  }
+
+  /* Get exit code and put back exception. */
+  PyObject *exc_obj = PyErr_GetRaisedException();
+  PyObject *code_obj = ((PySystemExitObject *)exc_obj)->code;
+  g_system_exit_code = 0;
+  if (code_obj && code_obj != Py_None) {
+    g_system_exit_code = PyLong_Check(code_obj) ? int(PyLong_AsLong(code_obj)) : 1;
+  }
+  PyErr_SetRaisedException(exc_obj);
+  return true;
+}
 
 /**
  * When a script calls `sys.exit(..)` it is expected that Blender quits,
@@ -866,10 +1011,10 @@ void PyC_Err_PrintWithFunc(PyObject *py_func)
  */
 static void pyc_exception_buffer_handle_system_exit()
 {
-  if (!PyErr_ExceptionMatches(PyExc_SystemExit)) {
+  if (!PyC_Err_CaptureSystemExitCode()) {
     return;
   }
-/* Inspecting, follow Python's logic in #_Py_HandleSystemExit & treat as a regular exception. */
+  /* Inspecting, follow Python's logic in #_Py_HandleSystemExit & treat as a regular exception. */
 #  if 0 /* FIXME: */
   if (_Py_GetConfig()->inspect) {
     return;
@@ -1170,6 +1315,20 @@ void PyC_MainModule_Restore(PyObject *main_mod)
   }
 }
 
+int PyC_Module_AddToSysModules(PyObject *sys_modules, PyObject *module)
+{
+  /* It would be OK to remove this assert if we ever wanted to add to a non-standard module dict.
+   * Currently it's only ever expected that they match, hence the assert. */
+  BLI_assert(sys_modules == PyImport_GetModuleDict());
+  PyObject *name = PyModule_GetNameObject(module);
+  if (name == nullptr) {
+    return -1;
+  }
+  int result = PyDict_SetItem(sys_modules, name, module);
+  Py_DECREF(name);
+  return result;
+}
+
 bool PyC_IsInterpreterActive()
 {
   /* MIXAR: callers use this to decide whether they may skip #PyGILState_Ensure,
@@ -1229,7 +1388,7 @@ void PyC_RunQuicky(const char *filepath, int n, ...)
       if (ret) {
         sizes[i] = PyLong_AsLong(ret);
         Py_DECREF(ret);
-        ret = PyObject_CallFunction(unpack, "sy#", format, (char *)ptr, sizes[i]);
+        ret = PyObject_CallFunction(unpack, "sy#", format, static_cast<char *>(ptr), sizes[i]);
       }
 
       if (ret == nullptr) {
@@ -1340,37 +1499,36 @@ void PyC_RunQuicky(const char *filepath, int n, ...)
 
 void *PyC_RNA_AsPointer(PyObject *value, const char *type_name)
 {
-  PyObject *as_pointer;
-  PyObject *pointer;
-
-  if (STREQ(Py_TYPE(value)->tp_name, type_name) &&
-      (as_pointer = PyObject_GetAttrString(value, "as_pointer")) != nullptr &&
-      PyCallable_Check(as_pointer))
-  {
-    void *result = nullptr;
-
-    /* must be a 'type_name' object */
-    pointer = PyObject_CallObject(as_pointer, nullptr);
-    Py_DECREF(as_pointer);
-
-    if (!pointer) {
-      PyErr_SetString(PyExc_SystemError, "value.as_pointer() failed");
-      return nullptr;
-    }
-    result = PyLong_AsVoidPtr(pointer);
-    Py_DECREF(pointer);
-    if (!result) {
-      PyErr_SetString(PyExc_SystemError, "value.as_pointer() failed");
-    }
-
-    return result;
+  if (!STREQ(Py_TYPE(value)->tp_name, type_name)) {
+    PyErr_Format(PyExc_TypeError,
+                 "expected '%.200s' type found '%.200s' instead",
+                 type_name,
+                 Py_TYPE(value)->tp_name);
+    return nullptr;
   }
 
-  PyErr_Format(PyExc_TypeError,
-               "expected '%.200s' type found '%.200s' instead",
-               type_name,
-               Py_TYPE(value)->tp_name);
-  return nullptr;
+  PyObject *as_pointer = PyObject_GetAttrString(value, "as_pointer");
+  if ((as_pointer == nullptr) || !PyCallable_Check(as_pointer)) {
+    Py_XDECREF(as_pointer);
+    PyErr_Format(PyExc_TypeError, "Invalid %.200s pointer", type_name);
+    return nullptr;
+  }
+
+  /* Must be a `type_name` object. */
+  PyObject *pointer = PyObject_CallObject(as_pointer, nullptr);
+  Py_DECREF(as_pointer);
+
+  if (pointer == nullptr) {
+    PyErr_SetString(PyExc_SystemError, "value.as_pointer() failed");
+    return nullptr;
+  }
+  void *result = PyLong_AsVoidPtr(pointer);
+  Py_DECREF(pointer);
+  if (!result) {
+    PyErr_SetString(PyExc_SystemError, "value.as_pointer() failed");
+  }
+
+  return result;
 }
 
 /** \} */
@@ -1508,7 +1666,7 @@ static PyObject *pyc_run_string_as_py_object(const char *imports[],
 
   if (imports_star) {
     for (int i = 0; imports_star[i]; i++) {
-      PyObject *mod = PyImport_ImportModule("math");
+      PyObject *mod = PyImport_ImportModule(imports_star[i]);
       if (mod) {
         /* Don't overwrite existing values (override=0). */
         PyDict_Merge(py_dict, PyModule_GetDict(mod), 0);
@@ -1618,7 +1776,7 @@ bool PyC_RunString_AsStringAndSize(const char *imports[],
       ok = false;
     }
     else {
-      char *val_alloc = MEM_malloc_arrayN<char>(size_t(val_len) + 1, __func__);
+      char *val_alloc = MEM_new_array_uninitialized<char>(size_t(val_len) + 1, __func__);
       memcpy(val_alloc, val, (size_t(val_len) + 1) * sizeof(*val_alloc));
       *r_value = val_alloc;
       *r_value_size = val_len;
@@ -1662,8 +1820,8 @@ bool PyC_RunString_AsStringAndSizeOrNone(const char *imports[],
         ok = false;
       }
       else {
-        char *val_alloc = MEM_malloc_arrayN<char>(size_t(val_len) + 1, __func__);
-        memcpy(val_alloc, val, (size_t(val_len) + 1) * sizeof(val_alloc));
+        char *val_alloc = MEM_new_array_uninitialized<char>(size_t(val_len) + 1, __func__);
+        memcpy(val_alloc, val, (size_t(val_len) + 1) * sizeof(*val_alloc));
         *r_value = val_alloc;
         *r_value_size = val_len;
         ok = true;
@@ -1958,3 +2116,155 @@ bool PyC_StructFmt_type_is_bool(char format)
 }
 
 /** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Dict Utilities
+ * \{ */
+
+bool PyC_Dict_CheckKeysAreStrings(PyObject *dict)
+{
+  PyObject *key;
+  Py_ssize_t pos = 0;
+  while (PyDict_Next(dict, &pos, &key, nullptr)) {
+    if (!PyUnicode_Check(key)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Owned MemoryView
+ *
+ * A memory view where the memory is owned.
+ * NOTE(@ideasman42): Python doesn't provide a convenient zero-copy way
+ * for owned memory to be returned from a `memoryview`.
+ *
+ * This types only purpose is to expose a `memoryview` which our own custom free.
+ * The type itself is not expected to be exposed to users.
+ * So we could switch to an alternative API if it is ever supported.
+ * \{ */
+
+#ifndef MATH_STANDALONE
+
+struct BPyMemoryViewOwned {
+  PyObject_VAR_HEAD;
+  /**
+   * Snapshot of the caller's #Py_buffer.
+   * - `info.shape` and `info.strides` point into `shape_and_stride`.
+   * - `info.obj` is always null.
+   */
+  Py_buffer info;
+  /**
+   * Flexible array of `2 * info.ndim`.
+   * Layout:
+   * - `shape_and_stride[0..ndim]`: shape.
+   * - `shape_and_stride[ndim..2 * ndim]`: strides.
+   */
+  Py_ssize_t shape_and_stride[];
+};
+
+static void bpy_memoryview_buffer_dealloc(BPyMemoryViewOwned *self)
+{
+  /* `info.buf` is asserted non-null at construction.
+   * #MEM_delete_void also accepts null defensively. */
+  MEM_delete_void(self->info.buf);
+  Py_TYPE(self)->tp_free(self);
+}
+
+static int bpy_memoryview_buffer_getbuffer(BPyMemoryViewOwned *self, Py_buffer *view, int flags)
+{
+  if (self->info.readonly && (flags & PyBUF_WRITABLE) == PyBUF_WRITABLE) {
+    PyErr_SetString(PyExc_BufferError, "BPyMemoryViewOwned: object is not writable");
+    return -1;
+  }
+  *view = self->info;
+  view->obj = Py_NewRef(reinterpret_cast<PyObject *>(self));
+  /* Honor what the caller actually requested. */
+  if ((flags & PyBUF_FORMAT) != PyBUF_FORMAT) {
+    view->format = nullptr;
+  }
+  if ((flags & PyBUF_ND) != PyBUF_ND) {
+    view->shape = nullptr;
+  }
+  if ((flags & PyBUF_STRIDES) != PyBUF_STRIDES) {
+    view->strides = nullptr;
+  }
+  return 0;
+}
+
+static PyBufferProcs bpy_memoryview_buffer_as_buffer = {
+    /*bf_getbuffer*/ reinterpret_cast<getbufferproc>(bpy_memoryview_buffer_getbuffer),
+    /*bf_releasebuffer*/ nullptr,
+};
+
+static PyTypeObject BPyMemoryViewOwned_Type = {
+    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*tp_name*/ "BPyMemoryViewOwned",
+    /*tp_basicsize*/ sizeof(BPyMemoryViewOwned),
+    /*tp_itemsize*/ sizeof(Py_ssize_t),
+    /*tp_dealloc*/ reinterpret_cast<destructor>(bpy_memoryview_buffer_dealloc),
+    /*tp_vectorcall_offset*/ 0,
+    /*tp_getattr*/ nullptr,
+    /*tp_setattr*/ nullptr,
+    /*tp_as_async*/ nullptr,
+    /*tp_repr*/ nullptr,
+    /*tp_as_number*/ nullptr,
+    /*tp_as_sequence*/ nullptr,
+    /*tp_as_mapping*/ nullptr,
+    /*tp_hash*/ nullptr,
+    /*tp_call*/ nullptr,
+    /*tp_str*/ nullptr,
+    /*tp_getattro*/ nullptr,
+    /*tp_setattro*/ nullptr,
+    /*tp_as_buffer*/ &bpy_memoryview_buffer_as_buffer,
+    /* `Py_TPFLAGS_HAVE_GC` (and the matching `tp_traverse` / `tp_clear`) is not
+     * needed: the wrapper holds no Python references - `info.obj` /
+     * `info.suboffsets` / `info.internal` are explicitly nulled at construction
+     * and the buffer is plain memory. */
+    /*tp_flags*/ Py_TPFLAGS_DEFAULT,
+    /*tp_doc*/ nullptr,
+};
+
+PyObject *PyC_MemoryView_FromBufferOwned(const Py_buffer *info)
+{
+  BLI_assert(info->buf != nullptr);
+  BLI_assert(info->ndim >= 1);
+  BLI_assert(info->itemsize > 0);
+  BLI_assert(info->format != nullptr);
+  BLI_assert(info->shape != nullptr);
+  BLI_assert(info->strides != nullptr);
+
+  if (PyType_Ready(&BPyMemoryViewOwned_Type) < 0) [[unlikely]] {
+    MEM_delete_void(info->buf);
+    return nullptr;
+  }
+  BPyMemoryViewOwned *wrapper = PyObject_NewVar(
+      BPyMemoryViewOwned, &BPyMemoryViewOwned_Type, Py_ssize_t(2) * info->ndim);
+  if (wrapper == nullptr) [[unlikely]] {
+    MEM_delete_void(info->buf);
+    return nullptr;
+  }
+  wrapper->info = *info;
+  wrapper->info.obj = nullptr;
+  wrapper->info.shape = wrapper->shape_and_stride;
+  wrapper->info.strides = wrapper->shape_and_stride + info->ndim;
+  wrapper->info.suboffsets = nullptr;
+  wrapper->info.internal = nullptr;
+  const size_t dim_size = size_t(info->ndim) * sizeof(Py_ssize_t);
+  memcpy(wrapper->shape_and_stride, info->shape, dim_size);
+  memcpy(wrapper->shape_and_stride + info->ndim, info->strides, dim_size);
+  /* `wrapper` now owns `info->buf`, its `tp_dealloc` will free it. */
+
+  PyObject *mv = PyMemoryView_FromObject(reinterpret_cast<PyObject *>(wrapper));
+  Py_DECREF(wrapper);
+  return mv;
+}
+
+#endif /* !MATH_STANDALONE */
+
+/** \} */
+
+}  // namespace blender

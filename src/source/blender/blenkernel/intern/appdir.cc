@@ -28,7 +28,7 @@
 
 #include "BLT_translation.hh"
 
-#include "GHOST_Path-api.hh"
+#include "GHOST_ISystemPaths.hh"
 
 #include "CLG_log.h"
 
@@ -51,6 +51,8 @@
 /* #mkdtemp on OSX (and probably all *BSD?), not worth making specific check for this OS. */
 #  include <unistd.h>
 #endif /* !WIN32 */
+
+namespace blender {
 
 static const char _str_null[] = "(null)";
 #define STR_OR_FALLBACK(a) ((a) ? (a) : _str_null)
@@ -105,7 +107,7 @@ void BKE_appdir_exit()
    * disposed of here. Note that there may be several calls to this in `exit` process
    * (e.g. `wm_init/wm_exit` will currently both call GHOST API directly,
    * & `BKE_appdir_init/_exit`). */
-  GHOST_DisposeSystemPaths();
+  GHOST_ISystemPaths::dispose();
 #ifndef NDEBUG
   BLI_assert(is_appdir_init == true);
   is_appdir_init = false;
@@ -174,7 +176,8 @@ bool BKE_appdir_folder_documents(char *dir)
 {
   dir[0] = '\0';
 
-  const std::optional<std::string> documents_path = GHOST_getUserSpecialDir(
+  const GHOST_ISystemPaths *ghost_system_paths = GHOST_ISystemPaths::get();
+  const std::optional<std::string> documents_path = ghost_system_paths->getUserSpecialDir(
       GHOST_kUserSpecialDirDocuments);
 
   /* Usual case: Ghost gave us the documents path. We're done here. */
@@ -201,17 +204,17 @@ bool BKE_appdir_folder_documents(char *dir)
   return true;
 }
 
-bool BKE_appdir_folder_caches(char *path, const size_t path_maxncpy)
+void BKE_appdir_folder_caches(char *path, const size_t path_maxncpy)
 {
   path[0] = '\0';
 
-  std::optional<std::string> caches_root_path = GHOST_getUserSpecialDir(
+  const GHOST_ISystemPaths *ghost_system_paths = GHOST_ISystemPaths::get();
+  std::optional<std::string> caches_root_path = ghost_system_paths->getUserSpecialDir(
       GHOST_kUserSpecialDirCaches);
-  if (!caches_root_path || !BLI_is_dir(caches_root_path->c_str())) {
-    caches_root_path = BKE_tempdir_base();
-  }
-  if (!caches_root_path || !BLI_is_dir(caches_root_path->c_str())) {
-    return false;
+  if (!caches_root_path || caches_root_path->empty()) [[unlikely]] {
+    const char *tempdir = BKE_tempdir_session();
+    BLI_path_join(path, path_maxncpy, tempdir, ".cache", SEP_STR);
+    return;
   }
 
 #ifdef WIN32
@@ -227,8 +230,6 @@ bool BKE_appdir_folder_caches(char *path, const size_t path_maxncpy)
 #else /* __linux__ */
   BLI_path_join(path, path_maxncpy, caches_root_path->c_str(), "mixar", SEP_STR);
 #endif
-
-  return true;
 }
 
 bool BKE_appdir_font_folder_default(char *dir, size_t dir_maxncpy)
@@ -266,10 +267,10 @@ bool BKE_appdir_font_folder_default(char *dir, size_t dir_maxncpy)
  * Concatenates paths into \a targetpath,
  * returning true if result points to a directory.
  *
+ * \param check_is_dir: When false, return true even if the path doesn't exist.
  * \param path_base: Path base, never nullptr.
  * \param folder_name: First sub-directory (optional).
  * \param subfolder_name: Second sub-directory (optional).
- * \param check_is_dir: When false, return true even if the path doesn't exist.
  *
  * \note The names for optional paths only follow other usage in this file,
  * the names don't matter for this function.
@@ -446,11 +447,11 @@ static bool get_path_environment(char *targetpath,
       targetpath, targetpath_maxncpy, subfolder_name, envvar, check_is_dir);
 }
 
-static blender::Vector<std::string> get_path_environment_multiple(const char *subfolder_name,
-                                                                  const char *envvar,
-                                                                  const bool check_is_dir)
+static Vector<std::string> get_path_environment_multiple(const char *subfolder_name,
+                                                         const char *envvar,
+                                                         const bool check_is_dir)
 {
-  blender::Vector<std::string> paths;
+  Vector<std::string> paths;
   const char *env_path = envvar ? BLI_getenv(envvar) : nullptr;
   if (!env_path) {
     return paths;
@@ -513,7 +514,9 @@ static bool get_path_user_ex(char *targetpath,
   else {
     user_path[0] = '\0';
 
-    const char *user_base_path = GHOST_getUserDir(version, blender_version_decimal(version));
+    const GHOST_ISystemPaths *ghost_system_paths = GHOST_ISystemPaths::get();
+    const char *user_base_path = ghost_system_paths->getUserDir(version,
+                                                                blender_version_decimal(version));
     if (user_base_path) {
       STRNCPY(user_path, user_base_path);
     }
@@ -568,7 +571,9 @@ static bool get_path_system_ex(char *targetpath,
   }
   else {
     system_path[0] = '\0';
-    const char *system_base_path = GHOST_getSystemDir(version, blender_version_decimal(version));
+    const GHOST_ISystemPaths *ghost_system_paths = GHOST_ISystemPaths::get();
+    const char *system_base_path = ghost_system_paths->getSystemDir(
+        version, blender_version_decimal(version));
     if (system_base_path) {
       STRNCPY(system_path, system_base_path);
     }
@@ -598,6 +603,42 @@ static bool get_path_system(char *targetpath,
   const bool check_is_dir = true;
   return get_path_system_ex(
       targetpath, targetpath_maxncpy, folder_name, subfolder_name, version, check_is_dir);
+}
+
+/**
+ * Returns the path of a folder for architecture-dependent libraries, mirroring
+ * #get_path_system_ex under the install lib tree (FHS). See #GHOST_ISystemPaths::getSystemLibsDir;
+ * returns false on platforms that bundle libraries beside the executable.
+ */
+static bool get_path_system_libs_ex(char *targetpath,
+                                    size_t targetpath_maxncpy,
+                                    const char *folder_name,
+                                    const char *subfolder_name,
+                                    const int version,
+                                    const bool check_is_dir)
+{
+  char system_path[FILE_MAX] = "";
+
+  const GHOST_ISystemPaths *ghost_system_paths = GHOST_ISystemPaths::get();
+  const char *system_base_path = ghost_system_paths->getSystemLibsDir(
+      version, blender_version_decimal(version));
+  if (system_base_path) {
+    STRNCPY(system_path, system_base_path);
+  }
+
+  if (!system_path[0]) {
+    return false;
+  }
+
+  CLOG_DEBUG(&LOG,
+             "Get path system libs: '%s', folder='%s', subfolder='%s'",
+             system_path,
+             STR_OR_FALLBACK(folder_name),
+             STR_OR_FALLBACK(subfolder_name));
+
+  /* Try `$LIBDIR/folder_name/subfolder_name`, `subfolder_name` may be nullptr. */
+  return test_path(
+      targetpath, targetpath_maxncpy, check_is_dir, system_path, folder_name, subfolder_name);
 }
 
 /** \} */
@@ -820,6 +861,9 @@ std::optional<std::string> BKE_appdir_resource_path_id_with_version(const int fo
     case BLENDER_RESOURCE_PATH_SYSTEM:
       ok = get_path_system_ex(path, sizeof(path), nullptr, nullptr, version, check_is_dir);
       break;
+    case BLENDER_RESOURCE_PATH_SYSTEM_LIBS:
+      ok = get_path_system_libs_ex(path, sizeof(path), nullptr, nullptr, version, check_is_dir);
+      break;
     default:
       path[0] = '\0'; /* in case check_is_dir is false */
       ok = false;
@@ -857,7 +901,7 @@ std::optional<std::string> BKE_appdir_resource_path_id(const int folder_id,
  *
  * \param program_filepath: The full path and full name of the executable
  * (must be #FILE_MAX minimum)
- * \param name: The name of the executable (usually `argv[0]`) to be checked
+ * \param program_name: The name of the executable (usually `argv[0]`) to be checked
  */
 static void where_am_i(char *program_filepath,
                        const size_t program_filepath_maxncpy,
@@ -866,7 +910,7 @@ static void where_am_i(char *program_filepath,
 #  ifdef WITH_BINRELOC
   /* Linux uses `binreloc` since `argv[0]` is not reliable, call `br_init(nullptr)` first. */
   {
-    const char *path = nullptr;
+    char *path = nullptr;
     path = br_find_exe(nullptr);
     if (path) {
       BLI_strncpy(program_filepath, path, program_filepath_maxncpy);
@@ -878,7 +922,8 @@ static void where_am_i(char *program_filepath,
 
 #  ifdef _WIN32
   {
-    wchar_t *fullname_16 = MEM_malloc_arrayN<wchar_t>(program_filepath_maxncpy, "ProgramPath");
+    wchar_t *fullname_16 = MEM_new_array_uninitialized<wchar_t>(program_filepath_maxncpy,
+                                                                "ProgramPath");
     if (GetModuleFileNameW(0, fullname_16, program_filepath_maxncpy)) {
       conv_utf_16_to_8(fullname_16, program_filepath, program_filepath_maxncpy);
       if (!BLI_exists(program_filepath)) {
@@ -891,11 +936,11 @@ static void where_am_i(char *program_filepath,
                    "Error",
                    MB_OK);
       }
-      MEM_freeN(fullname_16);
+      MEM_delete(fullname_16);
       return;
     }
 
-    MEM_freeN(fullname_16);
+    MEM_delete(fullname_16);
   }
 #  endif
 
@@ -1045,9 +1090,9 @@ bool BKE_appdir_program_python_search(char *program_filepath,
 /** \name Application Templates
  * \{ */
 
-static blender::Vector<std::string> appdir_app_template_directories()
+static Vector<std::string> appdir_app_template_directories()
 {
-  blender::Vector<std::string> directories;
+  Vector<std::string> directories;
 
   /** Keep in sync with `bpy.utils.app_template_paths()` */
   char temp_dir[FILE_MAX];
@@ -1082,7 +1127,7 @@ bool BKE_appdir_app_template_any()
 
 bool BKE_appdir_app_template_id_search(const char *app_template, char *path, size_t path_maxncpy)
 {
-  const blender::Vector<std::string> directories = appdir_app_template_directories();
+  const Vector<std::string> directories = appdir_app_template_directories();
 
   for (const std::string &directory : directories) {
     BLI_path_join(path, path_maxncpy, directory.c_str(), app_template);
@@ -1114,11 +1159,11 @@ bool BKE_appdir_app_template_has_userpref(const char *app_template)
   return BLI_exists(userpref_path);
 }
 
-void BKE_appdir_app_templates(ListBase *templates)
+void BKE_appdir_app_templates(ListBaseT<LinkData> *templates)
 {
-  BLI_listbase_clear(templates);
+  templates->clear_no_delete();
 
-  const blender::Vector<std::string> directories = appdir_app_template_directories();
+  const Vector<std::string> directories = appdir_app_template_directories();
 
   for (const std::string &subdir : directories) {
     direntry *dirs;
@@ -1256,3 +1301,5 @@ void BKE_tempdir_session_purge()
 }
 
 /** \} */
+
+}  // namespace blender
