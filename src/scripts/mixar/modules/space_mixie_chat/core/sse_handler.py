@@ -286,6 +286,7 @@ class SSEStreamHandler:
         auth_token: Optional[str] = None,
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        project_context: Optional[dict] = None,
     ) -> bool:
         """
         Start SSE stream for V2 agent chat.
@@ -305,6 +306,8 @@ class SSEStreamHandler:
                 resolved to a bpy.data.images entry). Sent to the backend so it
                 can inline the names into the user message and the agent can
                 pass them straight to generation tools without a tool round-trip.
+            project_context: Opaque project ID, lease, revision, and protocol.
+                Never contains the local project root.
 
         Returns:
             True if stream started successfully
@@ -326,7 +329,7 @@ class SSEStreamHandler:
         self._running.set()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
@@ -532,6 +535,7 @@ class SSEStreamHandler:
         auth_token: Optional[str],
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        project_context: Optional[dict] = None,
         _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
@@ -567,6 +571,9 @@ class SSEStreamHandler:
             # empty strings when an attachment did not resolve to a name.
             if attachment_names:
                 payload["attachment_names"] = [n for n in attachment_names if n]
+
+            if project_context:
+                payload["project_context"] = project_context
 
             logger.debug(f"Starting SSE request to {self.chat_url}")
 
@@ -657,6 +664,7 @@ class SSEStreamHandler:
                     auth_token,
                     image_attachments,
                     attachment_names,
+                    project_context,
                     _connect_attempt + 1,
                 )
             self._on_error(f"Connection error: {e}")

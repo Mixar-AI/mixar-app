@@ -101,5 +101,8 @@ class AGENT_BUBBLE_PT_footer(Panel):
             icon='PLAY',
         )
 
+        from mixar.modules.addon_project.ui.controls import draw_project_controls
+        draw_project_controls(layout, scene, compact=True)
+
 
 classes = (AGENT_BUBBLE_PT_footer,)
