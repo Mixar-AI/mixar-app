@@ -143,7 +143,7 @@ static SpaceLink *mixie_create(const ScrArea * /*area*/, const Scene * /*scene*/
 
   region->v2d.scroll = (V2D_SCROLL_RIGHT | V2D_SCROLL_BOTTOM);
   region->v2d.keepzoom = V2D_LIMITZOOM;
-  region->v2d.keeptot = 0;
+  region->v2d.keeptot = V2D_KEEPTOT_FREE;
 
   return (SpaceLink *)smixie;
 }
@@ -179,7 +179,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
   rctf saved_cur = region->v2d.cur;
 
   /* Initialize View2D using standard Blender pattern */
-  ui::view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
+  ui::view2d_region_reinit(&region->v2d, ui::V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
 
   /* Custom View2D settings for moodboard infinite canvas */
   region->v2d.tot.xmin = -10000.0f;
@@ -210,7 +210,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
   region->v2d.scroll = (V2D_SCROLL_RIGHT | V2D_SCROLL_BOTTOM);
   region->v2d.keepzoom = V2D_LIMITZOOM;
-  region->v2d.keeptot = 0;
+  region->v2d.keeptot = V2D_KEEPTOT_FREE;
 
   /* Let uiBlocks drawn over the canvas receive pointer and keyboard events
    * before the moodboard's canvas keymaps. */
@@ -223,7 +223,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler_v2d_mask(&region->runtime->handlers, keymap);
 
   /* Add drop boxes for drag-and-drop */
-  ListBase *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
+  ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(lb));
 }

@@ -9,7 +9,7 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
-#include "BKE_icons.h"
+#include "BKE_icons.hh"
 #include "BKE_preview_image.hh"
 
 #include "BLI_string.h"

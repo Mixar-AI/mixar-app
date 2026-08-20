@@ -203,6 +203,9 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -240,3 +243,4 @@ void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

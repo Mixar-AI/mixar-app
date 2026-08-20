@@ -253,31 +253,31 @@ static eSpace_Type rna_Space_refine_reverse(StructRNA *srna)
    * (moodboard, chat, layers, etc.) with "unknown space type",
    * leaving GPU overlays unable to render anywhere a Mixar user
    * actually works. */
-  if (srna == &RNA_SpaceMixie) {
+  if (srna == RNA_SpaceMixie) {
     return SPACE_MIXIE;
   }
-  if (srna == &RNA_SpaceMixieChat) {
+  if (srna == RNA_SpaceMixieChat) {
     return SPACE_MIXIE_CHAT;
   }
-  if (srna == &RNA_SpaceAgentBubble) {
+  if (srna == RNA_SpaceAgentBubble) {
     return SPACE_AGENT_BUBBLE;
   }
-  if (srna == &RNA_SpaceTopBar) {
+  if (srna == RNA_SpaceTopBar) {
     return SPACE_TOPBAR;
   }
-  if (srna == &RNA_SpaceMixarLayers) {
+  if (srna == RNA_SpaceMixarLayers) {
     return SPACE_MIXAR_LAYERS;
   }
-  if (srna == &RNA_SpaceMixarProperties) {
+  if (srna == RNA_SpaceMixarProperties) {
     return SPACE_MIXAR_PROPERTIES;
   }
-  if (srna == &RNA_SpaceMixarAssets) {
+  if (srna == RNA_SpaceMixarAssets) {
     return SPACE_MIXAR_ASSETS;
   }
-  if (srna == &RNA_SpaceBaking) {
+  if (srna == RNA_SpaceBaking) {
     return SPACE_BAKING;
   }
-  if (srna == &RNA_SpaceTextureSets) {
+  if (srna == RNA_SpaceTextureSets) {
     return SPACE_TEXTURE_SETS;
   }
   return SPACE_EMPTY;

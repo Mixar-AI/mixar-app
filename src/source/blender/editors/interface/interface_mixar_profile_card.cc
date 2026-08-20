@@ -177,7 +177,7 @@ void read_string(PointerRNA *ptr, const char *name, char *dst, const int dst_max
   char *value = RNA_property_string_get_alloc(ptr, prop, dst, dst_maxncpy, &len);
   if (value != nullptr && value != dst) {
     BLI_strncpy(dst, value, dst_maxncpy);
-    MEM_delete_void(value);
+    MEM_delete_void(static_cast<void *>(value));
   }
 }
 

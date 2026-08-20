@@ -1654,7 +1654,12 @@ void ED_spacetype_view3d()
   st->refresh = space_view3d_refresh;
   st->duplicate = view3d_duplicate;
   st->operatortypes = view3d_operatortypes_with_agent_strip;
-  st->keymap = view3d_keymap;
+  /* Mixar: ARegionType::keymap was removed in 5.2, so the Agent Scene
+   * Strip's default keymap items are ensured from the space keymap. */
+  st->keymap = [](wmKeyConfig *keyconf) {
+    view3d_keymap(keyconf);
+    view3d_agent_strip_keymap(keyconf);
+  };
   st->dropboxes = view3d_dropboxes;
   st->gizmos = view3d_widgets;
   st->context = view3d_context;

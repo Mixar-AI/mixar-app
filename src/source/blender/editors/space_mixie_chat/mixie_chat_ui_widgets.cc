@@ -269,12 +269,11 @@ float chat_ui_draw_image_attachment(Main *bmain,
   float draw_y = y - display_height - style->margin;
 
   /* Draw using raw pixel upload — bypasses colorspace conversion. */
-  IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
   if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -282,14 +281,10 @@ float chat_ui_draw_image_attachment(Main *bmain,
                                    true,
                                    ibuf->float_buffer.data,
                                    display_width / float(ibuf->x),
-                                   display_height / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   display_height / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -297,10 +292,7 @@ float chat_ui_draw_image_attachment(Main *bmain,
                                    false,
                                    ibuf->byte_buffer.data,
                                    display_width / float(ibuf->x),
-                                   display_height / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   display_height / float(ibuf->y), nullptr);
   }
 
   GPU_blend(GPU_BLEND_NONE);

@@ -423,12 +423,11 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
 
             /* Draw image using immediate mode (fallback).
              * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
-            IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+            PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
             GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
             if (ibuf->float_buffer.data) {
-              immDrawPixelsTexScaledFullSize(&state,
-                                             pos_x,
+              drawer.draw(pos_x,
                                              pos_y,
                                              ibuf->x,
                                              ibuf->y,
@@ -436,14 +435,10 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
                                              true,
                                              ibuf->float_buffer.data,
                                              display_width / float(ibuf->x),
-                                             display_height / float(ibuf->y),
-                                             1.0f,
-                                             1.0f,
-                                             nullptr);
+                                             display_height / float(ibuf->y), nullptr);
             }
             else if (ibuf->byte_buffer.data) {
-              immDrawPixelsTexScaledFullSize(&state,
-                                             pos_x,
+              drawer.draw(pos_x,
                                              pos_y,
                                              ibuf->x,
                                              ibuf->y,
@@ -451,10 +446,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
                                              false,
                                              ibuf->byte_buffer.data,
                                              display_width / float(ibuf->x),
-                                             display_height / float(ibuf->y),
-                                             1.0f,
-                                             1.0f,
-                                             nullptr);
+                                             display_height / float(ibuf->y), nullptr);
             }
 
             GPU_blend(GPU_BLEND_NONE);

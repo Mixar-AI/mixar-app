@@ -87,7 +87,7 @@ bool mixie_chat_handle_action_button_click(bContext *C,
       rt->copy_feedback_time = BLI_time_now_seconds();
     }
     if (todo_text) {
-      MEM_delete_void(todo_text);
+      MEM_delete_void(static_cast<void *>(todo_text));
     }
     ED_region_tag_redraw(region);
     return true;

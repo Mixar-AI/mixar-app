@@ -216,6 +216,9 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -239,3 +242,4 @@ void MIXIE_OT_moodboard_crop_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

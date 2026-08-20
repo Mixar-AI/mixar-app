@@ -290,6 +290,9 @@ void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot)
 {
   ot->name = "Moodboard Video Hover Monitor";
@@ -300,3 +303,4 @@ void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot)
   ot->poll = blender::ed::mixie::moodboard_poll;
   ot->flag = OPTYPE_INTERNAL;
 }
+}  // namespace blender

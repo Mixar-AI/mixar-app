@@ -227,7 +227,7 @@ static void rules_paste(ARegion *region, MixieChatRuntime *rt)
   if (out > 0) {
     rules_insert(region, rt, buf, out);
   }
-  MEM_delete_void(buf);
+  MEM_delete_void(static_cast<void *>(buf));
 }
 
 /** Move the caret one visual line up/down, preserving the goal column. */

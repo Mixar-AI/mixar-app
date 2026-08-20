@@ -159,12 +159,11 @@ void footer_thumbnails_draw_image(Main *bmain,
   float draw_y = y + (size - draw_h) * 0.5f;
 
   /* Draw using raw pixel upload — bypasses colorspace conversion. */
-  IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
   if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -172,14 +171,10 @@ void footer_thumbnails_draw_image(Main *bmain,
                                    true,
                                    ibuf->float_buffer.data,
                                    draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -187,10 +182,7 @@ void footer_thumbnails_draw_image(Main *bmain,
                                    false,
                                    ibuf->byte_buffer.data,
                                    draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
 
   GPU_blend(GPU_BLEND_NONE);

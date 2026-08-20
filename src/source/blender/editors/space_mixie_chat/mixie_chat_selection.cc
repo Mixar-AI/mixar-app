@@ -125,7 +125,7 @@ char *mixie_chat_get_selected_text(const bContext *C)
 
   /* If content is empty, try text as fallback */
   if (text_len == 0) {
-    MEM_delete_void(text_buffer);
+    MEM_delete_void(static_cast<void *>(text_buffer));
     PropertyRNA *fallback_prop = RNA_struct_find_property(&msg_ptr, "text");
     if (fallback_prop) {
       text_len = RNA_property_string_length(&msg_ptr, fallback_prop);
@@ -144,7 +144,7 @@ char *mixie_chat_get_selected_text(const bContext *C)
 
   int sel_len = sel_end - sel_start;
   if (sel_len <= 0) {
-    MEM_delete_void(text_buffer);
+    MEM_delete_void(static_cast<void *>(text_buffer));
     return nullptr;
   }
 
@@ -154,7 +154,7 @@ char *mixie_chat_get_selected_text(const bContext *C)
   selected[sel_len] = '\0';
 
   /* Free dynamically allocated text buffer */
-  MEM_delete_void(text_buffer);
+  MEM_delete_void(static_cast<void *>(text_buffer));
 
   return selected;
 }
@@ -413,7 +413,7 @@ static wmOperatorStatus mixie_chat_copy_exec(bContext *C, wmOperator * /*op*/)
   }
 
   WM_clipboard_text_set(selected, false);
-  MEM_delete_void(selected);
+  MEM_delete_void(static_cast<void *>(selected));
 
   return OPERATOR_FINISHED;
 }

@@ -73,7 +73,7 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
     char *multi_paths_cstr = RNA_string_get_alloc(op->ptr, "multi_filepaths", nullptr, 0, nullptr);
     if (multi_paths_cstr) {
       std::string multi_paths(multi_paths_cstr);
-      MEM_delete_void(multi_paths_cstr);
+      MEM_delete_void(static_cast<void *>(multi_paths_cstr));
 
       std::stringstream ss(multi_paths);
       std::string segment;
@@ -220,6 +220,9 @@ static wmOperatorStatus moodboard_drop_image_invoke(bContext *C,
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -246,3 +249,4 @@ void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

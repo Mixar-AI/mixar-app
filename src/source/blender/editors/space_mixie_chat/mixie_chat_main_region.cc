@@ -363,7 +363,7 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
 {
   const float prev_y_min = region->v2d.cur.ymin;
 
-  ui::view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
+  ui::view2d_region_reinit(&region->v2d, ui::V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
 
   View2D *v2d = &region->v2d;
 
@@ -430,7 +430,7 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, mixie_keymap);
 
   /* Register dropbox handler for image drag-and-drop. */
-  ListBase *dropboxes = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
       "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(dropboxes));

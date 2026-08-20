@@ -392,7 +392,7 @@ angle_wrapper->absolute(false);
                                  row_label_w, -UI_UNIT_Y,
                                  angle_input_w, UI_UNIT_Y,
                                  &mixar_uv_vertex_old_angle, -360.0f, 360.0f,
-                                 "Rotation angle in degrees";
+                                 "Rotation angle in degrees");
     ui::button_retval_set(angle_but, B_MIXAR_UVEDIT_ROTATE);
     ui::button_number_step_size_set(angle_but, 1);
     ui::button_number_precision_set(angle_but, 3);
@@ -413,7 +413,7 @@ scale_wrapper->absolute(false);
              nullptr, 0.0f, 0.0f, "");
     but = ui::uiDefButV(scale_block, ui::ButtonType::Num, "",
                      row_label_w + xy_label_w, y, xy_input_w, UI_UNIT_Y,
-                     &mixar_uv_size_target[0], 0.0f, 10.0f, "Width in UV space";
+                     &mixar_uv_size_target[0], 0.0f, 10.0f, "Width in UV space");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_SCALE);
     ui::button_number_step_size_set(but, 1);
     ui::button_number_precision_set(but, 3);
@@ -423,7 +423,7 @@ scale_wrapper->absolute(false);
     but = ui::uiDefButV(scale_block, ui::ButtonType::Num, "",
                      row_label_w + half_content + xy_gap + xy_label_w, y,
                      xy_input_w, UI_UNIT_Y,
-                     &mixar_uv_size_target[1], 0.0f, 10.0f, "Height in UV space";
+                     &mixar_uv_size_target[1], 0.0f, 10.0f, "Height in UV space");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_SCALE);
     ui::button_number_step_size_set(but, 1);
     ui::button_number_precision_set(but, 3);
@@ -513,7 +513,7 @@ cursor_col->absolute(false);
              0, y, label_w, UI_UNIT_Y, nullptr, 0.0f, 0.0f, "");
     but = ui::uiDefButV(cursor_block, ui::ButtonType::Num, "",
                      label_w, y, input_w, UI_UNIT_Y,
-                     &mixar_uv_cursor_edit[0], -FLT_MAX, FLT_MAX, "Cursor X position";
+                     &mixar_uv_cursor_edit[0], -FLT_MAX, FLT_MAX, "Cursor X position");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_CURSOR);
     ui::button_number_step_size_set(but, step);
     ui::button_number_precision_set(but, digits);
@@ -521,7 +521,7 @@ cursor_col->absolute(false);
              half_w + xy_gap, y, label_w, UI_UNIT_Y, nullptr, 0.0f, 0.0f, "");
     but = ui::uiDefButV(cursor_block, ui::ButtonType::Num, "",
                      half_w + xy_gap + label_w, y, input_w, UI_UNIT_Y,
-                     &mixar_uv_cursor_edit[1], -FLT_MAX, FLT_MAX, "Cursor Y position";
+                     &mixar_uv_cursor_edit[1], -FLT_MAX, FLT_MAX, "Cursor Y position");
     ui::button_retval_set(but, B_MIXAR_UVEDIT_CURSOR);
     ui::button_number_step_size_set(but, step);
     ui::button_number_precision_set(but, digits);
