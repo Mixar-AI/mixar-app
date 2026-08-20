@@ -113,6 +113,15 @@ class TransactionStore:
         })
         return {"success": True, "proposal_id": proposal_id, "base_revision": current_revision, "changes": previews}
 
+    def proposal_changes(self, project_id: str, proposal_id: str) -> list:
+        """Normalized changes of a staged proposal ([] when unavailable)."""
+        proposal = read_json(self._proposal_path(project_id, proposal_id), None)
+        if isinstance(proposal, dict) and proposal.get("project_id") == project_id:
+            changes = proposal.get("changes")
+            if isinstance(changes, list):
+                return changes
+        return []
+
     @staticmethod
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

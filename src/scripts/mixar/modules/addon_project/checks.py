@@ -10,6 +10,7 @@ import traceback
 from pathlib import Path
 
 from .indexer import read_source
+from .installer import install_addon
 from .paths import iter_project_files
 
 
@@ -36,8 +37,21 @@ def run_static_checks(root: Path) -> dict:
     return {"success": passed, "checks": results, "summary": f"{sum(r['success'] for r in results)}/{len(results)} Python files compiled"}
 
 
-def run_blender_reload(root: Path, entrypoint: str) -> dict:
-    """Import and exercise register/unregister on Blender's main thread."""
+def run_blender_reload(
+    root: Path,
+    entrypoint: str,
+    *,
+    allow_root_package=True,
+    deliberately_disabled=False,
+) -> dict:
+    """Import and exercise register/unregister on Blender's main thread.
+
+    ``deliberately_disabled`` comes from the machine-local disable stamps
+    (service layer): only an EXPLICIT set_enabled(False)/uninstall skips the
+    auto-enable — a bare "link exists but not enabled" state also matches
+    stale links and enables that never persisted to prefs, which must
+    re-enable.
+    """
     if not entrypoint:
         return {
             "success": False,
@@ -91,12 +105,39 @@ def run_blender_reload(root: Path, entrypoint: str) -> dict:
             register()
             unregister()
             test_registered = False
-        return {
+        result = {
             "success": True,
             "check": "blender_reload",
             "message": "Add-on imported and registration lifecycle passed",
             "left_enabled": was_enabled,
         }
+        if not was_enabled:
+            # A passing, not-yet-enabled add-on gets installed so it is live
+            # now and survives restarts. Install failures (dotted entrypoint,
+            # target collision, no symlink privilege) never fail the checks
+            # themselves — the structured "install" result explains why the
+            # add-on is not live yet. Exception: an entrypoint carrying a
+            # deliberate-disable stamp must not be forced back on.
+            if deliberately_disabled:
+                install = {
+                    "success": False,
+                    "installed": False,
+                    "reason": "disabled_by_user",
+                    "message": (
+                        "Add-on is installed but disabled; enable it to "
+                        "make it live"
+                    ),
+                }
+            else:
+                install = install_addon(
+                    root, entrypoint, allow_root_package=allow_root_package
+                )
+            result["install"] = install
+            result["installed"] = bool(install.get("success"))
+            if install.get("success"):
+                result["left_enabled"] = True
+                result["message"] = "Add-on installed and enabled"
+        return result
     except Exception as exc:
         if module is not None and (test_registered or was_enabled):
             try:

@@ -184,10 +184,12 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         if scene.mixie_chat_mode == 'ADDON_PROJECT':
             if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
                 from mixar.modules.addon_project.ui.operators import (
-                    prompt_for_addon_project_link,
+                    ensure_addon_project_ready,
                 )
-                prompt_for_addon_project_link(self)
-                return {'CANCELLED'}
+                # Zero-question setup: default root + link, then this SAME
+                # send proceeds to build_project_context below.
+                if not ensure_addon_project_ready(self):
+                    return {'CANCELLED'}
             try:
                 from mixar.modules.addon_project.context import build_project_context
                 project_context = build_project_context(scene)

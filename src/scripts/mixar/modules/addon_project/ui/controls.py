@@ -30,10 +30,22 @@ def draw_project_controls(
     row = layout if inline else layout.row(align=True)
     project_id = getattr(scene, "mixie_addon_project_id", "") or ""
     if not project_id:
+        # Primary flow: name a new add-on inside the one-time projects root
+        # (the operator opens the root picker first when none is saved yet).
+        # Everything else (open existing, link arbitrary folder, change the
+        # root) lives in the workspace menu — exactly two small buttons, so
+        # the fixed-height Agent Bubble composer row never overflows. The
+        # menu queries the workspace only when opened, keeping disk IO out
+        # of this draw callback.
         row.operator(
-            "mixar.addon_project_link",
-            text="Create / Link" if compact else "Create or Link Project Folder",
-            icon='FILE_FOLDER',
+            "mixar.addon_project_new",
+            text="New Add-on",
+            icon='FILE_NEW',
+        )
+        row.menu(
+            "MIXAR_MT_addon_project_workspace",
+            text="" if compact else "Add-on Projects",
+            icon='DOWNARROW_HLT',
         )
         return
     if setup_only:
@@ -43,6 +55,13 @@ def draw_project_controls(
     row.label(
         text=_compact_project_name(project_name) if compact else project_name,
         icon='FILE_SCRIPT',
+    )
+    # With the projects root linked as THE project, switching the active
+    # add-on (and the other workspace actions) stays one icon away.
+    row.menu(
+        "MIXAR_MT_addon_project_workspace",
+        text="",
+        icon='DOWNARROW_HLT',
     )
     row.operator(
         "mixar.addon_project_open_entrypoint",

@@ -21,15 +21,32 @@ def manifest_path(root: Path) -> Path:
     return root / MANIFEST_DIR / MANIFEST_FILE
 
 
-def _looks_like_addon(path: Path) -> bool:
+def _looks_like_addon_source(source: str) -> bool:
     """Recognize the ordinary Blender add-on entrypoint shape cheaply."""
+    return (
+        "bl_info" in source
+        or ("def register(" in source and "def unregister(" in source)
+    )
+
+
+def _looks_like_addon(path: Path) -> bool:
     try:
         source = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return False
+    return _looks_like_addon_source(source)
+
+
+def is_root_package_entrypoint(root: Path, entrypoint: str) -> bool:
+    """True when the entrypoint means "the project root itself is the package".
+
+    Legitimate for a standalone project folder; never for the workspace root
+    (installing it would symlink EVERY add-on as one umbrella add-on).
+    """
     return (
-        "bl_info" in source
-        or ("def register(" in source and "def unregister(" in source)
+        bool(entrypoint)
+        and entrypoint.split(".")[0] == root.name
+        and (root / "__init__.py").is_file()
     )
 
 
@@ -54,8 +71,12 @@ def entrypoint_source_path(root: Path, entrypoint: str) -> Path:
     )
 
 
-def infer_entrypoint(root: Path) -> str:
-    if (root / "__init__.py").is_file() and _MODULE_RE.match(root.name):
+def infer_entrypoint(root: Path, *, allow_root_package=True) -> str:
+    if (
+        allow_root_package
+        and (root / "__init__.py").is_file()
+        and _MODULE_RE.match(root.name)
+    ):
         return root.name
     candidates = []
     for child in root.iterdir():
@@ -108,6 +129,12 @@ def load_manifest(root: Path) -> dict:
         "project_id": str(project_id),
         "name": str(payload.get("name") or root.name),
         "entrypoint": entrypoint,
+        # Schema-compatible extra key: True marks this project as an add-on
+        # projects WORKSPACE. Guard decisions key on this stamp, never on a
+        # live comparison with the currently saved workspace.json — an
+        # abandoned old root keeps its guards, a never-stamped standalone
+        # folder is never healed.
+        "workspace": bool(payload.get("workspace", False)),
     }
 
 
@@ -159,11 +186,15 @@ def validate_project_root(root: Path, *, entrypoint=None) -> None:
     )
 
 
-def ensure_manifest(root: Path, name=None, entrypoint=None) -> dict:
+def ensure_manifest(root: Path, name=None, entrypoint=None, *, allow_root_package=True) -> dict:
     path = manifest_path(root)
     if path.exists():
         return load_manifest(root)
-    chosen_entrypoint = infer_entrypoint(root) if entrypoint is None else entrypoint
+    chosen_entrypoint = (
+        infer_entrypoint(root, allow_root_package=allow_root_package)
+        if entrypoint is None
+        else entrypoint
+    )
     if chosen_entrypoint and not _MODULE_RE.match(chosen_entrypoint):
         raise AddonProjectError("invalid_entrypoint", "The add-on module name is invalid")
     payload = {
@@ -176,8 +207,23 @@ def ensure_manifest(root: Path, name=None, entrypoint=None) -> dict:
     return payload
 
 
-def set_entrypoint(root: Path, entrypoint: str) -> dict:
+def mark_workspace_manifest(root: Path) -> dict:
+    """Stamp the manifest as the add-on projects workspace (idempotent)."""
+    manifest = load_manifest(root)
+    if not manifest.get("workspace"):
+        manifest["workspace"] = True
+        write_json_atomic(manifest_path(root), manifest)
+    return manifest
+
+
+def set_entrypoint(root: Path, entrypoint: str, *, allow_root_package=True) -> dict:
     """Validate and persist one path-free Blender import name."""
+    if not allow_root_package and is_root_package_entrypoint(root, entrypoint):
+        raise AddonProjectError(
+            "invalid_entrypoint",
+            "Each add-on lives in its own subfolder of the projects folder; "
+            "the projects folder itself cannot be the add-on",
+        )
     manifest = load_manifest(root)
     entrypoint_source_path(root, entrypoint)
     manifest["entrypoint"] = entrypoint
@@ -185,9 +231,11 @@ def set_entrypoint(root: Path, entrypoint: str) -> dict:
     return manifest
 
 
-def refresh_entrypoint(root: Path, manifest: dict) -> dict:
+def refresh_entrypoint(root: Path, manifest: dict, *, allow_root_package=True) -> dict:
     """Auto-fill a newly created project's entrypoint once it is unambiguous."""
     if manifest.get("entrypoint"):
         return manifest
-    inferred = infer_entrypoint(root)
-    return set_entrypoint(root, inferred) if inferred else manifest
+    inferred = infer_entrypoint(root, allow_root_package=allow_root_package)
+    if not inferred:
+        return manifest
+    return set_entrypoint(root, inferred, allow_root_package=allow_root_package)

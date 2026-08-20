@@ -60,6 +60,7 @@ def test_protocol_v1_surface_is_stable():
         "addon_project.run_checks",
         "addon_project.rollback",
         "addon_project.history",
+        "addon_project.set_enabled",
     }
 
 
@@ -404,7 +405,7 @@ def test_sse_chat_payload_carries_only_path_free_project_context(monkeypatch):
     assert "root" not in requests[0]["project_context"]
 
 
-def test_blender_reload_exercises_disabled_addon_without_enabling_it(tmp_path, monkeypatch):
+def test_blender_reload_exercises_disabled_addon_then_installs_it(tmp_path, monkeypatch):
     module_name = "reload_check_sample"
     project = tmp_path / "repository"
     package = project / module_name
@@ -415,6 +416,14 @@ def test_blender_reload_exercises_disabled_addon_without_enabling_it(tmp_path, m
         "def unregister():\n    events.append('unregister')\n",
         encoding="utf-8",
     )
+    addons_dir = tmp_path / "user_addons"
+    addons_dir.mkdir()
+    import bpy
+
+    monkeypatch.setattr(
+        bpy.utils, "user_resource", lambda *_args, **_kwargs: str(addons_dir)
+    )
+    enable_calls = []
 
     class AddonUtils:
         @staticmethod
@@ -422,15 +431,26 @@ def test_blender_reload_exercises_disabled_addon_without_enabling_it(tmp_path, m
             pytest.fail("A disabled add-on must not be disabled again")
 
         @staticmethod
-        def enable(*_args, **_kwargs):
-            pytest.fail("A disabled add-on must not be left enabled")
+        def modules_refresh(*_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def enable(name, default_set=False, persistent=False):
+            enable_calls.append((name, default_set))
+            return sys.modules[name]
 
     monkeypatch.setitem(sys.modules, "addon_utils", AddonUtils)
     result = run_blender_reload(project, module_name)
     assert result["success"] is True
-    assert result["left_enabled"] is False
+    assert result["left_enabled"] is True
+    assert result["installed"] is True
+    assert result["install"]["success"] is True
     module = sys.modules[module_name]
     assert module.events == ["register", "unregister"]
+    target = addons_dir / module_name
+    assert target.is_symlink()
+    assert target.resolve() == package.resolve()
+    assert enable_calls == [(module_name, True)]
 
 
 def test_link_prefers_the_only_blender_addon_package(tmp_path):

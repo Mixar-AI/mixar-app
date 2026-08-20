@@ -400,26 +400,36 @@ class ConnectionManager:
                     logger.warning("project request %s finished after disconnect", request_id)
 
             def _worker() -> None:
-                from mixar.modules.addon_project.constants import RPC_RUN_CHECKS
+                from mixar.modules.addon_project.constants import (
+                    RPC_RUN_CHECKS,
+                    RPC_SET_ENABLED,
+                )
                 from mixar.modules.addon_project.service import get_addon_project_service
 
                 service = get_addon_project_service()
-                # Blender registration APIs must run on the main thread. Static
-                # checks and every other project operation stay on this worker.
-                if method == RPC_RUN_CHECKS and bool(params.get("reload_blender")):
-                    static_params = dict(params)
-                    static_params["reload_blender"] = False
-                    static_result = service.dispatch(method, static_params)
-                    if not static_result.get("success"):
-                        _respond(static_result)
-                        return
+                # Blender registration APIs must run on the main thread:
+                # reload-checks AND set_enabled both reach addon_utils
+                # enable/disable (register()/unregister(), prefs writes).
+                # Static checks and every other project operation stay on
+                # this worker.
+                needs_main_thread = method == RPC_SET_ENABLED or (
+                    method == RPC_RUN_CHECKS and bool(params.get("reload_blender"))
+                )
+                if needs_main_thread:
+                    if method == RPC_RUN_CHECKS:
+                        static_params = dict(params)
+                        static_params["reload_blender"] = False
+                        static_result = service.dispatch(method, static_params)
+                        if not static_result.get("success"):
+                            _respond(static_result)
+                            return
 
                     from .main_thread_executor import run_on_main_thread
 
-                    def _reload_and_respond() -> None:
+                    def _run_and_respond() -> None:
                         _respond(service.dispatch(method, params))
 
-                    run_on_main_thread(_reload_and_respond)
+                    run_on_main_thread(_run_and_respond)
                     return
                 _respond(service.dispatch(method, params))
 

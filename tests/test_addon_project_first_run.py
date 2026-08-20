@@ -50,6 +50,7 @@ class _RecordingLayout:
 
     def menu(self, menu_id, **kwargs):
         self.menus.append((menu_id, kwargs))
+        return SimpleNamespace()
 
 
 def test_unlinked_compact_control_can_render_in_existing_composer_row():
@@ -62,10 +63,16 @@ def test_unlinked_compact_control_can_render_in_existing_composer_row():
 
     controls.draw_project_controls(layout, scene, compact=True, inline=True)
 
+    # The fixed-height Agent Bubble composer row holds at most two small
+    # controls: New Add-on plus the workspace menu (icon-only in compact).
     assert layout.row_calls == 0
     assert layout.operators == [(
-        "mixar.addon_project_link",
-        {"text": "Create / Link", "icon": "FILE_FOLDER"},
+        "mixar.addon_project_new",
+        {"text": "New Add-on", "icon": "FILE_NEW"},
+    )]
+    assert layout.menus == [(
+        "MIXAR_MT_addon_project_workspace",
+        {"text": "", "icon": "DOWNARROW_HLT"},
     )]
 
 
@@ -98,10 +105,18 @@ def test_linked_project_controls_use_clear_primary_actions_and_more_menu():
             {"text": "Test & Reload", "icon": "CHECKMARK"},
         ),
     ]
-    assert layout.menus == [(
-        "MIXAR_MT_addon_project_more",
-        {"text": "More", "icon": "DOWNARROW_HLT"},
-    )]
+    # The workspace menu (set active add-on, enable/disable, change root)
+    # sits beside the labelled More menu (entrypoint / undo-last / unlink).
+    assert layout.menus == [
+        (
+            "MIXAR_MT_addon_project_workspace",
+            {"text": "", "icon": "DOWNARROW_HLT"},
+        ),
+        (
+            "MIXAR_MT_addon_project_more",
+            {"text": "More", "icon": "DOWNARROW_HLT"},
+        ),
+    ]
 
 
 def test_floating_agent_bubble_keeps_drag_handle_without_project_controls():
@@ -150,18 +165,22 @@ def test_secondary_project_actions_are_explicitly_named():
     assert 'text="Unlink Project"' in source
 
 
-def test_send_paths_open_native_picker_before_building_project_context():
+def test_send_paths_proceed_after_ensuring_project():
     link_source = LINK_OPERATORS.read_text(encoding="utf-8")
     chat_source = CHAT.read_text(encoding="utf-8")
     quick_source = QUICK_PROMPT.read_text(encoding="utf-8")
 
-    assert "bpy.ops.mixar.addon_project_link('INVOKE_DEFAULT')" in link_source
-    assert chat_source.index("prompt_for_addon_project_link(self)") < chat_source.index(
-        "build_project_context(scene)"
-    )
-    assert quick_source.index("prompt_for_addon_project_link(self)") < quick_source.index(
-        "build_project_context(scene)"
-    )
+    # Zero-question first Send: the helper auto-creates the default root,
+    # links it, and the SAME send falls through to build_project_context —
+    # no picker, no "press Send again".
+    assert "def ensure_addon_project_ready(" in link_source
+    assert "ensure_workspace_root()" in link_source
+    assert "link_workspace_root()" in link_source
+    for source in (chat_source, quick_source):
+        assert "if not ensure_addon_project_ready(self):" in source
+        assert source.index("ensure_addon_project_ready(self)") < source.index(
+            "build_project_context(scene)"
+        )
 
     invoke_source = quick_source.split("def invoke", 1)[1].split("def draw", 1)[0]
     assert 'mixie_chat_quick_prompt_input = ""' not in invoke_source

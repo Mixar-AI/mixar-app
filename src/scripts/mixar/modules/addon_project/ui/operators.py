@@ -13,34 +13,45 @@ from ..manifest import entrypoint_source_path, infer_entrypoint
 from ..service import get_addon_project_service
 
 
-def prompt_for_addon_project_link(operator) -> bool:
-    """Open Blender's folder picker while leaving the current draft intact."""
+def ensure_addon_project_ready(operator) -> bool:
+    """Make an unlinked project-mode Send proceed in the SAME action.
+
+    Zero questions: when no projects root is saved, the default
+    ``~/Mixar Addons`` is created and saved; the root is linked as THE
+    project (idempotent) and the scene props are set, so the caller falls
+    straight through to build_project_context. False only on real
+    failures, with the error reported.
+    """
     try:
-        result = bpy.ops.mixar.addon_project_link('INVOKE_DEFAULT')
+        service = get_addon_project_service()
+        first_time = service.get_workspace_root() is None
+        service.ensure_workspace_root()
+        result = service.link_workspace_root()
     except Exception as exc:
+        operator.report({'ERROR'}, getattr(exc, "message", str(exc)))
+        return False
+    scene = getattr(bpy.context, "scene", None)
+    if scene is not None:
+        scene.mixie_addon_project_id = result["project_id"]
+        scene.mixie_addon_project_name = result["name"]
+        scene.mixie_chat_mode = 'ADDON_PROJECT'
+    if first_time:
         operator.report(
-            {'ERROR'},
-            f"Could not open the add-on project folder picker: {exc}",
+            {'INFO'},
+            "Add-ons will be created in Mixar Addons in your home folder "
+            "— change it from the project menu",
         )
-        return False
-
-    if 'RUNNING_MODAL' not in result:
-        operator.report({'ERROR'}, "Could not open the add-on project folder picker")
-        return False
-
-    operator.report(
-        {'INFO'},
-        "Choose a folder named like my_addon; your draft is preserved for Send",
-    )
     return True
 
 
 class MIXAR_OT_addon_project_link(Operator):
+    # Escape hatch for linking an arbitrary existing folder; the primary flow
+    # is the workspace root + New Add-on dialog (ui/workspace_ops.py).
     bl_idname = "mixar.addon_project_link"
-    bl_label = "Create or Link Add-on Project"
+    bl_label = "Link Existing Folder"
     bl_description = (
-        "Choose an add-on folder named with letters, numbers, and underscores; "
-        "Mixar stores only its project ID in the scene"
+        "Link an existing add-on folder named with letters, numbers, and "
+        "underscores; Mixar stores only its project ID in the scene"
     )
     bl_options = {'REGISTER'}
 
@@ -124,7 +135,12 @@ class MIXAR_OT_addon_project_set_entrypoint(Operator):
             root, manifest = service.registry.resolve(
                 str(context.scene.mixie_addon_project_id or "")
             )
-            self.entrypoint = manifest.get("entrypoint") or infer_entrypoint(root)
+            # The workspace root itself must never be suggested as the
+            # entrypoint (service-side set_entrypoint rejects it anyway).
+            allow_root = service.get_workspace_root() != root
+            self.entrypoint = manifest.get("entrypoint") or infer_entrypoint(
+                root, allow_root_package=allow_root
+            )
         except Exception:
             self.entrypoint = ""
         return context.window_manager.invoke_props_dialog(self, width=440)
@@ -158,7 +174,17 @@ class MIXAR_OT_addon_project_run_checks(Operator):
         try:
             result = get_addon_project_service().run_checks(project_id, reload_blender=True)
             if result["success"]:
-                self.report({'INFO'}, "Add-on compile and reload checks passed")
+                install = (result.get("blender_reload") or {}).get("install")
+                if install is None:
+                    self.report({'INFO'}, "Add-on compile and reload checks passed")
+                elif install.get("success"):
+                    self.report({'INFO'}, install.get("message") or "Add-on installed and enabled")
+                else:
+                    self.report(
+                        {'WARNING'},
+                        "Checks passed; "
+                        + (install.get("message") or "the add-on was not auto-installed"),
+                    )
                 return {'FINISHED'}
             live = result.get("blender_reload") or {}
             message = live.get("message") or result["static"].get("summary") or "Checks failed"
