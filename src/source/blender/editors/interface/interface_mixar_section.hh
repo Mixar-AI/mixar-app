@@ -12,6 +12,10 @@
 #pragma once
 
 #include "BLI_sys_types.h" /* uchar, for the card flag accessors below. */
+namespace blender {
+struct ARegion;
+}  // namespace blender
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
 
@@ -85,7 +89,6 @@ void UI_layout_mixar_mark_last_input(Layout *layout);
 /* -------------------------------------------------------------------- */
 /* Custom panel category tab drawing for MIXIE space                     */
 
-struct ARegion;
 
 /**
  * Draw a custom styled panel category tab bar for the MIXIE space.

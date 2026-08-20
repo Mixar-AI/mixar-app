@@ -27,14 +27,17 @@
 #pragma once
 
 #include "BLI_sys_types.h"
+namespace blender {
+struct bContext;
+struct rcti;
+struct uiWidgetColors;
+}  // namespace blender
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
 
-struct bContext;
-struct rcti;
 struct Button;
 struct Layout;
-struct uiWidgetColors;
 
 /**
  * What a card element draws as. Stored on the button by the builder and
