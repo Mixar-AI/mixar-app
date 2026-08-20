@@ -23,9 +23,8 @@ Batching contract with the backend:
 import json
 import os
 
-from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.api.client import HTTPClient
+from mixar.modules.asset_search.core.api_client import metered_client
 from mixar.modules.asset_search.constants import (
     ASSET_TRAIN_ENDPOINT,
     ASSET_TRAIN_PREPARE_ENDPOINT,
@@ -33,38 +32,20 @@ from mixar.modules.asset_search.constants import (
 
 logger = get_logger(__name__)
 
-# Images per training POST. The server's ceiling is MAX_TRAIN_IMAGES = 500, but
-# /train EMBEDS SYNCHRONOUSLY: one request holds the connection open while the
-# ML service (or the GPU queue) encodes every image in it. At 500 that outlived
-# the gateway and came back 500, so batches are kept to a size the endpoint can
-# actually answer within one request.
-#
-# The trade-off is real and deliberate: the endpoint is credit-metered PER
-# REQUEST and rate-limited (5/minute; 30/hour), so a smaller batch multiplies
-# the charge. train_stream's pacer keeps the run under the rate limit. The
-# proper fix is server-side — meter per image, or make /train enqueue and
-# return — after which this can go back up.
-UPLOAD_BATCH_SIZE = 100
-# And a byte ceiling well under the server's 300MB/request cap, so a set of
-# large previews splits before it 413s (and before the request runs long).
-# Whichever cap trips first ends a batch.
-UPLOAD_BATCH_MAX_BYTES = 50 * 1024 * 1024
+# Images per training POST. Matches the server's per-request ceiling
+# (MAX_TRAIN_IMAGES = 500) so a typical library trains in ONE request. The
+# endpoint is rate-limited (5/minute; 30/hour) AND credit-metered PER REQUEST,
+# so a smaller batch multiplies the charge — 1000 assets went from 2 charges to
+# 10 while it was briefly lowered to 100.
+UPLOAD_BATCH_SIZE = 500
+# And a byte ceiling under the server's 300MB/request cap, so an unusually large
+# set of previews splits before it 413s. Whichever cap trips first ends a batch.
+UPLOAD_BATCH_MAX_BYTES = 250 * 1024 * 1024
 
 
 def train_client():
-    """HTTP client for the training endpoints — WITHOUT automatic retries.
-
-    The shared client retries 5xx on POST, which is wrong for /train and
-    /train/prepare: both are credit-metered per request and NOT idempotent, so
-    a retry re-uploads the whole batch, makes the server embed it again, and
-    charges again. It also swallows the failure — urllib3 raises ResponseError
-    ("too many 500 error responses") instead of returning the response, so the
-    server's actual error never reaches the user.
-
-    Without retries a transient 5xx just ends the run; everything already
-    uploaded is durable server-side and the next train's diff resumes from it.
-    """
-    return HTTPClient(base_url=get_server_url(), retry_count=0)
+    """No-retry client for the training endpoints (see core/api_client)."""
+    return metered_client()
 
 
 def prepare_api(metadata, operator):

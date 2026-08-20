@@ -432,11 +432,11 @@ def _semantic_search_worker(query: str, token: int, image_pack=None) -> None:
     global _search_payload
     had_image = image_pack is not None
     try:
-        from mixar.config.config import get_server_url
         from mixar.modules.asset_search.constants import ASSET_SEARCH_ENDPOINT
-        from mixar.modules.common.api.client import HTTPClient
+        from mixar.modules.asset_search.core.api_client import metered_client
 
-        client = HTTPClient(base_url=get_server_url())
+        # Credit-metered per call — never auto-retried (see core/api_client).
+        client = metered_client()
         files = {"image": image_pack} if image_pack else None
         resp = client.post(
             ASSET_SEARCH_ENDPOINT,

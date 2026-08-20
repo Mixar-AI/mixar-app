@@ -19,6 +19,7 @@ from bpy.types import Operator
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.core.api_client import metered_client
 from mixar.modules.common.api.client import HTTPClient
 
 logger = get_logger(__name__)
@@ -263,7 +264,8 @@ def _extract_search_image_bytes(img):
 def _search_api(prompt, image_bytes, operator):
     """POST a search query to the backend proxy in a background thread."""
     try:
-        client = HTTPClient(base_url=get_server_url())
+        # Credit-metered per call — never auto-retried (see core/api_client).
+        client = metered_client()
         form_data = {"prompt": prompt or ""}
         files = None
         if image_bytes:
