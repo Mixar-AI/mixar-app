@@ -13,7 +13,10 @@ core/render_session.build_render_plan). For each item the worker extracts the
 asset's embedded preview when present, otherwise renders a 512x512 preview,
 saves it as ``out_dir/<idx>.jpg``, and appends one JSON line to
 ``out_dir/results.jsonl`` (flushed per item — the parent tails this file for
-real-time progress). ``out_dir/done.marker`` is written at the end.
+real-time progress). ``out_dir/done.marker`` is written at the end, and any
+assets that had to be rendered are listed in ``out_dir/backfill.json`` for the
+parent to hand to a detached backfill process (see the backfill-only mode
+below) — writing thumbnails back must never delay done.marker.
 
 DELIBERATELY self-contained: no mixar imports (runs under --factory-startup
 where the addon is not loaded), only bpy + stdlib + numpy. The small rig /
@@ -144,6 +147,48 @@ def _render_jpg(scene, out_path):
         scene.render.image_settings.quality = orig_q
 
 
+class _LinkedBlend:
+    """Keeps ONE library linked so an embedded preview can be read WITHOUT
+    appending the asset. Mirrors utils/preview_render.LinkedBlend — keep in sync.
+
+    Appending copies the asset's entire dependency graph (mesh data, materials,
+    node trees, packed textures) into the local file; reading ``preview`` /
+    ``asset_data`` needs none of it. The library is held across consecutive
+    items from the same .blend (the plan is grouped by file), so a multi-asset
+    .blend is parsed once. References from ``load()`` die on ``release()``.
+    """
+
+    def __init__(self):
+        self._path = None
+        self._library = None
+
+    def load(self, item):
+        if self._path != item['blend_str']:
+            self.release()
+        with bpy.data.libraries.load(item['blend_str'], link=True) as (_, data_to):
+            if item['kind'] == 'OBJECT':
+                data_to.objects = [item['name']]
+            else:
+                data_to.collections = [item['name']]
+        block = (data_to.objects[0] if item['kind'] == 'OBJECT'
+                 else data_to.collections[0])
+        if block is not None:
+            self._path = item['blend_str']
+            # Hold the Library ID (filepath matching is unsafe — it may be
+            # stored relative to the current file).
+            self._library = block.library
+        return block
+
+    def release(self):
+        library, self._library, self._path = self._library, None, None
+        if library is None:
+            return
+        try:
+            bpy.data.libraries.remove(library)
+        except Exception as exc:  # noqa: BLE001 — must not stop the run
+            print(f"[preview] could not free linked library: {exc}")
+
+
 def _remove_appended(objects=(), collections=()):
     for coll in collections:
         objs = list(coll.all_objects)
@@ -213,8 +258,32 @@ def _stage_scene():
     return scene, cam
 
 
-def _process_item(scene, cam, item, out_path):
-    """One asset: append -> preview-or-render JPEG -> cleanup. Returns info."""
+def _process_item(scene, cam, item, out_path, linked):
+    """One asset: link -> embedded preview, else append -> render. Returns info.
+
+    The preview lives in the datablock's own header, so the asset is LINKED
+    first and only APPENDED (dependency graph and all) when it has no usable
+    thumbnail and must actually be rendered.
+    """
+    block = linked.load(item)
+    if block is None:
+        linked.release()
+        raise RuntimeError("not found in .blend")
+    # Read everything off the linked datablock BEFORE release() — the
+    # reference dies with its library.
+    info = _collect_metadata(block, item['library'], item['rel_path'])
+    info['name'] = item['name']
+    if _save_preview_jpg(block, out_path):
+        info['reused_preview'] = True
+        return info  # library stays linked for the next item in the same file
+
+    # No usable thumbnail — rendering needs a real local copy.
+    linked.release()
+    return _render_item(scene, cam, item, info, out_path)
+
+
+def _render_item(scene, cam, item, info, out_path):
+    """Append the asset, render it to ``out_path``, and clean the copy up."""
     with bpy.data.libraries.load(item['blend_str'], link=False) as (_, data_to):
         if item['kind'] == 'OBJECT':
             data_to.objects = [item['name']]
@@ -225,12 +294,7 @@ def _process_item(scene, cam, item, out_path):
         obj = data_to.objects[0]
         if obj is None:
             raise RuntimeError("not found in .blend")
-        info = _collect_metadata(obj, item['library'], item['rel_path'])
-        info['name'] = item['name']
         try:
-            if _save_preview_jpg(obj, out_path):
-                info['reused_preview'] = True
-                return info
             scene.collection.objects.link(obj)
             bpy.context.view_layer.update()
             _frame_camera(cam, [obj])
@@ -244,12 +308,7 @@ def _process_item(scene, cam, item, out_path):
         coll = data_to.collections[0]
         if coll is None:
             raise RuntimeError("not found in .blend")
-        info = _collect_metadata(coll, item['library'], item['rel_path'])
-        info['name'] = item['name']
         try:
-            if _save_preview_jpg(coll, out_path):
-                info['reused_preview'] = True
-                return info
             scene.collection.children.link(coll)
             bpy.context.view_layer.update()
             objects = list(coll.all_objects)
@@ -359,13 +418,15 @@ def main():
     scene, cam = _stage_scene()
 
     backfill_entries = []
+    linked = _LinkedBlend()
     with open(results_path, "a", encoding="utf-8") as results:
         for i, item in enumerate(items):
             label = f"{item.get('name', '?')} ({item.get('library', '?')})"
             out_path = os.path.join(out_dir, f"{i:05d}.jpg")
             entry = {"idx": i, "ok": False, "label": label}
+            started = time.time()
             try:
-                info = _process_item(scene, cam, item, out_path)
+                info = _process_item(scene, cam, item, out_path, linked)
                 entry.update(ok=True, file=f"{i:05d}.jpg", info=info)
                 if not info.get("reused_preview"):
                     backfill_entries.append({
@@ -375,15 +436,25 @@ def main():
                     })
             except Exception as e:  # noqa: BLE001 — record and continue
                 entry["reason"] = str(e)[:150]
+                # Never carry a half-used linked library into the next item.
+                linked.release()
+            entry["ms"] = int((time.time() - started) * 1000)
             results.write(json.dumps(entry) + "\n")
             results.flush()
             os.fsync(results.fileno())
             _touch(heartbeat_path)
+    linked.release()
 
-    # Backfill BEFORE done.marker: the parent deletes out_dir (our jpgs)
-    # right after it sees done. The heartbeat keeps its watchdog satisfied.
+    # Thumbnail backfill is NOT done here. It reopens and re-saves every .blend
+    # this shard rendered from — potentially gigabytes of writes — and sitting
+    # between the last render and done.marker meant the user watched a finished
+    # progress bar for all of it, with the upload unable to start. The entries
+    # are recorded instead; the parent launches ONE detached backfill process
+    # for every shard once rendering is done.
     if backfill_entries:
-        _backfill_previews(backfill_entries, heartbeat_path)
+        with open(os.path.join(out_dir, "backfill.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump(backfill_entries, fh)
 
     with open(os.path.join(out_dir, "done.marker"), "w", encoding="utf-8") as fh:
         fh.write("done")

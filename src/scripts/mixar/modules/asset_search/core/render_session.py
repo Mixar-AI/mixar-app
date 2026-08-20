@@ -16,18 +16,21 @@ operator/API as a thin run-to-completion wrapper) and by the training
 modal in ``ui/operators/asset_train_ops.py``.
 """
 
+import os
+import tempfile
 from pathlib import Path
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.utils.preview_render import (
+    LinkedBlend,
     PreviewRenderRig,
     frame_camera,
-    image_from_preview,
     remove_collection,
     remove_objects,
-    render_to_image,
+    render_to_jpeg,
+    save_preview_jpeg,
 )
 
 logger = get_logger(__name__)
@@ -138,13 +141,21 @@ class RenderSession:
     Lifecycle: ``start()`` (enters the preview rig — scene mutated), then
     ``step(n)`` repeatedly until ``done``, then ``finish()`` (ALWAYS, also on
     cancel/error — restores the scene). ``collected`` holds the metadata dicts
-    (with ``image_name`` set) for every successfully rendered asset;
-    ``failures`` holds (label, reason) for every skipped one.
+    (``image_name`` = the server's pairing key, ``image_path`` = the JPEG on
+    disk) for every successfully rendered asset; ``failures`` holds
+    (label, reason) for every skipped one.
+
+    Previews are written STRAIGHT TO DISK in ``out_dir`` — no bpy.data.images
+    datablock is created. The upload phase streams those files, so a large
+    library never packs hundreds of images into the user's session (they also
+    had to be re-encoded to JPEG a second time on the way out). ``out_dir``
+    belongs to the caller, which must remove it once the upload is done.
     """
 
-    def __init__(self, context, items):
+    def __init__(self, context, items, out_dir=None):
         self.context = context
         self.items = items
+        self.out_dir = out_dir or tempfile.mkdtemp(prefix="mixar_previews_")
         self.index = 0
         self.collected = []
         self.failures = []
@@ -154,8 +165,28 @@ class RenderSession:
         # candidates for writing the render back as the asset's preview
         # (kept separate from `collected`: absolute blend paths must never
         # ride the metadata uploaded to the server).
-        self.rendered_items = []  # {blend_str, name, image_name}
+        self.rendered_items = []  # {blend_str, name, jpg}
         self._rig = None
+        # Preview-first linking (see LinkedBlend): read the embedded thumbnail
+        # off a LINKED datablock and only append when one must be rendered.
+        self._linked = LinkedBlend()
+        # image_name is the key the SERVER pairs metadata to embeddings on, so
+        # it must be unique per request. bpy's datablock suffixing used to
+        # provide that implicitly; with no datablock we enforce it here.
+        self._used_names = set()
+        self._file_seq = 0
+
+    def _image_name(self, asset_name):
+        name = f"asset_preview_{asset_name}"
+        if name not in self._used_names:
+            self._used_names.add(name)
+            return name
+        suffix = 1
+        while f"{name}.{suffix:03d}" in self._used_names:
+            suffix += 1
+        unique = f"{name}.{suffix:03d}"
+        self._used_names.add(unique)
+        return unique
 
     # -- lifecycle -------------------------------------------------------
 
@@ -164,6 +195,7 @@ class RenderSession:
         self._rig.__enter__()
 
     def finish(self):
+        self._linked.release()
         if self._rig is not None:
             self._rig.__exit__(None, None, None)
             self._rig = None
@@ -200,6 +232,8 @@ class RenderSession:
                 logger.error("[RenderSession] Error rendering %s: %s",
                              item['name'], e)
                 self.failures.append((self.current_label, str(e)[:120]))
+                # Never carry a half-used linked library into the next item.
+                self._linked.release()
             if _time.monotonic() - started >= time_budget:
                 break
         return attempted
@@ -207,6 +241,45 @@ class RenderSession:
     # -- per-item render (adapted from the former monolithic operator) ----
 
     def _render_item(self, item):
+        """Embedded thumbnail off a LINKED datablock; append only to render.
+
+        Reading the preview needs nothing but the datablock's own header, so
+        the asset is LINKED first (see LinkedBlend) — appending it just to
+        throw the copy away was the dominant cost of a thumbnail-rich library.
+        The expensive append happens only when no usable thumbnail exists and a
+        real render is required.
+        """
+        img_name = self._image_name(item['name'])
+        # Own counter, not self.index: the caller advances that before calling
+        # here, so deriving the filename from it would silently break if the
+        # step() bookkeeping ever moves.
+        out_path = os.path.join(self.out_dir, f"{self._file_seq:05d}.jpg")
+        self._file_seq += 1
+
+        block = self._linked.load(item)
+        if block is None:
+            self._linked.release()
+            self.failures.append((self.current_label, "not found in .blend"))
+            return
+        # Read everything off the linked datablock BEFORE any release() — the
+        # reference dies with its library.
+        info = collect_asset_metadata(block, item['library'], item['rel_path'])
+        info['name'] = item['name']
+        if save_preview_jpeg(block, out_path):
+            self.preview_reused += 1
+            info['reused_preview'] = True
+            info['image_name'] = img_name
+            info['image_path'] = out_path
+            self.collected.append(info)
+            # Library stays linked: the next item is usually from the same file.
+            return
+
+        # No usable thumbnail — a render needs a real local copy.
+        self._linked.release()
+        self._render_appended(item, info, img_name, out_path)
+
+    def _render_appended(self, item, info, img_name, out_path):
+        """Append the asset, render it, and clean the local copy up."""
         scene = self.context.scene
         with bpy.data.libraries.load(item['blend_str'], link=False) as (_, data_to):
             if item['kind'] == 'OBJECT':
@@ -214,62 +287,43 @@ class RenderSession:
             else:
                 data_to.collections = [item['name']]
 
-        img_name = f"asset_preview_{item['name']}"
-
         if item['kind'] == 'OBJECT':
             obj = data_to.objects[0]
             if obj is None:
                 self.failures.append((self.current_label, "not found in .blend"))
                 return
-            info = collect_asset_metadata(obj, item['library'], item['rel_path'])
-            info['name'] = item['name']  # Blender may rename on append
-            # Embedded thumbnail first — skips the whole main-thread render.
-            img = image_from_preview(obj, img_name)
-            if img is not None:
-                self.preview_reused += 1
-                info['reused_preview'] = True
-                remove_objects([obj])
-            else:
-                scene.collection.objects.link(obj)
-                bpy.context.view_layer.update()
-                frame_camera(self._rig.camera, [obj])
-                img = render_to_image(scene, img_name)
-                scene.collection.objects.unlink(obj)
-                remove_objects([obj])
+            scene.collection.objects.link(obj)
+            bpy.context.view_layer.update()
+            frame_camera(self._rig.camera, [obj])
+            rendered = render_to_jpeg(scene, out_path)
+            scene.collection.objects.unlink(obj)
+            remove_objects([obj])
         else:
             coll = data_to.collections[0]
             if coll is None:
                 self.failures.append((self.current_label, "not found in .blend"))
                 return
-            info = collect_asset_metadata(coll, item['library'], item['rel_path'])
-            info['name'] = item['name']
-            img = image_from_preview(coll, img_name)
-            if img is not None:
-                self.preview_reused += 1
-                info['reused_preview'] = True
-                remove_collection(coll)
-            else:
-                scene.collection.children.link(coll)
-                bpy.context.view_layer.update()
-                objects = list(coll.all_objects)
-                if not objects:
-                    scene.collection.children.unlink(coll)
-                    remove_collection(coll)
-                    self.failures.append((self.current_label, "empty collection"))
-                    return
-                frame_camera(self._rig.camera, objects)
-                img = render_to_image(scene, img_name)
+            scene.collection.children.link(coll)
+            bpy.context.view_layer.update()
+            objects = list(coll.all_objects)
+            if not objects:
                 scene.collection.children.unlink(coll)
                 remove_collection(coll)
+                self.failures.append((self.current_label, "empty collection"))
+                return
+            frame_camera(self._rig.camera, objects)
+            rendered = render_to_jpeg(scene, out_path)
+            scene.collection.children.unlink(coll)
+            remove_collection(coll)
 
-        if img:
+        if rendered:
             info['image_name'] = img_name
+            info['image_path'] = out_path
             self.collected.append(info)
-            if not info.get('reused_preview'):
-                self.rendered_items.append({
-                    'blend_str': item['blend_str'],
-                    'name': item['name'],
-                    'image_name': img_name,
-                })
+            self.rendered_items.append({
+                'blend_str': item['blend_str'],
+                'name': item['name'],
+                'jpg': out_path,
+            })
         else:
             self.failures.append((self.current_label, "render produced no image"))

@@ -4,11 +4,15 @@
 
 """Small main-thread helpers shared by the training operators."""
 
-import bpy
-
 from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Progress-bar weighting per phase (render dominates wall time). Shared, since
+# the modal and each of its phase modules report against the same scale.
+W_SCAN_END = 0.05
+W_PREPARE_END = 0.08
+W_RENDER_END = 0.80
 
 
 def fmt_duration(seconds):
@@ -36,13 +40,17 @@ def launch_thumbnail_backfill(rendered_items):
     """Write the session's rendered previews back as asset thumbnails.
 
     ``rendered_items``: RenderSession.rendered_items — assets that were
-    RENDERED because their .blend carried no usable preview. Their packed
-    JPEGs are written to a temp dir and a fire-and-forget backfill worker
-    (separate process) injects them into the source .blend files, so the
-    assets get real thumbnails and the next training run reuses them.
-    Best-effort: any failure just leaves the library as it was.
+    RENDERED because their .blend carried no usable preview. Their JPEGs are
+    COPIED into a temp dir of their own and a fire-and-forget backfill worker
+    (separate process) injects them into the source .blend files, so the assets
+    get real thumbnails and the next training run reuses them.
+
+    The copy is deliberate: the backfill worker deletes its own work dir when
+    it finishes, and the originals still have to be there for the upload.
+    Best-effort — any failure just leaves the library as it was.
     """
     import os
+    import shutil
     import tempfile
 
     from mixar.modules.asset_search.core import preview_worker
@@ -51,45 +59,16 @@ def launch_thumbnail_backfill(rendered_items):
     try:
         work_dir = None
         for i, item in enumerate(rendered_items):
-            img = bpy.data.images.get(item.get("image_name", ""))
-            if img is None:
-                continue
-            data = extract_image_bytes(img)
-            if not data:
+            source = item.get("jpg", "")
+            if not source or not os.path.isfile(source):
                 continue
             if work_dir is None:
                 work_dir = tempfile.mkdtemp(prefix="mixar_backfill_")
             jpg = os.path.join(work_dir, f"{i:05d}.jpg")
-            with open(jpg, "wb") as fh:
-                fh.write(data)
+            shutil.copyfile(source, jpg)
             entries.append({
                 "blend_str": item["blend_str"], "name": item["name"], "jpg": jpg,
             })
         preview_worker.start_backfill(entries)
     except Exception as e:  # noqa: BLE001 — thumbnails are a bonus, never a blocker
         logger.warning("[Asset Training] Thumbnail backfill skipped: %s", e)
-
-
-def extract_image_bytes(img):
-    """Extract JPEG bytes from a Blender image (packed fast path)."""
-    if img.packed_file and img.packed_file.data:
-        return bytes(img.packed_file.data)
-
-    import os
-    import tempfile
-
-    from mixar.modules.asset_search.utils.preview_render import safe_temp_filename
-
-    tmp_path = os.path.join(
-        tempfile.gettempdir(), f"_mixar_tmp_{safe_temp_filename(img.name)}.jpg"
-    )
-    try:
-        img.save_render(filepath=tmp_path)
-        with open(tmp_path, "rb") as fh:
-            return fh.read()
-    except Exception as exc:
-        logger.error("[Asset Training] Fallback save failed for %s: %s", img.name, exc)
-        return None
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)

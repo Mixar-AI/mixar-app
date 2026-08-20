@@ -5,14 +5,18 @@
 
 """Asset Training Operators — chunked/off-process training with live progress.
 
-Phases: INIT -> SCANNING -> PREPARING -> (RENDERING | RENDER_WORKER)
-        -> UPLOADING -> WAITING.
+Phases: INIT -> SCANNING -> PREPARING -> (RENDERING | RENDER_WORKER) -> WAITING,
+with UPLOADING inserted only when uploads cannot be streamed.
 
-Small plans render in-process, a few assets per timer tick (embedded-preview
-reuse makes most instant); large plans run in a HEADLESS WORKER process
-(core/preview_worker) so the app never freezes — the modal polls its
-results.jsonl for per-asset progress. Uploads are batched (core/train_api).
-State PropertyGroups live in ui/properties/training_props.py.
+This module is the modal state machine and its lifecycle; the phases live
+beside it — ``asset_train_render_phase`` (planning, in-process ticks,
+completion/cancel), ``asset_train_worker_phase`` (the headless fan-out) and
+``asset_train_upload_phase`` (streamed and barrier uploads). Small plans render
+in-process, a few assets per timer tick (embedded-preview reuse makes most
+instant); large plans render across HEADLESS WORKER processes
+(core/preview_worker) so the app never freezes. Batches upload WHILE rendering
+continues (core/train_stream). State PropertyGroups live in
+ui/properties/training_props.py.
 """
 
 import threading
@@ -23,23 +27,14 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.core import preview_worker
-from mixar.modules.asset_search.core.train_api import (
-    build_upload_batches,
-    post_batches,
-    prepare_api,
-)
+from mixar.modules.asset_search.core.train_api import prepare_api
 from mixar.modules.asset_search.core.train_support import (
-    extract_image_bytes,
+    W_RENDER_END,
+    W_SCAN_END,
     fmt_duration,
-    set_failures,
 )
 
 logger = get_logger(__name__)
-
-# Progress-bar weighting per phase (render dominates wall time).
-_W_SCAN_END = 0.05
-_W_PREPARE_END = 0.08
-_W_RENDER_END = 0.80
 
 
 class MIXIE_OT_train_asset_model(Operator):
@@ -63,6 +58,17 @@ class MIXIE_OT_train_asset_model(Operator):
     _metadata_checksum = None
     _session = None              # in-process RenderSession
     _worker = None               # headless preview_worker handle
+    # Directory holding this run's preview JPEGs. Previews are files, not
+    # packed datablocks, so it must live until the upload has read them —
+    # _finish owns its removal.
+    _image_dir = None
+    # Streaming upload (see core/train_stream): batches are posted WHILE the
+    # remaining assets render, so the upload cost hides inside the render time.
+    _stream = None
+    _builder = None
+    _collected = None            # finished assets, in arrival order
+    _used_names = None           # image_name uniqueness across the whole run
+    _stream_uploads = False      # safe to upload while rendering?
     _worker_failures = []
     _render_started_at = 0.0
     _started_at = 0.0
@@ -107,6 +113,12 @@ class MIXIE_OT_train_asset_model(Operator):
         self._metadata_checksum = None
         self._session = None
         self._worker = None
+        self._image_dir = None
+        self._stream = None
+        self._builder = None
+        self._collected = []
+        self._used_names = set()
+        self._stream_uploads = False
         self._worker_failures = []
         self._started_at = time.time()
         self._upload_done = 0
@@ -158,7 +170,7 @@ class MIXIE_OT_train_asset_model(Operator):
         # now-orphaned assets as removed and the removal path drops their
         # embeddings, so search stops returning them.
 
-        state.progress = _W_SCAN_END
+        state.progress = W_SCAN_END
         state.phase_text = (
             f"Checking what's new ({len(self._scan_metadata)} assets scanned)…"
         )
@@ -182,11 +194,20 @@ class MIXIE_OT_train_asset_model(Operator):
                            res.get('message'))
             self._train_mode = "full"
             self._removed_assets = []
+            # Prepare failed, so we do NOT know whether the user already has an
+            # index. A streamed mode="full" first batch would REPLACE it before
+            # the run can be cancelled, so this path keeps the old barrier:
+            # render everything, then upload.
+            self._stream_uploads = False
             state.prepare_note = f"{scanned} assets — full training"
             return self._start_rendering(context, state, filter_assets=None)
 
         action = res.get("action", "full_train")
         self._metadata_checksum = res.get("metadata_checksum")
+        # Safe to upload while rendering: an incremental run is durable
+        # server-side (that is already the cancel contract), and "full_train"
+        # is the server telling us there is no existing index to lose.
+        self._stream_uploads = action in ("incremental", "full_train")
 
         if action == "skip":
             state.needs_retraining = False
@@ -209,7 +230,7 @@ class MIXIE_OT_train_asset_model(Operator):
                              message="Embeddings are up to date — nothing to do")
                 return {"FINISHED"}
             if not new_assets:
-                state.progress = _W_RENDER_END
+                state.progress = W_RENDER_END
                 state.phase_text = "Removing deleted assets…"
                 self._phase = 'UPLOADING'
                 self._redraw(context)
@@ -226,213 +247,60 @@ class MIXIE_OT_train_asset_model(Operator):
     # ------------------------------------------------------------------ #
 
     def _start_rendering(self, context, state, filter_assets):
-        from mixar.modules.asset_search.core.render_session import build_render_plan
-        from .asset_inspect_ops import clear_render_filter, get_render_filter, set_render_filter
-
-        if filter_assets is not None:
-            set_render_filter(filter_assets)
-        else:
-            clear_render_filter()
-
-        items, discovery_failures = build_render_plan(context, get_render_filter())
-        if not items and self._train_mode == "full":
-            self._finish(context, success=False,
-                         message="No objects or collections found in asset libraries")
-            return {"CANCELLED"}
-
-        state.assets_total = len(items)
-        state.assets_done = 0
-        state.progress = _W_PREPARE_END
-        self._render_started_at = time.time()
-        self._worker_failures = list(discovery_failures)
-
-        if len(items) >= preview_worker.WORKER_MIN_ITEMS:
-            self._worker = preview_worker.start_worker(items)
-            if self._worker is not None:
-                state.phase_text = (
-                    f"Rendering previews in background 0/{len(items)} "
-                    "(app stays responsive)"
-                )
-                self._phase = 'RENDER_WORKER'
-                self._redraw(context)
-                return {"RUNNING_MODAL"}
-            logger.warning("[Asset Training] Worker unavailable — in-process render")
-
-        return self._start_inprocess_session(context, state, items)
+        from .asset_train_render_phase import start_rendering
+        return start_rendering(self, context, state, filter_assets)
 
     def _start_inprocess_session(self, context, state, items):
-        from mixar.modules.asset_search.core.render_session import RenderSession
-
-        self._session = RenderSession(context, items)
-        self._session.failures.extend(self._worker_failures)
-        self._worker_failures = []
-        self._session.start()
-        state.phase_text = f"Rendering previews 0/{len(items)}"
-        self._phase = 'RENDERING'
-        self._redraw(context)
-        return {"RUNNING_MODAL"}
+        from .asset_train_render_phase import start_inprocess_session
+        return start_inprocess_session(self, context, state, items)
 
     def _update_render_progress(self, state, done, total, current):
-        state.assets_done = done
-        state.assets_total = total
-        state.current_item = current
-        frac = done / total if total else 1.0
-        state.progress = _W_PREPARE_END + (_W_RENDER_END - _W_PREPARE_END) * frac
-        elapsed = time.time() - self._render_started_at
-        if 3 <= done < total:
-            state.eta_text = f"~{fmt_duration((elapsed / done) * (total - done))} remaining"
+        from .asset_train_render_phase import update_progress
+        update_progress(self, state, done, total, current)
 
     def _handle_rendering(self, context, state):
-        session = self._session
-        if state.cancel_requested and not session.done:
-            return self._cancel_render(context, state, session.collected,
-                                       teardown=session.finish)
-        if not session.done:
-            session.step()
-            self._update_render_progress(
-                state, session.index, session.total, session.current_label)
-            set_failures(state, session.failures)
-            state.phase_text = f"Rendering previews {session.index}/{session.total}"
-            self._redraw(context)
-            return {"RUNNING_MODAL"}
-
-        session.finish()
-        # Rendered because no thumbnail existed -> write the render back as
-        # the asset's thumbnail (fire-and-forget worker; never blocks).
-        if session.rendered_items:
-            from mixar.modules.asset_search.core.train_support import (
-                launch_thumbnail_backfill,
-            )
-            launch_thumbnail_backfill(session.rendered_items)
-        return self._renders_complete(context, state, session.collected,
-                                      session.failures,
-                                      reused=session.preview_reused)
+        from .asset_train_render_phase import handle_rendering
+        return handle_rendering(self, context, state)
 
     def _handle_render_worker(self, context, state):
         from .asset_train_worker_phase import handle_render_worker
         return handle_render_worker(self, context, state)
 
     def _renders_complete(self, context, state, collected, failures, reused=0):
-        from .asset_inspect_ops import clear_render_filter, set_collected_asset_data
-
-        set_collected_asset_data(collected)
-        clear_render_filter()
-        set_failures(state, failures)
-        state.current_item = ""
-        state.eta_text = ""
-        # The full-library checksum marks the library FULLY embedded at this
-        # content hash — the server then returns "skip" on the next train. Never
-        # stamp it when assets are still un-embedded (any render/embed failure),
-        # or those assets are marked trained and become unreachable until the
-        # library's contents change. A clean run stamps it; a partial run leaves
-        # it unstamped so the next train retries the remainder.
-        if failures:
-            self._metadata_checksum = None
-        if reused:
-            state.prepare_note = (
-                (state.prepare_note + " · " if state.prepare_note else "")
-                + f"{reused} thumbnails reused (not re-rendered)"
-            )
-
-        if not collected and self._train_mode == "full":
-            self._finish(context, success=False,
-                         message="No assets could be rendered")
-            return {"CANCELLED"}
-        state.progress = _W_RENDER_END
-        self._phase = 'UPLOADING'
-        self._redraw(context)
-        return {"RUNNING_MODAL"}
+        from .asset_train_render_phase import complete
+        return complete(self, context, state, collected, failures, reused=reused)
 
     def _cancel_render(self, context, state, collected, teardown=None):
-        """Incremental keeps finished work (durable server-side); full
-        discards — a partial mode="full" upload would REPLACE the index."""
-        from .asset_inspect_ops import clear_render_filter, set_collected_asset_data
-
-        if teardown is not None:
-            teardown()
-        clear_render_filter()
-
-        # A cancelled run is partial by definition: keep the finished assets
-        # (incremental uploads are durable server-side) but NEVER stamp the
-        # full-library checksum, or the un-rendered remainder is marked trained
-        # and never retried.
-        self._metadata_checksum = None
-
-        if self._train_mode == "incremental" and collected:
-            set_collected_asset_data(collected)
-            state.phase_text = (
-                f"Cancelled — saving the {len(collected)} finished assets…"
-            )
-            state.progress = _W_RENDER_END
-            self._phase = 'UPLOADING'
-            self._redraw(context)
-            return {"RUNNING_MODAL"}
-
-        set_collected_asset_data([])
-        self._finish(context, success=False,
-                     message="Training cancelled — nothing was changed")
-        return {"CANCELLED"}
+        from .asset_train_render_phase import cancel
+        return cancel(self, context, state, collected, teardown=teardown)
 
     # ------------------------------------------------------------------ #
-    # Upload
+    # Upload — thin delegates; the phase logic lives in the upload module
     # ------------------------------------------------------------------ #
+
+    def _start_upload_stream(self):
+        from .asset_train_upload_phase import start_stream
+        start_stream(self)
+
+    def _feed_collected(self, infos):
+        from .asset_train_upload_phase import feed
+        feed(self, infos)
+
+    def _upload_note(self):
+        from .asset_train_upload_phase import note
+        return note(self)
+
+    def _stop_upload_stream(self, drop=False):
+        from .asset_train_upload_phase import stop_stream
+        stop_stream(self, drop=drop)
 
     def _handle_uploading(self, context, state):
-        from .asset_inspect_ops import get_collected_asset_data
-
-        assets = get_collected_asset_data()
-        files_by_image = {}
-        for info in assets:
-            img_name = info.get("image_name", "")
-            img = bpy.data.images.get(img_name) if img_name else None
-            if img is None:
-                continue
-            jpeg = extract_image_bytes(img)
-            if jpeg is not None:
-                files_by_image[img_name] = jpeg
-
-        batches = build_upload_batches(assets, files_by_image)
-        if not batches and not self._removed_assets and self._train_mode == "full":
-            self._finish(context, success=False, message="No images to upload")
-            return {"FINISHED"}
-
-        state.upload_total = max(len(batches), 1)
-        state.upload_done = 0
-        state.phase_text = f"Uploading & embedding — batch 0/{max(len(batches), 1)}"
-
-        self._bg_result = None
-        self._bg_thread = threading.Thread(
-            target=post_batches,
-            args=(batches, self._train_mode, self._removed_assets,
-                  self._metadata_checksum, self),
-            daemon=True,
-        )
-        self._bg_thread.start()
-        self._phase = 'WAITING'
-        self._redraw(context)
-        return {"RUNNING_MODAL"}
+        from .asset_train_upload_phase import handle_uploading
+        return handle_uploading(self, context, state)
 
     def _handle_waiting(self, context, state):
-        done, total = self._upload_done, max(self._upload_total, 1)
-        if done != state.upload_done or state.upload_total != total:
-            state.upload_done = done
-            state.upload_total = total
-            state.phase_text = f"Uploading & embedding — batch {done}/{total}"
-            state.progress = _W_RENDER_END + (1.0 - _W_RENDER_END) * (done / total)
-            self._redraw(context)
-
-        if self._bg_thread and self._bg_thread.is_alive():
-            return {"RUNNING_MODAL"}
-
-        res = self._bg_result or {}
-        success = res.get("success", False)
-        state.progress = 1.0
-        if success:
-            state.needs_retraining = False
-            state.retraining_message = ""
-        self._finish(context, success=success,
-                     message=res.get("message", "API upload failed"))
-        return {"FINISHED"}
+        from .asset_train_upload_phase import handle_waiting
+        return handle_waiting(self, context, state)
 
     # ------------------------------------------------------------------ #
     # Teardown
@@ -451,6 +319,18 @@ class MIXIE_OT_train_asset_model(Operator):
             preview_worker.stop(self._worker)
             preview_worker.cleanup(self._worker)
             self._worker = None
+        # An uploader thread still reading previews must not race the rmtree
+        # below. WAITING only finishes once the thread is dead; the error and
+        # stall paths land here with it alive, so drop and wait it out.
+        self._stop_upload_stream(drop=True)
+        self._stream = None
+        if self._bg_thread is not None and self._bg_thread.is_alive():
+            self._bg_thread.join(timeout=5.0)
+        # The run is over either way — the preview JPEGs have been uploaded,
+        # discarded, or abandoned, so the directory goes with it.
+        if self._image_dir:
+            preview_worker.cleanup(self._image_dir)
+            self._image_dir = None
         clear_render_filter()
 
         state = context.scene.mixie_asset_training

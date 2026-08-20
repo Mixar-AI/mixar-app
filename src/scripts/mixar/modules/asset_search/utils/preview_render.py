@@ -105,24 +105,24 @@ def safe_temp_filename(name):
     return cleaned or "image"
 
 
-def image_from_preview(datablock, image_name, min_size=32):
-    """Build a packed JPEG bpy image from a datablock's EMBEDDED asset preview.
+def save_preview_jpeg(datablock, out_path, min_size=32):
+    """Write a datablock's EMBEDDED asset preview to ``out_path`` as JPEG.
 
     Library assets usually already carry a thumbnail baked into their .blend
     (Blender's asset system; BlenderKit ships one for every asset, and Mixar's
-    own exports embed one). Reusing it skips the whole main-thread EEVEE
-    render — the dominant cost of training.
+    own exports embed one). Reusing it skips the whole EEVEE render — the
+    dominant cost of training.
 
-    Returns the bpy image (same contract as render_to_image: named, packed
-    JPEG) or None when the datablock has no usable preview (missing, tiny, or
-    blank — an allocated-but-never-rendered preview slot is fully transparent).
+    Returns True on success, False when the datablock has no usable preview
+    (missing, tiny, or blank — an allocated-but-never-rendered preview slot is
+    fully transparent).
     """
     preview = getattr(datablock, "preview", None)
     if preview is None:
-        return None
+        return False
     w, h = preview.image_size
     if w < min_size or h < min_size:
-        return None
+        return False
 
     import numpy as np
 
@@ -130,88 +130,134 @@ def image_from_preview(datablock, image_name, min_size=32):
     try:
         preview.image_pixels_float.foreach_get(buf)
     except Exception:
-        return None
+        return False
     # Blank/transparent preview slot -> not a real thumbnail.
     if float(buf[3::4].max(initial=0.0)) < 0.05:
-        return None
+        return False
 
-    temp_path = os.path.join(
-        tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
-    )
     float_img = None
     try:
         float_img = bpy.data.images.new(
-            f"_preview_src_{image_name}", width=w, height=h, alpha=True
+            f"_preview_src_{os.path.basename(out_path)}",
+            width=w, height=h, alpha=True,
         )
         float_img.pixels.foreach_set(buf)
         float_img.file_format = 'JPEG'
-        float_img.filepath_raw = temp_path
+        float_img.filepath_raw = out_path
         float_img.save()
-
-        existing = bpy.data.images.get(image_name)
-        if existing:
-            bpy.data.images.remove(existing)
-        img = bpy.data.images.load(temp_path)
-        img.name = image_name
-        img.pack()
-        return img
+        return True
     except Exception as e:
         logger.debug("[PreviewRender] Embedded preview unusable for %s: %s",
-                     image_name, e)
-        return None
+                     out_path, e)
+        return False
     finally:
         if float_img is not None:
             try:
                 bpy.data.images.remove(float_img)
             except Exception:
                 pass
-        if os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
 
 
-def render_to_image(scene, image_name, pack=True):
-    """Render the scene, save to temp JPEG, load back as a bpy image.
+class LinkedBlend:
+    """Keeps ONE library linked at a time so an asset's embedded preview can be
+    read WITHOUT appending it.
 
-    Args:
-        scene: The scene to render (rig already set up).
-        image_name: Name for the resulting bpy.data.images entry.
-        pack: Pack the image into the .blend (True for training previews
-            that must survive; False for transient UI thumbnails).
+    Appending (``libraries.load(link=False)``) resolves and COPIES the asset's
+    whole dependency graph — mesh data, modifiers, materials, node trees and
+    every packed texture — into the local file. For an asset that already
+    carries a thumbnail that is pure waste: only ``id.preview`` and
+    ``id.asset_data`` are ever read, and both are available on a LINKED
+    datablock at a fraction of the cost.
+
+    The library is deliberately kept alive between calls while consecutive plan
+    items come from the same .blend (``build_render_plan`` emits them grouped by
+    file), so a multi-asset .blend is parsed once instead of once per asset.
+    Callers MUST ``release()`` before appending the same asset for a real render
+    and when the session ends.
+
+    Every reference obtained from ``load()`` is INVALID after ``release()`` —
+    read what you need (metadata, preview) before releasing.
     """
-    temp_path = os.path.join(
-        tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
-    )
 
-    # Temporarily switch output format to JPEG with 80% quality
+    def __init__(self):
+        self._path = None
+        self._library = None
+
+    def load(self, item):
+        """Link ``item``'s datablock and return it (None when not in the file)."""
+        if self._path != item['blend_str']:
+            self.release()
+        with bpy.data.libraries.load(item['blend_str'], link=True) as (_, data_to):
+            if item['kind'] == 'OBJECT':
+                data_to.objects = [item['name']]
+            else:
+                data_to.collections = [item['name']]
+        block = (data_to.objects[0] if item['kind'] == 'OBJECT'
+                 else data_to.collections[0])
+        if block is not None:
+            self._path = item['blend_str']
+            # Hold the Library ID itself — matching by filepath later is unsafe
+            # (Blender may store it relative to the current file).
+            self._library = block.library
+        return block
+
+    def release(self):
+        """Free the linked library and every ID it brought in."""
+        library, self._library, self._path = self._library, None, None
+        if library is None:
+            return
+        try:
+            bpy.data.libraries.remove(library)
+        except Exception as e:  # noqa: BLE001 — a stuck library must not stop the run
+            logger.debug("[PreviewRender] Could not free linked library: %s", e)
+
+
+def render_to_jpeg(scene, out_path):
+    """Render the staged scene straight to ``out_path`` as JPEG. True on success."""
     orig_format = scene.render.image_settings.file_format
     orig_quality = scene.render.image_settings.quality
     scene.render.image_settings.file_format = 'JPEG'
     scene.render.image_settings.quality = 80
-
     try:
         bpy.ops.render.render()
-
         render_img = bpy.data.images.get('Render Result')
         if not render_img:
+            return False
+        render_img.save_render(filepath=out_path, scene=scene)
+        return True
+    finally:
+        scene.render.image_settings.file_format = orig_format
+        scene.render.image_settings.quality = orig_quality
+
+
+def render_to_image(scene, image_name, pack=True):
+    """Render the scene and load the result back as a bpy image.
+
+    Datablock-producing wrapper around ``render_to_jpeg``, for callers that
+    need a bpy image (chat asset-picker thumbnails, one-off inspections). The
+    training flow keeps the JPEG on disk and never creates a datablock.
+
+    Args:
+        scene: The scene to render (rig already set up).
+        image_name: Name for the resulting bpy.data.images entry.
+        pack: Pack the image into the .blend (True for previews that must
+            survive; False for transient UI thumbnails).
+    """
+    temp_path = os.path.join(
+        tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
+    )
+    try:
+        if not render_to_jpeg(scene, temp_path):
             return None
-
-        render_img.save_render(filepath=temp_path, scene=scene)
-
         existing = bpy.data.images.get(image_name)
         if existing:
             bpy.data.images.remove(existing)
-
         img = bpy.data.images.load(temp_path)
         img.name = image_name
         if pack:
             img.pack()
         return img
     finally:
-        scene.render.image_settings.file_format = orig_format
-        scene.render.image_settings.quality = orig_quality
         if os.path.exists(temp_path):
             os.remove(temp_path)
 

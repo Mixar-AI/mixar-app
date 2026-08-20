@@ -21,6 +21,7 @@ Batching contract with the backend:
 """
 
 import json
+import os
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
@@ -32,21 +33,44 @@ from mixar.modules.asset_search.constants import (
 
 logger = get_logger(__name__)
 
-# Images per training POST. Matches the server's per-request ceiling
-# (MAX_TRAIN_IMAGES = 500) so a typical library trains in ONE request. The
-# server endpoint is rate-limited (5/minute; 30/hour) AND credit-metered PER
-# REQUEST — the old value of 25 turned any real library into many back-to-back
-# requests that 429'd mid-run and multiplied the credit charge N-fold.
-UPLOAD_BATCH_SIZE = 500
-# And a byte ceiling under the server's 300MB/request cap, so an unusually large
-# set of previews splits before it 413s. Whichever cap trips first ends a batch.
-UPLOAD_BATCH_MAX_BYTES = 250 * 1024 * 1024
+# Images per training POST. The server's ceiling is MAX_TRAIN_IMAGES = 500, but
+# /train EMBEDS SYNCHRONOUSLY: one request holds the connection open while the
+# ML service (or the GPU queue) encodes every image in it. At 500 that outlived
+# the gateway and came back 500, so batches are kept to a size the endpoint can
+# actually answer within one request.
+#
+# The trade-off is real and deliberate: the endpoint is credit-metered PER
+# REQUEST and rate-limited (5/minute; 30/hour), so a smaller batch multiplies
+# the charge. train_stream's pacer keeps the run under the rate limit. The
+# proper fix is server-side — meter per image, or make /train enqueue and
+# return — after which this can go back up.
+UPLOAD_BATCH_SIZE = 100
+# And a byte ceiling well under the server's 300MB/request cap, so a set of
+# large previews splits before it 413s (and before the request runs long).
+# Whichever cap trips first ends a batch.
+UPLOAD_BATCH_MAX_BYTES = 50 * 1024 * 1024
+
+
+def train_client():
+    """HTTP client for the training endpoints — WITHOUT automatic retries.
+
+    The shared client retries 5xx on POST, which is wrong for /train and
+    /train/prepare: both are credit-metered per request and NOT idempotent, so
+    a retry re-uploads the whole batch, makes the server embed it again, and
+    charges again. It also swallows the failure — urllib3 raises ResponseError
+    ("too many 500 error responses") instead of returning the response, so the
+    server's actual error never reaches the user.
+
+    Without retries a transient 5xx just ends the run; everything already
+    uploaded is durable server-side and the next train's diff resumes from it.
+    """
+    return HTTPClient(base_url=get_server_url(), retry_count=0)
 
 
 def prepare_api(metadata, operator):
     """POST metadata to /train/prepare; result into ``operator._bg_result``."""
     try:
-        client = HTTPClient(base_url=get_server_url())
+        client = train_client()
         resp = client.post(
             ASSET_TRAIN_PREPARE_ENDPOINT,
             data={"metadata": json.dumps(metadata)},
@@ -73,39 +97,64 @@ def prepare_api(metadata, operator):
         operator._bg_result = {"success": False, "message": f"Prepare failed: {exc}"}
 
 
-def build_upload_batches(assets, files_by_image):
-    """Split (asset metadata, jpeg bytes) into upload batches.
+def build_upload_batches(assets):
+    """Split assets into upload batches, referencing previews by PATH.
+
+    The JPEGs stay on disk and are read one batch at a time in
+    ``post_batches`` — holding every preview's bytes in memory at once (a
+    packed datablock AND a bytes copy per asset) was the peak-memory spike of a
+    large training run.
 
     Args:
-        assets: metadata dicts (each with ``image_name``).
-        files_by_image: {image_name: jpeg_bytes} for successfully extracted images.
+        assets: metadata dicts, each with ``image_name`` (the server's pairing
+            key) and ``image_path`` (the JPEG on disk).
 
     Returns:
-        List of {"metadata": [...], "files": [(filename, bytes), ...]}.
+        List of {"metadata": [...], "files": [(filename, path), ...]}.
         Assets whose image is missing are dropped (already counted as failures).
     """
-    paired = [
-        (info, files_by_image[info["image_name"]])
-        for info in assets
-        if info.get("image_name") and info["image_name"] in files_by_image
-    ]
     batches = []
     cur_meta, cur_files, cur_bytes = [], [], 0
-    for info, data in paired:
+    for info in assets:
+        path = info.get("image_path")
+        if not info.get("image_name") or not path:
+            continue
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            continue
         # Flush before adding an item that would exceed EITHER cap — but never
         # emit an empty batch (a single oversized item still ships alone).
         if cur_meta and (
             len(cur_meta) >= UPLOAD_BATCH_SIZE
-            or cur_bytes + len(data) > UPLOAD_BATCH_MAX_BYTES
+            or cur_bytes + size > UPLOAD_BATCH_MAX_BYTES
         ):
             batches.append({"metadata": cur_meta, "files": cur_files})
             cur_meta, cur_files, cur_bytes = [], [], 0
         cur_meta.append(info)
-        cur_files.append((f"{info['image_name']}.jpg", data))
-        cur_bytes += len(data)
+        cur_files.append((f"{info['image_name']}.jpg", path))
+        cur_bytes += size
     if cur_meta:
         batches.append({"metadata": cur_meta, "files": cur_files})
     return batches
+
+
+def _read_batch_files(files):
+    """Read one batch's JPEGs into the multipart shape requests expects.
+
+    Bytes rather than open handles ON PURPOSE: HTTPClient re-sends `files`
+    verbatim when it retries after a 401 refresh, and a consumed file object
+    would upload an empty image on that second attempt.
+    """
+    payload = []
+    for fname, path in files:
+        try:
+            with open(path, "rb") as fh:
+                payload.append(("images", (fname, fh.read(), "image/jpeg")))
+        except OSError as exc:
+            logger.warning("[Asset Training] Skipping unreadable preview %s: %s",
+                           path, exc)
+    return payload
 
 
 def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
@@ -121,7 +170,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
     operator._upload_embedded = 0
 
     try:
-        client = HTTPClient(base_url=get_server_url())
+        client = train_client()
 
         if not batches:
             # Removal-only request.
@@ -164,10 +213,9 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
             if is_last and metadata_checksum:
                 form_data["metadata_checksum"] = metadata_checksum
 
-            files_list = [
-                ("images", (fname, data, "image/jpeg"))
-                for fname, data in batch["files"]
-            ]
+            # Read THIS batch's images only; they are released before the next
+            # batch is read, so peak memory stays at one batch.
+            files_list = _read_batch_files(batch["files"])
             logger.debug(
                 "[Asset Training] Uploading batch %d/%d (%d images)",
                 i + 1, len(batches), len(files_list),
@@ -179,6 +227,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
                 timeout=300,
                 raise_for_status=False,
             )
+            del files_list
             if not resp.success:
                 msg = resp.message or f"Server returned {resp.status_code}"
                 operator._bg_result = {

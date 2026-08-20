@@ -98,8 +98,12 @@ class MIXIE_OT_inspect_asset_libraries(Operator):
         for label, reason in session.failures:
             logger.warning("[Asset Inspector] Skipped %s: %s", label, reason)
 
+        # Previews are JPEG FILES now (session.out_dir), not packed datablocks —
+        # name the directory so an inspection run is actually inspectable. This
+        # debug operator does not delete it; the training flow owns its own.
         summary = (
-            f"Rendered {len(session.collected)} asset preview(s) to memory"
+            f"Rendered {len(session.collected)} asset preview(s) to "
+            f"{session.out_dir}"
             + (f", {len(session.failures)} skipped" if session.failures else "")
         )
         logger.debug("[Asset Inspector] %s", summary)
