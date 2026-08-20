@@ -66,6 +66,13 @@ void mixie_chat_render_messages(const bContext *C,
   wmWindow *win = CTX_wm_window(C);
   float action_zone_h = chat_ui_get_action_buttons_height(UI_SCALE_FAC);
 
+  /* Code-block copy chips: rebuild the hit list this pass; keep repainting
+   * while a chip's ✔ copied-flash is live so it reverts on time. */
+  mixie_chat_code_hits_reset(rt);
+  if (mixie_chat_code_copy_feedback_pending()) {
+    ED_region_tag_redraw(region);
+  }
+
   /* Compute slide-in animation state for newest message */
   float slide_x_offset = 0.0f;
   bool slide_anim_active = false;
@@ -372,18 +379,44 @@ void mixie_chat_render_messages(const bContext *C,
 
       mixie_chat_render_feedback(C, region, &msg_ptr, metrics, layout);
 
-      /* Draw text selection highlight if this message is selected */
+      /* Draw text selection highlight if this message is selected. Markdown
+       * selections live inside ONE rendered segment: highlight against that
+       * segment's own rect/text/font (recorded during the content draw just
+       * above, so the rects are from THIS frame). Plain bubbles highlight
+       * against the shared layout text rect — the same geometry hit-testing
+       * used to map the click. */
       if (smixie && smixie->sel_message_index == message_index &&
           smixie->sel_start != smixie->sel_end) {
-        rctf text_rect;
-        text_rect.xmin = layout.bubble_x + layout.style.h_padding;
-        text_rect.xmax =
-            layout.bubble_x + layout.style.h_padding + layout.content_width;
-        text_rect.ymin = layout.y_pos + layout.style.v_padding;
-        text_rect.ymax =
-            layout.y_pos + layout.bubble_height - layout.style.v_padding;
-        chat_ui_draw_text_selection(&text_rect, text_buffer, smixie->sel_start,
-                                    smixie->sel_end, layout.style.font_size);
+        if (rt->sel_md_seg >= 0) {
+          MarkdownSegHit seg_hit;
+          if (mixie_chat_md_seg_find(rt, message_index, rt->sel_md_seg, &seg_hit)) {
+            const char *seg_text = mixie_chat_message_segment_text(
+                C, message_index, rt->sel_md_seg, /*code_only=*/false);
+            if (seg_text && seg_text[0] != '\0') {
+              const int sel_font = seg_hit.mono ? chat_ui_mono_font() : BLF_default();
+              BLF_size(sel_font, seg_hit.font_size);
+              const float line_h = seg_hit.mono ?
+                                       float(BLF_height_max(sel_font)) :
+                                       float(BLF_height_max(sel_font)) * 1.15f;
+              chat_ui_draw_text_selection(&seg_hit.text_rect, seg_text,
+                                          smixie->sel_start, smixie->sel_end,
+                                          seg_hit.font_size, sel_font, line_h,
+                                          seg_hit.mono ? BLFWrapMode::HardLimit :
+                                                         BLFWrapMode::Minimal);
+            }
+          }
+        }
+        else {
+          rctf text_rect;
+          if (mixie_chat_layout_text_rect(&layout, &text_rect)) {
+            const char *sel_text = (layout.copy_text && layout.copy_text[0] != '\0') ?
+                                       layout.copy_text :
+                                       text_buffer;
+            chat_ui_draw_text_selection(&text_rect, sel_text, smixie->sel_start,
+                                        smixie->sel_end, layout.style.font_size,
+                                        BLF_default(), -1.0f);
+          }
+        }
       }
 
       /* Draw attachments using cached data */

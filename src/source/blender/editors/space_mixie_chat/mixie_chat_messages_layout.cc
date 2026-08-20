@@ -192,6 +192,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     layout.slot_images_height = 0.0f;
     layout.slot_steps_height = 0.0f;
     layout.thinking_height = 0.0f;
+    layout.is_markdown_content = false;
     bool is_slot_msg = populate_slot_layout_data(&msg_ptr, &layout);
 
     /* For slot-based messages, we may have no text but still need to render slots */
@@ -254,6 +255,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           if (slot_has_md) {
             text_height = chat_ui_calc_markdown_height(slot_meta_h, &style, content_width, 1.0f);
             text_width = content_width;
+            layout.is_markdown_content = true;
           } else {
             chat_ui_calc_text_bounds(layout.content_text, content_width, style.font_size, 0,
                                      &text_width, &text_height);
@@ -315,6 +317,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           /* Use markdown height calculation */
           text_height = chat_ui_calc_markdown_height(meta_buf_height, &style, content_width, 1.0f);
           text_width = content_width;
+          layout.is_markdown_content = true;
         } else {
           chat_ui_calc_text_bounds(calc_text, content_width, style.font_size, 0,
                                    &text_width, &text_height);
