@@ -171,6 +171,18 @@ class SlotEventProcessor:
                 except Exception as e:
                     logger.error(f"[SLOT] Failed to apply {slot_name}: {e}")
 
+        # A re-delivered batch event's content/actions slots (applied above)
+        # draw the backend's FIRST pending question, but the answers kept by
+        # store_batch may put the wizard further along. Re-render the card the
+        # stored state actually calls for — after every slot has been applied,
+        # so the wire's own content/actions cannot overwrite it back.
+        if "questions" in event_data:
+            try:
+                from .batched_choice import reconcile_rendered_card
+                reconcile_rendered_card(bubble, scene)
+            except Exception as e:
+                logger.error(f"[SLOT] Failed to reconcile batched card: {e}")
+
     @staticmethod
     def _apply_questions_slot(bubble: Any, questions: list) -> None:
         """Store a batched-choice wizard payload, keeping answers already given.
