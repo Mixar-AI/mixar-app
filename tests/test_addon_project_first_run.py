@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "src/scripts/mixar/modules/addon_project/ui/controls.py"
 FOOTER = ROOT / "src/scripts/mixar/modules/agent_bubble/ui/panels/footer_panel.py"
 HEADER = ROOT / "src/scripts/mixar/modules/agent_bubble/ui/header.py"
+CHAT_HEADER = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/header.py"
 LINK_OPERATORS = ROOT / "src/scripts/mixar/modules/addon_project/ui/operators.py"
 PROJECT_MENU = ROOT / "src/scripts/mixar/modules/addon_project/ui/menus.py"
 CHAT = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_ops.py"
@@ -103,18 +104,21 @@ def test_linked_project_controls_use_clear_primary_actions_and_more_menu():
     )]
 
 
-def test_linked_project_controls_live_in_the_main_bubble_header():
+def test_floating_agent_bubble_keeps_drag_handle_without_project_controls():
     source = HEADER.read_text(encoding="utf-8")
-    draw_call = "draw_project_controls("
 
-    assert draw_call in source
+    assert "draw_project_controls" not in source
     centered_block = source.split("handle_row.alignment = 'CENTER'", 1)[1].split(
         "layout.separator_spacer()",
         1,
     )[0]
-    assert "handle_row," in centered_block
-    assert "compact=True" in centered_block
-    assert "inline=True" in centered_block
+    assert 'handle_row.label(text="▬▬▬▬")' in centered_block
+
+
+def test_linked_project_controls_remain_in_full_mixie_chat_header():
+    source = CHAT_HEADER.read_text(encoding="utf-8")
+
+    assert "draw_project_controls(layout, scene)" in source
 
 
 def test_linked_project_is_not_duplicated_in_the_composer():
