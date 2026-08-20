@@ -31,7 +31,7 @@ set(LIB
   PRIVATE bf::gpu
   PRIVATE bf::imbuf
   PRIVATE bf::intern::guardedalloc
-  PRIVATE bf::extern::fmtlib
+  PRIVATE bf::dependencies::fmt
   PRIVATE bf::windowmanager
   bf_editor_interface
   # We reuse mixie chat's custom-drawn footer region for our composer

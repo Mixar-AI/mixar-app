@@ -56,7 +56,7 @@ set(LIB
   PRIVATE bf::imbuf
   PRIVATE bf::imbuf::movie
   PRIVATE bf::intern::guardedalloc
-  PRIVATE bf::extern::fmtlib
+  PRIVATE bf::dependencies::fmt
   PRIVATE bf::windowmanager
   bf_editor_interface
 )
