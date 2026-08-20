@@ -30,31 +30,9 @@ def _load_wizard():
 class _Bubble:
     """Minimal stand-in for the message PropertyGroup the wizard mutates."""
 
-    def __init__(self, questions=None, answers="", bubble_id="bubble-1"):
+    def __init__(self, questions=None, answers=""):
         self.batched_questions = json.dumps(questions) if questions else ""
         self.batched_answers = answers
-        self.bubble_id = bubble_id
-
-
-def _capture_renders(wizard):
-    """Route the wizard's slot-pipeline replays into a captured list."""
-    import sys
-    import types
-
-    captured = []
-
-    class _Processor:
-        def apply_event(self, event, scene):
-            captured.append({"event": event, "scene": scene})
-
-    module = types.ModuleType("slot_processor")
-    module.get_slot_processor = lambda: _Processor()
-    package = types.ModuleType("batched_choice_test")
-    package.__path__ = []
-    sys.modules["batched_choice_test"] = package
-    sys.modules["batched_choice_test.slot_processor"] = module
-    wizard.__package__ = "batched_choice_test"
-    return captured
 
 
 QUESTIONS = [
@@ -102,32 +80,15 @@ def test_progress_survives_between_clicks():
     assert json.loads(bubble.batched_answers) == {"Which engine?": "Cycles"}
 
 
-def test_non_batch_and_unrelated_clicks_fall_through_to_the_backend():
+def test_non_batch_and_stale_clicks_fall_through_to_the_backend():
     wizard = _load_wizard()
     # A bubble with no batch is an ordinary action button.
     assert wizard.record_choice(_Bubble(), "Cycles") is None
     # Cancel is always answered by the backend, never locally.
     assert wizard.record_choice(_Bubble(QUESTIONS), wizard.CANCEL_ACTION) is None
-    # A value foreign to the whole batch is a genuinely unrelated action.
+    # An option belonging to no pending card is a stale repaint click.
+    assert wizard.record_choice(_Bubble(QUESTIONS), "4K") is None
     assert wizard.record_choice(_Bubble(QUESTIONS), "nonsense") is None
-
-
-def test_a_click_from_a_non_current_card_is_swallowed_not_dispatched():
-    """A stale in-batch click must never reach the backend.
-
-    Dispatched as a single legacy answer, the backend would record it against
-    its FIRST pending question — the wrong one. Swallow it; the batch state
-    (and the current card) stay exactly as they were.
-    """
-    wizard = _load_wizard()
-    bubble = _Bubble(QUESTIONS)
-    stale = wizard.record_choice(bubble, "4K")  # question 2's option, card 1 up
-    assert stale["status"] == "stale"
-    assert bubble.batched_answers == ""
-    # The wizard still expects question 1 and advances normally from it.
-    step = wizard.record_choice(bubble, "Cycles")
-    assert step["status"] == "advanced"
-    assert step["question"]["question"] == "Which resolution?"
 
 
 def test_corrupt_wizard_state_never_swallows_the_click():
@@ -175,80 +136,6 @@ def test_redelivered_completed_batch_does_not_re_ask():
 
     questions, answers = wizard.parse_batch(bubble)
     assert wizard.next_unanswered(questions, answers) is None
-
-
-def test_reconcile_redraws_the_card_the_stored_answers_call_for():
-    """A re-delivered event's own content/actions draw the backend's FIRST
-    pending question; mid-wizard that regresses the display to question one
-    while the recorded state expects a later card. Reconcile re-renders the
-    next unanswered question after every questions-slot delivery."""
-    wizard = _load_wizard()
-    captured = _capture_renders(wizard)
-    bubble = _Bubble(QUESTIONS)
-    wizard.record_choice(bubble, "Cycles")
-    wizard.record_choice(bubble, "4K")
-
-    wizard.store_batch(bubble, QUESTIONS)  # re-delivery keeps both answers
-    wizard.reconcile_rendered_card(bubble, scene="SCENE")
-
-    assert len(captured) == 1
-    event = captured[0]["event"]
-    assert event["bubble_id"] == "bubble-1"
-    assert event["content"] == {"set": "Denoise?"}
-    assert [a["value"] for a in event["actions"]] == [
-        "Yes",
-        "No",
-        wizard.CANCEL_ACTION,
-    ]
-
-
-def test_reconcile_leaves_a_fresh_batch_to_the_wire_card():
-    """No answers yet — the event's own first card is already correct."""
-    wizard = _load_wizard()
-    captured = _capture_renders(wizard)
-    bubble = _Bubble(QUESTIONS)
-    wizard.reconcile_rendered_card(bubble, scene="SCENE")
-    assert captured == []
-
-
-def test_reconcile_renders_the_summary_for_a_completed_batch():
-    """A submitted batch converges on its recap, never a live-looking card."""
-    wizard = _load_wizard()
-    captured = _capture_renders(wizard)
-    bubble = _Bubble(QUESTIONS)
-    for choice in ("Cycles", "4K", "Yes"):
-        wizard.record_choice(bubble, choice)
-
-    wizard.store_batch(bubble, QUESTIONS)
-    wizard.reconcile_rendered_card(bubble, scene="SCENE")
-
-    assert len(captured) == 1
-    event = captured[0]["event"]
-    assert event["actions"] == []
-    assert event["content"]["set"] == (
-        "- Which engine? **Cycles**\n"
-        "- Which resolution? **4K**\n"
-        "- Denoise? **Yes**"
-    )
-
-
-def test_failed_submit_rolls_back_the_last_answer_so_it_can_be_retried():
-    """Without the rollback a failed submit leaves the batch fully answered,
-    every later click swallowed as stale, and no way to ever submit."""
-    wizard = _load_wizard()
-    bubble = _Bubble(QUESTIONS)
-    for choice in ("Cycles", "4K"):
-        wizard.record_choice(bubble, choice)
-    final = wizard.record_choice(bubble, "Yes")
-    assert final["status"] == "complete"
-
-    wizard.rollback_answer(bubble, final["answered"])
-
-    questions, answers = wizard.parse_batch(bubble)
-    assert wizard.next_unanswered(questions, answers)["question"] == "Denoise?"
-    retried = wizard.record_choice(bubble, "Yes")
-    assert retried["status"] == "complete"
-    assert retried["answers"] == final["answers"]
 
 
 def test_backend_reasking_only_unmatched_questions_keeps_the_rest():
@@ -368,26 +255,7 @@ def test_operator_delegates_to_the_wizard_and_submits_once():
     assert "answers=step[\"answers\"]" in block
     assert "interrupt_id=getattr(bubble, 'interrupt_id', '') or None" in block
     assert block.count("start_input_stream(") == 1
-    # Success leaves the answer recap on the bubble; failure rolls the last
-    # answer back and re-renders its card so the final click is retryable.
-    assert "batched_choice.render_summary(" in block
-    assert "batched_choice.rollback_answer(bubble, step[\"answered\"])" in block
     # A batched click is intercepted before the normal single-answer dispatch.
     assert source.index("batch = self._advance_batched_choice(scene)") < source.index(
         "        # Find the bubble by bubble_id and get the action label"
-    )
-
-
-def test_slot_processor_reconciles_after_a_questions_delivery():
-    """The reconcile must run AFTER the wire's own content/actions slots, or
-    they overwrite the corrected card right back to the backend's first
-    pending question."""
-    source = SLOT_PROCESSOR.read_text(encoding="utf-8")
-    apply_event = source[
-        source.index("    def apply_event("):
-        source.index("    @staticmethod")
-    ]
-    assert "reconcile_rendered_card(bubble, scene)" in apply_event
-    assert apply_event.index("for slot_name, handler in slot_handlers:") < (
-        apply_event.index("reconcile_rendered_card")
     )

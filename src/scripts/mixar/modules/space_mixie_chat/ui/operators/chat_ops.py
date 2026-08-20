@@ -111,6 +111,25 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
 
+        project_context = None
+        if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
+            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
+                from mixar.modules.addon_project.ui.operators import (
+                    ensure_addon_project_ready,
+                )
+                # Zero-question setup: default root + link, then this SAME
+                # send proceeds to build_project_context below.
+                if not ensure_addon_project_ready(self):
+                    metrics.stop_timer('send_message_total')
+                    return {'CANCELLED'}
+            try:
+                from mixar.modules.addon_project.context import build_project_context
+                project_context = build_project_context(scene)
+            except Exception as exc:
+                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
+                metrics.stop_timer('send_message_total')
+                return {'CANCELLED'}
+
         # Mark the user as engaged so the "Hi I'm Mixie" greeting
         # stops re-appearing whenever the message list transiently
         # empties (e.g. moodboard sync growing the bubble past the
@@ -126,7 +145,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         capture(EVENT_MESSAGE_SENT, {
-            "mode": "agent",
+            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
             "has_attachments": bool(len(pending_attachments)),
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
@@ -352,6 +371,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
                 attachment_names=attachment_names if attachment_names else None,
+                project_context=project_context,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to start chat stream")
