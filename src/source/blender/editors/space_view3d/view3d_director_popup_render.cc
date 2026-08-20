@@ -109,7 +109,7 @@ int draw_kind_toggles(bContext *C,
     drawn++;
   }
   if (free_items && items) {
-    MEM_delete_void(static_cast<void *>(items));
+    MEM_delete_void(static_cast<void *>(const_cast<EnumPropertyItem *>(items)));
   }
   return enabled_count;
 }
