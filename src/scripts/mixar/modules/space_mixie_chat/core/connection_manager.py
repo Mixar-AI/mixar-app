@@ -379,6 +379,67 @@ class ConnectionManager:
             ).start()
             return None  # deferred — _respond() replies from the worker
 
+        def on_addon_project_request(method: str, params: dict, request_id) -> None:
+            """Run bounded project I/O off-thread and Blender reload on main."""
+            import threading
+
+            if not request_id:
+                return None
+            if not session.has_active_session():
+                return {"success": False, "error": {
+                    "code": "session_inactive",
+                    "message": "Agent session not active",
+                }}
+            request_client = client
+
+            def _respond(result: dict) -> None:
+                ws_client = get_jsonrpc_client()
+                if ws_client is request_client and request_client.is_connected:
+                    request_client.queue_response(request_id, result)
+                else:
+                    logger.warning("project request %s finished after disconnect", request_id)
+
+            def _worker() -> None:
+                from mixar.modules.addon_project.constants import (
+                    RPC_RUN_CHECKS,
+                    RPC_SET_ENABLED,
+                )
+                from mixar.modules.addon_project.service import get_addon_project_service
+
+                service = get_addon_project_service()
+                # Blender registration APIs must run on the main thread:
+                # reload-checks AND set_enabled both reach addon_utils
+                # enable/disable (register()/unregister(), prefs writes).
+                # Static checks and every other project operation stay on
+                # this worker.
+                needs_main_thread = method == RPC_SET_ENABLED or (
+                    method == RPC_RUN_CHECKS and bool(params.get("reload_blender"))
+                )
+                if needs_main_thread:
+                    if method == RPC_RUN_CHECKS:
+                        static_params = dict(params)
+                        static_params["reload_blender"] = False
+                        static_result = service.dispatch(method, static_params)
+                        if not static_result.get("success"):
+                            _respond(static_result)
+                            return
+
+                    from .main_thread_executor import run_on_main_thread
+
+                    def _run_and_respond() -> None:
+                        _respond(service.dispatch(method, params))
+
+                    run_on_main_thread(_run_and_respond)
+                    return
+                _respond(service.dispatch(method, params))
+
+            threading.Thread(
+                target=_worker,
+                daemon=True,
+                name="MixarAddonProjectRPC",
+            ).start()
+            return None
+
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         # Re-arm the script executor: a prior disconnect(update_session_state=
@@ -403,6 +464,7 @@ class ConnectionManager:
             on_job_update=on_job_update,
             on_sandbox_control=on_sandbox_control,
             on_llm_request=on_llm_request,
+            on_addon_project_request=on_addon_project_request,
         )
 
         # Connect

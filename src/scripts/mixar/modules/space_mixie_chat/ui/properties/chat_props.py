@@ -654,6 +654,17 @@ def on_generate_type_changed(self, context):
         redraw_chat_areas()
 
 
+def _on_chat_mode_changed(self, context):
+    """When the user switches INTO Library mode, show the full asset grid so the
+    browse experience is immediate (no need to press Enter first)."""
+    if getattr(self, "mixie_chat_mode", "") == 'LIBRARY':
+        try:
+            from ...core import library_browse
+            library_browse.schedule_show_all()
+        except Exception:
+            pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -711,8 +722,29 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks and assistance", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
+            # Value 2 belonged to the removed legacy ASK mode and can still be
+            # persisted in old .blend files. Never reuse it: doing so would
+            # silently turn those files into another mode on load. Library was
+            # authored against 2 before Add-on Project landed and is moved to 4
+            # here for exactly that reason.
+            ('ADDON_PROJECT', "Add-on Project", "Build and maintain a linked multi-file Blender add-on", 'FILE_SCRIPT', 3),
+            ('LIBRARY', "Library", "Browse your asset library and add assets to the scene", 'ASSET_MANAGER', 4),
         ],
         default='AGENT',
+        update=_on_chat_mode_changed,
+    )
+
+    bpy.types.Scene.mixie_addon_project_id = StringProperty(
+        name="Add-on Project ID",
+        description="Opaque project identity; the local folder path is stored only on this machine",
+        default="",
+    )
+
+    bpy.types.Scene.mixie_addon_project_name = StringProperty(
+        name="Add-on Project Name",
+        description="Cached display name for the locally linked add-on project",
+        default="",
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
@@ -878,6 +910,7 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate content", 'GENERATE', 1),
+            ('ADDON_PROJECT', "Add-on Project", "Work on the linked Blender add-on", 'FILE_SCRIPT', 3),
         ],
         default='AGENT',
     )
@@ -943,7 +976,7 @@ def unregister():
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
-        'mixie_chat_mode',
+        'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
         if hasattr(bpy.types.Scene, attr):

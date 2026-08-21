@@ -6,13 +6,257 @@
 """
 Asset Library Search Panel
 
-Panel in the asset browser's source list (TOOLS region) for training
-an asset search model, checking status, and searching indexed assets.
+Asset-browser TOOLS panel styled in the Mixar sidebar language (same visual
+system as the moodboard N-panel): mixar_section boxes with labeled headers,
+hint-scale sublabels, 1.4-scale primary action buttons, and status badges.
 """
 
 import bpy
 from bpy.types import Panel
 
+# Visual constants — kept in lockstep with moodboard/constants.py
+# (GENERATE_BUTTON_SCALE_Y / SEP_* / HINT_SCALE_Y).
+_BTN_SCALE = 1.4
+_SEP_SECTION = 0.8
+_SEP_INTRA = 0.15
+_HINT_SCALE = 0.85
+
+
+def _section(layout, label=None, icon='NONE', action_op=None,
+             action_icon='FILE_REFRESH', action_enabled=True):
+    """Styled Mixar section (accent border + shadow); returns its column."""
+    box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
+    col = box.column()
+    if label:
+        if action_op:
+            row = col.row(align=True)
+            row.label(text=label, icon=icon)
+            sub = row.row(align=True)
+            sub.alignment = 'RIGHT'
+            sub.enabled = action_enabled
+            sub.operator(action_op, text="", icon=action_icon)
+        else:
+            col.label(text=label, icon=icon)
+        col.separator(factor=_SEP_INTRA)
+    return col
+
+
+def _hint(col, text, icon='NONE'):
+    row = col.row()
+    row.scale_y = _HINT_SCALE
+    row.label(text=text, icon=icon)
+
+
+def _input(layout, data, prop, **kw):
+    if hasattr(layout, 'mixar_input'):
+        layout.mixar_input(data, prop, **{k: v for k, v in kw.items() if k == 'text'})
+    else:
+        layout.prop(data, prop, **kw)
+
+
+# ---------------------------------------------------------------------------
+# Sections
+# ---------------------------------------------------------------------------
+
+def _draw_status(layout, state):
+    """Library Index section: state badge, last-run summary, train actions."""
+    col = _section(
+        layout, "Library Index", icon='ASSET_MANAGER',
+        action_op="mixie.refresh_asset_status",
+        action_icon='SORTTIME' if state.is_refreshing else 'FILE_REFRESH',
+        action_enabled=not state.is_refreshing,
+    )
+
+    if not state.has_model and not state.last_trained_at:
+        col.label(text="Not indexed yet", icon='INFO')
+        _hint(col, "Train to enable search and agent reuse")
+    elif state.needs_retraining:
+        alert = col.row()
+        alert.alert = True
+        alert.label(
+            text=state.retraining_message or "Library changed — retrain",
+            icon='ERROR',
+        )
+    else:
+        col.label(text="Up to date", icon='CHECKMARK')
+    if state.last_trained_at:
+        _hint(col, f"Last trained: {state.last_trained_at}")
+
+    if state.last_summary:
+        col.separator(factor=_SEP_INTRA)
+        row = col.row()
+        row.scale_y = _HINT_SCALE
+        if not state.last_summary_success:
+            row.alert = True
+        row.label(
+            text=state.last_summary,
+            icon='CHECKMARK' if state.last_summary_success else 'ERROR',
+        )
+
+    col.separator(factor=_SEP_INTRA)
+    btn = col.row()
+    btn.scale_y = _BTN_SCALE
+    btn.operator("mixie.train_asset_model", text="Train Model", icon='PLAY')
+    danger = col.row()
+    danger.scale_y = _HINT_SCALE
+    danger.operator("mixie.delete_asset_embeddings",
+                    text="Delete All Embeddings…", icon='TRASH', emboss=False)
+
+
+def _draw_library_enrollment(layout, context):
+    """'Libraries to Train' — tick which registered libraries to index."""
+    from mixar.modules.asset_search.ui.operators.library_ops import (
+        ensure_library_list_synced,
+    )
+    ensure_library_list_synced(context)
+
+    col = _section(
+        layout, "Libraries to Train", icon='ASSET_MANAGER',
+        action_op="mixie.refresh_libraries", action_icon='FILE_REFRESH',
+    )
+    wm = context.window_manager
+    coll = getattr(wm, "mixie_asset_libraries", None)
+    if not coll:
+        _hint(col, "Add asset libraries in Preferences › File Paths")
+        return
+
+    col.template_list(
+        "MIXIE_UL_asset_libraries", "",
+        wm, "mixie_asset_libraries",
+        wm, "mixie_asset_libraries_index",
+        rows=min(max(len(coll), 2), 6),
+    )
+    enabled_n = sum(1 for it in coll if it.enabled)
+    footer = col.row(align=True)
+    footer.scale_y = _HINT_SCALE
+    footer.label(text=f"{enabled_n} of {len(coll)} selected")
+    ops = footer.row(align=True)
+    ops.alignment = 'RIGHT'
+    ops.operator("mixie.set_all_libraries", text="All").enable = True
+    ops.operator("mixie.set_all_libraries", text="None").enable = False
+    _hint(col, "Counts show after Refresh; only ticked libraries are trained",
+          icon='INFO')
+
+
+def _draw_training_progress(layout, state):
+    """Live training section: bar, counter, phase, current item, ETA, cancel."""
+    col = _section(layout, "Training", icon='ASSET_MANAGER')
+
+    col.prop(state, "progress", text=state.phase_text or "Training…", slider=True)
+
+    if state.assets_total:
+        col.label(
+            text=f"Embedding {state.assets_done} / {state.assets_total} assets",
+            icon='RENDER_RESULT',
+        )
+    if state.current_item:
+        _hint(col, f"Now: {state.current_item}")
+    if state.eta_text:
+        _hint(col, state.eta_text, icon='TIME')
+    if state.prepare_note:
+        _hint(col, state.prepare_note, icon='INFO')
+
+    if state.failed_count:
+        col.separator(factor=_SEP_INTRA)
+        fail_row = col.row()
+        fail_row.alert = True
+        fail_row.prop(
+            state, "show_failures",
+            text=f"{state.failed_count} skipped",
+            icon='TRIA_DOWN' if state.show_failures else 'TRIA_RIGHT',
+            emboss=False,
+        )
+        if state.show_failures:
+            for line in state.failed_list.split("\n"):
+                if line.strip():
+                    _hint(col, "  " + line)
+
+    col.separator(factor=_SEP_INTRA)
+    cancel = col.row()
+    cancel.scale_y = 1.1
+    if state.cancel_requested:
+        cancel.enabled = False
+        cancel.operator("mixie.cancel_asset_training",
+                        text="Cancelling…", icon='SORTTIME')
+    else:
+        cancel.operator("mixie.cancel_asset_training",
+                        text="Cancel", icon='CANCEL')
+
+
+def _draw_search(layout, state, is_training):
+    """Search section: prompt + reference image + button + actionable results."""
+    col = _section(layout, "Search Library", icon='VIEWZOOM')
+
+    if is_training:
+        _hint(col, "Unavailable while training", icon='LOCKED')
+        return
+
+    _input(col, state, "search_prompt", text="",
+           icon='VIEWZOOM', placeholder="Describe an asset…")
+    col.separator(factor=_SEP_INTRA)
+    _hint(col, "Reference Image (optional)", icon='IMAGE_DATA')
+    col.template_ID(state, "search_image", open="image.open")
+
+    col.separator(factor=_SEP_INTRA)
+    btn = col.row()
+    btn.scale_y = _BTN_SCALE
+    if state.is_searching:
+        btn.enabled = False
+        btn.operator("mixie.search_assets", text="Searching…", icon='SORTTIME')
+    else:
+        btn.operator("mixie.search_assets", text="Search", icon='VIEWZOOM')
+
+    if state.search_results:
+        col.separator(factor=_SEP_SECTION)
+        header = col.row(align=True)
+        header.label(text=f"{len(state.search_results)} result(s)",
+                     icon='CHECKMARK')
+        header.operator("mixie.clear_search_results", text="", icon='X',
+                        emboss=False)
+        for hit in state.search_results:
+            card = col.box()
+            row = card.row(align=True)
+            main = row.column(align=True)
+            main.label(text=hit.name, icon='OBJECT_DATA')
+            src = hit.library or "unknown library"
+            if hit.asset_type:
+                src += f" · {hit.asset_type}"
+            _hint(main, "    " + src)
+            score_row = main.row(align=True)
+            score_row.scale_y = 0.6
+            try:
+                score_row.progress(factor=hit.score,
+                                   text=f"{hit.score:.0%}", type='BAR')
+            except Exception:
+                _hint(score_row, f"score {hit.score:.2f}")
+            btn_col = row.column()
+            op = btn_col.operator("mixie.locate_search_result", text="",
+                                  icon='ZOOM_SELECTED')
+            op.asset_name = hit.name
+            op.library = hit.library
+        _hint(col, "Click the magnifier to show a result in the browser",
+              icon='INFO')
+    elif state.search_message:
+        col.separator(factor=_SEP_INTRA)
+        row = col.row(align=True)
+        row.scale_y = _HINT_SCALE
+        row.label(text=state.search_message, icon='INFO')
+        row.operator("mixie.clear_search_results", text="", icon='X',
+                     emboss=False)
+        if "No matching" in state.search_message:
+            _hint(col, "Try other words, or retrain if assets are new")
+
+
+def _draw_agent_reuse(layout, state):
+    col = _section(layout, "Agent Asset Reuse",
+                   icon='OUTLINER_OB_GROUP_INSTANCE')
+    col.prop(state, "match_threshold", text="Match Threshold", slider=True)
+    _hint(col, "Ask the agent to \"use my library\"", icon='INFO')
+
+
+# ---------------------------------------------------------------------------
+# Panel
+# ---------------------------------------------------------------------------
 
 class MIXIE_PT_asset_library_search(Panel):
     """Asset Library Search panel in the asset browser source list"""
@@ -31,105 +275,21 @@ class MIXIE_PT_asset_library_search(Panel):
     def draw(self, context):
         layout = self.layout
         state = getattr(context.scene, 'mixie_asset_training', None)
-        is_training = state.is_training if state else False
-
-        # == Model section ==
-        model_box = layout.box()
-        col = model_box.column(align=True)
+        if state is None:
+            layout.label(text="Asset search unavailable", icon='ERROR')
+            return
+        is_training = state.is_training
 
         if is_training:
-            col.prop(state, "progress", text="Training...", slider=True)
-            col.enabled = False
+            _draw_training_progress(layout, state)
         else:
-            row = col.row(align=True)
-            row.scale_y = 1.3
-            row.operator(
-                "mixie.train_asset_model",
-                text="Train Model",
-                icon='OUTLINER_OB_LIGHT',
-            )
-            # Compact refresh — icon-only, doesn't stretch
-            refresh_sub = row.row(align=True)
-            refresh_sub.scale_x = 0.8
-            if state and state.is_refreshing:
-                refresh_sub.enabled = False
-                refresh_sub.operator(
-                    "mixie.refresh_asset_status",
-                    text="",
-                    icon='SORTTIME',
-                )
-            else:
-                refresh_sub.operator(
-                    "mixie.refresh_asset_status",
-                    text="",
-                    icon='FILE_REFRESH',
-                )
-
-            # Stale-embeddings warning
-            if state and state.needs_retraining:
-                col.separator(factor=0.3)
-                alert_row = col.row()
-                alert_row.alert = True
-                alert_row.label(
-                    text=state.retraining_message
-                    or "Retrain to update embeddings",
-                    icon='ERROR',
-                )
-
-        layout.separator(factor=0.5)
-
-        # == Search section ==
-        search_col = layout.column()
-
-        if state:
-            # Text prompt
-            search_col.prop(state, "search_prompt", text="", icon='VIEWZOOM')
-            search_col.separator(factor=0.3)
-
-            # Reference image (compact)
-            search_col.label(text="Reference Image", icon='IMAGE_DATA')
-            search_col.template_ID(
-                state, "search_image", open="image.open",
-            )
-            search_col.separator(factor=0.5)
-
-        # Search button
-        btn_row = search_col.row(align=True)
-        btn_row.scale_y = 1.5
-        if state and state.is_searching:
-            btn_row.enabled = False
-            btn_row.operator(
-                "mixie.search_assets",
-                text="Searching...",
-                icon='SORTTIME',
-            )
-        else:
-            btn_row.operator(
-                "mixie.search_assets",
-                text="Search",
-                icon='VIEWZOOM',
-            )
-
-        # Results
-        if state and state.search_message:
-            layout.separator(factor=0.5)
-            result_box = search_col.box()
-            lines = state.search_message.split("\n")
-            # Header line (e.g. "Found 3 results:")
-            if lines:
-                header = result_box.row()
-                header.scale_y = 0.9
-                header.label(text=lines[0], icon='CHECKMARK')
-            # Individual results
-            for line in lines[1:]:
-                if line.strip():
-                    r = result_box.row()
-                    r.scale_y = 0.85
-                    r.label(text="    " + line)
-
-        # Grey out entire search section during training
-        if is_training:
-            search_col.enabled = False
+            _draw_status(layout, state)
+            layout.separator(factor=_SEP_SECTION)
+            _draw_library_enrollment(layout, context)
+        layout.separator(factor=_SEP_SECTION)
+        _draw_search(layout, state, is_training)
+        layout.separator(factor=_SEP_SECTION)
+        _draw_agent_reuse(layout, state)
 
 
 classes = (

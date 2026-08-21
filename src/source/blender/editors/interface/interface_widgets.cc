@@ -2097,6 +2097,33 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   const int fontid = chat_fstyle.uifont_id;
   const char *drawstr = but->editstr ? but->editstr : but->drawstr.c_str();
 
+#ifdef WITH_INPUT_IME
+  /* While an IME composition is in progress (Korean/Japanese/Chinese input),
+   * the preedit text lives only in ime_data->composite — editstr is untouched
+   * until the syllable commits. Splice it in at the cursor so the user sees
+   * what they are composing; mirrors the single-line widget_draw_text(). */
+  const wmIMEData *ime_data = but->editstr ? ui_but_ime_data_get(but) : nullptr;
+  std::string ime_drawstr;
+  int ime_composite_len = 0;
+  if (ime_data && ime_data->composite.size()) {
+    ime_composite_len = int(ime_data->composite.size());
+    const int splice_pos = std::clamp(int(but->pos), 0, int(strlen(but->editstr)));
+    ime_drawstr.assign(but->editstr, size_t(splice_pos));
+    ime_drawstr.append(ime_data->composite);
+    ime_drawstr.append(but->editstr + splice_pos);
+    drawstr = ime_drawstr.c_str();
+  }
+#endif
+
+  /* Cursor position within drawstr. During IME composition the caret sits
+   * inside the spliced preedit text, not at but->pos. */
+  int cursor_pos = but->pos;
+#ifdef WITH_INPUT_IME
+  if (ime_composite_len) {
+    cursor_pos += (ime_data->cursor_pos != -1) ? ime_data->cursor_pos : ime_composite_len;
+  }
+#endif
+
   if (!drawstr || !drawstr[0]) {
     if (but->editstr) {
       /* Editing an empty string — fall through to draw the cursor.
@@ -2198,11 +2225,11 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 
   /* Find which line contains the cursor */
   int cursor_line = num_lines - 1;
-  if (but->editstr && but->pos >= 0) {
+  if (but->editstr && cursor_pos >= 0) {
     for (int i = 0; i < num_lines; i++) {
       const int line_start = line_byte_offsets[i];
       const int next_start = (i + 1 < num_lines) ? line_byte_offsets[i + 1] : (drawstr_len + 1);
-      if (but->pos >= line_start && (but->pos < next_start || i == num_lines - 1)) {
+      if (cursor_pos >= line_start && (cursor_pos < next_start || i == num_lines - 1)) {
         cursor_line = i;
         break;
       }
@@ -2224,11 +2251,11 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   }
   g_multiline_was_editing = is_editing;
 
-  if (is_editing && but->pos >= 0) {
+  if (is_editing && cursor_pos >= 0) {
     /* Only auto-scroll when the cursor actually moves — otherwise manual
      * scroll (wheel / touchpad) gets overridden every frame. */
-    const bool cursor_moved = (but->pos != g_multiline_prev_cursor_pos);
-    g_multiline_prev_cursor_pos = but->pos;
+    const bool cursor_moved = (cursor_pos != g_multiline_prev_cursor_pos);
+    g_multiline_prev_cursor_pos = cursor_pos;
     if (cursor_moved) {
       if (cursor_line < g_multiline_scroll_offset) {
         g_multiline_scroll_offset = cursor_line;
@@ -2291,8 +2318,8 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   }
 
   /* Draw cursor if editing */
-  if (but->editstr && but->pos >= 0) {
-    const int local_pos = std::min(but->pos - line_byte_offsets[cursor_line],
+  if (but->editstr && cursor_pos >= 0) {
+    const int local_pos = std::min(cursor_pos - line_byte_offsets[cursor_line],
                                    int(lines[cursor_line].size()));
     const int cursor_x = BLF_str_offset_to_cursor(fontid,
                                                    drawstr + line_byte_offsets[cursor_line],
@@ -2321,8 +2348,56 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                cursor_top - U.pixelsize);
 
       immUnbindProgram();
+
+#ifdef WITH_INPUT_IME
+      /* Keep the IME candidate window anchored to the caret (the single-line
+       * path does this from widget_draw_text; without it the popup floats at
+       * wherever the mouse was when editing started). */
+      ui_but_ime_reposition(but, rect->xmin + cursor_x + 5, int(cursor_bottom) + 3, false);
+#endif
     }
   }
+
+#ifdef WITH_INPUT_IME
+  /* Underline the in-progress composition, wrapping across lines. */
+  if (ime_composite_len && but->editstr && but->pos >= 0) {
+    float fcol[4];
+    rgba_uchar_to_float(fcol, wcol->text);
+
+    const int comp_start = but->pos;
+    const int comp_end = but->pos + ime_composite_len;
+
+    for (int i = g_multiline_scroll_offset;
+         i < min_ii(g_multiline_scroll_offset + visible_lines, num_lines);
+         i++)
+    {
+      const int line_start = line_byte_offsets[i];
+      const int line_len = int(lines[i].size());
+      const int line_end = line_start + line_len;
+
+      if (comp_end <= line_start || comp_start >= line_end) {
+        continue;
+      }
+
+      const int local_start = max_ii(comp_start - line_start, 0);
+      const int local_end = min_ii(comp_end - line_start, line_len);
+
+      const float ul_x_start = (local_start > 0) ?
+                                   BLF_width(fontid, drawstr + line_start, local_start) :
+                                   0.0f;
+      const float ul_x_end = BLF_width(fontid, drawstr + line_start, local_end);
+
+      const int visual_line = i - g_multiline_scroll_offset;
+      const float line_bottom = rect->ymax - (visual_line + 1) * line_height;
+
+      UI_draw_text_underline(rect->xmin + int(ul_x_start),
+                             int(line_bottom) + int(2.0f * U.pixelsize),
+                             min_ii(int(ul_x_end), BLI_rcti_size_x(rect) - 2) - int(ul_x_start),
+                             1,
+                             fcol);
+    }
+  }
+#endif
 
   /* Draw text line by line */
   for (int i = g_multiline_scroll_offset;
