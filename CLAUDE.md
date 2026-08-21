@@ -80,6 +80,15 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — o
 | **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |
 
+**Batched-choice replay and retry contract:** In-batch clicks are accepted only
+for the card that is currently rendered; a stale card click is swallowed so it
+cannot answer the wrong question. After every re-delivered `questions` event,
+`slot_processor.apply_event` calls `reconcile_rendered_card`: an in-progress
+batch redraws its next unanswered card, while a submitted batch redraws the
+answer recap that is also shown after a successful submit. If the submit fails,
+the final answer is rolled back and its card is redrawn so the user can retry
+that last click.
+
 ## Moodboard Canvas, Inference Graph & Video
 
 - **Canvas**: theme-independent pure black with a sparse neutral-gray dot grid fixed in *canvas* space (zoom in → fewer/larger dots). Dots are filled discs, not GPU point primitives (subpixel Moiré), and fade out as their projected diameter approaches one pixel.
