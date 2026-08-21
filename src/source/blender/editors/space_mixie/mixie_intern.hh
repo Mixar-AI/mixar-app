@@ -315,8 +315,10 @@ int mixie_get_sam3d_preview_delete_at_position(const bContext *C,
 }  // namespace blender::ed::mixie
 
 /* -------------------------------------------------------------------- */
-/** \name Operator Registration (C linkage)
+/** \name Operator Registration
  * \{ */
+
+namespace blender {
 
 /* mixie_header.cc */
 void mixie_header_region_init(wmWindowManager *wm, ARegion *region);
@@ -341,5 +343,7 @@ void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_crop_image(wmOperatorType *ot);
+
+}  // namespace blender
 
 /** \} */

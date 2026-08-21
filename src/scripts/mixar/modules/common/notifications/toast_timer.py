@@ -106,8 +106,16 @@ def ensure_toast_timer_running() -> None:
     bpy.app.timers.register(_start_on_main, first_interval=0)
 
 
-def cleanup_toast_timer() -> None:
-    """Unregister the timer and draw handler, and clear all notifications."""
+def cleanup_toast_timer(app_exit: bool = False) -> None:
+    """Unregister the timer and draw handler, and clear all notifications.
+
+    ``app_exit=True`` marks the atexit path: Python finalizes AFTER
+    ``BKE_blender_free()`` (see WM_exit_ex), so ``bpy.data`` and the
+    spacetype draw-handler registries are already freed — writing the WM
+    visibility flag or removing the draw handler there is a use-after-free
+    segfault, and neither matters for a dying process. Only silence the
+    timer and drop the pure-Python store.
+    """
     global _timer_active
 
     with _timer_lock:
@@ -116,10 +124,11 @@ def cleanup_toast_timer() -> None:
     if bpy.app.timers.is_registered(_toast_tick):
         bpy.app.timers.unregister(_toast_tick)
 
-    _set_toasts_visible_flag(False)
+    if not app_exit:
+        _set_toasts_visible_flag(False)
 
-    from .toast_renderer import remove_draw_handler
-    remove_draw_handler()
+        from .toast_renderer import remove_draw_handler
+        remove_draw_handler()
 
     from .store import get_notification_store
     get_notification_store().reset()

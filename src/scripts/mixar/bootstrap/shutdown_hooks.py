@@ -73,7 +73,10 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
         from mixar.modules.common.notifications.toast_timer import (
             cleanup_toast_timer,
         )
-        _safe("cleanup_toast_timer", cleanup_toast_timer)
+        # On the atexit path bpy.data is already freed (BPY_python_end runs
+        # after BKE_blender_free), so the toast cleanup must skip its RNA
+        # write and draw-handler removal or it segfaults on quit.
+        _safe("cleanup_toast_timer", cleanup_toast_timer, app_exit=(reason == "atexit"))
     except ImportError:
         pass
 

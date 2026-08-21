@@ -23,6 +23,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -267,7 +268,7 @@ void BAKING_OT_height_to_normal(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "strength", 1.0f, 0.01f, 10.0f, "Strength", "", 0.01f, 10.0f);
@@ -284,8 +285,8 @@ void BAKING_OT_blend_normal_maps(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "base_image", "Image", "Base Image", "Base normal map (modified in place)");
-  RNA_def_pointer(ot->srna, "detail_image", "Image", "Detail Image", "Detail normal map to blend");
+  RNA_def_pointer_runtime(ot->srna, "base_image", RNA_Image, "Base Image", "Base normal map (modified in place)");
+  RNA_def_pointer_runtime(ot->srna, "detail_image", RNA_Image, "Detail Image", "Detail normal map to blend");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "detail_strength", 1.0f, 0.0f, 2.0f, "Detail Strength", "", 0.0f, 2.0f);

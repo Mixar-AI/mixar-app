@@ -24,6 +24,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 #include "RNA_enum_types.hh"
 
 #include "WM_api.hh"
@@ -259,9 +260,10 @@ void BAKING_OT_blend_images(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(
-      ot->srna, "base_image", "Image", "Base Image", "Base image (modified in place)");
-  RNA_def_pointer(ot->srna, "blend_image", "Image", "Blend Image", "Image to blend on top");
+  RNA_def_pointer_runtime(
+      ot->srna, "base_image", RNA_Image, "Base Image", "Base image (modified in place)");
+  RNA_def_pointer_runtime(
+      ot->srna, "blend_image", RNA_Image, "Blend Image", "Image to blend on top");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "opacity", 1.0f, 0.0f, 1.0f, "Opacity", "", 0.0f, 1.0f);
@@ -279,7 +281,7 @@ void BAKING_OT_dither_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna,
