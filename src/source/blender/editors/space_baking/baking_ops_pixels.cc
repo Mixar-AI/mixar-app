@@ -19,6 +19,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -272,8 +273,8 @@ void BAKING_OT_copy_image_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "src_image", "Image", "Source Image", "");
-  RNA_def_pointer(ot->srna, "dest_image", "Image", "Destination Image", "");
+  RNA_def_pointer_runtime(ot->srna, "src_image", RNA_Image, "Source Image", "");
+  RNA_def_pointer_runtime(ot->srna, "dest_image", RNA_Image, "Destination Image", "");
   RNA_def_int(ot->srna, "src_width", 1024, 1, 32768, "Source Width", "", 1, 32768);
   RNA_def_int(ot->srna, "src_height", 1024, 1, 32768, "Source Height", "", 1, 32768);
   RNA_def_int(ot->srna, "dest_width", 1024, 1, 32768, "Destination Width", "", 1, 32768);
@@ -298,8 +299,8 @@ void BAKING_OT_copy_image_channel_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "src_image", "Image", "Source Image", "");
-  RNA_def_pointer(ot->srna, "dest_image", "Image", "Destination Image", "");
+  RNA_def_pointer_runtime(ot->srna, "src_image", RNA_Image, "Source Image", "");
+  RNA_def_pointer_runtime(ot->srna, "dest_image", RNA_Image, "Destination Image", "");
   RNA_def_int(ot->srna, "src_width", 1024, 1, 32768, "Source Width", "", 1, 32768);
   RNA_def_int(ot->srna, "src_height", 1024, 1, 32768, "Source Height", "", 1, 32768);
   RNA_def_int(ot->srna, "dest_width", 1024, 1, 32768, "Destination Width", "", 1, 32768);
@@ -327,7 +328,7 @@ void BAKING_OT_set_image_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);

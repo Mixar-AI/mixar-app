@@ -23,6 +23,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -268,7 +269,7 @@ void BAKING_OT_dilate(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -286,7 +287,7 @@ void BAKING_OT_erode(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -304,7 +305,7 @@ void BAKING_OT_sobel_edge_detect(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 }

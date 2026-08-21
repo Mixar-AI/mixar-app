@@ -38,11 +38,15 @@ void texture_sets_draw_main_region(const bContext *C, ARegion *region);
 }  // namespace blender::ed::texture_sets
 
 /* -------------------------------------------------------------------- */
-/** \name Region Callbacks (C linkage)
+/** \name Region Callbacks
  * \{ */
+
+namespace blender {
 
 /* texture_sets_header.cc */
 void texture_sets_header_region_init(wmWindowManager *wm, ARegion *region);
 void texture_sets_header_region_draw(const bContext *C, ARegion *region);
+
+}  // namespace blender
 
 /** \} */

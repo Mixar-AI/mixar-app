@@ -24,6 +24,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -196,7 +197,7 @@ void BAKING_OT_get_image_minmax(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 
@@ -219,7 +220,7 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "target_min", 0.0f, -FLT_MAX, FLT_MAX, "Target Min", "", 0.0f, 1.0f);

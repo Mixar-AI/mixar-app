@@ -19,6 +19,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -283,7 +284,7 @@ void BAKING_OT_pixels_to_srgb(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -304,7 +305,7 @@ void BAKING_OT_pixels_to_linear(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -325,7 +326,7 @@ void BAKING_OT_batch_srgb_to_linear(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_boolean(ot->srna, "convert_r", true, "Convert Red", "");
@@ -345,7 +346,7 @@ void BAKING_OT_batch_linear_to_srgb(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_boolean(ot->srna, "convert_r", true, "Convert Red", "");
