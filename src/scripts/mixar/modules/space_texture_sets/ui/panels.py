@@ -11,6 +11,8 @@ Single column layout like the Texturing Layers space.
 import bpy
 from bpy.types import Panel
 
+from ...common.utils import panel_style
+
 
 def _draw_texture_sets_tab(context, layout, obj):
     """Draw the Texture Sets tab content (material slots management).
@@ -80,10 +82,7 @@ def _draw_channel_settings_tab(context, layout):
     mpui = wm.mpui
 
     # ========== CHANNELS BOX ==========
-    box = layout.box()
-    box.label(text="Channels", icon='NODE_COMPOSITING')
-
-    col = box.column()
+    col = panel_style.section(layout, label="Channels", icon='NODE_COMPOSITING')
 
     channel_count = len(mp.channels)
 
@@ -121,7 +120,7 @@ def _draw_channel_settings_tab(context, layout):
         channel = mp.channels[mp.active_channel_index]
 
         # Channel settings box
-        settings_box = col.box()
+        settings_box = panel_style.section(col)
 
         # Header with channel name and icon
         header_row = settings_box.row(align=True)
