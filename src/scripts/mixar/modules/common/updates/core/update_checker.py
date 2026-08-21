@@ -149,8 +149,10 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
     """Convert the raw API ``/check`` response dict into an ``UpdateInfo``.
 
     Handles the server envelope: ``{"status": "success", "data": {...}}``.
-    Only metadata is consumed — the update flow is browser-based, so the
-    nested ``download`` binary object is ignored entirely.
+    The nested ``download`` object carries the installer artifact for this
+    platform; a release published without one (or with a type this
+    platform can't apply) still yields an ``UpdateInfo`` — the update is
+    real, it just routes to the browser instead of the in-app installer.
 
     Returns ``None`` when the response indicates *no update available*.
     """
@@ -165,6 +167,22 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         logger.error("Rejecting update: malformed latest_version %r", latest_version)
         return None
 
+    download = data.get("download")
+    if not isinstance(download, dict):
+        download = {}
+
+    # Only https installer URLs are ever fetched: this file is about to be
+    # run, elevated, on the user's machine.
+    download_url = str(download.get("url") or "")
+    if download_url and not download_url.startswith("https://"):
+        logger.error("Ignoring non-https installer URL for %s", latest_version)
+        download_url = ""
+
+    try:
+        download_size = int(download.get("size_bytes") or 0)
+    except (TypeError, ValueError):
+        download_size = 0
+
     return UpdateInfo(
         latest_version=latest_version,
         current_version=data.get("current_version", ""),
@@ -174,7 +192,21 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         changelog_summary=data.get("changelog_summary", ""),
         changelog_url=data.get("changelog_url", ""),
         browser_download_url=data.get("browser_download_url", ""),
+        download_url=download_url,
+        download_sha256=str(download.get("sha256") or "").strip().lower(),
+        download_size=download_size,
+        installer_type=str(download.get("installer_type") or "").strip().lower(),
     )
+
+
+# ============================================================================
+# Severity
+# ============================================================================
+
+
+def is_forced(info) -> bool:
+    """A forced or unsupported update must be installed — no skipping."""
+    return bool(info.force_update or info.unsupported)
 
 
 # ============================================================================

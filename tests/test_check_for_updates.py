@@ -29,7 +29,7 @@ sys.modules.setdefault(
 
 from mixar.modules.common.notifications.store import get_notification_store
 from mixar.modules.common.updates.constants import UPDATE_NOTIFICATION_ID
-from mixar.modules.common.updates.core import trigger
+from mixar.modules.common.updates.core import toasts, trigger
 from mixar.modules.common.updates.core.state import get_update_state
 
 
@@ -63,7 +63,7 @@ def test_trigger_skipped_while_active_keeps_flag_untouched():
 
 
 def test_up_to_date_toast_is_transient_success():
-    trigger._push_up_to_date_toast()
+    toasts.push_up_to_date_toast()
     item = _toast()
     assert item.type.value == "success"
     assert item.ttl_ms == 6000
@@ -72,7 +72,7 @@ def test_up_to_date_toast_is_transient_success():
 
 
 def test_check_failed_toast_is_transient_error():
-    trigger._push_check_failed_toast()
+    toasts.push_check_failed_toast()
     item = _toast()
     assert item.type.value == "error"
     assert item.ttl_ms == 6000

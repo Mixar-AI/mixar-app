@@ -5,8 +5,9 @@
 """
 Update Checker Bootstrap Module
 
-Hooks into Blender startup to schedule a delayed update check.  The actual
-check logic lives in ``mixar.modules.common.updates.core.trigger``.
+Hooks into Blender startup to schedule a delayed update check, and to
+report the outcome of an update applied while the app was closed.  The
+actual logic lives in ``mixar.modules.common.updates.core``.
 
 Loaded by bootstrap/__init__.py during the startup sequence.  Schedules
 a delayed timer so the API infrastructure (executor + queue processor)
@@ -28,12 +29,23 @@ _init_timer_registered = False
 
 
 def _delayed_init() -> None:
-    """Delegate to the shared update-check trigger.
+    """Report the last install's outcome, then check for a new update.
 
     Runs on the **main thread** (bpy.app.timers callback).
     Returns ``None`` so the timer does not repeat.
+
+    Order matters: the outcome toast is about the update the user already
+    asked for, so it goes up before a check can push a new one over it.
     """
+    from mixar.modules.common.updates.core.toasts import (
+        report_previous_update_result,
+    )
     from mixar.modules.common.updates.core.trigger import trigger_update_check
+
+    try:
+        report_previous_update_result()
+    except Exception as e:  # noqa: BLE001 - never block the update check
+        logger.debug("Could not report the previous update result: %s", e)
 
     trigger_update_check()
     return None

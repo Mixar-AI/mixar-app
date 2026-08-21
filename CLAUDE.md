@@ -69,7 +69,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — o
 | **moodboard** | Reference boards + node canvas (below), catalog-driven generation sidebar (Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character Parts, Retopology, UV Unwrap, Mesh Segment, Auto Rig, Video Gen, World Labs + Queue), turnaround/multi-view image-to-3D, clipboard, scene recon, freehand image annotations, SAM3-guided character components, World Labs Gaussian splats (all below) |
 | **director** | Phase-zero camera directing as a viewport mode (below): native C++ View3D rail/gate/popups/timeline over Python-owned operators |
 | **hunyuan** | 3D generation enqueue helpers: text/image→3D, retopology (Hunyuan/Tripo engines), UV unwrap, auto-rig (`core/animate_enqueue.py`) |
-| **common** | API clients (`common/api/services/`), authenticated content-free UX telemetry (`common/analytics` — event reference in `docs/telemetry-events.md`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, browser-based updates, **job_queue** (below), **generation_params** schema engine, **usage** / account card (below) |
+| **common** | API clients (`common/api/services/`), authenticated content-free UX telemetry (`common/analytics` — event reference in `docs/telemetry-events.md`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, **self-updates** (below), **job_queue** (below), **generation_params** schema engine, **usage** / account card (below) |
 | **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager) |
 | **byok** | Bring-your-own-key provider settings via backend credentials endpoints. Providers: backend catalog (cloud) + client-side OpenRouter, Codex (ChatGPT sub) and **Local (this computer)** — the Local branch (`ui/operators/byok_local_ops.py` + `core/local_provider.py`) offers a managed llama.cpp model (Download/Start/Save against `modules/local_models`) or a custom OpenAI-compatible server (detected-apps dropdown, worker-thread reachability ping); both save through the same `PUT /agent/byok` with optional `base_url`/`supports_vision` fields (omitted for other providers — backwards compatible) |
 | **local_models** | Zero-setup local LLM runtime: pinned llama.cpp `llama-server` + curated GGUF downloads (sha256-verified, resumable, size-scaled deadlines), single-`_proc` supervisor (bind-tested 11500–11599 port, `/health` watch, crash counter cap 2, `retry_fallback` → next runtime variant retried once), `llm.request` relay executor (POST-only, loopback/RFC1918/ULA + approved-base match, header allowlists, byte caps), detection of user-run Ollama/LM Studio/oMLX/llama.cpp. `core/orchestrator.py` owns ALL threads/timers/toast (stable id `LOCAL_MODEL_TOAST_ID`) + WM mirrors; `bootstrap/local_models_module.py` resumes a registered managed server ~6 s after start and health-watches it; `shutdown_hooks` + unregister call `stop_all()`; logout stops the server but keeps downloaded files. See module README/ARCHITECTURE |
@@ -197,6 +197,72 @@ The safe executor exposes `hashlib` and `struct` for local content digests and d
 - C++ overlays of note: `rna_main_api.cc` (kill preview jobs before `bpy.data.*.remove()` frees IDs), `py_capi_utils.cc` (per-thread GIL check), agent-bubble window lifecycle in `wm_files.cc`/`wm_window` (bubble windows never serialized; GHOST pointers invalidated on close AND free).
 - `mixie_chat_free()` clears process-global caches and runs for ANY freed Main (including temp Mains) — any new global cache cleared there needs a self-heal check on the draw path.
 
+## Self-Update (`modules/common/updates/`)
+
+Mixar updates itself: one **Restart & Update** click closes the app,
+applies the release installer, and reopens it. The downloads page is the
+fallback, not the default. Full write-up: `docs/seamless-updates.md`.
+
+- **Flow**: `/updates/check` → stage the installer in the background →
+  toast with **Restart & Update** → confirm (with unsaved-file handling) →
+  spawn a **detached helper** → quit → helper waits for our PID, installs,
+  relaunches → next startup reads the helper's `update-result.txt` and
+  toasts the outcome.
+- **Staging lives in `%ProgramData%\Mixar\Updates` on Windows**, and that
+  is the whole point of this design. The previous native-restart attempt
+  staged in the per-user temp dir; a per-machine MSI runs elevated, and a
+  standard user whose UAC prompt is answered with *another* admin account
+  leaves `msiexec` unable to read the file. `%LOCALAPPDATA%` is a
+  fallback and is flagged (`StagingDir.shared == False`), never the first
+  choice. macOS/Linux stage per-user, which is correct there.
+- **The installer is only trusted twice over**: the download is renamed
+  from `.part` to its final name only after the backend `sha256` matches,
+  and `core/verify.py` then compares its signature to the **running app's**
+  (Authenticode subject / codesign Team ID) — so a certificate rotation
+  needs no client release and an unsigned dev build degrades to
+  checksum-only instead of refusing to update. `REJECTED` blocks;
+  `UNVERIFIED` logs.
+- **The helper must not live in the install directory** (the MSI replaces
+  it) and must outlive us: generated into the staging dir and started in a
+  **hidden console** (`CREATE_NO_WINDOW`, breakaway-from-job when allowed /
+  `start_new_session`) — never `DETACHED_PROCESS`, whose console-less cmd
+  makes every wait-loop child (tasklist/find/ping) open its own visible
+  window. Windows elevates
+  explicitly via `Start-Process -Verb RunAs` (falling back to plain
+  `msiexec`); macOS mounts the DMG, verifies, `ditto`s the new bundle
+  **next to** the old one and exchanges them with `mv` — never overwriting
+  in place, and always installing over the *running* bundle's path rather
+  than the DMG's own name. Every failure path still relaunches: a declined
+  UAC prompt leaves the user on the old version, never with nothing.
+- **Install paths carry no version, by contract** (pinned by
+  `tests/test_update_packaging_paths.py`): `C:\Program Files\Mixar` with a
+  WiX UpgradeCode derived from `"Mixar"`, and `Mixar.app` inside the DMG.
+  The UpgradeCode used to be derived from the version-stamped install
+  directory, so a 3.3.x → 3.4.0 MSI installed *beside* the old build
+  instead of upgrading it. `packaging.cmake` generates `<Upgrade>` rows for
+  every legacy per-minor UpgradeCode (`mixar_legacy_upgrades.wxs`,
+  referenced from `WIX.template` via `MIXAR_LEGACY_UPGRADE_MARKER`) so
+  existing installs migrate on the first upgrade.
+- **One toast id, rendered from state** (`core/toasts.py`): available /
+  downloading (%) / ready / failed are renderings of the same toast, and a
+  dismissed toast is never resurrected by a progress tick. Self-install
+  unavailable (Linux, read-only install, App Translocation, a release with
+  no installer or no checksum) swaps the primary button back to the
+  browser download. Forced updates keep no Skip.
+- **A quit that doesn't happen is recovered, not waited out**: after
+  `apply_and_restart` schedules the quit, a 15s watchdog (timers stop
+  during real teardown, so it can only fire if the quit failed or is
+  blocked) kills the waiting helper via its kept `Popen`, returns state to
+  READY with the staged installer intact, and toasts "Update paused —
+  click Restart & Update to try again".
+- **Progress is always visible while downloading**: the update toast body
+  carries a live "Downloading — 45% — 180 MB of 400 MB" line re-rendered
+  by the 1s tick, and the topbar badge (`badge_label`) shows
+  "Downloading 45%" / "Restart to Update" / "Updating…".
+- Operators stay thin — decisions live in `core/install_flow.py`
+  (`plan_restart`, `apply_and_restart`) so they are testable under the
+  `bpy` mock. Config: `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`.
+
 ## Repo Docs Map
 
-`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs).
+`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover.
