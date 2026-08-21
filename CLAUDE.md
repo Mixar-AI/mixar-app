@@ -166,6 +166,8 @@ The top-bar profile dropdown is a **native card**, not a menu: greeting + email,
 
 Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → backend validates → Blender script over WebSocket → script reads `__PARAMS__`, emits `print("__RESULT__" + json.dumps(...))` → result returns to LLM. Client-side execution runs through `space_mixie_chat/core/main_thread_executor.py` / `core/executor.py`.
 
+The safe executor exposes `hashlib` and `struct` for local content digests and deterministic binary packing in first-party transaction scripts. Filesystem, process, and unrestricted network modules remain blocked.
+
 ## Key Patterns & Gotchas
 
 - **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks.
