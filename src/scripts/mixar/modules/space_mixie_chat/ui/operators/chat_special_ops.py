@@ -463,7 +463,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         from mixar.config.config import get_server_url
         from ...core import get_session_manager
         session = get_session_manager()
-        bubble.action_items.clear()
         try:
             from mixar.modules.auth.core.auth import get_access_token
             auth_token = get_access_token() or ''
@@ -484,9 +483,26 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             interrupt_id=getattr(bubble, 'interrupt_id', '') or None,
             auth_token=auth_token,
         ):
+            # Replace the last card with the answer recap (and drop the
+            # buttons) so the transcript keeps what was chosen, the way the
+            # single-choice flow echoes the clicked label.
+            parsed = batched_choice.parse_batch(bubble)
+            batched_choice.render_summary(
+                self.bubble_id,
+                parsed[0] if parsed else [],
+                step["answers"],
+                scene,
+            )
             session.set_state(scene, SessionState.BUSY)
             session.clear_streaming()
         else:
+            # The final answer was recorded before the network call. Leaving
+            # it recorded would make the batch read fully-answered — every
+            # later click swallowed as stale — while the interrupt is still
+            # pending backend-side. Roll it back and put its card up again so
+            # the final click can simply be retried.
+            batched_choice.rollback_answer(bubble, step["answered"])
+            batched_choice.render_question(self.bubble_id, step["answered"], scene)
             self.report({'ERROR'}, 'Failed to submit choices')
         return {'handled': True}
 

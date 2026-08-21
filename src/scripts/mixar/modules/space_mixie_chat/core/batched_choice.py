@@ -142,9 +142,16 @@ def record_choice(bubble: Any, action_value: str) -> Optional[dict]:
         if _belongs_to_batch(questions, action_value):
             return {"status": "stale", "question": None, "answers": answers}
         return None
-    # An option that belongs to no pending card is a stale click (a repaint
-    # race, or a button from an unrelated slot) — never record it.
     if action_value not in (current.get("options") or []):
+        # A click from a card that is no longer current (stale repaint, or a
+        # re-delivered event that redrew an earlier question). Recording it
+        # would answer the wrong question, and falling through would dispatch
+        # a stray single answer that the backend maps onto its FIRST pending
+        # question — also the wrong one. Swallow any click that belongs to
+        # the batch; only a value foreign to the whole batch is a genuinely
+        # unrelated action.
+        if _belongs_to_batch(questions, action_value):
+            return {"status": "stale", "question": None, "answers": answers}
         return None
 
     answers[current["question"]] = action_value
@@ -161,7 +168,14 @@ def record_choice(bubble: Any, action_value: str) -> Optional[dict]:
         for item in questions
         if isinstance(item, dict) and item.get("question") in answers
     }
-    return {"status": "complete", "question": None, "answers": ordered}
+    # ``answered`` names the question THIS click resolved so a failed submit
+    # can roll exactly it back and become retryable.
+    return {
+        "status": "complete",
+        "question": None,
+        "answers": ordered,
+        "answered": current,
+    }
 
 
 def _belongs_to_batch(questions: list, action_value: str) -> bool:
@@ -170,6 +184,63 @@ def _belongs_to_batch(questions: list, action_value: str) -> bool:
         isinstance(item, dict) and action_value in (item.get("options") or [])
         for item in questions
     )
+
+
+def rollback_answer(bubble: Any, question: Any) -> None:
+    """Remove one recorded answer after a failed submit.
+
+    The final click records its answer BEFORE the network call. If the call
+    fails, the batch would read fully answered while the interrupt is still
+    pending backend-side — and since a fully answered batch swallows every
+    click as stale, the user could never retry. Rolling the last answer back
+    (and re-rendering its card) makes the final click retryable.
+    """
+    parsed = parse_batch(bubble)
+    if parsed is None or not isinstance(question, dict):
+        return
+    _, answers = parsed
+    answers.pop(question.get("question"), None)
+    bubble.batched_answers = (
+        json.dumps(answers, ensure_ascii=False) if answers else ""
+    )
+
+
+def answers_summary(questions: list, answers: dict) -> str:
+    """Markdown recap of a submitted batch, in backend question order."""
+    lines = [
+        f"- {item['question']} **{answers[item['question']]}**"
+        for item in questions
+        if isinstance(item, dict) and item.get("question") in answers
+    ]
+    return "\n".join(lines)
+
+
+def reconcile_rendered_card(bubble: Any, scene: Any) -> None:
+    """Re-render the card the stored answers actually call for.
+
+    ``store_batch`` keeps answers across re-delivery, but a re-delivered
+    event's own ``content``/``actions`` slots still draw the FIRST pending
+    question from the backend's point of view (it has none of the local
+    answers). Without this pass the visible card regresses to question one
+    while the recorded state expects a later question — and clicks on the
+    regressed card are swallowed as stale or, worse, hit an option shared
+    with the current card and answer the wrong question. Called after every
+    event that carried a ``questions`` slot: a batch in progress re-renders
+    its next unanswered card; a fully answered (already submitted) batch
+    re-renders its answer summary with no buttons.
+    """
+    parsed = parse_batch(bubble)
+    if parsed is None:
+        return
+    questions, answers = parsed
+    if not answers:
+        return  # fresh batch — the wire's own first card is already correct
+    bubble_id = getattr(bubble, "bubble_id", "")
+    current = next_unanswered(questions, answers)
+    if current is not None:
+        render_question(bubble_id, current, scene)
+    else:
+        render_summary(bubble_id, questions, answers, scene)
 
 
 def render_question(bubble_id: str, question: dict, scene: Any) -> None:
@@ -181,6 +252,29 @@ def render_question(bubble_id: str, question: dict, scene: Any) -> None:
             "bubble_id": bubble_id,
             "content": {"set": question.get("question", "")},
             "actions": question_actions(question),
+        },
+        scene,
+    )
+
+
+def render_summary(
+    bubble_id: str, questions: list, answers: dict, scene: Any
+) -> None:
+    """Replace a submitted batch's card with its answer recap, no buttons.
+
+    Rendered on successful submission (so the transcript keeps what was
+    chosen, like the single-choice flow's echoed label) and by
+    ``reconcile_rendered_card`` when a completed batch is re-delivered —
+    converging on the recap instead of a live-looking question card whose
+    buttons would only ever be swallowed.
+    """
+    from .slot_processor import get_slot_processor
+
+    get_slot_processor().apply_event(
+        {
+            "bubble_id": bubble_id,
+            "content": {"set": answers_summary(questions, answers)},
+            "actions": [],
         },
         scene,
     )
