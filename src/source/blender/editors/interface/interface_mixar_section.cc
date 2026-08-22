@@ -36,6 +36,7 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 
 #include "UI_interface_layout.hh"
@@ -108,6 +109,66 @@ void UI_layout_mixar_mark_last_input(uiLayout *layout)
       but->flag2 |= UI_BUT2_MIXAR_INPUT;
       break;
     }
+  }
+}
+
+/* -------------------------------------------------------------------- */
+/* Profile-card element reuse                                            */
+
+/* Card-styled surfaces built from Python (the AI Provider Settings
+ * dialog) tag ordinary layout items with the profile card's element
+ * kinds so they share its painters. These mirror the private
+ * `mark_last` in `interface_mixar_profile_card.cc`; they live here with
+ * the other mark-last helpers to keep that file inside the size rule. */
+
+void UI_layout_mixar_card_tag_last(uiLayout *layout,
+                                   const MixarCardElement element,
+                                   const float payload)
+{
+  uiBlock *block = layout->block();
+  if (block->buttons.is_empty()) {
+    return;
+  }
+  uiBut *but = block->buttons[block->buttons.size() - 1].get();
+  UI_BUT2_MIXAR_CARD_SET(but);
+  /* `hardmin`/`hardmax` are inert on the label and operator buttons
+   * tagged here — neither carries a data pointer or RNA property (see
+   * the rationale on `mark_last` in `interface_mixar_profile_card.cc`). */
+  but->hardmin = float(int(element));
+  but->hardmax = payload;
+}
+
+void UI_layout_mixar_card_style_last_button(uiLayout *layout,
+                                            const MixarCardElement element,
+                                            const bool active_default)
+{
+  if (!UI_mixar_card_element_is_button(element)) {
+    /* A text kind on a clickable rect would paint chrome-less glyphs
+     * over a live hit area — refuse rather than draw a broken button. */
+    return;
+  }
+  uiBlock *block = layout->block();
+  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
+    uiBut *but = block->buttons[i].get();
+    if (but->type != ButType::But) {
+      continue;
+    }
+    UI_BUT2_MIXAR_CARD_SET(but);
+    but->hardmin = float(int(element));
+    but->hardmax = 0.0f; /* MixarCardIcon::None — the painter centres the label. */
+    /* Set *or clear*: `template_popup_confirm` hands its cancel button
+     * the active-default flag when nothing else holds it yet, so a
+     * dialog styling that button afterwards must be able to take the
+     * flag away again and give it to its real primary action. The flag
+     * is also the native OK/Cancel suppression contract — see
+     * #wm_block_dialog_create. */
+    if (active_default) {
+      UI_but_flag_enable(but, UI_BUT_ACTIVE_DEFAULT);
+    }
+    else {
+      UI_but_flag_disable(but, UI_BUT_ACTIVE_DEFAULT);
+    }
+    break;
   }
 }
 

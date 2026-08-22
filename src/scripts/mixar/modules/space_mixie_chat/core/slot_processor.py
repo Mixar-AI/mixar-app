@@ -171,25 +171,29 @@ class SlotEventProcessor:
                 except Exception as e:
                     logger.error(f"[SLOT] Failed to apply {slot_name}: {e}")
 
+        # A re-delivered batch event's content/actions slots (applied above)
+        # draw the backend's FIRST pending question, but the answers kept by
+        # store_batch may put the wizard further along. Re-render the card the
+        # stored state actually calls for — after every slot has been applied,
+        # so the wire's own content/actions cannot overwrite it back.
+        if "questions" in event_data:
+            try:
+                from .batched_choice import reconcile_rendered_card
+                reconcile_rendered_card(bubble, scene)
+            except Exception as e:
+                logger.error(f"[SLOT] Failed to reconcile batched card: {e}")
+
     @staticmethod
     def _apply_questions_slot(bubble: Any, questions: list) -> None:
-        """Store a validated batched-choice wizard payload on its bubble."""
-        import json
+        """Store a batched-choice wizard payload, keeping answers already given.
 
-        valid = (
-            isinstance(questions, list)
-            and 1 < len(questions) <= 4
-            and all(
-                isinstance(item, dict)
-                and isinstance(item.get("question"), str)
-                and item["question"].strip()
-                and isinstance(item.get("options"), list)
-                and item["options"]
-                for item in questions
-            )
-        )
-        bubble.batched_questions = json.dumps(questions) if valid else ""
-        bubble.batched_answers = ""
+        Re-delivery of the same interrupt (reconnect replay, or a still-pending
+        interrupt re-emitted when a later stream leg ends) must not reset the
+        user's progress — see batched_choice.store_batch.
+        """
+        from .batched_choice import store_batch
+
+        store_batch(bubble, questions)
 
     @staticmethod
     def _apply_interrupt_id_slot(bubble: Any, interrupt_id: str) -> None:
@@ -475,16 +479,25 @@ class SlotEventProcessor:
 
         Args:
             bubble: Message PropertyGroup
-            actions: List of dicts with label, value, style
+            actions: List of dicts with label, value, style, and (for
+                asset-picker options) asset_name/library/blend_file/asset_type
             scene: The Blender scene (for the AWAITING_INPUT state set)
         """
+        from . import asset_choice_previews
+
         prev_count = len(bubble.action_items)
+
+        # An answered picker is replaced with an empty actions list — that is
+        # the moment its locally generated preview images become garbage.
+        if prev_count and any(item.image for item in bubble.action_items):
+            asset_choice_previews.cleanup_bubble(bubble)
 
         # Clear existing items
         bubble.action_items.clear()
 
         # Add new items
         action_labels = []
+        has_asset_options = False
         for action_data in actions:
             action = bubble.action_items.add()
             # Handle None values - Blender properties don't accept None for strings
@@ -499,7 +512,21 @@ class SlotEventProcessor:
             else:
                 action.style = 'DEFAULT'
 
+            # Asset-picker identity (multi-match HITL): lets the client
+            # generate a local preview thumbnail for this option.
+            action.asset_name = action_data.get("asset_name") or ""
+            action.library = action_data.get("library") or ""
+            action.blend_file = action_data.get("blend_file") or ""
+            action.asset_type = action_data.get("asset_type") or ""
+            if action.asset_name and action.blend_file:
+                has_asset_options = True
+
             action_labels.append(f"{action.label}({action.style})")
+
+        # Kick off local preview generation for asset-picker options (embedded
+        # .blend preview first, render fallback) — thumbnails pop in per tick.
+        if has_asset_options and scene is not None:
+            asset_choice_previews.schedule(scene, bubble)
 
         # Non-empty action buttons (choice / approval, e.g. Yes / No /
         # Cancel) unambiguously mean the agent has paused for the user.

@@ -12,6 +12,7 @@
  * every frame. Split from mixie_chat_messages.cc for modularity.
  */
 
+#include <algorithm>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -192,6 +193,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     layout.slot_images_height = 0.0f;
     layout.slot_steps_height = 0.0f;
     layout.thinking_height = 0.0f;
+    layout.is_markdown_content = false;
     bool is_slot_msg = populate_slot_layout_data(&msg_ptr, &layout);
 
     /* For slot-based messages, we may have no text but still need to render slots */
@@ -254,6 +256,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           if (slot_has_md) {
             text_height = chat_ui_calc_markdown_height(slot_meta_h, &style, content_width, 1.0f);
             text_width = content_width;
+            layout.is_markdown_content = true;
           } else {
             chat_ui_calc_text_bounds(layout.content_text, content_width, style.font_size, 0,
                                      &text_width, &text_height);
@@ -315,6 +318,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           /* Use markdown height calculation */
           text_height = chat_ui_calc_markdown_height(meta_buf_height, &style, content_width, 1.0f);
           text_width = content_width;
+          layout.is_markdown_content = true;
         } else {
           chat_ui_calc_text_bounds(calc_text, content_width, style.font_size, 0,
                                    &text_width, &text_height);
@@ -391,7 +395,17 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           chat_ui_calc_text_bounds(
               action.label, content_width, style.font_size, 0,
               &action_text_width, &action_text_height);
-          action.height = action_text_height + style.v_padding * 1.5f;
+          if (action.image[0] != '\0') {
+            /* Asset-picker image button: square preview thumbnail left of the
+             * label — the row must fit the thumbnail. Render derives the
+             * thumbnail rect from the same constant. */
+            const float thumb = CHAT_ACTION_THUMB_SIZE * UI_SCALE_FAC;
+            action.height = std::max(thumb, action_text_height) +
+                            style.v_padding * 1.5f;
+          }
+          else {
+            action.height = action_text_height + style.v_padding * 1.5f;
+          }
           layout.slot_actions_height += action.height;
           if (i > 0) {
             layout.slot_actions_height += metrics.bubble_spacing;

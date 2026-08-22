@@ -254,6 +254,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if self.action_value.startswith("chat_model:"):
             return self._apply_model_choice(context)
 
+        # Library mode: append the clicked asset into the scene locally — no
+        # backend round-trip, works while disconnected. The asset identity rides
+        # on the action item (asset_name/library/blend_file/asset_type).
+        if self.action_value.startswith("lib_add:"):
+            return self._add_library_asset(context)
+
         if self.action_value == "export_destination_selected":
             from ...core import get_session_manager
             from ...core.export_destination import has_destination
@@ -394,6 +400,33 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         redraw_chat_areas()
         return {'FINISHED'}
 
+    def _add_library_asset(self, context):
+        """Library mode: append the clicked asset into the scene at the 3D
+        cursor. The asset identity lives on the clicked action item."""
+        scene = context.scene
+        action = None
+        for msg in scene.mixie_chat_messages:
+            if getattr(msg, "bubble_id", "") == self.bubble_id:
+                for item in msg.action_items:
+                    if item.value == self.action_value:
+                        action = item
+                        break
+                break
+        if action is None or not action.asset_name:
+            self.report({'WARNING'}, "That asset is no longer available")
+            return {'CANCELLED'}
+
+        from ...core import library_browse
+        ok, message = library_browse.add_asset_to_scene(
+            context, action.library, action.blend_file,
+            action.asset_name, action.asset_type,
+        )
+        if ok:
+            self.report({'INFO'}, f"Added '{message}' to the scene")
+            return {'FINISHED'}
+        self.report({'WARNING'}, message)
+        return {'CANCELLED'}
+
     def _advance_batched_choice(self, scene):
         """Advance a batch locally, returning None when this is a normal action."""
         from ...core import batched_choice
@@ -409,7 +442,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if step is None:
             return None
 
-        if not step["complete"]:
+        if step["status"] == "stale":
+            # Already answered and submitted — swallow so a button left on
+            # screen by a re-delivered event cannot fire a stray single answer.
+            return {'handled': True}
+
+        if step["status"] == "advanced":
             # Draw the next card through the normal slot pipeline so it is
             # identical to a backend-sent one — a bare bubble.content write
             # leaves the old question rendered (stale markdown segments and
@@ -425,8 +463,6 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         from mixar.config.config import get_server_url
         from ...core import get_session_manager
         session = get_session_manager()
-        bubble.action_items.clear()
-        batched_choice.clear_batch(bubble)
         try:
             from mixar.modules.auth.core.auth import get_access_token
             auth_token = get_access_token() or ''
@@ -447,9 +483,26 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             interrupt_id=getattr(bubble, 'interrupt_id', '') or None,
             auth_token=auth_token,
         ):
+            # Replace the last card with the answer recap (and drop the
+            # buttons) so the transcript keeps what was chosen, the way the
+            # single-choice flow echoes the clicked label.
+            parsed = batched_choice.parse_batch(bubble)
+            batched_choice.render_summary(
+                self.bubble_id,
+                parsed[0] if parsed else [],
+                step["answers"],
+                scene,
+            )
             session.set_state(scene, SessionState.BUSY)
             session.clear_streaming()
         else:
+            # The final answer was recorded before the network call. Leaving
+            # it recorded would make the batch read fully-answered — every
+            # later click swallowed as stale — while the interrupt is still
+            # pending backend-side. Roll it back and put its card up again so
+            # the final click can simply be retried.
+            batched_choice.rollback_answer(bubble, step["answered"])
+            batched_choice.render_question(self.bubble_id, step["answered"], scene)
             self.report({'ERROR'}, 'Failed to submit choices')
         return {'handled': True}
 
@@ -534,7 +587,7 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
             return {'CANCELLED'}
 
         # Set the chat mode if provided
-        if self.mode and self.mode in {'AGENT', 'GENERATE'}:
+        if self.mode and self.mode in {'AGENT', 'GENERATE', 'LIBRARY'}:
             context.scene.mixie_chat_mode = self.mode
 
         # Set the generate type if provided (only applies when mode is
