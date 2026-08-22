@@ -136,12 +136,24 @@ class HTTPClient:
         # to retry because it carries an idempotency key; other POST callers
         # should ensure their endpoints are idempotent or guard against
         # duplicate work themselves.
-        retry_strategy = Retry(
-            total=self._retry_count,
-            backoff_factor=self._retry_delay,
-            status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        )
+        #
+        # retry_count=0 means "hand me the 5xx, don't retry it" — for endpoints
+        # that are expensive, metered or non-idempotent. It must clear
+        # status_forcelist rather than just zeroing `total`: urllib3 counts a
+        # forced-status response as a retry attempt, so Retry(total=0,
+        # status_forcelist=[500]) still raises MaxRetryError("too many 500
+        # error responses") instead of returning the response, and the server's
+        # actual error never reaches the caller.
+        if self._retry_count <= 0:
+            retry_strategy = Retry(total=0, status_forcelist=[],
+                                   raise_on_status=False)
+        else:
+            retry_strategy = Retry(
+                total=self._retry_count,
+                backoff_factor=self._retry_delay,
+                status_forcelist=[500, 502, 503, 504],
+                allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            )
 
         adapter = HTTPAdapter(
             max_retries=retry_strategy,

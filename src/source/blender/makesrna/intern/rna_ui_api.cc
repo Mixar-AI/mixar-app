@@ -94,20 +94,7 @@ std::optional<StringRefNull> rna_translate_ui_text(
   }
 
   /* Else, if an RNA type or property is specified, use its context. */
-#  if 0
-  /* XXX Disabled for now. Unfortunately, their is absolutely no way from py code to get the RNA
-   *     struct corresponding to the 'data' (in functions like prop() & co),
-   *     as this is pure runtime data. Hence, messages extraction script can't determine the
-   *     correct context it should use for such 'text' messages...
-   *     So for now, one have to explicitly specify the 'text_ctxt' when using prop() etc.
-   *     functions, if default context is not suitable.
-   */
-  if (prop) {
-    return BLT_pgettext(RNA_property_translation_context(prop), text);
-  }
-#  else
   (void)prop;
-#  endif
   if (type) {
     return BLT_pgettext(RNA_struct_translation_context(type), text);
   }
@@ -1119,6 +1106,65 @@ static void rna_uiItemR_mixar_input(Layout *layout,
   UI_layout_mixar_mark_last_input(layout);
 }
 
+/* Item values must match the `mixar_card_label` enum in
+ * #RNA_api_ui_layout — mapped by value here because #MixarCardElement is
+ * an editor-side type the makesrna pass cannot see. */
+static void rna_uiLayoutMixarCardLabel(Layout *layout, const char *text, int kind)
+{
+  ui::MixarCardElement element = ui::MixarCardElement::None;
+  switch (kind) {
+    case 1:
+      element = ui::MixarCardElement::Heading;
+      break;
+    case 2:
+      element = ui::MixarCardElement::Muted;
+      break;
+    case 3:
+      element = ui::MixarCardElement::SectionLabel;
+      break;
+    case 4:
+      element = ui::MixarCardElement::MetaRight;
+      break;
+    case 5:
+      element = ui::MixarCardElement::Pill;
+      break;
+    case 6:
+      element = ui::MixarCardElement::Divider;
+      break;
+    case 7:
+      element = ui::MixarCardElement::DangerText;
+      break;
+    default:
+      break;
+  }
+  layout->label(text ? text : "", ICON_NONE);
+  if (element != ui::MixarCardElement::None) {
+    ui::UI_layout_mixar_card_tag_last(layout, element, 0.0f);
+  }
+}
+
+static void rna_uiLayoutMixarCardButton(Layout *layout, int kind, bool active_default)
+{
+  ui::MixarCardElement element = ui::MixarCardElement::CardButton;
+  switch (kind) {
+    case 1:
+      element = ui::MixarCardElement::AccentButton;
+      break;
+    case 2:
+      element = ui::MixarCardElement::CardButton;
+      break;
+    case 3:
+      element = ui::MixarCardElement::DangerButton;
+      break;
+    case 4:
+      element = ui::MixarCardElement::GhostButton;
+      break;
+    default:
+      break;
+  }
+  ui::UI_layout_mixar_card_style_last_button(layout, element, active_default);
+}
+
 static Layout *rna_uiLayoutSplit(Layout *layout, float factor, bool align)
 {
   return &layout->split(factor, align);
@@ -1706,6 +1752,52 @@ void RNA_api_ui_layout(StructRNA *srna)
   api_ui_item_common(func);
   parm = RNA_def_property(func, "icon_value", PROP_INT, PROP_UNSIGNED);
   RNA_def_property_ui_text(parm, "Icon Value", "Override automatic icon of the item");
+
+  /* Mixar profile-card text elements, reusable outside the card itself.
+   * Values must match the switch in `rna_uiLayoutMixarCardLabel`. */
+  static const EnumPropertyItem mixar_card_label_kind_items[] = {
+      {1, "HEADING", 0, "Heading", "Oversized full-contrast heading"},
+      {2, "MUTED", 0, "Muted", "Small dim body text"},
+      {3, "SECTION", 0, "Section Label", "Small section heading, one tier brighter than Muted"},
+      {4, "META", 0, "Meta Right", "Small muted right-aligned metadata"},
+      {5, "PILL", 0, "Pill", "Small bordered chip, right-aligned in its row"},
+      {6, "DIVIDER", 0, "Divider", "Horizontal rule between sections (text ignored)"},
+      {7, "DANGER", 0, "Danger Text", "Danger-tinted body text for inline errors"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_card_label", "rna_uiLayoutMixarCardLabel");
+  RNA_def_function_ui_description(func,
+                                  "Text element drawn with the Mixar account-card painters "
+                                  "(Mixar custom widget)");
+  parm = RNA_def_string(func, "text", nullptr, 0, "Text", "Text to draw");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  parm = RNA_def_enum(func, "kind", mixar_card_label_kind_items, 2, "Kind", "Element kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+
+  /* Mixar profile-card action-button styling for the previous button.
+   * Values must match the switch in `rna_uiLayoutMixarCardButton`. */
+  static const EnumPropertyItem mixar_card_button_kind_items[] = {
+      {1, "ACCENT", 0, "Accent", "Filled accent button, the one primary action"},
+      {2, "CARD", 0, "Card", "Outlined neutral action button"},
+      {3, "DANGER", 0, "Danger", "Danger-tinted action button"},
+      {4, "GHOST", 0, "Ghost", "Borderless quiet action button"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_card_button", "rna_uiLayoutMixarCardButton");
+  RNA_def_function_ui_description(
+      func,
+      "Restyle the most recently added button as a Mixar account-card action button. "
+      "active_default also sets/clears the dialog default flag: a popup dialog with an "
+      "active-default button draws no automatic OK/Cancel row and Return activates it "
+      "(Mixar custom widget)");
+  parm = RNA_def_enum(func, "kind", mixar_card_button_kind_items, 2, "Kind", "Button kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  RNA_def_boolean(func,
+                  "active_default",
+                  false,
+                  "Active Default",
+                  "Make this the dialog's default button (Return activates it; suppresses the "
+                  "automatic OK/Cancel row in operator dialogs)");
 
   /* split layout */
   func = RNA_def_function(srna, "split", "rna_uiLayoutSplit");
@@ -2690,13 +2782,6 @@ void RNA_api_ui_layout(StructRNA *srna)
   RNA_def_function_ui_description(func, "Item. A widget to control color managed view settings.");
   RNA_def_function_flag(func, FUNC_USE_CONTEXT);
   api_ui_item_rna_common(func);
-#  if 0
-  RNA_def_boolean(func,
-                  "show_global_settings",
-                  false,
-                  "",
-                  "Show widgets to control global color management settings");
-#  endif
 
   /* node socket icon */
   func = RNA_def_function(srna, "template_node_socket", "template_node_socket");

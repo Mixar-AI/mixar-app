@@ -76,11 +76,14 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         chat_ui_draw_accent_bar(layout.bubble_x, layout.y_pos,
                                 layout.bubble_height, plan_accent, UI_SCALE_FAC);
 
-        /* Draw markdown content */
+        /* Draw markdown content (code blocks register their copy chips
+         * against this message index). */
         float content_x = layout.bubble_x + layout.style.h_padding;
         float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
+        mixie_chat_code_hits_set_message(layout.message_index);
         chat_ui_draw_markdown(slot_meta_d, content_x, content_y,
                               layout.content_width, &layout.style, 1.0f);
+        mixie_chat_code_hits_set_message(-1);
       } else {
         /* Fallback: plain text bubble */
         chat_ui_draw_bubble(&layout.style, slot_content, layout.bubble_x,
@@ -194,11 +197,14 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                 layout.bubble_height, plan_accent, UI_SCALE_FAC);
       }
 
-      /* Draw markdown content */
+      /* Draw markdown content (code blocks register their copy chips
+       * against this message index). */
       float content_x = layout.bubble_x + layout.style.h_padding;
       float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
+      mixie_chat_code_hits_set_message(layout.message_index);
       chat_ui_draw_markdown(meta_buf, content_x, content_y,
                             layout.content_width, &layout.style, 1.0f);
+      mixie_chat_code_hits_set_message(-1);
     } else {
       /* Draw bubble with text and attachment offset */
       chat_ui_draw_bubble(&layout.style, display_text, layout.bubble_x,

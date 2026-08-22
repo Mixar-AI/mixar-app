@@ -12,10 +12,13 @@ Contains functional and calculation logic for the moodboard feature.
 from . import moodboard_utils
 from . import chat_utils
 from .chat_utils import get_last_user_message, get_user_message_images_for_generation
-from .moodboard_utils import (
+from . import moodboard_enumeration
+from .moodboard_enumeration import (
     get_selected_moodboard_images,
     get_selected_moodboard_image_objects,
+    list_moodboard_images,
 )
+from .moodboard_utils import stamp_moodboard_item_added
 from .media_utils import (
     describe_moodboard_media,
     get_selected_moodboard_video_inputs,

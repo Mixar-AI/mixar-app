@@ -327,6 +327,9 @@ void UI_mixar_profile_card_draw_element(
     case MixarCardElement::Divider:
       draw_divider(rect);
       break;
+    case MixarCardElement::DangerText:
+      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, MX_DANGER);
+      break;
     default:
       break;
   }

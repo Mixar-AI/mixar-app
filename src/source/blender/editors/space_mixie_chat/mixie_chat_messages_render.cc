@@ -6,10 +6,7 @@
 /** \file
  * \ingroup spmixiechat
  *
- * Message render loop for chat UI.
- * Draws cached message layouts with visibility culling, handles hover
- * states, action buttons, text selection, and cursor updates.
- * Split from mixie_chat_messages.cc for modularity.
+ * Cached message rendering, interaction state, and cursor updates.
  */
 
 #include <cmath>
@@ -68,7 +65,12 @@ void mixie_chat_render_messages(const bContext *C,
   wmWindow *win = CTX_wm_window(C);
   float action_zone_h = chat_ui_get_action_buttons_height(UI_SCALE_FAC);
 
-  /* Compute slide-in animation state for newest message */
+  /* Rebuild code-copy hits every pass and repaint while feedback is active. */
+  mixie_chat_code_hits_reset(rt);
+  if (mixie_chat_code_copy_feedback_pending()) {
+    ED_region_tag_redraw(region);
+  }
+
   float slide_x_offset = 0.0f;
   bool slide_anim_active = false;
   if (rt->slide_anim_msg_index >= 0) {
@@ -130,7 +132,6 @@ void mixie_chat_render_messages(const bContext *C,
     if (has_renderable_content) {
       const MessageLayoutData &layout = rt->layout_cache[message_index];
 
-      /* Visibility culling: skip drawing messages entirely outside viewport */
       float msg_top = layout.y_pos + layout.bubble_height + metrics.label_height;
       float msg_bottom = layout.y_pos - layout.slot_todo_height -
                          layout.slot_actions_height - layout.slot_steps_height -
@@ -143,7 +144,6 @@ void mixie_chat_render_messages(const bContext *C,
         continue;
       }
 
-      /* Apply slide-in animation: offset the newest message horizontally */
       bool is_sliding = slide_anim_active && (message_index == rt->slide_anim_msg_index);
       if (is_sliding) {
         float x_off = layout.is_user ? slide_x_offset : -slide_x_offset;
@@ -151,7 +151,6 @@ void mixie_chat_render_messages(const bContext *C,
         GPU_matrix_translate_2f(x_off, 0.0f);
       }
 
-      /* Get text for drawing */
       char *text_buffer = nullptr;
       if (text_len > 0) {
         text_buffer = static_cast<char *>(MEM_new_uninitialized(text_len + 1, "chat_text"));
@@ -161,7 +160,6 @@ void mixie_chat_render_messages(const bContext *C,
         text_buffer[0] = '\0';
       }
 
-      /* Draw sender label using cached data */
       float label_y = layout.y_pos - metrics.label_height;
       const char *label = layout.is_error ? "Error" : (layout.is_user ? "You" : "Mixie");
       float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
@@ -170,15 +168,10 @@ void mixie_chat_render_messages(const bContext *C,
                                 label_y + 8.0f * metrics.scale_factor, &metrics,
                                 layout.is_user);
 
-      /* Render message content (slot-based or legacy) */
       mixie_chat_render_message_content(layout, &msg_ptr, text_len, text_buffer);
 
-      /* Render slot todo items as single combined bubble below content */
       if (layout.is_slot_based && layout.slot_todo_count > 0) {
-        /* Wall-clock pulse (~1 Hz blink for the 2-frame ● ○ dot) — the
-         * animation pump supplies the redraws, the clock the phase. fmod
-         * BEFORE the int cast: epoch seconds * 2 overflows int and the
-         * conversion saturates to a constant (frozen dot). */
+        /* Apply fmod before converting epoch seconds to int to avoid overflow. */
         int todo_spin_idx = int(fmod(BLI_time_now_seconds() * 2.0, 2.0));
 
         /* Build combined text with status icons */
@@ -189,11 +182,7 @@ void mixie_chat_render_messages(const bContext *C,
                                    combined_todo,
                                    sizeof(combined_todo));
 
-        /* Draw single combined todo bubble. Todo text wraps at content_width
-         * (see the layout pass), so the bubble must span the full content
-         * area — bubble_width is fitted to the main text (e.g. a short
-         * loader line) and can be narrower, which would let the wrapped
-         * todo text overflow the bubble. Same formula as the steps card. */
+        /* Todo cards span the full wrapping width used by the layout pass. */
         float todo_bubble_y = layout.y_pos - metrics.bubble_spacing;
         ChatBubbleStyle slot_todo_style = layout.style;
         chat_ui_get_prompt_button_color(slot_todo_style.bg_color);
@@ -208,7 +197,6 @@ void mixie_chat_render_messages(const bContext *C,
                             layout.content_width);
       }
 
-      /* Render slot action buttons below content/todo bubbles */
       if (layout.is_slot_based && layout.slot_action_count > 0) {
         MessageLayoutData &mutable_layout =
             const_cast<MessageLayoutData &>(layout);
@@ -218,9 +206,7 @@ void mixie_chat_render_messages(const bContext *C,
           action_y -= layout.slot_todo_height + metrics.bubble_spacing;
         }
 
-        /* Action labels wrap at content_width like the todo/steps cards, so
-         * the buttons span the full content area too (bubble_width can be
-         * narrower than the wrapped label). Bounds must match the draw. */
+        /* Bounds match the full wrapping width used to draw action labels. */
         const float action_block_width = layout.content_width +
                                          2.0f * layout.style.h_padding +
                                          4.0f * UI_SCALE_FAC;
@@ -256,15 +242,56 @@ void mixie_chat_render_messages(const bContext *C,
           }
 
           /* Draw action bubble */
-          chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
-                              action.bounds.ymin, action_block_width,
-                              action.height, layout.content_width);
+          if (action.image[0] != '\0') {
+            /* Draw the asset preview and label inside the recorded hit bounds. */
+            chat_ui_draw_bubble(&action_style, "", action.bounds.xmin,
+                                action.bounds.ymin, action_block_width,
+                                action.height, layout.content_width);
+
+            const float thumb = CHAT_ACTION_THUMB_SIZE * UI_SCALE_FAC;
+            ChatImageStyle thumb_style = image_style;
+            thumb_style.max_width = thumb;
+            thumb_style.max_height = thumb;
+            thumb_style.margin = 0.0f;
+            /* Pass the vertically centered top edge expected by the image helper. */
+            const float thumb_top =
+                action.bounds.ymin + (action.height + thumb) / 2.0f;
+            chat_ui_draw_image_attachment(bmain, action.image, /*source=*/1,
+                                          action.bounds.xmin +
+                                              layout.style.h_padding,
+                                          thumb_top, thumb, &thumb_style);
+
+            /* Label right of the thumbnail, vertically centered. */
+            const float text_x = action.bounds.xmin + layout.style.h_padding +
+                                 thumb + layout.style.h_padding;
+            const float text_w =
+                action.bounds.xmax - text_x - layout.style.h_padding;
+            if (text_w > 0.0f && action.label[0] != '\0') {
+              float label_w, label_h;
+              chat_ui_calc_text_bounds(
+                  action.label, text_w, layout.style.font_size, 0, &label_w,
+                  &label_h);
+              rctf label_rect;
+              label_rect.xmin = text_x;
+              label_rect.xmax = text_x + text_w;
+              label_rect.ymin =
+                  action.bounds.ymin + (action.height - label_h) / 2.0f;
+              label_rect.ymax = label_rect.ymin + label_h;
+              chat_ui_draw_text_wrapped(action.label, &label_rect,
+                                        layout.style.font_size, 0,
+                                        action_style.text_color);
+            }
+          }
+          else {
+            chat_ui_draw_bubble(&action_style, action.label, action.bounds.xmin,
+                                action.bounds.ymin, action_block_width,
+                                action.height, layout.content_width);
+          }
 
           action_y -= action.height + metrics.bubble_spacing;
         }
       }
 
-      /* Render steps block + finalized thinking below content/todo/actions */
       if (layout.is_slot_based && (layout.slot_steps_height > 0.0f ||
                                    layout.thinking_height > 0.0f)) {
         MessageLayoutData &ml = const_cast<MessageLayoutData &>(layout);
@@ -278,12 +305,7 @@ void mixie_chat_render_messages(const bContext *C,
           stack_y -= layout.slot_actions_height + metrics.bubble_spacing;
         }
 
-        /* Steps/thinking text wraps at content_width (see the calc
-         * functions), so the card must span the full content area —
-         * bubble_width is fitted to the main text and can be narrower,
-         * which would let the wrapped text overflow the card. The trailing
-         * 4*scale matches the text-bubble width formula in the layout pass
-         * so card and bubble right edges align. */
+        /* Match the wrapping width and trailing padding from the layout pass. */
         const float block_width =
             ml.content_width + 2.0f * ml.style.h_padding + 4.0f * UI_SCALE_FAC;
 
@@ -298,13 +320,10 @@ void mixie_chat_render_messages(const bContext *C,
 
         if (ml.thinking_height > 0.0f) {
           ChatBubbleStyle think_style = ml.style;
-          /* Wall-clock spinner: smooth at whatever rate the animation pump
-           * delivers frames (the RNA index only ticked at 2 fps). */
+          /* Use wall-clock time so the spinner follows the repaint rate. */
           const int spin = chat_ui_spinner_frame();
           if (ml.has_content && ml.has_loader) {
-            /* Working under the Plan: show the live loader status
-             * ("Executing bpy script…", "Validating scene…", …). Same text +
-             * fallback as the layout pass, so the wrapped height matches. */
+            /* Use the same loader text and fallback measured by layout. */
             const char *status = chat_ui_loader_status_text(
                 &ml.loader, ml.has_loader, "Working\xE2\x80\xA6");
             chat_ui_draw_live_thinking(&think_style, status, spin,
@@ -327,7 +346,6 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
 
-      /* Draw action buttons (copy, etc.) below every message — always visible. */
       if (layout.text_height > 0.0f && !layout.has_loader) {
         MessageLayoutData &mutable_layout =
             const_cast<MessageLayoutData &>(layout);
@@ -374,21 +392,42 @@ void mixie_chat_render_messages(const bContext *C,
 
       mixie_chat_render_feedback(C, region, &msg_ptr, metrics, layout);
 
-      /* Draw text selection highlight if this message is selected */
+      /* Highlight markdown against its rendered segment; plain text uses the
+       * cached text rect shared with hit-testing. */
       if (smixie && smixie->sel_message_index == message_index &&
           smixie->sel_start != smixie->sel_end) {
-        rctf text_rect;
-        text_rect.xmin = layout.bubble_x + layout.style.h_padding;
-        text_rect.xmax =
-            layout.bubble_x + layout.style.h_padding + layout.content_width;
-        text_rect.ymin = layout.y_pos + layout.style.v_padding;
-        text_rect.ymax =
-            layout.y_pos + layout.bubble_height - layout.style.v_padding;
-        chat_ui_draw_text_selection(&text_rect, text_buffer, smixie->sel_start,
-                                    smixie->sel_end, layout.style.font_size);
+        if (rt->sel_md_seg >= 0) {
+          MarkdownSegHit seg_hit;
+          if (mixie_chat_md_seg_find(rt, message_index, rt->sel_md_seg, &seg_hit)) {
+            const char *seg_text = mixie_chat_message_segment_text(
+                C, message_index, rt->sel_md_seg, /*code_only=*/false);
+            if (seg_text && seg_text[0] != '\0') {
+              const int sel_font = seg_hit.mono ? chat_ui_mono_font() : BLF_default();
+              BLF_size(sel_font, seg_hit.font_size);
+              const float line_h = seg_hit.mono ?
+                                       float(BLF_height_max(sel_font)) :
+                                       float(BLF_height_max(sel_font)) * 1.15f;
+              chat_ui_draw_text_selection(&seg_hit.text_rect, seg_text,
+                                          smixie->sel_start, smixie->sel_end,
+                                          seg_hit.font_size, sel_font, line_h,
+                                          seg_hit.mono ? BLFWrapMode::HardLimit :
+                                                         BLFWrapMode::Minimal);
+            }
+          }
+        }
+        else {
+          rctf text_rect;
+          if (mixie_chat_layout_text_rect(&layout, &text_rect)) {
+            const char *sel_text = (layout.copy_text && layout.copy_text[0] != '\0') ?
+                                       layout.copy_text :
+                                       text_buffer;
+            chat_ui_draw_text_selection(&text_rect, sel_text, smixie->sel_start,
+                                        smixie->sel_end, layout.style.font_size,
+                                        BLF_default(), -1.0f);
+          }
+        }
       }
 
-      /* Draw attachments using cached data */
       if (layout.attachments_height > 0 && !layout.attachments.is_empty()) {
         float att_y =
             layout.y_pos + layout.bubble_height - layout.style.v_padding;

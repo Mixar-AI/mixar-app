@@ -17,6 +17,7 @@ set(INC_SYS
 set(SRC
   mixie_chat_action_buttons.cc
   mixie_chat_agent_bubble.cc
+  mixie_chat_code_copy.cc
   mixie_chat_dragdrop.cc
   mixie_chat_footer.cc
   mixie_chat_footer_cache.cc

@@ -15,7 +15,9 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_rect.h"
+#include "BLI_string_ref.hh"
 #include "BLI_string_utf8.h"
+#include "BLI_vector.hh"
 
 #include "BLF_api.hh"
 
@@ -63,6 +65,8 @@ static void clear_selection(SpaceMixieChat *smixie)
   smixie->sel_message_index = -1;
   smixie->sel_start = 0;
   smixie->sel_end = 0;
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  rt->sel_md_seg = -1;
 }
 
 /** \} */
@@ -90,6 +94,33 @@ char *mixie_chat_get_selected_text(const bContext *C)
 
   if (sel_start == sel_end) {
     return nullptr;
+  }
+
+  /* Markdown-segment selection: the offsets index the SEGMENT's text
+   * (set by mixie_chat_pos_to_text), not the message's raw content. */
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (rt->sel_md_seg >= 0) {
+    const char *seg_text = mixie_chat_message_segment_text(
+        C, smixie->sel_message_index, rt->sel_md_seg, /*code_only=*/false);
+    if (!seg_text || seg_text[0] == '\0') {
+      return nullptr;
+    }
+    const int seg_len = int(strlen(seg_text));
+    if (sel_start < 0) {
+      sel_start = 0;
+    }
+    if (sel_end > seg_len) {
+      sel_end = seg_len;
+    }
+    const int sel_len = sel_end - sel_start;
+    if (sel_len <= 0) {
+      return nullptr;
+    }
+    char *selected = static_cast<char *>(
+        MEM_new_uninitialized(size_t(sel_len) + 1, "chat_selected_text"));
+    memcpy(selected, seg_text + sel_start, size_t(sel_len));
+    selected[sel_len] = '\0';
+    return selected;
   }
 
   Scene *scene = CTX_data_scene(C);
@@ -169,7 +200,10 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
                                  const char *text,
                                  int sel_start,
                                  int sel_end,
-                                 int font_size)
+                                 int font_size,
+                                 int font_id,
+                                 float line_height,
+                                 BLFWrapMode wrap_mode)
 {
   if (sel_start == sel_end || !text || text[0] == '\0') {
     return;
@@ -200,22 +234,20 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
     return;
   }
 
-  const int font_id = BLF_default();
   BLF_size(font_id, font_size);
 
-  /* Calculate selection bounds */
-  float sel_x1 = text_rect->xmin + BLF_width(font_id, text, sel_start);
-  float sel_x2 = text_rect->xmin + BLF_width(font_id, text, sel_end);
-
-  /* Clamp to text rect */
-  if (sel_x1 < text_rect->xmin) {
-    sel_x1 = text_rect->xmin;
+  /* Wrap the text exactly the way the draw pass does, then highlight the
+   * selected span per visual line — the old single-rect version measured
+   * the whole selection as one line, which was wrong for any wrapped text. */
+  const blender::Vector<blender::StringRef> lines =
+      BLF_string_wrap(font_id, text, int(BLI_rctf_size_x(text_rect)), wrap_mode);
+  if (lines.is_empty()) {
+    return;
   }
-  if (sel_x2 > text_rect->xmax) {
-    sel_x2 = text_rect->xmax;
+  if (line_height <= 0.0f) {
+    line_height = float(BLF_height_max(font_id));
   }
 
-  /* Draw selection highlight */
   float sel_color[4] = {0.3f, 0.5f, 0.8f, 0.4f};
 
   GPU_blend(GPU_BLEND_ALPHA);
@@ -226,7 +258,45 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   immUniformColor4fv(sel_color);
 
-  immRectf(pos, sel_x1, text_rect->ymin, sel_x2, text_rect->ymax);
+  for (int i = 0; i < int(lines.size()); i++) {
+    const blender::StringRef line = lines[i];
+    const int line_start = int(line.data() - text);
+    const int line_end = line_start + int(line.size());
+
+    const int span_start = (sel_start > line_start) ? sel_start : line_start;
+    const int span_end = (sel_end < line_end) ? sel_end : line_end;
+    if (span_start >= span_end) {
+      continue;
+    }
+
+    float x1 = text_rect->xmin;
+    if (span_start > line_start) {
+      x1 += BLF_width(font_id, line.data(), size_t(span_start - line_start));
+    }
+    float x2 = text_rect->xmin;
+    if (span_end > line_start) {
+      x2 += BLF_width(font_id, line.data(), size_t(span_end - line_start));
+    }
+    if (x1 < text_rect->xmin) {
+      x1 = text_rect->xmin;
+    }
+    if (x2 > text_rect->xmax) {
+      x2 = text_rect->xmax;
+    }
+    if (x2 <= x1) {
+      continue;
+    }
+
+    const float line_top = text_rect->ymax - float(i) * line_height;
+    float line_bottom = line_top - line_height;
+    if (line_bottom < text_rect->ymin) {
+      line_bottom = text_rect->ymin;
+    }
+    if (line_top <= line_bottom) {
+      continue;
+    }
+    immRectf(pos, x1, line_bottom, x2, line_top);
+  }
 
   immUnbindProgram();
   GPU_blend(GPU_BLEND_NONE);
@@ -240,6 +310,7 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
 
 struct ChatSelectionData {
   int message_index;
+  int seg_index; /* markdown segment the offsets index, -1 for plain text */
   int start_char;
 };
 
@@ -270,6 +341,11 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
     return OPERATOR_FINISHED;
   }
 
+  /* Check for code-block copy chip clicks */
+  if (mixie_chat_handle_code_copy_click(C, region, event->mval[0], event->mval[1])) {
+    return OPERATOR_FINISHED;
+  }
+
   /* Check for steps/thinking collapse toggle clicks */
   if (mixie_chat_handle_steps_click(C, region, event->mval[0], event->mval[1])) {
     return OPERATOR_FINISHED;
@@ -286,15 +362,21 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
   }
 
   /* Convert mouse to text position */
-  int msg_idx, char_offset;
-  if (!mixie_chat_pos_to_text(C, region, event->mval, &msg_idx, &char_offset)) {
-    /* Clicked outside any message - clear selection. Pass the event
-     * through so handlers registered after this keymap (View2D
-     * scrollbar interaction in particular) still get a chance at the
-     * click: plain OPERATOR_CANCELLED would break event handling and
-     * eat it. */
+  int msg_idx, seg_idx, char_offset;
+  if (!mixie_chat_pos_to_text(C, region, event->mval, &msg_idx, &seg_idx, &char_offset)) {
     clear_selection(smixie);
     ED_region_tag_redraw(region);
+    /* Inside a bubble but not on selectable text (list/table segments,
+     * padding): eat the click — passing it through would reach window-level
+     * handlers, and in the Agent Bubble the global LEFTMOUSE binding starts
+     * a window drag from inside the message card. */
+    if (mixie_chat_pos_in_message_bubble(C, region, event->mval)) {
+      return OPERATOR_FINISHED;
+    }
+    /* Clicked outside any message — pass the event through so handlers
+     * registered after this keymap (View2D scrollbar interaction in
+     * particular) still get a chance at the click: plain OPERATOR_CANCELLED
+     * would break event handling and eat it. */
     return OPERATOR_CANCELLED | OPERATOR_PASS_THROUGH;
   }
 
@@ -302,10 +384,12 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
   smixie->sel_message_index = msg_idx;
   smixie->sel_start = char_offset;
   smixie->sel_end = char_offset;
+  mixie_chat_ensure_runtime(smixie)->sel_md_seg = seg_idx;
 
   /* Setup modal for drag */
   ChatSelectionData *data = MEM_new<ChatSelectionData>("chat_sel_data");
   data->message_index = msg_idx;
+  data->seg_index = seg_idx;
   data->start_char = char_offset;
   op->customdata = data;
 
@@ -330,10 +414,12 @@ static wmOperatorStatus mixie_chat_select_modal(bContext *C, wmOperator *op, con
 
   switch (event->type) {
     case MOUSEMOVE: {
-      int msg_idx, char_offset;
-      if (mixie_chat_pos_to_text(C, region, event->mval, &msg_idx, &char_offset)) {
-        /* Only allow selection within the same message */
-        if (msg_idx == data->message_index) {
+      int msg_idx, seg_idx, char_offset;
+      if (mixie_chat_pos_to_text(C, region, event->mval, &msg_idx, &seg_idx, &char_offset)) {
+        /* Only extend within the same message AND the same markdown
+         * segment — offsets from different segments index different
+         * strings and cannot form one range. */
+        if (msg_idx == data->message_index && seg_idx == data->seg_index) {
           smixie->sel_end = char_offset;
           ED_region_tag_redraw(region);
         }

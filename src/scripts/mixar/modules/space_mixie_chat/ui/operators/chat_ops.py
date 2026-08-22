@@ -101,6 +101,14 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
+        # Library mode: the typed text searches the asset library (empty = show
+        # everything); results render as clickable thumbnails, no backend call.
+        if scene.mixie_chat_mode == 'LIBRARY':
+            from ...core import library_browse
+            capture(EVENT_MESSAGE_SENT, {"mode": "library"}, context=context)
+            metrics.stop_timer('send_message_total')
+            return library_browse.execute_library_mode(self, context)
+
         message_text = scene.mixie_chat_input.strip()
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
@@ -110,6 +118,25 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
+
+        project_context = None
+        if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
+            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
+                from mixar.modules.addon_project.ui.operators import (
+                    ensure_addon_project_ready,
+                )
+                # Zero-question setup: default root + link, then this SAME
+                # send proceeds to build_project_context below.
+                if not ensure_addon_project_ready(self):
+                    metrics.stop_timer('send_message_total')
+                    return {'CANCELLED'}
+            try:
+                from mixar.modules.addon_project.context import build_project_context
+                project_context = build_project_context(scene)
+            except Exception as exc:
+                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
+                metrics.stop_timer('send_message_total')
+                return {'CANCELLED'}
 
         # Mark the user as engaged so the "Hi I'm Mixie" greeting
         # stops re-appearing whenever the message list transiently
@@ -126,7 +153,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         capture(EVENT_MESSAGE_SENT, {
-            "mode": "agent",
+            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
             "has_attachments": bool(len(pending_attachments)),
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
@@ -164,6 +191,16 @@ class MIXIE_CHAT_OT_send_message(Operator):
                     stale_placeholders.append(i)
             for i in reversed(stale_placeholders):
                 scene.mixie_chat_messages.remove(i)
+
+            # A fresh turn is also the reliable point to sweep asset-picker
+            # preview thumbnails no bubble references anymore (an abandoned
+            # picker never gets the empty-actions replacement that normally
+            # cleans them).
+            try:
+                from ...core import asset_choice_previews
+                asset_choice_previews.cleanup_orphans(scene)
+            except Exception:
+                pass
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
@@ -352,6 +389,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
                 attachment_names=attachment_names if attachment_names else None,
+                project_context=project_context,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to start chat stream")

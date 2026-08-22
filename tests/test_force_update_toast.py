@@ -30,10 +30,9 @@ sys.modules.setdefault(
 from mixar.modules.common.notifications.store import get_notification_store
 from mixar.modules.common.updates.constants import UPDATE_NOTIFICATION_ID
 from mixar.modules.common.updates.core.state import UpdateInfo
-from mixar.modules.common.updates.core.trigger import (
-    _push_update_available_toast,
-    is_forced,
-)
+from mixar.modules.common.updates.core.state import get_update_state
+from mixar.modules.common.updates.core.toasts import push_update_available_toast
+from mixar.modules.common.updates.core.update_checker import is_forced
 
 
 def _info(**overrides) -> UpdateInfo:
@@ -61,6 +60,9 @@ def _pushed_item():
 
 def setup_function(_fn):
     get_notification_store().clear_all()
+    # The toast renders from install state as well as from the info it is
+    # handed; reset it so each case starts from "nothing staged".
+    get_update_state().set_install_idle()
 
 
 def test_is_forced_flags():
@@ -70,7 +72,7 @@ def test_is_forced_flags():
 
 
 def test_normal_toast_has_skip_and_is_dismissible():
-    _push_update_available_toast(_info())
+    push_update_available_toast(_info())
     item = _pushed_item()
     assert item.dismissible is True
     assert item.title == "Mixar Update Available"
@@ -79,7 +81,7 @@ def test_normal_toast_has_skip_and_is_dismissible():
 
 
 def test_forced_toast_has_no_skip_and_is_not_dismissible():
-    _push_update_available_toast(_info(force_update=True))
+    push_update_available_toast(_info(force_update=True))
     item = _pushed_item()
     assert item.dismissible is False
     assert item.title == "Mixar Update Required"
@@ -89,14 +91,14 @@ def test_forced_toast_has_no_skip_and_is_not_dismissible():
 
 
 def test_unsupported_toast_is_treated_as_forced():
-    _push_update_available_toast(_info(unsupported=True))
+    push_update_available_toast(_info(unsupported=True))
     item = _pushed_item()
     assert item.dismissible is False
     assert [a.label for a in item.actions] == ["Download"]
 
 
 def test_download_action_opens_downloads_page_operator():
-    _push_update_available_toast(_info())
+    push_update_available_toast(_info())
     item = _pushed_item()
     download = next(a for a in item.actions if a.label == "Download")
     assert download.operator == "mixar.open_downloads_page"

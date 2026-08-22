@@ -56,12 +56,26 @@ def _send_mark_read(server_id: str) -> None:
 
 
 def _invoke_operator(operator_idname: str) -> None:
-    """Invoke a ``category.name`` operator idname, logging failures."""
+    """Invoke a ``category.name`` operator idname, logging failures.
+
+    Runs inside a ``bpy.app.timers`` callback, whose context carries no
+    window — but ``INVOKE_DEFAULT`` is what lets a toast button's operator
+    show a confirmation dialog (``mixar.restart_to_update`` needs one
+    before quitting the app), so a window is borrowed from the window
+    manager for the call.  Operators without an ``invoke()`` fall through
+    to ``execute()`` exactly as the old ``EXEC_DEFAULT`` dispatch did.
+    """
     try:
         parts = operator_idname.split(".")
-        if len(parts) == 2:
-            category, name = parts
-            op = getattr(getattr(bpy.ops, category), name)
+        if len(parts) != 2:
+            return
+        category, name = parts
+        op = getattr(getattr(bpy.ops, category), name)
+        window = next(iter(bpy.context.window_manager.windows), None)
+        if window is not None:
+            with bpy.context.temp_override(window=window, screen=window.screen):
+                op('INVOKE_DEFAULT')
+        else:
             op('EXEC_DEFAULT')
     except Exception as e:
         logger.error("Failed to invoke %s: %s", operator_idname, e)
