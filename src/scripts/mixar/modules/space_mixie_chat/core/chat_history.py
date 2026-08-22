@@ -362,6 +362,12 @@ def _sanitize_snapshot(snapshot: list) -> list:
     """
     out = []
     for msg in snapshot:
+        # Library-mode browse grids are transient UI, not conversation. Drop them
+        # entirely — action_items get stripped below, which would otherwise leave
+        # a header promising clickable assets with nothing to click on restore.
+        # (prefix == library_browse.LIBRARY_BUBBLE_PREFIX)
+        if (msg.get("bubble_id") or "").startswith("libbrowse:"):
+            continue
         content = msg.get("content") or ""
         if msg.get("loader_visible"):
             if not content.strip():

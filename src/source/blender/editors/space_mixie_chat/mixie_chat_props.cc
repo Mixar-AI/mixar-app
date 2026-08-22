@@ -113,6 +113,8 @@ void init_action_item_property_cache(PointerRNA *item_ptr) {
   g_action_props.label = RNA_struct_find_property(item_ptr, "label");
   g_action_props.value = RNA_struct_find_property(item_ptr, "value");
   g_action_props.style = RNA_struct_find_property(item_ptr, "style");
+  /* Optional (asset-picker thumbnails) — null with an older scripts overlay. */
+  g_action_props.image = RNA_struct_find_property(item_ptr, "image");
   g_action_props.initialized = true;
 }
 

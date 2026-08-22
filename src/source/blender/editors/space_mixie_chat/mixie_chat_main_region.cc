@@ -163,6 +163,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       }
     }
 
+
     /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
      * interactive, so it gets no hover affordance either. */
     const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING ||
@@ -219,6 +220,17 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         BLI_rctf_isect_pt(&layout.thinking_header_bounds, mouse_x, mouse_y))
     {
       any_hovered = true;
+    }
+  }
+
+  /* Code-block copy chips (hover state lives in mixie_chat_code_copy.cc) */
+  {
+    bool chip_hover_changed = false;
+    if (mixie_chat_code_hits_hover(rt, mouse_x, mouse_y, &chip_hover_changed)) {
+      any_hovered = true;
+    }
+    if (chip_hover_changed) {
+      needs_redraw = true;
     }
   }
 
@@ -291,6 +303,11 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
 
     /* 3. Action button clicks (copy/retry) */
     if (mixie_chat_handle_action_button_click(C, region, mx, my)) {
+      return WM_UI_HANDLER_BREAK;
+    }
+
+    /* 3b. Code-block copy chip clicks */
+    if (mixie_chat_handle_code_copy_click(C, region, mx, my)) {
       return WM_UI_HANDLER_BREAK;
     }
 

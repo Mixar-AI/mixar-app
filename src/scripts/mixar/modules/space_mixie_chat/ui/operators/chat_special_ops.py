@@ -254,6 +254,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         if self.action_value.startswith("chat_model:"):
             return self._apply_model_choice(context)
 
+        # Library mode: append the clicked asset into the scene locally — no
+        # backend round-trip, works while disconnected. The asset identity rides
+        # on the action item (asset_name/library/blend_file/asset_type).
+        if self.action_value.startswith("lib_add:"):
+            return self._add_library_asset(context)
+
         if self.action_value == "export_destination_selected":
             from ...core import get_session_manager
             from ...core.export_destination import has_destination
@@ -393,6 +399,33 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
 
         redraw_chat_areas()
         return {'FINISHED'}
+
+    def _add_library_asset(self, context):
+        """Library mode: append the clicked asset into the scene at the 3D
+        cursor. The asset identity lives on the clicked action item."""
+        scene = context.scene
+        action = None
+        for msg in scene.mixie_chat_messages:
+            if getattr(msg, "bubble_id", "") == self.bubble_id:
+                for item in msg.action_items:
+                    if item.value == self.action_value:
+                        action = item
+                        break
+                break
+        if action is None or not action.asset_name:
+            self.report({'WARNING'}, "That asset is no longer available")
+            return {'CANCELLED'}
+
+        from ...core import library_browse
+        ok, message = library_browse.add_asset_to_scene(
+            context, action.library, action.blend_file,
+            action.asset_name, action.asset_type,
+        )
+        if ok:
+            self.report({'INFO'}, f"Added '{message}' to the scene")
+            return {'FINISHED'}
+        self.report({'WARNING'}, message)
+        return {'CANCELLED'}
 
     def _advance_batched_choice(self, scene):
         """Advance a batch locally, returning None when this is a normal action."""
@@ -554,7 +587,7 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
             return {'CANCELLED'}
 
         # Set the chat mode if provided
-        if self.mode and self.mode in {'AGENT', 'GENERATE'}:
+        if self.mode and self.mode in {'AGENT', 'GENERATE', 'LIBRARY'}:
             context.scene.mixie_chat_mode = self.mode
 
         # Set the generate type if provided (only applies when mode is

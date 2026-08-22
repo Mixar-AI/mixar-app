@@ -32,12 +32,32 @@ logger = get_logger(__name__)
 _attached_listeners: set = set()
 
 
+def _listener_key(listener):
+    """Stable dedupe identity for a listener.
+
+    Fresh-closure listeners (the scene-flag listener is rebuilt on every
+    enqueue) stamp a stable ``_mixar_listener_key``; stable module functions and
+    cached singletons fall back to their own object identity.
+    """
+    return getattr(listener, "_mixar_listener_key", listener)
+
+
 def get_queue_with_listener(feature_key: str, listener) -> FeatureQueue:
-    """Get or create a FeatureQueue, attaching ``listener`` once per key."""
+    """Get or create a FeatureQueue, attaching ``listener`` exactly once.
+
+    Dedup is per ``(feature_key, listener)`` — NOT per ``feature_key`` alone.
+    Several DISTINCT listeners legitimately watch the same queue (e.g. the
+    generation-library archiver AND the image-to-3D scene-flag listener both on
+    ``image_to_3d_pro``); keying on the feature_key alone let whichever attached
+    FIRST silently suppress the other. That regressed shipped UI: the startup
+    archiver claimed the key, so enqueue's ``mixie_image_to_3d_is_generating``
+    flag listener never attached and the loader/success state broke.
+    """
     queue = get_queue(feature_key)
-    if feature_key not in _attached_listeners:
+    key = (feature_key, _listener_key(listener))
+    if key not in _attached_listeners:
         queue.add_listener(listener)
-        _attached_listeners.add(feature_key)
+        _attached_listeners.add(key)
     return queue
 
 
@@ -160,6 +180,10 @@ def create_scene_flag_listener(
                         batch_popup_title, succeeded, failed, cancelled,
                     )
 
+    # Stable dedupe identity: this factory returns a NEW closure on every
+    # enqueue, but all closures for the same scene property are the same logical
+    # listener and must attach only once (see get_queue_with_listener).
+    _on_queue_changed._mixar_listener_key = f"scene_flag:{property_name}"
     return _on_queue_changed
 
 

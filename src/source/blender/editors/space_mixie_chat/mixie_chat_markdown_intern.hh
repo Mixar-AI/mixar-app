@@ -56,6 +56,13 @@ int parse_markdown_segments(const char *metadata_json,
                             int max_segments);
 
 /**
+ * Cached variant keyed on the metadata JSON (LRU, main-thread only —
+ * mixie_chat_markdown_parse.cc). The returned pointer is valid until the
+ * entry is evicted; consume it before the next cache access.
+ */
+const MarkdownSegment *markdown_segments_get_cached(const char *metadata_json, int *r_count);
+
+/**
  * Table segment rendering (mixie_chat_table.cc).
  * Table text is tab-delimited columns, newline-delimited rows.
  * First row is always the header.

@@ -68,6 +68,8 @@ enum class MixarCardElement : int {
   GhostButton,
   /** Horizontal rule between card sections. */
   Divider,
+  /** Danger-tinted body text — inline error copy in card-styled dialogs. */
+  DangerText,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
@@ -84,6 +86,33 @@ void UI_layout_mixar_profile_card(Layout *layout, bContext *C);
 
 /** Element kind a button was tagged with, or None if it is not a card element. */
 MixarCardElement UI_mixar_card_element_get(const Button *but);
+
+/**
+ * Tag the most recently created button in \a layout's block as card
+ * element \a element (any kind; \a payload is the #MixarCardIcon for
+ * button kinds, the fill fraction for the quota bar, 0 otherwise).
+ *
+ * Exposed so card-styled surfaces built from Python — the AI Provider
+ * Settings dialog — can reuse the profile card's element painters
+ * instead of re-hardcoding the design. See `rna_ui_api.cc`
+ * (`mixar_card_label`).
+ */
+void UI_layout_mixar_card_tag_last(Layout *layout, MixarCardElement element, float payload);
+
+/**
+ * Style the most recently created operator/push button (#ButtonType::But)
+ * in \a layout's block as one of the card's action-button kinds, and
+ * set or clear #UI_BUT_ACTIVE_DEFAULT on it.
+ *
+ * The active-default flag is what lets a dialog own its confirm row:
+ * #wm_block_dialog_create only appends the automatic OK/Cancel pair
+ * when the block has no active-default button. Non-button \a element
+ * kinds are ignored (the tag would draw a label as chrome-less text
+ * inside a clickable rect).
+ */
+void UI_layout_mixar_card_style_last_button(Layout *layout,
+                                            MixarCardElement element,
+                                            bool active_default);
 
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);

@@ -97,6 +97,43 @@ def register():
         addon_keymaps.append((km_mixie, kmi_abort))
         logger.debug("Registered Escape shortcut for abort")
 
+        # Text selection (click-drag) + copy (Cmd/Ctrl+C) in the message area.
+        # The C-side "Mixie Chat" keymap registers both (space_mixie_chat.cc),
+        # but the GUI keyconfig preset reload wipes items from all C-registered
+        # keymaps in the default config, so those bindings go dead in GUI
+        # sessions — the same finding as the agent_scene_strip keymap. The
+        # addon-keyconfig items here survive the reload and are merged into the
+        # same "Mixie Chat" keymap that mixie_chat_main_region_init installs on
+        # the message region of BOTH the docked chat and the Agent Bubble
+        # (the bubble reuses that region init), so selection and copy work in
+        # both surfaces. Without the select_text binding, a click-drag in the
+        # bubble's message area fell through to the global LEFTMOUSE
+        # mixar.bubble_header_drag binding and moved the whole window instead
+        # of selecting text.
+        kmi_select = km_mixie.keymap_items.new(
+            'mixie_chat.select_text',
+            type='LEFTMOUSE',
+            value='PRESS',
+        )
+        addon_keymaps.append((km_mixie, kmi_select))
+
+        if is_macos:
+            kmi_copy = km_mixie.keymap_items.new(
+                'mixie_chat.copy',
+                type='C',
+                value='PRESS',
+                oskey=True,
+            )
+        else:
+            kmi_copy = km_mixie.keymap_items.new(
+                'mixie_chat.copy',
+                type='C',
+                value='PRESS',
+                ctrl=True,
+            )
+        addon_keymaps.append((km_mixie, kmi_copy))
+        logger.debug("Registered select-text and copy shortcuts for chat")
+
 
 def unregister():
     """Unregister keymap for Mixie Chat space."""

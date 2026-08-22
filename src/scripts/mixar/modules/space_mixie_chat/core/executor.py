@@ -293,11 +293,13 @@ class ScriptExecutor:
             import colorsys
             import datetime
             import collections
+            import hashlib
             import bmesh
             import mathutils
             import bpy_extras
             import imbuf
             import numpy
+            import struct
 
             exec_namespace = {
                 "__builtins__": get_safe_builtins(),
@@ -312,8 +314,10 @@ class ScriptExecutor:
                 "re": re,
                 "datetime": datetime,
                 "collections": collections,
+                "hashlib": hashlib,
                 "time": time,
                 "numpy": numpy,
+                "struct": struct,
                 # Blender modules
                 "bmesh": bmesh,
                 "mathutils": mathutils,
@@ -326,6 +330,20 @@ class ScriptExecutor:
                 "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,
             }
+
+            # Some first-party scene transaction scripts use
+            # ``globals().get(<sentinel>)`` to gate a commit body. Exposing the
+            # real globals builtin would also expose the mutable builtins map
+            # and the restricted-open capability, so provide only a detached,
+            # filtered snapshot of names already visible to the script.
+            def _safe_globals():
+                return {
+                    name: value
+                    for name, value in exec_namespace.items()
+                    if name not in {"__builtins__", "open"}
+                }
+
+            exec_namespace["__builtins__"]["globals"] = _safe_globals
 
             # Restricted __import__: allows "import bpy", "import json" etc.
             # (which are already in exec_namespace) but blocks arbitrary imports.
