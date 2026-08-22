@@ -38,8 +38,7 @@ static wmOperatorStatus gaussian_blur_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("gaussian_blur");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "gaussian_blur: no image provided");
@@ -149,8 +148,7 @@ static wmOperatorStatus gaussian_blur_exec(bContext *C, wmOperator *op)
 
 static wmOperatorStatus box_blur_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -240,8 +238,7 @@ static wmOperatorStatus box_blur_exec(bContext *C, wmOperator *op)
 
 static wmOperatorStatus bilateral_filter_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -334,8 +331,7 @@ static wmOperatorStatus bilateral_filter_exec(bContext *C, wmOperator *op)
 
 static wmOperatorStatus fxaa_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -470,7 +466,7 @@ void BAKING_OT_gaussian_blur(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 100, "Radius", "", 1, 100);
@@ -488,7 +484,7 @@ void BAKING_OT_box_blur(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 100, "Radius", "", 1, 100);
@@ -505,7 +501,7 @@ void BAKING_OT_bilateral_filter(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 20, "Radius", "", 1, 20);
@@ -524,7 +520,7 @@ void BAKING_OT_fxaa(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 }

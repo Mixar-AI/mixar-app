@@ -229,7 +229,6 @@ void mixie_chat_code_chip_draw(float right_x, float top_y, float scale_factor, i
 }
 
 /** \} */
-}  // namespace blender
 
 /* -------------------------------------------------------------------- */
 /** \name Hover
@@ -338,3 +337,5 @@ bool mixie_chat_handle_code_copy_click(bContext *C,
 }
 
 /** \} */
+
+}  // namespace blender
