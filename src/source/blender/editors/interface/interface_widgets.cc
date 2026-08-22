@@ -2132,7 +2132,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
    * the preedit text lives only in ime_data->composite — editstr is untouched
    * until the syllable commits. Splice it in at the cursor so the user sees
    * what they are composing; mirrors the single-line widget_draw_text(). */
-  const wmIMEData *ime_data = but->editstr ? ui_but_ime_data_get(but) : nullptr;
+  const wmIMEData *ime_data = but->editstr ? button_ime_data_get(but) : nullptr;
   std::string ime_drawstr;
   int ime_composite_len = 0;
   if (ime_data && ime_data->composite.size()) {
@@ -2383,7 +2383,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
       /* Keep the IME candidate window anchored to the caret (the single-line
        * path does this from widget_draw_text; without it the popup floats at
        * wherever the mouse was when editing started). */
-      ui_but_ime_reposition(but, rect->xmin + cursor_x + 5, int(cursor_bottom) + 3, false);
+      button_ime_reposition(but, rect->xmin + cursor_x + 5, int(cursor_bottom) + 3, false);
 #endif
     }
   }
@@ -2420,7 +2420,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
       const int visual_line = i - g_multiline_scroll_offset;
       const float line_bottom = rect->ymax - (visual_line + 1) * line_height;
 
-      UI_draw_text_underline(rect->xmin + int(ul_x_start),
+      draw_text_underline(rect->xmin + int(ul_x_start),
                              int(line_bottom) + int(2.0f * U.pixelsize),
                              min_ii(int(ul_x_end), BLI_rcti_size_x(rect) - 2) - int(ul_x_start),
                              1,

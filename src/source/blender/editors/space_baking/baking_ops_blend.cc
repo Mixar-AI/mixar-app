@@ -84,10 +84,8 @@ static wmOperatorStatus blend_images_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("blend_images");
 
-  PointerRNA base_image_ptr = RNA_pointer_get(op->ptr, "base_image");
-  PointerRNA blend_image_ptr = RNA_pointer_get(op->ptr, "blend_image");
-  Image *base_image = static_cast<Image *>(base_image_ptr.data);
-  Image *blend_image = static_cast<Image *>(blend_image_ptr.data);
+  Image *base_image = image_from_operator(C, op, "base_image");
+  Image *blend_image = image_from_operator(C, op, "blend_image");
 
   if (!base_image || !blend_image) {
     CLOG_WARN(LOG_BAKING, "blend_images: missing image(s)");
@@ -155,8 +153,7 @@ static wmOperatorStatus dither_image_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("dither_image");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "dither_image: no image provided");
@@ -260,10 +257,10 @@ void BAKING_OT_blend_images(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(
-      ot->srna, "base_image", RNA_Image, "Base Image", "Base image (modified in place)");
-  RNA_def_pointer_runtime(
-      ot->srna, "blend_image", RNA_Image, "Blend Image", "Image to blend on top");
+  blender::ed::baking::define_image_name_property(
+      ot->srna, "base_image", "Base Image", "Base image (modified in place)");
+  blender::ed::baking::define_image_name_property(
+      ot->srna, "blend_image", "Blend Image", "Image to blend on top");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "opacity", 1.0f, 0.0f, 1.0f, "Opacity", "", 0.0f, 1.0f);
@@ -281,7 +278,7 @@ void BAKING_OT_dither_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna,

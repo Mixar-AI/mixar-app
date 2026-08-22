@@ -415,8 +415,8 @@ def test_card_taggers_exported_and_danger_text_drawn():
     section = (INTERFACE_DIR / "interface_mixar_section.cc").read_text()
     assert "void UI_layout_mixar_card_tag_last(" in section
     assert "void UI_layout_mixar_card_style_last_button(" in section
-    assert "button_flag_enable(but, UI_BUT_ACTIVE_DEFAULT)" in section
-    assert "button_flag_disable(but, UI_BUT_ACTIVE_DEFAULT)" in section
+    assert "button_flag_enable(but, BUT_ACTIVE_DEFAULT)" in section
+    assert "button_flag_disable(but, BUT_ACTIVE_DEFAULT)" in section
 
     draw = (INTERFACE_DIR / "interface_mixar_profile_card_draw.cc").read_text()
     assert "case MixarCardElement::DangerText:" in draw

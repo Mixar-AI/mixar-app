@@ -169,10 +169,10 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
      * is also the native OK/Cancel suppression contract — see
      * #wm_block_dialog_create. */
     if (active_default) {
-      button_flag_enable(but, UI_BUT_ACTIVE_DEFAULT);
+      button_flag_enable(but, BUT_ACTIVE_DEFAULT);
     }
     else {
-      button_flag_disable(but, UI_BUT_ACTIVE_DEFAULT);
+      button_flag_disable(but, BUT_ACTIVE_DEFAULT);
     }
     break;
   }

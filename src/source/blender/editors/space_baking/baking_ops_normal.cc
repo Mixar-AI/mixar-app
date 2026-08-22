@@ -38,8 +38,7 @@ static wmOperatorStatus height_to_normal_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("height_to_normal");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "height_to_normal: no image provided");
@@ -157,10 +156,8 @@ static wmOperatorStatus blend_normal_maps_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("blend_normal_maps");
 
-  PointerRNA base_image_ptr = RNA_pointer_get(op->ptr, "base_image");
-  PointerRNA detail_image_ptr = RNA_pointer_get(op->ptr, "detail_image");
-  Image *base_image = static_cast<Image *>(base_image_ptr.data);
-  Image *detail_image = static_cast<Image *>(detail_image_ptr.data);
+  Image *base_image = image_from_operator(C, op, "base_image");
+  Image *detail_image = image_from_operator(C, op, "detail_image");
 
   if (!base_image || !detail_image) {
     CLOG_WARN(LOG_BAKING, "blend_normal_maps: missing image(s)");
@@ -268,7 +265,7 @@ void BAKING_OT_height_to_normal(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "strength", 1.0f, 0.01f, 10.0f, "Strength", "", 0.01f, 10.0f);
@@ -285,8 +282,10 @@ void BAKING_OT_blend_normal_maps(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "base_image", RNA_Image, "Base Image", "Base normal map (modified in place)");
-  RNA_def_pointer_runtime(ot->srna, "detail_image", RNA_Image, "Detail Image", "Detail normal map to blend");
+  blender::ed::baking::define_image_name_property(
+      ot->srna, "base_image", "Base Image", "Base normal map (modified in place)");
+  blender::ed::baking::define_image_name_property(
+      ot->srna, "detail_image", "Detail Image", "Detail normal map to blend");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "detail_strength", 1.0f, 0.0f, 2.0f, "Detail Strength", "", 0.0f, 2.0f);

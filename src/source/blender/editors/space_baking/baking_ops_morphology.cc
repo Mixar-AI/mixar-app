@@ -38,8 +38,7 @@ static wmOperatorStatus dilate_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("dilate");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "dilate: no image provided");
@@ -107,8 +106,7 @@ static wmOperatorStatus erode_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("erode");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "erode: no image provided");
@@ -176,8 +174,7 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("sobel_edge_detect");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "sobel_edge_detect: no image provided");
@@ -269,7 +266,7 @@ void BAKING_OT_dilate(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -287,7 +284,7 @@ void BAKING_OT_erode(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -305,7 +302,7 @@ void BAKING_OT_sobel_edge_detect(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 }

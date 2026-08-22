@@ -132,8 +132,8 @@ def copy_image_channel_pixels(src, dest, src_idx=0, dest_idx=0, segment=None, se
         # Use optimized C++ baking operator
         logger.debug("copy_image_channel_pixels: using C++ backend")
         bpy.ops.baking.copy_image_channel_pixels(
-            src_image=src,
-            dest_image=dest,
+            src_image=src.name,
+            dest_image=dest.name,
             src_width=src.size[0],
             src_height=src.size[1],
             dest_width=dest.size[0],
@@ -225,8 +225,8 @@ def copy_image_pixels(src, dest, segment=None, segment_src=None):
         # Use optimized C++ baking operator
         logger.debug("copy_image_pixels: using C++ backend")
         bpy.ops.baking.copy_image_pixels(
-            src_image=src,
-            dest_image=dest,
+            src_image=src.name,
+            dest_image=dest.name,
             src_width=src.size[0],
             src_height=src.size[1],
             dest_width=dest.size[0],
@@ -303,7 +303,7 @@ def set_image_pixels(image, color, segment=None):
         # Use optimized C++ baking operator
         logger.debug("set_image_pixels: using C++ backend")
         bpy.ops.baking.set_image_pixels(
-            image=image,
+            image=image.name,
             width=image.size[0],
             height=image.size[1],
             start_x=start_x,

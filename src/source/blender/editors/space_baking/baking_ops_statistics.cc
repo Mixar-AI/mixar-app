@@ -35,12 +35,11 @@ namespace blender::ed::baking {
 /** \name Get Image MinMax Operator
  * \{ */
 
-static wmOperatorStatus get_image_minmax_exec(bContext * /*C*/, wmOperator *op)
+static wmOperatorStatus get_image_minmax_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("get_image_minmax");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "get_image_minmax: no image provided");
@@ -100,8 +99,7 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("normalize_image");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "normalize_image: no image provided");
@@ -197,7 +195,7 @@ void BAKING_OT_get_image_minmax(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 
@@ -220,7 +218,7 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer_runtime(ot->srna, "image", RNA_Image, "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "target_min", 0.0f, -FLT_MAX, FLT_MAX, "Target Min", "", 0.0f, 1.0f);

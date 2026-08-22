@@ -102,7 +102,7 @@ void UI_layout_mixar_card_tag_last(Layout *layout, MixarCardElement element, flo
 /**
  * Style the most recently created operator/push button (#ButtonType::But)
  * in \a layout's block as one of the card's action-button kinds, and
- * set or clear #UI_BUT_ACTIVE_DEFAULT on it.
+ * set or clear #BUT_ACTIVE_DEFAULT on it.
  *
  * The active-default flag is what lets a dialog own its confirm row:
  * #wm_block_dialog_create only appends the automatic OK/Cancel pair
