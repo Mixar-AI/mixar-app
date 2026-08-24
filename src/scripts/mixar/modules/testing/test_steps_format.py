@@ -228,6 +228,14 @@ def test_humanize_unknown_tool_name_falls_back():
     assert steps_format.humanize_tool_name("") == "Tool call"
 
 
+def test_running_tool_label_uses_gerunds():
+    assert steps_format.running_tool_label("image_gen") == "Generating image"
+    assert steps_format.running_tool_label("video_gen_submit") == "Generating video"
+    assert steps_format.running_tool_label("model_3d") == "Generating 3D"
+    assert steps_format.running_tool_label("create_cube") == ""
+    assert steps_format.running_tool_label("unknown") == ""
+
+
 def test_finish_step_detail_is_object_names_not_stdout():
     """Detail holds the object names (expandable), never raw script stdout."""
     bubble = _FakeBubble()

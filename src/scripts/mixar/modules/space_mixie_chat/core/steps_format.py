@@ -99,6 +99,36 @@ def infer_step_kind(tool_name: str) -> str:
     return "TOOL"
 
 
+# Gerund labels for in-flight generation tools. Matched on substrings of the
+# backend tool name, longest-meaning first, so ``generate_image`` finds the
+# image row before the bare generate one. The trailing ellipsis is what the
+# C++ steps block already draws for RUNNING — the label itself stays put.
+_RUNNING_TOOL_LOOKS = (
+    (("generate_image", "image_generation", "image_gen", "image_edit"),
+     "Generating image"),
+    (("generate_video", "video_generation", "video_gen", "lipsync"),
+     "Generating video"),
+    (("generate_3d", "model_3d", "image_to_3d", "retopolog", "auto_rig",
+      "tripo_rig"),
+     "Generating 3D"),
+    (("mat_gen", "pbr_gen", "texture_edit", "lookdev"), "Generating textures"),
+    (("world_labs",), "Generating world"),
+    (("search", "browse"), "Searching"),
+    (("generate",), "Generating"),
+)
+
+
+def running_tool_label(tool_name: str) -> str:
+    """Gerund row for a tool that is still running, or "" to keep humanize()."""
+    lowered = (tool_name or "").lower()
+    if not lowered or lowered in ("unknown", "execute_bpy_script"):
+        return ""
+    for keys, label in _RUNNING_TOOL_LOOKS:
+        if any(key in lowered for key in keys):
+            return label
+    return ""
+
+
 def humanize_tool_name(tool_name: str) -> str:
     """Turn a snake_case tool name into a row label: "create_cube" -> "Create cube".
 
@@ -259,7 +289,7 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = 
     row = bubble.step_items.add()
     row.item_id = request_id or ""
     row.kind = infer_step_kind(tool_name)
-    label = humanize_tool_name(tool_name)
+    label = running_tool_label(tool_name) or humanize_tool_name(tool_name)
     if label == "Tool call":
         classified = classify_script_action(script)
         if classified:
