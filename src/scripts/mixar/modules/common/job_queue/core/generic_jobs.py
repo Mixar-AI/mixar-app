@@ -43,7 +43,9 @@ class AsyncGLBJob(Job):
     fail_message : str
         Human-readable fallback shown when the backend returns FAILED.
     _on_imported_hook : callable | None
-        ``fn(job, object_names)`` called from ``on_imported``.
+        ``fn(job, object_names) -> str | None`` called from ``on_imported``.
+        A hook that RENAMES what it imported must return the final object
+        name(s) — see ``on_imported`` for why.
     """
 
     job_type: str = ""
@@ -88,12 +90,28 @@ class AsyncGLBJob(Job):
         )
 
     def on_imported(self, object_names: str) -> None:
+        """Record the imported objects, then run the post-import hook.
+
+        ``imported_object_names`` is the job's only handle on what it put in
+        the scene, and every later consumer resolves it through
+        ``bpy.data.objects.get()`` — the generations-library archiver, the
+        queue list's "select the result" click. Most of our hooks RENAME the
+        import (``model_gen`` names the mesh after the source image, retopology
+        appends ``_low``), which frees the name recorded a line earlier and
+        leaves the job pointing at an object that no longer exists.
+
+        So a renaming hook returns its final name and we record THAT. Hooks
+        that only inspect return None and keep the imported names.
+        """
         super().on_imported(object_names)
         if self._on_imported_hook is not None:
             try:
-                self._on_imported_hook(self, object_names)
+                final = self._on_imported_hook(self, object_names)
             except Exception as e:
                 logger.warning("on_imported hook failed: %s", e)
+            else:
+                if isinstance(final, str) and final.strip():
+                    self.imported_object_names = final.strip()
 
 
 # ---------------------------------------------------------------------------

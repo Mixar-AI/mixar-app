@@ -61,10 +61,13 @@ def _result_hook(scene_name: str, node_id: str, kind: str,
                     "[NodeGraph] post-import processing failed: %s", e)
             if final:
                 create_asset_result(scene, node, final)
-            else:
-                names = [n.strip() for n in result_names.split(",") if n.strip()]
-                resolved = [n for n in names if bpy.data.objects.get(n) is not None]
-                create_asset_result(scene, node, ", ".join(resolved or names))
+                # Also re-point the JOB at the renamed mesh (see
+                # AsyncGLBJob.on_imported) — the generations-library archiver
+                # and the queue list resolve job.imported_object_names.
+                return final
+            names = [n.strip() for n in result_names.split(",") if n.strip()]
+            resolved = [n for n in names if bpy.data.objects.get(n) is not None]
+            create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
             connect_image_results(scene, node, result_names)
         else:
@@ -511,6 +514,7 @@ def _mesh_result_hook(scene_name: str, node_id: str,
                     "[TextureGen] node PBR post-import processing failed: %s", e)
 
         create_asset_result(scene, node, result)
+        return result  # see AsyncGLBJob.on_imported
 
     return _hook
 
