@@ -246,6 +246,11 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
         layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Media", icon='TRIA_DOWN')
         layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
+        layout.operator(
+            "mixie.moodboard_capture_viewport",
+            text="Capture Viewport",
+            icon='CAMERA_DATA',
+        )
         layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
         layout.operator("mixie.moodboard_add_textbox", text="Add Text", icon='FONT_DATA')
 
@@ -308,6 +313,14 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         row = layout.row()
         row.enabled = bool(exportable_media)
         row.operator("mixie.moodboard_export_images", text="Export", icon='EXPORT')
+
+        row = layout.row()
+        row.enabled = selected_stills > 0
+        row.operator(
+            "mixie.moodboard_apply_as_world",
+            text="Apply as World HDRI",
+            icon='WORLD',
+        )
 
         layout.separator()
 

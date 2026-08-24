@@ -69,6 +69,11 @@ def _draw_imagegen(layout, context):
         else "Use Selected Moodboard Image"
     )
     draw_toggle(col, tab, "use_reference_images", text=ref_label)
+    col.operator(
+        "mixie.moodboard_capture_viewport",
+        text="Capture Viewport",
+        icon='CAMERA_DATA',
+    )
 
     if tab.use_reference_images:
         if hasattr(scene, 'mixie_moodboard_images'):

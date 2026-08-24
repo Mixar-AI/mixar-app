@@ -61,6 +61,8 @@ def _draw_retopology_catalog(layout, context):
     draw_mesh_info(col, context, max_mb=150 if is_tripo else 200)
     draw_hint(layout, "Select the objects you want to retopologize",
               icon='INFO')
+    lod = col.row()
+    lod.operator("mixie.auto_lod", text="Quick LOD (local)", icon='MOD_DECIM')
     draw_section_separator(layout)
 
     # --- Settings (Mode / Model / schema params from the catalog) ---
