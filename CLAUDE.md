@@ -39,6 +39,29 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 - Because `bpy` is a MagicMock in tests, `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
 - Config: env vars in `.env` (copy `.env.example`; never commit `.env`) → `scripts/unix/settings.sh` → `scripts/generate_config.py` emits runtime `mixar.json`. C++ env header generated at `source/creator/mixar_env_config.h`. `MIXAR_ENV=Prod` targets `https://api.mixar.app`; `Dev` targets a dev backend (and is the only env where dev-bypass credentials are allowed — the build aborts otherwise).
 
+### GUI E2E: the QA harness (MISSION-CRITICAL — this is how features ship)
+The QA harness drives the REAL built app like a human — semantic clicks by
+operator-id/prop/surface (no pixel guessing), drags, file drops, targeted
+screenshots you must actually READ — and runs replayable E2E scenarios (agent
+chat, Agent Bubble custom targets, moodboard graph, Director timeline, full
+image→3D→retopology pipeline). **A feature is DONE only when the running app
+has proven it: state asserts AND vision, plus a scenario left behind.** Before
+any feature work, read the playbook:
+- Harness: private repo `github.com/Mixar-AI/mixar-qa-harness` — clone it
+  anywhere and export that path as `$QA_HARNESS`. Read `README.md`
+  (architecture + hard-won gotchas), `SHIP_LOOP.md` (the
+  build→drive→verify→encode→ship contract), `UX_CHECKLIST.md` (checkable
+  "looks right" criteria).
+- In-app C++ half (introspection RNA, custom-surface targets, drop hook):
+  in THIS repo's `develop`, so every branch cut from it is drivable — build Dev.
+- Run: `cd "$QA_HARNESS" && ./run_qa_app.sh` then
+  `python3 driver/qa_client.py status`; full suite `./run_scenarios.sh`
+  (spends real credits; one isolated app reloads clean startup state between
+  scenarios); MCP tools available as the `mixar-qa` server.
+- New custom-drawn UI is unshippable until it exports QA targets
+  (`Mixar_qa_register_target_provider` — read the surface's OWN hit-test
+  geometry, never duplicate it).
+
 ## Code Rules
 
 - No file larger than **500 lines** — split aggressively. Use C++ for performance-critical paths.
