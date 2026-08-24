@@ -5,10 +5,11 @@
 """Unified Job Queue API Service.
 
 Handles communication with the backend unified job queue:
-- POST   /job-queue/jobs:       Submit a new job
-- GET    /job-queue/jobs/{id}:  Get job status/result
-- GET    /job-queue/jobs:       List user's jobs
-- DELETE /job-queue/jobs/{id}:  Cancel a job
+- POST   /job-queue/jobs:          Submit a new job
+- POST   /job-queue/jobs/estimate: Billed credit cost (no charge, no upload)
+- GET    /job-queue/jobs/{id}:     Get job status/result
+- GET    /job-queue/jobs:          List user's jobs
+- DELETE /job-queue/jobs/{id}:     Cancel a job
 
 Responses are normalized to the Blender-side status names used by
 existing concrete Job classes.
@@ -90,6 +91,10 @@ class JobQueueService(BaseService):
         # model, and a missing key must not erase the locally submitted value.
         if "model" in data:
             normalized["model"] = data.get("model")
+        if "credit_cost" in data:
+            normalized["credit_cost"] = data.get("credit_cost")
+        if "remaining_credits" in data:
+            normalized["remaining_credits"] = data.get("remaining_credits")
         return APIResponse(
             success=response.success,
             status_code=response.status_code,
@@ -147,6 +152,31 @@ class JobQueueService(BaseService):
             "jobs",
             json=body,
             on_success=self._wrap_success(on_success),
+            on_error=on_error,
+            on_complete=on_complete,
+            timeout=timeout,
+        )
+
+    def estimate(
+        self,
+        job_type: str,
+        model: str,
+        payload: dict,
+        on_success: Optional[Callable[[APIResponse], None]] = None,
+        on_error: Optional[Callable[[Exception], None]] = None,
+        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
+        timeout: float = 30.0,
+    ) -> str:
+        """POST /job-queue/jobs/estimate — billed cost, no charge, no upload."""
+        _require_auth()
+        return self.post_async(
+            "jobs/estimate",
+            json={
+                "service": job_type,
+                "model": model,
+                "payload": payload,
+            },
+            on_success=on_success,
             on_error=on_error,
             on_complete=on_complete,
             timeout=timeout,

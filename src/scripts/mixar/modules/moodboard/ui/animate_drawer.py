@@ -52,8 +52,18 @@ def _draw_animate(layout, context):
     draw_hint(info, "Max mesh: 150 MB (GLB)", icon='DOT')
 
     # --- Generate ---
+    from mixar.modules.common.generation_params import (
+        resolve_model_slug, resolve_service_key,
+    )
+    service_key = resolve_service_key(
+        "animate", getattr(tab, "mode", "")
+    ) or "animate"
     draw_generate_footer(
         layout, context, "mixie.animate_generate", "animate",
         gen_flag_attr="mixie_animate_is_generating",
         feature_key=FEATURE_ANIMATE,
+        service_key=service_key,
+        model_slug=resolve_model_slug(
+            service_key, getattr(tab, "model", "")
+        ) or "",
     )

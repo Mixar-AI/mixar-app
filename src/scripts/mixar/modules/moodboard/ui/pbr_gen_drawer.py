@@ -106,8 +106,18 @@ def _draw_pbr_gen(layout, context):
     draw_capability_selector(col, tab, "pbr_generation")
 
     # --- Generate ---
+    from mixar.modules.common.generation_params import (
+        resolve_model_slug, resolve_service_key,
+    )
+    service_key = resolve_service_key(
+        "pbr_generation", getattr(tab, "mode", "")
+    ) or "pbr_generation"
     draw_generate_footer(
         layout, context, "mixie.pbr_gen_generate", "pbr_gen",
         gen_flag_attr="mixie_pbr_gen_is_generating",
         feature_key=FEATURE_PBR_GEN,
+        service_key=service_key,
+        model_slug=resolve_model_slug(
+            service_key, getattr(tab, "model", "")
+        ) or "",
     )

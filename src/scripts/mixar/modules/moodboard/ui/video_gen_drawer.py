@@ -78,6 +78,13 @@ def _draw_video_gen(layout, context):
             icon='DOT',
         )
 
+    from mixar.modules.common.generation_params import (
+        collect_params, resolve_model_slug, resolve_service_key,
+    )
+    service_key = resolve_service_key("video_gen", getattr(tab, "mode", "")) or "video_gen"
+    model_slug = resolve_model_slug(service_key, getattr(tab, "model", "")) or ""
+    params = collect_params(service_key, model_slug) if model_slug else None
+    prompt = str(getattr(tab, "prompt", "") or "")
     draw_generate_footer(
         layout,
         context,
@@ -85,4 +92,8 @@ def _draw_video_gen(layout, context):
         "video_gen",
         gen_flag_attr="mixie_video_gen_is_generating",
         feature_key=FEATURE_VIDEO_GEN,
+        service_key=service_key,
+        model_slug=model_slug,
+        params=params,
+        payload={"prompt": prompt} if prompt else None,
     )

@@ -53,6 +53,13 @@ def invalidate_generation_caches():
         clear_chat_generate_options_cache()
     except Exception as e:
         logger.warning(f"Chat generate options clear failed: {e}")
+    try:
+        from mixar.modules.common.job_queue.core.generate_cost import (
+            reset_estimate_state,
+        )
+        reset_estimate_state()
+    except Exception as e:
+        logger.warning(f"Generate-cost estimate clear failed: {e}")
 
 
 def maybe_show_onboarding(email: str) -> None:

@@ -60,4 +60,6 @@ def draw_world_labs(layout, context):
     draw_generate_footer(
         layout, context, "mixie.world_labs_generate", "world_labs",
         feature_key="world_labs",
+        service_key="world_labs",
+        model_slug=model or "",
     )

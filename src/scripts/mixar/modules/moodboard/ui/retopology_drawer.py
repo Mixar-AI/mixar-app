@@ -89,4 +89,6 @@ def _draw_retopology_catalog(layout, context):
         layout, context, "mixie.retopology_generate", "retopology",
         gen_flag_attr="mixie_retopology_is_generating",
         feature_key=FEATURE_RETOPOLOGY,
+        service_key=service_key,
+        model_slug=model_slug or "",
     )

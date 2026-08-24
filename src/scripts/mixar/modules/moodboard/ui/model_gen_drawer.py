@@ -104,4 +104,6 @@ def _draw_model_gen(layout, context):
     draw_generate_footer(
         layout, context, generate_op, "image_to_3d",
         gen_flag_attr=gen_flag, feature_key=feature_key,
+        service_key=service_key,
+        model_slug=getattr(tab, "model", "") or "",
     )

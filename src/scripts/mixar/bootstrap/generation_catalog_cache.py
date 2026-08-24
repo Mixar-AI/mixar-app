@@ -161,6 +161,7 @@ get_model = _queries.get_model
 get_default_model_slug = _queries.get_default_model_slug
 get_styles = _queries.get_styles
 get_credit_cost = _queries.get_credit_cost
+resolve_generate_cost = _queries.resolve_generate_cost
 
 
 # ============================================================================

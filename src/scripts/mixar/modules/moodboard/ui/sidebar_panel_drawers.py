@@ -120,8 +120,17 @@ def _draw_imagegen(layout, context):
         draw_dropdown(col, tab, "resolution", text="Resolution")
 
     # --- Generate ---
+    imagegen_params = None
+    try:
+        from mixar.modules.common.generation_params import collect_params
+        imagegen_params = collect_params("image_gen", tab.model)
+    except Exception:
+        imagegen_params = None
     draw_generate_footer(layout, context, "mixie.imagegen_generate", "imagegen",
-                         feature_key="imagegen")
+                         feature_key="imagegen",
+                         service_key="image_gen",
+                         model_slug=getattr(tab, "model", "") or "",
+                         params=imagegen_params)
 
 
 # ---------------------------------------------------------------------------

@@ -102,6 +102,27 @@ def test_job_queue_service_posts_to_job_queue(monkeypatch):
     assert received[0].data["data"]["status"] == "PENDING"
 
 
+def test_job_queue_service_estimate_posts_without_idempotency(monkeypatch):
+    monkeypatch.setattr(JQS, "get_access_token", lambda: "token")
+    client = FakeClient()
+    service = JQS.JobQueueService(client)
+    received = []
+
+    service.estimate(
+        job_type="image_gen",
+        model="flash",
+        payload={"params": {"number_of_images": 2}},
+        on_success=received.append,
+    )
+
+    method, endpoint, kwargs = client.calls[0]
+    assert method == "POST"
+    assert endpoint.endswith("jobs/estimate")
+    assert kwargs["json"]["service"] == "image_gen"
+    assert kwargs["json"]["model"] == "flash"
+    assert "idempotency_key" not in kwargs["json"]
+
+
 def test_job_queue_service_accepts_stable_idempotency_key(monkeypatch):
     monkeypatch.setattr(JQS, "get_access_token", lambda: "token")
     client = FakeClient()

@@ -112,3 +112,39 @@ class GenerationCatalogQueries:
         catalog = self._snapshot() or {}
         costs = catalog.get("credit_costs") or {}
         return costs.get(feature_key)
+
+    def resolve_generate_cost(
+        self,
+        service_key: str = "",
+        model_slug: str = "",
+        feature_key: str = "",
+    ) -> Optional[int]:
+        """Billed credit cost for the Generate button, or None if unknown.
+
+        Prefers the selected model's catalog ``credit_cost``, then the
+        service row, then the ``credit_costs`` map keyed by feature_key.
+        Catalog values are the billed amount (markup already applied).
+        """
+        if service_key:
+            if model_slug:
+                model = self.get_model(service_key, model_slug)
+                cost = _positive_int((model or {}).get("credit_cost"))
+                if cost is not None:
+                    return cost
+            service = self.get_service(service_key)
+            if service:
+                cost = _positive_int(service.get("credit_cost"))
+                if cost is not None:
+                    return cost
+                feature_key = feature_key or (service.get("feature_key") or "")
+        if feature_key:
+            return _positive_int(self.get_credit_cost(feature_key))
+        return None
+
+
+def _positive_int(value: Any) -> Optional[int]:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0 else None
