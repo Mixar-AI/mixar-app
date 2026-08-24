@@ -24,6 +24,7 @@ from ...core import (
     get_image_display_name,
     validate_image_file,
 )
+from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
 
@@ -88,6 +89,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             attachment.image_path = filepath
             attachment.image_source = 'FILE'
             attachment.display_name = get_image_display_name(filepath, 'FILE')
+            mirror_attachment_to_moodboard(scene, filepath, 'FILE')
             added += 1
 
         if added == 0:
@@ -185,6 +187,9 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
         attachment.image_path = self.image_name
         attachment.image_source = 'BLEND_DATA'
         attachment.display_name = get_image_display_name(self.image_name, 'BLEND_DATA')
+
+        # Attached images are also board images.
+        mirror_attachment_to_moodboard(scene, self.image_name, 'BLEND_DATA')
 
         # Notify UI to refresh
         redraw_chat_areas()

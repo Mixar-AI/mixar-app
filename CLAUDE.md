@@ -113,6 +113,24 @@ answer recap that is also shown after a successful submit. If the submit fails,
 the final answer is rolled back and its card is redrawn so the user can retry
 that last click.
 
+**Chat attachment → moodboard contract:** attaching an image in the chat also
+puts it on the scene's moodboard. `space_mixie_chat/core/attachment_board_sync.py`
+is the ONE mirror — every path that appends to `mixie_chat_pending_attachments`
+calls `mirror_attachment_to_moodboard` (file picker, blend-data picker,
+clipboard paste, viewport capture, region snip); `moodboard/core/chat_sync.py`
+is deliberately NOT one of them, since it mirrors the board *into* the composer
+and its images are boarded already (its attachments carry `is_moodboard`, which
+`mirror_attachment` skips). Boarded items are added **unselected** — a selected
+board item is synced straight back into `pending_attachments` and would show a
+second pill for the image the user just attached. `FILE` attachments go through
+the moodboard's own `media_import.load_media_file_to_board` (moved out of
+`ui/operators/image_ops.py` so non-UI callers need no operator import), which
+packs stills so a paste/screenshot living in `bpy.app.tempdir` survives cleanup;
+`BLEND_DATA` ones are packed then boarded via `add_packed_image_to_board`. Both
+de-dupe against what is already on the board, and the whole mirror is
+best-effort — a boarding failure never blocks the attach. Pinned by
+`tests/test_chat_attachment_boarding.py`.
+
 ## Moodboard Canvas, Inference Graph & Video
 
 - **Canvas**: theme-independent pure black with a sparse neutral-gray dot grid fixed in *canvas* space (zoom in → fewer/larger dots). Dots are filled discs, not GPU point primitives (subpixel Moiré), and fade out as their projected diameter approaches one pixel.
