@@ -189,7 +189,7 @@ Gaussian-splat environments, from the backend `world_labs` job or a local file, 
 
 All standard AI generation goes through **one** queue — do NOT create new `Job` subclasses for standard features.
 
-- **Contract**: `POST /job-queue/jobs` (job_type, model, payload) submits; state is driven by the shared agent WebSocket (`job.update` pushes, `job.get`/`job.sync` reconciliation); `GET`/`DELETE /job-queue/jobs/{id}` for status/cancel (`common/api/services/job_queue_service.py`).
+- **Contract**: `POST /job-queue/jobs` (job_type, model, payload) submits; state is driven by the shared agent WebSocket (`job.update` pushes, `job.get`/`job.sync` reconciliation); `GET`/`DELETE /job-queue/jobs/{id}` for status/cancel (`common/api/services/job_queue_service.py`). `POST /job-queue/jobs/estimate` returns the billed credit cost without charging or uploading (same resolver as submit). The Generate button shows that figure (`Generate · 12`) via `job_queue/core/generate_cost.py`: catalog `credit_cost` is already billed (markup applied server-side); `image_gen`/`video_gen` debounce a live estimate at 0.7 s. Never redraw synchronously when scheduling an estimate — that steals the Generate click.
 - **Entry point**: `enqueue_generation(kind="glb"|"image", feature_key, job_type, model, payload, label, ...)` in `core/enqueue.py`. Two generic jobs cover everything standard: `AsyncGLBJob` (submit→poll→download→import) and `SyncImageJob` (inline result→moodboard) in `core/generic_jobs.py`.
 - **Per-feature enqueue helpers** build payloads and call `enqueue_generation()`: `moodboard/core/generation_enqueue.py`, `hunyuan/core/{retopology,uv,part,animate}_enqueue.py`. No literal model slugs in this layer — resolve via catalog (`catalog_default_model()`; `None` = abort submit, never substitute a slug) or `hunyuan/core/pro_model.resolve_pro_model_slug`.
 - **Bespoke queues** (genuinely custom polling/result handling) keep their own files: `lookdev360_queue`, `scene_recon_queue`, `mesh_segment_queue`, `matgen_queue`, `world_labs_queue` (submit the catalog-backed `world_labs` job, download SPZ + optional GLB/panorama off the main thread, `world_labs_spz.spz_to_ply()`, then import the KIRI splat and collider).
@@ -219,7 +219,7 @@ The top-bar profile dropdown is a **native card**, not a menu: greeting + email,
 - **`usage_pct` is the backend's, never recomputed client-side** — the server owns grandfathered per-cycle and trial allocations plus clamping. The card shows the *complement* (percentage **remaining**) and the bar **depletes**, unlike the dashboard's "% used" fill.
 - **RNA is the only channel to the card**: C++ can't read a Python module cache, so `core/poller._mirror_to_rna` projects the snapshot onto **WindowManager** properties (`mixar_usage_*`, `mixar_account_name`). WindowManager, never Scene — a plan and credit balance must not be serialized into a shared `.blend`. `tests/test_usage_meter.py::TestCardRnaContract` pins both directions of the name list, since a typo in C++ reads as a missing property and silently draws zeros.
 - **State/poller split**: `core/state.py` is pure Python (no `bpy`) so percentage/threshold/format logic is unit-testable; `core/poller.py` owns refresh timing. Draw callbacks **only read** — a popover can redraw on every mouse move.
-- **Refresh triggers**: a 5s supervising tick against a 60s TTL, plus a forced refresh on **queue drain** (`job_queue/core/enqueue_toast.py:_push_summary` — generations are what spend credits), behind a 10s rate floor. Logout clears cache + RNA + greeting immediately (`auth_ops._clear_account_name`); login repopulates via `core/account.apply_from_user_info`. Fetch runs on a daemon thread, write-back through a one-shot timer.
+- **Refresh triggers**: a 5s supervising tick against a 60s TTL, plus a forced refresh on **each newly-terminal queue job** (`enqueue_toast.refresh_from_queues`) and again on **queue drain**, behind a 10s rate floor. Overlapping jobs must not leave the meter stale until the last one finishes. Logout clears cache + RNA + greeting immediately (`auth_ops._clear_account_name`); login repopulates via `core/account.apply_from_user_info`. Fetch runs on a daemon thread, write-back through a one-shot timer.
 - **Thresholds are duplicated across languages and must agree**: `constants.USAGE_CRITICAL_PCT`/`USAGE_WARNING_PCT` (20/50 % remaining) vs `CARD_USAGE_CRITICAL_FACTOR`/`CARD_USAGE_WARNING_FACTOR` in `interface_mixar_profile_card_draw.cc`. Pinned by `test_thresholds_match_the_cpp_card`.
 - **The quota bar keeps its percentage in a reserved slot to the right, never inside the fill** — text on the fill has to switch colour with how far the fill reaches, which makes the card's most important number least readable exactly at the extremes. (Re-confirmed 2026-08-19 against a design showing it inside the fill; the design was not adopted on this point.) Healthy uses the teal→cyan ramp; warning/critical are flat (a two-tone alarm reads as a gradient artifact). A non-zero remainder never rounds below one bar-height of colour.
 - **`uchar[4]` colour literals must state alpha explicitly.** A three-value initializer zero-fills alpha and the shape draws completely invisible — this is exactly how the bar's fill silently disappeared once. `tests/test_usage_meter.py::TestCardColourLiterals` scans the palette and card sources for it.
@@ -321,6 +321,18 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 - Operators stay thin — decisions live in `core/install_flow.py`
   (`plan_restart`, `apply_and_restart`) so they are testable under the
   `bpy` mock. Config: `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`.
+- **Help → Export Diagnostics** (`common/core/diagnostics.py`) writes a JSON
+  support dump: Mixar/Blender versions, OS, catalog version, signed-in flag,
+  queue state. Tokens, prompts, paths, and scene content stay out.
+
+## World HDRI and local LOD
+
+- `mixie.moodboard_apply_as_world` sets a selected moodboard still as the scene
+  environment map (movies fail closed). `mixie.auto_lod` is a local Decimate on
+  the active mesh — Retopology remains the billed quality path.
+- `mixie.moodboard_capture_viewport` OpenGL-captures the 3D view, packs it, and
+  selects it on the moodboard so Image Gen / Model Gen "Use Selected" paths
+  pick it up. Stills only.
 
 ## Repo Docs Map
 
