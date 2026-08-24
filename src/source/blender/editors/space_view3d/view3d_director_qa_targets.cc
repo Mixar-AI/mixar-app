@@ -10,7 +10,7 @@
  * the SAME stored rects the interaction handler hit-tests against
  * (view3d_director_timeline_interaction.cc). Bounds there are region-local
  * pixels compared against event->mval, so conversion is a winrct offset.
- * Read-only apart from the runtime ensure (which interaction also does).
+ * Strictly read-only.
  */
 
 #include <string>
@@ -47,8 +47,12 @@ void director_qa_targets(const wmWindow * /*win*/,
   if (area->spacetype != SPACE_VIEW3D || region->regiontype != RGN_TYPE_CHANNELS) {
     return;
   }
-  DirectorTimelineRuntime *runtime =
-      view3d_director_timeline_runtime_ensure(const_cast<ARegion *>(region));
+  /* Read the runtime the way ``timeline_ui_handler`` does — never
+   * ``runtime_ensure``: a dump must not allocate region data (and set
+   * RGN_FLAG_TEMP_REGIONDATA) on a dock the user has not opened yet. No
+   * runtime simply means no targets. */
+  const DirectorTimelineRuntime *runtime = static_cast<const DirectorTimelineRuntime *>(
+      region->regiondata);
   if (runtime == nullptr) {
     return;
   }

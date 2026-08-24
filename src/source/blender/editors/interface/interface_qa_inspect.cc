@@ -160,6 +160,23 @@ const char *but_type_name(const ButType type)
   }
 }
 
+/* A widget scrolled out of its region still has valid geometry, but in window
+ * space that rect lands outside the region — often on top of a different area
+ * entirely. Clicking its centre would hit the wrong thing, so intersect with
+ * the region and drop anything with nothing left visible. */
+bool qa_clip_to_region(const ARegion *region, rcti *rect)
+{
+  rcti clipped;
+  if (!BLI_rcti_isect(rect, &region->winrct, &clipped)) {
+    return false;
+  }
+  if (BLI_rcti_size_x(&clipped) <= 0 || BLI_rcti_size_y(&clipped) <= 0) {
+    return false;
+  }
+  *rect = clipped;
+  return true;
+}
+
 void qa_emit_custom_targets(std::string &out,
                             bool &first_widget,
                             const wmWindow *win,
@@ -196,6 +213,10 @@ void qa_emit_custom_targets(std::string &out,
     }
   }
   for (const MixarQATarget &t : targets) {
+    rcti rect = t.rect_win;
+    if (!qa_clip_to_region(region, &rect)) {
+      continue;
+    }
     if (!first_widget) {
       out += ',';
     }
@@ -222,9 +243,8 @@ void qa_emit_custom_targets(std::string &out,
     if (t.index >= 0) {
       out += "\"index\":" + std::to_string(t.index) + ',';
     }
-    out += "\"rect\":[" + std::to_string(t.rect_win.xmin) + ',' +
-           std::to_string(t.rect_win.ymin) + ',' + std::to_string(t.rect_win.xmax) +
-           ',' + std::to_string(t.rect_win.ymax) + "],";
+    out += "\"rect\":[" + std::to_string(rect.xmin) + ',' + std::to_string(rect.ymin) +
+           ',' + std::to_string(rect.xmax) + ',' + std::to_string(rect.ymax) + "],";
     out += std::string("\"enabled\":") + (t.enabled ? "true" : "false");
     if (t.sel) {
       out += ",\"sel\":true";
@@ -265,6 +285,18 @@ void qa_dump_region(std::string &out,
 
       rcti pix;
       ui_but_to_pixelrect(&pix, region, block, but);
+
+      /* Region-space pixels -> window pixels (origin bottom-left), the same
+       * space ``Window.event_simulate`` consumes. Clipped to the region so a
+       * scrolled-away button never reports a rect over some other area. */
+      rcti rect;
+      rect.xmin = region->winrct.xmin + pix.xmin;
+      rect.xmax = region->winrct.xmin + pix.xmax;
+      rect.ymin = region->winrct.ymin + pix.ymin;
+      rect.ymax = region->winrct.ymin + pix.ymax;
+      if (!qa_clip_to_region(region, &rect)) {
+        continue;
+      }
 
       if (!first_widget) {
         out += ',';
@@ -323,14 +355,8 @@ void qa_dump_region(std::string &out,
         }
       }
 
-      /* Region-space pixels -> window pixels (origin bottom-left), the same
-       * space ``Window.event_simulate`` consumes. */
-      const int x0 = region->winrct.xmin + pix.xmin;
-      const int y0 = region->winrct.ymin + pix.ymin;
-      const int x1 = region->winrct.xmin + pix.xmax;
-      const int y1 = region->winrct.ymin + pix.ymax;
-      out += "\"rect\":[" + std::to_string(x0) + ',' + std::to_string(y0) + ',' +
-             std::to_string(x1) + ',' + std::to_string(y1) + "],";
+      out += "\"rect\":[" + std::to_string(rect.xmin) + ',' + std::to_string(rect.ymin) +
+             ',' + std::to_string(rect.xmax) + ',' + std::to_string(rect.ymax) + "],";
 
       out += std::string("\"enabled\":") +
              (((but->flag & UI_BUT_DISABLED) == 0) ? "true" : "false");

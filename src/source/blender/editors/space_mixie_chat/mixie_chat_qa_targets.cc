@@ -98,6 +98,29 @@ void chat_qa_targets(const wmWindow * /*win*/,
         t.value = layout.bubble_id;
         r_targets.push_back(std::move(t));
       }
+      /* Once the block is expanded, each row carrying a second level is
+       * separately clickable (mixie_chat.toggle_step_row) — mirror the exact
+       * guards mixie_chat_handle_steps_click uses, or QA would offer rows
+       * that swallow the click and toggle nothing. */
+      if (!layout.steps_collapsed) {
+        for (int i = 0; i < layout.slot_step_count; i++) {
+          const StepItemSlotData &step = layout.slot_steps[i];
+          if (step.detail[0] == '\0') {
+            continue;
+          }
+          MixarQATarget row;
+          if (!view_rect_to_window(region, step.row_bounds, &row.rect_win)) {
+            continue;
+          }
+          row.surface = "chat_step_row";
+          row.text = step.label;
+          row.value = layout.bubble_id;
+          row.detail = step.id;
+          row.index = i;
+          row.sel = step.expanded;
+          r_targets.push_back(std::move(row));
+        }
+      }
     }
     if (layout.has_thinking) {
       MixarQATarget t;

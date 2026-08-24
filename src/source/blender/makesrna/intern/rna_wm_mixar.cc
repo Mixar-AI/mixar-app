@@ -61,7 +61,8 @@ static void rna_Window_global_areas_begin(CollectionPropertyIterator *iter, Poin
 /* QA widget-tree dump (see interface_qa_inspect.cc). RNA string reads call
  * ``length`` then ``get`` back-to-back on the same thread, so the length
  * callback serializes into this cache and ``get`` copies + consumes it —
- * every Python read returns a freshly serialized dump. */
+ * every Python read returns a freshly serialized dump, and ``get`` never
+ * re-serializes into a buffer ``length`` already sized. */
 static std::string g_mixar_qa_ui_dump_cache;
 
 static int rna_WindowManager_mixar_qa_ui_dump_length(PointerRNA *ptr)
@@ -71,12 +72,12 @@ static int rna_WindowManager_mixar_qa_ui_dump_length(PointerRNA *ptr)
   return int(g_mixar_qa_ui_dump_cache.size());
 }
 
-static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA *ptr, char *value)
+static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *value)
 {
-  if (g_mixar_qa_ui_dump_cache.empty()) {
-    const wmWindowManager *wm = (const wmWindowManager *)ptr->data;
-    g_mixar_qa_ui_dump_cache = Mixar_ui_qa_inspect_json(wm);
-  }
+  /* ``value`` is sized by the ``length`` callback above, which is what
+   * serializes the dump. Never re-serialize here: the UI may have changed
+   * since, and a longer dump would overrun the caller's buffer. A read that
+   * somehow skipped ``length`` gets an empty string, not a heap overflow. */
   memcpy(value, g_mixar_qa_ui_dump_cache.c_str(), g_mixar_qa_ui_dump_cache.size() + 1);
   g_mixar_qa_ui_dump_cache.clear();
   g_mixar_qa_ui_dump_cache.shrink_to_fit();
