@@ -71,16 +71,16 @@ def test_is_forced_flags():
     assert is_forced(_info(unsupported=True)) is True
 
 
-def test_normal_toast_has_skip_and_is_dismissible():
+def test_normal_toast_is_dismissible_and_offers_only_the_action():
     push_update_available_toast(_info())
     item = _pushed_item()
     assert item.dismissible is True
     assert item.title == "Mixar Update Available"
     assert "available" in item.body
-    assert [a.label for a in item.actions] == ["Skip", "Download"]
+    assert [a.label for a in item.actions] == ["Download"]
 
 
-def test_forced_toast_has_no_skip_and_is_not_dismissible():
+def test_forced_toast_is_not_dismissible():
     push_update_available_toast(_info(force_update=True))
     item = _pushed_item()
     assert item.dismissible is False

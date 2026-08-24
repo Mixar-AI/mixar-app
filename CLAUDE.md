@@ -303,25 +303,35 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
   referenced from `WIX.template` via `MIXAR_LEGACY_UPGRADE_MARKER`) so
   existing installs migrate on the first upgrade.
 - **One toast id, rendered from state** (`core/toasts.py`): available /
-  downloading (%) / ready / failed are renderings of the same toast, and a
+  downloading / ready / failed are renderings of the same toast, and a
   dismissed toast is never resurrected by a progress tick. Self-install
   unavailable (Linux, read-only install, App Translocation, a release with
   no installer or no checksum) swaps the primary button back to the
-  browser download. Forced updates keep no Skip.
+  browser download.
+- **The toast announces; the badge carries.** No Skip button — the badge
+  is permanent and re-opens the toast, so a version is announced at most
+  twice: available, then READY (`install_flow._announce_ready`, the one
+  announcement that survives dismissal). `.mixar_announced_version`
+  (`<version>=available|ready`) records that we told them, not a user
+  decision. **The gate covers the toast only — staging always starts**,
+  or a later Restart & Update is slow. Forced and interactive checks
+  always toast.
 - **A quit that doesn't happen is recovered, not waited out**: after
   `apply_and_restart` schedules the quit, a 15s watchdog (timers stop
   during real teardown, so it can only fire if the quit failed or is
   blocked) kills the waiting helper via its kept `Popen`, returns state to
   READY with the staged installer intact, and toasts "Update paused —
   click Restart & Update to try again".
-- **Progress is always visible while downloading**: the update toast body
-  carries a live "Downloading — 45% — 180 MB of 400 MB" line re-rendered
-  by the 1s tick, and the topbar badge (`badge_label`) shows
-  "Downloading 45%" / "Restart to Update" / "Updating…".
+- **Progress is visible where the user is waiting on it**: the badge
+  (`badge_label`) always shows "Downloading 45%" / "Restart to Update" /
+  "Updating…"; a percentage reaches a toast only after Restart & Update
+  (`push_downloading_toast`, live figures + Cancel). The availability
+  toast carries none, so `_progress_tick` re-pushes the toast only while
+  `install_requested` and otherwise redraws the badge alone.
 - Operators stay thin — decisions live in `core/install_flow.py`
   (`plan_restart`, `apply_and_restart`) so they are testable under the
   `bpy` mock. Config: `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`.
 
 ## Repo Docs Map
 
-`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover.
+`README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover.

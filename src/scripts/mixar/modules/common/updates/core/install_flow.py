@@ -73,6 +73,12 @@ def _refresh_ui():
     refresh_update_toast()
 
 
+def _redraw_badge():
+    from .toasts import tag_topbar_redraw
+
+    tag_topbar_redraw()
+
+
 def _capture_download_outcome(state):
     """Report staged/failed once the download thread has finished.
 
@@ -94,10 +100,20 @@ def _capture_download_outcome(state):
 
 
 def _progress_tick():
-    """Repeating timer that keeps the toast's percentage moving."""
-    if get_update_state().install_state is not InstallState.DOWNLOADING:
+    """Repeating timer that keeps the visible percentage moving.
+
+    Only the post-"Restart & Update" toast carries a percentage, so a
+    background download re-renders the badge alone. Re-pushing the
+    availability toast every second would replace a notification whose
+    text has not changed, under a user who may be reaching for it.
+    """
+    state = get_update_state()
+    if state.install_state is not InstallState.DOWNLOADING:
         return None
-    _refresh_ui()
+    if state.install_requested:
+        _refresh_ui()
+    else:
+        _redraw_badge()
     return _PROGRESS_TICK_S
 
 
@@ -186,10 +202,37 @@ def _discard(path):
         pass
 
 
+def _announce_ready(state):
+    """Toast once when the installer becomes ready to apply.
+
+    "Downloaded, one restart away" is new and actionable, so it earns an
+    interruption even if the availability toast was dismissed — but only
+    one, recorded per version.  From then on the badge ("Restart to
+    Update") carries it.
+    """
+    if state.install_state is not InstallState.READY:
+        return
+    info = state.update_info
+    version = info.latest_version if info else ""
+    if not version:
+        return
+
+    from .toasts import push_update_available_toast
+    from .update_checker import (
+        ANNOUNCE_READY, get_announced_stage, set_announced_stage,
+    )
+
+    if get_announced_stage(version) == ANNOUNCE_READY:
+        return
+    set_announced_stage(version, ANNOUNCE_READY)
+    push_update_available_toast(info)
+
+
 def _after_download():
     """Main thread: refresh the toast and honour a pending restart request."""
     state = get_update_state()
     _refresh_ui()
+    _announce_ready(state)
     _capture_download_outcome(state)
 
     if state.install_state is InstallState.READY and state.install_requested:
