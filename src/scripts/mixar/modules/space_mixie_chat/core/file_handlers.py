@@ -133,10 +133,14 @@ def _on_load_post(*_args) -> None:
 
     mixie_chat_mode is saved in the .blend as an int. Files written by
     builds whose enum had items that no longer exist (the old ASK mode
-    stored value 2; Add-on Project deliberately starts at 3) load with an out-of-range int: bpy then logs
+    stored value 2; the retired LIBRARY mode stored 4; Add-on Project
+    deliberately starts at 3) load with an out-of-range int: bpy then logs
     "current value '2' matches no enum" on EVERY read — i.e. every
     footer/bubble redraw — and reads return "". Reset such scenes to
     'AGENT' once, right after load, so the file is clean from then on.
+
+    This is also what lands a .blend saved while Library mode was still
+    offered back on 'AGENT' instead of a mode the user can no longer see.
     """
     import bpy as _bpy
 
@@ -146,7 +150,7 @@ def _on_load_post(*_args) -> None:
                 continue
             # Invalid persisted ints read back as "" (no matching item).
             if scene.mixie_chat_mode not in (
-                'AGENT', 'GENERATE', 'LIBRARY', 'ADDON_PROJECT'
+                'AGENT', 'GENERATE', 'ADDON_PROJECT'
             ):
                 scene.mixie_chat_mode = 'AGENT'
                 logger.info(

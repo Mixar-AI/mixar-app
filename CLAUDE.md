@@ -113,6 +113,20 @@ answer recap that is also shown after a successful submit. If the submit fails,
 the final answer is rolled back and its card is redrawn so the user can retry
 that last click.
 
+**Chat mode enum contract:** `scene.mixie_chat_mode` (`chat_props.py`) is the
+ONE list every mode dropdown enumerates — the C++ chat footer, the agent
+bubble's footer panel and the bubble menu all bind that property — so an
+unlisted item is hidden everywhere at once. Retired values are never reused:
+2 was the legacy ASK mode, 4 was **LIBRARY**, which is no longer offered.
+Unlisting is the whole mechanism: assigning a missing identifier raises, the
+quick-prompt enum and `chat_special_ops`' allowlist carry no LIBRARY, and a
+.blend saved in the retired mode loads out-of-range and is reset to `AGENT` by
+`core/file_handlers.py`'s persisted-enum sanitizer (which exists because bpy
+otherwise logs "matches no enum" on every footer redraw). `core/library_browse.py`
+is left intact and fully dormant — every entry point is gated on the mode — so
+restoring the feature is just re-listing the item. Pinned by
+`tests/test_library_mode_retired.py`.
+
 **Chat attachment → moodboard contract:** attaching an image in the chat also
 puts it on the scene's moodboard. `space_mixie_chat/core/attachment_board_sync.py`
 is the ONE mirror — every path that appends to `mixie_chat_pending_attachments`

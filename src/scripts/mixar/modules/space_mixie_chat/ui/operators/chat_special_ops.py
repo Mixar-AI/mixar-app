@@ -586,8 +586,10 @@ class MIXIE_CHAT_OT_insert_prompt_text(Operator):
         if not self.text:
             return {'CANCELLED'}
 
-        # Set the chat mode if provided
-        if self.mode and self.mode in {'AGENT', 'GENERATE', 'LIBRARY'}:
+        # Set the chat mode if provided. LIBRARY is deliberately absent —
+        # the mode is retired, so a quick prompt must not be able to put the
+        # user into a mode the dropdown no longer offers.
+        if self.mode and self.mode in {'AGENT', 'GENERATE'}:
             context.scene.mixie_chat_mode = self.mode
 
         # Set the generate type if provided (only applies when mode is
