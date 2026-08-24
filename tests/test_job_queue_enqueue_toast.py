@@ -260,6 +260,30 @@ def test_new_batch_after_drain_starts_a_fresh_count(monkeypatch):
     assert item.body == "job-b"
 
 
+def test_terminal_job_requests_usage_refresh_before_drain(monkeypatch):
+    """Overlapping jobs must refresh the meter as each one finishes."""
+    calls = []
+    monkeypatch.setattr(ET, "_request_usage_refresh", lambda: calls.append(1))
+    a, b = _queue("feat_a"), _queue("feat_b")
+    _setup(monkeypatch, queues=[a, b])
+
+    first, second = _job("job-a"), _job("job-b")
+    a.submit(first)
+    b.submit(second)
+    calls.clear()
+
+    first.state = JobState.SUCCESS
+    a._notify()
+    assert calls == [1], "a finished job refreshes while siblings still run"
+
+    a._notify()
+    assert calls == [1], "the same terminal job must not refresh twice"
+
+    second.state = JobState.FAILED
+    b._notify()
+    assert len(calls) >= 2, "the second terminal (and drain) refresh again"
+
+
 # ---------------------------------------------------------------------------
 # active_job_count — the pill reads this
 # ---------------------------------------------------------------------------

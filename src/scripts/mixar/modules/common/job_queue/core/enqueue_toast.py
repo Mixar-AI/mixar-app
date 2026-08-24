@@ -56,15 +56,23 @@ _showing_active = False
 # (consistent with the previous burst behaviour).
 _suppressed = False
 
+# Terminal job ids whose success/failure already triggered a usage refresh.
+# Overlapping jobs used to leave the account meter stale until the *whole*
+# queue drained; refreshing on each newly-terminal id (behind the poller's
+# rate floor) keeps the bar in step with spend.
+_usage_refreshed_ids: set = set()
+
 
 def reset_state() -> None:
     """Forget all toast state (tests / defensive re-init)."""
     global _batch_ids, _latest_label, _last_key, _showing_active, _suppressed
+    global _usage_refreshed_ids
     _batch_ids = set()
     _latest_label = ""
     _last_key = ""
     _showing_active = False
     _suppressed = False
+    _usage_refreshed_ids = set()
 
 
 def _store():
@@ -79,6 +87,17 @@ def _view_queue_action():
         operator="mixie.queue_view",
         style="primary",
     )
+
+
+def _request_usage_refresh() -> None:
+    """Ask the account-card poller to refetch. Fail-open: toast must not
+    depend on billing."""
+    try:
+        from mixar.modules.common.usage.core import poller as _usage_poller
+
+        _usage_poller.request_refresh()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _job_label(job) -> str:
@@ -105,16 +124,26 @@ def refresh_from_queues() -> None:
     global _showing_active, _suppressed
 
     try:
+        from .job import TERMINAL_STATES
         from .queue_manager import ACTIVE_JOB_STATES, all_queues
     except Exception:
         return
 
     active = 0
+    newly_terminal = []
+    live_ids = set()
     for queue in all_queues():
         for job in queue.snapshot():
+            live_ids.add(job.id)
             if job.state in ACTIVE_JOB_STATES:
                 active += 1
                 _batch_ids.add(job.id)
+            elif job.state in TERMINAL_STATES and job.id not in _usage_refreshed_ids:
+                newly_terminal.append(job.id)
+    _usage_refreshed_ids.intersection_update(live_ids)
+    if newly_terminal:
+        _usage_refreshed_ids.update(newly_terminal)
+        _request_usage_refresh()
 
     if active:
         # A sticky toast never expires, so if ours is gone the user closed it.
@@ -159,16 +188,10 @@ def _push_summary() -> None:
     from .job import JobState, TERMINAL_STATES
     from .queue_manager import all_queues
 
-    # Generations are what actually spend credits, so a drained queue is the
-    # moment the top-bar meter is most likely to be wrong. Ask for a refresh
-    # on every drain (including all-failed batches — a partial charge still
-    # moves the balance); the poller's rate floor absorbs bursts.
-    try:
-        from mixar.modules.common.usage.core import poller as _usage_poller
-
-        _usage_poller.request_refresh()
-    except Exception:  # noqa: BLE001 — the toast must not depend on billing
-        pass
+    # Drain is a second chance for the meter (including all-failed batches —
+    # a partial charge still moves the balance). Per-job refreshes already
+    # ran as each job went terminal; the poller's rate floor absorbs bursts.
+    _request_usage_refresh()
 
     succeeded = 0
     failed = 0

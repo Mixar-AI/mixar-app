@@ -14,8 +14,9 @@ Refresh triggers, in order of how much they matter:
 
 * the TTL tick (the meter must not go stale while the app sits open),
 * login (a fresh account must not inherit the previous user's figures),
-* queue drain (generations are what actually spend credits, so the
-  number the user just watched change is refreshed as soon as it does).
+* each terminal queue job (generations are what actually spend credits,
+  so overlapping jobs must not leave the meter stale until drain),
+* queue drain (a second chance, including all-failed batches).
 """
 
 from __future__ import annotations
