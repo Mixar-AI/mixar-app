@@ -20,6 +20,11 @@ from mixar.modules.common.updates.constants import OP_CHECK_FOR_UPDATES
 def _draw_check_for_updates_entry(self, context):
     self.layout.separator()
     self.layout.operator(OP_CHECK_FOR_UPDATES, text="Check for Updates", icon="FILE_REFRESH")
+    self.layout.operator(
+        "mixar.export_diagnostics",
+        text="Export Diagnostics",
+        icon="TEXT",
+    )
 
 
 def register():
