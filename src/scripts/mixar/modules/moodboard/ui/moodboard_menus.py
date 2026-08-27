@@ -81,13 +81,34 @@ def _mesh_source_id(scene) -> str:
     return ""
 
 
-def _connected_action(layout, action_type: str, text: str, icon: str, source=""):
+def _connected_action(
+    layout, action_type: str, text: str, icon: str, source="", drop=None
+):
     op = layout.operator(
         "mixie.moodboard_create_connected_action", text=text, icon=icon
     )
     op.action_type = action_type
     op.source_node_id = source
+    if drop is not None:
+        op.use_drop_position = True
+        op.drop_x, op.drop_y = drop
     return op
+
+
+def _link_drop_anchor(scene):
+    """Canvas point a dragged noodle was released at, or None.
+
+    Read-only: this runs from a menu draw, so it must never write scene data.
+    The C++ graph modal sets the flag just before opening this menu and clears
+    it at every other entry point, so a stale anchor cannot leak into a node
+    created from the output handle or the right-click menu.
+    """
+    if not getattr(scene, "mixie_moodboard_link_drop_active", False):
+        return None
+    return (
+        float(getattr(scene, "mixie_moodboard_link_drop_x", 0.0)),
+        float(getattr(scene, "mixie_moodboard_link_drop_y", 0.0)),
+    )
 
 
 class MIXIE_MT_moodboard_context_menu(Menu):
@@ -334,21 +355,22 @@ class MIXIE_MT_moodboard_output_menu(Menu):
         except Exception:
             source_id = ""
             source_type = ""
+        drop = _link_drop_anchor(scene)
 
         added = False
         if source_type == 'IMAGE' and _capability_available("image_gen"):
             _connected_action(
-                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA', source_id
+                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA', source_id, drop
             )
             added = True
         if source_type == 'IMAGE' and _capability_available("model_gen"):
             _connected_action(
-                layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id
+                layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id, drop
             )
             added = True
         if source_type in {'IMAGE', 'VIDEO'} and _capability_available("video_gen"):
             _connected_action(
-                layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id
+                layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id, drop
             )
             added = True
         # A 3D mesh output continues into the mesh -> mesh features, matching the
@@ -360,7 +382,7 @@ class MIXIE_MT_moodboard_output_menu(Menu):
                     if not drew_mesh:
                         layout.label(text="Continue in 3D")
                         drew_mesh = True
-                    _connected_action(layout, action_type, text, icon, source_id)
+                    _connected_action(layout, action_type, text, icon, source_id, drop)
                     added = True
         if not added:
             layout.label(text="No compatible continuation", icon='INFO')

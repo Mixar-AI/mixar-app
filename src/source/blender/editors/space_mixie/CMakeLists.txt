@@ -31,6 +31,7 @@ set(SRC
   mixie_moodboard_ops_crop.cc
   mixie_moodboard_ops_drop.cc
   mixie_moodboard_ops_graph.cc
+  mixie_moodboard_ops_graph_link.cc
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_select.cc

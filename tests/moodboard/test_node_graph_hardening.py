@@ -24,6 +24,7 @@ GRAPH_SOURCES = (
     "mixie_draw_moodboard_graph.cc",
     "mixie_draw_moodboard_node_ui.cc",
     "mixie_moodboard_ops_graph.cc",
+    "mixie_moodboard_ops_graph_link.cc",
 )
 
 

@@ -17,13 +17,24 @@ class MIXIE_OT_moodboard_create_connected_action(Operator):
 
     action_type: bpy.props.EnumProperty(items=ACTION_TYPES)
     source_node_id: bpy.props.StringProperty(default="")
+    # SKIP_SAVE: this is a REGISTER operator, so any property the caller leaves
+    # unset is re-filled from the last run. Without it, one node created by
+    # dropping a noodle would pin every later menu entry to that same spot.
+    use_drop_position: bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
+    drop_x: bpy.props.FloatProperty(default=0.0, options={'SKIP_SAVE'})
+    drop_y: bpy.props.FloatProperty(default=0.0, options={'SKIP_SAVE'})
 
     def execute(self, context):
         from mixar.modules.moodboard.core.node_graph import create_connected_action
 
         try:
             node = create_connected_action(
-                context.scene, self.action_type, self.source_node_id
+                context.scene,
+                self.action_type,
+                self.source_node_id,
+                drop_position=(
+                    (self.drop_x, self.drop_y) if self.use_drop_position else None
+                ),
             )
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
@@ -153,18 +164,29 @@ class MIXIE_OT_moodboard_connect_nodes(Operator):
 
     from_node_id: bpy.props.StringProperty(default="")
     to_node_id: bpy.props.StringProperty(default="")
+    # Empty means "whichever input fits": a noodle released on a card's body
+    # rather than precisely on one of its sockets still has an unambiguous
+    # target, so it resolves to the first free compatible slot.
     to_socket: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.node_graph import connect_nodes
+        from mixar.modules.moodboard.core.node_graph import (
+            connect_nodes,
+            connect_to_next_input,
+        )
 
         try:
-            connect_nodes(
-                context.scene,
-                self.from_node_id,
-                self.to_node_id,
-                self.to_socket,
-            )
+            if self.to_socket:
+                connect_nodes(
+                    context.scene,
+                    self.from_node_id,
+                    self.to_node_id,
+                    self.to_socket,
+                )
+            else:
+                connect_to_next_input(
+                    context.scene, self.from_node_id, self.to_node_id
+                )
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}

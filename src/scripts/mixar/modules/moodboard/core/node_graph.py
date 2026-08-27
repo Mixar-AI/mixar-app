@@ -401,7 +401,19 @@ def _graph_node_by_id(scene, node_id: str):
     return asset_node_by_id(scene, node_id)
 
 
-def create_connected_action(scene, action_type: str, source_node_id: str = ""):
+def create_connected_action(
+    scene,
+    action_type: str,
+    source_node_id: str = "",
+    drop_position: tuple[float, float] | None = None,
+):
+    """Create a continuation node and wire it to its source.
+
+    ``drop_position`` is the canvas point where a dragged link was released.
+    When given it wins over the source-relative placement: the user already
+    said where the node goes, so the card is centred on that point with its
+    input edge under the cursor.
+    """
     # Operator context, so the migrating write is safe here — and required,
     # since the new node's links key off media ids.
     ensure_media_node_ids(scene)
@@ -429,7 +441,10 @@ def create_connected_action(scene, action_type: str, source_node_id: str = ""):
     node.action_type = action_type
     _initialize_catalog_selection(scene, node)
     refresh_node_height(node)
-    if sources:
+    if drop_position is not None:
+        node.position_x = float(drop_position[0])
+        node.position_y = float(drop_position[1]) - node.height * 0.5
+    elif sources:
         right, center_y = _source_right_and_center(sources)
         node.position_x = right + ACTION_NODE_GAP
         node.position_y = center_y - node.height * 0.5

@@ -120,46 +120,6 @@ static wmOperatorStatus call_node_operator(bContext *C,
   return status;
 }
 
-static wmOperatorStatus call_connect_operator(bContext *C,
-                                              const char *from_node_id,
-                                              const MoodboardGraphSocketHit &target,
-                                              const wmEvent *event)
-{
-  wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_connect_nodes", false);
-  if (!ot) {
-    return OPERATOR_CANCELLED;
-  }
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, ot);
-  RNA_string_set(&props, "from_node_id", from_node_id);
-  RNA_string_set(&props, "to_node_id", target.node_id);
-  RNA_string_set(&props, "to_socket", target.socket_id);
-  const wmOperatorStatus status = WM_operator_name_call_ptr(
-      C, ot, blender::wm::OpCallContext::ExecDefault, &props, event);
-  WM_operator_properties_free(&props);
-  return status;
-}
-
-static wmOperatorStatus call_output_menu(bContext *C,
-                                         PointerRNA *scene_ptr,
-                                         const char *source_node_id,
-                                         const wmEvent *event)
-{
-  PropertyRNA *source = RNA_struct_find_property(scene_ptr, "mixie_moodboard_output_source_id");
-  wmOperatorType *menu_type = WM_operatortype_find("WM_OT_call_menu", false);
-  if (!source || !menu_type) {
-    return OPERATOR_CANCELLED;
-  }
-  RNA_property_string_set(scene_ptr, source, source_node_id);
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, menu_type);
-  RNA_string_set(&props, "name", "MIXIE_MT_moodboard_output_menu");
-  const wmOperatorStatus status = WM_operator_name_call_ptr(
-      C, menu_type, blender::wm::OpCallContext::InvokeRegionWin, &props, event);
-  WM_operator_properties_free(&props);
-  return status;
-}
-
 static wmOperatorStatus graph_select_invoke(bContext *C,
                                             wmOperator *op,
                                             const wmEvent *event)
@@ -188,6 +148,7 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
     data->initial_region_y = event->mval[1];
     BLI_strncpy(data->from_node_id, output.node_id, sizeof(data->from_node_id));
     op->customdata = data;
+    moodboard_graph_clear_link_drop_anchor(&scene_ptr);
     moodboard_graph_link_drag_begin(scene, output.x, output.y);
     WM_event_add_modal_handler(C, op);
     ED_area_tag_redraw(CTX_wm_area(C));
@@ -306,9 +267,7 @@ static wmOperatorStatus graph_select_modal(bContext *C,
       return OPERATOR_RUNNING_MODAL;
     }
     if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
-      MoodboardGraphSocketHit target{};
-      const bool hit = moodboard_find_input_socket_under_mouse(
-          &scene_ptr, &region->v2d, event->mval[0], event->mval[1], &target);
+      /* Read everything the resolution needs before the drag data is freed. */
       char from_node_id[MIXIE_GRAPH_ID_BUF];
       BLI_strncpy(from_node_id, data->from_node_id, sizeof(from_node_id));
       const bool moved = data->moved;
@@ -316,11 +275,8 @@ static wmOperatorStatus graph_select_modal(bContext *C,
       MEM_delete(data);
       op->customdata = nullptr;
       ED_area_tag_redraw(CTX_wm_area(C));
-      if (hit) {
-        return call_connect_operator(C, from_node_id, target, event);
-      }
-      return moved ? OPERATOR_CANCELLED :
-                     call_output_menu(C, &scene_ptr, from_node_id, event);
+      return moodboard_graph_link_release(
+          C, &scene_ptr, &region->v2d, event, from_node_id, moved);
     }
     if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE)) {
       moodboard_graph_link_drag_end(scene);
@@ -389,6 +345,8 @@ static wmOperatorStatus graph_context_invoke(bContext *C,
     RNA_float_set(&scene_ptr, "mixie_moodboard_context_x", mouse_x);
     RNA_float_set(&scene_ptr, "mixie_moodboard_context_y", mouse_y);
   }
+
+  moodboard_graph_clear_link_drop_anchor(&scene_ptr);
 
   rctf rect{};
   int index = moodboard_find_action_node_under_mouse(&scene_ptr, mouse_x, mouse_y, &rect);
