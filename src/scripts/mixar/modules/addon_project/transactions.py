@@ -123,17 +123,54 @@ class TransactionStore:
         return []
 
     @staticmethod
+    def _apply_mode(fd: int, temporary: str, mode: int) -> None:
+        """Carry the replaced file's permissions onto its replacement.
+
+        ``os.fchmod`` does not exist on Windows at all, so calling it there
+        raised AttributeError before the first project file was written and
+        every commit came back as a bare ``internal_error``. Windows keeps
+        the path-based call, which only carries the read-only bit — the only
+        permission it models — and a filesystem that models none is not a
+        reason to fail the commit.
+        """
+        fchmod = getattr(os, "fchmod", None)
+        if fchmod is not None:
+            fchmod(fd, mode)
+            return
+        try:
+            os.chmod(temporary, mode)
+        except (OSError, NotImplementedError):
+            pass
+
+    @staticmethod
+    def _replace(temporary: str, path: Path) -> None:
+        """Atomically move the staged file into place.
+
+        Windows refuses to replace a read-only destination, where POSIX only
+        consults the parent directory. Clear that one attribute and retry, so
+        a read-only project file is rewritten with the permissions the caller
+        already decided to preserve, instead of failing the whole commit.
+        """
+        try:
+            os.replace(temporary, path)
+        except PermissionError:
+            if os.name != "nt" or not path.exists():
+                raise
+            os.chmod(path, stat.S_IMODE(path.stat().st_mode) | stat.S_IWRITE)
+            os.replace(temporary, path)
+
+    @staticmethod
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
         try:
-            os.fchmod(fd, mode)
+            TransactionStore._apply_mode(fd, temporary, mode)
             with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
                 handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            TransactionStore._replace(temporary, path)
         except Exception:
             try:
                 os.unlink(temporary)

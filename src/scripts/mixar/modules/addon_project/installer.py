@@ -2,13 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Symlink a checked add-on project into Blender's user add-ons directory.
+"""Link a checked add-on project into Blender's user add-ons directory.
 
 Auto-install makes a freshly created add-on live immediately and lets it
-survive restarts (the symlinked module sits on Blender's normal add-on
+survive restarts (the linked module sits on Blender's normal add-on
 search path, and ``enable(default_set=True)`` records it in preferences so
 the ordinary preference auto-save persists it — the user's auto-save-prefs
 setting is respected, matching native add-on enabling).
+
+The link kind is the platform's business (``links.py``): a symlink where
+one can be created, a directory junction on Windows accounts without the
+symlink privilege.
 
 Returned messages never carry absolute local paths: results cross to the
 backend, and the module contract keeps the project root and the user
@@ -20,6 +24,7 @@ import sys
 from pathlib import Path
 
 from .errors import AddonProjectError
+from .links import create_link, is_link, resolves_to
 from .manifest import entrypoint_source_path
 
 
@@ -36,12 +41,7 @@ def _resolve_install_source(root: Path, entrypoint: str):
 
 
 def _is_this_projects_link(target: Path, source: Path) -> bool:
-    try:
-        if not target.is_symlink():
-            return False
-        return Path(os.path.realpath(target)) == Path(os.path.realpath(source))
-    except OSError:
-        return False
+    return is_link(target) and resolves_to(target, source)
 
 
 def install_addon(root: Path, entrypoint: str, *, allow_root_package=True) -> dict:
@@ -69,7 +69,7 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
         )
     source, link_name, is_package = _resolve_install_source(root, entrypoint)
     if not allow_root_package and source.resolve() == Path(root).resolve():
-        # For the workspace root, symlinking the root would install EVERY
+        # For the workspace root, linking the root would install EVERY
         # add-on as one umbrella add-on. Refuse regardless of how the
         # entrypoint got here (legacy manifest, umbrella __init__.py, ...).
         return _failure(
@@ -83,7 +83,7 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
     addons_dir = Path(bpy.utils.user_resource('SCRIPTS', path="addons", create=True))
     target = addons_dir / link_name
     created_link = False
-    if target.is_symlink() or target.exists():
+    if is_link(target) or target.exists():
         if not _is_this_projects_link(target, source):
             # Fail closed: never overwrite or delete a foreign add-on.
             return _failure(
@@ -94,7 +94,7 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
             )
     else:
         try:
-            os.symlink(source, target, target_is_directory=is_package)
+            create_link(source, target, is_package=is_package)
             created_link = True
         except OSError:
             return _failure(
@@ -161,7 +161,7 @@ def addon_is_enabled(entrypoint: str) -> bool:
 def remove_workspace_root_link(root: Path) -> bool:
     """Self-heal: drop a legacy whole-root install link. Best-effort.
 
-    Removes ``<user_addons>/<root.name>`` ONLY when it is a symlink
+    Removes ``<user_addons>/<root.name>`` ONLY when it is a link of ours
     resolving to the workspace root itself; anything else is left alone.
     Never touches project files, and is a safe no-op on partially cleaned
     state (link already removed, or replaced by something foreign).
@@ -173,9 +173,7 @@ def remove_workspace_root_link(root: Path) -> bool:
             bpy.utils.user_resource('SCRIPTS', path="addons", create=True)
         )
         target = addons_dir / root.name
-        if not target.is_symlink():
-            return False
-        if Path(os.path.realpath(target)) != Path(os.path.realpath(root)):
+        if not is_link(target) or not resolves_to(target, root):
             return False
         target.unlink()
         try:
@@ -265,8 +263,8 @@ def _disable_addon(root: Path, entrypoint: str) -> dict:
 def uninstall_addon(root: Path, entrypoint: str) -> dict:
     """Disable and remove this project's install link. Never raises.
 
-    Only a symlink resolving into this project's entrypoint source is
-    removed; a real dir/file or foreign symlink fails closed untouched
+    Only a link resolving into this project's entrypoint source is
+    removed; a real dir/file or foreign link fails closed untouched
     (before any disable — a same-named foreign add-on is not ours to stop).
     Project files are never touched.
     """
@@ -293,7 +291,7 @@ def _uninstall_addon(root: Path, entrypoint: str) -> dict:
 
     addons_dir = Path(bpy.utils.user_resource('SCRIPTS', path="addons", create=True))
     target = addons_dir / link_name
-    present = target.is_symlink() or target.exists()
+    present = is_link(target) or target.exists()
     if present and not _is_this_projects_link(target, source):
         return _failure(
             "uninstall_target_conflict",

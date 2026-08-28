@@ -14,6 +14,7 @@ import pytest
 
 sys.modules.setdefault("keyring", MagicMock(name="keyring"))
 
+from mixar.modules.addon_project.links import is_link
 from mixar.modules.addon_project.errors import AddonProjectError
 from mixar.modules.addon_project.service import AddonProjectService
 import mixar.modules.addon_project.ui.operators as link_operators
@@ -428,7 +429,7 @@ def test_run_checks_optional_entrypoint_targets_one_addon(
     assert result["blender_reload"]["installed"] is True
     assert enable_calls == [("ws_delta_addon", True)]
     target = addons_dir / "ws_delta_addon"
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == (workspace / "ws_delta_addon").resolve()
 
 
