@@ -48,6 +48,7 @@
 #include "RNA_access.hh"
 #include "RNA_define.hh"
 #include "RNA_enum_types.hh"
+#include "RNA_prototypes.hh"
 
 #include "image_mixar_uv_panels.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -56,10 +57,10 @@ namespace blender {
 using blender::Span;
 using blender::Vector;
 
-/* RNA type declarations */
-extern StructRNA RNA_ToolSettings;
-extern StructRNA RNA_SpaceUVEditor;
-extern StructRNA RNA_SpaceImageEditor;
+/* Mixar 5.2 port: RNA struct handles come from the generated RNA_prototypes.hh
+ * (`extern StructRNA *RNA_X` pointers in `namespace blender`). Hand-rolled
+ * `extern StructRNA RNA_X` object declarations compile per-TU and only fail at
+ * final link. */
 
 /* Forward declarations for helpers in image_mixar_uv_helpers.cc */
 int mixar_uvedit_center(Scene *scene, const Span<Object *> objects, float center[2]);
@@ -370,7 +371,7 @@ move_wrapper->absolute(false);
      * `use_property_split`. */
     xform_col->separator(0.5f);
     PointerRNA sima_ptr = RNA_pointer_create_discrete(
-        nullptr, &RNA_SpaceImageEditor, sima);
+        nullptr, RNA_SpaceImageEditor, sima);
     ui::Layout *pivot_split = &xform_col->split(0.4f, false);
     pivot_split->label(IFACE_("Pivot"), ICON_NONE);
     pivot_split->prop(&sima_ptr, "pivot_point", UI_ITEM_NONE,
