@@ -26,8 +26,8 @@ from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
 from ...core.performance_metrics import get_metrics
 from ...core import (
+    encode_attachment_for_upload,
     get_session_manager,
-    image_to_base64,
 )
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
@@ -260,49 +260,44 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 attachment_data.append(att_data)
 
                 if att.image_source == 'FILE':
-                    # FILE images are safe to encode off the main thread
-                    future = executor.submit(image_to_base64, att.image_path, att.image_source)
+                    # FILE images (read + PIL compress) are safe off the main thread
+                    future = executor.submit(
+                        encode_attachment_for_upload, att.image_path, att.image_source
+                    )
                     encoding_futures.append(future)
                 else:
                     # BLEND_DATA images access bpy.data — must stay on main thread
                     encoding_futures.append(None)
 
-            # Wait for all encodings with timeout (5s per image)
-            timeout_per_image = 5.0
+            # Per-image budget. Compression bounds the work (a 12MP photo is
+            # decoded at reduced scale and re-encoded in well under a second),
+            # so a timeout here means something is genuinely wrong with that
+            # one image — drop it and send the rest, never the whole set.
+            timeout_per_image = 10.0
 
-            try:
-                for idx, future in enumerate(encoding_futures):
+            for idx, future in enumerate(encoding_futures):
+                att_path, att_source = attachment_data[idx]
+                try:
                     if future is None:
                         # BLEND_DATA: encode on main thread (bpy.data access)
-                        att_path, att_source = attachment_data[idx]
-                        b64 = image_to_base64(att_path, att_source)
+                        encoded = encode_attachment_for_upload(att_path, att_source)
                     else:
-                        b64 = future.result(timeout=timeout_per_image)
-                    if b64:
-                        att_path, att_source = attachment_data[idx]
-                        ext = os.path.splitext(att_path)[1].lower() if att_source == 'FILE' else '.png'
-                        mime_map = {
-                            '.png': 'image/png',
-                            '.jpg': 'image/jpeg',
-                            '.jpeg': 'image/jpeg',
-                            '.bmp': 'image/bmp',
-                            '.tiff': 'image/tiff',
-                            '.tif': 'image/tiff'
-                        }
-                        mime_type = mime_map.get(ext, 'image/png')
-                        encoded_attachments.append({"base64": b64, "mime_type": mime_type})
-                    else:
-                        logger.warning(f"Failed to encode attachment index {idx}")
+                        encoded = future.result(timeout=timeout_per_image)
+                except FuturesTimeoutError:
+                    logger.error(f"Image encoding timeout for {att_path}")
+                    self.report({'WARNING'},
+                                f"Skipped slow image: {os.path.basename(att_path)}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Image encoding error for {att_path}: {e}")
+                    self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
+                    continue
 
-            except FuturesTimeoutError:
-                # Timeout - proceed without attachments
-                logger.error("Image encoding timeout - sending without attachments")
-                self.report({'WARNING'}, "Image encoding timeout - message sent without images")
-                encoded_attachments = []
-            except Exception as e:
-                logger.error(f"Image encoding error: {e}")
-                self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
-                encoded_attachments = []
+                if encoded:
+                    b64, mime_type = encoded
+                    encoded_attachments.append({"base64": b64, "mime_type": mime_type})
+                else:
+                    logger.warning(f"Failed to encode attachment index {idx}")
 
             total_encode_time = metrics.stop_timer('image_encoding_total')
             if encoded_attachments and total_encode_time is not None:

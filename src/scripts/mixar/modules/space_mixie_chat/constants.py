@@ -310,7 +310,13 @@ MENTION_INSERT_MAXLEN = 300
 # IMAGE ATTACHMENT CONSTANTS
 # ============================================================================
 
-MAX_IMAGE_SIZE_MB = 10
+# Ceiling on the SOURCE file a user may attach. Attachments are downscaled and
+# JPEG re-encoded before upload (core/attachment_compression.py), so this no
+# longer bounds what goes on the wire — it only stops absurd inputs. 10 MB
+# rejected ordinary 48 MP phone photos outright ("File too large") even though
+# they compress to a few hundred KB; decode cost is bounded by MAX_DECODE_PIXELS
+# in the compressor, not by this.
+MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif'}
 THUMBNAIL_SIZE = (128, 128)

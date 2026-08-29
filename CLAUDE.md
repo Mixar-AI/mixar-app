@@ -37,6 +37,7 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 
 - `pytest.ini` testpaths: `tests/`, plus in-tree suites under `space_mixie_chat/tests` and `paint/{layered_build,procedural_materials}/tests`. `pythonpath = src/scripts`.
 - Because `bpy` is a MagicMock in tests, `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
+- The root `conftest.py` imports the REAL `numpy`/`PIL` before collection. `modules/testing/mock_bpy` stubs "third-party modules that may not be available" only when they are ABSENT from `sys.modules`, so without that preload whichever test imported it first decided whether PIL was real for the whole session — image tests then silently skipped, or ran against a MagicMock handing back empty bytes.
 - Config: env vars in `.env` (copy `.env.example`; never commit `.env`) → `scripts/unix/settings.sh` → `scripts/generate_config.py` emits runtime `mixar.json`. C++ env header generated at `source/creator/mixar_env_config.h`. `MIXAR_ENV=Prod` targets `https://api.mixar.app`; `Dev` targets a dev backend (and is the only env where dev-bypass credentials are allowed — the build aborts otherwise).
 
 ### GUI E2E: the QA harness (MISSION-CRITICAL — this is how features ship)
@@ -144,6 +145,49 @@ packs stills so a paste/screenshot living in `bpy.app.tempdir` survives cleanup;
 de-dupe against what is already on the board, and the whole mirror is
 best-effort — a boarding failure never blocks the attach. Pinned by
 `tests/test_chat_attachment_boarding.py`.
+
+**Chat attachment compression contract:** every outgoing chat attachment is
+downscaled and JPEG re-encoded BEFORE it goes on the wire —
+`space_mixie_chat/core/attachment_compression.py`, reached through the ONE
+encode entry point `core/image_utils.encode_attachment_for_upload(path, source)`,
+which returns `(base64, mime)` so the declared mime always describes the bytes
+actually sent (a mime guessed from the source extension mis-declares a
+re-encoded JPEG, and providers reject a declared-vs-actual mismatch with a
+400). Targets mirror the backend's `IMAGE_MAX_EDGE_PX` / `IMAGE_JPEG_QUALITY`
+(1568 px longest edge, q85) so the backend's own pass sees no gain and keeps
+our bytes; drift there means every attachment is re-encoded twice. Before this
+the chat was the ONE upload path in the client that never compressed — every
+other one goes through `common/utils/image_utils.compress_for_service` — so
+`FILE` uploaded the original file bytes (a 12 MP phone photo: ~5.8 MB base64)
+and `BLEND_DATA` (moodboard-origin, paste, blend picker) built a
+full-resolution RGBA PNG at ~47 MB base64, which **overshot the backend's raw
+ceiling and was dropped before its compression could run** — the agent then
+answered as if no image had been sent.
+Rules: the byte-level helpers are deliberately `bpy`-free so `FILE` can run on
+the encoder thread pool; only `compress_blend_image_for_chat` touches
+`bpy.data` and MUST stay on the main thread. It prefers the image's ENCODED
+source (packed bytes, else the file on disk) over `image.pixels` — a 12 MP
+`foreach_get` is a 195 MB float buffer plus a multi-second PNG encode — but
+only when the image is not `is_dirty`, since unsaved pixel edits never reach
+those bytes; generated images fall back to the pixel path through the shared
+`common/utils/image_utils.image_to_rgba_array` (one definition, so a compressed
+upload carries exactly the pixels the PNG upload would have). `MAX_DECODE_PIXELS`,
+not the byte count, is the decompression-bomb guard (a few-KB PNG can declare a
+gigapixel canvas), and `draft()` lets libjpeg decode straight to a reduced
+scale. EXIF orientation is applied and stripped — iPhone photos are stored
+landscape with an orientation tag, and stripping stops the backend rotating
+twice. Alpha flattens onto **white** (PIL's bare `convert("RGB")` composites
+onto black, turning a dark-foreground cutout into a near-black frame). A
+re-encode is only taken when it saves `MIN_COMPRESSION_GAIN`, EXCEPT for a
+format no provider accepts (`.bmp`/`.tiff` were declared as `image/bmp` and
+rejected outright — those always convert). Compression failing is never fatal:
+the original bytes go up exactly as before. Generation quality is untouched —
+image-to-3D and friends read the full-resolution `bpy.data.images` entry via
+`attachment_names`/`image_name`, never this data URL. `MAX_IMAGE_SIZE_MB` is
+the SOURCE-file cap only (25 MB; at 10 MB it rejected ordinary 48 MP phone
+photos outright), and one attachment failing to encode skips that attachment
+instead of wiping the whole set. Pinned by
+`tests/test_chat_attachment_compression.py`.
 
 ## Moodboard Canvas, Inference Graph & Video
 
