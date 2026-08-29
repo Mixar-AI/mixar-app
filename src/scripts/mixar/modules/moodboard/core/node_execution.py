@@ -9,10 +9,10 @@ from __future__ import annotations
 import base64
 import json
 import os
-import re
 
 import bpy
 
+from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.utils.image_utils import compress_for_service
 from .media_utils import describe_moodboard_media, is_still_item
@@ -26,11 +26,12 @@ from .node_graph import (
 from .node_job_bridge import ensure_graph_listener
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 
+logger = get_logger(__name__)
 
-def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
+
+def _result_hook(scene_name: str, node_id: str, kind: str,
+                 mesh_name: str = "", front_zrot: float = 0.0):
     def _hook(job, result_names: str):
-        if prior_hook is not None:
-            prior_hook(job, result_names)
         scene = bpy.data.scenes.get(scene_name)
         if scene is None:
             return
@@ -38,15 +39,32 @@ def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
         if node is None:
             return
         if kind == 'ASSET':
-            names = [name.strip() for name in result_names.split(",") if name.strip()]
-            resolved = [name for name in names if bpy.data.objects.get(name) is not None]
-            if not resolved and prior_hook is not None:
-                base = re.sub(r'[^a-zA-Z0-9_]', '_', job.label)
-                base = re.sub(r'_+', '_', base).strip('_') or "object"
-                renamed = f"{base}_high"
-                if bpy.data.objects.get(renamed) is not None:
-                    resolved = [renamed]
-            create_asset_result(scene, node, ", ".join(resolved or names))
+            # Name + normalize (placement + -Y orientation) the imported mesh
+            # exactly like the sidebar/chat paths, then bind the node's asset
+            # result to the FINAL object name (rename may add a .NNN suffix).
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_generated_model,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            from mixar.modules.moodboard.core.generation_enqueue import (
+                _sanitize_label,
+            )
+            target = mesh_name or _sanitize_label(job.label)
+            final = None
+            try:
+                final = rename_generated_model(result_names, target, front_zrot)
+                convert_imported_material_to_paint_layers(final or target)
+            except Exception as e:
+                logger.warning(
+                    "[NodeGraph] post-import processing failed: %s", e)
+            if final:
+                create_asset_result(scene, node, final)
+            else:
+                names = [n.strip() for n in result_names.split(",") if n.strip()]
+                resolved = [n for n in names if bpy.data.objects.get(n) is not None]
+                create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
             connect_image_results(scene, node, result_names)
         else:
@@ -187,11 +205,18 @@ def _run_model_3d(context, node, operator):
             payload["prompt"] = prompt
     payload = assemble_payload(service_key, params, payload, model)
 
+    from mixar.modules.moodboard.core.generation_enqueue import (
+        derive_model_name, model_front_zrot,
+    )
+
     route = _routing(service_key)
     feature_key = route.pop("feature_key")
-    prior_hook = route.pop("on_imported", None)
+    route.pop("on_imported", None)  # _routing never sets it; drop if it ever does
     ensure_graph_listener(feature_key)
-    hook = _result_hook(context.scene.name, node.node_id, 'ASSET', prior_hook)
+    mesh_name = derive_model_name(image, prompt or "")
+    hook = _result_hook(
+        context.scene.name, node.node_id, 'ASSET',
+        mesh_name, model_front_zrot(model))
     job = enqueue_generation(
         kind="glb",
         feature_key=feature_key,
@@ -432,13 +457,18 @@ _MESH_FEATURE_ROUTING = {
 }
 
 
-def _mesh_result_hook(scene_name: str, node_id: str):
+def _mesh_result_hook(scene_name: str, node_id: str,
+                      texture_finalize: bool = False, base_name: str = ""):
     """Embed the imported result mesh INTO the producing node.
 
     Like Generate 3D, the feature node's generate UI is replaced by the result
     thumbnail (``create_asset_result`` sets ``preview_object`` + ``result_names``),
     rather than spawning a separate asset node. The node stays a MESH source so
     it can be chained onward.
+
+    When *texture_finalize* is set (PBR Generation), the imported mesh is renamed
+    (pose kept) and its material/images cleaned up + packed map split, then the
+    node binds to the FINAL name.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -449,7 +479,28 @@ def _mesh_result_hook(scene_name: str, node_id: str):
             return
         from .node_graph import create_asset_result
 
-        create_asset_result(scene, node, object_names)
+        result = object_names
+        if texture_finalize:
+            try:
+                from mixar.modules.common.job_queue.core.model_io import (
+                    rename_imported_object,
+                )
+                from mixar.modules.moodboard.core.imported_pbr_layers import (
+                    convert_imported_material_to_paint_layers,
+                )
+                from mixar.modules.moodboard.core.generation_enqueue import (
+                    _sanitize_label,
+                )
+                target = base_name or _sanitize_label(job.label)
+                final = rename_imported_object(object_names, target)
+                convert_imported_material_to_paint_layers(final or target)
+                if final:
+                    result = final
+            except Exception as e:
+                logger.warning(
+                    "[TextureGen] node PBR post-import processing failed: %s", e)
+
+        create_asset_result(scene, node, result)
 
     return _hook
 
@@ -547,7 +598,11 @@ def _run_mesh_feature(context, node, operator):
     payload = assemble_payload(service_key, params, payload, model)
 
     ensure_graph_listener(routing['feature_key'])
-    hook = _mesh_result_hook(context.scene.name, node.node_id)
+    hook = _mesh_result_hook(
+        context.scene.name, node.node_id,
+        texture_finalize=(node.action_type == 'PBR_GEN'),
+        base_name=meshes[0].name,
+    )
     extra = {}
     if routing.get('import_options'):
         extra['import_options'] = routing['import_options']

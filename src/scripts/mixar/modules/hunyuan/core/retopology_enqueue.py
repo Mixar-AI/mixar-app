@@ -12,6 +12,8 @@ post-processed vs. unprocessed mesh detection and fallback cleanup.
 import base64 as _b64
 import os
 
+import bpy
+
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
@@ -52,28 +54,44 @@ def snapshot_shared_params(topo) -> dict:
 
 
 def _retopology_on_imported(job, object_names: str) -> None:
-    """Post-import for retopology: detect post-processed mesh or fallback."""
+    """Post-import for retopology: detect post-processed mesh or fallback.
+
+    Either branch also runs ``finalize_generated_material`` on the result so a
+    BAKED retopology (Tripo ``bake=True``) gets its messy provider material /
+    image names cleaned to the ``<mesh>_*`` convention and any packed
+    metallicRoughness split into separate images. A no-op for geometry-only
+    retopology that carries no textured material.
+    """
+    from mixar.modules.common.job_queue.core.model_io import (
+        post_import_rename_and_setup,
+    )
+    from mixar.modules.moodboard.core.imported_pbr_layers import (
+        convert_imported_material_to_paint_layers,
+    )
     names = [n.strip() for n in object_names.split(",") if n.strip()]
     has_low_suffix = any("_low" in n for n in names)
 
     if has_low_suffix:
         logger.info("[Retopology] Post-processed mesh detected, skipping client-side cleanup")
-        return
-
-    logger.warning("[Retopology] Unprocessed mesh detected, applying client-side fallback")
-    name = os.path.splitext(job.label)[0] if "." in job.label else job.label
-    for suffix in ("_high", "_High", "_HIGH"):
-        if name.endswith(suffix):
-            name = name[:-len(suffix)]
-            break
-    target = name + "_low"
-    try:
-        from mixar.modules.common.job_queue.core.model_io import (
-            post_import_rename_and_setup,
+        final = next(
+            (n for n in names
+             if (o := bpy.data.objects.get(n)) is not None and o.type == 'MESH'),
+            None,
         )
-        post_import_rename_and_setup(object_names, target, smart_uv=True)
-    except Exception as e:
-        logger.warning("[Retopology] post_import_rename_and_setup failed: %s", e)
+    else:
+        logger.warning("[Retopology] Unprocessed mesh detected, applying client-side fallback")
+        target = _strip_high_suffix(job.label) + "_low"
+        final = None
+        try:
+            final = post_import_rename_and_setup(object_names, target, smart_uv=True)
+        except Exception as e:
+            logger.warning("[Retopology] post_import_rename_and_setup failed: %s", e)
+
+    if final:
+        try:
+            convert_imported_material_to_paint_layers(final)
+        except Exception as e:
+            logger.warning("[Retopology] material finalize failed: %s", e)
 
 
 def _strip_high_suffix(name: str) -> str:
@@ -95,14 +113,27 @@ def _make_tripo_on_imported(bake: bool):
     """
 
     def _on_imported(job, object_names: str) -> None:
+        from mixar.modules.common.job_queue.core.model_io import (
+            post_import_rename_and_setup,
+        )
+        from mixar.modules.moodboard.core.imported_pbr_layers import (
+            convert_imported_material_to_paint_layers,
+        )
         target = _strip_high_suffix(job.label) + "_low"
+        final = None
         try:
-            from mixar.modules.common.job_queue.core.model_io import (
-                post_import_rename_and_setup,
-            )
-            post_import_rename_and_setup(object_names, target, smart_uv=not bake)
+            final = post_import_rename_and_setup(
+                object_names, target, smart_uv=not bake)
         except Exception as e:
             logger.warning("[Retopology/Tripo] post_import_rename_and_setup failed: %s", e)
+
+        # Baked Tripo output carries a textured material — rebuild it as a paint
+        # fill layer (maps into channel slots). No-op when bake=False (no textures).
+        if final:
+            try:
+                convert_imported_material_to_paint_layers(final)
+            except Exception as e:
+                logger.warning("[Retopology/Tripo] material finalize failed: %s", e)
 
     return _on_imported
 
