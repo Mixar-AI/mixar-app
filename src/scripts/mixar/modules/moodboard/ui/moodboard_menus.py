@@ -157,14 +157,24 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             except Exception:
                 action_node = None
             if action_node is not None:
-                rerun = action_node.state not in {'DRAFT', 'QUEUED', 'RUNNING'}
-                run = layout.operator(
-                    "mixie.moodboard_run_action_node",
-                    text="Edit & Run Again" if rerun else "Run Node",
-                    icon='GREASEPENCIL' if rerun else 'PLAY',
-                )
-                run.node_id = action_node.node_id
-                run.edit_before_run = rerun
+                if action_node.state in {'QUEUED', 'RUNNING'}:
+                    # Running work offers the one action that applies to it —
+                    # "Run Node" here could only report "already running".
+                    cancel = layout.operator(
+                        "mixie.moodboard_cancel_action_node",
+                        text="Cancel Generation",
+                        icon='CANCEL',
+                    )
+                    cancel.node_id = action_node.node_id
+                else:
+                    rerun = action_node.state != 'DRAFT'
+                    run = layout.operator(
+                        "mixie.moodboard_run_action_node",
+                        text="Edit & Run Again" if rerun else "Run Node",
+                        icon='GREASEPENCIL' if rerun else 'PLAY',
+                    )
+                    run.node_id = action_node.node_id
+                    run.edit_before_run = rerun
                 delete = layout.operator(
                     "mixie.moodboard_delete_action_node", text="Delete Node", icon='TRASH'
                 )

@@ -100,6 +100,45 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_OT_moodboard_cancel_action_node(Operator):
+    bl_idname = "mixie.moodboard_cancel_action_node"
+    bl_label = "Cancel Generation"
+    bl_description = "Cancel the generation this node is waiting on"
+    bl_options = {'REGISTER'}
+
+    # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
+    node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
+
+    def execute(self, context):
+        from mixar.modules.moodboard.core.node_graph import (
+            action_node_by_id,
+            active_action_node,
+        )
+        from mixar.modules.moodboard.core.node_job_bridge import cancel_node_job
+
+        node = (
+            action_node_by_id(context.scene, self.node_id)
+            if self.node_id else active_action_node(context.scene)
+        )
+        if node is None:
+            self.report({'WARNING'}, "Select an inference node")
+            return {'CANCELLED'}
+        if cancel_node_job(node.node_id):
+            self.report({'INFO'}, "Generation cancelled")
+        elif node.state in {'QUEUED', 'RUNNING'}:
+            # No live queue job backs this state (a stale .blend, or the queue
+            # was cleared by a file load) — reconcile the node so it stops
+            # claiming work that no longer exists.
+            node.state = 'CANCELLED'
+            self.report({'INFO'}, "This node was no longer generating")
+        else:
+            self.report({'WARNING'}, "This node is not generating")
+            return {'CANCELLED'}
+        if context.area:
+            context.area.tag_redraw()
+        return {'FINISHED'}
+
+
 class MIXIE_OT_moodboard_reset_node_params(Operator):
     bl_idname = "mixie.moodboard_reset_node_params"
     bl_label = "Reset Settings"
@@ -233,6 +272,7 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
 classes = (
     MIXIE_OT_moodboard_create_connected_action,
     MIXIE_OT_moodboard_run_action_node,
+    MIXIE_OT_moodboard_cancel_action_node,
     MIXIE_OT_moodboard_reset_node_params,
     MIXIE_OT_moodboard_delete_action_node,
     MIXIE_OT_moodboard_connect_nodes,

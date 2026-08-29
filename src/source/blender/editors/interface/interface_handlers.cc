@@ -4495,12 +4495,24 @@ static int ui_do_but_textedit(
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;
         bool is_moodboard_node_prompt = false;
+        bool is_moodboard_sidebar_prompt = false;
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
-          is_moodboard_node_prompt =
-              area && area->spacetype == SPACE_MIXIE && prop_id && STREQ(prop_id, "prompt") &&
-              RNA_struct_find_property(&but->rnapoin, "node_id");
+          const bool is_moodboard_prompt = area && area->spacetype == SPACE_MIXIE && prop_id &&
+                                           STREQ(prop_id, "prompt");
+          if (is_moodboard_prompt) {
+            if (RNA_struct_find_property(&but->rnapoin, "node_id")) {
+              is_moodboard_node_prompt = true;
+            }
+            else {
+              /* An N-panel tab prompt: the sidebar is the UI region. Popup
+               * dialogs (TEMP regions) keep the native Enter-confirms-dialog
+               * behavior, and the canvas node prompt is the branch above. */
+              is_moodboard_sidebar_prompt = data->region &&
+                                            data->region->regiontype == RGN_TYPE_UI;
+            }
+          }
         }
 
         if (is_moodboard_node_prompt &&
@@ -4526,6 +4538,34 @@ static int ui_do_but_textedit(
             WM_operator_name_call_ptr(
                 C, run_ot, blender::wm::OpCallContext::ExecDefault, &run_props, nullptr);
             WM_operator_properties_free(&run_props);
+          }
+          retval = WM_UI_HANDLER_BREAK;
+          break;
+        }
+
+        if (is_moodboard_sidebar_prompt &&
+            (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
+        {
+          /* Enter in an N-panel prompt runs that tab's Generate, exactly like
+           * Enter in a canvas node prompt runs the node. The owner
+           * PropertyGroup names the tab; the Python dispatcher
+           * (moodboard/core/prompt_submit.py) resolves the tab's
+           * mode-dependent generate operator so the routing lives beside the
+           * drawers it mirrors rather than being frozen into C++. Read the
+           * identifier before apply/exit while the button's RNA pointer is
+           * guaranteed live. */
+          const std::string owner_type = RNA_struct_identifier(but->rnapoin.type);
+          ui_apply_but(C, block, but, data, true);
+          button_activate_state(C, but, BUTTON_STATE_EXIT);
+          if (wmOperatorType *submit_ot = WM_operatortype_find(
+                  "MIXIE_OT_moodboard_prompt_generate", false))
+          {
+            PointerRNA submit_props;
+            WM_operator_properties_create_ptr(&submit_props, submit_ot);
+            RNA_string_set(&submit_props, "owner_type", owner_type.c_str());
+            WM_operator_name_call_ptr(
+                C, submit_ot, blender::wm::OpCallContext::ExecDefault, &submit_props, nullptr);
+            WM_operator_properties_free(&submit_props);
           }
           retval = WM_UI_HANDLER_BREAK;
           break;

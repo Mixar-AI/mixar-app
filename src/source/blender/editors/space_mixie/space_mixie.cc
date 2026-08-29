@@ -351,11 +351,17 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   params_dbl.modifier = 0;
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_select_image", &params_dbl);
 
-  /* Multi-select with Shift+LEFTMOUSE */
+  /* Multi-select with Shift+LEFTMOUSE. Graph cards get first refusal (same
+   * ordering as the plain click above): the graph operator toggles the card
+   * under the pointer and passes through everywhere else, so media extend
+   * keeps working. */
   KeyMapItem_Params params_extend{};
   params_extend.type = LEFTMOUSE;
   params_extend.value = KM_PRESS;
   params_extend.modifier = KM_SHIFT;
+  wmKeyMapItem *kmi_extend_graph = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_graph_select", &params_extend);
+  RNA_boolean_set(kmi_extend_graph->ptr, "extend", true);
   wmKeyMapItem *kmi_extend = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend);
   RNA_boolean_set(kmi_extend->ptr, "extend", true);
@@ -372,6 +378,9 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 #else
   params_extend_native.modifier = KM_CTRL;
 #endif
+  wmKeyMapItem *kmi_extend_native_graph = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_graph_select", &params_extend_native);
+  RNA_boolean_set(kmi_extend_native_graph->ptr, "extend", true);
   wmKeyMapItem *kmi_extend_native = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend_native);
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);

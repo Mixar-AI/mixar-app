@@ -20,6 +20,8 @@ set(SRC
   mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_groups.cc
   mixie_draw_moodboard_graph.cc
+  mixie_draw_moodboard_graph_sockets.cc
+  mixie_draw_moodboard_media_labels.cc
   mixie_moodboard_graph_geometry.cc
   mixie_draw_moodboard_node_ui.cc
   mixie_draw_moodboard_images.cc

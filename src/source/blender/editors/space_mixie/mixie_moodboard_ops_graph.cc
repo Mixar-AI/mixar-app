@@ -129,6 +129,7 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   if (!scene || !region) {
     return OPERATOR_PASS_THROUGH;
   }
+  const bool extend = RNA_boolean_get(op->ptr, "extend");
   float mouse_x, mouse_y;
   UI_view2d_region_to_view(&region->v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
@@ -138,7 +139,8 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   }
 
   MoodboardGraphSocketHit output{};
-  if (moodboard_find_output_socket_under_mouse(
+  if (!extend &&
+      moodboard_find_output_socket_under_mouse(
           &scene_ptr, &region->v2d, event->mval[0], event->mval[1], &output))
   {
     GraphMoveData *data = MEM_new<GraphMoveData>("MoodboardGraphLinkDrag");
@@ -163,6 +165,11 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
     index = moodboard_find_asset_node_under_mouse(&scene_ptr, mouse_x, mouse_y, &node_rect);
   }
   if (index < 0) {
+    if (extend) {
+      /* Shift-click on anything but a card belongs to the media extend
+       * operator bound behind this one. */
+      return OPERATOR_PASS_THROUGH;
+    }
     if (moodboard_find_image_under_mouse(
             &scene_ptr, mouse_x, mouse_y, nullptr, nullptr, nullptr, nullptr, nullptr) >= 0 ||
         moodboard_find_textbox_under_mouse(
@@ -174,6 +181,30 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
         &scene_ptr, &region->v2d, event->mval[0], event->mval[1], 9.0f);
     if (index < 0 || !select_graph_link(&scene_ptr, index)) {
       return OPERATOR_PASS_THROUGH;
+    }
+    ED_area_tag_redraw(CTX_wm_area(C));
+    return OPERATOR_FINISHED;
+  }
+
+  if (extend) {
+    /* Toggle this card in the existing selection (media stays selected too, so
+     * a mixed sweep can feed group actions), matching Shift-click on media. */
+    PointerRNA node;
+    if (!graph_node_pointer(&scene_ptr, kind, index, &node)) {
+      return OPERATOR_CANCELLED;
+    }
+    const bool now_selected = !RNA_boolean_get(&node, "selected");
+    RNA_boolean_set(&node, "selected", now_selected);
+    char node_id[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
+    char active_id[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(
+        &scene_ptr, "mixie_moodboard_active_node_id", active_id, sizeof(active_id));
+    if (now_selected) {
+      RNA_string_set(&scene_ptr, "mixie_moodboard_active_node_id", node_id);
+    }
+    else if (STREQ(active_id, node_id)) {
+      RNA_string_set(&scene_ptr, "mixie_moodboard_active_node_id", "");
     }
     ED_area_tag_redraw(CTX_wm_area(C));
     return OPERATOR_FINISHED;
@@ -224,6 +255,8 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   data->index = index;
   data->initial_mouse_x = mouse_x;
   data->initial_mouse_y = mouse_y;
+  data->initial_region_x = event->mval[0];
+  data->initial_region_y = event->mval[1];
   data->initial_x = RNA_float_get(&node, "position_x");
   data->initial_y = RNA_float_get(&node, "position_y");
   op->customdata = data;
@@ -293,6 +326,16 @@ static wmOperatorStatus graph_select_modal(bContext *C,
   }
 
   if (event->type == MOUSEMOVE) {
+    /* Same threshold every media drag applies: a click that wobbles a pixel is
+     * a click, not a request to nudge the card. */
+    const int dx = event->mval[0] - data->initial_region_x;
+    const int dy = event->mval[1] - data->initial_region_y;
+    data->moved = data->moved ||
+                  dx * dx + dy * dy >=
+                      int(MOODBOARD_DRAG_THRESHOLD_PX * MOODBOARD_DRAG_THRESHOLD_PX);
+    if (!data->moved) {
+      return OPERATOR_RUNNING_MODAL;
+    }
     float mouse_x, mouse_y;
     UI_view2d_region_to_view(
         &region->v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
@@ -408,6 +451,11 @@ void MIXIE_OT_moodboard_graph_select(wmOperatorType *ot)
   ot->cancel = blender::ed::mixie::graph_select_cancel;
   ot->poll = blender::ed::mixie::moodboard_poll;
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO | OPTYPE_BLOCKING;
+  RNA_def_boolean(ot->srna,
+                  "extend",
+                  false,
+                  "Extend",
+                  "Toggle this card in the existing selection instead of replacing it");
 }
 
 void MIXIE_OT_moodboard_context_menu(wmOperatorType *ot)
