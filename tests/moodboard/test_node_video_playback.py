@@ -46,14 +46,20 @@ def test_clicking_a_node_preview_toggles_playback_before_the_move_modal():
     ops = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph.cc")
 
     invoke = ops.split("static wmOperatorStatus graph_select_invoke(")[1]
-    toggle_at = invoke.find("moodboard_toggle_video_playback")
+    toggle_at = invoke.find("moodboard_graph_node_video_click")
     modal_at = invoke.find("WM_event_add_modal_handler(C, op);\n  return OPERATOR_RUNNING_MODAL")
     assert toggle_at != -1, "node previews never reach the playback toggle"
     # The node-move branch has no drag threshold, so it would slide the card on
     # the first mouse-move of the very click that started playback.
     assert modal_at == -1 or toggle_at < modal_at
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in invoke
-    assert "KM_DBL_CLICK" in invoke
+
+    # The gesture itself lives in its own unit (500-line rule); the play radius
+    # is a fixed PIXEL size, so it must convert through the view scale.
+    video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in video
+    assert "UI_view2d_scale_get_x" in video
+    assert "double_click" in video
+    assert "moodboard_toggle_video_playback" in video
 
 
 def test_asset_double_click_still_selects_objects_rather_than_playing():
@@ -63,7 +69,7 @@ def test_asset_double_click_still_selects_objects_rather_than_playing():
 
     invoke = ops.split("static wmOperatorStatus graph_select_invoke(")[1]
     asset_branch = invoke.find("MIXIE_OT_moodboard_select_asset_objects")
-    play_branch = invoke.find("moodboard_toggle_video_playback")
+    play_branch = invoke.find("moodboard_graph_node_video_click")
     assert asset_branch != -1 and play_branch != -1
     assert "if (kind == GRAPH_ASSET)" in invoke
     assert asset_branch < play_branch

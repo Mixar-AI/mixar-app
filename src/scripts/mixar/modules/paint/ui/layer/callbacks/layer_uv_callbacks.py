@@ -282,12 +282,6 @@ def update_override_color_value(self, context):
     ch = self
     root_tree = self.id_data
 
-    # Invalidate cached layer thumbnails so color/value edits show up
-    # (root_tree is the material node tree; its name matches the
-    # material_name key used when the list draws thumbnails)
-    from ...utils.thumbnail_generator import invalidate_layer_thumbnail
-    invalidate_layer_thumbnail(layer.name, root_tree.name)
-
     tree = get_tree(layer)
     if not tree:
         return

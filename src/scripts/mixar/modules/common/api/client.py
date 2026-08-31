@@ -326,13 +326,9 @@ class HTTPClient:
 
             self._log("debug", f"Response: {response.status_code}")
 
-            # Handle 401 with automatic token refresh — on ANY 401, not just
-            # raise_for_status=True callers: raise_for_status=False call
-            # sites (asset_search metered endpoints etc.) need an expired
-            # token refreshed and the request retried too, or they fail raw
-            # 401 until some other module happens to refresh it.
+            # Handle 401 with automatic token refresh
             # Skip refresh if _skip_token_refresh is True to prevent infinite recursion
-            if response.status_code == 401 and not _skip_token_refresh:
+            if response.status_code == 401 and raise_for_status and not _skip_token_refresh:
                 self._log("debug", "Got 401, attempting token refresh")
                 refresh_result = refresh_access_token()
 
@@ -357,9 +353,10 @@ class HTTPClient:
                     )
                     self._log("debug", f"Retry response: {response.status_code}")
 
-            # If still not ok after the refresh attempt, raise for
-            # raise_for_status callers (non-401 errors land here too)
-            if raise_for_status and not response.ok:
+                # If still not ok after refresh attempt, raise the error
+                if not response.ok:
+                    raise self._map_exception(response)
+            elif raise_for_status and not response.ok:
                 raise self._map_exception(response)
 
             # Parse response

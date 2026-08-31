@@ -3,9 +3,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 keyring==24.2.0
-# OS certificate trust store for every bundled HTTP/WebSocket client
-# (corporate TLS inspection). See docs/enterprise-network.md.
-truststore>=0.10.0
 websocket-client>=1.9.0
 httpx>=0.27.0
 mistune>=3.0.0

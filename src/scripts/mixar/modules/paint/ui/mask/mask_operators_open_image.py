@@ -285,30 +285,28 @@ class MOpenImageAsMask(bpy.types.Operator, ImportHelper, OpenImage):
             directory = os.path.dirname(self.file_browser_filepath)
 
         ori_ui_type = bpy.context.area.type
+        bpy.context.area.type = "IMAGE_EDITOR"
         images = []
         skipped_paths = []
-        try:
-            bpy.context.area.type = "IMAGE_EDITOR"
-            for path in import_list:
-                # Validate path to prevent directory traversal attacks
-                safe_path = os.path.normpath(os.path.join(directory, path))
-                normalized_directory = os.path.normpath(directory)
-                if not safe_path.startswith(normalized_directory + os.sep) and safe_path != normalized_directory:
-                    logger.warning("Skipping potentially unsafe path: %s", path)
-                    skipped_paths.append(path)
-                    continue
+        for path in import_list:
+            # Validate path to prevent directory traversal attacks
+            safe_path = os.path.normpath(os.path.join(directory, path))
+            normalized_directory = os.path.normpath(directory)
+            if not safe_path.startswith(normalized_directory + os.sep) and safe_path != normalized_directory:
+                logger.warning("Skipping potentially unsafe path: %s", path)
+                skipped_paths.append(path)
+                continue
 
-                bpy.ops.image.open(
-                    filepath=safe_path,
-                    directory=directory,
-                    relative_path=self.relative,
-                    use_udim_detecting=self.use_udim_detecting,
-                )
-                image = bpy.context.space_data.image
-                if image not in images:
-                    images.append(image)
-        finally:
-            bpy.context.area.type = ori_ui_type
+            bpy.ops.image.open(
+                filepath=safe_path,
+                directory=directory,
+                relative_path=self.relative,
+                use_udim_detecting=self.use_udim_detecting,
+            )
+            image = bpy.context.space_data.image
+            if image not in images:
+                images.append(image)
+        bpy.context.area.type = ori_ui_type
 
         # Report skipped paths to the user
         if skipped_paths:
@@ -350,13 +348,11 @@ class MOpenImageAsMask(bpy.types.Operator, ImportHelper, OpenImage):
         reconnect_mp_nodes(layer.id_data)
         rearrange_mp_nodes(layer.id_data)
 
-        # Update UI (only when a mask was actually added, `mask` is otherwise
-        # unbound when all paths were skipped)
-        if images:
-            wm.mpui.need_update = True
-            wm.mpui.layer_ui.expand_masks = True
-            mask.expand_content = True
-            mask.expand_vector = True
+        # Update UI
+        wm.mpui.need_update = True
+        wm.mpui.layer_ui.expand_masks = True
+        mask.expand_content = True
+        mask.expand_vector = True
 
         logger.info(
             "Image(s) opened as mask(s) in %s ms!",

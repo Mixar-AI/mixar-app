@@ -6,13 +6,6 @@ import ctypes
 import os
 import sys
 
-# Effective-backend fallback state. Selecting 'CPP' without a loadable native
-# library used to silently run the slow Python path; the availability probe
-# below runs once per session and the fallback is logged once.
-_tdcore_available = None
-_cpp_fallback_warned = False
-
-
 class TDCoreWrapper:
 	def __init__(self):
 		self.lib = self._load_library()
@@ -27,8 +20,8 @@ class TDCoreWrapper:
 			lib_name = "tdcore.dll"
 		elif sys.platform.startswith("linux"):
 			lib_name = "libtdcore.so"
-		elif sys.platform.startswith("darwin"):  # macOS
-			lib_name = "libtdcore.dylib"
+		# elif sys.platform.startswith("darwin"):  # macOS
+		# 	lib_name = "libtdcore.dylib"
 		else:
 			return None
 
@@ -96,34 +89,3 @@ class TDCoreWrapper:
 		finally:
 			del self.lib
 			self.lib = None
-
-
-def tdcore_available():
-	"""Probe once per session whether the native library can be loaded."""
-	global _tdcore_available
-	if _tdcore_available is None:
-		probe = TDCoreWrapper()
-		_tdcore_available = probe.lib is not None
-		del probe
-	return _tdcore_available
-
-
-def resolve_calculation_backend(preferred_backend):
-	"""Return the effective calculation backend.
-
-	'CPP' requires the native tdcore library; when it cannot be loaded on this
-	platform (e.g. macOS without libtdcore.dylib), fall back to the Python
-	backend and log a one-time warning instead of silently running the slow
-	path while the preference still says C++ (Fast).
-	"""
-	global _cpp_fallback_warned
-	if preferred_backend != 'CPP':
-		return preferred_backend
-
-	if not tdcore_available():
-		if not _cpp_fallback_warned:
-			_cpp_fallback_warned = True
-			print("[WARNING] Texel Density: native C++ backend (tdcore) is not available on this platform, using the Python backend instead")
-		return 'PY'
-
-	return 'CPP'

@@ -21,7 +21,6 @@ logger = get_logger(__name__)
 from ...utils.statics import blend_type_items
 from ...core.io.arrangements.layer_arrangements import rearrange_mp_nodes
 from ...core.io.connections.layer_connections import reconnect_mp_nodes
-from ...core.io.utils.bsdf_connections import commit_mp_material
 from ...core.node.node_utils import get_active_mpaint_node
 from ...utils.blender_commons import (
     get_active_material,
@@ -401,13 +400,6 @@ class LAYERS_OT_AddFillLayer(Operator):
 
         # Request UI refresh
         request_ui_refresh()
-
-        # Flush the depsgraph so a scripted EXEC_DEFAULT add (agent path, no UI
-        # event loop) re-evaluates and renders instead of serving a stale shader.
-        # relink=False: after create_material the group already drives the BSDF, so
-        # repairing the link here would only ever fire when it was deliberately
-        # rewired (e.g. a bake/preview) — the (re)build paths own the relink.
-        commit_mp_material(node, mat, context, relink=False)
 
         # Performance logging
         logger.info(f'Layer {layer.name} created in {(time.time() - T) * 1000:.2f} ms!')

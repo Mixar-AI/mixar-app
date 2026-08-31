@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
     GRAPH_WIDGET_MAXLEN,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _clamp(value, limit: int) -> str:
@@ -595,17 +598,39 @@ def sync_all_node_schemas() -> None:
 
     for scene in bpy.data.scenes:
         for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
-            capability = _capability_for_action(node.action_type)
-            services = services_for_action(
-                node.action_type,
-                get_services(capability, surface="moodboard"),
-            )
-            service_keys = [service.get("key") for service in services if service.get("key")]
-            service_key = node_service_key(node)
-            if service_keys and service_key not in service_keys:
-                service_key = service_keys[0]
-            model_slug = node_model_slug(node)
-            if service_key and get_model(service_key, model_slug) is None:
-                model_slug = get_default_model_slug(service_key) or ""
-            set_node_selection(node, service_key, model_slug)
-            sync_node_schema(scene, node)
+            # Per-node isolation: one node whose service/model no longer
+            # resolves must not strand every node after it — including every
+            # node in every later scene — on the previous catalog. The failure
+            # is named rather than swallowed, because a stale dropdown looks
+            # exactly like a node nobody has touched.
+            try:
+                _sync_one_node_schema(
+                    scene, node, get_services, get_model, get_default_model_slug
+                )
+            except Exception as exc:
+                logger.error(
+                    "Catalog refresh failed for moodboard node %s (%s): %s",
+                    getattr(node, "node_id", "?"),
+                    getattr(node, "action_type", "?"),
+                    exc,
+                )
+
+
+def _sync_one_node_schema(
+    scene, node, get_services, get_model, get_default_model_slug
+) -> None:
+    """Re-resolve one node's service/model against the current catalog."""
+    capability = _capability_for_action(node.action_type)
+    services = services_for_action(
+        node.action_type,
+        get_services(capability, surface="moodboard"),
+    )
+    service_keys = [service.get("key") for service in services if service.get("key")]
+    service_key = node_service_key(node)
+    if service_keys and service_key not in service_keys:
+        service_key = service_keys[0]
+    model_slug = node_model_slug(node)
+    if service_key and get_model(service_key, model_slug) is None:
+        model_slug = get_default_model_slug(service_key) or ""
+    set_node_selection(node, service_key, model_slug)
+    sync_node_schema(scene, node)

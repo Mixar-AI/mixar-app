@@ -18,6 +18,7 @@ from mixar.modules.common.analytics.export_events import capture_export
 from ...core.media_utils import (
     describe_moodboard_media,
     is_video_item,
+    node_exportable_media,
     selected_exportable_media,
 )
 
@@ -33,10 +34,15 @@ def _capture_moodboard_export(context, success, image_count, filepath=None):
         pass
 
 
-def _selected_media(scene):
-    # Includes results owned by a selected inference node: those are never
-    # `selected` themselves, so right-clicking a completed node and choosing
-    # Export used to report "No media selected to export".
+def _media_to_export(scene, node_id=""):
+    # `node_id` is set by the Export button on a node card: that button acts on
+    # the card it sits on, so it must not widen to whatever else happens to be
+    # selected. Without it, the selection is the source — which still includes
+    # results owned by a selected inference node, since those are never
+    # `selected` themselves and Export would otherwise report "nothing
+    # selected" for a completed node.
+    if node_id:
+        return node_exportable_media(scene, node_id)
     return selected_exportable_media(scene)
 
 
@@ -97,9 +103,15 @@ class MIXIE_OT_moodboard_export_images(Operator):
         options={'HIDDEN'},
     )
 
+    # Scope the export to one node's own result. SKIP_SAVE: this is a REGISTER
+    # operator, so a remembered id would silently keep exporting that node's
+    # result after the user invoked Export from the menu with a different
+    # selection.
+    node_id: StringProperty(default="", options={'SKIP_SAVE'})
+
     def invoke(self, context, event):
         scene = context.scene
-        selected_media = _selected_media(scene)
+        selected_media = _media_to_export(scene, self.node_id)
 
         if not selected_media:
             self.report({'WARNING'}, "No media selected to export")
@@ -114,7 +126,7 @@ class MIXIE_OT_moodboard_export_images(Operator):
         import os
 
         scene = context.scene
-        selected_media = _selected_media(scene)
+        selected_media = _media_to_export(scene, self.node_id)
 
         if not selected_media:
             self.report({'WARNING'}, "No media selected to export")

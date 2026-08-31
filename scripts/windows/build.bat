@@ -385,11 +385,6 @@ if !ERRORLEVEL! neq 0 (
     echo Error: websocket-client installed but not importable — site-packages path mismatch
     exit /b 1
 )
-"!PYTHON_BIN!" -c "import truststore; print('  truststore:', truststore.__version__)"
-if !ERRORLEVEL! neq 0 (
-    echo Error: truststore installed but not importable — enterprise TLS trust would silently fall back to certifi
-    exit /b 1
-)
 echo Successfully installed and verified Python packages
 
 echo.

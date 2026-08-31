@@ -14,8 +14,6 @@ set(INC_SYS
 )
 
 set(SRC
-  mixar_file_drop.cc
-  mixar_file_drop.hh
   spacetypes.cc
 )
 

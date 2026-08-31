@@ -21,12 +21,49 @@ from .transform_ops import (
 )
 
 
+# Everything a grab can move, by the kind recorded in `_initial_positions`.
+# Nodes are in here because a duplicated node has to be placeable with the
+# mouse exactly like a duplicated image -- and because pressing G with a node
+# selected should do the obvious thing.
+_GRAB_COLLECTIONS = {
+    'IMAGE': "mixie_moodboard_images",
+    'TEXTBOX': "mixie_moodboard_textboxes",
+    'ACTION_NODE': "mixie_moodboard_action_nodes",
+    'ASSET_NODE': "mixie_moodboard_asset_nodes",
+}
+
+
+def _grab_item(scene, item_type, index):
+    """Resolve one recorded (kind, index) back to its item, or None.
+
+    The collection can shrink under a running modal (an undo, a delete from
+    another window), so every lookup is bounds-checked rather than trusted.
+    """
+    collection = getattr(scene, _GRAB_COLLECTIONS.get(item_type, ""), None)
+    if collection is None or index >= len(collection):
+        return None
+    return collection[index]
+
+
+def _selected_graph_nodes(scene):
+    """(kind, index, x, y) for each selected inference and 3D asset node."""
+    recorded = []
+    for item_type in ('ACTION_NODE', 'ASSET_NODE'):
+        collection = getattr(scene, _GRAB_COLLECTIONS[item_type], ())
+        for index, node in enumerate(collection):
+            if node.selected:
+                recorded.append(
+                    (item_type, index, node.position_x, node.position_y)
+                )
+    return recorded
+
+
 class MIXIE_OT_moodboard_grab(Operator):
     """Move selected moodboard items interactively"""
 
     bl_idname = "mixie.moodboard_grab"
     bl_label = "Grab/Move"
-    bl_description = "Move selected images and text boxes (G)"
+    bl_description = "Move selected images, text boxes and nodes (G)"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Store initial View2D mouse position and item positions
@@ -55,16 +92,11 @@ class MIXIE_OT_moodboard_grab(Operator):
 
             # Update positions of all selected items (with bounds checking)
             for item_type, index, init_x, init_y in self._initial_positions:
-                if item_type == 'IMAGE':
-                    if index < len(scene.mixie_moodboard_images):
-                        img = scene.mixie_moodboard_images[index]
-                        img.position_x = init_x + delta_x
-                        img.position_y = init_y + delta_y
-                elif item_type == 'TEXTBOX':
-                    if index < len(scene.mixie_moodboard_textboxes):
-                        tb = scene.mixie_moodboard_textboxes[index]
-                        tb.position_x = init_x + delta_x
-                        tb.position_y = init_y + delta_y
+                item = _grab_item(scene, item_type, index)
+                if item is None:
+                    continue
+                item.position_x = init_x + delta_x
+                item.position_y = init_y + delta_y
 
             tag_mixie_redraw(context)
             return {'RUNNING_MODAL'}
@@ -79,16 +111,11 @@ class MIXIE_OT_moodboard_grab(Operator):
             # Cancel - restore original positions
             scene = context.scene
             for item_type, index, init_x, init_y in self._initial_positions:
-                if item_type == 'IMAGE':
-                    if index < len(scene.mixie_moodboard_images):
-                        img = scene.mixie_moodboard_images[index]
-                        img.position_x = init_x
-                        img.position_y = init_y
-                elif item_type == 'TEXTBOX':
-                    if index < len(scene.mixie_moodboard_textboxes):
-                        tb = scene.mixie_moodboard_textboxes[index]
-                        tb.position_x = init_x
-                        tb.position_y = init_y
+                item = _grab_item(scene, item_type, index)
+                if item is None:
+                    continue
+                item.position_x = init_x
+                item.position_y = init_y
 
             tag_mixie_redraw(context)
             self.report({'INFO'}, "Move cancelled")
@@ -121,6 +148,8 @@ class MIXIE_OT_moodboard_grab(Operator):
                 self._initial_positions.append(
                     ('TEXTBOX', i, tb.position_x, tb.position_y)
                 )
+
+        self._initial_positions.extend(_selected_graph_nodes(scene))
 
         if not self._initial_positions:
             self.report({'WARNING'}, "No items selected to move")

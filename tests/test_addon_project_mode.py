@@ -337,19 +337,12 @@ def test_handshake_advertises_project_capability():
         def settimeout(self, _timeout):
             pass
 
-        def recv_data(self, control_frame=False):
-            from websocket import ABNF
-
-            return (
-                ABNF.OPCODE_TEXT,
-                json.dumps({"jsonrpc": "2.0", "result": {"success": True}}).encode(),
-            )
-
-    from mixar.modules.space_mixie_chat.core.jsonrpc_frames import HANDSHAKE_OK
+        def recv(self):
+            return json.dumps({"jsonrpc": "2.0", "result": {"success": True}})
 
     client = JSONRPCWebSocketClient("http://localhost", "instance-1")
     client._ws = FakeSocket()
-    assert client._perform_handshake() == HANDSHAKE_OK
+    assert client._perform_handshake() is True
     assert "addon_project_v1" in client._ws.sent[0]["params"]["capabilities"]
 
 

@@ -64,6 +64,10 @@ def test_graph_strings_declare_a_maxlen_smaller_than_their_cpp_buffer():
         ("GRAPH_WIDGET_MAXLEN", "MIXIE_GRAPH_WIDGET_BUF"),
         ("GRAPH_OBJECT_NAMES_MAXLEN", "MIXIE_GRAPH_NAMES_BUF"),
         ("GRAPH_ERROR_MAXLEN", "MIXIE_GRAPH_ERROR_BUF"),
+        # Read into a stack buffer when composing a parameter's tooltip.
+        ("GRAPH_DESCRIPTION_MAXLEN", "MIXIE_GRAPH_DESCRIPTION_BUF"),
+        # Read into a stack buffer by the card header's state side.
+        ("GRAPH_PROGRESS_MAXLEN", "MIXIE_GRAPH_PROGRESS_BUF"),
     )
     for python_name, c_name in pairs:
         maxlen = _int_constant(constants, python_name)
@@ -181,6 +185,74 @@ def test_media_lookup_never_writes_during_draw():
     # The migration still has to run somewhere outside draw.
     chat_sync = _read(MOODBOARD / "core/chat_sync.py")
     assert "ensure_media_node_ids" in chat_sync
+
+
+def test_catalog_swap_refreshes_nodes_independently_of_the_npanel_engine():
+    """The sidebar engine and the moodboard nodes are two independent consumers
+    of the catalog. Sharing one try block meant anything raising in the engine
+    branch — including the blanket `except ImportError` that exists for "the
+    params module is not loaded yet" — skipped the node sweep silently, so the
+    N-panel picked up a catalog change while every node kept its old dropdowns
+    and nothing was logged."""
+    consumers = _read(
+        ROOT / "src/scripts/mixar/bootstrap/generation_catalog/consumers.py"
+    )
+
+    engine_at = consumers.index("rebuild_from_catalog()")
+    nodes_at = consumers.index("sync_all_node_schemas()")
+    # A try of its own, opened AFTER the engine branch has been closed off.
+    between = consumers[engine_at:nodes_at]
+    assert between.count("except") >= 1, "node sweep shares the engine's try block"
+    assert "try:" in between
+    # And its own log line, so a node-side failure is not reported as an
+    # engine failure (or not at all).
+    assert "Moodboard node catalog refresh failed" in consumers
+    # Every consumer is called, and none can stop the next one.
+    fanout = consumers.split("def notify_catalog_swapped()")[1]
+    for call in ("_rebuild_parameter_engine()", "_refresh_moodboard_nodes()",
+                 "_refresh_sidebar_tab_labels()"):
+        assert call in fanout
+
+
+def test_one_unresolvable_node_cannot_strand_the_rest_of_the_board():
+    """The sweep walks every node of every scene. Without per-node isolation a
+    single node whose service/model no longer resolves aborts the loop, leaving
+    every later node — and every later scene — on the previous catalog."""
+    schema = _read(MOODBOARD / "core/node_schema.py")
+    sweep = schema.split("def sync_all_node_schemas()")[1].split(
+        "def _sync_one_node_schema"
+    )[0]
+    assert "try:" in sweep and "except Exception" in sweep
+    assert "_sync_one_node_schema(" in sweep
+    # Named, not swallowed: a stale dropdown is indistinguishable from a node
+    # nobody has touched, so the node id has to reach the log.
+    assert 'getattr(node, "node_id"' in sweep
+
+
+def test_every_extend_select_property_skips_save():
+    """`extend` must never persist between invocations.
+
+    These are REGISTER operators, so `WM_operator_last_properties_init` refills
+    any non-PROP_SKIP_SAVE property the invocation did not set from the previous
+    run -- and the plain-click keymap items set nothing. Without the flag, ONE
+    Shift or Cmd click remembered `extend = true`, so every later plain click
+    took the toggle branch, which returns FINISHED and installs no modal: cards
+    could no longer be dragged at all, a press only selected or deselected them.
+    Media select had the flag and kept working, which is exactly how the two
+    came to behave differently.
+    """
+    # Anchor on the DEFINITION (`"extend", false, ...`), not on the reads
+    # (`RNA_boolean_get(op->ptr, "extend")`), which have no trailing comma.
+    definition = '"extend",'
+    checked = 0
+    for name in ("mixie_moodboard_ops_graph.cc", "mixie_moodboard_ops_select.cc"):
+        source = _read(SPACE_MIXIE / name)
+        for tail in source.split(definition)[1:]:
+            checked += 1
+            assert "PROP_SKIP_SAVE" in tail[:400], (
+                f"{name}: extend is defined without PROP_SKIP_SAVE"
+            )
+    assert checked == 2, f"expected both extend properties, found {checked}"
 
 
 def test_node_service_and_model_resolve_from_saved_slugs():

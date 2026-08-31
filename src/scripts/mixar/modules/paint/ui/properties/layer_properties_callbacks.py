@@ -63,15 +63,15 @@ def _get_mixar_group_node(context):
     if not mat.use_nodes:
         return (None, None)
 
-    # Find the Mixar Layers group node (same detection as _get_backend_layer:
-    # the legacy "mixar_mp" marker is never set anywhere)
+    # Find the Mixar Layers group node
     for node in mat.node_tree.nodes:
         if (
             node.type == "GROUP"
             and node.node_tree
-            and hasattr(node.node_tree, "mp")
+            and hasattr(node.node_tree, "mixar_mp")
         ):
-            return (node, mat)
+            if node.node_tree.mixar_mp.is_mixar_node:
+                return (node, mat)
 
     return (None, None)
 
@@ -345,23 +345,8 @@ def update_channel_blend_type(channel, context):
             return
 
     layer, _ = get_parent_layer_from_channel(channel, context)
-    if not layer or layer.updating_property:
+    if layer and layer.updating_property:
         return
 
-    backend_layer, _ = _get_backend_layer(context, layer)
-    if not backend_layer:
-        return
-
-    # UI channels mirror the backend layer.channels order (see
-    # sync_channels_from_backend), so map the UI channel to its backend index
-    ch_idx = next(
-        (i for i, ch in enumerate(layer.channels) if ch == channel), -1
-    )
-    if ch_idx < 0 or ch_idx >= len(backend_layer.channels):
-        return
-
-    # Sync to the backend channel: assigning blend_type triggers its update
-    # callback, which runs the same reconnect path as other blend-type edits
-    backend_ch = backend_layer.channels[ch_idx]
-    if backend_ch.blend_type != channel.blend_type:
-        backend_ch.blend_type = channel.blend_type
+    # TODO: Sync to backend YLayerChannel.blend_type
+    # This may require reconnecting blend nodes

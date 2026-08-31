@@ -40,11 +40,9 @@ bool point_inside(const rctf &rect, const wmEvent *event)
 
 int beat_at_event(const DirectorTimelineRuntime &runtime, const wmEvent *event)
 {
-  /* Last-drawn handle is on top, so search newest-first. Forward order
-   * let an earlier neighbour steal the last keyframe when handles overlap. */
-  for (int i = int(runtime.beat_hits.size()) - 1; i >= 0; --i) {
-    if (point_inside(runtime.beat_hits[i].bounds, event)) {
-      return runtime.beat_hits[i].index;
+  for (const DirectorTimelineBeatHit &hit : runtime.beat_hits) {
+    if (point_inside(hit.bounds, event)) {
+      return hit.index;
     }
   }
   return -1;
@@ -120,13 +118,7 @@ bool begin_beat_drag(bContext *C,
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
   WM_operator_properties_free(&op_ptr);
-  if (result & OPERATOR_RUNNING_MODAL) {
-    /* Same as strip drag: pin the view so retiming the first/last beat
-     * cannot re-fit the span under the cursor. */
-    runtime->view_user_modified = true;
-    return true;
-  }
-  return false;
+  return (result & OPERATOR_RUNNING_MODAL) != 0;
 }
 
 bool begin_scrub(bContext *C,

@@ -157,13 +157,6 @@ class MeshSegmentJob(Job):
             on_error(f"Failed to apply labels: {e}")
             return True
 
-        # count == 0 means no vertex groups were created — in practice a
-        # UV-less mesh (labels key off UV islands). Fail the job instead of
-        # "completing" it, so the user isn't charged for an empty apply.
-        if count == 0:
-            on_error("Mesh has no UV map — segmentation results need UVs to apply")
-            return True
-
         # Update scene properties
         try:
             scene = bpy.context.scene
@@ -185,15 +178,6 @@ class MeshSegmentJob(Job):
 # ---------------------------------------------------------------------------
 
 
-def _reject(message: str) -> None:
-    """Log + surface an enqueue rejection on the scene's error property."""
-    logger.error("[MeshSegment] %s", message)
-    try:
-        bpy.context.scene.mixie_mesh_segment_error = message
-    except Exception:  # noqa: BLE001 — no scene (headless) — logging is enough
-        pass
-
-
 def enqueue_mesh_segment_job(
     *,
     mesh_object_name: str,
@@ -203,17 +187,6 @@ def enqueue_mesh_segment_job(
     model: str = "mesh_segment_v1",
 ) -> Optional[MeshSegmentJob]:
     """Build a ``MeshSegmentJob`` and submit it to the queue."""
-    # Fail fast BEFORE the user pays for a job whose results cannot apply:
-    # labels land as vertex groups keyed off UV islands, so a UV-less mesh
-    # would spend a job and then apply nothing (see MeshSegmentJob.handle_result).
-    mesh_obj = bpy.data.objects.get(mesh_object_name)
-    if mesh_obj is None or mesh_obj.type != 'MESH' or mesh_obj.data is None:
-        _reject(f"Mesh object '{mesh_object_name}' not found")
-        return None
-    if not mesh_obj.data.uv_layers:
-        _reject("Mesh has no UV map — segmentation results need UVs to apply")
-        return None
-
     try:
         with open(mesh_file_path, "rb") as f:
             mesh_bytes = f.read()

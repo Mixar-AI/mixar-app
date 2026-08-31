@@ -67,6 +67,16 @@ class MIXIE_OT_moodboard_copy_image(Operator):
             self.report({'WARNING'}, "Nothing selected to copy")
             return {'CANCELLED'}
 
+        # Last copy wins: the node clipboard gates the node paste operator's
+        # poll, so leaving a stale node set on it would make Ctrl+V paste nodes
+        # after the user copied an image.
+        try:
+            from mixar.modules.moodboard.core import node_clipboard
+
+            node_clipboard.clear()
+        except Exception:
+            pass
+
         # Secondary, best-effort: put the first still image on the system
         # clipboard. Movies remain lossless in the in-app clipboard; exporting
         # them to an OS image clipboard would silently reduce them to one frame.

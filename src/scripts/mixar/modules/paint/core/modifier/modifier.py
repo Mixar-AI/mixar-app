@@ -20,13 +20,13 @@ from ..element.update_fcurves import shift_modifier_fcurves_down
 from ..subtree.get_subtree import get_mod_tree
 
 # Import from refactored modules for re-export
-from .modifier_channel import get_modifier_channel_type
 from .modifier_tree import (
     check_modifiers_trees,
     disable_modifiers_tree,
     enable_modifiers_tree,
 )
 from .modifier_updates import (
+    get_modifier_channel_type,
     update_affect_alpha,
     update_affect_color,
     update_invert_channel,

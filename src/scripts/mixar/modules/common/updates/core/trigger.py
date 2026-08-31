@@ -75,13 +75,7 @@ def trigger_update_check(interactive: bool = False) -> bool:
         return False
 
     _interactive_check["active"] = interactive
-    try:
-        bpy.app.timers.register(_do_update_check, first_interval=0.0)
-    except Exception:
-        # Registration failed — the timer callback (and with it the
-        # success/error callbacks that consume the flag) will never run.
-        _interactive_check["active"] = False
-        raise
+    bpy.app.timers.register(_do_update_check, first_interval=0.0)
     logger.info("Update check scheduled on main thread (interactive=%s)", interactive)
     return True
 
@@ -143,10 +137,6 @@ def _do_update_check() -> None:
 
     except Exception as e:
         logger.error("Update check init failed: %s", e, exc_info=True)
-        # The check never dispatched, so the success/error callbacks that
-        # consume the interactive flag will never run — clear it here or it
-        # sticks until some later check overwrites it.
-        _interactive_check["active"] = False
 
     return None
 

@@ -56,19 +56,31 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
     assert "BKE_curve_forward_diff_bezier" in geometry
     assert "mixie_draw_moodboard_graph_controls" in renderer
-    assert '"prompt",' in controls
+    # The prompt / Generate / Cancel a node draws INSIDE its tile live in their
+    # own unit; the settings panel beside the card stays in `controls`.
+    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
+    assert "mixie_draw_moodboard_node_tile_controls.cc" in cmake
+    assert '"prompt",' in tile
     # Mode/Model draw the Python-cached human labels (dynamic enums can't
     # self-display); the static word is only the empty-label fallback.
     assert 'model_label[0] ? model_label : "Model"' in controls
     assert 'mode_label[0] ? mode_label : "Mode"' in controls
-    assert "BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in controls
-    # The draft hint draws exactly when the floating controls do not, so both
-    # sides must share the same on-screen size thresholds.
-    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in renderer
+    # The control panel is CANVAS content: laid out from the node's stored
+    # canvas rect, not its projected screen rect, so it scales and pans with the
+    # zoom. A regression to screen-space layout would reintroduce the panel that
+    # dwarfed a zoomed-out card (and the size gate that hid it entirely).
+    assert "int(node_rect.xmin) - int(12 * ui_scale) - panel_width" in controls
+    assert "node_region.xmin -" not in controls
+    # The draft hint draws exactly when the panel does not, so both sides share
+    # one gate — selection alone, now that the panel can never be too small to
+    # draw.
+    assert "const bool controls_visible = selected;" in renderer
+    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX" not in renderer
+    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX" not in controls
     assert "draw_draft_hint" in renderer
     assert "draw_state_hint" in renderer
     assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
-    assert "generation_running" in controls
+    assert "generation_running" in tile
     assert 'RNA_boolean_get(&iter.ptr, "visible")' in controls
     # Numeric parameters are plain manual number fields: the catalog's wide
     # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
@@ -76,14 +88,26 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "button_type = ButType::Num;" in controls
     assert 'RNA_struct_find_property(node, "parameters")' in controls
     assert "uiDefButO" in controls
-    assert '"MIXIE_OT_moodboard_run_action_node"' in controls
+    assert '"MIXIE_OT_moodboard_run_action_node"' in tile
+    # The node-control block is begun INSIDE the ambient View2D ortho so
+    # UI_block_begin captures the zoomed projection (widgets scale, and clicks
+    # hit them because the same matrix is inverted for hit-testing). Pixel space
+    # is restored only afterwards, for the screen-space pass — the 3D preview
+    # icon blits and the media label bar.
+    assert controls.index("UI_block_begin(") < controls.index(
+        "UI_view2d_view_restore(C)"
+    )
     assert controls.index("UI_view2d_view_restore(C)") < controls.index(
-        "UI_block_begin("
+        "moodboard_media_labels"
     )
     assert "UI_region_handlers_add" in space
     assert "ED_KEYMAP_UI | ED_KEYMAP_GIZMO" in space
     assert "moodboard_action_run_button_rect" not in renderer
-    assert "UI_draw_roundbox_4fv" in renderer
+    # Card fill, border and the generating glow are chrome, and live with the
+    # rest of it (resize grip, header strip) rather than in the graph pass.
+    chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
+    assert "UI_draw_roundbox_4fv" in chrome
+    assert "moodboard_draw_card_background(" in renderer
 
 
 def test_context_actions_create_connected_nodes_and_execute_through_queue():
@@ -116,7 +140,13 @@ def test_catalog_schema_and_results_stay_inside_reusable_blocks():
     assert "def refresh_node_parameter_visibility" in schema
     assert "def sync_all_node_schemas" in schema
     assert 'get_services(capability, surface="moodboard")' in graph
-    assert "sync_all_node_schemas()" in catalog
+    # The catalog cache fans a swap out through its consumers unit (its own
+    # 500-line split); the node refresh is one of the consumers there.
+    consumers = _read(
+        ROOT / "src/scripts/mixar/bootstrap/generation_catalog/consumers.py"
+    )
+    assert "notify_catalog_swapped()" in catalog
+    assert "sync_all_node_schemas()" in consumers
     assert "parameters: CollectionProperty" in properties
     assert "visible: BoolProperty" in properties
     assert "show_mode: BoolProperty" in properties

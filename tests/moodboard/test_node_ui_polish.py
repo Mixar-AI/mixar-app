@@ -104,11 +104,11 @@ def test_running_nodes_never_draw_the_prompt_under_the_hint():
     """A selected QUEUED/RUNNING node drew a disabled prompt + Generate right
     over the centred "Generating..." text. Mid-flight the tile offers Cancel
     instead."""
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
-    assert "if (generation_running) {" in node_ui
-    assert "MIXIE_OT_moodboard_cancel_action_node" in node_ui
-    tail = node_ui.split("if (generation_running) {")[1]
-    assert "else if (!has_result || state == 0) {" in tail
+    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
+    assert "if (generation_running) {" in tile
+    assert "MIXIE_OT_moodboard_cancel_action_node" in tile
+    tail = tile.split("if (generation_running) {")[1]
+    assert "else if (!has_result || state == 0 || edit_mode) {" in tail
 
 
 def test_failed_hint_yields_to_the_visible_retry_controls():
@@ -116,8 +116,11 @@ def test_failed_hint_yields_to_the_visible_retry_controls():
     the failure keeps its corner label and floats its reason above the card."""
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     assert "ELEM(state, 4, 5) && controls_visible" in draw
-    # One definition of controls-visible, shared with the toolbar's gate.
-    assert draw.count("MOODBOARD_GRAPH_CONTROLS_MIN_PX_X") == 1
+    # ONE definition of controls-visible, shared with the toolbar's own gate.
+    # The panel is canvas content that shrinks with its card rather than
+    # vanishing below a pixel threshold, so selection alone decides.
+    assert draw.count("const bool controls_visible = selected;") == 1
+    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX" not in draw
 
 
 def test_failed_nodes_show_their_error_message():
@@ -127,18 +130,174 @@ def test_failed_nodes_show_their_error_message():
     assert "MIXIE_GRAPH_ERROR_BUF" in draw
 
 
-def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
+def test_a_finished_node_shows_its_result_behind_a_floating_edit_toggle():
+    """The way back into a finished node used to be an "Edit & Run Again" row
+    buried in the panel — only reachable once the panel was already open, and it
+    reset the node's state to DRAFT (discarding its outcome and its error) just
+    to make the prompt reappear. It is now a toggle floating over the card's
+    top-right corner, and it changes nothing but how the card is presented."""
     node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
-    assert "show_rerun" in node_ui
-    assert '"Edit & Run Again"' in node_ui
-    assert 'RNA_boolean_set(rerun_props, "edit_before_run", true)' in node_ui
+    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
+
+    assert '"Edit & Run Again"' not in node_ui
+    assert "edit_before_run" not in node_ui
+    # A finished node draws the toggle and then stops: the panel below it is
+    # the edit surface, and it is folded away until the toggle is on.
+    assert "moodboard_add_node_card_actions(" in node_ui
+    assert "if (!edit_mode) {" in node_ui
+    # OUTSIDE the card: floating just above its top edge and right-aligned with
+    # it, the same relationship the settings panel has to the card's left edge.
+    # Laid over the card, these controls covered the result they belong to.
+    assert "node_rect.ymax + MOODBOARD_NODE_HEADER_LIFT" in tile
+    assert "int(node_rect.xmax) - width" in tile
+    assert "int(node_rect.ymax) - margin - height" not in tile
+    # The header text is painted on this same row, so both must derive their
+    # position from the same two constants or they land on different lines.
+    chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
+    for metric in ("MOODBOARD_NODE_HEADER_LIFT", "MOODBOARD_NODE_HEADER_ROW_H"):
+        assert metric in tile and metric in chrome, metric
+    assert '"MIXIE_OT_moodboard_toggle_node_edit"' in tile
+    # Icon buttons, not words: the row floats over the canvas above the card,
+    # so it stays as small as a comfortable target allows. That makes the
+    # tooltip the only text they carry.
+    assert "edit_mode ? ICON_CHECKMARK : ICON_GREASEPENCIL" in tile
+    assert "uiDefIconButO" in tile
+    assert "const int width = height;" in tile, "icon buttons must stay square"
+
+    # The operator is a pure presentation flip — it must not touch state, the
+    # job, or the result.
+    ops = _read(MOODBOARD / "ui/operators/node_graph_ops.py")
+    toggle = ops.split("class MIXIE_OT_moodboard_toggle_node_edit")[1].split(
+        "\nclass "
+    )[0]
+    assert "node.edit_mode = not node.edit_mode" in toggle
+    for forbidden in ("node.state =", "node.job_id =", "node.preview_image ="):
+        assert forbidden not in toggle
 
 
 def test_node_panel_metrics_scale_with_the_ui_factor():
-    """Labels render at UI_SCALE_FAC; fixed pixel rows clipped them on high-DPI."""
+    """Labels render at UI_SCALE_FAC; fixed pixel rows clipped them on high-DPI.
+
+    The VERTICAL metrics (rows, insets, gaps) exist to fit text and so stay
+    tied to the UI factor.
+    """
     node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
-    assert "const int row_h = int(32 * ui_scale)" in node_ui
-    assert "const int panel_width = int(244 * ui_scale)" in node_ui
+    assert "const int inset = int(14 * ui_scale)" in node_ui
+    assert "const int gap = int(6 * ui_scale)" in node_ui
+    # The row height is negotiated against the card (see the height test) but
+    # both of its clamps are still DPI-derived, so text can never be crushed.
+    assert "int(MOODBOARD_NODE_PANEL_MIN_ROW_H * ui_scale)" in node_ui
+    assert "int(32 * ui_scale));" in node_ui
+
+
+def test_a_finished_node_can_export_its_own_result():
+    """Export sits beside Edit on the card. It is scoped to THIS node, not the
+    selection: the two usually coincide (clicking a card selects it) but with
+    several cards selected the button on one card must save that card's
+    result."""
+    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+
+    assert '"MIXIE_OT_moodboard_export_images"' in tile
+    export = tile.split('"MIXIE_OT_moodboard_export_images"')[1]
+    # The exporter opens a file dialog, so it has to be invoked, not exec'd.
+    assert "OpCallContext::InvokeDefault" in export
+    assert 'RNA_string_set(UI_but_operator_ptr_ensure(save), "node_id", node_id)' in (
+        export
+    )
+    # Export claims the right-hand corner and Edit steps left of it, so Export
+    # is laid out FIRST.
+    assert tile.index("MIXIE_OT_moodboard_export_images") < tile.index(
+        "MIXIE_OT_moodboard_toggle_node_edit"
+    )
+    # ICON_IMPORT, not ICON_EXPORT: the outward arrow reads as upload.
+    assert "ICON_IMPORT," in tile
+    assert "ICON_EXPORT," not in tile
+    # Only when the result is MEDIA: a 3D result is a scene object, not a board
+    # item the moodboard exporter can write. Export is now the first button laid
+    # out, so the gate is a positive branch rather than an early return.
+    assert "if (has_media_result) {" in tile
+    assert "preview_ptr.data != nullptr" in node_ui
+
+    # The operator honours that scoping instead of widening to the selection.
+    ops = _read(MOODBOARD / "ui/operators/export_ops.py")
+    assert "def _media_to_export(scene, node_id" in ops
+    assert "return node_exportable_media(scene, node_id)" in ops
+    assert "node_id: StringProperty(default=\"\", options={'SKIP_SAVE'})" in ops
+    media = _read(MOODBOARD / "core/media_utils.py")
+    assert "def node_exportable_media(scene, node_id" in media
+
+
+def test_node_fields_carry_their_own_tooltips():
+    """The panel's fields draw their VALUE, not their name -- a dropdown reads
+    "1K", a number field just "1" -- so the tooltip is the only thing that says
+    what a field is. It cannot come from RNA: every catalog parameter shares one
+    set of value properties, so uiDefButR's fallback to the property description
+    would put identical text on every field of every node."""
+    tooltips = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tooltips.cc")
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+
+    # uiBut::tip is a NON-owning StringRef, so a locally built string would
+    # dangle: the button outlives the draw and is what the tooltip is read from.
+    # The button must own a copy and free it.
+    assert "UI_but_func_tooltip_set(but, node_tooltip_func, BLI_strdup(text), MEM_freeN)" in (
+        tooltips
+    )
+    # Composed from the parameter's OWN catalog text, plus the bounds a plain
+    # number field cannot show.
+    assert 'mixie_rna_string_get_clamped(parameter, "label"' in tooltips
+    assert 'mixie_rna_string_get_clamped(parameter, "description"' in tooltips
+    assert '"Range: "' in tooltips
+    # Every field the panel draws is covered.
+    assert "moodboard_set_parameter_tooltip(button, parameter)" in node_ui
+    assert "moodboard_set_node_tooltip(mode," in node_ui
+    assert "moodboard_set_node_tooltip(model," in node_ui
+
+
+def test_node_panel_width_follows_the_card_not_the_ui_factor():
+    """A DPI-scaled constant width crept up on the card's own (DPI-independent)
+    width, so on a high-DPI display the settings panel was nearly as wide as the
+    node it configures. It is a fraction of the card, floored at what a model
+    name needs so labels can still never clip."""
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    assert "const int panel_width = int(244 * ui_scale)" not in node_ui
+    assert "BLI_rctf_size_x(&node_rect) * MOODBOARD_NODE_PANEL_WIDTH_RATIO" in node_ui
+    assert "MOODBOARD_NODE_PANEL_MIN_TEXT_W * ui_scale" in node_ui
+
+
+def test_painted_canvas_text_carries_the_ui_factor():
+    """Widget labels get UI_SCALE_FAC from the style; painted canvas text has to
+    apply it itself. Without it every hint and the card header rendered at a
+    fraction of the size of the buttons beside them on a high-DPI display."""
+    graph = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
+    chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
+
+    assert "canvas_font_size(size)" in graph
+    assert "size * UI_SCALE_FAC" in graph
+    assert "BLF_size(font_id, size);" not in graph
+    # The header measures the state text to reserve room for it and then draws
+    # it; both calls must use the same size or the reservation is wrong.
+    assert chrome.count("BLF_size(font_id, 15.0f * UI_SCALE_FAC);") == 2
+    assert "BLF_size(font_id, 15.0f);" not in chrome
+
+
+def test_node_panel_height_follows_the_card_too():
+    """Half the card in BOTH axes. Height is reached by sizing the rows to the
+    target, not by stretching or clipping the panel: the fixed chrome comes off
+    first and the remainder is shared between the control rows and Reset. A
+    content-driven height alone left the panel as tall as the card it sits
+    beside."""
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    assert "BLI_rctf_size_y(&node_rect) *" in node_ui
+    assert "MOODBOARD_NODE_PANEL_HEIGHT_RATIO" in node_ui
+    assert "const int panel_height = chrome + rows * row_h;" in node_ui
+    # `rows` and `chrome` must together describe exactly what the layout draws
+    # below, or the panel background and its contents disagree.
+    assert "const int rows = control_count + 1;" in node_ui
+    assert (
+        "const int chrome = inset * 2 + (control_count - 1) * gap + reset_gap;"
+        in node_ui
+    )
 
 
 # --------------------------------------------------------------------------- #

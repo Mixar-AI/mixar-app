@@ -148,6 +148,99 @@ static bool ensure_rect_visible_in_region(ARegion *region,
   return true;
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Moodboard Frame Operator
+ *
+ * Fit the view to the board, or to the selection. Distinct from ensure-visible
+ * above, which only ever GROWS the visible rect so a new item comes on screen:
+ * it cannot zoom in, so it can never actually frame anything.
+ * \{ */
+
+/* Union of every canvas rect, or of the selected items only. Returns false when
+ * there is nothing to frame, so the caller can report rather than zoom to a
+ * degenerate box. */
+static bool moodboard_content_bounds(PointerRNA *scene_ptr,
+                                     const bool selected_only,
+                                     rctf *r_bounds)
+{
+  bool found = false;
+  /* Media, action and asset nodes share one rect definition already -- the
+   * graph cache -- so framing cannot drift from what is drawn. It is keyed by
+   * node id, so selection is resolved by looking each id back up. */
+  MoodboardGraphCache cache;
+  moodboard_graph_cache_build(scene_ptr, &cache);
+  for (const auto &item : cache.outputs.items()) {
+    if (selected_only && !moodboard_graph_node_id_selected(scene_ptr, item.key.c_str())) {
+      continue;
+    }
+    if (!found) {
+      *r_bounds = item.value;
+      found = true;
+    }
+    else {
+      BLI_rctf_union(r_bounds, &item.value);
+    }
+  }
+
+  /* Text boxes are not graph nodes and so are not in the cache. */
+  PropertyRNA *boxes = RNA_struct_find_property(scene_ptr, "mixie_moodboard_textboxes");
+  const int box_count = boxes ? RNA_property_collection_length(scene_ptr, boxes) : 0;
+  for (int index = 0; index < box_count; index++) {
+    PointerRNA box;
+    RNA_property_collection_lookup_int(scene_ptr, boxes, index, &box);
+    if (selected_only && !RNA_boolean_get(&box, "selected")) {
+      continue;
+    }
+    rctf rect;
+    rect.xmin = RNA_float_get(&box, "position_x");
+    rect.ymin = RNA_float_get(&box, "position_y");
+    rect.xmax = rect.xmin + RNA_float_get(&box, "width");
+    rect.ymax = rect.ymin + RNA_float_get(&box, "height");
+    if (!found) {
+      *r_bounds = rect;
+      found = true;
+    }
+    else {
+      BLI_rctf_union(r_bounds, &rect);
+    }
+  }
+  return found;
+}
+
+static wmOperatorStatus moodboard_frame_exec(bContext *C, wmOperator *op)
+{
+  Scene *scene = CTX_data_scene(C);
+  ARegion *region = CTX_wm_region(C);
+  if (!scene || !region) {
+    return OPERATOR_CANCELLED;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  const bool selected_only = RNA_boolean_get(op->ptr, "selected_only");
+
+  rctf bounds{};
+  if (!moodboard_content_bounds(&scene_ptr, selected_only, &bounds)) {
+    BKE_report(op->reports,
+               RPT_INFO,
+               selected_only ? "Nothing selected to frame" : "The board is empty");
+    return OPERATOR_CANCELLED;
+  }
+
+  /* A margin proportional to the content, floored so framing a single small
+   * card does not fill the viewport with it. */
+  const float margin = std::max(BLI_rctf_size_x(&bounds), BLI_rctf_size_y(&bounds)) * 0.06f;
+  BLI_rctf_pad(&bounds, std::max(margin, 40.0f), std::max(margin, 40.0f));
+
+  /* Unlike ensure-visible this SETS the rect, so the view zooms in as well as
+   * out. View2D then re-validates it against the region aspect and the zoom
+   * limits, which can only enlarge it -- the content stays framed. */
+  region->v2d.cur = bounds;
+  UI_view2d_curRect_validate(&region->v2d);
+  ED_region_tag_redraw(region);
+  return OPERATOR_FINISHED;
+}
+
+/** \} */
+
 static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *op)
 {
   const float x = RNA_float_get(op->ptr, "x");
@@ -217,6 +310,28 @@ void MIXIE_OT_moodboard_zoom(wmOperatorType *ot)
   ot->poll = blender::ed::mixie::moodboard_poll;
 
   ot->flag = 0;
+}
+
+void MIXIE_OT_moodboard_frame(wmOperatorType *ot)
+{
+  ot->name = "Frame Moodboard";
+  ot->idname = "MIXIE_OT_moodboard_frame";
+  ot->description = "Fit the view to the whole board, or to the selection";
+
+  ot->exec = blender::ed::mixie::moodboard_frame_exec;
+  ot->poll = blender::ed::mixie::moodboard_poll;
+
+  ot->flag = 0;
+
+  /* PROP_SKIP_SAVE: this operator is bound twice, once per mode. Without it
+   * the remembered value from the last run would leak into whichever binding
+   * did not set it. */
+  PropertyRNA *prop = RNA_def_boolean(ot->srna,
+                                      "selected_only",
+                                      false,
+                                      "Selected Only",
+                                      "Frame just the selected items");
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE);
 }
 
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot)

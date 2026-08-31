@@ -36,25 +36,6 @@ def _capability_available(capability: str) -> bool:
         return False
 
 
-def _mask_detail_available() -> bool:
-    """Whether an image_gen model can detail a cutout/mask pair.
-
-    Gates the "Multi Lasso Mask" action: without a mask-guidance model the
-    spawned node's Generate would fail closed, so the action stays hidden.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_models, is_loaded
-        from mixar.modules.moodboard.core.character_components import (
-            eligible_component_model_slugs,
-        )
-
-        return is_loaded() and bool(
-            eligible_component_model_slugs(get_models("image_gen"))
-        )
-    except Exception:
-        return False
-
-
 _MESH_CONTINUATIONS = (
     ('PBR_GEN', "PBR Generation", 'TEXTURE', "pbr_generation"),
     ('RETOPOLOGY', "Retopology", 'MOD_REMESH', "retopology"),
@@ -82,7 +63,8 @@ def _mesh_source_id(scene) -> str:
 
 
 def _connected_action(
-    layout, action_type: str, text: str, icon: str, source="", drop=None
+    layout, action_type: str, text: str, icon: str, source="", drop=None,
+    allow_empty=False,
 ):
     op = layout.operator(
         "mixie.moodboard_create_connected_action", text=text, icon=icon
@@ -92,6 +74,8 @@ def _connected_action(
     if drop is not None:
         op.use_drop_position = True
         op.drop_x, op.drop_y = drop
+    # Only the Shift+A Add menu sets this — a standalone node with no source.
+    op.allow_empty = allow_empty
     return op
 
 
@@ -167,18 +151,54 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     )
                     cancel.node_id = action_node.node_id
                 else:
-                    rerun = action_node.state != 'DRAFT'
+                    # A finished node's way back into editing is the card's
+                    # floating Edit toggle. Mirror it here rather than the old
+                    # `edit_before_run` path, which reset the node's state to
+                    # DRAFT — discarding its real outcome and its error — just
+                    # to make the prompt reappear.
+                    finished = bool(
+                        (action_node.preview_image or action_node.preview_object)
+                        and action_node.state in {'SUCCESS', 'FAILED', 'CANCELLED'}
+                    )
+                    if finished:
+                        toggle = layout.operator(
+                            "mixie.moodboard_toggle_node_edit",
+                            text="Done Editing" if action_node.edit_mode
+                            else "Edit Node",
+                            icon='GREASEPENCIL',
+                        )
+                        toggle.node_id = action_node.node_id
                     run = layout.operator(
                         "mixie.moodboard_run_action_node",
-                        text="Edit & Run Again" if rerun else "Run Node",
-                        icon='GREASEPENCIL' if rerun else 'PLAY',
+                        text="Generate",
+                        icon='PLAY',
                     )
                     run.node_id = action_node.node_id
-                    run.edit_before_run = rerun
+                    run.edit_before_run = False
+                rename = layout.operator(
+                    "mixie.moodboard_rename_node", text="Rename Node", icon='FONT_DATA'
+                )
+                rename.node_id = action_node.node_id
                 delete = layout.operator(
                     "mixie.moodboard_delete_action_node", text="Delete Node", icon='TRASH'
                 )
                 delete.node_id = action_node.node_id
+                # Act on the whole node SELECTION, not just the right-clicked
+                # node, so several nodes copy or duplicate together with the
+                # links between them intact.
+                layout.operator(
+                    "mixie.moodboard_duplicate_nodes",
+                    text="Duplicate Nodes",
+                    icon='DUPLICATE',
+                )
+                layout.operator(
+                    "mixie.moodboard_copy_nodes", text="Copy Nodes", icon='COPYDOWN'
+                )
+                paste_row = layout.row()
+                paste_row.operator_context = 'INVOKE_DEFAULT'
+                paste_row.operator(
+                    "mixie.moodboard_paste_nodes", text="Paste Nodes", icon='PASTEDOWN'
+                )
                 layout.separator()
 
                 can_continue = action_node.action_type in {'IMAGE_GEN', 'VIDEO_GEN'}
@@ -236,9 +256,14 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                 _connected_action(
                     layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'
                 )
-            # Multi Lasso Mask launches the lasso tool on the one selected still;
-            # each SAM3-refined loop spawns a connected mask-detail node.
-            if selected_stills == 1 and _mask_detail_available():
+            # Multi Lasso Mask launches the lasso tool on the one selected
+            # still; each SAM3-refined loop spawns a connected mask-detail node.
+            # Shown whenever exactly one still is selected: the lasso + SAM3
+            # refinement (and the mask components it produces) work regardless
+            # of the catalog. Only the spawned node's Generate needs a
+            # mask-guidance image_gen model, and that already fails closed with
+            # a message, so the tool itself is never hidden.
+            if selected_stills == 1:
                 mask_row = layout.row()
                 mask_row.operator_context = 'INVOKE_DEFAULT'
                 mask_op = mask_row.operator(
@@ -273,14 +298,24 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             layout.operator("mixie.create_group", text="Group", icon='GROUP')
             layout.separator()
 
-        # Add content
-        layout.operator_context = 'INVOKE_DEFAULT'
-        layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Media", icon='TRIA_DOWN')
-        layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
-        layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
-        layout.operator("mixie.moodboard_add_textbox", text="Add Text", icon='FONT_DATA')
-
-        layout.separator()
+        # Add content — canvas-level actions, shown only when no image is
+        # selected. A right-clicked image gets an image-focused menu, not the
+        # "add stuff to the canvas" actions.
+        if selected_images == 0:
+            layout.operator_context = 'INVOKE_DEFAULT'
+            # Paste onto empty canvas — the only way to place copied nodes when
+            # no node is selected, since the node block above needs an active
+            # node to draw. The operator polls the node clipboard, so it is
+            # simply absent when nothing was copied.
+            if action_node is None:
+                layout.operator(
+                    "mixie.moodboard_paste_nodes", text="Paste Nodes", icon='PASTEDOWN'
+                )
+            layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Media", icon='TRIA_DOWN')
+            layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
+            layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
+            layout.operator("mixie.moodboard_add_textbox", text="Add Text", icon='FONT_DATA')
+            layout.separator()
 
         # Text box editing (only shown when exactly one text box is selected)
         if selected_textboxes == 1:
@@ -303,7 +338,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     break
             layout.separator()
 
-        # Transform operations (only enabled when images are selected)
+        # Transform operations (only enabled when images are selected). Crop is
+        # a modal tool, so set the invoke context here regardless of whether the
+        # gated "Add content" block above ran.
+        layout.operator_context = 'INVOKE_DEFAULT'
         row = layout.row()
         row.enabled = selected_stills > 0
         row.operator("mixie.moodboard_crop_tool", text="Crop", icon='FULLSCREEN_EXIT')
@@ -326,11 +364,17 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         layout.separator()
 
-        # Selection
-        layout.operator("mixie.moodboard_select_all", text="Select All", icon='CHECKBOX_HLT')
-        layout.operator("mixie.moodboard_deselect_all", text="Deselect All", icon='CHECKBOX_DEHLT')
+        # Arrange acts on the node selection, or the whole board when nothing
+        # is selected, so it belongs at canvas level rather than on one card.
+        if scene.mixie_moodboard_action_nodes or scene.mixie_moodboard_asset_nodes:
+            layout.menu("MIXIE_MT_moodboard_arrange", icon='SNAP_GRID')
+            layout.separator()
 
-        layout.separator()
+        # Selection — canvas-level, hidden when acting on a selected image.
+        if selected_images == 0:
+            layout.operator("mixie.moodboard_select_all", text="Select All", icon='CHECKBOX_HLT')
+            layout.operator("mixie.moodboard_deselect_all", text="Deselect All", icon='CHECKBOX_DEHLT')
+            layout.separator()
 
         # Export. Gated on the same set the operator exports, which includes a
         # selected node's generated result — that media is never `selected`

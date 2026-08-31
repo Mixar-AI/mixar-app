@@ -235,24 +235,6 @@ class ConnectionManager:
 
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
-                # #1258: a turn that outlived the disconnect is invisible to
-                # the user — ask the server which local sessions have a turn
-                # still running, or abandoned unwatched by the drain, and
-                # surface "Resume previous task" for those. A turn that ended
-                # in front of the user is never announced.
-                # on_connected runs on the WebSocket thread. The check walks
-                # bpy.data.scenes and reads scene RNA, so it MUST be marshalled
-                # to the main thread — a reconnect fires routinely mid-turn
-                # (every 50 s liveness teardown a GIL-holding script causes)
-                # while the main thread is adding and removing lane scenes,
-                # and iterating that ListBase concurrently is a segfault.
-                try:
-                    from .turn_resume import check_orphaned_turns
-
-                    run_on_main_thread(check_orphaned_turns)
-                except Exception:
-                    logger.exception("orphaned-turn check failed (non-fatal)")
-
             # Report client version in the background (REST)
             import threading
 
@@ -270,16 +252,6 @@ class ConnectionManager:
                     )
 
             threading.Thread(target=_report_version, daemon=True).start()
-
-            # P1-6: if this (re)connect re-activated a session whose last
-            # build died with a dead Blender session (a PARKED turn), the
-            # backend decides whether the tail is small enough to
-            # auto-continue. Fail-quiet — never break the connect path.
-            try:
-                from .parked_resume import schedule_after_connect
-                schedule_after_connect(base_url)
-            except Exception as e:
-                logger.debug(f"[PARKED] auto-resume skipped: {e}")
 
         def on_disconnected(reason: str):
             if self._is_shutting_down:

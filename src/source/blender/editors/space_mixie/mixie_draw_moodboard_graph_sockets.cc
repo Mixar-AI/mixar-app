@@ -15,6 +15,9 @@
 
 #include "BLI_string.h"
 
+#include "DNA_theme_types.h"   /* UI_SCALE_FAC */
+#include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
+
 #include "GPU_immediate_util.hh"
 
 namespace blender::ed::mixie {
@@ -152,7 +155,7 @@ void moodboard_draw_socket_label(PointerRNA *socket,
     return;
   }
   const int font_id = BLF_default();
-  BLF_size(font_id, 13.0f);
+  BLF_size(font_id, 13.0f * UI_SCALE_FAC);
   const float width = BLF_width(font_id, label, strlen(label));
   BLF_color4f(font_id, 0.86f, 0.87f, 0.90f, 0.82f);
   BLF_position(font_id,

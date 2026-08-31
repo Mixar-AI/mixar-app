@@ -110,6 +110,29 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
+        # Node copy/paste share Ctrl/Cmd+C and +V with the image ones below and
+        # resolve by poll(): Blender skips a keymap item whose operator cannot
+        # poll and tries the next matching one, and items are walked in the
+        # order they were added -- so these must be registered FIRST to get
+        # first refusal. With an inference node selected the node operator
+        # runs; otherwise it declines and the image operator handles the key.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_copy_nodes',
+            type='C',
+            value='PRESS',
+            ctrl=modifier.get('ctrl', False),
+            oskey=modifier.get('oskey', False)
+        )
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_paste_nodes',
+            type='V',
+            value='PRESS',
+            ctrl=modifier.get('ctrl', False),
+            oskey=modifier.get('oskey', False)
+        )
+        addon_keymaps.append((km, kmi))
+
         # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
@@ -138,6 +161,18 @@ def register():
                 'mixie.moodboard_delete', type=key, value='PRESS'
             )
             addon_keymaps.append((km, kmi))
+
+        # Shift+A: searchable Add-Node menu at the cursor, like the 3D viewport.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_add_menu', type='A', value='PRESS', shift=True
+        )
+        addon_keymaps.append((km, kmi))
+
+        # F2 renames the active node, matching Blender's rename shortcut.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_rename_node', type='F2', value='PRESS'
+        )
+        addon_keymaps.append((km, kmi))
 
         # Pie menu keymap - follows user's VIEW3D pie menu key preference
         pie_key = get_user_pie_menu_key()

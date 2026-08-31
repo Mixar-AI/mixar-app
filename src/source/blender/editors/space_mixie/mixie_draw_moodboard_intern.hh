@@ -47,6 +47,9 @@
 #include "mixie_intern.hh"
 
 struct uiBlock;
+/* Tooltip helpers below take a button; the UI headers that define it are not
+ * pulled in here, and only the pointer type is needed. */
+struct uiBut;
 
 namespace blender::ed::mixie {
 
@@ -156,6 +159,56 @@ const float *moodboard_mesh_output_color();
 void moodboard_draw_socket(
     float x, float y, const float color[3], bool connected, bool required);
 void moodboard_draw_output_handle(float x, float y, const float color[3]);
+/** Bottom-right resize grip on a node card (see mixie_moodboard_ops_graph_resize.cc). */
+/** The card itself: fill plus border, brighter while selected. */
+void moodboard_draw_card_background(const rctf &rect, bool selected);
+/** The breathing accent a QUEUED/RUNNING card wears. */
+void moodboard_draw_running_glow(const rctf &rect);
+void moodboard_draw_node_resize_grip(const rctf &rect, bool selected);
+/**
+ * The header strip inside a node card's top edge: the node's name (or, unnamed,
+ * its type) on the left and its live queue state on the right. Painted text
+ * rather than widgets, so the strip doubles as the card's drag handle.
+ */
+void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, bool selected);
+/**
+ * Give `but` a tooltip whose text is not a compile-time constant.
+ *
+ * `uiBut::tip` is a NON-owning StringRef, so a locally built string would
+ * dangle the moment the draw function returns — the button outlives it and is
+ * what the tooltip is read from, during event handling. These take a copy the
+ * button owns and frees.
+ */
+void moodboard_set_node_tooltip(uiBut *but, const char *text);
+/** Tooltip for one catalog parameter: its name, what it does, and its range. */
+void moodboard_set_parameter_tooltip(uiBut *but, PointerRNA *parameter);
+/**
+ * The controls a node draws inside its own tile: the prompt and Generate, or
+ * Cancel while a generation is in flight. Canvas units, from `node_rect`.
+ * (mixie_draw_moodboard_node_tile_controls.cc)
+ */
+void moodboard_add_node_tile_controls(uiBlock *block,
+                                      PointerRNA *node,
+                                      const rctf &node_rect,
+                                      bool generation_running,
+                                      bool has_result,
+                                      int state,
+                                      bool edit_mode,
+                                      const char *node_id);
+/**
+ * The action row floating over a finished card's top-right corner: an
+ * Edit/Done toggle, and Export beside it when the result is media.
+ *
+ * Edit flips the node's `edit_mode`, which folds the settings panel and the
+ * in-tile prompt in and out — a presentation flag only, so the node keeps its
+ * state, its result and its error either way. Export is scoped to this node's
+ * own result rather than the selection.
+ */
+void moodboard_add_node_card_actions(uiBlock *block,
+                                     const rctf &node_rect,
+                                     bool edit_mode,
+                                     bool has_media_result,
+                                     const char *node_id);
 void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
 
 /* Shared by the node-UI toolbar and the selected-media label bar
