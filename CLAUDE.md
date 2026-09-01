@@ -137,6 +137,14 @@ where they write, never by which button they pressed.
   swallows every TIMER starves every other timer in the window, and the chat
   canvas's idle-commit timer is one of them — with a docked chat, handwriting
   would never convert while the viewport was frozen.
+- **Recognition is pipelined on the wire, delivered in written order**
+  (`space_mixie_chat/core/scribble.py`). Each round trip sits at the model's
+  ~1 s floor and a continuous writer commits a batch every pause, so up to
+  `SCRIBBLE_MAX_IN_FLIGHT` (2) batches travel at once; a batch that lands
+  early is HELD until its predecessors land, so text never enters the
+  composer out of order. The hint is resolved when a batch is posted, not
+  when it is queued. Delivery is deduplicated by in-flight membership: the
+  shared request queue is at-least-once.
 - **The send waits for the last transcription.** `send_message` flushes the
   canvas and, if a recognition request is in flight, re-sends once it lands
   (`scribble.defer_until_idle`, bounded) — ABOVE the empty-message check,

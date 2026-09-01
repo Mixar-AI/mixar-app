@@ -330,6 +330,15 @@ SCRIBBLE_MAX_POINTS = 4096
 # Informational mirror of the C++ wmTimer — Python never waits on it.
 SCRIBBLE_IDLE_COMMIT_MS = 850
 
+# Recognition requests allowed on the wire at once. Each round trip sits at
+# the model's ~1 s floor, and a continuous writer commits a batch every
+# pause; with one slot the composer falls a full round trip further behind
+# the pen at every pause. Text still enters the composer strictly in written
+# order (core/scribble.py holds an early result until its predecessors
+# land). Two is enough to hide the round trip for a steady writer; more only
+# adds requests that then wait on each other's order.
+SCRIBBLE_MAX_IN_FLIGHT = 2
+
 # Longest edge (px) of the ink bounding box in the rasterized PNG. Small
 # writing is upscaled to this too: the recognizer reads pixels, not strokes.
 SCRIBBLE_RASTER_MAX_EDGE = 1280

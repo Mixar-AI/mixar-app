@@ -38,6 +38,7 @@ from mixar.modules.space_mixie_chat.constants import (  # noqa: E402
     CHAT_INPUT_MAXLEN,
     SCRIBBLE_COMMIT_MAXLEN,
     SCRIBBLE_HINT_TAIL_CHARS,
+    SCRIBBLE_MAX_IN_FLIGHT,
     SCRIBBLE_MAX_POINTS,
     SCRIBBLE_MAX_STROKES,
 )
@@ -214,42 +215,71 @@ class TestHint:
 
 
 class TestRequestQueue:
-    def test_second_batch_waits_for_the_first(self, posts):
+    """Pipelined on the wire, delivered in written order."""
+
+    def test_two_batches_travel_at_once_but_land_in_order(self, posts):
+        """Each round trip is ~1 s at the model's floor; posting the second
+        batch only after the first lands would put the composer a full
+        round trip further behind the pen at every pause."""
         scene = FakeScene()
         scribble.submit_strokes(scene, scribble.parse_strokes_payload(payload_json()))
         scribble.submit_strokes(scene, scribble.parse_strokes_payload(payload_json()))
-        assert len(posts) == 1
-
-        posts[0][1](FakeResponse("one"))
-        assert scene.mixie_chat_input == "one"
         assert len(posts) == 2
 
+        # The SECOND batch lands first: it must wait for the first.
         posts[1][1](FakeResponse("two"))
+        assert scene.mixie_chat_input == ""
+        assert scribble.is_busy() is True
+
+        posts[0][1](FakeResponse("one"))
         assert scene.mixie_chat_input == "one two"
         assert scribble.is_busy() is False
 
-    def test_hint_is_resolved_at_post_time_not_enqueue_time(self, posts):
-        # The queued batch continues the sentence the first one appended, so
-        # its hint must include that text.
+    def test_the_wire_is_capped(self, posts):
         scene = FakeScene()
         parsed = scribble.parse_strokes_payload(payload_json())
-        scribble.submit_strokes(scene, parsed)
-        scribble.submit_strokes(scene, parsed)
+        for _ in range(SCRIBBLE_MAX_IN_FLIGHT + 3):
+            scribble.submit_strokes(scene, parsed)
+        assert len(posts) == SCRIBBLE_MAX_IN_FLIGHT
+
+        posts[0][1](FakeResponse("one"))
+        assert len(posts) == SCRIBBLE_MAX_IN_FLIGHT + 1
+
+    def test_hint_for_a_waiting_batch_is_resolved_when_it_starts(self, posts):
+        """A batch that waited for a slot continues the sentence its
+        predecessors already appended, so its hint must include that text —
+        a hint snapshotted at enqueue time would describe a composer that no
+        longer exists."""
+        scene = FakeScene()
+        parsed = scribble.parse_strokes_payload(payload_json())
+        for _ in range(SCRIBBLE_MAX_IN_FLIGHT + 1):
+            scribble.submit_strokes(scene, parsed)
 
         assert posts[0][0] == ""
         posts[0][1](FakeResponse("the quick brown"))
-        assert posts[1][0] == "the quick brown"
+        assert posts[SCRIBBLE_MAX_IN_FLIGHT][0] == "the quick brown"
 
-    def test_error_releases_the_queue_and_runs_the_next_batch(self, posts):
+    def test_a_late_duplicate_delivery_is_ignored(self, posts):
+        """The shared request queue is at-least-once: an advisory timeout
+        followed by the real response fires the callback twice."""
+        scene = FakeScene()
+        scribble.submit_strokes(scene, scribble.parse_strokes_payload(payload_json()))
+        posts[0][1](FakeResponse("once"))
+        posts[0][1](FakeResponse("once"))
+        assert scene.mixie_chat_input == "once"
+        assert scribble.is_busy() is False
+
+    def test_error_releases_the_slot_and_keeps_the_order(self, posts):
         scene = FakeScene()
         parsed = scribble.parse_strokes_payload(payload_json())
-        scribble.submit_strokes(scene, parsed)
-        scribble.submit_strokes(scene, parsed)
+        for _ in range(SCRIBBLE_MAX_IN_FLIGHT + 1):
+            scribble.submit_strokes(scene, parsed)
 
         posts[0][2](RuntimeError("network down"))
-        assert len(posts) == 2
-        posts[1][1](FakeResponse("still works"))
-        assert scene.mixie_chat_input == "still works"
+        assert len(posts) == SCRIBBLE_MAX_IN_FLIGHT + 1, "the freed slot is refilled"
+        for post in posts[1:]:
+            post[1](FakeResponse("still works"))
+        assert scene.mixie_chat_input == "still works still works"
         assert scribble.is_busy() is False
 
     def test_failure_to_dispatch_does_not_wedge_the_queue(self, monkeypatch):
@@ -325,7 +355,7 @@ class TestBusyFlag:
         posts[0][1](FakeResponse("done"))
         assert window_manager.mixie_chat_ink_busy is False
 
-    def test_flag_stays_up_while_a_batch_is_still_queued(self, posts):
+    def test_flag_stays_up_while_a_batch_is_still_on_the_wire(self, posts):
         import bpy
 
         window_manager = bpy.context.window_manager
@@ -338,6 +368,23 @@ class TestBusyFlag:
         posts[0][1](FakeResponse("first"))
         assert window_manager.mixie_chat_ink_busy is True
         posts[1][1](FakeResponse("second"))
+        assert window_manager.mixie_chat_ink_busy is False
+
+    def test_flag_stays_up_while_an_early_result_waits_for_its_turn(self, posts):
+        """Landed-but-held text is still work in progress from the user's
+        point of view — the composer has not changed yet."""
+        import bpy
+
+        window_manager = bpy.context.window_manager
+        window_manager.mixie_chat_ink_busy = False
+        scene = FakeScene()
+        parsed = scribble.parse_strokes_payload(payload_json())
+        scribble.submit_strokes(scene, parsed)
+        scribble.submit_strokes(scene, parsed)
+
+        posts[1][1](FakeResponse("second"))
+        assert window_manager.mixie_chat_ink_busy is True
+        posts[0][1](FakeResponse("first"))
         assert window_manager.mixie_chat_ink_busy is False
 
 

@@ -10,22 +10,26 @@ and clears its canvas. Everything from that point is here: validate the
 payload, rasterize it (``scribble_raster``), POST it to the handwriting
 endpoint, and append the transcription to ``scene.mixie_chat_input``.
 
-**One request at a time, FIFO.** A user writing continuously produces a new
-batch every pause, and the transcriptions must land in the order they were
-written — a second request racing the first would reorder the sentence. Later
-batches queue behind the in-flight one.
+**Pipelined on the wire, delivered in order.** A user writing continuously
+produces a new batch every pause, and each round trip is about a second at
+the model's floor. Waiting for one batch to land before posting the next
+would make the composer lag further behind the pen with every pause, so up
+to ``SCRIBBLE_MAX_IN_FLIGHT`` batches travel at once — but their text enters
+the composer strictly in the order it was written: a batch that lands early
+waits for the ones before it. Later batches queue behind the in-flight ones.
 
-The hint is deliberately resolved at POST time, not when the batch is queued:
-a queued batch continues the sentence the *previous* batch just appended, and
-a hint snapshotted at enqueue time would describe the composer as it was
-before that text existed.
+The hint is resolved when a batch is POSTED, not when it is queued, so a
+batch that waited for a slot continues the sentence its predecessors already
+appended. A batch that starts while another is still in flight sees the
+composer as it is at that moment — the hint is advisory, and the recognizer
+is told the image is authoritative.
 
 ``bpy`` is reached only through late imports so the standalone test suite can
 exercise the parsing, spacing and queue logic outside Blender.
 """
 
 import json
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
 
@@ -33,26 +37,38 @@ from ..constants import (
     CHAT_INPUT_MAXLEN,
     SCRIBBLE_COMMIT_MAXLEN,
     SCRIBBLE_HINT_TAIL_CHARS,
+    SCRIBBLE_MAX_IN_FLIGHT,
     SCRIBBLE_MAX_POINTS,
     SCRIBBLE_MAX_STROKES,
 )
 
 logger = get_logger(__name__)
 
-# Single in-flight request plus the batches waiting behind it, oldest first.
-# Each pending entry is (scene, png_bytes) — the strokes are rasterized when
-# they are handed over, so a malformed batch fails at the operator rather
-# than minutes later when its turn comes up.
-_in_flight = False
-_pending: List[Tuple[object, bytes]] = []
+# Batches on the wire, by sequence number. The value is the scene the text
+# lands in. Membership is also the delivery-dedup test: the shared request
+# queue is AT-LEAST-once (an advisory timeout is delivered without consuming
+# the callback, and the stalled request's real response can then fire it a
+# second time — processor.py peek_expired_callback), and a batch that is no
+# longer here has already been settled.
+_in_flight: Dict[int, object] = {}
 
-# Delivery-dedup token. The shared request queue is AT-LEAST-once: an
-# advisory timeout is delivered without consuming the callback, and the
-# stalled request's real response can then fire it a second time
-# (processor.py peek_expired_callback). Each batch gets a fresh sequence
-# number; _finish ignores anything that is not the current batch, so a
-# duplicate delivery cannot double-release the FIFO.
-_batch_seq = 0
+# Batches waiting for a slot, oldest first: (seq, scene, png_bytes). The
+# strokes are rasterized when they are handed over, so a malformed batch
+# fails at the operator rather than seconds later when its turn comes up.
+_pending: List[Tuple[int, object, bytes]] = []
+
+# Batches that have landed but whose predecessors have not: seq -> (scene,
+# text, error). Released into the composer in sequence order.
+_landed: Dict[int, Tuple[object, str, Optional[Exception]]] = {}
+
+# Sequence numbers: the next to hand out, and the next allowed into the
+# composer. Everything between them is somewhere in the three stores above.
+_next_seq = 0
+_deliver_seq = 0
+
+# Re-entrancy guard for the pump: a synchronous failure inside _start lands
+# in _finish, which pumps again while the outer pump's loop is still running.
+_pumping = False
 
 
 # =============================================================================
@@ -167,18 +183,20 @@ def handle_commit(scene, payload: str) -> bool:
 
 
 def submit_strokes(scene, payload: dict) -> None:
-    """Rasterize *payload* and POST it, queueing behind any in-flight batch."""
+    """Rasterize *payload* and put it on the wire, or behind the batches
+    already there when every slot is taken."""
+    global _next_seq
     image_bytes = _rasterize(payload)
-    if _in_flight:
-        _pending.append((scene, image_bytes))
-        _set_busy()
-        return
-    _start(scene, image_bytes)
+    seq = _next_seq
+    _next_seq += 1
+    _pending.append((seq, scene, image_bytes))
+    _pump()
 
 
 def is_busy() -> bool:
-    """True while a batch is in flight or waiting."""
-    return bool(_in_flight or _pending)
+    """True while any batch is on the wire, waiting for a slot, or landed
+    but still waiting for a predecessor."""
+    return bool(_in_flight or _pending or _landed)
 
 
 def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> bool:
@@ -211,6 +229,106 @@ def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> 
 
     bpy.app.timers.register(_tick, first_interval=poll_s)
     return True
+
+
+def flush_pending_ink() -> None:
+    """Ask the C++ overlay to convert any un-committed strokes NOW.
+
+    Every Python path that clears ``mixie_chat_ink_visible`` (the header
+    toggle, the rules/history toggles enforcing overlay exclusivity) must
+    call this FIRST: the C++ draw-side closing edge cannot dispatch
+    operators, so without the flush a toggle-close silently drops whatever
+    the user just wrote. C++-side closes (Esc, close X) flush on their own.
+    """
+    try:
+        import bpy
+
+        if hasattr(bpy.types, "MIXIE_CHAT_OT_ink_flush"):
+            bpy.ops.mixie_chat.ink_flush()
+    except Exception:
+        logger.debug("[Scribble] ink flush failed", exc_info=True)
+
+
+def reset_state() -> None:
+    """Drop all queued work (file load, unregister, tests).
+
+    Anything still on the wire is orphaned: its delivery finds no in-flight
+    entry and is ignored, so a batch written into the OLD file can never
+    append its text into the new one.
+    """
+    global _deliver_seq
+    _in_flight.clear()
+    _pending.clear()
+    _landed.clear()
+    _deliver_seq = _next_seq
+
+
+def _pump() -> None:
+    """Move waiting batches onto the wire while there are free slots."""
+    global _pumping
+    if _pumping:
+        return
+    _pumping = True
+    try:
+        while _pending and len(_in_flight) < SCRIBBLE_MAX_IN_FLIGHT:
+            seq, scene, image_bytes = _pending.pop(0)
+            _start(seq, scene, image_bytes)
+    finally:
+        _pumping = False
+    _set_busy()
+
+
+def _start(seq: int, scene, image_bytes: bytes) -> None:
+    """POST one batch and wire its completion back onto this queue."""
+    _in_flight[seq] = scene
+
+    def _on_success(response):
+        _finish(seq, _recognized_text(response), None)
+
+    def _on_error(error):
+        _finish(seq, "", error)
+
+    try:
+        _post(image_bytes, _hint_for(scene), _on_success, _on_error)
+    except Exception as e:
+        # A failure to even dispatch must still release the slot, or every
+        # later batch waits on a request that was never made.
+        logger.error("[Scribble] failed to submit handwriting: %s", e)
+        _finish(seq, "", e)
+
+
+def _finish(seq: int, text: str, error: Optional[Exception]) -> None:
+    """One batch landed: hold it until its predecessors have, then release
+    everything that is now deliverable, and refill the wire."""
+    scene = _in_flight.pop(seq, None)
+    if scene is None:
+        # Stale duplicate from the at-least-once queue (advisory timeout
+        # followed by the real response), or a batch orphaned by a reset.
+        logger.debug("[Scribble] ignoring stale delivery for batch %s", seq)
+        return
+    _landed[seq] = (scene, text, error)
+    _deliver()
+    _pump()
+
+
+def _deliver() -> None:
+    """Release landed batches into the composer, strictly in written order."""
+    global _deliver_seq
+    while _deliver_seq in _landed:
+        scene, text, error = _landed.pop(_deliver_seq)
+        _deliver_seq += 1
+        try:
+            if error is not None:
+                _report_error(scene, error)
+            elif text:
+                _append_recognized(scene, text)
+            else:
+                # Illegible or blank: silently nothing, the way lifting the
+                # pen off an unreadable scrawl does on iPadOS.
+                logger.debug("[Scribble] nothing legible in this batch")
+        except Exception:
+            logger.error("[Scribble] failed to deliver recognized text",
+                         exc_info=True)
 
 
 # =============================================================================
@@ -257,87 +375,6 @@ def close_canvas(wm) -> None:
     flush_pending_ink()
     wm.mixie_chat_ink_visible = False
     _redraw()
-
-
-def flush_pending_ink() -> None:
-    """Ask the C++ overlay to convert any un-committed strokes NOW.
-
-    Every Python path that clears ``mixie_chat_ink_visible`` (the header
-    toggle, the rules/history toggles enforcing overlay exclusivity) must
-    call this FIRST: the C++ draw-side closing edge cannot dispatch
-    operators, so without the flush a toggle-close silently drops whatever
-    the user just wrote. C++-side closes (Esc, close X) flush on their own.
-    """
-    try:
-        import bpy
-
-        if hasattr(bpy.types, "MIXIE_CHAT_OT_ink_flush"):
-            bpy.ops.mixie_chat.ink_flush()
-    except Exception:
-        logger.debug("[Scribble] ink flush failed", exc_info=True)
-
-
-def reset_state() -> None:
-    """Drop all queued work (file load, unregister, tests)."""
-    global _in_flight, _batch_seq
-    _in_flight = False
-    _batch_seq += 1  # orphan any in-flight delivery
-    _pending.clear()
-
-
-def _start(scene, image_bytes: bytes) -> None:
-    """POST one batch and wire its completion back onto this queue."""
-    global _in_flight, _batch_seq
-    _in_flight = True
-    _batch_seq += 1
-    seq = _batch_seq
-    _set_busy()
-
-    def _on_success(response):
-        _finish(seq, scene, _recognized_text(response), None)
-
-    def _on_error(error):
-        _finish(seq, scene, "", error)
-
-    try:
-        _post(image_bytes, _hint_for(scene), _on_success, _on_error)
-    except Exception as e:
-        # A failure to even dispatch must still release the queue, or every
-        # later batch waits on a request that was never made.
-        logger.error("[Scribble] failed to submit handwriting: %s", e)
-        _finish(seq, scene, "", e)
-
-
-def _finish(seq: int, scene, text: str, error: Optional[Exception]) -> None:
-    """Deliver one result on the main thread, then start the next batch."""
-    global _in_flight
-    if not _in_flight or seq != _batch_seq:
-        # Stale duplicate from the at-least-once queue (advisory timeout
-        # followed by the real response) — the batch was already settled.
-        logger.debug("[Scribble] ignoring stale delivery for batch %s", seq)
-        return
-    _in_flight = False
-    try:
-        if error is not None:
-            _report_error(scene, error)
-        elif text:
-            _append_recognized(scene, text)
-        else:
-            # Illegible or blank: silently nothing, the way lifting the pen
-            # off an unreadable scrawl does on iPadOS.
-            logger.debug("[Scribble] nothing legible in this batch")
-    except Exception:
-        logger.error("[Scribble] failed to deliver recognized text",
-                     exc_info=True)
-    finally:
-        if _pending:
-            next_scene, next_bytes = _pending.pop(0)
-            _start(next_scene, next_bytes)
-        else:
-            # Clears the overlay's "Converting…" indicator; C++ reads the
-            # flag per draw, so the redraw inside _set_busy is what makes
-            # it disappear without the user moving the mouse.
-            _set_busy()
 
 
 # =============================================================================

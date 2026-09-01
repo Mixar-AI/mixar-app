@@ -204,7 +204,7 @@ class TestDeferUntilIdle:
     def test_the_callback_runs_once_the_queue_drains(self):
         """A prompt written entirely by hand is EMPTY until its last batch
         lands; the send must wait for it rather than bounce it."""
-        scribble._in_flight = True
+        scribble._in_flight[0] = object()
         fired = []
 
         assert scribble.defer_until_idle(lambda: fired.append(1)) is True
@@ -213,12 +213,12 @@ class TestDeferUntilIdle:
         assert tick() == 0.1, "still converting — poll again"
         assert fired == []
 
-        scribble._in_flight = False
+        scribble._in_flight.clear()
         assert tick() is None, "queue drained — the timer retires"
         assert fired == [1]
 
     def test_a_stalled_request_does_not_hold_the_message_forever(self, monkeypatch):
-        scribble._in_flight = True
+        scribble._in_flight[0] = object()
         fired = []
         now = [1000.0]
         monkeypatch.setattr(time, "monotonic", lambda: now[0])
@@ -232,13 +232,13 @@ class TestDeferUntilIdle:
         assert fired == [1], "sent anyway once the wait is up"
 
     def test_a_raising_callback_still_retires_the_timer(self):
-        scribble._in_flight = False
-        scribble._in_flight = True
+        scribble._in_flight.clear()
+        scribble._in_flight[0] = object()
 
         def _boom():
             raise RuntimeError("boom")
 
         assert scribble.defer_until_idle(_boom) is True
         tick = self._registered_tick()
-        scribble._in_flight = False
+        scribble._in_flight.clear()
         assert tick() is None
