@@ -195,9 +195,72 @@ wmEvent *WM_event_add(wmWindow *win, const wmEvent *event_to_add)
   return wm_event_add_intern(win, event_to_add);
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Mixar agent input ("mixed mode")
+ *
+ * The Mixar agent may drive the UI of a normally running app (launched WITHOUT
+ * ``--enable-event-simulate``): synthetic events are injected through
+ * #WM_event_add_simulate while real GHOST input keeps flowing between agent
+ * actions. While an agent ACTION is active, real mouse/keyboard input is
+ * dropped in #wm_event_add_ghostevent so a stray click or keystroke cannot
+ * interleave with an injected press/release sequence -- except Esc, which
+ * flags an interrupt request and is still delivered so the user can always
+ * take over. The flags are owned by the app's Python agent bridge through the
+ * ``WindowManager.mixar_agent_*`` RNA properties (rna_wm_mixar.cc).
+ * \{ */
+
+static bool g_mixar_agent_input_enabled = false;
+static bool g_mixar_agent_action_active = false;
+static bool g_mixar_agent_interrupt_requested = false;
+
+bool Mixar_agent_input_enabled()
+{
+  return g_mixar_agent_input_enabled;
+}
+
+void Mixar_agent_input_enabled_set(const bool enabled)
+{
+  g_mixar_agent_input_enabled = enabled;
+  if (!enabled) {
+    /* Disabling agent input must never leave real input locked out. */
+    g_mixar_agent_action_active = false;
+    g_mixar_agent_interrupt_requested = false;
+  }
+}
+
+bool Mixar_agent_action_active()
+{
+  return g_mixar_agent_action_active;
+}
+
+void Mixar_agent_action_active_set(const bool active)
+{
+  /* An action can only be active while agent input is enabled. */
+  g_mixar_agent_action_active = active && g_mixar_agent_input_enabled;
+}
+
+bool Mixar_agent_interrupt_requested()
+{
+  return g_mixar_agent_interrupt_requested;
+}
+
+void Mixar_agent_interrupt_requested_set(const bool requested)
+{
+  g_mixar_agent_interrupt_requested = requested;
+}
+
+/* Synthetic events are accepted in event-simulate mode (QA) or in agent
+ * mixed mode. */
+static bool mixar_agent_event_inject_allowed()
+{
+  return (G.f & G_FLAG_EVENT_SIMULATE) || g_mixar_agent_input_enabled;
+}
+
+/** \} */
+
 wmEvent *WM_event_add_simulate(wmWindow *win, const wmEvent *event_to_add)
 {
-  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
+  if (!mixar_agent_event_inject_allowed()) {
     BLI_assert_unreachable();
     return nullptr;
   }
@@ -5937,6 +6000,42 @@ void wm_event_add_ghostevent(wmWindowManager *wm,
 {
   if (UNLIKELY(G.f & G_FLAG_EVENT_SIMULATE)) {
     return;
+  }
+
+  /* Mixar agent input (mixed mode): while an agent action is active in a
+   * normally running app, drop real input so a stray click or keystroke cannot
+   * interleave with the injected press/release sequence. Esc always passes
+   * (press AND release, so no key is left half-pressed in the event state) and
+   * a press flags an interrupt request so the user can take over at any moment.
+   * Window activation/deactivation and other non-input events keep flowing;
+   * OS drag & drop arrives through wm_window.cc, not here. */
+  if (UNLIKELY(g_mixar_agent_action_active)) {
+    switch (type) {
+      case GHOST_kEventKeyDown:
+      case GHOST_kEventKeyUp: {
+        const GHOST_TEventKeyData *kd = static_cast<const GHOST_TEventKeyData *>(customdata);
+        if (kd->key == GHOST_kKeyEsc) {
+          if (type == GHOST_kEventKeyDown) {
+            g_mixar_agent_interrupt_requested = true;
+          }
+          break; /* Deliver. */
+        }
+        return;
+      }
+      case GHOST_kEventCursorMove:
+      case GHOST_kEventTrackpad:
+      case GHOST_kEventButtonDown:
+      case GHOST_kEventButtonUp:
+      case GHOST_kEventWheel:
+      case GHOST_kEventNDOFMotion:
+      case GHOST_kEventNDOFButton:
+      case GHOST_kEventImeCompositionStart:
+      case GHOST_kEventImeComposition:
+      case GHOST_kEventImeCompositionEnd:
+        return;
+      default:
+        break;
+    }
   }
 
   /**

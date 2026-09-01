@@ -87,14 +87,57 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 void Mixar_qa_simulate_file_drop(
     bContext *C, wmWindow *win, int x, int y, const char *filepath);
 
+/* Agent mixed-mode input flags, defined in windowmanager/intern/wm_event_system.cc
+ * (Mixar overlay). Forward-declared here like the file-drop hook: the makesrna
+ * generated code includes this file, and the overlay owns no shared header. */
+bool Mixar_agent_input_enabled();
+void Mixar_agent_input_enabled_set(bool enabled);
+bool Mixar_agent_action_active();
+void Mixar_agent_action_active_set(bool active);
+bool Mixar_agent_interrupt_requested();
+void Mixar_agent_interrupt_requested_set(bool requested);
+
 static void rna_Window_mixar_qa_drop_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath, int x, int y)
 {
-  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
-    BKE_report(reports, RPT_ERROR, "Not running with '--enable-event-simulate' enabled");
+  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0 && !Mixar_agent_input_enabled()) {
+    BKE_report(reports,
+               RPT_ERROR,
+               "Not running with '--enable-event-simulate' and agent input is not enabled");
     return;
   }
   Mixar_qa_simulate_file_drop(C, win, x, y, filepath);
+}
+
+static bool rna_WindowManager_mixar_agent_input_enabled_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_agent_input_enabled();
+}
+
+static void rna_WindowManager_mixar_agent_input_enabled_set(PointerRNA * /*ptr*/, bool value)
+{
+  Mixar_agent_input_enabled_set(value);
+}
+
+static bool rna_WindowManager_mixar_agent_action_active_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_agent_action_active();
+}
+
+static void rna_WindowManager_mixar_agent_action_active_set(PointerRNA * /*ptr*/, bool value)
+{
+  Mixar_agent_action_active_set(value);
+}
+
+static bool rna_WindowManager_mixar_agent_interrupt_requested_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_agent_interrupt_requested();
+}
+
+static void rna_WindowManager_mixar_agent_interrupt_requested_set(PointerRNA * /*ptr*/,
+                                                                    bool value)
+{
+  Mixar_agent_interrupt_requested_set(value);
 }
 
 #else /* RNA_RUNTIME */
@@ -175,6 +218,40 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "QA UI Dump",
         "JSON snapshot of all live UI widgets (labels, operators, properties, "
         "window-space rects, state) for the Mixar QA harness");
+
+    /* Agent mixed-mode input: lets the Mixar agent inject UI events into a
+     * normally running app (no --enable-event-simulate) and lets the user take
+     * over with Esc. Runtime state only, never saved. */
+    prop = RNA_def_property(srna_wm, "mixar_agent_input_enabled", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop,
+                                   "rna_WindowManager_mixar_agent_input_enabled_get",
+                                   "rna_WindowManager_mixar_agent_input_enabled_set");
+    RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+    RNA_def_property_ui_text(prop,
+                             "Agent Input Enabled",
+                             "Accept synthetic UI events from the Mixar agent while real "
+                             "input keeps working (mixed mode)");
+
+    prop = RNA_def_property(srna_wm, "mixar_agent_action_active", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop,
+                                   "rna_WindowManager_mixar_agent_action_active_get",
+                                   "rna_WindowManager_mixar_agent_action_active_set");
+    RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+    RNA_def_property_ui_text(prop,
+                             "Agent Action Active",
+                             "An agent UI action is in flight: real mouse/keyboard input is "
+                             "dropped except Esc, which requests an interrupt");
+
+    prop = RNA_def_property(
+        srna_wm, "mixar_agent_interrupt_requested", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop,
+                                   "rna_WindowManager_mixar_agent_interrupt_requested_get",
+                                   "rna_WindowManager_mixar_agent_interrupt_requested_set");
+    RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+    RNA_def_property_ui_text(prop,
+                             "Agent Interrupt Requested",
+                             "The user pressed Esc during an agent UI action; the agent "
+                             "bridge clears this after aborting the action");
   }
 }
 
