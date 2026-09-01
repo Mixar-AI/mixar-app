@@ -26,6 +26,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabmedia_intern.hh"
 #include "agent_ui_theme.hh"
 
@@ -36,56 +37,8 @@
  * deliberately local, same reasoning).
  * \{ */
 
-void media_fill_round(const rctf *rect, const float radius, const float col[4])
-{
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, radius, col);
-}
+/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
 
-static int media_font()
-{
-  return BLF_default();
-}
-
-float media_text_width(const char *text, const float size)
-{
-  const int font = media_font();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-void media_label_left(
-    const char *text, const float x, const float cy, const float size, const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = media_font();
-  BLF_size(font, size);
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
-}
-
-void media_label_centre(
-    const char *text, const float cx, const float cy, const float size, const float col[4])
-{
-  media_label_left(text, cx - media_text_width(text, size) * 0.5f, cy, size, col);
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name RNA plumbing
- * \{ */
-
-/** engine.py's `_sanitize`: every non-word char becomes '_'. */
 void media_sanitize_key(const char *in, char *out, const int out_len)
 {
   int n = 0;
@@ -217,20 +170,20 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
 
 float media_chip_width(const MediaParamChip &chip, const float u, const float font, const float font_sub)
 {
-  const float pad = AGENT_DU(AGENT_CHIP_PAD_X) + 4.0f * u;
+  const float pad = PANE_CHIP_PAD_X * u;
   switch (chip.kind) {
     case MediaChipKind::Enum:
       /* label  value ▾ */
-      return pad * 2.0f + media_text_width(chip.label, font_sub) + 10.0f * u +
-             media_text_width(chip.value, font) + 22.0f * u;
+      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
+             pane_text_width(chip.value, font) + 22.0f * u;
     case MediaChipKind::Bool:
       /* label [ON OFF] */
-      return pad * 2.0f + media_text_width(chip.label, font_sub) + 10.0f * u +
-             media_text_width("ON", font_sub) + media_text_width("OFF", font_sub) + 44.0f * u;
+      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
+             pane_text_width("ON", font_sub) + pane_text_width("OFF", font_sub) + 44.0f * u;
     case MediaChipKind::Int:
       /* label - value + */
-      return pad * 2.0f + media_text_width(chip.label, font_sub) + 10.0f * u +
-             media_text_width(chip.value, font) + 64.0f * u;
+      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
+             pane_text_width(chip.value, font) + 64.0f * u;
   }
   return 0.0f;
 }

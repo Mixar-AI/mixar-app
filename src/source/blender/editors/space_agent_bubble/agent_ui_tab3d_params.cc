@@ -49,6 +49,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_tab3d_intern.hh"
 #include "agent_ui_theme.hh"
 
@@ -98,7 +99,7 @@ bool flow_place(Flow *f, const float w, rctf *r_rect)
   const float h = AGENT_CHIP_H * f->u;
   if (f->x + w > f->x_max && f->x > f->x0) {
     f->x = f->x0;
-    f->y_top -= T3D_ROW_PITCH * f->u;
+    f->y_top -= PANE_ROW_PITCH * f->u;
   }
   if (f->y_top - h < f->y_floor) {
     f->out_of_room = true;
@@ -108,7 +109,7 @@ bool flow_place(Flow *f, const float w, rctf *r_rect)
   r_rect->xmax = f->x + w;
   r_rect->ymax = f->y_top;
   r_rect->ymin = f->y_top - h;
-  f->x += w + T3D_CHIP_GAP * f->u;
+  f->x += w + PANE_CHIP_GAP * f->u;
   return true;
 }
 
@@ -121,24 +122,24 @@ void draw_enum_segmented(uiBlock *block,
                          Flow *f)
 {
   const float u = f->u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
+  const float font = PANE_FONT * u;
   const float pad = 30.0f * u;
 
   float seg_w[8];
   float total = 0.0f;
   for (int i = 0; i < totitem && i < 8; i++) {
-    seg_w[i] = t3d_text_width(items[i].name, font) + pad;
+    seg_w[i] = pane_text_width(items[i].name, font) + pad;
     total += seg_w[i];
   }
   rctf track;
   if (!flow_place(f, total, &track)) {
     return;
   }
-  const float chip[4] = T3D_COL_CHIP;
-  const float thumb[4] = T3D_COL_CHIP_THUMB;
+  const float chip[4] = PANE_COL_CHIP;
+  const float thumb[4] = PANE_COL_PILL;
   const float text[4] = AGENT_COL_TEXT;
   const float dim[4] = AGENT_COL_TEXT_DIM;
-  t3d_fill_round(&track, AGENT_CHIP_RADIUS * u, chip);
+  pane_fill_round(&track, AGENT_CHIP_RADIUS * u, chip);
 
   const int cur = RNA_property_enum_get(group_ptr, prop);
   float x = track.xmin;
@@ -146,9 +147,9 @@ void draw_enum_segmented(uiBlock *block,
     rctf seg = {x, x + seg_w[i], track.ymin, track.ymax};
     const bool active = (items[i].value == cur);
     if (active) {
-      t3d_fill_round(&seg, AGENT_CHIP_RADIUS * u, thumb);
+      pane_fill_round(&seg, AGENT_CHIP_RADIUS * u, thumb);
     }
-    t3d_label_centre(items[i].name,
+    pane_label_centre(items[i].name,
                      BLI_rctf_cent_x(&seg),
                      BLI_rctf_cent_y(&seg),
                      font,
@@ -176,7 +177,7 @@ void draw_enum_dropdown(uiBlock *block,
                         Flow *f)
 {
   const float u = f->u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
+  const float font = PANE_FONT * u;
 
   char name[64];
   prettify(RNA_property_identifier(prop), name);
@@ -186,17 +187,17 @@ void draw_enum_dropdown(uiBlock *block,
 
   char label[128];
   SNPRINTF(label, "%s: %s", name, cur_label ? cur_label : "—");
-  t3d_fit_text(label, 300.0f * u, font);
+  pane_fit_text(label, 300.0f * u, font);
 
-  const float w = T3D_CHIP_PAD_X * u * 2.0f + t3d_text_width(label, font);
+  const float w = PANE_CHIP_PAD_X * u * 2.0f + pane_text_width(label, font);
   rctf rect;
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = T3D_COL_CHIP;
+  const float chip[4] = PANE_COL_CHIP;
   const float text[4] = AGENT_COL_TEXT;
-  t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  t3d_label_centre(label, BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font, text);
+  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
+  pane_label_centre(label, BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font, text);
 
   uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
                          blender::wm::OpCallContext::InvokeDefault, "",
@@ -217,41 +218,41 @@ void draw_boolean_chip(uiBlock *block,
                        Flow *f)
 {
   const float u = f->u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
+  const float font = PANE_FONT * u;
   char name[64];
   prettify(RNA_property_identifier(prop), name);
   const bool on = RNA_property_boolean_get(group_ptr, prop);
 
-  const float pad = T3D_CHIP_PAD_X * u;
-  const float name_w = t3d_text_width(name, font);
-  const float on_w = t3d_text_width("ON", font) + 20.0f * u;
-  const float off_w = t3d_text_width("OFF", font) + 20.0f * u;
+  const float pad = PANE_CHIP_PAD_X * u;
+  const float name_w = pane_text_width(name, font);
+  const float on_w = pane_text_width("ON", font) + 20.0f * u;
+  const float off_w = pane_text_width("OFF", font) + 20.0f * u;
   const float w = pad + name_w + 12.0f * u + on_w + off_w + pad * 0.5f;
 
   rctf rect;
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = T3D_COL_CHIP;
-  const float thumb[4] = T3D_COL_CHIP_THUMB;
+  const float chip[4] = PANE_COL_CHIP;
+  const float thumb[4] = PANE_COL_PILL;
   const float text[4] = AGENT_COL_TEXT;
   const float dim[4] = AGENT_COL_TEXT_DIM;
-  t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
+  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
   const float cy = BLI_rctf_cent_y(&rect);
-  t3d_label_left(name, rect.xmin + pad, cy, font, text);
+  pane_label_left(name, rect.xmin + pad, cy, font, text);
 
   /* ON / OFF halves, thumb on the live value. */
   const float toggles_x = rect.xmin + pad + name_w + 12.0f * u;
   rctf on_rect = {toggles_x, toggles_x + on_w, rect.ymin + 4.0f * u, rect.ymax - 4.0f * u};
   rctf off_rect = {on_rect.xmax, on_rect.xmax + off_w, on_rect.ymin, on_rect.ymax};
   if (on) {
-    t3d_fill_round(&on_rect, AGENT_CHIP_RADIUS * u, thumb);
+    pane_fill_round(&on_rect, AGENT_CHIP_RADIUS * u, thumb);
   }
   else {
-    t3d_fill_round(&off_rect, AGENT_CHIP_RADIUS * u, thumb);
+    pane_fill_round(&off_rect, AGENT_CHIP_RADIUS * u, thumb);
   }
-  t3d_label_centre("ON", BLI_rctf_cent_x(&on_rect), cy, font, on ? text : dim);
-  t3d_label_centre("OFF", BLI_rctf_cent_x(&off_rect), cy, font, on ? dim : text);
+  pane_label_centre("ON", BLI_rctf_cent_x(&on_rect), cy, font, on ? text : dim);
+  pane_label_centre("OFF", BLI_rctf_cent_x(&off_rect), cy, font, on ? dim : text);
 
   uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
                          blender::wm::OpCallContext::InvokeDefault, "",
@@ -271,12 +272,12 @@ void draw_number_chip(uiBlock *slider_block,
                       Flow *f)
 {
   const float u = f->u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
+  const float font = PANE_FONT * u;
   char name[64];
   prettify(RNA_property_identifier(prop), name);
 
-  const float pad = T3D_CHIP_PAD_X * u;
-  const float name_w = t3d_text_width(name, font);
+  const float pad = PANE_CHIP_PAD_X * u;
+  const float name_w = pane_text_width(name, font);
   const float slider_w = 195.0f * u; /* Design's Face Count slider run. */
   const float w = pad + name_w + 12.0f * u + slider_w + pad * 0.5f;
 
@@ -284,10 +285,10 @@ void draw_number_chip(uiBlock *slider_block,
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = T3D_COL_CHIP;
+  const float chip[4] = PANE_COL_CHIP;
   const float text[4] = AGENT_COL_TEXT;
-  t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  t3d_label_left(name, rect.xmin + pad, BLI_rctf_cent_y(&rect), font, text);
+  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
+  pane_label_left(name, rect.xmin + pad, BLI_rctf_cent_y(&rect), font, text);
 
   /* A REAL slider: Blender's own NumSlider bound to the group property —
    * exact drag/type behaviour, themed chrome inside the chip. */
@@ -300,12 +301,13 @@ void draw_number_chip(uiBlock *slider_block,
 
 }  // namespace
 
-void agent_ui_tab3d_params_draw(const bContext *C,
+float agent_ui_tab3d_params_draw(const bContext *C,
                                 PointerRNA *group_ptr,
                                 const char *group_path,
                                 uiBlock *chips_block,
                                 uiBlock *slider_block,
                                 const float x0,
+                                const float row_start_x,
                                 const float y0_top,
                                 const float x_max,
                                 const float y_floor,
@@ -313,7 +315,10 @@ void agent_ui_tab3d_params_draw(const bContext *C,
 {
   Flow f = {};
   f.x = x0;
-  f.x0 = x0;
+  /* Wrapped rows LEFT-ALIGN at the strip margin. Wrapping to the
+   * continuation x (after the Mode/Model dropdowns) indented every second
+   * row to mid-strip, which read as centred. */
+  f.x0 = row_start_x;
   f.y_top = y0_top;
   f.x_max = x_max;
   f.y_floor = y_floor;
@@ -361,4 +366,8 @@ void agent_ui_tab3d_params_draw(const bContext *C,
     }
   }
   RNA_STRUCT_END;
+
+  /* Strip bottom: the lowest row this flow reached (the caller places the
+   * prompt box from here — the kit's prompt-visibility contract). */
+  return f.y_top - PANE_ROW_H * u;
 }

@@ -39,8 +39,10 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabmedia.hh"
 #include "agent_ui_tabmedia_intern.hh"
+#include "agent_ui_tabsplat_intern.hh" /* board-selection thumbnails */
 #include "agent_ui_theme.hh"
 
 
@@ -69,22 +71,17 @@ void agent_ui_tabmedia_draw(const bContext *C,
     return;
   }
 
-  const float col_chip[4] = AGENT_COL_CHIP;
-  const float col_param[4] = MEDIA_COL_PARAM_CHIP;
-  const float col_value[4] = MEDIA_COL_VALUE;
-  const float col_value_on[4] = MEDIA_COL_VALUE_ON;
-  const float col_seg_active[4] = MEDIA_COL_SEG_ACTIVE;
-  const float col_surface[4] = AGENT_COL_SURFACE;
-  const float col_generate[4] = AGENT_COL_GENERATE;
+  const float col_param[4] = PANE_COL_CHIP;
+  const float col_value[4] = PANE_COL_PILL_DIM;
+  const float col_value_on[4] = PANE_COL_PILL;
   const float col_text[4] = AGENT_COL_TEXT;
   const float col_strong[4] = AGENT_COL_TEXT_STRONG;
   const float col_dim[4] = AGENT_COL_TEXT_DIM;
 
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
-  const float font_sub = AGENT_DU(15);
-  const float pad_x = MEDIA_PAD_X * u;
-  const float left = band.xmin + pad_x;
-  const float right = band.xmax - pad_x;
+  const float font = PANE_FONT * u;
+  const float font_sub = PANE_FONT_SUB * u;
+  const float left = band.xmin + PANE_INSET_X * u;
+  const float right = band.xmax - PANE_INSET_X * u;
 
   /* ---- Sub-tab state (wm.mixar_bubble_media_kind). ---- */
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
@@ -124,35 +121,22 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   GPU_blend(GPU_BLEND_ALPHA);
 
+  /* Shared panel wash (pane kit). */
+  pane_wash_paint(panel, u);
+
   /* ---- Row 1: Image Generation / Video Generation segmented. ---- */
-  const float seg_h = MEDIA_SEG_H * u;
-  const float seg_top = band.ymax - MEDIA_PAD_TOP * u;
+  const float seg_top = band.ymax - PANE_STRIP_TOP * u;
   const char *seg_labels[2] = {"Image Generation", "Video Generation"};
-  float seg_w[2], seg_x[2];
+  rctf seg_rects[2];
   {
-    const float w0 = media_text_width(seg_labels[0], font) + MEDIA_SEG_PAD_X * 2.0f * u;
-    const float w1 = media_text_width(seg_labels[1], font) + MEDIA_SEG_PAD_X * 2.0f * u;
-    const float cx = (band.xmin + band.xmax) * 0.5f;
-    seg_w[0] = w0;
-    seg_w[1] = w1;
-    seg_x[0] = cx - (w0 + w1 + MEDIA_CHIP_GAP * u) * 0.5f;
-    seg_x[1] = seg_x[0] + w0 + MEDIA_CHIP_GAP * u;
-    for (int i = 0; i < 2; i++) {
-      rctf pill;
-      pill.xmin = seg_x[i];
-      pill.xmax = seg_x[i] + seg_w[i];
-      pill.ymax = seg_top;
-      pill.ymin = seg_top - seg_h;
-      const bool active = (i == 1) == video;
-      if (active) {
-        media_fill_round(&pill, MEDIA_SEG_RADIUS * u, col_seg_active);
-      }
-      media_label_centre(seg_labels[i],
-                     BLI_rctf_cent_x(&pill),
-                     BLI_rctf_cent_y(&pill),
-                     font,
-                     active ? col_strong : col_dim);
-    }
+    /* Widths from the measured labels, track centred in the panel — the
+     * kit's segmented control, so this matches 3D/Splat exactly. */
+    rctf probe[2];
+    const rctf track_probe = pane_segmented_layout(0.0f, seg_top, seg_labels, 2, u, probe);
+    const float track_w = BLI_rctf_size_x(&track_probe);
+    const float x0 = (band.xmin + band.xmax) * 0.5f - track_w * 0.5f;
+    pane_segmented_layout(x0, seg_top, seg_labels, 2, u, seg_rects);
+    pane_segmented_paint(seg_rects, seg_labels, video ? 1 : 0, 2, u);
   }
 
   /* ---- Params rows: model dropdown + catalog chips, wrap to 2 rows. ---- */
@@ -205,8 +189,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
   }
 
   /* Lay chips out, wrapping once. */
-  const float chip_h_px = AGENT_CHIP_H * u;
-  float row_y = seg_top - seg_h - MEDIA_ROW_GAP * u;
+  const float chip_h_px = PANE_ROW_H * u;
+  float row_y = seg_top - PANE_ROW_PITCH * u;
   float x = left;
   int rows_used = 1;
   int shown = 0;
@@ -214,7 +198,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
     const float w = media_chip_width(chips[i], u, font, font_sub);
     if (x + w > right && rows_used < 2) {
       rows_used++;
-      row_y -= chip_h_px + MEDIA_CHIP_GAP * u;
+      row_y -= PANE_ROW_PITCH * u;
       x = left;
     }
     if (x + w > right) {
@@ -224,138 +208,99 @@ void agent_ui_tabmedia_draw(const bContext *C,
     chips[i].rect.xmax = x + w;
     chips[i].rect.ymax = row_y;
     chips[i].rect.ymin = row_y - chip_h_px;
-    x += w + MEDIA_CHIP_GAP * u;
+    x += w + PANE_CHIP_GAP * u;
     shown++;
   }
 
   for (int i = 0; i < shown; i++) {
     const MediaParamChip &chip = chips[i];
     const float cy = BLI_rctf_cent_y(&chip.rect);
-    media_fill_round(&chip.rect, AGENT_CHIP_RADIUS * u, col_param);
-    const float pad = AGENT_DU(AGENT_CHIP_PAD_X) + 4.0f * u;
+    pane_fill_round(&chip.rect, PANE_RADIUS * u, col_param);
+    const float pad = PANE_CHIP_PAD_X * u;
     float tx = chip.rect.xmin + pad;
-    media_label_left(chip.label, tx, cy, font_sub, col_dim);
-    tx += media_text_width(chip.label, font_sub) + 10.0f * u;
+    pane_label_left(chip.label, tx, cy, font_sub, col_dim);
+    tx += pane_text_width(chip.label, font_sub) + 10.0f * u;
 
     if (chip.kind == MediaChipKind::Enum) {
-      media_label_left(chip.value, tx, cy, font, col_text);
+      pane_label_left(chip.value, tx, cy, font, col_text);
       /* Down chevron. */
-      media_label_left("\xE2\x96\xBE", chip.rect.xmax - pad - 10.0f * u, cy, font_sub, col_text);
+      pane_label_left("\xE2\x96\xBE", chip.rect.xmax - pad - 10.0f * u, cy, font_sub, col_text);
     }
     else if (chip.kind == MediaChipKind::Bool) {
       rctf pill;
       pill.xmin = tx;
       pill.xmax = chip.rect.xmax - pad + 4.0f * u;
-      pill.ymin = cy - 19.0f * u;
-      pill.ymax = cy + 19.0f * u;
-      media_fill_round(&pill, AGENT_CHIP_RADIUS * u, chip.bool_value ? col_value_on : col_value);
-      const float on_w = media_text_width("ON", font_sub);
-      const float off_w = media_text_width("OFF", font_sub);
+      pill.ymin = cy - (PANE_PILL_H * 0.5f) * u;
+      pill.ymax = cy + (PANE_PILL_H * 0.5f) * u;
+      pane_fill_round(&pill, PANE_RADIUS * u, chip.bool_value ? col_value_on : col_value);
+      const float on_w = pane_text_width("ON", font_sub);
+      const float off_w = pane_text_width("OFF", font_sub);
       const float span = BLI_rctf_size_x(&pill);
-      media_label_left("ON",
+      pane_label_left("ON",
                    pill.xmin + span * 0.25f - on_w * 0.5f,
                    cy,
                    font_sub,
                    chip.bool_value ? col_strong : col_dim);
-      media_label_left("OFF",
+      pane_label_left("OFF",
                    pill.xmin + span * 0.75f - off_w * 0.5f,
                    cy,
                    font_sub,
                    chip.bool_value ? col_dim : col_strong);
     }
     else { /* Int */
-      media_label_left("\xE2\x88\x92", tx + 4.0f * u, cy, font, col_dim);
-      media_label_centre(chip.value,
+      pane_label_left("\xE2\x88\x92", tx + 4.0f * u, cy, font, col_dim);
+      pane_label_centre(chip.value,
                      (tx + chip.rect.xmax - pad) * 0.5f,
                      cy,
                      font,
                      col_text);
-      media_label_left("+", chip.rect.xmax - pad - 8.0f * u, cy, font, col_dim);
+      pane_label_left("+", chip.rect.xmax - pad - 8.0f * u, cy, font, col_dim);
     }
   }
   if (shown < chip_count) {
     char more[32];
     SNPRINTF(more, "+%d more", chip_count - shown);
-    media_label_left(more, x, row_y - chip_h_px * 0.5f, font_sub, col_dim);
+    pane_label_left(more, x, row_y - chip_h_px * 0.5f, font_sub, col_dim);
   }
 
   /* Video catalog-only unavailable state. */
   const bool video_unavailable = video && (!tab_ok || !group_ok);
   if (video_unavailable) {
-    media_label_centre("Video generation needs the live catalog",
+    pane_label_centre("Video generation needs the live catalog",
                    (band.xmin + band.xmax) * 0.5f,
                    row_y - chip_h_px * 0.5f,
                    font,
                    col_dim);
   }
 
-  /* ---- Bottom row + prompt box. ---- */
-  const float bottom_h = MEDIA_BOTTOM_H * u;
-  const float bottom_y = band.ymin + 16.0f * u;
-  /* row_y already tracks the LOWEST chip row's top. */
-  const float prompt_top = row_y - chip_h_px - MEDIA_ROW_GAP * u;
+  /* ---- Prompt box: strip bottom -> panel bottom (kit contract), bottom
+   * row INSIDE the box foot like every other pane. ---- */
   UNUSED_VARS(rows_used);
-  rctf prompt_box;
-  prompt_box.xmin = band.xmin + 6.0f * u;
-  prompt_box.xmax = band.xmax - 6.0f * u;
-  prompt_box.ymax = prompt_top;
-  prompt_box.ymin = bottom_y + bottom_h + MEDIA_ROW_GAP * u;
-  const bool prompt_fits = BLI_rctf_size_y(&prompt_box) > 40.0f * u;
-  if (prompt_fits) {
-    media_fill_round(&prompt_box, MEDIA_PROMPT_RADIUS * u, col_surface);
-  }
+  const float strip_bottom = row_y - chip_h_px;
+  rctf prompt_box = pane_prompt_box_rect(panel, strip_bottom, u);
+  const bool prompt_fits = BLI_rctf_size_y(&prompt_box) > PANE_BOX_MIN_H * u;
+  pane_prompt_box_paint(prompt_box, u);
+  const float bottom_h = PANE_ROW_H * u;
+  const float bottom_y = pane_bottom_row_ymin(prompt_box, u);
 
-  /* Upload / capture / refs / generate chip geometry. */
+  /* Upload / capture / refs / generate chip geometry (kit metrics; painted
+   * AFTER the embossed field block below — its chrome covers earlier
+   * pixels). */
   rctf upload = {}, capture = {}, generate = {};
-  const float upload_w =
-      media_text_width("Upload Reference", font) + AGENT_DU(AGENT_CHIP_PAD_X) * 2.0f + 8.0f * u;
-  const float capture_w =
-      media_text_width("Capture Viewport", font) + AGENT_DU(AGENT_CHIP_PAD_X) * 2.0f + 8.0f * u;
-  float bx = left;
-  if (!video) {
-    upload = {bx, bx + upload_w, bottom_y, bottom_y + bottom_h};
-    media_fill_round(&upload, AGENT_CHIP_RADIUS * u, col_chip);
-    media_label_centre(
-        "Upload Reference", BLI_rctf_cent_x(&upload), BLI_rctf_cent_y(&upload), font, col_text);
-    bx = upload.xmax + MEDIA_CHIP_GAP * u;
-  }
-  /* Capture Viewport: painted dim + inert. The existing capture operator
-   * (`mixie_chat.capture_screenshot`) feeds the CHAT attachment flow and
-   * boards the still unselected, so it cannot feed this tab's reference
-   * selection — wiring it here would silently attach the capture to the next
-   * chat message. Documented gap. */
+  const float upload_w = pane_action_chip_w("Upload Reference", true, u);
+  const float capture_w = pane_action_chip_w("Capture Viewport", false, u);
+  float bx = prompt_box.xmin + PANE_BOTTOM_IN_L * u;
+  /* Both halves upload: the image half into tab_imagegen's reference
+   * collection, the video half onto the moodboard AS SELECTED (Video Gen's
+   * references ARE the board selection). */
+  upload = {bx, bx + upload_w, bottom_y, bottom_y + bottom_h};
+  bx = upload.xmax + PANE_CHIP_GAP * u;
+  /* Capture Viewport: LIVE — mixar.pane_capture_viewport screenshots the 3D
+   * viewport and attaches the still as this tab's reference (image half:
+   * reference collection; video half: boarded selected). */
   capture = {bx, bx + capture_w, bottom_y, bottom_y + bottom_h};
-  media_fill_round(&capture, AGENT_CHIP_RADIUS * u, col_chip);
-  media_label_centre("Capture Viewport",
-                 BLI_rctf_cent_x(&capture),
-                 BLI_rctf_cent_y(&capture),
-                 font,
-                 col_dim);
-  bx = capture.xmax + MEDIA_CHIP_GAP * u;
+  bx = capture.xmax + PANE_CHIP_GAP * u;
 
-  /* Selected moodboard references count (both halves read the selection). */
-  {
-    int selected = 0;
-    PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-    PropertyRNA *images = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
-    if (images && RNA_property_type(images) == PROP_COLLECTION) {
-      CollectionPropertyIterator iter;
-      RNA_property_collection_begin(&scene_ptr, images, &iter);
-      for (; iter.valid; RNA_property_collection_next(&iter)) {
-        PointerRNA item = iter.ptr;
-        PropertyRNA *sel = RNA_struct_find_property(&item, "selected");
-        if (sel && RNA_property_boolean_get(&item, sel)) {
-          selected++;
-        }
-      }
-      RNA_property_collection_end(&iter);
-    }
-    if (selected > 0) {
-      char refs[48];
-      SNPRINTF(refs, "%d selected ref%s", selected, selected == 1 ? "" : "s");
-      media_label_left(refs, bx + 6.0f * u, bottom_y + bottom_h * 0.5f, font_sub, col_dim);
-    }
-  }
 
   /* Generate — dim while that tab's flag says a submit is in flight. */
   bool busy = false;
@@ -367,15 +312,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
            RNA_property_boolean_get(&scene_ptr, flag);
   }
   const bool can_generate = tab_ok && !busy && !video_unavailable;
-  generate = {right - MEDIA_GENERATE_W * u, right, bottom_y, bottom_y + bottom_h};
-  media_fill_round(&generate, AGENT_CHIP_RADIUS * u, col_generate);
-  media_label_centre(busy ? "Queued..." : "Generate",
-                 BLI_rctf_cent_x(&generate),
-                 BLI_rctf_cent_y(&generate),
-                 font,
-                 can_generate ? col_strong : col_dim);
-
-  GPU_blend(GPU_BLEND_NONE);
+  generate = pane_generate_rect(prompt_box, u);
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
    * dropdown buttons, embossed prompt field. ---- */
@@ -388,8 +325,9 @@ void agent_ui_tabmedia_draw(const bContext *C,
   for (int i = 0; i < 2; i++) {
     uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
-                           int(seg_x[i]), int(seg_top - seg_h),
-                           short(seg_w[i]), short(seg_h),
+                           int(seg_rects[i].xmin), int(seg_rects[i].ymin),
+                           short(BLI_rctf_size_x(&seg_rects[i])),
+                           short(BLI_rctf_size_y(&seg_rects[i])),
                            i == 0 ? "Image generation" : "Video generation");
     if (but) {
       PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
@@ -450,26 +388,72 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Prompt field over the prompt box. */
   if (prompt_fits && tab_ok && RNA_struct_find_property(&tab_ptr, "prompt")) {
+    /* The kit's top strip: ghost text top-left, caret at text height. */
+    const rctf field = pane_prompt_field_rect(prompt_box, u);
     uiBut *input = uiDefButR(field_block, ButType::Text, 0, "",
-                             int(prompt_box.xmin + MEDIA_PROMPT_INSET * u),
-                             int(prompt_box.ymin + MEDIA_PROMPT_INSET * u),
-                             short(BLI_rctf_size_x(&prompt_box) - MEDIA_PROMPT_INSET * 2.0f * u),
-                             short(BLI_rctf_size_y(&prompt_box) - MEDIA_PROMPT_INSET * 2.0f * u),
+                             int(field.xmin), int(field.ymin),
+                             short(BLI_rctf_size_x(&field)),
+                             short(BLI_rctf_size_y(&field)),
                              &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
     if (input) {
       UI_but_placeholder_set(input, "Describe your scene here...");
       UI_but_flag2_enable(input, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      UI_but_flag_enable(input, UI_BUT_TEXTEDIT_UPDATE);
     }
   }
 
-  /* Upload (image half only). */
-  if (!video && upload.xmax > upload.xmin) {
-    uiDefButO(block, ButType::But, "mixie.imagegen_upload_reference",
-              blender::wm::OpCallContext::InvokeDefault, "",
-              int(upload.xmin), int(upload.ymin),
-              short(BLI_rctf_size_x(&upload)), short(BLI_rctf_size_y(&upload)),
-              "Add reference images from disk");
+  /* Field chrome on screen BEFORE the bottom row is painted (kit invariant:
+   * the embossed field spans the whole box and covers earlier pixels). */
+  UI_block_end(C, field_block);
+  UI_block_draw(C, field_block);
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  pane_action_chip_paint(upload, "Upload Reference", true, false, u);
+  pane_action_chip_paint(capture, "Capture Viewport", false, false, u);
+  /* Selected board references as REAL thumbnails (design: small previews,
+   * never a "N refs" count). Up to 3, "+N" only as overflow. */
+  {
+    Image *ref_images[8] = {nullptr};
+    const int selected = splat_selected_moodboard_images(C, ref_images, 8);
+    const int show = std::min(selected, 3);
+    const float edge = bottom_h;
+    float tx = bx + 6.0f * u;
+    for (int i = 0; i < show; i++) {
+      rctf t;
+      t.xmin = tx;
+      t.xmax = tx + edge;
+      t.ymin = bottom_y;
+      t.ymax = bottom_y + edge;
+      const float back[4] = PANE_COL_CHIP;
+      pane_fill_round(&t, 6.0f * u, back);
+      splat_draw_image_thumb(ref_images[i], t);
+      tx = t.xmax + 6.0f * u;
+    }
+    if (selected > show) {
+      char more[24];
+      SNPRINTF(more, "+%d", selected - show);
+      pane_label_left(more, tx + 2.0f * u, bottom_y + bottom_h * 0.5f, font_sub, col_dim);
+    }
   }
+  pane_generate_paint(generate, busy ? "Queued..." : "Generate", can_generate, u);
+  GPU_blend(GPU_BLEND_NONE);
+
+  /* Upload — per half: the image tab's own reference-collection uploader,
+   * or the video flow's board-as-selected import. */
+  uiDefButO(block, ButType::But,
+            video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
+            blender::wm::OpCallContext::InvokeDefault, "",
+            int(upload.xmin), int(upload.ymin),
+            short(BLI_rctf_size_x(&upload)), short(BLI_rctf_size_y(&upload)),
+            video ? "Import selected reference stills for the video" :
+                    "Add reference images from disk");
+
+  /* Capture Viewport -> this tab's reference. */
+  uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
+            blender::wm::OpCallContext::InvokeDefault, "",
+            int(capture.xmin), int(capture.ymin),
+            short(BLI_rctf_size_x(&capture)), short(BLI_rctf_size_y(&capture)),
+            "Screenshot the 3D viewport as a reference image");
 
   /* Generate — the same operators the moodboard footers dispatch. */
   if (can_generate) {
@@ -481,8 +465,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
               video ? "Generate a video" : "Generate images");
   }
 
-  UI_block_end(C, field_block);
-  UI_block_draw(C, field_block);
   UI_block_end(C, block);
   UI_block_draw(C, block);
 }

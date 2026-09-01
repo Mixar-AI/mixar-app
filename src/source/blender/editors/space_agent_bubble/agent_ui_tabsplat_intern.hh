@@ -13,6 +13,8 @@
 
 #pragma once
 
+struct Image;
+
 #include "BLI_rect.h"
 #include "RNA_access.hh"
 
@@ -21,10 +23,6 @@ struct bContext;
 /* Artboard-unit metrics measured from the "gaussian splats" frame (island
  * origin 267,340; deltas relative to the card panel's top-left at island
  * (2,201)). */
-#define SPLAT_FONT 18
-#define SPLAT_ROW_H 44
-#define SPLAT_ROW_RADIUS 14
-#define SPLAT_PARAMS_Y 31
 #define SPLAT_MODE_X 21
 #define SPLAT_MODE_W 155
 #define SPLAT_MODE_SPLIT 78 /* Text half width (99 - 21). */
@@ -34,11 +32,7 @@ struct bContext;
 #define SPLAT_LOD_X 353
 #define SPLAT_LOD_W 230
 #define SPLAT_BOX_INSET_X 4
-#define SPLAT_BOX_Y 105
-#define SPLAT_CHIP_ROW_DY 302 /* Chip row top, from panel top. */
-#define SPLAT_CHIP_UPLOAD_X 21
 #define SPLAT_CHIP_UPLOAD_W 150
-#define SPLAT_CHIP_CAPTURE_X 183
 #define SPLAT_CHIP_CAPTURE_W 183
 #define SPLAT_MOOD_LABEL_X 390
 #define SPLAT_SWITCH_X 646
@@ -47,9 +41,6 @@ struct bContext;
 #define SPLAT_THUMB_X 723
 #define SPLAT_THUMB_EDGE 45
 #define SPLAT_THUMB_GAP 7
-#define SPLAT_GEN_X 1172
-#define SPLAT_GEN_W 114
-#define SPLAT_PROMPT_PAD_X 39 /* Ghost text inset from panel left (43 - 4). */
 
 #define SPLAT_ENUM_MAX 6
 
@@ -82,6 +73,7 @@ struct SplatPaneRects {
   int lod_count;
   rctf prompt_box;
   rctf prompt_field;
+  float mood_label_x; /* Left edge of the "Allow selected..." label run. */
   rctf chip_upload, chip_capture;
   rctf moodboard_switch;
   rctf thumbs; /* Left edge of the thumbnail run. */
@@ -95,6 +87,10 @@ int splat_enum_items_get(const bContext *C,
                          SplatEnumItem *r_items,
                          int max_items);
 
+/* Board-selection thumbnails, shared with the Media pane. */
+int splat_selected_moodboard_images(const bContext *C, Image **r_images, int max_images);
+void splat_draw_image_thumb(Image *image, const rctf &box);
+
 void splat_pane_rects_build(const rctf &panel, float u, const SplatEnumItem *lod_items, int lod_count, SplatPaneRects *r_rects);
 void splat_pane_paint(const bContext *C,
                       const SplatTabState &state,
@@ -104,5 +100,4 @@ void splat_pane_paint(const bContext *C,
                       const SplatEnumItem *lod_items,
                       int lod_count,
                       float u);
-void splat_label_centre(
-    const char *text, float cx, float cy, float size, const float col[4]);
+/* Painter primitives live in the pane kit (agent_ui_pane_kit.hh). */

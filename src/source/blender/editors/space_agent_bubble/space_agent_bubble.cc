@@ -55,6 +55,10 @@
 #include "GPU_framebuffer.hh"
 #include "GPU_matrix.hh"
 #include "UI_view2d.hh"
+#include "BLI_string.h"
+
+#include "BLF_api.hh"
+
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
@@ -239,6 +243,13 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region);
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
 void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
 void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
+/* Attachment thumbnail helpers from mixie_chat_footer_thumbnails.cc
+ * (declared in mixie_chat_footer_intern.hh; re-declared here like the other
+ * chat imports this file uses). Source: 0 = FILE, 1 = BLEND_DATA. */
+struct Image;
+Image *footer_thumbnails_load_image(Main *bmain, const char *path, int source);
+void footer_thumbnails_draw_image(
+    Main *bmain, const char *path, int source, float x, float y, float size);
 void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
@@ -464,6 +475,95 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
             "Attach a reference image");
 
+  /* --- Pending-attachment thumbnails, right of the Upload chip ---
+   * Small rounded previews at chip height (the Figma treatment), each one a
+   * click-to-remove button over the existing mixie_chat.remove_attachment.
+   * The window does NOT resize for attachments any more (see the sync
+   * operator) — this row is the whole presentation. */
+  {
+    PropertyRNA *att_prop = RNA_struct_find_property(&scene_ptr,
+                                                     "mixie_chat_pending_attachments");
+    if (att_prop && RNA_property_type(att_prop) == PROP_COLLECTION) {
+      Main *bmain = CTX_data_main(C);
+      const int att_count = RNA_property_collection_length(&scene_ptr, att_prop);
+      const int max_thumbs = 4;
+      const float thumb_size = float(bh);
+      const float gap = float(bh) * 0.18f;
+      float tx = float(bx + bw) + gap * 2.0f;
+      const float backplate[4] = {0.24f, 0.24f, 0.24f, 1.0f};
+
+      GPU_blend(GPU_BLEND_ALPHA);
+      int shown = 0;
+      int index = 0;
+      CollectionPropertyIterator iter;
+      RNA_property_collection_begin(&scene_ptr, att_prop, &iter);
+      for (; iter.valid && shown < max_thumbs; RNA_property_collection_next(&iter), index++) {
+        PointerRNA item = iter.ptr;
+
+        char path[1024] = "";
+        if (PropertyRNA *pp = RNA_struct_find_property(&item, "image_path")) {
+          int len = 0;
+          char *val = RNA_property_string_get_alloc(&item, pp, path, sizeof(path), &len);
+          if (val != path) {
+            BLI_strncpy(path, val, sizeof(path));
+            MEM_freeN(val);
+          }
+        }
+        int source = 0; /* FILE */
+        if (PropertyRNA *sp = RNA_struct_find_property(&item, "image_source")) {
+          const int value = RNA_property_enum_get(&item, sp);
+          const char *ident = nullptr;
+          if (RNA_property_enum_identifier(
+                  const_cast<bContext *>(C), &item, sp, value, &ident) &&
+              ident && STREQ(ident, "BLEND_DATA"))
+          {
+            source = 1;
+          }
+        }
+        if (path[0] == '\0') {
+          continue;
+        }
+
+        rctf plate;
+        plate.xmin = tx;
+        plate.xmax = tx + thumb_size;
+        plate.ymin = float(by);
+        plate.ymax = float(by) + thumb_size;
+        UI_draw_roundbox_corner_set(UI_CNR_ALL);
+        UI_draw_roundbox_4fv(&plate, true, thumb_size * 0.18f, backplate);
+        footer_thumbnails_draw_image(
+            bmain, path, source, tx + 1.0f, float(by) + 1.0f, thumb_size - 2.0f);
+
+        uiBut *thumb_but = uiDefButO(block, ButType::But,
+                                     "mixie_chat.remove_attachment",
+                                     blender::wm::OpCallContext::ExecDefault, "",
+                                     int(tx), by, short(thumb_size), short(thumb_size),
+                                     "Remove this attachment");
+        if (thumb_but) {
+          PointerRNA *op_ptr = UI_but_operator_ptr_ensure(thumb_but);
+          RNA_int_set(op_ptr, "index", index);
+        }
+
+        tx += thumb_size + gap;
+        shown++;
+      }
+      RNA_property_collection_end(&iter);
+      GPU_blend(GPU_BLEND_NONE);
+
+      if (att_count > shown) {
+        char more[24];
+        SNPRINTF(more, "+%d", att_count - shown);
+        /* Reuse the chip font metrics: dim label, vertically centred. */
+        const float dim_col[4] = AGENT_COL_TEXT_DIM;
+        const int font_id = BLF_default();
+        BLF_size(font_id, AGENT_DU(AGENT_CHIP_FONT));
+        BLF_color4fv(font_id, dim_col);
+        BLF_position(font_id, tx + gap, float(by) + thumb_size * 0.34f, 0.0f);
+        BLF_draw(font_id, more, strlen(more));
+      }
+    }
+  }
+
   /* Send while idle, Stop while a turn is running — the same split the chat
    * footer makes (abort_session when busy). */
   agent_bubble_rect_to_region(region, layout->btn_generate, &bx, &by, &bw, &bh);
@@ -629,6 +729,11 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
                                   AGENT_BUBBLE_DEFAULT_HEIGHT +
                                       AGENT_BUBBLE_TRANSCRIPT_HEIGHT);
   }
+
+  /* NO per-tab resizing: the window jumping sizes between tabs read as
+   * inconsistency. Panes adapt to the window instead — each computes its
+   * params strip first and gives the prompt box whatever remains (the pane
+   * kit's layout contract), and the user resizes if they want more room. */
 }
 
 /* The transcript region's layout: the grow-once latch above, then the chat
@@ -735,6 +840,10 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
           fx = int(lay.panel.xmin) - region->winrct.xmin;
           fw = short(BLI_rctf_size_x(&lay.panel));
         }
+        /* Whole-region field — the design's "the panel IS the prompt".
+         * Blender's multiline text path (Text + TEXTEDIT_UPDATE + tall rect)
+         * renders top-left with a text-height caret, so full height is
+         * correct; a top-strip variant read as "just a thin bar". */
         uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "",
                                      fx, 0, fw, short(rh),
                                      &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
@@ -2464,27 +2573,20 @@ static void agent_bubble_force_redraw(bContext *C)
 static wmOperatorStatus mixar_bubble_sync_attachment_size_exec(bContext *C, wmOperator *op)
 {
 #if defined(__APPLE__) || defined(_WIN32)
-  const bool force_attachment_height = RNA_boolean_get(op->ptr, "force_attachment_height");
-  if (force_attachment_height && g_bubble_ghostwin != nullptr && !g_bubble_minimised &&
-      !g_bubble_expanded)
-  {
-    /* Use 1 (not the actual count) because this fires before the
-     * pending attachment list is updated — we just need the "has
-     * attachments" height floor to pre-size the bubble. */
-    const int height = agent_bubble_height_floor_for_attachments(1);
-    bubble_force_size_and_refresh(C, g_bubble_ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, height);
-    bubble_set_min_content_size(g_bubble_ghostwin, height);
-    g_bubble_had_pending_attachments = true;
-    return OPERATOR_FINISHED;
-  }
-  agent_bubble_sync_footer_window_size(C, CTX_wm_region(C));
-  /* Always force a redraw — agent_bubble_sync_footer_window_size
-   * may early-return without tagging when the bubble is already the
-   * right size, but the footer thumbnails still need rendering. */
+  /* ISLAND ARCHITECTURE: attachments no longer drive window sizing. The old
+   * footer pre-sized the bubble for a thumbnail strip; the island renders
+   * pending attachments inline in the composer chip row at chip height, so
+   * no extra room is needed. The legacy force-size here was also the
+   * "attach an image and the whole chat bugs out" bug: it re-applied the
+   * pre-island layout constants (and on retina ended up doubling the window
+   * to 1748x896). The operator survives for its Python callers, now only
+   * tagging a redraw so the new thumbnails appear immediately. */
+  (void)op;
   agent_bubble_force_redraw(C);
   return OPERATOR_FINISHED;
 #else
   (void)C;
+  (void)op;
   return OPERATOR_CANCELLED;
 #endif
 }

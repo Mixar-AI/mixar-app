@@ -210,7 +210,11 @@ void agent_ui_layout_build(const int window_w,
 
   /* --- Inner panel, and the stack that hangs off the card's foot --- */
   const float card_bottom = AGENT_CARD_Y + card_h;
-  const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_Y - AGENT_CARD_Y);
+  /* The panel runs to the card BOTTOM, keeping only the same 6-unit inset it
+   * has at the sides (artboard: card ends 569, panel 563). Mirroring the
+   * card-top offset here instead left a 76-unit band of bare card gradient
+   * under every pane — the "green strip" under the prompt box. */
+  const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_X - AGENT_CARD_X);
   r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, AGENT_PANEL_W, panel_h);
 
   const float chip_y = card_bottom - AGENT_CARD_PAD_BOTTOM - AGENT_CHIP_H;

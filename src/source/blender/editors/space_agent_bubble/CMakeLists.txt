@@ -19,6 +19,7 @@ set(SRC
   agent_ui_draw.cc
   agent_ui_icons.cc
   agent_ui_layout.cc
+  agent_ui_pane_kit.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc
   agent_ui_tabsplat_paint.cc
@@ -32,6 +33,7 @@ set(SRC
   agent_ui_draw.hh
   agent_ui_icons.hh
   agent_ui_layout.hh
+  agent_ui_pane_kit.hh
   agent_ui_queue.hh
   agent_ui_tabsplat.hh
   agent_ui_tabsplat_intern.hh

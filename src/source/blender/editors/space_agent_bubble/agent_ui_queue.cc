@@ -50,6 +50,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_queue.hh"
 #include "agent_ui_theme.hh"
 
@@ -231,74 +232,7 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row)
  * deliberately local; that file's helpers are private to its own pass).
  * \{ */
 
-void q_fill_round(const rctf *rect, const float radius, const float col[4])
-{
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, radius, col);
-}
-
-int q_font()
-{
-  return BLF_default();
-}
-
-float q_text_width(const char *text, const float size)
-{
-  const int font = q_font();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-void q_label_left(
-    const char *text, const float x, const float cy, const float size, const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = q_font();
-  BLF_size(font, size);
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
-}
-
-void q_label_centre(
-    const char *text, const float cx, const float cy, const float size, const float col[4])
-{
-  q_label_left(text, cx - q_text_width(text, size) * 0.5f, cy, size, col);
-}
-
-void q_label_right(
-    const char *text, const float x, const float cy, const float size, const float col[4])
-{
-  q_label_left(text, x - q_text_width(text, size), cy, size, col);
-}
-
-/** Truncate \a text (in place) so it fits \a max_w at \a size, byte-safe. */
-void q_fit_text(char *text, const float max_w, const float size)
-{
-  if (q_text_width(text, size) <= max_w) {
-    return;
-  }
-  size_t len = strlen(text);
-  while (len > 1) {
-    len--;
-    /* Never split a UTF-8 sequence: back up over continuation bytes. */
-    while (len > 1 && ((unsigned char)(text[len]) & 0xC0) == 0x80) {
-      len--;
-    }
-    text[len] = '\0';
-    if (q_text_width(text, size) <= max_w) {
-      break;
-    }
-  }
-}
+/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
 
 /** \} */
 
@@ -309,12 +243,12 @@ void q_fit_text(char *text, const float max_w, const float size)
 #define QROW_H 64.0f       /* Row backplate height. */
 #define QROW_GAP 10.0f     /* Vertical gap between rows. */
 #define QROW_PAD_X 18.0f   /* Row inner horizontal padding. */
-#define QROW_RADIUS 14.0f  /* Row corner radius — matches the chips. */
+#define QROW_RADIUS PANE_RADIUS /* Row corner radius — the kit chips'. */
 #define QROW_DOT_R 5.0f    /* Status dot radius — matches the pill's dot. */
-#define QROW_FONT 18.0f    /* Title size — matches the chip labels. */
-#define QROW_FONT_SUB 15.0f/* Status size — matches the pill label. */
+#define QROW_FONT PANE_FONT /* Title size — the kit chip label size. */
+#define QROW_FONT_SUB PANE_FONT_SUB /* Status size — the kit meta size. */
 #define QROW_CANCEL_W 40.0f/* Cancel cross hit width at the row's right edge. */
-#define QPANEL_PAD 16.0f   /* Panel inset around the whole list. */
+#define QPANEL_PAD PANE_INSET_X /* Panel inset — the kit strip inset. */
 #define QHEADER_H 46.0f    /* "N jobs" + Clear finished strip above the rows. */
 
 /** \} */
@@ -342,7 +276,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   const float col_text[4] = AGENT_COL_TEXT;
   const float col_dim[4] = AGENT_COL_TEXT_DIM;
-  const float col_row[4] = AGENT_COL_CHIP;
+  const float col_row[4] = PANE_COL_ACTION; /* Same family as the bottom action chips. */
   const float col_accent[4] = AGENT_COL_BORDER;   /* Running dot: the island green. */
   const float col_done[4] = AGENT_COL_ACCENT;     /* Done dot: calmer green. */
   const float col_pending[4] = AGENT_COL_QUEUE_COUNT;
@@ -350,8 +284,11 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   GPU_blend(GPU_BLEND_ALPHA);
 
+  /* Shared panel wash (pane kit) — the queue backdrops like every pane. */
+  pane_wash_paint(panel, u);
+
   if (row_count == 0) {
-    q_label_centre("No jobs in the queue",
+    pane_label_centre("No jobs in the queue",
                    (panel.xmin + panel.xmax) * 0.5f,
                    (panel.ymin + panel.ymax) * 0.5f,
                    font,
@@ -378,9 +315,9 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       SNPRINTF(counts, "%d job%s", row_count, (row_count == 1) ? "" : "s");
     }
     const float cy = y_top - header_h * 0.5f;
-    q_label_left(counts, list_left, cy, font_sub, col_dim);
+    pane_label_left(counts, list_left, cy, font_sub, col_dim);
     if (any_terminal) {
-      q_label_right("Clear finished", list_right, cy, font_sub, col_dim);
+      pane_label_right("Clear finished", list_right, cy, font_sub, col_dim);
     }
   }
   y_top -= header_h;
@@ -397,7 +334,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     rect.ymax = y_top - float(i) * (row_h + row_gap);
     rect.ymin = rect.ymax - row_h;
 
-    q_fill_round(&rect, QROW_RADIUS * u, col_row);
+    pane_fill_round(&rect, QROW_RADIUS * u, col_row);
 
     const float cy = (rect.ymin + rect.ymax) * 0.5f;
     const float dot_r = QROW_DOT_R * u;
@@ -424,7 +361,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     dot.xmax = dot_cx + dot_r;
     dot.ymin = cy - dot_r;
     dot.ymax = cy + dot_r;
-    q_fill_round(&dot, dot_r, dot_col);
+    pane_fill_round(&dot, dot_r, dot_col);
 
     /* Two-line row, matching the moodboard queue's information:
      *   line 1: dot + title ................ elapsed clock [cancel]
@@ -446,23 +383,23 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       format_elapsed(double(row.elapsed_done), clock);
     }
     if (clock[0]) {
-      q_label_right(clock, right_edge, cy1, font_sub, col_dim);
+      pane_label_right(clock, right_edge, cy1, font_sub, col_dim);
     }
 
     /* Title between dot and clock. */
     char title[96];
     BLI_strncpy(title, row.title, sizeof(title));
     const float title_x = dot_cx + dot_r + 12.0f * u;
-    const float title_max_w = right_edge - q_text_width(clock, font_sub) - 16.0f * u - title_x;
-    q_fit_text(title, title_max_w, font);
-    q_label_left(title, title_x, cy1, font, col_text);
+    const float title_max_w = right_edge - pane_text_width(clock, font_sub) - 16.0f * u - title_x;
+    pane_fit_text(title, title_max_w, font);
+    pane_label_left(title, title_x, cy1, font, col_text);
 
     /* Metadata line: generation type - model, dim; status word right. */
     char status[64];
     BLI_strncpy(status, row.status, sizeof(status));
     const float status_max_w = (rect.xmax - rect.xmin) * 0.35f;
-    q_fit_text(status, status_max_w, font_sub);
-    q_label_right(status, right_edge, cy2, font_sub, row.is_failed ? col_failed : col_dim);
+    pane_fit_text(status, status_max_w, font_sub);
+    pane_label_right(status, right_edge, cy2, font_sub, row.is_failed ? col_failed : col_dim);
 
     char meta[160] = "";
     if (row.type_label[0] && row.model_label[0]) {
@@ -475,14 +412,14 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       BLI_strncpy(meta, row.model_label, sizeof(meta));
     }
     if (meta[0]) {
-      const float meta_max_w = right_edge - q_text_width(status, font_sub) - 16.0f * u - title_x;
-      q_fit_text(meta, meta_max_w, font_sub);
-      q_label_left(meta, title_x, cy2, font_sub, col_dim);
+      const float meta_max_w = right_edge - pane_text_width(status, font_sub) - 16.0f * u - title_x;
+      pane_fit_text(meta, meta_max_w, font_sub);
+      pane_label_left(meta, title_x, cy2, font_sub, col_dim);
     }
 
     /* Cancel cross for rows that can still be cancelled. */
     if (row.is_running || row.is_pending) {
-      q_label_centre("\xC3\x97", /* U+00D7 multiplication sign. */
+      pane_label_centre("\xC3\x97", /* U+00D7 multiplication sign. */
                      rect.xmax - (QROW_CANCEL_W * 0.5f) * u,
                      cy,
                      font,
@@ -494,7 +431,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     char more[32];
     SNPRINTF(more, "+%d more", row_count - shown);
     const float more_y = y_top - float(shown) * (row_h + row_gap) - row_gap;
-    q_label_centre(more, (list_left + list_right) * 0.5f, more_y, font_sub, col_dim);
+    pane_label_centre(more, (list_left + list_right) * 0.5f, more_y, font_sub, col_dim);
   }
 
   GPU_blend(GPU_BLEND_NONE);
@@ -505,7 +442,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Clear finished. */
   if (any_terminal) {
     const float cy = panel.ymax - pad - header_h * 0.5f;
-    const float w = q_text_width("Clear finished", font_sub) + 16.0f * u;
+    const float w = pane_text_width("Clear finished", font_sub) + 16.0f * u;
     uiDefButO(block, ButType::But, "mixie.queue_clear_all_completed",
               blender::wm::OpCallContext::InvokeDefault, "",
               int(list_right - w), int(cy - header_h * 0.5f), short(w), short(header_h),

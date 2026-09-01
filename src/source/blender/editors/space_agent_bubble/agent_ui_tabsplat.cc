@@ -43,6 +43,7 @@
 #include "WM_types.hh"
 
 #include "agent_ui_tabsplat.hh"
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabsplat_intern.hh"
 #include "agent_ui_theme.hh"
 
@@ -217,14 +218,18 @@ void agent_ui_tabsplat_draw(const bContext *C,
 
   GPU_blend(GPU_BLEND_ALPHA);
 
+  /* Shared panel wash (pane kit) — under everything, including the
+   * unavailable state, so this tab backdrops like every other pane. */
+  pane_wash_paint(panel, u);
+
   if (!available) {
     /* Fail closed, like the moodboard drawer: message only, no controls —
      * a bundled client must never resurrect a disabled Marble model. */
     const float dim[4] = AGENT_COL_TEXT_DIM;
-    splat_label_centre("World Labs catalog settings are unavailable",
+    pane_label_centre("World Labs catalog settings are unavailable",
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),
-                       AGENT_DU(SPLAT_FONT),
+                       PANE_FONT * u,
                        dim);
     GPU_blend(GPU_BLEND_NONE);
     return;
@@ -304,6 +309,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               "Upload an input image for world generation");
 
+    /* Capture Viewport -> tab.reference_image (use_selected_image off). */
+    rect_args(rects.chip_capture, &bx, &by, &bw, &bh);
+    uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Screenshot the 3D viewport as the input image");
+
     /* Moodboard-selection switch. */
     rect_args(rects.moodboard_switch, &bx, &by, &bw, &bh);
     uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
@@ -336,6 +347,11 @@ void agent_ui_tabsplat_draw(const bContext *C,
                              state.image_mode ? "Describe your scene here... (optional)" :
                                                 "Describe your scene here...");
       UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      /* TEXTEDIT_UPDATE is not just Enter-to-submit parity — it is one of the
+       * multiline text gates (ui_but_is_multiline_text): without it a tall
+       * Text button vertically centres its content and draws a rect-height
+       * caret (the "giant caret" bug). */
+      UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
     }
   }
 

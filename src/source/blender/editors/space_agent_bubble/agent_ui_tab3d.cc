@@ -45,72 +45,12 @@
 #include "WM_types.hh"
 
 #include "agent_ui_icons.hh"
+#include "agent_ui_pane_kit.hh"
 #include "agent_ui_tab3d.hh"
 #include "agent_ui_tab3d_intern.hh"
 #include "agent_ui_theme.hh"
 
-/* -------------------------------------------------------------------- */
-/** \name Painter helpers (shared with the params file; the island's other
- * panes keep theirs private, so these are duplicated on purpose).
- * \{ */
-
-void t3d_fill_round(const rctf *rect, const float radius, const float col[4])
-{
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, radius, col);
-}
-
-float t3d_text_width(const char *text, const float size)
-{
-  const int font = BLF_default();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-void t3d_label_left(
-    const char *text, const float x, const float cy, const float size, const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = BLF_default();
-  BLF_size(font, size);
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
-}
-
-void t3d_label_centre(
-    const char *text, const float cx, const float cy, const float size, const float col[4])
-{
-  t3d_label_left(text, cx - t3d_text_width(text, size) * 0.5f, cy, size, col);
-}
-
-void t3d_fit_text(char *text, const float max_w, const float size)
-{
-  if (t3d_text_width(text, size) <= max_w) {
-    return;
-  }
-  size_t len = strlen(text);
-  while (len > 1) {
-    len--;
-    while (len > 1 && ((unsigned char)(text[len]) & 0xC0) == 0x80) {
-      len--;
-    }
-    text[len] = '\0';
-    if (t3d_text_width(text, size) <= max_w) {
-      break;
-    }
-  }
-}
-
-/** \} */
+/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
 
 namespace {
 
@@ -274,39 +214,23 @@ float dropdown_chip(const bContext *C,
                     const float u)
 {
   UNUSED_VARS(C, region);
-  const float h = AGENT_CHIP_H * u;
-  const float pad = T3D_CHIP_PAD_X * u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
-  const float chev = AGENT_DU(AGENT_CHIP_ICON) * 0.8f;
-
   char label[64];
   BLI_strncpy(label, label_in[0] ? label_in : "—", sizeof(label));
-  t3d_fit_text(label, 320.0f * u, font);
+  pane_fit_text(label, 320.0f * u, PANE_FONT * u);
 
-  const float w = pad + t3d_text_width(label, font) + 10.0f * u + chev + pad * 0.75f;
-  rctf rect = {x, x + w, y_top - h, y_top};
-
-  const float chip_col[4] = T3D_COL_CHIP;
-  const float text_col[4] = AGENT_COL_TEXT;
-  t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip_col);
-  const float cy = BLI_rctf_cent_y(&rect);
-  t3d_label_left(label, x + pad, cy, font, text_col);
-
-  rctf chev_box;
-  chev_box.xmax = rect.xmax - pad * 0.75f;
-  chev_box.xmin = chev_box.xmax - chev;
-  chev_box.ymin = cy - chev * 0.5f;
-  chev_box.ymax = cy + chev * 0.5f;
-  agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chev_box, text_col, chip_col);
+  const float w = pane_dropdown_chip_w(label, u);
+  const rctf rect = {x, x + w, y_top - PANE_ROW_H * u, y_top};
+  pane_dropdown_chip_paint(rect, label, u);
 
   uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
                          blender::wm::OpCallContext::InvokeDefault, "",
-                         int(rect.xmin), int(rect.ymin), short(w), short(h), tip);
+                         int(rect.xmin), int(rect.ymin), short(w),
+                         short(PANE_ROW_H * u), tip);
   if (but) {
     PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", data_path);
   }
-  return w + T3D_CHIP_GAP * u;
+  return w + PANE_CHIP_GAP * u;
 }
 
 }  // namespace
@@ -320,27 +244,8 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   GPU_blend(GPU_BLEND_ALPHA);
 
-  /* Panel wash — the design's #2D2D2D -> #131413 ramp over the whole panel
-   * (vertical here; the diagonal falloff is imperceptible at this delta). */
-  {
-    const float top[4] = T3D_COL_PANEL_TOP;
-    const float bottom[4] = T3D_COL_PANEL_BOTTOM;
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
-    UI_draw_roundbox_4fv_ex(
-        &panel, bottom, top, 1.0f, nullptr, 0.0f, AGENT_PANEL_RADIUS * u);
-  }
-
-  /* Prompt box: top fixed on the design grid, foot following the panel's
-   * (the card stretches with the window and the box absorbs the slack). */
-  rctf box;
-  box.xmin = panel.xmin + (T3D_BOX_X - AGENT_PANEL_X) * u;
-  box.xmax = box.xmin + T3D_BOX_W * u;
-  box.ymax = panel.ymax - (T3D_BOX_Y - AGENT_PANEL_Y) * u;
-  box.ymin = panel.ymin + T3D_BOX_BOTTOM_INSET * u;
-  const float box_col[4] = T3D_COL_BOX;
-  if (box.ymax > box.ymin + 40.0f * u) {
-    t3d_fill_round(&box, T3D_BOX_RADIUS * u, box_col);
-  }
+  /* Panel wash — the shared #2D2D2D -> #131413 ramp (pane kit). */
+  pane_wash_paint(panel, u);
 
   /* Blocks: chips (unembossed ops) + field/sliders (embossed). The field
    * block is begun FIRST so overlapping chip buttons win their clicks. */
@@ -350,9 +255,9 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
       C, region, "agent_island_3d", blender::ui::EmbossType::None);
 
   /* --- Params strip: Mode + Model dropdowns, then the schema params. --- */
-  float x = panel.xmin + (T3D_ROW_X - AGENT_PANEL_X) * u;
-  const float row_top = panel.ymax - (T3D_ROW0_Y - AGENT_PANEL_Y) * u;
-  const float x_max = panel.xmax - T3D_ROW_X * u * 0.5f;
+  float x = panel.xmin + PANE_INSET_X * u;
+  const float row_top = panel.ymax - PANE_STRIP_TOP * u;
+  const float x_max = panel.xmax - PANE_INSET_X * u;
 
   x += dropdown_chip(C, block, region, st.mode_label,
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.mode",
@@ -361,18 +266,31 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.model",
                      "AI model", x, row_top, u);
 
+  /* Strip height first, box below it — the kit's prompt-visibility contract:
+   * a wrapping strip pushes the box down instead of overlapping it. */
+  float strip_bottom = row_top - PANE_ROW_H * u;
   if (st.group_ok) {
-    agent_ui_tab3d_params_draw(C, &st.group_ptr, st.group_path, block, field_block,
-                               x, row_top, x_max, box.ymax + 8.0f * u, u);
+    const float params_floor = panel.ymin + (PANE_BOX_MIN_H + PANE_BOX_GAP) * u;
+    strip_bottom = std::min(strip_bottom,
+                            agent_ui_tab3d_params_draw(C, &st.group_ptr, st.group_path,
+                                                       block, field_block,
+                                                       x, panel.xmin + PANE_INSET_X * u,
+                                                       row_top, x_max, params_floor, u));
   }
 
+  rctf box = pane_prompt_box_rect(panel, strip_bottom, u);
+  pane_prompt_box_paint(box, u);
+
   /* --- Prompt field: the whole box (bottom chips draw over its foot). --- */
-  if (box.ymax > box.ymin + 40.0f * u) {
+  if (box.ymax > box.ymin + PANE_BOX_MIN_H * u) {
     PropertyRNA *prompt_prop = RNA_struct_find_property(&st.tab_ptr, "prompt");
     if (prompt_prop) {
+      /* The kit's top strip: ghost text and caret at text scale, never a
+       * box-height caret, never a collision with the bottom chips. */
+      const rctf field = pane_prompt_field_rect(box, u);
       uiBut *input = uiDefButR(field_block, ButType::Text, 0, "",
-                               int(box.xmin), int(box.ymin),
-                               short(BLI_rctf_size_x(&box)), short(BLI_rctf_size_y(&box)),
+                               int(field.xmin), int(field.ymin),
+                               short(BLI_rctf_size_x(&field)), short(BLI_rctf_size_y(&field)),
                                &st.tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
       if (input) {
         UI_but_placeholder_set(input, "Describe your scene here...");
@@ -388,12 +306,8 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   UI_block_end(C, field_block);
   UI_block_draw(C, field_block);
 
-  /* --- Bottom row inside the box: Upload Reference + Generate. --- */
-  const float chip_h = AGENT_CHIP_H * u;
-  const float chip_y0 = box.ymin + T3D_CHIP_BOTTOM_INSET * u;
-  const float font = AGENT_DU(AGENT_CHIP_FONT);
-  const float text_col[4] = AGENT_COL_TEXT;
-
+  /* --- Bottom row inside the box foot: Upload Reference + Generate. --- */
+  const float chip_y0 = pane_bottom_row_ymin(box, u);
   {
     /* Upload chip — the tab's OWN picker (sets reference_image and the
      * generate path reads it when use_selected_image is off). Show the
@@ -402,28 +316,18 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
     if (st.reference_name[0] && !st.use_selected_image) {
       BLI_strncpy(label, st.reference_name, sizeof(label));
     }
-    t3d_fit_text(label, 260.0f * u, font);
-    const float pad = T3D_CHIP_PAD_X * u;
-    const float icon_edge = AGENT_DU(AGENT_CHIP_ICON);
-    const float w = pad + icon_edge + AGENT_DU(AGENT_CHIP_ICON_GAP) +
-                    t3d_text_width(label, font) + pad;
+    pane_fit_text(label, 260.0f * u, PANE_FONT * u);
     rctf rect;
-    rect.xmin = box.xmin + (T3D_UPLOAD_X - T3D_BOX_X) * u;
-    rect.xmax = rect.xmin + w;
+    rect.xmin = box.xmin + PANE_BOTTOM_IN_L * u;
+    rect.xmax = rect.xmin + pane_action_chip_w(label, true, u);
     rect.ymin = chip_y0;
-    rect.ymax = chip_y0 + chip_h;
-    const float chip_col[4] = T3D_COL_UPLOAD;
-    t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip_col);
-    const float cy = BLI_rctf_cent_y(&rect);
-    rctf icon = {rect.xmin + pad, rect.xmin + pad + icon_edge,
-                 cy - icon_edge * 0.5f, cy + icon_edge * 0.5f};
-    agent_ui_icon_draw(AGENT_ICON_IMAGE, &icon, text_col, chip_col);
-    t3d_label_left(label, icon.xmax + AGENT_DU(AGENT_CHIP_ICON_GAP), cy, font, text_col);
+    rect.ymax = chip_y0 + PANE_ROW_H * u;
+    pane_action_chip_paint(rect, label, true, false, u);
 
     uiDefButO(block, ButType::But, "mixie.image_to_3d_pick_image",
               blender::wm::OpCallContext::InvokeDefault, "",
               int(rect.xmin), int(rect.ymin),
-              short(BLI_rctf_size_x(&rect)), short(chip_h),
+              short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
               "Pick an input image for 3D generation");
   }
 
@@ -435,22 +339,12 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
     const char *op = STREQ(st.mode_id, "tripo_smart_segment") ?
                          "mixie.smart_segment_generate" :
                          "mixie.model_gen_generate";
-    rctf rect;
-    rect.xmax = box.xmax - T3D_BOX_BOTTOM_INSET * u * 2.0f;
-    rect.xmin = rect.xmax - T3D_GENERATE_W * u;
-    rect.ymin = chip_y0;
-    rect.ymax = chip_y0 + chip_h;
-    const float gen_col[4] = T3D_COL_GENERATE;
-    const float strong[4] = AGENT_COL_TEXT_STRONG;
-    const float dim[4] = AGENT_COL_TEXT_DIM;
-    t3d_fill_round(&rect, AGENT_CHIP_RADIUS * u, gen_col);
-    t3d_label_centre(st.generating ? "Working..." : "Generate",
-                     BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font,
-                     st.generating ? dim : strong);
+    const rctf rect = pane_generate_rect(box, u);
+    pane_generate_paint(rect, st.generating ? "Working..." : "Generate", !st.generating, u);
     if (!st.generating) {
       uiDefButO(block, ButType::But, op, blender::wm::OpCallContext::InvokeDefault, "",
                 int(rect.xmin), int(rect.ymin),
-                short(BLI_rctf_size_x(&rect)), short(chip_h),
+                short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
                 "Generate a 3D model with the selected mode and model");
     }
   }
