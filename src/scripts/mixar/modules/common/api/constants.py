@@ -52,6 +52,7 @@ class APIModule(Enum):
 
     AGENT = "agent"
     AUTHENTICATION = "auth"
+    HANDWRITING = "handwriting"
     IMAGES = "images"
     IMAGEGEN = "image-generation"
     LOOKDEV = "lookdev"
