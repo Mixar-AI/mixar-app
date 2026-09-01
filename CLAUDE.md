@@ -173,6 +173,14 @@ view matrices and `scene.ray_cast`.
   The modal dies on load but the overlay handler and the module-level running
   guard do not; that pair would leave a stale still painted over a viewport
   with nothing left listening for the disarm.
+- **The mode must be visible and recoverable from inside itself.** The freeze
+  consumes every pointer event over the region, so a hint pill names the way
+  out (Esc) and the way back (Backspace undoes the last mark, bound in the
+  modal rather than a keymap — the modal already owns the events, and a GUI
+  keyconfig reload wipes C-registered items). Queued marks can be cleared from
+  the chat header without re-arming. This is the failure ink tools hit first
+  (arXiv:2607.21468, Thinkink): users cannot tell which mode they are in, and
+  ask for visible controls and a way to undo.
 - The draw pass (`core/overlay.py`) READS ONLY — the live stroke is handed in
   by the modal rather than read back off RNA. Strokes group by a 0.6 s pen-up
   pause into ONE mark, which is what makes an arrow's shaft+head and an X's two

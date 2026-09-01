@@ -28,6 +28,8 @@ written.
 
 from .geometry import bbox, point_in_polygon
 from ..constants import (
+    EMPTY_BACKGROUND,
+    EMPTY_TOO_SMALL,
     MAX_OBJECTS_PER_MARK,
     MIN_HITS_FOR_COVERAGE,
     MIN_OBJECT_COVERAGE,
@@ -148,11 +150,11 @@ def resolve_status(hit_total, miss_total, sample_total):
     ray that did land is an answer.
     """
     if sample_total <= 0:
-        return False, "too_small"
+        return False, EMPTY_TOO_SMALL
     if hit_total <= 0:
-        return False, "background"
+        return False, EMPTY_BACKGROUND
     if hit_total < MIN_HITS_FOR_COVERAGE and miss_total > hit_total:
-        return False, "too_small"
+        return False, EMPTY_TOO_SMALL
     return True, None
 
 

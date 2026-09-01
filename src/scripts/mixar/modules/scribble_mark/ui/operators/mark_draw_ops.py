@@ -148,6 +148,17 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._maybe_commit(context, region)
             return {"RUNNING_MODAL"}
 
+        # Undo, reachable from inside the freeze. Drawing a mark you did not
+        # mean and having no way back short of leaving the mode is exactly the
+        # brittleness users report of ink tools; the freeze owns every event
+        # over this region, so the binding lives here rather than in a keymap
+        # (which a GUI keyconfig reload would wipe).
+        if (event.value == "PRESS"
+                and (event.type in ("BACK_SPACE", "DEL")
+                     or (event.type == "Z" and (event.ctrl or event.oskey)))):
+            self._undo_last(context)
+            return {"RUNNING_MODAL"}
+
         if event.type == "ESC" and event.value == "PRESS":
             self._commit_pending(context)
             self._disarm(context)
@@ -215,6 +226,25 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if time.monotonic() - self._last_up < MARK_COMMIT_IDLE_S:
             return
         self._commit(context, region)
+
+    def _undo_last(self, context):
+        """Drop the most recent mark and the ink drawn for it.
+
+        Prefers the half-drawn strokes: if the pen is mid-gesture, the thing
+        the user means to take back is what is under it, not the mark they
+        already finished.
+        """
+        if self._strokes:
+            self._strokes = []
+            self._current = None
+            overlay.set_live_strokes([])
+            overlay.tag_redraw()
+            return
+
+        if mark_store.remove_last(context.scene):
+            overlay.pop_settled()
+            self.report({"INFO"}, "Mark removed")
+        overlay.tag_redraw()
 
     def _commit_pending(self, context):
         region = self._region(context)

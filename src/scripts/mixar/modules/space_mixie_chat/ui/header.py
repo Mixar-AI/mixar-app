@@ -85,12 +85,20 @@ class MIXIE_CHAT_HT_header(Header):
             if hasattr(bpy.types, 'MIXAR_OT_scribble_mark_toggle'):
                 armed = bool(getattr(wm, 'mixar_mark_armed', False))
                 mark_count = len(getattr(scene, 'mixar_marks', ()) or ())
-                layout.operator(
+                mark_row = layout.row(align=True)
+                mark_row.operator(
                     "mixar.scribble_mark_toggle",
                     text=str(mark_count) if mark_count else "",
                     icon='GREASEPENCIL',
                     depress=armed,
                 )
+                # Queued marks need a way out without re-entering the freeze:
+                # a user who changed their mind should not have to arm the
+                # mode again just to discard what it left behind.
+                if mark_count and not armed:
+                    mark_row.operator(
+                        "mixar.scribble_mark_clear", text="", icon='X',
+                    )
 
             if getattr(scene, 'mixie_chat_mode', '') == 'ADDON_PROJECT':
                 layout.separator()

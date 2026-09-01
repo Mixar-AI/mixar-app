@@ -24,10 +24,10 @@ of asking a vision model to guess one.
 #: refuses a version it does not know rather than misreading fields.
 MARK_PAYLOAD_VERSION = 1
 
-#: Surfaces a mark can be made on. Only VIEW3D is wired today; the enum exists
-#: so the payload never has to grow a new shape when the moodboard lands.
+#: The surface a mark was made on. Only the 3D viewport is wired; the payload
+#: carries the field so a second surface (marking a moodboard image) can be
+#: added without changing the shape the backend already parses.
 SURFACE_VIEW3D = "view3d"
-SURFACE_IMAGE = "image"
 
 #: Gesture labels. Always advisory — the raw polygon travels alongside, so the
 #: agent can disagree with a misclassification instead of being stuck with it.
@@ -36,14 +36,6 @@ GESTURE_CIRCLE = "circle"
 GESTURE_ARROW = "arrow"
 GESTURE_STRIKE = "strike"
 GESTURE_STROKE = "stroke"
-
-GESTURES = (
-    GESTURE_POINT,
-    GESTURE_CIRCLE,
-    GESTURE_ARROW,
-    GESTURE_STRIKE,
-    GESTURE_STROKE,
-)
 
 #: Why a mark resolved to nothing. Reported rather than silently dropped — an
 #: agent that knows the user pointed at empty space can say so.
@@ -71,9 +63,6 @@ MAX_POINTS_PER_STROKE = 512
 #: pixels (callers multiply by UI_SCALE_FAC). Decimates tablet input at the
 #: source so the stroke store stays bounded on a high-DPI display.
 MIN_SAMPLE_DIST_PX = 2.0
-
-#: A stroke below this many points is a tap, not a path.
-MIN_STROKE_POINTS = 2
 
 #: Pen-up idle after which the strokes drawn so far become ONE mark.
 #: This is what groups an arrow's shaft and head, or an X's two lines, without
@@ -235,47 +224,27 @@ MARK_INK_WIDTH = 3.0
 #: Scrim laid over the frozen frame so it reads as paused, not merely idle.
 MARK_SCRIM_COLOR = (0.02, 0.03, 0.04, 0.18)
 
-#: Marks stay drawn for the turn they were sent with, then collapse to a
-#: badge. Showing them while the agent works is reassuring; leaving them up
-#: forever is clutter.
-MARK_BADGE_RADIUS_PX = 13.0
+#: Marks stay drawn while the freeze is up. Sending lowers the freeze, so the
+#: ink comes off the viewport and the count on the toolbar toggle becomes the
+#: badge — showing the marks while the agent works is reassuring, leaving the
+#: whole frozen frame up forever is not.
 
-#: Hint pill along the top of the frozen frame.
-MARK_HINT_HEIGHT_PX = 30.0
-MARK_HINT_PAD_X_PX = 12.0
+#: Hint pill along the top of the frozen frame. Not decoration: a frozen
+#: viewport with no legend is a viewport the user cannot work out how to leave,
+#: and Esc is undiscoverable on its own.
+MARK_HINT_HEIGHT_PX = 28.0
+MARK_HINT_PAD_X_PX = 14.0
+MARK_HINT_TOP_GAP_PX = 12.0
+MARK_HINT_FONT_PX = 12
+MARK_HINT_BG_COLOR = (0.05, 0.07, 0.09, 0.86)
+MARK_HINT_TEXT_COLOR = (0.86, 0.93, 0.95, 1.0)
+MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 
-# =============================================================================
-# AGENT CONTEXT
-# =============================================================================
-
-#: Prepended to the mark payload in the hidden context block. This is the only
-#: per-turn teaching the agent gets about the mark contract, so it states the
-#: coordinate convention explicitly — the backend localizer uses the same one
-#: and a silent mismatch would place edits in the wrong half of the frame.
-MARK_CONTEXT_PREAMBLE = (
-    "The user pointed at the scene instead of describing it. They froze the "
-    "viewport and drew {count} mark(s) on that still frame; the frozen frame "
-    "is attached, both clean and with the marks drawn on it.\n\n"
-    "Coordinates are normalized to that frame: u runs 0..1 left to right, v "
-    "runs 0..1 BOTTOM to TOP. The same convention the sculpt localizer uses, "
-    "so a mark can be used wherever a located region can.\n\n"
-    "Each mark was already resolved against the live scene on the client by "
-    "raycasting — `resolved.objects` is measured, not guessed. Trust it over "
-    "anything you would infer from the image:\n"
-    "- `resolved.objects[0].name` is what the user pointed at. Act on it.\n"
-    "- `coverage` is the fraction of the mark's area landing on that object; "
-    "`partial` means the user selected only PART of it.\n"
-    "- `vertex_group`, when present, names a vertex group on that object "
-    "holding exactly the marked faces. Select it instead of re-deriving the "
-    "region from coordinates.\n"
-    "- `view.camera` names a camera baked at the moment of the mark. Render "
-    "from it to see exactly what the user was looking at.\n"
-    "- `gesture` is an advisory reading of the mark's shape; the raw polygon "
-    "travels with it, so disagree if it looks wrong.\n"
-    "- `hit: false` means the user marked empty space — say so rather than "
-    "picking a nearby object.\n\n"
-    "To re-read the marks inside a script at any time:\n"
-    "    from mixar.modules.scribble_mark.core import marks\n"
-    "    data = marks.get_marks()\n"
-    "'data' is the same JSON shown below."
+#: What the pill says. Both states name every control that exists, because a
+#: mode whose boundaries and recovery are invisible is the failure the Thinkink
+#: study (arXiv:2607.21468) found first: users could not tell which mode they
+#: were in, and asked for visible controls and a way to undo.
+MARK_HINT_IDLE = "Drag to mark what you mean  ·  Esc when done"
+MARK_HINT_MARKED = (
+    "{count} mark{plural}  ·  Backspace undoes the last  ·  Esc when done"
 )

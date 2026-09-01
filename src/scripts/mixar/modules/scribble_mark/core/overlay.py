@@ -22,6 +22,7 @@ image's name and update tag so a re-arm swaps it and nothing else does.
 
 from __future__ import annotations
 
+import blf
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
@@ -30,11 +31,22 @@ from mixar.config.logging_config import get_logger
 
 from . import freeze
 from ..constants import (
+    MARK_HINT_ACCENT_COLOR,
+    MARK_HINT_BG_COLOR,
+    MARK_HINT_FONT_PX,
+    MARK_HINT_HEIGHT_PX,
+    MARK_HINT_IDLE,
+    MARK_HINT_MARKED,
+    MARK_HINT_PAD_X_PX,
+    MARK_HINT_TEXT_COLOR,
+    MARK_HINT_TOP_GAP_PX,
     MARK_INK_COLOR,
     MARK_INK_COLOR_SETTLED,
     MARK_INK_WIDTH,
     MARK_SCRIM_COLOR,
 )
+
+_FONT_ID = 0
 
 logger = get_logger(__name__)
 
@@ -168,6 +180,52 @@ def _draw_strokes(strokes, color, width):
         batch_for_shader(shader, 'LINE_STRIP', {"pos": points}).draw(shader)
 
 
+def _hint_text(scene):
+    """What the pill says, given how much has been drawn."""
+    try:
+        count = len(getattr(scene, "mixar_marks", ()) or ())
+    except Exception:  # noqa: BLE001
+        count = 0
+    if not count:
+        return MARK_HINT_IDLE
+    return MARK_HINT_MARKED.format(count=count, plural="" if count == 1 else "s")
+
+
+def _draw_hint(region, scene, scale):
+    """A legend across the top of the frozen frame.
+
+    Load-bearing, not decoration: the freeze consumes every pointer event over
+    the region, so without a visible way out the user is looking at a picture
+    of their scene with no idea how to get their viewport back.
+    """
+    text = _hint_text(scene)
+    height = MARK_HINT_HEIGHT_PX * scale
+    pad_x = MARK_HINT_PAD_X_PX * scale
+
+    blf.size(_FONT_ID, int(round(MARK_HINT_FONT_PX * scale)))
+    text_w, text_h = blf.dimensions(_FONT_ID, text)
+
+    width = text_w + pad_x * 2.0
+    x0 = (region.width - width) / 2.0
+    y1 = region.height - MARK_HINT_TOP_GAP_PX * scale
+    y0 = y1 - height
+
+    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+    batch = batch_for_shader(
+        shader, 'TRIS',
+        {"pos": ((x0, y0), (x0 + width, y0), (x0 + width, y1), (x0, y1))},
+        indices=((0, 1, 2), (0, 2, 3)),
+    )
+    shader.bind()
+    shader.uniform_float("color", MARK_HINT_BG_COLOR)
+    batch.draw(shader)
+
+    colour = MARK_HINT_ACCENT_COLOR if _live_strokes else MARK_HINT_TEXT_COLOR
+    blf.color(_FONT_ID, *colour)
+    blf.position(_FONT_ID, x0 + pad_x, y0 + (height - text_h) / 2.0, 0)
+    blf.draw(_FONT_ID, text)
+
+
 def _draw_callback():
     try:
         if not _armed():
@@ -194,6 +252,8 @@ def _draw_callback():
                 _draw_strokes(strokes, MARK_INK_COLOR_SETTLED, width)
             if _live_strokes:
                 _draw_strokes(_live_strokes, MARK_INK_COLOR, width)
+
+            _draw_hint(region, scene, scale)
         finally:
             gpu.state.blend_set('NONE')
     except Exception as exc:  # noqa: BLE001 — a draw handler must never raise

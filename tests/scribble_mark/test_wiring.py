@@ -377,3 +377,53 @@ class TestFrameAttachments:
 ))
 def test_no_module_file_exceeds_the_line_limit(path):
     assert len(path.read_text().splitlines()) <= 500, path.name
+
+
+class TestVisibleControlsAndRecovery:
+    """A mode whose boundaries and recovery are invisible is the first thing
+    users trip on with ink tools (arXiv:2607.21468 found exactly this: people
+    could not tell which mode they were in, and asked for visible controls and
+    a way to undo). The freeze consumes every pointer event over the region,
+    so both have to be on screen."""
+
+    OVERLAY = "src/scripts/mixar/modules/scribble_mark/core/overlay.py"
+    MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
+    HEADER = "src/scripts/mixar/modules/space_mixie_chat/ui/header.py"
+
+    def test_the_frozen_frame_carries_a_hint(self):
+        text = source(self.OVERLAY)
+        assert "_draw_hint" in text
+        callback = text[text.index("def _draw_callback"):]
+        assert "_draw_hint(" in callback, "the hint is defined but never drawn"
+
+    def test_the_hint_names_the_way_out(self):
+        from mixar.modules.scribble_mark.constants import (
+            MARK_HINT_IDLE, MARK_HINT_MARKED,
+        )
+        assert "Esc" in MARK_HINT_IDLE
+        assert "Esc" in MARK_HINT_MARKED
+
+    def test_the_hint_names_the_way_back(self):
+        from mixar.modules.scribble_mark.constants import MARK_HINT_MARKED
+        assert "Backspace" in MARK_HINT_MARKED
+
+    def test_undo_is_reachable_from_inside_the_freeze(self):
+        """Bound in the modal rather than a keymap: the freeze already owns
+        every event over the region, and a GUI keyconfig reload wipes
+        C-registered keymap items."""
+        text = source(self.MODAL)
+        assert "BACK_SPACE" in text
+        assert "_undo_last" in text
+
+    def test_undo_prefers_the_half_drawn_stroke(self):
+        """Mid-gesture, the thing the user means to take back is what is under
+        the pen, not the mark they already finished."""
+        text = source(self.MODAL)
+        body = text[text.index("def _undo_last"):]
+        body = body[:body.index("\n    def ", 1)]
+        assert body.index("self._strokes") < body.index("remove_last")
+
+    def test_queued_marks_can_be_cleared_without_re_arming(self):
+        text = source(self.HEADER)
+        assert "mixar.scribble_mark_clear" in text
+        assert "not armed" in text
