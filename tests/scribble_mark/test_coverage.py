@@ -177,3 +177,33 @@ class TestScreenOverlap:
     def test_screen_bbox_of_nothing_is_none(self):
         assert C.screen_bbox([None, None]) is None
         assert C.screen_bbox([]) is None
+
+
+class TestVectorizedContainment:
+    """The vertex-group pass tests every vertex of a mesh against the mark
+    polygon; a Python loop there stalls the UI, so it is vectorized — and
+    must agree exactly with the scalar version it replaces."""
+
+    def test_agrees_with_the_scalar_test_on_a_convex_shape(self):
+        from mixar.modules.scribble_mark.core.geometry import point_in_polygon
+        pts = [(x * 7.3 % 120 - 10, y * 11.7 % 120 - 10) for x in range(40) for y in range(40)]
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        mask = C.points_in_polygon_mask(xs, ys, SQUARE)
+        assert mask is not None
+        for i, (x, y) in enumerate(pts):
+            assert bool(mask[i]) == point_in_polygon(x, y, SQUARE), (x, y)
+
+    def test_agrees_with_the_scalar_test_on_a_concave_shape(self):
+        from mixar.modules.scribble_mark.core.geometry import point_in_polygon
+        c_shape = [(0, 0), (100, 0), (100, 30), (40, 30),
+                   (40, 70), (100, 70), (100, 100), (0, 100)]
+        pts = [(x * 3.1 % 110 - 5, y * 5.7 % 110 - 5) for x in range(35) for y in range(35)]
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        mask = C.points_in_polygon_mask(xs, ys, c_shape)
+        for i, (x, y) in enumerate(pts):
+            assert bool(mask[i]) == point_in_polygon(x, y, c_shape), (x, y)
+
+    def test_degenerate_polygon_returns_none_so_callers_can_fall_back(self):
+        assert C.points_in_polygon_mask([1], [1], [(0, 0), (1, 1)]) is None

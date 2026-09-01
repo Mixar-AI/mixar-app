@@ -75,6 +75,16 @@ MIN_SAMPLE_DIST_PX = 2.0
 #: A stroke below this many points is a tap, not a path.
 MIN_STROKE_POINTS = 2
 
+#: Pen-up idle after which the strokes drawn so far become ONE mark.
+#: This is what groups an arrow's shaft and head, or an X's two lines, without
+#: asking the user to declare it — the same idle-commit shape the handwriting
+#: canvas already uses, so the gesture is one people meet twice.
+MARK_COMMIT_IDLE_S = 0.6
+
+#: Modal timer period. Shorter than the idle above, so a commit fires at most
+#: one period late.
+MARK_TIMER_STEP_S = 0.15
+
 # =============================================================================
 # SERIALIZATION LIMITS
 # =============================================================================
@@ -173,6 +183,18 @@ MIN_HITS_FOR_COVERAGE = 3
 
 #: Rays are cast this far into the scene before giving up.
 RAYCAST_DISTANCE = 1.0e6
+
+#: A vertex group holding fewer than this many vertices is not written — it
+#: would name a selection too sparse to edit, and an agent told to "select
+#: this group" would then act on almost nothing.
+MIN_MARKED_VERTICES = 3
+
+#: Meshes above this vertex count skip the vertex-group pass. The projection
+#: is vectorized and handles large meshes in milliseconds, but this runs while
+#: the user waits for their message to send, so there is a ceiling. Above it
+#: the mark still resolves to the object — only the sub-object selection is
+#: skipped, and the reason is reported.
+MAX_MESH_VERTICES_FOR_GROUP = 2_000_000
 
 # =============================================================================
 # SCENE ENTITIES

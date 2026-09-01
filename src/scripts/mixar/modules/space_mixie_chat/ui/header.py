@@ -77,6 +77,21 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
 
+            # Mark Viewport — freezes the 3D viewport and lets the user draw
+            # on it. The marks ride with the next message, already resolved
+            # against the scene, so the agent knows what "this" refers to.
+            # depress mirrors the armed state, like the overlays above.
+            # hasattr guard: deferred UI registration pass.
+            if hasattr(bpy.types, 'MIXAR_OT_scribble_mark_toggle'):
+                armed = bool(getattr(wm, 'mixar_mark_armed', False))
+                mark_count = len(getattr(scene, 'mixar_marks', ()) or ())
+                layout.operator(
+                    "mixar.scribble_mark_toggle",
+                    text=str(mark_count) if mark_count else "",
+                    icon='GREASEPENCIL',
+                    depress=armed,
+                )
+
             if getattr(scene, 'mixie_chat_mode', '') == 'ADDON_PROJECT':
                 layout.separator()
                 draw_project_controls(layout, scene)

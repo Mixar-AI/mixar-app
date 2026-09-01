@@ -287,6 +287,7 @@ class SSEStreamHandler:
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
         project_context: Optional[dict] = None,
+        mark_context: Optional[dict] = None,
     ) -> bool:
         """
         Start SSE stream for V2 agent chat.
@@ -308,6 +309,11 @@ class SSEStreamHandler:
                 pass them straight to generation tools without a tool round-trip.
             project_context: Opaque project ID, lease, revision, and protocol.
                 Never contains the local project root.
+            mark_context: Scribble Marks — where on a frozen viewport frame the
+                user pointed, already resolved on the client into which object,
+                how much of it, and a world-space surface point. Path-free:
+                object, camera and vertex-group names are Blender datablock
+                names and carry no filesystem information.
 
         Returns:
             True if stream started successfully
@@ -332,7 +338,7 @@ class SSEStreamHandler:
         user_preferences = self._collect_user_preferences()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context, user_preferences),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context, mark_context, user_preferences),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
@@ -556,6 +562,7 @@ class SSEStreamHandler:
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
         project_context: Optional[dict] = None,
+        mark_context: Optional[dict] = None,
         user_preferences: Optional[dict] = None,
         _connect_attempt: int = 0,
     ) -> None:
@@ -595,6 +602,12 @@ class SSEStreamHandler:
 
             if project_context:
                 payload["project_context"] = project_context
+
+            # Where the user pointed, resolved against the live scene before
+            # it left the client. The backend uses this instead of asking a
+            # vision model to locate the region on a render.
+            if mark_context:
+                payload["mark_context"] = mark_context
 
             # Session preferences (e.g. the asset-library match threshold) the
             # backend merges into the agent scratchpad for this turn.
@@ -691,6 +704,7 @@ class SSEStreamHandler:
                     image_attachments,
                     attachment_names,
                     project_context,
+                    mark_context,
                     user_preferences,
                     _connect_attempt + 1,
                 )

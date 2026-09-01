@@ -186,6 +186,44 @@ def rect_overlap_fraction(inner, outer):
     return min(1.0, (ox * oy) / inner_area)
 
 
+def points_in_polygon_mask(xs, ys, polygon):
+    """Vectorized even-odd containment for many points at once.
+
+    The scalar :func:`~.geometry.point_in_polygon` is fine for the few hundred
+    grid samples of a raycast, but the vertex-group pass tests every vertex of
+    a mesh — hundreds of thousands of them against up to 32 edges — and a
+    Python loop there stalls the UI for seconds.
+
+    Returns a boolean numpy array, or None when numpy is unavailable or the
+    polygon is degenerate, so callers can fall back rather than fail.
+    """
+    try:
+        import numpy as np
+    except ImportError:  # pragma: no cover — numpy ships with Blender
+        return None
+
+    if len(polygon) < 3:
+        return None
+
+    px = np.asarray([float(p[0]) for p in polygon])
+    py = np.asarray([float(p[1]) for p in polygon])
+    xs = np.asarray(xs, dtype=float)
+    ys = np.asarray(ys, dtype=float)
+
+    inside = np.zeros(xs.shape, dtype=bool)
+    j = len(polygon) - 1
+    for i in range(len(polygon)):
+        yi, yj = py[i], py[j]
+        xi, xj = px[i], px[j]
+        straddles = (yi > ys) != (yj > ys)
+        denom = yj - yi
+        if abs(denom) > 1e-12:
+            crossing = xi + (ys - yi) * (xj - xi) / denom
+            inside ^= straddles & (xs < crossing)
+        j = i
+    return inside
+
+
 def screen_bbox(points):
     """``(min_x, min_y, max_x, max_y)`` of projected points, or None.
 

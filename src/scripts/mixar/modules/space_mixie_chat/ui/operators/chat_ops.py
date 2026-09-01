@@ -119,6 +119,22 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
 
+        # Scribble Marks: where the user pointed, already resolved against
+        # the live scene. Runs BEFORE the attachment encoding below because it
+        # appends the frozen frames to pending_attachments; building it after
+        # would send the marks with no picture of them.
+        mark_context = None
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
+                for note in mark_notes:
+                    self.report({'INFO'}, f"Marks: {note}")
+            except Exception as e:  # noqa: BLE001
+                # The words are a complete request on their own; never lose a
+                # message because the marks could not be assembled.
+                logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
+
         project_context = None
         if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
             if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
@@ -385,6 +401,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 image_attachments=encoded_attachments if encoded_attachments else None,
                 attachment_names=attachment_names if attachment_names else None,
                 project_context=project_context,
+                mark_context=mark_context,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to start chat stream")
@@ -418,6 +435,16 @@ class MIXIE_CHAT_OT_send_message(Operator):
             logger.debug(
                 "moodboard deselect on send skipped: %s", e, exc_info=True
             )
+
+        # Settle the marks that just went out and lower the freeze. The marks
+        # themselves are KEPT — a follow-up turn refers back to them, and the
+        # vertex groups and cameras they name are still live in the scene.
+        if mark_context:
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                chat_bridge.finish_send(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("scribble mark settle skipped: %s", e, exc_info=True)
 
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()
