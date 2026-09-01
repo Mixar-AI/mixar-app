@@ -270,7 +270,7 @@ class TestFreezeDiscipline:
         that can move under them, and every mark would describe a view that
         no longer exists."""
         text = source("src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py")
-        marker = text.index("capture_region_still")
+        marker = text.index("self._session.take(")
         following = text[marker:marker + 600]
         assert "CANCELLED" in following
 
@@ -444,14 +444,14 @@ class TestReviewFindings:
         own handlers, so arming from the bubble without an override registers
         the modal where no viewport event will ever arrive: nothing is
         captured, Esc does nothing, and the freeze blocks no input at all."""
-        text = source(self.MODAL)
-        assert "def _find_view3d" in text
-        signature = text[text.index("def _find_view3d"):]
+        finder = source("src/scripts/mixar/modules/scribble_mark/core/freeze_session.py")
+        signature = finder[finder.index("def find_view3d"):]
         signature = signature[:signature.index("return best")]
         assert "window" in signature
 
+        text = source(self.MODAL)
         invoke = text[text.index("def invoke"):text.index("def modal")]
-        assert "window, area, region = _find_view3d" in invoke
+        assert "window, area, region = find_view3d" in invoke
         assert "temp_override(window=window" in invoke
         assert "window=window" in invoke, "the timer must be on that window too"
 
@@ -489,8 +489,8 @@ class TestReviewFindings:
         text = source(self.FREEZE)
         assert "def frame_name(serial)" in text
         assert "def annotated_name(serial)" in text
-        modal = source(self.MODAL)
-        assert "freeze.frame_name(serial)" in modal
+        session = source("src/scripts/mixar/modules/scribble_mark/core/freeze_session.py")
+        assert "freeze.frame_name(serial)" in session
 
     def test_the_overlay_paints_only_the_frozen_viewport(self):
         """A POST_PIXEL handler on SpaceView3D runs for EVERY 3D viewport, so
@@ -501,6 +501,30 @@ class TestReviewFindings:
         callback = text[text.index("def _draw_callback"):]
         assert "_target_area_ptr" in callback
         assert "as_pointer()" in callback
+
+    def test_a_region_resize_takes_a_new_freeze(self):
+        """Once the region and the still disagree, neither size is right:
+        the arm-time size mismaps the mark onto the stretched still the user
+        drew on, and the live size pairs it with a raycast through a view the
+        still no longer depicts. So the freeze is replaced, and marks already
+        committed keep the view they were drawn on."""
+        text = source(self.MODAL)
+        assert "_refreeze_if_resized" in text
+        timer = text[text.index('if event.type == "TIMER":'):]
+        assert timer.index("_refreeze_if_resized") < timer.index("_maybe_commit")
+
+        session = source("src/scripts/mixar/modules/scribble_mark/core/freeze_session.py")
+        assert "def matches" in session
+        assert "def take" in session
+
+    def test_a_freeze_still_referenced_by_a_mark_is_not_released(self):
+        """A mark drawn before a resize is still going to be sent, and its
+        still and camera have to survive until it is."""
+        session = source("src/scripts/mixar/modules/scribble_mark/core/freeze_session.py")
+        take = session[session.index("def take"):session.index("def matches")]
+        assert "view_used" in take
+        release = session[session.index("def release_if_unused"):]
+        assert "if self.view_used" in release
 
     def test_the_per_turn_cap_counts_drafts_only(self):
         """Counting every mark ever made lets eight SENT marks disable the
@@ -516,12 +540,17 @@ class TestReviewFindings:
         cancel = cancel[:cancel.index("\n    # --")]
         assert "_disarm" in cancel
 
-    def test_an_unused_baked_camera_is_released(self):
-        """Every arm/disarm that commits no mark would otherwise add a camera
-        to the .blend."""
+    def test_an_unused_freeze_is_released(self):
+        """Every arm/disarm that commits no mark would otherwise add a still
+        AND a camera to the .blend."""
         text = source(self.MODAL)
         finish = text[text.index("def _finish"):]
-        assert "view_bake.release" in finish[:600]
+        assert "release_if_unused" in finish[:700]
+
+        session = source("src/scripts/mixar/modules/scribble_mark/core/freeze_session.py")
+        release = session[session.index("def release_if_unused"):]
+        assert "view_bake.release" in release
+        assert "freeze.release" in release
 
 
 class TestSharedViewCamera:

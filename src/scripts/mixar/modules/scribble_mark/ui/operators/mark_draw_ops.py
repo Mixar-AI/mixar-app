@@ -37,12 +37,15 @@ from mixar.modules.scribble_mark.constants import (
     MIN_SAMPLE_DIST_PX,
 )
 from mixar.modules.scribble_mark.core import (
-    freeze,
     gesture,
     marks as mark_store,
     overlay,
     resolve,
-    view_bake,
+)
+from mixar.modules.scribble_mark.core.freeze_session import (
+    FreezeSession,
+    find_view3d,
+    resolve as resolve_context,
 )
 
 logger = get_logger(__name__)
@@ -76,11 +79,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     _strokes = None
     _current = None
     _last_up = 0.0
-    _view_name = ""
-    _view_data = None
-    _view_used = False
-    _frame_name = ""
-    _region_size = (0, 0)
+    _session = None
 
     # -- lifecycle -------------------------------------------------------
 
@@ -89,7 +88,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if _running:
             return {"CANCELLED"}
 
-        window, area, region = _find_view3d(context)
+        window, area, region = find_view3d(context)
         if area is None or region is None:
             self.report({"WARNING"}, "No 3D viewport to mark")
             return {"CANCELLED"}
@@ -107,10 +106,8 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                         "Leave camera view (Numpad 0) before marking")
             return {"CANCELLED"}
 
-        serial = mark_store.next_serial(context.scene)
-        frame_name = freeze.frame_name(serial)
-        frame = freeze.capture_region_still(context, window, area, region,
-                                            frame_name)
+        self._session = FreezeSession()
+        frame = self._session.take(context, window, area, region)
         if frame is None:
             # Refusing to arm is deliberate: with nothing frozen the user
             # would be drawing on a live viewport that can move under them,
@@ -118,21 +115,8 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self.report({"ERROR"}, "Could not freeze the viewport")
             return {"CANCELLED"}
 
-        self._view_name, self._view_data = view_bake.bake_view(
-            context, area, region, serial
-        )
-        self._view_used = False
-
-        context.scene.mixar_mark_frame_name = frame
-        self._frame_name = frame
         self._area_ptr = area.as_pointer()
         self._region_ptr = region.as_pointer()
-        # The region can be resized while the freeze is up (dragging an editor
-        # border, resizing the window). The still and the baked camera are
-        # fixed at this size, so marks must be normalized against it too — not
-        # against whatever the region has become by commit time, which would
-        # shear the payload against its own picture.
-        self._region_size = (region.width, region.height)
         self._strokes = []
         self._current = None
         self._last_up = 0.0
@@ -144,7 +128,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
         wm = context.window_manager
         # Bound to the window that OWNS the frozen viewport, not to whichever
-        # window the button was clicked in — see _find_view3d.
+        # window the button was clicked in — see freeze_session.find_view3d.
         with context.temp_override(window=window, area=area, region=region):
             self._timer = wm.event_timer_add(MARK_TIMER_STEP_S, window=window)
             wm.modal_handler_add(self)
@@ -173,6 +157,10 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             return {"FINISHED"}
 
         if event.type == "TIMER":
+            if not self._refreeze_if_resized(context, region):
+                self._disarm(context)
+                self._finish(context)
+                return {"FINISHED"}
             self._maybe_commit(context, region)
             return {"RUNNING_MODAL"}
 
@@ -313,9 +301,10 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 resolved = resolve.resolve_mark(
                     context, region, rv3d, reading, serial
                 )
-            width, height = self._region_size
+            width, height = self._session.region_size
             stored = mark_store.add_mark(
-                context.scene, serial, self._view_name, self._view_data,
+                context.scene, serial, self._session.view_name,
+                self._session.view_data,
                 reading, width, height, resolved,
             )
         except Exception as exc:  # noqa: BLE001 — a bad mark is not a bad session
@@ -326,12 +315,33 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             wm.mixar_mark_busy = False
 
         if stored is not None:
-            self._view_used = True
+            self._session.view_used = True
             overlay.push_settled(strokes)
             self.report({"INFO"}, _commit_message(resolved))
         overlay.tag_redraw()
 
     # -- context ---------------------------------------------------------
+
+    def _refreeze_if_resized(self, context, region):
+        """Take a new freeze when the region no longer matches the still.
+
+        Neither size is right once they diverge, so the old freeze is not
+        patched up — it is replaced, and marks already committed keep the view
+        they were drawn on.
+        """
+        if self._session.matches(region):
+            return True
+        self._commit_pending(context)
+        window, area, _region = resolve_context(
+            context, self._area_ptr, self._region_ptr
+        )
+        if window is None or area is None:
+            return False
+        if self._session.take(context, window, area, region) is None:
+            self.report({"WARNING"}, "Viewport resized — could not re-freeze")
+            return False
+        self.report({"INFO"}, "Viewport resized — frame re-captured")
+        return True
 
     def _region(self, context):
         """Re-find the frozen region by pointer, or None if it is gone.
@@ -340,22 +350,15 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         it points at when the user splits or closes an editor, and touching
         it then is a crash rather than an error.
         """
-        for window in context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.as_pointer() != self._area_ptr:
-                    continue
-                for region in area.regions:
-                    if region.as_pointer() == self._region_ptr:
-                        return region
-        return None
+        return resolve_context(context, self._area_ptr, self._region_ptr)[2]
 
     def _rv3d(self, context):
-        for window in context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.as_pointer() == self._area_ptr:
-                    space = area.spaces.active
-                    return getattr(space, "region_3d", None)
-        return None
+        _window, area, _region = resolve_context(
+            context, self._area_ptr, self._region_ptr
+        )
+        if area is None:
+            return None
+        return getattr(area.spaces.active, "region_3d", None)
 
     def _disarm(self, context):
         try:
@@ -365,11 +368,11 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     def _finish(self, context):
         global _running
-        # A freeze that committed no mark owns a camera nothing references.
-        # Left behind, every arm/disarm cycle adds one to the .blend.
-        if self._view_name and not self._view_used:
-            view_bake.release(self._view_name)
-            self._view_name = ""
+        # A freeze that committed no mark owns a still and a camera nothing
+        # references. Left behind, every arm/disarm cycle adds both to the
+        # .blend.
+        if self._session is not None:
+            self._session.release_if_unused()
         if self._timer is not None:
             try:
                 context.window_manager.event_timer_remove(self._timer)
@@ -395,43 +398,6 @@ def _ui_scale():
 def _point_in_region(region, x, y):
     return (region.x <= x < region.x + region.width
             and region.y <= y < region.y + region.height)
-
-
-def _find_view3d(context):
-    """``(window, area, region)`` of the 3D viewport to freeze, or three Nones.
-
-    The WINDOW is returned, not just the area, and every caller needs it. The
-    Agent Bubble is its own ``wmWindow`` holding a single AGENT_BUBBLE area,
-    so arming from the bubble's header finds a viewport in a DIFFERENT window
-    — and Blender binds a modal handler to ``CTX_wm_window(C)`` and dispatches
-    each window's events only against that window's own handlers. Registered
-    on the wrong window the modal receives nothing from the viewport it froze:
-    no stroke is captured, Esc over the viewport does nothing, and the freeze
-    blocks no input at all. Worse, ``event.mouse_x/y`` would then be relative
-    to the bubble while ``region.x/y`` are relative to the main window, so
-    bubble-local positions land "inside" the viewport rect and record phantom
-    strokes.
-    """
-    best = (None, None, None, 0)
-    windows = [context.window] + [
-        w for w in context.window_manager.windows if w is not context.window
-    ]
-    for window in windows:
-        screen = getattr(window, "screen", None)
-        if screen is None:
-            continue
-        for area in screen.areas:
-            if area.type != "VIEW_3D":
-                continue
-            for region in area.regions:
-                if region.type != "WINDOW":
-                    continue
-                size = region.width * region.height
-                if size > best[3]:
-                    best = (window, area, region, size)
-        if best[0] is not None:
-            break
-    return best[0], best[1], best[2]
 
 
 def _commit_message(resolved):

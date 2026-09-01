@@ -173,6 +173,26 @@ view matrices and `scene.ray_cast`.
   The modal dies on load but the overlay handler and the module-level running
   guard do not; that pair would leave a stale still painted over a viewport
   with nothing left listening for the disarm.
+- **A freeze is a SET — still, baked camera, and the region size every
+  normalized coordinate is relative to** (`core/freeze_session.py`). A mark is
+  only meaningful against the set it was drawn on. When the region resizes the
+  three stop agreeing and NEITHER size rescues it: the arm-time size mismaps
+  the mark onto the stretched still the user actually drew on, and the live
+  size pairs it with a raycast through a view the still no longer depicts. So
+  a resize takes a NEW freeze, and marks already committed keep the view they
+  were drawn on — which is what the payload's `views` map is for. A freeze no
+  committed mark references is released whole.
+- **Arming refuses in camera view.** The region shows the camera frame
+  letterboxed inside it while `render.opengl` captures only that frame, so a
+  mark's region coordinates correspond to no position in the still. This is
+  also why the camera bake never has to represent an off-centre frustum.
+- **Everything runs in the window that OWNS the viewport, not the one the
+  button was clicked in.** The Agent Bubble is its own `wmWindow`; Blender
+  binds a modal to `CTX_wm_window(C)` and dispatches each window's events only
+  against its own handlers, so arming from the bubble without the override
+  froze the viewport and then received nothing from it — and `event.mouse_x/y`
+  (bubble-relative) landing inside `region.x/y` (main-window-relative)
+  recorded phantom strokes.
 - **The mode must be visible and recoverable from inside itself.** The freeze
   consumes every pointer event over the region, so a hint pill names the way
   out (Esc) and the way back (Backspace undoes the last mark, bound in the

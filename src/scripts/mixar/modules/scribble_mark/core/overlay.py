@@ -97,6 +97,20 @@ def pop_settled():
         _settled_strokes.pop()
 
 
+def reset_ink():
+    """Drop the drawn ink and the cached texture, keeping the target.
+
+    Used when a freeze is retaken mid-session (the region resized): the new
+    still needs a new texture, and the old freeze's ink described a frame that
+    no longer exists.
+    """
+    global _live_strokes, _texture, _texture_key
+    _live_strokes = []
+    _settled_strokes.clear()
+    _texture = None
+    _texture_key = None
+
+
 def reset():
     """Forget everything the overlay was drawing. Called on disarm."""
     global _live_strokes, _texture, _texture_key
