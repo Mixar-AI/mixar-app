@@ -59,8 +59,12 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
     try:
         depsgraph = context.evaluated_depsgraph_get()
     except Exception as exc:  # noqa: BLE001
+        # None, not _empty(): _empty means "we looked and there was nothing
+        # there", which the agent is told to state as fact. A depsgraph we
+        # could not reach is "we did not look", and the mark is stored with no
+        # resolved block rather than a measurement that was never made.
         logger.warning("Scribble mark: no depsgraph, mark left unresolved: %s", exc)
-        return _empty("too_small")
+        return None
 
     polygon = list(reading.get("polygon") or [])
     anchor = reading.get("anchor")

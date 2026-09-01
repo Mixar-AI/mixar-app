@@ -472,7 +472,8 @@ class AGENT_BUBBLE_HT_header(Header):
             wm = context.window_manager
             mark_count = 0
             if scene is not None:
-                mark_count = len(getattr(scene, 'mixar_marks', ()) or ())
+                mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
+                                 if m.state == 'DRAFT')
             right_controls.operator(
                 "mixar.scribble_mark_toggle",
                 text=str(mark_count) if mark_count else "",

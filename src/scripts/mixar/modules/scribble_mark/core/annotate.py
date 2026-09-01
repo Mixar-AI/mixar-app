@@ -29,8 +29,6 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import ANNOTATED_IMAGE_NAME
-
 logger = get_logger(__name__)
 
 #: Bright core and dark casing, in PIL's 0-255 RGB.
@@ -46,7 +44,7 @@ BASE_WIDTH = 3.0
 REFERENCE_HEIGHT = 1080.0
 
 
-def render_annotated(image, marks, name=ANNOTATED_IMAGE_NAME):
+def render_annotated(image, marks, name):
     """Draw *marks* over a copy of *image*. Returns the new datablock's name.
 
     Returns None on any failure — the marks' resolved data is the load-bearing

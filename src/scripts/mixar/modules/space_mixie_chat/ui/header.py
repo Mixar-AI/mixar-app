@@ -84,7 +84,8 @@ class MIXIE_CHAT_HT_header(Header):
             # hasattr guard: deferred UI registration pass.
             if hasattr(bpy.types, 'MIXAR_OT_scribble_mark_toggle'):
                 armed = bool(getattr(wm, 'mixar_mark_armed', False))
-                mark_count = len(getattr(scene, 'mixar_marks', ()) or ())
+                mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
+                                 if m.state == 'DRAFT')
                 mark_row = layout.row(align=True)
                 mark_row.operator(
                     "mixar.scribble_mark_toggle",

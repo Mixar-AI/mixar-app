@@ -64,10 +64,24 @@ _settled_strokes = []
 _texture = None
 _texture_key = None
 
+#: Pointers to the ONE area/region that was frozen. A POST_PIXEL handler on
+#: SpaceView3D runs for every 3D viewport, so without this the still of one
+#: viewport is stretched over all of them — including ones that are still live
+#: and navigable, which is a lie about what is frozen.
+_target_area_ptr = 0
+_target_region_ptr = 0
+
 
 # =============================================================================
 # State handed in by the operator
 # =============================================================================
+
+def set_target(area_ptr, region_ptr):
+    """Pin the overlay to the area/region the operator actually froze."""
+    global _target_area_ptr, _target_region_ptr
+    _target_area_ptr = area_ptr
+    _target_region_ptr = region_ptr
+
 
 def set_live_strokes(strokes):
     global _live_strokes
@@ -86,10 +100,13 @@ def pop_settled():
 def reset():
     """Forget everything the overlay was drawing. Called on disarm."""
     global _live_strokes, _texture, _texture_key
+    global _target_area_ptr, _target_region_ptr
     _live_strokes = []
     _settled_strokes.clear()
     _texture = None
     _texture_key = None
+    _target_area_ptr = 0
+    _target_region_ptr = 0
 
 
 # =============================================================================
@@ -181,9 +198,16 @@ def _draw_strokes(strokes, color, width):
 
 
 def _hint_text(scene):
-    """What the pill says, given how much has been drawn."""
+    """What the pill says, given how much has been drawn.
+
+    Counts DRAFTS: the number that matters is what this message will carry,
+    not how many marks the .blend has accumulated over its life.
+    """
     try:
-        count = len(getattr(scene, "mixar_marks", ()) or ())
+        count = sum(
+            1 for m in (getattr(scene, "mixar_marks", ()) or ())
+            if m.state == "DRAFT"
+        )
     except Exception:  # noqa: BLE001
         count = 0
     if not count:
@@ -235,6 +259,13 @@ def _draw_callback():
         if area is None or area.type != 'VIEW_3D':
             return
         if region is None or region.type != 'WINDOW':
+            return
+        # Exactly one viewport was frozen. Painting the still into any other
+        # would cover a live, navigable viewport with a stretched picture of a
+        # different one.
+        if _target_area_ptr and area.as_pointer() != _target_area_ptr:
+            return
+        if _target_region_ptr and region.as_pointer() != _target_region_ptr:
             return
 
         scene = bpy.context.scene

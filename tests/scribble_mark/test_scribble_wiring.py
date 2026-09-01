@@ -427,3 +427,129 @@ class TestVisibleControlsAndRecovery:
         text = source(self.HEADER)
         assert "mixar.scribble_mark_clear" in text
         assert "not armed" in text
+
+
+class TestReviewFindings:
+    """Regressions found by adversarial review of the diff. Each of these is
+    invisible in this suite's mocked world and only shows up in Blender, which
+    is exactly why they are pinned at the source level."""
+
+    MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
+    FREEZE = "src/scripts/mixar/modules/scribble_mark/core/freeze.py"
+    OVERLAY = "src/scripts/mixar/modules/scribble_mark/core/overlay.py"
+
+    def test_the_modal_is_bound_to_the_window_owning_the_viewport(self):
+        """The Agent Bubble is its own wmWindow. Blender binds a modal to
+        CTX_wm_window(C) and dispatches each window's events only against its
+        own handlers, so arming from the bubble without an override registers
+        the modal where no viewport event will ever arrive: nothing is
+        captured, Esc does nothing, and the freeze blocks no input at all."""
+        text = source(self.MODAL)
+        assert "def _find_view3d" in text
+        signature = text[text.index("def _find_view3d"):]
+        signature = signature[:signature.index("return best")]
+        assert "window" in signature
+
+        invoke = text[text.index("def invoke"):text.index("def modal")]
+        assert "window, area, region = _find_view3d" in invoke
+        assert "temp_override(window=window" in invoke
+        assert "window=window" in invoke, "the timer must be on that window too"
+
+    def test_the_capture_override_names_the_window(self):
+        """An area/region override that disagrees with the context window is
+        not a coherent context."""
+        text = source(self.FREEZE)
+        assert "temp_override(window=window, area=area, region=region)" in text
+
+    def test_arming_refuses_in_camera_view(self):
+        """In camera view the region shows the camera frame letterboxed inside
+        it while render.opengl captures only that frame, so a mark's region
+        coordinates correspond to no position in the still."""
+        invoke = source(self.MODAL)
+        invoke = invoke[invoke.index("def invoke"):invoke.index("def modal")]
+        assert "CAMERA" in invoke
+        assert "CANCELLED" in invoke
+
+    def test_media_type_is_set_before_and_restored_after_the_format(self):
+        """Blender 5 rejects PNG on a scene whose output is FFMPEG until the
+        media type is IMAGE — so arming would die on any scene that has been
+        through a video render. The restore order mirrors the set order."""
+        text = source(self.FREEZE)
+        assert "media_type" in text
+        set_media = text.index('settings.media_type = "IMAGE"')
+        set_format = text.index('settings.file_format = "PNG"')
+        assert set_media < set_format
+        restore = text[text.index("finally:"):]
+        assert restore.index('settings.media_type = saved["media_type"]') < \
+               restore.index('settings.file_format = saved["file_format"]')
+
+    def test_frames_are_named_per_freeze_not_recycled(self):
+        """A fixed name means re-arming silently repoints an image an earlier
+        chat message (and the backend's attachment_names) already refers to."""
+        text = source(self.FREEZE)
+        assert "def frame_name(serial)" in text
+        assert "def annotated_name(serial)" in text
+        modal = source(self.MODAL)
+        assert "freeze.frame_name(serial)" in modal
+
+    def test_the_overlay_paints_only_the_frozen_viewport(self):
+        """A POST_PIXEL handler on SpaceView3D runs for EVERY 3D viewport, so
+        without this the still of one is stretched over all of them —
+        including ones that are still live and navigable."""
+        text = source(self.OVERLAY)
+        assert "def set_target" in text
+        callback = text[text.index("def _draw_callback"):]
+        assert "_target_area_ptr" in callback
+        assert "as_pointer()" in callback
+
+    def test_the_per_turn_cap_counts_drafts_only(self):
+        """Counting every mark ever made lets eight SENT marks disable the
+        feature for the rest of the .blend's life."""
+        assert "drafts_only=True" in source(self.MODAL)
+        marks = source("src/scripts/mixar/modules/scribble_mark/core/marks.py")
+        add = marks[marks.index("def add_mark"):marks.index("def mark_all_sent")]
+        assert "STATE_DRAFT" in add
+
+    def test_every_exit_path_clears_the_armed_flag(self):
+        text = source(self.MODAL)
+        cancel = text[text.index("def cancel"):]
+        cancel = cancel[:cancel.index("\n    # --")]
+        assert "_disarm" in cancel
+
+    def test_an_unused_baked_camera_is_released(self):
+        """Every arm/disarm that commits no mark would otherwise add a camera
+        to the .blend."""
+        text = source(self.MODAL)
+        finish = text[text.index("def _finish"):]
+        assert "view_bake.release" in finish[:600]
+
+
+class TestSharedViewCamera:
+    """The baked camera belongs to a FREEZE, not to a mark. Releasing it with
+    any one mark leaves its siblings pointing at a deleted camera — and
+    render_viewport(view="mark") then silently renders the scene camera and
+    reports it as the frame the user drew on."""
+
+    class _Item:
+        def __init__(self, view_name):
+            self.view_name = view_name
+            self.mark_json = "{}"
+
+    def _shared(self, item, collection):
+        from mixar.modules.scribble_mark.core.marks import _view_shared
+        return _view_shared(item, collection)
+
+    def test_a_camera_used_by_a_sibling_is_kept(self):
+        a, b = self._Item("cam1"), self._Item("cam1")
+        assert self._shared(a, [a, b]) is True
+
+    def test_the_last_mark_of_a_freeze_releases_its_camera(self):
+        a = self._Item("cam1")
+        assert self._shared(a, [a]) is False
+
+    def test_a_different_freeze_does_not_keep_it_alive(self):
+        a, b = self._Item("cam1"), self._Item("cam2")
+        assert self._shared(a, [a, b]) is False
+
+    def test_no_collection_means_do_not_guess(self):
+        assert self._shared(self._Item("cam1"), None) is False

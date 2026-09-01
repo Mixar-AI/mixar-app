@@ -69,7 +69,9 @@ def add_mark(scene, serial, view_name, view_data, reading, region_width,
     if collection is None:
         return None
 
-    if len(collection) >= MAX_MARKS_PER_TURN:
+    # Drafts only. Counting every mark ever made would let eight sent marks
+    # permanently disable the feature for the rest of the .blend's life.
+    if sum(1 for i in collection if i.state == STATE_DRAFT) >= MAX_MARKS_PER_TURN:
         logger.info("Scribble mark: refusing mark %d, already at the cap of %d",
                     serial, MAX_MARKS_PER_TURN)
         return None
@@ -110,7 +112,7 @@ def remove_last(scene):
     if not collection:
         return False
     index = len(collection) - 1
-    _release_item(collection[index])
+    _release_item(collection[index], collection)
     collection.remove(index)
     return True
 
@@ -126,17 +128,26 @@ def clear(scene, drafts_only=False):
         item = collection[index]
         if drafts_only and item.state != STATE_DRAFT:
             continue
-        _release_item(item)
+        _release_item(item, collection)
         collection.remove(index)
         removed += 1
 
     if not drafts_only:
-        freeze.release(scene.get("mixar_mark_frame_name") or "")
+        # getattr, not scene.get(): the latter reads custom IDProperties and
+        # would always miss the registered RNA property, so the frozen still
+        # was never released and got saved into the .blend.
+        freeze.release(getattr(scene, "mixar_mark_frame_name", "") or "")
     return removed
 
 
-def _release_item(item):
+def _release_item(item, collection=None):
     """Give back the scene entities one mark owns.
+
+    The baked view camera is SHARED by every mark from the same freeze, so it
+    is released only when nothing else still names it. Releasing it
+    unconditionally is how undoing one of three marks left the other two
+    pointing at a deleted camera — and ``render_viewport(view="mark")`` then
+    silently renders the scene camera instead of the frame they describe.
 
     Best-effort throughout: a mark whose object was deleted between marking
     and undoing must still be removable.
@@ -154,7 +165,18 @@ def _release_item(item):
             if obj is not None:
                 vertex_groups.remove_group(obj, group)
 
-    view_bake.release(item.view_name)
+    if item.view_name and not _view_shared(item, collection):
+        view_bake.release(item.view_name)
+
+
+def _view_shared(item, collection):
+    """True when another mark still references this mark's baked camera."""
+    if collection is None:
+        return False
+    return any(
+        other != item and other.view_name == item.view_name
+        for other in collection
+    )
 
 
 # =============================================================================

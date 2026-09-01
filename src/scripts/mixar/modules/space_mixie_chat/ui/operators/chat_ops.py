@@ -442,7 +442,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # Settle the marks that just went out and lower the freeze. The marks
         # themselves are KEPT — a follow-up turn refers back to them, and the
         # vertex groups and cameras they name are still live in the scene.
-        if mark_context:
+        # Unconditional: sending is the end of the gesture whether or not
+        # anything was drawn. Gated on mark_context, arming and then sending
+        # without marking left the viewport frozen with no marks to explain it.
+        if not is_modify and not is_awaiting_input:
             try:
                 from mixar.modules.scribble_mark.core import chat_bridge
                 chat_bridge.finish_send(scene)

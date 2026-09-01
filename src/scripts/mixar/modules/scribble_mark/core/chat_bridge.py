@@ -27,7 +27,6 @@ import bpy
 from mixar.config.logging_config import get_logger
 
 from . import annotate, freeze, marks as mark_store
-from ..constants import ANNOTATED_IMAGE_NAME
 
 logger = get_logger(__name__)
 
@@ -91,8 +90,12 @@ def _attach_frames(scene, context):
     if image is None:
         return ["the frozen frame was unavailable; marks sent without it"]
 
+    # Named off the newest mark's serial, so an earlier message's attachment
+    # is never overwritten by a later freeze.
+    marks = context.get("marks") or ()
+    serial = marks[-1].get("id") if marks else 0
     annotated = annotate.render_annotated(
-        image, context.get("marks") or (), ANNOTATED_IMAGE_NAME
+        image, marks, freeze.annotated_name(serial)
     )
 
     pending = scene.mixie_chat_pending_attachments

@@ -29,7 +29,6 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.scribble_mark.constants import (
-    FROZEN_IMAGE_NAME,
     MARK_COMMIT_IDLE_S,
     MARK_TIMER_STEP_S,
     MAX_MARKS_PER_TURN,
@@ -79,6 +78,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     _last_up = 0.0
     _view_name = ""
     _view_data = None
+    _view_used = False
+    _frame_name = ""
+    _region_size = (0, 0)
 
     # -- lifecycle -------------------------------------------------------
 
@@ -87,13 +89,28 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if _running:
             return {"CANCELLED"}
 
-        area, region = _find_view3d(context)
+        window, area, region = _find_view3d(context)
         if area is None or region is None:
             self.report({"WARNING"}, "No 3D viewport to mark")
             return {"CANCELLED"}
 
-        frame = freeze.capture_region_still(context, area, region,
-                                            FROZEN_IMAGE_NAME)
+        space = area.spaces.active
+        rv3d = getattr(space, "region_3d", None)
+        if getattr(rv3d, "view_perspective", "") == "CAMERA":
+            # In camera view the region shows the camera frame letterboxed
+            # inside it, and render.opengl captures only that frame — so a
+            # mark's region coordinates would not correspond to any position
+            # in the still, and every raycast would land somewhere the user
+            # did not point. Refusing is the honest option; silently marking
+            # the wrong place is not.
+            self.report({"WARNING"},
+                        "Leave camera view (Numpad 0) before marking")
+            return {"CANCELLED"}
+
+        serial = mark_store.next_serial(context.scene)
+        frame_name = freeze.frame_name(serial)
+        frame = freeze.capture_region_still(context, window, area, region,
+                                            frame_name)
         if frame is None:
             # Refusing to arm is deliberate: with nothing frozen the user
             # would be drawing on a live viewport that can move under them,
@@ -101,25 +118,36 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self.report({"ERROR"}, "Could not freeze the viewport")
             return {"CANCELLED"}
 
-        serial = mark_store.next_serial(context.scene)
         self._view_name, self._view_data = view_bake.bake_view(
             context, area, region, serial
         )
+        self._view_used = False
 
         context.scene.mixar_mark_frame_name = frame
+        self._frame_name = frame
         self._area_ptr = area.as_pointer()
         self._region_ptr = region.as_pointer()
+        # The region can be resized while the freeze is up (dragging an editor
+        # border, resizing the window). The still and the baked camera are
+        # fixed at this size, so marks must be normalized against it too — not
+        # against whatever the region has become by commit time, which would
+        # shear the payload against its own picture.
+        self._region_size = (region.width, region.height)
         self._strokes = []
         self._current = None
         self._last_up = 0.0
 
         overlay.reset()
+        overlay.set_target(self._area_ptr, self._region_ptr)
         overlay.install()
         context.window_manager.mixar_mark_armed = True
 
         wm = context.window_manager
-        self._timer = wm.event_timer_add(MARK_TIMER_STEP_S, window=context.window)
-        wm.modal_handler_add(self)
+        # Bound to the window that OWNS the frozen viewport, not to whichever
+        # window the button was clicked in — see _find_view3d.
+        with context.temp_override(window=window, area=area, region=region):
+            self._timer = wm.event_timer_add(MARK_TIMER_STEP_S, window=window)
+            wm.modal_handler_add(self)
         _running = True
         overlay.tag_redraw()
         return {"RUNNING_MODAL"}
@@ -191,6 +219,11 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         return {"RUNNING_MODAL"}
 
     def cancel(self, context):
+        # Every exit path leaves the same state. A cancel that tears the modal
+        # down but leaves the armed flag set gives the header a depressed
+        # toggle with nothing behind it, and the next click merely clears the
+        # flag instead of arming.
+        self._disarm(context)
         self._finish(context)
 
     # -- strokes ---------------------------------------------------------
@@ -263,7 +296,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             overlay.tag_redraw()
             return
 
-        if mark_store.count(context.scene) >= MAX_MARKS_PER_TURN:
+        if mark_store.count(context.scene, drafts_only=True) >= MAX_MARKS_PER_TURN:
             self.report({"WARNING"},
                         f"Only {MAX_MARKS_PER_TURN} marks per message")
             overlay.tag_redraw()
@@ -280,9 +313,10 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 resolved = resolve.resolve_mark(
                     context, region, rv3d, reading, serial
                 )
+            width, height = self._region_size
             stored = mark_store.add_mark(
                 context.scene, serial, self._view_name, self._view_data,
-                reading, region.width, region.height, resolved,
+                reading, width, height, resolved,
             )
         except Exception as exc:  # noqa: BLE001 — a bad mark is not a bad session
             logger.warning("Scribble mark: could not commit mark %d: %s",
@@ -292,6 +326,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             wm.mixar_mark_busy = False
 
         if stored is not None:
+            self._view_used = True
             overlay.push_settled(strokes)
             self.report({"INFO"}, _commit_message(resolved))
         overlay.tag_redraw()
@@ -330,6 +365,11 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     def _finish(self, context):
         global _running
+        # A freeze that committed no mark owns a camera nothing references.
+        # Left behind, every arm/disarm cycle adds one to the .blend.
+        if self._view_name and not self._view_used:
+            view_bake.release(self._view_name)
+            self._view_name = ""
         if self._timer is not None:
             try:
                 context.window_manager.event_timer_remove(self._timer)
@@ -358,8 +398,21 @@ def _point_in_region(region, x, y):
 
 
 def _find_view3d(context):
-    """The 3D viewport to freeze — the largest one, current window first."""
-    best = (None, None, 0)
+    """``(window, area, region)`` of the 3D viewport to freeze, or three Nones.
+
+    The WINDOW is returned, not just the area, and every caller needs it. The
+    Agent Bubble is its own ``wmWindow`` holding a single AGENT_BUBBLE area,
+    so arming from the bubble's header finds a viewport in a DIFFERENT window
+    — and Blender binds a modal handler to ``CTX_wm_window(C)`` and dispatches
+    each window's events only against that window's own handlers. Registered
+    on the wrong window the modal receives nothing from the viewport it froze:
+    no stroke is captured, Esc over the viewport does nothing, and the freeze
+    blocks no input at all. Worse, ``event.mouse_x/y`` would then be relative
+    to the bubble while ``region.x/y`` are relative to the main window, so
+    bubble-local positions land "inside" the viewport rect and record phantom
+    strokes.
+    """
+    best = (None, None, None, 0)
     windows = [context.window] + [
         w for w in context.window_manager.windows if w is not context.window
     ]
@@ -374,11 +427,11 @@ def _find_view3d(context):
                 if region.type != "WINDOW":
                     continue
                 size = region.width * region.height
-                if size > best[2]:
-                    best = (area, region, size)
+                if size > best[3]:
+                    best = (window, area, region, size)
         if best[0] is not None:
             break
-    return best[0], best[1]
+    return best[0], best[1], best[2]
 
 
 def _commit_message(resolved):
