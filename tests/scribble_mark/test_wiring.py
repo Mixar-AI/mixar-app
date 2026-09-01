@@ -126,6 +126,37 @@ class TestSendPath:
         encode = text.index("image_encoding_total")
         assert prepare < encode
 
+    def test_nothing_can_cancel_the_send_after_the_frames_are_attached(self):
+        """The window between attaching and sending must be empty of
+        bail-outs. A pre-flight check cancelling after prepare_for_send leaves
+        the frozen frames queued for the NEXT message, carrying marks that
+        were never settled — and the user sees them appear on a message they
+        did not mark."""
+        import re
+
+        text = source(CHAT_OPS)
+        prepare = text.index("chat_bridge.prepare_for_send")
+        send = text.index("sse_handler.start_stream")
+
+        for match in re.finditer(r"return \{'CANCELLED'\}", text):
+            if not (prepare < match.start() < send):
+                continue
+            # The one legal exception: the modify / awaiting-input branch,
+            # which prepare_for_send never runs for.
+            preceding = text[prepare:match.start()]
+            assert "if is_modify or is_awaiting_input:" in preceding, (
+                "a cancelling return sits between attaching the frozen frames "
+                "and sending them"
+            )
+
+    def test_the_websocket_preflight_runs_before_the_frames_are_attached(self):
+        """The commonest cancel of all — no connection — must land before
+        anything is queued."""
+        text = source(CHAT_OPS)
+        assert text.index("WebSocket not ready") < text.index(
+            "chat_bridge.prepare_for_send"
+        )
+
     def test_mark_context_reaches_start_stream(self):
         assert "mark_context=mark_context" in source(CHAT_OPS)
 
@@ -250,12 +281,25 @@ class TestFreezeDiscipline:
                         "resolution_percentage", "filepath"):
             assert text.count(setting) >= 2, f"{setting} saved but not restored"
 
-    def test_the_frozen_frame_is_packed_and_unlinked_from_tempdir(self):
-        """It lives in bpy.app.tempdir, which is cleaned on exit; a mark
-        referencing a vanished image loses the one thing a VLM can read."""
-        text = source("src/scripts/mixar/modules/scribble_mark/core/freeze.py")
-        assert ".pack()" in text
-        assert "filepath_raw" in text
+    @pytest.mark.parametrize("module", ["freeze", "annotate"])
+    def test_frames_are_packed_through_the_shared_loader(self, module):
+        """Both frames live in bpy.app.tempdir, which is cleaned on exit, and
+        a mark referencing a vanished image loses the one thing a VLM can
+        read. `load_image_from_file` already packs and clears the temp path;
+        a second copy of those steps is a second place for them to drift."""
+        text = source(f"src/scripts/mixar/modules/scribble_mark/core/{module}.py")
+        assert "load_image_from_file" in text
+        assert ".pack()" not in text, "packing is the shared loader's job"
+
+    def test_the_shared_loader_still_packs_and_clears_the_temp_path(self):
+        """Pinned here because the freeze relies on it: if that helper ever
+        stops clearing filepath_raw, a reload after tempdir cleanup reports a
+        missing file for an image that is fully present."""
+        text = source("src/scripts/mixar/modules/common/utils/image_utils.py")
+        loader = text[text.index("def load_image_from_file"):]
+        loader = loader[:loader.index("\ndef ", 1)] if "\ndef " in loader[1:] else loader
+        assert ".pack()" in loader
+        assert "filepath_raw" in loader
 
     def test_a_file_load_cannot_leave_the_viewport_frozen(self):
         """The modal dies on load but the overlay handler and the running

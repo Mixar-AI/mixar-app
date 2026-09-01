@@ -161,6 +161,7 @@ def _pack_result(frame, name):
     """Write the annotated frame into ``bpy.data.images``, packed."""
     import bpy
 
+    from mixar.modules.common.utils.image_utils import load_image_from_file
     from mixar.modules.space_mixie_chat.core.image_utils import (
         get_mixar_screenshots_dir,
     )
@@ -179,11 +180,9 @@ def _pack_result(frame, name):
         existing = bpy.data.images.get(name)
         if existing is not None:
             bpy.data.images.remove(existing)
-        loaded = bpy.data.images.load(path, check_existing=False)
-        loaded.name = name
-        loaded.pack()
-        loaded.filepath_raw = ""
-        return loaded.name
+        # Shared loader: sRGB colorspace, packed, and the temp path cleared so
+        # Blender never tries to re-read the file removed below.
+        return load_image_from_file(path, name).name
     except Exception as exc:  # noqa: BLE001
         logger.warning("Scribble mark: could not pack annotated frame: %s", exc)
         return None

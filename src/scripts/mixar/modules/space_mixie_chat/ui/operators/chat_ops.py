@@ -119,21 +119,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
 
-        # Scribble Marks: where the user pointed, already resolved against
-        # the live scene. Runs BEFORE the attachment encoding below because it
-        # appends the frozen frames to pending_attachments; building it after
-        # would send the marks with no picture of them.
         mark_context = None
-        if not (is_modify or is_awaiting_input):
-            try:
-                from mixar.modules.scribble_mark.core import chat_bridge
-                mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
-                for note in mark_notes:
-                    self.report({'INFO'}, f"Marks: {note}")
-            except Exception as e:  # noqa: BLE001
-                # The words are a complete request on their own; never lose a
-                # message because the marks could not be assembled.
-                logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
 
         project_context = None
         if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
@@ -191,6 +177,23 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not ws_client.connection_id:
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
+
+        # Scribble Marks: where the user pointed, already resolved against the
+        # live scene. Placed HERE deliberately — after every pre-flight bail-out
+        # and before the attachment encoding below. prepare_for_send appends the
+        # frozen frames to pending_attachments, so running it any earlier would
+        # leave those frames queued for the NEXT message whenever a pre-flight
+        # check cancels this one.
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
+                for note in mark_notes:
+                    self.report({'INFO'}, f"Marks: {note}")
+            except Exception as e:  # noqa: BLE001
+                # The words are a complete request on their own; never lose a
+                # message because the marks could not be assembled.
+                logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
 
         # Clear any STALE loader left by a prior turn before starting a new one.
         # If the previous turn was cancelled or the stream was closed client-side,

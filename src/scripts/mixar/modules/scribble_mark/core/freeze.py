@@ -100,19 +100,20 @@ def capture_region_still(context, area, region, name=FROZEN_IMAGE_NAME):
 def _load_packed(path, name):
     """Load *path* into ``bpy.data.images`` under *name*, packed.
 
-    The previous frozen frame is released first: one freeze is live at a time
-    and keeping every past capture in the .blend would grow it without bound.
+    Goes through the shared ``load_image_from_file`` rather than repeating
+    load/name/pack/clear-filepath here: that helper already sets the sRGB
+    colorspace and clears the temp path (Blender otherwise tries to re-read a
+    file we are about to delete), and a second copy of those four steps is a
+    second place for them to drift.
+
+    The previous frozen frame is released first: one freeze is live at a time,
+    and keeping every past capture would grow the .blend without bound.
     """
+    from mixar.modules.common.utils.image_utils import load_image_from_file
+
     release(name)
     try:
-        image = bpy.data.images.load(path, check_existing=False)
-        image.name = name
-        image.pack()
-        # Now that the bytes live in the .blend, drop the tempdir reference —
-        # otherwise a reload after tempdir cleanup reports a missing file for
-        # an image that is in fact fully present.
-        image.filepath_raw = ""
-        return image.name
+        return load_image_from_file(path, name).name
     except Exception as exc:  # noqa: BLE001
         logger.warning("Scribble mark: could not pack frozen frame: %s", exc)
         return None
