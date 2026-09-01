@@ -181,6 +181,84 @@ def is_busy() -> bool:
     return bool(_in_flight or _pending)
 
 
+def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> bool:
+    """Run *callback* once no recognition is in flight. True if it was deferred.
+
+    False means nothing is pending and the caller should simply proceed.
+    Used by the send path: handwriting still being converted belongs to the
+    message about to go out, and a prompt written entirely by hand is EMPTY
+    until its last batch lands. The timeout bounds a stalled request — a
+    message that waits forever on a transcription that will never arrive is
+    worse than one sent without its final handwritten words.
+    """
+    if not is_busy():
+        return False
+
+    import time
+
+    import bpy
+
+    deadline = time.monotonic() + timeout_s
+
+    def _tick():
+        if is_busy() and time.monotonic() < deadline:
+            return poll_s
+        try:
+            callback()
+        except Exception:  # noqa: BLE001 — a timer callback must not raise
+            logger.error("[Scribble] deferred callback failed", exc_info=True)
+        return None
+
+    bpy.app.timers.register(_tick, first_interval=poll_s)
+    return True
+
+
+# =============================================================================
+# Canvas visibility — shared with the C++ overlay through the WM flags
+# =============================================================================
+
+def canvas_available(wm) -> bool:
+    """Whether the handwriting canvas exists in this build.
+
+    The flag is registered by ``ui/properties/ink_props.py``; the C++ overlay
+    reads it per draw. Without the flag there is nothing to open.
+    """
+    return wm is not None and hasattr(wm, "mixie_chat_ink_visible")
+
+
+def is_canvas_open(wm) -> bool:
+    return bool(getattr(wm, "mixie_chat_ink_visible", False))
+
+
+def open_canvas(wm) -> bool:
+    """Raise the canvas over every chat surface. True when it is up."""
+    if not canvas_available(wm):
+        return False
+    # Scribble, project rules and past chats are all modal over the same
+    # chat surface — only one may be open at a time.
+    if getattr(wm, "mixie_chat_rules_visible", False):
+        wm.mixie_chat_rules_visible = False
+    if getattr(wm, "mixie_chat_history_visible", False):
+        wm.mixie_chat_history_visible = False
+    if not wm.mixie_chat_ink_visible:
+        wm.mixie_chat_ink_visible = True
+    _redraw()
+    return True
+
+
+def close_canvas(wm) -> None:
+    """Lower the canvas, converting whatever is still on it FIRST.
+
+    The C++ draw-side closing edge cannot dispatch operators, so a Python
+    close that skipped the flush would silently drop the user's last words.
+    """
+    if not is_canvas_open(wm):
+        return
+    flush_pending_ink()
+    wm.mixie_chat_ink_visible = False
+    _redraw()
+
+
 def flush_pending_ink() -> None:
     """Ask the C++ overlay to convert any un-committed strokes NOW.
 

@@ -8,7 +8,8 @@ One entry point each way, called from the chat send operator:
 
 * :func:`prepare_for_send` — build the mark payload and attach the frozen
   frames, returning the dict that rides beside ``project_context``.
-* :func:`finish_send` — flip the drafts to SENT and lower the freeze.
+* :func:`finish_send` — flip the drafts to SENT and leave Scribble on both
+  surfaces (the freeze and the chat handwriting canvas).
 
 Both are best-effort by contract. The user's words are a complete request on
 their own; losing the whole message because an optional attachment failed to
@@ -66,11 +67,13 @@ def finish_send(scene):
         logger.debug("Scribble mark: could not settle marks: %s", exc)
 
     try:
-        wm = bpy.context.window_manager
-        if getattr(wm, "mixar_mark_armed", False):
-            # Sending is the end of the gesture. Leaving the viewport frozen
-            # afterwards traps the user behind a still they have finished with.
-            wm.mixar_mark_armed = False
+        # Sending is the end of the gesture on BOTH surfaces. Leaving the
+        # viewport frozen afterwards traps the user behind a still they have
+        # finished with, and leaving the chat canvas up would swallow their
+        # next click into the composer.
+        from . import scribble_mode
+
+        scribble_mode.disarm(bpy.context.window_manager)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: could not disarm after send: %s", exc)
 

@@ -77,18 +77,21 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
 
-            # Mark Viewport — freezes the 3D viewport and lets the user draw
-            # on it. The marks ride with the next message, already resolved
-            # against the scene, so the agent knows what "this" refers to.
-            # depress mirrors the armed state, like the overlays above.
+            # Scribble — one mode, two surfaces: ink over the chat becomes
+            # text in the composer (the C++ ink canvas), ink over the frozen
+            # 3D viewport becomes marks the agent resolves against the scene,
+            # so it knows what "this" refers to. The count is how many marks
+            # ride with the next message. depress reflects EITHER half being
+            # up, like the overlays above — a pressed button turns it all off.
             # hasattr guard: deferred UI registration pass.
-            if hasattr(bpy.types, 'MIXAR_OT_scribble_mark_toggle'):
-                armed = bool(getattr(wm, 'mixar_mark_armed', False))
+            if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle'):
+                armed = bool(getattr(wm, 'mixar_mark_armed', False)
+                             or getattr(wm, 'mixie_chat_ink_visible', False))
                 mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
                                  if m.state == 'DRAFT')
                 mark_row = layout.row(align=True)
                 mark_row.operator(
-                    "mixar.scribble_mark_toggle",
+                    "mixar.scribble_toggle",
                     text=str(mark_count) if mark_count else "",
                     icon='GREASEPENCIL',
                     depress=armed,

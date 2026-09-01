@@ -4,10 +4,12 @@
 
 """Scribble operators — Python side of the handwriting ink overlay.
 
-The pen icon in the chat header toggles the C++-drawn ink canvas
-(``editors/space_mixie_chat/mixie_chat_ink_overlay.cc``); a stylus press on
-the composer or on empty chat background opens it too, writing the same WM
-flag from C++.
+The C++-drawn ink canvas (``editors/space_mixie_chat/mixie_chat_ink_overlay.cc``)
+is raised two ways: the Scribble control in the chat header
+(``mixar.scribble_toggle``, which arms the chat canvas AND the viewport
+marks together — see ``scribble_mark/core/scribble_mode.py``), or a stylus
+press on the composer / on empty chat background, which C++ handles by
+writing the same WM flag and opens the canvas alone.
 
 While it is open the overlay captures strokes and, once the pen has been
 still for ``SCRIBBLE_IDLE_COMMIT_MS``, dispatches ``mixie_chat.ink_commit``
@@ -21,45 +23,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 
-from ...core.ui_utils import redraw_chat_areas
-
 logger = get_logger(__name__)
-
-
-class MIXIE_CHAT_OT_toggle_scribble(Operator):
-    """Toggle the handwriting canvas over the chat"""
-
-    bl_idname = "mixie_chat.toggle_scribble"
-    bl_label = "Scribble"
-    bl_description = (
-        "Write with a stylus over the chat — your handwriting is converted "
-        "to text in the message box"
-    )
-    bl_options = {'INTERNAL'}
-
-    @classmethod
-    def poll(cls, context):
-        return context.scene is not None
-
-    def execute(self, context):
-        wm = context.window_manager
-        opening = not getattr(wm, 'mixie_chat_ink_visible', False)
-        if opening:
-            # Scribble, project rules and past chats are all modal over the
-            # same chat surface — only one may be open at a time.
-            if getattr(wm, 'mixie_chat_rules_visible', False):
-                wm.mixie_chat_rules_visible = False
-            if getattr(wm, 'mixie_chat_history_visible', False):
-                wm.mixie_chat_history_visible = False
-        else:
-            # Closing from the header: convert whatever is still on the
-            # canvas first — the C++ closing edge cannot dispatch the
-            # commit itself and would drop the strokes.
-            from ...core import scribble
-            scribble.flush_pending_ink()
-        wm.mixie_chat_ink_visible = opening
-        redraw_chat_areas()
-        return {'FINISHED'}
 
 
 class MIXIE_CHAT_OT_ink_commit(Operator):
@@ -103,6 +67,5 @@ class MIXIE_CHAT_OT_ink_commit(Operator):
 
 
 classes = (
-    MIXIE_CHAT_OT_toggle_scribble,
     MIXIE_CHAT_OT_ink_commit,
 )

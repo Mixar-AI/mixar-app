@@ -51,6 +51,15 @@ def _on_load_post(_dummy):
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: could not clear the armed flag: %s", exc)
 
+    # The chat half's recognition queue is Python module state too: a batch
+    # in flight for the OLD file must not append its text into the new one.
+    try:
+        from mixar.modules.space_mixie_chat.core import scribble
+
+        scribble.reset_state()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Scribble: could not reset the handwriting queue: %s", exc)
+
 
 def register():
     if _on_load_post not in bpy.app.handlers.load_post:

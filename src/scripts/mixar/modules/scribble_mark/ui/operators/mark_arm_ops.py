@@ -2,57 +2,58 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Arming, disarming, and tidying marks.
+"""Arming, disarming, and tidying Scribble.
 
 The toggle is the feature's one entry point, and it lives in the chat
-composer next to the other ways of showing the agent something. Disarming
-works by clearing ``wm.mixar_mark_armed`` — the running modal watches that
-flag and stops. There is deliberately no second mechanism: a "stop the modal"
-call that could disagree with the flag is exactly how a viewport ends up
-blocked with nothing left running to unblock it.
+composer next to the other ways of showing the agent something. It arms
+BOTH surfaces at once — handwriting over the chat, marks over the frozen
+viewport — through ``core/scribble_mode.py``, which is also what every
+other exit (Esc, send) goes through, so the two halves cannot drift apart.
+
+Disarming the viewport half works by clearing ``wm.mixar_mark_armed`` — the
+running modal watches that flag and stops. There is deliberately no second
+mechanism: a "stop the modal" call that could disagree with the flag is
+exactly how a viewport ends up blocked with nothing left running to
+unblock it.
 """
 
 from __future__ import annotations
 
-import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.scribble_mark.core import marks as mark_store
-from mixar.modules.scribble_mark.core import overlay
+from mixar.modules.scribble_mark.core import overlay, scribble_mode
 
 logger = get_logger(__name__)
 
 
-class MIXAR_OT_scribble_mark_toggle(Operator):
-    """Freeze the viewport and mark what you want the agent to work on"""
+class MIXAR_OT_scribble_toggle(Operator):
+    """Scribble: write in the chat to type, draw on the viewport to point"""
 
-    bl_idname = "mixar.scribble_mark_toggle"
-    bl_label = "Mark Viewport"
+    bl_idname = "mixar.scribble_toggle"
+    bl_label = "Scribble"
     bl_description = (
-        "Freeze the 3D viewport and draw on it. Circle a region, point an "
-        "arrow, or tap — the marks are sent with your message and resolved "
-        "against the scene, so the agent knows exactly what you meant"
+        "Scribble with a stylus or the mouse. Writing over the chat is "
+        "converted to text in the message box; drawing on the frozen 3D "
+        "viewport marks what you mean, and the marks are sent with your "
+        "message already resolved against the scene"
     )
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         wm = context.window_manager
-        if getattr(wm, "mixar_mark_armed", False):
-            # The modal sees the flag drop on its next event and finishes,
-            # committing whatever is half-drawn.
-            wm.mixar_mark_armed = False
+        if scribble_mode.is_armed(wm):
+            # One exit for both halves: the canvas converts what is still
+            # on it and lowers; the freeze modal sees the flag drop on its
+            # next event and finishes, committing anything half-drawn.
+            scribble_mode.disarm(wm)
             overlay.tag_redraw()
             return {"FINISHED"}
 
-        try:
-            result = bpy.ops.mixar.scribble_mark_draw("INVOKE_DEFAULT")
-        except RuntimeError as exc:
-            self.report({"ERROR"}, f"Could not start marking: {exc}")
-            return {"CANCELLED"}
-
-        if "RUNNING_MODAL" not in result:
-            # The modal already reported why (no viewport, capture failed).
+        if not scribble_mode.arm(context, report=self.report):
+            self.report({"WARNING"},
+                        "Nothing to scribble on — open a 3D viewport or the chat")
             return {"CANCELLED"}
         return {"FINISHED"}
 
@@ -96,7 +97,7 @@ class MIXAR_OT_scribble_mark_clear(Operator):
 
 
 classes = (
-    MIXAR_OT_scribble_mark_toggle,
+    MIXAR_OT_scribble_toggle,
     MIXAR_OT_scribble_mark_undo,
     MIXAR_OT_scribble_mark_clear,
 )

@@ -66,8 +66,9 @@ MIN_SAMPLE_DIST_PX = 2.0
 
 #: Pen-up idle after which the strokes drawn so far become ONE mark.
 #: This is what groups an arrow's shaft and head, or an X's two lines, without
-#: asking the user to declare it — the same idle-commit shape the handwriting
-#: canvas already uses, so the gesture is one people meet twice.
+#: asking the user to declare it — the same idle-commit shape the chat
+#: handwriting canvas uses (INK_IDLE_COMMIT_SEC in mixie_chat_ink_intern.hh),
+#: so the gesture is one people meet twice inside one Scribble mode.
 MARK_COMMIT_IDLE_S = 0.6
 
 #: Modal timer period. Shorter than the idle above, so a commit fires at most
@@ -244,7 +245,7 @@ MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 #: mode whose boundaries and recovery are invisible is the failure the Thinkink
 #: study (arXiv:2607.21468) found first: users could not tell which mode they
 #: were in, and asked for visible controls and a way to undo.
-MARK_HINT_IDLE = "Drag to mark what you mean  ·  Esc when done"
+MARK_HINT_IDLE = "Draw here to point  ·  Write in the chat to type  ·  Esc when done"
 MARK_HINT_MARKED = (
     "{count} mark{plural}  ·  Backspace undoes the last  ·  Esc when done"
 )

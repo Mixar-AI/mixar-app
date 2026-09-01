@@ -463,23 +463,27 @@ class AGENT_BUBBLE_HT_header(Header):
                 depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
             )
 
-        # Mark Viewport — freezes the 3D viewport under the bubble and lets
-        # the user draw on it; the marks ride with the next message already
-        # resolved against the scene. The count sits on the button so it is
-        # obvious that marks are queued even when the freeze has been lowered.
+        # Scribble — one mode, two surfaces: ink over the chat becomes text
+        # in the composer (the C++ ink canvas), ink over the frozen 3D
+        # viewport becomes marks the agent resolves against the scene. The
+        # count on the button is how many marks ride with the next message,
+        # visible even after the freeze is lowered. depress reflects EITHER
+        # half being up — clicking a pressed button turns everything off.
         # hasattr guard: registers in the deferred UI pass.
-        if hasattr(bpy.types, 'MIXAR_OT_scribble_mark_toggle') and not agent_running:
+        if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle') and not agent_running:
             wm = context.window_manager
             mark_count = 0
             if scene is not None:
                 mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
                                  if m.state == 'DRAFT')
+            armed = bool(getattr(wm, 'mixar_mark_armed', False)
+                         or getattr(wm, 'mixie_chat_ink_visible', False))
             right_controls.operator(
-                "mixar.scribble_mark_toggle",
+                "mixar.scribble_toggle",
                 text=str(mark_count) if mark_count else "",
                 icon='GREASEPENCIL',
                 emboss=False,
-                depress=bool(getattr(wm, 'mixar_mark_armed', False)),
+                depress=armed,
             )
 
 
