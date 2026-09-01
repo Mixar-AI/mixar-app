@@ -26,7 +26,10 @@ struct AgentIslandState {
   char status_text[64];     /* Status pill label, from the state enum's UI name. */
   bool status_busy;         /* Lights the pill's dot. */
 
-  char title[128];          /* Card header — the current session's history title. */
+  char title[128];
+  /* Last USER message, for the minimised pill's preview line. Empty when the
+   * conversation has none. */
+  char last_prompt[160];          /* Card header — the current session's history title. */
   const char *placeholder;  /* Drawn only while the input is empty. */
   bool prompt_empty;
   /* A conversation exists, so the panel splits: transcript above, input below.

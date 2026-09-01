@@ -224,6 +224,29 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->has_transcript =
         messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
 
+    /* Newest USER message -> pill preview. Walk the whole collection (no
+     * reverse iterator on RNA collections) keeping the last match. */
+    if (messages) {
+      CollectionPropertyIterator iter;
+      RNA_property_collection_begin(&scene_ptr, messages, &iter);
+      for (; iter.valid; RNA_property_collection_next(&iter)) {
+        PointerRNA item = iter.ptr;
+        if (!enum_is(&item, "sender", "USER")) {
+          continue;
+        }
+        PropertyRNA *text_prop = RNA_struct_find_property(&item, "text");
+        if (!text_prop || RNA_property_type(text_prop) != PROP_STRING) {
+          continue;
+        }
+        char text[160];
+        read_string_prop(&item, "text", text, sizeof(text));
+        if (text[0]) {
+          BLI_strncpy(r_state->last_prompt, text, sizeof(r_state->last_prompt));
+        }
+      }
+      RNA_property_collection_end(&iter);
+    }
+
     char session_id[128];
     read_string_prop(&scene_ptr, "mixie_session_id", session_id, sizeof(session_id));
 

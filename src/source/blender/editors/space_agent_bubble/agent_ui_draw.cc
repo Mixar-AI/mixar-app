@@ -28,6 +28,7 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
+#include "UI_interface_icons.hh"
 
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
@@ -470,6 +471,84 @@ void agent_ui_draw_status_pill(const float width,
   const float w = width;
   const float h = height;
   if (w <= 0.0f || h <= 0.0f) {
+    return;
+  }
+
+  /* ELONGATED resting pill (aspect says which window shape this is): the
+   * minimised bubble's whole identity — dim last-prompt preview + the Mixar
+   * logo on a green gradient chip (Frame 1533210248.svg). Hovering it
+   * expands the island (mixar.bubble_hover_tick). */
+  if (w > h * 4.0f) {
+    const float u = h / 85.0f; /* design pill is 85 artboard units tall */
+
+    rctf pill;
+    pill.xmin = 0.0f;
+    pill.xmax = w;
+    pill.ymin = 0.0f;
+    pill.ymax = h;
+    const float grad_top[4] = {0.176f, 0.176f, 0.176f, 1.0f};    /* #2D2D2D */
+    const float grad_bottom[4] = {0.075f, 0.078f, 0.075f, 1.0f}; /* #131413 */
+    GPU_blend(GPU_BLEND_NONE);
+    const float pill_grad_a[2] = {w * 0.985f, h};
+    const float pill_grad_b[2] = {w * 0.947f, 0.0f};
+    fill_round_gradient(&pill, h * 0.5f, grad_top, grad_bottom, pill_grad_a, pill_grad_b);
+    GPU_blend(GPU_BLEND_ALPHA);
+    /* Faint rim, brightest toward the top-right like the export's stroke. */
+    const float rim[4] = {1.0f, 1.0f, 1.0f, 0.14f};
+    outline_round(&pill, h * 0.5f, rim);
+
+    /* Logo chip, right-inset 10.5 units, 85x68 rx25. */
+    rctf chip;
+    chip.xmax = w - 10.5f * u;
+    chip.xmin = chip.xmax - 85.0f * u;
+    chip.ymin = h * 0.5f - 34.0f * u;
+    chip.ymax = h * 0.5f + 34.0f * u;
+    const float chip_a[4] = {0.125f, 0.345f, 0.212f, 1.0f}; /* #205836 */
+    const float chip_b[4] = {0.227f, 0.518f, 0.341f, 1.0f}; /* #3A8457 */
+    const float chip_grad_a[2] = {chip.xmax - 7.0f * u, chip.ymax - 14.0f * u};
+    const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
+    fill_round_gradient(&chip, 25.0f * u, chip_a, chip_b, chip_grad_a, chip_grad_b);
+    const float icon_edge = 45.0f * u;
+    UI_icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
+                    BLI_rctf_cent_y(&chip) - icon_edge * 0.5f,
+                    ICON_MIXAR_ICON,
+                    /*aspect=*/16.0f / icon_edge, /* icons draw at 16/aspect px */
+                    /*alpha=*/1.0f,
+                    /*desaturate=*/0.0f,
+                    /*mono_color=*/nullptr,
+                    /*mono_border=*/false,
+                    /*text_overlay=*/nullptr);
+
+    /* Preview line: newest user prompt, dim, ellipsised into the space left
+     * of the chip. */
+    char preview[160];
+    BLI_strncpy(preview,
+                state->last_prompt[0] ? state->last_prompt : "Ask Mixie anything...",
+                sizeof(preview));
+    /* One line only — newlines read as garbage glyphs in BLF. */
+    for (char *c = preview; *c; c++) {
+      if (*c == '\n' || *c == '\r') {
+        *c = ' ';
+      }
+    }
+    const float text_size = 27.0f * u;
+    const float text_x = 28.0f * u;
+    const float text_max_w = chip.xmin - 16.0f * u - text_x;
+    const float dim_col[4] = {0.62f, 0.62f, 0.62f, 1.0f};
+    if (text_width(preview, text_size) > text_max_w) {
+      size_t len = strlen(preview);
+      while (len > 1) {
+        preview[--len] = '\0';
+        char probe[164];
+        SNPRINTF(probe, "%s...", preview);
+        if (text_width(probe, text_size) <= text_max_w) {
+          BLI_strncpy(preview, probe, sizeof(preview));
+          break;
+        }
+      }
+    }
+    label_left(preview, text_x, h * 0.5f, text_size, dim_col);
+    GPU_blend(GPU_BLEND_NONE);
     return;
   }
 

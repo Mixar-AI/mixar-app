@@ -170,7 +170,9 @@ def _load_autoshow_tick_inner():
         if closed:
             return 0.25  # let close settle before invoke
 
-    if _try_invoke_bubble(start_minimised=False):
+    # The resting state is the floating pill — the full island only ever
+    # appears from a hover/click, never as the first thing on screen.
+    if _try_invoke_bubble(start_minimised=True):
         logger.info(
             "agent_bubble: shown after file load on attempt %d",
             _st.load_autoshow_attempts,

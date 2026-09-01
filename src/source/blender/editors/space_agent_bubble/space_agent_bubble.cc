@@ -56,6 +56,7 @@
 #include "GPU_matrix.hh"
 #include "UI_view2d.hh"
 #include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "BLF_api.hh"
 
@@ -155,6 +156,9 @@
  * won't exist; guard the call sites with the platform macro. */
 #if defined(__APPLE__) || defined(_WIN32)
 extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless);
+extern "C" bool Mixar_WindowContainsScreenCursor(void *window_handle, int margin_pt);
+extern "C" void Mixar_WindowFloatIn(void *window_handle, int rise_pt, float duration);
+extern "C" void Mixar_WindowFloatOut(void *window_handle, int sink_pt, float duration);
 extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height);
 extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius);
 extern "C" void Mixar_WindowSetMinContentSize(void *window_handle,
@@ -1357,7 +1361,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 /* Margin (px) between the pill's bottom and the screen's visible
  * frame bottom when the bubble is minimised and the pill snaps to
  * the centre-bottom of the screen. */
-#define AGENT_BUBBLE_PILL_BOTTOM_MARGIN 24
+/* Resting pill floats well clear of the host's bottom edge (Higgsfield sits
+ * its pill above the timeline, not glued to the frame). */
+#define AGENT_BUBBLE_PILL_BOTTOM_MARGIN 72
 
 /* Bottom margin used when snapping the FULL bubble window to the
  * centre-bottom of the screen at first open (and on subsequent
@@ -1408,15 +1414,23 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 
-#define AGENT_BUBBLE_PILL_WIDTH_LARGE 184
-#define AGENT_BUBBLE_PILL_HEIGHT_LARGE 44
-#define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 22.0f
+/* Elongated resting pill (Frame 1533210248.svg, 643x85 rx31.5 at the 1.5x
+ * export): last-prompt preview + logo chip. This is the minimised bubble's
+ * whole identity — hover expands it into the island. */
+#define AGENT_BUBBLE_PILL_WIDTH_LARGE 429
+#define AGENT_BUBBLE_PILL_HEIGHT_LARGE 57
+#define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 28.5f
 
 /* Duration (seconds) of the minimise glide animation — pill slides
  * + grows from above-bubble to centre-bottom while the bubble
  * fades out. ~0.28 s is the upper end of "responsive" UI motion;
  * shorter feels jumpy, longer feels sluggish. */
-#define AGENT_BUBBLE_MINIMISE_ANIM_DURATION 0.28f
+/* Ease-out-quint float in/out: quick to ~90%%, soft settle. Expand slightly
+ * longer than collapse — an entrance can savour its settle, an exit should
+ * get out of the way. */
+#define AGENT_BUBBLE_MINIMISE_ANIM_DURATION 0.20f
+#define AGENT_BUBBLE_EXPAND_ANIM_DURATION 0.26f
+#define AGENT_BUBBLE_FLOAT_RISE_PT 18
 /* Gap (px) between the bottom of the pill and the top of the
  * bubble — small visual separation matching the Figma where the
  * pill floats slightly above the main bubble. */
@@ -2733,8 +2747,19 @@ static void minimise_anim_finish(void * /*user_data*/)
     Mixar_WindowAnchorAtParentCentreBottom(
         g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
 #else
+    /* The pill is fully faded out here — resize to the elongated shape and
+     * seat it at the resting spot while nothing is visible, then fade in.
+     * Native-only resize (no bContext in this callback): the pill's HEADER
+     * draw sizes itself from Mixar_WindowGetContentPixelSize and repaints on
+     * every composite via draw_overlay, so skipping the wmWindow layout sync
+     * is safe for this surface. */
+    Mixar_WindowForceSize(g_pill_ghostwin,
+                          AGENT_BUBBLE_PILL_WIDTH_LARGE,
+                          AGENT_BUBBLE_PILL_HEIGHT_LARGE);
+    Mixar_WindowSetCornerRadius(g_pill_ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
     Mixar_WindowAnchorAtParentCentreBottom(
         g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 1.0f, 0.18f);
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
@@ -2743,6 +2768,104 @@ static void minimise_anim_finish(void * /*user_data*/)
   }
 }
 #endif
+
+/* -------------------------------------------------------------------- */
+/** \name Hover expand / collapse (Higgsfield-style)
+ *
+ * A Python timer (agent_bubble/ui/operators/hover_ops.py) calls
+ * mixar.bubble_hover_tick a few times a second. Minimised + cursor over the
+ * pill -> restore; expanded + cursor outside the bubble for a few
+ * consecutive ticks -> minimise. All hit-testing is native screen-space
+ * (Mixar_WindowContainsScreenCursor), so no GHOST/Blender coordinate
+ * conversion is involved.
+ * \{ */
+
+static int g_hover_outside_ticks = 0;
+static double g_hover_cooldown_until = 0.0;
+
+static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  const double now = BLI_time_now_seconds();
+  if (now < g_hover_cooldown_until) {
+    return OPERATOR_FINISHED;
+  }
+
+  if (g_bubble_minimised) {
+    g_hover_outside_ticks = 0;
+    if (g_pill_ghostwin != nullptr &&
+        Mixar_WindowContainsScreenCursor(g_pill_ghostwin, /*margin_pt=*/0))
+    {
+      /* Cooldown BEFORE the restore: the minimise animation takes a moment
+       * and a tick landing mid-transition would see stale frames. */
+      g_hover_cooldown_until = now + 0.35;
+      WM_operator_name_call(C,
+                            "MIXAR_OT_bubble_restore",
+                            blender::wm::OpCallContext::ExecDefault,
+                            nullptr,
+                            nullptr);
+    }
+    return OPERATOR_FINISHED;
+  }
+
+  if (g_bubble_ghostwin == nullptr) {
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+
+  /* Expanded: collapse after the cursor has been outside the bubble (and the
+   * pill, which floats above it) for a stretch of consecutive ticks. The
+   * 32pt margin keeps a small grace ring so skimming the edge doesn't
+   * flicker. */
+  const bool inside =
+      Mixar_WindowContainsScreenCursor(g_bubble_ghostwin, /*margin_pt=*/32) ||
+      (g_pill_ghostwin != nullptr &&
+       Mixar_WindowContainsScreenCursor(g_pill_ghostwin, /*margin_pt=*/16));
+  if (inside) {
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+
+  /* Never collapse under an open popup/menu/dropdown belonging to the bubble
+   * (catalog dropdowns, the history overlay's field, tooltips...). */
+  LISTBASE_FOREACH (wmWindow *, win, &CTX_wm_manager(C)->windows) {
+    if (win->ghostwin != g_bubble_ghostwin) {
+      continue;
+    }
+    const bScreen *screen = WM_window_get_active_screen(win);
+    if (screen && !BLI_listbase_is_empty(&screen->regionbase)) {
+      g_hover_outside_ticks = 0;
+      return OPERATOR_FINISHED;
+    }
+    break;
+  }
+
+  g_hover_outside_ticks++;
+  if (g_hover_outside_ticks >= 2) { /* ~0.2s at the timer's 0.1s tick. */
+    g_hover_outside_ticks = 0;
+    g_hover_cooldown_until = now + 0.35;
+    WM_operator_name_call(C,
+                          "MIXAR_OT_bubble_minimise",
+                          blender::wm::OpCallContext::ExecDefault,
+                          nullptr,
+                          nullptr);
+  }
+  return OPERATOR_FINISHED;
+#else
+  return OPERATOR_CANCELLED;
+#endif
+}
+
+void MIXAR_OT_bubble_hover_tick(wmOperatorType *ot)
+{
+  ot->name = "Hover Tick";
+  ot->idname = "MIXAR_OT_bubble_hover_tick";
+  ot->description = "Hover Tick";
+  ot->exec = mixar_bubble_hover_tick_exec;
+  ot->flag = OPTYPE_INTERNAL;
+}
+
+/** \} */
 
 static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*op*/)
 {
@@ -2762,12 +2885,10 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
     Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #else
-  if (g_pill_ghostwin != nullptr) {
-    pill_set_size(C,
-                  AGENT_BUBBLE_PILL_WIDTH_LARGE,
-                  AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-                  AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
-  }
+  /* Do NOT resize the pill here: ForceSize grows the frame from its current
+   * origin, so the still-visible pill flashed as a 429pt slab hanging off to
+   * the left before the anchor dropped it into the seat. It fades out at its
+   * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
    * hides or it will vanish too). */
@@ -2786,19 +2907,16 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * just hides the bubble and resets alpha. */
   minimise_anim_finish(nullptr);
 #else
-  /* macOS: animate the pill glide + bubble fade, then schedule the
-   * finish callback via dispatch_after. */
-  if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
-    Mixar_WindowAnimateFrameToCentreBottomOfWindow(
-        g_pill_ghostwin,
-        g_host_ghostwin,
-        AGENT_BUBBLE_PILL_WIDTH_LARGE,
-        AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-        AGENT_BUBBLE_PILL_BOTTOM_MARGIN,
-        AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
+  /* macOS: the bubble sinks + fades (FLIP layer animation); the pill
+   * CROSSFADES to its resting seat — a long frame glide runs on AppKit's
+   * legacy NSAnimation timer and reads ~30fps, while a fade has no motion to
+   * be choppy. Fade it out here; the finish callback seats it and fades it
+   * back in. */
+  if (g_pill_ghostwin != nullptr) {
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 0.0f, 0.08f);
   }
-  Mixar_WindowAnimateAlphaTo(g_bubble_ghostwin, 0.0f,
-                             AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
+  Mixar_WindowFloatOut(
+      g_bubble_ghostwin, AGENT_BUBBLE_FLOAT_RISE_PT, AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
   Mixar_DispatchMainAfter(AGENT_BUBBLE_MINIMISE_ANIM_DURATION,
                           minimise_anim_finish,
                           /*user_data=*/nullptr);
@@ -2852,8 +2970,6 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   g_bubble_had_pending_attachments = false;
   g_bubble_last_min_height = 0;
 
-  /* Ensure the bubble is fully opaque — minimise may have set alpha
-   * to 0 (macOS fade animation or Win32 immediate alpha set). */
   bubble_force_size_and_refresh(
       C,
       g_bubble_ghostwin,
@@ -2861,7 +2977,15 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
       agent_bubble_collapsed_height_for_current_attachments(C));
   bubble_set_min_content_size(
       g_bubble_ghostwin, agent_bubble_collapsed_height_for_current_attachments(C));
+#ifdef __APPLE__
+  /* Animated expand: the bubble fades IN from the alpha the minimise fade
+   * left it at, mirroring the minimise animation (the pill's glide up to its
+   * above-bubble seat is animated below). Alpha is set to 0 first so a
+   * restore after a non-animated hide doesn't pop. */
+  Mixar_WindowSetAlpha(g_bubble_ghostwin, 0.0f);
+#else
   Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
+#endif
 
   /* Re-arm hidesOnDeactivate so the bubble hides/shows with the
    * app on alt-tab (macOS).  Do this before showing. */
@@ -2883,12 +3007,21 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
 
   /* Show the bubble (now it already has an owner). */
   Mixar_WindowOrderFront(g_bubble_ghostwin);
+#ifdef __APPLE__
+  /* Entrance: rise into the seat while fading in — position-only animation,
+   * so Blender never re-layouts mid-flight. */
+  Mixar_WindowFloatIn(
+      g_bubble_ghostwin, AGENT_BUBBLE_FLOAT_RISE_PT, AGENT_BUBBLE_EXPAND_ANIM_DURATION);
+#endif
 
   /* Re-parent the pill directly from host → bubble.  This changes
    * GWLP_HWNDPARENT atomically (host→bubble) so the pill is NEVER
    * a visible window with no owner — avoiding the Alt+Tab race.
    * The old host tracking hook is overwritten by the new one. */
   if (g_pill_ghostwin != nullptr) {
+#ifdef __APPLE__
+    Mixar_WindowSetAlpha(g_pill_ghostwin, 0.0f);
+#endif
     pill_set_size(C,
                   AGENT_BUBBLE_PILL_WIDTH,
                   AGENT_BUBBLE_PILL_HEIGHT,
@@ -2898,6 +3031,10 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
                                     g_bubble_ghostwin,
                                     /*offset_x=*/0,
                                     /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
+#ifdef __APPLE__
+    /* Crossfade into the small status-pill seat while the island rises. */
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 1.0f, AGENT_BUBBLE_EXPAND_ANIM_DURATION);
+#endif
   }
 
   g_bubble_minimised = false;
@@ -3036,6 +3173,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_window_update_drag);
   WM_operatortype_append(MIXAR_OT_bubble_window_end_drag);
   WM_operatortype_append(MIXAR_OT_bubble_minimise);
+  WM_operatortype_append(MIXAR_OT_bubble_hover_tick);
   WM_operatortype_append(MIXAR_OT_bubble_restore);
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
