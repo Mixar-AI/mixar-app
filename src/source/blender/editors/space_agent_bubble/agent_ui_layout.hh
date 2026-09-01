@@ -83,10 +83,6 @@ struct AgentIslandLayout {
   float prompt_x;
   float prompt_y;
 
-  rctf seg_track;
-  rctf seg_thumb;    /* Positioned over whichever half is active. */
-  rctf seg_agent;    /* Rect the Agent Mode button is placed over. */
-  rctf seg_generate; /* Rect the Generate Mode button is placed over. */
   rctf chip_upload;
   rctf btn_generate;
 };
@@ -94,7 +90,7 @@ struct AgentIslandLayout {
 /**
  * Resolve the island against `region`, anchored to the region's top-left.
  *
- * `agent_mode_active` picks which half of the segmented control the thumb
+ * `agent_mode_active` is kept in the signature for ABI stability but unused
  * covers; `active_tab` picks the filled pill.
  */
 /**

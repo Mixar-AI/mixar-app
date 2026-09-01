@@ -64,6 +64,9 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_queue.hh"
+#include "agent_ui_tab3d.hh"
+#include "agent_ui_tabsplat.hh"
+#include "agent_ui_tabmedia.hh"
 #include "agent_ui_theme.hh"
 
 /* Slim region sizing + bubble window dimensions.
@@ -363,6 +366,9 @@ static void agent_bubble_island_controls_header(const bContext *C,
     const char *tip;
   } tab_buttons[] = {
       {AGENT_TAB_AGENT, "AGENT", "Agent chat"},
+      {AGENT_TAB_3D, "THREE_D", "3D generation"},
+      {AGENT_TAB_MEDIA, "MEDIA", "Image and video generation"},
+      {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
       {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
   };
   for (const auto &tb : tab_buttons) {
@@ -448,33 +454,6 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
       UI_but_placeholder_set(input_but, "Describe your scene here...");
       UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
-    }
-  }
-
-  /* --- Segmented mode control ---
-   * Blender's stock `wm.context_set_enum`, not an RNA enum button: an enum
-   * button derives its icon from the enum ITEM, and mixie_chat_mode's items
-   * carry icons, which got stamped over the island's own chips. */
-  {
-    struct ModeHalf {
-      const rctf *rect;
-      const char *value;
-      const char *tip;
-    };
-    const ModeHalf halves[2] = {
-        {&layout->seg_agent, "AGENT", "Agent mode"},
-        {&layout->seg_generate, "GENERATE", "Generate mode"},
-    };
-    for (const ModeHalf &half : halves) {
-      agent_bubble_rect_to_region(region, *half.rect, &bx, &by, &bw, &bh);
-      uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
-                             blender::wm::OpCallContext::InvokeDefault, "",
-                             bx, by, bw, bh, half.tip);
-      if (but) {
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
-        RNA_string_set(op_ptr, "data_path", "scene.mixie_chat_mode");
-        RNA_string_set(op_ptr, "value", half.value);
-      }
     }
   }
 
@@ -674,7 +653,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   {
     AgentIslandState tab_probe;
     agent_ui_state_gather(C, &tab_probe);
-    if (tab_probe.active_tab == AGENT_TAB_QUEUE) {
+    if (tab_probe.active_tab != AGENT_TAB_AGENT) {
       agent_bubble_fill_region_backdrop(region);
       AgentIslandState state;
       AgentIslandLayout layout;
@@ -687,7 +666,19 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
                            -float(region->winrct.ymin));
         const wmWindow *win = CTX_wm_window(C);
         const float u = float(WM_window_native_pixel_x(win)) / float(AGENT_ISLAND_W);
-        agent_ui_queue_draw(C, region, panel_region, u);
+        if (tab_probe.active_tab == AGENT_TAB_QUEUE) {
+          agent_ui_queue_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_SPLAT) {
+          agent_ui_tabsplat_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_MEDIA) {
+          agent_ui_tabmedia_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_3D) {
+          agent_ui_tab3d_draw(C, region, panel_region, u);
+        }
+        /* GENERATIONS: no pane yet — the island chrome + empty panel. */
       }
       return;
     }
@@ -827,6 +818,13 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
    * (which then spans exactly the panel above the chips — one box, no
    * sliver), so TOOLS holds only the chip row + card foot. */
   const int bottom_units_empty = AGENT_INPUT_GAP + AGENT_CHIP_H + AGENT_CARD_PAD_BOTTOM;
+
+  /* Non-Agent tabs draw their entire pane inside the WINDOW region — panes
+   * like the 3D tab pin rows to the panel FOOT, which the Agent tab's TOOLS
+   * band would clip — so TOOLS keeps only the card-foot sliver there. */
+  AgentIslandState tab_probe;
+  agent_ui_state_gather(C, &tab_probe);
+  const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
   (void)win_logical_h;
   LISTBASE_FOREACH (ARegion *, other, &area->regionbase) {
     int want = 0;
@@ -834,7 +832,13 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
       want = header_logical;
     }
     else if (other->regiontype == RGN_TYPE_TOOLS) {
-      const int units = has_conversation ? bottom_units : bottom_units_empty;
+      int units;
+      if (agent_tab_active) {
+        units = has_conversation ? bottom_units : bottom_units_empty;
+      }
+      else {
+        units = 4; /* Card foot only — the pane owns everything above. */
+      }
       want = int(float(units) * u_logical + 0.5f);
     }
     if (want > 0 && other->sizey != want) {

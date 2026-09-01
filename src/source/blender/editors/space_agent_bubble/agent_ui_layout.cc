@@ -88,7 +88,7 @@ const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
 void agent_ui_layout_build(const int window_w,
                            const int window_h,
                            AgentTabId active_tab,
-                           const bool agent_mode_active,
+                           const bool /*agent_mode_active*/,
                            const bool has_transcript,
                            AgentIslandLayout *r_layout)
 {
@@ -234,28 +234,11 @@ void agent_ui_layout_build(const int window_w,
    * painter centres every label the same way. */
   r_layout->prompt_y = f.y(AGENT_PROMPT_Y + AGENT_PROMPT_FONT * 0.5f);
 
-  /* --- Chip row --- */
-  r_layout->seg_track = f.box(AGENT_SEG_X, chip_y, AGENT_SEG_W, AGENT_CHIP_H);
-
-  const float thumb_x = agent_mode_active ?
-                            (AGENT_SEG_X + AGENT_SEG_THUMB_INSET) :
-                            (AGENT_SEG_X + AGENT_SEG_W - AGENT_SEG_THUMB_INSET -
-                             AGENT_SEG_THUMB_W);
-  r_layout->seg_thumb = f.box(thumb_x,
-                              chip_y + AGENT_SEG_THUMB_INSET,
-                              AGENT_SEG_THUMB_W,
-                              AGENT_CHIP_H - AGENT_SEG_THUMB_INSET * 2);
-
-  /* Halves split at the thumb's width, not at the track's midpoint — the
-   * thumb is narrower than half the track, and a hit test on the midpoint
-   * would put part of "Agent Mode" inside the Generate half. */
-  const float split = AGENT_SEG_X + AGENT_SEG_THUMB_INSET + AGENT_SEG_THUMB_W;
-  r_layout->seg_agent = f.box(AGENT_SEG_X, chip_y, split - AGENT_SEG_X, AGENT_CHIP_H);
-  r_layout->seg_generate = f.box(
-      split, chip_y, AGENT_SEG_X + AGENT_SEG_W - split, AGENT_CHIP_H);
-
+  /* --- Chip row ---
+   * The mode toggle is gone (there is only Agent mode), so Upload Reference
+   * takes the row's left edge where the toggle sat. */
   r_layout->chip_upload = f.box(
-      AGENT_CHIP_UPLOAD_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
+      AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
   r_layout->btn_generate = f.box(
       AGENT_BTN_GENERATE_X, chip_y, AGENT_BTN_GENERATE_W, AGENT_CHIP_H);
 }

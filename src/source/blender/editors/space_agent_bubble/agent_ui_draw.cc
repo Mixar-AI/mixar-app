@@ -412,7 +412,6 @@ void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *stat
 {
   const float u = layout->scale;
   const float chip[4] = AGENT_COL_CHIP;
-  const float chip_active[4] = AGENT_COL_CHIP_ACTIVE;
   const float generate[4] = AGENT_COL_GENERATE;
   const float text[4] = AGENT_COL_TEXT;
 
@@ -427,22 +426,6 @@ void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *stat
   if (layout->tabs[AGENT_TAB_AGENT].active == false) {
     return;
   }
-
-  /* Segmented mode control. */
-  fill_round(&layout->seg_track, radius, chip);
-  fill_round(&layout->seg_thumb, radius, chip_active);
-  /* Both halves keep the same label colour — the artboard distinguishes them
-   * with the thumb alone, and dimming the inactive one reads as disabled. */
-  label_centre("Agent Mode",
-               BLI_rctf_cent_x(&layout->seg_agent),
-               BLI_rctf_cent_y(&layout->seg_agent),
-               size,
-               text);
-  label_centre("Generate Mode",
-               BLI_rctf_cent_x(&layout->seg_generate),
-               BLI_rctf_cent_y(&layout->seg_generate),
-               size,
-               text);
 
   /* Upload Reference. The artboard truncates this to "Upload Refe…" inside a
    * 150-unit chip; the ellipsis is the design, not an accident of the export,
