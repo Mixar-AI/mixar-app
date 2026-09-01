@@ -249,7 +249,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * before any keymap handlers, ensuring LEFTMOUSE reaches our click dispatch.
  * \{ */
 
-static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
   /* 0. Project-rules overlay — modal while open: consumes text-editing
    * keys, clicks (incl. click-away close), scroll, and ESC. Checked
@@ -364,7 +364,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
   return WM_UI_HANDLER_CONTINUE;
 }
 
-static void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
+void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
 {
   /* Nothing to free */
 }

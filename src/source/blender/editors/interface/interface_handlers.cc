@@ -12864,6 +12864,25 @@ static int ui_handler_region_menu(bContext *C, const wmEvent *event, void * /*us
     }
   }
 
+  /* Mixar: a text field being edited must not make the whole window
+   * scroll-dead. While the active button is in text editing and did not
+   * consume a scroll-family event itself (a search box consuming wheel
+   * returns BREAK above), let it fall through to the region keymaps so
+   * View2D scrolling keeps working — the Mixie chat transcript is scrolled
+   * with the composer focused, exactly like any chat app. Everything else
+   * stays blocked: this is still modal interaction. */
+  if (retval == WM_UI_HANDLER_CONTINUE && but && but->active &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING) &&
+      ELEM(event->type,
+           WHEELUPMOUSE,
+           WHEELDOWNMOUSE,
+           WHEELLEFTMOUSE,
+           WHEELRIGHTMOUSE,
+           MOUSEPAN))
+  {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   /* we block all events, this is modal interaction */
   return WM_UI_HANDLER_BREAK;
 }

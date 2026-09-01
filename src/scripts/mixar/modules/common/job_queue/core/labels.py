@@ -73,6 +73,26 @@ def catalog_feature_label(origin_capability_key: str, service: str) -> str:
     return ""
 
 
+def model_label(service: str, model: str) -> str:
+    """Backend catalog model label, with exact submitted-slug fallback.
+
+    The one definition — the queue UIList and the agent island's Queue tab
+    mirror both use it, so the two surfaces can never disagree on a name.
+    """
+    model_slug = (model or "").strip()
+    if not model_slug:
+        return ""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        catalog_model = get_model((service or "").strip(), model_slug)
+        if catalog_model and catalog_model.get("label"):
+            return catalog_model["label"]
+    except Exception:
+        pass
+    return model_slug
+
+
 def feature_label(
     origin_capability_key: str,
     service: str,

@@ -18,6 +18,7 @@
  */
 
 #include <climits>
+#include <cmath>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -51,7 +52,19 @@
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
+#include "GPU_framebuffer.hh"
+#include "GPU_matrix.hh"
+#include "UI_view2d.hh"
+#include "GPU_state.hh"
+
+#include "UI_interface_c.hh"
+#include "UI_interface_layout.hh"
+
 #include "agent_bubble_intern.hh"
+#include "agent_ui_draw.hh"
+#include "agent_ui_layout.hh"
+#include "agent_ui_queue.hh"
+#include "agent_ui_theme.hh"
 
 /* Slim region sizing + bubble window dimensions.
  *
@@ -71,12 +84,46 @@
  * fits a 1-line composer + the action row comfortably; the wrapper's
  * internal scroll handles overflow when the input grows. */
 #define AGENT_BUBBLE_FOOTER_HEIGHT 90
-#define AGENT_BUBBLE_DEFAULT_WIDTH 400
+/* Island chrome slabs, logical px at the default 874-wide window (island
+ * units x 874/1310). Re-synced to the live width each frame by the composer
+ * region's layout callback. */
+#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 100
+#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 96
+/* The bubble window IS the island: 1310 x 569 artboard units at the 1.5x
+ * export divisor (see agent_ui_theme.hh). Sizing the window to the design
+ * means island-local (0,0) is the region's top-left and nothing has to
+ * centre itself. */
+#define AGENT_BUBBLE_DEFAULT_WIDTH 874
 /* Default content height: footer (~90 px) + header (~18 px) + body for
  * chat history. 350 px gives ~240 px of scroll area — a compact bubble
  * the user can grow via drag/expand. This is also the OS resize floor
  * (AGENT_BUBBLE_MIN_HEIGHT below). */
-#define AGENT_BUBBLE_DEFAULT_HEIGHT 350
+#define AGENT_BUBBLE_DEFAULT_HEIGHT 348
+/* The island's height in UNSCALED units — 569 artboard units / the 1.5x export
+ * factor. Region sizey is unscaled: Blender multiplies it by UI_SCALE_FAC when
+ * it lays the area out, so passing an already-scaled value (AGENT_DU(...))
+ * double-scales and the region comes back twice the window's height. */
+#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 348
+/* The island's three slabs, unscaled. Top = pill + tab strip + card header,
+ * bottom = input line + chip row; the transcript takes what is left. */
+/* Slab heights are artboard UNITS; the layout converts them with the same
+ * window-derived ratio the island uses, because region->sizey is unscaled
+ * while the island is laid out in winrct (physical) space. Hard-coding them in
+ * unscaled pixels made every slab half the height its content needed. */
+#define AGENT_BUBBLE_SLAB_TOP_UNITS 149
+#define AGENT_BUBBLE_SLAB_BOTTOM_UNITS 133
+#define AGENT_BUBBLE_SLAB_TOP_PX 99
+#define AGENT_BUBBLE_SLAB_BOTTOM_PX 96
+/* Blender enforces a minimum height on the main (WINDOW) region. If the two
+ * slabs claim the whole window it does not shrink to zero — it OVERLAPS them,
+ * and the overlap both repaints the slab's pixels every frame (the blink) and
+ * covers the top of the input field (the missing text). So the empty-state
+ * slab takes everything EXCEPT that reserve. */
+#define AGENT_BUBBLE_WINDOW_MIN_PX 52
+/* Compact = island only, exactly the artboard. The window grows to this once
+ * a conversation exists, so the transcript has somewhere to live without a
+ * permanently tall slab floating over the viewport. */
+#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 340
 #define AGENT_BUBBLE_MIN_WIDTH AGENT_BUBBLE_DEFAULT_WIDTH
 #define AGENT_BUBBLE_MIN_HEIGHT AGENT_BUBBLE_DEFAULT_HEIGHT
 #define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 100
@@ -182,6 +229,15 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region);
 void mixie_chat_footer_region_draw(const bContext *C, ARegion *region);
 
 void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region);
+/* Message + overlay painters, called directly by the transcript region so it
+ * can paint the island's card underneath them (mixie_chat_main_region_draw
+ * clears the background first, which would wipe the card out). */
+void mixie_chat_draw_messages(const bContext *C, ARegion *region);
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
+void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
+void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
+void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
 void mixie_chat_main_region_draw(const bContext *C, ARegion *region);
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion *region);
@@ -206,6 +262,9 @@ void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
  * no-op). */
 static void *g_bubble_ghostwin = nullptr;
 static void *g_pill_ghostwin = nullptr;
+/* One-shot: has this bubble already been grown to make room for a
+ * conversation? Reset when the bubble window closes. */
+static bool g_bubble_grown_for_chat = false;
 static bool g_bubble_minimised = false;
 static bool g_bubble_expanded = false;
 static bool g_bubble_had_pending_attachments = false;
@@ -235,20 +294,586 @@ void mixie_chat_clear_bg_override();
 /* Wrapper draw callbacks that push the custom bg colour into the
  * shared mixie_chat draw path, then clear it afterwards so the
  * regular mixie_chat editor is unaffected. */
-static void agent_bubble_main_region_draw(const bContext *C, ARegion *region)
+/* -------------------------------------------------------------------- */
+/** \name Agent Island
+ *
+ * The island replaces the bubble's former header/body/footer stack: one
+ * custom-drawn region paints the status pill, the tab strip and the card,
+ * exactly as the artboard draws them. The old regions are left registered
+ * but hidden, so nothing else in this file has to learn about the change.
+ * \{ */
+
+/**
+ * Transparent Blender buttons laid over the painted island.
+ *
+ * Deliberately real `uiBut`s rather than a bespoke click operator: that way
+ * typing, the caret, selection, IME, hover, tooltips and Enter-to-send are all
+ * Blender's existing machinery, and every control invokes an operator the chat
+ * already owns. Nothing here implements behaviour — it only positions.
+ *
+ * Emboss is None so the buttons contribute no pixels; the island's own painter
+ * has already drawn every chip, pill and disc underneath them.
+ */
+/**
+ * Region init for the island.
+ *
+ * Deliberately NOT mixie_chat_main_region_init. That one installs the chat's
+ * own click dispatch ahead of Blender's uiBlock handler, and its comment says
+ * exactly what that costs: "if a chat hit-target ever overlaps a uiBlock
+ * button, the click will be stolen from the button". The island is nothing but
+ * uiBlock buttons over a painted surface, so it takes the uiBlock handler and
+ * nothing else — no chat hit dispatch, no "Mixie Chat" selection keymap, no
+ * View2D (the island does not scroll).
+ */
+
+/* Defined below with the other island plumbing; the controls need them here. */
+static void agent_bubble_rect_to_region(
+    const ARegion *region, const rctf &src, int *r_x, int *r_y, short *r_w, short *r_h);
+
+/** Card-header controls. They live in the top slab's region. */
+
+/**
+ * Composer controls — input field, mode toggle, upload and Generate. They live
+ * in the bottom slab's region.
+ *
+ * Two blocks on purpose: the operator buttons are unembossed so they add no
+ * pixels over the chips the island has painted, but the prompt field cannot be.
+ * `ui_do_but_TEX` ignores a plain click on an unembossed text button (Blender
+ * reserves LEFTMOUSE there, entering text editing only on Ctrl+click), and
+ * activating it on init does not hold — the button is rebuilt every redraw and
+ * comes back inactive.
+ */
+/** Card-header controls: tab strip + (on the Agent tab) history / new chat. */
+static void agent_bubble_island_controls_header(const bContext *C,
+                                                ARegion *region,
+                                                const AgentIslandLayout *layout,
+                                                const AgentIslandState *state)
 {
-  /* The main body (RGN_TYPE_WINDOW) resolves TH_BACK to
-   * space_agent_bubble.back, which is the "Window Background" colour
-   * in the Agent Bubble theme.  Push it as an override so the shared
-   * mixie_chat draw path uses the agent-bubble colour, not the
-   * mixie-chat one. */
-  bTheme *btheme = UI_GetTheme();
-  const unsigned char *bk = btheme->space_agent_bubble.back;
-  float body_bg[4] = {bk[0] / 255.0f, bk[1] / 255.0f, bk[2] / 255.0f, bk[3] / 255.0f};
-  mixie_chat_set_bg_override(body_bg);
-  mixie_chat_main_region_draw(C, region);
-  mixie_chat_clear_bg_override();
+  uiBlock *block = UI_block_begin(
+      C, region, "agent_island_hdr", blender::ui::EmbossType::None);
+  int bx, by;
+  short bw, bh;
+
+  /* Tab strip — stock wm.context_set_enum on wm.mixar_bubble_tab, the same
+   * pattern as the mode toggle. Only the tabs with real content are wired;
+   * the painter draws the rest as inert. */
+  const struct {
+    AgentTabId tab;
+    const char *value;
+    const char *tip;
+  } tab_buttons[] = {
+      {AGENT_TAB_AGENT, "AGENT", "Agent chat"},
+      {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
+  };
+  for (const auto &tb : tab_buttons) {
+    agent_bubble_rect_to_region(region, layout->tabs[tb.tab].pill, &bx, &by, &bw, &bh);
+    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           bx, by, bw, bh, tb.tip);
+    if (but) {
+      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
+      RNA_string_set(op_ptr, "value", tb.value);
+    }
+  }
+
+  if (state->active_tab == AGENT_TAB_AGENT) {
+    agent_bubble_rect_to_region(region, layout->hdr_history, &bx, &by, &bw, &bh);
+    uiDefButO(block, ButType::But, "mixie_chat.show_history",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Chat history");
+    agent_bubble_rect_to_region(region, layout->hdr_new_chat, &bx, &by, &bw, &bh);
+    uiDefButO(block, ButType::But, "mixie_chat.new_session",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "New chat");
+  }
+  UI_block_end(C, block);
+  UI_block_draw(C, block);
 }
+
+static void agent_bubble_island_controls_bottom(const bContext *C,
+                                                ARegion *region,
+                                                const AgentIslandLayout *layout,
+                                                const AgentIslandState *state)
+{
+  Scene *scene = CTX_data_scene(C);
+  if (!scene) {
+    return;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+
+  uiBlock *block = UI_block_begin(
+      C, region, "agent_island", blender::ui::EmbossType::None);
+  uiBlock *field_block = UI_block_begin(
+      C, region, "agent_island_field", blender::ui::EmbossType::Emboss);
+
+  int bx, by;
+  short bw, bh;
+
+  /* --- Prompt field ---
+   * Bound to the same scene.mixie_chat_input the chat footer uses, with the
+   * same UI_BUT_TEXTEDIT_UPDATE flag — that is what makes Enter submit, via
+   * the property's own update callback. */
+  /* In the empty state the WINDOW region hosts the whole-panel field; the
+   * strip here would be a second box for the same property. */
+  PropertyRNA *input_prop = state->has_transcript ?
+                                RNA_struct_find_property(&scene_ptr, "mixie_chat_input") :
+                                nullptr;
+  if (input_prop) {
+    /* Clamp the field to its region. The panel can be taller than the slab
+     * (Blender reserves a minimum for the main region), and a uiBut whose rect
+     * runs past its region does not simply get cropped — it stops drawing its
+     * text at all, which is what made the ghost text and typing invisible. */
+    agent_bubble_rect_to_region(region, layout->input, &bx, &by, &bw, &bh);
+    /* Clamp to this region — the empty-state field spans the whole panel,
+     * whose top edge lies a min-height sliver above the TOOLS region, and a
+     * uiBut poking past its region stops drawing its text entirely. */
+    {
+      const int region_h = BLI_rcti_size_y(&region->winrct) + 1;
+      if (by < 0) {
+        bh = short(bh + by);
+        by = 0;
+      }
+      if (by + bh > region_h) {
+        bh = short(region_h - by);
+      }
+    }
+    uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "", bx, by, bw, bh,
+                                 &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
+                                 nullptr);
+    if (input_but) {
+      /* Placeholder on the BUTTON: painting it separately put the ghost text at
+       * the artboard's x while Blender drew the caret at the field's own text
+       * origin — two places for one thing. */
+      UI_but_placeholder_set(input_but, "Describe your scene here...");
+      UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+    }
+  }
+
+  /* --- Segmented mode control ---
+   * Blender's stock `wm.context_set_enum`, not an RNA enum button: an enum
+   * button derives its icon from the enum ITEM, and mixie_chat_mode's items
+   * carry icons, which got stamped over the island's own chips. */
+  {
+    struct ModeHalf {
+      const rctf *rect;
+      const char *value;
+      const char *tip;
+    };
+    const ModeHalf halves[2] = {
+        {&layout->seg_agent, "AGENT", "Agent mode"},
+        {&layout->seg_generate, "GENERATE", "Generate mode"},
+    };
+    for (const ModeHalf &half : halves) {
+      agent_bubble_rect_to_region(region, *half.rect, &bx, &by, &bw, &bh);
+      uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+                             blender::wm::OpCallContext::InvokeDefault, "",
+                             bx, by, bw, bh, half.tip);
+      if (but) {
+        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        RNA_string_set(op_ptr, "data_path", "scene.mixie_chat_mode");
+        RNA_string_set(op_ptr, "value", half.value);
+      }
+    }
+  }
+
+  agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
+  /* Same operator the old chat footer's attach button used —
+   * `mixie_chat.add_image` opens nothing on its own. */
+  uiDefButO(block, ButType::But, "mixie_chat.add_image_from_file",
+            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+            "Attach a reference image");
+
+  /* Send while idle, Stop while a turn is running — the same split the chat
+   * footer makes (abort_session when busy). */
+  agent_bubble_rect_to_region(region, layout->btn_generate, &bx, &by, &bw, &bh);
+  uiDefButO(block,
+            ButType::But,
+            state->status_busy ? "mixie_chat.abort_session" : "mixie_chat.send_message",
+            blender::wm::OpCallContext::InvokeDefault,
+            "",
+            bx,
+            by,
+            bw,
+            bh,
+            state->status_busy ? "Stop the running turn" : "Send");
+
+  UI_block_end(C, field_block);
+  UI_block_draw(C, field_block);
+
+  UI_block_end(C, block);
+  UI_block_draw(C, block);
+}
+
+/** True when this draw belongs to the small floating status-pill window. */
+static bool agent_bubble_window_is_pill(const bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  return !win || WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH;
+}
+
+/** Opaque backdrop for ONE region — never a framebuffer-wide clear. */
+static void agent_bubble_fill_region_backdrop(const ARegion *region)
+{
+  rctf r;
+  r.xmin = 0.0f;
+  r.ymin = 0.0f;
+  r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+  r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+  const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  GPU_blend(GPU_BLEND_NONE);
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  UI_draw_roundbox_4fv(&r, true, 0.0f, backdrop);
+}
+
+/**
+ * Build the island against the whole window and translate the GPU matrix so
+ * this region's slice lines up.
+ *
+ * Every region paints the entire island; each one's scissor keeps only its own
+ * band. That is what lets the card enclose the transcript without any code
+ * cutting the card into pieces — there is still exactly one layout and one
+ * painter.
+ */
+static bool agent_bubble_island_begin(const bContext *C,
+                                      const ARegion *region,
+                                      AgentIslandState *r_state,
+                                      AgentIslandLayout *r_layout)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  if (!win) {
+    return false;
+  }
+
+  /* The island belongs to the BUBBLE window only.
+   *
+   * ED_area_init recreates any region the spacetype registers, so the pill's
+   * area keeps growing the island's slabs back after they are pruned. With a
+   * self-calibrating scale the island is "valid" at any size, so it happily
+   * drew a miniature of itself into the 180x50 pill — that is the grey slab
+   * that alternated with the status capsule and read as the pill blinking. */
+  if (WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH) {
+    return false;
+  }
+
+  agent_ui_state_gather(C, r_state);
+  /* WM_window_native_pixel_*, deliberately.
+   *
+   * These report double wmWindow::sizex/sizey on a retina display, and that
+   * factor is exactly the one the region's own drawing space uses — swapping
+   * in win->sizex/sizey (which look "correct" next to the Python-reported
+   * region sizes) makes the island vanish entirely. The two spaces are not
+   * interchangeable here; verify any change to this line by LOOKING at the
+   * bubble, not by comparing numbers. */
+  agent_ui_layout_build(WM_window_native_pixel_x(win),
+                        WM_window_native_pixel_y(win),
+                        AgentTabId(r_state->active_tab),
+                        r_state->agent_mode,
+                        r_state->has_transcript,
+                        r_layout);
+  if (!r_layout->valid) {
+    return false;
+  }
+
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(-float(region->winrct.xmin), -float(region->winrct.ymin));
+  return true;
+}
+
+static void agent_bubble_island_end()
+{
+  GPU_matrix_pop();
+}
+
+/** Window-space rect -> this region's local coordinates, for uiBut placement. */
+static void agent_bubble_rect_to_region(const ARegion *region,
+                                        const rctf &src,
+                                        int *r_x,
+                                        int *r_y,
+                                        short *r_w,
+                                        short *r_h)
+{
+  *r_x = int(src.xmin) - region->winrct.xmin;
+  *r_y = int(src.ymin) - region->winrct.ymin;
+  *r_w = short(BLI_rctf_size_x(&src));
+  *r_h = short(BLI_rctf_size_y(&src));
+}
+
+/* Defined further down, next to the other window-sizing helpers; the island's
+ * layout pass needs it before that point. */
+static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height);
+static void agent_bubble_sync_chrome_sizes(const bContext *C);
+
+/* -------------------------------------------------------------------- */
+/** \name Island regions
+ *
+ * The island is one design cut into three regions so the transcript can live
+ * INSIDE the card and scroll: the messages need a real RGN_TYPE_WINDOW (they
+ * are drawn by mixie chat's renderer, which owns the whole region and its
+ * View2D and cannot be confined to a sub-rect).
+ *
+ *   CHANNELS (top)  status pill, tab strip, card header
+ *   WINDOW  (mid)   the card's inner panel — transcript, scrollable
+ *   TOOLS   (bottom) input line, chip row, card foot
+ *
+ * All three paint the SAME layout, built in window space and translated by
+ * each region's own origin; the region scissor keeps only its band. So the
+ * card's border, gradient and panel stay one continuous drawing.
+ * \{ */
+
+/**
+ * Grow the bubble once, the first time a conversation exists, so the
+ * transcript band has room. Layout pass, not draw — no writes while painting.
+ */
+static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*region*/)
+{
+  const Scene *scene = CTX_data_scene(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (!scene || !win || !win->ghostwin) {
+    return;
+  }
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+
+  PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+  PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+  const bool has_conversation =
+      messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
+
+  if (has_conversation && !g_bubble_grown_for_chat) {
+    g_bubble_grown_for_chat = true;
+    bubble_force_size_and_refresh(const_cast<bContext *>(C),
+                                  win->ghostwin,
+                                  AGENT_BUBBLE_DEFAULT_WIDTH,
+                                  AGENT_BUBBLE_DEFAULT_HEIGHT +
+                                      AGENT_BUBBLE_TRANSCRIPT_HEIGHT);
+  }
+}
+
+/* The transcript region's layout: the grow-once latch above, then the chat
+ * editor's own layout pass (View2D setup, auto-scroll bookkeeping). */
+static void agent_bubble_transcript_region_layout(const bContext *C, ARegion *region)
+{
+  agent_bubble_island_region_layout(C, region);
+  if (!agent_bubble_window_is_pill(C)) {
+    agent_bubble_sync_chrome_sizes(C);
+    mixie_chat_main_region_layout(C, region);
+  }
+}
+
+static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
+{
+  /* Never paint into the pill's window — its own header draws the capsule. */
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+
+  /* Queue tab: the card shows the unified job queue instead of the chat. */
+  {
+    AgentIslandState tab_probe;
+    agent_ui_state_gather(C, &tab_probe);
+    if (tab_probe.active_tab == AGENT_TAB_QUEUE) {
+      agent_bubble_fill_region_backdrop(region);
+      AgentIslandState state;
+      AgentIslandLayout layout;
+      if (agent_bubble_island_begin(C, region, &state, &layout)) {
+        agent_ui_draw_island(region, &layout, &state);
+        agent_bubble_island_end();
+        rctf panel_region = layout.panel;
+        BLI_rctf_translate(&panel_region,
+                           -float(region->winrct.xmin),
+                           -float(region->winrct.ymin));
+        const wmWindow *win = CTX_wm_window(C);
+        const float u = float(WM_window_native_pixel_x(win)) / float(AGENT_ISLAND_W);
+        agent_ui_queue_draw(C, region, panel_region, u);
+      }
+      return;
+    }
+  }
+
+  /* The transcript region IS the card's inner panel: the chat editor's whole
+   * proven draw path (messages, overlays, View2D scrolling) runs against this
+   * region unmodified. With no conversation the region is only the min-height
+   * sliver above the whole-panel input field — paint bare panel fill, no chat
+   * (the ghost text is the design's empty state, not the greeting). */
+  const float panel_bg[4] = AGENT_COL_SURFACE;
+  bool draw_chat = false;
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    draw_chat = messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
+  }
+  if (draw_chat) {
+    mixie_chat_set_bg_override(panel_bg);
+    mixie_chat_main_region_draw(C, region);
+    mixie_chat_clear_bg_override();
+  }
+  else {
+    /* Empty state: this region IS the whole-panel input field. Paint the
+     * panel fill, then lay the embossed field uiBut over the full region —
+     * mixie_chat_main_region_init installed UI_region_handlers, so the block
+     * dispatches normally. The composer skips its input strip in this state
+     * (agent_bubble_island_controls_bottom), keeping exactly ONE field box. */
+    rctf r;
+    r.xmin = 0.0f;
+    r.ymin = 0.0f;
+    r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+    r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+    GPU_blend(GPU_BLEND_NONE);
+    UI_draw_roundbox_corner_set(UI_CNR_ALL);
+    const float fill[4] = AGENT_COL_SURFACE;
+    UI_draw_roundbox_4fv(&r, true, 0.0f, fill);
+
+    Scene *scene_mut = CTX_data_scene(C);
+    if (scene_mut) {
+      PointerRNA scene_ptr = RNA_id_pointer_create(&scene_mut->id);
+      if (RNA_struct_find_property(&scene_ptr, "mixie_chat_input")) {
+        uiBlock *field_block = UI_block_begin(
+            C, region, "agent_island_field_panel", blender::ui::EmbossType::Emboss);
+        const int rw = BLI_rcti_size_x(&region->winrct) + 1;
+        const int rh = BLI_rcti_size_y(&region->winrct) + 1;
+        /* Panel side margins so the field's chrome aligns with the chips. */
+        AgentIslandState st;
+        AgentIslandLayout lay;
+        int fx = 0;
+        short fw = short(rw);
+        if (agent_bubble_island_begin(C, region, &st, &lay)) {
+          agent_bubble_island_end(); /* only needed the layout */
+          fx = int(lay.panel.xmin) - region->winrct.xmin;
+          fw = short(BLI_rctf_size_x(&lay.panel));
+        }
+        uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "",
+                                     fx, 0, fw, short(rh),
+                                     &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
+                                     nullptr);
+        if (input_but) {
+          UI_but_placeholder_set(input_but, "Describe your scene here...");
+          UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+          UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+        }
+        UI_block_end(C, field_block);
+        UI_block_draw(C, field_block);
+      }
+    }
+  }
+
+  /* Side frame: the card gradient's edges and the credits ring cross this
+   * region. Paint the full island restricted to the two side strips outside
+   * the panel, so the border stays one continuous drawing with the chrome
+   * regions above and below. */
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (agent_bubble_island_begin(C, region, &state, &layout)) {
+    const float region_w = float(BLI_rcti_size_x(&region->winrct) + 1);
+    const float region_h = float(BLI_rcti_size_y(&region->winrct) + 1);
+    const float left_w = layout.panel.xmin - float(region->winrct.xmin);
+    const float right_x = layout.panel.xmax - float(region->winrct.xmin);
+    GPU_scissor_test(true);
+    if (left_w > 0.0f) {
+      GPU_scissor(0, 0, int(left_w), int(region_h));
+      agent_ui_draw_island(region, &layout, &state);
+    }
+    if (right_x < region_w) {
+      GPU_scissor(int(right_x), 0, int(region_w - right_x) + 1, int(region_h));
+      agent_ui_draw_island(region, &layout, &state);
+    }
+    GPU_scissor_test(false);
+    agent_bubble_island_end();
+  }
+}
+
+/**
+ * Keep the chrome slabs sized to the island scale. The island's unit is
+ * width-derived (window_w / 1310 artboard units), so a width change must
+ * re-derive both slab heights; region->sizey is in LOGICAL px (Blender
+ * multiplies by the window scale). Runs on the TOOLS region's layout pass,
+ * which also syncs the HEADER — headers get no layout callback of their own.
+ */
+static void agent_bubble_sync_chrome_sizes(const bContext *C)
+{
+  wmWindow *win = CTX_wm_window(C);
+  ScrArea *area = CTX_wm_area(C);
+  if (!win || !area || agent_bubble_window_is_pill(C)) {
+    return;
+  }
+  const float scale = UI_SCALE_FAC > 0.0f ? UI_SCALE_FAC : 1.0f;
+  const float u_logical = (float(WM_window_native_pixel_x(win)) / scale) /
+                          float(AGENT_ISLAND_W);
+  /* Top chrome: island top -> panel top. Bottom: panel-bottom gap + input
+   * strip + gap + chip row + card foot padding. Same unit math as
+   * agent_ui_layout_build — keep in sync with the AGENT_* tokens. Runs from
+   * the WINDOW region's layout: the TOOLS region can bootstrap-collapse to
+   * 1px (too small -> invisible -> its own layout never runs), so it cannot
+   * be trusted to fix itself. */
+  const int top_units = AGENT_PANEL_Y - AGENT_ISLAND_TOP;
+  const int bottom_units = AGENT_TRANSCRIPT_GAP + AGENT_INPUT_H + AGENT_INPUT_GAP +
+                           AGENT_CHIP_H + AGENT_CARD_PAD_BOTTOM;
+
+  /* With no conversation the field IS the panel, so the TOOLS region grows to
+   * cover everything below the header except the sliver Blender reserves as
+   * the WINDOW region's minimum (painted as bare panel fill). */
+  bool has_conversation = false;
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    has_conversation = messages &&
+                       RNA_property_collection_length(&scene_ptr, messages) > 0;
+  }
+  const int header_logical = int(float(top_units) * u_logical + 0.5f);
+  const int win_logical_h = int(float(WM_window_native_pixel_y(win)) / scale);
+  /* With no conversation the whole-panel field lives in the WINDOW region
+   * (which then spans exactly the panel above the chips — one box, no
+   * sliver), so TOOLS holds only the chip row + card foot. */
+  const int bottom_units_empty = AGENT_INPUT_GAP + AGENT_CHIP_H + AGENT_CARD_PAD_BOTTOM;
+  (void)win_logical_h;
+  LISTBASE_FOREACH (ARegion *, other, &area->regionbase) {
+    int want = 0;
+    if (other->regiontype == RGN_TYPE_HEADER) {
+      want = header_logical;
+    }
+    else if (other->regiontype == RGN_TYPE_TOOLS) {
+      const int units = has_conversation ? bottom_units : bottom_units_empty;
+      want = int(float(units) * u_logical + 0.5f);
+    }
+    if (want > 0 && other->sizey != want) {
+      other->sizey = want;
+      other->flag &= ~(RGN_FLAG_TOO_SMALL | RGN_FLAG_HIDDEN);
+      ED_area_tag_region_size_update(area, other);
+    }
+  }
+}
+
+static void agent_bubble_composer_region_layout(const bContext *C, ARegion * /*region*/)
+{
+  agent_bubble_sync_chrome_sizes(C);
+}
+
+static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region)
+{
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+  agent_bubble_fill_region_backdrop(region);
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (!agent_bubble_island_begin(C, region, &state, &layout)) {
+    return;
+  }
+  agent_ui_draw_island(region, &layout, &state);
+  agent_bubble_island_end();
+  if (state.active_tab == AGENT_TAB_AGENT) {
+    agent_bubble_island_controls_bottom(C, region, &layout, &state);
+  }
+}
+
+static void agent_bubble_composer_region_init(wmWindowManager * /*wm*/, ARegion *region)
+{
+  UI_region_handlers_add(&region->runtime->handlers);
+}
+
+/** \} */
 
 static int agent_bubble_height_floor_for_attachments(const int attachment_count)
 {
@@ -665,8 +1290,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  * via Mixar_WindowForceSize + Mixar_WindowSetCornerRadius on every
  * minimise / restore transition (including the start_minimised
  * branch of the open op). */
-#define AGENT_BUBBLE_PILL_WIDTH 148
-#define AGENT_BUBBLE_PILL_HEIGHT 28
+/* The artboard's status pill: 135 x 38 units at the 1.5x export factor. */
+#define AGENT_BUBBLE_PILL_WIDTH 90
+#define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 
 #define AGENT_BUBBLE_PILL_WIDTH_LARGE 184
@@ -825,6 +1451,7 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
  */
 void ED_agent_bubble_windows_closed()
 {
+  g_bubble_grown_for_chat = false;
   g_bubble_ghostwin = nullptr;
   g_pill_ghostwin = nullptr;
   g_bubble_minimised = false;
@@ -973,6 +1600,14 @@ static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*
   BLI_addtail(&sbubble->regionbase, region);
   region->regiontype = RGN_TYPE_HEADER;
   region->alignment = RGN_ALIGN_TOP;
+  /* Island top chrome: tab strip + card header row. VISIBLE — the transcript
+   * needs its own WINDOW region (the chat renderer owns a whole region and
+   * its View2D; confining it to a scissored band re-implemented scrolling
+   * badly), so the chrome above it lives here. Height is re-synced to the
+   * island scale every frame by agent_bubble_composer_region_layout; this is
+   * only the first-frame default. The pill window reuses this region for the
+   * status capsule (its repair path prunes the others). */
+  region->sizey = AGENT_BUBBLE_TOP_CHROME_HEIGHT;
 
   /* Footer — bottom — input field + send button.
    * Use RGN_TYPE_TOOLS instead of RGN_TYPE_FOOTER because footer regions
@@ -987,7 +1622,9 @@ static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*
   BLI_addtail(&sbubble->regionbase, region);
   region->regiontype = RGN_TYPE_TOOLS;
   region->alignment = RGN_ALIGN_BOTTOM;
-  region->sizey = AGENT_BUBBLE_FOOTER_HEIGHT;
+  /* Island bottom chrome: input strip + chip row + card foot. VISIBLE — see
+   * the HEADER note above; height re-synced per frame. */
+  region->sizey = AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT;
 
   /* Main — scrollable chat history.
    *
@@ -1057,9 +1694,89 @@ void agent_bubble_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
 {
+  /* Two windows share this region type: the BUBBLE's header is the island's
+   * top chrome (tab strip + card header row), the PILL's header is the status
+   * capsule. */
+  if (!agent_bubble_window_is_pill(C)) {
+    agent_bubble_fill_region_backdrop(region);
+    AgentIslandState state;
+    AgentIslandLayout layout;
+    if (agent_bubble_island_begin(C, region, &state, &layout)) {
+      agent_ui_draw_island(region, &layout, &state);
+      agent_bubble_island_end();
+      agent_bubble_island_controls_header(C, region, &layout, &state);
+    }
+    return;
+  }
+
+  /* PILL path below.
+   *
+   * Structured so that EVERY code path paints the capsule. The earlier shape
+   * cleared the framebuffer first and bailed if the window context or the OS
+   * size query was missing — those frames composited as the bare window
+   * backdrop, a flat theme-grey flash alternating with the capsule, i.e. the
+   * pill "blinking". Size comes from the OS when available (wmWindow/region
+   * rects for this window are never updated after Mixar_WindowForceSize) and
+   * falls back to the region rect, which always exists. */
+  float pill_w = float(BLI_rcti_size_x(&region->winrct) + 1);
+  float pill_h = float(BLI_rcti_size_y(&region->winrct) + 1);
+  const wmWindow *win = CTX_wm_window(C);
+  if (win && win->ghostwin) {
+    int os_w = 0;
+    int os_h = 0;
+    Mixar_WindowGetContentPixelSize(win->ghostwin, &os_w, &os_h);
+    if (os_w > 0 && os_h > 0) {
+      pill_w = float(os_w);
+      pill_h = float(os_h);
+    }
+  }
+
+  /* The pill's region rect hangs below the window (winrct.ymin is negative —
+   * the rects were laid out for the temp-window size and never updated), so
+   * region-local (0,0) is NOT the window's bottom-left. Two consequences,
+   * both fixed here: rows of the region outside the capsule showed the bare
+   * backdrop (paint a bed over the WHOLE region first), and the capsule drawn
+   * at region-local origin landed shifted down (translate so it is drawn in
+   * window coordinates). */
+  const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+  rctf region_rect;
+  region_rect.xmin = 0.0f;
+  region_rect.xmax = float(region->winx);
+  region_rect.ymin = 0.0f;
+  region_rect.ymax = float(region->winy);
+  GPU_blend(GPU_BLEND_NONE);
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  UI_draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
+
+  AgentIslandState state;
+  agent_ui_state_gather(C, &state);
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(float(-region->winrct.xmin), float(-region->winrct.ymin));
+  agent_ui_draw_status_pill(pill_w, pill_h, &state);
+  GPU_matrix_pop();
+  return;
   /* Header TH_BACK resolves to ts->header from the Agent Bubble theme,
    * so no manual override is needed here. */
   ED_region_header(C, region);
+}
+
+/* Overlay pass — runs on EVERY window composite, drawing straight into the
+ * window framebuffer (wm_draw_window_onscreen), unlike the regular draw which
+ * paints into a cached per-region offscreen buffer that is then blitted.
+ * That cached buffer is freed whenever Blender thinks the region resized and
+ * is only repainted on the next tagged redraw — in the gap, composites
+ * blitted NOTHING for this region and the pill flashed as the bare window
+ * backdrop. Painting the capsule here as well means every composite shows a
+ * pill no matter what state the region buffer is in. wm_region_draw_overlay
+ * calls wmViewport(&region->winrct) first, which already establishes the
+ * region pixel-space ortho the pill painter expects. */
+static void agent_bubble_header_region_draw_overlay(const bContext *C, ARegion *region)
+{
+  /* Only the pill needs the every-composite repaint; re-running the bubble's
+   * header path here would rebuild its uiBlock outside the normal draw. */
+  if (agent_bubble_window_is_pill(C)) {
+    agent_bubble_header_region_draw(C, region);
+  }
 }
 
 /** \} */
@@ -1404,7 +2121,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
             while (region != nullptr) {
               ARegion *next = region->next;
               if (region->regiontype == RGN_TYPE_WINDOW ||
-                  region->regiontype == RGN_TYPE_TOOLS)
+                  region->regiontype == RGN_TYPE_TOOLS ||
+                  region->regiontype == RGN_TYPE_CHANNELS)
               {
                 ED_region_exit(C, region);
                 BLI_remlink(&pill_area->regionbase, region);
@@ -1418,6 +2136,10 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
                  * every header to ED_area_headersize). */
                 region->sizey = AGENT_BUBBLE_PILL_HEIGHT;
                 region->flag &= ~RGN_FLAG_DYNAMIC_SIZE;
+                /* The BUBBLE hides its HEADER — the island paints that band
+                 * itself. On the PILL this region is the whole window, and it
+                 * is what draws the status pill, so it has to be visible. */
+                region->flag &= ~RGN_FLAG_HIDDEN;
               }
               region = next;
             }
@@ -2310,13 +3032,18 @@ void ED_spacetype_agent_bubble()
    * the appropriate handlers itself. */
   art = MEM_callocN<ARegionType>("spacetype agent_bubble main region");
   art->regionid = RGN_TYPE_WINDOW;
+  /* The transcript region — the chat editor's own proven init/layout/draw
+   * (View2D scrolling, text selection, overlays), with only the island's
+   * side-frame painted on top. keymapflag 0 mirrors the chat editor:
+   * mixie_chat_main_region_init installs its handlers itself, in its own
+   * order. */
   art->keymapflag = 0;
   art->init = mixie_chat_main_region_init;
-  art->layout = mixie_chat_main_region_layout;
-  art->draw = agent_bubble_main_region_draw;
+  art->layout = agent_bubble_transcript_region_layout;
+  art->draw = agent_bubble_island_region_draw;
+  art->cursor = mixie_chat_main_region_cursor;
   art->exit = mixie_chat_main_region_exit; /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
-  art->cursor = mixie_chat_main_region_cursor;
   /* Run the cursor callback on every mouse move, not just on region entry or
    * explicit refresh (region_cursor_set_ex gates on this flag). This keeps
    * history rows, option bubbles, stars, chips, and links responsive while
@@ -2331,6 +3058,7 @@ void ED_spacetype_agent_bubble()
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
   art->init = agent_bubble_header_region_init;
   art->draw = agent_bubble_header_region_draw;
+  art->draw_overlay = agent_bubble_header_region_draw_overlay;
   BLI_addhead(&st->regiontypes, art);
 
   /* Footer region — REUSES MIXIE CHAT'S CUSTOM-DRAWN FOOTER.
@@ -2349,15 +3077,16 @@ void ED_spacetype_agent_bubble()
    * mixie_chat_footer_region_init does NOT call ED_region_panels_init,
    * so the panel system isn't set up for this region; Python panels
    * registered for AGENT_BUBBLE TOOLS never get a draw call. */
+  /* TOOLS region: the island's bottom chrome — input strip, chip row, card
+   * foot. Plain uiBlock interaction (ED_KEYMAP_UI installs the ui region
+   * handler); its layout callback re-syncs both chrome slabs to the island
+   * scale. */
   art = MEM_callocN<ARegionType>("spacetype agent_bubble footer region");
   art->regionid = RGN_TYPE_TOOLS;
-  art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FOOTER;
-  art->init = mixie_chat_footer_region_init;
-  art->layout = agent_bubble_footer_region_layout;
-  art->draw = agent_bubble_footer_region_draw;
-  /* No prefsizey — mixie chat's layout callback computes the height
-   * dynamically based on input line count + pending attachments, so
-   * a static prefsizey would be overridden every layout pass. */
+  art->keymapflag = ED_KEYMAP_UI;
+  art->init = agent_bubble_composer_region_init;
+  art->layout = agent_bubble_composer_region_layout;
+  art->draw = agent_bubble_composer_region_draw;
   BLI_addhead(&st->regiontypes, art);
 
   BKE_spacetype_register(std::move(st));

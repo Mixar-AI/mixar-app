@@ -62,6 +62,12 @@ void mixie_chat_anim_pump_shutdown(wmWindowManager *wm);
 
 /* Main region custom drawing */
 void mixie_chat_draw_messages(const bContext *C, ARegion *region);
+/** Restrict (or, with nullptr, un-restrict) the message view to a region-local
+ * sub-rect — see MixieChatRuntime::view_band. */
+void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
+/** Pin the View2D mask back to the stored view band (no-op without one) —
+ * view2d_masks() stomps the mask to the region origin after every scroll. */
+void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
 
 /* Optional per-frame background colour override.  When set, the
  * region draw functions use this RGBA colour instead of TH_BACK.
@@ -552,6 +558,12 @@ void chat_ui_get_label_color(float out_color[4]);
  * Python-registered WindowManager bool `mixie_chat_history_visible`;
  * rows from `mixie_chat_history_entries`. */
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+
+/* Chat click/ESC UI handler pair — exported so the Agent Bubble island region
+ * can install the same handler stack as the chat editor's main region (with
+ * its own uiBlock-first ordering). */
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
 bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event);
 bool mixie_chat_history_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);

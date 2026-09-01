@@ -16,8 +16,18 @@ set(INC_SYS
 
 set(SRC
   space_agent_bubble.cc
+  agent_ui_draw.cc
+  agent_ui_icons.cc
+  agent_ui_layout.cc
+  agent_ui_queue.cc
+  agent_ui_state.cc
 
   agent_bubble_intern.hh
+  agent_ui_draw.hh
+  agent_ui_icons.hh
+  agent_ui_layout.hh
+  agent_ui_queue.hh
+  agent_ui_theme.hh
 )
 
 set(LIB
