@@ -134,6 +134,9 @@ class JSONRPCMethod:
     LLM_REQUEST = "llm.request"
     # Server -> Client (requests - capability-scoped local add-on workspace)
     ADDON_PROJECT_PREFIX = "addon_project."
+    # Server -> Client (requests - capability-scoped agent UI control; the
+    # agent operates the real Mixar UI, see modules/agent_ui)
+    UI_CONTROL_PREFIX = "ui."
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"

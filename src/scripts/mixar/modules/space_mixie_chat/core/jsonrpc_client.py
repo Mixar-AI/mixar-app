@@ -75,6 +75,9 @@ class JSONRPCWebSocketClient:
         on_addon_project_request: Optional[
             Callable[[str, dict, Optional[str]], Optional[dict]]
         ] = None,
+        on_ui_request: Optional[
+            Callable[[str, dict, Optional[str]], Optional[dict]]
+        ] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -101,6 +104,7 @@ class JSONRPCWebSocketClient:
         self._on_sandbox_control = on_sandbox_control
         self._on_llm_request = on_llm_request
         self._on_addon_project_request = on_addon_project_request
+        self._on_ui_request = on_ui_request
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -354,6 +358,7 @@ class JSONRPCWebSocketClient:
     def _perform_handshake(self) -> bool:
         """Send handshake request and wait for response."""
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
+        from ...agent_ui.constants import CAPABILITY as UI_CONTROL_CAPABILITY
 
         request_id = f"handshake_{self._next_request_id()}"
 
@@ -368,6 +373,9 @@ class JSONRPCWebSocketClient:
                 "notifications",
                 "local_llm",
                 ADDON_PROJECT_CAPABILITY,
+                # "ui_control_v1": the backend agent may operate this app's
+                # real UI through ui.* requests (modules/agent_ui).
+                UI_CONTROL_CAPABILITY,
             ],
         }
         # Anti-abuse device signal (one trial per machine); best-effort
@@ -574,6 +582,9 @@ class JSONRPCWebSocketClient:
         elif isinstance(method, str) and method.startswith(JSONRPCMethod.ADDON_PROJECT_PREFIX):
             self._handle_addon_project_request(method, params, request_id)
 
+        elif isinstance(method, str) and method.startswith(JSONRPCMethod.UI_CONTROL_PREFIX):
+            self._handle_ui_request(method, params, request_id)
+
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
                 try:
@@ -642,6 +653,40 @@ class JSONRPCWebSocketClient:
                 "error": {
                     "code": "capability_unavailable",
                     "message": "Add-on Project Mode is unavailable in this client",
+                },
+            }
+        if request_id and result is not None:
+            self.queue_response(request_id, result)
+
+    def _handle_ui_request(
+        self, method: str, params: dict, request_id: Optional[str]
+    ) -> None:
+        """Handle a capability-scoped agent UI control request (``ui.*``).
+
+        The callback schedules main-thread work and replies through
+        ``queue_response``; a synchronous dict is an immediate refusal.
+        """
+        result = None
+        if self._on_ui_request:
+            try:
+                result = self._on_ui_request(method, params, request_id)
+                if result is None:
+                    return
+            except Exception as exc:
+                logger.error("agent UI request failed: %s", exc)
+                result = {
+                    "success": False,
+                    "error": {
+                        "code": "internal",
+                        "message": "The UI control handler failed in the client",
+                    },
+                }
+        else:
+            result = {
+                "success": False,
+                "error": {
+                    "code": "not_enabled",
+                    "message": "Agent UI control is unavailable in this client",
                 },
             }
         if request_id and result is not None:

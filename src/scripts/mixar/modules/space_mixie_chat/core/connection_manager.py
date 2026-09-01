@@ -267,6 +267,13 @@ class ConnectionManager:
             # with "Agent session not active" while showing an idle pill.
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED
             def _set_offline():
+                # Agent UI control must never outlive the transport that
+                # authorised it: drop agent-input mode on any disconnect.
+                try:
+                    from mixar.modules.agent_ui import get_agent_ui_service
+                    get_agent_ui_service().on_transport_disconnect()
+                except Exception as exc:
+                    logger.debug("agent_ui disconnect hook skipped: %s", exc)
                 session.on_transport_disconnect(terminal=terminal)
                 # Preserved active states produce no state edge, so repaint
                 # explicitly — the pill/header show "Reconnecting" from
@@ -440,6 +447,33 @@ class ConnectionManager:
             ).start()
             return None
 
+        def on_ui_request(method: str, params: dict, request_id) -> None:
+            """Agent UI control (``ui.*``): main-thread only — the service
+            drives real input events and reads window geometry."""
+            if not request_id:
+                return None
+            if not session.has_active_session():
+                return {"success": False, "error": {
+                    "code": "not_enabled",
+                    "message": "Agent session not active",
+                }}
+            request_client = client
+
+            def _respond(result: dict) -> None:
+                ws_client = get_jsonrpc_client()
+                if ws_client is request_client and request_client.is_connected:
+                    request_client.queue_response(request_id, result)
+                else:
+                    logger.warning("UI request %s finished after disconnect", request_id)
+
+            def _run() -> None:
+                from mixar.modules.agent_ui import get_agent_ui_service
+                get_agent_ui_service().handle(method, params, _respond)
+
+            from .main_thread_executor import run_on_main_thread
+            run_on_main_thread(_run)
+            return None
+
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         # Re-arm the script executor: a prior disconnect(update_session_state=
@@ -465,6 +499,7 @@ class ConnectionManager:
             on_sandbox_control=on_sandbox_control,
             on_llm_request=on_llm_request,
             on_addon_project_request=on_addon_project_request,
+            on_ui_request=on_ui_request,
         )
 
         # Connect
@@ -488,6 +523,15 @@ class ConnectionManager:
 
         if not update_session_state:
             self._is_shutting_down = True
+
+        # Leave agent-input mode before the transport goes away (skipped in
+        # restricted shutdown where bpy data is unavailable).
+        if update_session_state:
+            try:
+                from mixar.modules.agent_ui import get_agent_ui_service
+                get_agent_ui_service().disable("connection closed")
+            except Exception as exc:
+                logger.debug("agent_ui disable on disconnect skipped: %s", exc)
 
         # Disconnect JSON-RPC WebSocket client
         cleanup_jsonrpc_client()
