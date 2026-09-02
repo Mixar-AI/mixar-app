@@ -150,6 +150,20 @@ where they write, never by which button they pressed.
   (`scribble.defer_until_idle`, bounded) — ABOVE the empty-message check,
   because a prompt written entirely by hand is empty until its last batch
   arrives. Sending then ends the gesture on both surfaces.
+- **A mark on empty space lands on the ground** (`core/ground.py`,
+  `resolve._ground_fallback`). A layout sketch is drawn on nothing, and a
+  "background" mark with no position cannot place anything (uat7: three
+  circles, both objects built at the origin). When the grid rays hit no
+  geometry the anchor and outline are intersected with the world ground plane
+  (z = 0) and reported as `plane: "ground"` with a `point` and a footprint —
+  kept apart from `hit` so the agent reads it as WHERE to build, not as
+  something that exists. Sky (a ray that never meets the plane, or meets it
+  beyond `GROUND_MAX_DISTANCE`) stays an honest background with no position.
+- **Stop hands the marks back.** Pressing Stop means "that turn did not
+  happen": `marks.reopen_last_sent` flips the last send's SENT marks back to
+  DRAFT from the abort operator, so the retry ("continue", or the same
+  request again) carries them. The backend keeps them too when the previous
+  turn never finished; the client re-send is the explicit half of that.
 - **Freezing is load-bearing, not decoration.** Arming captures the viewport
   (`core/freeze.py`, packed so it survives `bpy.app.tempdir` cleanup), bakes a
   camera (`core/view_bake.py`) and blocks the region. That makes the pixels the

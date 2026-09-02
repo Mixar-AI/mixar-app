@@ -221,6 +221,11 @@ def _summarize_mark(mark, numbered):
         return f"{prefix}the user {verb} a region of the frozen view."
 
     if not resolved.get("hit"):
+        point = resolved.get("point")
+        if resolved.get("plane") and point:
+            coords = ", ".join(f"{c:g}" for c in point)
+            return (f"{prefix}the user {verb} an empty spot on the ground "
+                    f"plane at world ({coords}) — a placement target.")
         reason = resolved.get("empty_reason") or "nothing under it"
         return (f"{prefix}the user {verb} empty space "
                 f"({reason}) — no object is under this mark.")

@@ -43,6 +43,18 @@ EMPTY_NO_HIT = "no_hit"
 EMPTY_BACKGROUND = "background"
 EMPTY_TOO_SMALL = "too_small"
 
+#: A mark on empty space still lands SOMEWHERE: its rays are intersected with
+#: the world ground plane (z = 0, Blender's grid floor) and reported as a
+#: plane hit under this label — kept apart from a real surface hit so the
+#: agent knows nothing is built there yet and treats it as a placement target.
+PLANE_GROUND = "ground"
+GROUND_PLANE_Z = 0.0
+
+#: A ray that meets the ground plane farther than this from the eye (metres)
+#: is treated as sky: a near-horizontal ray crosses z = 0 kilometres away, and
+#: reporting that as "where they pointed" would send an object to the horizon.
+GROUND_MAX_DISTANCE = 1000.0
+
 # =============================================================================
 # CAPTURE LIMITS
 # =============================================================================

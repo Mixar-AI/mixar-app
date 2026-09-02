@@ -324,6 +324,19 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         except Exception as e:
             logger.debug(f"finalize_turn on abort skipped: {e}")
 
+        # 4d. Stop means "that turn did not happen". The Scribble marks that
+        # went with it were never acted on, so hand them back to the composer
+        # as drafts: the retry ("continue", or the same request again) then
+        # carries them. Without this the retry arrives with no marks and the
+        # agent builds at the origin exactly as if nothing had been pointed at.
+        try:
+            from mixar.modules.scribble_mark.core import marks as mark_store
+            reopened = mark_store.reopen_last_sent(scene)
+            if reopened:
+                logger.info(f"Scribble: reopened {reopened} mark(s) after stop")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"scribble mark reopen on abort skipped: {e}")
+
         # 5. Send abort to backend
         self._send_abort_request_async(session.get_session_id(scene))
 

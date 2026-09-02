@@ -18,6 +18,10 @@ everything below it, and **nothing here waits on the network**:
 3. a grid of raycasts inside the outline: which objects, and how much of each
 4. a vertex group naming exactly the marked faces (``vertex_groups``)
 
+A mark whose rays hit nothing is landed on the world ground plane instead
+(``ground``): a layout sketch on an empty viewport is the commonest kind of
+mark there is, and "background, no position" would leave it unusable.
+
 Runs on the main thread, from an operator, while the user waits for a message
 to send — so it is bounded by ``COVERAGE_GRID`` and by the vertex cap, and
 every step is wrapped: a mark that cannot be resolved is reported as
@@ -30,12 +34,16 @@ from mixar.config.logging_config import get_logger
 
 from . import coverage as cov
 from . import vertex_groups as vgroups
-from .geometry import bbox as points_bbox
-from .projection import project_object_bbox, raycast
+from .geometry import bbox as points_bbox, decimate
+from .ground import ground_footprint, ray_plane_z
+from .projection import project_object_bbox, ray_from_region, raycast
 from ..constants import (
     COVERAGE_GRID,
+    EMPTY_BACKGROUND,
     EMPTY_NO_HIT,
+    GROUND_PLANE_Z,
     PARTIAL_COVERAGE_MAX,
+    PLANE_GROUND,
     WORLD_DECIMALS,
 )
 
@@ -104,6 +112,13 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
         hit, empty_reason = True, None
 
     if not hit:
+        # A mark on nothing is usually a LAYOUT mark: "put it here". Land it
+        # on the ground plane so it carries a position the agent can build
+        # at, instead of arriving as "background" with no coordinates.
+        if empty_reason == EMPTY_BACKGROUND:
+            grounded = _ground_fallback(region, rv3d, polygon, anchor, len(samples))
+            if grounded is not None:
+                return grounded
         return _empty(empty_reason or EMPTY_NO_HIT)
 
     mark_bbox = points_bbox(polygon or ([anchor] if anchor else []))
@@ -174,6 +189,45 @@ def _attach_vertex_group(region, rv3d, objects_by_name, primary, polygon, serial
     if written:
         primary["vertex_group"] = written
         primary["vertex_count"] = len(indices)
+
+
+def _ground_fallback(region, rv3d, polygon, anchor, sample_count):
+    """The mark's footprint on the world ground plane, or None.
+
+    None when the anchor ray never meets the plane — the user marked sky, or
+    the intersection is so far off it would be a lie — in which case the mark
+    stays an honest "background" with no position.
+    """
+    anchor_point = _ground_hit(region, rv3d, anchor) if anchor else None
+    if anchor_point is None:
+        return None
+
+    outline = decimate(list(polygon or []), 16)
+    hits = [_ground_hit(region, rv3d, p) for p in outline]
+    footprint = ground_footprint([h for h in hits if h is not None] or [anchor_point])
+
+    return {
+        "hit": False,
+        "point": [round(c, WORLD_DECIMALS) for c in anchor_point],
+        "normal": [0.0, 0.0, 1.0],
+        "objects": [],
+        "world_bbox": {
+            "center": [round(c, WORLD_DECIMALS) for c in footprint["center"]],
+            "size": [round(c, WORLD_DECIMALS) for c in footprint["size"]],
+        },
+        "sample_count": sample_count,
+        "hit_count": 0,
+        "empty_reason": EMPTY_BACKGROUND,
+        "plane": PLANE_GROUND,
+        "plane_z": GROUND_PLANE_Z,
+    }
+
+
+def _ground_hit(region, rv3d, point):
+    origin, direction = ray_from_region(region, rv3d, point)
+    if origin is None:
+        return None
+    return ray_plane_z(tuple(origin), tuple(direction))
 
 
 def _world_bbox(points):

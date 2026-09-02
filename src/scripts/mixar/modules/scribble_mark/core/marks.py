@@ -94,6 +94,12 @@ def add_mark(scene, serial, view_name, view_data, reading, region_width,
     return item
 
 
+#: Serials flipped to SENT by the most recent send, so a stopped turn can
+#: hand them back. Session-only on purpose: a stop and its retry happen in
+#: the same session, and a reopened mark is a DRAFT like any other.
+_last_sent: list = []
+
+
 def mark_all_sent(scene):
     """Flip every draft mark to SENT.
 
@@ -101,9 +107,31 @@ def mark_all_sent(scene):
     follow-up turn refers back to, and the vertex groups and cameras they
     name are still live in the .blend.
     """
+    _last_sent.clear()
     for item in _collection(scene) or ():
         if item.state == STATE_DRAFT:
             item.state = STATE_SENT
+            _last_sent.append(int(item.serial))
+
+
+def reopen_last_sent(scene) -> int:
+    """Hand the last send's marks back as drafts. Returns how many.
+
+    Pressing Stop means "that turn did not happen". The marks that went with
+    it were never acted on, so they belong to the NEXT message: a retry
+    ("continue", or the same request again) must carry them, or the agent
+    builds at the origin exactly as if nothing had been pointed at.
+    """
+    if not _last_sent:
+        return 0
+    wanted = set(_last_sent)
+    reopened = 0
+    for item in _collection(scene) or ():
+        if int(item.serial) in wanted and item.state == STATE_SENT:
+            item.state = STATE_DRAFT
+            reopened += 1
+    _last_sent.clear()
+    return reopened
 
 
 def remove_last(scene):
