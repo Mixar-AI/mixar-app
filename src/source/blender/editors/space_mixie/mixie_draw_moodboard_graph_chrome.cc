@@ -123,7 +123,7 @@ void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, const bool s
    * little lower than that tucks it toward the card it labels, so it reads as
    * belonging to the card rather than floating midway between it and the
    * canvas. The icons keep the true centre -- they are a target, not a label. */
-  const float baseline = row_y + row_h * 0.2f;
+  const float baseline = row_y + row_h * 0.1f;
   const float left = rect.xmin;
   const float right = rect.xmax;
 
@@ -157,6 +157,44 @@ void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, const bool s
   draw_header_text(
       title, left, baseline, std::max(right - left - state_width, 1.0f),
       selected ? 0.98f : 0.82f, false);
+}
+
+void moodboard_draw_graph_notice(PointerRNA *scene_ptr)
+{
+  /* Why the last connection was refused, on the canvas beside the node it was
+   * aimed at. `connect_nodes` already produces a specific sentence ("That input
+   * socket is already connected", "This model accepts fewer image inputs") --
+   * it was just going to the status bar, which is not where the user is looking
+   * when they release a noodle. Cleared by a one-shot timer in Python, so this
+   * only ever READS. */
+  char notice[MIXIE_GRAPH_NOTICE_BUF];
+  mixie_rna_string_get_clamped(scene_ptr, "mixie_moodboard_graph_notice",
+                               notice, sizeof(notice));
+  if (notice[0] == '\0') {
+    return;
+  }
+  const float x = RNA_float_get(scene_ptr, "mixie_moodboard_graph_notice_x");
+  const float y = RNA_float_get(scene_ptr, "mixie_moodboard_graph_notice_y");
+
+  const int font_id = BLF_default();
+  const float size = 15.0f * UI_SCALE_FAC;
+  BLF_size(font_id, size);
+  const float text_w = BLF_width(font_id, notice, strlen(notice));
+  const float pad = 10.0f * UI_SCALE_FAC;
+  const float box_h = size + pad * 2.0f;
+  /* Sits above the anchor, which is the target card's top-left, so it never
+   * covers the card the message is about. */
+  const rctf box = {x, x + text_w + pad * 2.0f, y + pad, y + pad + box_h};
+
+  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  const float background[4] = {0.16f, 0.07f, 0.07f, 0.96f};
+  const float border[4] = {0.78f, 0.32f, 0.30f, 0.90f};
+  UI_draw_roundbox_4fv(&box, true, 8.0f * UI_SCALE_FAC, background);
+  UI_draw_roundbox_4fv(&box, false, 8.0f * UI_SCALE_FAC, border);
+
+  BLF_color4f(font_id, 0.98f, 0.82f, 0.80f, 0.96f);
+  BLF_position(font_id, box.xmin + pad, box.ymin + pad * 0.9f, 0.0f);
+  BLF_draw(font_id, notice, strlen(notice));
 }
 
 }  // namespace blender::ed::mixie

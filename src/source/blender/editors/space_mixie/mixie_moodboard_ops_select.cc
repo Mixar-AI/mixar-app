@@ -927,6 +927,23 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
           }
         }
 
+        if (event->modifier & KM_CTRL) {
+          /* Snap the GRABBED item to the grid and move everything else by the
+           * same delta, so a multi-item selection keeps its shape and only its
+           * anchor lands on the grid. Snapping each item independently would
+           * collapse the spacing the user arranged. Applied here, after the
+           * drag threshold above has already used the raw delta. */
+          const float grid = MOODBOARD_SNAP_GRID;
+          const float snapped_x = std::round(
+                                      (move_data->initial_pos_x + delta_x) / grid) *
+                                  grid;
+          const float snapped_y = std::round(
+                                      (move_data->initial_pos_y + delta_y) / grid) *
+                                  grid;
+          delta_x = snapped_x - move_data->initial_pos_x;
+          delta_y = snapped_y - move_data->initial_pos_y;
+        }
+
         PropertyRNA *img_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
         if (img_prop) {
           for (int i = 0; i < move_data->selected_count; i++) {

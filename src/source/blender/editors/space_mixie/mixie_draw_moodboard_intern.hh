@@ -171,6 +171,9 @@ void moodboard_draw_node_resize_grip(const rctf &rect, bool selected);
  * rather than widgets, so the strip doubles as the card's drag handle.
  */
 void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, bool selected);
+/** Why the last connection was refused, drawn beside the node it was aimed at.
+ * Read-only: the message is posted and cleared from Python. */
+void moodboard_draw_graph_notice(PointerRNA *scene_ptr);
 /**
  * Give `but` a tooltip whose text is not a compile-time constant.
  *

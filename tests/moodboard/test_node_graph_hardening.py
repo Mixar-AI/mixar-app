@@ -68,6 +68,8 @@ def test_graph_strings_declare_a_maxlen_smaller_than_their_cpp_buffer():
         ("GRAPH_DESCRIPTION_MAXLEN", "MIXIE_GRAPH_DESCRIPTION_BUF"),
         # Read into a stack buffer by the card header's state side.
         ("GRAPH_PROGRESS_MAXLEN", "MIXIE_GRAPH_PROGRESS_BUF"),
+        # Read into a stack buffer by the refused-connection notice.
+        ("GRAPH_NOTICE_MAXLEN", "MIXIE_GRAPH_NOTICE_BUF"),
     )
     for python_name, c_name in pairs:
         maxlen = _int_constant(constants, python_name)
@@ -253,6 +255,41 @@ def test_every_extend_select_property_skips_save():
                 f"{name}: extend is defined without PROP_SKIP_SAVE"
             )
     assert checked == 2, f"expected both extend properties, found {checked}"
+
+
+def test_repeatable_inputs_keep_their_own_type_and_name():
+    """A shared `max_materials` budget used to collapse every repeatable input
+    into one pooled, untyped "Material N" group -- which is how Generate Video
+    advertised a single violet socket named "Material 1" when it actually takes
+    images AND videos, each with its own ceiling. The budget is a limit, not a
+    description of the inputs."""
+    from mixar.modules.moodboard.core.node_schema import build_input_contract
+
+    service = {}
+    model = {
+        "input_spec": {
+            "max_materials": 5,
+            "inputs": [
+                {"name": "image", "kind": "image", "multiple": True, "max_count": 4},
+                {"name": "video", "kind": "video", "multiple": True, "max_count": 2},
+            ],
+        }
+    }
+    contract = build_input_contract(service, model)
+    labels = [socket["label"] for socket in contract["sockets"]]
+    accepted = {socket["label"]: socket["accepted_types"] for socket in contract["sockets"]}
+    groups = {socket["group_id"] for socket in contract["sockets"]}
+
+    assert not any(label.startswith("Material") for label in labels), labels
+    assert "Image 1" in labels and "Video 1" in labels
+    assert accepted["Image 1"] == ["IMAGE"]
+    assert accepted["Video 1"] == ["VIDEO"]
+    assert groups == {"image", "video"}
+
+    # Per-type ceilings AND the pooled budget, both enforced by connect_nodes.
+    assert contract["limits"]["IMAGE"] == 4
+    assert contract["limits"]["VIDEO"] == 2
+    assert contract["limits"]["TOTAL"] == 5
 
 
 def test_node_service_and_model_resolve_from_saved_slugs():

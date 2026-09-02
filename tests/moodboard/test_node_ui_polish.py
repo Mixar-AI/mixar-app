@@ -265,6 +265,76 @@ def test_node_panel_width_follows_the_card_not_the_ui_factor():
     assert "MOODBOARD_NODE_PANEL_MIN_TEXT_W * ui_scale" in node_ui
 
 
+def test_sockets_name_themselves_while_a_noodle_is_in_flight():
+    """Selection is no help mid-drag: the node being aimed at is usually not
+    the selected one, and "what does this accept?" is exactly the question a
+    drag raises."""
+    draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    assert "moodboard_graph_link_drag_active(scene)" in draw
+    assert "if ((selected || dragging_link) && socket_labels_readable) {" in draw
+    # The predicate reuses the drag state the preview noodle already keys on,
+    # rather than tracking a second copy of "is a drag happening".
+    assert "return link_drag_matches(scene);" in geometry
+
+
+def test_a_refused_connection_says_why_on_the_canvas():
+    """`connect_nodes` already produces a specific sentence; it was going only
+    to the status bar, which is not where the user is looking when they release
+    a noodle."""
+    chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
+    draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
+    ops = _read(MOODBOARD / "ui/operators/node_graph_ops.py")
+
+    assert "moodboard_draw_graph_notice(&scene_ptr)" in draw
+    assert 'mixie_rna_string_get_clamped(scene_ptr, "mixie_moodboard_graph_notice"' in (
+        chrome
+    )
+    assert "post_graph_notice(context.scene, str(exc), self.to_node_id)" in ops
+    # Cleared by a one-shot timer, never by comparing a Python monotonic stamp
+    # against Blender's: both are monotonic but their epochs differ.
+    notice = _read(MOODBOARD / "core/graph_notice.py")
+    assert "bpy.app.timers.register(_clear" in notice
+    assert "BLI_time_now_seconds" not in chrome.split("moodboard_draw_graph_notice")[1]
+
+
+def test_the_snap_grid_is_one_value_in_both_languages():
+    """The C++ drags (nodes, media) and the Python grab modal move the same
+    items, so two grids would snap them differently depending on the gesture."""
+    header = _read(SPACE_MIXIE / "mixie_intern.hh")
+    constants = _read(MOODBOARD / "constants.py")
+    cpp = re.search(r"#define MOODBOARD_SNAP_GRID ([\d.]+)f", header)
+    py = re.search(r"GRAPH_SNAP_GRID = ([\d.]+)", constants)
+    assert cpp and py, "the snap grid is missing on one side"
+    assert float(cpp.group(1)) == float(py.group(1))
+
+
+def test_media_and_text_boxes_snap_too_not_just_nodes():
+    """Snapping only nodes would make it impossible to line a node up against
+    the reference image feeding it."""
+    select = _read(SPACE_MIXIE / "mixie_moodboard_ops_select.cc")
+    grab = _read(MOODBOARD / "ui/operators/transform_modal_ops.py")
+    assert "event->modifier & KM_CTRL" in select
+    assert "MOODBOARD_SNAP_GRID" in select
+    assert "event.ctrl" in grab
+    assert "GRAPH_SNAP_GRID" in grab
+    # The GRABBED item snaps and the rest follow by the same delta, so a
+    # multi-item selection keeps its spacing.
+    assert "delta_x = snapped_x - move_data->initial_pos_x;" in select
+    assert "self._initial_positions[0]" in grab
+
+
+def test_holding_ctrl_snaps_a_dragged_node_to_the_canvas_grid():
+    """The CARD's corner snaps, not the cursor: snapping the pointer would
+    leave the card off-grid by wherever the user happened to grab it."""
+    ops = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph.cc")
+    assert "event->modifier & KM_CTRL" in ops
+    assert "MOODBOARD_SNAP_GRID" in ops
+    snap = ops.split("event->modifier & KM_CTRL")[1].split("}")[0]
+    assert "std::round(new_x / grid) * grid" in snap
+    assert "std::round(new_y / grid) * grid" in snap
+
+
 def test_painted_canvas_text_carries_the_ui_factor():
     """Widget labels get UI_SCALE_FAC from the style; painted canvas text has to
     apply it itself. Without it every hint and the card header rendered at a

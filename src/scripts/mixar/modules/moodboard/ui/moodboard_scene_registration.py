@@ -34,6 +34,9 @@ from bpy.props import (
     StringProperty,
 )
 
+from mixar.modules.moodboard.ui.moodboard_graph_transient_props import (
+    register_graph_transient_props,
+)
 from mixar.config.logging_config import get_logger
 
 from .moodboard_properties import (
@@ -204,29 +207,7 @@ def register():
                 options={'SKIP_SAVE'},
             ),
         )
-    # Where a dragged noodle was released. The C++ graph modal sets these
-    # before opening the continuation menu so the node the menu creates lands
-    # under the cursor; every other entry point clears the flag, because the
-    # output handle's own coordinates would spawn the node on its source.
-    _safe_scene_prop(
-        'mixie_moodboard_link_drop_active',
-        BoolProperty(
-            name="Moodboard Link Drop Active",
-            description="Whether a released link opened the continuation menu",
-            default=False,
-            options={'SKIP_SAVE'},
-        ),
-    )
-    for axis in ('x', 'y'):
-        _safe_scene_prop(
-            f'mixie_moodboard_link_drop_{axis}',
-            FloatProperty(
-                name=f"Moodboard Link Drop {axis.upper()}",
-                description="Canvas position where the dragged link was released",
-                default=0.0,
-                options={'SKIP_SAVE'},
-            ),
-        )
+    register_graph_transient_props(_safe_scene_prop)
     _safe_scene_prop(
         'mixie_moodboard_selected_index',
         IntProperty(
@@ -423,6 +404,9 @@ def unregister():
         'mixie_moodboard_active_node_id',
         'mixie_moodboard_link_drop_y',
         'mixie_moodboard_link_drop_x',
+        'mixie_moodboard_graph_notice_y',
+        'mixie_moodboard_graph_notice_x',
+        'mixie_moodboard_graph_notice',
         'mixie_moodboard_link_drop_active',
         'mixie_moodboard_context_y',
         'mixie_moodboard_context_x',

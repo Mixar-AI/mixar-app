@@ -392,8 +392,18 @@ static wmOperatorStatus graph_select_modal(bContext *C,
     float mouse_x, mouse_y;
     UI_view2d_region_to_view(
         &region->v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
-    RNA_float_set(&node, "position_x", data->initial_x + mouse_x - data->initial_mouse_x);
-    RNA_float_set(&node, "position_y", data->initial_y + mouse_y - data->initial_mouse_y);
+    float new_x = data->initial_x + mouse_x - data->initial_mouse_x;
+    float new_y = data->initial_y + mouse_y - data->initial_mouse_y;
+    if (event->modifier & KM_CTRL) {
+      /* Snap the card's own corner to the canvas grid, not the cursor: the
+       * user is placing the CARD, and snapping the pointer would leave the
+       * card off-grid by wherever they happened to grab it. */
+      const float grid = MOODBOARD_SNAP_GRID;
+      new_x = std::round(new_x / grid) * grid;
+      new_y = std::round(new_y / grid) * grid;
+    }
+    RNA_float_set(&node, "position_x", new_x);
+    RNA_float_set(&node, "position_y", new_y);
     ED_area_tag_redraw(CTX_wm_area(C));
     return OPERATOR_RUNNING_MODAL;
   }

@@ -770,6 +770,11 @@ static bool link_drag_matches(const Scene *scene)
   return g_link_drag.active && uid != 0 && g_link_drag.scene_uid == uid;
 }
 
+bool moodboard_graph_link_drag_active(Scene *scene)
+{
+  return link_drag_matches(scene);
+}
+
 void moodboard_graph_link_drag_begin(Scene *scene, const float x, const float y)
 {
   g_link_drag = {scene_drag_uid(scene), true, x, y, x, y};

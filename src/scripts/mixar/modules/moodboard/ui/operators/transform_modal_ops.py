@@ -63,7 +63,9 @@ class MIXIE_OT_moodboard_grab(Operator):
 
     bl_idname = "mixie.moodboard_grab"
     bl_label = "Grab/Move"
-    bl_description = "Move selected images, text boxes and nodes (G)"
+    bl_description = (
+        "Move selected images, text boxes and nodes (G). Hold Ctrl to snap"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     # Store initial View2D mouse position and item positions
@@ -87,6 +89,22 @@ class MIXIE_OT_moodboard_grab(Operator):
             # Calculate delta in View2D space (1:1 with item positions)
             delta_x = view_x - self._initial_view_x
             delta_y = view_y - self._initial_view_y
+
+            if event.ctrl and self._initial_positions:
+                # Same rule as the C++ drags: snap the FIRST recorded item to
+                # the grid and shift the rest by the same delta, so a mixed
+                # selection of images, text boxes and nodes keeps its shape.
+                from mixar.modules.moodboard.constants import GRAPH_SNAP_GRID
+
+                _kind, _index, anchor_x, anchor_y = self._initial_positions[0]
+                delta_x = (
+                    round((anchor_x + delta_x) / GRAPH_SNAP_GRID) * GRAPH_SNAP_GRID
+                    - anchor_x
+                )
+                delta_y = (
+                    round((anchor_y + delta_y) / GRAPH_SNAP_GRID) * GRAPH_SNAP_GRID
+                    - anchor_y
+                )
 
             scene = context.scene
 

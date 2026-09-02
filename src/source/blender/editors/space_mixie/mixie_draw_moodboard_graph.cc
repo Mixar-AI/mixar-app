@@ -247,6 +247,11 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
   UI_view2d_scale_get(v2d, &zoom_x, &zoom_y);
   /* Canvas-unit labels stop being legible below this; skip the draw cost. */
   const bool socket_labels_readable = 13.0f * zoom_x >= 7.0f;
+  /* Sockets name themselves on the SELECTED node, and on every node while a
+   * noodle is in flight: mid-drag is precisely when "what does this accept?"
+   * is the question, and selection is no help because the node being aimed at
+   * is usually not the selected one. */
+  const bool dragging_link = moodboard_graph_link_drag_active(scene);
 
   PropertyRNA *actions = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_action_nodes");
   if (actions) {
@@ -304,7 +309,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
                                 moodboard_socket_type_color(accepted),
                                 connected,
                                 RNA_boolean_get(&socket, "required"));
-          if (selected && socket_labels_readable) {
+          if ((selected || dragging_link) && socket_labels_readable) {
             moodboard_draw_socket_label(&socket, socket_x, socket_y);
           }
         }
@@ -477,6 +482,9 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
     }
     RNA_property_collection_end(&iter);
   }
+
+  /* Last, so it sits over the cards rather than under one. */
+  moodboard_draw_graph_notice(&scene_ptr);
 
   mixie_draw_moodboard_graph_controls(C, v2d, cache);
 }

@@ -7,6 +7,7 @@
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.moodboard.core.graph_notice import post_graph_notice
 from mixar.modules.moodboard.ui.moodboard_graph_properties import ACTION_TYPES
 
 
@@ -404,7 +405,12 @@ class MIXIE_OT_moodboard_connect_nodes(Operator):
                     context.scene, self.from_node_id, self.to_node_id
                 )
         except ValueError as exc:
+            # The status bar is somewhere the user is not looking: they are
+            # watching the cursor they just released. Put the reason there too.
+            post_graph_notice(context.scene, str(exc), self.to_node_id)
             self.report({'WARNING'}, str(exc))
+            if context.area:
+                context.area.tag_redraw()
             return {'CANCELLED'}
         if context.area:
             context.area.tag_redraw()

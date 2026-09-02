@@ -175,35 +175,34 @@ def build_input_contract(service: dict, model: dict) -> dict:
             "repeatable": False,
         })
 
-    if total_limit and multiple_inputs:
-        total_limit = min(total_limit, _MAX_INPUT_SOCKETS - len(sockets))
-        accepted_types = sorted({item[1] for item in multiple_inputs})
-        required_count = max((1 if item[2] else 0 for item in multiple_inputs), default=0)
-        for index in range(max(total_limit, 0)):
+    # Every repeatable input keeps its OWN typed group. A shared budget
+    # (``max_materials``) used to collapse them all into one pooled, untyped
+    # "Material N" group -- which is how Generate Video came to advertise a
+    # single violet socket named "Material 1" when what it actually takes is
+    # some images AND some videos, each with its own ceiling. The budget is a
+    # limit, not a description of the inputs, so it is expressed as one below
+    # instead of flattening them.
+    for name, accepted, required, maximum in multiple_inputs:
+        remaining = _MAX_INPUT_SOCKETS - len(sockets)
+        for index in range(min(maximum, remaining)):
             sockets.append({
-                "id": f"materials:{index}",
-                "label": f"Material {index + 1}",
-                "accepted_types": accepted_types,
-                "required": index < required_count,
-                "group_id": "materials",
+                "id": f"{name}:{index}",
+                "label": _clamp(
+                    f"{name.replace('_', ' ').title()} {index + 1}",
+                    GRAPH_LABEL_MAXLEN,
+                ),
+                "accepted_types": [accepted],
+                "required": required and index == 0,
+                "group_id": name,
                 "repeatable": True,
             })
-        limits["TOTAL"] = total_limit
-    else:
-        for name, accepted, required, maximum in multiple_inputs:
-            remaining = _MAX_INPUT_SOCKETS - len(sockets)
-            for index in range(min(maximum, remaining)):
-                sockets.append({
-                    "id": f"{name}:{index}",
-                    "label": _clamp(
-                        f"{name.replace('_', ' ').title()} {index + 1}",
-                        GRAPH_LABEL_MAXLEN,
-                    ),
-                    "accepted_types": [accepted],
-                    "required": required and index == 0,
-                    "group_id": name,
-                    "repeatable": True,
-                })
+
+    # The pooled ceiling across every type, on top of the per-type ones already
+    # accumulated above. `connect_nodes` and `reconcile_node_links` enforce both
+    # -- so a model that takes "4 images, 2 videos, 5 materials total" refuses
+    # the 5th image, the 3rd video, and the 6th of any mix.
+    if total_limit and multiple_inputs:
+        limits["TOTAL"] = min(total_limit, _MAX_INPUT_SOCKETS)
 
     return {"sockets": sockets, "limits": limits}
 

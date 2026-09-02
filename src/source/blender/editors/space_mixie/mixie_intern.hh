@@ -68,6 +68,14 @@ struct wmWindowManager;
 #define MIXIE_GRAPH_ERROR_BUF 768  /* GRAPH_ERROR_MAXLEN */
 #define MIXIE_GRAPH_DESCRIPTION_BUF 768 /* GRAPH_DESCRIPTION_MAXLEN */
 #define MIXIE_GRAPH_PROGRESS_BUF 128 /* GRAPH_PROGRESS_MAXLEN */
+#define MIXIE_GRAPH_NOTICE_BUF 256 /* GRAPH_NOTICE_MAXLEN */
+/* Canvas grid EVERYTHING snaps to while Ctrl is held during a move -- nodes,
+ * images, videos and text boxes alike, or snapping one kind against another
+ * would be impossible. Canvas units, so the grid belongs to the board rather
+ * than to the current zoom: two items snapped at different zoom levels still
+ * line up. Duplicated as `GRAPH_SNAP_GRID` in moodboard/constants.py for the
+ * Python grab modal; the two MUST agree and a test pins that. */
+#define MOODBOARD_SNAP_GRID 40.0f
 /* The row floating just ABOVE a node card: its name on the left, and on the
  * right either its live state (while generating) or the Edit/Export icons
  * (once finished) -- never both, because a node is one or the other. Nothing
@@ -298,6 +306,9 @@ bool moodboard_find_input_socket_under_mouse(PointerRNA *scene_ptr,
                                               MoodboardGraphSocketHit *r_hit);
 /** Conservative canvas-space bounds of the link curve, for view culling. */
 void moodboard_graph_link_bounds(float x1, float y1, float x2, float y2, rctf *r_bounds);
+/** Is a noodle currently being dragged in this scene? Sockets name themselves
+ * while one is, which is exactly when the user needs to read them. */
+bool moodboard_graph_link_drag_active(Scene *scene);
 void moodboard_graph_link_drag_begin(Scene *scene, float x, float y);
 void moodboard_graph_link_drag_update(Scene *scene, float x, float y);
 void moodboard_graph_link_drag_end(Scene *scene);

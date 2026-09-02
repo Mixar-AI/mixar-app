@@ -24,6 +24,7 @@ from mixar.modules.moodboard.constants import (
     GRAPH_MODEL_SLUG_MAXLEN,
     GRAPH_NODE_ID_MAXLEN,
     GRAPH_PROGRESS_MAXLEN,
+    GRAPH_PROMPT_MAXLEN,
     GRAPH_OBJECT_NAMES_MAXLEN,
     GRAPH_SERVICE_KEY_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
@@ -311,7 +312,7 @@ class MixieMoodboardActionNode(PropertyGroup):
     progress_text: StringProperty(
         name="Progress", default="", maxlen=GRAPH_PROGRESS_MAXLEN
     )
-    prompt: StringProperty(name="Prompt", default="", maxlen=4096)
+    prompt: StringProperty(name="Prompt", default="", maxlen=GRAPH_PROMPT_MAXLEN)
     # MASK_DETAIL in-node controls, drawn vertically inside the node card by the
     # C++ layout. Real node props so each mask node is independent; catalog image
     # params come from the node's own `parameters` collection.

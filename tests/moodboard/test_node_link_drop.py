@@ -247,7 +247,10 @@ def test_link_drop_state_is_registered_and_unregistered():
     ):
         assert registration.count(f"'{name}'") >= 1, f"{name} is never unregistered"
     # x/y are registered through the shared axis loop.
-    assert "f'mixie_moodboard_link_drop_{axis}'" in registration
+    # The transient canvas-interaction props live in their own module now
+    # (500-line rule); the teardown list stays with the rest of the teardown.
+    transient = _read(MOODBOARD / "ui/moodboard_graph_transient_props.py")
+    assert "f'mixie_moodboard_link_drop_{axis}'" in transient
     assert "'mixie_moodboard_link_drop_active'," in registration
 
 
