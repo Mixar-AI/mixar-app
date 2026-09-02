@@ -638,6 +638,22 @@ def _run_mesh_feature(context, node, operator):
     return job, params
 
 
+def mark_run_failed(node, message: str) -> bool:
+    """Record a submit failure on a node, unless it is genuinely generating.
+
+    The run operator catches EVERY submission error — including a second
+    click on a node whose job is already queued ("This node is already
+    running"). Demoting that node to FAILED would flash a bogus failure on a
+    live job, so a generating node keeps its state; the message still reaches
+    the user through the operator's own report.
+    """
+    if node.state in {'QUEUED', 'RUNNING'}:
+        return False
+    node.state = 'FAILED'
+    node.error = message
+    return True
+
+
 def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
         raise ValueError("This node is already running")
