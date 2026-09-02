@@ -240,8 +240,21 @@ def _after_download():
         # The user asked for this before the download finished. Go through
         # the operator rather than quitting here: it owns the unsaved-work
         # confirmation, and minutes may have passed since they clicked.
+        #
+        # This runs inside a bpy.app.timers callback, whose context usually
+        # carries no window — and INVOKE_DEFAULT opens the unsaved-work
+        # confirmation dialog, which needs one. Borrow a window like the
+        # toast dispatcher does; without it the invoke fails, the request
+        # has already been consumed here, and the user is never prompted.
         try:
-            bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+            window = next(iter(bpy.context.window_manager.windows), None)
+            if window is not None:
+                with bpy.context.temp_override(
+                    window=window, screen=window.screen
+                ):
+                    bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+            else:
+                bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
         except Exception:  # noqa: BLE001 - operator may be unavailable
             logger.error("Could not open the restart prompt", exc_info=True)
 

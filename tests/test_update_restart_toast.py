@@ -640,3 +640,34 @@ def test_progress_tick_stops_when_the_download_ends(monkeypatch):
     state.set_ready("/tmp/Mixar-3.4.0.msi", True)
 
     assert install_flow._progress_tick() is None
+
+
+# ============================================================================
+# The timer-invoked restart prompt borrows a window
+#
+# _after_download runs inside a bpy.app.timers callback, whose context
+# usually carries no window — and INVOKE_DEFAULT opens the unsaved-work
+# confirmation, which needs one. The same PR fixed this for toast clicks;
+# the restart prompt must get the same treatment or the invoke silently
+# fails after install_requested has already been consumed.
+# ============================================================================
+
+INSTALL_FLOW_SRC = (
+    SCRIPTS / "mixar" / "modules" / "common" / "updates" / "core" / "install_flow.py"
+)
+
+
+def test_after_download_invokes_the_restart_prompt_with_a_window():
+    source = INSTALL_FLOW_SRC.read_text(encoding="utf-8")
+    after = source[source.index("def _after_download"):]
+    after = after[:after.index("\n\n\n")]
+
+    assert 'bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")' in after
+    # Timer contexts carry no window; a dialog needs one borrowed in.
+    assert "temp_override" in after
+    assert "window_manager.windows" in after
+    # The request is consumed BEFORE the invoke, so a failed invoke can be
+    # retried from the toast/badge instead of auto-firing on every tick.
+    assert after.index("set_install_requested(False)") < after.index(
+        "restart_to_update"
+    )
