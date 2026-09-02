@@ -240,16 +240,24 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row)
 /** \name Row metrics — all in island units, scaled by `u` at use.
  * \{ */
 
-#define QROW_H 64.0f       /* Row backplate height. */
+/* The queue reads at its OWN scale, not the kit's.
+ *
+ * Every other pane is chips and a prompt — a handful of short labels with air
+ * around them. The queue is a dense two-line list, and at the kit's 18/15 it
+ * was the one pane you had to lean in to read. The row grows with the type so
+ * the two lines keep their breathing room (they are placed as fractions of
+ * QROW_H); the cost is roughly one fewer row visible before paging, which is
+ * the right trade for a list whose whole job is to be glanceable. */
+#define QROW_H 76.0f       /* Row backplate height. */
 #define QROW_GAP 10.0f     /* Vertical gap between rows. */
 #define QROW_PAD_X 18.0f   /* Row inner horizontal padding. */
 #define QROW_RADIUS PANE_RADIUS /* Row corner radius — the kit chips'. */
-#define QROW_DOT_R 5.0f    /* Status dot radius — matches the pill's dot. */
-#define QROW_FONT PANE_FONT /* Title size — the kit chip label size. */
-#define QROW_FONT_SUB PANE_FONT_SUB /* Status size — the kit meta size. */
+#define QROW_DOT_R 6.0f    /* Status dot radius — scaled with the type. */
+#define QROW_FONT 23.0f    /* Title size. */
+#define QROW_FONT_SUB 19.0f /* Status / metadata size. */
 #define QROW_CANCEL_W 40.0f/* Cancel cross hit width at the row's right edge. */
 #define QPANEL_PAD PANE_INSET_X /* Panel inset — the kit strip inset. */
-#define QHEADER_H 46.0f    /* "N jobs" + Clear finished strip above the rows. */
+#define QHEADER_H 54.0f    /* "N jobs" + Clear finished strip above the rows. */
 
 /** \} */
 

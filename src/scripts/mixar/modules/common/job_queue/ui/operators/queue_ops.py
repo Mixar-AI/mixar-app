@@ -126,14 +126,54 @@ def find_largest_queue_area(context):
     return best
 
 
+def _show_island_queue_tab(context) -> bool:
+    """Open the agent island on its Queue tab. True when it actually opened.
+
+    The island's Queue tab lists the same ``wm.mixie_queue`` mirror the
+    sidebar panel does, and it is where the user is already watching the
+    status pill tick, so that is where "View Queue" should land. The tab is
+    plain RNA (``wm.mixar_bubble_tab``) and opening is a plain operator call,
+    so nothing here imports the agent_bubble module.
+
+    Returns False — leaving the caller to fall back to the sidebar — when the
+    island is unavailable: a build without the spacetype, or a platform whose
+    window controls are stubbed (see ``BUBBLE_WINDOW_CONTROLS_SUPPORTED``).
+    """
+    wm = getattr(context, "window_manager", None)
+    if wm is None or not hasattr(wm, "mixar_bubble_tab"):
+        return False
+
+    import bpy
+
+    open_op = getattr(getattr(bpy.ops, "mixar", None), "agent_bubble_open_window", None)
+    if open_op is None:
+        return False
+    try:
+        if open_op() != {'FINISHED'}:
+            return False
+    except Exception:  # noqa: BLE001 — never let the toast action raise
+        return False
+
+    # Set the tab AFTER opening: the open path restores from the pill, and a
+    # tab set first would be repainted before the window is on screen.
+    try:
+        wm.mixar_bubble_tab = 'QUEUE'
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
 class MIXIE_OT_queue_view(Operator):
-    """Switch sidebar to the Queue panel."""
+    """Show the job queue — the agent island's Queue tab, else the sidebar."""
 
     bl_idname = "mixie.queue_view"
     bl_label = "View Queue"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
+        if _show_island_queue_tab(context):
+            return {'FINISHED'}
+
         area = getattr(context, "area", None)
         if area is None or area.type != QUEUE_AREA_TYPE:
             area = find_largest_queue_area(context)

@@ -243,12 +243,21 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Panel wash — the shared #2D2D2D -> #131413 ramp (pane kit). */
   pane_wash_paint(panel, u);
 
-  /* Blocks: chips (unembossed ops) + field/sliders (embossed). The field
-   * block is begun FIRST so overlapping chip buttons win their clicks. */
-  uiBlock *field_block = UI_block_begin(
-      C, region, "agent_island_3d_field", blender::ui::EmbossType::Emboss);
+  /* Blocks: chips (unembossed ops) + field/sliders (embossed).
+   *
+   * ORDER IS A CONTRACT, and it is the opposite of what it looks like.
+   * `UI_block_region_set` does `BLI_addhead`, so the region's list runs
+   * newest-first, and `ui_but_find_mouse_over_ex` walks that list WITHOUT
+   * breaking on a hit — every later block overwrites the candidate. The last
+   * one walked, and so the winner, is the block created FIRST. The chips sit
+   * inside the prompt box's foot and overlap the field that spans it, so the
+   * OPS block must be begun first or clicking Generate / Upload Reference
+   * just puts the caret in the prompt. Media and Splat already do this; 3D
+   * had the two swapped, which is exactly how it read in the app. */
   uiBlock *block = UI_block_begin(
       C, region, "agent_island_3d", blender::ui::EmbossType::None);
+  uiBlock *field_block = UI_block_begin(
+      C, region, "agent_island_3d_field", blender::ui::EmbossType::Emboss);
 
   /* --- Params strip: Mode + Model dropdowns, then the schema params. --- */
   float x = panel.xmin + PANE_INSET_X * u;
