@@ -44,9 +44,11 @@ void cinema_draw_top_strip(uiBlock *block,
                    title);
   cinema_text_right("V1", chip.xmax - 20.0f * u, BLI_rctf_cent_y(&chip), 13.0f * u, version);
 
-  /* Shortcut hints. The keys are what the Director keymap actually binds:
-   * capture is F (`director/ui/keymap.py`), so the hint says F — a design
-   * label of "I" would be a lie about a live binding. */
+  /* Shortcut hints. The keys are what the Director keymap actually binds
+   * (`director/ui/keymap.py`): O -> `mixar.director_navigate`, F -> capture
+   * (a design label of "I" would be a lie about a live binding), WASD/QE ->
+   * `mixar.director_nudge_camera`. A hint here is a promise — never paint one
+   * without the matching keymap item. */
   struct Hint {
     float x;
     const char *keys[4];

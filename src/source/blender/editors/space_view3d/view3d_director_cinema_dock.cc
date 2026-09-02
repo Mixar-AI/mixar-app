@@ -52,6 +52,8 @@ constexpr float TRANSPORT_SIZE = 26.0f;
 constexpr float TRANSPORT_GAP = 26.0f;
 constexpr float TOOL_SIZE = 24.0f;
 constexpr float TOOL_GAP = 6.0f;
+/** Clear space the frame fields must keep from the centred transport. */
+constexpr float FIELD_CLEARANCE = 16.0f;
 
 /** Left/right pointing media triangle, optionally with a stop bar. */
 void transport_glyph(const rctf &box, const bool forward, const bool bar, const bool pause)
@@ -179,6 +181,112 @@ void tool_icon(uiBlock *block,
   director_overlay_disable_button(but, !enabled);
 }
 
+/** Right edge of the centred transport group, in region px. */
+float transport_right_edge(const ARegion *region)
+{
+  const float u = cinema_unit();
+  const float group_w = TRANSPORT_SIZE * 3.0f * u + TRANSPORT_GAP * 2.0f * u;
+  return (float(region->winx) + group_w) * 0.5f;
+}
+
+/** Transport triple (previous / preview / next), centred on the dock. */
+void draw_transport(uiBlock *block,
+                    const ARegion *region,
+                    const DirectorViewState &state,
+                    const float cy,
+                    const bool playing)
+{
+  const float u = cinema_unit();
+  const float group_w = TRANSPORT_SIZE * 3.0f * u + TRANSPORT_GAP * 2.0f * u;
+  float tx = (float(region->winx) - group_w) * 0.5f;
+  const struct {
+    const char *op;
+    bool forward;
+    bool bar;
+    const char *tip;
+  } transport[3] = {
+      {"MIXAR_OT_director_previous_beat", false, true, "Previous keyframe"},
+      {"MIXAR_OT_director_preview", true, false, "Preview this shot"},
+      {"MIXAR_OT_director_next_beat", true, true, "Next keyframe"},
+  };
+  const bool no_beats = state.beats.is_empty();
+  for (int index = 0; index < 3; index++) {
+    const rctf box = {tx,
+                      tx + TRANSPORT_SIZE * u,
+                      cy - TRANSPORT_SIZE * u * 0.5f,
+                      cy + TRANSPORT_SIZE * u * 0.5f};
+    transport_glyph(box, transport[index].forward, transport[index].bar, index == 1 && playing);
+    cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
+    uiBut *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
+    const bool enabled = index == 1 ? (state.beats.size() >= 2 &&
+                                       state.frame_end > state.frame_start)
+                                    : !no_beats;
+    director_overlay_disable_button(but, !enabled);
+    tx += (TRANSPORT_SIZE + TRANSPORT_GAP) * u;
+  }
+}
+
+/**
+ * Right-edge mode tools. Returns the x the next group may claim.
+ *
+ * \a full adds capture and add-camera; the compact layout leaves those out
+ * because its viewport rail already carries both as primary buttons.
+ */
+float draw_mode_tools(uiBlock *block,
+                      const ARegion *region,
+                      const DirectorViewState &state,
+                      const float cy,
+                      const bool full)
+{
+  const float u = cinema_unit();
+  float right = float(region->winx) - (SIDE_PAD + 8.0f) * u;
+  const struct {
+    const char *op;
+    int icon;
+    const char *tip;
+    bool enabled;
+    bool wide_only;
+  } tools[5] = {
+      {"MIXAR_OT_director_toggle_timeline", ICON_X, "Collapse timeline", true, false},
+      {"MIXAR_OT_director_toggle_immersive",
+       ICON_FULLSCREEN_ENTER,
+       "Toggle immersive Director view",
+       true,
+       false},
+      {"MIXAR_OT_director_explore",
+       ICON_VIEW_PAN,
+       "Fly the scene freely without moving the shot camera",
+       state.has_shot,
+       false},
+      {state.locked ? "MIXAR_OT_director_new_take" : "MIXAR_OT_director_capture_beat",
+       state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT,
+       state.locked ? "Start an editable child take" : "Capture the live camera pose (F)",
+       state.has_camera,
+       true},
+      /* The camera entry point. The right column carries it as "+ Add Camera",
+       * but that column only draws in the wide layout — without this the
+       * compact one has no way to start directing at all. */
+      {state.has_shot ? "MIXAR_OT_director_new_shot" : "MIXAR_OT_director_start",
+       state.has_shot ? ICON_ADD : ICON_CAMERA_DATA,
+       state.has_shot ? "Create a new shot camera from this view" :
+                        "Direct the active scene camera from the viewport",
+       true,
+       true},
+  };
+  for (const auto &tool : tools) {
+    if (tool.wide_only && !full) {
+      continue;
+    }
+    const rctf box = {right - TOOL_SIZE * u,
+                      right,
+                      cy - TOOL_SIZE * u * 0.5f,
+                      cy + TOOL_SIZE * u * 0.5f};
+    tool_icon(block, tool.op, tool.icon, box, tool.tip, tool.enabled);
+    right -= (TOOL_SIZE + TOOL_GAP) * u;
+  }
+  return right;
+}
+
 }  // namespace
 
 float cinema_dock_control_height()
@@ -243,75 +351,22 @@ void cinema_draw_dock_controls(uiBlock *block,
   unit_chip(block, region, "Sec", "SEC", sec_chip, STREQ(unit_id, "SEC"));
 
   /* -------- Transport (centred on the dock) -------- */
-  const float group_w = TRANSPORT_SIZE * 3.0f * u + TRANSPORT_GAP * 2.0f * u;
-  float tx = (float(region->winx) - group_w) * 0.5f;
-  const struct {
-    const char *op;
-    bool forward;
-    bool bar;
-    const char *tip;
-  } transport[3] = {
-      {"MIXAR_OT_director_previous_beat", false, true, "Previous keyframe"},
-      {"MIXAR_OT_director_preview", true, false, "Preview this shot"},
-      {"MIXAR_OT_director_next_beat", true, true, "Next keyframe"},
-  };
-  const bool no_beats = state.beats.is_empty();
-  for (int index = 0; index < 3; index++) {
-    const rctf box = {tx,
-                      tx + TRANSPORT_SIZE * u,
-                      cy - TRANSPORT_SIZE * u * 0.5f,
-                      cy + TRANSPORT_SIZE * u * 0.5f};
-    transport_glyph(box, transport[index].forward, transport[index].bar, index == 1 && playing);
-    cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
-    uiBut *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
-    const bool enabled = index == 1 ? (state.beats.size() >= 2 &&
-                                       state.frame_end > state.frame_start)
-                                    : !no_beats;
-    director_overlay_disable_button(but, !enabled);
-    tx += (TRANSPORT_SIZE + TRANSPORT_GAP) * u;
-  }
+  draw_transport(block, region, state, cy, playing);
 
   /* -------- Right edge: mode tools, then the frame range -------- */
-  float right = float(region->winx) - (SIDE_PAD + 8.0f) * u;
-  const struct {
-    const char *op;
-    int icon;
-    const char *tip;
-    bool enabled;
-  } tools[5] = {
-      {"MIXAR_OT_director_toggle_timeline", ICON_X, "Collapse timeline", true},
-      {"MIXAR_OT_director_toggle_immersive",
-       ICON_FULLSCREEN_ENTER,
-       "Toggle immersive Director view",
-       true},
-      {"MIXAR_OT_director_explore",
-       ICON_VIEW_PAN,
-       "Fly the scene freely without moving the shot camera",
-       state.has_shot},
-      {state.locked ? "MIXAR_OT_director_new_take" : "MIXAR_OT_director_capture_beat",
-       state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT,
-       state.locked ? "Start an editable child take" : "Capture the live camera pose (F)",
-       state.has_camera},
-      /* The camera entry point. The right column carries it as "+ Add Camera",
-       * but that column only draws in the wide layout — without this the
-       * compact one has no way to start directing at all. */
-      {state.has_shot ? "MIXAR_OT_director_new_shot" : "MIXAR_OT_director_start",
-       state.has_shot ? ICON_ADD : ICON_CAMERA_DATA,
-       state.has_shot ? "Create a new shot camera from this view" :
-                        "Direct the active scene camera from the viewport",
-       true},
-  };
-  for (const auto &tool : tools) {
-    const rctf box = {right - TOOL_SIZE * u,
-                      right,
-                      cy - TOOL_SIZE * u * 0.5f,
-                      cy + TOOL_SIZE * u * 0.5f};
-    tool_icon(block, tool.op, tool.icon, box, tool.tip, tool.enabled);
-    right -= (TOOL_SIZE + TOOL_GAP) * u;
-  }
+  float right = draw_mode_tools(block, region, state, cy, /*full=*/true);
   right -= 14.0f * u;
 
-  if (scene != nullptr) {
+  /* The fields are created LAST and `ui_but_find_mouse_over_ex` walks a
+   * block's buttons BACKWARDS, so an invisible ButType::Num overlapping the
+   * transport wins its clicks — "previous keyframe" started a drag-edit on
+   * the scene Start frame. Drop the pair when the dock is too narrow to hold
+   * them clear of the transport; the transport is the load-bearing group and
+   * the frame range is reachable from Blender's own timeline. */
+  const float fields_w = (FIELD_W * 2.0f + 8.0f) * u;
+  const bool fields_fit = (right - fields_w) >=
+                          (transport_right_edge(region) + FIELD_CLEARANCE * u);
+  if (scene != nullptr && fields_fit) {
     PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
     const rctf end_rect = {right - FIELD_W * u, right, row_ymin, row_ymax};
     frame_field(block, &scene_ptr, "End", "frame_end", end_rect, "Last frame of the scene range");
@@ -320,4 +375,21 @@ void cinema_draw_dock_controls(uiBlock *block,
     frame_field(
         block, &scene_ptr, "Start", "frame_start", start_rect, "First frame of the scene range");
   }
+}
+
+void cinema_draw_dock_compact(uiBlock *block,
+                              const ARegion *region,
+                              const DirectorViewState &state,
+                              const bool playing)
+{
+  /* The designed dock row belongs to the wide surface. Below the gate the old
+   * viewport rail is what draws, and painting the design's Duration chips and
+   * frame fields over it stacked two control sets on one screen. What survives
+   * is only what has no other home while the timeline is expanded: the
+   * transport, and collapse / immersive / explore. */
+  cinema_qa_begin(region);
+  const float u = cinema_unit();
+  const float cy = float(region->winy) - (ROW_TOP_GAP + ROW_H * 0.5f) * u;
+  draw_transport(block, region, state, cy, playing);
+  draw_mode_tools(block, region, state, cy, /*full=*/false);
 }

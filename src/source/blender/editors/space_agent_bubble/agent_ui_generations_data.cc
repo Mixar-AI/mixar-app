@@ -372,14 +372,18 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
   *r_data = GenPaneData{};
 
   /* Edge-triggered library reload. Static because the edge is per-process:
-   * the number only ever goes up, and every island window wants the same
-   * one reload. */
+   * the asset list it invalidates is process-global too, and every island
+   * window wants the same one reload. Compared with != rather than >, because
+   * `wm.mixar_generations_revision` lives on the WindowManager and restarts at
+   * 0 on every file load while this counter does not — an inequality reads
+   * that as one reload, which is what a new file wants anyway. */
   static int g_seen_revision = 0;
   bool reload = false;
 
   wmWindowManager *wm = CTX_wm_manager(C);
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+    int revision = g_seen_revision;
     char source[32];
     char filter[32];
     char sort[32];
@@ -398,13 +402,26 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
     if (PropertyRNA *rev = RNA_struct_find_property(&wm_ptr, "mixar_generations_revision");
         rev && RNA_property_type(rev) == PROP_INT)
     {
-      const int revision = RNA_property_int_get(&wm_ptr, rev);
-      reload = revision != g_seen_revision;
-      g_seen_revision = revision;
+      revision = RNA_property_int_get(&wm_ptr, rev);
     }
     r_data->source = STREQ(source, "LIBRARY") ? GEN_SOURCE_LIBRARY : GEN_SOURCE_AI;
     r_data->filter = filter_from_id(filter);
     r_data->newest_first = !STREQ(sort, "OLDEST");
+
+    /* The edge is consumed only by a gather that actually re-reads the
+     * library the bump was about. Browsing some OTHER library on the Asset
+     * Library source used to swallow it, and "Mixar Generations" then stayed
+     * on its stale read until the NEXT archive bumped the revision again —
+     * the freshly archived tile simply missing. Leaving it pending also keeps
+     * `reload` false for that other library, so we never re-read an unrelated
+     * library on every mouse move. */
+    const bool covers_generations = r_data->source != GEN_SOURCE_LIBRARY ||
+                                    r_data->library[0] == '\0' ||
+                                    STREQ(r_data->library, GENERATIONS_LIBRARY_NAME);
+    reload = revision != g_seen_revision && covers_generations;
+    if (reload) {
+      g_seen_revision = revision;
+    }
   }
 
   gather_libraries(r_data);

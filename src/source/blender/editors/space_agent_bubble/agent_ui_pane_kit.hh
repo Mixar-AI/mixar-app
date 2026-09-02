@@ -24,11 +24,15 @@
  *  - bottom row INSIDE the box foot: 16 up, Upload 17 in, Generate 16 in
  *    from the right (identical rects in all four frames)
  *
- * Layout contract (prompt visibility): a pane computes its params-strip
- * height FIRST, then places the prompt box from `strip bottom + PANE_BOX_GAP`
- * down to `panel bottom + PANE_BOX_INSET` — never at a fixed offset — so a
- * strip that wraps (Video Gen) shrinks the box gracefully and a taller
- * window grows it.
+ * Layout contract (prompt visibility): the PROMPT BOX IS RESERVED FIRST and
+ * the params strip gets whatever height is left. A pane lays its strip out
+ * from the panel top down, but clamps the strip bottom it hands to
+ * `pane_prompt_box_rect` at `pane_params_floor` — so the box is never smaller
+ * than #PANE_BOX_MIN_H and its text field is always created. Params that do
+ * not fit wrap or elide inside their own strip. The box still grows with a
+ * taller window and shrinks under a wrapping strip; what it may not do is
+ * vanish while Generate stays armed, because Generate is a paid action and
+ * must never submit a prompt the user cannot see or edit.
  *
  * Functional invariants the kit deliberately does NOT touch (they live with
  * the callers): catalog enum reads pass the real bContext; painted chips
@@ -106,7 +110,12 @@ float pane_text_width(const char *text, float size);
 void pane_label_left(const char *text, float x, float cy, float size, const float col[4]);
 void pane_label_centre(const char *text, float cx, float cy, float size, const float col[4]);
 void pane_label_right(const char *text, float x, float cy, float size, const float col[4]);
-/** Truncate \a text in place (UTF-8-safe) until it fits \a max_w. */
+/**
+ * Truncate \a text in place (UTF-8-safe) until it fits \a max_w, appending an
+ * ellipsis when anything was actually removed — a bare chop reads as a
+ * different string ("ReproCone" -> "ReproCon"), not a shortened one. Only ever
+ * shrinks the caller's buffer.
+ */
 void pane_fit_text(char *text, float max_w, float size);
 
 /** \} */
@@ -125,12 +134,31 @@ void pane_wash_paint(const rctf &panel, float u);
 rctf pane_prompt_box_rect(const rctf &panel, float strip_bottom_y, float u);
 void pane_prompt_box_paint(const rctf &box, float u);
 
+/**
+ * The lowest y a params strip may reach.
+ *
+ * The prompt box is RESERVED FIRST and the params get what is left, not the
+ * other way round: Generate is a paid action, so a schema that wraps past the
+ * room available must never be able to squeeze the prompt box below
+ * #PANE_BOX_MIN_H — that stopped the text field being created at all while
+ * Generate stayed armed, and the button then submitted whatever stale prompt
+ * string was on the tab group. Params that do not fit wrap or elide within
+ * their own strip; every pane clamps its strip bottom to this floor.
+ */
+float pane_params_floor(const rctf &panel, float u);
+
+/** True when \a box can host the prompt field (see #pane_params_floor). A
+ * pane whose box fails this must also disable its Generate button. */
+bool pane_prompt_fits(const rctf &box, float u);
+
 /** The embossed field's rect: a PANE_FIELD_H strip at the box TOP. A field
  * spanning the whole box centres its ghost text vertically and draws a caret
  * the full box height — the strip keeps both at text scale. */
 rctf pane_prompt_field_rect(const rctf &box, float u);
 
-/** Bottom row inside the box foot. */
+/** Bottom row inside the box foot, clamped so a short box can never push the
+ * row out through its own top over the params strip (the OPS block wins
+ * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
 rctf pane_generate_rect(const rctf &box, float u);
 /** Generate button: #1A4026 pill, strong label when enabled, dim otherwise. */

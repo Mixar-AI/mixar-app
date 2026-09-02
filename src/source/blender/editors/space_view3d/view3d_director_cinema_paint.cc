@@ -72,9 +72,35 @@ bool cinema_surface_fits(const ARegion *region)
 {
   const float u = cinema_unit();
   /* Both columns, the floor margins and a usable gate between them, plus
-   * enough height for the left column's three cards. */
+   * enough height for every card. The height is DERIVED from the lowest
+   * content in either column (the Speed card's foot and the Export button's)
+   * rather than guessed: #cinema_design_rect anchors on
+   * #CINEMA_VIEWPORT_TOP, so a shorter region pushes `rect.ymin` negative and
+   * lays the Speed slider and the Export button out below the region — drawn
+   * clipped, and not hit-testable, with no compact fallback to fall back on. */
   const float min_w = CINEMA_PANEL_W * 2.0f + CINEMA_MARGIN_MIN * 2.0f + CINEMA_GATE_MIN_W;
-  return float(region->winx) / u >= min_w && float(region->winy) / u >= 700.0f;
+  const float content_bottom = std::max(CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H,
+                                        CINEMA_EXPORT_Y + CINEMA_EXPORT_H);
+  const float min_h = content_bottom - CINEMA_VIEWPORT_TOP;
+  return float(region->winx) / u >= min_w && float(region->winy) / u >= min_h;
+}
+
+float cinema_list_row_h()
+{
+  return std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH);
+}
+
+int cinema_list_window_start(const int count, const int active)
+{
+  /* The card only has room for #CINEMA_LIST_MAX_ROWS. Window the list around
+   * the live entry rather than always showing the head: with the active shot
+   * off the end no row highlighted at all, so "My Cameras" claimed none was
+   * being directed. */
+  if (count <= CINEMA_LIST_MAX_ROWS) {
+    return 0;
+  }
+  const int centred = std::clamp(active, 0, count - 1) - CINEMA_LIST_MAX_ROWS / 2;
+  return std::clamp(centred, 0, count - CINEMA_LIST_MAX_ROWS);
 }
 
 void cinema_draw_stage(const ARegion *region)

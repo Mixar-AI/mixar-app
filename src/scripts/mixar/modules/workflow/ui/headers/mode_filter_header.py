@@ -59,6 +59,36 @@ def _separator_factor_for_px(context, px: float) -> float:
     return px / (6.0 * scale)
 
 
+_MENU_STRIP_UNITS = 16.0
+"""Room the File/Edit/Render/Window/Help strip and its separator take, in UI
+units. An estimate is enough: the pad only has to stop SHORT of the region
+edge, and the flex spacers absorb whatever it leaves."""
+
+_PAD_SAFETY_UNITS = 1.0
+"""Slack kept free so the flex spacers still have something to spend.
+`ui_update_flexible_spacing` bails out entirely once the content is wider than
+the region — content then packs left and the tail (the slider) is clipped off
+the end, which is exactly what a pad the full width of the right region caused
+at ~1280 px, at UI scale 1.25, or with a long account email widening the
+profile chip."""
+
+
+def _centring_pad_px(context, right_px: float) -> float:
+    """The centring pad, clamped to what the LEFT region can actually spend."""
+    region = getattr(context, "region", None)
+    width = float(getattr(region, "width", 0) or 0)
+    if width <= 0.0:
+        return 0.0
+    scale = float(getattr(context.preferences.system, "ui_scale", 1.0)) or 1.0
+    # UI_UNIT_X is 20 logical px; `ui_scale` is the same DPI-inclusive factor
+    # UI_SCALE_FAC reads.
+    unit_px = 20.0 * scale
+    reserved = (
+        _MENU_STRIP_UNITS + _SLIDER_HALF_UNITS * 2.0 + _PAD_SAFETY_UNITS
+    ) * unit_px
+    return max(0.0, min(float(right_px), width - reserved))
+
+
 def _right_region_width(context) -> int:
     """Width of the topbar's RIGHT region (scene/view-layer + profile)."""
     area = getattr(context, "area", None)
@@ -91,10 +121,15 @@ def _draw_mode_slider(layout, context) -> None:
     # width pushed the slider clean off the end and it vanished. There the
     # flex spacers alone centre it in whatever room is left — visibly right
     # of the tabs, a little left of true centre, but always present.
+    #
+    # The pad is also CLAMPED to the room the left region has left after the
+    # menus and the slider itself. Unclamped it could exceed the region and
+    # push the slider off the end — perfect centring is worth nothing if the
+    # control it centres is clipped away.
     if is_zen:
-        right_px = _right_region_width(context)
-        if right_px > 0:
-            layout.separator(factor=_separator_factor_for_px(context, right_px))
+        pad_px = _centring_pad_px(context, _right_region_width(context))
+        if pad_px > 0.0:
+            layout.separator(factor=_separator_factor_for_px(context, pad_px))
 
     # Tag each half IMMEDIATELY after creating it: the tag applies to the
     # BLOCK's most recent button, not to the sub-layout it is called on, so

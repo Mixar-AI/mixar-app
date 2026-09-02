@@ -170,10 +170,15 @@ void cinema_draw_right_panel(uiBlock *block,
     active_index = RNA_int_get(&state_ptr, "active_shot_index");
   }
 
-  const float row_h = CINEMA_ROW_H * u;
+  const float row_h = cinema_list_row_h() * u;
   const float first_row_y = 276.0f;
-  const int max_rows = 4; /* The card's height; the rest scrolls out of view. */
-  for (int index = 0; index < std::min(shot_count, max_rows); index++) {
+  /* The card fits CINEMA_LIST_MAX_ROWS and nothing scrolls, so the window
+   * follows the active shot: the live camera is always one of the rows drawn,
+   * and the highlight can never go missing. */
+  const int first_row = cinema_list_window_start(shot_count, active_index);
+  const int visible_rows = std::min(shot_count, int(CINEMA_LIST_MAX_ROWS));
+  for (int slot = 0; slot < visible_rows; slot++) {
+    const int index = first_row + slot;
     PointerRNA shot_ptr;
     if (!RNA_property_collection_lookup_int(&state_ptr, shots_prop, index, &shot_ptr)) {
       continue;
@@ -199,7 +204,7 @@ void cinema_draw_right_panel(uiBlock *block,
     row.xmin = cameras.xmin + 11.0f * u;
     row.xmax = cameras.xmax - 10.0f * u;
     row.ymax = float(region->winy) -
-               (first_row_y - VIEWPORT_TOP + CINEMA_LIST_PITCH * float(index)) * u;
+               (first_row_y - VIEWPORT_TOP + CINEMA_LIST_PITCH * float(slot)) * u;
     row.ymin = row.ymax - row_h;
     if (active) {
       const float top[4] = CINEMA_COL_ROW_TOP;
@@ -286,12 +291,15 @@ void cinema_draw_right_panel(uiBlock *block,
               "director_fps");
 
   /* -------- Resolution -------- */
-  const int height = scene ? scene->r.ysch : 1080;
+  /* MIXAR_OT_director_set_resolution scales the SHORTER side to the tier, so
+   * a 9:16 scene at 1080p is 1080x1920 — reading `ysch` matched nothing there
+   * and no chip lit. The tier IS the short side. */
+  const int short_side = scene ? std::min(scene->r.xsch, scene->r.ysch) : 1080;
   const char *const res_labels[3] = {"720p", "1080p", "2K"};
   const int res_values[3] = {720, 1080, 1440};
   int res_active = -1;
   for (int index = 0; index < 3; index++) {
-    if (height == res_values[index]) {
+    if (short_side == res_values[index]) {
       res_active = index;
     }
   }
@@ -336,7 +344,7 @@ void cinema_draw_right_panel(uiBlock *block,
 
   /* -------- Export -------- */
   const rctf export_rect = design_rect_right(
-      region, COLUMN_X, 754.0f, CINEMA_PANEL_W, CINEMA_EXPORT_H);
+      region, COLUMN_X, CINEMA_EXPORT_Y, CINEMA_PANEL_W, CINEMA_EXPORT_H);
   const float export_col[4] = CINEMA_COL_EXPORT;
   cinema_fill(export_rect, CINEMA_PANEL_RADIUS * u, export_col);
   const bool can_export = !state.beats.is_empty();

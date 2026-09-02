@@ -50,6 +50,8 @@ struct DirectorViewState;
 #define CINEMA_ROW_RADIUS 15.0f
 #define CINEMA_ROW_PITCH 79.0f  /* Labelled dropdown to the next one. */
 #define CINEMA_LIST_PITCH 34.0f /* Template / camera list rows. */
+/** Rows a list can show before it has to window around the live one. */
+#define CINEMA_LIST_MAX_ROWS 4
 
 /* Top strip. */
 #define CINEMA_CHIP_H 41.0f
@@ -65,6 +67,19 @@ struct DirectorViewState;
 #define CINEMA_SEGMENT_CHIP_H 37.0f
 #define CINEMA_EXPORT_H 59.0f
 #define CINEMA_PREVIEW_H 170.0f
+
+/* Lowest content in either column. The height gate is DERIVED from these, so
+ * moving a card down moves the gate with it instead of silently laying the
+ * Speed slider and the Export button out below the region. */
+#define CINEMA_SPEED_CARD_Y 732.0f
+#define CINEMA_SPEED_CARD_H 81.0f
+#define CINEMA_EXPORT_Y 754.0f
+
+/* Keyframe spacing bounds. These MIRROR MIN_BEAT_SECONDS / MAX_BEAT_SECONDS
+ * in `director/constants.py`, which are the `beat_seconds` RNA property's own
+ * limits and therefore the slider's travel; keep the two in step. */
+#define CINEMA_BEAT_SECONDS_MIN 0.1f
+#define CINEMA_BEAT_SECONDS_MAX 10.0f
 
 /* Type sizes. */
 #define CINEMA_FONT_LABEL 13.0f /* "Aspect Ratio", "My Cameras". */
@@ -111,6 +126,20 @@ float cinema_margin(const ARegion *region);
 
 /** Whether the region can host the designed surface at all. */
 bool cinema_surface_fits(const ARegion *region);
+
+/**
+ * Height of one list row, in design px.
+ *
+ * Clamped to #CINEMA_LIST_PITCH: rows advance by the pitch, and a taller row
+ * overlaps its neighbour. The overlapping button is created LAST and
+ * `ui_but_find_mouse_over_ex` walks a block backwards, so the bottom band of
+ * every row would activate the entry BELOW it — and #cinema_qa_record would
+ * publish that same wrong rect.
+ */
+float cinema_list_row_h();
+
+/** First row to draw so \a active stays visible in a #CINEMA_LIST_MAX_ROWS window. */
+int cinema_list_window_start(int count, int active);
 
 /**
  * Rect from the design's WINDOW coordinates, anchored to the region's top.
@@ -224,6 +253,16 @@ void cinema_draw_dock_controls(uiBlock *block,
                                const ARegion *region,
                                const DirectorViewState &state,
                                bool playing);
+
+/**
+ * Timeline dock, compact layout: transport plus the mode tools that have no
+ * other home. Drawn instead of #cinema_draw_dock_controls when the viewport
+ * is below the wide-surface gate, where the old rail owns the chrome.
+ */
+void cinema_draw_dock_compact(uiBlock *block,
+                              const ARegion *region,
+                              const DirectorViewState &state,
+                              bool playing);
 
 /** Height the dock's control row occupies, in region px. */
 float cinema_dock_control_height();

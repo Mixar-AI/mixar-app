@@ -24,6 +24,7 @@
  * order, so priority params land first.
  */
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -97,19 +98,27 @@ bool flow_place(Flow *f, const float w, rctf *r_rect)
     return false;
   }
   const float h = AGENT_CHIP_H * f->u;
-  if (f->x + w > f->x_max && f->x > f->x0) {
-    f->x = f->x0;
-    f->y_top -= PANE_ROW_PITCH * f->u;
+  /* Probe the wrap, then test the floor, and only THEN commit. Decrementing
+   * `y_top` before the test consumed the row that did not fit, so the strip
+   * bottom the caller reads back (`y_top - PANE_ROW_H`) sat a whole row BELOW
+   * the floor — the prompt box under it collapsed past PANE_BOX_MIN_H and its
+   * text field was never created, while Generate stayed armed. */
+  float x = f->x;
+  float y_top = f->y_top;
+  if (x + w > f->x_max && x > f->x0) {
+    x = f->x0;
+    y_top -= PANE_ROW_PITCH * f->u;
   }
-  if (f->y_top - h < f->y_floor) {
+  if (y_top - h < f->y_floor) {
     f->out_of_room = true;
     return false;
   }
-  r_rect->xmin = f->x;
-  r_rect->xmax = f->x + w;
-  r_rect->ymax = f->y_top;
-  r_rect->ymin = f->y_top - h;
-  f->x += w + PANE_CHIP_GAP * f->u;
+  r_rect->xmin = x;
+  r_rect->xmax = x + w;
+  r_rect->ymax = y_top;
+  r_rect->ymin = y_top - h;
+  f->x = x + w + PANE_CHIP_GAP * f->u;
+  f->y_top = y_top;
   return true;
 }
 
@@ -327,15 +336,27 @@ float agent_ui_tab3d_params_draw(const bContext *C,
   f.y_floor = y_floor;
   f.u = u;
 
+  /* Params ELIDE inside their own strip — they never grow it past the floor
+   * that reserves the prompt box. Whatever did not fit is counted and
+   * reported, so a schema is never silently half-shown. */
+  int elided = 0;
+
   RNA_STRUCT_BEGIN (group_ptr, prop) {
     const char *identifier = RNA_property_identifier(prop);
     if (!STRPREFIX(identifier, "p_")) {
       continue; /* rna_type / name — not schema params. */
     }
-    if (f.out_of_room) {
-      break;
+    const PropertyType prop_type = RNA_property_type(prop);
+    if (prop_type != PROP_ENUM && prop_type != PROP_BOOLEAN && prop_type != PROP_INT &&
+        prop_type != PROP_FLOAT)
+    {
+      continue; /* No chip vocabulary — see the default case below. */
     }
-    switch (RNA_property_type(prop)) {
+    if (f.out_of_room) {
+      elided++;
+      continue;
+    }
+    switch (prop_type) {
       case PROP_ENUM: {
         const EnumPropertyItem *items = nullptr;
         int totitem = 0;
@@ -367,10 +388,24 @@ float agent_ui_tab3d_params_draw(const bContext *C,
          * the moodboard N-panel remains the surface for those. */
         break;
     }
+    /* A widget whose own flow_place hit the floor drew nothing. */
+    if (f.out_of_room) {
+      elided++;
+    }
   }
   RNA_STRUCT_END;
 
-  /* Strip bottom: the lowest row this flow reached (the caller places the
-   * prompt box from here — the kit's prompt-visibility contract). */
-  return f.y_top - PANE_ROW_H * u;
+  if (elided > 0) {
+    const float dim[4] = AGENT_COL_TEXT_DIM;
+    char more[32];
+    SNPRINTF(more, "+%d more", elided);
+    const float w = pane_text_width(more, PANE_FONT_SUB * u);
+    const float x = std::min(f.x, x_max - w);
+    pane_label_left(more, x, f.y_top - AGENT_CHIP_H * u * 0.5f, PANE_FONT_SUB * u, dim);
+  }
+
+  /* Strip bottom: the lowest row this flow reached, never below the floor the
+   * caller reserved for the prompt box (the kit's prompt-visibility
+   * contract) — see pane_params_floor. */
+  return std::max(f.y_top - PANE_ROW_H * u, y_floor);
 }

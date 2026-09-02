@@ -97,7 +97,17 @@ void pane_fit_text(char *text, const float max_w, const float size)
   if (pane_text_width(text, size) <= max_w) {
     return;
   }
-  size_t len = strlen(text);
+  /* A bare chop reads as a DIFFERENT string, not a shortened one — a mesh
+   * named "ReproCone" rendered as "ReproCon" and looked like the wrong
+   * result. Fit the head to `max_w` minus the ellipsis, then append it; a
+   * budget at or below zero cannot hold even the ellipsis, so fit to max_w. */
+  static const char ELLIPSIS[] = "\xE2\x80\xA6"; /* U+2026 */
+  const size_t ellipsis_len = sizeof(ELLIPSIS) - 1;
+  const size_t orig_len = strlen(text);
+  const float budget = max_w - pane_text_width(ELLIPSIS, size);
+  const float target = (budget > 0.0f) ? budget : max_w;
+
+  size_t len = orig_len;
   while (len > 1) {
     len--;
     /* Never split a UTF-8 sequence: back up over continuation bytes. */
@@ -105,9 +115,15 @@ void pane_fit_text(char *text, const float max_w, const float size)
       len--;
     }
     text[len] = '\0';
-    if (pane_text_width(text, size) <= max_w) {
+    if (pane_text_width(text, size) <= target) {
       break;
     }
+  }
+  /* Callers pass fixed `char[]` buffers and this function only ever SHRINKS
+   * them, so the ellipsis is written only where it fits inside what came in. */
+  if (budget > 0.0f && len + ellipsis_len <= orig_len) {
+    memcpy(text + len, ELLIPSIS, ellipsis_len);
+    text[len + ellipsis_len] = '\0';
   }
 }
 
@@ -148,6 +164,19 @@ rctf pane_prompt_box_rect(const rctf &panel, const float strip_bottom_y, const f
   return box;
 }
 
+float pane_params_floor(const rctf &panel, const float u)
+{
+  /* Mirrors pane_prompt_box_rect's own bottom clamp, or the floor promises a
+   * box the box rect cannot deliver. */
+  const float box_bottom = std::max(panel.ymin + PANE_BOX_INSET * u, 2.0f);
+  return box_bottom + (PANE_BOX_MIN_H + PANE_BOX_GAP) * u;
+}
+
+bool pane_prompt_fits(const rctf &box, const float u)
+{
+  return BLI_rctf_size_y(&box) >= PANE_BOX_MIN_H * u;
+}
+
 rctf pane_prompt_field_rect(const rctf &box, const float u)
 {
   /* The field IS the whole box — the design's prompt area. Blender's
@@ -169,7 +198,13 @@ void pane_prompt_box_paint(const rctf &box, const float u)
 
 float pane_bottom_row_ymin(const rctf &box, const float u)
 {
-  return box.ymin + PANE_BOTTOM_UP * u;
+  const float y = box.ymin + PANE_BOTTOM_UP * u;
+  /* Clamp INSIDE the box: unclamped, a short box pushed the PANE_ROW_H row up
+   * through its top, so Upload and Generate floated over the params strip —
+   * and because the OPS block wins overlapping clicks, the params beneath
+   * them became unreachable. */
+  const float y_top_limit = box.ymax - PANE_ROW_H * u;
+  return std::max(box.ymin, std::min(y, y_top_limit));
 }
 
 rctf pane_generate_rect(const rctf &box, const float u)
@@ -178,7 +213,8 @@ rctf pane_generate_rect(const rctf &box, const float u)
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
   rect.xmin = rect.xmax - PANE_GENERATE_W * u;
   rect.ymin = pane_bottom_row_ymin(box, u);
-  rect.ymax = rect.ymin + PANE_ROW_H * u;
+  /* A box shorter than one row still cannot spill over its own top edge. */
+  rect.ymax = std::min(rect.ymin + PANE_ROW_H * u, box.ymax);
   return rect;
 }
 
@@ -341,137 +377,6 @@ void pane_onoff_chip_paint(const rctf &rect, const char *label, const bool on, c
 }
 
 /** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Reference thumbnails
- * \{ */
-
-int pane_board_selected_images(const bContext *C, Image **r_images, const int max_images)
-{
-  Scene *scene = CTX_data_scene(C);
-  if (!scene || max_images <= 0) {
-    return 0;
-  }
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *items = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
-  if (!items || RNA_property_type(items) != PROP_COLLECTION) {
-    return 0;
-  }
-  int count = 0;
-  CollectionPropertyIterator iter;
-  RNA_property_collection_begin(&scene_ptr, items, &iter);
-  for (; iter.valid && count < max_images; RNA_property_collection_next(&iter)) {
-    PointerRNA item = iter.ptr;
-    PropertyRNA *sel = RNA_struct_find_property(&item, "selected");
-    if (!sel || !RNA_property_boolean_get(&item, sel)) {
-      continue;
-    }
-    PropertyRNA *img_prop = RNA_struct_find_property(&item, "image");
-    if (!img_prop || RNA_property_type(img_prop) != PROP_POINTER) {
-      continue;
-    }
-    PointerRNA img_ptr = RNA_property_pointer_get(&item, img_prop);
-    if (img_ptr.data) {
-      r_images[count++] = static_cast<Image *>(img_ptr.data);
-    }
-  }
-  RNA_property_collection_end(&iter);
-  return count;
-}
-
-void pane_image_thumb_draw(Image *image, const rctf &box)
-{
-  if (image == nullptr) {
-    return;
-  }
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
-    /* Release even on the failure path — acquire always pairs with release. */
-    BKE_image_release_ibuf(image, ibuf, lock);
-    return;
-  }
-  const float size_x = BLI_rctf_size_x(&box);
-  const float size_y = BLI_rctf_size_y(&box);
-  const float aspect = float(ibuf->x) / float(ibuf->y);
-  float draw_w, draw_h;
-  if (aspect > size_x / size_y) {
-    draw_w = size_x;
-    draw_h = size_x / aspect;
-  }
-  else {
-    draw_h = size_y;
-    draw_w = size_y * aspect;
-  }
-  const float draw_x = box.xmin + (size_x - draw_w) * 0.5f;
-  const float draw_y = box.ymin + (size_y - draw_h) * 0.5f;
-
-  IMMDrawPixelsTexState tex_state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
-  GPU_blend(GPU_BLEND_ALPHA_PREMULT);
-  if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
-                                   blender::gpu::TextureFormat::SFLOAT_16_16_16_16, true,
-                                   ibuf->float_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
-  }
-  else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
-                                   blender::gpu::TextureFormat::UNORM_8_8_8_8, false,
-                                   ibuf->byte_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
-  }
-  GPU_blend(GPU_BLEND_ALPHA);
-  BKE_image_release_ibuf(image, ibuf, lock);
-}
-
-float pane_ref_thumbs_paint(Image *const *images,
-                            const int count,
-                            const float x,
-                            const float row_ymin,
-                            const float row_h,
-                            const float max_x,
-                            const float u)
-{
-  if (images == nullptr || count <= 0) {
-    return x;
-  }
-  const float back[4] = PANE_COL_CHIP;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  const float gap = PANE_REF_THUMB_GAP * u;
-
-  float tx = x;
-  int shown = 0;
-  for (int i = 0; i < count && shown < PANE_REF_THUMB_MAX; i++) {
-    if (images[i] == nullptr) {
-      continue;
-    }
-    /* Stop before the run would reach whatever sits to its right (Generate),
-     * and let the "+N" below account for the rest. */
-    if (tx + row_h > max_x) {
-      break;
-    }
-    rctf t;
-    t.xmin = tx;
-    t.xmax = tx + row_h;
-    t.ymin = row_ymin;
-    t.ymax = row_ymin + row_h;
-    pane_fill_round(&t, PANE_REF_THUMB_RADIUS * u, back);
-    pane_image_thumb_draw(images[i], t);
-    tx = t.xmax + gap;
-    shown++;
-  }
-
-  if (shown < count) {
-    char more[24];
-    SNPRINTF(more, "+%d", count - shown);
-    pane_label_left(more, tx + 2.0f * u, row_ymin + row_h * 0.5f, PANE_FONT_SUB * u, dim);
-    tx += pane_text_width(more, PANE_FONT_SUB * u) + gap;
-  }
-  return tx;
-}
-
-/** \} */
-
 /* -------------------------------------------------------------------- */
 /** \name Owned tooltips
  * \{ */

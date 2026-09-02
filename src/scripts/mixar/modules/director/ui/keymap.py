@@ -13,6 +13,7 @@ _OPERATOR_NAMES = (
     "director_capture_beat",
     "director_block_input",
     "director_nudge_camera",
+    "director_navigate",
 )
 
 # Object-editing shortcuts absorbed while directing, each registered in the
@@ -71,6 +72,23 @@ _NUDGE_KEYS = (
     ('Q', "DOWN"),
 )
 
+# The other key the Cinema Mode top strip advertises. Blender's default
+# keymap gives O to proportional editing in "Object Mode" (and to the
+# per-mode equivalents), so the binding has to sit in that keymap to be
+# reached at all; "3D View" covers the modes that do not bind it.
+#
+# Deliberately NOT registered in the global "User Interface" keymap the
+# nudges need: `MIXAR_OT_director_navigate.poll` checks only that a shot is
+# being directed and is editable — it has no area/region test — so a global
+# binding would claim O app-wide for the whole session. Both keymaps here are
+# dispatched only inside a 3D viewport's WINDOW region, which is the scoping
+# the poll does not do itself. Outside Cinema Mode the poll fails and O falls
+# through to its native meaning untouched.
+_NAVIGATE_KEYMAPS = (
+    ("Object Mode", ('EMPTY', 'WINDOW')),
+    ("3D View", ('VIEW_3D', 'WINDOW')),
+)
+
 _NUDGE_KEYMAPS = (
     # "User Interface" FIRST and it is the one that matters: Blender
     # dispatches it ahead of every mode keymap, which is the only place that
@@ -126,6 +144,20 @@ def _register_keymap():
             )
             item.properties.direction = direction
             addon_keymaps.append((keymap, item))
+
+    for keymap_name, (space_type, region_type) in _NAVIGATE_KEYMAPS:
+        keymap = keyconfig.keymaps.new(
+            name=keymap_name,
+            space_type=space_type,
+            region_type=region_type,
+        )
+        item = keymap.keymap_items.new(
+            "mixar.director_navigate",
+            type='O',
+            value='PRESS',
+            head=True,
+        )
+        addon_keymaps.append((keymap, item))
 
     keymap = keyconfig.keymaps.new(
         name="3D View",

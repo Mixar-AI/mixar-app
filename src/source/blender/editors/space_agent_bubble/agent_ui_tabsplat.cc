@@ -162,8 +162,20 @@ bool splat_state_resolve(const bContext *C, SplatTabState *r_state)
   {
     BLI_strncpy(r_state->mode_ident, mode_ident, sizeof(r_state->mode_ident));
   }
-  /* The drawer upper-cases before comparing; mirror that tolerance. */
-  r_state->image_mode = (r_state->mode_ident[0] == 'i' || r_state->mode_ident[0] == 'I');
+  /* Compare the WHOLE identifier, case-insensitively, exactly as the drawer
+   * does (`str(...).upper()` against {IMAGE, TEXT}). A first-character test
+   * made any future catalog mode beginning with "i" grow the image
+   * reference UI, and the drawer fails closed on a mode it does not know —
+   * so this pane must too, or it offers a submit the N-panel refuses. */
+  if (BLI_strcasecmp(r_state->mode_ident, "IMAGE") == 0) {
+    r_state->image_mode = true;
+  }
+  else if (BLI_strcasecmp(r_state->mode_ident, "TEXT") == 0) {
+    r_state->image_mode = false;
+  }
+  else {
+    return false;
+  }
 
   r_state->use_selected = false;
   if (PropertyRNA *use_sel = RNA_struct_find_property(&r_state->tab, "use_selected_image")) {
@@ -254,7 +266,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
       C, &state.params, state.lod_prop, lod_items, SPLAT_ENUM_MAX);
 
   SplatPaneRects rects;
-  splat_pane_rects_build(panel, u, lod_items, lod_count, &rects);
+  splat_pane_rects_build(panel, u, mode_items, mode_count, lod_items, lod_count, &rects);
 
   splat_pane_paint(C, state, rects, mode_items, mode_count, lod_items, lod_count, u);
 
@@ -278,8 +290,8 @@ void agent_ui_tabsplat_draw(const bContext *C,
   /* Mode segments (Text / Image) + LOD segments — stock wm.context_set_enum
    * on the generation-params group's own enum attrs. */
   char data_path[256];
-  for (int i = 0; i < mode_count && i < 2; i++) {
-    rect_args(i == 0 ? rects.mode_text : rects.mode_image, &bx, &by, &bw, &bh);
+  for (int i = 0; i < mode_count && i < rects.mode_count; i++) {
+    rect_args(rects.mode_seg[i], &bx, &by, &bw, &bh);
     uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, nullptr);
@@ -324,44 +336,63 @@ void agent_ui_tabsplat_draw(const bContext *C,
     }
   }
 
+  /* Bottom-row buttons exist only where the row had space for them — an
+   * element dropped by splat_pane_rects_build has an empty rect, and wiring
+   * one anyway would put an invisible target over Generate. */
   if (state.image_mode) {
     /* Upload — the tab's own picker (writes tab.reference_image and flips
      * use_selected_image off, same as the N-panel). */
-    rect_args(rects.chip_upload, &bx, &by, &bw, &bh);
-    uiDefButO(block, ButType::But, "mixie.world_labs_pick_image",
-              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "Upload an input image for world generation");
+    if (splat_rect_is_live(rects.chip_upload)) {
+      rect_args(rects.chip_upload, &bx, &by, &bw, &bh);
+      uiDefButO(block, ButType::But, "mixie.world_labs_pick_image",
+                blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                "Upload an input image for world generation");
+    }
 
     /* Capture Viewport -> tab.reference_image (use_selected_image off). */
-    rect_args(rects.chip_capture, &bx, &by, &bw, &bh);
-    uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
-              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "Screenshot the 3D viewport as the input image");
+    if (splat_rect_is_live(rects.chip_capture)) {
+      rect_args(rects.chip_capture, &bx, &by, &bw, &bh);
+      uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
+                blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                "Screenshot the 3D viewport as the input image");
+    }
 
     /* Moodboard-selection switch. */
-    rect_args(rects.moodboard_switch, &bx, &by, &bw, &bh);
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh,
-                           "Use the image selected on the moodboard");
-    if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
-      RNA_string_set(op_ptr,
-                     "data_path",
-                     "scene.mixie_moodboard_sidebar.tab_world_labs.use_selected_image");
+    if (splat_rect_is_live(rects.moodboard_switch)) {
+      rect_args(rects.moodboard_switch, &bx, &by, &bw, &bh);
+      uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
+                             blender::wm::OpCallContext::InvokeDefault, "",
+                             bx, by, bw, bh,
+                             "Use the image selected on the moodboard");
+      if (but) {
+        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        RNA_string_set(op_ptr,
+                       "data_path",
+                       "scene.mixie_moodboard_sidebar.tab_world_labs.use_selected_image");
+      }
     }
   }
 
-  /* Generate — the moodboard tab's own operator, prop-less so it reads the
-   * sidebar tab exactly like the N-panel footer. */
-  rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
-  uiDefButO(block, ButType::But, "mixie.world_labs_generate",
-            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-            "Generate a 3D world from the prompt or input image");
+  /* Generate goes through the SAME dispatcher Enter does
+   * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
+   * on the tab PropertyGroup's own RNA identifier — the string
+   * interface_handlers.cc forwards. One path, so a click and a keypress can
+   * never resolve to different paid generations. Armed only where the prompt
+   * field was actually drawn. */
+  if (rects.prompt_ok) {
+    rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
+    uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+                           blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                           "Generate a 3D world from the prompt or input image");
+    if (but) {
+      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(state.tab.type));
+    }
+  }
 
   /* Prompt field — embossed (ui_do_but_TEX ignores plain clicks on an
    * unembossed text button), bound to the tab's own prompt. */
-  if (RNA_struct_find_property(&state.tab, "prompt")) {
+  if (rects.prompt_ok && RNA_struct_find_property(&state.tab, "prompt")) {
     rect_args(rects.prompt_field, &bx, &by, &bw, &bh);
     uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "", bx, by, bw, bh,
                                  &state.tab, "prompt", -1, 0.0f, 0.0f, nullptr);

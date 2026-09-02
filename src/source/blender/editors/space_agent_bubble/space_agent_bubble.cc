@@ -268,6 +268,11 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * compatible with SpaceMixieChat (see DNA_space_types.h). */
 void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
 
+/* Drops the cached per-message rects. The transcript rebuilds them on its
+ * next draw (an empty cache is itself a rebuild trigger), so this is only
+ * ever a cost, never a loss. */
+void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
+
 /* interface_mixar_drag_query.cc — uiBut is private to the interface module,
  * so the "is this press already owned by a button waiting to drag?" question
  * has to be asked over there. Declared here rather than included: the header
@@ -620,6 +625,25 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
 }
 
 /**
+ * Drop the chat's cached message rects for the bubble's space.
+ *
+ * The island's WINDOW region is shared between the transcript and the panes,
+ * and the chat's hit tests read a cache the pane never refreshes. Leaving it
+ * populated on a pane tab is what let a click land on the copy chip of a
+ * message that is no longer drawn.
+ */
+static void agent_bubble_clear_chat_layout_cache(const bContext *C)
+{
+  ScrArea *area = CTX_wm_area(C);
+  if (!area || area->spacetype != SPACE_AGENT_BUBBLE) {
+    return;
+  }
+  if (SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first)) {
+    mixie_chat_clear_layout_cache(smixie);
+  }
+}
+
+/**
  * Build the island against the whole window and translate the GPU matrix so
  * this region's slice lines up.
  *
@@ -772,6 +796,13 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     AgentIslandState tab_probe;
     agent_ui_state_gather(C, &tab_probe);
     if (tab_probe.active_tab != AGENT_TAB_AGENT) {
+      /* The transcript is not drawn below, so its per-message rects would
+       * otherwise stay live over the pane that replaced it — the chat's hit
+       * tests are a CACHE, not a re-derivation, and every one of them walks
+       * it. Dropping it here is what makes a stale copy chip unhittable even
+       * if some other path reaches the chat dispatch. Idempotent: the cache
+       * is empty from the second frame of a pane tab onward. */
+      agent_bubble_clear_chat_layout_cache(C);
       agent_bubble_fill_region_backdrop(region);
       AgentIslandState state;
       AgentIslandLayout layout;
@@ -2907,12 +2938,31 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
 #endif
 }
 
+/**
+ * Nothing to hover-test until the island has a window of its own.
+ *
+ * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
+ * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
+ * times a second for the whole session, bubble or no bubble. On a platform
+ * outside the `Mixar_Window*` allowlist (see agent_bubble/constants.py) the
+ * exec body below is a bare OPERATOR_CANCELLED, so the poll is simply false.
+ */
+static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  return g_bubble_ghostwin != nullptr || g_pill_ghostwin != nullptr;
+#else
+  return false;
+#endif
+}
+
 void MIXAR_OT_bubble_hover_tick(wmOperatorType *ot)
 {
   ot->name = "Hover Tick";
   ot->idname = "MIXAR_OT_bubble_hover_tick";
   ot->description = "Hover Tick";
   ot->exec = mixar_bubble_hover_tick_exec;
+  ot->poll = mixar_bubble_hover_tick_poll;
   ot->flag = OPTYPE_INTERNAL;
 }
 

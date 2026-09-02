@@ -95,7 +95,19 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   uiBlock *block = UI_block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
-  cinema_draw_dock_controls(block, C, region, state, playing);
+  /* The designed dock row is half of the wide surface, so it is gated on the
+   * SAME test the columns use — and that test reads the VIEWPORT region, not
+   * this dock (whose own height is one control row). Below the gate the old
+   * viewport rail draws instead, and the two together stacked duplicate
+   * controls on one screen. */
+  ScrArea *area = CTX_wm_area(C);
+  const ARegion *main_region = area ? BKE_area_find_region_type(area, RGN_TYPE_WINDOW) : nullptr;
+  if (main_region != nullptr && cinema_surface_fits(main_region)) {
+    cinema_draw_dock_controls(block, C, region, state, playing);
+  }
+  else {
+    cinema_draw_dock_compact(block, region, state, playing);
+  }
   DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
   const int content_top = region->winy - int(cinema_dock_control_height());
   view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);

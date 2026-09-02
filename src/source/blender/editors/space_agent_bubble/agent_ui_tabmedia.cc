@@ -44,9 +44,6 @@
 #include "agent_ui_tabmedia_intern.hh"
 #include "agent_ui_theme.hh"
 
-
-
-
 /* -------------------------------------------------------------------- */
 /** \name Draw
  * \{ */
@@ -187,21 +184,29 @@ void agent_ui_tabmedia_draw(const bContext *C,
     }
   }
 
-  /* Lay chips out, wrapping once. */
+  /* Lay chips out, wrapping once — but never past the floor that reserves
+   * the prompt box (kit contract): the box is claimed FIRST and the chips
+   * elide into "+N more" rather than pushing the prompt out of existence
+   * while Generate stays armed. */
   const float chip_h_px = PANE_ROW_H * u;
   float row_y = seg_top - PANE_ROW_PITCH * u;
+  /* Never lifted above the first chip row's own bottom — the box would climb
+   * over the chips it is supposed to sit under. */
+  const float params_floor = std::min(pane_params_floor(panel, u), row_y - chip_h_px);
   float x = left;
   int rows_used = 1;
   int shown = 0;
   for (int i = 0; i < chip_count; i++) {
     const float w = media_chip_width(chips[i], u, font, font_sub);
-    if (x + w > right && rows_used < 2) {
+    if (x + w > right && rows_used < 2 &&
+        row_y - PANE_ROW_PITCH * u - chip_h_px >= params_floor)
+    {
       rows_used++;
       row_y -= PANE_ROW_PITCH * u;
       x = left;
     }
     if (x + w > right) {
-      break; /* Second row full — remaining chips overflow. */
+      break; /* Row full and no room to wrap — remaining chips overflow. */
     }
     chips[i].rect.xmin = x;
     chips[i].rect.xmax = x + w;
@@ -275,9 +280,13 @@ void agent_ui_tabmedia_draw(const bContext *C,
   /* ---- Prompt box: strip bottom -> panel bottom (kit contract), bottom
    * row INSIDE the box foot like every other pane. ---- */
   UNUSED_VARS(rows_used);
-  const float strip_bottom = row_y - chip_h_px;
+  const float strip_bottom = std::max(row_y - chip_h_px, params_floor);
   rctf prompt_box = pane_prompt_box_rect(panel, strip_bottom, u);
-  const bool prompt_fits = BLI_rctf_size_y(&prompt_box) > PANE_BOX_MIN_H * u;
+  const bool prompt_fits = pane_prompt_fits(prompt_box, u);
+  /* Generate is a PAID action and must never submit a prompt the user cannot
+   * see or edit, so it is armed only where the field is actually drawn. */
+  const bool prompt_ok = prompt_fits && tab_ok &&
+                         RNA_struct_find_property(&tab_ptr, "prompt") != nullptr;
   pane_prompt_box_paint(prompt_box, u);
   const float bottom_h = PANE_ROW_H * u;
   const float bottom_y = pane_bottom_row_ymin(prompt_box, u);
@@ -310,7 +319,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
     busy = flag && RNA_property_type(flag) == PROP_BOOLEAN &&
            RNA_property_boolean_get(&scene_ptr, flag);
   }
-  const bool can_generate = tab_ok && !busy && !video_unavailable;
+  const bool can_generate = tab_ok && !busy && !video_unavailable && prompt_ok;
   generate = pane_generate_rect(prompt_box, u);
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
@@ -410,7 +419,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
   }
 
   /* Prompt field over the prompt box. */
-  if (prompt_fits && tab_ok && RNA_struct_find_property(&tab_ptr, "prompt")) {
+  if (prompt_ok) {
     /* The kit's top strip: ghost text top-left, caret at text height. */
     const rctf field = pane_prompt_field_rect(prompt_box, u);
     uiBut *input = uiDefButR(field_block, ButType::Text, 0, "",
@@ -504,14 +513,24 @@ void agent_ui_tabmedia_draw(const bContext *C,
             short(BLI_rctf_size_x(&capture)), short(BLI_rctf_size_y(&capture)),
             "Screenshot the 3D viewport as a reference image");
 
-  /* Generate — the same operators the moodboard footers dispatch. */
+  /* Generate goes through the SAME dispatcher Enter does
+   * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
+   * on the tab PropertyGroup's own RNA identifier — the string
+   * interface_handlers.cc forwards. Hardcoding `mixie.imagegen_generate` here
+   * made click and keypress submit DIFFERENT paid generations: the image
+   * half's `depth_to_image` mode, which this pane's own dropdown exposes,
+   * routes to `mixie.lookdev_generate`. */
   if (can_generate) {
-    uiDefButO(block, ButType::But,
-              video ? "mixie.video_gen_generate" : "mixie.imagegen_generate",
-              blender::wm::OpCallContext::InvokeDefault, "",
-              int(generate.xmin), int(generate.ymin),
-              short(BLI_rctf_size_x(&generate)), short(BLI_rctf_size_y(&generate)),
-              video ? "Generate a video" : "Generate images");
+    uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           int(generate.xmin), int(generate.ymin),
+                           short(BLI_rctf_size_x(&generate)),
+                           short(BLI_rctf_size_y(&generate)),
+                           video ? "Generate a video" : "Generate images");
+    if (but) {
+      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(tab_ptr.type));
+    }
   }
 
   UI_block_end(C, block);

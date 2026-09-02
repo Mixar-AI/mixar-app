@@ -271,25 +271,35 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.model",
                      "AI model", x, row_top, u);
 
-  /* Strip height first, box below it — the kit's prompt-visibility contract:
-   * a wrapping strip pushes the box down instead of overlapping it. */
-  float strip_bottom = row_top - PANE_ROW_H * u;
+  /* The prompt box is RESERVED FIRST (kit contract): the params get the room
+   * above `pane_params_floor` and elide inside it, so the box can never be
+   * squeezed below PANE_BOX_MIN_H and leave Generate armed over an
+   * uneditable prompt slab. */
+  const float first_row_bottom = row_top - PANE_ROW_H * u;
+  /* Never lifted above the first row's own bottom — the box would climb over
+   * the Mode/Model chips it is supposed to sit under. A panel too short even
+   * for that gets no field and no Generate (prompt_ok below). */
+  const float params_floor = std::min(pane_params_floor(panel, u), first_row_bottom);
+  float strip_bottom = first_row_bottom;
   if (st.group_ok) {
-    const float params_floor = panel.ymin + (PANE_BOX_MIN_H + PANE_BOX_GAP) * u;
     strip_bottom = std::min(strip_bottom,
                             agent_ui_tab3d_params_draw(C, &st.group_ptr, st.group_path,
                                                        block, field_block,
                                                        x, panel.xmin + PANE_INSET_X * u,
                                                        row_top, x_max, params_floor, u));
   }
+  strip_bottom = std::max(strip_bottom, params_floor);
 
   rctf box = pane_prompt_box_rect(panel, strip_bottom, u);
   pane_prompt_box_paint(box, u);
 
   /* --- Prompt field: the whole box (bottom chips draw over its foot). --- */
-  if (box.ymax > box.ymin + PANE_BOX_MIN_H * u) {
+  const bool prompt_fits = pane_prompt_fits(box, u);
+  bool prompt_ok = false;
+  if (prompt_fits) {
     PropertyRNA *prompt_prop = RNA_struct_find_property(&st.tab_ptr, "prompt");
     if (prompt_prop) {
+      prompt_ok = true;
       /* The kit's top strip: ghost text and caret at text scale, never a
        * box-height caret, never a collision with the bottom chips. */
       const rctf field = pane_prompt_field_rect(box, u);
@@ -352,20 +362,25 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   }
 
   {
-    /* Generate — the same footer routing as the moodboard tab: everything
-     * submits mixie.model_gen_generate except smart segmentation. Pinned to
-     * ui/model_gen_drawer.py's _MODEL_GEN_FOOTER; a new service there needs
-     * a row here only if it routes to a THIRD operator. */
-    const char *op = STREQ(st.mode_id, "tripo_smart_segment") ?
-                         "mixie.smart_segment_generate" :
-                         "mixie.model_gen_generate";
+    /* Generate goes through the SAME dispatcher Enter does
+     * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), so
+     * the click and the keypress cannot resolve to different PAID
+     * generations. The owner is the tab PropertyGroup's own RNA identifier —
+     * exactly what interface_handlers.cc forwards — so no per-mode operator
+     * table is duplicated here at all (smart segmentation included). */
     const rctf rect = pane_generate_rect(box, u);
-    pane_generate_paint(rect, st.generating ? "Working..." : "Generate", !st.generating, u);
-    if (!st.generating) {
-      uiDefButO(block, ButType::But, op, blender::wm::OpCallContext::InvokeDefault, "",
-                int(rect.xmin), int(rect.ymin),
-                short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
-                "Generate a 3D model with the selected mode and model");
+    const bool armed = !st.generating && prompt_ok;
+    pane_generate_paint(rect, st.generating ? "Working..." : "Generate", armed, u);
+    if (armed) {
+      uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+                             blender::wm::OpCallContext::InvokeDefault, "",
+                             int(rect.xmin), int(rect.ymin),
+                             short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
+                             "Generate a 3D model with the selected mode and model");
+      if (but) {
+        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(st.tab_ptr.type));
+      }
     }
   }
 

@@ -257,10 +257,14 @@ void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const b
   BLI_rctf_pad(&pill, -inset, -inset);
 
   const float rad = BLI_rctf_size_y(&pill) * 0.5f;
-  /* Payload first: the pill is an operator button, so Blender never sets
-   * UI_SELECT on it — the "am I the live state" answer only ever comes from
-   * the tag. (UI_SELECT is still honoured for the press flash.) */
-  const bool lit = but->hardmax >= 0.5f || is_active || (but->flag & UI_SELECT) != 0;
+  /* State comes from the payload ONLY. The pill is an operator button, so
+   * Blender never sets UI_SELECT on it as state — UI_SELECT there means "the
+   * mouse is held down", and folding that into `lit` filled the whole pill
+   * green on a mere press, indistinguishable from actually directing. The
+   * press affordance is a brightness shift on whichever fill state chose. */
+  const bool lit = but->hardmax >= 0.5f;
+  const bool pressed = is_active || (but->flag & UI_SELECT) != 0;
+  const float boost = pressed ? 1.22f : (is_hover ? 1.12f : 1.0f);
 
   GPU_blend(GPU_BLEND_ALPHA);
   if (lit) {
@@ -270,20 +274,27 @@ void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const b
     float b[4];
     mixar_card_to_float(PILL_FILL_ON_B, a);
     mixar_card_to_float(PILL_FILL_ON_A, b);
-    if (is_hover) {
-      for (int i = 0; i < 3; i++) {
-        a[i] = std::min(1.0f, a[i] * 1.12f);
-        b[i] = std::min(1.0f, b[i] * 1.12f);
-      }
+    for (int i = 0; i < 3; i++) {
+      a[i] = std::min(1.0f, a[i] * boost);
+      b[i] = std::min(1.0f, b[i] * boost);
     }
     UI_draw_roundbox_corner_set(UI_CNR_ALL);
     /* shade_dir 1.0 = vertical ramp (inner1 at the top). */
     UI_draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);
-    mixar_card_outline_round(&pill, rad, PILL_BORDER_ON, is_hover ? 1.0f : 0.9f);
+    mixar_card_outline_round(&pill, rad, PILL_BORDER_ON, (is_hover || pressed) ? 1.0f : 0.9f);
   }
   else {
-    mixar_card_fill_round(&pill, rad, PILL_FILL, is_hover ? 1.0f : 0.94f);
-    mixar_card_outline_round(&pill, rad, PILL_BORDER, is_hover ? 1.0f : 0.85f);
+    /* The resting fill is near-black, so the multiplicative boost would be
+     * invisible here; lift it by a fixed step instead. Still nowhere near the
+     * lit green — a press must never read as "Cinema Mode is on". */
+    uchar fill[4];
+    memcpy(fill, PILL_FILL, sizeof(fill));
+    const int lift = pressed ? 26 : (is_hover ? 10 : 0);
+    for (int i = 0; i < 3; i++) {
+      fill[i] = uchar(std::min(255, int(fill[i]) + lift));
+    }
+    mixar_card_fill_round(&pill, rad, fill, (is_hover || pressed) ? 1.0f : 0.94f);
+    mixar_card_outline_round(&pill, rad, PILL_BORDER, (is_hover || pressed) ? 1.0f : 0.85f);
   }
 
   /* Resting label carries the design's grey-to-white ramp; lit resolves it
@@ -298,8 +309,13 @@ void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const b
 /** Zen viewport shading pill: "Solid" / "Rendered". */
 void draw_viewport_pill(uiBut *but, const rcti *rect, const bool is_hover, const bool is_active)
 {
-  const bool lit = is_active || (but->flag & UI_SELECT) != 0 || but->hardmax >= 0.5f;
-  const float alpha = lit ? 1.0f : (is_hover ? 0.75f : VIEW_PILL_DIM);
+  /* Payload only — see draw_cinema_pill. UI_SELECT on an operator button is
+   * "held down", and reading it as state made an inactive shading pill jump
+   * to the lit one's opacity. Press sits BETWEEN dim and lit so it is still
+   * visible feedback without claiming the state. */
+  const bool lit = but->hardmax >= 0.5f;
+  const bool pressed = is_active || (but->flag & UI_SELECT) != 0;
+  const float alpha = lit ? 1.0f : (pressed ? 0.85f : (is_hover ? 0.75f : VIEW_PILL_DIM));
 
   rctf pill;
   mixar_card_rect_to_rctf(rect, &pill);

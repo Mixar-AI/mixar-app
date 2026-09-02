@@ -194,8 +194,10 @@ void template_row(uiBlock *block,
                   const bool enabled)
 {
   const float u = cinema_unit();
+  /* List rows advance by CINEMA_LIST_PITCH; a taller row overlaps the next
+   * one and the later-created button wins the shared band. */
   const rctf row = cinema_design_rect(
-      region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, CINEMA_ROW_H);
+      region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, cinema_list_row_h());
   if (active) {
     const float top[4] = CINEMA_COL_ROW_TOP;
     const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
@@ -328,7 +330,8 @@ void cinema_draw_left_panel(uiBlock *block,
   }
 
   /* Card 3 — speed (keyframe spacing). */
-  const rctf card3 = cinema_design_rect(region, cinema_margin(region), 732.0f, CINEMA_PANEL_W, 81.0f);
+  const rctf card3 = cinema_design_rect(
+      region, cinema_margin(region), CINEMA_SPEED_CARD_Y, CINEMA_PANEL_W, CINEMA_SPEED_CARD_H);
   cinema_panel(card3, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
   cinema_text_left("Speed",
                    card3.xmin + 13.0f * u,
@@ -338,8 +341,12 @@ void cinema_draw_left_panel(uiBlock *block,
 
   const rctf meter = cinema_design_rect(
       region, cinema_margin(region) + 16.0f, 775.0f, 213.0f, 19.0f);
-  /* Faster moves = less time between keyframes, so the meter fills as
-   * `beat_seconds` falls. Range mirrors MIN/MAX_BEAT_SECONDS. */
+  /* The meter IS the slider's painted track, so it has to fill over the
+   * property's OWN range (CINEMA_BEAT_SECONDS_MIN/MAX, mirroring
+   * MIN/MAX_BEAT_SECONDS in `director/constants.py`) and in the direction the
+   * slider travels — dragging right raises `beat_seconds` and fills the bar.
+   * A narrower range clamped the top of the travel to an empty meter, and
+   * filling the other way emptied the bar as the thumb moved right. */
   float beat_seconds = 1.0f;
   if (state_ptr.data != nullptr) {
     PropertyRNA *prop = RNA_struct_find_property(&state_ptr, "beat_seconds");
@@ -348,9 +355,9 @@ void cinema_draw_left_panel(uiBlock *block,
     }
   }
   constexpr int TICKS = 30;
-  const float span = std::max(0.001f, 4.0f - 0.1f);
-  const float speed = std::clamp((4.0f - beat_seconds) / span, 0.0f, 1.0f);
-  cinema_tick_meter(meter, TICKS, int(std::round(speed * float(TICKS))));
+  const float span = std::max(0.001f, CINEMA_BEAT_SECONDS_MAX - CINEMA_BEAT_SECONDS_MIN);
+  const float travel = std::clamp((beat_seconds - CINEMA_BEAT_SECONDS_MIN) / span, 0.0f, 1.0f);
+  cinema_tick_meter(meter, TICKS, int(std::round(travel * float(TICKS))));
 
   /* The real control rides on top of the painted meter so dragging behaves
    * exactly like any Blender slider.

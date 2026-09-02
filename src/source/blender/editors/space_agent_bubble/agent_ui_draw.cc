@@ -340,7 +340,12 @@ void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *sta
 
   fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
 
-  const float label_size = AGENT_DU(AGENT_TAB_FONT);
+  /* Text is sized in the ISLAND unit, not AGENT_DU(): the two agree only at
+   * the default window width, and the window widens freely (the bubble
+   * constrains its MINIMUM size only). Sizing glyphs off UI_SCALE_FAC while
+   * every rect grows with `u` left labels stranded at their original pixel
+   * size inside grown pills. */
+  const float label_size = AGENT_TAB_FONT * u;
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     const AgentTabLayout &tab = layout->tabs[i];
@@ -377,7 +382,7 @@ void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *sta
         label_centre(count,
                      BLI_rctf_cent_x(&layout->queue_count),
                      BLI_rctf_cent_y(&layout->queue_count),
-                     AGENT_DU(AGENT_NEW_BADGE_FONT),
+                     AGENT_NEW_BADGE_FONT * u,
                      text);
       }
     }
@@ -406,7 +411,7 @@ void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *sta
       label_centre("NEW",
                    BLI_rctf_cent_x(&layout->new_badge),
                    BLI_rctf_cent_y(&layout->new_badge),
-                   AGENT_DU(AGENT_NEW_BADGE_FONT),
+                   AGENT_NEW_BADGE_FONT * u,
                    strong);
     }
   }
@@ -425,11 +430,14 @@ void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *stat
   const float generate[4] = AGENT_COL_GENERATE;
   const float text[4] = AGENT_COL_TEXT;
 
-  const float size = AGENT_DU(AGENT_CHIP_FONT);
+  /* Every metric here is in the island unit. Mixing `* u` (radius) with
+   * AGENT_DU() (pad/gap/icon) drifted the icon off-centre and started the
+   * label at the wrong x as soon as the window left its default width. */
+  const float size = AGENT_CHIP_FONT * u;
   const float radius = AGENT_CHIP_RADIUS * u;
-  const float pad = AGENT_DU(AGENT_CHIP_PAD_X);
-  const float icon_gap = AGENT_DU(AGENT_CHIP_ICON_GAP);
-  const float icon_edge = AGENT_DU(AGENT_CHIP_ICON);
+  const float pad = AGENT_CHIP_PAD_X * u;
+  const float icon_gap = AGENT_CHIP_ICON_GAP * u;
+  const float icon_edge = AGENT_CHIP_ICON * u;
 
   /* Composer chips belong to the Agent tab; other tabs fill the card with
    * their own content (Queue rows, later panes). */
@@ -575,7 +583,10 @@ void agent_ui_draw_status_pill(const float width,
   pill.ymin = 0.0f;
   pill.ymax = h;
 
-  const float dot_r = h * (float(AGENT_PILL_DOT_R) / float(AGENT_PILL_H));
+  /* The pill's own unit — its window is force-sized independently of the
+   * island, so it carries neither `layout->scale` nor UI_SCALE_FAC's ratio. */
+  const float pill_u = h / float(AGENT_PILL_H);
+  const float dot_r = AGENT_PILL_DOT_R * pill_u;
   const float dot_cx = w * (float(AGENT_PILL_DOT_CX - AGENT_PILL_X) / float(AGENT_PILL_W));
   rctf dot;
   dot.xmin = dot_cx - dot_r;
@@ -599,7 +610,7 @@ void agent_ui_draw_status_pill(const float width,
   label_left(state->status_text,
              w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
              h * 0.5f,
-             AGENT_DU(AGENT_PILL_FONT),
+             AGENT_PILL_FONT * pill_u,
              text_dim);
   GPU_blend(GPU_BLEND_NONE);
 }
@@ -672,12 +683,12 @@ void agent_ui_draw_island(const ARegion * /*region*/,
     label_centre(state->title,
                  layout->hdr_title_cx,
                  layout->hdr_title_y,
-                 AGENT_DU(AGENT_HDR_TITLE_FONT),
+                 AGENT_HDR_TITLE_FONT * u,
                  strong);
     label_right("FAQs",
                 layout->hdr_faq.xmax,
                 BLI_rctf_cent_y(&layout->hdr_faq),
-                AGENT_DU(AGENT_HDR_FAQ_FONT),
+                AGENT_HDR_FAQ_FONT * u,
                 strong);
   }
   else {
@@ -700,7 +711,7 @@ void agent_ui_draw_island(const ARegion * /*region*/,
     label_centre(tab_title,
                  layout->hdr_title_cx,
                  layout->hdr_title_y,
-                 AGENT_DU(AGENT_HDR_TITLE_FONT),
+                 AGENT_HDR_TITLE_FONT * u,
                  strong);
   }
 
