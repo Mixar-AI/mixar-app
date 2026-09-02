@@ -365,8 +365,9 @@ void agent_ui_tabmedia_draw(const bContext *C,
       }
       uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
                              blender::wm::OpCallContext::InvokeDefault, "",
-                             cx, cy, cw, ch, chip.label);
+                             cx, cy, cw, ch, nullptr);
       if (but) {
+        pane_but_tooltip_owned(but, chip.label);
         PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", data_path);
       }
@@ -379,8 +380,9 @@ void agent_ui_tabmedia_draw(const bContext *C,
       SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
       uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
                              blender::wm::OpCallContext::InvokeDefault, "",
-                             cx, cy, cw, ch, chip.label);
+                             cx, cy, cw, ch, nullptr);
       if (but) {
+        pane_but_tooltip_owned(but, chip.label);
         PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", data_path);
       }

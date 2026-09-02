@@ -274,6 +274,12 @@ void qa_dump_region(std::string &out,
   }
 
   LISTBASE_FOREACH (const uiBlock *, block, &region->runtime->uiblocks) {
+    /* NOTE: deliberately NOT filtered on `block->active`. That flag means
+     * "rebuilt during the current free-inactive pass", not "on screen": every
+     * region that is not mid-redraw carries live blocks with it clear, and
+     * filtering on it dropped ~95% of the UI (measured: 11 widgets instead of
+     * several hundred, the whole topbar and island missing). The stale-block
+     * problem it was meant to solve needs a real liveness stamp instead. */
     for (const std::unique_ptr<uiBut> &but_ptr : block->buttons) {
       const uiBut *but = but_ptr.get();
       if (but->flag & UI_HIDDEN) {

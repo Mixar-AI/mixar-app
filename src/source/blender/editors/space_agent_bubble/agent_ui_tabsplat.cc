@@ -282,8 +282,9 @@ void agent_ui_tabsplat_draw(const bContext *C,
     rect_args(i == 0 ? rects.mode_text : rects.mode_image, &bx, &by, &bw, &bh);
     uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, mode_items[i].label);
+                           bx, by, bw, bh, nullptr);
     if (but) {
+      pane_but_tooltip_owned(but, mode_items[i].label);
       PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_mode", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);
@@ -294,8 +295,9 @@ void agent_ui_tabsplat_draw(const bContext *C,
     rect_args(rects.lod_seg[i], &bx, &by, &bw, &bh);
     uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, lod_items[i].label);
+                           bx, by, bw, bh, nullptr);
     if (but) {
+      pane_but_tooltip_owned(but, lod_items[i].label);
       PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_lod", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);

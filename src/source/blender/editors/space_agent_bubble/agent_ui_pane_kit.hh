@@ -42,6 +42,7 @@
 
 struct Image;
 struct bContext;
+struct uiBut;
 
 /* -------------------------------------------------------------------- */
 /** \name Tokens (island units unless noted; colours state alpha ALWAYS)
@@ -186,5 +187,18 @@ float pane_ref_thumbs_paint(Image *const *images,
                             float row_h,
                             float max_x,
                             float u);
+
+/**
+ * Give \a but a tooltip it OWNS.
+ *
+ * `uiBut::tip` is a non-owning `StringRef` and `ui_def_but` stores it by
+ * reference, so passing a catalog label, a local buffer, or an entry of an
+ * `EnumPropertyItem` array the caller is about to `MEM_freeN` leaves the
+ * button pointing at dead memory — an undefined tooltip on hover, and freed
+ * bytes in the QA introspection dump (which broke the harness outright).
+ * A string LITERAL is fine and needs no help; anything computed goes through
+ * here, which copies it and hands ownership to the button.
+ */
+void pane_but_tooltip_owned(uiBut *but, const char *text);
 
 /** \} */

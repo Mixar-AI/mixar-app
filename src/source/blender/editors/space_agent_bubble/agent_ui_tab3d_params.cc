@@ -158,8 +158,9 @@ void draw_enum_segmented(uiBlock *block,
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(seg.xmin), int(seg.ymin),
                            short(seg_w[i]), short(BLI_rctf_size_y(&seg)),
-                           items[i].name);
+                           nullptr);
     if (but) {
+      pane_but_tooltip_owned(but, items[i].name);
       char path[256];
       SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
       PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
@@ -202,8 +203,9 @@ void draw_enum_dropdown(uiBlock *block,
   uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
                          blender::wm::OpCallContext::InvokeDefault, "",
                          int(rect.xmin), int(rect.ymin),
-                         short(w), short(BLI_rctf_size_y(&rect)), name);
+                         short(w), short(BLI_rctf_size_y(&rect)), nullptr);
   if (but) {
+    pane_but_tooltip_owned(but, name);
     char path[256];
     SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
     PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
@@ -257,8 +259,9 @@ void draw_boolean_chip(uiBlock *block,
   uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
                          blender::wm::OpCallContext::InvokeDefault, "",
                          int(rect.xmin), int(rect.ymin),
-                         short(w), short(BLI_rctf_size_y(&rect)), name);
+                         short(w), short(BLI_rctf_size_y(&rect)), nullptr);
   if (but) {
+    pane_but_tooltip_owned(but, name);
     char path[256];
     SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
     PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);

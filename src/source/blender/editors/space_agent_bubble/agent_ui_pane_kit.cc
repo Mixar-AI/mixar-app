@@ -12,6 +12,9 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
+
+#include "MEM_guardedalloc.h"
 
 #include "BLF_api.hh"
 
@@ -468,3 +471,32 @@ float pane_ref_thumbs_paint(Image *const *images,
 }
 
 /** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Owned tooltips
+ * \{ */
+
+namespace {
+
+std::string pane_tooltip_owned_fn(bContext * /*C*/, void *argN, blender::StringRef /*tip*/)
+{
+  return std::string(static_cast<const char *>(argN));
+}
+
+}  // namespace
+
+void pane_but_tooltip_owned(uiBut *but, const char *text)
+{
+  if (but == nullptr || text == nullptr || text[0] == '\0') {
+    return;
+  }
+  const size_t size = strlen(text) + 1;
+  char *owned = static_cast<char *>(MEM_mallocN(size, __func__));
+  memcpy(owned, text, size);
+  /* The callback form is the only one that owns its argument; `but->tip` is a
+   * bare StringRef and would dangle. `MEM_freeN` is the matching free func. */
+  UI_but_func_tooltip_set(but, pane_tooltip_owned_fn, owned, MEM_freeN);
+}
+
+/** \} */
+
