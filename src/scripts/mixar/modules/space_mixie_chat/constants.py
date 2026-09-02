@@ -367,6 +367,38 @@ TIMER_THROTTLE_CONTENT_THRESHOLD = 2000
 # Timeout threshold for script execution warnings (seconds)
 SCRIPT_TIMEOUT_THRESHOLD = 30.0
 
+# Undo checkpoints for agent-executed scripts.
+#
+# Agent scripts run from a bpy.app.timers tick, whose context carries no
+# window, and ed.undo_push polls ED_operator_screenactive (window + screen).
+# The bare push therefore failed and was silently swallowed: an agent turn
+# used to get NO undo checkpoint at all ("undo the texturing and revert to
+# the default model" was unservable). The executor now retries the push
+# inside a borrowed window, so checkpoints actually exist — and their
+# granularity/cost is governed here.
+#
+# AGENT_UNDO_GROUP_PER_TURN
+#   False (default): every script gets its own checkpoint (bounded by the cap
+#   below), so Ctrl-Z steps back through a turn one tool at a time — e.g.
+#   revert just the applied texturing and keep the build.
+#   True: one shared checkpoint per agent turn — the pre-turn state is one
+#   Ctrl-Z away and undo memory stays flat in very heavy scenes, at the price
+#   of all-or-nothing undo.
+# Turn boundaries come from queue_processor: begin_agent_turn on the first
+# streamed event, end_agent_turn on stream complete/error (and on abort /
+# file load), so a checkpoint-less turn cannot leak into the next one.
+AGENT_UNDO_GROUP_PER_TURN = False
+
+# Per-script checkpoints are capped per turn. Blender keeps U.undosteps
+# (32 by default) memfile steps, so an uncapped long turn would evict the
+# pre-turn checkpoint — the one that must survive so Ctrl-Z can return to the
+# scene as it was before the agent touched it. The first push of a turn is
+# always that pre-turn state (execute() pushes BEFORE running the script);
+# once the cap is reached later scripts stop pushing and share the last
+# checkpoint. Only successful pushes count, so a failed push is retried by
+# the next script.
+AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN = 8
+
 # ============================================================================
 # SLOT EVENT PROCESSING
 # ============================================================================
