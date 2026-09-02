@@ -70,9 +70,11 @@ def _on_load_pre(*_args) -> None:
     """
     import bpy
     from .export_destination import clear_all_destinations
+    from .import_source import clear_all_sources
     from .session import get_session_manager
 
     clear_all_destinations()
+    clear_all_sources()
 
     session = get_session_manager()
 
@@ -186,8 +188,10 @@ def register():
 def unregister():
     """Remove load handlers."""
     from .export_destination import clear_all_destinations
+    from .import_source import clear_all_sources
 
     clear_all_destinations()
+    clear_all_sources()
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
     if _on_load_post in bpy.app.handlers.load_post:

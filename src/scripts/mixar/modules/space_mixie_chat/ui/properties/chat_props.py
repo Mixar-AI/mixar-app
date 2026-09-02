@@ -254,6 +254,9 @@ class MixieChatMessage(PropertyGroup):
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
+    # #1251 import picker: comma-separated extensions offered by the native
+    # open dialog. Picker configuration only — never a path.
+    import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
