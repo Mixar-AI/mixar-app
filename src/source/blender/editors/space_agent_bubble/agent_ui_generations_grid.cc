@@ -144,13 +144,13 @@ void agent_ui_generations_thumb(const GenItem &item, const rctf &box, const floa
                              int(size));
         break;
       }
-      /* No pixels — and there may never be any. An asset library written by
-       * `bpy.data.libraries.write` (which is how Mixar archives a generation)
-       * carries the preview on the DATABLOCK but no file thumbnail, and the
-       * external-asset preview path reads the thumbnail cache. Blender's own
-       * Asset Browser has a second, filelist-based reader for exactly this;
-       * a custom region does not. So the tile says "3D asset" honestly
-       * instead of drawing an empty plate. */
+      /* No pixels YET — the deferred read is asynchronous, and a .blend with
+       * no embedded preview at all never gets any. Either way the tile says
+       * "3D asset" rather than drawing an empty plate. (The read itself does
+       * reach a datablock preview inside the .blend: `full_path()` is the
+       * exploded `<blend>/Object/<name>` form, which `IMB_thumb_manage`
+       * splits and hands to `IMB_thumb_load_blend` — no file thumbnail on
+       * disk is required.) */
       draw_placeholder(box, AGENT_ICON_MESH);
       break;
     }
@@ -283,12 +283,23 @@ void agent_ui_generations_grid(const bContext *C,
      * drag. The operator is attached afterwards, the way the asset shelf
      * does it, so a click still runs it.
      *
-     * The preview icon is passed only once the thumbnail has pixels: with
-     * ICON_NONE the tile paints nothing of its own and our placeholder shows
-     * through. */
-    const BIFIconID preview = agent_ui_generations_asset_has_preview(item) ?
-                                  blender::ed::asset::asset_preview_icon_id(*item.asset) :
-                                  BIFIconID(ICON_NONE);
+     * The preview icon id is passed UNCONDITIONALLY, not once the thumbnail
+     * has pixels. Attaching it to a button is what STARTS the deferred read
+     * (`ui_def_but_icon` -> `ui_icon_ensure_deferred`) — the asset shelf says
+     * so in as many words — so gating it on pixels was a deadlock: no icon,
+     * therefore no read, therefore no pixels, therefore no icon. Every
+     * archived generation drew the placeholder cube forever while Blender's
+     * own Asset Browser showed the same file's thumbnail fine.
+     *
+     * `ensure_previewable` only ALLOCATES the preview and attaches the load
+     * info; the id it mints is valid immediately and resolves to nothing
+     * until the read lands, so an unloaded tile still shows our placeholder
+     * through the button. */
+    BIFIconID preview = BIFIconID(ICON_NONE);
+    if (item.kind == GEN_ITEM_ASSET && item.asset) {
+      item.asset->ensure_previewable();
+      preview = blender::ed::asset::asset_preview_icon_id(*item.asset);
+    }
 
     uiBut *but;
     if (item.kind == GEN_ITEM_ASSET) {

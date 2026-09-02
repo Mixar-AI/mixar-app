@@ -332,14 +332,15 @@ void agent_ui_generations_detail(const bContext *C,
 /**
  * Does this asset have preview PIXELS right now?
  *
- * Requests the preview as a side effect (only for the tiles actually being
- * drawn), so it must be called from the paint pass before the buttons are
- * laid: the tile is a preview uiBut only when the answer is yes, because a
- * preview button whose image never arrives paints an empty tile over the
- * placeholder. An asset library written by `bpy.data.libraries.write` — which
- * is how Mixar archives a generation — carries its preview on the DATABLOCK
- * and has no file thumbnail, and the external-asset preview path reads the
- * thumbnail cache, so for those the answer stays no.
+ * Answers only "is it loaded" — it does NOT decide whether the tile gets a
+ * preview icon id. It used to, and that was a deadlock: attaching the id to
+ * the button is what starts the deferred read, so withholding it until the
+ * pixels arrived meant they never did. The id is now passed unconditionally
+ * (see `agent_ui_generations_grid`), and this is just the gate for painting
+ * our own placeholder underneath while the read is still in flight.
+ *
+ * Requests the preview as a side effect, so it must only be called for tiles
+ * actually being drawn.
  */
 bool agent_ui_generations_asset_has_preview(const GenItem &item);
 

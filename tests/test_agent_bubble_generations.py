@@ -527,13 +527,38 @@ def test_there_is_no_bottom_fade():
 
 
 def test_a_tile_is_never_blank():
-    """An asset library written by `bpy.data.libraries.write` carries its
-    preview on the datablock and has no file thumbnail, so the external-asset
-    preview path finds nothing — every archived generation drew an empty
-    plate."""
+    """A tile whose preview has not arrived (or never will) says what it is
+    rather than drawing an empty plate."""
     assert "agent_ui_generations_asset_has_preview" in GRID_CC
     assert "draw_placeholder(box, AGENT_ICON_MESH)" in GRID_CC
     assert "draw_placeholder(box, AGENT_ICON_SPLAT)" in GRID_CC
+
+
+def _tile_button_block() -> str:
+    """The second grid pass — the one that lays the buttons."""
+    start = GRID_CC.index("uiDefIconPreviewBut")
+    return GRID_CC[GRID_CC.rindex("BIFIconID preview", 0, start) : start]
+
+
+def test_the_preview_icon_id_is_never_gated_on_having_pixels():
+    """Attaching the icon id to a button is what STARTS the deferred read
+    (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), so withholding it until
+    the pixels arrived was a deadlock: no icon, no read, no pixels, no icon.
+    Every archived generation drew the placeholder cube forever while
+    Blender's own Asset Browser showed the same file's thumbnail fine.
+    """
+    block = _tile_button_block()
+    assert "ensure_previewable()" in block
+    assert "asset_preview_icon_id" in block
+    # The gate must not reappear on the path that decides the icon id.
+    assert "agent_ui_generations_asset_has_preview" not in block
+
+
+def test_the_preview_request_precedes_the_icon_read():
+    """`ensure_previewable` is what mints the icon id; reading it first
+    yields ICON_NONE and the tile never asks for its preview again."""
+    block = _tile_button_block()
+    assert block.index("ensure_previewable()") < block.index("asset_preview_icon_id")
 
 
 def test_no_debug_printing_survived():
