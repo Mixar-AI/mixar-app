@@ -177,6 +177,11 @@ bool splat_state_resolve(const bContext *C, SplatTabState *r_state)
     return false;
   }
 
+  /* Busy state from the unified queue — the pane's only honest source: World
+   * Labs enqueues pass no `scene_flag`, so no legacy `is_generating` property
+   * is ever written for this flow. */
+  r_state->active_jobs = pane_active_job_count(C, SPLAT_SERVICE_KEY);
+
   r_state->use_selected = false;
   if (PropertyRNA *use_sel = RNA_struct_find_property(&r_state->tab, "use_selected_image")) {
     r_state->use_selected = RNA_property_boolean_get(&r_state->tab, use_sel);
@@ -378,7 +383,14 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * on the tab PropertyGroup's own RNA identifier — the string
    * interface_handlers.cc forwards. One path, so a click and a keypress can
    * never resolve to different paid generations. Armed only where the prompt
-   * field was actually drawn. */
+   * field was actually drawn, and only while this pane has nothing live in the
+   * unified queue — the painter dims the button in exactly the same two cases
+   * (splat_pane_paint), and a button that paints disabled must not still be
+   * clickable. */
+  /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
+   * the point — so an active job is INFORMATION (the label carries the
+   * count), never a lock. Only a missing prompt field or an unusable
+   * catalog can disarm it. */
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
     uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",

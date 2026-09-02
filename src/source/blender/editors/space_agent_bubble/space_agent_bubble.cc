@@ -297,6 +297,17 @@ static void *g_pill_ghostwin = nullptr;
 static bool g_bubble_grown_for_chat = false;
 static bool g_bubble_minimised = false;
 static bool g_bubble_expanded = false;
+/* Set by every restore; cleared the first time the cursor is actually over
+ * the island. Until then the hover pump will NOT collapse.
+ *
+ * A restore can happen with the pointer nowhere near the island — the queue
+ * toast's "View Queue" opens it on the Queue tab while the cursor is still
+ * on the toast, halfway across the screen. The pump saw "outside" on its
+ * very next tick and shut it again instantly, so the button looked broken.
+ * Hover can only take the island away once hover has been offered it.
+ * Declared with the other window statics because the teardown paths clear
+ * it long before the hover section is reached. */
+static bool g_hover_await_enter = false;
 static bool g_bubble_had_pending_attachments = false;
 static int g_bubble_last_min_height = 0;
 
@@ -1625,6 +1636,7 @@ void ED_agent_bubble_windows_closed()
   g_pill_ghostwin = nullptr;
   g_bubble_minimised = false;
   g_bubble_expanded = false;
+  g_hover_await_enter = false;
 }
 
 void ED_agent_bubble_window_freed(const void *ghostwin)
@@ -1642,6 +1654,7 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
+    g_hover_await_enter = false;
   }
   if (ghostwin == g_pill_ghostwin) {
     g_pill_ghostwin = nullptr;
@@ -2837,6 +2850,7 @@ static void minimise_anim_finish(void * /*user_data*/)
 static int g_hover_outside_ticks = 0;
 static double g_hover_cooldown_until = 0.0;
 
+
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
@@ -2876,6 +2890,13 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
       (g_pill_ghostwin != nullptr &&
        Mixar_WindowContainsScreenCursor(g_pill_ghostwin, /*margin_pt=*/16));
   if (inside) {
+    /* Hover has now been offered the island, so it may take it away again. */
+    g_hover_await_enter = false;
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+  if (g_hover_await_enter) {
+    /* Opened programmatically and never visited — see the latch's note. */
     g_hover_outside_ticks = 0;
     return OPERATOR_FINISHED;
   }
@@ -3052,6 +3073,13 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   if (g_bubble_ghostwin == nullptr || !g_bubble_minimised) {
     return OPERATOR_FINISHED;
   }
+
+  /* Hold the island open until hover has actually been offered it — see
+   * `g_hover_await_enter`. Arming this for EVERY restore is deliberate: a
+   * hover-driven restore clears it on its very next tick (the cursor is over
+   * the pill, which counts as inside), so only the restores that happen away
+   * from the pointer are affected. */
+  g_hover_await_enter = true;
 
   /* Snap the bubble to the host's centre-bottom BEFORE bringing it
    * forward. orderFront alone restores the bubble at its old frame

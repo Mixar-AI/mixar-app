@@ -99,6 +99,14 @@ struct uiBut;
 #define PANE_COL_GENERATE {0.102f, 0.251f, 0.149f, 1.0f}    /* #1A4026 */
 #define PANE_COL_BOX {0.071f, 0.071f, 0.071f, 1.0f}         /* #121212 prompt box */
 
+/* Report line (see "Live feedback" below). The error tone follows the queue
+ * pane's muted red rather than a saturated one — this line sits inside a very
+ * dark panel and a pure red vibrates against it. */
+#define PANE_COL_MSG_ERROR {0.804f, 0.361f, 0.361f, 1.0f}
+#define PANE_COL_MSG_WARN {0.898f, 0.694f, 0.298f, 1.0f}
+#define PANE_MSG_FONT PANE_FONT_SUB
+#define PANE_MSG_TTL_S 5.0 /* Seconds a report stays on screen. */
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -188,6 +196,56 @@ void pane_onoff_chip_paint(const rctf &rect, const char *label, bool on, float u
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Live feedback (agent_ui_pane_kit_feedback.cc)
+ *
+ * The island is its own always-on-top window: it has no status bar and no
+ * Info editor, so neither a running job nor an operator's `self.report()`
+ * reaches the user by any route Blender provides. These two helpers are the
+ * ONE definition every pane uses for both — do not re-derive either.
+ * \{ */
+
+/**
+ * How many unified-queue jobs are currently active for \a service_key.
+ *
+ * Reads the `wm.mixie_queue` mirror the island's Queue tab already lists, and
+ * counts the NON-TERMINAL states (PENDING, PAUSED_AUTH, RUNNING_SUBMIT,
+ * RUNNING_POLL, RUNNING_DOWNLOAD — the vocabulary `agent_ui_queue.cc` owns).
+ * A row matches when \a service_key equals its `service`, `feature_key` or
+ * `origin_capability_key`; a null/empty key counts EVERY active job, which is
+ * what a pane that cannot yet identify its own service should pass.
+ *
+ * This replaces the legacy `scene.mixie_*_is_generating` flags as the panes'
+ * busy state: those are only written by enqueue paths that pass a
+ * `scene_flag`, which the Image Gen and World Labs flows do not, so the
+ * button never changed for a job that was in fact queued.
+ */
+int pane_active_job_count(const bContext *C, const char *service_key);
+
+/** The band the message line paints in: the PANE_BOX_GAP the kit already
+ * leaves above the prompt box, so no pane gives up layout for it. */
+rctf pane_report_line_rect(const rctf &box, float u);
+
+/**
+ * Paint the pane's newest message above \a box, coloured by severity, for
+ * #PANE_MSG_TTL_S seconds after it arrives. Returns true when it drew.
+ *
+ * The text comes from the DEDICATED `wm.mixar_pane_message*` channel, written
+ * only by the panes' own Generate dispatcher — never from Blender's global
+ * report list, which carries the whole app's activity (the agent's own
+ * sandboxed script execution included) and so painted unrelated output above
+ * the user's prompt.
+ *
+ * Freshness is tracked from `wm.mixar_pane_message_serial` increasing (bumped
+ * on every write, a repeat included), stamped with `BLI_time_now_seconds()`;
+ * the FIRST paint of a session records the serial and shows nothing, so an
+ * old message can never greet the user. Degrades to drawing nothing when the
+ * `mixar_pane_message*` properties are absent.
+ */
+bool pane_report_line_draw(const bContext *C, const rctf &box, float u);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Reference thumbnails
  *
  * Every pane previews the images it will actually SUBMIT, the way the Agent
@@ -228,5 +286,16 @@ float pane_ref_thumbs_paint(Image *const *images,
  * here, which copies it and hands ownership to the button.
  */
 void pane_but_tooltip_owned(uiBut *but, const char *text);
+
+/**
+ * The Generate button's label for \a active_jobs already in the queue.
+ *
+ * "Generate" when nothing is running, otherwise the count — the button stays
+ * ARMED either way. This is a queue: stacking jobs is the point, so an active
+ * job is information, not a lock. Before this the panes showed nothing at all
+ * on submit (their busy flag read a legacy scene property the queue path never
+ * sets), so a user pressed Generate, the job queued, and the UI said nothing.
+ */
+void pane_queue_label(char *out, int out_maxncpy, int active_jobs);
 
 /** \} */

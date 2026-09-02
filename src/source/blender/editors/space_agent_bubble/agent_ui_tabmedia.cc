@@ -67,11 +67,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
     return;
   }
 
-  const float col_param[4] = PANE_COL_CHIP;
-  const float col_value[4] = PANE_COL_PILL_DIM;
-  const float col_value_on[4] = PANE_COL_PILL;
-  const float col_text[4] = AGENT_COL_TEXT;
-  const float col_strong[4] = AGENT_COL_TEXT_STRONG;
+  /* Chip colours live with the chip painter (media_param_chips_paint); this
+   * file only needs the dim tone for its own overflow / unavailable copy. */
   const float col_dim[4] = AGENT_COL_TEXT_DIM;
 
   const float font = PANE_FONT * u;
@@ -216,51 +213,9 @@ void agent_ui_tabmedia_draw(const bContext *C,
     shown++;
   }
 
-  for (int i = 0; i < shown; i++) {
-    const MediaParamChip &chip = chips[i];
-    const float cy = BLI_rctf_cent_y(&chip.rect);
-    pane_fill_round(&chip.rect, PANE_RADIUS * u, col_param);
-    const float pad = PANE_CHIP_PAD_X * u;
-    float tx = chip.rect.xmin + pad;
-    pane_label_left(chip.label, tx, cy, font_sub, col_dim);
-    tx += pane_text_width(chip.label, font_sub) + 10.0f * u;
-
-    if (chip.kind == MediaChipKind::Enum) {
-      pane_label_left(chip.value, tx, cy, font, col_text);
-      /* Down chevron. */
-      pane_label_left("\xE2\x96\xBE", chip.rect.xmax - pad - 10.0f * u, cy, font_sub, col_text);
-    }
-    else if (chip.kind == MediaChipKind::Bool) {
-      rctf pill;
-      pill.xmin = tx;
-      pill.xmax = chip.rect.xmax - pad + 4.0f * u;
-      pill.ymin = cy - (PANE_PILL_H * 0.5f) * u;
-      pill.ymax = cy + (PANE_PILL_H * 0.5f) * u;
-      pane_fill_round(&pill, PANE_RADIUS * u, chip.bool_value ? col_value_on : col_value);
-      const float on_w = pane_text_width("ON", font_sub);
-      const float off_w = pane_text_width("OFF", font_sub);
-      const float span = BLI_rctf_size_x(&pill);
-      pane_label_left("ON",
-                   pill.xmin + span * 0.25f - on_w * 0.5f,
-                   cy,
-                   font_sub,
-                   chip.bool_value ? col_strong : col_dim);
-      pane_label_left("OFF",
-                   pill.xmin + span * 0.75f - off_w * 0.5f,
-                   cy,
-                   font_sub,
-                   chip.bool_value ? col_dim : col_strong);
-    }
-    else { /* Int */
-      pane_label_left("\xE2\x88\x92", tx + 4.0f * u, cy, font, col_dim);
-      pane_label_centre(chip.value,
-                     (tx + chip.rect.xmax - pad) * 0.5f,
-                     cy,
-                     font,
-                     col_text);
-      pane_label_left("+", chip.rect.xmax - pad - 8.0f * u, cy, font, col_dim);
-    }
-  }
+  /* Chip art lives in the util TU (500-line rule) — this file lays out and
+   * wires; that one paints. */
+  media_param_chips_paint(chips, shown, u, font, font_sub);
   if (shown < chip_count) {
     char more[32];
     SNPRINTF(more, "+%d more", chip_count - shown);
@@ -310,16 +265,21 @@ void agent_ui_tabmedia_draw(const bContext *C,
   bx = capture.xmax + PANE_CHIP_GAP * u;
 
 
-  /* Generate — dim while that tab's flag says a submit is in flight. */
-  bool busy = false;
-  {
-    PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-    PropertyRNA *flag = RNA_struct_find_property(
-        &scene_ptr, video ? "mixie_video_gen_is_generating" : "mixie_imagegen_is_generating");
-    busy = flag && RNA_property_type(flag) == PROP_BOOLEAN &&
-           RNA_property_boolean_get(&scene_ptr, flag);
-  }
-  const bool can_generate = tab_ok && !busy && !video_unavailable && prompt_ok;
+  /* Generate — "Queued..." while this half has work in the unified queue.
+   *
+   * NOT the legacy `scene.mixie_{imagegen,video_gen}_is_generating` flags: the
+   * Image Gen tab's own operator passes no `scene_flag` to
+   * `enqueue_generation`, so nothing on this pane's path ever set them and the
+   * button never acknowledged a click. The queue mirror is where the job
+   * actually is. `service_key` is what this half submits (the mode's catalog
+   * service, or image_gen/video_gen). */
+  const int active_jobs = pane_active_job_count(C, service_key);
+  const bool busy = active_jobs > 0;
+  /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
+   * the point — so an active job is INFORMATION (the label carries the
+   * count), never a lock. Only a missing prompt field or an unusable
+   * catalog can disarm it. */
+  const bool can_generate = tab_ok && !video_unavailable && prompt_ok;
   generate = pane_generate_rect(prompt_box, u);
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
@@ -453,38 +413,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * references ARE the selected board media — so it always previews those. */
   {
     Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
-    int ref_count = 0;
-    bool from_board = true;
-    if (!video && tab_ok) {
-      PropertyRNA *use_board = RNA_struct_find_property(&tab_ptr, "use_reference_images");
-      if (use_board && RNA_property_type(use_board) == PROP_BOOLEAN) {
-        from_board = RNA_property_boolean_get(&tab_ptr, use_board);
-      }
-    }
-    if (from_board) {
-      ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
-    }
-    else {
-      PropertyRNA *refs = RNA_struct_find_property(&tab_ptr, "reference_images");
-      if (refs && RNA_property_type(refs) == PROP_COLLECTION) {
-        CollectionPropertyIterator iter;
-        RNA_property_collection_begin(&tab_ptr, refs, &iter);
-        for (; iter.valid && ref_count < PANE_REF_THUMB_MAX;
-             RNA_property_collection_next(&iter))
-        {
-          PointerRNA item = iter.ptr;
-          PropertyRNA *img_prop = RNA_struct_find_property(&item, "image");
-          if (!img_prop || RNA_property_type(img_prop) != PROP_POINTER) {
-            continue;
-          }
-          PointerRNA img = RNA_property_pointer_get(&item, img_prop);
-          if (img.data) {
-            ref_images[ref_count++] = static_cast<Image *>(img.data);
-          }
-        }
-        RNA_property_collection_end(&iter);
-      }
-    }
+    const int ref_count = media_collect_reference_images(
+        C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
     pane_ref_thumbs_paint(ref_images,
                           ref_count,
                           bx + PANE_REF_THUMB_GAP * u,
@@ -493,7 +423,13 @@ void agent_ui_tabmedia_draw(const bContext *C,
                           generate.xmin - PANE_CHIP_GAP * u,
                           u);
   }
-  pane_generate_paint(generate, busy ? "Queued..." : "Generate", can_generate, u);
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), active_jobs);
+  pane_generate_paint(generate, gen_label, can_generate, u);
+  /* Newest operator report, above the box — the island has no status bar, so
+   * without this a refusal ("No image selected in moodboard") is silent. Kit
+   * helper: one definition for all three panes. */
+  pane_report_line_draw(C, prompt_box, u);
   GPU_blend(GPU_BLEND_NONE);
 
   /* Upload — per half: the image tab's own reference-collection uploader,

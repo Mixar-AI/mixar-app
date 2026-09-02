@@ -188,6 +188,102 @@ float media_chip_width(const MediaParamChip &chip, const float u, const float fo
   return 0.0f;
 }
 
+void media_param_chips_paint(const MediaParamChip *chips,
+                             const int count,
+                             const float u,
+                             const float font,
+                             const float font_sub)
+{
+  const float col_param[4] = PANE_COL_CHIP;
+  const float col_value[4] = PANE_COL_PILL_DIM;
+  const float col_value_on[4] = PANE_COL_PILL;
+  const float col_text[4] = AGENT_COL_TEXT;
+  const float col_strong[4] = AGENT_COL_TEXT_STRONG;
+  const float col_dim[4] = AGENT_COL_TEXT_DIM;
+
+  for (int i = 0; i < count; i++) {
+    const MediaParamChip &chip = chips[i];
+    const float cy = BLI_rctf_cent_y(&chip.rect);
+    pane_fill_round(&chip.rect, PANE_RADIUS * u, col_param);
+    const float pad = PANE_CHIP_PAD_X * u;
+    float tx = chip.rect.xmin + pad;
+    pane_label_left(chip.label, tx, cy, font_sub, col_dim);
+    tx += pane_text_width(chip.label, font_sub) + 10.0f * u;
+
+    if (chip.kind == MediaChipKind::Enum) {
+      pane_label_left(chip.value, tx, cy, font, col_text);
+      /* Down chevron. */
+      pane_label_left("\xE2\x96\xBE", chip.rect.xmax - pad - 10.0f * u, cy, font_sub, col_text);
+    }
+    else if (chip.kind == MediaChipKind::Bool) {
+      rctf pill;
+      pill.xmin = tx;
+      pill.xmax = chip.rect.xmax - pad + 4.0f * u;
+      pill.ymin = cy - (PANE_PILL_H * 0.5f) * u;
+      pill.ymax = cy + (PANE_PILL_H * 0.5f) * u;
+      pane_fill_round(&pill, PANE_RADIUS * u, chip.bool_value ? col_value_on : col_value);
+      const float on_w = pane_text_width("ON", font_sub);
+      const float off_w = pane_text_width("OFF", font_sub);
+      const float span = BLI_rctf_size_x(&pill);
+      pane_label_left("ON",
+                      pill.xmin + span * 0.25f - on_w * 0.5f,
+                      cy,
+                      font_sub,
+                      chip.bool_value ? col_strong : col_dim);
+      pane_label_left("OFF",
+                      pill.xmin + span * 0.75f - off_w * 0.5f,
+                      cy,
+                      font_sub,
+                      chip.bool_value ? col_dim : col_strong);
+    }
+    else { /* Int */
+      pane_label_left("\xE2\x88\x92", tx + 4.0f * u, cy, font, col_dim);
+      pane_label_centre(
+          chip.value, (tx + chip.rect.xmax - pad) * 0.5f, cy, font, col_text);
+      pane_label_left("+", chip.rect.xmax - pad - 8.0f * u, cy, font, col_dim);
+    }
+  }
+}
+
+int media_collect_reference_images(const bContext *C,
+                                   PointerRNA *tab_ptr,
+                                   const bool video,
+                                   Image **r_images,
+                                   const int max_images)
+{
+  int count = 0;
+  bool from_board = true;
+  if (!video && tab_ptr != nullptr) {
+    PropertyRNA *use_board = RNA_struct_find_property(tab_ptr, "use_reference_images");
+    if (use_board && RNA_property_type(use_board) == PROP_BOOLEAN) {
+      from_board = RNA_property_boolean_get(tab_ptr, use_board);
+    }
+  }
+  if (from_board || tab_ptr == nullptr) {
+    return pane_board_selected_images(C, r_images, max_images);
+  }
+
+  PropertyRNA *refs = RNA_struct_find_property(tab_ptr, "reference_images");
+  if (!refs || RNA_property_type(refs) != PROP_COLLECTION) {
+    return 0;
+  }
+  CollectionPropertyIterator iter;
+  RNA_property_collection_begin(tab_ptr, refs, &iter);
+  for (; iter.valid && count < max_images; RNA_property_collection_next(&iter)) {
+    PointerRNA item = iter.ptr;
+    PropertyRNA *img_prop = RNA_struct_find_property(&item, "image");
+    if (!img_prop || RNA_property_type(img_prop) != PROP_POINTER) {
+      continue;
+    }
+    PointerRNA img = RNA_property_pointer_get(&item, img_prop);
+    if (img.data) {
+      r_images[count++] = static_cast<Image *>(img.data);
+    }
+  }
+  RNA_property_collection_end(&iter);
+  return count;
+}
+
 /** \} */
 
 

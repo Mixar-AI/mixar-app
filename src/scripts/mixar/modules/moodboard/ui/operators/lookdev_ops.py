@@ -50,7 +50,7 @@ class MIXIE_OT_lookdev_generate(Operator):
             prompt = getattr(scene, 'mixie_lookdev_prompt', '')
 
         if not prompt or not prompt.strip():
-            self.report({'WARNING'}, "Please enter a prompt (press Enter to confirm your text)")
+            self.report({'ERROR'}, "Please enter a prompt (press Enter to confirm your text)")
             return {'CANCELLED'}
 
         # Always render depth from the 3D scene

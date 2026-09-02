@@ -26,6 +26,7 @@ set(SRC
   agent_ui_icons.cc
   agent_ui_layout.cc
   agent_ui_pane_kit.cc
+  agent_ui_pane_kit_feedback.cc
   agent_ui_pane_kit_thumbs.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc

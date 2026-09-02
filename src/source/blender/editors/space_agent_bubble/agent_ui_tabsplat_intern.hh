@@ -36,6 +36,11 @@ struct bContext;
 
 #define SPLAT_ENUM_MAX 6
 
+/* The job identity this pane submits under — `world_labs_queue.py`'s
+ * `_SERVICE_KEY` / `FEATURE_WORLD_LABS`, which are the same string. Used only
+ * to count this pane's live jobs in the unified queue mirror. */
+#define SPLAT_SERVICE_KEY "world_labs"
+
 struct SplatEnumItem {
   char ident[64];
   char label[64];
@@ -54,6 +59,11 @@ struct SplatTabState {
   char mode_ident[32];
   bool image_mode;
   bool use_selected;
+  /* Live unified-queue work for this pane's service, from
+   * `pane_active_job_count(C, SPLAT_SERVICE_KEY)`. This pane had NO busy
+   * state at all: World Labs enqueues pass no `scene_flag`, so there is not
+   * even a legacy flag to read, and Generate never acknowledged a click. */
+  int active_jobs;
   /* The tab's OWN uploaded/captured input (tab_world_labs.reference_image).
    * Submitted when `use_selected` is off — see world_labs_ops _resolve_image. */
   Image *reference_image;

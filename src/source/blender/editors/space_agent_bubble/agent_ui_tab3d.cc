@@ -72,6 +72,8 @@ struct Tab3DState {
    * Submitted when `use_selected_image` is off — see model_gen_ops
    * _get_input_image. Previewed as a thumbnail in the bottom row. */
   Image *reference_image;
+  /* Live unified-queue work for this tab's service (pane_active_job_count). */
+  int active_jobs;
   bool generating;
 
   /* Params group for (mode_id, model_id) — engine-registered on WM. */
@@ -159,18 +161,17 @@ bool state_gather(const bContext *C, Tab3DState *st)
     }
   }
 
-  /* Busy flag — same per-mode scene flags `_MODEL_GEN_FOOTER` names. Reading
-   * whichever exists keeps this resilient to a mode the table doesn't know. */
-  const char *flag_name = "mixie_image_to_3d_is_generating";
-  if (STREQ(st->mode_id, "hunyuan_rapid")) {
-    flag_name = "mixie_hunyuan_rapid_is_generating";
-  }
-  else if (STREQ(st->mode_id, "tripo_smart_segment")) {
-    flag_name = "mixie_smart_segment_is_generating";
-  }
-  if (PropertyRNA *p = RNA_struct_find_property(&scene_ptr, flag_name)) {
-    st->generating = RNA_property_boolean_get(&scene_ptr, p);
-  }
+  /* Busy state — the UNIFIED QUEUE, not the per-mode
+   * `scene.mixie_*_is_generating` flags `_MODEL_GEN_FOOTER` names. Those are
+   * written only by `create_scene_flag_listener`, i.e. only for enqueue paths
+   * that pass a `scene_flag`, and only on the queue's next change edge — so
+   * they lag the submit, miss modes that pass none, and are per-scene. The
+   * pane's own service key is `mode_id` (the catalog service this tab
+   * submits: model_3d / image_to_3d / hunyuan_rapid / …), never a hardcoded
+   * slug; an unresolved mode passes an empty key and counts any active job
+   * rather than reporting nothing. */
+  st->active_jobs = pane_active_job_count(C, st->mode_id);
+  st->generating = st->active_jobs > 0;
 
   /* Schema param group: wm.mixar_genparams_<service>__<slug> (engine.py's
    * _wm_attr). Placeholder enum ids (LOADING/ERROR/NONE) simply fail to
@@ -321,6 +322,11 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   UI_block_end(C, field_block);
   UI_block_draw(C, field_block);
 
+  /* Newest operator report, in the gap above the box — the island window has
+   * no status bar, so a refusal like "No image selected in moodboard" would
+   * otherwise be completely silent. One kit definition, all three panes. */
+  pane_report_line_draw(C, box, u);
+
   /* --- Bottom row inside the box foot: Upload Reference + Generate. --- */
   const float chip_y0 = pane_bottom_row_ymin(box, u);
   {
@@ -369,8 +375,16 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
      * exactly what interface_handlers.cc forwards — so no per-mode operator
      * table is duplicated here at all (smart segmentation included). */
     const rctf rect = pane_generate_rect(box, u);
-    const bool armed = !st.generating && prompt_ok;
-    pane_generate_paint(rect, st.generating ? "Working..." : "Generate", armed, u);
+  /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
+   * the point — so an active job is INFORMATION (the label carries the
+   * count), never a lock. Only a missing prompt field or an unusable
+   * catalog can disarm it. */
+    const bool armed = prompt_ok;
+    /* "Queued..." — the same word the Media pane uses, because both now read
+     * the same thing: a job sitting in the unified queue. */
+    char gen_label[32];
+    pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs);
+    pane_generate_paint(rect, gen_label, armed, u);
     if (armed) {
       uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
                              blender::wm::OpCallContext::InvokeDefault, "",

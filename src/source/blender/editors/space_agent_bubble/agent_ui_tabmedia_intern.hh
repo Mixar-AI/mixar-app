@@ -16,7 +16,9 @@
 #include "BLI_rect.h"
 #include "RNA_access.hh"
 
+struct Image;
 struct Scene;
+struct bContext;
 
 /* -------------------------------------------------------------------- */
 /** \name Metrics (island units) and local palette
@@ -68,3 +70,21 @@ int media_gather_param_chips(const bContext *C,
                              int max_chips,
                              int *r_total);
 float media_chip_width(const MediaParamChip &chip, float u, float font, float font_sub);
+
+/** Paint \a count already-laid-out chips (enum value + chevron, ON/OFF pill,
+ * -/+ stepper). Art only — the pane file lays them out and wires the buttons. */
+void media_param_chips_paint(
+    const MediaParamChip *chips, int count, float u, float font, float font_sub);
+
+/**
+ * The images this half will actually SUBMIT, for the bottom row's preview.
+ *
+ * Image half: `use_reference_images` ON means the board selection is the
+ * source, OFF means the tab's own uploads are (imagegen_ops.py reads it
+ * exactly this way, and the uploader flips it off when it adds one). Video
+ * half: Video Gen has no reference property of its own — its references ARE
+ * the selected board media — so it always previews those, as does an
+ * unresolved tab (\a tab null).
+ */
+int media_collect_reference_images(
+    const bContext *C, PointerRNA *tab_ptr, bool video, Image **r_images, int max_images);

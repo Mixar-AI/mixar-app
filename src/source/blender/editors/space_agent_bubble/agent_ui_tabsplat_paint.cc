@@ -367,9 +367,21 @@ void splat_pane_paint(const bContext *C,
 
   /* ("Powered by World Labs" attribution removed per design revision.) */
 
+  /* Newest operator report, in the gap above the box (kit helper — the ONE
+   * definition, shared with the 3D and Media panes). The island window has no
+   * status bar, so a refusal from `mixie.world_labs_generate` reached the user
+   * nowhere at all before this. Drawn before the field block, like everything
+   * else this pane paints — the field lives INSIDE the box, so its chrome
+   * cannot cover a line drawn above it. */
+  pane_report_line_draw(C, rects.prompt_box, u);
+
   /* Generate — the kit's shared button, armed only where the prompt field
-   * could actually be drawn (paid action, see SplatPaneRects::prompt_ok). */
-  pane_generate_paint(rects.btn_generate, "Generate", rects.prompt_ok, u);
+   * could actually be drawn (paid action, see SplatPaneRects::prompt_ok) and
+   * while this pane has no job already in the unified queue. "Queued..." is
+   * the same word the 3D and Media panes use for the same queue state. */
+  const bool busy = state.active_jobs > 0;
+  pane_generate_paint(
+      rects.btn_generate, busy ? "Queued..." : "Generate", rects.prompt_ok && !busy, u);
 }
 
 /** \} */
