@@ -65,6 +65,23 @@ enum class MixarCardElement : int {
   Divider,
   /** Danger-tinted body text — inline error copy in card-styled dialogs. */
   DangerText,
+  /** Topbar mode slider, left half (Zen). Paints the WHOLE two-up track and
+   * the animated thumb, then its own label — the right half paints only its
+   * label, so the thumb can never cover the left one (buttons draw in
+   * creation order). Payload carries the target: 0 = left active, 1 = right. */
+  ModeSliderLeft,
+  /** Topbar mode slider, right half (Engine): label only. */
+  ModeSliderRight,
+  /** Topbar "Cinema Mode" pill: dark fill, hairline border, gradient label.
+   * Payload is 1.0 while the mode is active. */
+  CinemaPill,
+  /** Zen viewport shading pill ("Solid" / "Rendered"): the design's dark
+   * chip at full opacity when live, 49% when not. Payload is 1.0 for the
+   * live one. */
+  ViewportPill,
+  /** Topbar account chip: dark slab, label left, full-height avatar disc at
+   * the right end carrying the stock person glyph. */
+  ProfilePill,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
@@ -111,6 +128,14 @@ void UI_layout_mixar_card_style_last_button(uiLayout *layout,
 
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);
+
+/**
+ * Paint the topbar elements (mode slider halves, Cinema Mode pill).
+ * Returns false when \a element is not one of them, so the card's own
+ * dispatch can carry on.
+ */
+bool UI_mixar_topbar_draw_element(
+    uiBut *but, rcti *rect, MixarCardElement element, bool is_hover, bool is_active);
 
 /**
  * Draw one action button — background, glyph and label.

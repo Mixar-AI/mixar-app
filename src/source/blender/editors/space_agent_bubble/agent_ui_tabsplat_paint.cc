@@ -19,10 +19,7 @@
 
 #include "BLF_api.hh"
 
-#include "BIF_glutil.hh"
-
 #include "BKE_context.hh"
-#include "BKE_image.hh"
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -31,11 +28,7 @@
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 
-#include "GPU_shader_builtin.hh"
 #include "GPU_state.hh"
-
-#include "IMB_imbuf.hh"
-#include "IMB_imbuf_types.hh"
 
 #include "RNA_access.hh"
 
@@ -45,98 +38,10 @@
 #include "agent_ui_tabsplat_intern.hh"
 #include "agent_ui_theme.hh"
 
-/* -------------------------------------------------------------------- */
-/** \name Local paint helpers (queue-tab idiom, deliberately local)
- * \{ */
-
-namespace {
-
-/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc); the two
- * helpers below are splat-specific (moodboard selection scan + raw-ImBuf
- * thumbnail draw, the mixie_chat_footer_thumbnails.cc idiom). */
-
-
-/** Selected moodboard images, oldest first (board order). */
-
-}  // namespace
-
-/* Shared with the Media pane (declared in agent_ui_tabsplat_intern.hh). */
-int splat_selected_moodboard_images(const bContext *C, Image **r_images, const int max_images)
-{
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
-    return 0;
-  }
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *items = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
-  if (!items || RNA_property_type(items) != PROP_COLLECTION) {
-    return 0;
-  }
-  int count = 0;
-  CollectionPropertyIterator iter;
-  RNA_property_collection_begin(&scene_ptr, items, &iter);
-  for (; iter.valid && count < max_images; RNA_property_collection_next(&iter)) {
-    PointerRNA item = iter.ptr;
-    PropertyRNA *sel = RNA_struct_find_property(&item, "selected");
-    if (!sel || !RNA_property_boolean_get(&item, sel)) {
-      continue;
-    }
-    PropertyRNA *img_prop = RNA_struct_find_property(&item, "image");
-    if (!img_prop || RNA_property_type(img_prop) != PROP_POINTER) {
-      continue;
-    }
-    PointerRNA img_ptr = RNA_property_pointer_get(&item, img_prop);
-    if (img_ptr.data) {
-      r_images[count++] = static_cast<Image *>(img_ptr.data);
-    }
-  }
-  RNA_property_collection_end(&iter);
-  return count;
-}
-
-void splat_draw_image_thumb(Image *image, const rctf &box)
-{
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
-    BKE_image_release_ibuf(image, ibuf, lock);
-    return;
-  }
-  const float size_x = BLI_rctf_size_x(&box);
-  const float size_y = BLI_rctf_size_y(&box);
-  const float aspect = float(ibuf->x) / float(ibuf->y);
-  float draw_w, draw_h;
-  if (aspect > size_x / size_y) {
-    draw_w = size_x;
-    draw_h = size_x / aspect;
-  }
-  else {
-    draw_h = size_y;
-    draw_w = size_y * aspect;
-  }
-  const float draw_x = box.xmin + (size_x - draw_w) * 0.5f;
-  const float draw_y = box.ymin + (size_y - draw_h) * 0.5f;
-
-  IMMDrawPixelsTexState tex_state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
-  GPU_blend(GPU_BLEND_ALPHA_PREMULT);
-  if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
-                                   blender::gpu::TextureFormat::SFLOAT_16_16_16_16, true,
-                                   ibuf->float_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
-  }
-  else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
-                                   blender::gpu::TextureFormat::UNORM_8_8_8_8, false,
-                                   ibuf->byte_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
-  }
-  GPU_blend(GPU_BLEND_ALPHA);
-  BKE_image_release_ibuf(image, ibuf, lock);
-}
-
-
-/** \} */
+/* Painter primitives, the board-selection scan and the raw-ImBuf thumbnail
+ * draw all come from the pane kit (`agent_ui_pane_kit.cc`) — the Media and 3D
+ * panes preview their references the same way, and one definition keeps the
+ * plate metrics from drifting between tabs. */
 
 /* -------------------------------------------------------------------- */
 /** \name Geometry
@@ -345,31 +250,28 @@ void splat_pane_paint(const bContext *C,
     const float knob_col[4] = {0.95f, 0.95f, 0.95f, 1.0f};
     pane_fill_round(&knob, knob_r, knob_col);
 
-    /* Selected-image thumbnails + overflow count (only meaningful while the
-     * switch is on). */
+    /* Reference preview — whatever this tab will actually SUBMIT: the board
+     * selection while the switch is on, otherwise its own uploaded/captured
+     * image (world_labs_ops::_resolve_image reads exactly this way). Same
+     * thumbnails the Agent tab shows for its pending attachments. */
+    Image *images[PANE_REF_THUMB_MAX] = {nullptr};
+    int count = 0;
     if (state.use_selected) {
-      Image *images[8] = {nullptr};
-      const int selected = splat_selected_moodboard_images(C, images, 8);
-      const int show = std::min(selected, 2);
-      float x = rects.thumbs.xmin;
-      for (int i = 0; i < show; i++) {
-        rctf t;
-        t.xmin = x;
-        t.xmax = x + SPLAT_THUMB_EDGE * u;
-        t.ymin = rects.thumbs.ymin;
-        t.ymax = rects.thumbs.ymax;
-        pane_fill_round(&t, 6.0f * u, track);
-        splat_draw_image_thumb(images[i], t);
-        x = t.xmax + SPLAT_THUMB_GAP * u;
-      }
-      if (selected > show) {
-        char more[24];
-        SNPRINTF(more, "+%d more", selected - show);
-        pane_label_left(more, x + 4.0f * u, row_cy, AGENT_DU(15), dim);
-      }
-      else if (selected == 0) {
-        pane_label_left("none selected", x, row_cy, AGENT_DU(15), dim);
-      }
+      count = pane_board_selected_images(C, images, PANE_REF_THUMB_MAX);
+    }
+    else if (state.reference_image != nullptr) {
+      images[count++] = state.reference_image;
+    }
+    const float max_x = rects.btn_generate.xmin - PANE_CHIP_GAP * u;
+    const float thumb_h = BLI_rctf_size_y(&rects.thumbs);
+    const float end_x = pane_ref_thumbs_paint(
+        images, count, rects.thumbs.xmin, rects.thumbs.ymin, thumb_h, max_x, u);
+    if (count == 0) {
+      pane_label_left(state.use_selected ? "none selected" : "no image added",
+                      end_x,
+                      row_cy,
+                      AGENT_DU(15),
+                      dim);
     }
   }
 

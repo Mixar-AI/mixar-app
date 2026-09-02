@@ -115,12 +115,93 @@ void glyph_agent(const float cx, const float cy, const float s, const float col[
            col);
 }
 
-/** Thumbs-up.
+/** Nine-dot rosette — the Gaussian Splat tab's mark.
  *
- * The artboard uses this same mark on 3D, Media, Gaussian Splat and My
- * Generations — it is plainly a placeholder the designer never replaced, but
- * the brief is an as-is replica, so it is reproduced rather than invented
- * around. Give each tab its own mark only when the design does. */
+ * `generations.svg` draws it as nine r=2.46 discs in a 24-unit box: one at
+ * the centre and eight on a radius-9 circle at 45-degree steps. Discs, not a
+ * stippled texture — the splat mark has to stay legible at 16 px. */
+void glyph_splat(const float cx, const float cy, const float s, const float col[4])
+{
+  const float ring_r = s * 0.375f;
+  const float dot_r = std::max(0.75f, s * 0.1025f);
+
+  disc(cx, cy, dot_r, col);
+  for (int i = 0; i < 8; i++) {
+    const float a = float(i) * float(M_PI) / 4.0f;
+    disc(cx + std::cos(a) * ring_r, cy + std::sin(a) * ring_r, dot_r, col);
+  }
+}
+
+/** Down arrow beside an up arrow — the generations sort chip.
+ *
+ * The design draws two 2-unit shafts 16 units apart, each 16 tall, with a
+ * chevron head at opposite ends. Both are built from the same primitives as
+ * the chevron glyph so the weights match the rest of the set. */
+void glyph_sort(const float cx, const float cy, const float s, const float col[4])
+{
+  const float half_h = s * 0.36f;
+  const float dx = s * 0.22f;
+  const float w = std::max(1.0f, s * 0.09f);
+  const float head = s * 0.16f;
+
+  auto arrow = [&](const float x, const bool down) {
+    const float tip = down ? (cy - half_h) : (cy + half_h);
+    vrule(cy - half_h, cy + half_h, x, w, col);
+    const float base = down ? (tip + head) : (tip - head);
+    const float pts[3][2] = {{x - head, base}, {x + head, base}, {x, tip}};
+    poly(pts, 3, col);
+  };
+  arrow(cx - dx, true);
+  arrow(cx + dx, false);
+}
+
+/** Isometric cube — a 3D asset whose preview has not loaded (or does not
+ * exist). Drawn as a hexagon silhouette punched by an inset hexagon, plus the
+ * three edges meeting at the centre — the same punch idiom as the thumbs-up,
+ * so the seams where those edges meet the rim are erased rather than
+ * outlined. */
+void glyph_mesh(const float cx,
+                const float cy,
+                const float s,
+                const float col[4],
+                const float bg[4])
+{
+  const float w = stroke_width(s);
+
+  auto hexagon = [&](const float r, const float c[4]) {
+    float pts[8][2];
+    pts[0][0] = cx;
+    pts[0][1] = cy;
+    for (int i = 0; i <= 6; i++) {
+      const float a = float(M_PI) * 0.5f + float(i % 6) * float(M_PI) / 3.0f;
+      pts[i + 1][0] = cx + std::cos(a) * r;
+      pts[i + 1][1] = cy + std::sin(a) * r;
+    }
+    poly(pts, 8, c);
+  };
+  hexagon(s * 0.46f, col);
+  hexagon(s * 0.46f - w, bg);
+
+  /* The three visible cube edges: up, down-left, down-right. */
+  const float r = s * 0.46f - w * 0.5f;
+  vrule(cy, cy + r, cx, w, col);
+  for (const float a : {float(M_PI) * 7.0f / 6.0f, float(M_PI) * 11.0f / 6.0f}) {
+    const float ex = cx + std::cos(a) * r;
+    const float ey = cy + std::sin(a) * r;
+    /* A rotated capsule is overkill at this size; a short box between the
+     * centre and the vertex reads as an edge. */
+    const int steps = 6;
+    for (int i = 0; i <= steps; i++) {
+      const float t = float(i) / float(steps);
+      disc(cx + (ex - cx) * t, cy + (ey - cy) * t, w * 0.5f, col);
+    }
+  }
+}
+
+/** Thumbs-up — My Generations.
+ *
+ * Traced from `generations.svg`'s 24-unit glyph: a cuff on the left, the fist
+ * beside it and the thumb rising out of the fist's top-left. */
 void glyph_thumb(const float cx,
                  const float cy,
                  const float s,
@@ -253,6 +334,15 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
     case AGENT_ICON_THUMB:
       glyph_thumb(cx, cy, s, color, backdrop);
+      break;
+    case AGENT_ICON_SPLAT:
+      glyph_splat(cx, cy, s, color);
+      break;
+    case AGENT_ICON_SORT:
+      glyph_sort(cx, cy, s, color);
+      break;
+    case AGENT_ICON_MESH:
+      glyph_mesh(cx, cy, s, color, backdrop);
       break;
     case AGENT_ICON_CLOCK:
       glyph_clock(cx, cy, s, color);

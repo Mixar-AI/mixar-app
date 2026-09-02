@@ -139,6 +139,23 @@ def _force_workspace_rebuild(target):
     window.workspace = target
 
 
+def _kick_slider_animation() -> None:
+    """Start the topbar slider's frame pump BEFORE the workspace switch.
+
+    Waiting for the first post-switch topbar draw to notice the change (the
+    pump's other trigger) left the thumb stalled mid-travel: the workspace
+    switch itself eats a beat, and with no frames flowing the slider only
+    caught up when a later hover forced a redraw. Kicking here means frames
+    are already coming when the new workspace lands.
+    """
+    try:
+        from mixar.modules.workflow.ui.operators import mode_slider_anim
+
+        mode_slider_anim.kick()
+    except Exception:  # noqa: BLE001 — the switch matters, the animation does not
+        pass
+
+
 class MIXAR_OT_set_ui_mode_ai(Operator):
     """Switch Mixar into Zen Mode (minimal viewport + Agent Bubble + moodboard)"""
 
@@ -151,6 +168,7 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
             previous_mode = get_ui_mode()
         except Exception:
             previous_mode = None
+        _kick_slider_animation()
         set_ui_mode(UI_MODE_AI)
         _capture_mode_changed(context, UI_MODE_AI, previous_mode)
         # Materialize the dedicated Zen Mode workspace if this is the
@@ -195,6 +213,7 @@ class MIXAR_OT_set_ui_mode_pro(Operator):
             previous_mode = None
         set_ui_mode(UI_MODE_PRO)
         _capture_mode_changed(context, UI_MODE_PRO, previous_mode)
+        _kick_slider_animation()
         if not apply_ui_mode(UI_MODE_PRO):
             self.report({"WARNING"}, "Modeling workspace not found")
         _redraw_topbar(context)

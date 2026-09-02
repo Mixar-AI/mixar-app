@@ -67,6 +67,7 @@
 
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
+#include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_queue.hh"
 #include "agent_ui_tab3d.hh"
@@ -384,6 +385,8 @@ static void agent_bubble_island_controls_header(const bContext *C,
       {AGENT_TAB_3D, "THREE_D", "3D generation"},
       {AGENT_TAB_MEDIA, "MEDIA", "Image and video generation"},
       {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
+      {AGENT_TAB_GENERATIONS, "GENERATIONS",
+       "Your generations and connected asset libraries"},
       {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
   };
   for (const auto &tb : tab_buttons) {
@@ -787,7 +790,9 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         else if (tab_probe.active_tab == AGENT_TAB_3D) {
           agent_ui_tab3d_draw(C, region, panel_region, u);
         }
-        /* GENERATIONS: no pane yet — the island chrome + empty panel. */
+        else if (tab_probe.active_tab == AGENT_TAB_GENERATIONS) {
+          agent_ui_generations_draw(C, region, panel_region, u);
+        }
       }
       return;
     }

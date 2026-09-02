@@ -307,16 +307,23 @@ void label_right(const char *text, const float x, const float cy, const float si
 
 struct TabSpec {
   const char *label;
+  /** #AGENT_ICON_COUNT means the tab carries NO mark. */
   AgentIcon icon;
 };
 
+/* Only three tabs have a mark in the design (`generations.svg`): Agent's
+ * person-in-a-ring, Gaussian Splat's nine-dot rosette and My Generations'
+ * thumbs-up. 3D and Media are text-only, and their labels then CENTRE in the
+ * pill rather than sitting in an empty icon slot's offset — the earlier build
+ * stamped the thumbs-up on all four, which read as four tabs meaning the same
+ * thing. */
 const TabSpec g_tabs[AGENT_TAB_COUNT] = {
     {"Agent", AGENT_ICON_AGENT},
-    {"3D", AGENT_ICON_THUMB},
-    {"Media", AGENT_ICON_THUMB},
-    {"Gaussian Splat", AGENT_ICON_THUMB},
+    {"3D", AGENT_ICON_COUNT},
+    {"Media", AGENT_ICON_COUNT},
+    {"Gaussian Splat", AGENT_ICON_SPLAT},
     {"My Generations", AGENT_ICON_THUMB},
-    {"Queue", AGENT_ICON_THUMB},
+    {"Queue", AGENT_ICON_COUNT},
 };
 
 void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *state)
@@ -375,16 +382,19 @@ void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *sta
                      text);
       }
     }
-    else {
+    else if (g_tabs[i].icon != AGENT_ICON_COUNT) {
       /* Backdrop is this pill's own fill — the active pill is #183E25, the
        * rest sit directly on the strip. */
       const float *pill_bg = tab.active ? active_fill : surface;
       agent_ui_icon_draw(g_tabs[i].icon, &tab.icon, label_col, pill_bg);
     }
 
-    if (i == AGENT_TAB_QUEUE && state->queue_count <= 0) {
-      /* No live jobs means no count chip, so the label owns the whole pill
-       * rather than sitting in the offset the chip would have left. */
+    /* A tab with nothing in its icon slot centres its label; leaving it at
+     * the icon offset would hang the word off to the right of an empty pill.
+     * The Queue pill does the same once its count chip is gone. */
+    const bool centred = (g_tabs[i].icon == AGENT_ICON_COUNT) &&
+                         (i != AGENT_TAB_QUEUE || state->queue_count <= 0);
+    if (centred) {
       label_centre(g_tabs[i].label, BLI_rctf_cent_x(&tab.pill), cy, label_size,
                    label_col);
     }

@@ -40,6 +40,9 @@
 
 #include "BLI_rect.h"
 
+struct Image;
+struct bContext;
+
 /* -------------------------------------------------------------------- */
 /** \name Tokens (island units unless noted; colours state alpha ALWAYS)
  * \{ */
@@ -72,6 +75,13 @@
 #define PANE_BOTTOM_IN_L 17  /* Box left -> first action chip. */
 #define PANE_BOTTOM_IN_R 16  /* Box right -> Generate right edge. */
 #define PANE_GENERATE_W 114
+
+/* Reference thumbnails in the bottom row. The Agent tab previews its pending
+ * attachments this way, so every pane that takes a reference does too — a
+ * chip-height square with a rounded backplate, then a dim "+N". */
+#define PANE_REF_THUMB_MAX 4
+#define PANE_REF_THUMB_GAP 6
+#define PANE_REF_THUMB_RADIUS 6
 
 /* Palette. */
 #define PANE_COL_WASH_TOP {0.176f, 0.176f, 0.176f, 1.0f}    /* #2D2D2D */
@@ -145,5 +155,36 @@ void pane_segmented_paint(
 /** ON/OFF chip: label + #474747 pill behind the live side. */
 float pane_onoff_chip_w(const char *label, float u);
 void pane_onoff_chip_paint(const rctf &rect, const char *label, bool on, float u);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Reference thumbnails
+ *
+ * Every pane previews the images it will actually SUBMIT, the way the Agent
+ * tab previews its pending attachments. Which images those are is per-tab
+ * (each generation tab has a toggle choosing between the moodboard selection
+ * and its own upload), so the pane collects them and the kit draws them.
+ * \{ */
+
+/** Still images currently selected on the moodboard, oldest first. */
+int pane_board_selected_images(const bContext *C, Image **r_images, int max_images);
+
+/** Aspect-fit \a image inside \a box. The caller paints the backplate. */
+void pane_image_thumb_draw(Image *image, const rctf &box);
+
+/**
+ * Paint a run of reference thumbnails from \a x, each `row_h` square, and a
+ * dim "+N" for whatever did not fit (#PANE_REF_THUMB_MAX or \a max_x, first
+ * limit reached). Returns the x just past everything drawn, so a caller can
+ * keep laying out. Null entries are skipped, never drawn as empty plates.
+ */
+float pane_ref_thumbs_paint(Image *const *images,
+                            int count,
+                            float x,
+                            float row_ymin,
+                            float row_h,
+                            float max_x,
+                            float u);
 
 /** \} */

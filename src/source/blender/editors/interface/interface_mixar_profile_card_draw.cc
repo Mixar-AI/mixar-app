@@ -285,7 +285,12 @@ bool UI_mixar_card_element_is_button(const MixarCardElement element)
               MixarCardElement::AccentButton,
               MixarCardElement::CardButton,
               MixarCardElement::DangerButton,
-              MixarCardElement::GhostButton);
+              MixarCardElement::GhostButton,
+              MixarCardElement::ModeSliderLeft,
+              MixarCardElement::ModeSliderRight,
+              MixarCardElement::CinemaPill,
+              MixarCardElement::ViewportPill,
+              MixarCardElement::ProfilePill);
 }
 
 void UI_mixar_profile_card_draw_element(
@@ -297,6 +302,12 @@ void UI_mixar_profile_card_draw_element(
    * kept in the signature because it is the widget-callback shape and
    * dropping it would make this the odd one out. */
   UNUSED_VARS(wcol);
+
+  /* Topbar elements are buttons too, but they own their own chrome — check
+   * them before the card-button painter claims them. */
+  if (UI_mixar_topbar_draw_element(but, rect, element, is_hover, is_active)) {
+    return;
+  }
 
   if (UI_mixar_card_element_is_button(element)) {
     UI_mixar_card_button_draw(but, rect, element, is_hover, is_active);

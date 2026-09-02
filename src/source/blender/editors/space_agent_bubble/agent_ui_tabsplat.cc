@@ -169,6 +169,15 @@ bool splat_state_resolve(const bContext *C, SplatTabState *r_state)
   if (PropertyRNA *use_sel = RNA_struct_find_property(&r_state->tab, "use_selected_image")) {
     r_state->use_selected = RNA_property_boolean_get(&r_state->tab, use_sel);
   }
+
+  /* The tab's own uploaded/captured input, for the bottom row's preview. */
+  r_state->reference_image = nullptr;
+  if (PropertyRNA *ref = RNA_struct_find_property(&r_state->tab, "reference_image")) {
+    if (RNA_property_type(ref) == PROP_POINTER) {
+      PointerRNA img = RNA_property_pointer_get(&r_state->tab, ref);
+      r_state->reference_image = static_cast<Image *>(img.data);
+    }
+  }
   return true;
 }
 
@@ -298,8 +307,20 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * enum's own items build the menu, so the choice list always tracks the
    * catalog. */
   rect_args(rects.model_chip, &bx, &by, &bw, &bh);
-  uiDefButR(block, ButType::Menu, 0, "", bx, by, bw, bh,
-            &state.tab, "model", -1, 0.0f, 0.0f, nullptr);
+  {
+    /* `wm.context_menu_enum`, NOT an RNA menu button: a ButType::Menu draws
+     * Blender's own down-arrow over the chevron the chip already painted —
+     * two arrows on one chip. The operator opens the same enum menu with no
+     * chrome of its own. */
+    uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           bx, by, bw, bh, "Model");
+    if (but) {
+      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "data_path",
+                     "scene.mixie_moodboard_sidebar.tab_world_labs.model");
+    }
+  }
 
   if (state.image_mode) {
     /* Upload — the tab's own picker (writes tab.reference_image and flips

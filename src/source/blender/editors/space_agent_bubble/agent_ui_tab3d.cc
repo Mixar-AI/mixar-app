@@ -68,7 +68,10 @@ struct Tab3DState {
   char model_label[64];
 
   bool use_selected_image;
-  char reference_name[64]; /* Image datablock name, "" when unset. */
+  /* The tab's OWN uploaded/captured input (tab_image_to_3d.reference_image).
+   * Submitted when `use_selected_image` is off — see model_gen_ops
+   * _get_input_image. Previewed as a thumbnail in the bottom row. */
+  Image *reference_image;
   bool generating;
 
   /* Params group for (mode_id, model_id) — engine-registered on WM. */
@@ -148,18 +151,11 @@ bool state_gather(const bContext *C, Tab3DState *st)
   if (PropertyRNA *p = RNA_struct_find_property(&st->tab_ptr, "use_selected_image")) {
     st->use_selected_image = RNA_property_boolean_get(&st->tab_ptr, p);
   }
+  st->reference_image = nullptr;
   if (PropertyRNA *p = RNA_struct_find_property(&st->tab_ptr, "reference_image")) {
-    PointerRNA image = RNA_property_pointer_get(&st->tab_ptr, p);
-    if (image.data) {
-      if (PropertyRNA *name_prop = RNA_struct_find_property(&image, "name")) {
-        int len = 0;
-        char *value = RNA_property_string_get_alloc(
-            &image, name_prop, st->reference_name, sizeof(st->reference_name), &len);
-        if (value != st->reference_name) {
-          BLI_strncpy(st->reference_name, value, sizeof(st->reference_name));
-          MEM_freeN(value);
-        }
-      }
+    if (RNA_property_type(p) == PROP_POINTER) {
+      PointerRNA image = RNA_property_pointer_get(&st->tab_ptr, p);
+      st->reference_image = static_cast<Image *>(image.data);
     }
   }
 
@@ -310,13 +306,10 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   const float chip_y0 = pane_bottom_row_ymin(box, u);
   {
     /* Upload chip — the tab's OWN picker (sets reference_image and the
-     * generate path reads it when use_selected_image is off). Show the
-     * picked image's name once one is set. */
-    char label[96] = "Upload Reference";
-    if (st.reference_name[0] && !st.use_selected_image) {
-      BLI_strncpy(label, st.reference_name, sizeof(label));
-    }
-    pane_fit_text(label, 260.0f * u, PANE_FONT * u);
+     * generate path reads it when use_selected_image is off). The chip keeps
+     * its constant label; what is attached is shown as a thumbnail beside it,
+     * the way the Agent tab previews its attachments. */
+    const char *label = "Upload Reference";
     rctf rect;
     rect.xmin = box.xmin + PANE_BOTTOM_IN_L * u;
     rect.xmax = rect.xmin + pane_action_chip_w(label, true, u);
@@ -329,6 +322,24 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
               int(rect.xmin), int(rect.ymin),
               short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
               "Pick an input image for 3D generation");
+
+    /* Reference preview — whatever this tab will actually SUBMIT: the board
+     * selection while `use_selected_image` is on, otherwise its own upload. */
+    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+    int ref_count = 0;
+    if (st.use_selected_image) {
+      ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
+    }
+    else if (st.reference_image != nullptr) {
+      ref_images[ref_count++] = st.reference_image;
+    }
+    pane_ref_thumbs_paint(ref_images,
+                          ref_count,
+                          rect.xmax + PANE_CHIP_GAP * u,
+                          chip_y0,
+                          PANE_ROW_H * u,
+                          pane_generate_rect(box, u).xmin - PANE_CHIP_GAP * u,
+                          u);
   }
 
   {

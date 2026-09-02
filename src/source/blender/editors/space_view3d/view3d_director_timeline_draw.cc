@@ -34,14 +34,16 @@
 
 namespace {
 
-constexpr float RULER_COLOR[4] = {0.43f, 0.43f, 0.45f, 1.0f};
-constexpr float TIME_COLOR[4] = {0.66f, 0.65f, 0.67f, 1.0f};
+/* Design tokens: a hairline major tick, dimmer minor dots, quiet labels. */
+constexpr float RULER_COLOR[4] = {0.435f, 0.435f, 0.435f, 1.0f};  /* #6F6F6F */
+constexpr float RULER_MINOR_COLOR[4] = {0.278f, 0.278f, 0.278f, 1.0f}; /* #474747 */
+constexpr float TIME_COLOR[4] = {0.604f, 0.604f, 0.604f, 1.0f};   /* #9A9A9A */
 constexpr float STRIP_COLOR[4] = {1.0f, 0.72f, 0.48f, 1.0f};
 constexpr float STRIP_HOVER_COLOR[4] = {1.0f, 0.76f, 0.54f, 1.0f};
 constexpr float HANDLE_COLOR[4] = {1.0f, 0.83f, 0.69f, 1.0f};
 constexpr float HANDLE_ACTIVE_COLOR[4] = {1.0f, 0.90f, 0.80f, 1.0f};
 constexpr float STRIP_TEXT_COLOR[4] = {1.0f, 0.98f, 0.96f, 1.0f};
-constexpr float PLAYHEAD_COLOR[4] = {0.68f, 0.86f, 0.98f, 1.0f};
+constexpr float PLAYHEAD_COLOR[4] = {0.851f, 0.851f, 0.851f, 1.0f}; /* #D9D9D9 */
 constexpr float PLAYHEAD_TEXT_COLOR[4] = {0.035f, 0.045f, 0.055f, 1.0f};
 
 void draw_rect(
@@ -143,19 +145,51 @@ float major_tick_seconds(const float pixels_per_second)
   return steps.back();
 }
 
+/** Ruler label for \a seconds, in the unit the Duration chips select. */
+void ruler_label(const DirectorViewState &state,
+                 const float seconds,
+                 const float major_seconds,
+                 char *out,
+                 const int size)
+{
+  if (state.ruler_minutes) {
+    const int total = int(std::round(seconds));
+    BLI_snprintf(out, size, "%d:%02d", total / 60, std::abs(total % 60));
+    return;
+  }
+  if (major_seconds < 1.0f) {
+    BLI_snprintf(out, size, "%.1fs", seconds);
+    return;
+  }
+  /* The design pads single digits ("01s", "02s") so the row keeps its rhythm
+   * when the labels cross from one digit to two. */
+  BLI_snprintf(out, size, "%02.0fs", seconds);
+}
+
+/**
+ * Labels sit above the ticks and the ticks hang down to the dock's floor, so
+ * the ruler reads as a scale rather than a row of centred marks.
+ */
 void draw_ruler(const DirectorViewState &state,
                 const DirectorTimelineRuntime &runtime,
-                const float ruler_y)
+                const float tick_base)
 {
+  const float u = UI_SCALE_FAC;
   const float width = BLI_rctf_size_x(&runtime.viewport_bounds);
   const float fps = std::max(state.fps, 0.001f);
   const float pixels_per_second = width * fps / runtime.view_span_frames;
-  const float major_seconds = major_tick_seconds(pixels_per_second);
-  const int divisions = major_seconds * pixels_per_second >= 150.0f * UI_SCALE_FAC ? 10 : 5;
+  /* `m:ss` cannot label a sub-second step — every tick would round to the
+   * same string — so the minutes unit floors the major step at one second. */
+  const float major_seconds = std::max(major_tick_seconds(pixels_per_second),
+                                       state.ruler_minutes ? 1.0f : 0.0f);
+  const int divisions = major_seconds * pixels_per_second >= 150.0f * u ? 10 : 5;
   const float minor_seconds = major_seconds / float(divisions);
   const float start_seconds = (runtime.view_start_frame - state.scene_frame_start) / fps;
   const float end_seconds = start_seconds + runtime.view_span_frames / fps;
   const float first_tick = std::ceil(start_seconds / minor_seconds) * minor_seconds;
+
+  const float major_h = 26.0f * u;
+  const float label_y = tick_base + major_h + 10.0f * u;
 
   for (float seconds = first_tick; seconds <= end_seconds + minor_seconds * 0.25f;
        seconds += minor_seconds)
@@ -166,29 +200,17 @@ void draw_ruler(const DirectorViewState &state,
     const float major_index = std::round(seconds / major_seconds);
     const bool is_major = std::abs(seconds - major_index * major_seconds) < minor_seconds * 0.15f;
     if (is_major) {
-      draw_rect(x,
-                ruler_y - 4.0f * UI_SCALE_FAC,
-                x + UI_SCALE_FAC,
-                ruler_y + 11.0f * UI_SCALE_FAC,
-                RULER_COLOR);
+      draw_rect(x, tick_base, x + std::max(1.0f, u), tick_base + major_h, RULER_COLOR);
       char label[32];
-      if (major_seconds < 1.0f) {
-        BLI_snprintf(label, sizeof(label), "%.1fs", seconds);
-      }
-      else {
-        BLI_snprintf(label, sizeof(label), "%.0fs", seconds);
-      }
-      draw_text(label,
-                x - 8.0f * UI_SCALE_FAC,
-                ruler_y + 15.0f * UI_SCALE_FAC,
-                11.0f * UI_SCALE_FAC,
-                TIME_COLOR);
+      ruler_label(state, seconds, major_seconds, label, sizeof(label));
+      draw_text(label, x - 2.0f * u, label_y, 12.0f * u, TIME_COLOR);
     }
     else {
-      const float dot = std::max(2.0f, 2.5f * UI_SCALE_FAC);
+      const float dot = std::max(2.0f, 2.0f * u);
+      const float dot_y = tick_base + major_h * 0.42f;
       const rctf dot_rect = {
-          x - dot * 0.5f, x + dot * 0.5f, ruler_y - dot * 0.5f, ruler_y + dot * 0.5f};
-      draw_round_rect(dot_rect, dot * 0.5f, RULER_COLOR);
+          x - dot * 0.5f, x + dot * 0.5f, dot_y - dot * 0.5f, dot_y + dot * 0.5f};
+      draw_round_rect(dot_rect, dot * 0.5f, RULER_MINOR_COLOR);
     }
   }
 }
@@ -304,16 +326,19 @@ void view3d_director_timeline_draw_content(const ARegion *region,
                                            const int content_top)
 {
   sync_view(state, runtime);
-  runtime->viewport_bounds = {float(margin + 8.0f * UI_SCALE_FAC),
-                              float(region->winx - margin - 8.0f * UI_SCALE_FAC),
+  const float u = UI_SCALE_FAC;
+  runtime->viewport_bounds = {float(margin) + 26.0f * u,
+                              float(region->winx - margin) - 26.0f * u,
                               float(margin),
                               float(content_top)};
-  const float strip_y = float(margin) + 7.0f * UI_SCALE_FAC;
-  const float strip_h = std::min(36.0f * UI_SCALE_FAC,
-                                 BLI_rctf_size_y(&runtime->viewport_bounds) * 0.40f);
-  const float ruler_y = strip_y + strip_h + 17.0f * UI_SCALE_FAC;
+  /* Bottom-up: ruler ticks on the dock floor, labels above them, then the
+   * camera strip in the band left under the control row. */
+  const float tick_base = float(margin) + 10.0f * u;
+  const float label_top = tick_base + 36.0f * u + 12.0f * u;
+  const float strip_h = std::min(32.0f * u, std::max(0.0f, content_top - label_top - 8.0f * u));
+  const float strip_y = label_top + 6.0f * u;
 
-  draw_ruler(state, *runtime, ruler_y);
+  draw_ruler(state, *runtime, tick_base);
   draw_strip(state, runtime, strip_y, strip_h);
-  draw_playhead(state, *runtime, float(margin), float(content_top));
+  draw_playhead(state, *runtime, tick_base, float(content_top) - 6.0f * u);
 }

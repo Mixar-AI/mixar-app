@@ -27,6 +27,11 @@ set(SRC
   view3d_camera_control.cc
   view3d_context.cc
   view3d_cursor_snap.cc
+  view3d_director_cinema_dock.cc
+  view3d_director_cinema_left.cc
+  view3d_director_cinema_paint.cc
+  view3d_director_cinema_right.cc
+  view3d_director_cinema_top.cc
   view3d_director_overlay.cc
   view3d_director_overlay_frame.cc
   view3d_director_popup.cc
@@ -83,6 +88,7 @@ set(SRC
 
   view3d_agent_strip.hh
   view3d_director.hh
+  view3d_director_cinema.hh
   view3d_intern.hh
   view3d_navigate.hh
 )

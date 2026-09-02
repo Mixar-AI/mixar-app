@@ -62,6 +62,9 @@ struct SplatTabState {
   char mode_ident[32];
   bool image_mode;
   bool use_selected;
+  /* The tab's OWN uploaded/captured input (tab_world_labs.reference_image).
+   * Submitted when `use_selected` is off — see world_labs_ops _resolve_image. */
+  Image *reference_image;
 };
 
 /** Region-space rects for every element, built from the panel rect. */
@@ -87,9 +90,10 @@ int splat_enum_items_get(const bContext *C,
                          SplatEnumItem *r_items,
                          int max_items);
 
-/* Board-selection thumbnails, shared with the Media pane. */
-int splat_selected_moodboard_images(const bContext *C, Image **r_images, int max_images);
-void splat_draw_image_thumb(Image *image, const rctf &box);
+/* Board-selection collection and thumbnail drawing now live in the pane kit
+ * (`pane_board_selected_images` / `pane_image_thumb_draw`) — every pane
+ * previews its references the same way, so the Media pane no longer reaches
+ * into this header for them. */
 
 void splat_pane_rects_build(const rctf &panel, float u, const SplatEnumItem *lod_items, int lod_count, SplatPaneRects *r_rects);
 void splat_pane_paint(const bContext *C,

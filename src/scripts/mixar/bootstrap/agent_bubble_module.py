@@ -297,21 +297,14 @@ def _draw_topbar_open_agent(self, context):
     if region is None or region.alignment != 'RIGHT':
         return
     layout = self.layout
+
     layout.separator()
     # SPARKLE is a Mixar color SVG icon (UI_icons.hh MIXIE CHAT block);
     # fall back to the old bulb on builds that predate it.
-    try:
-        layout.operator(
-            "mixar.agent_bubble_open_window",
-            text="Open Mixie",
-            icon='SPARKLE',
-        )
-    except TypeError:
-        layout.operator(
-            "mixar.agent_bubble_open_window",
-            text="Open Mixie",
-            icon='OUTLINER_OB_LIGHT',
-        )
+    # No "Open Mixie" button in either mode: the chat's own floating pill is
+    # the way in, and a second door to the same room only crowded the topbar.
+    # The update BADGE below stays — it is the only persistent signal that an
+    # update is waiting (see docs/seamless-updates.md).
 
     # Update badge — appears just right of Open Mixie whenever an update
     # is known; clicking re-shows the sticky update toast.

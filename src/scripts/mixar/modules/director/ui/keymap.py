@@ -12,6 +12,7 @@ addon_keymaps = []
 _OPERATOR_NAMES = (
     "director_capture_beat",
     "director_block_input",
+    "director_nudge_camera",
 )
 
 # Object-editing shortcuts absorbed while directing, each registered in the
@@ -45,6 +46,48 @@ _GUARDED_KEYS = (
 )
 
 
+# The camera motion the Cinema Mode strip advertises. These live in the SAME
+# keymaps as the guards below, and are inserted at the HEAD so they are the
+# first thing Blender tries for their key: "Object Mode" already binds A to
+# select-all and owns the guarded S, and a nudge parked behind either would
+# never run. Being first also makes the nudge its own guard — it consumes the
+# key while directing, and outside Cinema Mode its poll fails and the key
+# falls through to its native meaning untouched.
+#
+# `repeat=True` is what makes a HELD key keep moving: the operator fires again
+# at the OS auto-repeat rate, and `core/camera_nudge` scales each step by the
+# real elapsed time so the speed does not depend on that rate.
+#
+# Registered in both keymaps that can be dispatched first for these keys:
+# "Object Mode" wins while the user is in Object Mode, and "3D View" covers
+# the other modes (a Pose-mode S still reaches Blender's own scale first —
+# see the module note in `nudge_ops.py`).
+_NUDGE_KEYS = (
+    ('W', "FORWARD"),
+    ('S', "BACK"),
+    ('A', "LEFT"),
+    ('D', "RIGHT"),
+    ('E', "UP"),
+    ('Q', "DOWN"),
+)
+
+_NUDGE_KEYMAPS = (
+    # "User Interface" FIRST and it is the one that matters: Blender
+    # dispatches it ahead of every mode keymap, which is the only place that
+    # beats both `UI_OT_eyedropper_depth` (which owns E globally, and whose
+    # modal then swallows the NEXT key too — that is why Q looked dead) and
+    # our own `mixar.director_block_input` guard on S, which sat ahead of the
+    # nudge in the merged Object Mode keymap no matter which registered
+    # first: addon-vs-addon ordering does not follow registration order the
+    # way addon-vs-default does. Being global is safe only because
+    # `nudge_ops._in_cinema_viewport` scopes the poll to a directing session
+    # inside a 3D viewport's WINDOW region — keep the two together.
+    ("User Interface", ('EMPTY', 'WINDOW')),
+    ("Object Mode", ('EMPTY', 'WINDOW')),
+    ("3D View", ('VIEW_3D', 'WINDOW')),
+)
+
+
 def _operators_ready() -> bool:
     for name in _OPERATOR_NAMES:
         try:
@@ -62,6 +105,27 @@ def _register_keymap():
     keyconfig = getattr(getattr(wm, "keyconfigs", None), "addon", None)
     if wm is None or keyconfig is None or not _operators_ready():
         return 0.1
+
+    # Registered FIRST, on purpose. `head=True` only orders items inside the
+    # addon keymap; when Blender merges the addon keyconfig into the one it
+    # dispatches, items keep the order they were REGISTERED in, so a nudge
+    # added after the guard below still lost S to it.
+    for keymap_name, (space_type, region_type) in _NUDGE_KEYMAPS:
+        keymap = keyconfig.keymaps.new(
+            name=keymap_name,
+            space_type=space_type,
+            region_type=region_type,
+        )
+        for key, direction in _NUDGE_KEYS:
+            item = keymap.keymap_items.new(
+                "mixar.director_nudge_camera",
+                type=key,
+                value='PRESS',
+                repeat=True,
+                head=True,
+            )
+            item.properties.direction = direction
+            addon_keymaps.append((keymap, item))
 
     keymap = keyconfig.keymaps.new(
         name="3D View",
@@ -88,6 +152,7 @@ def _register_keymap():
             **modifiers,
         )
         addon_keymaps.append((keymap, item))
+
     return None
 
 

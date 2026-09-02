@@ -42,7 +42,6 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabmedia.hh"
 #include "agent_ui_tabmedia_intern.hh"
-#include "agent_ui_tabsplat_intern.hh" /* board-selection thumbnails */
 #include "agent_ui_theme.hh"
 
 
@@ -346,9 +345,31 @@ void agent_ui_tabmedia_draw(const bContext *C,
     PointerRNA *owner = chip.on_wm_group ? &group_ptr : &tab_ptr;
 
     if (chip.kind == MediaChipKind::Enum) {
-      /* Native dropdown menu over the painted chip. */
-      uiDefButR(block, ButType::Menu, 0, "", cx, cy, cw, ch,
-                owner, chip.prop_id, -1, 0.0f, 0.0f, chip.label);
+      /* `wm.context_menu_enum`, NOT an RNA menu button: a ButType::Menu
+       * draws Blender's own down-arrow on top of the chevron the chip has
+       * already painted, so the chip showed TWO arrows. An operator button
+       * carries no chrome of its own and opens the same enum menu. */
+      char data_path[256];
+      if (chip.on_wm_group) {
+        char svc[64], mdl[64];
+        media_sanitize_key(service_key, svc, sizeof(svc));
+        media_sanitize_key(model_id, mdl, sizeof(mdl));
+        SNPRINTF(
+            data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
+      }
+      else {
+        SNPRINTF(data_path,
+                 "scene.mixie_moodboard_sidebar.%s.%s",
+                 video ? "tab_video_gen" : "tab_imagegen",
+                 chip.prop_id);
+      }
+      uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+                             blender::wm::OpCallContext::InvokeDefault, "",
+                             cx, cy, cw, ch, chip.label);
+      if (but) {
+        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        RNA_string_set(op_ptr, "data_path", data_path);
+      }
     }
     else if (chip.kind == MediaChipKind::Bool) {
       char data_path[256];
@@ -410,30 +431,56 @@ void agent_ui_tabmedia_draw(const bContext *C,
   GPU_blend(GPU_BLEND_ALPHA);
   pane_action_chip_paint(upload, "Upload Reference", true, false, u);
   pane_action_chip_paint(capture, "Capture Viewport", false, false, u);
-  /* Selected board references as REAL thumbnails (design: small previews,
-   * never a "N refs" count). Up to 3, "+N" only as overflow. */
+  /* Reference preview — REAL thumbnails of whatever this half will actually
+   * SUBMIT (design: small previews, never a "N refs" count), the same way the
+   * Agent tab previews its pending attachments.
+   *
+   * Image half: `use_reference_images` ON means the board selection is the
+   * source and OFF means the tab's own uploads are (imagegen_ops.py reads it
+   * exactly this way, and the uploader flips it off when it adds one).
+   * Video half: Video Gen has no reference property of its own — its
+   * references ARE the selected board media — so it always previews those. */
   {
-    Image *ref_images[8] = {nullptr};
-    const int selected = splat_selected_moodboard_images(C, ref_images, 8);
-    const int show = std::min(selected, 3);
-    const float edge = bottom_h;
-    float tx = bx + 6.0f * u;
-    for (int i = 0; i < show; i++) {
-      rctf t;
-      t.xmin = tx;
-      t.xmax = tx + edge;
-      t.ymin = bottom_y;
-      t.ymax = bottom_y + edge;
-      const float back[4] = PANE_COL_CHIP;
-      pane_fill_round(&t, 6.0f * u, back);
-      splat_draw_image_thumb(ref_images[i], t);
-      tx = t.xmax + 6.0f * u;
+    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+    int ref_count = 0;
+    bool from_board = true;
+    if (!video && tab_ok) {
+      PropertyRNA *use_board = RNA_struct_find_property(&tab_ptr, "use_reference_images");
+      if (use_board && RNA_property_type(use_board) == PROP_BOOLEAN) {
+        from_board = RNA_property_boolean_get(&tab_ptr, use_board);
+      }
     }
-    if (selected > show) {
-      char more[24];
-      SNPRINTF(more, "+%d", selected - show);
-      pane_label_left(more, tx + 2.0f * u, bottom_y + bottom_h * 0.5f, font_sub, col_dim);
+    if (from_board) {
+      ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
     }
+    else {
+      PropertyRNA *refs = RNA_struct_find_property(&tab_ptr, "reference_images");
+      if (refs && RNA_property_type(refs) == PROP_COLLECTION) {
+        CollectionPropertyIterator iter;
+        RNA_property_collection_begin(&tab_ptr, refs, &iter);
+        for (; iter.valid && ref_count < PANE_REF_THUMB_MAX;
+             RNA_property_collection_next(&iter))
+        {
+          PointerRNA item = iter.ptr;
+          PropertyRNA *img_prop = RNA_struct_find_property(&item, "image");
+          if (!img_prop || RNA_property_type(img_prop) != PROP_POINTER) {
+            continue;
+          }
+          PointerRNA img = RNA_property_pointer_get(&item, img_prop);
+          if (img.data) {
+            ref_images[ref_count++] = static_cast<Image *>(img.data);
+          }
+        }
+        RNA_property_collection_end(&iter);
+      }
+    }
+    pane_ref_thumbs_paint(ref_images,
+                          ref_count,
+                          bx + PANE_REF_THUMB_GAP * u,
+                          bottom_y,
+                          bottom_h,
+                          generate.xmin - PANE_CHIP_GAP * u,
+                          u);
   }
   pane_generate_paint(generate, busy ? "Queued..." : "Generate", can_generate, u);
   GPU_blend(GPU_BLEND_NONE);
