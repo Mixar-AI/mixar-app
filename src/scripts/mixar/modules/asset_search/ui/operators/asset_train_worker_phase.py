@@ -97,7 +97,12 @@ def handle_render_worker(op, context, state):
 
     # Everything was converted (and fed to the uploader) as it arrived.
     collected = op._collected
-    failures = op._worker_failures + worker.failures
+    # A shard that crashed after >=1 result leaves its remainder with NO
+    # result line at all — record those as failures so complete() never
+    # stamps the full-library checksum over unrendered assets (they would be
+    # marked trained and never retried).
+    failures = (op._worker_failures + worker.failures
+                + preview_worker.missing_result_failures(worker))
     reused = sum(1 for r in worker.ok_results
                  if (r.get("info") or {}).get("reused_preview"))
     # Rendered because no thumbnail existed -> write the render back as the
