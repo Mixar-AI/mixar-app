@@ -73,6 +73,7 @@ class MIXAR_OT_scribble_mark_undo(Operator):
         if not mark_store.remove_last(context.scene):
             return {"CANCELLED"}
         overlay.pop_settled()
+        mark_store.refresh_reading(context.scene, context.window_manager)
         overlay.tag_redraw()
         return {"FINISHED"}
 
@@ -91,6 +92,10 @@ class MIXAR_OT_scribble_mark_clear(Operator):
     def execute(self, context):
         removed = mark_store.clear(context.scene)
         overlay.reset()
+        wm = context.window_manager
+        # The reading override described ink that no longer exists.
+        if getattr(wm, "mixar_mark_intent", "AUTO") != "AUTO":
+            wm.mixar_mark_intent = "AUTO"
         overlay.tag_redraw()
         self.report({"INFO"}, f"Cleared {removed} mark(s)")
         return {"FINISHED"}

@@ -22,6 +22,11 @@ A mark whose rays hit nothing is landed on the world ground plane instead
 (``ground``): a layout sketch on an empty viewport is the commonest kind of
 mark there is, and "background, no position" would leave it unusable.
 
+Every raw stroke is also sampled into world space (``strokes_world``) —
+raycast where the ray meets geometry, the ground plane where it does not —
+so that when the freeze's ink is read as a SKETCH (``sketch.py``) each line
+of the drawing has a place on the ground to be built at.
+
 Runs on the main thread, from an operator, while the user waits for a message
 to send — so it is bounded by ``COVERAGE_GRID`` and by the vertex cap, and
 every step is wrapped: a mark that cannot be resolved is reported as
@@ -44,13 +49,15 @@ from ..constants import (
     GROUND_PLANE_Z,
     PARTIAL_COVERAGE_MAX,
     PLANE_GROUND,
+    STROKE_WORLD_POINTS,
     WORLD_DECIMALS,
 )
 
 logger = get_logger(__name__)
 
 
-def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True):
+def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True,
+                 strokes=None):
     """Everything the client can establish about one mark.
 
     Args:
@@ -59,6 +66,8 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
         write_vertex_group: set False to measure without mutating the scene
             (the live overlay previews coverage on every stroke; it must not
             leave a trail of groups behind it).
+        strokes: the raw strokes in region pixels; each is sampled into world
+            space and reported as ``strokes_world`` (see ``_strokes_world``).
 
     Returns the ``resolved`` block of the mark payload. Always a dict — an
     unresolvable mark reports why rather than vanishing.
@@ -76,6 +85,7 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
 
     polygon = list(reading.get("polygon") or [])
     anchor = reading.get("anchor")
+    strokes_world = _strokes_world(scene, depsgraph, region, rv3d, strokes)
 
     # --- tier 2: the anchor -------------------------------------------
     anchor_hit, anchor_point, anchor_normal, anchor_obj = (False, None, None, None)
@@ -118,8 +128,8 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
         if empty_reason == EMPTY_BACKGROUND:
             grounded = _ground_fallback(region, rv3d, polygon, anchor, len(samples))
             if grounded is not None:
-                return grounded
-        return _empty(empty_reason or EMPTY_NO_HIT)
+                return _with_strokes(grounded, strokes_world)
+        return _with_strokes(_empty(empty_reason or EMPTY_NO_HIT), strokes_world)
 
     mark_bbox = points_bbox(polygon or ([anchor] if anchor else []))
     fractions = _object_fractions(region, rv3d, objects_by_name, mark_bbox)
@@ -139,7 +149,7 @@ def resolve_mark(context, region, rv3d, reading, serial, write_vertex_group=True
         "hit_count": hit_total,
         "empty_reason": None,
     }
-    return resolved
+    return _with_strokes(resolved, strokes_world)
 
 
 # =============================================================================
@@ -221,6 +231,44 @@ def _ground_fallback(region, rv3d, polygon, anchor, sample_count):
         "plane": PLANE_GROUND,
         "plane_z": GROUND_PLANE_Z,
     }
+
+
+def _strokes_world(scene, depsgraph, region, rv3d, strokes):
+    """Each stroke as a short world-space path, or None when none were given.
+
+    Per stroke: ``{"points": [[x, y, z], ...], "on": label}`` — a sample lands
+    on whatever geometry its ray meets, else on the ground plane; a ray that
+    meets nothing (sky) is skipped. ``on`` is where MOST of the stroke landed:
+    ``"ground"``, an object name, or None for a stroke drawn entirely on sky.
+    Bounded: ``STROKE_WORLD_POINTS`` rays per stroke.
+    """
+    if strokes is None:
+        return None
+    out = []
+    for stroke in strokes:
+        points = []
+        labels = {}
+        for sample in decimate(list(stroke or ()), STROKE_WORLD_POINTS):
+            ok, location, _normal, obj = raycast(scene, depsgraph, region, rv3d, sample)
+            if ok and location is not None:
+                points.append(_round_vec(location))
+                label = getattr(obj, "name", None) or PLANE_GROUND
+            else:
+                ground = _ground_hit(region, rv3d, sample)
+                if ground is None:
+                    continue
+                points.append([round(c, WORLD_DECIMALS) for c in ground])
+                label = PLANE_GROUND
+            labels[label] = labels.get(label, 0) + 1
+        on = max(labels, key=labels.get) if labels else None
+        out.append({"points": points, "on": on})
+    return out
+
+
+def _with_strokes(resolved, strokes_world):
+    if strokes_world is not None:
+        resolved["strokes_world"] = strokes_world
+    return resolved
 
 
 def _ground_hit(region, rv3d, point):

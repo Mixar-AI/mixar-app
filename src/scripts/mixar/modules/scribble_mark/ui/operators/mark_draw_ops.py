@@ -15,6 +15,11 @@ shaft and head — or an X's two lines — arrive as a single gesture without th
 user having to say so. It is the same idle-commit shape the handwriting
 canvas uses, so it is a rhythm people meet twice rather than a new rule.
 
+Above the marks, the freeze's ink as a whole is READ as either pointing or a
+sketch (``core/sketch.py``); the hint pill says which, and Tab flips it. The
+grouping is the resolution unit, not the meaning: a road with cars and trees
+is one drawing however many pauses it took.
+
 Resolution runs at commit time, here on the main thread, not at send time.
 By the time the user presses Send the payload is already built, so pointing
 at something never adds latency to sending a message.
@@ -29,6 +34,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.scribble_mark.constants import (
+    INTENT_SKETCH,
     MARK_COMMIT_IDLE_S,
     MARK_TIMER_STEP_S,
     MAX_MARKS_PER_TURN,
@@ -201,6 +207,13 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._finish(context)
             return {"FINISHED"}
 
+        # Flip how the ink is read. The reading is on screen in the pill;
+        # this is the way to disagree with it without leaving the freeze.
+        if event.type == "TAB" and event.value == "PRESS":
+            self._commit_pending(context)
+            self._flip_reading(context)
+            return {"RUNNING_MODAL"}
+
         inside = _point_in_region(region, event.mouse_x, event.mouse_y)
         if not inside:
             # Outside the frozen viewport the app is entirely normal — the
@@ -212,7 +225,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
         if event.type == "LEFTMOUSE":
             if event.value == "PRESS":
-                self._begin_stroke(point)
+                self._begin_stroke(context, region, point)
             elif event.value == "RELEASE":
                 self._end_stroke(context)
             return {"RUNNING_MODAL"}
@@ -236,9 +249,11 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     # -- strokes ---------------------------------------------------------
 
-    def _begin_stroke(self, point):
+    def _begin_stroke(self, context, region, point):
         if len(self._strokes) >= MAX_STROKES_PER_MARK:
-            return
+            # Commit the group and start another rather than drop ink: a
+            # sketch drawn without pausing must not lose its later strokes.
+            self._commit(context, region)
         self._current = [point]
         self._strokes.append(self._current)
         overlay.set_live_strokes(self._strokes)
@@ -285,7 +300,20 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if mark_store.remove_last(context.scene):
             overlay.pop_settled()
             self.report({"INFO"}, "Mark removed")
+        mark_store.refresh_reading(context.scene, context.window_manager)
         overlay.tag_redraw()
+
+    def _flip_reading(self, context):
+        wm = context.window_manager
+        current = mark_store.refresh_reading(context.scene, wm)
+        # Setting the property re-reads the drafts and repaints (its update
+        # callback), so the pill changes under the user's eyes.
+        if current == INTENT_SKETCH:
+            wm.mixar_mark_intent = "POINT"
+            self.report({"INFO"}, "Reading the ink as separate marks")
+        else:
+            wm.mixar_mark_intent = "SKETCH"
+            self.report({"INFO"}, "Reading the ink as one sketch")
 
     def _commit_pending(self, context):
         region = self._region(context)
@@ -319,13 +347,13 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             resolved = None
             if rv3d is not None:
                 resolved = resolve.resolve_mark(
-                    context, region, rv3d, reading, serial
+                    context, region, rv3d, reading, serial, strokes=strokes
                 )
             width, height = self._session.region_size
             stored = mark_store.add_mark(
                 context.scene, serial, self._session.view_name,
                 self._session.view_data,
-                reading, width, height, resolved,
+                reading, width, height, resolved, strokes=strokes,
             )
         except Exception as exc:  # noqa: BLE001 — a bad mark is not a bad session
             logger.warning("Scribble mark: could not commit mark %d: %s",
@@ -338,6 +366,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._session.view_used = True
             overlay.push_settled(strokes)
             self.report({"INFO"}, _commit_message(resolved))
+        mark_store.refresh_reading(context.scene, wm)
         overlay.tag_redraw()
 
     # -- context ---------------------------------------------------------

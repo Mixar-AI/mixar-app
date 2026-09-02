@@ -20,15 +20,26 @@ Two shapes, both versioned:
 The budget rule: **detail is shed before marks are, and resolution is never
 shed at all.** Polygon points are a nicety the agent can live without; which
 object the user pointed at is the entire point of the feature.
+
+Above the marks sits the freeze's **intent** (``sketch.read_intent``): the
+same ink is either a set of pointing gestures or ONE drawing. A sketch
+payload carries a ``sketch`` block — every stroke with its place in the
+world — built from the raw strokes each mark stores, which are then left off
+the wire (the annotated frame shows them).
 """
 
+import copy
 import json
 
+from . import sketch as sketch_mod
 from .geometry import decimate, normalized_bbox, to_normalized
 from ..constants import (
+    INTENT_POINT,
+    INTENT_SKETCH,
     MARK_JSON_MAX_BYTES,
     MARK_PAYLOAD_VERSION,
     MARK_POLYGON_MAX_POINTS,
+    MARK_STROKE_MAX_POINTS,
     SURFACE_VIEW3D,
     UV_DECIMALS,
 )
@@ -39,7 +50,7 @@ from ..constants import (
 # =============================================================================
 
 def build_mark(mark_id, view_name, reading, region_width, region_height,
-               resolved=None):
+               resolved=None, strokes=None):
     """One mark, ready to serialize.
 
     Args:
@@ -48,6 +59,9 @@ def build_mark(mark_id, view_name, reading, region_width, region_height,
         reading: a ``gesture.classify`` result.
         region_width/height: the frozen frame's pixel size.
         resolved: the raycast result, or None when resolution did not run.
+        strokes: the raw strokes, in region pixels. Stored normalized — they
+            are what the annotated frame draws and what the sketch reading
+            counts; the gesture polygon is only the hull of them.
 
     Raises:
         ValueError: on a zero-sized region — every coordinate downstream
@@ -81,25 +95,60 @@ def build_mark(mark_id, view_name, reading, region_width, region_height,
         "gesture": reading.get("gesture"),
         "closed": bool(reading.get("closed")),
         "region": region,
+        "strokes": [
+            to_normalized(decimate(list(s), MARK_STROKE_MAX_POINTS),
+                          region_width, region_height)
+            for s in (strokes or ()) if s
+        ],
     }
     if resolved is not None:
         mark["resolved"] = resolved
     return mark
 
 
-def build_payload(marks, views, surface=SURFACE_VIEW3D):
+def build_payload(marks, views, surface=SURFACE_VIEW3D, intent_override=None):
     """The whole turn's marks plus the views they reference.
 
     Only views actually referenced by a mark are included — a freeze the user
     armed and then left without drawing on contributes nothing.
+
+    ``intent_override`` is the user's explicit choice (``sketch``/``point``)
+    or None for the automatic reading. Either way the payload says which
+    (``intent_source``), so the agent knows whether the label was measured
+    or chosen.
     """
     referenced = {m.get("view") for m in marks if m.get("view")}
-    return {
+    auto_intent, _stats = sketch_mod.read_intent(marks)
+    chosen = intent_override in (INTENT_POINT, INTENT_SKETCH)
+    intent = intent_override if chosen else auto_intent
+
+    payload = {
         "v": MARK_PAYLOAD_VERSION,
         "surface": surface,
+        "intent": intent,
+        "intent_source": "user" if chosen else "auto",
         "views": {name: data for name, data in views.items() if name in referenced},
-        "marks": list(marks),
+        "marks": [_wire_mark(m) for m in marks],
     }
+    if intent == INTENT_SKETCH:
+        payload["sketch"] = sketch_mod.build_sketch(marks)
+    return payload
+
+
+def _wire_mark(mark):
+    """A mark as sent: the raw strokes and their world samples stay behind.
+
+    They are folded into the sketch block when the freeze is a sketch, and
+    for pointing the resolved point/objects already say everything the
+    strokes could; either way the annotated frame shows the ink itself.
+    """
+    out = copy.deepcopy(mark)
+    strokes = out.pop("strokes", None) or []
+    out["stroke_count"] = len(strokes)
+    resolved = out.get("resolved")
+    if isinstance(resolved, dict):
+        resolved.pop("strokes_world", None)
+    return out
 
 
 def _rounded_direction(direction):
@@ -139,6 +188,13 @@ def serialize(payload, max_bytes=MARK_JSON_MAX_BYTES):
 
     working = json.loads(text)
 
+    if working.get("sketch"):
+        text, note = _shed_sketch(working, max_bytes)
+        if note:
+            notes.append(note)
+        if text is not None:
+            return text, notes
+
     for mark in working["marks"]:
         polygon = mark.get("region", {}).get("polygon") or []
         if len(polygon) > 8:
@@ -174,6 +230,42 @@ def serialize(payload, max_bytes=MARK_JSON_MAX_BYTES):
     return _dump(working), notes
 
 
+def _shed_sketch(working, max_bytes):
+    """Sketch-first shedding. Returns ``(text_or_None, note)``.
+
+    For a drawing the per-mark outlines are the cheapest thing to lose: the
+    sketch block carries each stroke's bbox and the annotated frame carries
+    the ink. Then the stroke paths are thinned, then the shortest strokes go
+    — detail before layout. The marks themselves are never touched here.
+    """
+    for mark in working["marks"]:
+        mark.get("region", {})["polygon"] = []
+    text = _dump(working)
+    if len(text.encode("utf-8")) <= max_bytes:
+        return text, "mark outlines dropped; the sketch block and the marked frame carry the ink"
+
+    sketch = working["sketch"]
+    for stroke in sketch.get("strokes") or []:
+        stroke["world"] = decimate(stroke.get("world") or [], 4)
+    text = _dump(working)
+    if len(text.encode("utf-8")) <= max_bytes:
+        return text, "sketch stroke paths thinned to fit the context budget"
+
+    strokes = sketch.get("strokes") or []
+    if len(strokes) > 16:
+        by_length = sorted(
+            range(len(strokes)),
+            key=lambda i: len(strokes[i].get("world") or []),
+            reverse=True,
+        )
+        keep = sorted(by_length[:16])
+        sketch["strokes"] = [strokes[i] for i in keep]
+        text = _dump(working)
+        if len(text.encode("utf-8")) <= max_bytes:
+            return text, "shortest sketch strokes dropped to fit the context budget"
+    return None, "sketch detail shed; still over budget"
+
+
 def _dump(payload):
     return json.dumps(payload, separators=(",", ":"), sort_keys=False)
 
@@ -198,9 +290,30 @@ def summarize(payload):
     if not marks:
         return ""
 
+    if payload.get("intent") == INTENT_SKETCH and payload.get("sketch"):
+        return _summarize_sketch(payload)
+
     lines = []
     for mark in marks:
         lines.append(_summarize_mark(mark, len(marks) > 1))
+    return "\n".join(lines)
+
+
+def _summarize_sketch(payload):
+    """A drawing is restated as ONE thing, not as a list of its pauses."""
+    lines = [sketch_mod.describe_sketch(payload)]
+    crossed = []
+    for mark in payload.get("marks") or []:
+        resolved = mark.get("resolved") or {}
+        if not resolved.get("hit"):
+            continue
+        for obj in resolved.get("objects") or []:
+            name = obj.get("name")
+            if name and name not in crossed:
+                crossed.append(name)
+    if crossed:
+        lines.append("The ink also crosses existing objects: "
+                     + ", ".join(f"`{n}`" for n in crossed) + ".")
     return "\n".join(lines)
 
 

@@ -32,9 +32,12 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 
-from . import freeze, view_bake, vertex_groups
+from . import freeze, overlay, view_bake, vertex_groups
 from . import payload as payload_mod
+from . import sketch as sketch_mod
 from ..constants import (
+    INTENT_POINT,
+    INTENT_SKETCH,
     MARK_PAYLOAD_VERSION,
     MAX_MARKS_PER_TURN,
     SURFACE_VIEW3D,
@@ -63,7 +66,7 @@ def next_serial(scene):
 
 
 def add_mark(scene, serial, view_name, view_data, reading, region_width,
-             region_height, resolved=None):
+             region_height, resolved=None, strokes=None):
     """Record one mark. Returns the stored item, or None if it did not fit."""
     collection = _collection(scene)
     if collection is None:
@@ -78,7 +81,8 @@ def add_mark(scene, serial, view_name, view_data, reading, region_width,
 
     try:
         built = payload_mod.build_mark(
-            serial, view_name, reading, region_width, region_height, resolved
+            serial, view_name, reading, region_width, region_height, resolved,
+            strokes=strokes,
         )
     except ValueError as exc:
         logger.warning("Scribble mark: could not build mark %d: %s", serial, exc)
@@ -234,7 +238,22 @@ def _parsed(item):
         return None
 
 
-def build_context(scene, drafts_only=True):
+def draft_marks(scene):
+    """The draft marks as stored — raw strokes included.
+
+    This is the record the annotated frame is drawn from and the sketch
+    reading is made from; ``build_context`` returns the WIRE shape, which
+    leaves the strokes behind.
+    """
+    return [
+        parsed for item in (_collection(scene) or ())
+        if item.state == STATE_DRAFT
+        for parsed in (_parsed(item),)
+        if parsed is not None
+    ]
+
+
+def build_context(scene, drafts_only=True, intent_override=None):
     """The mark payload for a turn, or None when there is nothing to send."""
     collection = _collection(scene) or ()
     marks = []
@@ -254,7 +273,35 @@ def build_context(scene, drafts_only=True):
 
     if not marks:
         return None
-    return payload_mod.build_payload(marks, views, SURFACE_VIEW3D)
+    return payload_mod.build_payload(
+        marks, views, SURFACE_VIEW3D, intent_override=intent_override
+    )
+
+
+# =============================================================================
+# Reading the ink: marks or a sketch
+# =============================================================================
+
+_INTENT_BY_SETTING = {"SKETCH": INTENT_SKETCH, "POINT": INTENT_POINT}
+
+
+def intent_override(wm):
+    """The user's explicit reading (``sketch``/``point``), or None for auto."""
+    return _INTENT_BY_SETTING.get(getattr(wm, "mixar_mark_intent", "AUTO"))
+
+
+def refresh_reading(scene, wm):
+    """Re-read the drafts and push the result to the hint pill.
+
+    Called wherever the drafts or the override change — a commit, an undo,
+    a clear, a Tab — never from a draw callback, which is what makes it
+    affordable to parse every draft here. Returns the effective intent.
+    """
+    marks = draft_marks(scene)
+    auto, stats = sketch_mod.read_intent(marks)
+    intent = intent_override(wm) or auto
+    overlay.set_reading(intent if marks else None, stats["strokes"])
+    return intent
 
 
 def get_marks(include_sent=True):

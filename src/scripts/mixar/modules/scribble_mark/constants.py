@@ -29,6 +29,17 @@ MARK_PAYLOAD_VERSION = 1
 #: added without changing the shape the backend already parses.
 SURFACE_VIEW3D = "view3d"
 
+#: How the ink of a whole freeze is read. POINT is marks that each mean
+#: "this" or "here"; SKETCH is a DRAWING — a road with cars and trees on the
+#: side — that the agent should read as a picture of what to build, laid out
+#: where it was drawn. The reading is decided on the client (``core/sketch.py``),
+#: shown in the hint pill, and overridable, because a drawing chopped into
+#: per-pause "marks" arrives as nine placement targets and the agent builds
+#: nine unrelated things at them. Advisory like the gesture labels: both
+#: representations travel, the label says which one the user meant.
+INTENT_POINT = "point"
+INTENT_SKETCH = "sketch"
+
 #: Gesture labels. Always advisory — the raw polygon travels alongside, so the
 #: agent can disagree with a misclassification instead of being stuck with it.
 GESTURE_POINT = "point"
@@ -59,13 +70,16 @@ GROUND_MAX_DISTANCE = 1000.0
 # CAPTURE LIMITS
 # =============================================================================
 
-#: A turn carrying more marks than this is almost certainly a stuck modal.
-#: "Move THIS over THERE" needs two; a handful covers every real composition.
-MAX_MARKS_PER_TURN = 8
+#: Draft marks a message may carry. Pointing needs a handful ("move THIS
+#: over THERE" is two), but a SKETCH is chopped into one mark per pen-up
+#: pause, and a road with a few cars and trees is easily fifteen of them —
+#: at the old cap of 8 the second half of the drawing was silently refused.
+MAX_MARKS_PER_TURN = 32
 
-#: Strokes per mark. An arrow is 2 (shaft + head), an X is 2, a redrawn circle
-#: might be 3. Beyond this the user is sketching, not pointing.
-MAX_STROKES_PER_MARK = 8
+#: Strokes per mark. An arrow is 2 (shaft + head), an X is 2, a quickly drawn
+#: car is 6 or 7. Reaching the cap COMMITS the group and starts a new one
+#: rather than dropping ink — nothing the user drew is ever thrown away.
+MAX_STROKES_PER_MARK = 16
 
 #: Captured samples kept per stroke before decimation. Tablets emit far more
 #: than this; the tail is dropped rather than growing the buffer.
@@ -95,6 +109,17 @@ MARK_TIMER_STEP_S = 0.15
 #: trace; 32 points describes any hand-drawn loop well past legibility.
 MARK_POLYGON_MAX_POINTS = 32
 
+#: Points kept per RAW stroke stored with a mark (normalized). These are what
+#: the annotated frame is drawn from — the ink the user actually put down, not
+#: its convex hull — so they are kept finer than the polygon: at 48 a car
+#: still looks like a car.
+MARK_STROKE_MAX_POINTS = 48
+
+#: Samples per stroke projected into world space at commit time (raycast, or
+#: the ground plane where the ray hits nothing). Eight is enough to say where
+#: a road runs; the drawing itself is carried by the annotated frame.
+STROKE_WORLD_POINTS = 8
+
 #: Normalized coordinates are rounded to this many decimals — ~0.1 px on a
 #: 1080p frame, and it keeps the JSON small enough to sit in a prompt.
 UV_DECIMALS = 4
@@ -103,8 +128,52 @@ UV_DECIMALS = 4
 WORLD_DECIMALS = 4
 
 #: Hard cap on the serialized mark payload. Marks ride inside the model's
-#: context, so this is a prompt-budget limit, not a transport one.
-MARK_JSON_MAX_BYTES = 24000
+#: context, so this is a prompt-budget limit, not a transport one. Sized for
+#: a sketch: thirty-odd ground marks plus the stroke block below.
+MARK_JSON_MAX_BYTES = 40000
+
+# =============================================================================
+# SKETCH READING
+# =============================================================================
+# Deterministic, like the gesture reader, and for the same reason. Every
+# threshold is a count or a ratio, so it holds at any DPI.
+
+#: A freeze needs at least this many strokes to be a drawing at all. Three
+#: circles on empty ground are three placement targets, not a sketch.
+SKETCH_MIN_STROKES = 4
+
+#: ...of which at least this many must be OPEN lines (not closed loops, not
+#: taps). A layout of circled spots has none; a drawing of anything has many.
+SKETCH_MIN_OPEN_STROKES = 3
+
+#: At least this fraction of the freeze's marks must read as DRAWN — ink on
+#: nothing, an irregular non-gesture line, or a three-plus-stroke doodle —
+#: rather than as a pointing gesture on an object.
+SKETCH_DRAWN_FRACTION = 0.5
+
+#: A mark of this many strokes is a doodle: arrows are two, X's are two.
+SKETCH_DOODLE_STROKES = 3
+
+#: Sketching over an existing surface (a floor mesh) hits it with every
+#: stroke. A circled figure covering less than this fraction of the object it
+#: landed on, in a session of at least SKETCH_CANVAS_MIN_STROKES strokes, is
+#: drawn ON the surface rather than selecting it.
+SKETCH_MAX_OBJECT_FRACTION = 0.15
+SKETCH_CANVAS_MIN_STROKES = 8
+
+#: A stroke whose bbox diagonal is under this, normalized, is a tap
+#: (~12 px on a 1080-tall frame, matching POINT_MAX_DIAG_PX).
+SKETCH_TAP_MAX_UV = 0.012
+
+#: Strokes carried in the payload's sketch block. The LONGEST are kept —
+#: outlines and roads over the dots that detail them.
+SKETCH_MAX_STROKES = 48
+
+#: World points per stroke on the wire (thinned further under budget).
+SKETCH_WORLD_POINTS = STROKE_WORLD_POINTS
+
+#: Strokes named individually in the client prose before "and N more".
+SKETCH_PROSE_STROKES = 12
 
 # =============================================================================
 # GESTURE CLASSIFICATION
@@ -257,7 +326,17 @@ MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 #: mode whose boundaries and recovery are invisible is the failure the Thinkink
 #: study (arXiv:2607.21468) found first: users could not tell which mode they
 #: were in, and asked for visible controls and a way to undo.
-MARK_HINT_IDLE = "Draw here to point  ·  Write in the chat to type  ·  Esc when done"
+MARK_HINT_IDLE = (
+    "Draw here to point or sketch  ·  Write in the chat to type  ·  Esc when done"
+)
+#: ...and once ink is down, what the ink is being READ as, with the way to
+#: change the reading. Both readings name Tab: a sketch mistaken for nine
+#: marks is exactly the misread the user must be able to see and flip.
 MARK_HINT_MARKED = (
-    "{count} mark{plural}  ·  Backspace undoes the last  ·  Esc when done"
+    "{count} mark{plural}  ·  Tab: read as a sketch  ·  Backspace undoes the "
+    "last  ·  Esc when done"
+)
+MARK_HINT_SKETCH = (
+    "Sketch: {count} stroke{plural}, built as drawn  ·  Tab: read as marks  ·  "
+    "Backspace undoes the last  ·  Esc when done"
 )

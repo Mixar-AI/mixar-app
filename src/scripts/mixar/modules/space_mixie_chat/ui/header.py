@@ -96,6 +96,12 @@ class MIXIE_CHAT_HT_header(Header):
                     icon='GREASEPENCIL',
                     depress=armed,
                 )
+                # How the ink is READ — marks, or one sketch. Visible and
+                # flippable beside the count, because a drawing silently
+                # taken as nine placement targets is a mode the user can
+                # neither see nor correct (arXiv:2607.21468).
+                if mark_count and hasattr(wm, 'mixar_mark_intent'):
+                    mark_row.prop(wm, "mixar_mark_intent", text="", icon_only=True)
                 # Queued marks need a way out without re-entering the freeze:
                 # a user who changed their mind should not have to arm the
                 # mode again just to discard what it left behind.

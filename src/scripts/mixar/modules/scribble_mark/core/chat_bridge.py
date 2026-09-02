@@ -23,19 +23,32 @@ can always re-render from the baked camera.
 
 from __future__ import annotations
 
+import json
+
 import bpy
 
 from mixar.config.logging_config import get_logger
 
 from . import annotate, freeze, marks as mark_store
+from . import payload as payload_mod
 
 logger = get_logger(__name__)
 
 
 def prepare_for_send(scene):
-    """``(mark_context, notes)`` for this turn, or ``(None, [])``."""
+    """``(mark_context, notes)`` for this turn, or ``(None, [])``.
+
+    The payload is built under the user's reading override (the header
+    dropdown / Tab) and then run through the context budget: what goes on
+    the wire is exactly what ``serialize`` says fits, and anything shed is
+    reported in *notes* rather than silently missing.
+    """
     try:
-        context = mark_store.build_context(scene, drafts_only=True)
+        wm = bpy.context.window_manager
+        context = mark_store.build_context(
+            scene, drafts_only=True,
+            intent_override=mark_store.intent_override(wm),
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Scribble mark: could not build mark context: %s", exc,
                        exc_info=True)
@@ -46,7 +59,15 @@ def prepare_for_send(scene):
 
     notes = []
     try:
-        notes = _attach_frames(scene, context)
+        text, shed = payload_mod.serialize(context)
+        context = json.loads(text)
+        notes.extend(shed)
+    except Exception as exc:  # noqa: BLE001 — over budget is better than lost
+        logger.warning("Scribble mark: budget pass failed, sending as built: %s",
+                       exc)
+
+    try:
+        notes.extend(_attach_frames(scene, context))
     except Exception as exc:  # noqa: BLE001 — an attachment is never worth
         # losing the marks, which carry the resolved answer on their own
         logger.warning("Scribble mark: could not attach frozen frames: %s", exc,
@@ -65,6 +86,16 @@ def finish_send(scene):
         mark_store.mark_all_sent(scene)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: could not settle marks: %s", exc)
+
+    try:
+        # The reading override belongs to the ink that just went; the next
+        # freeze starts on Auto. (Its update callback re-reads the drafts,
+        # which are now SENT, and clears the hint.)
+        wm = bpy.context.window_manager
+        if getattr(wm, "mixar_mark_intent", "AUTO") != "AUTO":
+            wm.mixar_mark_intent = "AUTO"
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Scribble mark: could not reset the reading: %s", exc)
 
     try:
         # Sending is the end of the gesture on BOTH surfaces. Leaving the
@@ -94,11 +125,13 @@ def _attach_frames(scene, context):
         return ["the frozen frame was unavailable; marks sent without it"]
 
     # Named off the newest mark's serial, so an earlier message's attachment
-    # is never overwritten by a later freeze.
+    # is never overwritten by a later freeze. Drawn from the STORED records,
+    # which still carry the raw strokes the wire payload leaves behind.
     marks = context.get("marks") or ()
     serial = marks[-1].get("id") if marks else 0
     annotated = annotate.render_annotated(
-        image, marks, freeze.annotated_name(serial)
+        image, mark_store.draft_marks(scene) or marks,
+        freeze.annotated_name(serial),
     )
 
     pending = scene.mixie_chat_pending_attachments

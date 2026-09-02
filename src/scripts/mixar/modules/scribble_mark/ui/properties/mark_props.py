@@ -11,7 +11,8 @@ Split by lifetime, which is the whole reason there are two homes:
   can address turns later, and the vertex groups and cameras it names are
   saved alongside it. Losing them on file reload would make "make it a bit
   taller" unresolvable.
-* **WindowManager** — whether mark mode is currently armed. That describes an
+* **WindowManager** — whether mark mode is currently armed, and how the
+  user asked the ink to be READ (marks or a sketch). Both describe an
   in-progress gesture, never the saved document; a .blend that reopened
   mid-freeze, with the viewport blocked and no modal running to unblock it,
   would be a file the user could not navigate.
@@ -26,10 +27,35 @@ import bpy
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
+    EnumProperty,
     IntProperty,
     StringProperty,
 )
 from bpy.types import PropertyGroup
+
+#: How the user asked the freeze's ink to be read. AUTO is the client's own
+#: reading (``core/sketch.py``); the other two override it. A visible,
+#: flippable reading is the whole point: a drawing silently taken as nine
+#: placement targets is a mode the user could neither see nor correct.
+INTENT_ITEMS = (
+    ('AUTO', "Auto", "Read from the ink: a few gestures are marks, a drawing "
+     "is a sketch", 'AUTO', 0),
+    ('SKETCH', "Sketch", "Everything drawn is ONE drawing of what to build, "
+     "laid out as drawn", 'GREASEPENCIL', 1),
+    ('POINT', "Marks", "Each gesture points at a thing or a spot",
+     'RESTRICT_SELECT_OFF', 2),
+)
+
+
+def _on_intent_update(self, context):
+    """Re-read the drafts under the new setting and repaint the hint."""
+    try:
+        from mixar.modules.scribble_mark.core import marks as mark_store, overlay
+
+        mark_store.refresh_reading(context.scene, self)
+        overlay.tag_redraw()
+    except Exception:  # noqa: BLE001 — an RNA update callback must not raise
+        pass
 
 
 class MixarScribbleMark(PropertyGroup):
@@ -110,12 +136,24 @@ def register():
         default=False,
         options={'SKIP_SAVE'},
     )
+    bpy.types.WindowManager.mixar_mark_intent = EnumProperty(
+        name="Read Ink As",
+        description=(
+            "How the ink on the frozen viewport is read: marks that each "
+            "point at something, or one sketch of what to build. Auto "
+            "decides from the ink itself; Tab flips it while drawing"
+        ),
+        items=INTENT_ITEMS,
+        default='AUTO',
+        options={'SKIP_SAVE'},
+        update=_on_intent_update,
+    )
 
 
 def unregister():
     from bpy.utils import unregister_class
 
-    for attr in ("mixar_mark_armed", "mixar_mark_busy"):
+    for attr in ("mixar_mark_armed", "mixar_mark_busy", "mixar_mark_intent"):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)
     for attr in ("mixar_marks", "mixar_mark_serial", "mixar_mark_frame_name"):

@@ -48,6 +48,10 @@ def _on_load_post(_dummy):
         wm = getattr(bpy.context, "window_manager", None)
         if wm is not None and getattr(wm, "mixar_mark_armed", False):
             wm.mixar_mark_armed = False
+        # The reading override is SKIP_SAVE too, but a load without a restart
+        # keeps the WindowManager — and it described the OLD file's ink.
+        if wm is not None and getattr(wm, "mixar_mark_intent", "AUTO") != "AUTO":
+            wm.mixar_mark_intent = "AUTO"
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: could not clear the armed flag: %s", exc)
 

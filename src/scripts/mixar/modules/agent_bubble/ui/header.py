@@ -485,6 +485,13 @@ class AGENT_BUBBLE_HT_header(Header):
                 emboss=False,
                 depress=armed,
             )
+            # The reading (marks vs one sketch), visible and flippable
+            # wherever the count is — see space_mixie_chat/ui/header.py.
+            if mark_count and hasattr(wm, 'mixar_mark_intent'):
+                right_controls.prop(
+                    wm, "mixar_mark_intent", text="", icon_only=True,
+                    emboss=False,
+                )
 
 
 classes = (AGENT_BUBBLE_HT_header,)

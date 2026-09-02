@@ -31,12 +31,14 @@ from mixar.config.logging_config import get_logger
 
 from . import freeze
 from ..constants import (
+    INTENT_SKETCH,
     MARK_HINT_ACCENT_COLOR,
     MARK_HINT_BG_COLOR,
     MARK_HINT_FONT_PX,
     MARK_HINT_HEIGHT_PX,
     MARK_HINT_IDLE,
     MARK_HINT_MARKED,
+    MARK_HINT_SKETCH,
     MARK_HINT_PAD_X_PX,
     MARK_HINT_TEXT_COLOR,
     MARK_HINT_TOP_GAP_PX,
@@ -63,6 +65,12 @@ _settled_strokes = []
 
 _texture = None
 _texture_key = None
+
+#: How the freeze's ink currently reads — ``(intent, stroke_count)`` — pushed
+#: in by ``marks.refresh_reading`` whenever a mark is committed, undone or
+#: the user flips it. Cached here because deciding it means parsing every
+#: draft mark, which a draw callback must not do on every mouse move.
+_reading = None
 
 #: Pointers to the ONE area/region that was frozen. A POST_PIXEL handler on
 #: SpaceView3D runs for every 3D viewport, so without this the still of one
@@ -97,6 +105,12 @@ def pop_settled():
         _settled_strokes.pop()
 
 
+def set_reading(intent, stroke_count):
+    """Record how the ink reads, for the hint pill. None clears it."""
+    global _reading
+    _reading = None if intent is None else (intent, int(stroke_count))
+
+
 def reset_ink():
     """Drop the drawn ink and the cached texture, keeping the target.
 
@@ -113,12 +127,13 @@ def reset_ink():
 
 def reset():
     """Forget everything the overlay was drawing. Called on disarm."""
-    global _live_strokes, _texture, _texture_key
+    global _live_strokes, _texture, _texture_key, _reading
     global _target_area_ptr, _target_region_ptr
     _live_strokes = []
     _settled_strokes.clear()
     _texture = None
     _texture_key = None
+    _reading = None
     _target_area_ptr = 0
     _target_region_ptr = 0
 
@@ -212,10 +227,12 @@ def _draw_strokes(strokes, color, width):
 
 
 def _hint_text(scene):
-    """What the pill says, given how much has been drawn.
+    """What the pill says, given how much has been drawn and how it reads.
 
     Counts DRAFTS: the number that matters is what this message will carry,
-    not how many marks the .blend has accumulated over its life.
+    not how many marks the .blend has accumulated over its life. The reading
+    (marks vs sketch) comes from the cache ``refresh_reading`` fills, so the
+    user can SEE which way their ink will be taken before they send it.
     """
     try:
         count = sum(
@@ -226,6 +243,10 @@ def _hint_text(scene):
         count = 0
     if not count:
         return MARK_HINT_IDLE
+    if _reading is not None and _reading[0] == INTENT_SKETCH:
+        strokes = _reading[1]
+        return MARK_HINT_SKETCH.format(count=strokes,
+                                       plural="" if strokes == 1 else "s")
     return MARK_HINT_MARKED.format(count=count, plural="" if count == 1 else "s")
 
 

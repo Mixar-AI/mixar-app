@@ -19,6 +19,13 @@ what any generation step should actually work from.
 Ink is drawn as a dark casing under a bright core, because a single-colour
 stroke that reads on a light clay render disappears on a dark material
 preview, and the frozen frame can be either.
+
+What is drawn is the RAW INK — each stroke the user put down — not the
+gesture polygon. The polygon is a convex hull for every gesture but a loop,
+and a hull of a sketched car is a blob: the picture the agent was shown of a
+road with cars and trees was a row of blobs, which is a large part of why it
+built something else. Records from before strokes were stored fall back to
+the polygon.
 """
 
 from __future__ import annotations
@@ -77,44 +84,44 @@ def render_annotated(image, marks, name):
 
     draw = ImageDraw.Draw(frame)
     for mark in marks:
-        points = _mark_points(mark, width, height)
-        if len(points) < 2:
-            _draw_dot(draw, points, casing_width, core_width)
-            continue
-        # Casing first, core over it — one pass each, so the join between
-        # segments does not show the casing through the core.
-        draw.line(points, fill=INK_CASING, width=casing_width, joint="curve")
-        draw.line(points, fill=INK_CORE, width=core_width, joint="curve")
+        for points in _mark_polylines(mark, width, height):
+            if len(points) < 2:
+                _draw_dot(draw, points, casing_width, core_width)
+                continue
+            # Casing first, core over it — one pass each, so the join between
+            # segments does not show the casing through the core.
+            draw.line(points, fill=INK_CASING, width=casing_width, joint="curve")
+            draw.line(points, fill=INK_CORE, width=core_width, joint="curve")
 
     return _pack_result(frame, name)
 
 
-def _mark_points(mark, width, height):
-    """A mark's outline in PIL pixel coordinates.
+def _mark_polylines(mark, width, height):
+    """A mark's ink as PIL polylines: its raw strokes, else its outline.
 
     Two conversions at once, and both matter: normalized to pixels, and
     ``v`` bottom-up (the payload's convention, matching the backend
     localizer) to PIL's top-down rows. Skipping the flip draws every mark
     mirrored across the horizon.
     """
+    strokes = [s for s in (mark.get("strokes") or []) if s]
+    if strokes:
+        return [_to_pil(stroke, width, height) for stroke in strokes]
+
     region = mark.get("region") or {}
     polygon = region.get("polygon") or []
-
     if len(polygon) >= 2:
-        source = polygon
-        closed = mark.get("closed")
-    else:
-        anchor = region.get("anchor")
-        source = [anchor] if anchor else []
-        closed = False
+        points = _to_pil(polygon, width, height)
+        if mark.get("closed") and len(points) >= 3:
+            points.append(points[0])
+        return [points]
 
-    points = [
-        (float(u) * width, (1.0 - float(v)) * height)
-        for u, v in source
-    ]
-    if closed and len(points) >= 3:
-        points.append(points[0])
-    return points
+    anchor = region.get("anchor")
+    return [_to_pil([anchor], width, height)] if anchor else []
+
+
+def _to_pil(points, width, height):
+    return [(float(u) * width, (1.0 - float(v)) * height) for u, v in points]
 
 
 def _draw_dot(draw, points, casing_width, core_width):
