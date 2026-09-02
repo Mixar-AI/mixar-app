@@ -74,7 +74,11 @@ class MixieQueueItemPG(PropertyGroup):
     # unix-epoch creation time the island can subtract from time(NULL).
     type_label: StringProperty(name="Generation Type", default="")
     model_label: StringProperty(name="Model", default="")
-    created_epoch: FloatProperty(name="Created (unix)", default=0.0)
+    # INT, not float: a float32 cannot hold a unix epoch. Its ULP at 1.79e9
+    # is 128 s, so the elapsed clock read up to a minute wrong and ticked in
+    # ~2-minute jumps (a 95 s-old job displayed as 1:11). Whole seconds are
+    # all an m:ss clock needs, and int32 holds them exactly.
+    created_epoch: IntProperty(name="Created (unix seconds)", default=0)
     elapsed_done: FloatProperty(name="Frozen Elapsed", default=0.0)
 
 
@@ -167,7 +171,7 @@ def _sync_mirror(_queue) -> None:
             )
             item.model_label = model_label(item.service, item.model)
             item.created_epoch = (
-                time.time() - (now - item.created_at) if item.created_at else 0.0
+                int(time.time() - (now - item.created_at)) if item.created_at else 0
             )
             item.elapsed_done = (
                 max(0.0, item.finished_at - item.created_at)

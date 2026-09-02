@@ -308,7 +308,7 @@ void gather_jobs(const bContext *C, GenPaneData *data)
     BLI_snprintf(item->key, sizeof(item->key), "job:%s", job_id);
     gen_read_string(&row, "type_label", item->type_label, sizeof(item->type_label));
     gen_read_string(&row, "model_label", item->model_label, sizeof(item->model_label));
-    item->sort_time = double(gen_read_float(&row, "created_epoch"));
+    item->sort_time = double(gen_read_int(&row, "created_epoch"));
     gen_format_age(item->sort_time, item->age);
   }
   RNA_property_collection_end(&iter);

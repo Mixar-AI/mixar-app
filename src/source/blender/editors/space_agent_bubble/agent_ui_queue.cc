@@ -134,6 +134,18 @@ void read_item_string(PointerRNA *item, const char *name, char *r_buf, const int
   r_buf[buf_len - 1] = '\0';
 }
 
+/** Whole unix seconds. The epoch is an IntProperty because a float32 cannot
+ * hold one: its ULP at 1.79e9 is 128 s, which had the elapsed clock reading up
+ * to a minute wrong and ticking in ~2-minute jumps. */
+int read_item_int(PointerRNA *item, const char *name)
+{
+  PropertyRNA *prop = RNA_struct_find_property(item, name);
+  if (!prop || RNA_property_type(prop) != PROP_INT) {
+    return 0;
+  }
+  return RNA_property_int_get(item, prop);
+}
+
 float read_item_float(PointerRNA *item, const char *name)
 {
   PropertyRNA *prop = RNA_struct_find_property(item, name);
@@ -209,7 +221,7 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row)
     status_word(state, substate, row.status);
     read_item_string(&item, "type_label", row.type_label, sizeof(row.type_label));
     read_item_string(&item, "model_label", row.model_label, sizeof(row.model_label));
-    row.created_epoch = double(read_item_float(&item, "created_epoch"));
+    row.created_epoch = double(read_item_int(&item, "created_epoch"));
     row.elapsed_done = read_item_float(&item, "elapsed_done");
 
     row.is_running = state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||

@@ -75,6 +75,14 @@ float gen_read_float(PointerRNA *ptr, const char *name)
                                                            0.0f;
 }
 
+/** Whole unix seconds — see `created_epoch`'s note: a float32 cannot hold an
+ * epoch without quantising it to ~128 s. */
+int gen_read_int(PointerRNA *ptr, const char *name)
+{
+  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
+  return (prop && RNA_property_type(prop) == PROP_INT) ? RNA_property_int_get(ptr, prop) : 0;
+}
+
 /** The enum's stable identifier, never its index — an index repoints. */
 void gen_read_enum_id(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy)
 {

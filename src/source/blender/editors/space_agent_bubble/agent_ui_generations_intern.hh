@@ -297,6 +297,9 @@ void agent_ui_generations_grid(const bContext *C,
 
 void gen_read_string(PointerRNA *ptr, const char *name, char *out, int out_maxncpy);
 float gen_read_float(PointerRNA *ptr, const char *name);
+
+/** Whole unix seconds; an epoch does not survive a float32. */
+int gen_read_int(PointerRNA *ptr, const char *name);
 /** The enum's stable IDENTIFIER, never its index — an index repoints the
  * moment an item is inserted. */
 void gen_read_enum_id(PointerRNA *ptr, const char *name, char *out, int out_maxncpy);

@@ -170,18 +170,21 @@ class MIXAR_OT_generations_select_media(Operator):
             self.report({'ERROR'}, "This scene has no moodboard")
             return {'CANCELLED'}
         target = (self.image_name or "").strip()
-        found = False
-        for item in items:
-            image = getattr(item, "image", None)
-            match = image is not None and image.name == target
-            # An exclusive selection: the board selection is a reference set,
-            # and silently adding to whatever was already selected would
-            # change what the next generation submits.
-            item.selected = match
-            found = found or match
-        if not found:
+        # Resolve BEFORE mutating. The selection is exclusive — it is the
+        # reference set, and adding to whatever was already selected would
+        # change what the next generation submits — so a miss used to clear
+        # every item and then bail with CANCELLED, which pushes no undo step.
+        # Clicking a stale tile (the asset list is a cache) wiped the user's
+        # whole reference set unrecoverably.
+        if not any(
+            getattr(item, "image", None) is not None and item.image.name == target
+            for item in items
+        ):
             self.report({'ERROR'}, "That image is no longer on the board")
             return {'CANCELLED'}
+        for item in items:
+            image = getattr(item, "image", None)
+            item.selected = image is not None and image.name == target
         self.report({'INFO'}, f"Selected '{target}' on the moodboard")
         return {'FINISHED'}
 

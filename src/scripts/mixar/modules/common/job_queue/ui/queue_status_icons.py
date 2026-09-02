@@ -278,15 +278,27 @@ def _blink_tick():
 
 
 def start_blink_if_needed() -> None:
-    """Kick off the blink timer if there's running work and it isn't already."""
+    """Kick off the blink timer if there's running work and it isn't already.
+
+    The flag is trusted only when the timer really is registered. It used to
+    be trusted on its own, and a file load then froze the queue for the rest
+    of the session: Blender drops non-persistent timers on load, but nothing
+    cleared the flag, so both restart paths returned here and the pill's
+    elapsed clock stayed stuck at whatever it read at load time. The timer is
+    persistent now AND the flag is cross-checked, so neither alone can wedge
+    it.
+    """
     global _blink_timer_active
-    if _blink_timer_active:
+    if _blink_timer_active and bpy.app.timers.is_registered(_blink_tick):
         return
     if not _has_running_jobs():
+        _blink_timer_active = False
         return
     _blink_timer_active = True
     try:
-        bpy.app.timers.register(_blink_tick, first_interval=_BLINK_INTERVAL_S)
+        bpy.app.timers.register(
+            _blink_tick, first_interval=_BLINK_INTERVAL_S, persistent=True
+        )
     except Exception:
         _blink_timer_active = False
 
