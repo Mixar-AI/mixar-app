@@ -94,6 +94,104 @@ void poly(const float (*pts)[2], const int count, const float col[4])
   immUnbindProgram();
 }
 
+/** Stroke a polyline given in glyph-box fractions of \a s about (cx, cy).
+ *
+ * A silhouette punch cannot express the traced artwork: the design's outlines
+ * cross themselves (the thumb re-enters the fist) and a punch fills that
+ * crossing solid. Every segment quad goes into ONE triangle batch — a
+ * flattened Bezier is dozens of segments, and a draw call each would put a
+ * shader bind per segment on the tab strip's per-frame cost. Joins are only
+ * capped where the path actually turns; between the dense samples of a curve
+ * the notch is well under a pixel.
+ */
+void stroke_path(const float (*pts)[2],
+                 const int count,
+                 const float cx,
+                 const float cy,
+                 const float s,
+                 const float w,
+                 const bool closed,
+                 const float col[4])
+{
+  if (count < 2) {
+    return;
+  }
+  const float half = w * 0.5f;
+  auto at = [&](const int i, float &x, float &y) {
+    x = cx + pts[i][0] * s;
+    y = cy + pts[i][1] * s;
+  };
+
+  const int segments = closed ? count : count - 1;
+
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(col);
+  immBegin(GPU_PRIM_TRIS, segments * 6);
+
+  for (int i = 0; i < segments; i++) {
+    float ax, ay, bx, by;
+    at(i, ax, ay);
+    at((i + 1) % count, bx, by);
+
+    float dx = bx - ax;
+    float dy = by - ay;
+    const float len = std::sqrt(dx * dx + dy * dy);
+    if (len < 1e-6f) {
+      /* Degenerate samples still owe the batch its six vertices. */
+      dx = 1.0f;
+      dy = 0.0f;
+    }
+    else {
+      dx /= len;
+      dy /= len;
+    }
+    const float nx = -dy * half;
+    const float ny = dx * half;
+
+    immVertex2f(pos, ax + nx, ay + ny);
+    immVertex2f(pos, bx + nx, by + ny);
+    immVertex2f(pos, bx - nx, by - ny);
+    immVertex2f(pos, ax + nx, ay + ny);
+    immVertex2f(pos, bx - nx, by - ny);
+    immVertex2f(pos, ax - nx, ay - ny);
+  }
+
+  immEnd();
+  immUnbindProgram();
+
+  /* Round the corners and the open ends. */
+  const int joins = closed ? count : count - 2;
+  for (int j = 0; j < joins; j++) {
+    const int i = closed ? j : j + 1;
+    float px, py, vx, vy, nx2, ny2;
+    at((i - 1 + count) % count, px, py);
+    at(i, vx, vy);
+    at((i + 1) % count, nx2, ny2);
+
+    const float ux = vx - px, uy = vy - py;
+    const float wx = nx2 - vx, wy = ny2 - vy;
+    const float ul = std::sqrt(ux * ux + uy * uy);
+    const float wl = std::sqrt(wx * wx + wy * wy);
+    if (ul < 1e-6f || wl < 1e-6f) {
+      continue;
+    }
+    /* cos of the turn; only cap where the miter would actually notch. */
+    if ((ux * wx + uy * wy) / (ul * wl) < 0.985f) {
+      disc(vx, vy, half, col);
+    }
+  }
+  if (!closed) {
+    float x, y;
+    at(0, x, y);
+    disc(x, y, half, col);
+    at(count - 1, x, y);
+    disc(x, y, half, col);
+  }
+}
+
 /* -------------------------------------------------------------------- */
 /* Glyphs. `s` is the glyph box edge; (cx, cy) its centre.               */
 
@@ -200,45 +298,40 @@ void glyph_mesh(const float cx,
 
 /** Thumbs-up — My Generations.
  *
- * Traced from `generations.svg`'s 24-unit glyph: a cuff on the left, the fist
- * beside it and the thumb rising out of the fist's top-left. */
-void glyph_thumb(const float cx,
-                 const float cy,
-                 const float s,
-                 const float col[4],
-                 const float bg[4])
+ * Traced from `generations.svg`'s own outline (Lucide's thumbs-up at
+ * stroke-width 2 in a 17-unit box) and flattened to a polyline, rather than
+ * approximated from rounded boxes: the approximation collapsed into a blob at
+ * 16 px and was indistinguishable from the placeholder mark the tab strip
+ * used to stamp on every tab. Points are fractions of the glyph box, y up. */
+void glyph_thumb(const float cx, const float cy, const float s, const float col[4])
 {
-  const float w = stroke_width(s);
-
-  /* One pass at inset 0 in the ink colour, one at inset `w` in the backdrop.
-   * The fist and the thumb overlap in BOTH passes, so the inner pass erases
-   * the seam between them instead of outlining it. The cuff is a separate
-   * shape in the artboard and stays separate here. */
-  auto pass = [&](const float inset, const float c[4]) {
-    /* Cuff. */
-    box_fill(cx - s * 0.45f + inset,
-             cx - s * 0.22f - inset,
-             cy - s * 0.34f + inset,
-             cy + s * 0.10f - inset,
-             s * 0.05f,
-             c);
-    /* Fist. */
-    box_fill(cx - s * 0.13f + inset,
-             cx + s * 0.45f - inset,
-             cy - s * 0.34f + inset,
-             cy + s * 0.16f - inset,
-             s * 0.12f,
-             c);
-    /* Thumb — reaches down into the fist so the two stay merged after inset. */
-    box_fill(cx - s * 0.13f + inset,
-             cx + s * 0.14f - inset,
-             cy - s * 0.04f + inset,
-             cy + s * 0.46f - inset,
-             s * 0.09f,
-             c);
+  static const float outline[57][2] = {
+      {+0.3068f, -0.4831f}, {-0.3792f, -0.4831f}, {-0.4035f, -0.4807f},
+      {-0.4261f, -0.4736f}, {-0.4466f, -0.4625f}, {-0.4645f, -0.4477f},
+      {-0.4793f, -0.4299f}, {-0.4905f, -0.4094f}, {-0.4975f, -0.3867f},
+      {-0.5000f, -0.3623f}, {-0.5000f, +0.1208f}, {-0.2627f, +0.1208f},
+      {-0.2477f, +0.1217f}, {-0.2331f, +0.1245f}, {-0.2191f, +0.1289f},
+      {-0.2058f, +0.1351f}, {-0.1933f, +0.1428f}, {-0.1818f, +0.1520f},
+      {-0.1715f, +0.1626f}, {-0.1624f, +0.1746f}, {-0.0102f, +0.4024f},
+      {+0.0035f, +0.4204f}, {+0.0190f, +0.4363f}, {+0.0363f, +0.4501f},
+      {+0.0551f, +0.4617f}, {+0.0751f, +0.4709f}, {+0.0962f, +0.4776f},
+      {+0.1181f, +0.4817f}, {+0.1407f, +0.4831f}, {+0.1534f, +0.4831f},
+      {+0.1670f, +0.4816f}, {+0.1794f, +0.4773f}, {+0.1904f, +0.4706f},
+      {+0.1996f, +0.4618f}, {+0.2068f, +0.4512f}, {+0.2117f, +0.4393f},
+      {+0.2139f, +0.4264f}, {+0.2132f, +0.4128f}, {+0.1643f, +0.1208f},
+      {+0.3793f, +0.1208f}, {+0.4068f, +0.1176f}, {+0.4320f, +0.1087f},
+      {+0.4541f, +0.0948f}, {+0.4726f, +0.0766f}, {+0.4869f, +0.0549f},
+      {+0.4962f, +0.0304f}, {+0.5000f, +0.0040f}, {+0.4976f, -0.0237f},
+      {+0.4252f, -0.3860f}, {+0.4191f, -0.4064f}, {+0.4099f, -0.4250f},
+      {+0.3978f, -0.4415f}, {+0.3832f, -0.4557f}, {+0.3664f, -0.4673f},
+      {+0.3479f, -0.4759f}, {+0.3279f, -0.4813f}, {+0.3068f, -0.4831f},
   };
-  pass(0.0f, col);
-  pass(w, bg);
+  /* The cuff divider, a separate stroke in the artboard. */
+  static const float cuff[2][2] = {{-0.2584f, +0.1208f}, {-0.2584f, -0.4831f}};
+
+  const float w = std::max(1.0f, s * 0.11f);
+  stroke_path(outline, 57, cx, cy, s, w, true, col);
+  stroke_path(cuff, 2, cx, cy, s, w, false, col);
 }
 
 /** Clock face — the history button. Drawn as a filled disc with cut hands
@@ -333,7 +426,7 @@ void agent_ui_icon_draw(const AgentIcon icon,
       glyph_agent(cx, cy, s, color);
       break;
     case AGENT_ICON_THUMB:
-      glyph_thumb(cx, cy, s, color, backdrop);
+      glyph_thumb(cx, cy, s, color);
       break;
     case AGENT_ICON_SPLAT:
       glyph_splat(cx, cy, s, color);

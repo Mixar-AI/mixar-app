@@ -311,16 +311,15 @@ struct TabSpec {
   AgentIcon icon;
 };
 
-/* Only three tabs have a mark in the design (`generations.svg`): Agent's
- * person-in-a-ring, Gaussian Splat's nine-dot rosette and My Generations'
- * thumbs-up. 3D and Media are text-only, and their labels then CENTRE in the
- * pill rather than sitting in an empty icon slot's offset — the earlier build
- * stamped the thumbs-up on all four, which read as four tabs meaning the same
- * thing. */
+/* `generations.svg` marks Agent, Gaussian Splat and My Generations only. 3D
+ * and Media take the island's own cube and picture glyphs so the strip does
+ * not read as two tabs that failed to load — both pills have room for the
+ * 24-unit slot plus their label without widening. Queue keeps its count chip
+ * in that slot and centres its label when the queue is empty. */
 const TabSpec g_tabs[AGENT_TAB_COUNT] = {
     {"Agent", AGENT_ICON_AGENT},
-    {"3D", AGENT_ICON_COUNT},
-    {"Media", AGENT_ICON_COUNT},
+    {"3D", AGENT_ICON_MESH},
+    {"Media", AGENT_ICON_IMAGE},
     {"Gaussian Splat", AGENT_ICON_SPLAT},
     {"My Generations", AGENT_ICON_THUMB},
     {"Queue", AGENT_ICON_COUNT},

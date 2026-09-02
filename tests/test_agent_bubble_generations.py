@@ -243,16 +243,45 @@ def _tab_table():
     return dict(re.findall(r'\{"([^"]+)",\s*(AGENT_ICON_\w+)\}', block))
 
 
-def test_only_the_designed_tabs_carry_a_mark():
-    """`generations.svg` gives a glyph to Agent, Gaussian Splat and My
-    Generations only. The build before this stamped the SAME thumbs-up on
-    four tabs, which read as four tabs meaning one thing."""
+def test_every_category_tab_carries_its_own_mark():
+    """No two category tabs may share a glyph, and none may go unmarked.
+
+    `generations.svg` draws marks for Agent, Gaussian Splat and My
+    Generations only; 3D and Media take the island's own cube and picture
+    glyphs so the strip cannot read as two tabs that failed to load. The
+    build before this stamped the SAME thumbs-up on four tabs, which read as
+    four tabs meaning one thing — hence the distinctness assert.
+    """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
     assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
     assert tabs["My Generations"] == "AGENT_ICON_THUMB"
-    assert tabs["3D"] == "AGENT_ICON_COUNT"
-    assert tabs["Media"] == "AGENT_ICON_COUNT"
+    assert tabs["3D"] == "AGENT_ICON_MESH"
+    assert tabs["Media"] == "AGENT_ICON_IMAGE"
+
+    marks = [icon for label, icon in tabs.items() if label != "Queue"]
+    assert "AGENT_ICON_COUNT" not in marks
+    assert len(set(marks)) == len(marks)
+
+
+def test_the_generations_mark_is_traced_not_approximated():
+    """The thumbs-up is `generations.svg`'s own outline, flattened.
+
+    Its predecessor was built from rounded boxes and collapsed into a blob at
+    16 px — indistinguishable from the placeholder mark the strip used to
+    stamp on every tab, which is exactly how it was reported.
+    """
+    assert "stroke_path(outline, 57" in ICONS_CC
+    assert "stroke_path(cuff, 2" in ICONS_CC
+
+
+def test_a_stroked_glyph_batches_its_segments():
+    """One flattened curve is dozens of segments; a draw call each would put
+    a shader bind per segment on the tab strip's per-frame cost."""
+    body = ICONS_CC[ICONS_CC.index("void stroke_path(") :]
+    body = body[: body.index("\n}\n")]
+    assert body.count("immBindBuiltinProgram") == 1
+    assert "GPU_PRIM_TRIS, segments * 6" in body
 
 
 def test_the_icon_sentinel_stays_last():

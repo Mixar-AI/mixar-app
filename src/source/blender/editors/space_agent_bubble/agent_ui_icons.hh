@@ -19,9 +19,9 @@
 struct rctf;
 
 enum AgentIcon {
-  /* Tab strip. Only three tabs carry a mark in the design — Agent, Gaussian
-   * Splat and My Generations. 3D and Media are deliberately text-only, so
-   * there is no glyph here for them and none should be invented. */
+  /* Tab strip. `generations.svg` draws marks for Agent, Gaussian Splat and
+   * My Generations only; 3D and Media borrow the cube and picture glyphs
+   * below so no tab reads as the odd one out. */
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
   AGENT_ICON_THUMB,     /* Thumbs-up — My Generations. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */
@@ -30,12 +30,12 @@ enum AgentIcon {
   AGENT_ICON_CLOCK,
   AGENT_ICON_PLUS,
 
-  /* Chip row. */
-  AGENT_ICON_IMAGE,
+  /* Chip row, and the two tabs the design leaves unmarked. */
+  AGENT_ICON_IMAGE, /* Framed picture — Upload Reference, and the Media tab. */
   AGENT_ICON_STAR,
   AGENT_ICON_CHEVRON_DOWN,
   AGENT_ICON_SORT, /* Down + up arrow pair — the generations sort chip. */
-  AGENT_ICON_MESH, /* Isometric cube — a 3D asset with no preview yet. */
+  AGENT_ICON_MESH, /* Isometric cube — a preview-less 3D asset, and the 3D tab. */
 
   AGENT_ICON_COUNT,
 };

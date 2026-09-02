@@ -268,6 +268,12 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * compatible with SpaceMixieChat (see DNA_space_types.h). */
 void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
 
+/* interface_mixar_drag_query.cc — uiBut is private to the interface module,
+ * so the "is this press already owned by a button waiting to drag?" question
+ * has to be asked over there. Declared here rather than included: the header
+ * lives inside editors/interface. */
+bool UI_mixar_region_active_but_is_draggable(ARegion *region);
+
 /* Static state used by the minimise / restore / expand-toggle ops.
  *
  * We need persistent pointers to the bubble + pill ghost windows
@@ -2645,6 +2651,18 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
     return OPERATOR_CANCELLED;
   }
 
+  /* Stand down when the button under the cursor is waiting to start its own
+   * drag — a My Generations asset tile. Blender answers a press over a
+   * draggable button with WM_UI_HANDLER_CONTINUE (`ui_do_but_EXIT`) so a
+   * region keymap can still select, which is the only reason that press ever
+   * reaches the WINDOW-level LEFTMOUSE binding this operator hangs off. Taking
+   * it here hands the gesture to AppKit's native window drag, which swallows
+   * every following mouse-move, so the tile's asset drag never begins and the
+   * window moves instead. */
+  if (UI_mixar_region_active_but_is_draggable(CTX_wm_region(C))) {
+    return OPERATOR_CANCELLED;
+  }
+
 #if defined(__APPLE__) || defined(_WIN32)
   Mixar_WindowBeginDrag(win->ghostwin);
 #endif
@@ -2831,18 +2849,46 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
     return OPERATOR_FINISHED;
   }
 
-  /* Never collapse under an open popup/menu/dropdown belonging to the bubble
-   * (catalog dropdowns, the history overlay's field, tooltips...). */
+  /* Never collapse while the user is inside something the bubble opened.
+   *
+   * Two shapes of that, and BOTH must be checked. A dropdown/menu/tooltip is
+   * a region on the bubble window's own screen. A file browser, the render
+   * window or a props dialog is a whole separate TEMP window — and the cursor
+   * being over it is exactly the "outside the bubble" the collapse tests for,
+   * so without this the picker the user just opened minimises the bubble and
+   * is torn down with it, which is the one state the chat cannot be driven
+   * out of. Temp windows are rare and short-lived, so a blanket refusal costs
+   * nothing; a hover-collapse the moment one closes is still one tick away. */
   LISTBASE_FOREACH (wmWindow *, win, &CTX_wm_manager(C)->windows) {
-    if (win->ghostwin != g_bubble_ghostwin) {
-      continue;
-    }
-    const bScreen *screen = WM_window_get_active_screen(win);
-    if (screen && !BLI_listbase_is_empty(&screen->regionbase)) {
+    /* The island's OWN windows are temp screens (that is how they stay out of
+     * the .blend), so they must be excluded before anything asks about
+     * temp-ness — a blanket check froze the collapse permanently and the
+     * hover UX simply stopped working. */
+    const bool is_island = (win->ghostwin == g_bubble_ghostwin ||
+                            win->ghostwin == g_pill_ghostwin);
+    if (!is_island && WM_window_is_temp_screen(win)) {
       g_hover_outside_ticks = 0;
       return OPERATOR_FINISHED;
     }
-    break;
+    const bScreen *screen = WM_window_get_active_screen(win);
+    if (screen == nullptr) {
+      continue;
+    }
+    /* `screen->temp` only covers the file browser's default WINDOW display
+     * type. Under USER_TEMP_SPACE_DISPLAY_FULLSCREEN it is a MAXIMIZED area
+     * stacked on a screen that is not temp at all — hence `area->full`, which
+     * is what separates that overlay from a File Browser the user keeps
+     * docked in their own layout (that one must not freeze the collapse). */
+    LISTBASE_FOREACH (const ScrArea *, area, &screen->areabase) {
+      if (area->spacetype == SPACE_FILE && area->full != nullptr) {
+        g_hover_outside_ticks = 0;
+        return OPERATOR_FINISHED;
+      }
+    }
+    if (win->ghostwin == g_bubble_ghostwin && !BLI_listbase_is_empty(&screen->regionbase)) {
+      g_hover_outside_ticks = 0;
+      return OPERATOR_FINISHED;
+    }
   }
 
   g_hover_outside_ticks++;
