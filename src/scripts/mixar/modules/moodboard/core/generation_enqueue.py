@@ -67,7 +67,7 @@ def model_front_zrot(model_slug: str) -> float:
 
 
 def make_model_rename_on_imported(
-    mesh_name: str, front_zrot: float = 0.0,
+    mesh_name: str, front_zrot: float = 0.0, placement: Optional[dict] = None,
 ) -> Callable:
     """Build an on_imported hook that renames + normalizes a Model Gen import.
 
@@ -76,6 +76,11 @@ def make_model_rename_on_imported(
     back to the queue label when *mesh_name* is empty (e.g. an image whose
     name sanitized away). *front_zrot* (see :func:`model_front_zrot`) rotates
     the result about world Z so every engine's front faces -Y.
+
+    *placement* (see ``job_queue.core.placement``) then carries the
+    normalized model to where the user pointed — applied HERE, at import,
+    because the job outlives the agent's turn: the alternative was a mesh at
+    the origin and a follow-up message to move it.
     """
 
     def _hook(job, object_names: str):
@@ -84,11 +89,18 @@ def make_model_rename_on_imported(
             from mixar.modules.common.job_queue.core.model_io import (
                 rename_generated_model,
             )
+            from mixar.modules.common.job_queue.core.placement import (
+                apply_placement,
+            )
             from mixar.modules.moodboard.core.imported_pbr_layers import (
                 convert_imported_material_to_paint_layers,
             )
             final = rename_generated_model(
                 object_names, target, front_zrot=front_zrot)
+            if placement and final:
+                # After normalization (base at the origin, facing -Y) and
+                # before the material pass, which is transform-agnostic.
+                apply_placement(final, placement)
             convert_imported_material_to_paint_layers(final or target)
             # Hand the final name back so the job stops pointing at the name
             # the GLB carried — see AsyncGLBJob.on_imported. Without this the
@@ -291,6 +303,7 @@ def enqueue_pro_job(
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
     turnaround: Optional[dict] = None,
     mesh_name: str = "",
+    placement: Optional[dict] = None,
 ) -> Optional[Job]:
     """Build an Image-to-3D Pro job and submit it to the queue.
 
@@ -322,7 +335,7 @@ def enqueue_pro_job(
         label=label,
         fail_message="Image to 3D failed",
         on_imported=make_model_rename_on_imported(
-            resolved_name, model_front_zrot(model_key)),
+            resolved_name, model_front_zrot(model_key), placement=placement),
         scene_flag="mixie_image_to_3d_is_generating",
         batch_popup_title="Image to 3D batch complete",
     )
