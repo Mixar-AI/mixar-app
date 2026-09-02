@@ -127,6 +127,12 @@ class JSONRPCMethod:
 
     # Server -> Client (requests - expect response)
     BLENDER_EXECUTE_SCRIPT = "blender.execute_script"
+    # Liveness probe answered on the WEBSOCKET thread (never queued to the
+    # main thread): the backend asks it before counting a script timeout
+    # toward the "Blender stopped responding" breaker, so a long-but-healthy
+    # script is distinguishable from a frozen app. Advertised in the handshake
+    # as the "liveness" capability; older clients simply never answer it.
+    BLENDER_LIVENESS = "blender.liveness"
     # Server -> Client (request - sandbox lifecycle; handled by the parent only)
     AGENT_SANDBOX_CONTROL = "agent.sandbox_control"
     # Server -> Client (request - relay one LLM HTTP call to the user's local
