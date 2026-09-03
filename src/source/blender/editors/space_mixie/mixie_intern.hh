@@ -329,6 +329,9 @@ void mixie_header_region_draw(const bContext *C, ARegion *region);
 /* mixie_dragdrop.cc */
 void mixie_dropboxes();
 
+/* mixie_moodboard_qa_targets.cc */
+void mixie_moodboard_qa_targets_register();
+
 /* mixie_ops.cc - General operators */
 void MIXIE_OT_sam3d_preview_select(wmOperatorType *ot);
 void MIXIE_OT_sam3d_preview_delete(wmOperatorType *ot);

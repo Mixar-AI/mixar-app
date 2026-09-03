@@ -68,4 +68,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region);
 /** Register and materialize the poll-driven bottom timeline region. */
 void view3d_director_timeline_region_register(SpaceType *st);
 void view3d_director_timeline_region_ensure(ScrArea *area);
+
+/* QA harness target provider (view3d_director_qa_targets.cc). */
+void view3d_director_qa_targets_register();
 }  // namespace blender

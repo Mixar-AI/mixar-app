@@ -24,6 +24,7 @@
 
 #include "../interface/interface_qa_inspect.hh"
 
+#include "mixie_chat_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
 

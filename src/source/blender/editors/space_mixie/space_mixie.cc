@@ -775,7 +775,6 @@ void ED_spacetype_mixie()
   BLI_addhead(&st->regiontypes, art);
 
   /* QA harness: export moodboard canvas nodes/media/sockets as targets. */
-  void mixie_moodboard_qa_targets_register();
   mixie_moodboard_qa_targets_register();
 
   BKE_spacetype_register(std::move(st));
