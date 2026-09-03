@@ -42,6 +42,9 @@ from mixar.modules.onboarding.constants import (
     CARD_BTN_PRIMARY_BG_HOVER,
     CARD_BTN_PRIMARY_BG_HOVER_TOP,
     CARD_BTN_PRIMARY_BG_TOP,
+    CARD_BTN_ALT_BG,
+    CARD_BTN_ALT_BG_HOVER,
+    CARD_BTN_ALT_TEXT,
     CARD_BTN_PRIMARY_TEXT,
     CARD_BTN_SKIP_TEXT,
     CARD_BTN_SKIP_TEXT_HOVER,
@@ -207,6 +210,24 @@ def _draw_primary_button(rect: tuple, label: str, font_size: int,
                       font_size, CARD_BTN_PRIMARY_TEXT)
 
 
+def _draw_alt_button(rect: tuple, label: str, font_size: int,
+                      radius: int, hover: bool) -> None:
+    """Muted counterpart to the primary pill — flat fill, no gradient,
+    so the green Continue button still wins the eye."""
+    bx, by, bw, bh = rect
+    draw_rounded_rect(
+        bx, by, bw, bh, radius,
+        CARD_BTN_ALT_BG_HOVER if hover else CARD_BTN_ALT_BG,
+    )
+
+    blf.size(_FONT_ID, font_size)
+    tw, th = blf.dimensions(_FONT_ID, label)
+    _draw_text(
+        int(bx + (bw - tw) * 0.5), int(by + (bh - th) * 0.5),
+        label, font_size, CARD_BTN_ALT_TEXT,
+    )
+
+
 def _draw_skip_link(rect: tuple, label: str, font_size: int,
                      hover: bool) -> None:
     sx, sy, _sw, _sh = rect
@@ -283,6 +304,15 @@ def draw_card(layout, hover_target: str,
         layout.button_font, layout.primary_btn_radius,
         hover=(hover_target == "primary"),
     )
+
+    # Secondary button, left of the primary one.
+    if layout.alt_visible:
+        ax, ay, aw, ah = layout.alt_rect
+        _draw_alt_button(
+            (ax + ox, ay + oy, aw, ah), layout.alt_label,
+            layout.button_font, layout.primary_btn_radius,
+            hover=(hover_target == "alt"),
+        )
 
     # Skip link.
     if layout.skip_visible:

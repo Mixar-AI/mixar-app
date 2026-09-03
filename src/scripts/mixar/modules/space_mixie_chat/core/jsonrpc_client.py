@@ -367,6 +367,10 @@ class JSONRPCWebSocketClient:
                 "script_execution",
                 "notifications",
                 "local_llm",
+                # Client answers blender.liveness on the WS thread; the
+                # backend only probes instances that advertise it (older
+                # clients would silently never reply).
+                "liveness",
                 ADDON_PROJECT_CAPABILITY,
             ],
         }
@@ -565,6 +569,9 @@ class JSONRPCWebSocketClient:
         if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
 
+        elif method == JSONRPCMethod.BLENDER_LIVENESS:
+            self._handle_liveness(request_id)
+
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
@@ -646,6 +653,32 @@ class JSONRPCWebSocketClient:
             }
         if request_id and result is not None:
             self.queue_response(request_id, result)
+
+    def _handle_liveness(self, request_id: Optional[str]) -> None:
+        """Answer blender.liveness WITHOUT touching bpy or the main thread.
+
+        The backend sends this before counting a script timeout toward its
+        "Blender stopped responding" breaker. A legitimately long script
+        holds the main thread (and mostly the GIL) while Blender is perfectly
+        alive; this handler runs entirely on the WebSocket receive thread and
+        answers whenever the GIL is acquirable at all — answering AT ALL is
+        the proof of life the backend needs. Never import bpy-dependent
+        modules on this path beyond the lock-guarded in-flight snapshot.
+        """
+        if request_id is None:
+            return
+        try:
+            from .main_thread_executor import get_inflight_script, has_pending_requests
+
+            inflight = get_inflight_script()
+            self.queue_response(request_id, {
+                "alive": True,
+                "script_in_flight": inflight,
+                "queue_pending": has_pending_requests(),
+                "handshake_complete": self._handshake_complete,
+            })
+        except Exception as e:  # never let a probe raise inside the recv loop
+            logger.error(f"Error in liveness handler: {e}")
 
     def _handle_execute_script(self, params: dict, request_id: Optional[str]) -> None:
         """Handle script execution request.

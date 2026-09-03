@@ -209,7 +209,8 @@ class MNewLayerMask(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        node = get_active_mpaint_node()
+        return node is not None and node.node_tree is not None
 
     @classmethod
     def description(self, context, properties):

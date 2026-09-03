@@ -20,6 +20,7 @@ from mixar.modules.addon_project.constants import (
     WORKSPACE_LAYOUT_RULE,
 )
 from mixar.modules.addon_project.errors import AddonProjectError
+from mixar.modules.addon_project.links import create_link, is_link
 from mixar.modules.addon_project.service import AddonProjectService
 
 
@@ -134,7 +135,7 @@ def test_enable_disable_round_trip_via_dispatch(env):
     assert enabled["result"]["enabled"] is True
     assert env.stub.enable_calls == [("en_sample_addon", True)]
     target = env.addons_dir / "en_sample_addon"
-    assert target.is_symlink()
+    assert is_link(target)
 
     disabled = env.service.dispatch(
         RPC_SET_ENABLED, _wire(env, enabled=False)
@@ -144,13 +145,13 @@ def test_enable_disable_round_trip_via_dispatch(env):
     assert disabled["result"]["link_removed"] is False
     # Disable persists via prefs (default_set=True) and KEEPS the link.
     assert env.stub.disable_calls == [("en_sample_addon", True)]
-    assert target.is_symlink()
+    assert is_link(target)
 
 
 def test_uninstall_removes_only_self_owned_link(env):
     env.service.set_enabled(env.project_id, True)
     target = env.addons_dir / "en_sample_addon"
-    assert target.is_symlink()
+    assert is_link(target)
 
     response = env.service.dispatch(
         RPC_SET_ENABLED, _wire(env, enabled=False, uninstall=True)
@@ -158,7 +159,7 @@ def test_uninstall_removes_only_self_owned_link(env):
     assert response["success"] is True
     assert response["result"]["link_removed"] is True
     assert "project files kept" in response["result"]["message"]
-    assert not target.exists() and not target.is_symlink()
+    assert not target.exists() and not is_link(target)
     assert env.stub.disable_calls == [("en_sample_addon", True)]
     # Uninstall never touches the project's own files.
     assert (env.package / "__init__.py").is_file()
@@ -174,7 +175,7 @@ def test_uninstall_fails_closed_on_foreign_target_without_disabling(env):
     assert response["success"] is False
     assert response["result"]["reason"] == "uninstall_target_conflict"
     assert str(env.addons_dir) not in response["result"]["message"]
-    assert foreign.is_dir() and not foreign.is_symlink()
+    assert foreign.is_dir() and not is_link(foreign)
     assert (foreign / "__init__.py").read_text(encoding="utf-8") == "USER = True\n"
     # A same-named foreign add-on is not ours to stop.
     assert env.stub.disable_calls == []
@@ -195,7 +196,7 @@ def test_set_enabled_entrypoint_param_validation_and_fallback(env):
     assert response["success"] is True
     assert response["entrypoint"] == "en_other_addon"
     assert env.stub.enable_calls == [("en_other_addon", True)]
-    assert (env.addons_dir / "en_other_addon").is_symlink()
+    assert is_link(env.addons_dir / "en_other_addon")
 
 
 def test_set_enabled_requires_an_active_entrypoint(tmp_path):
@@ -223,7 +224,7 @@ def test_stamped_disable_survives_run_checks_and_enable_clears_it(env):
     assert live["install"]["reason"] == "disabled_by_user"
     assert env.stub.enable_calls == []
     # The link stays; only enabling was skipped.
-    assert (env.addons_dir / "en_sample_addon").is_symlink()
+    assert is_link(env.addons_dir / "en_sample_addon")
 
     # Explicit enable clears the stamp; run_checks auto-enables again.
     env.service.set_enabled(env.project_id, True)
@@ -236,11 +237,7 @@ def test_stamped_disable_survives_run_checks_and_enable_clears_it(env):
 def test_stale_link_without_stamp_reenables(env):
     # A link left by an older/failed install, or an enable that never
     # persisted to prefs, must NOT read as a deliberate disable.
-    os.symlink(
-        env.package,
-        env.addons_dir / "en_sample_addon",
-        target_is_directory=True,
-    )
+    create_link(env.package, env.addons_dir / "en_sample_addon", is_package=True)
 
     result = env.service.run_checks(env.project_id, reload_blender=True)
 

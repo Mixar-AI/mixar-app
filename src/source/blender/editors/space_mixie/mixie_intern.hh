@@ -12,6 +12,7 @@
 #include <string>
 
 #include "BLI_map.hh"
+#include "BLI_set.hh"
 
 /* rctf is stored by value in MoodboardGraphCache, so the full type is needed. */
 #include "DNA_vec_types.h"
@@ -76,6 +77,7 @@ using wmWindowManager = blender::wmWindowManager;
 #define MIXIE_GRAPH_LABEL_BUF 256  /* GRAPH_LABEL_MAXLEN */
 #define MIXIE_GRAPH_WIDGET_BUF 64  /* GRAPH_WIDGET_MAXLEN */
 #define MIXIE_GRAPH_NAMES_BUF 4096 /* GRAPH_OBJECT_NAMES_MAXLEN */
+#define MIXIE_GRAPH_ERROR_BUF 768  /* GRAPH_ERROR_MAXLEN */
 /* Display-only echo of a draft node's prompt inside its tile. Deliberately far
  * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
  * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
@@ -86,18 +88,13 @@ using wmWindowManager = blender::wmWindowManager;
 #define MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y 220
 /** Inset of a node card's media preview from the card edge. */
 #define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
-#define MOODBOARD_GRAPH_SOCKET_RADIUS 10.0f
-#define MOODBOARD_GRAPH_OUTPUT_RADIUS 13.0f
-#define MOODBOARD_GRAPH_SOCKET_OFFSET 12.0f
+/* Socket radii/offset are CANVAS units (they zoom with the graph); hit-tests
+ * must convert through the view scale, never compare these against pixels
+ * (see region_socket_hit). */
+#define MOODBOARD_GRAPH_SOCKET_RADIUS 12.0f
+#define MOODBOARD_GRAPH_OUTPUT_RADIUS 15.0f
+#define MOODBOARD_GRAPH_SOCKET_OFFSET 14.0f
 #define MOODBOARD_GRAPH_LINK_RESOLUTION 24
-/* MASK_DETAIL card split: bottom fraction is the mask/result thumbnail, the
- * top holds the vertical control stack. Shared by the graph draw + node UI. */
-#define MOODBOARD_MASK_THUMB_FRACTION 0.45f
-/* Base on-screen width (px, before DPI scaling) of the in-node control panel.
- * It is DPI-scaled but deliberately does NOT scale with canvas zoom — the panel
- * width must never depend on the card's on-screen size, or the widgets would
- * resize as the canvas is zoomed. */
-#define MOODBOARD_NODE_UI_WIDTH 320
 
 /* Mixie3D Mode Constants */
 #define SAM3D_PREVIEW_HEIGHT_RATIO 0.20f
@@ -241,9 +238,14 @@ struct MoodboardGraphCache {
   blender::Map<std::string, rctf> outputs;
   /** node_id -> action node, the only nodes that own input sockets. */
   blender::Map<std::string, PointerRNA> action_nodes;
+  /** "to_node_id|to_socket" of every link, so sockets can draw occupancy. */
+  blender::Set<std::string> occupied_inputs;
 };
 
 void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cache);
+
+/** Key of one input socket in #MoodboardGraphCache::occupied_inputs. */
+std::string moodboard_graph_socket_key(const char *node_id, const char *socket_id);
 
 void moodboard_graph_link_curve_coords(
     float x1,

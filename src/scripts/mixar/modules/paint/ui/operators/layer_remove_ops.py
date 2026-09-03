@@ -14,6 +14,7 @@ logger = get_logger(__name__)
 
 from ...core.io.arrangements.layer_arrangements import rearrange_mp_nodes
 from ...core.io.connections.layer_connections import reconnect_mp_nodes
+from ...core.io.utils.bsdf_connections import commit_mp_material
 from ...core.layer.check_channels import check_start_end_root_ch_nodes
 from ..utils.ui_refresh import request_ui_refresh
 
@@ -204,6 +205,12 @@ class LAYERS_OT_RemoveActiveLayer(Operator):
             check_start_end_root_ch_nodes(tree)
             reconnect_mp_nodes(tree)
             rearrange_mp_nodes(tree)
+            # Flush the depsgraph so a scripted EXEC_DEFAULT removal (agent path, no
+            # UI event loop) re-evaluates and renders instead of serving a stale
+            # shader. relink=False: the group already drives the BSDF here, so the
+            # (re)build paths own the group->BSDF relink (avoids clobbering a
+            # deliberately rewired BSDF, e.g. a baked/preview material).
+            commit_mp_material(node, mat, context, relink=False)
 
         # Request UI refresh after layer removal
         request_ui_refresh()

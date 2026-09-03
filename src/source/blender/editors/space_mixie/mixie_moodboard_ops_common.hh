@@ -73,6 +73,22 @@ extern int moodboard_find_textbox_under_mouse(PointerRNA *scene_ptr,
                                               float *r_height);
 extern void moodboard_deselect_all(PointerRNA *scene_ptr);
 
+/* mixie_moodboard_ops_graph_link.cc */
+/**
+ * Decide what a released noodle meant: connect to the input socket under the
+ * cursor, connect to the inference card it landed on, or — on free canvas after
+ * an actual drag — open the continuation menu anchored at the drop point.
+ * \a moved distinguishes a drag from a plain click on the output handle.
+ */
+wmOperatorStatus moodboard_graph_link_release(bContext *C,
+                                              PointerRNA *scene_ptr,
+                                              View2D *v2d,
+                                              const wmEvent *event,
+                                              const char *from_node_id,
+                                              bool moved);
+/** Forget any recorded drop point, so a later menu places beside its source. */
+void moodboard_graph_clear_link_drop_anchor(PointerRNA *scene_ptr);
+
 /** \} */
 
 /* -------------------------------------------------------------------- */

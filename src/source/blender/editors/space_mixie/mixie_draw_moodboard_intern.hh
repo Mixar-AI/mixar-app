@@ -46,6 +46,10 @@
 
 #include "mixie_intern.hh"
 
+namespace blender::ui {
+struct Block;
+}  // namespace blender::ui
+
 namespace blender::ed::mixie {
 
 /* -------------------------------------------------------------------- */
@@ -145,14 +149,48 @@ void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
 /** Draw moodboard groups */
 void mixie_draw_moodboard_groups(const bContext *C, View2D *v2d);
 
+/* Socket/handle painters and the type palette (mixie_draw_moodboard_graph_sockets.cc).
+ * Colors are returned as borrowed float[3] pointers into static palette storage. */
+const float *moodboard_socket_type_color(const char *accepted_types);
+const float *moodboard_action_output_color(int action_type);
+const float *moodboard_media_output_color(const Image *image);
+const float *moodboard_mesh_output_color();
+void moodboard_draw_socket(
+    float x, float y, const float color[3], bool connected, bool required);
+void moodboard_draw_output_handle(float x, float y, const float color[3]);
+void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
+
+/* Shared by the node-UI toolbar and the selected-media label bar
+ * (mixie_draw_moodboard_node_ui.cc / mixie_draw_moodboard_media_labels.cc). */
+bool moodboard_view_rect_to_region(View2D *v2d,
+                                   ARegion *region,
+                                   const rctf &view_rect,
+                                   rcti *r_region_rect);
+void moodboard_draw_floating_background(const rctf &rect);
+void mixie_draw_moodboard_selected_media_labels(ui::Block *block,
+                                                View2D *v2d,
+                                                ARegion *region,
+                                                PointerRNA *scene_ptr,
+                                                const MoodboardGraphCache *cache);
+
+/* The graph passes share ONE per-frame #MoodboardGraphCache built by
+ * #mixie_draw_moodboard_mode — each pass resolving media rects on its own
+ * re-acquired every image's ImBuf several times per redraw. */
+
 /** Draw persistent graph links behind canvas nodes. */
-void mixie_draw_moodboard_links(const bContext *C, View2D *v2d);
+void mixie_draw_moodboard_links(const bContext *C,
+                                View2D *v2d,
+                                const MoodboardGraphCache *cache);
 
 /** Draw inference blocks and generated 3D asset cards. */
-void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d);
+void mixie_draw_moodboard_graph_nodes(const bContext *C,
+                                      View2D *v2d,
+                                      const MoodboardGraphCache *cache);
 
 /** Draw editable catalog-backed controls directly inside inference nodes. */
-void mixie_draw_moodboard_graph_controls(const bContext *C, View2D *v2d);
+void mixie_draw_moodboard_graph_controls(const bContext *C,
+                                         View2D *v2d,
+                                         const MoodboardGraphCache *cache);
 
 /** Draw edit tool overlay (crop/mask/lasso) */
 void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d);

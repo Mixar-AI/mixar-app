@@ -13,6 +13,7 @@ from mathutils import Vector
 from .....config.logging_config import get_logger
 logger = get_logger(__name__)
 
+from ...core.io.utils.bsdf_connections import commit_mp_material
 from ...core.layer.create_channels import create_new_mp_channel
 from ...core.node.get_nodes import get_closest_bsdf_backward, get_material_output
 from ...core.node.create_nodes import create_new_group_tree, simple_new_mix_node
@@ -154,6 +155,10 @@ class LAYERS_OT_CreateMaterial(Operator):
             space.type == "VIEW_3D"
             and space.shading.type not in {"MATERIAL", "RENDERED"}
         )
+        # Execute removes all existing nodes; warn in the dialog when they exist
+        self._will_remove_nodes = bool(
+            mat and mat.node_tree and len(mat.node_tree.nodes) > 0
+        )
         if get_mixar_paint_preferences().skip_property_popups and not event.shift:
             return self.execute(context)
         return context.window_manager.invoke_props_dialog(self)
@@ -164,6 +169,16 @@ class LAYERS_OT_CreateMaterial(Operator):
         layout.use_property_split = False
         layout.use_property_decorate = False
         main_col = layout.column(align=False)
+
+        # Warn before wiping the existing node tree (execute removes all nodes)
+        if getattr(self, "_will_remove_nodes", False):
+            warn_box = main_col.box()
+            warn_col = warn_box.column(align=True)
+            warn_col.alert = True
+            warn_col.label(
+                text="Existing material nodes will be removed.", icon="ERROR"
+            )
+            main_col.separator(factor=0.8)
 
         # Material Setup Section
         name_box = main_col.box()
@@ -392,6 +407,11 @@ class LAYERS_OT_CreateMaterial(Operator):
                         ch.enable = True
 
         request_ui_refresh()
+
+        # Ensure the fresh group -> BSDF links take effect and the depsgraph
+        # re-evaluates, so a scripted EXEC_DEFAULT create (agent path, no UI event
+        # loop) renders the new material instead of a stale/foreign shader.
+        commit_mp_material(node, mat, context)
 
         # Prompt to bake AO if AO channel was created
         ao_created = self.ao and self.type != "EMISSION"

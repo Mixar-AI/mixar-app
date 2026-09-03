@@ -7049,4 +7049,51 @@ bool WM_window_modal_keymap_status_draw(bContext *C, wmWindow *win, ui::Layout &
 
 /** \} */
 
+/* -------------------------------------------------------------------- */
+/** \name Mixar QA: simulated OS file drop
+ *
+ * ``Window.event_simulate`` covers keyboard/mouse but not OS drag-and-drop,
+ * so file-drop flows (moodboard media import) were untestable. This replays
+ * the exact sequence the GHOST_kEventDraggingDropDone handler in wm_window.cc
+ * performs — activate-position MOUSEMOVE, WM_DRAG_PATH drag payload, EVT_DROP
+ * event — from a window-space coordinate. QA-only: requires
+ * ``--enable-event-simulate`` (enforced by the RNA wrapper in
+ * rna_wm_mixar.cc, the sole caller).
+ * \{ */
+
+void Mixar_qa_simulate_file_drop(
+    bContext *C, wmWindow *win, const int x, const int y, const char *filepath)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+
+  wmEvent event;
+  wm_event_init_from_window(win, &event);
+  event.type = MOUSEMOVE;
+  event.val = KM_NOTHING;
+  copy_v2_v2_int(event.prev_xy, event.xy);
+  event.xy[0] = x;
+  event.xy[1] = y;
+  copy_v2_v2_int(win->eventstate->xy, event.xy);
+  event.flag = eWM_EventFlag(0);
+
+  wm->runtime->winactive = win;
+  win->active = 1;
+
+  WM_event_add(win, &event);
+
+  const char *paths[1] = {filepath};
+  wmDragPath *path_data = WM_drag_create_path_data(blender::Span<const char *>(paths, 1));
+  WM_event_start_drag(C, ICON_NONE, WM_DRAG_PATH, path_data, WM_DRAG_NOP);
+
+  event.type = EVT_DROP;
+  event.val = KM_RELEASE;
+  event.custom = EVT_DATA_DRAGDROP;
+  event.customdata = &wm->runtime->drags;
+  event.customdata_free = true;
+
+  WM_event_add(win, &event);
+}
+
+/** \} */
+
 }  // namespace blender

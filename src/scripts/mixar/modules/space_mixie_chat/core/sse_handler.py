@@ -286,6 +286,7 @@ class SSEStreamHandler:
         auth_token: Optional[str] = None,
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        imported_object_names: Optional[list] = None,
         project_context: Optional[dict] = None,
     ) -> bool:
         """
@@ -306,6 +307,9 @@ class SSEStreamHandler:
                 resolved to a bpy.data.images entry). Sent to the backend so it
                 can inline the names into the user message and the agent can
                 pass them straight to generation tools without a tool round-trip.
+            imported_object_names: #1268 — names of the scene objects an attached
+                3D model file (MODEL_FILE attachment) created at attach time.
+                Names only — the local path never leaves the addon.
             project_context: Opaque project ID, lease, revision, and protocol.
                 Never contains the local project root.
 
@@ -332,7 +336,7 @@ class SSEStreamHandler:
         user_preferences = self._collect_user_preferences()
         self._thread = threading.Thread(
             target=self._stream_loop,
-            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, project_context, user_preferences),
+            args=(message, instance_id, session_id, plan_required, execution_required, approval_required, auth_token, image_attachments, attachment_names, imported_object_names, project_context, user_preferences),
             daemon=True,
         )
         self._thread.name = "MixarSSEStream"
@@ -555,9 +559,9 @@ class SSEStreamHandler:
         auth_token: Optional[str],
         image_attachments: Optional[list] = None,
         attachment_names: Optional[list] = None,
+        imported_object_names: Optional[list] = None,
         project_context: Optional[dict] = None,
         user_preferences: Optional[dict] = None,
-        _connect_attempt: int = 0,
     ) -> None:
         """Background thread that handles V2 SSE streaming."""
         try:
@@ -592,6 +596,10 @@ class SSEStreamHandler:
             # empty strings when an attachment did not resolve to a name.
             if attachment_names:
                 payload["attachment_names"] = [n for n in attachment_names if n]
+            # #1268: names of objects an attached model file created in the
+            # scene. Names only — the local path never leaves the addon.
+            if imported_object_names:
+                payload["imported_object_names"] = [n for n in imported_object_names if n]
 
             if project_context:
                 payload["project_context"] = project_context

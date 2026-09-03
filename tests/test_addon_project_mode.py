@@ -5,6 +5,7 @@
 """End-to-end tests for the local Add-on Project Mode transaction boundary."""
 
 import json
+import os
 from queue import Empty
 import stat
 import sys
@@ -24,6 +25,7 @@ from mixar.modules.addon_project.constants import (
     RPC_STAGE_PATCH,
 )
 from mixar.modules.addon_project.errors import AddonProjectError
+from mixar.modules.addon_project.links import is_link
 from mixar.modules.addon_project.paths import resolve_project_path
 from mixar.modules.addon_project.service import AddonProjectService
 from mixar.modules.addon_project.checks import run_blender_reload
@@ -448,7 +450,7 @@ def test_blender_reload_exercises_disabled_addon_then_installs_it(tmp_path, monk
     module = sys.modules[module_name]
     assert module.events == ["register", "unregister"]
     target = addons_dir / module_name
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == package.resolve()
     assert enable_calls == [(module_name, True)]
 
@@ -497,6 +499,10 @@ def test_new_project_auto_discovers_entrypoint_after_first_commit(tmp_path):
     assert manifest["entrypoint"] == "studio_addon"
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="Windows models only the read-only bit, not POSIX permission bits",
+)
 def test_commit_preserves_existing_file_permissions(linked_project):
     service, project, description = linked_project
     target = project / "operators.py"

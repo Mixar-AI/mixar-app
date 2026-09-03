@@ -311,14 +311,22 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
+  /* One rect/link cache for every graph pass of this frame. Each pass
+   * building its own re-acquired every image's ImBuf (aspect lookup) several
+   * times per redraw — at the generating-glow repaint rate that was the
+   * dominant per-frame cost on a large board. */
+  MoodboardGraphCache graph_cache;
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  moodboard_graph_cache_build(&scene_ptr, &graph_cache);
+
   /* Draw graph connections behind every canvas block. */
-  mixie_draw_moodboard_links(C, v2d);
+  mixie_draw_moodboard_links(C, v2d, &graph_cache);
 
   /* Draw moodboard images */
   mixie_draw_moodboard_images(C, v2d);
 
   /* Draw inference and 3D-result nodes above their links. */
-  mixie_draw_moodboard_graph_nodes(C, v2d);
+  mixie_draw_moodboard_graph_nodes(C, v2d, &graph_cache);
 
   /* Draw moodboard text boxes */
   mixie_draw_moodboard_textboxes(C, v2d);

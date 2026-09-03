@@ -124,23 +124,26 @@ echo "Using $BUILD_CORES cores for parallel build"
 cmake --build "$BUILD_ENV_DIR" $BUILD_ARGS
 cmake --build "$BUILD_ENV_DIR" --target install --config "$BLENDER_BUILD_ENV"
 
-# Generate runtime configuration for the bundle
-echo "Generating runtime configuration for bundle..."
-BUNDLE_CONFIG_DIR="$BUILD_ENV_DIR/bin/Mixar.app/Contents/Resources/$BLENDER_VERSION/config"
-python3 "$ROOT_DIR/scripts/generate_config.py" --output "$BUNDLE_CONFIG_DIR/mixar.json"
-
-# Install Python packages using the generated Python binary
-echo "Installing Python packages for Mixar..."
-
-# Determine base path for embedded Python based on platform
+# Resource root of the installed tree. macOS nests it inside the .app bundle;
+# Linux installs flat under bin/. Both the runtime config and the embedded
+# Python live under it, so resolve it once.
 if [[ "$PLATFORM" == "macOS" ]]; then
-    PY_BASE="$BUILD_ENV_DIR/bin/Mixar.app/Contents/Resources"
+    RESOURCE_BASE="$BUILD_ENV_DIR/bin/Mixar.app/Contents/Resources"
 elif [[ "$PLATFORM" == "Linux" ]]; then
-    PY_BASE="$BUILD_ENV_DIR/bin"
+    RESOURCE_BASE="$BUILD_ENV_DIR/bin"
 else
     echo "Error: Unsupported platform: $PLATFORM"
     exit 1
 fi
+
+# Generate runtime configuration for the bundle
+echo "Generating runtime configuration for bundle..."
+BUNDLE_CONFIG_DIR="$RESOURCE_BASE/$BLENDER_VERSION/config"
+python3 "$ROOT_DIR/scripts/generate_config.py" --output "$BUNDLE_CONFIG_DIR/mixar.json"
+
+# Install Python packages using the generated Python binary
+echo "Installing Python packages for Mixar..."
+PY_BASE="$RESOURCE_BASE"
 
 # Try common python binary names inside Blender's embedded Python
 PYTHON_BIN=""

@@ -52,13 +52,19 @@ STEP_INFO_IMAGE_TO_3D = "INFO_IMAGE_TO_3D"
 STEP_INFO_RETOPOLOGY = "INFO_RETOPOLOGY"
 STEP_INFO_MIXIE_CHAT = "INFO_MIXIE_CHAT"
 STEP_INFO_ENGINE_MODE = "INFO_ENGINE_MODE"
+# Second-to-last card: offer to bring the user's existing Blender
+# add-ons across. The two outcome cards below are reached only from
+# this card's Import button, so they carry no step dots of their own.
+STEP_PLUGIN_IMPORT = "PLUGIN_IMPORT"
+STEP_PLUGIN_IMPORT_NONE = "PLUGIN_IMPORT_NONE"
+STEP_PLUGIN_IMPORT_DONE = "PLUGIN_IMPORT_DONE"
 STEP_COMPLETION = "COMPLETION"
 STEP_DONE = "DONE"
 
 DEFAULT_STEP = STEP_WELCOME
 
 # Total info-step count, used in the "STEP N OF M" badges.
-TOTAL_INFO_STEPS = 6
+TOTAL_INFO_STEPS = 7
 
 # ---------------------------------------------------------------------------
 # Sidebar category names — offline FALLBACK labels only. The moodboard
@@ -203,6 +209,43 @@ INFO_ENGINE_MODE_BODY_3 = (
 )
 
 # ---------------------------------------------------------------------------
+# Step 7 — bring your existing Blender add-ons across.
+#
+# The body line naming the plugin count is built at card-config time
+# (the count isn't known until we scan), so only the fallback copy for
+# "we couldn't find anything yet" lives here as a constant.
+# ---------------------------------------------------------------------------
+PLUGIN_IMPORT_LABEL = "Bring your add-ons along"
+PLUGIN_IMPORT_BODY_FOUND = "We found {count} in your Blender {version} install."
+PLUGIN_IMPORT_BODY_HINT = "We'll copy them in and switch them on for you."
+PLUGIN_IMPORT_BODY_UNKNOWN_1 = (
+    "Already use Blender? We can copy your add-ons and"
+)
+PLUGIN_IMPORT_BODY_UNKNOWN_2 = (
+    "extensions into Mixar so you keep working the same way."
+)
+PLUGIN_IMPORT_CONFIRM_LABEL = "Import them"
+PLUGIN_IMPORT_DECLINE_LABEL = "Not now"
+
+# Outcome card — nothing found to import.
+PLUGIN_IMPORT_NONE_TITLE = "No Blender install found"
+PLUGIN_IMPORT_NONE_BODY_1 = (
+    "We couldn't find a Blender installation with add-ons to import."
+)
+PLUGIN_IMPORT_NONE_BODY_2 = (
+    "You can run this again any time from Preferences > Add-ons."
+)
+
+# Outcome card — import finished. Counts are filled in at card-config
+# time from the import summary.
+PLUGIN_IMPORT_DONE_TITLE = "Add-ons imported"
+PLUGIN_IMPORT_DONE_BODY_OK = "Imported {imported} · enabled {enabled}."
+PLUGIN_IMPORT_DONE_BODY_NOTHING = "Everything was already in Mixar."
+PLUGIN_IMPORT_DONE_BODY_PROBLEM = "{failed} couldn't be enabled here."
+PLUGIN_IMPORT_DONE_BODY_MANAGE = "Manage them in Preferences > Add-ons."
+PLUGIN_IMPORT_OUTCOME_CONFIRM_LABEL = "Continue"
+
+# ---------------------------------------------------------------------------
 # Completion dialog copy.
 # ---------------------------------------------------------------------------
 COMPLETION_TITLE = "You're all set."
@@ -262,6 +305,15 @@ CARD_BTN_PADDING_X = 42
 
 # Skip-tour link gap from the primary button (horizontal).
 CARD_SKIP_GAP = 28
+
+# Secondary ("Not now") button — a muted pill left of the primary one,
+# for cards that ask a question with two real answers. Deliberately
+# lower-contrast than the green primary so the recommended action still
+# reads first.
+CARD_ALT_GAP = 16
+CARD_BTN_ALT_BG = (1.0, 1.0, 1.0, 0.10)
+CARD_BTN_ALT_BG_HOVER = (1.0, 1.0, 1.0, 0.18)
+CARD_BTN_ALT_TEXT = (0.86, 0.88, 0.90, 1.0)
 
 # Back link — sits in the bottom button row to the right of Skip
 # (or at the left edge when Skip is hidden). Rendered like the Skip

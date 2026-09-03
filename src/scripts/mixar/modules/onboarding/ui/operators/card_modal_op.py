@@ -129,6 +129,53 @@ def _back_deferred():
     return None
 
 
+def _make_goto_deferred(step_id: str):
+    """Jump straight to ``step_id`` — used by a card's secondary button,
+    the only place the flow branches off ``continue_step``."""
+
+    def _goto():
+        from mixar.modules.onboarding.core import state
+        state.transition_to(step_id)
+        return None
+
+    return _goto
+
+
+def _make_action_deferred(action: str):
+    """Run a named primary-button side effect, then transition to
+    whichever step its outcome implies.
+
+    Runs on the main thread from a timer (never a draw callback), so
+    calling into bpy operators — which the plugin import does — is safe.
+    """
+
+    def _run():
+        from mixar.modules.onboarding.constants import (
+            STEP_PLUGIN_IMPORT_DONE,
+            STEP_PLUGIN_IMPORT_NONE,
+        )
+        from mixar.modules.onboarding.core import state, steps
+
+        if action == steps.ACTION_IMPORT_PLUGINS:
+            from mixar.modules.onboarding.core import plugin_import_bridge
+
+            # Re-scan rather than trusting the cached count the card's
+            # copy was built from — Blender could have been installed or
+            # removed since the tour started.
+            if not plugin_import_bridge.scan(refresh=True).found:
+                state.transition_to(STEP_PLUGIN_IMPORT_NONE)
+                return None
+            plugin_import_bridge.import_everything()
+            state.transition_to(STEP_PLUGIN_IMPORT_DONE)
+            return None
+
+        logger.warning("Onboarding: unknown primary action %r", action)
+        state.advance()
+        return None
+
+    return _run
+
+
 # ---------------------------------------------------------------------------
 # The modal operator.
 # ---------------------------------------------------------------------------
@@ -282,6 +329,8 @@ class MIXAR_OT_onboarding_card(Operator):
             region_y=ry,
             bubble_anchor=bubble_anchor,
             back_visible=cfg.get("back_visible", False),
+            alt_label=cfg.get("alt_label", ""),
+            alt_visible=cfg.get("alt_visible", False),
         )
 
     def _draw_callback(self):
@@ -336,6 +385,8 @@ class MIXAR_OT_onboarding_card(Operator):
             target = self._hit_test_event(event)
             if target == "primary":
                 return self._on_primary(context)
+            if target == "alt":
+                return self._on_alt(context)
             if target == "back":
                 return self._on_back(context)
             if target == "skip":
@@ -398,9 +449,28 @@ class MIXAR_OT_onboarding_card(Operator):
     # -- actions -----------------------------------------------------------
 
     def _on_primary(self, context):
+        # A card can declare a side effect that decides its own next
+        # step (the plugin import); otherwise this is a plain advance.
+        action = (self._config or {}).get("primary_action", "")
         self._cleanup()
         bpy.app.timers.register(
-            _advance_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
+            _make_action_deferred(action) if action else _advance_deferred,
+            first_interval=STEP_ADVANCE_DEFER_SECONDS,
+        )
+        return {"FINISHED"}
+
+    def _on_alt(self, context):
+        alt_step = (self._config or {}).get("alt_step", "")
+        self._cleanup()
+        if not alt_step:
+            logger.warning("Onboarding: alt button with no alt_step")
+            bpy.app.timers.register(
+                _advance_deferred, first_interval=STEP_ADVANCE_DEFER_SECONDS,
+            )
+            return {"FINISHED"}
+        bpy.app.timers.register(
+            _make_goto_deferred(alt_step),
+            first_interval=STEP_ADVANCE_DEFER_SECONDS,
         )
         return {"FINISHED"}
 

@@ -15,6 +15,7 @@ from mixar.config.logging_config import get_logger
 
 from ...constants import MAX_ATTACHMENTS_PER_MESSAGE
 from ...core import cleanup_loaded_file_image, get_image_display_name, validate_image_file
+from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.image_utils import get_mixar_screenshots_dir
 from ...core.ui_utils import redraw_chat_areas
 
@@ -106,6 +107,8 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
             attachment.image_path = screenshot_path
             attachment.image_source = 'FILE'
             attachment.display_name = "viewport_screenshot.png"
+
+            mirror_attachment_to_moodboard(scene, screenshot_path, 'FILE')
 
             logger.info(f"Screenshot captured: {screenshot_path}")
             self.report({'INFO'}, "Viewport screenshot attached")
@@ -253,6 +256,10 @@ class MIXIE_CHAT_OT_snip_image(Operator):
             attachment.image_path = self._screenshot_path
             attachment.image_source = 'FILE'
             attachment.display_name = os.path.basename(self._screenshot_path)
+
+            mirror_attachment_to_moodboard(
+                context.scene, self._screenshot_path, 'FILE'
+            )
 
             logger.info(f"Snipped region saved: {self._screenshot_path}")
             self.report({'INFO'}, "Region captured")

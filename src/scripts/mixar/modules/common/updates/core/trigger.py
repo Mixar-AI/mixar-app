@@ -38,7 +38,8 @@ _ACTIVE_STATES = frozenset({
 
 # Whether the in-flight check was requested explicitly by the user
 # (Help → Check for Updates).  Interactive checks give feedback even when
-# up to date or on failure, and ignore a previously skipped version.
+# up to date or on failure, and toast even if the version was announced
+# already — the user just asked.
 # Only one check runs at a time (_ACTIVE_STATES guard), so a plain flag
 # is race-safe; the callbacks consume and reset it.
 _interactive_check = {"active": False}
@@ -57,7 +58,8 @@ def trigger_update_check(interactive: bool = False) -> bool:
 
     Args:
         interactive: True when the user explicitly asked (menu action) —
-            shows "up to date"/failure feedback and bypasses skip-version.
+            shows "up to date"/failure feedback and toasts even for an
+            already-announced version.
 
     Returns:
         ``True`` if a check was scheduled, ``False`` if skipped because
@@ -152,7 +154,13 @@ def _on_check_success(response) -> None:
         push_up_to_date_toast,
         tag_topbar_redraw,
     )
-    from .update_checker import get_skipped_version, is_forced, parse_update_response
+    from .update_checker import (
+        ANNOUNCE_AVAILABLE,
+        get_announced_stage,
+        is_forced,
+        parse_update_response,
+        set_announced_stage,
+    )
 
     state = get_update_state()
     interactive = _interactive_check["active"]
@@ -179,24 +187,25 @@ def _on_check_success(response) -> None:
         )
         state.set_available(info)
 
-        # A skipped version only suppresses the toast — the update info is
-        # still cached so the topbar badge stays visible until the user is
-        # actually on the latest version.  Forced updates and explicit
-        # user-requested checks always toast.
+        # Staging always starts: it is the invisible half of "seamless",
+        # and the badge reports it either way.
+        _start_installer_download(info)
+
+        # An already-announced version gets the badge, not a second toast.
+        # The update info stays cached, so the badge remains visible until
+        # the user is actually on the latest version and re-opens the toast
+        # on click.  Forced updates and explicit user-requested checks
+        # always toast.
         if not is_forced(info) and not interactive:
-            skipped = get_skipped_version()
-            if skipped and skipped == info.latest_version:
+            if get_announced_stage(info.latest_version):
                 logger.info(
-                    "Version %s was skipped by user — badge only, no toast",
+                    "Version %s already announced — badge only, no toast",
                     info.latest_version,
                 )
-                # Deliberately no download: staging 400 MB for a release
-                # the user declined is not a background nicety. Clicking the
-                # badge later starts it.
                 tag_topbar_redraw()
                 return
 
-        _start_installer_download(info)
+        set_announced_stage(info.latest_version, ANNOUNCE_AVAILABLE)
         push_update_available_toast(info)
 
     except Exception as e:

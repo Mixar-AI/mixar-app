@@ -50,6 +50,7 @@ from .check_texcoord_nodes import (
 # Re-export all public functions for backward compatibility
 __all__ = [
     "check_all_layer_channel_io_and_nodes",
+    "finalize_layer_channel_overrides",
     "check_mp_channel_nodes",
     "check_mask_texcoord_nodes",
     "check_layer_texcoord_nodes",
@@ -171,6 +172,34 @@ def check_all_layer_channel_io_and_nodes(
             )
             reconnect_layer_nodes(ol)
             rearrange_layer_nodes(ol)
+
+
+def finalize_layer_channel_overrides(layer):
+    """Finish a layer whose channel overrides were bound under ``halt_update``.
+
+    Builders that bind images programmatically (generated PBR / MatGen
+    materials, imported glTF materials, lookdev360 textures) set
+    ``ch.override`` / ``ch.override_type`` with ``mp.halt_update = True`` so
+    per-property callbacks don't fire mid-build. That also skips
+    ``update_layer_channel_override``, and the callback is what runs
+    ``check_all_layer_channel_io_and_nodes`` AFTER the overrides exist --
+    which is the only moment ``is_layer_using_vector`` turns True for a COLOR
+    fill layer and its **Mapping node** gets created. Reconnecting alone wires
+    every image texture straight to the layer's UV input, so the generated
+    layer shipped without a mapping and every UV transform control (offset,
+    rotation, scale, uniform scale) was dead on it.
+
+    Call this once after restoring ``halt_update``; it mirrors the tail of
+    ``update_layer_channel_override``, so a programmatic bind ends in exactly
+    the state the interactive operator leaves behind.
+    """
+    group_tree = layer.id_data
+    check_all_layer_channel_io_and_nodes(layer)
+    check_uv_nodes(group_tree.mp)
+    reconnect_layer_nodes(layer)
+    rearrange_layer_nodes(layer)
+    reconnect_mp_nodes(group_tree)
+    rearrange_mp_nodes(group_tree)
 
 
 def check_mp_channel_nodes(mp, reconnect=False):

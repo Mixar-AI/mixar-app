@@ -78,7 +78,7 @@ def make_model_rename_on_imported(
     the result about world Z so every engine's front faces -Y.
     """
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = mesh_name or _sanitize_label(job.label)
         try:
             from mixar.modules.common.job_queue.core.model_io import (
@@ -90,9 +90,15 @@ def make_model_rename_on_imported(
             final = rename_generated_model(
                 object_names, target, front_zrot=front_zrot)
             convert_imported_material_to_paint_layers(final or target)
+            # Hand the final name back so the job stops pointing at the name
+            # the GLB carried — see AsyncGLBJob.on_imported. Without this the
+            # generations-library archiver looks the mesh up by a freed name
+            # and every Model Gen result goes unarchived.
+            return final
         except Exception as e:
             logger.warning(
                 "[ModelGen] post-import processing failed: %s", e)
+        return None
 
     return _hook
 
@@ -107,7 +113,7 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
     re-textured and must keep its pose.
     """
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = mesh_name or _sanitize_label(job.label)
         try:
             from mixar.modules.common.job_queue.core.model_io import (
@@ -118,9 +124,11 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
             )
             final = rename_imported_object(object_names, target)
             convert_imported_material_to_paint_layers(final or target)
+            return final  # see AsyncGLBJob.on_imported
         except Exception as e:
             logger.warning(
                 "[TextureGen] post-import processing failed: %s", e)
+        return None
 
     return _hook
 
@@ -128,13 +136,14 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
 def _make_hp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that renames + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = _sanitize_label(job.label) + "_high"
+        final = None
         try:
             from mixar.modules.common.job_queue.core.model_io import (
                 post_import_rename_and_setup,
             )
-            post_import_rename_and_setup(object_names, target)
+            final = post_import_rename_and_setup(object_names, target)
         except Exception as e:
             logger.warning("[SceneGenHP] post_import_rename_and_setup failed: %s", e)
 
@@ -147,15 +156,18 @@ def _make_hp_on_imported(chain_id: str) -> Callable:
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
 
+        return final  # see AsyncGLBJob.on_imported
+
     return _hook
 
 
 def _make_lp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that handles retopo mesh + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         names = [n.strip() for n in object_names.split(",") if n.strip()]
         has_low_suffix = any("_low" in n for n in names)
+        final = None
 
         if has_low_suffix:
             logger.info("[SceneGenLP] Post-processed mesh detected, skipping client-side cleanup")
@@ -171,7 +183,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 from mixar.modules.common.job_queue.core.model_io import (
                     post_import_rename_and_setup,
                 )
-                post_import_rename_and_setup(object_names, target, smart_uv=True)
+                final = post_import_rename_and_setup(
+                    object_names, target, smart_uv=True)
             except Exception as e:
                 logger.warning("[SceneGenLP] post_import_rename_and_setup failed: %s", e)
 
@@ -186,6 +199,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 obj = bpy.data.objects.get(name)
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
+
+        return final  # see AsyncGLBJob.on_imported
 
     return _hook
 

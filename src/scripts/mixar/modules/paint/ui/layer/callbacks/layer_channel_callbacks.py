@@ -107,7 +107,7 @@ def update_channel_enable(self, context):
         root_ch.name, layer.name, "{:0.2f}".format((time.time() - T) * 1000)
     )
     # Update timer if it exists (legacy mpui pattern)
-    if hasattr(wm, 'yptimer'):
+    if hasattr(wm, 'mptimer'):
         wm.mptimer.time = str(time.time())
 
 
@@ -154,7 +154,7 @@ def update_blend_type(self, context):
         layer.name, "{:0.2f}".format((time.time() - T) * 1000)
     )
     # Update timer if it exists (legacy mpui pattern)
-    if hasattr(wm, 'yptimer'):
+    if hasattr(wm, 'mptimer'):
         wm.mptimer.time = str(time.time())
 
 
@@ -276,12 +276,27 @@ def update_blend_linked(self, context):
 
     layer = self
 
-    # When linking is enabled, sync all channels to the linked blend type
+    # Only update channels if blending is linked
     if layer.blend_linked:
         mp.halt_update = True
-        for ch in layer.channels:
-            ch.blend_type = layer.linked_blend_type
-        mp.halt_update = False
+        try:
+            for ch in layer.channels:
+                ch.blend_type = layer.linked_blend_type
+
+            # The per-channel update_blend_type callbacks were suppressed by
+            # the halt flag, so rebuild the node graph here (same sequence as
+            # update_blend_type) before releasing it.
+            tree = get_tree(layer)
+            check_all_layer_channel_io_and_nodes(layer, tree)
+            check_uv_nodes(mp)
+
+            reconnect_layer_nodes(layer)
+            rearrange_layer_nodes(layer)
+
+            reconnect_mp_nodes(self.id_data)
+            rearrange_mp_nodes(self.id_data)
+        finally:
+            mp.halt_update = False
 
         logger.info(f"Blend linked enabled: synced all channels to {layer.linked_blend_type}")
 
@@ -304,8 +319,23 @@ def update_linked_blend_type(self, context):
     # Only update channels if blending is linked
     if layer.blend_linked:
         mp.halt_update = True
-        for ch in layer.channels:
-            ch.blend_type = layer.linked_blend_type
-        mp.halt_update = False
+        try:
+            for ch in layer.channels:
+                ch.blend_type = layer.linked_blend_type
+
+            # The per-channel update_blend_type callbacks were suppressed by
+            # the halt flag, so rebuild the node graph here (same sequence as
+            # update_blend_type) before releasing it.
+            tree = get_tree(layer)
+            check_all_layer_channel_io_and_nodes(layer, tree)
+            check_uv_nodes(mp)
+
+            reconnect_layer_nodes(layer)
+            rearrange_layer_nodes(layer)
+
+            reconnect_mp_nodes(self.id_data)
+            rearrange_mp_nodes(self.id_data)
+        finally:
+            mp.halt_update = False
 
         logger.info(f"Linked blend type changed to {layer.linked_blend_type}")

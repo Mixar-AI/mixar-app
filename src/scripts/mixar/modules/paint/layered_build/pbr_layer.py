@@ -32,15 +32,8 @@ from .download import load_image
 # ``paint/layered_build/`` so ``..`` resolves to the ``paint`` package.
 from ..core.node.node_utils import get_active_mpaint_node
 from ..core.node.create_nodes import check_new_node
+from ..core.node.check_nodes import finalize_layer_channel_overrides
 from ..core.subtree.get_subtree import get_tree
-from ..core.io.connections.layer_connections import (
-    reconnect_layer_nodes,
-    reconnect_mp_nodes,
-)
-from ..core.io.arrangements.layer_arrangements import (
-    rearrange_layer_nodes,
-    rearrange_mp_nodes,
-)
 from ..ui.layer.helpers.layer_create_helpers import add_new_layer
 from ..utils.blender_commons import get_noncolor_name
 
@@ -85,6 +78,10 @@ def _bind_prepared_maps(group_tree, mp, prepared, layer_name):
     left the wired ``source`` node without an image (it only ever set the image
     on a detached cache node), which rendered the channel BLACK until a manual
     re-attach; binding source directly fixes that on the first try.
+
+    ``finalize_layer_channel_overrides`` closes the bind: it runs the node check
+    the halted property callbacks skipped, which is what gives the layer its
+    Mapping node now that its IMAGE overrides make it vector-using.
     """
     normal_map_type = _normal_map_type_for(prepared)
 
@@ -139,12 +136,12 @@ def _bind_prepared_maps(group_tree, mp, prepared, layer_name):
     finally:
         mp.halt_update = ori_halt_update
 
-    # Reconnect and rearrange: layer-level helpers take the LAYER, mp-level helpers take
-    # the GROUP tree. All four are called once after binding (matches the operator).
-    reconnect_layer_nodes(layer)
-    rearrange_layer_nodes(layer)
-    reconnect_mp_nodes(group_tree)
-    rearrange_mp_nodes(group_tree)
+    # Finish exactly where the interactive operator finishes. Reconnecting alone
+    # is NOT enough: the override flags above were set under halt_update, so the
+    # callback that creates the layer's Mapping node never ran and every image
+    # texture would be wired straight to the UV input (no mapping = no UV
+    # offset/rotation/scale on the generated layer).
+    finalize_layer_channel_overrides(layer)
 
     return layer
 

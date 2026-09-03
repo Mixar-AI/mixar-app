@@ -48,7 +48,9 @@ static void draw_link_curve(const float x1,
   immUnbindProgram();
 }
 
-void mixie_draw_moodboard_links(const bContext *C, View2D *v2d)
+void mixie_draw_moodboard_links(const bContext *C,
+                                View2D *v2d,
+                                const MoodboardGraphCache *cache)
 {
   Scene *scene = CTX_data_scene(C);
   if (!scene) {
@@ -59,15 +61,12 @@ void mixie_draw_moodboard_links(const bContext *C, View2D *v2d)
   if (!links) {
     return;
   }
-  /* Built once, reused by every link. See MoodboardGraphCache. */
-  MoodboardGraphCache cache;
-  moodboard_graph_cache_build(&scene_ptr, &cache);
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, links, &iter);
   while (iter.valid) {
     PointerRNA link = iter.ptr;
     float x1, y1, x2, y2;
-    if (moodboard_graph_link_endpoints(&scene_ptr, &link, &x1, &y1, &x2, &y2, &cache)) {
+    if (moodboard_graph_link_endpoints(&scene_ptr, &link, &x1, &y1, &x2, &y2, cache)) {
       /* Cull off-screen links before evaluating the curve. */
       rctf bounds{};
       moodboard_graph_link_bounds(x1, y1, x2, y2, &bounds);
@@ -121,37 +120,6 @@ static void draw_running_glow(const rctf &rect)
   ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
 }
 
-static void draw_socket(const float x, const float y, const float color[3])
-{
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4f(color[0], color[1], color[2], 1.0f);
-  imm_draw_circle_fill_2d(pos, x, y, MOODBOARD_GRAPH_SOCKET_RADIUS, 24);
-  immUnbindProgram();
-}
-
-static void draw_output_handle(const float x, const float y, const float color[3])
-{
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4f(color[0], color[1], color[2], 1.0f);
-  imm_draw_circle_fill_2d(pos, x, y, MOODBOARD_GRAPH_OUTPUT_RADIUS, 28);
-  immUniformColor4f(0.04f, 0.05f, 0.06f, 1.0f);
-  GPU_line_width(2.5f);
-  immBegin(GPU_PRIM_LINES, 4);
-  immVertex2f(pos, x - 7.0f, y);
-  immVertex2f(pos, x + 7.0f, y);
-  immVertex2f(pos, x, y - 7.0f);
-  immVertex2f(pos, x, y + 7.0f);
-  immEnd();
-  GPU_line_width(1.0f);
-  immUnbindProgram();
-}
-
 static void draw_text(const char *text, const float x, const float y, const float size, const float alpha)
 {
   const int font_id = BLF_default();
@@ -178,12 +146,13 @@ static void draw_text_centered(
   BLF_draw(font_id, text, strlen(text));
 }
 
-static void draw_text_centered_clipped(const char *text,
-                                       const float center_x,
-                                       const float y,
-                                       const float max_width,
-                                       const float size,
-                                       const float alpha)
+static void draw_text_centered_clipped_col(const char *text,
+                                           const float center_x,
+                                           const float y,
+                                           const float max_width,
+                                           const float size,
+                                           const float color[3],
+                                           const float alpha)
 {
   const int font_id = BLF_default();
   BLF_size(font_id, size);
@@ -198,13 +167,41 @@ static void draw_text_centered_clipped(const char *text,
     clipped = true;
   }
   const float x = center_x - (draw_width + (clipped ? BLF_width(font_id, ellipsis, 3) : 0.0f)) * 0.5f;
-  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
+  BLF_color4f(font_id, color[0], color[1], color[2], alpha);
   BLF_position(font_id, x, y, 0.0f);
   BLF_draw(font_id, text, draw_len);
   if (clipped) {
     BLF_position(font_id, x + draw_width, y, 0.0f);
     BLF_draw(font_id, ellipsis, 3);
   }
+}
+
+static void draw_text_centered_clipped(const char *text,
+                                       const float center_x,
+                                       const float y,
+                                       const float max_width,
+                                       const float size,
+                                       const float alpha)
+{
+  const float light[3] = {0.94f, 0.95f, 0.98f};
+  draw_text_centered_clipped_col(text, center_x, y, max_width, size, light, alpha);
+}
+
+/** One clipped line of the node's failure message (empty error draws nothing).
+ * The state used to be announced with no reason at all — the error string was
+ * recorded on the node and then shown nowhere. */
+static void draw_error_line(PointerRNA *node,
+                            const float center_x,
+                            const float y,
+                            const float max_width)
+{
+  char error[MIXIE_GRAPH_ERROR_BUF];
+  mixie_rna_string_get_clamped(node, "error", error, sizeof(error));
+  if (!error[0]) {
+    return;
+  }
+  const float red[3] = {0.94f, 0.55f, 0.52f};
+  draw_text_centered_clipped_col(error, center_x, y, max_width, 13.0f, red, 0.85f);
 }
 
 /* A deselected (or too-zoomed-out) draft card would otherwise render as an
@@ -248,17 +245,25 @@ static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
   if (ELEM(state, 4, 5)) {
     draw_text_centered_clipped(
         "Click to edit the prompt and try again", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    if (state == 4) {
+      draw_error_line(node, center_x, center_y - 52.0f, max_width);
+    }
   }
   else if (prompt[0]) {
     draw_text_centered_clipped(prompt, center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
   }
 }
 
-void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
+void mixie_draw_moodboard_graph_nodes(const bContext *C,
+                                      View2D *v2d,
+                                      const MoodboardGraphCache *cache)
 {
   Scene *scene = CTX_data_scene(C);
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  const float neutral[3] = {0.56f, 0.57f, 0.60f};
+  float zoom_x, zoom_y;
+  ui::view2d_scale_get(v2d, &zoom_x, &zoom_y);
+  /* Canvas-unit labels stop being legible below this; skip the draw cost. */
+  const bool socket_labels_readable = 13.0f * zoom_x >= 7.0f;
 
   PropertyRNA *actions = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_action_nodes");
   if (actions) {
@@ -274,22 +279,51 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
       if (is_rect_in_view(v2d, rect.xmin, rect.ymin, BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect))) {
         const bool selected = RNA_boolean_get(&node, "selected");
         const int state = RNA_enum_get(&node, "state");
+        /* One definition of "the floating controls are on screen", shared by
+         * every hint below — the toolbar pass uses the same gate, so exactly
+         * one of the two draws in any given spot. */
+        const bool controls_visible =
+            selected &&
+            BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
+            BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
         draw_card_background(rect, selected);
         if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
           draw_running_glow(rect);
         }
+        char node_id[MIXIE_GRAPH_ID_BUF];
+        mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
         PropertyRNA *sockets = RNA_struct_find_property(&node, "input_sockets");
         const int socket_count = sockets ? RNA_property_collection_length(&node, sockets) : 0;
         for (int socket_index = 0; socket_index < socket_count; socket_index++) {
           float socket_x, socket_y;
-          if (moodboard_graph_action_socket_position(
+          if (!moodboard_graph_action_socket_position(
                   &node, socket_index, &socket_x, &socket_y))
           {
-            draw_socket(socket_x, socket_y, neutral);
+            continue;
+          }
+          PointerRNA socket;
+          RNA_property_collection_lookup_int(&node, sockets, socket_index, &socket);
+          char accepted[MIXIE_GRAPH_ID_BUF];
+          mixie_rna_string_get_clamped(
+              &socket, "accepted_types", accepted, sizeof(accepted));
+          char socket_id[MIXIE_GRAPH_ID_BUF];
+          mixie_rna_string_get_clamped(&socket, "socket_id", socket_id, sizeof(socket_id));
+          const bool connected =
+              cache && cache->occupied_inputs.contains(
+                           moodboard_graph_socket_key(node_id, socket_id));
+          moodboard_draw_socket(socket_x,
+                                socket_y,
+                                moodboard_socket_type_color(accepted),
+                                connected,
+                                RNA_boolean_get(&socket, "required"));
+          if (selected && socket_labels_readable) {
+            moodboard_draw_socket_label(&socket, socket_x, socket_y);
           }
         }
-        draw_output_handle(
-            rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, BLI_rctf_cent_y(&rect), neutral);
+        const int action_type = RNA_enum_get(&node, "action_type");
+        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+                                     BLI_rctf_cent_y(&rect),
+                                     moodboard_action_output_color(action_type));
 
         PointerRNA preview_ptr = RNA_pointer_get(&node, "preview_image");
         Image *preview_image = static_cast<Image *>(preview_ptr.data);
@@ -340,17 +374,24 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
              * (Edit & Run Again keeps the previous result visible). */
             draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
           }
+          else if (ELEM(state, 4, 5) && controls_visible) {
+            /* The floating prompt + Generate are on screen for the retry, so
+             * the centered hint would draw straight underneath them. Keep the
+             * compact corner label, and float the failure reason above the
+             * card where nothing overlaps it. */
+            draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
+            if (state == 4) {
+              draw_error_line(&node,
+                              BLI_rctf_cent_x(&rect),
+                              rect.ymax + 14.0f,
+                              std::max(60.0f, BLI_rctf_size_x(&rect) - 24.0f));
+            }
+          }
           else {
             draw_state_hint(&node, rect, state);
           }
         }
         else if (state == 0 && !has_visual) {
-          float zoom_x, zoom_y;
-          ui::view2d_scale_get(v2d, &zoom_x, &zoom_y);
-          const bool controls_visible =
-              selected &&
-              BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
-              BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
           if (!controls_visible) {
             draw_draft_hint(&node, rect);
           }
@@ -376,8 +417,9 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
               v2d, rect.xmin, rect.ymin, BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect)))
       {
         draw_card_background(rect, RNA_boolean_get(&node, "selected"));
-        draw_output_handle(
-            rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET, BLI_rctf_cent_y(&rect), neutral);
+        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+                                     BLI_rctf_cent_y(&rect),
+                                     moodboard_mesh_output_color());
         char title[MIXIE_GRAPH_LABEL_BUF];
         mixie_rna_string_get_clamped(&node, "title", title, sizeof(title));
         /* 3D mesh node: the object preview icon is drawn in the node-UI pass
@@ -415,30 +457,32 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
 
   /* Uploaded stills and movies use the same output-handle language as
    * generated tiles. Embedded queue results are already represented by their
-   * owning action node and remain hidden here. */
+   * owning action node and remain hidden here. Rects come from the shared
+   * per-frame cache — re-deriving them here re-acquired every image's ImBuf a
+   * second time per redraw just to read its aspect. */
   PropertyRNA *media_items = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
-  if (media_items) {
+  if (media_items && cache) {
     CollectionPropertyIterator iter{};
     RNA_property_collection_begin(&scene_ptr, media_items, &iter);
     while (iter.valid) {
       PointerRNA media = iter.ptr;
       PropertyRNA *embedded = RNA_struct_find_property(&media, "embedded_node_id");
       if (!embedded || RNA_property_string_length(&media, embedded) == 0) {
-        PointerRNA image_ptr = RNA_pointer_get(&media, "image");
-        Image *image = static_cast<Image *>(image_ptr.data);
-        if (image) {
-          float aspect = 1.0f;
-          void *lock = nullptr;
-          ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-          if (ibuf && ibuf->x > 0) {
-            aspect = float(ibuf->y) / float(ibuf->x);
-          }
-          BKE_image_release_ibuf(image, ibuf, lock);
-          const float width = MOODBOARD_IMAGE_BASE_SIZE * RNA_float_get(&media, "scale");
-          const float x = RNA_float_get(&media, "position_x") + width +
-                          MOODBOARD_GRAPH_SOCKET_OFFSET;
-          const float y = RNA_float_get(&media, "position_y") + width * aspect * 0.5f;
-          draw_output_handle(x, y, neutral);
+        char media_id[MIXIE_GRAPH_ID_BUF];
+        mixie_rna_string_get_clamped(&media, "node_id", media_id, sizeof(media_id));
+        const rctf *media_rect = media_id[0] ? cache->outputs.lookup_ptr(media_id) : nullptr;
+        if (media_rect &&
+            is_rect_in_view(v2d,
+                            media_rect->xmin,
+                            media_rect->ymin,
+                            BLI_rctf_size_x(media_rect),
+                            BLI_rctf_size_y(media_rect)))
+        {
+          PointerRNA image_ptr = RNA_pointer_get(&media, "image");
+          Image *image = static_cast<Image *>(image_ptr.data);
+          moodboard_draw_output_handle(media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+                                       BLI_rctf_cent_y(media_rect),
+                                       moodboard_media_output_color(image));
         }
       }
       RNA_property_collection_next(&iter);
@@ -446,7 +490,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C, View2D *v2d)
     RNA_property_collection_end(&iter);
   }
 
-  mixie_draw_moodboard_graph_controls(C, v2d);
+  mixie_draw_moodboard_graph_controls(C, v2d, cache);
 }
 
 }  // namespace blender::ed::mixie

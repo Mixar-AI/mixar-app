@@ -50,6 +50,10 @@ _asset_cache = None
 _search_token = 0
 _search_thread = None
 _search_payload = None  # (token, query, had_image, {"success", "message", "results"})
+# Guards the check-and-publish in the worker and the read-and-clear in the poll,
+# so a stale worker that finishes AFTER a newer search can't overwrite the newer
+# result (which would strand the newer bubble on "Searching…" forever).
+_search_lock = threading.Lock()
 
 
 def invalidate() -> None:
@@ -167,22 +171,37 @@ def _grid_bubble(scene):
     card under a 'No matches' result. A LIVE agent picker (awaiting input) is
     left alone."""
     protect_pickers = _agent_awaiting_input(scene)
-    keep = None
-    for i in range(len(scene.mixie_chat_messages) - 1, -1, -1):
-        msg = scene.mixie_chat_messages[i]
-        ours = _is_library_bubble(msg)
-        if ours and keep is None:
-            keep = msg
+    msgs = scene.mixie_chat_messages
+
+    # Pass 1: find the newest (highest-index) library bubble to keep.
+    keep_index = -1
+    for i in range(len(msgs) - 1, -1, -1):
+        if _is_library_bubble(msgs[i]):
+            keep_index = i
+            break
+
+    # Pass 2: remove every OTHER asset-card bubble. Do NOT hold an item wrapper
+    # across a .remove() — removing a lower-index element reallocates/shifts the
+    # CollectionProperty backing store and INVALIDATES any previously fetched
+    # wrapper (dereferencing a stale one can crash/deadlock Blender). Track the
+    # kept index instead and re-fetch it fresh at the end.
+    for i in range(len(msgs) - 1, -1, -1):
+        if i == keep_index:
             continue
-        if ours or (_is_asset_card_bubble(msg) and not protect_pickers):
+        msg = msgs[i]
+        if _is_library_bubble(msg) or (_is_asset_card_bubble(msg) and not protect_pickers):
             _cleanup_bubble(msg)
-            scene.mixie_chat_messages.remove(i)
-    if keep is None:
-        keep = scene.mixie_chat_messages.add()
+            msgs.remove(i)
+            if i < keep_index:
+                keep_index -= 1
+
+    if keep_index < 0:
+        keep = msgs.add()
         keep.bubble_id = f"{LIBRARY_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
         keep.sender = "AGENT"
         keep.message_type = "AGENT"
-    return keep
+        return keep
+    return msgs[keep_index]
 
 
 def _cleanup_bubble(bubble) -> None:
@@ -207,48 +226,6 @@ def _set_content(msg, content: str) -> None:
         pass
 
 
-def _debug_dump(scene, label: str) -> None:
-    """Log the full chat-bubble state so we can see exactly what lingers."""
-    try:
-        msgs = scene.mixie_chat_messages
-        parts = []
-        for m in msgs:
-            bid = (getattr(m, "bubble_id", "") or "")[:22]
-            acts = list(getattr(m, "action_items", []))
-            asset_n = sum(1 for a in acts if getattr(a, "asset_name", ""))
-            libadd = sum(
-                1 for a in acts
-                if (getattr(a, "value", "") or "").startswith(LIB_ADD_PREFIX)
-            )
-            content = (getattr(m, "content", "") or "").replace("\n", " ")[:30]
-            parts.append(
-                f"<id={bid!r} acts={len(acts)} asset={asset_n} "
-                f"libadd={libadd} sender={getattr(m,'sender','?')} "
-                f"input={getattr(m,'input_type','')!r} content={content!r}>"
-            )
-        state = "?"
-        try:
-            from .session import get_session_manager
-            state = get_session_manager().get_state(scene).name
-        except Exception:
-            pass
-        line = (
-            f"[LibraryDbg] {label} | mode={getattr(scene, 'mixie_chat_mode', '?')} "
-            f"state={state} n={len(msgs)} " + "  ".join(parts)
-        )
-        logger.info("%s", line)
-        # Also append to a file so it's easy to capture without a console.
-        try:
-            import os
-            path = os.path.join(os.path.expanduser("~"), "mixar_library_debug.log")
-            with open(path, "a", encoding="utf-8") as fh:
-                fh.write(line + "\n")
-        except Exception:
-            pass
-    except Exception:
-        logger.exception("[LibraryDbg] dump failed")
-
-
 def build_library_grid(
     context, query: str = "", force: bool = False, header_note: str = "",
 ) -> None:
@@ -266,13 +243,10 @@ def build_library_grid(
         return
     query = (query or "").strip()
 
-    _debug_dump(scene, f"build_library_grid ENTER query={query!r} force={force}")
-
     assets = _enumerate_assets(context, force=force)
     msg = _grid_bubble(scene)
     _cleanup_bubble(msg)
     msg.action_items.clear()
-    _debug_dump(scene, f"build_library_grid AFTER _grid_bubble kept={msg.bubble_id!r}")
 
     if not assets:
         _set_content(
@@ -296,7 +270,6 @@ def build_library_grid(
         header += f" · showing the first {len(shown)}, refine your search"
     if not shown:
         _set_content(msg, header + "\n\nNo matches — try a different search.")
-        _debug_dump(scene, "build_library_grid EXIT no-match")
         _redraw()
         return
 
@@ -446,25 +419,31 @@ def _semantic_search_worker(query: str, token: int, image_pack=None) -> None:
             raise_for_status=False,
         )
         if not resp.success:
-            _search_payload = (token, query, had_image, {
+            result = {
                 "success": False,
                 "message": resp.message or f"Server returned {resp.status_code}",
-            })
-            return
-        inner = (resp.data or {}).get("data", resp.data or {})
-        rows = []
-        for r in inner.get("results", []):
-            meta = r.get("metadata", {}) or {}
-            rows.append({
-                "name": meta.get("name") or r.get("model_name", "?"),
-                "score": float(r.get("similarity_score", 0) or 0),
-                "library": meta.get("library", ""),
-                "blend_file": meta.get("blend_file", ""),
-                "type": meta.get("type", ""),
-            })
-        _search_payload = (token, query, had_image, {"success": True, "results": rows})
+            }
+        else:
+            inner = (resp.data or {}).get("data", resp.data or {})
+            rows = []
+            for r in inner.get("results", []):
+                meta = r.get("metadata", {}) or {}
+                rows.append({
+                    "name": meta.get("name") or r.get("model_name", "?"),
+                    "score": float(r.get("similarity_score", 0) or 0),
+                    "library": meta.get("library", ""),
+                    "blend_file": meta.get("blend_file", ""),
+                    "type": meta.get("type", ""),
+                })
+            result = {"success": True, "results": rows}
     except Exception as exc:  # noqa: BLE001 — worker must never raise
-        _search_payload = (token, query, had_image, {"success": False, "message": str(exc)})
+        result = {"success": False, "message": str(exc)}
+
+    # Publish only if this search is still the current one. A stale worker that
+    # returns after a newer search started must not clobber the newer result.
+    with _search_lock:
+        if token == _search_token:
+            _search_payload = (token, query, had_image, result)
 
 
 def _poll_semantic_search():
@@ -472,8 +451,9 @@ def _poll_semantic_search():
     global _search_payload
     if _search_thread is not None and _search_thread.is_alive():
         return 0.2
-    payload = _search_payload
-    _search_payload = None
+    with _search_lock:
+        payload = _search_payload
+        _search_payload = None
     if payload is None:
         return None
     token, query, had_image, result = payload

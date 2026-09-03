@@ -204,6 +204,29 @@ def register():
                 options={'SKIP_SAVE'},
             ),
         )
+    # Where a dragged noodle was released. The C++ graph modal sets these
+    # before opening the continuation menu so the node the menu creates lands
+    # under the cursor; every other entry point clears the flag, because the
+    # output handle's own coordinates would spawn the node on its source.
+    _safe_scene_prop(
+        'mixie_moodboard_link_drop_active',
+        BoolProperty(
+            name="Moodboard Link Drop Active",
+            description="Whether a released link opened the continuation menu",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
+    for axis in ('x', 'y'):
+        _safe_scene_prop(
+            f'mixie_moodboard_link_drop_{axis}',
+            FloatProperty(
+                name=f"Moodboard Link Drop {axis.upper()}",
+                description="Canvas position where the dragged link was released",
+                default=0.0,
+                options={'SKIP_SAVE'},
+            ),
+        )
     _safe_scene_prop(
         'mixie_moodboard_selected_index',
         IntProperty(
@@ -398,6 +421,9 @@ def unregister():
         'mixie_moodboard_sidebar',
         'mixie_moodboard_output_source_id',
         'mixie_moodboard_active_node_id',
+        'mixie_moodboard_link_drop_y',
+        'mixie_moodboard_link_drop_x',
+        'mixie_moodboard_link_drop_active',
         'mixie_moodboard_context_y',
         'mixie_moodboard_context_x',
         'mixie_moodboard_links',

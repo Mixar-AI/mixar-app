@@ -4,6 +4,8 @@
 
 """Stable, path-free errors returned by the project RPC."""
 
+import traceback
+
 
 class AddonProjectError(Exception):
     """Expected project operation failure with a stable public code."""
@@ -23,8 +25,13 @@ def public_error(exc: Exception, project_root=None) -> dict:
         code = "internal_error"
         # Unexpected OS/import errors may contain the project root, the local
         # Mixar install path, or the client-state directory. Keep those details
-        # on the Blender client instead of returning them over JSON-RPC.
+        # on the Blender client instead of returning them over JSON-RPC — but
+        # print them to the local console, or an unexpected failure reaches the
+        # user as a bare "internal_error" with nothing to diagnose it by.
         message = "The local add-on project operation failed"
+        print("[AddonProject] Unexpected failure:", "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        ))
     if project_root is not None:
         root = str(project_root)
         message = message.replace(root, "<project>")

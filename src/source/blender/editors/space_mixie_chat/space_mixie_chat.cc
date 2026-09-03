@@ -366,6 +366,10 @@ void ED_spacetype_mixie_chat()
 
   BLI_addhead(&st->regiontypes, art);
 
+  /* QA harness: export chat action/gate buttons + feedback stars as targets. */
+  void mixie_chat_qa_targets_register();
+  mixie_chat_qa_targets_register();
+
   BKE_spacetype_register(std::move(st));
 }
 

@@ -231,6 +231,14 @@ def cancel_splat_viewport_restore() -> None:
         pass
 
 
+def scene_has_splats(scene) -> bool:
+    """True when any mesh in *scene* carries the KIRI splat GN modifier."""
+    return any(
+        obj.type == 'MESH' and SPLAT_GN_MODIFIER in obj.modifiers
+        for obj in scene.objects
+    )
+
+
 def enable_render_updates(objects) -> None:
     """Mark splat meshes for camera-driven updates (KIRI + our handlers).
 

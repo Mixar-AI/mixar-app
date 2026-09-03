@@ -48,6 +48,7 @@ set(SRC
   interface_mixar_profile_card.cc
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
+  interface_qa_inspect.cc
   interface_ops.cc
   interface_ops_color.cc
   interface_panel.cc
@@ -121,6 +122,7 @@ set(SRC
   interface_mixar_palette.hh
   interface_mixar_profile_card.hh
   interface_mixar_section.hh
+  interface_qa_inspect.hh
   templates/interface_templates_intern.hh
   interface_intern.hh
   regions/interface_regions_intern.hh

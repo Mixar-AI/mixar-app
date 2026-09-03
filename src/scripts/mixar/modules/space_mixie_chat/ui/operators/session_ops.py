@@ -305,6 +305,12 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 3. Flush queued tool scripts (global — scripts aren't scene-tagged)
         flush_executor_queue()
 
+        # 3b. End the executor's undo turn: the drained queue may have held
+        # the stream's complete/error event, so nothing else would end it and
+        # the next turn would inherit this one's checkpoint budget.
+        from ...core.executor import get_executor
+        get_executor().end_agent_turn()
+
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
 

@@ -29,17 +29,18 @@ from .core.toasts import (
 )
 from .core.trigger import trigger_update_check
 from .core.update_checker import (
-    clear_skipped_version,
+    ANNOUNCE_AVAILABLE,
+    ANNOUNCE_READY,
+    get_announced_stage,
     get_current_version,
     get_or_create_install_id,
     get_platform_key,
     get_runtime_version,
-    get_skipped_version,
     is_forced,
     is_newer,
     parse_semver,
     parse_update_response,
-    set_skipped_version,
+    set_announced_stage,
 )
 
 __all__ = [
@@ -60,9 +61,10 @@ __all__ = [
     "get_current_version",
     "get_runtime_version",
     "parse_update_response",
-    "get_skipped_version",
-    "set_skipped_version",
-    "clear_skipped_version",
+    "ANNOUNCE_AVAILABLE",
+    "ANNOUNCE_READY",
+    "get_announced_stage",
+    "set_announced_stage",
     # Trigger
     "trigger_update_check",
     # Install flow

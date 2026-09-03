@@ -18,9 +18,12 @@ _STATE_MAP = {
     JobState.CANCELLED: 'CANCELLED',
 }
 
-# ~30 fps redraw pump so the running-node glow (C++ draw_running_glow) animates
-# smoothly. Job-state changes alone only repaint on discrete edges.
-_PULSE_INTERVAL_S = 1.0 / 30.0
+# Redraw pump for the running-node glow (C++ draw_running_glow). 15 fps is
+# visually smooth for its slow ~2.9s alpha breathe, and a generation runs for
+# minutes — pumping the full canvas repaint at 30 fps doubled the draw cost of
+# every generating session for no visible gain. Job-state changes alone only
+# repaint on discrete edges, hence the timer.
+_PULSE_INTERVAL_S = 1.0 / 15.0
 
 
 def _redraw_mixie_areas() -> None:
@@ -97,3 +100,43 @@ def ensure_graph_listener(feature_key: str) -> None:
     from mixar.modules.common.job_queue.core.queue_manager import get_queue
 
     get_queue(feature_key).add_listener(sync_graph_jobs)
+
+
+def find_active_node_job(node_id: str):
+    """The live queue (queue, job) pair driving *node_id*, or (None, None).
+
+    Looked up by ``graph_node_id`` across every feature queue rather than by
+    the node's ``job_id`` — the node's stored id flips from the local queue id
+    to the backend id once the submit lands, so it cannot address the queue.
+    """
+    if not node_id:
+        return None, None
+    from mixar.modules.common.job_queue.core.queue_manager import (
+        ACTIVE_JOB_STATES,
+        all_queues,
+    )
+
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if (
+                str(getattr(job, "graph_node_id", "") or "") == node_id
+                and job.state in ACTIVE_JOB_STATES
+            ):
+                return queue, job
+    return None, None
+
+
+def cancel_node_job(node_id: str) -> bool:
+    """Cancel the queue job a node is waiting on. True when one was cancelled.
+
+    The queue's cancel path notifies listeners, so ``sync_graph_jobs`` mirrors
+    the CANCELLED state back onto the node without extra wiring.
+    """
+    try:
+        queue, job = find_active_node_job(node_id)
+    except Exception:
+        return False
+    if queue is None or job is None:
+        return False
+    queue.cancel(job.id)
+    return True
