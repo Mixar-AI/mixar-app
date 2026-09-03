@@ -132,7 +132,7 @@ class ScenePublishClient:
 
         if not isinstance(payload, dict):
             raise PublishApiError("Malformed server response", code="malformed")
-        if payload.get("status") != "success":
+        if payload.get("status") and payload.get("status") != "success":
             raise PublishApiError(
                 str(payload.get("message") or "Request failed"), code="server"
             )
@@ -143,7 +143,7 @@ class ScenePublishClient:
     def init_publish(self, body: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """POST /scenes → ({scene...}, {upload plan...}) from ``data``."""
         payload = self._request("POST", "scenes", json_body=body)
-        data = payload.get("data") or {}
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
         return data.get("scene") or {}, data.get("upload") or {}
 
     def complete_upload(
@@ -159,28 +159,40 @@ class ScenePublishClient:
         if parts:
             body["parts"] = parts
         payload = self._request("POST", f"scenes/{scene_id}/complete", json_body=body)
-        return payload.get("data", {}).get("scene") or {}
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+        return data.get("scene") or {}
 
     def upload_thumbnail(self, scene_id: str, filepath: str) -> None:
+        import os
+
+        ext = os.path.splitext(filepath)[1] or ".png"
+        content_type = "image/png"
+        if ext.lower() in (".jpg", ".jpeg"):
+            content_type = "image/jpeg"
+        elif ext.lower() == ".webp":
+            content_type = "image/webp"
+
         with open(filepath, "rb") as handle:
             self._request(
                 "POST",
-                f"scenes/{scene_id}/thumbnail",
+                f"scenes/{scene_id}/thumbnail?ext={ext}",
                 data=handle,
-                headers={"Content-Type": "image/png"},
+                headers={"Content-Type": content_type},
                 timeout=UPLOAD_TIMEOUT_SECONDS,
             )
 
     def get_my_scenes(self) -> list:
         payload = self._request("GET", "scenes")
-        return payload.get("data", {}).get("scenes") or []
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+        return data.get("scenes") or []
 
     def delete_scene(self, scene_id: str) -> None:
         self._request("DELETE", f"scenes/{scene_id}")
 
     def get_quota(self) -> Dict[str, Any]:
         payload = self._request("GET", "quota")
-        return payload.get("data") or {}
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+        return data or {}
 
     # -- presigned storage ----------------------------------------------------
 

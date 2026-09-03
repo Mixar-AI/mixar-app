@@ -67,6 +67,10 @@ def _run(job: PublishJob, workspace: str) -> None:
     except Exception as exc:  # noqa: BLE001 - worker must never crash silently
         _logger.error(f"web_publish worker failed: {exc}", exc_info=True)
         state.set_error(f"Publish failed: {exc}")
+    finally:
+        from mixar.modules.web_publish.core.glb_export import cleanup_workspace
+
+        cleanup_workspace(workspace)
 
 
 def _publish(job: PublishJob, workspace: str, client: ScenePublishClient, state) -> None:

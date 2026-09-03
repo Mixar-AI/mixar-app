@@ -36,7 +36,6 @@ from mixar.modules.web_publish.core.publish_state import (
     STATUS_DONE,
     STATUS_ERROR,
     PublishJob,
-    camera_pose_to_config,
     compute_sha256,
     derive_title,
     get_publish_state,

@@ -7,7 +7,6 @@
 import bpy
 
 from mixar.modules.web_publish.core.publish_state import (
-    STATUS_DONE,
     STATUS_ERROR,
 )
 

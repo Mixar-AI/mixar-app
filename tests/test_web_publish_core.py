@@ -257,3 +257,102 @@ class TestThreadSafety:
         assert not errors
         progress, _ = state.snapshot()
         assert 0.0 <= progress.progress <= 1.0
+
+
+class TestApiClient:
+    def test_parse_success_envelope(self):
+        from unittest.mock import MagicMock
+        from mixar.modules.web_publish.core.publish_api import ScenePublishClient
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "status": "success",
+            "message": "OK",
+            "data": {"scene": {"id": "123"}},
+        }
+        client = ScenePublishClient(server_url="https://api.example.com")
+        parsed = client._parse(resp)
+        assert parsed["status"] == "success"
+        assert parsed["data"]["scene"]["id"] == "123"
+
+    def test_parse_unwrapped_success(self):
+        from unittest.mock import MagicMock
+        from mixar.modules.web_publish.core.publish_api import ScenePublishClient
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"scene": {"id": "123"}}
+        client = ScenePublishClient(server_url="https://api.example.com")
+        parsed = client._parse(resp)
+        assert parsed["scene"]["id"] == "123"
+
+    def test_init_publish_handles_enveloped_and_unwrapped(self):
+        from unittest.mock import MagicMock
+        from mixar.modules.web_publish.core.publish_api import ScenePublishClient
+
+        client = ScenePublishClient(server_url="https://api.example.com")
+
+        # Enveloped
+        client._request = MagicMock(
+            return_value={
+                "status": "success",
+                "data": {"scene": {"id": "s1"}, "upload": {"mode": "put"}},
+            }
+        )
+        scene, upload = client.init_publish({})
+        assert scene["id"] == "s1"
+        assert upload["mode"] == "put"
+
+        # Unwrapped
+        client._request = MagicMock(
+            return_value={"scene": {"id": "s2"}, "upload": {"mode": "multipart"}}
+        )
+        scene, upload = client.init_publish({})
+        assert scene["id"] == "s2"
+        assert upload["mode"] == "multipart"
+
+    def test_upload_thumbnail_appends_ext_query_param(self, tmp_path):
+        from unittest.mock import MagicMock
+        from mixar.modules.web_publish.core.publish_api import ScenePublishClient
+
+        thumb = tmp_path / "thumb.png"
+        thumb.write_bytes(b"png-bytes")
+
+        client = ScenePublishClient(server_url="https://api.example.com")
+        client._request = MagicMock(return_value={"status": "success"})
+
+        client.upload_thumbnail("scene-123", str(thumb))
+        assert client._request.call_count == 1
+        call_args = client._request.call_args
+        assert call_args[0][0] == "POST"
+        assert "scenes/scene-123/thumbnail?ext=.png" in call_args[0][1]
+
+
+class TestWorkerWorkspaceCleanup:
+    def test_run_cleans_up_workspace_on_error(self, tmp_path):
+        from unittest.mock import patch
+        from mixar.modules.web_publish.core.upload_worker import _run
+
+        ws = tmp_path / "ws_test"
+        ws.mkdir()
+        dummy_file = ws / "scene.glb"
+        dummy_file.write_bytes(b"fake")
+
+        job = PublishJob(
+            title="T",
+            description="",
+            visibility="public",
+            glb_path=str(dummy_file),
+            thumbnail_path="",
+            content_sha256="a" * 64,
+        )
+
+        with patch("mixar.modules.web_publish.core.upload_worker.ScenePublishClient") as ClientCls:
+            client = ClientCls.return_value
+            client.init_publish.side_effect = RuntimeError("Simulated network failure")
+
+            _run(job, str(ws))
+
+        assert not ws.exists(), "Workspace directory should have been cleaned up in finally block"
+

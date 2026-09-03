@@ -25,7 +25,6 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.web_publish.constants import (
     DRACO_COMPRESSION_LEVEL,
     GLB_EXPORT_FILENAME,
-    THUMBNAIL_FILENAME,
     THUMBNAIL_RESOLUTION,
 )
 
@@ -150,17 +149,19 @@ def render_thumbnail(context, filepath: str) -> Optional[str]:
         render.filepath = filepath
         render.image_settings.file_format = "PNG"
 
-        override = {}
-        area = getattr(context, "area", None)
-        region = getattr(context, "region", None)
-        if area is not None and getattr(area, "type", None) == "VIEW_3D":
-            override = {"area": area, "region": region}
-            with context.temp_override(**override):
-                bpy.ops.render.opengl(write_still=True, use_viewport=True)
-        else:
-            bpy.ops.render.opengl(write_still=True)
+        try:
+            override = {}
+            area = getattr(context, "area", None)
+            region = getattr(context, "region", None)
+            if area is not None and getattr(area, "type", None) == "VIEW_3D":
+                override = {"area": area, "region": region}
+                with context.temp_override(**override):
+                    bpy.ops.render.opengl(write_still=True, use_viewport=True)
+            else:
+                bpy.ops.render.opengl(write_still=True)
+        finally:
+            _restore_render_settings(render, original)
 
-        _restore_render_settings(render, original)
         if os.path.isfile(filepath) and os.path.getsize(filepath) > 0:
             return filepath
         return None
