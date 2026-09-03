@@ -102,6 +102,19 @@ class MIXAR_OT_agent_viewport_block(Operator):
 
         et = event.type
 
+        # The agent's OWN input must never be blocked: while an agent UI
+        # action is in flight (modules/agent_ui sets
+        # WindowManager.mixar_agent_action_active around every injected
+        # click/keystroke sequence) the events arriving here are the agent
+        # operating the viewport on purpose — Shift+A, Tab, S/G/R, typed
+        # values. Real human input is already dropped at the GHOST layer
+        # during that window (fork mixed mode), so passing through here does
+        # not reopen the viewport to the user. Event-simulate launches (QA
+        # rigs) have no human to block either.
+        wm = context.window_manager
+        if getattr(wm, "mixar_agent_action_active", False) or bpy.app.use_event_simulate:
+            return {"PASS_THROUGH"}
+
         if et in NAV_PASS_TYPES or et in VIEW_KEY_PASS_TYPES:
             return {"PASS_THROUGH"}
 
