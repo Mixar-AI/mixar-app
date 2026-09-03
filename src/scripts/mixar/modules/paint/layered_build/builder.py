@@ -18,6 +18,7 @@ from .procedural_layer import add_procedural_detail_layer
 from ..core.node.node_utils import get_active_mpaint_node
 from ..core.io.connections.layer_connections import reconnect_mp_nodes
 from ..core.io.arrangements.layer_arrangements import rearrange_mp_nodes
+from ..core.io.utils.bsdf_connections import commit_mp_material
 
 
 def _ensure_paint_material(obj):
@@ -149,5 +150,14 @@ def build_layered_material(manifest: dict, obj=None):
     # manages the active index unexpectedly. Idempotent — a no-op when the base is
     # already at the bottom (the normal case after the build-in-order loop above).
     _move_base_to_bottom(base_name, built - 1)
+
+    # Ensure the freshly built composite drives the BSDF and force a depsgraph
+    # re-eval. This build runs entirely from plain functions (no operator wrapper,
+    # no UI event loop on the agent path), so without this the group -> BSDF link is
+    # never verified and EEVEE can serve a stale shader — the render then never
+    # reflects the layered material that was just applied.
+    node = get_active_mpaint_node(obj)
+    if node is not None:
+        commit_mp_material(node, getattr(obj, "active_material", None))
 
     return {"layers_built": built, "material_name": manifest.get("material_name")}
