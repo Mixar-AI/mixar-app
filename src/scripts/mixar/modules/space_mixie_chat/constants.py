@@ -155,6 +155,10 @@ class JSONRPCMethod:
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
     JOB_SYNC = "job.sync"
     JOB_GET = "job.get"
+    # Client -> Server (notification - no response): outcome of one
+    # fire-and-forget final render job started by the agent's render_scene
+    # tool; echoes the job_key the kickoff pinned (session/turn identity).
+    RENDER_FINAL_RESULT = "render.final_render_result"
 
 
 # ============================================================================

@@ -545,6 +545,26 @@ class JSONRPCWebSocketClient:
         logger.debug(f"Queued request {request_id} ({method})")
         return request_id
 
+    def send_notification(self, method: str, params: dict) -> bool:
+        """Queue a JSON-RPC notification (no id, no response expected).
+
+        Fire-and-forget client -> server reporting (e.g. the final-render
+        outcome). Thread-safe: the payload only enters the outbound queue,
+        which the WS thread drains. Returns False immediately when the client
+        is not connected — the caller decides whether that matters (reporting
+        is best-effort; the server's pending marker expires instead).
+        """
+        if not self._connected:
+            return False
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+        }
+        self._outbound.put(json.dumps(notification))
+        logger.debug(f"Queued notification ({method})")
+        return True
+
     def _handle_message(self, msg: dict) -> None:
         """Handle incoming JSON-RPC message."""
         # Check if it's a response (to our ping, handshake, or send_request)
