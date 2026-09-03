@@ -313,6 +313,24 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 return {'CANCELLED'}
             return {'FINISHED'}
 
+        # Turn-resume prompt (#1258): adopt the orphaned turn locally (replay
+        # + follow via the attach endpoint) or dismiss the bubble — both are
+        # client-local, no backend round-trip, work right after reconnect.
+        from ...core.turn_resume import RESUME_ACTION_PREFIX, DISMISS_ACTION
+        if self.action_value == DISMISS_ACTION:
+            from ...core.turn_resume import dismiss_resume_prompt
+            dismiss_resume_prompt(context.scene)
+            redraw_chat_areas()
+            return {'FINISHED'}
+        if self.action_value.startswith(RESUME_ACTION_PREFIX):
+            from ...core.turn_resume import dismiss_resume_prompt
+            session_id = self.action_value[len(RESUME_ACTION_PREFIX):]
+            dismiss_resume_prompt(context.scene)
+            res = bpy.ops.mixie_chat.resume_previous_task(
+                'INVOKE_DEFAULT', session_id=session_id,
+            )
+            return {'FINISHED'} if res else {'CANCELLED'}
+
         # P1-5 retry chip: the graph already ENDED, so this value must NOT go
         # to /agent/input (there is no interrupt to resume). Send the bare
         # "continue" message instead — the classifier's deterministic

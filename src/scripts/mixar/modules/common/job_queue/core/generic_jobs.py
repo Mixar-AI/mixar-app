@@ -16,11 +16,8 @@ from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
 from .job import FAILED_BACKEND_STATUSES, Job, JobState
-from .helpers import (
-    download_images_to_moodboard,
-    extract_image_name,
-    extract_image_urls,
-)
+from .image_results import download_images_to_moodboard
+from .helpers import extract_image_name, extract_image_urls
 
 logger = get_logger(__name__)
 

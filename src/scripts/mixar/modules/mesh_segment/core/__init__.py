@@ -5,14 +5,11 @@
 """
 Mesh Segment Core Module.
 
-Provides mesh segment manager and mesh labeling utilities.
+Provides mesh labeling utilities.
 """
 
-from .mesh_segment_manager import MeshSegmentManager, get_mesh_segment_manager
 from .mesh_labeler import apply_labels_to_mesh
 
 __all__ = [
-    "MeshSegmentManager",
-    "get_mesh_segment_manager",
     "apply_labels_to_mesh",
 ]

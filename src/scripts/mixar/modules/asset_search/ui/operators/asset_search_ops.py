@@ -68,6 +68,24 @@ class MIXIE_OT_search_assets(Operator):
         # Extract image bytes on main thread (bpy.data access required)
         if state.search_image is not None:
             self._image_bytes = _extract_search_image_bytes(state.search_image)
+            if self._image_bytes is None:
+                # An unreadable reference image (e.g. no pixel data) must not
+                # degrade to a text-only search silently — say so, or cancel
+                # when there is nothing else to search with.
+                if not state.search_prompt.strip():
+                    state.is_searching = False
+                    self.report(
+                        {'ERROR'},
+                        "Could not read the reference image — it has no "
+                        "usable pixel data. Re-save the image or search "
+                        "with a text prompt.",
+                    )
+                    return {'CANCELLED'}
+                self.report(
+                    {'WARNING'},
+                    "Reference image could not be read — searching with "
+                    "the text prompt only",
+                )
 
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, window=context.window)
@@ -245,12 +263,22 @@ def _extract_search_image_bytes(img):
     if img.packed_file and img.packed_file.data:
         return bytes(img.packed_file.data)
 
-    # Fall back to saving a render to a temp file
-    tmp_path = os.path.join(
-        tempfile.gettempdir(), f"_mixar_search_{img.name}.jpg",
-    )
+    # Fall back to saving a render to a temp file. mkstemp: a predictable
+    # name in the shared tempdir invites collisions and symlink attacks
+    # (the rest of the module uses mkdtemp for the same reason).
+    fd, tmp_path = tempfile.mkstemp(prefix="mixar_search_", suffix=".jpg")
+    os.close(fd)
     try:
-        img.save_render(filepath=tmp_path)
+        # save_render writes in the SCENE's image format (PNG by default,
+        # worse: a user's EXR), while the upload is always image/jpeg —
+        # force JPEG the way render_to_jpeg() does, then restore.
+        settings = bpy.context.scene.render.image_settings
+        orig_format = settings.file_format
+        settings.file_format = 'JPEG'
+        try:
+            img.save_render(filepath=tmp_path)
+        finally:
+            settings.file_format = orig_format
         with open(tmp_path, "rb") as fh:
             return fh.read()
     except Exception as exc:

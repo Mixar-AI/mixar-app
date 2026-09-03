@@ -52,7 +52,13 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _queues: dict = {}
-_SYNC_WATCHDOG_INTERVAL = 30.0
+# The queue is push-driven, so this interval IS the worst-case delay a
+# completed job can sit invisible when its at-most-once ``job.update`` push
+# is lost: at 30 s a finished image generation stared at the user for half a
+# minute. One batched ``job.sync`` RPC every 5 s while at least one job is
+# active is negligible traffic, and the timer unregisters itself once no job
+# needs reconciling.
+_SYNC_WATCHDOG_INTERVAL = 5.0
 _sync_watchdog_registered = False
 _BACKEND_SYNC_STATES = frozenset(
     {
@@ -434,7 +440,29 @@ class FeatureQueue(DownloadMixin):
         The queue is process-global session state, not stored in the .blend, so
         a freshly opened file must start empty rather than inheriting the
         previous file's jobs (whose scene/node references are now stale).
+
+        Non-terminal jobs first get cancel_all's terminal treatment: dropping
+        a RUNNING_DOWNLOAD job nakedly would let its in-flight download thread
+        survive with no queue entry and import the paid result into the
+        freshly opened file via _finish_import.
         """
+        for job in list(self._jobs):
+            if job.state not in TERMINAL_STATES:
+                if job.backend_job_id:
+                    self._cancel_on_backend(job.backend_job_id)
+                job._submit_retry_scheduled = False
+                job.state = JobState.CANCELLED
+                if not job.error:
+                    job.error = "Cancelled"
+            # Same release pass _notify() runs for terminal jobs — these are
+            # being dropped, so no later notify will see them.
+            try:
+                job.release_resources()
+            except Exception as e:
+                logger.debug(
+                    "%s resource release failed for %s: %s",
+                    LOG_PREFIX, job.id, e,
+                )
         self._jobs = []
         self._notify()
 

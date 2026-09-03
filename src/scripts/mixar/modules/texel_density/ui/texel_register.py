@@ -62,6 +62,24 @@ def register():
     bpy.types.Scene.td = PointerProperty(type=props.TDAddonProps)
     bpy.types.Scene.td_addon_props = PointerProperty(type=preferences.TDAddonProperties)
 
+    # The Mixar bootstrap only auto-calls this module's register() - it never
+    # runs texel/__init__.register(), so the preferences-persistence bootstrap
+    # there (load saved prefs -> enable saving -> apply defaults to the
+    # session props) never ran and user preferences were never loaded or
+    # saved. Reproduce deferred_initialize()'s wiring here; it is idempotent
+    # (copy_prefs_to_props is gated on the props' "initialized" flag).
+    # NOTE: do not import texel/__init__ itself - executing it
+    # importlib.reload()s every texel submodule, which would orphan the
+    # classes registered above.
+    try:
+        from ..texel import config_json
+
+        config_json.load_or_initialize_prefs()
+        config_json.saving_enabled = True
+        config_json.copy_prefs_to_props()
+    except Exception as e:
+        print(f"[TD Prefs] Persistence bootstrap failed: {e}")
+
 
 def unregister():
     for cls in reversed(classes):

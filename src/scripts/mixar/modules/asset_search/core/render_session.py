@@ -279,7 +279,14 @@ class RenderSession:
         self._render_appended(item, info, img_name, out_path)
 
     def _render_appended(self, item, info, img_name, out_path):
-        """Append the asset, render it, and clean the local copy up."""
+        """Append the asset, render it, and clean the local copy up.
+
+        Cleanup runs in ``finally`` (mirroring the headless worker's
+        ``_render_item``): a render exception must not leak the appended
+        copy into the user's scene — PreviewRenderRig only hides objects
+        that existed at enter(), so a leftover asset would ride EVERY
+        subsequent preview render.
+        """
         scene = self.context.scene
         with bpy.data.libraries.load(item['blend_str'], link=False) as (_, data_to):
             if item['kind'] == 'OBJECT':
@@ -292,29 +299,37 @@ class RenderSession:
             if obj is None:
                 self.failures.append((self.current_label, "not found in .blend"))
                 return
-            scene.collection.objects.link(obj)
-            bpy.context.view_layer.update()
-            frame_camera(self._rig.camera, [obj])
-            rendered = render_to_jpeg(scene, out_path)
-            scene.collection.objects.unlink(obj)
-            remove_objects([obj])
+            try:
+                scene.collection.objects.link(obj)
+                bpy.context.view_layer.update()
+                frame_camera(self._rig.camera, [obj])
+                rendered = render_to_jpeg(scene, out_path)
+                scene.collection.objects.unlink(obj)
+            finally:
+                if obj.name in bpy.data.objects:
+                    remove_objects([obj])
         else:
             coll = data_to.collections[0]
             if coll is None:
                 self.failures.append((self.current_label, "not found in .blend"))
                 return
-            scene.collection.children.link(coll)
-            bpy.context.view_layer.update()
-            objects = list(coll.all_objects)
-            if not objects:
-                scene.collection.children.unlink(coll)
-                remove_collection(coll)
-                self.failures.append((self.current_label, "empty collection"))
-                return
-            frame_camera(self._rig.camera, objects)
-            rendered = render_to_jpeg(scene, out_path)
-            scene.collection.children.unlink(coll)
-            remove_collection(coll)
+            try:
+                scene.collection.children.link(coll)
+                bpy.context.view_layer.update()
+                objects = list(coll.all_objects)
+                if not objects:
+                    self.failures.append((self.current_label, "empty collection"))
+                    return
+                frame_camera(self._rig.camera, objects)
+                rendered = render_to_jpeg(scene, out_path)
+            finally:
+                if coll.name in bpy.data.collections:
+                    if coll.name in {c.name for c in scene.collection.children}:
+                        try:
+                            scene.collection.children.unlink(coll)
+                        except Exception:
+                            pass
+                    remove_collection(coll)
 
         if rendered:
             info['image_name'] = img_name

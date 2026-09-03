@@ -4,6 +4,8 @@
 
 """Error classification and sanitization for the job queue."""
 
+import re
+
 from mixar.modules.common.api.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -18,18 +20,30 @@ from mixar.modules.common.api.exceptions import (
 )
 
 # Substrings in raw error messages that indicate sensitive/internal details.
-# Checked case-insensitively.  Order does not matter.
+# Checked case-insensitively.  Order does not matter.  Only words that are
+# sensitive on their own belong here — a bare keyword like "token" would also
+# swallow benign messages such as "token limit exceeded" (that is why bare
+# "token" lives in the credential-shaped regexes below instead).
 _SENSITIVE_PATTERNS = (
     "api_key",
     "api key",
     "secret",
     "credentials",
     "password",
-    "token",
     ".env",
     "traceback",
     "file \"/",       # Python traceback paths
     "file \"c:\\",    # Windows traceback paths
+)
+
+# Credential-shaped content: the secret itself (provider keys, JWTs, auth
+# headers, key=value pairs), not keywords *about* secrets.  A message that
+# merely mentions "token" (rate limits, context limits) stays user-visible.
+_CREDENTIAL_PATTERNS = (
+    re.compile(r"\bsk-[A-Za-z0-9_-]{8,}"),                      # provider API keys
+    re.compile(r"eyJ[A-Za-z0-9_-]{10,}"),                       # JWT (base64 {" header)
+    re.compile(r"api[_-]?key\s*[=:]\s*\S+", re.IGNORECASE),     # apikey=… / api-key: …
+    re.compile(r"bearer\s+[A-Za-z0-9._-]{8,}", re.IGNORECASE),  # Authorization headers
 )
 
 
@@ -70,5 +84,8 @@ def sanitize_message(raw: str, fallback: str = "Something went wrong") -> str:
     lower = raw.lower()
     for pattern in _SENSITIVE_PATTERNS:
         if pattern in lower:
+            return fallback
+    for pattern in _CREDENTIAL_PATTERNS:
+        if pattern.search(raw):
             return fallback
     return raw if len(raw) <= 80 else raw[:77] + "…"

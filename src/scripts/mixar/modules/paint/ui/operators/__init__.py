@@ -129,7 +129,8 @@ def unregister():
     """
     import bpy
     for module in reversed(modules):
-        for cls in reversed(module.classes):
+        classes = getattr(module, 'classes', [])
+        for cls in reversed(classes):
             try:
                 bpy.utils.unregister_class(cls)
             except RuntimeError:
