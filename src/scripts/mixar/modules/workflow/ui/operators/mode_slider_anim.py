@@ -43,12 +43,18 @@ def _tag_topbars() -> None:
 
     The topbar is a GLOBAL area — it is not in `screen.areas`, so a normal
     area walk misses it entirely (same gotcha the Director toggle hit).
+
+    `Window.global_areas` is Mixar's own RNA addition (`rna_wm_mixar.cc`)
+    and iterates `win->global_areas.areabase` DIRECTLY — it yields the areas
+    themselves, so there is no `.areas` on it to walk. Reading one raised
+    `AttributeError: bpy_prop_collection: attribute "areas" not found` out of
+    the timer on every mode switch. Every other caller in the codebase
+    (`updates/ui/topbar_badge.py`, `usage/core/poller.py`,
+    `director/ui/properties/director_properties.py`) iterates it directly;
+    this is that same shape.
     """
     for window in bpy.context.window_manager.windows:
-        global_areas = getattr(window, "global_areas", None)
-        if global_areas is None:
-            continue
-        for area in global_areas.areas:
+        for area in getattr(window, "global_areas", None) or ():
             if area.type == 'TOPBAR':
                 area.tag_redraw()
 
