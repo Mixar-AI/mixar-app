@@ -84,7 +84,8 @@ def test_socket_hit_radius_follows_the_view_scale():
     zoomed-in socket's rim unclickable."""
     geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
     hit = geometry.split("static bool region_socket_hit(")[1].split("\n}")[0]
-    assert "UI_view2d_scale_get_x" in hit
+    # Blender 5.2: the C API wrapper was renamed to the ui:: namespace.
+    assert "ui::view2d_scale_get_x" in hit
     assert "MOODBOARD_GRAPH_SOCKET_RADIUS * scale" in hit
 
 
@@ -131,7 +132,12 @@ def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
     node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
     assert "show_rerun" in node_ui
     assert '"Edit & Run Again"' in node_ui
-    assert 'RNA_boolean_set(rerun_props, "edit_before_run", true)' in node_ui
+    # Blender 5.2: operator properties are set through
+    # ui::button_operator_ptr_ensure (no separate rerun_props handle).
+    assert (
+        'RNA_boolean_set(ui::button_operator_ptr_ensure(rerun), "edit_before_run", true)'
+        in node_ui
+    )
 
 
 def test_node_panel_metrics_scale_with_the_ui_factor():
