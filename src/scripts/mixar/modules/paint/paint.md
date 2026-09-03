@@ -547,10 +547,8 @@ __init__.py
 layer_channel_properties.py     # Channel property definitions
 layer_properties.py             # MLayer PropertyGroup
 layer_properties_callbacks.py   # Property callbacks
-layer_properties_channel.py     # Channel properties
 layer_properties_channel_nodes.py # Channel node properties
 layer_properties_layer.py       # Layer-specific properties
-layer_properties_normal.py      # Normal map properties
 layer_properties_transition.py  # Transition properties
 ```
 
