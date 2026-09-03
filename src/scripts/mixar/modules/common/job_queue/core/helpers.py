@@ -453,22 +453,31 @@ def download_images_to_moodboard(
                         # back the cards and their freshly loaded datablocks so
                         # a failed hook cannot leave a successful-looking,
                         # untraceable result on the moodboard.
-                        items = target_scene.mixie_moodboard_images
-                        for index in range(len(items) - 1, -1, -1):
-                            try:
-                                item = items[index]
-                                if (
-                                    getattr(item, "mixar_job_handle", "") == job_id
-                                    and getattr(item, "image", None) in added_images
-                                ):
-                                    items.remove(index)
-                            except Exception:
-                                pass
-                        for img in added_images:
-                            try:
-                                bpy.data.images.remove(img)
-                            except Exception:
-                                pass
+                        try:
+                            items = target_scene.mixie_moodboard_images
+                            for index in range(len(items) - 1, -1, -1):
+                                try:
+                                    item = items[index]
+                                    if (
+                                        getattr(item, "mixar_job_handle", "") == job_id
+                                        and getattr(item, "image", None) in added_images
+                                    ):
+                                        items.remove(index)
+                                except Exception:
+                                    pass
+                            for img in added_images:
+                                try:
+                                    bpy.data.images.remove(img)
+                                except Exception:
+                                    pass
+                        except Exception as rollback_error:
+                            # The rollback must never mask on_error: a raise
+                            # here would otherwise strand the job in
+                            # RUNNING_DOWNLOAD and leak the loaded datablocks.
+                            logger.error(
+                                "Moodboard rollback failed for job %s: %s",
+                                job_id, rollback_error,
+                            )
                         on_error(f"Could not finalize generated images: {e}")
                         return None
                 if undo_message:

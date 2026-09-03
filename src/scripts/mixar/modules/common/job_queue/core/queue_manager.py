@@ -434,7 +434,29 @@ class FeatureQueue(DownloadMixin):
         The queue is process-global session state, not stored in the .blend, so
         a freshly opened file must start empty rather than inheriting the
         previous file's jobs (whose scene/node references are now stale).
+
+        Non-terminal jobs first get cancel_all's terminal treatment: dropping
+        a RUNNING_DOWNLOAD job nakedly would let its in-flight download thread
+        survive with no queue entry and import the paid result into the
+        freshly opened file via _finish_import.
         """
+        for job in list(self._jobs):
+            if job.state not in TERMINAL_STATES:
+                if job.backend_job_id:
+                    self._cancel_on_backend(job.backend_job_id)
+                job._submit_retry_scheduled = False
+                job.state = JobState.CANCELLED
+                if not job.error:
+                    job.error = "Cancelled"
+            # Same release pass _notify() runs for terminal jobs — these are
+            # being dropped, so no later notify will see them.
+            try:
+                job.release_resources()
+            except Exception as e:
+                logger.debug(
+                    "%s resource release failed for %s: %s",
+                    LOG_PREFIX, job.id, e,
+                )
         self._jobs = []
         self._notify()
 
