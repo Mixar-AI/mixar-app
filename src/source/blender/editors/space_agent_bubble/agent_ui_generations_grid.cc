@@ -12,7 +12,7 @@
  * \section drag Dragging a generation into the viewport
  *
  * A 3D tile's button carries Blender's OWN asset drag
- * (#UI_but_drag_set_asset), so releasing it over a 3D viewport runs the
+ * (#ui::button_drag_set_asset), so releasing it over a 3D viewport runs the
  * View3D's existing asset dropbox: the import method the library is
  * configured with, the undo push, the placement under the cursor — all of it
  * is Blender's, none of it re-implemented here. That is only possible because
@@ -55,6 +55,9 @@
 #include "agent_ui_icons.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Grid geometry
@@ -113,30 +116,30 @@ void draw_placeholder(const rctf &box, const AgentIcon icon)
 
 }  // namespace
 
-bool agent_ui_generations_asset_has_preview(const GenItem &item)
+bool agent_ui_generations_asset_has_preview(const bContext *C, const GenItem &item)
 {
   if (item.kind != GEN_ITEM_ASSET || !item.asset) {
     return false;
   }
   /* Only ATTACHES the deferred read; what starts it is the icon id landing on
-   * a uiBut (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), which is why an
+   * a ui::Button (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), which is why an
    * asset tile is a preview BUTTON rather than a painted plate. */
-  item.asset->ensure_previewable();
+  item.asset->ensure_previewable(*C);
   const PreviewImage *prv = item.asset->get_preview();
   return prv && prv->rect[ICON_SIZE_PREVIEW] != nullptr;
 }
 
-void agent_ui_generations_thumb(const GenItem &item, const rctf &box, const float u)
+void agent_ui_generations_thumb(const bContext *C, const GenItem &item, const rctf &box, const float u)
 {
   switch (item.kind) {
     case GEN_ITEM_ASSET: {
       if (!item.asset) {
         return;
       }
-      if (agent_ui_generations_asset_has_preview(item)) {
+      if (agent_ui_generations_asset_has_preview(C, item)) {
         const BIFIconID icon = blender::ed::asset::asset_preview_icon_id(*item.asset);
         const float size = std::min(BLI_rctf_size_x(&box), BLI_rctf_size_y(&box));
-        UI_icon_draw_preview(BLI_rctf_cent_x(&box) - size * 0.5f,
+        ui::icon_draw_preview(BLI_rctf_cent_x(&box) - size * 0.5f,
                              BLI_rctf_cent_y(&box) - size * 0.5f,
                              icon,
                              1.0f,
@@ -171,7 +174,7 @@ void agent_ui_generations_thumb(const GenItem &item, const rctf &box, const floa
 }
 
 void agent_ui_generations_grid(const bContext *C,
-                               uiBlock *block,
+                               ui::Block *block,
                                const rctf &panel,
                                const float u,
                                const GenPaneData &data,
@@ -220,7 +223,7 @@ void agent_ui_generations_grid(const bContext *C,
      * and NOT by the button — the button carries the icon so Blender keeps
      * the deferred read alive, and drawing it twice is harmless overdraw we
      * avoid by leaving the button's own draw to cover the same pixels. */
-    agent_ui_generations_thumb(item, tile, u);
+    agent_ui_generations_thumb(C, item, tile, u);
 
     if (STREQ(item.key, data.selected)) {
       /* The ring is handed back rather than drawn: the block paints AFTER
@@ -274,11 +277,11 @@ void agent_ui_generations_grid(const bContext *C,
     const char *tip = (item.kind == GEN_ITEM_ASSET) ?
                           "Click to inspect, or drag into the viewport" :
                           "Click to inspect";
-    /* An asset tile is a ButType::PreviewTile, and that type is load-bearing
+    /* An asset tile is a ui::ButtonType::PreviewTile, and that type is load-bearing
      * rather than cosmetic: Blender's drag-start lives in `ui_do_but_EXIT`,
-     * and only the preview-tile/label family routes there. A ButType::But
+     * and only the preview-tile/label family routes there. A ui::ButtonType::But
      * goes to `ui_do_but_BUT`, which handles the click and NEVER checks
-     * `ui_but_drag_is_draggable` — so the drag data attached below was
+     * `button_drag_is_draggable` — so the drag data attached below was
      * present and simply unreachable, and the tile clicked but would not
      * drag. The operator is attached afterwards, the way the asset shelf
      * does it, so a click still runs it.
@@ -297,31 +300,31 @@ void agent_ui_generations_grid(const bContext *C,
      * through the button. */
     BIFIconID preview = BIFIconID(ICON_NONE);
     if (item.kind == GEN_ITEM_ASSET && item.asset) {
-      item.asset->ensure_previewable();
+      item.asset->ensure_previewable(*C);
       preview = blender::ed::asset::asset_preview_icon_id(*item.asset);
     }
 
-    uiBut *but;
+    ui::Button *but;
     if (item.kind == GEN_ITEM_ASSET) {
-      but = uiDefIconPreviewBut(block, ButType::PreviewTile, 0, preview,
+      but = uiDefIconPreviewBut(block, ui::ButtonType::PreviewTile, preview,
                                 int(tile.xmin), int(tile.ymin),
                                 short(BLI_rctf_size_x(&tile)),
                                 short(BLI_rctf_size_y(&tile)),
                                 nullptr, 0.0f, 0.0f, tip);
       if (but) {
         if (wmOperatorType *ot = WM_operatortype_find("wm.context_set_string", true)) {
-          UI_but_operator_set(but, ot, blender::wm::OpCallContext::InvokeDefault);
+          ui::button_operator_set(but, ot, blender::wm::OpCallContext::InvokeDefault);
         }
       }
     }
     else {
-      but = uiDefButO(block, ButType::But, "wm.context_set_string",
+      but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_string",
                       blender::wm::OpCallContext::InvokeDefault, "",
                       int(tile.xmin), int(tile.ymin), short(BLI_rctf_size_x(&tile)),
                       short(BLI_rctf_size_y(&tile)), tip);
     }
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_selected");
       RNA_string_set(op_ptr, "value", item.key);
     }
@@ -337,7 +340,7 @@ void agent_ui_generations_grid(const bContext *C,
       AssetImportSettings import_settings{};
       import_settings.method = method;
       import_settings.use_instance_collections = false;
-      UI_but_drag_set_asset(but,
+      ui::button_drag_set_asset(but,
                             item.asset,
                             import_settings,
                             ICON_NONE,
@@ -346,3 +349,5 @@ void agent_ui_generations_grid(const bContext *C,
   }
   UNUSED_VARS(C);
 }
+
+}  // namespace blender

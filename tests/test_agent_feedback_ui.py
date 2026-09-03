@@ -53,7 +53,7 @@ def test_feedback_comment_requires_rating_and_deduplicates_submission():
 
 
 def test_feedback_post_tracks_server_outcome_and_preserves_retry_text():
-    source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
+    source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text(encoding="utf-8")
 
     assert "response.raise_for_status()" in source
     assert "feedback_comment_submitting = True" in source
@@ -166,7 +166,7 @@ def test_feedback_rating_callback_uses_stable_values_after_operator_returns(
 
 
 def test_only_latest_agent_response_offers_feedback():
-    source = (CHAT_ROOT / "core/queue_processor.py").read_text()
+    source = (CHAT_ROOT / "core/queue_processor.py").read_text(encoding="utf-8")
     clear = source.index("for msg in messages:")
     select_latest = source.index("for i in range(len(messages) - 1, -1, -1):")
 
@@ -176,7 +176,7 @@ def test_only_latest_agent_response_offers_feedback():
 
 def test_feedback_cpp_is_split_into_bounded_translation_units():
     cpp_root = ROOT / "src/source/blender/editors/space_mixie_chat"
-    cmake = (cpp_root / "CMakeLists.txt").read_text()
+    cmake = (cpp_root / "CMakeLists.txt").read_text(encoding="utf-8")
 
     assert "mixie_chat_feedback.cc" in cmake
     assert "mixie_chat_action_buttons.cc" in cmake
@@ -185,12 +185,12 @@ def test_feedback_cpp_is_split_into_bounded_translation_units():
         "mixie_chat_hit_testing.cc",
         "mixie_chat_messages_render.cc",
     ):
-        assert len((cpp_root / filename).read_text().splitlines()) <= 500
+        assert len((cpp_root / filename).read_text(encoding="utf-8").splitlines()) <= 500
 
 
 def test_feedback_submission_shows_inline_confirmation():
     """Rating and comment submissions must surface a visible received state."""
-    ops_source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text()
+    ops_source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text(encoding="utf-8")
 
     # Both flows only show the received state from their completion callback.
     assert "FEEDBACK_STATUS_RECEIVED" in ops_source
@@ -202,12 +202,12 @@ def test_feedback_submission_shows_inline_confirmation():
     # the C++ hit-test/hover paths.
     assert "Feedback rating ignored (locked)" in ops_source
     cpp_root = ROOT / "src/source/blender/editors/space_mixie_chat"
-    feedback_cc = (cpp_root / "mixie_chat_feedback.cc").read_text()
+    feedback_cc = (cpp_root / "mixie_chat_feedback.cc").read_text(encoding="utf-8")
     assert "FEEDBACK_STATUS_SENDING ||" in feedback_cc
-    main_region = (cpp_root / "mixie_chat_main_region.cc").read_text()
+    main_region = (cpp_root / "mixie_chat_main_region.cc").read_text(encoding="utf-8")
     assert "feedback_locked" in main_region
 
-    constants_source = (CHAT_ROOT / "constants.py").read_text()
+    constants_source = (CHAT_ROOT / "constants.py").read_text(encoding="utf-8")
     for name in (
         "FEEDBACK_STATUS_IDLE = 0",
         "FEEDBACK_STATUS_SENDING = 1",
@@ -219,7 +219,7 @@ def test_feedback_submission_shows_inline_confirmation():
 
 def test_feedback_cpp_renders_received_state_and_submitted_comment():
     cpp_root = ROOT / "src/source/blender/editors/space_mixie_chat"
-    feedback = (cpp_root / "mixie_chat_feedback.cc").read_text()
+    feedback = (cpp_root / "mixie_chat_feedback.cc").read_text(encoding="utf-8")
 
     assert "Feedback received" in feedback
     assert "FEEDBACK_STATUS_RECEIVED" in feedback
@@ -227,14 +227,14 @@ def test_feedback_cpp_renders_received_state_and_submitted_comment():
 
     # Layout pass reserves height for the read-only comment block, and the
     # cache invalidation tracks status/comment changes.
-    layout = (cpp_root / "mixie_chat_messages_layout.cc").read_text()
+    layout = (cpp_root / "mixie_chat_messages_layout.cc").read_text(encoding="utf-8")
     assert "feedback_submitted_comment_height" in layout
-    messages = (cpp_root / "mixie_chat_messages.cc").read_text()
+    messages = (cpp_root / "mixie_chat_messages.cc").read_text(encoding="utf-8")
     assert "feedback_status" in messages
     assert "FEEDBACK_COMMENT_DISPLAY_MAX" in messages
 
     # C++ status values stay in sync with the Python constants.
-    ui_types = (cpp_root / "mixie_chat_ui_types.hh").read_text()
+    ui_types = (cpp_root / "mixie_chat_ui_types.hh").read_text(encoding="utf-8")
     for name in (
         "FEEDBACK_STATUS_IDLE = 0",
         "FEEDBACK_STATUS_SENDING = 1",
@@ -248,7 +248,7 @@ def test_feedback_row_is_positioned_below_steps_and_thinking():
     source = (
         ROOT
         / "src/source/blender/editors/space_mixie_chat/mixie_chat_feedback.cc"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 
     feedback_positioning = source[source.index("float fb_y = layout.y_pos;") :]
     action_height = feedback_positioning.index(

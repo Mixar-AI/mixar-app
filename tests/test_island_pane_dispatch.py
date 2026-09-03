@@ -42,13 +42,13 @@ FORKED_OPERATORS = (
 
 def test_every_pane_generates_through_the_shared_dispatcher():
     for name in PANES:
-        source = (CPP / name).read_text()
+        source = (CPP / name).read_text(encoding="utf-8")
         assert DISPATCHER in source, f"{name}: Generate does not use the dispatcher"
 
 
 def test_no_pane_names_a_generate_operator_of_its_own():
     for name in PANES:
-        source = (CPP / name).read_text()
+        source = (CPP / name).read_text(encoding="utf-8")
         for operator in FORKED_OPERATORS:
             assert f'"{operator}"' not in source, (
                 f"{name} calls {operator} directly — a click can then submit a "
@@ -61,7 +61,7 @@ def test_the_owner_type_comes_from_the_tab_struct_itself():
     handler forwards, so the two paths cannot drift; a hardcoded literal
     could."""
     for name in PANES:
-        source = (CPP / name).read_text()
+        source = (CPP / name).read_text(encoding="utf-8")
         block = source[source.index(DISPATCHER) :]
         owner = re.search(r'RNA_string_set\(op_ptr,\s*"owner_type",\s*([^)]+)\)', block)
         assert owner is not None, f"{name}: dispatcher call sets no owner_type"
@@ -73,7 +73,7 @@ def test_the_owner_type_comes_from_the_tab_struct_itself():
 def test_the_enter_handler_and_the_panes_agree_on_the_owner_string():
     handlers = (
         ROOT / "src/source/blender/editors/interface/interface_handlers.cc"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert "RNA_struct_identifier(but->rnapoin.type)" in handlers
 
 
@@ -82,7 +82,7 @@ def test_the_enter_handler_and_the_panes_agree_on_the_owner_string():
 
 
 def _execute_body() -> ast.FunctionDef:
-    tree = ast.parse(OPS_PY.read_text())
+    tree = ast.parse(OPS_PY.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "execute":
             return node

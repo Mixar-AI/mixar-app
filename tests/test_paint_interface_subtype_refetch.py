@@ -33,7 +33,7 @@ FUNCTIONS = ("new_tree_input", "refetch_interface_item")
 
 
 def _load_helpers():
-    source = INPUTS_PY.read_text()
+    source = INPUTS_PY.read_text(encoding="utf-8")
     module = ast.parse(source)
     wanted = [n for n in module.body if isinstance(n, ast.FunctionDef) and n.name in FUNCTIONS]
     assert {n.name for n in wanted} == set(FUNCTIONS), "helper missing from inputs.py"
@@ -106,7 +106,7 @@ def test_refetch_matches_by_pointer(helpers):
 
 def test_source_refetches_right_after_the_subtype_assignment():
     """Source-level guard: the re-fetch must directly follow ``inp.subtype = ``."""
-    source = INPUTS_PY.read_text()
+    source = INPUTS_PY.read_text(encoding="utf-8")
     module = ast.parse(source)
     fn = next(n for n in module.body if isinstance(n, ast.FunctionDef) and n.name == "new_tree_input")
     src = ast.get_source_segment(source, fn)

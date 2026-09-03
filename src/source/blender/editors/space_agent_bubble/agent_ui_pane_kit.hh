@@ -44,9 +44,14 @@
 
 #include "BLI_rect.h"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct Image;
 struct bContext;
-struct uiBut;
+namespace ui {
+struct Button;
+}
 
 /* -------------------------------------------------------------------- */
 /** \name Tokens (island units unless noted; colours state alpha ALWAYS)
@@ -277,15 +282,15 @@ float pane_ref_thumbs_paint(Image *const *images,
 /**
  * Give \a but a tooltip it OWNS.
  *
- * `uiBut::tip` is a non-owning `StringRef` and `ui_def_but` stores it by
+ * `ui::Button::tip` is a non-owning `StringRef` and `ui_def_but` stores it by
  * reference, so passing a catalog label, a local buffer, or an entry of an
- * `EnumPropertyItem` array the caller is about to `MEM_freeN` leaves the
+ * `EnumPropertyItem` array the caller is about to free leaves the
  * button pointing at dead memory — an undefined tooltip on hover, and freed
  * bytes in the QA introspection dump (which broke the harness outright).
  * A string LITERAL is fine and needs no help; anything computed goes through
  * here, which copies it and hands ownership to the button.
  */
-void pane_but_tooltip_owned(uiBut *but, const char *text);
+void pane_but_tooltip_owned(ui::Button *but, const char *text);
 
 /**
  * The Generate button's label for \a active_jobs already in the queue.
@@ -299,3 +304,5 @@ void pane_but_tooltip_owned(uiBut *but, const char *text);
 void pane_queue_label(char *out, int out_maxncpy, int active_jobs);
 
 /** \} */
+
+}  // namespace blender

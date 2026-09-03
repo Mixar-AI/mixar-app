@@ -54,6 +54,9 @@
 #include "agent_ui_queue.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -129,7 +132,7 @@ void read_item_string(PointerRNA *item, const char *name, char *r_buf, const int
   char *value = RNA_property_string_get_alloc(item, prop, r_buf, buf_len, &len);
   if (value != r_buf) {
     BLI_strncpy(r_buf, value, size_t(buf_len));
-    MEM_freeN(value);
+    MEM_delete(value);
   }
   r_buf[buf_len - 1] = '\0';
 }
@@ -457,13 +460,13 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   GPU_blend(GPU_BLEND_NONE);
 
   /* ---- Controls: one unembossed block over the painted rows. ---- */
-  uiBlock *block = UI_block_begin(C, region, "agent_island_queue", blender::ui::EmbossType::None);
+  ui::Block *block = ui::block_begin(C, region, "agent_island_queue", blender::ui::EmbossType::None);
 
   /* Clear finished. */
   if (any_terminal) {
     const float cy = panel.ymax - pad - header_h * 0.5f;
     const float w = pane_text_width("Clear finished", font_sub) + 16.0f * u;
-    uiDefButO(block, ButType::But, "mixie.queue_clear_all_completed",
+    uiDefButO(block, ui::ButtonType::But, "mixie.queue_clear_all_completed",
               blender::wm::OpCallContext::InvokeDefault, "",
               int(list_right - w), int(cy - header_h * 0.5f), short(w), short(header_h),
               "Remove all finished jobs from the queue");
@@ -476,12 +479,12 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     const float cancel_w = QROW_CANCEL_W * u;
 
     if (row.is_running || row.is_pending) {
-      uiBut *but = uiDefButO(block, ButType::But, "mixie.queue_cancel_job",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.queue_cancel_job",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              int(list_right - cancel_w), int(row_bottom),
                              short(cancel_w), short(row_h), "Cancel this job");
       if (but) {
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "feature_key", row.feature_key);
         RNA_string_set(op_ptr, "job_id", row.job_id);
       }
@@ -490,18 +493,20 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     /* Row select — drives the mirror's active_index, whose update callback is
      * the queue-selection hook (frames the imported result, etc.). The rect
      * stops short of the cancel zone so the two never overlap. */
-    uiBut *sel = uiDefButO(block, ButType::But, "wm.context_set_int",
+    ui::Button *sel = uiDefButO(block, ui::ButtonType::But, "wm.context_set_int",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(list_left), int(row_bottom),
                            short(list_right - cancel_w - list_left), short(row_h),
                            "Select this job");
     if (sel) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(sel);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(sel);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixie_queue.active_index");
       RNA_int_set(op_ptr, "value", mirror_index[i]);
     }
   }
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
+
+}  // namespace blender

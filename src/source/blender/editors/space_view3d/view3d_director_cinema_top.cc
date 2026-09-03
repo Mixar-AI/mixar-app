@@ -20,11 +20,14 @@
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Top strip
  * \{ */
 
-void cinema_draw_top_strip(uiBlock *block,
+void cinema_draw_top_strip(ui::Block *block,
                            const ARegion *region,
                            const DirectorViewState &state)
 {
@@ -113,3 +116,4 @@ void cinema_draw_top_strip(uiBlock *block,
 
 /** \} */
 
+}  // namespace blender

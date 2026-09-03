@@ -44,14 +44,17 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Primitives
  * \{ */
 
 void pane_fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, radius, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(rect, true, radius, col);
 }
 
 float pane_text_width(const char *text, const float size)
@@ -137,10 +140,10 @@ void pane_wash_paint(const rctf &panel, const float u)
 {
   const float top[4] = PANE_COL_WASH_TOP;
   const float bottom[4] = PANE_COL_WASH_BOTTOM;
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
   /* Vertical stand-in for the frames' near-vertical gradient; the diagonal
    * component is imperceptible at this delta. */
-  UI_draw_roundbox_4fv_ex(&panel, bottom, top, 1.0f, nullptr, 0.0f, AGENT_PANEL_RADIUS * u);
+  ui::draw_roundbox_4fv_ex(&panel, bottom, top, 1.0f, nullptr, 0.0f, AGENT_PANEL_RADIUS * u);
 }
 
 rctf pane_prompt_box_rect(const rctf &panel, const float strip_bottom_y, const float u)
@@ -180,7 +183,7 @@ bool pane_prompt_fits(const rctf &box, const float u)
 rctf pane_prompt_field_rect(const rctf &box, const float u)
 {
   /* The field IS the whole box — the design's prompt area. Blender's
-   * multiline text path (Text + UI_BUT_TEXTEDIT_UPDATE + tall rect) renders
+   * multiline text path (Text + ui::BUT_TEXTEDIT_UPDATE + tall rect) renders
    * top-left with a text-height caret, so no strip-sizing is needed; a
    * top-strip variant was tried and read as "just a thin bar". */
   UNUSED_VARS(u);
@@ -390,18 +393,19 @@ std::string pane_tooltip_owned_fn(bContext * /*C*/, void *argN, blender::StringR
 
 }  // namespace
 
-void pane_but_tooltip_owned(uiBut *but, const char *text)
+void pane_but_tooltip_owned(ui::Button *but, const char *text)
 {
   if (but == nullptr || text == nullptr || text[0] == '\0') {
     return;
   }
   const size_t size = strlen(text) + 1;
-  char *owned = static_cast<char *>(MEM_mallocN(size, __func__));
+  char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
   memcpy(owned, text, size);
   /* The callback form is the only one that owns its argument; `but->tip` is a
-   * bare StringRef and would dangle. `MEM_freeN` is the matching free func. */
-  UI_but_func_tooltip_set(but, pane_tooltip_owned_fn, owned, MEM_freeN);
+   * bare StringRef and would dangle. `MEM_delete_void` is the matching free func. */
+  ui::button_func_tooltip_set(but, pane_tooltip_owned_fn, owned, MEM_delete_void);
 }
 
 /** \} */
 
+}  // namespace blender

@@ -15,6 +15,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct rctf;
@@ -24,7 +27,7 @@ struct rctf;
  *
  * \param panel: the card panel rect in REGION pixel coordinates. Call where
  * the other tab panes are called (the transcript WINDOW region's draw), NOT
- * inside a translated GPU matrix — the pane builds a uiBlock.
+ * inside a translated GPU matrix — the pane builds a ui::Block.
  * \param u: island unit scale (window_native_w / AGENT_ISLAND_W).
  *
  * Reads/writes only EXISTING state: `scene.mixie_moodboard_sidebar`'s
@@ -37,3 +40,5 @@ void agent_ui_tabmedia_draw(const bContext *C,
                             ARegion *region,
                             const rctf &panel,
                             float u);
+
+}  // namespace blender

@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct AgentIslandLayout;
 struct bContext;
@@ -65,3 +68,5 @@ void agent_ui_draw_status_pill(float width, float height, const AgentIslandState
 void agent_ui_draw_island(const ARegion *region,
                           const AgentIslandLayout *layout,
                           const AgentIslandState *state);
+
+}  // namespace blender

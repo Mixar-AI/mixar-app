@@ -23,6 +23,9 @@
 
 #include "BLI_rect.h"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 
 /** A tab in the strip. Order is the artboard's, left to right. */
@@ -107,3 +110,4 @@ void agent_ui_layout_build(int window_w,
                            bool has_transcript,
                            AgentIslandLayout *r_layout);
 
+}  // namespace blender

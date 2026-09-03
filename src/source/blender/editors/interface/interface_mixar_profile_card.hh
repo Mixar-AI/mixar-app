@@ -140,7 +140,7 @@ bool UI_mixar_card_element_is_button(MixarCardElement element);
  * dispatch can carry on.
  */
 bool UI_mixar_topbar_draw_element(
-    uiBut *but, rcti *rect, MixarCardElement element, bool is_hover, bool is_active);
+    Button *but, rcti *rect, MixarCardElement element, bool is_hover, bool is_active);
 
 /**
  * Draw one action button — background, glyph and label.

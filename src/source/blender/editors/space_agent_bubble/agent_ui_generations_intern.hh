@@ -27,13 +27,18 @@
 
 #include "agent_ui_pane_kit.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct Image;
 struct PointerRNA;
 struct bContext;
-struct uiBlock;
+namespace ui {
+struct Block;
+}
 
-namespace blender::asset_system {
+namespace asset_system {
 class AssetRepresentation;
 }
 
@@ -274,11 +279,11 @@ GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
  *
  * \a r_selected_tile receives the selected tile's rect, or an empty rect when
  * nothing on this page is selected. The selection ring is the CALLER's to
- * draw, after the block: an asset tile is a preview uiBut, and the block
+ * draw, after the block: an asset tile is a preview ui::Button, and the block
  * paints last, so a ring drawn during this pass loses its inner half.
  */
 void agent_ui_generations_grid(const bContext *C,
-                               uiBlock *block,
+                               ui::Block *block,
                                const rctf &panel,
                                float u,
                                const GenPaneData &data,
@@ -325,9 +330,9 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data);
 /** Index of #GenPaneData::selected within the gathered items, or -1. */
 int agent_ui_generations_selected_index(const GenPaneData &data);
 
-/** Paint + lay out the detail column. \a block is the pane's own uiBlock. */
+/** Paint + lay out the detail column. \a block is the pane's own ui::Block. */
 void agent_ui_generations_detail(const bContext *C,
-                                 uiBlock *block,
+                                 ui::Block *block,
                                  const rctf &panel,
                                  float u,
                                  const GenPaneData &data);
@@ -345,11 +350,13 @@ void agent_ui_generations_detail(const bContext *C,
  * Requests the preview as a side effect, so it must only be called for tiles
  * actually being drawn.
  */
-bool agent_ui_generations_asset_has_preview(const GenItem &item);
+bool agent_ui_generations_asset_has_preview(const bContext *C, const GenItem &item);
 
 /** Aspect-fit an item's preview inside \a box. Assets go through Blender's
  * icon system (which is what loads an external asset's preview at all);
  * moodboard media go through the pane kit's ImBuf path. */
-void agent_ui_generations_thumb(const GenItem &item, const rctf &box, float u);
+void agent_ui_generations_thumb(const bContext *C, const GenItem &item, const rctf &box, float u);
 
 /** \} */
+
+}  // namespace blender

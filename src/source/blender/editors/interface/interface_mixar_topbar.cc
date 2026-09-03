@@ -36,6 +36,9 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -146,7 +149,7 @@ void draw_label_centred(const rcti *rect, const char *str, const uchar col[4], c
  * Per-glyph rather than a shader: the label is a handful of characters, so
  * stepping the colour per advance is indistinguishable from a smooth ramp
  * and needs no new GPU state. Drawn through BLF directly because
- * #UI_fontstyle_draw takes a single colour for the whole run.
+ * #fontstyle_draw takes a single colour for the whole run.
  */
 void draw_label_gradient(const rcti *rect,
                          const char *str,
@@ -158,14 +161,14 @@ void draw_label_gradient(const rcti *rect,
     return;
   }
   uiFontStyle fs = mixar_card_font(scale, 0);
-  UI_fontstyle_set(&fs);
+  fontstyle_set(&fs);
   const int font = fs.uifont_id;
 
   const size_t len = strlen(str);
   const float total_w = BLF_width(font, str, len);
   float x = float(rect->xmin) + (float(BLI_rcti_size_x(rect)) - total_w) * 0.5f;
 
-  /* Vertical centring on the ink box, matching #UI_fontstyle_draw. */
+  /* Vertical centring on the ink box, matching #fontstyle_draw. */
   rcti box;
   BLF_boundbox(font, str, len, &box);
   const float y = float(rect->ymin) +
@@ -203,7 +206,7 @@ void draw_label_gradient(const rcti *rect,
  * mirroring it to the right, which is exact because the builder pins both
  * halves to the same `ui_units_x`.
  */
-void draw_slider_left(uiBut *but, const rcti *rect, const bool is_hover)
+void draw_slider_left(Button *but, const rcti *rect, const bool is_hover)
 {
   const float half_w = float(BLI_rcti_size_x(rect));
   rctf track;
@@ -235,7 +238,7 @@ void draw_slider_left(uiBut *but, const rcti *rect, const bool is_hover)
 }
 
 /** Mode slider, right half: label only — the left half drew the chrome. */
-void draw_slider_right(uiBut *but, const rcti *rect)
+void draw_slider_right(Button *but, const rcti *rect)
 {
   draw_label_centred(rect, but->drawstr.c_str(), SLIDER_LABEL, 0.95f);
 }
@@ -247,7 +250,7 @@ void draw_slider_right(uiBut *but, const rcti *rect)
  * No separate switch widget: the fill is the state. A knob read as "here is
  * a control inside a button" when the button already IS the control.
  */
-void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const bool is_active)
+void draw_cinema_pill(Button *but, const rcti *rect, const bool is_hover, const bool is_active)
 {
   rctf pill;
   mixar_card_rect_to_rctf(rect, &pill);
@@ -278,9 +281,9 @@ void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const b
       a[i] = std::min(1.0f, a[i] * boost);
       b[i] = std::min(1.0f, b[i] * boost);
     }
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
+    draw_roundbox_corner_set(CNR_ALL);
     /* shade_dir 1.0 = vertical ramp (inner1 at the top). */
-    UI_draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);
+    draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);
     mixar_card_outline_round(&pill, rad, PILL_BORDER_ON, (is_hover || pressed) ? 1.0f : 0.9f);
   }
   else {
@@ -307,7 +310,7 @@ void draw_cinema_pill(uiBut *but, const rcti *rect, const bool is_hover, const b
 }
 
 /** Zen viewport shading pill: "Solid" / "Rendered". */
-void draw_viewport_pill(uiBut *but, const rcti *rect, const bool is_hover, const bool is_active)
+void draw_viewport_pill(Button *but, const rcti *rect, const bool is_hover, const bool is_active)
 {
   /* Payload only — see draw_cinema_pill. UI_SELECT on an operator button is
    * "held down", and reading it as state made an inactive shading pill jump
@@ -334,7 +337,7 @@ void draw_viewport_pill(uiBut *but, const rcti *rect, const bool is_hover, const
 }
 
 /** Topbar account chip: slab + label + avatar disc with the person glyph. */
-void draw_profile_pill(uiBut *but, const rcti *rect, const bool is_hover, const bool /*is_active*/)
+void draw_profile_pill(Button *but, const rcti *rect, const bool is_hover, const bool /*is_active*/)
 {
   rctf chip;
   mixar_card_rect_to_rctf(rect, &chip);
@@ -363,7 +366,7 @@ void draw_profile_pill(uiBut *but, const rcti *rect, const bool is_hover, const 
   mixar_card_to_float(PROFILE_GLYPH, mono);
   uchar mono_u[4];
   memcpy(mono_u, PROFILE_GLYPH, sizeof(mono_u));
-  UI_icon_draw_ex(BLI_rctf_cent_x(&disc) - glyph * 0.5f,
+  icon_draw_ex(BLI_rctf_cent_x(&disc) - glyph * 0.5f,
                   BLI_rctf_cent_y(&disc) - glyph * 0.5f,
                   ICON_USER,
                   /*aspect=*/16.0f / glyph,
@@ -388,7 +391,7 @@ void draw_profile_pill(uiBut *but, const rcti *rect, const bool is_hover, const 
 /* -------------------------------------------------------------------- */
 /* Public API                                                            */
 
-bool UI_mixar_topbar_draw_element(uiBut *but,
+bool UI_mixar_topbar_draw_element(Button *but,
                                   rcti *rect,
                                   const MixarCardElement element,
                                   const bool is_hover,
@@ -414,3 +417,5 @@ bool UI_mixar_topbar_draw_element(uiBut *but,
       return false;
   }
 }
+
+}  // namespace blender::ui

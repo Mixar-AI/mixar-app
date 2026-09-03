@@ -21,13 +21,19 @@
 
 #include <string>
 #include <vector>
+#include "DNA_vec_types.h"
+
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
-#include "DNA_vec_types.h"
 
-struct uiBlock;
-struct uiBut;
+namespace ui {
+struct Block;
+struct Button;
+}
 struct DirectorViewState;
 
 /* -------------------------------------------------------------------- */
@@ -212,14 +218,14 @@ const std::vector<CinemaQARecord> &cinema_qa_records();
 /** \} */
 
 /** Invisible hit area over painted chrome; every one drives an operator. */
-uiBut *cinema_op_button(uiBlock *block,
+ui::Button *cinema_op_button(ui::Block *block,
                         const char *operator_id,
                         const rctf &rect,
                         const char *tooltip);
 
 /** Same, but opening a native block popup (the existing Director popups). */
-uiBut *cinema_popup_button(uiBlock *block,
-                           uiBlockCreateFunc block_func,
+ui::Button *cinema_popup_button(ui::Block *block,
+                           ui::BlockCreateFunc block_func,
                            const rctf &rect,
                            const char *tooltip);
 
@@ -236,10 +242,10 @@ uiBut *cinema_popup_button(uiBlock *block,
 void cinema_draw_stage(const ARegion *region);
 
 /** Branding chip, shortcut hints, phone button. */
-void cinema_draw_top_strip(uiBlock *block, const ARegion *region, const DirectorViewState &state);
+void cinema_draw_top_strip(ui::Block *block, const ARegion *region, const DirectorViewState &state);
 
 /** Settings card, template styles, speed. */
-void cinema_draw_left_panel(uiBlock *block,
+void cinema_draw_left_panel(ui::Block *block,
                             const bContext *C,
                             const ARegion *region,
                             const DirectorViewState &state);
@@ -248,7 +254,7 @@ void cinema_draw_left_panel(uiBlock *block,
 void cinema_draw_dock_panel(const ARegion *region);
 
 /** Timeline dock: Duration units, transport, frame range, mode tools. */
-void cinema_draw_dock_controls(uiBlock *block,
+void cinema_draw_dock_controls(ui::Block *block,
                                const bContext *C,
                                const ARegion *region,
                                const DirectorViewState &state,
@@ -259,7 +265,7 @@ void cinema_draw_dock_controls(uiBlock *block,
  * other home. Drawn instead of #cinema_draw_dock_controls when the viewport
  * is below the wide-surface gate, where the old rail owns the chrome.
  */
-void cinema_draw_dock_compact(uiBlock *block,
+void cinema_draw_dock_compact(ui::Block *block,
                               const ARegion *region,
                               const DirectorViewState &state,
                               bool playing);
@@ -268,9 +274,11 @@ void cinema_draw_dock_compact(uiBlock *block,
 float cinema_dock_control_height();
 
 /** Cameras, preview, fps/resolution, export. */
-void cinema_draw_right_panel(uiBlock *block,
+void cinema_draw_right_panel(ui::Block *block,
                              const bContext *C,
                              const ARegion *region,
                              const DirectorViewState &state);
 
 /** \} */
+
+}  // namespace blender

@@ -14,7 +14,7 @@
  * icons at the right edge rather than being dropped: collapse in particular
  * is the timeline's only way back.
  *
- * Painting only; every control is a real uiBut over the painted pixels.
+ * Painting only; every control is a real ui::Button over the painted pixels.
  */
 
 #include <algorithm>
@@ -38,6 +38,9 @@
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -88,7 +91,7 @@ void transport_glyph(const rctf &box, const bool forward, const bool bar, const 
 }
 
 /** Small labelled numeric field ("Start 1"). */
-void frame_field(uiBlock *block,
+void frame_field(ui::Block *block,
                  PointerRNA *scene_ptr,
                  const char *label,
                  const char *property,
@@ -110,10 +113,9 @@ void frame_field(uiBlock *block,
    * and text-edits like any frame field. */
   rctf value = rect;
   value.xmin = rect.xmin + BLI_rctf_size_x(&rect) * 0.52f;
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
   uiDefButR(block,
-            ButType::Num,
-            0,
+            ui::ButtonType::Num,
             "",
             int(value.xmin),
             int(value.ymin),
@@ -125,11 +127,11 @@ void frame_field(uiBlock *block,
             0,
             0,
             tooltip);
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
 }
 
 /** One of the Duration unit chips. */
-void unit_chip(uiBlock *block,
+void unit_chip(ui::Block *block,
                const ARegion *region,
                const char *label,
                const char *value,
@@ -149,26 +151,26 @@ void unit_chip(uiBlock *block,
                      active ? on : off);
 
   cinema_qa_record(region, rect, "director_ruler_unit", value, -1);
-  uiBut *but = cinema_op_button(
+  ui::Button *but = cinema_op_button(
       block, "WM_OT_context_set_enum", rect, "Label the ruler in minutes or seconds");
   if (but != nullptr) {
-    PointerRNA *ptr = UI_but_operator_ptr_ensure(but);
+    PointerRNA *ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(ptr, "data_path", "scene.mixar_director.ruler_unit");
     RNA_string_set(ptr, "value", value);
   }
 }
 
 /** Quiet right-edge icon the design has no slot for, but the mode needs. */
-void tool_icon(uiBlock *block,
+void tool_icon(ui::Block *block,
                const char *operator_id,
                const int icon,
                const rctf &rect,
                const char *tooltip,
                const bool enabled)
 {
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
-  uiBut *but = uiDefIconButO(block,
-                             ButType::But,
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = uiDefIconButO(block,
+                             ui::ButtonType::But,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
                              icon,
@@ -177,7 +179,7 @@ void tool_icon(uiBlock *block,
                              int(BLI_rctf_size_x(&rect)),
                              int(BLI_rctf_size_y(&rect)),
                              tooltip);
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   director_overlay_disable_button(but, !enabled);
 }
 
@@ -190,7 +192,7 @@ float transport_right_edge(const ARegion *region)
 }
 
 /** Transport triple (previous / preview / next), centred on the dock. */
-void draw_transport(uiBlock *block,
+void draw_transport(ui::Block *block,
                     const ARegion *region,
                     const DirectorViewState &state,
                     const float cy,
@@ -217,7 +219,7 @@ void draw_transport(uiBlock *block,
                       cy + TRANSPORT_SIZE * u * 0.5f};
     transport_glyph(box, transport[index].forward, transport[index].bar, index == 1 && playing);
     cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
-    uiBut *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
+    ui::Button *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
     const bool enabled = index == 1 ? (state.beats.size() >= 2 &&
                                        state.frame_end > state.frame_start)
                                     : !no_beats;
@@ -232,7 +234,7 @@ void draw_transport(uiBlock *block,
  * \a full adds capture and add-camera; the compact layout leaves those out
  * because its viewport rail already carries both as primary buttons.
  */
-float draw_mode_tools(uiBlock *block,
+float draw_mode_tools(ui::Block *block,
                       const ARegion *region,
                       const DirectorViewState &state,
                       const float cy,
@@ -308,7 +310,7 @@ void cinema_draw_dock_panel(const ARegion *region)
   cinema_outline(panel, CINEMA_PANEL_RADIUS * u, line, u);
 }
 
-void cinema_draw_dock_controls(uiBlock *block,
+void cinema_draw_dock_controls(ui::Block *block,
                                const bContext *C,
                                const ARegion *region,
                                const DirectorViewState &state,
@@ -358,7 +360,7 @@ void cinema_draw_dock_controls(uiBlock *block,
   right -= 14.0f * u;
 
   /* The fields are created LAST and `ui_but_find_mouse_over_ex` walks a
-   * block's buttons BACKWARDS, so an invisible ButType::Num overlapping the
+   * block's buttons BACKWARDS, so an invisible ui::ButtonType::Num overlapping the
    * transport wins its clicks — "previous keyframe" started a drag-edit on
    * the scene Start frame. Drop the pair when the dock is too narrow to hold
    * them clear of the transport; the transport is the load-bearing group and
@@ -377,7 +379,7 @@ void cinema_draw_dock_controls(uiBlock *block,
   }
 }
 
-void cinema_draw_dock_compact(uiBlock *block,
+void cinema_draw_dock_compact(ui::Block *block,
                               const ARegion *region,
                               const DirectorViewState &state,
                               const bool playing)
@@ -393,3 +395,5 @@ void cinema_draw_dock_compact(uiBlock *block,
   draw_transport(block, region, state, cy, playing);
   draw_mode_tools(block, region, state, cy, /*full=*/false);
 }
+
+}  // namespace blender

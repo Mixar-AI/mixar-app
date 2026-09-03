@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""`uiBut::tip` is a NON-OWNING `blender::StringRef`.
+"""`ui::Button::tip` is a NON-OWNING `blender::StringRef`.
 
 `ui_def_but` stores it by reference (`but->tip = tip.value_or("")`), so a
-tooltip built from an `EnumPropertyItem` array the caller then `MEM_freeN`s,
+tooltip built from an `EnumPropertyItem` array the caller then frees,
 or from a local buffer, leaves the button pointing at dead memory. That is a
 use-after-free, an undefined tooltip on hover, and — because the QA
 introspection dump serializes every button's tip — freed bytes in
@@ -13,7 +13,7 @@ introspection dump serializes every button's tip — freed bytes in
 `snap`, semantic `click` and `drag` all raised `UnicodeDecodeError`).
 
 A string LITERAL is fine and needs no help. Anything computed must go through
-an owned-tooltip helper built on `UI_but_func_tooltip_set`, which owns its
+an owned-tooltip helper built on `ui::button_func_tooltip_set`, which owns its
 argument and frees it with the button.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "src/source/blender/editors"
 ISLAND = ROOT / "space_agent_bubble"
-PANE_KIT_CC = (ISLAND / "agent_ui_pane_kit.cc").read_text()
+PANE_KIT_CC = (ISLAND / "agent_ui_pane_kit.cc").read_text(encoding="utf-8")
 
 SCANNED = sorted(ISLAND.glob("*.cc")) + [
     ROOT / "space_view3d" / name
@@ -70,7 +70,7 @@ def _last_arg(source: str, open_paren: int) -> str:
 def test_no_button_is_given_a_tooltip_that_dies_before_it_does():
     offenders = []
     for path in SCANNED:
-        source = path.read_text()
+        source = path.read_text(encoding="utf-8")
         # Identifiers declared as a local char buffer anywhere in this file:
         # passing one as a tooltip dangles the moment the draw returns.
         local_buffers = set(re.findall(r"\bchar\s+(\w+)\s*\[", source))
@@ -89,19 +89,19 @@ def test_no_button_is_given_a_tooltip_that_dies_before_it_does():
 
 
 def test_the_owned_tooltip_helper_actually_owns_its_string():
-    """A copy plus `MEM_freeN` as the free func — anything else re-introduces
+    """A copy plus `MEM_delete_void` as the free func — anything else re-introduces
     the dangling reference in a new disguise."""
     body = PANE_KIT_CC[PANE_KIT_CC.index("void pane_but_tooltip_owned") :]
     body = body[: body.index("\n}\n")]
-    assert "MEM_mallocN" in body
+    assert "MEM_new_uninitialized" in body
     assert "memcpy" in body
-    assert "UI_but_func_tooltip_set" in body
-    assert "MEM_freeN" in body
+    assert "button_func_tooltip_set" in body
+    assert "MEM_delete_void" in body
 
 
 def test_the_panes_use_it_where_their_labels_are_dynamic():
     for name in ("agent_ui_tab3d_params.cc", "agent_ui_tabsplat.cc", "agent_ui_tabmedia.cc"):
-        assert "pane_but_tooltip_owned(" in (ISLAND / name).read_text(), name
+        assert "pane_but_tooltip_owned(" in (ISLAND / name).read_text(encoding="utf-8"), name
 
 
 def test_the_qa_dump_is_not_filtered_on_block_active():

@@ -41,6 +41,9 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Reference thumbnails
  * \{ */
@@ -105,19 +108,19 @@ void pane_image_thumb_draw(Image *image, const rctf &box)
   const float draw_x = box.xmin + (size_x - draw_w) * 0.5f;
   const float draw_y = box.ymin + (size_y - draw_h) * 0.5f;
 
-  IMMDrawPixelsTexState tex_state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer bitmap_drawer(GPU_SHADER_3D_IMAGE);
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
   if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
+    bitmap_drawer.draw(draw_x, draw_y, ibuf->x, ibuf->y,
                                    blender::gpu::TextureFormat::SFLOAT_16_16_16_16, true,
                                    ibuf->float_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state, draw_x, draw_y, ibuf->x, ibuf->y,
+    bitmap_drawer.draw(draw_x, draw_y, ibuf->x, ibuf->y,
                                    blender::gpu::TextureFormat::UNORM_8_8_8_8, false,
                                    ibuf->byte_buffer.data, draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y), 1.0f, 1.0f, nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
   GPU_blend(GPU_BLEND_ALPHA);
   BKE_image_release_ibuf(image, ibuf, lock);
@@ -171,3 +174,4 @@ float pane_ref_thumbs_paint(Image *const *images,
 
 /** \} */
 
+}  // namespace blender

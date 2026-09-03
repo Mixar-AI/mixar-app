@@ -30,6 +30,9 @@
 
 #include "agent_ui_generations_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /** Days since the civil epoch — portable, unlike `timegm`, which is not on
@@ -63,7 +66,7 @@ void gen_read_string(PointerRNA *ptr, const char *name, char *out, const int out
   if (value) {
     BLI_strncpy(out, value, out_maxncpy);
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete(value);
     }
   }
 }
@@ -178,3 +181,5 @@ double gen_blend_mtime(const char *path)
 }
 
 /** \} */
+
+}  // namespace blender

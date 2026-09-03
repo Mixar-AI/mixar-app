@@ -13,6 +13,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct rctf;
@@ -35,3 +38,5 @@ struct rctf;
  * loaded, only the prompt + Generate render.
  */
 void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, float u);
+
+}  // namespace blender

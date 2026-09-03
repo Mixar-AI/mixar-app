@@ -15,21 +15,21 @@ ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
 HANDLERS_CC = (
     ROOT / "src/source/blender/editors/interface/interface_handlers.cc"
-).read_text()
-QUEUE_CC = (CPP / "agent_ui_queue.cc").read_text()
+).read_text(encoding="utf-8")
+QUEUE_CC = (CPP / "agent_ui_queue.cc").read_text(encoding="utf-8")
 
 PANES = ("agent_ui_tab3d.cc", "agent_ui_tabmedia.cc", "agent_ui_tabsplat.cc")
 
 
 def _block_order(source: str) -> list[str]:
     """The names of the blocks a pane begins, in creation order."""
-    return re.findall(r'UI_block_begin\(\s*C,\s*region,\s*"([^"]+)"', source)
+    return re.findall(r'block_begin\(\s*C,\s*region,\s*"([^"]+)"', source)
 
 
 def test_every_pane_begins_its_ops_block_before_its_field_block():
     """Creation order decides who wins a click, and it inverts twice.
 
-    `UI_block_region_set` does `BLI_addhead`, so the region's block list runs
+    `ui::block_region_set` does `BLI_addhead`, so the region's block list runs
     newest-first, and `ui_but_find_mouse_over_ex` walks that list WITHOUT
     breaking on a hit — each later block overwrites the candidate. The winner
     is therefore the block created FIRST. The bottom-row chips sit inside the
@@ -39,7 +39,7 @@ def test_every_pane_begins_its_ops_block_before_its_field_block():
     two swapped.
     """
     for name in PANES:
-        order = _block_order((CPP / name).read_text())
+        order = _block_order((CPP / name).read_text(encoding="utf-8"))
         assert len(order) == 2, f"{name}: expected two blocks, got {order}"
         assert not order[0].endswith("_field"), (
             f"{name}: the field block is created first, so it steals the "
@@ -87,7 +87,7 @@ def test_the_queue_sets_its_own_type_scale():
     def value(token: str) -> float:
         return float(re.search(rf"#define {token}\s+([\d.]+)f", QUEUE_CC).group(1))
 
-    kit = (CPP / "agent_ui_pane_kit.hh").read_text()
+    kit = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
     kit_font = float(re.search(r"#define PANE_FONT\s+(\d+)", kit).group(1))
     kit_sub = float(re.search(r"#define PANE_FONT_SUB\s+(\d+)", kit).group(1))
 

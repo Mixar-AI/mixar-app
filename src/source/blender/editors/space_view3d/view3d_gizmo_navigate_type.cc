@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include "BLI_math_constants.h" /* MIXAR: M_PI, for the globe's ring sampling. */
+#include "BLI_math_constants.h" /* MIXAR: M_PI, for the globe ring sampling. */
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
@@ -37,6 +37,8 @@
 #include "WM_types.hh"
 
 #include "view3d_intern.hh"
+
+namespace blender {
 
 /* Radius of the entire background. */
 #define WIDGET_RADIUS ((U.gizmo_size_navigate_v3d / 2.0f) * UI_SCALE_FAC)
@@ -96,9 +98,9 @@ static void gizmo_globe_ring_draw(const int normal_axis,
 {
   GPUVertFormat *format = immVertexFormat();
   const uint pos_id = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32_32);
+      format, "pos", gpu::VertAttrType::SFLOAT_32_32_32);
   const uint color_id = GPU_vertformat_attr_add(
-      format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
+      format, "color", gpu::VertAttrType::SFLOAT_32_32_32_32);
 
   immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_SMOOTH_COLOR);
   immUniform2fv("viewportSize", &viewport_size[2]);
@@ -140,7 +142,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
   float matrix_unit[4][4];
   unit_m4(matrix_unit);
 
-  WM_GizmoMatrixParams params{};
+  wmGizmoMatrixParams params{};
   params.matrix_offset = matrix_unit;
   WM_gizmo_calc_matrix_final_params(gz, &params, matrix_screen);
   GPU_matrix_push();
@@ -164,7 +166,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     GPU_matrix_ortho_set_z(-gz->scale_final, gz->scale_final);
   }
 
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
   GPU_polygon_smooth(false);
   GPU_blend(GPU_BLEND_ALPHA);
 
@@ -179,7 +181,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     rect.xmax = rad;
     rect.ymin = -rad;
     rect.ymax = rad;
-    UI_draw_roundbox_4fv(&rect, true, rad, gz->color_hi);
+    ui::draw_roundbox_4fv(&rect, true, rad, gz->color_hi);
     GPU_matrix_pop();
   }
 
@@ -231,7 +233,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     mul_v3_m3v3(v_rot, m3_offset, v_local);
 
     float dot_color[4];
-    UI_GetThemeColor3fv(TH_AXIS_X + axis, dot_color);
+    ui::theme::get_color_3fv(TH_AXIS_X + axis, dot_color);
     /* Depth of this axis handle, exactly as the upstream artwork derived it,
      * so a marker on the far side of the sphere reads as being behind it. */
     const float depth = gz->matrix_offset[axis][2] * (is_pos ? 1.0f : -1.0f);
@@ -247,7 +249,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     rect.xmax = rad;
     rect.ymin = -rad;
     rect.ymax = rad;
-    UI_draw_roundbox_4fv(&rect, true, rad, dot_color);
+    ui::draw_roundbox_4fv(&rect, true, rad, dot_color);
     GPU_matrix_pop();
   }
 
@@ -317,15 +319,20 @@ static int gizmo_axis_cursor_get(wmGizmo * /*gz*/)
   return WM_CURSOR_DEFAULT;
 }
 
-static bool gizmo_axis_screen_bounds_get(bContext *C, wmGizmo *gz, rcti *r_bounding_box)
+static bool gizmo_axis_screen_bounds_get(const bContext *C, wmGizmo *gz, rcti *r_bounding_box)
 {
   ScrArea *area = CTX_wm_area(C);
   const float rad = WIDGET_RADIUS;
   r_bounding_box->xmin = gz->matrix_basis[3][0] + area->totrct.xmin - rad;
   r_bounding_box->ymin = gz->matrix_basis[3][1] + area->totrct.ymin - rad;
-  r_bounding_box->xmax = r_bounding_box->xmin + rad;
-  r_bounding_box->ymax = r_bounding_box->ymin + rad;
+  r_bounding_box->xmax = gz->matrix_basis[3][0] + area->totrct.xmin + rad;
+  r_bounding_box->ymax = gz->matrix_basis[3][1] + area->totrct.ymin + rad;
   return true;
+}
+
+static void gizmo_axis_setup(wmGizmo *gz)
+{
+  WM_gizmo_set_flag(gz, WM_GIZMO_NO_GROUPING, true);
 }
 
 void VIEW3D_GT_navigate_rotate(wmGizmoType *gzt)
@@ -334,6 +341,7 @@ void VIEW3D_GT_navigate_rotate(wmGizmoType *gzt)
   gzt->idname = "VIEW3D_GT_navigate_rotate";
 
   /* API callbacks. */
+  gzt->setup = gizmo_axis_setup;
   gzt->draw = gizmo_axis_draw;
   gzt->test_select = gizmo_axis_test_select;
   gzt->cursor_get = gizmo_axis_cursor_get;
@@ -341,3 +349,5 @@ void VIEW3D_GT_navigate_rotate(wmGizmoType *gzt)
 
   gzt->struct_size = sizeof(wmGizmo);
 }
+
+}  // namespace blender

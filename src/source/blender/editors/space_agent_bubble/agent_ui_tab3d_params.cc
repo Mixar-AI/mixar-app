@@ -54,6 +54,9 @@
 #include "agent_ui_tab3d_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /** Turn `p_face_count` into "Face Count" for the chip label. */
@@ -122,7 +125,7 @@ bool flow_place(Flow *f, const float w, rctf *r_rect)
   return true;
 }
 
-void draw_enum_segmented(uiBlock *block,
+void draw_enum_segmented(ui::Block *block,
                          PointerRNA *group_ptr,
                          PropertyRNA *prop,
                          const char *group_path,
@@ -163,7 +166,7 @@ void draw_enum_segmented(uiBlock *block,
                      BLI_rctf_cent_y(&seg),
                      font,
                      active ? text : dim);
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(seg.xmin), int(seg.ymin),
                            short(seg_w[i]), short(BLI_rctf_size_y(&seg)),
@@ -172,7 +175,7 @@ void draw_enum_segmented(uiBlock *block,
       pane_but_tooltip_owned(but, items[i].name);
       char path[256];
       SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", path);
       RNA_string_set(op_ptr, "value", items[i].identifier);
     }
@@ -180,7 +183,7 @@ void draw_enum_segmented(uiBlock *block,
   }
 }
 
-void draw_enum_dropdown(uiBlock *block,
+void draw_enum_dropdown(ui::Block *block,
                         PointerRNA *group_ptr,
                         PropertyRNA *prop,
                         const char *group_path,
@@ -209,7 +212,7 @@ void draw_enum_dropdown(uiBlock *block,
   pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
   pane_label_centre(label, BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font, text);
 
-  uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+  ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
                          blender::wm::OpCallContext::InvokeDefault, "",
                          int(rect.xmin), int(rect.ymin),
                          short(w), short(BLI_rctf_size_y(&rect)), nullptr);
@@ -217,12 +220,12 @@ void draw_enum_dropdown(uiBlock *block,
     pane_but_tooltip_owned(but, name);
     char path[256];
     SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
-    PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+    PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", path);
   }
 }
 
-void draw_boolean_chip(uiBlock *block,
+void draw_boolean_chip(ui::Block *block,
                        PointerRNA *group_ptr,
                        PropertyRNA *prop,
                        const char *group_path,
@@ -265,7 +268,7 @@ void draw_boolean_chip(uiBlock *block,
   pane_label_centre("ON", BLI_rctf_cent_x(&on_rect), cy, font, on ? text : dim);
   pane_label_centre("OFF", BLI_rctf_cent_x(&off_rect), cy, font, on ? dim : text);
 
-  uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
+  ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
                          blender::wm::OpCallContext::InvokeDefault, "",
                          int(rect.xmin), int(rect.ymin),
                          short(w), short(BLI_rctf_size_y(&rect)), nullptr);
@@ -273,12 +276,12 @@ void draw_boolean_chip(uiBlock *block,
     pane_but_tooltip_owned(but, name);
     char path[256];
     SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
-    PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+    PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", path);
   }
 }
 
-void draw_number_chip(uiBlock *slider_block,
+void draw_number_chip(ui::Block *slider_block,
                       PointerRNA *group_ptr,
                       PropertyRNA *prop,
                       Flow *f)
@@ -305,7 +308,7 @@ void draw_number_chip(uiBlock *slider_block,
   /* A REAL slider: Blender's own NumSlider bound to the group property —
    * exact drag/type behaviour, themed chrome inside the chip. */
   const float sx = rect.xmin + pad + name_w + 12.0f * u;
-  uiDefButR(slider_block, ButType::NumSlider, 0, "",
+  uiDefButR(slider_block, ui::ButtonType::NumSlider, "",
             int(sx), int(rect.ymin + 4.0f * u),
             short(slider_w), short(BLI_rctf_size_y(&rect) - 8.0f * u),
             group_ptr, RNA_property_identifier(prop), -1, 0.0f, 0.0f, nullptr);
@@ -316,8 +319,8 @@ void draw_number_chip(uiBlock *slider_block,
 float agent_ui_tab3d_params_draw(const bContext *C,
                                 PointerRNA *group_ptr,
                                 const char *group_path,
-                                uiBlock *chips_block,
-                                uiBlock *slider_block,
+                                ui::Block *chips_block,
+                                ui::Block *slider_block,
                                 const float x0,
                                 const float row_start_x,
                                 const float y0_top,
@@ -372,7 +375,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
           }
         }
         if (free && items) {
-          MEM_freeN(const_cast<EnumPropertyItem *>(items));
+          MEM_delete(items);
         }
         break;
       }
@@ -409,3 +412,5 @@ float agent_ui_tab3d_params_draw(const bContext *C,
    * contract) — see pane_params_floor. */
   return std::max(f.y_top - PANE_ROW_H * u, y_floor);
 }
+
+}  // namespace blender

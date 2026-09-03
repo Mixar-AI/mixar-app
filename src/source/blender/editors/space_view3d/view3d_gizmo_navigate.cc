@@ -10,6 +10,7 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 
 /* Mixar: Zen-mode gating for the persp/ortho button (see below). */
 #include "BLI_string.h"
@@ -30,6 +31,8 @@
 #include "WM_types.hh"
 
 #include "view3d_intern.hh" /* own include */
+
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name View3D Navigation Gizmo Group
@@ -83,7 +86,7 @@ struct NavigateWidgetGroup {
     struct {
       char is_persp;
       bool is_camera;
-      char viewlock;
+      eRegionView3D_ViewLock viewlock;
       char cameralock;
     } rv3d;
   } state;
@@ -167,7 +170,7 @@ static bool WIDGETGROUP_navigate_poll(const bContext *C, wmGizmoGroupType * /*gz
 
 static void WIDGETGROUP_navigate_setup(const bContext *C, wmGizmoGroup *gzgroup)
 {
-  NavigateWidgetGroup *navgroup = MEM_callocN<NavigateWidgetGroup>(__func__);
+  NavigateWidgetGroup *navgroup = MEM_new<NavigateWidgetGroup>(__func__);
 
   wmOperatorType *ot_view_axis = WM_operatortype_find("VIEW3D_OT_view_axis", true);
   wmOperatorType *ot_view_camera = WM_operatortype_find("VIEW3D_OT_view_camera", true);
@@ -184,23 +187,8 @@ static void WIDGETGROUP_navigate_setup(const bContext *C, wmGizmoGroup *gzgroup)
       gz->color_hi[3] = 0.5f;
     }
     else {
-      uchar icon_color[3];
-      UI_GetThemeColor3ubv(TH_TEXT, icon_color);
-      int color_tint, color_tint_hi;
-      if (icon_color[0] > 128) {
-        color_tint = -40;
-        color_tint_hi = 60;
-        gz->color[3] = 0.5f;
-        gz->color_hi[3] = 0.5f;
-      }
-      else {
-        color_tint = 60;
-        color_tint_hi = 60;
-        gz->color[3] = 0.5f;
-        gz->color_hi[3] = 0.75f;
-      }
-      UI_GetThemeColorShade3fv(TH_HEADER, color_tint, gz->color);
-      UI_GetThemeColorShade3fv(TH_HEADER, color_tint_hi, gz->color_hi);
+      gz->color[3] = 0.0f;
+      gz->color_hi[3] = 0.0f;
     }
 
     /* may be overwritten later */
@@ -316,21 +304,29 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
   navgroup->state.rv3d.cameralock = v3d->flag2 & V3D_LOCK_CAMERA;
 
   const bool show_navigate = (U.uiflag & USER_SHOW_GIZMO_NAVIGATE) != 0;
-  const bool show_rotate_gizmo = (U.mini_axis_type == USER_MINI_AXIS_TYPE_GIZMO);
-  const float icon_offset = ((GIZMO_SIZE / 2.0f) + GIZMO_OFFSET) * UI_SCALE_FAC;
+  const bool show_rotate_gizmo = (U.mini_axis_type == USER_MINI_AXIS_TYPE_GIZMO &&
+                                  (region->alignment != RGN_ALIGN_QSPLIT ||
+                                   region->runtime->quadview_index ==
+                                       bke::ARegionQuadviewIndex::TopRight));
+  const float icon_offset = UI_SCALE_FAC *
+                            (GIZMO_OFFSET + (show_rotate_gizmo ? GIZMO_SIZE / 2.0f : 0.0f));
   const float icon_offset_mini = (GIZMO_MINI_SIZE + GIZMO_MINI_OFFSET) * UI_SCALE_FAC;
   const float co_rotate[2] = {
       rect_visible->xmax - icon_offset,
       rect_visible->ymax - icon_offset,
   };
 
-  float icon_offset_from_axis = 0.0f;
-  switch ((eUserpref_MiniAxisType)U.mini_axis_type) {
+  float icon_offset_from_axis = icon_offset_mini * 0.75f;
+  switch (eUserpref_MiniAxisType(U.mini_axis_type)) {
     case USER_MINI_AXIS_TYPE_GIZMO:
-      icon_offset_from_axis = icon_offset * 2.1f;
+      icon_offset_from_axis = icon_offset * 2.2f;
       break;
     case USER_MINI_AXIS_TYPE_MINIMAL:
-      icon_offset_from_axis = (UI_UNIT_X * 2.5) + (U.rvisize * U.pixelsize * 2.0f);
+      if (region->alignment != RGN_ALIGN_QSPLIT ||
+          region->runtime->quadview_index == bke::ARegionQuadviewIndex::TopRight)
+      {
+        icon_offset_from_axis = (UI_UNIT_X * 2.0) + (U.rvisize * UI_SCALE_FAC * 1.6f);
+      }
       break;
     case USER_MINI_AXIS_TYPE_NONE:
       icon_offset_from_axis = icon_offset_mini * 0.75f;
@@ -417,6 +413,10 @@ void VIEW3D_GGT_navigate(wmGizmoGroupType *gzgt)
   gzgt->poll = WIDGETGROUP_navigate_poll;
   gzgt->setup = WIDGETGROUP_navigate_setup;
   gzgt->draw_prepare = WIDGETGROUP_navigate_draw_prepare;
+  /* Mixar: no backdrop chrome behind the navigate cluster — the wireframe
+   * globe in `view3d_gizmo_navigate_type.cc` is the whole mark. */
 }
 
 /** \} */
+
+}  // namespace blender

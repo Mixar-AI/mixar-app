@@ -39,6 +39,9 @@
 
 #include "UI_interface.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Artboard -> device pixels
  * \{ */
@@ -321,3 +324,5 @@
 #define AGENT_COL_GLYPH {0.894f, 0.894f, 0.894f, 1.0f}        /* #E4E4E4 header glyph disc */
 
 /** \} */
+
+}  // namespace blender

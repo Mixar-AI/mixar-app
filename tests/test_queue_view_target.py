@@ -16,7 +16,7 @@ SRC = (
     Path(__file__).resolve().parents[1]
     / "src/scripts/mixar/modules/common/job_queue/ui/operators/queue_ops.py"
 )
-SOURCE = SRC.read_text()
+SOURCE = SRC.read_text(encoding="utf-8")
 TREE = ast.parse(SOURCE)
 
 

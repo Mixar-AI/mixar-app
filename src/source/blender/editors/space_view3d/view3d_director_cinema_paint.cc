@@ -9,7 +9,7 @@
  *
  * Every painter here takes REGION pixels; callers convert from the design's
  * units through #cinema_unit(). Interaction is always a separate, invisible
- * uiBut laid over the painted pixels (see #cinema_op_button) so Blender keeps
+ * ui::Button laid over the painted pixels (see #cinema_op_button) so Blender keeps
  * owning hit-testing, tooltips and operator dispatch.
  */
 
@@ -38,6 +38,9 @@
 #include "UI_resources.hh"
 
 #include "view3d_director_cinema.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Scale
@@ -133,17 +136,17 @@ void cinema_panel(const rctf &rect,
                   const float top[4],
                   const float bottom[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
   /* shade_dir 1.0 = vertical ramp with `inner1` at the top. The design's
    * ramps are slightly diagonal; at panel scale the difference is under a
    * level of quantisation and a vertical ramp needs no custom geometry. */
-  UI_draw_roundbox_4fv_ex(&rect, top, bottom, 1.0f, nullptr, 0.0f, radius);
+  ui::draw_roundbox_4fv_ex(&rect, top, bottom, 1.0f, nullptr, 0.0f, radius);
 }
 
 void cinema_fill(const rctf &rect, const float radius, const float color[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, radius, color);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, true, radius, color);
 }
 
 void cinema_outline(const rctf &rect,
@@ -151,8 +154,8 @@ void cinema_outline(const rctf &rect,
                     const float color[4],
                     const float width)
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv_ex(&rect, nullptr, nullptr, 1.0f, color, width, radius);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv_ex(&rect, nullptr, nullptr, 1.0f, color, width, radius);
 }
 
 /** \} */
@@ -316,11 +319,10 @@ void cinema_image_preview(Image *image, const rctf &rect, const float radius)
   const float draw_x = rect.xmin + (box_w - draw_w) * 0.5f;
   const float draw_y = rect.ymin + (box_h - draw_h) * 0.5f;
 
-  IMMDrawPixelsTexState tex_state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer bitmap_drawer(GPU_SHADER_3D_IMAGE);
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
   if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state,
-                                   draw_x,
+    bitmap_drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -329,13 +331,10 @@ void cinema_image_preview(Image *image, const rctf &rect, const float radius)
                                    ibuf->float_buffer.data,
                                    draw_w / float(ibuf->x),
                                    draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
                                    nullptr);
   }
   else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&tex_state,
-                                   draw_x,
+    bitmap_drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -344,8 +343,6 @@ void cinema_image_preview(Image *image, const rctf &rect, const float radius)
                                    ibuf->byte_buffer.data,
                                    draw_w / float(ibuf->x),
                                    draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
                                    nullptr);
   }
   GPU_blend(GPU_BLEND_ALPHA);
@@ -399,16 +396,16 @@ const std::vector<CinemaQARecord> &cinema_qa_records()
 /** \name Hit areas
  * \{ */
 
-uiBut *cinema_op_button(uiBlock *block,
+ui::Button *cinema_op_button(ui::Block *block,
                         const char *operator_id,
                         const rctf &rect,
                         const char *tooltip)
 {
   /* Emboss::None and no label: the panel already painted this control, so the
    * button contributes hit-testing and dispatch only. */
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
-  uiBut *but = uiDefIconButO(block,
-                             ButType::But,
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = uiDefIconButO(block,
+                             ui::ButtonType::But,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
                              ICON_NONE,
@@ -417,28 +414,29 @@ uiBut *cinema_op_button(uiBlock *block,
                              int(BLI_rctf_size_x(&rect)),
                              int(BLI_rctf_size_y(&rect)),
                              tooltip);
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   return but;
 }
 
-uiBut *cinema_popup_button(uiBlock *block,
-                           uiBlockCreateFunc block_func,
+ui::Button *cinema_popup_button(ui::Block *block,
+                           ui::BlockCreateFunc block_func,
                            const rctf &rect,
                            const char *tooltip)
 {
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
-  uiBut *but = uiDefIconBlockBut(block,
-                                 block_func,
-                                 nullptr,
-                                 0,
-                                 ICON_NONE,
-                                 int(rect.xmin),
-                                 int(rect.ymin),
-                                 int(BLI_rctf_size_x(&rect)),
-                                 int(BLI_rctf_size_y(&rect)),
-                                 tooltip);
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = uiDefIconBlockBut(block,
+                                      block_func,
+                                      nullptr,
+                                      ICON_NONE,
+                                      int(rect.xmin),
+                                      int(rect.ymin),
+                                      short(BLI_rctf_size_x(&rect)),
+                                      short(BLI_rctf_size_y(&rect)),
+                                      tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   return but;
 }
 
 /** \} */
+
+}  // namespace blender

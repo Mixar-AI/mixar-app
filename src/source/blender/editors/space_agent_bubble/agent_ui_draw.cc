@@ -35,6 +35,9 @@
 #include "agent_ui_layout.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -43,20 +46,20 @@ namespace {
 
 void fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, true, radius, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(rect, true, radius, col);
 }
 
 void outline_round(const rctf *rect, const float radius, const float col[4])
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(rect, false, radius, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(rect, false, radius, col);
 }
 
 /**
  * Rounded rect filled with a two-stop ramp along an ARBITRARY axis.
  *
- * `UI_draw_roundbox_4fv_ex` can only shade vertically, and the card's ramp is
+ * `ui::draw_roundbox_4fv_ex` can only shade vertically, and the card's ramp is
  * diagonal — it runs from the card's top-right down and to the left, past the
  * bottom edge. Shading it vertically loses the horizontal falloff entirely,
  * which is most of the effect: at the card's top edge the artboard travels
@@ -526,7 +529,7 @@ void agent_ui_draw_status_pill(const float width,
     const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
     fill_round_gradient(&chip, 25.0f * u, chip_a, chip_b, chip_grad_a, chip_grad_b);
     const float icon_edge = 45.0f * u;
-    UI_icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
+    ui::icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
                     BLI_rctf_cent_y(&chip) - icon_edge * 0.5f,
                     ICON_MIXAR_ICON,
                     /*aspect=*/16.0f / icon_edge, /* icons draw at 16/aspect px */
@@ -601,8 +604,8 @@ void agent_ui_draw_status_pill(const float width,
    * window, so the corners never show this fill. */
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   GPU_blend(GPU_BLEND_NONE);
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&pill, true, 0.0f, bed);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
 
   GPU_blend(GPU_BLEND_ALPHA);
   fill_round(&pill, h * 0.5f, surface);
@@ -730,3 +733,5 @@ void agent_ui_draw_island(const ARegion * /*region*/,
 }
 
 /** \} */
+
+}  // namespace blender

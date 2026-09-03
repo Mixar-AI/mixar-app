@@ -55,7 +55,7 @@ def _load_from_path(monkeypatch, name: str, path: Path):
     # bpy-generated classes. Postponing annotations keeps this loader focused
     # on the runtime behavior under test, matching Blender's tolerant importer.
     code = compile(
-        path.read_text(),
+        path.read_text(encoding="utf-8"),
         str(path),
         "exec",
         flags=__future__.annotations.compiler_flag,

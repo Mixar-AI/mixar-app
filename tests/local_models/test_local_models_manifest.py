@@ -32,7 +32,7 @@ def test_api_token_minted_exactly_once(store):
     second = manifest.get_api_token()
     assert first == second
     assert len(first) >= 24
-    on_disk = json.loads((store / "manifest.json").read_text())
+    on_disk = json.loads((store / "manifest.json").read_text(encoding="utf-8"))
     assert on_disk["api_token"] == first
 
 
@@ -41,7 +41,7 @@ def test_atomic_write_leaves_no_temp_files(store):
     manifest.set_port(11500)
     leftovers = [name for name in os.listdir(store) if name.endswith(".tmp")]
     assert leftovers == []
-    on_disk = json.loads((store / "manifest.json").read_text())
+    on_disk = json.loads((store / "manifest.json").read_text(encoding="utf-8"))
     assert on_disk["runtime"]["ready"] is True
     assert on_disk["port"] == 11500
 
@@ -89,5 +89,5 @@ def test_corrupt_manifest_recovers_to_defaults(store):
     assert data["models"] == {}
     # A token mint rewrites a valid file over the corrupt one.
     token = manifest.get_api_token()
-    on_disk = json.loads((store / "manifest.json").read_text())
+    on_disk = json.loads((store / "manifest.json").read_text(encoding="utf-8"))
     assert on_disk["api_token"] == token

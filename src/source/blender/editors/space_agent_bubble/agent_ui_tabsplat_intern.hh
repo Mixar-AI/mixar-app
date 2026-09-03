@@ -12,11 +12,15 @@
  */
 
 #pragma once
+#include "BLI_rect.h"
+#include "RNA_access.hh"
+
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct Image;
 
-#include "BLI_rect.h"
-#include "RNA_access.hh"
 
 struct bContext;
 
@@ -133,3 +137,5 @@ void splat_pane_paint(const bContext *C,
                       int lod_count,
                       float u);
 /* Painter primitives live in the pane kit (agent_ui_pane_kit.hh). */
+
+}  // namespace blender

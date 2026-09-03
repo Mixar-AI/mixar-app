@@ -56,7 +56,7 @@ GENERATE_OPERATORS = {
 
 
 def test_the_dispatch_list_is_covered():
-    source = (MOODBOARD / "core/prompt_submit.py").read_text()
+    source = (MOODBOARD / "core/prompt_submit.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     table = next(
         node.value
@@ -86,8 +86,8 @@ def test_the_dispatch_list_is_covered():
 def test_the_footer_tables_are_covered():
     """Enter and the island's button both resolve through these tables, so an
     operator added to one is reachable from a pane the same day."""
-    model_gen = (MOODBOARD / "ui/model_gen_drawer.py").read_text()
-    texture_gen = (MOODBOARD / "ui/texture_gen_drawer.py").read_text()
+    model_gen = (MOODBOARD / "ui/model_gen_drawer.py").read_text(encoding="utf-8")
+    texture_gen = (MOODBOARD / "ui/texture_gen_drawer.py").read_text(encoding="utf-8")
     for source, name in ((model_gen, "_MODEL_GEN_FOOTER"),
                          (texture_gen, "_TEXTURE_GEN_FOOTER")):
         tree = ast.parse(source)
@@ -183,7 +183,7 @@ def test_no_generate_operator_warns_and_then_cancels():
     checked = 0
     for idname, module_name in GENERATE_OPERATORS.items():
         path = OPS / module_name
-        cls = _operator_class(ast.parse(path.read_text()), idname)
+        cls = _operator_class(ast.parse(path.read_text(encoding="utf-8")), idname)
         for fn in cls.body:
             if not isinstance(fn, ast.FunctionDef):
                 continue
@@ -207,7 +207,7 @@ def test_the_generate_operators_still_report_their_refusals():
     the same bug wearing a different hat."""
     for idname, module_name in GENERATE_OPERATORS.items():
         path = OPS / module_name
-        cls = _operator_class(ast.parse(path.read_text()), idname)
+        cls = _operator_class(ast.parse(path.read_text(encoding="utf-8")), idname)
         execute = next(
             fn for fn in cls.body
             if isinstance(fn, ast.FunctionDef) and fn.name == "execute"
@@ -229,7 +229,7 @@ def test_the_generate_operators_still_report_their_refusals():
 
 
 def _dispatcher_handler() -> ast.ExceptHandler:
-    tree = ast.parse(DISPATCHER_PY.read_text())
+    tree = ast.parse(DISPATCHER_PY.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if not isinstance(node, ast.ExceptHandler):
             continue
@@ -256,7 +256,7 @@ def test_the_dispatcher_re_reports_escaped_errors_as_errors():
 def test_the_dispatcher_strips_blenders_doubled_error_prefix():
     """Blender prepends "Error: " to the RuntimeError text; re-reporting it
     verbatim shows the user that prefix twice."""
-    source = DISPATCHER_PY.read_text()
+    source = DISPATCHER_PY.read_text(encoding="utf-8")
     assert '"Error: "' in source, (
         "prompt_generate_ops.py no longer de-prefixes Blender's 'Error: '"
     )

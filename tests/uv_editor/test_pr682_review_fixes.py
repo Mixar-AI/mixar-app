@@ -18,7 +18,7 @@ sys.modules.setdefault("bl_ui.space_toolsystem_common", MagicMock())
 
 
 def _function_counts(path):
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     counts = {}
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -52,7 +52,7 @@ def test_snap_base_applies_handles_single_and_multi_value_enums():
 def test_active_uv_tool_override_uses_area_owner_window():
     source = (
         ROOT / "src/scripts/mixar/modules/uv_editor/ui/properties_handlers.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     tree = ast.parse(source)
     get_active_tool = next(
         node for node in tree.body

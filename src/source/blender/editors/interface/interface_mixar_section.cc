@@ -142,7 +142,7 @@ void UI_layout_mixar_card_tag_last(Layout *layout,
    * the rationale on `mark_last` in `interface_mixar_profile_card.cc`).
    *
    * NEVER tag an RNA-backed button: an enum-item button (`prop_enum`,
-   * ButType::Row) keeps the value it applies in `hardmax`, so tagging one
+   * ui::ButtonType::Row) keeps the value it applies in `hardmax`, so tagging one
    * overwrites that value and the click writes garbage — the Zen shading
    * pills hit exactly this and set the viewport to an out-of-range enum.
    * Use an operator button (`wm.context_set_enum` and friends) instead. */

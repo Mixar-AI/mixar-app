@@ -166,10 +166,10 @@ def test_component_names_are_safe_and_prompt_text_is_normalised():
 def test_generation_defaults_to_strict_cutout_only_guidance():
     operator = (
         MOODBOARD / "ui/operators/character_component_ops.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     properties = (
         MOODBOARD / "ui/moodboard_character_component_props.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 
     assert 'getattr(settings, "include_full_context", False)' in operator
     assert "include_full_context: BoolProperty" in properties
@@ -365,7 +365,7 @@ def test_sam3_result_is_hard_clipped_to_original_lasso():
 
 
 def test_operator_uses_raw_mask_catalog_and_result_hook():
-    source = (MOODBOARD / "ui/operators/character_component_ops.py").read_text()
+    source = (MOODBOARD / "ui/operators/character_component_ops.py").read_text(encoding="utf-8")
 
     for contract in (
         "segment.mask_image",
@@ -382,8 +382,8 @@ def test_operator_uses_raw_mask_catalog_and_result_hook():
 
 
 def test_component_ui_exposes_names_independent_batching_and_lasso():
-    drawer = (MOODBOARD / "ui/character_components_drawer.py").read_text()
-    toolbar = (MOODBOARD / "ui/moodboard_toolbar.py").read_text()
+    drawer = (MOODBOARD / "ui/character_components_drawer.py").read_text(encoding="utf-8")
+    toolbar = (MOODBOARD / "ui/moodboard_toolbar.py").read_text(encoding="utf-8")
 
     assert 'row.prop(segment, "name", text="")' in drawer
     assert 'row.prop(segment, "include_for_detail", text="")' in drawer
@@ -395,7 +395,7 @@ def test_component_ui_exposes_names_independent_batching_and_lasso():
 def test_component_property_group_registers_before_its_owner():
     registration = (
         MOODBOARD / "ui/moodboard_scene_registration.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     classes = registration[registration.index("classes = ("):]
     assert classes.index("MixieCharacterComponentSettings") < classes.index(
         "MixieMoodboardTabSegmentTo3DProps"
@@ -403,8 +403,8 @@ def test_component_property_group_registers_before_its_owner():
 
 
 def test_duplicate_keeps_component_provenance_but_not_identity():
-    duplicate = (MOODBOARD / "ui/operators/transform_ops.py").read_text()
-    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text()
+    duplicate = (MOODBOARD / "ui/operators/transform_ops.py").read_text(encoding="utf-8")
+    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text(encoding="utf-8")
 
     assert "new_img.component_role = orig_img.component_role" in duplicate
     assert "new_img.component_source_item_id" in duplicate
