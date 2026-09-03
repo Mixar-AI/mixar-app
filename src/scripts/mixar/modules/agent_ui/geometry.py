@@ -517,7 +517,12 @@ def _locate(obj, element, index):
     if record["window_xy"] is None:
         raise UIControlError(ERR_NO_MATCH,
                              f"{element.lower()} {index} is off-screen — orbit or frame it first")
-    if record["visible"] is False:
+    # With X-ray on, Blender selects through geometry (face dots / hidden
+    # verts are clickable), so an occluded element is a valid target.
+    space = getattr(getattr(_area, "spaces", None), "active", None)
+    xray = bool(getattr(getattr(space, "shading", None), "show_xray", False))
+    record["xray"] = xray
+    if record["visible"] is False and not xray:
         raise UIControlError(ERR_OCCLUDED,
                              f"{element.lower()} {index} is behind other geometry — orbit the "
                              "view (NUMPAD keys) or toggle X-ray (Alt+Z), then retry")
