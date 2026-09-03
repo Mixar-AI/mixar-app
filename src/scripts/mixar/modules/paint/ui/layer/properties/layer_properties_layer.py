@@ -48,6 +48,14 @@ def register_layer_properties(cls):
         cls: The PropertyGroup class to add properties to.
     """
     # Fake lighting (hemi) properties
+    cls.__annotations__["hemi_space"] = type(
+        "EnumProperty",
+        (),
+        {
+            "__call__": lambda self: None,
+        },
+    )
+
     # We need to use bpy.props directly here
     from bpy.props import EnumProperty
 
