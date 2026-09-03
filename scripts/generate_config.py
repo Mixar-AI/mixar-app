@@ -98,6 +98,14 @@ def generate_config(version_file: str) -> dict:
             # waits through. Set false to keep the browser-download flow.
             "auto_download": _env_bool("MIXAR_UPDATE_AUTO_DOWNLOAD", True),
         },
+        # Enterprise network settings (empty = auto). Environment variables
+        # MIXAR_PROXY_URL / MIXAR_CA_BUNDLE / MIXAR_NO_PROXY take precedence.
+        # See docs/enterprise-network.md.
+        "network": {
+            "proxy_url": "",
+            "ca_bundle": "",
+            "no_proxy": "",
+        },
     }
 
     if environment == "Dev":
