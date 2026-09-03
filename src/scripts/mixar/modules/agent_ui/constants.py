@@ -23,17 +23,18 @@ RPC_DRAG = "ui.drag"
 RPC_DROP_FILE = "ui.drop_file"
 RPC_WAIT = "ui.wait"
 RPC_SNAP = "ui.snap"
+RPC_FOCUS_AREA = "ui.focus_area"
 
 RPC_METHODS = frozenset({
     RPC_STATE, RPC_DUMP, RPC_FIND, RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE,
-    RPC_SET_TEXT, RPC_DRAG, RPC_DROP_FILE, RPC_WAIT, RPC_SNAP,
+    RPC_SET_TEXT, RPC_DRAG, RPC_DROP_FILE, RPC_WAIT, RPC_SNAP, RPC_FOCUS_AREA,
 })
 
 # Methods that inject input — they need agent input enabled (mixed mode) or
 # an event-simulate launch. Read-only methods work in every build.
 ACTION_METHODS = frozenset({
     RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE, RPC_SET_TEXT, RPC_DRAG,
-    RPC_DROP_FILE,
+    RPC_DROP_FILE, RPC_FOCUS_AREA,
 })
 
 # Closed error-code set (spec §3).

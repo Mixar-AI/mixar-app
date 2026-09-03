@@ -46,7 +46,7 @@ from .constants import (
     RPC_METHODS,
     RPC_PRESS,
     RPC_SET_TEXT,
-    RPC_SNAP,
+    RPC_SNAP, RPC_FOCUS_AREA,
     RPC_STATE,
     RPC_TYPE,
     RPC_WAIT,
@@ -288,6 +288,10 @@ class AgentUIService:
             return drv.wait_until(params.get("until"), timeout)
 
         # Action methods below — handle() enforces enablement before stepping.
+        if method == RPC_FOCUS_AREA:
+            area_type = str(params.get("area_type") or "VIEW_3D").upper()
+            region_type = str(params.get("region_type") or "WINDOW").upper()
+            return drv.focus_area_steps(area_type, region_type)
         if method == RPC_CLICK:
             query = _required_query(params)
 

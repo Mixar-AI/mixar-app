@@ -381,6 +381,44 @@ def main_window():
     return max(_wm().windows, key=lambda w: len(w.screen.areas))
 
 
+def focus_area_steps(area_type, region_type="WINDOW"):
+    """Generator: move the pointer (warping the real cursor in mixed mode) into
+    the largest editor area of ``area_type`` in the main window, at a point of
+    its ``region_type`` region not covered by overlapping sibling regions
+    (sidebar/tool/header regions float over the WINDOW region and would steal
+    hotkeys). Blender routes keystrokes by pointer position, so this is what
+    makes Shift+A / Tab / E / G / R / S reach the 3D viewport. No click."""
+    win = main_window()
+    areas = [a for a in win.screen.areas if a.type == area_type]
+    if not areas:
+        raise UIControlError(ERR_NO_MATCH, f"no {area_type} area in the main window")
+    area = max(areas, key=lambda a: a.width * a.height)
+    region = next((r for r in area.regions if r.type == region_type and r.width > 1), None)
+    if region is None:
+        raise UIControlError(ERR_NO_MATCH, f"{area_type} has no {region_type} region")
+    x0, y0 = region.x, region.y
+    x1, y1 = region.x + region.width, region.y + region.height
+    occluders = [r for r in area.regions
+                 if r.type != region_type and r.width > 1 and r.height > 1]
+
+    def free(px, py):
+        return not any(r.x <= px < r.x + r.width and r.y <= py < r.y + r.height
+                       for r in occluders)
+
+    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+    candidates = [(cx, cy)]
+    for fx in (0.5, 0.35, 0.65, 0.2, 0.8):
+        for fy in (0.5, 0.35, 0.65, 0.25, 0.75):
+            candidates.append((int(x0 + (x1 - x0) * fx), int(y0 + (y1 - y0) * fy)))
+    px, py = next(((a, b) for a, b in candidates if free(a, b)), (cx, cy))
+    warp_pointer(win, px, py)
+    move_to(win, px, py)
+    yield 0.05
+    return {"area_type": area_type, "region_type": region_type,
+            "rect": [x0, y0, x1, y1], "point": [px, py],
+            "window": win.as_pointer()}
+
+
 def window_for(args):
     ptr = (args or {}).get("window")
     if ptr:

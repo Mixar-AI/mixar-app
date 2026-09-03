@@ -265,3 +265,18 @@ def test_handshake_advertises_capability(monkeypatch):
     except Exception:
         pass  # transport shape may differ; the outbound frame is what matters
     assert sent and CAPABILITY in sent[0]
+
+
+def test_focus_area_is_an_action_and_builds_a_generator():
+    """ui.focus_area injects a pointer move, so it needs enablement like a click,
+    and it must route through the pump (generator) rather than reply instantly."""
+    import types
+    from mixar.modules.agent_ui import constants as C
+    assert C.RPC_FOCUS_AREA in C.RPC_METHODS
+    assert C.RPC_FOCUS_AREA in C.ACTION_METHODS
+    from mixar.modules.agent_ui import service as S
+    svc = S.AgentUIService()
+    built = svc.build(C.RPC_FOCUS_AREA, {"protocol_version": C.PROTOCOL_VERSION,
+                                         "area_type": "VIEW_3D"})
+    assert isinstance(built, types.GeneratorType)
+    built.close()
