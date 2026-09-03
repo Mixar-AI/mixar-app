@@ -3,7 +3,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import re
+
+from mixar.config.logging_config import get_logger
+
 from .list_item_operators_helper import refresh_list_items
+
+logger = get_logger(__name__)
 
 
 def update_expand_subitems(self, context):
@@ -29,6 +34,7 @@ def update_list_item_index(self, context):
         self: The property that triggered the update.
         context: Blender context object.
     """
+    canvas_image = None  # Store the image to set AFTER layer index update
     try:
         mp = self.id_data.mp
         if mp.halt_update:
@@ -40,7 +46,6 @@ def update_list_item_index(self, context):
         item = mp.list_items[mp.active_item_index]
 
         layer_index = -1
-        canvas_image = None  # Store the image to set AFTER layer index update
 
         if item.type == 'LAYER':
             layer_index = item.index
@@ -137,16 +142,20 @@ def update_list_item_index(self, context):
 
         if layer_index != -1 and layer_index < len(mp.layers):
             mp.active_layer_index = layer_index  # This triggers update_layer_index
-
+    except (IndexError, AttributeError, ReferenceError):
+        logger.exception(
+            "update_list_item_index: data in inconsistent state during list item change"
+        )
+    finally:
         # Set canvas AFTER update_layer_index has run (to override any wrong image it might have set)
+        # Runs even when the bookkeeping above failed so the canvas always
+        # matches the item the UI just switched to.
         if canvas_image:
             from ...utils.blender_commons import set_image_paint_canvas
             if canvas_image == 'CLEAR':
                 set_image_paint_canvas(None)  # Clear texture set for procedural masks
             else:
                 set_image_paint_canvas(canvas_image)
-    except (IndexError, AttributeError, ReferenceError):
-        pass  # Data in inconsistent state during list item changes
 
 def get_active_item_entity(mp):
     """Get the actual entity (layer, mask, or channel) for the active list item.

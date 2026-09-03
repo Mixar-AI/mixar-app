@@ -155,6 +155,10 @@ class LAYERS_OT_CreateMaterial(Operator):
             space.type == "VIEW_3D"
             and space.shading.type not in {"MATERIAL", "RENDERED"}
         )
+        # Execute removes all existing nodes; warn in the dialog when they exist
+        self._will_remove_nodes = bool(
+            mat and mat.node_tree and len(mat.node_tree.nodes) > 0
+        )
         if get_mixar_paint_preferences().skip_property_popups and not event.shift:
             return self.execute(context)
         return context.window_manager.invoke_props_dialog(self)
@@ -165,6 +169,16 @@ class LAYERS_OT_CreateMaterial(Operator):
         layout.use_property_split = False
         layout.use_property_decorate = False
         main_col = layout.column(align=False)
+
+        # Warn before wiping the existing node tree (execute removes all nodes)
+        if getattr(self, "_will_remove_nodes", False):
+            warn_box = main_col.box()
+            warn_col = warn_box.column(align=True)
+            warn_col.alert = True
+            warn_col.label(
+                text="Existing material nodes will be removed.", icon="ERROR"
+            )
+            main_col.separator(factor=0.8)
 
         # Material Setup Section
         name_box = main_col.box()
