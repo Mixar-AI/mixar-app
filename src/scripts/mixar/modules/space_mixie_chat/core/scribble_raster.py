@@ -154,7 +154,10 @@ def rasterize_strokes(
         _draw_stroke(draw, geom, stroke, base)
 
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG", optimize=True)
+    # No optimize=True: it brute-forces the zlib strategy for a few hundred
+    # bytes of saving on a page that is mostly white, and this runs at every
+    # pen-up now. Default compression is a few hundred microseconds.
+    image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 

@@ -196,7 +196,11 @@ class TestDeferUntilIdle:
         scribble.reset_state()
 
     def _registered_tick(self):
-        return bpy.app.timers.register.call_args[0][0]
+        # Read the stub at call time: importing the chat core can replace
+        # sys.modules["bpy"] after this module bound its own name, and
+        # defer_until_idle imports bpy lazily — the timer is registered on
+        # whichever stub is installed when it runs.
+        return sys.modules["bpy"].app.timers.register.call_args[0][0]
 
     def test_nothing_pending_means_proceed_now(self):
         assert scribble.defer_until_idle(lambda: None) is False

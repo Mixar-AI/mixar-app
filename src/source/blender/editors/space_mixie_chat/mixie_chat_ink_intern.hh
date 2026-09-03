@@ -13,11 +13,13 @@
  *                                 commit dispatch, MIXIE_CHAT_OT_ink_flush)
  *
  * Division of labour: C++ owns the pen — stylus detection, live ink capture
- * with pressure, drawing, and WHEN to convert (idle pause / close / Enter).
- * Python owns the data — `mixie_chat.ink_commit` receives the strokes JSON,
- * rasterizes it, calls the backend `/handwriting/recognize` endpoint and
- * appends the recognized text to `scene.mixie_chat_input`
- * (space_mixie_chat/core/scribble.py).
+ * with pressure, drawing, and WHEN to convert (every pen-up as a PREVIEW,
+ * the idle pause / close / Enter as the FINAL commit). Python owns the data
+ * — `mixie_chat.ink_commit` receives the strokes JSON, rasterizes it, calls
+ * the backend `/handwriting/recognize` endpoint and puts the recognized
+ * text into `scene.mixie_chat_input` (space_mixie_chat/core/scribble.py,
+ * scribble_live.py). A preview's text shows the moment it lands, so the
+ * final that follows the pause usually finds its answer already there.
  *
  * Visibility is the Python-registered WindowManager bool
  * `mixie_chat_ink_visible` (same scheme as the rules overlay); the busy
@@ -46,13 +48,16 @@ struct wmWindowManager;
  * used at maximum digit width (`[3840,2160,0.88],` ~ 17 bytes x 4096). */
 inline constexpr int INK_JSON_MAX = 98304;
 
-/** Idle time after the last pen-up before pending strokes auto-commit for
- * recognition (mirrored informationally as SCRIBBLE_IDLE_COMMIT_MS). */
+/** Idle time after the last pen-up before pending strokes FINAL-commit for
+ * recognition (mirrored informationally as SCRIBBLE_IDLE_COMMIT_MS). This
+ * is what groups a word's letters into one image; the user no longer waits
+ * on it, because every pen-up already sent the ink ahead as a preview. */
 inline constexpr double INK_IDLE_COMMIT_SEC = 0.85;
 
 /** Idle-commit timer period. Shorter than the idle threshold so a commit
- * fires at most one period late. */
-inline constexpr double INK_IDLE_TIMER_STEP = 0.25;
+ * fires at most one period late — 0.1 s, not 0.25: a quarter of a second
+ * of pure lateness was a visible part of every pause. */
+inline constexpr double INK_IDLE_TIMER_STEP = 0.1;
 
 /** \} */
 
@@ -113,6 +118,16 @@ std::string mixie_chat_ink_serialize(const MixieChatRuntime *rt, int winx, int w
 /** Serialize + dispatch `mixie_chat.ink_commit` + clear committed strokes
  * (a live in-progress stroke survives). Safe only from event context. */
 void mixie_chat_ink_commit(bContext *C, ARegion *region, MixieChatRuntime *rt);
+
+/** Serialize + dispatch `mixie_chat.ink_commit` with `provisional=true`,
+ * keeping every stroke on the canvas: the pen-up PREVIEW whose text shows
+ * in the composer while the user keeps writing. Safe only from event
+ * context. */
+void mixie_chat_ink_commit_provisional(bContext *C, ARegion *region, MixieChatRuntime *rt);
+
+/** Dispatch an EMPTY provisional commit: the user cleared the canvas, so the
+ * preview shown for its ink must go too. */
+void mixie_chat_ink_discard(bContext *C, ARegion *region);
 
 /** Commit pending ink on EVERY chat surface in every window (the WM-global
  * visibility means all surfaces share one canvas session — a close from one

@@ -4,11 +4,15 @@
 
 """Mixar Scribble — handwriting strokes to text in the chat composer.
 
-The C++ ink overlay captures the strokes and, ~``SCRIBBLE_IDLE_COMMIT_MS``
-after the pen lifts, dispatches ``mixie_chat.ink_commit`` with them as JSON
-and clears its canvas. Everything from that point is here: validate the
-payload, rasterize it (``scribble_raster``), POST it to the handwriting
-endpoint, and append the transcription to ``scene.mixie_chat_input``.
+The C++ ink overlay captures the strokes and dispatches
+``mixie_chat.ink_commit`` with them as JSON: at every pen-up as a PREVIEW
+(``provisional=True``, canvas kept), and ~``SCRIBBLE_IDLE_COMMIT_MS`` after
+the pen lifts as the FINAL commit, which clears its canvas. Previews are
+``scribble_live``'s business — their text shows in the composer as soon as
+it lands, so the final usually finds its answer already there. Everything
+else is here: validate the payload, rasterize it (``scribble_raster``),
+POST it to the handwriting endpoint, and settle the transcription into the
+composer in written order.
 
 **Pipelined on the wire, delivered in order.** A user writing continuously
 produces a new batch every pause, and each round trip is about a second at
@@ -33,10 +37,11 @@ from typing import Dict, List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
 
+from . import scribble_live as live
 from ..constants import (
     CHAT_INPUT_MAXLEN,
     SCRIBBLE_COMMIT_MAXLEN,
-    SCRIBBLE_HINT_TAIL_CHARS,
+    SCRIBBLE_LIVE_PREVIEW,
     SCRIBBLE_MAX_IN_FLIGHT,
     SCRIBBLE_MAX_POINTS,
     SCRIBBLE_MAX_STROKES,
@@ -166,37 +171,62 @@ def _positive_int(value, field: str) -> int:
 # Commit / submit queue
 # =============================================================================
 
-def handle_commit(scene, payload: str) -> bool:
+def handle_commit(scene, payload: str, provisional: bool = False) -> bool:
     """Entry point for ``mixie_chat.ink_commit``.
 
-    Returns True when a request was started or queued, False when there was
-    nothing to convert.
+    A provisional commit (every pen-up) previews the batch so far and keeps
+    the canvas; a final one (the pause, Enter, close) settles it. Returns
+    True when a request was started or queued, False when there was nothing
+    to convert.
 
     Raises:
         ValueError: the payload is malformed (the operator reports it).
     """
     data = parse_strokes_payload(payload)
+    if provisional:
+        if not SCRIBBLE_LIVE_PREVIEW:
+            return False
+        return live.preview(scene, data, live.payload_key(payload))
     if not data["strokes"]:
         return False
-    submit_strokes(scene, data)
+    submit_strokes(scene, data, key=live.payload_key(payload))
     return True
 
 
-def submit_strokes(scene, payload: dict) -> None:
-    """Rasterize *payload* and put it on the wire, or behind the batches
-    already there when every slot is taken."""
+def submit_strokes(scene, payload: dict, key: Optional[str] = None) -> None:
+    """Settle one batch: instantly when its preview already landed, by
+    adopting the preview still on the wire, or by posting it — behind the
+    batches already there when every slot is taken."""
     global _next_seq
-    image_bytes = _rasterize(payload)
     seq = _next_seq
     _next_seq += 1
+
+    # A caller without the raw payload (tests, older paths) gets a key that
+    # can never match a preview, so it simply posts.
+    key = key or live.payload_key(repr(payload))
+    batch, plan = live.close_batch(scene, key, seq)
+    if plan == live.PLAN_CACHED:
+        # The pause found its answer already there: no request at all.
+        _in_flight[seq] = scene
+        _finish(seq, batch.results[key], None)
+        return
+    if plan == live.PLAN_ADOPT:
+        # The preview on the wire IS this batch: its landing settles it.
+        _in_flight[seq] = scene
+        live.adopt(batch, lambda text, error: _finish(seq, text, error))
+        _set_busy()
+        return
+
+    image_bytes = _rasterize(payload)
     _pending.append((seq, scene, image_bytes))
     _pump()
 
 
 def is_busy() -> bool:
     """True while any batch is on the wire, waiting for a slot, or landed
-    but still waiting for a predecessor."""
-    return bool(_in_flight or _pending or _landed)
+    but still waiting for a predecessor — previews included, since the send
+    path waits on this and a preview may be adopted by the final."""
+    return bool(_in_flight or _pending or _landed) or live.is_busy()
 
 
 def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> bool:
@@ -261,6 +291,7 @@ def reset_state() -> None:
     _pending.clear()
     _landed.clear()
     _deliver_seq = _next_seq
+    live.reset()
 
 
 def _pump() -> None:
@@ -289,7 +320,7 @@ def _start(seq: int, scene, image_bytes: bytes) -> None:
         _finish(seq, "", error)
 
     try:
-        _post(image_bytes, _hint_for(scene), _on_success, _on_error)
+        _post(image_bytes, _hint_for(scene, seq), _on_success, _on_error)
     except Exception as e:
         # A failure to even dispatch must still release the slot, or every
         # later batch waits on a request that was never made.
@@ -320,12 +351,14 @@ def _deliver() -> None:
         try:
             if error is not None:
                 _report_error(scene, error)
-            elif text:
-                _append_recognized(scene, text)
+                # None keeps the preview the user already saw on screen.
+                live.finalize(_deliver_seq - 1, scene, None)
             else:
-                # Illegible or blank: silently nothing, the way lifting the
-                # pen off an unreadable scrawl does on iPadOS.
-                logger.debug("[Scribble] nothing legible in this batch")
+                if not text:
+                    # Illegible or blank: silently nothing, the way lifting
+                    # the pen off an unreadable scrawl does on iPadOS.
+                    logger.debug("[Scribble] nothing legible in this batch")
+                live.finalize(_deliver_seq - 1, scene, text)
         except Exception:
             logger.error("[Scribble] failed to deliver recognized text",
                          exc_info=True)
@@ -403,8 +436,13 @@ def _post(image_bytes: bytes, hint: str, on_success, on_error) -> None:
 
 
 def _set_busy() -> None:
-    """Publish the queue state for the overlay and repaint the chat."""
-    busy = is_busy()
+    """Publish the queue state for the overlay and repaint the chat.
+
+    FINAL batches only: a preview is on the wire at almost every pen-up,
+    and pulsing "Converting…" through a whole sentence would be noise —
+    the text itself appearing is the feedback.
+    """
+    busy = bool(_in_flight or _pending or _landed)
     try:
         import bpy
 
@@ -474,18 +512,15 @@ def _append_recognized(scene, text: str) -> None:
     current = getattr(scene, "mixie_chat_input", "")
     if not isinstance(current, str):
         current = ""
-    if current and not current[-1].isspace():
-        text = " " + text
-    scene.mixie_chat_input = (current + text)[:CHAT_INPUT_MAXLEN]
+    scene.mixie_chat_input = live.join_text(current, text)[:CHAT_INPUT_MAXLEN]
     _redraw()
 
 
-def _hint_for(scene) -> str:
-    """Tail of the composer, sent as advisory recognition context."""
-    current = getattr(scene, "mixie_chat_input", "")
-    if not isinstance(current, str):
-        return ""
-    return current[-SCRIBBLE_HINT_TAIL_CHARS:].strip()
+def _hint_for(scene, seq: Optional[int] = None) -> str:
+    """Tail of the composer BEFORE this batch's own preview, sent as
+    advisory recognition context — the recognizer is told the hint must not
+    be repeated, so a batch's own provisional text would silence it."""
+    return live.hint_text(scene, exclude=live.batch_for(seq))
 
 
 def _report_error(scene, error) -> None:

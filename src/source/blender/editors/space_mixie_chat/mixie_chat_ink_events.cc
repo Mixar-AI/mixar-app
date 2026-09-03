@@ -127,6 +127,16 @@ static void ink_flush_and_close(bContext *C, MixieChatRuntime * /*rt*/)
   mixie_chat_ink_set_visible(C, false);
 }
 
+/** The pen lifted: close the stroke, arm the pause, and send the batch so
+ * far ahead as a PREVIEW — by the time the pause commits it, its text is
+ * usually already on screen. Every pen-up path funnels through here. */
+static void ink_pen_up(bContext *C, ARegion *region, MixieChatRuntime *rt)
+{
+  mixie_chat_ink_stroke_end(rt);
+  mixie_chat_ink_idle_timer_ensure(C);
+  mixie_chat_ink_commit_provisional(C, region, rt);
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -228,8 +238,7 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event)
        * cached pressure on hover; the press-recovery below still ends
        * the stroke there.) */
       if (WM_event_is_tablet(event) && event->tablet.pressure <= 0.0f) {
-        mixie_chat_ink_stroke_end(rt);
-        mixie_chat_ink_idle_timer_ensure(C);
+        ink_pen_up(C, region, rt);
         ED_region_tag_redraw(region);
         return true;
       }
@@ -244,8 +253,7 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event)
     if (rt->ink_stroke_live) {
       /* A fresh press while a stroke is still latched means its release
        * was missed (it landed outside the region) — close it out first. */
-      mixie_chat_ink_stroke_end(rt);
-      mixie_chat_ink_idle_timer_ensure(C);
+      ink_pen_up(C, region, rt);
     }
     if (BLI_rctf_isect_pt(&rt->ink_close_bounds, mx, my)) {
       ink_flush_and_close(C, rt);
@@ -253,11 +261,12 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event)
     }
     if (BLI_rctf_isect_pt(&rt->ink_clear_bounds, mx, my)) {
       /* Clear drops UNCONVERTED ink only (already-committed batches are
-       * in flight or in the composer). */
+       * in flight or in the composer) — and the preview shown for it. */
       rt->ink_point_count = 0;
       rt->ink_stroke_count = 0;
       rt->ink_stroke_live = false;
       rt->ink_store_full = false;
+      mixie_chat_ink_discard(C, region);
       ED_region_tag_redraw(region);
       return true;
     }
@@ -269,8 +278,7 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event)
 
   if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
     if (rt->ink_stroke_live) {
-      mixie_chat_ink_stroke_end(rt);
-      mixie_chat_ink_idle_timer_ensure(C);
+      ink_pen_up(C, region, rt);
       ED_region_tag_redraw(region);
       return true;
     }

@@ -238,19 +238,43 @@ std::string mixie_chat_ink_serialize(const MixieChatRuntime *rt, int winx, int w
   return out;
 }
 
+/** Hand one strokes payload to Python. `provisional` marks a pen-up
+ * preview (text shown, canvas kept) as opposed to the final commit. */
+static void ink_dispatch_commit(bContext *C, const std::string &payload, const bool provisional)
+{
+  wmOperatorType *ot = WM_operatortype_find("mixie_chat.ink_commit", true);
+  if (!ot) {
+    return;
+  }
+  PointerRNA op_ptr;
+  WM_operator_properties_create_ptr(&op_ptr, ot);
+  RNA_string_set(&op_ptr, "strokes_json", payload.c_str());
+  RNA_boolean_set(&op_ptr, "provisional", provisional);
+  WM_operator_name_call_ptr(C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+  WM_operator_properties_free(&op_ptr);
+}
+
+void mixie_chat_ink_commit_provisional(bContext *C, ARegion *region, MixieChatRuntime *rt)
+{
+  const std::string payload = mixie_chat_ink_serialize(rt, region->winx, region->winy);
+  if (!payload.empty()) {
+    ink_dispatch_commit(C, payload, true);
+  }
+  /* Nothing is cleared: the ink stays until the pause commits it. */
+}
+
+void mixie_chat_ink_discard(bContext *C, ARegion *region)
+{
+  char buf[64];
+  SNPRINTF(buf, "{\"w\":%d,\"h\":%d,\"strokes\":[]}", region->winx, region->winy);
+  ink_dispatch_commit(C, std::string(buf), true);
+}
+
 void mixie_chat_ink_commit(bContext *C, ARegion *region, MixieChatRuntime *rt)
 {
   const std::string payload = mixie_chat_ink_serialize(rt, region->winx, region->winy);
   if (!payload.empty()) {
-    wmOperatorType *ot = WM_operatortype_find("mixie_chat.ink_commit", true);
-    if (ot) {
-      PointerRNA op_ptr;
-      WM_operator_properties_create_ptr(&op_ptr, ot);
-      RNA_string_set(&op_ptr, "strokes_json", payload.c_str());
-      WM_operator_name_call_ptr(
-          C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
-      WM_operator_properties_free(&op_ptr);
-    }
+    ink_dispatch_commit(C, payload, false);
   }
 
   /* Clear the committed strokes; a live in-progress stroke (the race where

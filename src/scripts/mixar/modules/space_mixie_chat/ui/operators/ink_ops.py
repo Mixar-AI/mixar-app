@@ -11,14 +11,17 @@ marks together — see ``scribble_mark/core/scribble_mode.py``), or a stylus
 press on the composer / on empty chat background, which C++ handles by
 writing the same WM flag and opens the canvas alone.
 
-While it is open the overlay captures strokes and, once the pen has been
-still for ``SCRIBBLE_IDLE_COMMIT_MS``, dispatches ``mixie_chat.ink_commit``
-with them and clears its canvas so the user can keep writing. All the work
-that follows — validation, rasterizing, the recognition request, appending
-to the composer — lives in ``core/scribble.py``.
+While it is open the overlay captures strokes and dispatches
+``mixie_chat.ink_commit`` twice over: at EVERY pen-up with
+``provisional=True`` (the ink so far, canvas kept — a preview whose text
+shows in the composer as soon as it lands), and once the pen has been still
+for ``SCRIBBLE_IDLE_COMMIT_MS`` as the FINAL commit, which clears the canvas
+so the user can keep writing. All the work that follows — validation,
+rasterizing, the recognition request, the composer — lives in
+``core/scribble.py`` and ``core/scribble_live.py``.
 """
 
-from bpy.props import StringProperty
+from bpy.props import BoolProperty, StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -43,6 +46,16 @@ class MIXIE_CHAT_OT_ink_commit(Operator):
         default="",
         options={'SKIP_SAVE', 'HIDDEN'},
     )
+    # A pen-up preview of the batch so far, not its final commit: the text
+    # is shown provisionally and the ink stays on the canvas. An empty
+    # provisional payload means the user cleared the canvas — discard the
+    # preview shown for it.
+    provisional: BoolProperty(
+        name="Provisional",
+        description="Preview the batch written so far without committing it",
+        default=False,
+        options={'SKIP_SAVE', 'HIDDEN'},
+    )
 
     @classmethod
     def poll(cls, context):
@@ -52,7 +65,9 @@ class MIXIE_CHAT_OT_ink_commit(Operator):
         from ...core import scribble
 
         try:
-            scribble.handle_commit(context.scene, self.strokes_json)
+            scribble.handle_commit(
+                context.scene, self.strokes_json, provisional=self.provisional
+            )
         except ValueError as e:
             # Version skew between the C++ capture and this parser: nothing
             # the user can act on, but it must never abort their writing.

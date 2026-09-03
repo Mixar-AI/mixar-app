@@ -223,7 +223,7 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
       hint_text = "Scribble — write here with your pen";
     }
     else {
-      hint_text = "Pause to convert · Enter converts now · Esc closes";
+      hint_text = "Text appears as you write · Enter finishes · Esc closes";
     }
 
     BLF_size(font_id, float(hint_px));

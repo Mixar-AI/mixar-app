@@ -326,9 +326,23 @@ SCRIBBLE_COMMIT_MAXLEN = 98304
 SCRIBBLE_MAX_STROKES = 64
 SCRIBBLE_MAX_POINTS = 4096
 
-# Idle delay after the last pen-up before C++ dispatches mixie_chat.ink_commit.
-# Informational mirror of the C++ wmTimer — Python never waits on it.
+# Idle delay after the last pen-up before C++ dispatches the FINAL
+# mixie_chat.ink_commit for a batch. Informational mirror of the C++ wmTimer
+# (INK_IDLE_COMMIT_SEC) — Python never waits on it. The pause is what groups
+# a word's letters into one image; it is no longer what the user waits for,
+# because every pen-up already sent the ink ahead as a preview (below).
 SCRIBBLE_IDLE_COMMIT_MS = 850
+
+# Live transcription (core/scribble_live.py). Every pen-up dispatches the
+# batch's ink so far as a PROVISIONAL commit; its text is shown in the
+# composer as soon as it lands, and the pause that finally commits the batch
+# usually finds the answer already there — the final either matches a
+# preview that landed (instant), adopts the preview still on the wire, or
+# posts afresh only when strokes were added after the last preview. At most
+# one preview is on the wire at a time; a pen-up while one is out replaces
+# the batch's pending preview, so the request rate is bounded by the round
+# trip, never by how fast the pen lifts.
+SCRIBBLE_LIVE_PREVIEW = True
 
 # Recognition requests allowed on the wire at once. Each round trip sits at
 # the model's ~1 s floor, and a continuous writer commits a batch every
@@ -341,7 +355,10 @@ SCRIBBLE_MAX_IN_FLIGHT = 2
 
 # Longest edge (px) of the ink bounding box in the rasterized PNG. Small
 # writing is upscaled to this too: the recognizer reads pixels, not strokes.
-SCRIBBLE_RASTER_MAX_EDGE = 1280
+# 768, not 1280: the backend benchmark (modules/handwriting/README.md) found
+# no accuracy or latency difference between the two, and the page is
+# rasterized and uploaded at every pen-up now, not just at every pause.
+SCRIBBLE_RASTER_MAX_EDGE = 768
 
 # Blank margin around the ink in the rasterized PNG, in output pixels.
 # Handwriting pushed flush against the frame reads worse.

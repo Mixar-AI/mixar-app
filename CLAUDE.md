@@ -137,6 +137,38 @@ where they write, never by which button they pressed.
   swallows every TIMER starves every other timer in the window, and the chat
   canvas's idle-commit timer is one of them — with a docked chat, handwriting
   would never convert while the viewport was frozen.
+- **Text appears while you write** (`space_mixie_chat/core/scribble_live.py`).
+  A word used to show up ~2 s after its last stroke: the 0.85 s idle pause
+  that groups a word's letters, then a full round trip at the model's ~1 s
+  floor. Now EVERY pen-up dispatches `mixie_chat.ink_commit` with
+  `provisional=True` (the batch's ink so far, canvas kept), the preview's
+  text is shown in the composer the moment it lands, and the pause's FINAL
+  commit usually finds its answer already there: ink is keyed by its
+  serialized bytes (`payload_key`), so the final either matches a landed
+  preview (instant, no request), adopts the preview still on the wire
+  (`close_batch` → `PLAN_ADOPT`), or posts afresh only when strokes were
+  added after the last preview. One preview is on the wire at a time — a
+  pen-up while one is out REPLACES the batch's pending preview, so the
+  request rate is bounded by the round trip, never by how fast the pen
+  lifts. The composer is a DOCUMENT of segments (a frozen base plus one
+  segment per batch, provisional until its final lands), re-rendered whole,
+  so a final that differs from its preview replaces it instead of landing
+  after it; a user edit mid-flight freezes what was on screen into the base
+  and later results append after it (never duplicated or deleted behind
+  them); an illegible preview keeps the previous word rather than blanking
+  it; a failed final keeps the preview the user saw. The hint sent with a
+  request excludes the batch's OWN preview (`hint_text(exclude=)`) — the
+  recognizer is told the hint must not be repeated, so including it would
+  make the model transcribe nothing. The "Converting…" pill tracks FINAL
+  batches only (`_set_busy`); `is_busy()`, which the send path waits on,
+  includes previews because a final may adopt one. Clear discards the open
+  batch's preview (an EMPTY provisional payload). The C++ idle timer ticks
+  at 0.1 s (was 0.25) and the raster page is 768 px (was 1280; the backend
+  benchmark found no difference). What remains is the model floor itself
+  (~0.9 s per call) — the backend is already at `thinking_level=minimal`,
+  `media_resolution` MEDIUM and byte-for-byte forwarding, so "instant" from
+  here means on-device recognition. Pinned by
+  `space_mixie_chat/tests/test_scribble_live.py`.
 - **Recognition is pipelined on the wire, delivered in written order**
   (`space_mixie_chat/core/scribble.py`). Each round trip sits at the model's
   ~1 s floor and a continuous writer commits a batch every pause, so up to
