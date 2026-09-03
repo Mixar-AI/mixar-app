@@ -604,5 +604,8 @@ void MIXIE_CHAT_OT_agent_bubble_show(wmOperatorType *ot);
 
 /* Property cache, layout data, runtime state: see mixie_chat_layout_data.hh */
 
+/* QA harness target provider (mixie_chat_qa_targets.cc). */
+void mixie_chat_qa_targets_register();
+
 /** \} */
 }  // namespace blender
