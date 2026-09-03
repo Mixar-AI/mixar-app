@@ -233,7 +233,8 @@ def test_single_keyframe_is_draggable_along_the_timeline():
     click that never moves still just views the keyframe, matching the old
     jump behaviour) and slides the beat plus its matching native camera keys
     on MOUSEMOVE. A single beat is clamped to stay between its time-neighbours
-    because two Director keys must never share a frame. Locked shots stay
+    because two Director keys must never share a frame. First and last
+    handles stay draggable too — see test_timeline_drag.py. Locked shots stay
     view-only: the C++ handler only starts the drag when the shot is unlocked
     and otherwise falls back to jump_beat.
     """
