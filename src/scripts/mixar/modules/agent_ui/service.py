@@ -48,7 +48,10 @@ from .constants import (
     RPC_SET_TEXT,
     RPC_SNAP, RPC_FOCUS_AREA,
     RPC_GEOMETRY_TARGETS, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
+    RPC_SEQUENCE, RPC_OPEN_MENU, RPC_RUN_OPERATOR,
+    RUN_OPERATOR_TIMEOUT_S,
     SELECT_GEOMETRY_TIMEOUT_S,
+    SEQUENCE_TIMEOUT_S,
     RPC_STATE,
     RPC_TYPE,
     RPC_WAIT,
@@ -66,7 +69,11 @@ logger = get_logger(__name__)
 
 WATCHDOG_INTERVAL_S = 2.0
 # Per-method pump budgets; everything else uses ACTION_TIMEOUT_S.
-METHOD_TIMEOUTS = {RPC_SELECT_GEOMETRY: SELECT_GEOMETRY_TIMEOUT_S}
+METHOD_TIMEOUTS = {
+    RPC_SELECT_GEOMETRY: SELECT_GEOMETRY_TIMEOUT_S,
+    RPC_SEQUENCE: SEQUENCE_TIMEOUT_S,
+    RPC_RUN_OPERATOR: RUN_OPERATOR_TIMEOUT_S,
+}
 
 
 def _session_active() -> bool:
@@ -115,6 +122,9 @@ class AgentUIService:
         self._enabled = False
         self._watchdog_live = False
         self._last_session_id = ""
+        # Per-step results of the most recent ui.sequence (kept so an Esc
+        # interrupt can still tell the backend how far the sequence got).
+        self.last_sequence_results = []
         self._pump.on_action_start = self._on_action_start
         self._pump.on_action_end = self._on_action_end
         self._pump.on_interrupt = self._on_interrupt
@@ -285,6 +295,10 @@ class AgentUIService:
             return {"total": len(hits), "widgets": [drv.public_widget(w) for w in hits[:limit]]}
         if method == RPC_SNAP:
             from .vision import snap_steps
+            if params.get("view") or (params.get("frame") and
+                                      str(params.get("frame")).lower() != "none"):
+                # View/frame keys are injected input (spec §11.3).
+                self.ensure_enabled()
             return snap_steps(params)
         if method == RPC_WAIT:
             timeout = _float(params.get("timeout", WAIT_TIMEOUT_DEFAULT), "timeout",
@@ -295,6 +309,19 @@ class AgentUIService:
             return geometry.geometry_targets(params)
 
         # Action methods below — handle() enforces enablement before stepping.
+        if method == RPC_SEQUENCE:
+            from .sequence import sequence_steps
+            self.last_sequence_results = []
+
+            def _progress(results):
+                self.last_sequence_results = list(results)
+            return sequence_steps(params, on_progress=_progress)
+        if method == RPC_OPEN_MENU:
+            from .sequence import open_menu_steps
+            return open_menu_steps(params)
+        if method == RPC_RUN_OPERATOR:
+            from .sequence import run_operator_steps
+            return run_operator_steps(params)
         if method == RPC_CLICK_GEOMETRY:
             from . import geometry
             return geometry.click_geometry_steps(params)
@@ -402,7 +429,23 @@ class AgentUIService:
         if method == RPC_WAIT:
             timeout = _float(params.get("timeout", WAIT_TIMEOUT_DEFAULT), "timeout",
                              0.1, WAIT_TIMEOUT_MAX) + 5.0
+        if method == RPC_SEQUENCE:
+            respond = self._with_sequence_partials(respond)
         self._pump.start(built, respond, timeout, label=method)
+
+    def _with_sequence_partials(self, respond):
+        """Wrap a ui.sequence reply so an interrupt/timeout still carries the
+        per-step results collected so far (spec §11.1)."""
+        def _respond(result):
+            if isinstance(result, dict) and not result.get("success"):
+                partial = list(self.last_sequence_results)
+                result = dict(result)
+                result["completed"] = sum(1 for r in partial if r.get("ok"))
+                result["results"] = partial
+                err = result.get("error") or {}
+                result["interrupted"] = err.get("code") == "interrupted"
+            respond(result)
+        return _respond
 
 
 def _required_query(params) -> dict:

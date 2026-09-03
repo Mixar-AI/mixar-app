@@ -22,7 +22,14 @@ import bpy
 import numpy as np
 
 from . import driver as drv
-from .constants import ERR_NO_MATCH, SNAP_JPEG_QUALITY, SNAP_MAX_EDGE_DEFAULT
+from .constants import (
+    ERR_INVALID_PARAMS,
+    ERR_NO_MATCH,
+    SNAP_FRAMES,
+    SNAP_JPEG_QUALITY,
+    SNAP_MAX_EDGE_DEFAULT,
+    SNAP_VIEWS,
+)
 from .errors import UIControlError
 
 _COLORS = [(1.0, 0.25, 0.25), (0.25, 1.0, 0.4), (0.3, 0.55, 1.0),
@@ -129,6 +136,68 @@ def encode_pixels(px, max_edge=SNAP_MAX_EDGE_DEFAULT):
     return base64.b64encode(data).decode("ascii"), "image/png", w, h
 
 
+# View / framing keys pressed with the pointer in the 3D viewport (spec §11.3).
+# (key, ctrl): ctrl flips a numpad view to its opposite side.
+VIEW_KEYS = {
+    "front": ("NUMPAD_1", False), "back": ("NUMPAD_1", True),
+    "right": ("NUMPAD_3", False), "left": ("NUMPAD_3", True),
+    "top": ("NUMPAD_7", False), "bottom": ("NUMPAD_7", True),
+    "persp": ("NUMPAD_5", False),  # only pressed when the view is orthographic
+}
+FRAME_KEYS = {"selected": "NUMPAD_PERIOD", "all": "HOME"}
+
+
+def view_keys(view, frame, is_perspective=True):
+    """Ordered (key, ctrl) presses for ``view``/``frame``; validates names."""
+    keys = []
+    if frame and frame != "none":
+        if frame not in SNAP_FRAMES:
+            raise UIControlError(ERR_INVALID_PARAMS, f"frame must be one of {SNAP_FRAMES}")
+        keys.append((FRAME_KEYS[frame], False))
+    if view:
+        if view not in SNAP_VIEWS:
+            raise UIControlError(ERR_INVALID_PARAMS, f"view must be one of {SNAP_VIEWS}")
+        key, ctrl = VIEW_KEYS[view]
+        if view != "persp" or not is_perspective:
+            keys.append((key, ctrl))
+    return keys
+
+
+def _is_perspective():
+    try:
+        from .geometry import view3d_region
+        _win, _area, _region, rv3d = view3d_region()
+        return bool(getattr(rv3d, "is_perspective", True))
+    except Exception:
+        return True
+
+
+def _view_steps(view, frame):
+    """Generator: press the view/frame keys in the viewport without smooth-view
+    animation so the capture that follows shows the settled view."""
+    keys = view_keys(view, frame, _is_perspective())
+    if not keys:
+        return
+    yield from drv.focus_area_steps("VIEW_3D")
+    win = drv.main_window()
+    prefs = getattr(getattr(bpy.context, "preferences", None), "view", None)
+    old_smooth = getattr(prefs, "smooth_view", None)
+    try:
+        if prefs is not None and old_smooth is not None:
+            prefs.smooth_view = 0
+        for key, ctrl in keys:
+            drv.press(win, key, ctrl=ctrl)
+            yield 0.05
+        for _ in range(3):
+            yield 0.05
+    finally:
+        if prefs is not None and old_smooth is not None:
+            try:
+                prefs.smooth_view = old_smooth
+            except Exception:
+                pass
+
+
 def snap_steps(params):
     """Generator: {area?, query?, margin?, annotate?, max_edge?} -> result."""
     area_type = params.get("area")
@@ -136,6 +205,14 @@ def snap_steps(params):
     annotate_q = params.get("annotate")
     margin = int(params.get("margin", 40))
     max_edge = int(params.get("max_edge", SNAP_MAX_EDGE_DEFAULT))
+
+    view = str(params.get("view") or "").lower() or None
+    frame = str(params.get("frame") or "none").lower()
+    # Pressing view/frame keys injects input: the service gates enablement
+    # (spec §11.3) — validate names here so a bad request fails before input.
+    view_keys(view, frame, True)
+    if view or frame != "none":
+        yield from _view_steps(view, frame)
 
     target_query = drv.query_of(target_q) if target_q else None
     widgets = drv.snapshot()
@@ -171,7 +248,7 @@ def snap_steps(params):
         target_query["window"] = win.as_pointer()
         target = drv.find_one(widgets, **target_query)
 
-    result = {"window": win.as_pointer()}
+    result = {"window": win.as_pointer(), "view": view, "frame": frame}
     h, w = px.shape[:2]
 
     if annotate_q is not None:

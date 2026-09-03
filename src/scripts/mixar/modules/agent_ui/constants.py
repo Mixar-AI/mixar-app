@@ -27,11 +27,15 @@ RPC_FOCUS_AREA = "ui.focus_area"
 RPC_GEOMETRY_TARGETS = "ui.geometry_targets"
 RPC_CLICK_GEOMETRY = "ui.click_geometry"
 RPC_SELECT_GEOMETRY = "ui.select_geometry"
+RPC_SEQUENCE = "ui.sequence"
+RPC_OPEN_MENU = "ui.open_menu"
+RPC_RUN_OPERATOR = "ui.run_operator"
 
 RPC_METHODS = frozenset({
     RPC_STATE, RPC_DUMP, RPC_FIND, RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE,
     RPC_SET_TEXT, RPC_DRAG, RPC_DROP_FILE, RPC_WAIT, RPC_SNAP, RPC_FOCUS_AREA,
     RPC_GEOMETRY_TARGETS, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
+    RPC_SEQUENCE, RPC_OPEN_MENU, RPC_RUN_OPERATOR,
 })
 
 # Methods that inject input — they need agent input enabled (mixed mode) or
@@ -39,6 +43,9 @@ RPC_METHODS = frozenset({
 ACTION_METHODS = frozenset({
     RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE, RPC_SET_TEXT, RPC_DRAG,
     RPC_DROP_FILE, RPC_FOCUS_AREA, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
+    # open_menu injects no input but opens UI at the pointer; run_operator
+    # types and presses keys. Both need enablement like every action.
+    RPC_SEQUENCE, RPC_OPEN_MENU, RPC_RUN_OPERATOR,
 })
 
 # Closed error-code set (spec §3).
@@ -54,6 +61,9 @@ ERR_DENIED = "denied"
 ERR_INTERNAL = "internal"
 # Geometry target exists and is on screen but another surface is in front of it.
 ERR_OCCLUDED = "occluded"
+# ui.run_operator: the search ran a different operator than the one asked for
+# (already undone with Ctrl+Z when this is reported).
+ERR_OPERATOR_MISMATCH = "operator_mismatch"
 
 QUERY_KEYS = frozenset({
     "text", "contains", "op", "prop", "prop_owner", "panel", "area_type",
@@ -101,6 +111,17 @@ GEOMETRY_TARGETS_LIMIT_MAX = 400
 SELECT_GEOMETRY_MAX = 80
 SELECT_GEOMETRY_TIMEOUT_S = 60.0
 GEOMETRY_TIMEOUT_S = 20.0
+
+# Batched input / menus / operators (spec §11).
+SEQUENCE_MAX_STEPS = 60
+SEQUENCE_WAIT_TICKS_MAX = 20
+SEQUENCE_TIMEOUT_S = 90.0
+SEQUENCE_STEP_KINDS = ("press", "type", "focus_area", "click", "click_geometry",
+                       "wait_ticks", "expect_popup")
+RUN_OPERATOR_TIMEOUT_S = 60.0
+MENU_IDNAME_RE = re.compile(r"^[A-Z0-9_]+_MT_[A-Za-z0-9_]+$")
+SNAP_VIEWS = ("front", "back", "right", "left", "top", "bottom", "persp")
+SNAP_FRAMES = ("selected", "all", "none")
 
 STATUS_TEXT = "Mixar is working — press Esc to take over"
 
