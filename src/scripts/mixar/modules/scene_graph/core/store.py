@@ -86,24 +86,29 @@ class SceneGraph:
                 logger.warning("scene_graph: could not store on scene: %s", exc)
 
 
-# Runtime registry: scene pointer -> SceneGraph. Cleared on file load.
+# Runtime registry: scene pointer -> (scene name, SceneGraph). Cleared on
+# file load. A deleted scene's address can be reused by a new scene, so the
+# cached name is validated on every access and the entry rebuilt on mismatch.
 _REGISTRY = {}
 
 
 def get_scene_graph(scene) -> SceneGraph:
     key = scene.as_pointer()
-    sg = _REGISTRY.get(key)
-    if sg is None:
-        sg = SceneGraph()
-        _REGISTRY[key] = sg
-    return sg
+    cached = _REGISTRY.get(key)
+    if cached is not None and cached[0] != scene.name:
+        # Pointer reused by a different scene -- the entry is stale.
+        cached = None
+    if cached is None:
+        cached = (scene.name, SceneGraph())
+        _REGISTRY[key] = cached
+    return cached[1]
 
 
 def mark_scene_dirty(scene):
-    sg = _REGISTRY.get(scene.as_pointer())
-    if sg is not None:
-        sg.mark_dirty()
-    # If absent, the first get_scene_graph() builds fresh anyway.
+    cached = _REGISTRY.get(scene.as_pointer())
+    if cached is not None and cached[0] == scene.name:
+        cached[1].mark_dirty()
+    # If absent or stale, the first get_scene_graph() builds fresh anyway.
 
 
 def clear_registry():
