@@ -47,6 +47,8 @@ from .constants import (
     RPC_PRESS,
     RPC_SET_TEXT,
     RPC_SNAP, RPC_FOCUS_AREA,
+    RPC_GEOMETRY_TARGETS, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
+    SELECT_GEOMETRY_TIMEOUT_S,
     RPC_STATE,
     RPC_TYPE,
     RPC_WAIT,
@@ -63,6 +65,8 @@ from .pump import Pump
 logger = get_logger(__name__)
 
 WATCHDOG_INTERVAL_S = 2.0
+# Per-method pump budgets; everything else uses ACTION_TIMEOUT_S.
+METHOD_TIMEOUTS = {RPC_SELECT_GEOMETRY: SELECT_GEOMETRY_TIMEOUT_S}
 
 
 def _session_active() -> bool:
@@ -286,8 +290,17 @@ class AgentUIService:
             timeout = _float(params.get("timeout", WAIT_TIMEOUT_DEFAULT), "timeout",
                              0.1, WAIT_TIMEOUT_MAX)
             return drv.wait_until(params.get("until"), timeout)
+        if method == RPC_GEOMETRY_TARGETS:
+            from . import geometry
+            return geometry.geometry_targets(params)
 
         # Action methods below — handle() enforces enablement before stepping.
+        if method == RPC_CLICK_GEOMETRY:
+            from . import geometry
+            return geometry.click_geometry_steps(params)
+        if method == RPC_SELECT_GEOMETRY:
+            from . import geometry
+            return geometry.select_geometry_steps(params)
         if method == RPC_FOCUS_AREA:
             area_type = str(params.get("area_type") or "VIEW_3D").upper()
             region_type = str(params.get("region_type") or "WINDOW").upper()
@@ -385,7 +398,7 @@ class AgentUIService:
                 built.close()
                 respond(exc.to_result())
                 return
-        timeout = ACTION_TIMEOUT_S
+        timeout = METHOD_TIMEOUTS.get(method, ACTION_TIMEOUT_S)
         if method == RPC_WAIT:
             timeout = _float(params.get("timeout", WAIT_TIMEOUT_DEFAULT), "timeout",
                              0.1, WAIT_TIMEOUT_MAX) + 5.0

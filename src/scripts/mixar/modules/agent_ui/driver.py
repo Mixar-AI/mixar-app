@@ -274,12 +274,15 @@ def move_to(win, x, y):
     _sim(win, type='MOUSEMOVE', value='NOTHING', x=int(x), y=int(y))
 
 
-def click_xy_steps(win, x, y, double=False):
+def click_xy_steps(win, x, y, double=False, shift=False, ctrl=False, alt=False):
     """Generator click: move, press and release land on SEPARATE main-loop
     iterations, like real input. Queueing them in one tick makes the first
     click into a freshly-entered area vanish (hover/active-region state and
-    the press resolve in the same event burst)."""
+    the press resolve in the same event burst). ``shift``/``ctrl``/``alt``
+    ride on both the press and the release (Shift+click = toggle-select in
+    the 3D viewport)."""
     x, y = int(x), int(y)
+    mods = {"shift": bool(shift), "ctrl": bool(ctrl), "alt": bool(alt)}
     # Approach from an offset first so two sequential targeted clicks are
     # never mistaken for a double-click on the same spot.
     warp_pointer(win, x - 4, y)
@@ -291,9 +294,9 @@ def click_xy_steps(win, x, y, double=False):
     yield 0.05
     reps = 2 if double else 1
     for _ in range(reps):
-        _sim(win, type='LEFTMOUSE', value='PRESS', x=x, y=y)
+        _sim(win, type='LEFTMOUSE', value='PRESS', x=x, y=y, **mods)
         yield 0.03
-        _sim(win, type='LEFTMOUSE', value='RELEASE', x=x, y=y)
+        _sim(win, type='LEFTMOUSE', value='RELEASE', x=x, y=y, **mods)
         yield 0.03
 
 

@@ -24,17 +24,21 @@ RPC_DROP_FILE = "ui.drop_file"
 RPC_WAIT = "ui.wait"
 RPC_SNAP = "ui.snap"
 RPC_FOCUS_AREA = "ui.focus_area"
+RPC_GEOMETRY_TARGETS = "ui.geometry_targets"
+RPC_CLICK_GEOMETRY = "ui.click_geometry"
+RPC_SELECT_GEOMETRY = "ui.select_geometry"
 
 RPC_METHODS = frozenset({
     RPC_STATE, RPC_DUMP, RPC_FIND, RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE,
     RPC_SET_TEXT, RPC_DRAG, RPC_DROP_FILE, RPC_WAIT, RPC_SNAP, RPC_FOCUS_AREA,
+    RPC_GEOMETRY_TARGETS, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
 })
 
 # Methods that inject input — they need agent input enabled (mixed mode) or
 # an event-simulate launch. Read-only methods work in every build.
 ACTION_METHODS = frozenset({
     RPC_CLICK, RPC_TYPE, RPC_PRESS, RPC_CHOOSE, RPC_SET_TEXT, RPC_DRAG,
-    RPC_DROP_FILE, RPC_FOCUS_AREA,
+    RPC_DROP_FILE, RPC_FOCUS_AREA, RPC_CLICK_GEOMETRY, RPC_SELECT_GEOMETRY,
 })
 
 # Closed error-code set (spec §3).
@@ -48,6 +52,8 @@ ERR_TIMEOUT = "timeout"
 ERR_INTERRUPTED = "interrupted"
 ERR_DENIED = "denied"
 ERR_INTERNAL = "internal"
+# Geometry target exists and is on screen but another surface is in front of it.
+ERR_OCCLUDED = "occluded"
 
 QUERY_KEYS = frozenset({
     "text", "contains", "op", "prop", "prop_owner", "panel", "area_type",
@@ -86,6 +92,15 @@ SNAP_JPEG_QUALITY = 80
 FIND_RETRY_WINDOW_S = 2.0
 # Widget geometry must survive this many UI ticks before a drag starts.
 DRAG_STABLE_TICKS = 2
+
+# Geometry targets / selection (spec §10).
+GEOMETRY_ELEMENTS = ("VERT", "EDGE", "FACE")
+GEOMETRY_SORTS = ("index", "area", "z", "-z", "x", "-x", "y", "-y", "distance")
+GEOMETRY_TARGETS_LIMIT_DEFAULT = 200
+GEOMETRY_TARGETS_LIMIT_MAX = 400
+SELECT_GEOMETRY_MAX = 80
+SELECT_GEOMETRY_TIMEOUT_S = 60.0
+GEOMETRY_TIMEOUT_S = 20.0
 
 STATUS_TEXT = "Mixar is working — press Esc to take over"
 
