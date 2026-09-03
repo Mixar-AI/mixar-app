@@ -291,7 +291,7 @@ def test_privacy_panel_lives_in_preferences_system_section() -> None:
     source = (
         Path(__file__).resolve().parents[1]
         / "src/scripts/mixar/modules/common/ui/panels/privacy_panel.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert "bl_space_type = 'PREFERENCES'" in source
     assert "bl_region_type = 'WINDOW'" in source
     assert 'bl_context = "system"' in source

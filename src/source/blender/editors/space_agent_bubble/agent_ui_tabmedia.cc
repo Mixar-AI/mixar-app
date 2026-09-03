@@ -44,6 +44,9 @@
 #include "agent_ui_tabmedia_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Draw
  * \{ */
@@ -284,21 +287,21 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
    * dropdown buttons, embossed prompt field. ---- */
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island_media", blender::ui::EmbossType::None);
-  uiBlock *field_block = UI_block_begin(
+  ui::Block *field_block = ui::block_begin(
       C, region, "agent_island_media_field", blender::ui::EmbossType::Emboss);
 
   /* Sub-tab halves. */
   for (int i = 0; i < 2; i++) {
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(seg_rects[i].xmin), int(seg_rects[i].ymin),
                            short(BLI_rctf_size_x(&seg_rects[i])),
                            short(BLI_rctf_size_y(&seg_rects[i])),
                            i == 0 ? "Image generation" : "Video generation");
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_media_kind");
       RNA_string_set(op_ptr, "value", i == 0 ? "IMAGE" : "VIDEO");
     }
@@ -314,7 +317,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
     PointerRNA *owner = chip.on_wm_group ? &group_ptr : &tab_ptr;
 
     if (chip.kind == MediaChipKind::Enum) {
-      /* `wm.context_menu_enum`, NOT an RNA menu button: a ButType::Menu
+      /* `wm.context_menu_enum`, NOT an RNA menu button: a ui::ButtonType::Menu
        * draws Blender's own down-arrow on top of the chevron the chip has
        * already painted, so the chip showed TWO arrows. An operator button
        * carries no chrome of its own and opens the same enum menu. */
@@ -332,12 +335,12 @@ void agent_ui_tabmedia_draw(const bContext *C,
                  video ? "tab_video_gen" : "tab_imagegen",
                  chip.prop_id);
       }
-      uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              cx, cy, cw, ch, nullptr);
       if (but) {
         pane_but_tooltip_owned(but, chip.label);
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", data_path);
       }
     }
@@ -347,12 +350,12 @@ void agent_ui_tabmedia_draw(const bContext *C,
       media_sanitize_key(service_key, svc, sizeof(svc));
       media_sanitize_key(model_id, mdl, sizeof(mdl));
       SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
-      uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              cx, cy, cw, ch, nullptr);
       if (but) {
         pane_but_tooltip_owned(but, chip.label);
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", data_path);
       }
     }
@@ -364,12 +367,12 @@ void agent_ui_tabmedia_draw(const bContext *C,
       SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
       const short half = short(cw / 2);
       for (int side = 0; side < 2; side++) {
-        uiBut *but = uiDefButO(block, ButType::But, "wm.context_cycle_int",
+        ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_cycle_int",
                                blender::wm::OpCallContext::InvokeDefault, "",
                                cx + side * half, cy, half, ch,
                                side == 0 ? "Decrease" : "Increase");
         if (but) {
-          PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+          PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
           RNA_string_set(op_ptr, "data_path", data_path);
           RNA_boolean_set(op_ptr, "reverse", side == 0);
           RNA_boolean_set(op_ptr, "wrap", false);
@@ -382,22 +385,22 @@ void agent_ui_tabmedia_draw(const bContext *C,
   if (prompt_ok) {
     /* The kit's top strip: ghost text top-left, caret at text height. */
     const rctf field = pane_prompt_field_rect(prompt_box, u);
-    uiBut *input = uiDefButR(field_block, ButType::Text, 0, "",
+    ui::Button *input = uiDefButR(field_block, ui::ButtonType::Text, "",
                              int(field.xmin), int(field.ymin),
                              short(BLI_rctf_size_x(&field)),
                              short(BLI_rctf_size_y(&field)),
                              &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
     if (input) {
-      UI_but_placeholder_set(input, "Describe your scene here...");
-      UI_but_flag2_enable(input, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
-      UI_but_flag_enable(input, UI_BUT_TEXTEDIT_UPDATE);
+      ui::button_placeholder_set(input, "Describe your scene here...");
+      ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
     }
   }
 
   /* Field chrome on screen BEFORE the bottom row is painted (kit invariant:
    * the embossed field spans the whole box and covers earlier pixels). */
-  UI_block_end(C, field_block);
-  UI_block_draw(C, field_block);
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
 
   GPU_blend(GPU_BLEND_ALPHA);
   pane_action_chip_paint(upload, "Upload Reference", true, false, u);
@@ -434,7 +437,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Upload — per half: the image tab's own reference-collection uploader,
    * or the video flow's board-as-selected import. */
-  uiDefButO(block, ButType::But,
+  uiDefButO(block, ui::ButtonType::But,
             video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
             blender::wm::OpCallContext::InvokeDefault, "",
             int(upload.xmin), int(upload.ymin),
@@ -443,7 +446,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                     "Add reference images from disk");
 
   /* Capture Viewport -> this tab's reference. */
-  uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
+  uiDefButO(block, ui::ButtonType::But, "mixar.pane_capture_viewport",
             blender::wm::OpCallContext::InvokeDefault, "",
             int(capture.xmin), int(capture.ymin),
             short(BLI_rctf_size_x(&capture)), short(BLI_rctf_size_y(&capture)),
@@ -457,20 +460,22 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * half's `depth_to_image` mode, which this pane's own dropdown exposes,
    * routes to `mixie.lookdev_generate`. */
   if (can_generate) {
-    uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(generate.xmin), int(generate.ymin),
                            short(BLI_rctf_size_x(&generate)),
                            short(BLI_rctf_size_y(&generate)),
                            video ? "Generate a video" : "Generate images");
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(tab_ptr.type));
     }
   }
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
 
 /** \} */
+
+}  // namespace blender

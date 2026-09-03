@@ -15,13 +15,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
 
-KIT_CC = (CPP / "agent_ui_pane_kit.cc").read_text()
-KIT_HH = (CPP / "agent_ui_pane_kit.hh").read_text()
-TAB3D = (CPP / "agent_ui_tab3d.cc").read_text()
-TAB3D_PARAMS = (CPP / "agent_ui_tab3d_params.cc").read_text()
-MEDIA = (CPP / "agent_ui_tabmedia.cc").read_text()
-SPLAT = (CPP / "agent_ui_tabsplat.cc").read_text()
-SPLAT_PAINT = (CPP / "agent_ui_tabsplat_paint.cc").read_text()
+KIT_CC = (CPP / "agent_ui_pane_kit.cc").read_text(encoding="utf-8")
+KIT_HH = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
+TAB3D = (CPP / "agent_ui_tab3d.cc").read_text(encoding="utf-8")
+TAB3D_PARAMS = (CPP / "agent_ui_tab3d_params.cc").read_text(encoding="utf-8")
+MEDIA = (CPP / "agent_ui_tabmedia.cc").read_text(encoding="utf-8")
+SPLAT = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
+SPLAT_PAINT = (CPP / "agent_ui_tabsplat_paint.cc").read_text(encoding="utf-8")
 
 PANE_SOURCES = {
     "agent_ui_tab3d.cc": TAB3D,
@@ -166,7 +166,7 @@ def test_the_splat_mode_toggle_is_measured_not_design_width():
     assert "pane_segmented_layout(\n        strip_x" in body or re.search(
         r"pane_segmented_layout\([^;]*r->mode_seg", body, re.S
     ), "the splat mode toggle is not laid out from measured labels"
-    intern = (CPP / "agent_ui_tabsplat_intern.hh").read_text()
+    intern = (CPP / "agent_ui_tabsplat_intern.hh").read_text(encoding="utf-8")
     for dead in ("SPLAT_MODE_W", "SPLAT_MODE_SPLIT", "SPLAT_MODEL_X", "SPLAT_LOD_X"):
         assert dead not in intern, f"{dead} is a fixed x/width for a catalog label"
 

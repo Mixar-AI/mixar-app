@@ -220,7 +220,7 @@ def test_footer_actions_per_state():
 
 def test_dialog_never_draws_its_own_ok_button():
     source = (SCRIPTS / "mixar" / "modules" / "byok" / "ui" / "operators"
-              / "byok_dialog_ui.py").read_text()
+              / "byok_dialog_ui.py").read_text(encoding="utf-8")
     assert '"OK"' not in source and "'OK'" not in source
 
 
@@ -356,7 +356,7 @@ def test_remove_failure_lands_on_error(monkeypatch):
 
 
 def test_rna_defines_the_card_reuse_functions():
-    source = RNA_UI_API.read_text()
+    source = RNA_UI_API.read_text(encoding="utf-8")
     assert '"mixar_card_label", "rna_uiLayoutMixarCardLabel"' in source
     assert '"mixar_card_button", "rna_uiLayoutMixarCardButton"' in source
     # active_default is the OK/Cancel-suppression channel.
@@ -364,7 +364,7 @@ def test_rna_defines_the_card_reuse_functions():
 
 
 def test_rna_kind_items_cover_every_kind_python_uses():
-    rna = RNA_UI_API.read_text()
+    rna = RNA_UI_API.read_text(encoding="utf-8")
     label_items = re.search(
         r"mixar_card_label_kind_items\[\]\s*=\s*\{(.*?)\};", rna, re.S).group(1)
     button_items = re.search(
@@ -372,7 +372,7 @@ def test_rna_kind_items_cover_every_kind_python_uses():
 
     byok_dir = SCRIPTS / "mixar" / "modules" / "byok"
     python = "\n".join(
-        p.read_text() for p in byok_dir.rglob("*.py")
+        p.read_text(encoding="utf-8") for p in byok_dir.rglob("*.py")
     )
     # No trailing \): multi-line calls end with a comma before the paren.
     label_kinds = set(re.findall(r"card_label\([^)]*?'([A-Z_]+)'", python))
@@ -390,7 +390,7 @@ def test_rna_kind_items_cover_every_kind_python_uses():
 def test_rna_switches_map_every_declared_item():
     """Each RNA enum value must have a case in its runtime switch —
     a missing case silently draws the element as plain/CARD."""
-    source = RNA_UI_API.read_text()
+    source = RNA_UI_API.read_text(encoding="utf-8")
     for items_name, fn_name in (
         ("mixar_card_label_kind_items", "rna_uiLayoutMixarCardLabel"),
         ("mixar_card_button_kind_items", "rna_uiLayoutMixarCardButton"),
@@ -403,7 +403,7 @@ def test_rna_switches_map_every_declared_item():
 
 
 def test_card_element_enum_keeps_count_last():
-    header = (INTERFACE_DIR / "interface_mixar_profile_card.hh").read_text()
+    header = (INTERFACE_DIR / "interface_mixar_profile_card.hh").read_text(encoding="utf-8")
     enum = re.search(r"enum class MixarCardElement : int \{(.*?)\};", header, re.S).group(1)
     enumerators = re.findall(r"^\s*([A-Za-z_]+),", enum, re.M)
     assert enumerators[-1] == "Count", "Count must stay the last enumerator"
@@ -412,13 +412,13 @@ def test_card_element_enum_keeps_count_last():
 
 
 def test_card_taggers_exported_and_danger_text_drawn():
-    section = (INTERFACE_DIR / "interface_mixar_section.cc").read_text()
+    section = (INTERFACE_DIR / "interface_mixar_section.cc").read_text(encoding="utf-8")
     assert "void UI_layout_mixar_card_tag_last(" in section
     assert "void UI_layout_mixar_card_style_last_button(" in section
     assert "button_flag_enable(but, BUT_ACTIVE_DEFAULT)" in section
     assert "button_flag_disable(but, BUT_ACTIVE_DEFAULT)" in section
 
-    draw = (INTERFACE_DIR / "interface_mixar_profile_card_draw.cc").read_text()
+    draw = (INTERFACE_DIR / "interface_mixar_profile_card_draw.cc").read_text(encoding="utf-8")
     assert "case MixarCardElement::DangerText:" in draw
 
 
@@ -426,7 +426,7 @@ def test_native_ok_row_suppression_guard_still_in_place():
     """The whole one-action UX rests on wm_block_dialog_create skipping
     its OK/Cancel pair when the dialog already has a default button. If
     an upstream merge drops that guard, the redundant buttons come back."""
-    source = WM_OPERATORS.read_text()
+    source = WM_OPERATORS.read_text(encoding="utf-8")
     guard = source.find("block_has_active_default_button")
     assert guard != -1
     # The guard must sit inside wm_block_dialog_create, before the

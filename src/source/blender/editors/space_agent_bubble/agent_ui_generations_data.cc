@@ -65,6 +65,9 @@
 
 #include "agent_ui_generations_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -86,7 +89,8 @@ bool item_push(GenPaneData *data, GenItem **r_item)
 void gather_libraries(GenPaneData *data)
 {
   data->lib_count = 0;
-  LISTBASE_FOREACH (const bUserAssetLibrary *, lib, &U.asset_libraries) {
+  for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
+    const bUserAssetLibrary *lib = &lib_ref;
     if (data->lib_count >= 16) {
       break;
     }
@@ -125,7 +129,8 @@ void gather_assets(const bContext *C,
                    const char *only_name,
                    const bool reload)
 {
-  LISTBASE_FOREACH (const bUserAssetLibrary *, lib, &U.asset_libraries) {
+  for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
+    const bUserAssetLibrary *lib = &lib_ref;
     if (only_name && !STREQ(lib->name, only_name)) {
       continue;
     }
@@ -233,7 +238,8 @@ void gather_splats(const bContext *C, GenPaneData *data)
   if (!bmain) {
     return;
   }
-  LISTBASE_FOREACH (Collection *, collection, &bmain->collections) {
+  for (Collection &collection_ref : bmain->collections) {
+    Collection *collection = &collection_ref;
     PointerRNA ptr = RNA_id_pointer_create(&collection->id);
     /* `collection["mixar_splat_world"]` is a custom property, and the
      * bracketed identifier is RNA's explicit ID-property lookup — a bare name
@@ -476,3 +482,5 @@ int agent_ui_generations_selected_index(const GenPaneData &data)
   }
   return -1;
 }
+
+}  // namespace blender

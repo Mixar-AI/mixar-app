@@ -27,14 +27,14 @@ CONSTANTS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/constants.py"
 
 
 def test_liveness_method_and_capability_declared():
-    constants = CONSTANTS.read_text()
+    constants = CONSTANTS.read_text(encoding="utf-8")
     assert 'BLENDER_LIVENESS = "blender.liveness"' in constants
-    client = CLIENT.read_text()
+    client = CLIENT.read_text(encoding="utf-8")
     assert '"liveness",' in client  # handshake capability
 
 
 def test_liveness_is_dispatched_and_answers_without_bpy_or_main_thread():
-    client = CLIENT.read_text()
+    client = CLIENT.read_text(encoding="utf-8")
     assert "elif method == JSONRPCMethod.BLENDER_LIVENESS:" in client
     assert "self._handle_liveness(request_id)" in client
     offset = client.index("def _handle_liveness")
@@ -47,7 +47,7 @@ def test_liveness_is_dispatched_and_answers_without_bpy_or_main_thread():
 
 
 def test_inflight_tracker_is_set_and_cleared_around_execute():
-    handlers = HANDLERS.read_text()
+    handlers = HANDLERS.read_text(encoding="utf-8")
     assert "def get_inflight_script" in handlers
     offset = handlers.index("def _process_one_request")
     block = handlers[offset:]

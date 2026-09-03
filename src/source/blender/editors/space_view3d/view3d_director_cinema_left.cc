@@ -7,7 +7,7 @@
  *
  * Cinema Mode: the left column — output settings, template styles, speed.
  *
- * Painting only — every control is an invisible uiBut over the painted
+ * Painting only — every control is an invisible ui::Button over the painted
  * pixels invoking a Python-owned `mixar.director_*` operator, or one of the
  * existing native Director popups.
  */
@@ -35,6 +35,9 @@
 #include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -48,7 +51,7 @@ const Camera *active_camera_data(const bContext *C)
   if (camera == nullptr || camera->type != OB_CAMERA) {
     return nullptr;
   }
-  return static_cast<const Camera *>(camera->data);
+  return id_cast<const Camera *>(camera->data);
 }
 
 void lens_label(const bContext *C, char *label, const int size)
@@ -145,12 +148,12 @@ void output_label(const bContext *C, char *label, const int size)
  * \{ */
 
 /** Labelled dropdown: grey caption, graded row, value, chevron. */
-void dropdown_row(uiBlock *block,
+void dropdown_row(ui::Block *block,
                   const ARegion *region,
                   const char *caption,
                   const char *value,
                   const float design_y,
-                  uiBlockCreateFunc popup,
+                  ui::BlockCreateFunc popup,
                   const char *tooltip,
                   const bool enabled)
 {
@@ -178,13 +181,13 @@ void dropdown_row(uiBlock *block,
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
   cinema_chevron(row.xmax - 20.0f * u, BLI_rctf_cent_y(&row), 10.0f * u, chevron);
 
-  uiBut *but = cinema_popup_button(block, popup, row, tooltip);
+  ui::Button *but = cinema_popup_button(block, popup, row, tooltip);
   director_overlay_disable_button(but, !enabled);
   cinema_qa_record(region, row, "director_dropdown", caption, -1);
 }
 
 /** One template-style row; the live one gets the graded chip. */
-void template_row(uiBlock *block,
+void template_row(ui::Block *block,
                   const bContext *C,
                   const ARegion *region,
                   const char *label,
@@ -212,11 +215,11 @@ void template_row(uiBlock *block,
                    active ? on : off);
 
   cinema_qa_record(region, row, "director_template", identifier, -1);
-  uiBut *but = cinema_op_button(
+  ui::Button *but = cinema_op_button(
       block, "MIXAR_OT_director_set_template", row, "Apply this camera template");
   if (but != nullptr) {
     RNA_enum_set_identifier(
-        const_cast<bContext *>(C), UI_but_operator_ptr_ensure(but), "template", identifier);
+        const_cast<bContext *>(C), ui::button_operator_ptr_ensure(but), "template", identifier);
     director_overlay_disable_button(but, !enabled);
   }
 }
@@ -229,7 +232,7 @@ void template_row(uiBlock *block,
 /** \name Left column
  * \{ */
 
-void cinema_draw_left_panel(uiBlock *block,
+void cinema_draw_left_panel(ui::Block *block,
                             const bContext *C,
                             const ARegion *region,
                             const DirectorViewState &state)
@@ -362,15 +365,14 @@ void cinema_draw_left_panel(uiBlock *block,
   /* The real control rides on top of the painted meter so dragging behaves
    * exactly like any Blender slider.
    *
-   * ButType::Scroll, not NumSlider: both drag through `ui_numedit_but_SLI`,
+   * ui::ButtonType::Scroll, not NumSlider: both drag through `ui_numedit_but_SLI`,
    * but only Num/NumSlider build a value string in `ui_but_update`, and an
    * Emboss::None button still draws its text — a "1.0" straight across the
    * design's tick meter. Scroll leaves `drawstr` empty. */
   if (state_ptr.data != nullptr) {
-    UI_block_emboss_set(block, blender::ui::EmbossType::None);
-    uiBut *slider = uiDefButR(block,
-                              ButType::Scroll,
-                              0,
+    ui::block_emboss_set(block, blender::ui::EmbossType::None);
+    ui::Button *slider = uiDefButR(block,
+                              ui::ButtonType::Scroll,
                               "",
                               int(meter.xmin),
                               int(meter.ymin),
@@ -382,10 +384,12 @@ void cinema_draw_left_panel(uiBlock *block,
                               0,
                               0,
                               "Time placed between captured keyframes");
-    UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+    ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
     director_overlay_disable_button(slider, !state.has_shot);
     cinema_qa_record(region, meter, "director_speed", "beat_seconds", -1);
   }
 }
 
 /** \} */
+
+}  // namespace blender

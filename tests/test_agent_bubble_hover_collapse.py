@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 
 CPP = Path(__file__).resolve().parents[1] / "src/source/blender/editors/space_agent_bubble"
-BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text()
+BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 
 
 def _hover_tick() -> str:
@@ -72,5 +72,5 @@ def test_the_bubbles_own_popups_still_freeze_it():
     """Dropdowns/menus/tooltips are regions on the bubble window's screen,
     not windows of their own; widening the guard must not drop them."""
     body = _hover_tick()
-    assert "win->ghostwin == g_bubble_ghostwin" in body
+    assert "win->runtime->ghostwin == g_bubble_ghostwin" in body
     assert "BLI_listbase_is_empty(&screen->regionbase)" in body

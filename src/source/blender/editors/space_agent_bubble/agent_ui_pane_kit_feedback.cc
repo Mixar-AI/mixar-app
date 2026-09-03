@@ -58,6 +58,9 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /**
@@ -76,7 +79,7 @@ void kit_read_string(PointerRNA *ptr, const char *name, char *r_buf, const int b
   char *value = RNA_property_string_get_alloc(ptr, prop, r_buf, buf_len, &len);
   if (value != r_buf) {
     BLI_strncpy(r_buf, value, size_t(buf_len));
-    MEM_freeN(value);
+    MEM_delete(value);
   }
   r_buf[buf_len - 1] = '\0';
 }
@@ -308,3 +311,5 @@ void pane_queue_label(char *out, const int out_maxncpy, const int active_jobs)
    * ticks down as jobs land, so the user can see their submit took. */
   BLI_snprintf(out, size_t(out_maxncpy), "Queued (%d)", active_jobs);
 }
+
+}  // namespace blender

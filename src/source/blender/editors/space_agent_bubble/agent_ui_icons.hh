@@ -16,6 +16,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct rctf;
 
 enum AgentIcon {
@@ -56,3 +59,5 @@ void agent_ui_icon_draw(AgentIcon icon,
                         const rctf *box,
                         const float color[4],
                         const float backdrop[4]);
+
+}  // namespace blender

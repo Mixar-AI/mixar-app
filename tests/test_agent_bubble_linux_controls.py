@@ -230,7 +230,7 @@ def _source(name):
     path = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "ui" / "operators" / name
     )
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def test_every_window_state_operator_polls_the_platform():
@@ -266,7 +266,7 @@ def test_the_platform_gate_is_an_allowlist():
     platform opts IN by having its window helpers written."""
     src = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "constants.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert 'sys.platform in {"darwin", "win32"}' in src
     assert CONST.BUBBLE_WINDOW_CONTROLS_SUPPORTED == (
         sys.platform in {"darwin", "win32"}

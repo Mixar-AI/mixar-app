@@ -47,6 +47,9 @@
 #include "agent_ui_tabsplat_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name State resolution
  * \{ */
@@ -223,7 +226,7 @@ int splat_enum_items_get(const bContext *C,
     count++;
   }
   if (free) {
-    MEM_freeN(const_cast<EnumPropertyItem *>(items));
+    MEM_delete(items);
   }
   return count;
 }
@@ -278,9 +281,9 @@ void agent_ui_tabsplat_draw(const bContext *C,
   GPU_blend(GPU_BLEND_NONE);
 
   /* ---- Controls ---- */
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island_splat", blender::ui::EmbossType::None);
-  uiBlock *field_block = UI_block_begin(
+  ui::Block *field_block = ui::block_begin(
       C, region, "agent_island_splat_field", blender::ui::EmbossType::Emboss);
 
   auto rect_args = [](const rctf &r, int *x, int *y, short *w, short *h) {
@@ -297,12 +300,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
   char data_path[256];
   for (int i = 0; i < mode_count && i < rects.mode_count; i++) {
     rect_args(rects.mode_seg[i], &bx, &by, &bw, &bh);
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, nullptr);
     if (but) {
       pane_but_tooltip_owned(but, mode_items[i].label);
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_mode", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);
       RNA_string_set(op_ptr, "value", mode_items[i].ident);
@@ -310,12 +313,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
   }
   for (int i = 0; i < lod_count && i < rects.lod_count; i++) {
     rect_args(rects.lod_seg[i], &bx, &by, &bw, &bh);
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, nullptr);
     if (but) {
       pane_but_tooltip_owned(but, lod_items[i].label);
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_lod", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);
       RNA_string_set(op_ptr, "value", lod_items[i].ident);
@@ -327,15 +330,15 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * catalog. */
   rect_args(rects.model_chip, &bx, &by, &bw, &bh);
   {
-    /* `wm.context_menu_enum`, NOT an RNA menu button: a ButType::Menu draws
+    /* `wm.context_menu_enum`, NOT an RNA menu button: a ui::ButtonType::Menu draws
      * Blender's own down-arrow over the chevron the chip already painted —
      * two arrows on one chip. The operator opens the same enum menu with no
      * chrome of its own. */
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, "Model");
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path",
                      "scene.mixie_moodboard_sidebar.tab_world_labs.model");
     }
@@ -349,7 +352,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
      * use_selected_image off, same as the N-panel). */
     if (splat_rect_is_live(rects.chip_upload)) {
       rect_args(rects.chip_upload, &bx, &by, &bw, &bh);
-      uiDefButO(block, ButType::But, "mixie.world_labs_pick_image",
+      uiDefButO(block, ui::ButtonType::But, "mixie.world_labs_pick_image",
                 blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                 "Upload an input image for world generation");
     }
@@ -357,7 +360,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     /* Capture Viewport -> tab.reference_image (use_selected_image off). */
     if (splat_rect_is_live(rects.chip_capture)) {
       rect_args(rects.chip_capture, &bx, &by, &bw, &bh);
-      uiDefButO(block, ButType::But, "mixar.pane_capture_viewport",
+      uiDefButO(block, ui::ButtonType::But, "mixar.pane_capture_viewport",
                 blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                 "Screenshot the 3D viewport as the input image");
     }
@@ -365,12 +368,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
     /* Moodboard-selection switch. */
     if (splat_rect_is_live(rects.moodboard_switch)) {
       rect_args(rects.moodboard_switch, &bx, &by, &bw, &bh);
-      uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              bx, by, bw, bh,
                              "Use the image selected on the moodboard");
       if (but) {
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr,
                        "data_path",
                        "scene.mixie_moodboard_sidebar.tab_world_labs.use_selected_image");
@@ -393,11 +396,11 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * catalog can disarm it. */
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
-    uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
                            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                            "Generate a 3D world from the prompt or input image");
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(state.tab.type));
     }
   }
@@ -406,25 +409,27 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * unembossed text button), bound to the tab's own prompt. */
   if (rects.prompt_ok && RNA_struct_find_property(&state.tab, "prompt")) {
     rect_args(rects.prompt_field, &bx, &by, &bw, &bh);
-    uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "", bx, by, bw, bh,
+    ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "", bx, by, bw, bh,
                                  &state.tab, "prompt", -1, 0.0f, 0.0f, nullptr);
     if (input_but) {
-      UI_but_placeholder_set(input_but,
+      ui::button_placeholder_set(input_but,
                              state.image_mode ? "Describe your scene here... (optional)" :
                                                 "Describe your scene here...");
-      UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       /* TEXTEDIT_UPDATE is not just Enter-to-submit parity — it is one of the
        * multiline text gates (ui_but_is_multiline_text): without it a tall
        * Text button vertically centres its content and draws a rect-height
        * caret (the "giant caret" bug). */
-      UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+      ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
     }
   }
 
-  UI_block_end(C, field_block);
-  UI_block_draw(C, field_block);
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
 
 /** \} */
+
+}  // namespace blender

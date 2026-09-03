@@ -20,6 +20,9 @@
 #include "agent_ui_layout.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Artboard -> region coordinates
  * \{ */
@@ -249,3 +252,4 @@ void agent_ui_layout_build(const int window_w,
 
 /** \} */
 
+}  // namespace blender

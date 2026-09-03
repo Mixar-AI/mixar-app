@@ -10,7 +10,7 @@ BAKING_DIR = ROOT / "src/source/blender/editors/space_baking"
 
 
 def test_baking_operators_use_image_names_not_id_pointer_properties():
-    sources = "\n".join(path.read_text() for path in BAKING_DIR.glob("baking_ops_*.cc"))
+    sources = "\n".join(path.read_text(encoding="utf-8") for path in BAKING_DIR.glob("baking_ops_*.cc"))
 
     assert "RNA_def_pointer_runtime" not in sources
     assert "RNA_pointer_get(op->ptr" not in sources
@@ -21,10 +21,10 @@ def test_baking_operators_use_image_names_not_id_pointer_properties():
 def test_python_baking_callers_pass_image_names():
     pixel_ops = (
         ROOT / "src/scripts/mixar/modules/paint/core/element/pixel_operations.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     embedded_tests = (
         ROOT / "src/scripts/mixar/modules/testing/test_baking_operators.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 
     assert "src_image=src.name" in pixel_ops
     assert "dest_image=dest.name" in pixel_ops

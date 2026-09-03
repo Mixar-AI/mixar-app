@@ -712,7 +712,7 @@ def test_progress_timer_notifies_only_on_change(queue, monkeypatch):
 
 
 def _nested_func(path, outer, inner):
-    tree = ast.parse(Path(path).read_text())
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == outer:
             for child in ast.walk(node):
@@ -760,7 +760,7 @@ def test_bg_download_reaches_the_main_thread_only_via_timers():
 
 
 def test_progress_timer_is_the_main_thread_refresh_path():
-    tree = ast.parse((_CORE / "queue_download.py").read_text())
+    tree = ast.parse((_CORE / "queue_download.py").read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) \
                 and node.name == "_start_download_progress_timer":

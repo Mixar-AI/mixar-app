@@ -23,10 +23,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
-DRAW_CC = (CPP / "agent_ui_draw.cc").read_text()
-LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text()
-THEME_HH = (CPP / "agent_ui_theme.hh").read_text()
-BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text()
+DRAW_CC = (CPP / "agent_ui_draw.cc").read_text(encoding="utf-8")
+LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
+THEME_HH = (CPP / "agent_ui_theme.hh").read_text(encoding="utf-8")
+BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 
 
 def _strip_comments(source: str) -> str:

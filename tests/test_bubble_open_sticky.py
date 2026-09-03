@@ -21,7 +21,7 @@ from pathlib import Path
 CC = (
     Path(__file__).resolve().parents[1]
     / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
-).read_text()
+).read_text(encoding="utf-8")
 
 
 def _hover_tick() -> str:

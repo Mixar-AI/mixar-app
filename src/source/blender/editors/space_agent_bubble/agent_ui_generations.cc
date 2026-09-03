@@ -48,6 +48,9 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /* -------------------------------------------------------------------- */
@@ -260,27 +263,27 @@ void agent_ui_generations_draw(const bContext *C,
   }
 
   /* ---- Controls: one unembossed block over the painted surface. ---- */
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island_generations", blender::ui::EmbossType::None);
 
   auto set_enum = [&](const rctf &r, const char *path, const char *value, const char *tip) {
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                            short(BLI_rctf_size_y(&r)), tip);
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", path);
       RNA_string_set(op_ptr, "value", value);
     }
   };
   auto set_string = [&](const rctf &r, const char *path, const char *value, const char *tip) {
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_string",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_string",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                            short(BLI_rctf_size_y(&r)), tip);
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", path);
       RNA_string_set(op_ptr, "value", value);
     }
@@ -290,12 +293,12 @@ void agent_ui_generations_draw(const bContext *C,
     if (BLI_rctf_size_x(&r) <= 0.0f) {
       return;
     }
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_int",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_int",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                            short(BLI_rctf_size_y(&r)), tip);
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", path);
       RNA_int_set(op_ptr, "value", value);
     }
@@ -325,7 +328,7 @@ void agent_ui_generations_draw(const bContext *C,
                "Show only this asset library");
   }
   if (BLI_rctf_size_x(&add_lib_rect) > 0.0f) {
-    uiDefButO(block, ButType::But, "mixar.generations_add_library",
+    uiDefButO(block, ui::ButtonType::But, "mixar.generations_add_library",
               blender::wm::OpCallContext::InvokeDefault, "",
               int(add_lib_rect.xmin), int(add_lib_rect.ymin),
               short(BLI_rctf_size_x(&add_lib_rect)), short(BLI_rctf_size_y(&add_lib_rect)),
@@ -337,14 +340,14 @@ void agent_ui_generations_draw(const bContext *C,
              "Filter the grid");
   }
   {
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_toggle_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(sort_rect.xmin), int(sort_rect.ymin),
                            short(BLI_rctf_size_x(&sort_rect)),
                            short(BLI_rctf_size_y(&sort_rect)),
                            "Newest first / oldest first");
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_sort");
       RNA_string_set(op_ptr, "value_1", "NEWEST");
       RNA_string_set(op_ptr, "value_2", "OLDEST");
@@ -365,8 +368,8 @@ void agent_ui_generations_draw(const bContext *C,
 
   GPU_blend(GPU_BLEND_NONE);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 
   /* Selection ring LAST: an asset tile is a preview button, so the block just
    * painted a thumbnail over the whole tile. A ring drawn before that keeps
@@ -377,9 +380,11 @@ void agent_ui_generations_draw(const bContext *C,
     rctf ring = selected_tile;
     BLI_rctf_pad(&ring, -w * 0.5f, -w * 0.5f);
     GPU_blend(GPU_BLEND_ALPHA);
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
-    UI_draw_roundbox_4fv_ex(
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv_ex(
         &ring, nullptr, nullptr, 1.0f, accent, w, (GEN_TILE_RADIUS * u) - w * 0.5f);
     GPU_blend(GPU_BLEND_NONE);
   }
 }
+
+}  // namespace blender

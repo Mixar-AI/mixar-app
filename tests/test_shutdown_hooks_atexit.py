@@ -31,7 +31,7 @@ def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
 
 class TestToastTimerAppExitGuard:
     def test_cleanup_accepts_app_exit(self):
-        tree = ast.parse(TOAST_TIMER.read_text())
+        tree = ast.parse(TOAST_TIMER.read_text(encoding="utf-8"))
         fn = _function(tree, "cleanup_toast_timer")
         assert "app_exit" in [a.arg for a in fn.args.args], (
             "cleanup_toast_timer must take app_exit so the atexit path can "
@@ -41,7 +41,7 @@ class TestToastTimerAppExitGuard:
     def test_rna_write_and_draw_handler_are_gated(self):
         """The WM flag write and draw-handler removal must sit under a
         `not app_exit` branch — both dereference freed data at atexit."""
-        tree = ast.parse(TOAST_TIMER.read_text())
+        tree = ast.parse(TOAST_TIMER.read_text(encoding="utf-8"))
         fn = _function(tree, "cleanup_toast_timer")
 
         guarded_calls = set()
@@ -69,7 +69,7 @@ class TestShutdownHooksPassReason:
     def test_atexit_reason_reaches_toast_cleanup(self):
         """_run_all_cleanups must forward app_exit=(reason == "atexit") to
         cleanup_toast_timer via _safe."""
-        tree = ast.parse(SHUTDOWN_HOOKS.read_text())
+        tree = ast.parse(SHUTDOWN_HOOKS.read_text(encoding="utf-8"))
         fn = _function(tree, "_run_all_cleanups")
 
         for node in ast.walk(fn):

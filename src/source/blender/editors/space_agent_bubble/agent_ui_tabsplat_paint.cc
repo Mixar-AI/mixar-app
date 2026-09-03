@@ -38,6 +38,9 @@
 #include "agent_ui_tabsplat_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* Painter primitives, the board-selection scan and the raw-ImBuf thumbnail
  * draw all come from the pane kit (`agent_ui_pane_kit.cc`) — the Media and 3D
  * panes preview their references the same way, and one definition keeps the
@@ -385,3 +388,5 @@ void splat_pane_paint(const bContext *C,
 }
 
 /** \} */
+
+}  // namespace blender

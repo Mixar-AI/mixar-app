@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 
 /**
@@ -23,3 +26,5 @@ struct ARegion;
  * therefore stand down rather than treat that press as its own.
  */
 bool UI_mixar_region_active_but_is_draggable(ARegion *region);
+
+}  // namespace blender

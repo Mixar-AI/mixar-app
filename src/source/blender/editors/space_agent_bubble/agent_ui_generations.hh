@@ -23,6 +23,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct rctf;
@@ -32,12 +35,14 @@ struct rctf;
  *
  * \param panel: the card panel rect in REGION pixel coordinates — the space
  * the island's uiBlocks use. Call from the WINDOW region's draw, NOT inside a
- * translated GPU matrix (a uiBlock captures the matrices at begin).
+ * translated GPU matrix (a ui::Block captures the matrices at begin).
  * \param u: island unit scale (window_native_w / AGENT_ISLAND_W).
  *
- * 3D tiles carry Blender's OWN asset drag (#UI_but_drag_set_asset), so
+ * 3D tiles carry Blender's OWN asset drag (#ui::button_drag_set_asset), so
  * dropping one in the viewport runs the View3D's existing asset dropbox with
  * asset-browser semantics — import method, undo push and placement included.
  * Nothing about the import is re-implemented here.
  */
 void agent_ui_generations_draw(const bContext *C, ARegion *region, const rctf &panel, float u);
+
+}  // namespace blender

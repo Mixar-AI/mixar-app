@@ -22,6 +22,9 @@
 
 #include "agent_ui_icons.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /** Monoline weight as a fraction of the glyph box, floored at one pixel. */
@@ -38,8 +41,8 @@ void box_fill(const float xmin,
               const float col[4])
 {
   const rctf rect = {xmin, xmax, ymin, ymax};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, rad, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, true, rad, col);
 }
 
 void box_outline(const float xmin,
@@ -50,8 +53,8 @@ void box_outline(const float xmin,
                  const float col[4])
 {
   const rctf rect = {xmin, xmax, ymin, ymax};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, false, rad, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, false, rad, col);
 }
 
 void rule(const float x0, const float x1, const float cy, const float w, const float col[4])
@@ -456,3 +459,5 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
   }
 }
+
+}  // namespace blender

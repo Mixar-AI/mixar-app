@@ -15,6 +15,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct rctf;
@@ -24,7 +27,7 @@ struct rctf;
  *
  * \param panel: the card panel rect in REGION pixel coordinates (the same
  * space the island's uiBlocks use — call where the composer controls are
- * built, NOT inside a translated GPU matrix; the uiBlock captures matrices
+ * built, NOT inside a translated GPU matrix; the ui::Block captures matrices
  * at begin).
  * \param u: island unit scale (window_native_w / AGENT_ISLAND_W).
  *
@@ -40,3 +43,5 @@ void agent_ui_tabsplat_draw(const bContext *C,
                             ARegion *region,
                             const rctf &panel,
                             float u);
+
+}  // namespace blender

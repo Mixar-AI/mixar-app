@@ -143,7 +143,7 @@ def test_scene_gen_lp_pins_hunyuan_topology_deliberately():
     """
     from mixar.modules.hunyuan.constants import RETOPOLOGY_HUNYUAN_MODEL
 
-    source = (_MODULES / "moodboard/core/generation_enqueue.py").read_text()
+    source = (_MODULES / "moodboard/core/generation_enqueue.py").read_text(encoding="utf-8")
     assert "RETOPOLOGY_HUNYUAN_MODEL" in source
     assert "catalog_default_model" not in source, (
         "Scene Gen LP must not resolve its engine from the catalog default"
@@ -212,6 +212,6 @@ def test_pr_adds_no_new_hardcoded_vendor_version_slugs():
         path.relative_to(_MODULES).as_posix()
         for path in _MODULES.rglob("*.py")
         if "__pycache__" not in path.parts
-        and "hunyuan_pro_v3.1" in path.read_text()
+        and "hunyuan_pro_v3.1" in path.read_text(encoding="utf-8")
     )
     assert offenders == ["moodboard/core/generation_enqueue.py"], offenders

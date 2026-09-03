@@ -20,9 +20,14 @@
 
 #include "agent_ui_pane_kit.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
-struct uiBlock;
+namespace ui {
+struct Block;
+}
 
 /* -------------------------------------------------------------------- */
 /** \name Design tokens (island units) — 3d.svg
@@ -61,8 +66,8 @@ struct uiBlock;
 float agent_ui_tab3d_params_draw(const bContext *C,
                                 PointerRNA *group_ptr,
                                 const char *group_path,
-                                uiBlock *chips_block,
-                                uiBlock *slider_block,
+                                ui::Block *chips_block,
+                                ui::Block *slider_block,
                                 float x0,
                                 float row_start_x,
                                 float y0_top,
@@ -71,3 +76,5 @@ float agent_ui_tab3d_params_draw(const bContext *C,
                                 float u);
 
 /** \} */
+
+}  // namespace blender

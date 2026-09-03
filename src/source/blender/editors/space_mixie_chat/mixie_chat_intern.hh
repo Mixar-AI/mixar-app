@@ -564,7 +564,7 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
 
 /* Chat click/ESC UI handler pair — exported so the Agent Bubble island region
  * can install the same handler stack as the chat editor's main region (with
- * its own uiBlock-first ordering). */
+ * its own ui::Block-first ordering). */
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
 void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
 bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event);

@@ -28,11 +28,11 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
-BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text()
-GEN_DATA_CC = (CPP / "agent_ui_generations_data.cc").read_text()
+BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
+GEN_DATA_CC = (CPP / "agent_ui_generations_data.cc").read_text(encoding="utf-8")
 HOVER_PY = (
     SCRIPTS / "mixar/modules/agent_bubble/ui/operators/hover_ops.py"
-).read_text()
+).read_text(encoding="utf-8")
 
 
 def _function_body(source: str, signature_start: str) -> str:

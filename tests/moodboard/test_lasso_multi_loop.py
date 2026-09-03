@@ -12,8 +12,8 @@ MOODBOARD = ROOT / "src/scripts/mixar/modules/moodboard"
 
 
 def test_lasso_pipeline_submits_loops_sequentially_and_adds_each_result():
-    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
-    mask_tool = (MOODBOARD / "ui/operators/moodboard_mask_ops.py").read_text()
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text(encoding="utf-8")
+    mask_tool = (MOODBOARD / "ui/operators/moodboard_mask_ops.py").read_text(encoding="utf-8")
 
     assert "lasso_loops" in source
     assert "_perform_mask_segmentations" in source
@@ -24,8 +24,8 @@ def test_lasso_pipeline_submits_loops_sequentially_and_adds_each_result():
 
 
 def test_lasso_segments_keep_the_source_image_visible():
-    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
-    overlay = (MOODBOARD / "core/segment_overlay.py").read_text()
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text(encoding="utf-8")
+    overlay = (MOODBOARD / "core/segment_overlay.py").read_text(encoding="utf-8")
 
     assert "segment.show_overlay = True" in source
     assert "segment.outline_only = True" in source
@@ -36,8 +36,8 @@ def test_lasso_segments_keep_the_source_image_visible():
 
 
 def test_debug_mode_adds_raw_sam3_mask_preview():
-    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text()
-    debug = (MOODBOARD / "core/component_debug.py").read_text()
+    source = (MOODBOARD / "ui/operators/lasso_select_sam_ops.py").read_text(encoding="utf-8")
+    debug = (MOODBOARD / "core/component_debug.py").read_text(encoding="utf-8")
 
     assert "add_sam3_mask_preview" in source
     assert 'config.get("log_level", "INFO")' in debug
@@ -46,7 +46,7 @@ def test_debug_mode_adds_raw_sam3_mask_preview():
 
 def test_debug_preview_snapshots_source_before_collection_growth():
     """Never dereference a CollectionProperty item after adding a sibling."""
-    debug = (MOODBOARD / "core/component_debug.py").read_text()
+    debug = (MOODBOARD / "core/component_debug.py").read_text(encoding="utf-8")
     add_index = debug.index("preview = scene.mixie_moodboard_images.add()")
     before_add = debug[:add_index]
     after_add = debug[add_index:debug.index("return preview", add_index)]

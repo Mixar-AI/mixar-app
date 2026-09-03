@@ -50,6 +50,9 @@
 #include "agent_ui_tab3d_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
 
 namespace {
@@ -201,7 +204,7 @@ bool state_gather(const bContext *C, Tab3DState *st)
 /** Dropdown chip: painted pill + current label + chevron, opening the stock
  * enum menu for \a data_path on click. Returns the chip's advance width. */
 float dropdown_chip(const bContext *C,
-                    uiBlock *block,
+                    ui::Block *block,
                     const ARegion *region,
                     const char *label_in,
                     const char *data_path,
@@ -219,12 +222,12 @@ float dropdown_chip(const bContext *C,
   const rctf rect = {x, x + w, y_top - PANE_ROW_H * u, y_top};
   pane_dropdown_chip_paint(rect, label, u);
 
-  uiBut *but = uiDefButO(block, ButType::But, "wm.context_menu_enum",
+  ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
                          blender::wm::OpCallContext::InvokeDefault, "",
                          int(rect.xmin), int(rect.ymin), short(w),
                          short(PANE_ROW_H * u), tip);
   if (but) {
-    PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+    PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", data_path);
   }
   return w + PANE_CHIP_GAP * u;
@@ -247,7 +250,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Blocks: chips (unembossed ops) + field/sliders (embossed).
    *
    * ORDER IS A CONTRACT, and it is the opposite of what it looks like.
-   * `UI_block_region_set` does `BLI_addhead`, so the region's list runs
+   * `ui::block_region_set` does `BLI_addhead`, so the region's list runs
    * newest-first, and `ui_but_find_mouse_over_ex` walks that list WITHOUT
    * breaking on a hit — every later block overwrites the candidate. The last
    * one walked, and so the winner, is the block created FIRST. The chips sit
@@ -255,9 +258,9 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
    * OPS block must be begun first or clicking Generate / Upload Reference
    * just puts the caret in the prompt. Media and Splat already do this; 3D
    * had the two swapped, which is exactly how it read in the app. */
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island_3d", blender::ui::EmbossType::None);
-  uiBlock *field_block = UI_block_begin(
+  ui::Block *field_block = ui::block_begin(
       C, region, "agent_island_3d_field", blender::ui::EmbossType::Emboss);
 
   /* --- Params strip: Mode + Model dropdowns, then the schema params. --- */
@@ -304,14 +307,14 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
       /* The kit's top strip: ghost text and caret at text scale, never a
        * box-height caret, never a collision with the bottom chips. */
       const rctf field = pane_prompt_field_rect(box, u);
-      uiBut *input = uiDefButR(field_block, ButType::Text, 0, "",
+      ui::Button *input = uiDefButR(field_block, ui::ButtonType::Text, "",
                                int(field.xmin), int(field.ymin),
                                short(BLI_rctf_size_x(&field)), short(BLI_rctf_size_y(&field)),
                                &st.tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
       if (input) {
-        UI_but_placeholder_set(input, "Describe your scene here...");
-        UI_but_flag2_enable(input, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
-        UI_but_flag_enable(input, UI_BUT_TEXTEDIT_UPDATE);
+        ui::button_placeholder_set(input, "Describe your scene here...");
+        ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+        ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
       }
     }
   }
@@ -319,8 +322,8 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Field chrome must be on screen BEFORE the bottom row is painted — the
    * embossed field spans the whole box, and painting the chips first left
    * them underneath its fill (invisible chips, working ghosts). */
-  UI_block_end(C, field_block);
-  UI_block_draw(C, field_block);
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
 
   /* Newest operator report, in the gap above the box — the island window has
    * no status bar, so a refusal like "No image selected in moodboard" would
@@ -342,7 +345,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
     rect.ymax = chip_y0 + PANE_ROW_H * u;
     pane_action_chip_paint(rect, label, true, false, u);
 
-    uiDefButO(block, ButType::But, "mixie.image_to_3d_pick_image",
+    uiDefButO(block, ui::ButtonType::But, "mixie.image_to_3d_pick_image",
               blender::wm::OpCallContext::InvokeDefault, "",
               int(rect.xmin), int(rect.ymin),
               short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
@@ -386,13 +389,13 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
     pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs);
     pane_generate_paint(rect, gen_label, armed, u);
     if (armed) {
-      uiBut *but = uiDefButO(block, ButType::But, "mixie.moodboard_prompt_generate",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              int(rect.xmin), int(rect.ymin),
                              short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
                              "Generate a 3D model with the selected mode and model");
       if (but) {
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(st.tab_ptr.type));
       }
     }
@@ -400,6 +403,8 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   GPU_blend(GPU_BLEND_NONE);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
+
+}  // namespace blender

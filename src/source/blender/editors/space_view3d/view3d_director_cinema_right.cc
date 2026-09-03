@@ -35,6 +35,9 @@
 #include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 constexpr float VIEWPORT_TOP = 85.0f;
@@ -59,7 +62,7 @@ rctf design_rect_right(const ARegion *region,
 }
 
 /** Three-way segmented row: graded track, chip behind the live choice. */
-void segment_row(uiBlock *block,
+void segment_row(ui::Block *block,
                  const ARegion *region,
                  const float design_y,
                  const char *const labels[3],
@@ -100,9 +103,9 @@ void segment_row(uiBlock *block,
                        index == active_index ? on : off);
 
     cinema_qa_record(region, cell, surface, labels[index], index);
-    uiBut *but = cinema_op_button(block, operator_id, cell, tooltip);
+    ui::Button *but = cinema_op_button(block, operator_id, cell, tooltip);
     if (but != nullptr) {
-      PointerRNA *ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(ptr, "data_path", property);
       RNA_int_set(ptr, "value", values[index]);
       director_overlay_disable_button(but, !enabled);
@@ -112,7 +115,7 @@ void segment_row(uiBlock *block,
 
 }  // namespace
 
-void cinema_draw_right_panel(uiBlock *block,
+void cinema_draw_right_panel(ui::Block *block,
                              const bContext *C,
                              const ARegion *region,
                              const DirectorViewState &state)
@@ -217,10 +220,10 @@ void cinema_draw_right_panel(uiBlock *block,
                      CINEMA_FONT_VALUE * u,
                      active ? value_col : dim_col);
     cinema_qa_record(region, row, "director_camera", name, index);
-    uiBut *but = cinema_op_button(
+    ui::Button *but = cinema_op_button(
         block, "MIXAR_OT_director_set_active_shot", row, "Direct this camera");
     if (but != nullptr) {
-      RNA_int_set(UI_but_operator_ptr_ensure(but), "index", index);
+      RNA_int_set(ui::button_operator_ptr_ensure(but), "index", index);
     }
   }
   if (shot_count == 0) {
@@ -332,11 +335,11 @@ void cinema_draw_right_panel(uiBlock *block,
                          CINEMA_FONT_VALUE * u,
                          index == res_active ? on : off);
       cinema_qa_record(region, cell, "director_resolution", identifiers[index], index);
-      uiBut *but = cinema_op_button(
+      ui::Button *but = cinema_op_button(
           block, "MIXAR_OT_director_set_resolution", cell, "Set the output resolution");
       if (but != nullptr) {
         RNA_enum_set_identifier(
-            const_cast<bContext *>(C), UI_but_operator_ptr_ensure(but), "preset", identifiers[index]);
+            const_cast<bContext *>(C), ui::button_operator_ptr_ensure(but), "preset", identifiers[index]);
         director_overlay_disable_button(but, !state.has_shot);
       }
     }
@@ -354,10 +357,12 @@ void cinema_draw_right_panel(uiBlock *block,
                      BLI_rctf_cent_y(&export_rect),
                      16.0f * u,
                      export_text);
-  uiBut *export_but = cinema_popup_button(block,
+  ui::Button *export_but = cinema_popup_button(block,
                                           view3d_director_render_popup_create,
                                           export_rect,
                                           "Export keyframes and rendered guides to the Moodboard");
   director_overlay_disable_button(export_but, !can_export);
   cinema_qa_record(region, export_rect, "director_export", "export", -1);
 }
+
+}  // namespace blender

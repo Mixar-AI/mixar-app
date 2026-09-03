@@ -39,8 +39,8 @@ namespace blender {
 
 namespace {
 
-/* `uiBut::tip` is a NON-owning StringRef, so handing it an entry of an
- * `EnumPropertyItem` array this file is about to `MEM_freeN` leaves the button
+/* `ui::Button::tip` is a NON-owning StringRef, so handing it an entry of an
+ * `EnumPropertyItem` array this file is about to free leaves the button
  * pointing at freed memory — an undefined tooltip on hover, and freed bytes in
  * the QA introspection dump. The callback form owns its argument. */
 std::string director_tooltip_owned_fn(bContext * /*C*/,
@@ -50,15 +50,15 @@ std::string director_tooltip_owned_fn(bContext * /*C*/,
   return std::string(static_cast<const char *>(argN));
 }
 
-void director_but_tooltip_owned(uiBut *but, const char *text)
+void director_but_tooltip_owned(ui::Button *but, const char *text)
 {
   if (but == nullptr || text == nullptr || text[0] == '\0') {
     return;
   }
   const size_t size = strlen(text) + 1;
-  char *owned = static_cast<char *>(MEM_mallocN(size, __func__));
+  char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
   memcpy(owned, text, size);
-  UI_but_func_tooltip_set(but, director_tooltip_owned_fn, owned, MEM_freeN);
+  ui::button_func_tooltip_set(but, director_tooltip_owned_fn, owned, MEM_delete_void);
 }
 
 

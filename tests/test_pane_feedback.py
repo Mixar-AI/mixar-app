@@ -35,15 +35,15 @@ PY = ROOT / "src/scripts/mixar/modules"
 if str(ROOT / "src/scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "src/scripts"))
 
-FEEDBACK = (CPP / "agent_ui_pane_kit_feedback.cc").read_text()
-KIT_HH = (CPP / "agent_ui_pane_kit.hh").read_text()
-QUEUE_CC = (CPP / "agent_ui_queue.cc").read_text()
-CMAKE = (CPP / "CMakeLists.txt").read_text()
+FEEDBACK = (CPP / "agent_ui_pane_kit_feedback.cc").read_text(encoding="utf-8")
+KIT_HH = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
+QUEUE_CC = (CPP / "agent_ui_queue.cc").read_text(encoding="utf-8")
+CMAKE = (CPP / "CMakeLists.txt").read_text(encoding="utf-8")
 
 CHANNEL_PY = PY / "agent_bubble/ui/properties/pane_message_props.py"
 DISPATCH_PY = PY / "moodboard/ui/operators/prompt_generate_ops.py"
-CHANNEL_SRC = CHANNEL_PY.read_text()
-DISPATCH_SRC = DISPATCH_PY.read_text()
+CHANNEL_SRC = CHANNEL_PY.read_text(encoding="utf-8")
+DISPATCH_SRC = DISPATCH_PY.read_text(encoding="utf-8")
 
 #: The one channel, named in both languages.
 CHANNEL_PROPS = (
@@ -60,7 +60,7 @@ from mixar.modules.agent_bubble.ui.properties import (  # noqa: E402
 # split (state/controls vs geometry/painting), so both halves count as "the
 # Splat pane" for these contracts.
 PANE_SOURCES = {
-    name: (CPP / name).read_text()
+    name: (CPP / name).read_text(encoding="utf-8")
     for name in (
         "agent_ui_tab3d.cc",
         "agent_ui_tabmedia.cc",
@@ -127,7 +127,7 @@ def test_the_queue_count_helper_has_exactly_one_definition():
     definitions = [
         path.name
         for path in CPP.glob("*.cc")
-        if re.search(r"^int pane_active_job_count\(", path.read_text(), re.M)
+        if re.search(r"^int pane_active_job_count\(", path.read_text(encoding="utf-8"), re.M)
     ]
     assert definitions == ["agent_ui_pane_kit_feedback.cc"], definitions
     assert "int pane_active_job_count(" in KIT_HH, "helper is not in the kit header"
@@ -239,7 +239,7 @@ def test_the_report_painter_has_exactly_one_definition():
     definitions = [
         path.name
         for path in CPP.glob("*.cc")
-        if re.search(r"^bool pane_report_line_draw\(", path.read_text(), re.M)
+        if re.search(r"^bool pane_report_line_draw\(", path.read_text(encoding="utf-8"), re.M)
     ]
     assert definitions == ["agent_ui_pane_kit_feedback.cc"], definitions
     assert "bool pane_report_line_draw(" in KIT_HH
@@ -271,7 +271,7 @@ def test_the_global_report_channel_is_gone_from_the_rna_overlay():
     """Deleted, not merely unused — an unused surface invites a rewiring."""
     rna = (
         ROOT / "src/source/blender/makesrna/intern/rna_wm_mixar.cc"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     body = rna[rna.index("#include"):]
     for banned in ("mixar_last_report", "mixar_report_count"):
         assert banned not in body, (
@@ -493,14 +493,14 @@ def test_the_channel_has_exactly_one_writer():
     definitions = [
         path.name
         for path in PY.rglob("*.py")
-        if re.search(r"^def set_pane_message\(", path.read_text(), re.M)
+        if re.search(r"^def set_pane_message\(", path.read_text(encoding="utf-8"), re.M)
     ]
     assert definitions == ["pane_message_props.py"], definitions
 
     for path in PY.rglob("*.py"):
         if path == CHANNEL_PY:
             continue
-        source = path.read_text()
+        source = path.read_text(encoding="utf-8")
         for prop in CHANNEL_PROPS:
             assert f".{prop} =" not in source, (
                 f"{path.name} assigns {prop} directly instead of calling "
@@ -686,7 +686,7 @@ def test_no_owned_pane_source_crosses_the_500_line_rule():
         "agent_ui_tabsplat.cc",
         "agent_ui_tabsplat_paint.cc",
     ):
-        lines = len((CPP / name).read_text().splitlines())
+        lines = len((CPP / name).read_text(encoding="utf-8").splitlines())
         assert lines <= 500, f"{name} is {lines} lines"
 
 
@@ -701,7 +701,7 @@ def _pane(name: str) -> str:
         Path(__file__).resolve().parents[1]
         / "src/source/blender/editors/space_agent_bubble"
         / name
-    ).read_text()
+    ).read_text(encoding="utf-8")
 
 
 def test_a_queued_job_does_not_disarm_generate():

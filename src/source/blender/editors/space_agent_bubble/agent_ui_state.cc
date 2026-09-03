@@ -42,6 +42,9 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_layout.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy)
@@ -57,7 +60,7 @@ void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int ou
   if (value) {
     BLI_strncpy(out, value, out_maxncpy);
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete(value);
     }
   }
 }
@@ -274,3 +277,5 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     }
   }
 }
+
+}  // namespace blender

@@ -259,7 +259,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * The Agent Bubble's WINDOW region is SHARED: the transcript draws there on
  * the Agent tab, while the 3D / Media / Splat / Generations / Queue panes build
  * their uiBlocks into the very same region. This handler is registered so it
- * sees LEFTMOUSE ahead of the uiBlock handler (mixie_chat_main_region_init) —
+ * sees LEFTMOUSE ahead of the ui::Block handler (mixie_chat_main_region_init) —
  * exactly the overlap that comment warns about. On a pane tab it would dispatch
  * message rects left over from the last Agent-tab draw and BREAK the event
  * before the pane's own button ran. SPACE_MIXIE_CHAT is never tab-switched.

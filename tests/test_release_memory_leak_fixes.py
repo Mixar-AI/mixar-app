@@ -11,7 +11,7 @@ SRC = ROOT / "src" / "scripts" / "mixar" / "modules"
 
 
 def read_src(relative_path: str) -> str:
-    return (SRC / relative_path).read_text()
+    return (SRC / relative_path).read_text(encoding="utf-8")
 
 
 def test_uv_editor_unregister_uses_timer_is_registered():

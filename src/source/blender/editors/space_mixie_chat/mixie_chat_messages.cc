@@ -201,7 +201,7 @@ void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region)
   }
   /* view2d_masks() rebuilds v2d->mask from winx/winy at the region ORIGIN
    * after every scroll/validate, losing the band's offset. Event-time
-   * consumers (uiBut hit-testing via ui_region_contains_point_px, the chat
+   * consumers (ui::Button hit-testing via ui_region_contains_point_px, the chat
    * click handlers' region_to_view transforms, the View2D keymap's mask
    * gate) all read the stored mask, so it must be pinned back to the band
    * before they run — the island registers this in a UI handler that
@@ -231,7 +231,7 @@ static void mixie_chat_region_set_view2d(MixieChatRuntime *rt,
   int winy = BLI_rcti_size_y(&region->winrct) + 1;
 
   /* With a view band, cur/mask/scroll clamps size to the band; the region
-   * dimensions only bound the mask. UI_view2d_view_ortho maps cur onto the
+   * dimensions only bound the mask. ui::view2d_view_ortho maps cur onto the
    * mask sub-rect, which is exactly the "message view occupies part of the
    * region" behaviour the Agent Bubble island needs. */
   rcti mask;
@@ -250,7 +250,7 @@ static void mixie_chat_region_set_view2d(MixieChatRuntime *rt,
   }
 
   /* Re-snap whenever cur's height drifts from the view height, not only on
-   * view-size changes: region re-init (UI_view2d_region_reinit) and validate
+   * view-size changes: region re-init (ui::view2d_region_reinit) and validate
    * calls from View2D operators can hand back a cur sized to the REGION while
    * the band mask is smaller — zoom is locked 1:1, so cur must always match
    * the mask height exactly or content draws scaled and scroll clamps act on

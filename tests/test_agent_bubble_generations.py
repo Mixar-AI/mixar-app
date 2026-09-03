@@ -45,17 +45,17 @@ install_bpy_mock()
 from mixar.modules.agent_bubble.ui.properties import bubble_tab_props, generations_props
 
 CPP = ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
-DATA_CC = (CPP / "agent_ui_generations_data.cc").read_text()
-PANE_CC = (CPP / "agent_ui_generations.cc").read_text()
-GRID_CC = (CPP / "agent_ui_generations_grid.cc").read_text()
-DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text()
+DATA_CC = (CPP / "agent_ui_generations_data.cc").read_text(encoding="utf-8")
+PANE_CC = (CPP / "agent_ui_generations.cc").read_text(encoding="utf-8")
+GRID_CC = (CPP / "agent_ui_generations_grid.cc").read_text(encoding="utf-8")
+DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 #: The pane is five translation units; a name may live in any of them.
 ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC
-INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text()
-ICONS_HH = (CPP / "agent_ui_icons.hh").read_text()
-DRAW_CC = (CPP / "agent_ui_draw.cc").read_text()
-SPACE_CC = (CPP / "space_agent_bubble.cc").read_text()
-CMAKE = (CPP / "CMakeLists.txt").read_text()
+INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
+ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
+DRAW_CC = (CPP / "agent_ui_draw.cc").read_text(encoding="utf-8")
+SPACE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
+CMAKE = (CPP / "CMakeLists.txt").read_text(encoding="utf-8")
 
 
 def _load_ops_module():
@@ -137,7 +137,7 @@ def test_the_property_list_matches_what_is_registered():
     src = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "ui" / "properties" /
         "generations_props.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assigned = set(re.findall(r"wm\.(mixar_generations_\w+) =", src))
     assert assigned == set(generations_props.PROP_NAMES)
 
@@ -323,7 +323,7 @@ def test_only_assets_are_draggable():
     """Blender's asset drag is attached to the tile button, and only for an
     asset: a still has no meaning as a 3D drop, and a drag that lands on
     nothing is worse than no drag at all."""
-    call = re.search(r"UI_but_drag_set_asset\((.*?)\);", GRID_CC, re.S)
+    call = re.search(r"button_drag_set_asset\((.*?)\);", GRID_CC, re.S)
     assert call, "the grid no longer offers Blender's own asset drag"
     guard = re.search(
         r"if \(but && item\.kind == GEN_ITEM_ASSET && item\.asset\)", GRID_CC
@@ -362,7 +362,7 @@ def test_the_build_knows_about_the_pane():
 LIB_OPS_SRC = (
     SCRIPTS / "mixar" / "modules" / "agent_bubble" / "ui" / "operators" /
     "generations_ops.py"
-).read_text()
+).read_text(encoding="utf-8")
 
 
 def test_the_library_add_delegates_to_blenders_own_operator():
@@ -387,7 +387,7 @@ def test_connecting_a_folder_twice_does_not_add_it_twice(monkeypatch):
     calls = []
     monkeypatch.setattr(
         OPS, "_registered_library_paths",
-        lambda: {OPS.os.path.normcase("/tmp/assets"): "My Assets"},
+        lambda: {OPS.os.path.normcase(OPS.os.path.abspath("/tmp/assets")): "My Assets"},
     )
     monkeypatch.setattr(OPS.os.path, "isdir", lambda _p: True)
     monkeypatch.setattr(OPS.bpy.path, "abspath", lambda p: p)
@@ -445,7 +445,7 @@ def test_the_pane_stays_inside_the_five_hundred_line_rule():
     """No file over 500 lines — the repo's rule, and the reason the pane is
     five translation units rather than one."""
     for path in sorted(CPP.glob("agent_ui_generations*")):
-        assert len(path.read_text().splitlines()) <= 500, path.name
+        assert len(path.read_text(encoding="utf-8").splitlines()) <= 500, path.name
 
 
 # ---------------------------------------------------------------------------
@@ -453,35 +453,35 @@ def test_the_pane_stays_inside_the_five_hundred_line_rule():
 # ---------------------------------------------------------------------------
 
 
-READ_CC = (CPP / "agent_ui_generations_read.cc").read_text()
-ICONS_CC = (CPP / "agent_ui_icons.cc").read_text()
+READ_CC = (CPP / "agent_ui_generations_read.cc").read_text(encoding="utf-8")
+ICONS_CC = (CPP / "agent_ui_icons.cc").read_text(encoding="utf-8")
 GEN_LIB_SRC = (
     SCRIPTS / "mixar" / "modules" / "asset_search" / "core" /
     "generation_library.py"
-).read_text()
+).read_text(encoding="utf-8")
 
 
 def test_an_asset_tile_is_a_preview_tile_button():
-    """`ButType::But` cannot be dragged, and says nothing about it.
+    """`ButtonType::But` cannot be dragged, and says nothing about it.
 
     Blender's drag-start lives in `ui_do_but_EXIT`, and only the
-    preview-tile/label family routes there; `ButType::But` goes to
+    preview-tile/label family routes there; `ButtonType::But` goes to
     `ui_do_but_BUT`, which never checks `ui_but_drag_is_draggable`. The drag
     data was attached and simply unreachable — the tile clicked, and dragging
     it did nothing at all, with no error anywhere.
     """
     call = re.search(
-        r"uiDefIconPreviewBut\(block,\s*(ButType::\w+)", GRID_CC
+        r"uiDefIconPreviewBut\(block,\s*(?:ui::)?(ButtonType::\w+)", GRID_CC
     )
-    assert call and call.group(1) == "ButType::PreviewTile", (
-        "asset tiles must be ButType::PreviewTile or they cannot be dragged"
+    assert call and call.group(1) == "ButtonType::PreviewTile", (
+        "asset tiles must be ButtonType::PreviewTile or they cannot be dragged"
     )
 
 
 def test_the_tile_operator_survives_the_preview_button():
     """A preview-tile button carries no operator of its own, so the click
     action has to be attached afterwards (the asset shelf's pattern)."""
-    assert "UI_but_operator_set(but" in GRID_CC
+    assert "button_operator_set(but" in GRID_CC
     assert 'WM_operatortype_find("wm.context_set_string"' in GRID_CC
 
 
@@ -548,7 +548,7 @@ def test_the_preview_icon_id_is_never_gated_on_having_pixels():
     Blender's own Asset Browser showed the same file's thumbnail fine.
     """
     block = _tile_button_block()
-    assert "ensure_previewable()" in block
+    assert "ensure_previewable(" in block
     assert "asset_preview_icon_id" in block
     # The gate must not reappear on the path that decides the icon id.
     assert "agent_ui_generations_asset_has_preview" not in block
@@ -558,7 +558,7 @@ def test_the_preview_request_precedes_the_icon_read():
     """`ensure_previewable` is what mints the icon id; reading it first
     yields ICON_NONE and the tile never asks for its preview again."""
     block = _tile_button_block()
-    assert block.index("ensure_previewable()") < block.index("asset_preview_icon_id")
+    assert block.index("ensure_previewable(") < block.index("asset_preview_icon_id")
 
 
 def test_no_debug_printing_survived():

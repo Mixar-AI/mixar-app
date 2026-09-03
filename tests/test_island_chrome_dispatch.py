@@ -7,8 +7,8 @@
 The Agent Bubble reuses the chat editor's own ``mixie_chat_main_region_init``,
 which registers the chat's UI handler AFTER ``UI_region_handlers_add`` — both
 prepend, so the chat handler gets first look at every LEFTMOUSE press, ahead of
-the buttons. That was safe only while no chat hit-target overlapped a uiBlock
-button. The five non-Agent panes build their uiBlocks into that same region, so
+the buttons. That was safe only while no chat hit-target overlapped a ui::Block
+button. The five non-Agent panes build their ui::Blocks into that same region, so
 the overlap is now total: a click landing where a message's copy chip was last
 drawn copied that message and returned ``WM_UI_HANDLER_BREAK``, and the pane
 control under the cursor never fired.
@@ -27,10 +27,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUBBLE_CC = (
     ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
-).read_text()
+).read_text(encoding="utf-8")
 MAIN_REGION_CC = (
     ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_main_region.cc"
-).read_text()
+).read_text(encoding="utf-8")
 
 
 def _function_body(source: str, signature_start: str) -> str:

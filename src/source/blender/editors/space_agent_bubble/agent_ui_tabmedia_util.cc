@@ -30,6 +30,9 @@
 #include "agent_ui_tabmedia_intern.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 
 
 /* -------------------------------------------------------------------- */
@@ -286,4 +289,4 @@ int media_collect_reference_images(const bContext *C,
 
 /** \} */
 
-
+}  // namespace blender

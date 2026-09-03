@@ -276,7 +276,7 @@ void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
  * ever a cost, never a loss. */
 void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
 
-/* interface_mixar_drag_query.cc — uiBut is private to the interface module,
+/* interface_mixar_drag_query.cc — ui::Button is private to the interface module,
  * so the "is this press already owned by a button waiting to drag?" question
  * has to be asked over there. Declared here rather than included: the header
  * lives inside editors/interface. */
@@ -350,7 +350,7 @@ void mixie_chat_clear_bg_override();
 /**
  * Transparent Blender buttons laid over the painted island.
  *
- * Deliberately real `uiBut`s rather than a bespoke click operator: that way
+ * Deliberately real `ui::Button`s rather than a bespoke click operator: that way
  * typing, the caret, selection, IME, hover, tooltips and Enter-to-send are all
  * Blender's existing machinery, and every control invokes an operator the chat
  * already owns. Nothing here implements behaviour — it only positions.
@@ -362,10 +362,10 @@ void mixie_chat_clear_bg_override();
  * Region init for the island.
  *
  * Deliberately NOT mixie_chat_main_region_init. That one installs the chat's
- * own click dispatch ahead of Blender's uiBlock handler, and its comment says
- * exactly what that costs: "if a chat hit-target ever overlaps a uiBlock
+ * own click dispatch ahead of Blender's ui::Block handler, and its comment says
+ * exactly what that costs: "if a chat hit-target ever overlaps a ui::Block
  * button, the click will be stolen from the button". The island is nothing but
- * uiBlock buttons over a painted surface, so it takes the uiBlock handler and
+ * ui::Block buttons over a painted surface, so it takes the ui::Block handler and
  * nothing else — no chat hit dispatch, no "Mixie Chat" selection keymap, no
  * View2D (the island does not scroll).
  */
@@ -393,7 +393,7 @@ static void agent_bubble_island_controls_header(const bContext *C,
                                                 const AgentIslandLayout *layout,
                                                 const AgentIslandState *state)
 {
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island_hdr", blender::ui::EmbossType::None);
   int bx, by;
   short bw, bh;
@@ -416,11 +416,11 @@ static void agent_bubble_island_controls_header(const bContext *C,
   };
   for (const auto &tb : tab_buttons) {
     agent_bubble_rect_to_region(region, layout->tabs[tb.tab].pill, &bx, &by, &bw, &bh);
-    uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, tb.tip);
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
       RNA_string_set(op_ptr, "value", tb.value);
     }
@@ -428,16 +428,16 @@ static void agent_bubble_island_controls_header(const bContext *C,
 
   if (state->active_tab == AGENT_TAB_AGENT) {
     agent_bubble_rect_to_region(region, layout->hdr_history, &bx, &by, &bw, &bh);
-    uiDefButO(block, ButType::But, "mixie_chat.show_history",
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_history",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               "Chat history");
     agent_bubble_rect_to_region(region, layout->hdr_new_chat, &bx, &by, &bw, &bh);
-    uiDefButO(block, ButType::But, "mixie_chat.new_session",
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.new_session",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               "New chat");
   }
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
 
 static void agent_bubble_island_controls_bottom(const bContext *C,
@@ -451,9 +451,9 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   }
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
 
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "agent_island", blender::ui::EmbossType::None);
-  uiBlock *field_block = UI_block_begin(
+  ui::Block *field_block = ui::block_begin(
       C, region, "agent_island_field", blender::ui::EmbossType::Emboss);
 
   int bx, by;
@@ -461,7 +461,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
 
   /* --- Prompt field ---
    * Bound to the same scene.mixie_chat_input the chat footer uses, with the
-   * same UI_BUT_TEXTEDIT_UPDATE flag — that is what makes Enter submit, via
+   * same ui::BUT_TEXTEDIT_UPDATE flag — that is what makes Enter submit, via
    * the property's own update callback. */
   /* In the empty state the WINDOW region hosts the whole-panel field; the
    * strip here would be a second box for the same property. */
@@ -470,13 +470,13 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                                 nullptr;
   if (input_prop) {
     /* Clamp the field to its region. The panel can be taller than the slab
-     * (Blender reserves a minimum for the main region), and a uiBut whose rect
+     * (Blender reserves a minimum for the main region), and a ui::Button whose rect
      * runs past its region does not simply get cropped — it stops drawing its
      * text at all, which is what made the ghost text and typing invisible. */
     agent_bubble_rect_to_region(region, layout->input, &bx, &by, &bw, &bh);
     /* Clamp to this region — the empty-state field spans the whole panel,
      * whose top edge lies a min-height sliver above the TOOLS region, and a
-     * uiBut poking past its region stops drawing its text entirely. */
+     * ui::Button poking past its region stops drawing its text entirely. */
     {
       const int region_h = BLI_rcti_size_y(&region->winrct) + 1;
       if (by < 0) {
@@ -487,23 +487,23 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         bh = short(region_h - by);
       }
     }
-    uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "", bx, by, bw, bh,
+    ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "", bx, by, bw, bh,
                                  &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
                                  nullptr);
     if (input_but) {
       /* Placeholder on the BUTTON: painting it separately put the ghost text at
        * the artboard's x while Blender drew the caret at the field's own text
        * origin — two places for one thing. */
-      UI_but_placeholder_set(input_but, "Describe your scene here...");
-      UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
-      UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+      ui::button_placeholder_set(input_but, "Describe your scene here...");
+      ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
     }
   }
 
   agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
   /* Same operator the old chat footer's attach button used —
    * `mixie_chat.add_image` opens nothing on its own. */
-  uiDefButO(block, ButType::But, "mixie_chat.add_image_from_file",
+  uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_image_from_file",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
             "Attach a reference image");
 
@@ -538,7 +538,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
           char *val = RNA_property_string_get_alloc(&item, pp, path, sizeof(path), &len);
           if (val != path) {
             BLI_strncpy(path, val, sizeof(path));
-            MEM_freeN(val);
+            MEM_delete(val);
           }
         }
         int source = 0; /* FILE */
@@ -561,18 +561,18 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         plate.xmax = tx + thumb_size;
         plate.ymin = float(by);
         plate.ymax = float(by) + thumb_size;
-        UI_draw_roundbox_corner_set(UI_CNR_ALL);
-        UI_draw_roundbox_4fv(&plate, true, thumb_size * 0.18f, backplate);
+        ui::draw_roundbox_corner_set(ui::CNR_ALL);
+        ui::draw_roundbox_4fv(&plate, true, thumb_size * 0.18f, backplate);
         footer_thumbnails_draw_image(
             bmain, path, source, tx + 1.0f, float(by) + 1.0f, thumb_size - 2.0f);
 
-        uiBut *thumb_but = uiDefButO(block, ButType::But,
+        ui::Button *thumb_but = uiDefButO(block, ui::ButtonType::But,
                                      "mixie_chat.remove_attachment",
                                      blender::wm::OpCallContext::ExecDefault, "",
                                      int(tx), by, short(thumb_size), short(thumb_size),
                                      "Remove this attachment");
         if (thumb_but) {
-          PointerRNA *op_ptr = UI_but_operator_ptr_ensure(thumb_but);
+          PointerRNA *op_ptr = ui::button_operator_ptr_ensure(thumb_but);
           RNA_int_set(op_ptr, "index", index);
         }
 
@@ -600,7 +600,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
    * footer makes (abort_session when busy). */
   agent_bubble_rect_to_region(region, layout->btn_generate, &bx, &by, &bw, &bh);
   uiDefButO(block,
-            ButType::But,
+            ui::ButtonType::But,
             state->status_busy ? "mixie_chat.abort_session" : "mixie_chat.send_message",
             blender::wm::OpCallContext::InvokeDefault,
             "",
@@ -610,11 +610,11 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
             bh,
             state->status_busy ? "Stop the running turn" : "Send");
 
-  UI_block_end(C, field_block);
-  UI_block_draw(C, field_block);
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
 
 /** True when this draw belongs to the small floating status-pill window. */
@@ -634,8 +634,8 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
   GPU_blend(GPU_BLEND_NONE);
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&r, true, 0.0f, backdrop);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);
 }
 
 /**
@@ -716,7 +716,7 @@ static void agent_bubble_island_end()
   GPU_matrix_pop();
 }
 
-/** Window-space rect -> this region's local coordinates, for uiBut placement. */
+/** Window-space rect -> this region's local coordinates, for ui::Button placement. */
 static void agent_bubble_rect_to_region(const ARegion *region,
                                         const rctf &src,
                                         int *r_x,
@@ -760,7 +760,7 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
 {
   const Scene *scene = CTX_data_scene(C);
   wmWindow *win = CTX_wm_window(C);
-  if (!scene || !win || !win->ghostwin) {
+  if (!scene || !win || !win->runtime->ghostwin) {
     return;
   }
   if (agent_bubble_window_is_pill(C)) {
@@ -776,7 +776,7 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
     g_bubble_grown_for_chat = true;
 #if defined(__APPLE__) || defined(_WIN32)
     bubble_force_size_and_refresh(const_cast<bContext *>(C),
-                                  win->ghostwin,
+                                  win->runtime->ghostwin,
                                   AGENT_BUBBLE_DEFAULT_WIDTH,
                                   AGENT_BUBBLE_DEFAULT_HEIGHT +
                                       AGENT_BUBBLE_TRANSCRIPT_HEIGHT);
@@ -870,7 +870,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   }
   else {
     /* Empty state: this region IS the whole-panel input field. Paint the
-     * panel fill, then lay the embossed field uiBut over the full region —
+     * panel fill, then lay the embossed field ui::Button over the full region —
      * mixie_chat_main_region_init installed UI_region_handlers, so the block
      * dispatches normally. The composer skips its input strip in this state
      * (agent_bubble_island_controls_bottom), keeping exactly ONE field box. */
@@ -880,15 +880,15 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
     r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
     GPU_blend(GPU_BLEND_NONE);
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
     const float fill[4] = AGENT_COL_SURFACE;
-    UI_draw_roundbox_4fv(&r, true, 0.0f, fill);
+    ui::draw_roundbox_4fv(&r, true, 0.0f, fill);
 
     Scene *scene_mut = CTX_data_scene(C);
     if (scene_mut) {
       PointerRNA scene_ptr = RNA_id_pointer_create(&scene_mut->id);
       if (RNA_struct_find_property(&scene_ptr, "mixie_chat_input")) {
-        uiBlock *field_block = UI_block_begin(
+        ui::Block *field_block = ui::block_begin(
             C, region, "agent_island_field_panel", blender::ui::EmbossType::Emboss);
         const int rw = BLI_rcti_size_x(&region->winrct) + 1;
         const int rh = BLI_rcti_size_y(&region->winrct) + 1;
@@ -906,17 +906,17 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
          * Blender's multiline text path (Text + TEXTEDIT_UPDATE + tall rect)
          * renders top-left with a text-height caret, so full height is
          * correct; a top-strip variant read as "just a thin bar". */
-        uiBut *input_but = uiDefButR(field_block, ButType::Text, 0, "",
+        ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "",
                                      fx, 0, fw, short(rh),
                                      &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
                                      nullptr);
         if (input_but) {
-          UI_but_placeholder_set(input_but, "Describe your scene here...");
-          UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
-          UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+          ui::button_placeholder_set(input_but, "Describe your scene here...");
+          ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+          ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
         }
-        UI_block_end(C, field_block);
-        UI_block_draw(C, field_block);
+        ui::block_end(C, field_block);
+        ui::block_draw(C, field_block);
       }
     }
   }
@@ -997,7 +997,8 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   agent_ui_state_gather(C, &tab_probe);
   const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
   (void)win_logical_h;
-  LISTBASE_FOREACH (ARegion *, other, &area->regionbase) {
+  for (ARegion &other_ref : area->regionbase) {
+    ARegion *other = &other_ref;
     int want = 0;
     if (other->regiontype == RGN_TYPE_HEADER) {
       want = header_logical;
@@ -1045,7 +1046,7 @@ static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region
 
 static void agent_bubble_composer_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
-  UI_region_handlers_add(&region->runtime->handlers);
+  ui::region_handlers_add(&region->runtime->handlers);
 }
 
 /** \} */
@@ -1919,11 +1920,11 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   float pill_w = float(BLI_rcti_size_x(&region->winrct) + 1);
   float pill_h = float(BLI_rcti_size_y(&region->winrct) + 1);
   const wmWindow *win = CTX_wm_window(C);
-  if (win && win->ghostwin) {
+  if (win && win->runtime->ghostwin) {
     int os_w = 0;
     int os_h = 0;
 #if defined(__APPLE__) || defined(_WIN32)
-    Mixar_WindowGetContentPixelSize(win->ghostwin, &os_w, &os_h);
+    Mixar_WindowGetContentPixelSize(win->runtime->ghostwin, &os_w, &os_h);
 #endif
     if (os_w > 0 && os_h > 0) {
       pill_w = float(os_w);
@@ -1945,8 +1946,8 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
   GPU_blend(GPU_BLEND_NONE);
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
 
   AgentIslandState state;
   agent_ui_state_gather(C, &state);
@@ -1973,7 +1974,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
 static void agent_bubble_header_region_draw_overlay(const bContext *C, ARegion *region)
 {
   /* Only the pill needs the every-composite repaint; re-running the bubble's
-   * header path here would rebuild its uiBlock outside the normal draw. */
+   * header path here would rebuild its ui::Block outside the normal draw. */
   if (agent_bubble_window_is_pill(C)) {
     agent_bubble_header_region_draw(C, region);
   }
@@ -2930,13 +2931,14 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
    * is torn down with it, which is the one state the chat cannot be driven
    * out of. Temp windows are rare and short-lived, so a blanket refusal costs
    * nothing; a hover-collapse the moment one closes is still one tick away. */
-  LISTBASE_FOREACH (wmWindow *, win, &CTX_wm_manager(C)->windows) {
+  for (wmWindow &win_ref : CTX_wm_manager(C)->windows) {
+    wmWindow *win = &win_ref;
     /* The island's OWN windows are temp screens (that is how they stay out of
      * the .blend), so they must be excluded before anything asks about
      * temp-ness — a blanket check froze the collapse permanently and the
      * hover UX simply stopped working. */
-    const bool is_island = (win->ghostwin == g_bubble_ghostwin ||
-                            win->ghostwin == g_pill_ghostwin);
+    const bool is_island = (win->runtime->ghostwin == g_bubble_ghostwin ||
+                            win->runtime->ghostwin == g_pill_ghostwin);
     if (!is_island && WM_window_is_temp_screen(win)) {
       g_hover_outside_ticks = 0;
       return OPERATOR_FINISHED;
@@ -2950,13 +2952,14 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
      * stacked on a screen that is not temp at all — hence `area->full`, which
      * is what separates that overlay from a File Browser the user keeps
      * docked in their own layout (that one must not freeze the collapse). */
-    LISTBASE_FOREACH (const ScrArea *, area, &screen->areabase) {
+    for (const ScrArea &area_ref : screen->areabase) {
+      const ScrArea *area = &area_ref;
       if (area->spacetype == SPACE_FILE && area->full != nullptr) {
         g_hover_outside_ticks = 0;
         return OPERATOR_FINISHED;
       }
     }
-    if (win->ghostwin == g_bubble_ghostwin && !BLI_listbase_is_empty(&screen->regionbase)) {
+    if (win->runtime->ghostwin == g_bubble_ghostwin && !BLI_listbase_is_empty(&screen->regionbase)) {
       g_hover_outside_ticks = 0;
       return OPERATOR_FINISHED;
     }
@@ -3470,7 +3473,7 @@ void ED_spacetype_agent_bubble()
    * so the panel system isn't set up for this region; Python panels
    * registered for AGENT_BUBBLE TOOLS never get a draw call. */
   /* TOOLS region: the island's bottom chrome — input strip, chip row, card
-   * foot. Plain uiBlock interaction (ED_KEYMAP_UI installs the ui region
+   * foot. Plain ui::Block interaction (ED_KEYMAP_UI installs the ui region
    * handler); its layout callback re-syncs both chrome slabs to the island
    * scale. */
   art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble footer region");

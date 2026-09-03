@@ -13,6 +13,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct rctf;
@@ -22,7 +25,7 @@ struct rctf;
  *
  * \param panel: the card panel rect in REGION pixel coordinates (the same
  * space the island's uiBlocks use — call this where the composer controls are
- * built, NOT inside a translated GPU matrix, because the uiBlock captures the
+ * built, NOT inside a translated GPU matrix, because the ui::Block captures the
  * current matrices at begin).
  * \param u: island unit scale (window_native_w / AGENT_ISLAND_W) so the row
  * metrics track the island's own type scale.
@@ -35,3 +38,5 @@ struct rctf;
  * terminal rows exist, bound to `mixie.queue_clear_all_completed`.
  */
 void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, float u);
+
+}  // namespace blender

@@ -10,7 +10,7 @@ HUNYUAN_OPS = ROOT / "src/scripts/mixar/modules/hunyuan/ui/operators/hunyuan_ops
 
 
 def read_ops() -> str:
-    return HUNYUAN_OPS.read_text()
+    return HUNYUAN_OPS.read_text(encoding="utf-8")
 
 
 def test_agent_retopology_operator_accepts_model_param():

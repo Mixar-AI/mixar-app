@@ -46,6 +46,9 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 /** One action row: what it says, which operator runs it, and the string
@@ -174,7 +177,7 @@ void build_actions(const GenItem &item, ActionSpec r_actions[2])
 }  // namespace
 
 void agent_ui_generations_detail(const bContext *C,
-                                 uiBlock *block,
+                                 ui::Block *block,
                                  const rctf &panel,
                                  const float u,
                                  const GenPaneData &data)
@@ -246,7 +249,7 @@ void agent_ui_generations_detail(const bContext *C,
                           preview.ymax - GEN_PREVIEW_H * u);
   if (BLI_rctf_size_y(&preview) >= GEN_PREVIEW_MIN * u) {
     pane_fill_round(&preview, GEN_TILE_RADIUS * u, plate);
-    agent_ui_generations_thumb(item, preview, u);
+    agent_ui_generations_thumb(C, item, preview, u);
   }
 
   /* Metadata chips: model / age / kind, then the item's own name on the row
@@ -339,23 +342,23 @@ void agent_ui_generations_detail(const bContext *C,
     if (item.kind == GEN_ITEM_JOB && i == 1) {
       /* Jump to the Queue tab — the same stock operator the tab strip uses,
        * so there is exactly one way the island changes tabs. */
-      uiBut *but = uiDefButO(block, ButType::But, "wm.context_set_enum",
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                              short(BLI_rctf_size_y(&r)), "Show the generation queue");
       if (but) {
-        PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
         RNA_string_set(op_ptr, "value", "QUEUE");
       }
       continue;
     }
-    uiBut *but = uiDefButO(block, ButType::But, actions[i].op,
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, actions[i].op,
                            blender::wm::OpCallContext::InvokeDefault, "",
                            int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                            short(BLI_rctf_size_y(&r)), actions[i].tip);
     if (but) {
-      PointerRNA *op_ptr = UI_but_operator_ptr_ensure(but);
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       for (int p = 0; p < 3; p++) {
         if (actions[i].prop[p] && actions[i].prop[p][0]) {
           RNA_string_set(op_ptr, actions[i].prop[p],
@@ -366,3 +369,5 @@ void agent_ui_generations_detail(const bContext *C,
   }
   UNUSED_VARS(C);
 }
+
+}  // namespace blender

@@ -16,6 +16,9 @@
 #include "BLI_rect.h"
 #include "RNA_access.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct Image;
 struct Scene;
 struct bContext;
@@ -88,3 +91,5 @@ void media_param_chips_paint(
  */
 int media_collect_reference_images(
     const bContext *C, PointerRNA *tab_ptr, bool video, Image **r_images, int max_images);
+
+}  // namespace blender

@@ -55,7 +55,7 @@ def test_speed_meter_range_mirrors_the_python_beat_bounds():
 
 
 def test_speed_meter_fills_the_way_the_slider_travels():
-    # The slider is a ButType::Scroll bound straight to `beat_seconds`, so it
+    # The slider is a ButtonType::Scroll bound straight to `beat_seconds`, so it
     # rises rightwards; the meter it paints over must rise with it.
     assert "(beat_seconds - CINEMA_BEAT_SECONDS_MIN) / span" in LEFT
     assert "CINEMA_BEAT_SECONDS_MAX - CINEMA_BEAT_SECONDS_MIN" in LEFT
@@ -87,7 +87,7 @@ def test_the_resolution_operator_still_scales_the_short_side():
 def test_list_row_height_is_clamped_to_the_pitch():
     assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in PAINT
     # Both lists draw through the clamp; a raw CINEMA_ROW_H row overlaps the
-    # next one, and the later-created uiBut wins the shared band.
+    # next one, and the later-created ui::Button wins the shared band.
     assert "cinema_list_row_h()" in RIGHT
     assert "cinema_list_row_h()" in LEFT
     assert "const float row_h = CINEMA_ROW_H * u;" not in RIGHT
