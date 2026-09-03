@@ -37,6 +37,25 @@ def get_tree_output_by_name(tree, name):
 
     return None
 
+def get_modifier_output_attribute_name(mod, identifier):
+    """Attribute name a geometry-nodes modifier writes for output `identifier`.
+
+    Blender 5.2 moved modifier IO off ID properties: the old
+    ``mod['<identifier>_attribute_name']`` lookup raises KeyError, and the
+    value now lives at ``mod.properties.outputs.<identifier>.attribute_name``.
+    Returns '' when the modifier has no such output.
+    """
+    outputs = getattr(getattr(mod, 'properties', None), 'outputs', None)
+    if outputs is not None:
+        sock = getattr(outputs, identifier, None)
+        if sock is not None:
+            return getattr(sock, 'attribute_name', '') or ''
+    try:
+        return mod[identifier + '_attribute_name'] or ''
+    except (KeyError, TypeError):
+        return ''
+
+
 def new_tree_output(tree, name, socket_type, description='', use_both=False):
     """
     Create a new output socket in a node tree's interface.
