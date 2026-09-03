@@ -207,7 +207,7 @@ class MIXIE_OT_world_labs_generate(Operator):
             image_b64 = _b64.b64encode(image_bytes).decode()
             label = image.name
         elif not prompt:
-            self.report({"WARNING"}, "Please enter a text prompt")
+            self.report({"ERROR"}, "Please enter a text prompt")
             return {"CANCELLED"}
 
         try:
@@ -224,7 +224,7 @@ class MIXIE_OT_world_labs_generate(Operator):
             return {"CANCELLED"}
 
         if not job:
-            self.report({"WARNING"}, "A duplicate generation is already queued")
+            self.report({"ERROR"}, "A duplicate generation is already queued")
             return {"CANCELLED"}
 
         mark_enqueued(FEATURE_WORLD_LABS)
@@ -312,13 +312,13 @@ class MIXIE_OT_world_labs_generate(Operator):
             ]
             if not selected:
                 if not quiet:
-                    self.report({"WARNING"}, "Please select an image in the moodboard")
+                    self.report({"ERROR"}, "Please select an image in the moodboard")
                 return None
             return selected[0]
         image = getattr(tab, "reference_image", None)
         if not image:
             if not quiet:
-                self.report({"WARNING"}, "Please add an input image")
+                self.report({"ERROR"}, "Please add an input image")
             return None
         return image
 

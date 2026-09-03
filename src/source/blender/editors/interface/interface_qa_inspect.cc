@@ -313,6 +313,12 @@ void qa_dump_region(std::string &out,
   }
 
   for (const blender::ui::Block &block : region->runtime->uiblocks) {
+    /* NOTE: deliberately NOT filtered on `block.active`. That flag means
+     * "rebuilt during the current free-inactive pass", not "on screen": every
+     * region that is not mid-redraw carries live blocks with it clear, and
+     * filtering on it dropped ~95% of the UI (measured: 11 widgets instead of
+     * several hundred, the whole topbar and island missing). The stale-block
+     * problem it was meant to solve needs a real liveness stamp instead. */
     for (const std::unique_ptr<blender::ui::Button> &but_ptr : block.buttons_ptrs) {
       const blender::ui::Button *but = but_ptr.get();
       if (but->flag & blender::ui::UI_HIDDEN) {

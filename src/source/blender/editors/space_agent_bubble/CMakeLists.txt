@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set(INC
+  ../asset
   ../include
   ../../makesrna
 
@@ -16,11 +17,45 @@ set(INC_SYS
 
 set(SRC
   space_agent_bubble.cc
+  agent_ui_draw.cc
+  agent_ui_generations.cc
+  agent_ui_generations_data.cc
+  agent_ui_generations_detail.cc
+  agent_ui_generations_grid.cc
+  agent_ui_generations_read.cc
+  agent_ui_icons.cc
+  agent_ui_layout.cc
+  agent_ui_pane_kit.cc
+  agent_ui_pane_kit_feedback.cc
+  agent_ui_pane_kit_thumbs.cc
+  agent_ui_queue.cc
+  agent_ui_tabsplat.cc
+  agent_ui_tabsplat_paint.cc
+  agent_ui_tabmedia.cc
+  agent_ui_tabmedia_util.cc
+  agent_ui_state.cc
+  agent_ui_tab3d.cc
+  agent_ui_tab3d_params.cc
 
   agent_bubble_intern.hh
+  agent_ui_draw.hh
+  agent_ui_generations.hh
+  agent_ui_generations_intern.hh
+  agent_ui_icons.hh
+  agent_ui_layout.hh
+  agent_ui_pane_kit.hh
+  agent_ui_queue.hh
+  agent_ui_tabsplat.hh
+  agent_ui_tabsplat_intern.hh
+  agent_ui_tabmedia.hh
+  agent_ui_tabmedia_intern.hh
+  agent_ui_tab3d.hh
+  agent_ui_tab3d_intern.hh
+  agent_ui_theme.hh
 )
 
 set(LIB
+  PRIVATE bf::asset_system
   PRIVATE bf::blenfont
   PRIVATE bf::blenkernel
   PRIVATE bf::blenlib

@@ -28,6 +28,7 @@
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
+#include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -324,14 +325,31 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
       C, region, "mixar_director_overlay", blender::ui::EmbossType::Emboss);
   ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
 
-  view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
-  if (region->winy > unit * 18) {
-    draw_tool_rail(block, C, region, state, unit, gap);
+  /* Cinema Mode surface (the designed shell): a top strip and two anchored
+   * columns replace the old floating rail and its popovers. The rail's
+   * content did not disappear — the lens/aspect/moves/export popups are the
+   * same native blocks, now opened from named rows instead of icon buttons.
+   *
+   * Needs room for both columns plus the gate between them; below that the
+   * old compact controls are still the honest fallback. */
+  if (cinema_surface_fits(region)) {
+    /* No empty-state card here: it would sit on top of the two columns, and
+     * the right column's own "+ Add Camera" is the same first action. */
+    cinema_draw_stage(region);
+    cinema_draw_top_strip(block, region, state);
+    cinema_draw_left_panel(block, C, region, state);
+    cinema_draw_right_panel(block, C, region, state);
   }
-  if (!state.has_shot) {
-    draw_empty_state(block, region, unit, gap);
+  else {
+    view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
+    if (region->winy > unit * 18) {
+      draw_tool_rail(block, C, region, state, unit, gap);
+    }
+    if (!state.has_shot) {
+      draw_empty_state(block, region, unit, gap);
+    }
+    draw_context_actions(block, region, state, unit, gap);
   }
-  draw_context_actions(block, region, state, unit, gap);
 
   ui::block_end(C, block);
   ui::block_draw(C, block);

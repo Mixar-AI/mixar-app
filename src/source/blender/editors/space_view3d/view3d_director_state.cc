@@ -87,6 +87,8 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   r_state->active = director_bool(&state_ptr, "is_directing", false);
   r_state->timeline_expanded = director_bool(&state_ptr, "timeline_expanded", true);
   r_state->auto_key = director_bool(&state_ptr, "auto_key", false);
+  /* `ruler_unit` is an enum whose MIN item is index 0. */
+  r_state->ruler_minutes = director_enum(&state_ptr, "ruler_unit", 1) == 0;
   r_state->frame_current = scene->r.cfra;
   r_state->frame_start = scene->r.sfra;
   r_state->frame_end = scene->r.efra;

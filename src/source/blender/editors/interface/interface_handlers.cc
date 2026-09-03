@@ -4849,18 +4849,28 @@ static int do_but_textedit(
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
-          const bool is_moodboard_prompt = area && area->spacetype == SPACE_MIXIE && prop_id &&
-                                           STREQ(prop_id, "prompt");
+          /* SPACE_AGENT_BUBBLE too: the island's 3D / Media / Gaussian Splat
+           * panes draw the SAME moodboard tab PropertyGroups, so their prompt
+           * fields must submit through the same dispatcher. Without this they
+           * fell through to the chat branch below (the island IS a chat
+           * space), which stamped the chat submit marker into a generation
+           * prompt and sent nothing anywhere. */
+          const bool is_moodboard_prompt = area && prop_id && STREQ(prop_id, "prompt") &&
+                                           ELEM(area->spacetype, SPACE_MIXIE,
+                                                SPACE_AGENT_BUBBLE);
           if (is_moodboard_prompt) {
             if (RNA_struct_find_property(&but->rnapoin, "node_id")) {
               is_moodboard_node_prompt = true;
             }
-            else {
-              /* An N-panel tab prompt: the sidebar is the UI region. Popup
-               * dialogs (TEMP regions) keep the native Enter-confirms-dialog
-               * behavior, and the canvas node prompt is the branch above. */
-              is_moodboard_sidebar_prompt = data->region &&
-                                            data->region->regiontype == RGN_TYPE_UI;
+            else if (data->region) {
+              /* The moodboard's N-panel tab lives in the sidebar's UI region;
+               * the island's panes live in its WINDOW region. Popup dialogs
+               * (TEMP regions) keep the native Enter-confirms-dialog behavior
+               * in both, and the canvas node prompt is the branch above. */
+              is_moodboard_sidebar_prompt =
+                  (area->spacetype == SPACE_AGENT_BUBBLE) ?
+                      (data->region->regiontype != RGN_TYPE_TEMPORARY) :
+                      (data->region->regiontype == RGN_TYPE_UI);
             }
           }
         }
@@ -13702,6 +13712,25 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
     if (event->val == KM_DBL_CLICK) {
       return WM_UI_HANDLER_CONTINUE;
     }
+  }
+
+  /* Mixar: a text field being edited must not make the whole window
+   * scroll-dead. While the active button is in text editing and did not
+   * consume a scroll-family event itself (a search box consuming wheel
+   * returns BREAK above), let it fall through to the region keymaps so
+   * View2D scrolling keeps working — the Mixie chat transcript is scrolled
+   * with the composer focused, exactly like any chat app. Everything else
+   * stays blocked: this is still modal interaction. */
+  if (retval == WM_UI_HANDLER_CONTINUE && but && but->active &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING) &&
+      ELEM(event->type,
+           WHEELUPMOUSE,
+           WHEELDOWNMOUSE,
+           WHEELLEFTMOUSE,
+           WHEELRIGHTMOUSE,
+           MOUSEPAN))
+  {
+    return WM_UI_HANDLER_CONTINUE;
   }
 
   /* we block all events, this is modal interaction */

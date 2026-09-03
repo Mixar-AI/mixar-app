@@ -21,8 +21,11 @@
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 
+#include "UI_interface_c.hh"
+
 #include "../interface/interface_qa_inspect.hh"
 
+#include "view3d_director_cinema.hh"
 #include "view3d_director_timeline.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -47,7 +50,26 @@ void director_qa_targets(const wmWindow * /*win*/,
                          const ARegion *region,
                          std::vector<MixarQATarget> &r_targets)
 {
-  if (area->spacetype != SPACE_VIEW3D || region->regiontype != RGN_TYPE_CHANNELS) {
+  if (area->spacetype != SPACE_VIEW3D) {
+    return;
+  }
+  /* Cinema Mode surface: the rows publish the very rects they laid their
+   * buttons over, so the harness can tell apart controls that share one
+   * operator id. */
+  for (const CinemaQARecord &record : cinema_qa_records()) {
+    if (record.region != region) {
+      continue;
+    }
+    MixarQATarget target;
+    if (!region_rect_to_window(region, record.rect, &target.rect_win)) {
+      continue;
+    }
+    target.surface = record.surface;
+    target.value = record.value;
+    target.index = record.index;
+    r_targets.push_back(std::move(target));
+  }
+  if (region->regiontype != RGN_TYPE_CHANNELS) {
     return;
   }
   /* Read the runtime the way ``timeline_ui_handler`` does — never

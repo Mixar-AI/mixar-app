@@ -157,13 +157,13 @@ class MIXIE_OT_model_gen_generate(Operator):
         sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
         tab = getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
         if tab is None:
-            self.report({"WARNING"}, "Model Gen tab not available")
+            self.report({"ERROR"}, "Model Gen tab not available")
             return {"CANCELLED"}
 
         # --- Resolve mode (service) and model slug from the catalog ---
         service_key = resolve_service_key("model_gen", getattr(tab, "mode", ""))
         if not service_key:
-            self.report({"WARNING"}, "Please wait for the catalog to load")
+            self.report({"ERROR"}, "Please wait for the catalog to load")
             return {"CANCELLED"}
 
         model = getattr(tab, 'model', '')
@@ -176,7 +176,7 @@ class MIXIE_OT_model_gen_generate(Operator):
             except Exception:
                 model = ""
         if not model or model in _PLACEHOLDERS:
-            self.report({"WARNING"}, "Please wait for models to load")
+            self.report({"ERROR"}, "Please wait for models to load")
             return {"CANCELLED"}
 
         # --- Inputs (image shared by all modes; multi-view for models that
@@ -201,17 +201,17 @@ class MIXIE_OT_model_gen_generate(Operator):
         elif service_key == "image_to_3d" or supports_mv:
             if not (image or prompt):
                 self.report(
-                    {"WARNING"},
+                    {"ERROR"},
                     "Provide at least one of: prompt, image, or multiple views",
                 )
                 return {"CANCELLED"}
         elif service_key == "hunyuan_rapid":
             if not (image or prompt):
-                self.report({"WARNING"}, "Provide either a prompt or an image")
+                self.report({"ERROR"}, "Provide either a prompt or an image")
                 return {"CANCELLED"}
         else:
             if not image:
-                self.report({"WARNING"}, "Please add an input image")
+                self.report({"ERROR"}, "Please add an input image")
                 return {"CANCELLED"}
 
         # --- Base payload (image / multi-view) ---
@@ -278,7 +278,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                 **route,
             )
             if not job:
-                self.report({"WARNING"}, "A duplicate generation is already queued")
+                self.report({"ERROR"}, "A duplicate generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")

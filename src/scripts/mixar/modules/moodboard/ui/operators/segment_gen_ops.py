@@ -150,12 +150,12 @@ class MIXIE_OT_smart_segment_generate(Operator):
         sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
         tab = getattr(sidebar, 'tab_image_to_3d', None) if sidebar else None
         if tab is None:
-            self.report({"WARNING"}, "Model Gen tab not available")
+            self.report({"ERROR"}, "Model Gen tab not available")
             return {"CANCELLED"}
 
         image = _get_input_image(context, tab)
         if image is None:
-            self.report({"WARNING"}, "No input image selected")
+            self.report({"ERROR"}, "No input image selected")
             return {"CANCELLED"}
 
         service_key = resolve_service_key(
@@ -187,7 +187,7 @@ class MIXIE_OT_smart_segment_generate(Operator):
             return {"CANCELLED"}
 
         if job is None:
-            self.report({"WARNING"}, "Smart segmentation was not queued")
+            self.report({"ERROR"}, "Smart segmentation was not queued")
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.constants import FEATURE_SMART_SEGMENT

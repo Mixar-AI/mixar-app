@@ -139,7 +139,13 @@ void UI_layout_mixar_card_tag_last(Layout *layout,
   UI_BUT2_MIXAR_CARD_SET(but);
   /* `hardmin`/`hardmax` are inert on the label and operator buttons
    * tagged here — neither carries a data pointer or RNA property (see
-   * the rationale on `mark_last` in `interface_mixar_profile_card.cc`). */
+   * the rationale on `mark_last` in `interface_mixar_profile_card.cc`).
+   *
+   * NEVER tag an RNA-backed button: an enum-item button (`prop_enum`,
+   * ButType::Row) keeps the value it applies in `hardmax`, so tagging one
+   * overwrites that value and the click writes garbage — the Zen shading
+   * pills hit exactly this and set the viewport to an out-of-range enum.
+   * Use an operator button (`wm.context_set_enum` and friends) instead. */
   but->hardmin = float(int(element));
   but->hardmax = payload;
 }

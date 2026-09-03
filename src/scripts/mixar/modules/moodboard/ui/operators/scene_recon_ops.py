@@ -235,7 +235,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 if item.selected and is_still_item(item)
             ]
             if not selected:
-                self.report({"WARNING"}, "Please select an image in the moodboard")
+                self.report({"ERROR"}, "Please select an image in the moodboard")
                 return {"CANCELLED"}
 
             try:
@@ -259,7 +259,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 prompt = getattr(sidebar_tab, 'prompt', '').strip()
                 if not prompt:
                     self.report(
-                        {"WARNING"},
+                        {"ERROR"},
                         "Please select an input image or describe a scene"
                     )
                     return {"CANCELLED"}
@@ -276,7 +276,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
         )
 
         if not success:
-            self.report({"WARNING"}, "Failed to submit job (already generating?)")
+            self.report({"ERROR"}, "Failed to submit job (already generating?)")
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON

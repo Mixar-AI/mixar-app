@@ -5,6 +5,8 @@
 
 #include "GHOST_SystemCocoa.hh"
 
+#import <QuartzCore/QuartzCore.h> /* CAMediaTimingFunction for the bubble animations. */
+
 #include "GHOST_EventButton.hh"
 #include "GHOST_EventCursor.hh"
 #include "GHOST_EventDragnDrop.hh"
@@ -1181,6 +1183,12 @@ extern "C" void Mixar_WindowSnapToCentreBottomOfWindow(void *child_handle,
  * on the main run loop at vsync. Animating BOTH origin and size
  * via setFrame:display: keeps the resize and the slide perfectly
  * in lockstep. */
+/* Ease-out-quint-feel curve shared by every bubble animation. */
+static CAMediaTimingFunction *mixar_ease_out_quint()
+{
+  return [CAMediaTimingFunction functionWithControlPoints:0.22f:1.0f:0.36f:1.0f];
+}
+
 extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
     void *child_handle,
     void *parent_handle,
@@ -1210,6 +1218,7 @@ extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
 
     [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:(CGFloat)duration];
+    [[NSAnimationContext currentContext] setTimingFunction:mixar_ease_out_quint()];
     [[child animator] setFrame:target display:YES];
     [NSAnimationContext endGrouping];
   }
@@ -1219,6 +1228,85 @@ extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
 /* Animate `window`'s alpha to `target_alpha` over `duration` seconds.
  * Used to fade the bubble out during the minimise glide so it
  * dissolves while the pill takes its place at the centre-bottom. */
+/* Premium entrance/exit for the agent bubble: position + alpha in ONE
+ * CoreAnimation group with an ease-out-quint-feel curve. Position-only frame
+ * animation (no size change), so Blender never re-layouts mid-flight — this
+ * is what keeps it butter-smooth where a size animation would stutter. */
+extern "C" void Mixar_WindowFloatIn(void *window_handle, int rise_pt, float duration)
+{
+  /* FLIP-style entrance: the WINDOW stays at its final frame (a frame
+   * animation via [animator setFrame:] runs on AppKit's legacy NSAnimation
+   * timer and reads ~30fps); instead the CONTENT LAYER starts translated
+   * down by rise_pt and animates to identity with real CoreAnimation, which
+   * composites at full display refresh. The window's alpha fade rides the
+   * window server and is smooth by construction. */
+  if (window_handle == nullptr) {
+    return;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return;
+  }
+  @autoreleasepool {
+    NSView *content = win.contentView;
+    CALayer *layer = content.layer;
+    if (layer != nil) {
+      [layer removeAnimationForKey:@"mixar_float"];
+      CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
+      slide.fromValue = @(-(CGFloat)rise_pt);
+      slide.toValue = @(0.0);
+      slide.duration = (CFTimeInterval)duration;
+      slide.timingFunction = mixar_ease_out_quint();
+      [layer addAnimation:slide forKey:@"mixar_float"];
+      layer.transform = CATransform3DIdentity;
+    }
+    [win setAlphaValue:0.0];
+    [NSAnimationContext beginGrouping];
+    [[NSAnimationContext currentContext] setDuration:(CGFloat)duration * 0.7];
+    [[NSAnimationContext currentContext] setTimingFunction:mixar_ease_out_quint()];
+    [[win animator] setAlphaValue:1.0];
+    [NSAnimationContext endGrouping];
+  }
+}
+
+extern "C" void Mixar_WindowFloatOut(void *window_handle, int sink_pt, float duration)
+{
+  /* FLIP-style exit: content layer sinks while the window fades; the window
+   * frame never moves (see Mixar_WindowFloatIn). The caller hides the window
+   * after `duration`; the next FloatIn resets the layer transform. */
+  if (window_handle == nullptr) {
+    return;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return;
+  }
+  @autoreleasepool {
+    NSView *content = win.contentView;
+    CALayer *layer = content.layer;
+    if (layer != nil) {
+      [layer removeAnimationForKey:@"mixar_float"];
+      CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
+      slide.fromValue = @(0.0);
+      slide.toValue = @(-(CGFloat)sink_pt);
+      slide.duration = (CFTimeInterval)duration;
+      slide.timingFunction = mixar_ease_out_quint();
+      /* Hold the end pose until the orderOut lands — otherwise the content
+       * snaps back for a frame between animation end and hide. */
+      slide.fillMode = kCAFillModeForwards;
+      slide.removedOnCompletion = NO;
+      [layer addAnimation:slide forKey:@"mixar_float"];
+    }
+    [NSAnimationContext beginGrouping];
+    [[NSAnimationContext currentContext] setDuration:(CGFloat)duration];
+    [[NSAnimationContext currentContext] setTimingFunction:mixar_ease_out_quint()];
+    [[win animator] setAlphaValue:0.0];
+    [NSAnimationContext endGrouping];
+  }
+}
+
 extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration)
 {
@@ -1233,6 +1321,11 @@ extern "C" void Mixar_WindowAnimateAlphaTo(
   @autoreleasepool {
     [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:(CGFloat)duration];
+    /* Ease-out: most of the change lands in the first frames, which is what
+     * reads as "responsive" for a hover-triggered reveal/dismiss. */
+    [[NSAnimationContext currentContext]
+        setTimingFunction:[CAMediaTimingFunction
+                              functionWithName:kCAMediaTimingFunctionEaseOut]];
     [[win animator] setAlphaValue:(CGFloat)target_alpha];
     [NSAnimationContext endGrouping];
   }
@@ -1304,6 +1397,27 @@ extern "C" int Mixar_WindowGetMaxHeightToScreenTop(
  * Reads convertRectToBacking on the contentView's bounds, which
  * is exactly what GHOST does when reporting window dimensions to
  * Blender. */
+extern "C" bool Mixar_WindowContainsScreenCursor(void *window_handle, int margin_pt)
+{
+  /* Hover detection for the agent bubble's pill/expand behaviour: is the
+   * system cursor inside this window's frame (grown by margin_pt points)?
+   * All in AppKit screen coordinates, so no GHOST coordinate conversion can
+   * drift. Safe to call every timer tick. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil || ![win isVisible]) {
+    return false;
+  }
+  @autoreleasepool {
+    NSPoint p = [NSEvent mouseLocation];
+    NSRect frame = NSInsetRect([win frame], -CGFloat(margin_pt), -CGFloat(margin_pt));
+    return NSMouseInRect(p, frame, NO);
+  }
+}
+
 extern "C" void Mixar_WindowGetContentPixelSize(
     void *window_handle, int *r_width, int *r_height)
 {

@@ -88,7 +88,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             # "which model?" ask); empty means the catalog default.
             model_name = self.model.strip() or _get_default_model_3d()
             if not model_name:
-                self.report({"WARNING"}, "No models available - please wait for models to load")
+                self.report({"ERROR"}, "No models available - please wait for models to load")
                 return {"CANCELLED"}
         else:
             if sidebar_tab:
@@ -103,7 +103,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_name = _get_default_model_3d()
 
             if not model_name or model_name in ("LOADING", "ERROR", "NONE", ""):
-                self.report({"WARNING"}, "Please wait for models to load or check connection")
+                self.report({"ERROR"}, "Please wait for models to load or check connection")
                 return {"CANCELLED"}
 
         # Get the input image based on context
@@ -113,10 +113,10 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "Please attach an image in chat")
+                    self.report({"ERROR"}, "Please attach an image in chat")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
         elif sidebar_tab:
             use_selected = getattr(sidebar_tab, 'use_selected_image', False)
@@ -128,12 +128,12 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "Please select an image in the moodboard")
+                    self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
             else:
                 image = getattr(sidebar_tab, 'reference_image', None)
                 if not image:
-                    self.report({"WARNING"}, "Please add an input image")
+                    self.report({"ERROR"}, "Please add an input image")
                     return {"CANCELLED"}
         else:
             if hasattr(scene, 'mixie_image_to_3d_use_selected') and scene.mixie_image_to_3d_use_selected:
@@ -144,15 +144,15 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "No image selected in moodboard")
+                    self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
             elif hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "No input image selected")
+                    self.report({"ERROR"}, "No input image selected")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
 
         # Turnaround sheets: the detect-views endpoint already split this
@@ -217,7 +217,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 batch_popup_title="Image to 3D batch complete",
             )
             if not job:
-                self.report({"WARNING"}, "A duplicate generation is already queued")
+                self.report({"ERROR"}, "A duplicate generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")

@@ -17,6 +17,7 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 from ...constants import (
+    CAMERA_TEMPLATE_ITEMS,
     DEFAULT_BEAT_SECONDS,
     GUIDANCE_STRENGTH_ITEMS,
     MAX_BEAT_SECONDS,
@@ -213,6 +214,12 @@ class MixarDirectorShot(PropertyGroup):
         subtype='FACTOR',
         update=_on_handheld_update,
     )
+    camera_template: EnumProperty(
+        name="Template Style",
+        description="Named movement style applied to this shot",
+        items=CAMERA_TEMPLATE_ITEMS,
+        default="NONE",
+    )
     render_output_types: EnumProperty(
         name="Video Renders",
         description="Shot videos to render and add to the Moodboard",
@@ -296,6 +303,15 @@ class MixarDirectorState(PropertyGroup):
         default=False,
         options={'SKIP_SAVE', 'HIDDEN'},
         update=_on_directing_update,
+    )
+    ruler_unit: EnumProperty(
+        name="Ruler Unit",
+        description="How the timeline ruler labels time",
+        items=(
+            ("MIN", "Min", "Label the ruler in minutes and seconds", 0),
+            ("SEC", "Sec", "Label the ruler in seconds", 1),
+        ),
+        default="SEC",
     )
     timeline_expanded: BoolProperty(
         name="Timeline",

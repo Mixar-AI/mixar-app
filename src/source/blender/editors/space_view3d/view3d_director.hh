@@ -40,6 +40,8 @@ struct DirectorViewState {
   bool navigate_mode = true;
   bool explore_mode = false;
   bool auto_key = false;
+  /** Ruler labels time in minutes (`ruler_unit == MIN`) rather than seconds. */
+  bool ruler_minutes = false;
   int active_beat_index = 0;
   int frame_current = 0;
   int frame_start = 0;
