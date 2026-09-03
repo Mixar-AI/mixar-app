@@ -48,11 +48,12 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 
 ## Bootstrap & Registration
 
-`src/scripts/startup/bootstrap/__init__.py` loads everything in 3 phases:
+`src/scripts/startup/bootstrap/__init__.py` loads everything in 4 phases:
 
 1. **Package setup** — synthetic packages for `src/scripts/mixar/` (no `__init__.py` needed in most subdirs).
-2. **Bootstrap modules** — `src/scripts/mixar/bootstrap/*.py`, each with `register()`/`unregister()` (agent connection, paint module, generation catalog cache, update checker, sandbox supervisor, etc.).
-3. **UI auto-discovery** — every file under `modules/**/ui/` is loaded in time-budgeted (~4ms/frame) batches: properties first (priority 0), then operators/core (1), then panels/menus/headers (2).
+2. **Network** — `modules/common/network.configure_network()`: exports the resolved proxy to the environment and installs the OS trust store (`truststore`) by replacing `ssl.SSLContext`. Must precede every bootstrap module — only contexts created afterwards are affected.
+3. **Bootstrap modules** — `src/scripts/mixar/bootstrap/*.py`, each with `register()`/`unregister()` (agent connection, paint module, generation catalog cache, update checker, sandbox supervisor, etc.).
+4. **UI auto-discovery** — every file under `modules/**/ui/` is loaded in time-budgeted (~4ms/frame) batches: properties first (priority 0), then operators/core (1), then panels/menus/headers (2).
 
 Rules: expose a `classes` tuple and let the fallback mechanism register it — only hand-write `register()`/`unregister()` when genuinely needed. For cross-directory property dependencies, drive import order via the module's `__init__.py` (reference: `paint/__init__.py`).
 
@@ -68,8 +69,8 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — o
 | **moodboard** | Reference boards + node canvas (below), catalog-driven generation sidebar (Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character Parts, Retopology, UV Unwrap, Mesh Segment, Auto Rig, Video Gen, World Labs + Queue), turnaround/multi-view image-to-3D, clipboard, scene recon, freehand image annotations, SAM3-guided character components, World Labs Gaussian splats (all below) |
 | **director** | Phase-zero camera directing as a viewport mode (below): native C++ View3D rail/gate/popups/timeline over Python-owned operators |
 | **hunyuan** | 3D generation enqueue helpers: text/image→3D, retopology (Hunyuan/Tripo engines), UV unwrap, auto-rig (`core/animate_enqueue.py`) |
-| **common** | API clients (`common/api/services/`), authenticated content-free UX telemetry (`common/analytics` — event reference in `docs/telemetry-events.md`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, browser-based updates, **job_queue** (below), **generation_params** schema engine |
-| **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager) |
+| **common** | API clients (`common/api/services/`), authenticated content-free UX telemetry (`common/analytics` — event reference in `docs/telemetry-events.md`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, browser-based updates, **job_queue** (below), **generation_params** schema engine, **network** (OS trust store via `truststore`, explicit proxy export incl. websocket-client, `classify_network_error` → `NetworkFailure` with `NET-*` support codes; operator contract in `docs/enterprise-network.md`) |
+| **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager). Browser SSO callback (`core/sso.py`) is a threaded loopback server with a per-connection read timeout — endpoint-security agents connect without sending a request and used to wedge it forever; `SSO_LOGIN_TIMEOUT_S` (300s) covers corporate IdP + MFA; the login operator has a scoped UI watchdog. Transport failures return `failure_kind` + a support-coded message via `common/network` |
 | **byok** | Bring-your-own-key provider settings via backend credentials endpoints |
 | **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune |
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
@@ -144,6 +145,7 @@ Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → b
 
 - **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks.
 - **Singleton + daemon threads** for persistent connections (ConnectionManager WebSocket). Background threads must not touch `bpy`; marshal to main thread via timers.
+- **Network contract**: never hand-roll `verify=`/`proxies=`/`sslopt=` at a call site — trust and proxy are process-wide (startup phase 2) so all five bundled clients (`requests`, `httpx`, `urllib`, `http.client`, `websocket-client`) agree. Catch `requests.exceptions.RequestException` (or the client's equivalent) and route it through `classify_network_error` + `log_network_failure`; generic "Unable to connect" strings are banned (pinned by `tests/network/`). Explicit CA bundle = plain OpenSSL with `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE`/`WEBSOCKET_CLIENT_CA_BUNDLE` exported; otherwise `truststore`; Linux without a system bundle falls back to certifi. PAC and SOCKS are unsupported by design.
 - **DRW offscreen passes reset the region framebuffer viewport/scissor** — capture and restore manually or the region renders black.
 - **Custom C region keymaps must register in the addon keyconfig** (Python side), not via C `WM_keymap_add_item` — GUI keyconfig preset reload wipes C-registered items.
 - Safety contracts: backend-authoritative option lists fail closed (empty list → disabled, never resurrect hardcoded services); feedback locks only after confirmed 2xx; BYOK keys are transient `SKIP_SAVE` fields; terminal queue states release large payloads but keep lightweight history.
@@ -159,4 +161,4 @@ Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → b
 
 ## Repo Docs Map
 
-`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs).
+`README.md` — public build-from-source guide and licensing. `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs).

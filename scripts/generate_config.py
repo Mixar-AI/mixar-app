@@ -80,6 +80,14 @@ def generate_config(version_file: str) -> dict:
         "performance": {
             "ui_batch_budget_ms": 4,
         },
+        # Enterprise network settings (empty = auto). Environment variables
+        # MIXAR_PROXY_URL / MIXAR_CA_BUNDLE / MIXAR_NO_PROXY take precedence.
+        # See docs/enterprise-network.md.
+        "network": {
+            "proxy_url": "",
+            "ca_bundle": "",
+            "no_proxy": "",
+        },
     }
 
     if environment == "Dev":

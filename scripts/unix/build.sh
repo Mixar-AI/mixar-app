@@ -170,6 +170,12 @@ if [[ -n "$PYTHON_BIN" ]]; then
         # Use --target to specify the exact location
         if "$PYTHON_BIN" -m pip install --no-user --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
             echo "Successfully installed Python packages to embedded Python site-packages"
+            # truststore is what lets the app trust corporate root CAs; a
+            # silent fallback to certifi would only surface at a customer.
+            if ! "$PYTHON_BIN" -c "import truststore" 2>/dev/null; then
+                echo "Error: truststore installed but not importable from the embedded Python"
+                exit 1
+            fi
         elif command -v pip3 >/dev/null 2>&1; then
             echo "Embedded pip failed, trying system pip with --target..."
             if pip3 install --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
