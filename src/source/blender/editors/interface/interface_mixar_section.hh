@@ -102,5 +102,15 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
  * time; used by the MIXAR click hook in interface_panel.cc.
  */
 const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mval[2]);
+/**
+ * Region-relative hit rect recorded for the Mixar-drawn tab `idname` in
+ * `region`, exactly as #UI_mixar_panel_category_find_at tests it. False when
+ * the region never drew the strip. Used by the QA harness inspector
+ * (interface_qa_inspect.cc) so `panel_tab` targets read the strip's own
+ * geometry instead of re-deriving it.
+ */
+bool UI_mixar_panel_category_tab_rect_get(const ARegion *region,
+                                          const char *idname,
+                                          rcti *r_rect);
 
 }  // namespace blender::ui

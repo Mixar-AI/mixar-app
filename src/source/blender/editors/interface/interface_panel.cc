@@ -1680,7 +1680,12 @@ static int panel_category_show_active_tab(const bContext &C, ARegion *region, co
   BLI_assert(BKE_regiontype_uses_category_tabs(region->runtime->type));
 
   const View2D *v2d = &region->v2d;
-  const Block *block = region->runtime->block_name_map.lookup_as(panel_category_tabs_block_name);
+  /* MIXAR: `lookup_as` asserts the key exists and dereferences a null slot in
+   * release builds when it does not. The Mixie sidebar never creates this
+   * block (area.cc routes it to #UI_panel_category_draw_all_mixar), so use
+   * the tolerant lookup — the `!block` guard below is only meaningful then. */
+  const Block *block = region->runtime->block_name_map.lookup_default_as(
+      panel_category_tabs_block_name, nullptr);
   if (!block) {
     return WM_UI_HANDLER_BREAK;
   }
@@ -2517,8 +2522,11 @@ static bool panel_categories_tab_is_mouse_over(ARegion *region, const wmEvent *e
   const View2D *v2d = &region->v2d;
   int ymin = region->overlap ? region->v2d.mask.ymax : region->v2d.mask.ymin;
   if (region->overlap) {
-    if (const Block *block = region->runtime->block_name_map.lookup_as(
-            panel_category_tabs_block_name);
+    /* MIXAR: tolerant lookup — see #panel_category_show_active_tab. This ran on
+     * every click in the overlapping Mixie sidebar and segfaulted on the
+     * missing block. */
+    if (const Block *block = region->runtime->block_name_map.lookup_default_as(
+            panel_category_tabs_block_name, nullptr);
         block && !block->buttons_ptrs.is_empty())
     {
       ymin = std::max(region->v2d.mask.ymin, int(block->buttons_ptrs.last()->rect.ymin));

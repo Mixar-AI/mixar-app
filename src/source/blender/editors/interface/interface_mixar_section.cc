@@ -229,6 +229,23 @@ const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mva
   return nullptr;
 }
 
+bool UI_mixar_panel_category_tab_rect_get(const ARegion *region,
+                                          const char *idname,
+                                          rcti *r_rect)
+{
+  const Vector<MixarCategoryTabRect> *tabs = mixar_category_tab_rects().lookup_ptr(region);
+  if (tabs == nullptr) {
+    return false;
+  }
+  for (const MixarCategoryTabRect &tab : *tabs) {
+    if (STREQ(tab.idname, idname)) {
+      *r_rect = tab.rect;
+      return true;
+    }
+  }
+  return false;
+}
+
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active)
 {
   Vector<MixarCategoryTabRect> tab_rects;

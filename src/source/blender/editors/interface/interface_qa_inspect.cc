@@ -33,6 +33,7 @@
 #include "WM_types.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_section.hh"
 #include "interface_qa_inspect.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -197,35 +198,49 @@ void qa_emit_custom_targets(std::string &out,
    * ``panel_category_show_active_tab`` performs. The generic widget loop below
    * already lists them as plain Tab widgets, but their label is translated and
    * abbreviated in compact mode, so keep exporting the stable ``panel_tab``
-   * surface keyed on the untranslated category idname. */
+   * surface keyed on the untranslated category idname. The Mixie sidebar never
+   * builds that block: area.cc routes it to Mixar's own GPU strip, whose click
+   * hit-rects are recorded at draw time — read those through
+   * ``UI_mixar_panel_category_tab_rect_get``, never re-derive the layout. */
   if (region->runtime != nullptr &&
       !BLI_listbase_is_empty(&region->runtime->panels_category))
   {
-    const blender::ui::Block *tabs = region->runtime->block_name_map.lookup_as(
-        "panel_category_tabs");
+    /* `lookup_default_as`, never `lookup_as`: the latter asserts the key exists
+     * and dereferences a null slot in release builds, and the Mixie sidebar
+     * draws its own category strip without ever creating this block. */
+    const blender::ui::Block *tabs = region->runtime->block_name_map.lookup_default_as(
+        "panel_category_tabs", nullptr);
     const char *active = blender::ui::panel_category_active_get(const_cast<ARegion *>(region),
                                                                 false);
     int index = 0;
     for (const PanelCategoryDyn &pc : region->runtime->panels_category) {
+      /* Region-relative pixels from either source. */
+      rcti pix;
+      bool found = false;
       if (tabs != nullptr) {
         for (const std::unique_ptr<blender::ui::Button> &but_ptr : tabs->buttons_ptrs) {
           const blender::ui::Button *but = but_ptr.get();
           if (but->type != blender::ui::ButtonType::Tab || int(but->hardmax) != index) {
             continue;
           }
-          rcti pix;
           blender::ui::button_to_pixelrect(&pix, region, tabs, but);
-          MixarQATarget t;
-          t.surface = "panel_tab";
-          t.text = pc.idname;
-          t.sel = (active != nullptr && STREQ(active, pc.idname));
-          t.rect_win.xmin = region->winrct.xmin + pix.xmin;
-          t.rect_win.xmax = region->winrct.xmin + pix.xmax;
-          t.rect_win.ymin = region->winrct.ymin + pix.ymin;
-          t.rect_win.ymax = region->winrct.ymin + pix.ymax;
-          targets.push_back(std::move(t));
+          found = true;
           break;
         }
+      }
+      else {
+        found = blender::ui::UI_mixar_panel_category_tab_rect_get(region, pc.idname, &pix);
+      }
+      if (found) {
+        MixarQATarget t;
+        t.surface = "panel_tab";
+        t.text = pc.idname;
+        t.sel = (active != nullptr && STREQ(active, pc.idname));
+        t.rect_win.xmin = region->winrct.xmin + pix.xmin;
+        t.rect_win.xmax = region->winrct.xmin + pix.xmax;
+        t.rect_win.ymin = region->winrct.ymin + pix.ymin;
+        t.rect_win.ymax = region->winrct.ymin + pix.ymax;
+        targets.push_back(std::move(t));
       }
       index++;
     }
