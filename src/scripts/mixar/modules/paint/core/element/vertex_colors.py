@@ -10,7 +10,7 @@ including retrieving, querying, and analyzing vertex color data from
 mesh objects and geometry nodes modifiers.
 """
 
-from ..io.input_outputs.outputs import get_tree_outputs
+from ..io.input_outputs.outputs import get_modifier_output_attribute_name, get_tree_outputs
 from ..node.get_nodes import get_layer_source
 from ..node.node_utils import get_source_vcol_name, get_vertex_colors
 
@@ -54,7 +54,7 @@ def get_vertex_color_names_from_geonodes(obj):
             outputs = get_tree_outputs(mod.node_group)
             for outp in outputs:
                 if outp.socket_type == 'NodeSocketColor':
-                    name = mod[outp.identifier + '_attribute_name']
+                    name = get_modifier_output_attribute_name(mod, outp.identifier)
                     if name != '' and name not in vcol_names:
                         vcol_names.append(name)
 
@@ -144,7 +144,7 @@ def get_vcol_data_type_and_domain_by_name(obj, vcol_name, objs=[]):
                     outputs = get_tree_outputs(mod.node_group)
                     for outp in outputs:
                         if outp.socket_type == 'NodeSocketColor':
-                            if mod[outp.identifier + '_attribute_name'] == vcol_name:
+                            if get_modifier_output_attribute_name(mod, outp.identifier) == vcol_name:
                                 data_type = 'FLOAT_COLOR'
                                 domain = outp.attribute_domain
                                 outp_found = True

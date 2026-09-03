@@ -85,13 +85,35 @@ def new_tree_input(tree, name, socket_type, description='', use_both=False):
         socket_type = 'NodeSocketFloat'
         subtype = 'FACTOR'
 
-    inp = None
+    inp = tree.interface.new_socket(name, description=description, in_out='INPUT', socket_type=socket_type)
 
-    if not inp:
-        inp =  tree.interface.new_socket(name, description=description, in_out='INPUT', socket_type=socket_type)
-
-    if hasattr(inp, 'subtype'): inp.subtype = subtype
+    if hasattr(inp, 'subtype') and inp.subtype != subtype:
+        inp.subtype = subtype
+        # Blender 5.1+ re-types the interface item in place when its subtype
+        # changes: same C pointer, but a different refined RNA struct, so the
+        # wrapper `new_socket` returned no longer compares equal to the item
+        # enumerated from `items_tree`. Callers keep the returned item in
+        # `valid_inputs`, and the cleanup passes delete every input that fails
+        # that membership test -- which silently removed EVERY factor input
+        # (Metallic, Roughness, opacities...) right after creating it. Hand
+        # back a fresh wrapper for the same item instead. Upstream Ucupaint
+        # works around the same thing by deferring the subtype assignment
+        # until after its cleanup pass.
+        inp = refetch_interface_item(tree, inp)
     return inp
+
+
+def refetch_interface_item(tree, item):
+    """Return the CURRENT wrapper for `item` (matched by C pointer).
+
+    Needed after any change that re-types an interface item (subtype,
+    socket_type): the old wrapper keeps the old RNA type and fails `==`.
+    """
+    ptr = item.as_pointer()
+    for it in tree.interface.items_tree:
+        if it.as_pointer() == ptr:
+            return it
+    return item
 
 def remove_tree_input(tree, item):
     """Remove an input from a node tree's interface.

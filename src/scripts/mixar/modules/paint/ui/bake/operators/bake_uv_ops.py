@@ -5,7 +5,7 @@
 
 """UV operations for baking"""
 
-from ....core.io.input_outputs.outputs import get_tree_outputs
+from ....core.io.input_outputs.outputs import get_modifier_output_attribute_name, get_tree_outputs
 from ....core.layer.layer_utils import get_uv_layers
 
 # Constant for active UV node name
@@ -78,7 +78,7 @@ def get_output_uv_names_from_geometry_nodes(obj):
             outputs = get_tree_outputs(m.node_group)
             for outp in outputs:
                 if outp.socket_type == "NodeSocketVector":
-                    uv = uv_layers.get(m[outp.identifier + "_attribute_name"])
+                    uv = uv_layers.get(get_modifier_output_attribute_name(m, outp.identifier))
                     if uv:
                         uv_names.append(uv.name)
 
