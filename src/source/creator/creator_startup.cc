@@ -1120,14 +1120,6 @@ bool show_startup_dialog(void) {
     }
     compute_code_challenge(code_verifier, code_challenge, sizeof(code_challenge));
 
-    // Generate the OAuth state nonce (matches the macOS/Windows flows).
-    char state[64] = {0};
-    if (!generate_state(state, sizeof(state))) {
-        std::system("zenity --error --title=\"Authentication Failed\" "
-                    "--text=\"Failed to generate SSO state nonce.\" --width=300");
-        return false;
-    }
-
     // Bind auth server first to get actual port
     int actual_port = 0;
     intptr_t server_handle = auth_server_start(51731, &actual_port);

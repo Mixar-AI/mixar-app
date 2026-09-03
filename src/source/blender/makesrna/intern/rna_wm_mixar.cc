@@ -42,17 +42,7 @@
 
 #include "BLI_listbase.h"
 
-#ifndef RNA_RUNTIME
-#  include "rna_internal_types.hh"
-
-#  include "BLI_ghash.h"
-#endif
-
-/* Mixar 5.2 port: namespace wrap. */
-namespace blender {
-
 #ifdef RNA_RUNTIME
-
 #  include <cstring>
 #  include <string>
 
@@ -60,6 +50,16 @@ namespace blender {
 #  include "BKE_report.hh"
 
 #  include "../../editors/interface/interface_qa_inspect.hh"
+#else
+#  include "rna_internal_types.hh"
+#endif
+
+/* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
+ * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
+ * header pulled in after the wrap opens would land in ``blender::blender``. */
+namespace blender {
+
+#ifdef RNA_RUNTIME
 
 static void rna_Window_global_areas_begin(CollectionPropertyIterator *iter, PointerRNA *ptr)
 {
@@ -166,8 +166,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
    * also registered in rna_wm.cc, so its generated wrappers land in
    * rna_wm_gen.cc where the helpers above are visible via the same include
    * injection that serves ``Window.global_areas``. */
-  StructRNA *srna_wm = static_cast<StructRNA *>(
-      BLI_ghash_lookup(brna->structs_map, "WindowManager"));
+  StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (srna_wm != nullptr) {
     prop = RNA_def_property(srna_wm, "mixar_qa_ui_dump", PROP_STRING, PROP_NONE);
     RNA_def_property_string_funcs(prop,

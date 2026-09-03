@@ -4,4 +4,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 void ED_dropboxes_mixar_file();
+
+}  // namespace blender

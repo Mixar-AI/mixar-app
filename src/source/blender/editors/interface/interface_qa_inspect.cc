@@ -35,6 +35,9 @@
 #include "interface_intern.hh"
 #include "interface_qa_inspect.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct MixarQAProviderEntry {
   int spacetype;
   MixarQATargetProvider fn;
@@ -186,25 +189,45 @@ void qa_emit_custom_targets(std::string &out,
 {
   std::vector<MixarQATarget> targets;
 
-  /* Sidebar category tabs (the vertical "Image Gen / Video Gen / ..." strip):
-   * drawn by the panel-category system, not uiButs — export their stored
-   * rects so tab switching is a semantic click. */
+  /* Sidebar category tabs (the vertical "Image Gen / Video Gen / ..." strip).
+   * Since Blender 5.2 these are real ``ButtonType::Tab`` buttons in the
+   * region's ``panel_category_tabs`` block (``panel_category_tabs_draw_all``),
+   * each bound to ``Region.active_panel_category`` with ``hardmax`` set to the
+   * category index — the same lookup upstream's own
+   * ``panel_category_show_active_tab`` performs. The generic widget loop below
+   * already lists them as plain Tab widgets, but their label is translated and
+   * abbreviated in compact mode, so keep exporting the stable ``panel_tab``
+   * surface keyed on the untranslated category idname. */
   if (region->runtime != nullptr &&
       !BLI_listbase_is_empty(&region->runtime->panels_category))
   {
+    const blender::ui::Block *tabs = region->runtime->block_name_map.lookup_as(
+        "panel_category_tabs");
     const char *active = blender::ui::panel_category_active_get(const_cast<ARegion *>(region),
-                                                     false);
-    for (const PanelCategoryDyn &pc : region->runtime->panels_category)
-    {
-      MixarQATarget t;
-      t.surface = "panel_tab";
-      t.text = pc.idname;
-      t.sel = (active != nullptr && STREQ(active, pc.idname));
-      t.rect_win.xmin = region->winrct.xmin + pc.rect.xmin;
-      t.rect_win.xmax = region->winrct.xmin + pc.rect.xmax;
-      t.rect_win.ymin = region->winrct.ymin + pc.rect.ymin;
-      t.rect_win.ymax = region->winrct.ymin + pc.rect.ymax;
-      targets.push_back(std::move(t));
+                                                                false);
+    int index = 0;
+    for (const PanelCategoryDyn &pc : region->runtime->panels_category) {
+      if (tabs != nullptr) {
+        for (const std::unique_ptr<blender::ui::Button> &but_ptr : tabs->buttons_ptrs) {
+          const blender::ui::Button *but = but_ptr.get();
+          if (but->type != blender::ui::ButtonType::Tab || int(but->hardmax) != index) {
+            continue;
+          }
+          rcti pix;
+          blender::ui::button_to_pixelrect(&pix, region, tabs, but);
+          MixarQATarget t;
+          t.surface = "panel_tab";
+          t.text = pc.idname;
+          t.sel = (active != nullptr && STREQ(active, pc.idname));
+          t.rect_win.xmin = region->winrct.xmin + pix.xmin;
+          t.rect_win.xmax = region->winrct.xmin + pix.xmax;
+          t.rect_win.ymin = region->winrct.ymin + pix.ymin;
+          t.rect_win.ymax = region->winrct.ymin + pix.ymax;
+          targets.push_back(std::move(t));
+          break;
+        }
+      }
+      index++;
     }
   }
 
@@ -314,7 +337,7 @@ void qa_dump_region(std::string &out,
         out += "\"popup\":true,";
       }
       if (block.panel != nullptr) {
-        const blender::ui::Panel *panel = block.panel;
+        const Panel *panel = block.panel;
         const char *panel_id = (panel->type != nullptr) ? panel->type->idname :
                                                           panel->panelname;
         json_str(out, "panel", panel_id ? panel_id : "");
@@ -397,22 +420,24 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
     if (screen == nullptr) {
       continue;
     }
-    for (const ScrArea *area : screen->areabase) {
-      for (const ARegion *region : area->regionbase) {
-        qa_dump_region(out, first_widget, win, area, region, false);
+    for (const ScrArea &area : screen->areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
       }
     }
     /* Global areas: topbar / statusbar. */
-    for (const ScrArea *area : win->global_areas.areabase) {
-      for (const ARegion *region : area->regionbase) {
-        qa_dump_region(out, first_widget, win, area, region, false);
+    for (const ScrArea &area : win->global_areas.areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
       }
     }
     /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
-    for (const ARegion *region : screen->regionbase) {
-      qa_dump_region(out, first_widget, win, nullptr, region, true);
+    for (const ARegion &region : screen->regionbase) {
+      qa_dump_region(out, first_widget, win, nullptr, &region, true);
     }
   }
   out += "\n]}";
   return out;
 }
+
+}  // namespace blender

@@ -38,6 +38,16 @@ if [ -f "$ROOT_DIR/.overlay_manifest" ]; then
 fi
 
 echo "Overlaying Mixar sources onto source..."
-rsync -av "$SRC_DIR/" "$SOURCE_DIR/"
+# Skip local-only artefacts that git ignores but that live inside src/ on a
+# dev machine (a stray .venv, .pyc caches, Finder metadata). CMake's install
+# rule for scripts/ only filters __pycache__, so anything else copied here
+# would ship inside the app bundle.
+rsync -av \
+    --exclude='.venv/' \
+    --exclude='venv/' \
+    --exclude='__pycache__/' \
+    --exclude='.pytest_cache/' \
+    --exclude='.DS_Store' \
+    "$SRC_DIR/" "$SOURCE_DIR/"
 
 echo "Overlay complete."

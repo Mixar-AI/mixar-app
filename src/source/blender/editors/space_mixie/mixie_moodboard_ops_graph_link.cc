@@ -25,8 +25,7 @@ static wmOperatorStatus call_connect_operator(bContext *C,
   if (!ot) {
     return OPERATOR_CANCELLED;
   }
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, ot);
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&props, "from_node_id", from_node_id);
   RNA_string_set(&props, "to_node_id", target.node_id);
   /* Empty when the drop landed on a card rather than one of its sockets: the
@@ -77,8 +76,7 @@ static wmOperatorStatus call_output_menu(bContext *C,
     return OPERATOR_CANCELLED;
   }
   RNA_property_string_set(scene_ptr, source, source_node_id);
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, menu_type);
+  PointerRNA props = WM_operator_properties_create_ptr(menu_type);
   RNA_string_set(&props, "name", "MIXIE_MT_moodboard_output_menu");
   const wmOperatorStatus status = WM_operator_name_call_ptr(
       C, menu_type, blender::wm::OpCallContext::InvokeRegionWin, &props, event);
