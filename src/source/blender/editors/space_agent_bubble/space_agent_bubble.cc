@@ -771,11 +771,13 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
 
   if (has_conversation && !g_bubble_grown_for_chat) {
     g_bubble_grown_for_chat = true;
+#if defined(__APPLE__) || defined(_WIN32)
     bubble_force_size_and_refresh(const_cast<bContext *>(C),
                                   win->ghostwin,
                                   AGENT_BUBBLE_DEFAULT_WIDTH,
                                   AGENT_BUBBLE_DEFAULT_HEIGHT +
                                       AGENT_BUBBLE_TRANSCRIPT_HEIGHT);
+#endif
   }
 
   /* NO per-tab resizing: the window jumping sizes between tabs read as
