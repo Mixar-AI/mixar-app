@@ -1906,7 +1906,9 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   if (win && win->ghostwin) {
     int os_w = 0;
     int os_h = 0;
+#if defined(__APPLE__) || defined(_WIN32)
     Mixar_WindowGetContentPixelSize(win->ghostwin, &os_w, &os_h);
+#endif
     if (os_w > 0 && os_h > 0) {
       pill_w = float(os_w);
       pill_h = float(os_h);
