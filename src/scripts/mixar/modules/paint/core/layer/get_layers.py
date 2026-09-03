@@ -221,7 +221,9 @@ def get_layer_depth(layer):
     cur = layer
     parent = layer
 
-    while True:
+    # Bound the walk by the stack size: a corrupt parent_idx chain (e.g. a
+    # cycle) must not hang the main thread.
+    for _ in range(len(mp.layers)):
         if cur.parent_idx != -1:
 
             try:

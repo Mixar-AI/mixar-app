@@ -65,28 +65,27 @@ def _resolve_mesh_objects(object_names=None) -> tuple[list[object], list[str]]:
     active = getattr(bpy.context, "active_object", None)
     if active is not None:
         _add_mesh_target(active, targets)
-    if targets:
-        return list(targets.values()), []
 
-    # Scope the final fallback to the active scene. bpy.data.objects includes
-    # every object across all scenes and unlinked datablocks.
-    scene = getattr(bpy.context, "scene", None)
-    for obj in getattr(scene, "objects", []):
-        _add_mesh_target(obj, targets)
+    # No scene-wide fallback: with an empty context the agent tool call must
+    # FAIL (callers report "No mesh objects found") instead of silently
+    # targeting EVERY mesh in the scene on a malformed request.
     return list(targets.values()), []
 
 
-def _selection_snapshot() -> tuple[str, list[str]]:
+def _selection_snapshot() -> tuple[str, list[str], str]:
     active = getattr(bpy.context, "active_object", None)
     selected = getattr(bpy.context, "selected_objects", [])
     return (
         getattr(active, "name", ""),
         [getattr(obj, "name", "") for obj in selected],
+        # object.mode is exactly what mode_set accepts; the default keeps
+        # test stub objects (no .mode) from triggering a restore.
+        getattr(active, "mode", "OBJECT"),
     )
 
 
-def _restore_selection(snapshot: tuple[str, list[str]]) -> None:
-    active_name, selected_names = snapshot
+def _restore_selection(snapshot: tuple[str, list[str], str]) -> None:
+    active_name, selected_names, mode = snapshot
     try:
         if bpy.context.mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")
@@ -100,6 +99,13 @@ def _restore_selection(snapshot: tuple[str, list[str]]) -> None:
             bpy.context.view_layer.objects.active = active
     except Exception:
         logger.debug("Could not restore selection", exc_info=True)
+    # Restore the artist's mode: the OBJECT switch above (plus the mid-flow
+    # switch in _activate_object) must not leave them stuck in OBJECT mode.
+    if mode and mode != "OBJECT":
+        try:
+            bpy.ops.object.mode_set(mode=mode)
+        except Exception:
+            logger.debug("Could not restore %s mode", mode, exc_info=True)
 
 
 def _activate_object(obj) -> None:

@@ -62,6 +62,12 @@ def _move_base_to_bottom(base_name: str, n_details: int) -> None:
         return
     try:
         mp.layers.move(base_idx, target)
+        # The raw move bypasses finalize_layer_move's parent remap, so any
+        # non-root parent_idx would point at the wrong layer afterwards.
+        # Built stacks are flat (base + procedural details, no groups) —
+        # force root level instead of leaving stale refs behind.
+        for lyr in mp.layers:
+            lyr.parent_idx = -1
         mp.active_layer_index = 0
         # Keep the UI list (scene.mixar_layers) in sync — it mirrors mp.layers 1:1.
         scene = bpy.context.scene
