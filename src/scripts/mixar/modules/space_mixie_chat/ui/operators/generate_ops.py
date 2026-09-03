@@ -127,6 +127,15 @@ def execute_generate_mode(operator, context):
 
         # Copy attachments to message history
         for att in pending_attachments:
+            if getattr(att, "image_source", "") == 'MODEL_FILE':
+                # #1268: Generate mode consumes attachments as REFERENCE
+                # IMAGES — a model file is not one. Warn once and skip.
+                operator.report(
+                    {'WARNING'},
+                    f"Skipped {att.display_name}: model files are not "
+                    "reference images — attach it in Agent mode instead",
+                )
+                continue
             msg_att = user_msg.attachments.add()
             msg_att.image_path = att.image_path
             msg_att.image_source = att.image_source

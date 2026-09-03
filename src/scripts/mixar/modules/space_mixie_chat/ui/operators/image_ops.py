@@ -25,6 +25,7 @@ from ...core import (
     validate_image_file,
 )
 from ...core.attachment_board_sync import mirror_attachment_to_moodboard
+from ...core.model_attachment import import_model_attachment, is_model_file
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
 
@@ -36,7 +37,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
 
     # ImportHelper settings
     filter_glob: StringProperty(
-        default="*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.tif",
+        default="*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.tif;*.obj",
         options={'HIDDEN'}
     )
 
@@ -71,10 +72,35 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
                             f"Attachment limit ({MAX_ATTACHMENTS_PER_MESSAGE}) reached")
                 break
 
-            is_valid, error = validate_image_file(filepath)
-            if not is_valid:
-                self.report({'WARNING'}, f"Skipped {os.path.basename(filepath)}: {error}")
+            # #1268: a 3D model file is imported into the scene AT ATTACH
+            # TIME (client-side; the path never leaves the addon) and the
+            # attachment records the imported object names. Skip the moodboard
+            # mirror — the board is image-only.
+            if is_model_file(filepath):
+                result = import_model_attachment(filepath)
+                if not result.get("success"):
+                    self.report(
+                        {'WARNING'},
+                        f"Skipped {os.path.basename(filepath)}: {result.get('error')}",
+                    )
+                    continue
+                already = any(
+                    att.image_path == filepath and att.image_source == 'MODEL_FILE'
+                    for att in attachments
+                )
+                if already:
+                    continue
+                attachment = attachments.add()
+                attachment.image_path = filepath
+                attachment.image_source = 'MODEL_FILE'
+                attachment.display_name = result["display_name"]
+                attachment.imported_object_names = ",".join(
+                    result["imported_object_names"]
+                )
+                added += 1
                 continue
+
+            is_valid, error = validate_image_file(filepath)
 
             # Skip duplicates
             already = False

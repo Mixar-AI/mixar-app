@@ -311,8 +311,20 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # message, so the agent can pass image_name to generation tools
         # without a get_last_user_message round-trip.
         attachment_names: list = []
+        # #1268: MODEL_FILE attachments are NOT images — they are imported
+        # scene objects. Their names ride a parallel field so the backend
+        # annotates the message without touching the vision gate.
+        imported_object_names: list = []
         if not is_modify and not is_awaiting_input and len(pending_attachments) > 0:
             for att in pending_attachments:
+                if att.image_source == 'MODEL_FILE':
+                    names = [
+                        n for n in str(att.imported_object_names or "").split(",")
+                        if n.strip()
+                    ]
+                    imported_object_names.extend(names)
+                    attachment_names.append("")  # keep index alignment
+                    continue
                 resolved_name = ""
                 try:
                     if att.image_source == 'BLEND_DATA':
@@ -384,6 +396,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 auth_token=auth_token,
                 image_attachments=encoded_attachments if encoded_attachments else None,
                 attachment_names=attachment_names if attachment_names else None,
+                imported_object_names=imported_object_names or None,
                 project_context=project_context,
             )
             if not success:
