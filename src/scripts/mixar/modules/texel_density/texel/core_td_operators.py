@@ -11,7 +11,6 @@ import numpy as np
 import ctypes
 
 from . import utils
-from .cpp_interface import TDCoreWrapper
 
 
 def find_image_editor_area(context):
@@ -52,13 +51,14 @@ class TexelDensityCheck(bpy.types.Operator):
 			return {"CANCELLED"}
 		
 		start_mode = bpy.context.object.mode
-		need_select_again_obj = bpy.context.selected_objects
-		start_selected_obj = (bpy.context.objects_in_mode if start_mode == 'EDIT' else bpy.context.selected_objects)
 
 		if len(bpy.context.selected_objects) == 0:
 			start_active_obj.select_set(True)
 
-		tdcore_lib = TDCoreWrapper() if utils.get_preferences().calculation_backend == 'CPP' else None
+		need_select_again_obj = bpy.context.selected_objects
+		start_selected_obj = (bpy.context.objects_in_mode if start_mode == 'EDIT' else bpy.context.selected_objects)
+
+		tdcore_lib = utils.get_tdcore_wrapper()
 
 		bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -265,7 +265,10 @@ class TexelDensitySet(bpy.types.Operator):
 				if td.rescale_anchor in cursor_locations:
 					bpy.ops.uv.cursor_set(location=cursor_locations[td.rescale_anchor])
 
-				if not context.scene.tool_settings.use_uv_select_sync:
+				if (start_mode == 'OBJECT' or not td.selected_faces) and not context.scene.tool_settings.use_uv_select_sync:
+					# With selected_faces enabled and sync off, sync_uv_selection
+					# already transferred the 3D face selection to UV — selecting
+					# everything here would rescale the entire UV map instead
 					bpy.ops.uv.select_all(action='SELECT')
 
 				# Set sync to False for operations (like original addon)

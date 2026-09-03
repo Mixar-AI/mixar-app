@@ -278,6 +278,25 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     suggested_filename=bubble.export_suggested_filename,
                 )
 
+        # #1251 import picker: same two-pass bridge as the export picker. The
+        # native open dialog stores the path in the process-local vault; the
+        # re-dispatch POSTs only the action value — the path never travels.
+        if self.action_value == "import_source_selected":
+            from ...core import get_session_manager
+            from ...core.import_source import has_source
+            session_id = get_session_manager().get_session_id(context.scene)
+            if not has_source(session_id):
+                bubble = next((m for m in context.scene.mixie_chat_messages
+                               if getattr(m, "bubble_id", "") == self.bubble_id), None)
+                if bubble is None or getattr(bubble, "input_type", "") != "file_open":
+                    self.report({'WARNING'}, "Import request is no longer available")
+                    return {'CANCELLED'}
+                return bpy.ops.mixie_chat.choose_import_file(
+                    'INVOKE_DEFAULT', bubble_id=self.bubble_id,
+                    session_id=session_id,
+                    formats=getattr(bubble, "import_formats", ""),
+                )
+
         # Credit-upgrade CTA: open the manage-subscription page via the shared
         # upgrade operator (seamless auth handoff) instead of dispatching the
         # value back to the backend. Handled before the connection check so it
@@ -294,6 +313,42 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 return {'CANCELLED'}
             return {'FINISHED'}
 
+        # Turn-resume prompt (#1258): adopt the orphaned turn locally (replay
+        # + follow via the attach endpoint) or dismiss the bubble — both are
+        # client-local, no backend round-trip, work right after reconnect.
+        from ...core.turn_resume import RESUME_ACTION_PREFIX, DISMISS_ACTION
+        if self.action_value == DISMISS_ACTION:
+            from ...core.turn_resume import dismiss_resume_prompt
+            dismiss_resume_prompt(context.scene)
+            redraw_chat_areas()
+            return {'FINISHED'}
+        if self.action_value.startswith(RESUME_ACTION_PREFIX):
+            from ...core.turn_resume import dismiss_resume_prompt
+            session_id = self.action_value[len(RESUME_ACTION_PREFIX):]
+            dismiss_resume_prompt(context.scene)
+            res = bpy.ops.mixie_chat.resume_previous_task(
+                'INVOKE_DEFAULT', session_id=session_id,
+            )
+            return {'FINISHED'} if res else {'CANCELLED'}
+
+        # P1-5 retry chip: the graph already ENDED, so this value must NOT go
+        # to /agent/input (there is no interrupt to resume). Send the bare
+        # "continue" message instead — the classifier's deterministic
+        # continuation guard re-runs only the unfinished lanes.
+        if self.action_value == "retry_failed_tasks":
+            from ...core.parked_resume import send_continue
+            scene = context.scene
+            if not send_continue(scene):
+                self.report({'WARNING'},
+                            "Chat is busy — wait for the current turn to finish")
+                return {'CANCELLED'}
+            for msg in scene.mixie_chat_messages:
+                if getattr(msg, "bubble_id", "") == self.bubble_id:
+                    msg.action_items.clear()
+                    break
+            redraw_chat_areas()
+            return {'FINISHED'}
+
         # Check connection before dispatching
         from ...core import get_session_manager
         session = get_session_manager()
@@ -301,6 +356,11 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             if self.action_value == "export_destination_selected":
                 from ...core.export_destination import clear_destination
                 clear_destination(session.get_session_id(context.scene))
+            elif self.action_value == "import_source_selected":
+                # A stale vault entry would skip the picker on the next click
+                # and import a file the user did not just choose.
+                from ...core.import_source import clear_source
+                clear_source(session.get_session_id(context.scene))
             logger.warning("[SLOT ACTION] CANCELLED: Not connected to server")
             self.report({'WARNING'}, "Not connected to server. Please reconnect.")
             return {'CANCELLED'}
@@ -391,6 +451,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     if self.action_value == "export_destination_selected":
                         from ...core.export_destination import clear_destination
                         clear_destination(session.get_session_id(scene))
+                    elif self.action_value == "import_source_selected":
+                        from ...core.import_source import clear_source
+                        clear_source(session.get_session_id(scene))
                     self.report({'ERROR'}, "Failed to send action")
 
         except Exception as e:

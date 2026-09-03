@@ -140,9 +140,12 @@ exit /b %INSTALL_EXIT%
 
 _SIGNATURE_CHECK = '''
 rem ---- re-check the signature immediately before running it -------------
+rem ONLY exit 0 passes. Anything else fails closed: 1 is an invalid
+rem signature, and 9009 (PowerShell missing) used to fall through to
+rem signature_ok, skipping the re-verify entirely.
 powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "{ps_verify}" >>"%LOG%" 2>&1
-if not "%ERRORLEVEL%"=="1" goto signature_ok
-echo [%DATE% %TIME%] Installer signature invalid - refusing to install >>"%LOG%" 2>&1
+if "%ERRORLEVEL%"=="0" goto signature_ok
+echo [%DATE% %TIME%] Installer signature could not be verified - refusing to install >>"%LOG%" 2>&1
 >"%RESULT%" echo version=%VERSION%
 >>"%RESULT%" echo stage=verify
 >>"%RESULT%" echo exit=signature

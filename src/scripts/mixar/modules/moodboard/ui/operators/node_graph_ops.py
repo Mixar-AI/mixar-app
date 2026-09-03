@@ -61,7 +61,10 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
     )
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.node_execution import run_action_node
+        from mixar.modules.moodboard.core.node_execution import (
+            mark_run_failed,
+            run_action_node,
+        )
         from mixar.modules.moodboard.core.node_graph import (
             action_node_by_id,
             active_action_node,
@@ -88,9 +91,10 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
         try:
             run_action_node(context, node, self)
         except Exception as exc:
-            node.state = 'FAILED'
-            node.error = str(exc)
-            self.report({'ERROR'}, str(exc))
+            # A node that is genuinely generating keeps its state; marking a
+            # live job FAILED (e.g. on this second click) is a false alarm.
+            marked = mark_run_failed(node, str(exc))
+            self.report({'ERROR' if marked else 'WARNING'}, str(exc))
             if context.area:
                 context.area.tag_redraw()
             return {'CANCELLED'}

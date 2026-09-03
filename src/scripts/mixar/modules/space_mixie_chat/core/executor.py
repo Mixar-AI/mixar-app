@@ -23,7 +23,11 @@ from typing import Any, Optional
 
 import bpy
 
-from ..constants import SCRIPT_TIMEOUT_THRESHOLD
+from ..constants import (
+    AGENT_UNDO_GROUP_PER_TURN,
+    AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN,
+    SCRIPT_TIMEOUT_THRESHOLD,
+)
 
 logger = get_logger(__name__)
 
@@ -144,9 +148,10 @@ class ScriptExecutor:
         "version_update",
     )
 
-    # Agent turn tracking for undo grouping
+    # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
     _in_agent_turn: bool = False
-    _undo_pushed_this_turn: bool = False
+    _undo_pushes_this_turn: int = 0          # SUCCESSFUL pushes so far
+    _undo_failure_logged_this_turn: bool = False
 
     def __init__(self):
         """Initialize the executor."""
@@ -216,18 +221,87 @@ class ScriptExecutor:
                     pass
 
     def begin_agent_turn(self) -> None:
-        """Signal the start of an agent turn (multi-tool sequence)."""
+        """Signal the start of an agent turn (multi-tool sequence).
+
+        Idempotent: the queue processor calls it for every streamed event,
+        so the turn begins with the first one and the per-turn undo counters
+        reset exactly once per turn.
+        """
         if not self._in_agent_turn:
             self._in_agent_turn = True
-            self._undo_pushed_this_turn = False
+            self._reset_turn_undo_state()
             logger.debug("Agent turn started")
 
     def end_agent_turn(self) -> None:
         """Signal the end of an agent turn."""
         if self._in_agent_turn:
             self._in_agent_turn = False
-            self._undo_pushed_this_turn = False
+            self._reset_turn_undo_state()
             logger.debug("Agent turn ended")
+
+    def _reset_turn_undo_state(self) -> None:
+        self._undo_pushes_this_turn = 0
+        self._undo_failure_logged_this_turn = False
+
+    def _should_push_undo(self, grouping: bool = None) -> bool:
+        """Whether THIS script should push an undo checkpoint.
+
+        Outside a turn every script pushes. Inside a turn, grouped mode
+        (AGENT_UNDO_GROUP_PER_TURN, or the per-call override) pushes once —
+        the pre-turn state, so one Ctrl-Z reverts the whole multi-tool turn
+        — and per-script mode (default) pushes before each script until
+        AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN checkpoints exist, so the user
+        can step back through the agent's work one tool at a time without
+        a long turn evicting the pre-turn state from Blender's undo stack.
+        Only SUCCESSFUL pushes are counted, so a failed push is retried by
+        the next script instead of silently leaving the turn without one.
+        """
+        group_per_turn = (
+            AGENT_UNDO_GROUP_PER_TURN if grouping is None else grouping
+        )
+        if not self._in_agent_turn:
+            return True
+        limit = 1 if group_per_turn else AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
+        return self._undo_pushes_this_turn < limit
+
+    def _push_undo_checkpoint(self) -> bool:
+        """Push an undo checkpoint; retry once inside an explicit window
+        context (undo_push's poll fails when the script runs without one).
+        Returns True only when a checkpoint was actually created."""
+        try:
+            bpy.ops.ed.undo_push(message="Mixie Chat Script")
+            return True
+        except RuntimeError:
+            pass
+        try:
+            windows = bpy.context.window_manager.windows
+            if not windows:
+                return False
+            with bpy.context.temp_override(window=windows[0]):
+                bpy.ops.ed.undo_push(message="Mixie Chat Script")
+            return True
+        except (RuntimeError, AttributeError):
+            return False
+
+    def _push_undo_for_script(self) -> bool:
+        """Push this script's checkpoint and account for it.
+
+        A success counts towards the turn's cap. A failure never aborts the
+        script: it is NOT counted (so the next script retries instead of the
+        turn silently having no checkpoint) and it is logged — once per turn,
+        because a context that cannot push will fail for every script in it.
+        """
+        if self._push_undo_checkpoint():
+            if self._in_agent_turn:
+                self._undo_pushes_this_turn += 1
+            return True
+        if not self._in_agent_turn or not self._undo_failure_logged_this_turn:
+            logger.warning(
+                "Undo checkpoint failed - this script's changes may not be "
+                "individually undoable"
+            )
+            self._undo_failure_logged_this_turn = True
+        return False
 
     def execute(self, script: str, push_undo: bool = True) -> ExecutionResult:
         """
@@ -251,19 +325,14 @@ class ScriptExecutor:
         # Capture scene state before execution
         before_state = self._capture_scene_state()
 
-        # Push undo step -- only once per agent turn when grouping is active
-        if push_undo:
-            should_push = True
-            if self._in_agent_turn:
-                if self._undo_pushed_this_turn:
-                    should_push = False
-                else:
-                    self._undo_pushed_this_turn = True
-            if should_push:
-                try:
-                    bpy.ops.ed.undo_push(message="Mixie Chat Script")
-                except RuntimeError:
-                    pass
+        # Push undo step BEFORE the script runs, so the first push of a turn
+        # captures the pre-turn scene. Granularity (per script up to the
+        # per-turn cap, or one per turn when grouped) is decided by
+        # _should_push_undo; a failed push never aborts the script — it is
+        # logged once per turn and retried by the next script, where it used
+        # to be silently swallowed (turns got NO checkpoint at all).
+        if push_undo and self._should_push_undo():
+            self._push_undo_for_script()
 
         # Snapshot handlers before execution to detect additions
         handler_snapshot = self._snapshot_handlers()

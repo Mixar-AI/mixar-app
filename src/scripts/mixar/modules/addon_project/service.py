@@ -190,7 +190,20 @@ class AddonProjectService(WorkspaceServiceMixin):
                 if is_workspace
                 else []
             )
-            result = self.transactions.commit(project_id, root, proposal_id)
+            # Scope the commit's static pass exactly like run_checks: a
+            # syntax error in an UNRELATED add-on must not block (and roll
+            # back) this commit. Workspace projects check the active
+            # add-on's folder; standalone roots keep the full tree. (Files
+            # the commit itself writes were already syntax-checked at
+            # stage_patch, so the scope cannot hide a new error.)
+            check_scopes = [(root, "")]
+            if is_workspace:
+                chosen = manifest.get("entrypoint") or ""
+                if chosen and (root / chosen).is_dir():
+                    check_scopes = [(root / chosen, f"{chosen}/")]
+            result = self.transactions.commit(
+                project_id, root, proposal_id, check_scopes=check_scopes
+            )
             if created:
                 # A commit that CREATES a new add-on package activates it so
                 # the next run_checks (no explicit entrypoint) installs the

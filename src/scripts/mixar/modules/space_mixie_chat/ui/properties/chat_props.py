@@ -49,9 +49,21 @@ class MixieChatAttachment(PropertyGroup):
         name="Image Source",
         items=[
             ('FILE', "File", "Image from file system"),
-            ('BLEND_DATA', "Blend Data", "Image from blend file")
+            ('BLEND_DATA', "Blend Data", "Image from blend file"),
+            # #1268: an attached 3D model file, imported into the scene at
+            # attach time. image_path holds the local path (never sent);
+            # imported_object_names carries what the agent may reference.
+            ('MODEL_FILE', "Model File", "3D model imported into the scene"),
         ],
         default='FILE'
+    )
+    # #1268: comma-separated names of the objects a MODEL_FILE import created
+    # (captured at attach time). Only these names ever reach the backend.
+    imported_object_names: StringProperty(
+        name="Imported Object Names",
+        description="Objects the attached model file created in the scene",
+        default="",
+        options={'SKIP_SAVE'},
     )
     display_name: StringProperty(
         name="Display Name",
@@ -254,6 +266,9 @@ class MixieChatMessage(PropertyGroup):
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
+    # #1251 import picker: comma-separated extensions offered by the native
+    # open dialog. Picker configuration only — never a path.
+    import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(

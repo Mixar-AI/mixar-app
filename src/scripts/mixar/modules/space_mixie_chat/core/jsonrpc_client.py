@@ -372,6 +372,10 @@ class JSONRPCWebSocketClient:
                 "script_execution",
                 "notifications",
                 "local_llm",
+                # Client answers blender.liveness on the WS thread; the
+                # backend only probes instances that advertise it (older
+                # clients would silently never reply).
+                "liveness",
                 ADDON_PROJECT_CAPABILITY,
                 # "ui_control_v1": the backend agent may operate this app's
                 # real UI through ui.* requests (modules/agent_ui).
@@ -549,6 +553,26 @@ class JSONRPCWebSocketClient:
         logger.debug(f"Queued request {request_id} ({method})")
         return request_id
 
+    def send_notification(self, method: str, params: dict) -> bool:
+        """Queue a JSON-RPC notification (no id, no response expected).
+
+        Fire-and-forget client -> server reporting (e.g. the final-render
+        outcome). Thread-safe: the payload only enters the outbound queue,
+        which the WS thread drains. Returns False immediately when the client
+        is not connected — the caller decides whether that matters (reporting
+        is best-effort; the server's pending marker expires instead).
+        """
+        if not self._connected:
+            return False
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+        }
+        self._outbound.put(json.dumps(notification))
+        logger.debug(f"Queued notification ({method})")
+        return True
+
     def _handle_message(self, msg: dict) -> None:
         """Handle incoming JSON-RPC message."""
         # Check if it's a response (to our ping, handshake, or send_request)
@@ -572,6 +596,9 @@ class JSONRPCWebSocketClient:
 
         if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
+
+        elif method == JSONRPCMethod.BLENDER_LIVENESS:
+            self._handle_liveness(request_id)
 
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
@@ -691,6 +718,32 @@ class JSONRPCWebSocketClient:
             }
         if request_id and result is not None:
             self.queue_response(request_id, result)
+
+    def _handle_liveness(self, request_id: Optional[str]) -> None:
+        """Answer blender.liveness WITHOUT touching bpy or the main thread.
+
+        The backend sends this before counting a script timeout toward its
+        "Blender stopped responding" breaker. A legitimately long script
+        holds the main thread (and mostly the GIL) while Blender is perfectly
+        alive; this handler runs entirely on the WebSocket receive thread and
+        answers whenever the GIL is acquirable at all — answering AT ALL is
+        the proof of life the backend needs. Never import bpy-dependent
+        modules on this path beyond the lock-guarded in-flight snapshot.
+        """
+        if request_id is None:
+            return
+        try:
+            from .main_thread_executor import get_inflight_script, has_pending_requests
+
+            inflight = get_inflight_script()
+            self.queue_response(request_id, {
+                "alive": True,
+                "script_in_flight": inflight,
+                "queue_pending": has_pending_requests(),
+                "handshake_complete": self._handshake_complete,
+            })
+        except Exception as e:  # never let a probe raise inside the recv loop
+            logger.error(f"Error in liveness handler: {e}")
 
     def _handle_execute_script(self, params: dict, request_id: Optional[str]) -> None:
         """Handle script execution request.

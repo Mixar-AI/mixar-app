@@ -253,8 +253,16 @@ def get_announced_stage(version: str) -> str:
 
 
 def set_announced_stage(version: str, stage: str) -> None:
-    """Record that *stage* has been announced for *version*."""
+    """Record that *stage* has been announced for *version*.
+
+    The write is monotonic per version: a recorded ``ready`` — the one
+    announcement that survives dismissal — is never demoted back to
+    ``available`` by a later interactive check, which would let a
+    re-completed download interrupt the user a second time.
+    """
     if not version:
+        return
+    if stage != ANNOUNCE_READY and get_announced_stage(version) == ANNOUNCE_READY:
         return
     try:
         with open(_announced_version_path(), "w") as f:

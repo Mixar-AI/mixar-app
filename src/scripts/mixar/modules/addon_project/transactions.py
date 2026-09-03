@@ -12,7 +12,7 @@ import time
 import uuid
 from pathlib import Path
 
-from .checks import run_static_checks
+from .checks import run_scoped_checks, run_static_checks
 from .constants import MAX_DIFF_CHARS, MAX_PATCH_BYTES, MAX_PATCH_FILES
 from .errors import AddonProjectError
 from .indexer import build_index, read_source, sha256_bytes
@@ -178,7 +178,8 @@ class TransactionStore:
                 pass
             raise
 
-    def commit(self, project_id: str, root: Path, proposal_id: str) -> dict:
+    def commit(self, project_id: str, root: Path, proposal_id: str,
+               *, check_scopes=None) -> dict:
         proposal = read_json(self._proposal_path(project_id, proposal_id), None)
         if not isinstance(proposal, dict) or proposal.get("project_id") != project_id:
             raise AddonProjectError("proposal_not_found", "The staged proposal is unavailable")
@@ -238,7 +239,11 @@ class TransactionStore:
                 else:
                     self._atomic_write(path, change["content"])
                 written.append(backup)
-            checks = run_static_checks(root)
+            # The static pass is scoped by the caller (service.commit_patch
+            # mirrors run_checks: one add-on's syntax error must not block a
+            # workspace commit touching another). Default keeps the
+            # whole-tree pass for standalone projects.
+            checks = run_scoped_checks(check_scopes or [(root, "")])
             if not checks["success"]:
                 raise AddonProjectError("checks_failed", checks["summary"])
             _, revision = build_index(root)

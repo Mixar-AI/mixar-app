@@ -454,3 +454,83 @@ def test_standalone_outside_root_project_still_works(tmp_path, service, workspac
     # The workspace root project remains a separate registry entry.
     root_description = service.link_workspace_root()
     assert root_description["project_id"] != description["project_id"]
+
+
+# ---------------------------------------------------------------------------
+# Commit-time static checks are scoped like run_checks
+#
+# The commit path used to compile the WHOLE workspace tree, so a syntax
+# error in one add-on blocked (and rolled back) every commit touching any
+# other add-on. The commit's static pass now scopes to the active add-on's
+# folder plus each newly created package — the same rule run_checks uses.
+# ---------------------------------------------------------------------------
+
+
+def test_commit_succeeds_despite_a_syntax_error_in_an_unrelated_addon(
+    service, workspace
+):
+    _addon_package(workspace, "ws_commit_alpha")
+    broken = _addon_package(workspace, "ws_commit_broken")
+    (broken / "oops.py").write_text("def broken(:\n", encoding="utf-8")
+    description = service.link_workspace_root()
+    # Two packages: ambiguous, so the entrypoint is chosen explicitly.
+    service.set_entrypoint(description["project_id"], "ws_commit_alpha")
+
+    record = next(
+        item for item in description["files"]
+        if item["path"] == "ws_commit_alpha/__init__.py"
+    )
+    staged = service.stage_patch(description["project_id"], {
+        "expected_revision": description["revision"],
+        "changes": [{
+            "path": "ws_commit_alpha/__init__.py",
+            "operation": "write",
+            "expected_sha256": record["sha256"],
+            "content": "NEEDLE = 'patched'\n",
+        }],
+    })
+
+    committed = service.commit_patch(description["project_id"], staged["proposal_id"])
+
+    assert committed["success"] is True
+    assert committed["checks"]["success"] is True
+    assert (workspace / "ws_commit_alpha" / "__init__.py").read_text(
+        encoding="utf-8"
+    ) == "NEEDLE = 'patched'\n"
+    # Reported paths stay project-relative and prefixed with the package.
+    assert all(
+        item["path"].startswith("ws_commit_alpha/")
+        for item in committed["checks"]["checks"]
+    )
+
+
+def test_commit_still_gates_on_its_own_scoped_addon(service, workspace):
+    # A PRE-EXISTING syntax error inside the active add-on still blocks (and
+    # rolls back) its own commits — scoping only forgives OTHER add-ons.
+    # (Files a commit writes are syntax-checked at stage_patch, so the gate
+    # can only ever fire on tree state that existed before the patch.)
+    alpha = _addon_package(workspace, "ws_gate_alpha")
+    (alpha / "oops.py").write_text("def broken(:\n", encoding="utf-8")
+    _addon_package(workspace, "ws_gate_beta")
+    description = service.link_workspace_root()
+    service.set_entrypoint(description["project_id"], "ws_gate_alpha")
+
+    record = next(
+        item for item in description["files"]
+        if item["path"] == "ws_gate_alpha/__init__.py"
+    )
+    staged = service.stage_patch(description["project_id"], {
+        "expected_revision": description["revision"],
+        "changes": [{
+            "path": "ws_gate_alpha/__init__.py",
+            "operation": "write",
+            "expected_sha256": record["sha256"],
+            "content": "NEEDLE = 'patched'\n",
+        }],
+    })
+
+    with pytest.raises(AddonProjectError) as error:
+        service.commit_patch(description["project_id"], staged["proposal_id"])
+    assert error.value.code == "checks_failed"
+    # The failed commit rolled back: the patch never landed.
+    assert (alpha / "__init__.py").read_text(encoding="utf-8") != "NEEDLE = 'patched'\n"

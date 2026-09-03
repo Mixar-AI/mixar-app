@@ -13,8 +13,10 @@ TOOL_SPECS is ready to register in the backend tool registry.
 from .store import get_scene_graph
 from .traversal import GraphView
 
-# Cache one GraphView per scene pointer, keyed by the store revision, so
-# repeated tool calls in a turn don't re-wrap the same graph.
+# Cache one GraphView per scene pointer, keyed by (scene name, store
+# revision), so repeated tool calls in a turn don't re-wrap the same graph.
+# The name is validated like the store registry, so a deleted scene's reused
+# address never serves a stale view.
 _VIEW_CACHE = {}
 
 
@@ -23,10 +25,10 @@ def get_view(scene):
     graph = sg.graph(scene)
     key = scene.as_pointer()
     cached = _VIEW_CACHE.get(key)
-    if cached is None or cached[0] != sg.revision:
-        cached = (sg.revision, GraphView(graph))
+    if cached is None or cached[0] != scene.name or cached[1] != sg.revision:
+        cached = (scene.name, sg.revision, GraphView(graph))
         _VIEW_CACHE[key] = cached
-    return cached[1]
+    return cached[2]
 
 
 TOOL_SPECS = [

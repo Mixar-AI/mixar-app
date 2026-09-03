@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 
 import bpy
 
@@ -277,31 +276,13 @@ def _run_video(context, node, operator):
     if any(not item["source_available"] for item in videos):
         raise ValueError("A connected video was moved or deleted")
 
-    video_inputs = []
-    for video in videos:
-        if video["file_size_bytes"] > limits["max_video_bytes"]:
-            raise ValueError(f"Video is too large: {video['filename']}")
-        if os.path.splitext(video["filename"])[1].lower() not in limits["video_extensions"]:
-            raise ValueError(f"Unsupported video reference: {video['filename']}")
-        video_inputs.append({
-            "filename": video["filename"],
-            "mime_type": video["mime_type"],
-            "filepath": video["resolved_filepath"],
-            "file_size_bytes": video["file_size_bytes"],
-        })
+    from .video_generation_catalog import (
+        build_image_reference_inputs,
+        build_video_reference_inputs,
+    )
 
-    image_inputs = []
-    for index, item in enumerate(images):
-        payload = compress_for_service(item["image"], "video_gen")
-        if len(payload) > limits["max_image_bytes"]:
-            raise ValueError(
-                f"Image is too large after compression: {item.get('filename') or 'reference'}"
-            )
-        image_inputs.append({
-            "filename": f"reference_{index + 1}.jpg",
-            "mime_type": "image/jpeg",
-            "bytes": payload,
-        })
+    video_inputs = build_video_reference_inputs(videos, limits)
+    image_inputs = build_image_reference_inputs(images, limits, compress_for_service)
     ensure_graph_listener(FEATURE_VIDEO_GEN)
     hook = _result_hook(context.scene.name, node.node_id, 'VIDEO')
     job = enqueue_generation(
@@ -636,6 +617,22 @@ def _run_mesh_feature(context, node, operator):
         **extra,
     )
     return job, params
+
+
+def mark_run_failed(node, message: str) -> bool:
+    """Record a submit failure on a node, unless it is genuinely generating.
+
+    The run operator catches EVERY submission error — including a second
+    click on a node whose job is already queued ("This node is already
+    running"). Demoting that node to FAILED would flash a bogus failure on a
+    live job, so a generating node keeps its state; the message still reaches
+    the user through the operator's own report.
+    """
+    if node.state in {'QUEUED', 'RUNNING'}:
+        return False
+    node.state = 'FAILED'
+    node.error = message
+    return True
 
 
 def run_action_node(context, node, operator):

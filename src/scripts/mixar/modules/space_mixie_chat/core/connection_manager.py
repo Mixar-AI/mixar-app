@@ -235,6 +235,16 @@ class ConnectionManager:
 
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
+                # #1258: a turn that outlived the disconnect is invisible to
+                # the user — ask the server which local sessions still have a
+                # live/replayable turn and surface "Resume previous task".
+                try:
+                    from .turn_resume import check_orphaned_turns
+
+                    check_orphaned_turns()
+                except Exception:
+                    logger.exception("orphaned-turn check failed (non-fatal)")
+
             # Report client version in the background (REST)
             import threading
 
@@ -252,6 +262,16 @@ class ConnectionManager:
                     )
 
             threading.Thread(target=_report_version, daemon=True).start()
+
+            # P1-6: if this (re)connect re-activated a session whose last
+            # build died with a dead Blender session (a PARKED turn), the
+            # backend decides whether the tail is small enough to
+            # auto-continue. Fail-quiet — never break the connect path.
+            try:
+                from .parked_resume import schedule_after_connect
+                schedule_after_connect(base_url)
+            except Exception as e:
+                logger.debug(f"[PARKED] auto-resume skipped: {e}")
 
         def on_disconnected(reason: str):
             if self._is_shutting_down:
