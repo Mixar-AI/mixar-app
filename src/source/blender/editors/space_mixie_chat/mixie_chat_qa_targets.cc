@@ -27,6 +27,9 @@
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 bool view_rect_to_window(const ARegion *region, const rctf &view, rcti *r_win)
@@ -135,8 +138,6 @@ void chat_qa_targets(const wmWindow * /*win*/,
 }
 
 }  // namespace
-
-namespace blender {
 
 void mixie_chat_qa_targets_register()
 {

@@ -25,6 +25,9 @@
 
 #include "view3d_director_timeline.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 bool region_rect_to_window(const ARegion *region, const rctf &rect, rcti *r_win)
@@ -82,8 +85,6 @@ void director_qa_targets(const wmWindow * /*win*/,
 }
 
 }  // namespace
-
-namespace blender {
 
 void view3d_director_qa_targets_register()
 {

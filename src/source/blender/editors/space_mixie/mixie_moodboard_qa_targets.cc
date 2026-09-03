@@ -33,6 +33,9 @@
 
 #include "mixie_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 namespace {
 
 using blender::ed::mixie::MoodboardGraphCache;
@@ -151,8 +154,6 @@ void moodboard_qa_targets(const wmWindow *win,
 }
 
 }  // namespace
-
-namespace blender {
 
 void mixie_moodboard_qa_targets_register()
 {

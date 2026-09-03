@@ -7073,7 +7073,7 @@ void Mixar_qa_simulate_file_drop(
   copy_v2_v2_int(event.prev_xy, event.xy);
   event.xy[0] = x;
   event.xy[1] = y;
-  copy_v2_v2_int(win->eventstate->xy, event.xy);
+  copy_v2_v2_int(win->runtime->eventstate->xy, event.xy);
   event.flag = eWM_EventFlag(0);
 
   wm->runtime->winactive = win;

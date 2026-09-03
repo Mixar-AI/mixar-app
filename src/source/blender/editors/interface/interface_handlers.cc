@@ -4909,8 +4909,7 @@ static int do_but_textedit(
           if (wmOperatorType *submit_ot = WM_operatortype_find(
                   "MIXIE_OT_moodboard_prompt_generate", false))
           {
-            PointerRNA submit_props;
-            WM_operator_properties_create_ptr(&submit_props, submit_ot);
+            PointerRNA submit_props = WM_operator_properties_create_ptr(submit_ot);
             RNA_string_set(&submit_props, "owner_type", owner_type.c_str());
             WM_operator_name_call_ptr(
                 C, submit_ot, blender::wm::OpCallContext::ExecDefault, &submit_props, nullptr);

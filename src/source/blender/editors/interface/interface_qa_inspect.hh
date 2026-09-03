@@ -21,6 +21,9 @@
 
 #include "BLI_rect.h"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct ScrArea;
 struct wmWindow;
@@ -67,3 +70,5 @@ using MixarQATargetProvider = void (*)(const wmWindow *win,
 void Mixar_qa_register_target_provider(int spacetype, MixarQATargetProvider fn);
 
 /** \} */
+
+}  // namespace blender
