@@ -52,7 +52,13 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _queues: dict = {}
-_SYNC_WATCHDOG_INTERVAL = 30.0
+# The queue is push-driven, so this interval IS the worst-case delay a
+# completed job can sit invisible when its at-most-once ``job.update`` push
+# is lost: at 30 s a finished image generation stared at the user for half a
+# minute. One batched ``job.sync`` RPC every 5 s while at least one job is
+# active is negligible traffic, and the timer unregisters itself once no job
+# needs reconciling.
+_SYNC_WATCHDOG_INTERVAL = 5.0
 _sync_watchdog_registered = False
 _BACKEND_SYNC_STATES = frozenset(
     {
