@@ -253,6 +253,16 @@ class ConnectionManager:
 
             threading.Thread(target=_report_version, daemon=True).start()
 
+            # P1-6: if this (re)connect re-activated a session whose last
+            # build died with a dead Blender session (a PARKED turn), the
+            # backend decides whether the tail is small enough to
+            # auto-continue. Fail-quiet — never break the connect path.
+            try:
+                from .parked_resume import schedule_after_connect
+                schedule_after_connect(base_url)
+            except Exception as e:
+                logger.debug(f"[PARKED] auto-resume skipped: {e}")
+
         def on_disconnected(reason: str):
             if self._is_shutting_down:
                 logger.info(f"JSON-RPC WebSocket disconnected: {reason}")

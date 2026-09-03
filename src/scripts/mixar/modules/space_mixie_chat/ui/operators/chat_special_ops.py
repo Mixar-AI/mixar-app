@@ -313,6 +313,24 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 return {'CANCELLED'}
             return {'FINISHED'}
 
+        # P1-5 retry chip: the graph already ENDED, so this value must NOT go
+        # to /agent/input (there is no interrupt to resume). Send the bare
+        # "continue" message instead — the classifier's deterministic
+        # continuation guard re-runs only the unfinished lanes.
+        if self.action_value == "retry_failed_tasks":
+            from ...core.parked_resume import send_continue
+            scene = context.scene
+            if not send_continue(scene):
+                self.report({'WARNING'},
+                            "Chat is busy — wait for the current turn to finish")
+                return {'CANCELLED'}
+            for msg in scene.mixie_chat_messages:
+                if getattr(msg, "bubble_id", "") == self.bubble_id:
+                    msg.action_items.clear()
+                    break
+            redraw_chat_areas()
+            return {'FINISHED'}
+
         # Check connection before dispatching
         from ...core import get_session_manager
         session = get_session_manager()

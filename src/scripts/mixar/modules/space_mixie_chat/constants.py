@@ -211,6 +211,7 @@ AGENT_CHAT_ENDPOINT = "/api/v1/blender/agent/chat"
 AGENT_INPUT_ENDPOINT = "/api/v1/blender/agent/input"
 AGENT_ATTACH_ENDPOINT = "/api/v1/blender/agent/chat/attach"
 AGENT_FEEDBACK_ENDPOINT = "/api/v1/blender/agent/feedback"
+AGENT_PARKED_TURN_ENDPOINT = "/api/v1/blender/agent/parked-turn"
 
 # Feedback submission lifecycle shown inline on the rated message.
 # Values are mirrored in C++ (mixie_chat_feedback.cc) — keep in sync.

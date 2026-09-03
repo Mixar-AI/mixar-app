@@ -114,6 +114,19 @@ answer recap that is also shown after a successful submit. If the submit fails,
 the final answer is rolled back and its card is redrawn so the user can retry
 that last click.
 
+**Retry-continue and parked auto-resume contract (P1-5/P1-6):** the backend's
+`turn_actions` chip ("Retry failed tasks") is NOT an interrupt — the graph
+already ended, so its click never goes to `/agent/input`. `core/parked_resume.py`
+is the ONE sender of the deterministic continuation phrase (`"continue"`, the
+exact string the backend's continuation guard matches — never reword or
+localize), used by both the chip (via `mixie_chat.select_slot_action`) and the
+auto-resume. On transport (re)connect, `on_connected` asks
+`POST /agent/parked-turn` for each idle scene with a saved session id; the
+BACKEND owns park + tail-size decisions, the client only sends, one-shot per
+session per app run (no double resume on transport flaps), fails quiet on any
+error, and never resumes over a live turn or a paused question. Pinned by
+`tests/test_parked_resume.py`.
+
 **Chat mode enum contract:** `scene.mixie_chat_mode` (`chat_props.py`) is the
 ONE list every mode dropdown enumerates — the C++ chat footer, the agent
 bubble's footer panel and the bubble menu all bind that property — so an
