@@ -32,6 +32,8 @@ from bpy.props import (
 )
 from bpy.types import PropertyGroup
 
+from mixar.modules.common.job_queue.core.labels import feature_label, model_label
+
 from mixar.modules.common.job_queue.core.job import TERMINAL_STATES
 from mixar.modules.common.job_queue.core.queue_manager import all_queues, get_queue
 from mixar.modules.common.job_queue.ui.queue_selection import on_active_index_changed
@@ -66,6 +68,18 @@ class MixieQueueItemPG(PropertyGroup):
     user_message: StringProperty(name="User Message", default="")
     created_at: FloatProperty(name="Created At", default=0.0)
     finished_at: FloatProperty(name="Finished At", default=0.0)
+    # C++-consumable metadata for the agent island's Queue tab: the catalog
+    # labels are Python-only lookups and Job timestamps are time.monotonic()
+    # (no C++-comparable base), so the sync stamps resolved strings plus a
+    # unix-epoch creation time the island can subtract from time(NULL).
+    type_label: StringProperty(name="Generation Type", default="")
+    model_label: StringProperty(name="Model", default="")
+    # INT, not float: a float32 cannot hold a unix epoch. Its ULP at 1.79e9
+    # is 128 s, so the elapsed clock read up to a minute wrong and ticked in
+    # ~2-minute jumps (a 95 s-old job displayed as 1:11). Whole seconds are
+    # all an m:ss clock needs, and int32 holds them exactly.
+    created_epoch: IntProperty(name="Created (unix seconds)", default=0)
+    elapsed_done: FloatProperty(name="Frozen Elapsed", default=0.0)
 
 
 class MixieUnifiedQueuePG(PropertyGroup):
@@ -152,6 +166,18 @@ def _sync_mirror(_queue) -> None:
             item.user_message = job.user_message
             item.created_at = getattr(job, "created_at", 0.0)
             item.finished_at = getattr(job, "finished_at", 0.0)
+            item.type_label = feature_label(
+                item.origin_capability_key, item.service, item.feature_key
+            )
+            item.model_label = model_label(item.service, item.model)
+            item.created_epoch = (
+                int(time.time() - (now - item.created_at)) if item.created_at else 0
+            )
+            item.elapsed_done = (
+                max(0.0, item.finished_at - item.created_at)
+                if (item.finished_at and item.created_at)
+                else 0.0
+            )
             if prev_key and item.job_id == prev_key:
                 new_index = i
 

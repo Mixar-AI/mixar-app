@@ -48,7 +48,8 @@ class MIXAR_OT_director_enter(Operator):
     """Open Director as a clean, mode-level viewport experience"""
 
     bl_idname = "mixar.director_enter"
-    bl_label = "Director"
+    # User-facing name only; the idname stays `director_*` (frozen contract).
+    bl_label = "Cinema Mode"
     bl_description = "Open the cinematic camera-directing workspace"
     bl_options = {'REGISTER'}
 

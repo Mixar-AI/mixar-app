@@ -79,12 +79,12 @@ class MIXIE_OT_texture_edit_generate(Operator):
 
         tab = _get_texture_gen_tab(context)
         if tab is None:
-            self.report({"WARNING"}, "Texture Gen tab not available")
+            self.report({"ERROR"}, "Texture Gen tab not available")
             return {"CANCELLED"}
 
         meshes = [o for o in context.selected_objects if o.type == 'MESH']
         if not meshes:
-            self.report({"WARNING"}, "No mesh selected")
+            self.report({"ERROR"}, "No mesh selected")
             return {"CANCELLED"}
 
         model = _resolve_model(
@@ -95,7 +95,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
         prompt = (getattr(tab, 'prompt', '') or '').strip()
         if image is None and not prompt:
             self.report(
-                {"WARNING"}, "Provide a reference image or a prompt")
+                {"ERROR"}, "Provide a reference image or a prompt")
             return {"CANCELLED"}
 
         # Export the selected mesh as FBX (texture edit requires .fbx).
@@ -158,7 +158,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
             )
             if not job:
                 self.report(
-                    {"WARNING"}, "A duplicate texture edit is already queued")
+                    {"ERROR"}, "A duplicate texture edit is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
@@ -186,12 +186,12 @@ class MIXIE_OT_texture_gen_matgen(Operator):
     def execute(self, context):
         tab = _get_texture_gen_tab(context)
         if tab is None:
-            self.report({"WARNING"}, "Texture Gen tab not available")
+            self.report({"ERROR"}, "Texture Gen tab not available")
             return {"CANCELLED"}
 
         prompt = (getattr(tab, 'prompt', '') or '').strip()
         if not prompt:
-            self.report({"WARNING"}, "Please enter a material description")
+            self.report({"ERROR"}, "Please enter a material description")
             return {"CANCELLED"}
 
         # mat_gen catalog model slugs ("fast" / "detailed") map onto the
@@ -206,7 +206,7 @@ class MIXIE_OT_texture_gen_matgen(Operator):
             job = enqueue_matgen_job(prompt=prompt, pipeline=pipeline)
             if job is None:
                 self.report(
-                    {"WARNING"},
+                    {"ERROR"},
                     "A duplicate material generation is already queued",
                 )
                 return {"CANCELLED"}

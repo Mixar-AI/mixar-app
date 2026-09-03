@@ -15,11 +15,13 @@
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 
 #include "DNA_space_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "RNA_access.hh"
 
@@ -251,8 +253,56 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * before any keymap handlers, ensuring LEFTMOUSE reaches our click dispatch.
  * \{ */
 
-static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+/**
+ * Is this region's transcript the surface actually on screen?
+ *
+ * The Agent Bubble's WINDOW region is SHARED: the transcript draws there on
+ * the Agent tab, while the 3D / Media / Splat / Generations / Queue panes build
+ * their uiBlocks into the very same region. This handler is registered so it
+ * sees LEFTMOUSE ahead of the uiBlock handler (mixie_chat_main_region_init) —
+ * exactly the overlap that comment warns about. On a pane tab it would dispatch
+ * message rects left over from the last Agent-tab draw and BREAK the event
+ * before the pane's own button ran. SPACE_MIXIE_CHAT is never tab-switched.
+ */
+static bool mixie_chat_dispatch_is_live(const bContext *C)
 {
+  const ScrArea *area = CTX_wm_area(C);
+  if (!area) {
+    return false;
+  }
+  if (area->spacetype != SPACE_AGENT_BUBBLE) {
+    return area->spacetype == SPACE_MIXIE_CHAT;
+  }
+
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return true;
+  }
+  /* wm.mixar_bubble_tab is the island's ONE source of what the card shows
+   * (bubble_tab_props.py). Matched on the stable enum IDENTIFIER, never an
+   * index; absent before Python registers it, and the card is Agent until
+   * then — so every unreadable branch below falls back to live. */
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
+  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
+    return true;
+  }
+  const char *ident = nullptr;
+  if (!RNA_property_enum_identifier(
+          nullptr, &wm_ptr, prop, RNA_property_enum_get(&wm_ptr, prop), &ident) ||
+      ident == nullptr)
+  {
+    return true;
+  }
+  return STREQ(ident, "AGENT");
+}
+
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+{
+  if (!mixie_chat_dispatch_is_live(C)) {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   /* 0. Project-rules overlay — modal while open: consumes text-editing
    * keys, clicks (incl. click-away close), scroll, and ESC. Checked
    * before the history overlay because it draws on top. Cheap no-op when
@@ -365,7 +415,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
   return WM_UI_HANDLER_CONTINUE;
 }
 
-static void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
+void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
 {
   /* Nothing to free */
 }

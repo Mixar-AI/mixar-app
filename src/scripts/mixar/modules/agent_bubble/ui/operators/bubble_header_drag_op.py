@@ -15,6 +15,10 @@ Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
   * invoke(): pass through if the click landed in the TOOLS region
     and toggle minimise/restore if the click landed on the pill window.
+  * begin_drag refuses (and invoke passes through) when the press is
+    already owned by a uiBut waiting to start its own drag, e.g. a My
+    Generations asset tile — window handlers run after every region
+    handler, so without that check the window move wins the gesture.
 """
 
 from __future__ import annotations
@@ -75,9 +79,15 @@ class MIXAR_OT_bubble_header_drag(Operator):
             return {'PASS_THROUGH'}
 
         try:
-            bpy.ops.mixar.bubble_window_begin_drag()
+            result = bpy.ops.mixar.bubble_window_begin_drag()
         except Exception as e:  # noqa: BLE001
             print(f"[agent_bubble] window_begin_drag failed: {e!r}")
+            return {'PASS_THROUGH'}
+
+        if result != {'FINISHED'}:
+            # begin_drag refuses when the press belongs to a uiBut waiting to
+            # start its own drag (a My Generations asset tile). Going modal
+            # here would eat the MOUSEMOVEs that button needs to begin it.
             return {'PASS_THROUGH'}
 
         if _IS_WINDOWS:

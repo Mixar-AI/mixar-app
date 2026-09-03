@@ -202,6 +202,14 @@ def configure_basic_workspace_chrome() -> None:
                     if not space.overlay.show_extras:
                         space.overlay.show_extras = True
 
+                    # Zen offers exactly two shading modes (Solid /
+                    # Rendered — see view3d_header_filter). A viewport
+                    # saved in Wireframe or Material would show neither
+                    # pill lit and no way back, so settle it on Solid.
+                    # Idempotent guard, same splash-safe reason as above.
+                    if space.shading.type not in {'SOLID', 'RENDERED'}:
+                        space.shading.type = 'SOLID' 
+
 
 def apply_ui_mode(mode: str) -> bool:
     """Activate the workspace appropriate for the given UI mode.

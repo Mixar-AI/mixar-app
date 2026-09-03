@@ -131,6 +131,20 @@ def test_native_viewport_surface_is_registered_from_view3d():
     assert "ED_region_header_init" not in timeline
 
 
+def _native_surface() -> str:
+    """Every Director C++ source, concatenated.
+
+    The Cinema Mode rework split the surface across `view3d_director_cinema_*`
+    files, so pinning a symbol to one filename now tests the file layout
+    rather than the wiring. These tests care that the native surface reaches
+    the operator at all — which file paints the button is free to change.
+    """
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(VIEW3D.glob("view3d_director_*.cc"))
+    )
+
+
 def test_native_surface_reaches_the_phase_zero_directing_actions():
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
     timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(encoding="utf-8")
@@ -152,8 +166,9 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         encoding="utf-8"
     )
     assert "MIXAR_OT_director_send_keyframes" in popup_render
-    assert "MIXAR_OT_director_toggle_timeline" in timeline
-    assert "MIXAR_OT_director_toggle_immersive" in timeline
+    surface = _native_surface()
+    assert "MIXAR_OT_director_toggle_timeline" in surface
+    assert "MIXAR_OT_director_toggle_immersive" in surface
     assert "mixar.director_pick_camera" in surface_ops
     assert "mixar.director_set_active_shot" in surface_ops
     assert "mixar.director_open_editor" not in surface_ops
@@ -174,8 +189,16 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert "region->winy - unit * 2 - gap * 2" in overlay
     assert "region->winy - unit * 6" not in overlay
     surface_ops = _read("ui/operators/surface_ops.py")
-
-    assert '"MIXAR_OT_director_pick_camera"' in timeline
+    # The Cinema surface replaced the camera DROPDOWN with the "My Cameras"
+    # list: a row directs its shot's camera, and Add Camera starts a take
+    # (adopting a camera the scene already has) or adds a shot. The picker
+    # operator itself still exists for the menu path and keeps its
+    # never-reassign-the-active-shot's-camera contract.
+    surface = _native_surface()
+    assert '"MIXAR_OT_director_set_active_shot"' in surface
+    assert '"MIXAR_OT_director_new_shot"' in surface
+    assert '"MIXAR_OT_director_start"' in surface
+    assert "mixar.director_pick_camera" in surface_ops
     assert "latest_shot_index_for_camera" in surface_ops
     assert "view3d_director_active_shot_pointer" in state
     assert "enter_camera_view(context or bpy.context, camera, remember=False)" in properties
@@ -197,7 +220,8 @@ def test_native_timeline_tracks_playback_and_real_beat_span():
     assert "ND_ANIMPLAY" in timeline
     assert "state.frame_end" in timeline_draw
     assert "runtime->view_span_frames" in timeline_draw
-    assert "state.beats.size() < 2" in timeline
+    # Preview needs a real span: the dock disables it below two beats.
+    assert "state.beats.size() >= 2" in _native_surface()
     assert "frames = sorted({beat.frame for beat in shot.beats})" in preview
     assert "Capture at least two keyframes to preview" in preview
 
@@ -463,20 +487,28 @@ def test_directing_absorbs_object_editing_shortcuts():
     assert '"Precise  O"' not in overlay
 
 
-def test_director_entry_sits_beside_the_topbar_mode_switch():
-    """The Director toggle lives next to Engine/Zen Mode, not in View3D.
+def test_cinema_mode_pill_sits_in_the_topbar_right_region():
+    """The entry point is the "Cinema Mode" pill on the topbar's right.
 
-    The workflow module appends the mode switch to TOPBAR_MT_editor_menus;
-    Director appends after it so both sit together, and the active session
-    renders depressed. State flips also tag the topbar's global area, which
-    ordinary screen iteration misses.
+    It is appended to TOPBAR_HT_upper_bar (not the editor-menus list it used
+    to live in) and draws ONLY in the RIGHT region, left of the profile chip
+    — which it keeps right-most by re-appending it, since header callbacks
+    draw in registration order and module order is not guaranteed. The label
+    is user-facing only: `mixar.director_*` idnames stay frozen. State flips
+    also tag the topbar's global area, which ordinary screen iteration
+    misses.
     """
     header = _read("ui/headers/director_header.py")
     properties = _read("ui/properties/director_properties.py")
 
-    assert "TOPBAR_MT_editor_menus" in header
+    assert "TOPBAR_HT_upper_bar" in header
+    assert "TOPBAR_MT_editor_menus" not in header
     assert "VIEW3D_HT_header" not in header
-    assert "depress=True" in header
+    assert "alignment != 'RIGHT'" in header
+    assert 'text="Cinema Mode"' in header
+    assert "mixar.director_enter" in header
+    assert "mixar.director_finish" in header
+    assert "_move_profile_chip_last" in header
     assert '"global_areas"' in properties
 
 
@@ -727,3 +759,37 @@ def test_director_native_files_follow_the_module_size_limit():
     assert native_files
     for path in native_files:
         assert len(path.read_text(encoding="utf-8").splitlines()) <= 500, path.name
+
+
+def test_camera_nudge_keys_beat_the_eyedropper_and_the_block_guard():
+    """W/A/S/D/Q/E move the shot camera, and only inside Cinema Mode.
+
+    The hint strip advertises these keys at rest, but Blender binds them
+    elsewhere: `UI_OT_eyedropper_depth` owns E in the global "User
+    Interface" keymap (and its modal then swallows the NEXT key, which is
+    what made Q look dead too), and our own `director_block_input` guard sat
+    ahead of the nudge on S — addon-vs-addon ordering inside one keymap does
+    not follow registration order the way addon-vs-default does. "User
+    Interface" is the one keymap dispatched ahead of both, so the binding
+    lives there FIRST.
+
+    Being global is only safe because the poll scopes it: directing, in a
+    VIEW_3D WINDOW region. The poll must NOT also require a camera — it is
+    what decides whether the key is ABSORBED, and a take with no camera (or
+    a locked one) still has to swallow S rather than leak it to
+    `transform.resize`; `execute` handles those cases.
+    """
+    keymap = _read("ui/keymap.py")
+    nudge = _read("ui/operators/nudge_ops.py")
+
+    ui_kbd = keymap.index('("User Interface"')
+    object_mode = keymap.index('("Object Mode"', keymap.index("_NUDGE_KEYMAPS"))
+    assert ui_kbd < object_mode, "User Interface must come first in _NUDGE_KEYMAPS"
+
+    assert "_in_cinema_viewport" in nudge
+    assert "area.type == 'VIEW_3D'" in nudge
+    assert "region.type == 'WINDOW'" in nudge
+    poll = nudge[nudge.index("    def poll(cls, context):"):]
+    poll = poll[: poll.index("def execute")]
+    assert "_in_cinema_viewport(context)" in poll
+    assert "camera" not in poll, "poll must absorb the key even without a camera"

@@ -37,7 +37,7 @@ class MIXIE_OT_video_gen_generate(Operator):
 
         prompt = str(getattr(tab, "prompt", "") or "").strip()
         if not prompt:
-            self.report({'WARNING'}, "Enter a video prompt")
+            self.report({'ERROR'}, "Enter a video prompt")
             return {'CANCELLED'}
 
         service_key = resolve_service_key(
@@ -72,7 +72,7 @@ class MIXIE_OT_video_gen_generate(Operator):
             image_mode=(params or {}).get("image_mode"),
         )
         if count_error:
-            self.report({'WARNING'}, count_error)
+            self.report({'ERROR'}, count_error)
             return {'CANCELLED'}
         if not refs["all_video_sources_available"]:
             self.report({'ERROR'}, "A selected video was moved or deleted")
@@ -124,7 +124,7 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, f"Failed to start video generation: {exc}")
             return {'CANCELLED'}
         if job is None:
-            self.report({'WARNING'}, "A duplicate video generation is already queued")
+            self.report({'ERROR'}, "A duplicate video generation is already queued")
             return {'CANCELLED'}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued

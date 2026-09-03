@@ -22,6 +22,14 @@
  * inside the ``#else`` branch (compiled into the makesrna binary
  * which generates the runtime code).
  *
+ * This file briefly also exposed a **report channel** on
+ * ``WindowManager`` (``mixar_last_report`` / ``_type`` /
+ * ``mixar_report_count``) for the agent island to paint inline; it was
+ * removed because Blender's global report list carries unrelated app
+ * activity — the agent's own sandboxed script execution above all — so
+ * pane messages now come from a dedicated channel that only the pane's
+ * own action writes (``agent_bubble/ui/properties/pane_message_props.py``).
+ *
  * The table entry for this file is registered in Mixar's overlay
  * of ``makesrna.cc`` (right after ``rna_wm.cc``). That same overlay
  * also injects an extra ``#include "rna_wm_mixar.cc"`` into the

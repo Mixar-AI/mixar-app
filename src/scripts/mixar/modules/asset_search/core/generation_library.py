@@ -298,6 +298,18 @@ def _save_job(job) -> None:
         if ok:
             _batch_dirty = True
             logger.info("[GenLibrary] Archived generation '%s'", asset_name)
+            # Blender's asset list is a cache that never notices a .blend
+            # appearing underneath it, so the writer tells the reader: the
+            # island's My Generations pane clears and re-reads the library
+            # when this number changes. Best-effort — a failure only means
+            # the new asset shows up on the next reload.
+            try:
+                from mixar.modules.agent_bubble.ui.properties.generations_props import (
+                    bump_revision,
+                )
+                bump_revision()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[GenLibrary] revision bump skipped: %s", exc)
         else:
             logger.warning("[GenLibrary] Exporter declined job %s", job.id[:8])
     except Exception:

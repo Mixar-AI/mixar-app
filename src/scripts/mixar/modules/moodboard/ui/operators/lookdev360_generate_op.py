@@ -119,14 +119,14 @@ class MIXIE_OT_lookdev360_generate(Operator):
         # Validate prompt
         if not prompt or not prompt.strip():
             set_agent_gen_reason(context, "No prompt provided for PBR/lookdev360")
-            self.report({'WARNING'}, "Please enter a prompt (press Enter to confirm your text)")
+            self.report({'ERROR'}, "Please enter a prompt (press Enter to confirm your text)")
             return {'CANCELLED'}
 
         # Get selected mesh objects
         mesh_objects = get_selected_mesh_objects()
         if not mesh_objects:
             set_agent_gen_reason(context, "No mesh selected — select the mesh object(s) to texture first")
-            self.report({'WARNING'}, "No mesh objects selected")
+            self.report({'ERROR'}, "No mesh objects selected")
             return {'CANCELLED'}
 
         # Step 1: Save material checkpoint
@@ -137,14 +137,14 @@ class MIXIE_OT_lookdev360_generate(Operator):
         # Step 2: Ensure UV unwrap on all objects
         for obj in mesh_objects:
             if not ensure_uv_unwrap(obj):
-                self.report({'WARNING'}, f"Failed to create UV map for '{obj.name}'")
+                self.report({'ERROR'}, f"Failed to create UV map for '{obj.name}'")
                 return {'CANCELLED'}
 
         # Step 2b: Ensure MPaint (ucupaint) setup exists on each object
         for obj in mesh_objects:
             node = check_or_create_mpaint_setup(obj)
             if not node:
-                self.report({'WARNING'}, f"Failed to create paint setup for '{obj.name}'")
+                self.report({'ERROR'}, f"Failed to create paint setup for '{obj.name}'")
                 return {'CANCELLED'}
 
         # Step 3: Export to OBJ
@@ -220,7 +220,7 @@ class MIXIE_OT_lookdev360_generate(Operator):
                 stored_obj_path=obj_path,
             )
             if not job:
-                self.report({'WARNING'}, "A duplicate Lookdev360 generation is already queued")
+                self.report({'ERROR'}, "A duplicate Lookdev360 generation is already queued")
                 return {'CANCELLED'}
         except Exception as e:
             self.report({'ERROR'}, f"Failed to start generation: {e}")

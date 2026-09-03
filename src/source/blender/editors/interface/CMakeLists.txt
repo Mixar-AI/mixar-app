@@ -45,9 +45,11 @@ set(SRC
   interface_layout.cc
   interface_mixar_card_button.cc
   interface_mixar_card_icons.cc
+  interface_mixar_drag_query.cc
   interface_mixar_profile_card.cc
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
+  interface_mixar_topbar.cc
   interface_qa_inspect.cc
   interface_ops.cc
   interface_ops_color.cc
@@ -119,6 +121,7 @@ set(SRC
   eyedroppers/eyedropper_intern.hh
   interface_mixar_card_icons.hh
   interface_mixar_card_paint.hh
+  interface_mixar_drag_query.hh
   interface_mixar_palette.hh
   interface_mixar_profile_card.hh
   interface_mixar_section.hh

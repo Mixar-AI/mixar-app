@@ -439,6 +439,16 @@ struct MixieChatRuntime {
   /** Previous window Y size for resize detection. */
   int prev_winy;
 
+  /** Optional view band: when valid, the message view occupies only this
+   * region-local sub-rect instead of the whole region. Set per-frame by the
+   * Agent Bubble island (whose single region also hosts the composer and
+   * header) before calling mixie_chat_draw_messages; never set by the chat
+   * editor, whose main region IS the message area. Drives the View2D mask,
+   * the wrap width, and every winx/winy-derived scroll clamp, so wheel
+   * scrolling and scrollers operate on the visible band, not the window. */
+  bool view_band_valid = false;
+  rcti view_band = {0, 0, 0, 0};
+
   /** Layout cache invalidation: previous message count. */
   int prev_msg_count = 0;
 

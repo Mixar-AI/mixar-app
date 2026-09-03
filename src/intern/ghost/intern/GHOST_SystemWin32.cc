@@ -4102,6 +4102,30 @@ extern "C" bool Mixar_WindowHasChildWindow(void *parent_handle)
   return false;
 }
 
+extern "C" bool Mixar_WindowContainsScreenCursor(void *window_handle, int margin_pt)
+{
+  /* Hover detection for the agent bubble's pill/expand behaviour (see the
+   * Cocoa counterpart). Screen coordinates throughout. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowWin32 *win32_window = static_cast<GHOST_WindowWin32 *>(window_handle);
+  HWND hwnd = win32_window->getHWND();
+  if (hwnd == nullptr || !IsWindowVisible(hwnd)) {
+    return false;
+  }
+  POINT pt;
+  if (!GetCursorPos(&pt)) {
+    return false;
+  }
+  RECT rect;
+  if (!GetWindowRect(hwnd, &rect)) {
+    return false;
+  }
+  InflateRect(&rect, margin_pt, margin_pt);
+  return PtInRect(&rect, pt) != 0;
+}
+
 extern "C" void Mixar_WindowGetContentPixelSize(
     void *window_handle, int *r_width, int *r_height)
 {

@@ -1143,6 +1143,35 @@ static void rna_uiLayoutMixarCardLabel(Layout *layout, const char *text, int kin
   }
 }
 
+/* Item values must match the `mixar_topbar_element` enum in
+ * #RNA_api_ui_layout. Tags the previous button with a topbar kind; the
+ * `active` flag rides through as the painter's float payload (the mode
+ * slider reads it as which half is live, the pill as its lit state). */
+static void rna_uiLayoutMixarTopbarElement(Layout *layout, int kind, bool active)
+{
+  ui::MixarCardElement element = ui::MixarCardElement::None;
+  switch (kind) {
+    case 1:
+      element = ui::MixarCardElement::ModeSliderLeft;
+      break;
+    case 2:
+      element = ui::MixarCardElement::ModeSliderRight;
+      break;
+    case 3:
+      element = ui::MixarCardElement::CinemaPill;
+      break;
+    case 4:
+      element = ui::MixarCardElement::ViewportPill;
+      break;
+    case 5:
+      element = ui::MixarCardElement::ProfilePill;
+      break;
+    default:
+      return;
+  }
+  ui::UI_layout_mixar_card_tag_last(layout, element, active ? 1.0f : 0.0f);
+}
+
 static void rna_uiLayoutMixarCardButton(Layout *layout, int kind, bool active_default)
 {
   ui::MixarCardElement element = ui::MixarCardElement::CardButton;
@@ -1798,6 +1827,37 @@ void RNA_api_ui_layout(StructRNA *srna)
                   "Active Default",
                   "Make this the dialog's default button (Return activates it; suppresses the "
                   "automatic OK/Cancel row in operator dialogs)");
+
+  /* Mixar topbar chrome: the animated Zen/Engine slider halves and the
+   * Cinema Mode pill. Values must match `rna_uiLayoutMixarTopbarElement`. */
+  static const EnumPropertyItem mixar_topbar_element_items[] = {
+      {1,
+       "MODE_SLIDER_LEFT",
+       0,
+       "Mode Slider Left",
+       "Left half of the mode slider; paints the whole track and the animated thumb"},
+      {2, "MODE_SLIDER_RIGHT", 0, "Mode Slider Right", "Right half of the mode slider"},
+      {3, "CINEMA_PILL", 0, "Cinema Pill", "Rounded dark pill with a graded label"},
+      {4,
+       "VIEWPORT_PILL",
+       0,
+       "Viewport Pill",
+       "Zen viewport shading pill; dimmed when it is not the live mode"},
+      {5,
+       "PROFILE_PILL",
+       0,
+       "Profile Pill",
+       "Account chip: label with a person-glyph avatar disc at the right end"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_topbar_element", "rna_uiLayoutMixarTopbarElement");
+  RNA_def_function_ui_description(
+      func,
+      "Restyle the most recently added button as Mixar topbar chrome (Mixar custom widget)");
+  parm = RNA_def_enum(func, "kind", mixar_topbar_element_items, 1, "Kind", "Element kind");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  RNA_def_boolean(
+      func, "active", false, "Active", "Whether this element represents the live state");
 
   /* split layout */
   func = RNA_def_function(srna, "split", "rna_uiLayoutSplit");
