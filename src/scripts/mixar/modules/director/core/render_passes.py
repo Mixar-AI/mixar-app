@@ -261,10 +261,9 @@ def _configure_common(scene, shot, frame_start: int, frame_end: int, path: str) 
 
 def _scene_has_splats(scene) -> bool:
     """True when any mesh carries the KIRI splat geometry-nodes modifier."""
-    return any(
-        o.type == 'MESH' and 'KIRI_3DGS_Render_GN' in o.modifiers
-        for o in scene.objects
-    )
+    from mixar.modules.moodboard.core.splat_render_camera import scene_has_splats
+
+    return scene_has_splats(scene)
 
 
 def configure_render_pass(scene, view_layer, shot, kind: str, path: str) -> str:
