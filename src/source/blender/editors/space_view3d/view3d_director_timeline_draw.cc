@@ -107,10 +107,13 @@ void sync_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
   const int last = state.beats.is_empty() ? state.scene_frame_start : state.frame_end;
   const int count = int(state.beats.size());
   const bool shot_changed = runtime->shot_identity != state.shot_identity;
-  const bool content_changed = runtime->content_first != first || runtime->content_last != last ||
-                               runtime->content_count != count;
+  /* Shot or beat-count changes are new content and may need a re-fit.
+   * Retiming the first or last keyframe is not: auto-fitting would keep that
+   * handle glued to the same pixel, so end keys look undraggable while
+   * middle ones slide. */
+  const bool count_changed = runtime->content_count != count;
   if (!runtime->view_initialized || shot_changed ||
-      (content_changed && !runtime->view_user_modified))
+      (count_changed && !runtime->view_user_modified))
   {
     reset_view(state, runtime);
   }
@@ -240,9 +243,17 @@ void draw_strip(const DirectorViewState &state,
   }
 
   const float handle_w = std::max(9.0f, 11.0f * UI_SCALE_FAC);
+  const float hit_pad = 10.0f * UI_SCALE_FAC;
   for (const DirectorBeatView &beat : state.beats) {
     const float x = frame_x(float(beat.frame));
-    if (x < runtime->viewport_bounds.xmin || x > runtime->viewport_bounds.xmax) {
+    const float hit_xmin = x - hit_pad;
+    const float hit_xmax = x + hit_pad;
+    /* Keep a partly-visible handle hittable. The last keyframe sits on the
+     * strip's right edge; dropping it when its centre crosses xmax made
+     * that handle undraggable. */
+    if (hit_xmax < runtime->viewport_bounds.xmin ||
+        hit_xmin > runtime->viewport_bounds.xmax)
+    {
       continue;
     }
     const rctf handle = {x - handle_w * 0.5f, x + handle_w * 0.5f, strip_y, strip_y + strip_h};
@@ -250,8 +261,8 @@ void draw_strip(const DirectorViewState &state,
                              beat.index == runtime->hovered_beat;
     draw_round_rect(handle, handle_w * 0.48f, highlighted ? HANDLE_ACTIVE_COLOR : HANDLE_COLOR);
     DirectorTimelineBeatHit hit;
-    hit.bounds = {x - 10.0f * UI_SCALE_FAC,
-                  x + 10.0f * UI_SCALE_FAC,
+    hit.bounds = {hit_xmin,
+                  hit_xmax,
                   strip_y - 4.0f * UI_SCALE_FAC,
                   strip_y + strip_h + 4.0f * UI_SCALE_FAC};
     hit.index = beat.index;

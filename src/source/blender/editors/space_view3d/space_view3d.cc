@@ -1780,6 +1780,10 @@ void ED_spacetype_view3d()
   /* regions: Director camera-beat timeline (Mixar) */
   view3d_director_timeline_region_register(st.get());
 
+  /* QA harness: export Director timeline strip/beats as targets (Mixar). */
+  void view3d_director_qa_targets_register();
+  view3d_director_qa_targets_register();
+
   WM_menutype_add(MEM_new<MenuType>(__func__, ed::geometry::node_group_operator_assets_menu()));
   WM_menutype_add(
       MEM_new<MenuType>(__func__, ed::geometry::node_group_operator_assets_menu_unassigned()));

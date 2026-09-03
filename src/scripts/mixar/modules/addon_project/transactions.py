@@ -12,7 +12,7 @@ import time
 import uuid
 from pathlib import Path
 
-from .checks import run_static_checks
+from .checks import run_scoped_checks, run_static_checks
 from .constants import MAX_DIFF_CHARS, MAX_PATCH_BYTES, MAX_PATCH_FILES
 from .errors import AddonProjectError
 from .indexer import build_index, read_source, sha256_bytes
@@ -123,17 +123,54 @@ class TransactionStore:
         return []
 
     @staticmethod
+    def _apply_mode(fd: int, temporary: str, mode: int) -> None:
+        """Carry the replaced file's permissions onto its replacement.
+
+        ``os.fchmod`` does not exist on Windows at all, so calling it there
+        raised AttributeError before the first project file was written and
+        every commit came back as a bare ``internal_error``. Windows keeps
+        the path-based call, which only carries the read-only bit — the only
+        permission it models — and a filesystem that models none is not a
+        reason to fail the commit.
+        """
+        fchmod = getattr(os, "fchmod", None)
+        if fchmod is not None:
+            fchmod(fd, mode)
+            return
+        try:
+            os.chmod(temporary, mode)
+        except (OSError, NotImplementedError):
+            pass
+
+    @staticmethod
+    def _replace(temporary: str, path: Path) -> None:
+        """Atomically move the staged file into place.
+
+        Windows refuses to replace a read-only destination, where POSIX only
+        consults the parent directory. Clear that one attribute and retry, so
+        a read-only project file is rewritten with the permissions the caller
+        already decided to preserve, instead of failing the whole commit.
+        """
+        try:
+            os.replace(temporary, path)
+        except PermissionError:
+            if os.name != "nt" or not path.exists():
+                raise
+            os.chmod(path, stat.S_IMODE(path.stat().st_mode) | stat.S_IWRITE)
+            os.replace(temporary, path)
+
+    @staticmethod
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
         try:
-            os.fchmod(fd, mode)
+            TransactionStore._apply_mode(fd, temporary, mode)
             with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
                 handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            TransactionStore._replace(temporary, path)
         except Exception:
             try:
                 os.unlink(temporary)
@@ -141,7 +178,8 @@ class TransactionStore:
                 pass
             raise
 
-    def commit(self, project_id: str, root: Path, proposal_id: str) -> dict:
+    def commit(self, project_id: str, root: Path, proposal_id: str,
+               *, check_scopes=None) -> dict:
         proposal = read_json(self._proposal_path(project_id, proposal_id), None)
         if not isinstance(proposal, dict) or proposal.get("project_id") != project_id:
             raise AddonProjectError("proposal_not_found", "The staged proposal is unavailable")
@@ -201,7 +239,11 @@ class TransactionStore:
                 else:
                     self._atomic_write(path, change["content"])
                 written.append(backup)
-            checks = run_static_checks(root)
+            # The static pass is scoped by the caller (service.commit_patch
+            # mirrors run_checks: one add-on's syntax error must not block a
+            # workspace commit touching another). Default keeps the
+            # whole-tree pass for standalone projects.
+            checks = run_scoped_checks(check_scopes or [(root, "")])
             if not checks["success"]:
                 raise AddonProjectError("checks_failed", checks["summary"])
             _, revision = build_index(root)

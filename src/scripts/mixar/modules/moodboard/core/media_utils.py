@@ -16,10 +16,50 @@ from __future__ import annotations
 
 import mimetypes
 import os
+import stat
+import time
 from typing import Callable, Literal, TypedDict
 
 
 MediaType = Literal["IMAGE", "VIDEO"]
+
+# The Video Gen drawer redraws with the canvas pulse (15 fps while a node
+# generates), and every draw used to re-stat every selected reference. The
+# hint it feeds tolerates sub-second staleness; submission paths re-stat fresh
+# via ``fresh=True`` so the authoritative check never trusts the cache.
+SOURCE_PROBE_TTL_S = 2.0
+
+_source_probe_cache: dict[str, tuple[float, bool, int]] = {}
+
+
+def _probe_source(
+    resolved_path: str, *, use_cache: bool
+) -> tuple[bool, int]:
+    """(exists-as-file, size) for *resolved_path* in ONE stat.
+
+    ``isfile`` + ``getsize`` was two syscalls per path per draw; the stat that
+    answers availability also carries the size.
+    """
+    now = time.monotonic()
+    if use_cache:
+        cached = _source_probe_cache.get(resolved_path)
+        if cached is not None and now - cached[0] < SOURCE_PROBE_TTL_S:
+            return cached[1], cached[2]
+    available = False
+    size = 0
+    try:
+        st = os.stat(resolved_path)
+        available = stat.S_ISREG(st.st_mode)
+        if available:
+            size = st.st_size
+    except OSError:
+        pass
+    if len(_source_probe_cache) > 1024:
+        # Bounded churn guard: these are probe results, not identity — losing
+        # them only costs a re-stat.
+        _source_probe_cache.clear()
+    _source_probe_cache[resolved_path] = (now, available, size)
+    return available, size
 
 
 class MoodboardMediaInput(TypedDict):
@@ -102,6 +142,7 @@ def describe_moodboard_media(
     item: object,
     *,
     path_resolver: Callable[[str], str] | None = None,
+    use_cache: bool = False,
 ) -> MoodboardMediaInput:
     """Describe one moodboard item for a future upload/submission pipeline.
 
@@ -109,6 +150,9 @@ def describe_moodboard_media(
     ``source_available`` lets a caller fail before queue submission when a
     linked movie has moved or been deleted.  Still images retain the same shape
     so mixed-media selection can be inspected without type guessing.
+
+    ``use_cache`` lets a redraw path reuse the (short-TTL) availability/size
+    probe; anything that gates a submission must leave it ``False``.
     """
     image = getattr(item, "image", None)
     media_type = media_type_for_image(image)
@@ -118,17 +162,20 @@ def describe_moodboard_media(
     resolved_filepath = ""
     if filepath:
         try:
-            resolved_filepath = os.path.abspath(os.path.realpath(resolver(filepath)))
+            # realpath already returns an absolute, normalized path — a second
+            # abspath over it is redundant.
+            resolved_filepath = os.path.realpath(resolver(filepath))
         except (OSError, TypeError, ValueError):
             resolved_filepath = ""
 
-    source_available = bool(resolved_filepath and os.path.isfile(resolved_filepath))
+    source_available = False
     file_size_bytes = 0
-    if source_available:
-        try:
-            file_size_bytes = os.path.getsize(resolved_filepath)
-        except OSError:
-            source_available = False
+    if resolved_filepath:
+        source_available, file_size_bytes = _probe_source(
+            resolved_filepath, use_cache=use_cache
+        )
+        if not source_available:
+            file_size_bytes = 0
 
     filename = os.path.basename(resolved_filepath or filepath)
     guessed_mime, _ = mimetypes.guess_type(filename)
@@ -188,8 +235,12 @@ def selected_exportable_media(scene) -> list:
     ]
 
 
-def get_selected_moodboard_video_inputs(context=None) -> SelectedVideoInputs:
-    """Return selected video inputs without loading their bytes into memory."""
+def get_selected_moodboard_video_inputs(context=None, *, fresh: bool = False) -> SelectedVideoInputs:
+    """Return selected video inputs without loading their bytes into memory.
+
+    ``fresh=True`` re-stats every source; leave it for submit paths. Draw
+    callers accept the short-TTL cache.
+    """
     if context is None:
         import bpy
 
@@ -198,9 +249,10 @@ def get_selected_moodboard_video_inputs(context=None) -> SelectedVideoInputs:
     videos: list[MoodboardMediaInput] = []
     scene = getattr(context, "scene", None)
     items = getattr(scene, "mixie_moodboard_images", ()) if scene else ()
+    use_cache = not fresh
     for item in items:
         if getattr(item, "selected", False) and is_video_item(item):
-            videos.append(describe_moodboard_media(item))
+            videos.append(describe_moodboard_media(item, use_cache=use_cache))
 
     return {
         "count": len(videos),
@@ -210,8 +262,15 @@ def get_selected_moodboard_video_inputs(context=None) -> SelectedVideoInputs:
     }
 
 
-def get_selected_moodboard_media_inputs(context=None) -> SelectedMediaInputs:
-    """Return selected stills and linked movies without loading video bytes."""
+def get_selected_moodboard_media_inputs(
+    context=None, *, fresh: bool = False
+) -> SelectedMediaInputs:
+    """Return selected stills and linked movies without loading video bytes.
+
+    ``fresh=True`` re-stats every source; the submit operator must pass it,
+    while the drawer accepts the short-TTL cache (this runs on every canvas
+    pulse redraw).
+    """
     if context is None:
         import bpy
 
@@ -221,10 +280,11 @@ def get_selected_moodboard_media_inputs(context=None) -> SelectedMediaInputs:
     videos = []
     scene = getattr(context, "scene", None)
     items = getattr(scene, "mixie_moodboard_images", ()) if scene else ()
+    use_cache = not fresh
     for item in items:
         if not getattr(item, "selected", False) or getattr(item, "image", None) is None:
             continue
-        description = describe_moodboard_media(item)
+        description = describe_moodboard_media(item, use_cache=use_cache)
         if description["media_type"] == "VIDEO":
             videos.append(description)
         else:

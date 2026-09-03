@@ -18,7 +18,7 @@ from typing import Optional, Tuple
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import INSTALL_ID_FILENAME, PLATFORM_MAP, SKIPPED_VERSION_FILENAME
+from ..constants import ANNOUNCED_VERSION_FILENAME, INSTALL_ID_FILENAME, PLATFORM_MAP
 from .state import UpdateInfo
 
 logger = get_logger(__name__)
@@ -210,44 +210,62 @@ def is_forced(info) -> bool:
 
 
 # ============================================================================
-# Skip-version persistence
+# Announcement persistence
 # ============================================================================
+#
+# The topbar badge shows update status permanently, so the toast only has
+# to announce the news — repeating it on every launch would be nagging,
+# not information.  What is persisted is therefore "we already told them
+# about X", not "the user refused X": the update is never withheld, only
+# demoted from an interrupt to the badge, which re-opens the toast on
+# click.  Two stages earn an interruption per version — the update
+# becoming available, and the installer becoming ready to apply.
+
+ANNOUNCE_AVAILABLE = "available"
+ANNOUNCE_READY = "ready"
 
 
-def _skipped_version_path() -> str:
+def _announced_version_path() -> str:
     import bpy
 
     config_dir = os.path.join(bpy.utils.resource_path("USER"), "config")
     os.makedirs(config_dir, exist_ok=True)
-    return os.path.join(config_dir, SKIPPED_VERSION_FILENAME)
+    return os.path.join(config_dir, ANNOUNCED_VERSION_FILENAME)
 
 
-def get_skipped_version() -> str:
-    """Return the version the user chose to skip, or ``""``."""
-    path = _skipped_version_path()
+def get_announced_stage(version: str) -> str:
+    """Return the last stage announced for *version*, or ``""``.
+
+    A different version reads back as never announced, so a new release
+    always gets its toast without anything needing to be cleared.
+    """
+    if not version:
+        return ""
     try:
-        if os.path.isfile(path):
-            with open(path, "r") as f:
-                return f.read().strip()
+        path = _announced_version_path()
+        if not os.path.isfile(path):
+            return ""
+        with open(path, "r") as f:
+            recorded, _, stage = f.read().strip().partition("=")
     except OSError:
-        pass
-    return ""
+        return ""
+    return stage if recorded == version else ""
 
 
-def set_skipped_version(version: str) -> None:
-    """Persist *version* so future checks skip it."""
+def set_announced_stage(version: str, stage: str) -> None:
+    """Record that *stage* has been announced for *version*.
+
+    The write is monotonic per version: a recorded ``ready`` — the one
+    announcement that survives dismissal — is never demoted back to
+    ``available`` by a later interactive check, which would let a
+    re-completed download interrupt the user a second time.
+    """
+    if not version:
+        return
+    if stage != ANNOUNCE_READY and get_announced_stage(version) == ANNOUNCE_READY:
+        return
     try:
-        with open(_skipped_version_path(), "w") as f:
-            f.write(version)
-    except OSError:
-        pass
-
-
-def clear_skipped_version() -> None:
-    """Remove the skip file so all versions are eligible again."""
-    try:
-        path = _skipped_version_path()
-        if os.path.isfile(path):
-            os.remove(path)
+        with open(_announced_version_path(), "w") as f:
+            f.write(f"{version}={stage}")
     except OSError:
         pass

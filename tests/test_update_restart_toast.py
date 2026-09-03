@@ -84,7 +84,7 @@ def test_staged_update_offers_restart_not_a_browser_download():
 
     toasts.push_update_available_toast(_info())
 
-    assert _labels() == ["Skip", "Restart & Update"]
+    assert _labels() == ["Restart & Update"]
     assert _toast().title == "Mixar Update Ready"
     assert "restart" in _toast().body.lower()
 
@@ -97,7 +97,7 @@ def test_restart_is_offered_while_the_installer_is_still_downloading():
 
     toasts.push_update_available_toast(_info())
 
-    assert _labels() == ["Skip", "Restart & Update"]
+    assert _labels() == ["Restart & Update"]
 
 
 def test_uninstallable_update_falls_back_to_the_downloads_page():
@@ -107,7 +107,7 @@ def test_uninstallable_update_falls_back_to_the_downloads_page():
 
     toasts.push_update_available_toast(_info())
 
-    assert _labels() == ["Skip", "Download"]
+    assert _labels() == ["Download"]
     download = next(a for a in _toast().actions if a.label == "Download")
     assert download.operator == "mixar.open_downloads_page"
 
@@ -119,10 +119,10 @@ def test_failed_download_falls_back_to_the_downloads_page():
 
     toasts.push_update_available_toast(_info())
 
-    assert _labels() == ["Skip", "Download"]
+    assert _labels() == ["Download"]
 
 
-def test_forced_update_never_offers_skip():
+def test_forced_update_is_not_dismissible():
     state = get_update_state()
     info = _info(force_update=True)
     state.set_available(info)
@@ -426,7 +426,7 @@ def test_failed_download_toast_says_why():
 
     item = _toast()
     assert "Download failed (HTTP 404)" in item.body
-    assert [a.label for a in item.actions] == ["Skip", "Download"]
+    assert [a.label for a in item.actions] == ["Download"]
 
 
 # ---------------------------------------------------------------------------
@@ -434,8 +434,13 @@ def test_failed_download_toast_says_why():
 # ---------------------------------------------------------------------------
 
 
-def test_downloading_toast_shows_live_progress():
-    """A 400 MB background download with no moving number looks stalled."""
+def test_background_download_keeps_its_progress_out_of_the_toast():
+    """Staging is background work until the user asks to wait on it.
+
+    The percentage lives on the topbar badge ("Downloading 45%") while the
+    download is unrequested; putting it in the toast turns an announcement
+    the user has read into a progress bar they did not ask for.
+    """
     state = get_update_state()
     state.set_available(_info())
     state.set_downloading()
@@ -444,10 +449,32 @@ def test_downloading_toast_shows_live_progress():
     toasts.push_update_available_toast(_info())
 
     item = _toast()
-    assert "Downloading — 25%" in item.body
+    assert "Downloading" not in item.body
+    assert "25%" not in item.body
+    assert "Version 3.4.0 is available." in item.body
+    # Still the normal toast: the user can restart (queues the intent) or dismiss.
+    assert _labels() == ["Restart & Update"]
+
+
+def test_requested_download_shows_live_progress():
+    """Once the user pressed Restart & Update they are waiting on it.
+
+    A 400 MB download with no moving number looks stalled, so this is the
+    toast that carries the percentage — and it offers Cancel, not Restart.
+    """
+    state = get_update_state()
+    state.set_available(_info())
+    state.set_downloading()
+    state.set_install_requested(True)
+    state.set_download_progress(100 * 1024 * 1024, 400 * 1024 * 1024)
+
+    toasts.push_update_available_toast(_info())
+
+    item = _toast()
+    assert "Downloading Mixar 3.4.0" == item.title
+    assert "25%" in item.body
     assert "400 MB" in item.body
-    # Still the normal toast: the user can restart (queues the intent) or skip.
-    assert _labels() == ["Skip", "Restart & Update"]
+    assert _labels() == ["Cancel"]
 
 
 def test_badge_shows_download_percentage():
@@ -504,3 +531,143 @@ def test_quit_watchdog_only_fires_while_installing():
 
     assert state.install_state is InstallState.READY
     assert not get_notification_store().contains(UPDATE_NOTIFICATION_ID)
+
+
+# ============================================================================
+# The one announcement that survives dismissal
+#
+# "Downloaded, one restart away" is new and actionable, so it re-opens the
+# toast even if the availability toast was dismissed — but exactly once per
+# version. After that the badge ("Restart to Update") carries it.
+# ============================================================================
+
+
+def _install_fake_announcements(monkeypatch, initial=""):
+    from mixar.modules.common.updates.core import update_checker
+
+    box = {"value": initial}
+
+    def _get(version):
+        recorded, _, stage = box["value"].partition("=")
+        return stage if recorded == version and version else ""
+
+    def _set(version, stage):
+        box["value"] = f"{version}={stage}"
+
+    monkeypatch.setattr(update_checker, "get_announced_stage", _get)
+    monkeypatch.setattr(update_checker, "set_announced_stage", _set)
+    return box
+
+
+def test_ready_reopens_a_dismissed_toast_once(monkeypatch):
+    from mixar.modules.common.updates.core import install_flow
+
+    box = _install_fake_announcements(monkeypatch, initial="3.4.0=available")
+    state = get_update_state()
+    info = _info()
+    state.set_available(info)
+    state.set_ready("/tmp/Mixar-3.4.0.msi", True)
+    get_notification_store().clear_all()  # the user dismissed it
+
+    install_flow._announce_ready(state)
+
+    assert _toast().title == "Mixar Update Ready"
+    assert box["value"] == "3.4.0=ready"
+
+    # Second pass (a later check, or a re-verified staged installer) must
+    # not interrupt again.
+    get_notification_store().clear_all()
+    install_flow._announce_ready(state)
+    assert all(
+        i.id != UPDATE_NOTIFICATION_ID
+        for i in get_notification_store().get_visible()
+    )
+
+
+def test_ready_announcement_is_skipped_while_still_downloading(monkeypatch):
+    from mixar.modules.common.updates.core import install_flow
+
+    box = _install_fake_announcements(monkeypatch, initial="3.4.0=available")
+    state = get_update_state()
+    info = _info()
+    state.set_available(info)
+    state.set_downloading()
+    get_notification_store().clear_all()
+
+    install_flow._announce_ready(state)
+
+    assert box["value"] == "3.4.0=available"
+    assert all(
+        i.id != UPDATE_NOTIFICATION_ID
+        for i in get_notification_store().get_visible()
+    )
+
+
+def test_progress_tick_only_repushes_the_toast_the_user_waits_on(monkeypatch):
+    """A static toast must not be replaced once a second.
+
+    The badge needs the redraw either way, but re-pushing a notification
+    whose text has not changed churns the store under a user who may be
+    reaching for its button.
+    """
+    from mixar.modules.common.updates.core import install_flow
+
+    calls = {"toast": 0, "badge": 0}
+    monkeypatch.setattr(
+        install_flow, "_refresh_ui", lambda: calls.__setitem__("toast", calls["toast"] + 1),
+    )
+    monkeypatch.setattr(
+        install_flow, "_redraw_badge", lambda: calls.__setitem__("badge", calls["badge"] + 1),
+    )
+
+    state = get_update_state()
+    state.set_available(_info())
+    state.set_downloading()
+
+    install_flow._progress_tick()
+    assert calls == {"toast": 0, "badge": 1}
+
+    state.set_install_requested(True)
+    install_flow._progress_tick()
+    assert calls == {"toast": 1, "badge": 1}
+
+
+def test_progress_tick_stops_when_the_download_ends(monkeypatch):
+    from mixar.modules.common.updates.core import install_flow
+
+    state = get_update_state()
+    state.set_available(_info())
+    state.set_ready("/tmp/Mixar-3.4.0.msi", True)
+
+    assert install_flow._progress_tick() is None
+
+
+# ============================================================================
+# The timer-invoked restart prompt borrows a window
+#
+# _after_download runs inside a bpy.app.timers callback, whose context
+# usually carries no window — and INVOKE_DEFAULT opens the unsaved-work
+# confirmation, which needs one. The same PR fixed this for toast clicks;
+# the restart prompt must get the same treatment or the invoke silently
+# fails after install_requested has already been consumed.
+# ============================================================================
+
+INSTALL_FLOW_SRC = (
+    SCRIPTS / "mixar" / "modules" / "common" / "updates" / "core" / "install_flow.py"
+)
+
+
+def test_after_download_invokes_the_restart_prompt_with_a_window():
+    source = INSTALL_FLOW_SRC.read_text(encoding="utf-8")
+    after = source[source.index("def _after_download"):]
+    after = after[:after.index("\n\n\n")]
+
+    assert 'bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")' in after
+    # Timer contexts carry no window; a dialog needs one borrowed in.
+    assert "temp_override" in after
+    assert "window_manager.windows" in after
+    # The request is consumed BEFORE the invoke, so a failed invoke can be
+    # retried from the toast/badge instead of auto-firing on every tick.
+    assert after.index("set_install_requested(False)") < after.index(
+        "restart_to_update"
+    )

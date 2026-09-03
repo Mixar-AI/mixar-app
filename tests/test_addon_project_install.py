@@ -14,6 +14,7 @@ sys.modules.setdefault("keyring", MagicMock(name="keyring"))
 
 from mixar.modules.addon_project.checks import run_blender_reload
 from mixar.modules.addon_project.installer import install_addon
+from mixar.modules.addon_project.links import create_link, is_link
 from mixar.modules.addon_project.service import AddonProjectService
 
 
@@ -68,7 +69,7 @@ def _symlink_or_skip(source, target):
         source_dir = source.is_dir()
         import os
 
-        os.symlink(source, target, target_is_directory=source_dir)
+        create_link(source, target, is_package=source_dir)
     except OSError:
         pytest.skip("symlinks unavailable")
 
@@ -92,7 +93,7 @@ def test_fresh_addon_checks_install_and_enable_it(tmp_path, monkeypatch):
     assert live["install"]["success"] is True
     assert live["install"]["created_link"] is True
     target = addons_dir / "fresh_install_sample"
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == project.resolve()
     assert stub.refresh_calls == 1
     assert stub.enable_calls == [("fresh_install_sample", True)]
@@ -116,7 +117,7 @@ def test_reenabling_with_existing_correct_link_is_idempotent(tmp_path, monkeypat
 
     assert install["success"] is True
     assert install["created_link"] is False
-    assert (addons_dir / "idempotent_sample").is_symlink()
+    assert is_link(addons_dir / "idempotent_sample")
     assert stub.enable_calls == [("idempotent_sample", True)]
 
 
@@ -140,7 +141,7 @@ def test_foreign_target_fails_closed_without_touching_it(tmp_path, monkeypatch):
     assert install["reason"] == "install_target_conflict"
     assert str(addons_dir) not in install["message"]
     assert str(project) not in install["message"]
-    assert foreign.is_dir() and not foreign.is_symlink()
+    assert foreign.is_dir() and not is_link(foreign)
     assert (foreign / "__init__.py").read_text(encoding="utf-8") == "USER_ADDON = True\n"
     assert stub.enable_calls == []
 
@@ -159,7 +160,7 @@ def test_foreign_symlink_target_fails_closed(tmp_path, monkeypatch):
     assert install["success"] is False
     assert install["reason"] == "install_target_conflict"
     target = addons_dir / "foreign_link_sample"
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == elsewhere.resolve()
 
 
@@ -199,12 +200,12 @@ def test_enable_failure_removes_only_the_link_this_call_created(tmp_path, monkey
     assert install["success"] is False
     assert install["reason"] == "install_enable_failed"
     target = addons_dir / "enable_fail_sample"
-    assert not target.exists() and not target.is_symlink()
+    assert not target.exists() and not is_link(target)
 
     # A pre-existing correct link is never removed by an enable failure.
     _symlink_or_skip(project, target)
     install = install_addon(project, "enable_fail_sample")
     assert install["success"] is False
     assert install["reason"] == "install_enable_failed"
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == project.resolve()

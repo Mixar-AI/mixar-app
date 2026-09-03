@@ -89,9 +89,11 @@ def push_update_available_toast(info) -> None:
 
     One toast id, one renderer: whichever of "available", "ready to
     install", "downloading" or "download failed" is true right now
-    decides the wording and the buttons.  Forced/unsupported updates
-    offer no Skip and are non-dismissible — the only way forward is to
-    update.
+    decides the wording and the buttons.  Dismissal is the only way out
+    and it is per-session; what stops the toast returning on the next
+    launch is the announcement record, not a user choice.
+    Forced/unsupported updates are non-dismissible — the only way
+    forward is to update.
     """
     from ...notifications.store import NotificationAction, get_notification_store
     from ..constants import UPDATE_NOTIFICATION_ID, InstallState
@@ -122,16 +124,12 @@ def push_update_available_toast(info) -> None:
     if install_state is InstallState.READY:
         title = "Mixar Update Ready"
         body = f"Version {info.latest_version} is ready to install."
-    elif install_state is InstallState.DOWNLOADING:
-        # The background download is the invisible half of "seamless" —
-        # without a moving number the toast looks stalled for minutes on a
-        # 400 MB installer. The 1s progress tick re-renders this line.
-        title = "Mixar Update Available"
-        body = (
-            f"Version {info.latest_version} is available.\n"
-            f"Downloading — {_download_body(state)}"
-        )
     else:
+        # No percentage here, deliberately. Staging runs in the background
+        # and the user has not asked to wait on it; the topbar badge shows
+        # "Downloading 45%" for anyone who wants the detail. Progress
+        # belongs in the toast only once the user has pressed Restart &
+        # Update and is actually waiting — see push_downloading_toast.
         title = "Mixar Update Required" if forced else "Mixar Update Available"
         body = f"Version {info.latest_version} is available."
 
@@ -148,10 +146,6 @@ def push_update_available_toast(info) -> None:
         body += f"\n{state.install_error} — use Download to update via your browser."
 
     actions = []
-    if not forced:
-        actions.append(NotificationAction(
-            label="Skip", operator="mixar.dismiss_update", style="secondary",
-        ))
     if can_self_install:
         actions.append(NotificationAction(
             label="Restart & Update", operator="mixar.restart_to_update",

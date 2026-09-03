@@ -29,6 +29,9 @@ from typing import NamedTuple
 import bpy
 from bpy.types import Header
 
+from mixar.modules.agent_bubble.constants import (
+    BUBBLE_WINDOW_CONTROLS_SUPPORTED,
+)
 from mixar.modules.agent_bubble.core.pill_icons import (
     get_pill_icon_id_named,
     get_running_text_suffix,
@@ -283,22 +286,36 @@ class AGENT_BUBBLE_HT_header(Header):
             # clipped by the window bounds and only show "Restore" /
             # "Restore." as a partial fragment that looks like a UI
             # bug. Suppressing the tooltip entirely is cleaner.
-            if icon_id:
-                row.operator(
-                    "mixar.bubble_restore_user",
-                    text=label,
-                    icon_value=icon_id,
-                    emboss=False,
-                    no_tooltip=True,
-                )
+            #
+            # Where the native window helpers are missing (Linux) the
+            # restore operator is a stub that returns CANCELLED, so the
+            # pill is drawn as a plain label instead of a button: the
+            # status still reads, but nothing invites a click that
+            # cannot do anything. Reaching the pill at all is already
+            # unlikely there — minimise is stubbed too — but the
+            # workspace-change autoshow can arm the minimised state
+            # directly (agent_bubble_module._on_workspace_change).
+            if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+                if icon_id:
+                    row.operator(
+                        "mixar.bubble_restore_user",
+                        text=label,
+                        icon_value=icon_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+                else:
+                    row.operator(
+                        "mixar.bubble_restore_user",
+                        text=label,
+                        icon=status.fallback_icon,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+            elif icon_id:
+                row.label(text=label, icon_value=icon_id)
             else:
-                row.operator(
-                    "mixar.bubble_restore_user",
-                    text=label,
-                    icon=status.fallback_icon,
-                    emboss=False,
-                    no_tooltip=True,
-                )
+                row.label(text=label, icon=status.fallback_icon)
             return
 
         # Main bubble window header (left → right):
@@ -308,41 +325,52 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # On macOS: coloured traffic-light circles (custom pill icons).
         # On Windows: minimise + expand icon buttons only.
-        traffic = layout.row(align=True)
-        if _IS_WINDOWS:
-            traffic.operator(
-                "mixar.bubble_close",
-                text="",
-                icon='REMOVE',
-                emboss=False,
-                no_tooltip=True,
-            )
-            traffic.operator(
-                "mixar.bubble_toggle_expand_tracked",
-                text="",
-                icon='FULLSCREEN_ENTER',
-                emboss=False,
-                no_tooltip=True,
-            )
-        else:
-            yellow_id = get_pill_icon_id_named("yellow")
-            green_id = get_pill_icon_id_named("green")
-            if yellow_id:
+        #
+        # Elsewhere (Linux): no window-state buttons at all. The operators
+        # behind them are compiled-out stubs that return CANCELLED without
+        # a message, so drawing them offers a control that silently does
+        # nothing — see BUBBLE_WINDOW_CONTROLS_SUPPORTED. The whole row is
+        # skipped rather than left empty: an empty aligned row still takes
+        # header space and would shift the drag handle off centre.
+        #
+        # Only this row is platform-gated. Dragging the bubble works on
+        # every platform, and so do the right-side controls below.
+        if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+            traffic = layout.row(align=True)
+            if _IS_WINDOWS:
                 traffic.operator(
                     "mixar.bubble_close",
                     text="",
-                    icon_value=yellow_id,
+                    icon='REMOVE',
                     emboss=False,
                     no_tooltip=True,
                 )
-            if green_id:
                 traffic.operator(
                     "mixar.bubble_toggle_expand_tracked",
                     text="",
-                    icon_value=green_id,
+                    icon='FULLSCREEN_ENTER',
                     emboss=False,
                     no_tooltip=True,
                 )
+            else:
+                yellow_id = get_pill_icon_id_named("yellow")
+                green_id = get_pill_icon_id_named("green")
+                if yellow_id:
+                    traffic.operator(
+                        "mixar.bubble_close",
+                        text="",
+                        icon_value=yellow_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+                if green_id:
+                    traffic.operator(
+                        "mixar.bubble_toggle_expand_tracked",
+                        text="",
+                        icon_value=green_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
 
         layout.separator_spacer()
         handle_row = layout.row()

@@ -15,6 +15,7 @@ import pytest
 
 sys.modules.setdefault("keyring", MagicMock(name="keyring"))
 
+from mixar.modules.addon_project.links import create_link, is_link
 from mixar.modules.addon_project.errors import AddonProjectError
 from mixar.modules.addon_project.installer import install_addon
 from mixar.modules.addon_project.service import AddonProjectService
@@ -135,7 +136,7 @@ def test_standalone_project_keeps_the_root_package_shape(tmp_path, env):
     install = install_addon(project, "rg_standalone_addon")
     assert install["success"] is True
     target = env.addons_dir / "rg_standalone_addon"
-    assert target.is_symlink()
+    assert is_link(target)
     assert target.resolve() == project.resolve()
 
 
@@ -282,12 +283,12 @@ def test_self_heal_clears_root_entrypoint_link_and_prefs(env):
     _manifest_file(env.root).write_text(
         json.dumps(manifest), encoding="utf-8"
     )
-    os.symlink(env.root, env.addons_dir / env.root.name, target_is_directory=True)
+    create_link(env.root, env.addons_dir / env.root.name, is_package=True)
 
     description = env.service.describe(linked["project_id"])
 
     assert description["entrypoint"] == "rg_edge_map_baker"
-    assert not (env.addons_dir / env.root.name).is_symlink()
+    assert not is_link(env.addons_dir / env.root.name)
     assert env.stub.disable_calls == [(env.root.name, True)]
     # Project files are never touched by the heal.
     assert (env.root / "__init__.py").is_file()
@@ -308,12 +309,12 @@ def test_never_stamped_standalone_root_folder_is_never_healed(tmp_path, env):
     description = env.service.link(str(project))
     assert description["entrypoint"] == "rg_solo_addon"
     _symlink = env.addons_dir / "rg_solo_addon"
-    os.symlink(project, _symlink, target_is_directory=True)
+    create_link(project, _symlink, is_package=True)
 
     described = env.service.describe(description["project_id"])
 
     assert described["entrypoint"] == "rg_solo_addon"
-    assert _symlink.is_symlink()
+    assert is_link(_symlink)
     assert env.stub.disable_calls == []
     manifest = json.loads(
         (project / ".mixar" / "addon-project.json").read_text(encoding="utf-8")
@@ -385,12 +386,12 @@ def test_self_heal_is_a_noop_on_partially_cleaned_state(env):
     linked = env.service.link_workspace_root()
     # Manifest already repointed manually, but the stale whole-root link
     # remains: resolving must neither crash nor touch anything.
-    os.symlink(env.root, env.addons_dir / env.root.name, target_is_directory=True)
+    create_link(env.root, env.addons_dir / env.root.name, is_package=True)
 
     description = env.service.describe(linked["project_id"])
 
     assert description["entrypoint"] == "rg_edge_map_baker"
-    assert (env.addons_dir / env.root.name).is_symlink()
+    assert is_link(env.addons_dir / env.root.name)
     assert env.stub.disable_calls == []
 
 

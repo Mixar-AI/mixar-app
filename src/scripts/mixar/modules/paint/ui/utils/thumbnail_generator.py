@@ -128,13 +128,19 @@ def get_layer_thumbnail(layer, channel_idx=0, material_name=""):
         preview = _preview_collection.get(cache_key)
         if preview:
             return preview.icon_id
+        # IMAGE layers use Blender's built-in image preview instead of a
+        # collection entry; the generated icon id is stored in the cache
+        # below so the per-row get_layer_source lookup only runs once.
+        cached_icon = _thumbnail_cache[cache_key]
+        if cached_icon:
+            return cached_icon
 
     # Prune cache if it's getting too large
     _prune_cache_if_needed()
 
     # Generate new thumbnail based on layer type
     icon_id = _generate_thumbnail(layer, channel_idx, cache_key)
-    _thumbnail_cache[cache_key] = True
+    _thumbnail_cache[cache_key] = icon_id
 
     return icon_id
 

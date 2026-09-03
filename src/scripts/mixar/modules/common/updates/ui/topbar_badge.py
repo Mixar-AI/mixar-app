@@ -8,9 +8,11 @@ Topbar Update Badge
 Persistent "Update Available" indicator drawn just right of the topbar
 "Open Mixie" button (called from agent_bubble's TOPBAR_HT_upper_bar
 draw hook).  Visible whenever update info is cached in the update state
-singleton — including after the user skips the version, so the badge
-persists until they are actually on the latest release.  Clicking
-re-shows the sticky update toast.
+singleton — including after the toast has been dismissed or the version
+has already been announced, so the badge persists until they are actually
+on the latest release.  Clicking re-shows the sticky update toast, which
+is what makes suppressing repeat announcements safe: the update is
+demoted to ambient status, never withheld.
 """
 
 import bpy

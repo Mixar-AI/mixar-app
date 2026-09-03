@@ -57,6 +57,15 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *i
     return nullptr;
   }
 
+  /* A >8-bit movie frame (e.g. a 10-bit HEVC video-gen result) decodes to a
+   * scene-linear float buffer with NO byte buffer, which this byte cache
+   * cannot upload — node previews then drew nothing (a black tile). Convert
+   * to display bytes once per decoded frame; the byte buffer lands on the
+   * movie-cache ibuf, so a paused frame pays this exactly once. */
+  if (ibuf->byte_buffer.data == nullptr && ibuf->float_buffer.data != nullptr) {
+    IMB_byte_from_float(ibuf);
+  }
+
   /* Return cached texture if dimensions still match. */
   if (it != s_srgb_tex_cache.end()) {
     if (ibuf->x == it->second.width && ibuf->y == it->second.height) {
@@ -72,7 +81,7 @@ static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *i
         return it->second.tex;
       }
     }
-    /* Stale dimensions, or a float frame unsupported by this byte cache. */
+    /* Stale dimensions, or a frame this byte cache cannot represent. */
     GPU_texture_free(it->second.tex);
     s_srgb_tex_cache.erase(it);
   }

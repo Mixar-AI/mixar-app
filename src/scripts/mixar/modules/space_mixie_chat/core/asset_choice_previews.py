@@ -294,13 +294,6 @@ def _generate(candidate):
                 "text-only button", asset_name,
             )
             return None
-        if appended_obj:
-            if appended_obj.name not in scene_coll.objects:
-                scene_coll.objects.link(appended_obj)
-        else:
-            if appended_coll.name not in scene_coll.children:
-                scene_coll.children.link(appended_coll)
-
         # This runs from a bpy.app.timers callback, where bpy.context has no
         # window — bpy.ops.render.render() can fail its poll there. Override
         # with a real window (any) so the operator has a full context.
@@ -309,7 +302,19 @@ def _generate(candidate):
             wm = bpy.context.window_manager
             win = wm.windows[0] if wm and wm.windows else None
 
+        # Link the asset INTO the rig, not before it: the rig's __enter__
+        # hides every scene object that is not part of the rig (hide_render
+        # = True), so an asset linked earlier was invisible to its own
+        # fallback render and every thumbnail came out blank. Both sibling
+        # implementations (RenderSession, scene_asset_exporter) enter the
+        # rig before appending for exactly this reason.
         with PreviewRenderRig(scene, size=RENDER_SIZE) as rig:
+            if appended_obj:
+                if appended_obj.name not in scene_coll.objects:
+                    scene_coll.objects.link(appended_obj)
+            else:
+                if appended_coll.name not in scene_coll.children:
+                    scene_coll.children.link(appended_coll)
             frame_camera(rig.camera, render_objs)
             if win is not None:
                 with bpy.context.temp_override(

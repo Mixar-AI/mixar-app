@@ -22,41 +22,6 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-class MIXAR_OT_dismiss_update(bpy.types.Operator):
-    """Skip this version and dismiss the notification"""
-
-    bl_idname = "mixar.dismiss_update"
-    bl_label = "Skip This Version"
-    bl_options = {"INTERNAL"}
-
-    def execute(self, context):
-        from ..core.state import get_update_state
-        from ..core.toasts import tag_topbar_redraw
-        from ..core.update_checker import is_forced, set_skipped_version
-        from ..constants import UPDATE_NOTIFICATION_ID
-        from ...notifications.store import get_notification_store
-
-        state = get_update_state()
-        info = state.update_info
-
-        # Forced/unsupported updates cannot be skipped — defence in depth;
-        # the toast doesn't offer Skip for these, but nothing else should
-        # be able to clear the requirement either.
-        if info and is_forced(info):
-            self.report({"WARNING"}, "This update is required and cannot be skipped")
-            return {"CANCELLED"}
-
-        if info and info.latest_version:
-            set_skipped_version(info.latest_version)
-            logger.info("User skipped version %s", info.latest_version)
-
-        # Dismiss the toast only — update_info/state stay intact so the
-        # topbar badge persists until the user is on the latest version.
-        get_notification_store().dismiss(UPDATE_NOTIFICATION_ID)
-        tag_topbar_redraw()
-        return {"FINISHED"}
-
-
 class MIXAR_OT_restart_to_update(bpy.types.Operator):
     """Restart Mixar and install the downloaded update"""
 
@@ -310,7 +275,6 @@ class MIXAR_OT_open_changelog(bpy.types.Operator):
 
 
 classes = (
-    MIXAR_OT_dismiss_update,
     MIXAR_OT_restart_to_update,
     MIXAR_OT_cancel_update_download,
     MIXAR_OT_open_downloads_page,

@@ -37,6 +37,28 @@ def run_static_checks(root: Path) -> dict:
     return {"success": passed, "checks": results, "summary": f"{sum(r['success'] for r in results)}/{len(results)} Python files compiled"}
 
 
+def run_scoped_checks(scoped_roots) -> dict:
+    """Compile each (root, path_prefix) pair and merge into one result.
+
+    Workspace commits scope their static pass exactly like ``run_checks``:
+    one add-on's syntax error must not block work on another. Each root's
+    reported paths are prefixed so they stay project-relative and
+    unambiguous (``pkg/module.py``), and the summaries concatenate.
+    """
+    checks = []
+    passed = True
+    parts = []
+    for scope_root, prefix in scoped_roots:
+        result = run_static_checks(scope_root)
+        passed = passed and result["success"]
+        parts.append(result["summary"])
+        for item in result.get("checks", []):
+            if prefix:
+                item["path"] = f"{prefix}{item['path']}"
+            checks.append(item)
+    return {"success": passed, "checks": checks, "summary": "; ".join(parts)}
+
+
 def run_blender_reload(
     root: Path,
     entrypoint: str,

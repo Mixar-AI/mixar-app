@@ -258,6 +258,61 @@ def died_early(handle):
     return all(s.proc.poll() not in (0, None) for s in handle.shards)
 
 
+def missing_result_failures(handle):
+    """Failure tuples for assets a shard never produced a result line for.
+
+    A shard that CRASHES after writing at least one result line is terminal
+    but incomplete: ``_poll_shard`` marks it done, nothing re-renders the
+    remainder, and nothing records it as failed. Without this reconciliation
+    the run would stamp the full-library metadata_checksum (marking those
+    assets trained server-side) and they would become unreachable until their
+    .blend changes. The caller folds these into the run's failure list, which
+    keeps the checksum unstamped so the next train retries them.
+    """
+    failures = []
+    for shard in handle.shards:
+        missing = shard.total - len(shard.results)
+        if missing <= 0:
+            continue
+        labels = _shard_labels(shard)
+        rendered = {r.get("label") for r in shard.results}
+        unrendered = [label for label in labels if label not in rendered]
+        if unrendered:
+            failures.extend(
+                (label, "preview worker exited before rendering this asset")
+                for label in unrendered[:missing]
+            )
+        else:
+            # Plan unreadable or labels don't line up — still record the gap
+            # so the checksum is never stamped over unrendered assets.
+            failures.append((
+                "worker shard",
+                f"{missing} assets were not rendered (worker exited early)",
+            ))
+    return failures
+
+
+def _item_label(item):
+    """The result-line label the worker writes for one plan item.
+
+    Plan items carry ``name``/``library`` (never a ``label`` key); the worker
+    builds each result's ``label`` from them (``preview_worker_script.main``),
+    so reconciliation must build it the same way or nothing ever matches.
+    """
+    return f"{item.get('name', '?')} ({item.get('library', '?')})"
+
+
+def _shard_labels(shard):
+    """The plan's item labels for one shard (empty when unreadable)."""
+    try:
+        with open(os.path.join(shard.dir, "plan.json"),
+                  encoding="utf-8") as fh:
+            items = json.load(fh).get("items", [])
+        return [_item_label(item) for item in items]
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return []
+
+
 def stop(handle):
     """Terminate every worker process (cancel/stall)."""
     for shard in handle.shards:

@@ -32,7 +32,10 @@ PLATFORM_MAP = {
 # ============================================================================
 
 INSTALL_ID_FILENAME = ".mixar_install_id"
-SKIPPED_VERSION_FILENAME = ".mixar_skipped_version"
+# Records that a version has already been announced in a toast, so the
+# announcement happens once rather than on every launch. Not a user
+# decision — the topbar badge keeps carrying the update either way.
+ANNOUNCED_VERSION_FILENAME = ".mixar_announced_version"
 
 # Staging directory (installer + helper script + logs) created under the
 # platform root resolved by ``core/staging.py``.

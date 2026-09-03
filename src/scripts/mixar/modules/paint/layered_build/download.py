@@ -87,7 +87,10 @@ def download_to_tempfile(
     if failed_at is not None:
         if time.monotonic() - failed_at < _FAILURE_TTL_SECONDS:
             raise prior_error
-        del _recent_failures[url]
+        # pop (not del): two threads can pass the TTL check together and both
+        # try to expire the same entry — the loser's KeyError would otherwise
+        # escape to the main thread.
+        _recent_failures.pop(url, None)
 
     attempts = max(1, int(attempts or 1))
     last_error = None
@@ -151,6 +154,12 @@ def load_image(url: str, non_color: bool) -> "bpy.types.Image":
     img = bpy.data.images.load(path, check_existing=True)
     try:
         img.colorspace_settings.name = "Non-Color" if non_color else "sRGB"
+    except Exception:
+        pass
+    try:
+        # The texture lives in a temp cache dir that gets wiped between
+        # sessions; pack it so a saved .blend keeps the built material.
+        img.pack()
     except Exception:
         pass
     return img

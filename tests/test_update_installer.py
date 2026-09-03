@@ -234,6 +234,26 @@ def test_windows_helper_only_rechecks_signatures_when_asked():
     assert "Get-AuthenticodeSignature" in _windows_script(require_signature=True)
 
 
+def test_windows_helper_signature_recheck_fails_closed():
+    """Only exit 0 may pass the helper's signature re-verify.
+
+    The old check (`if not "%ERRORLEVEL%"=="1" goto signature_ok`) failed
+    OPEN when PowerShell was missing: cmd reports 9009 for an unknown
+    command, 9009 != 1 read as "verified", and the staged MSI installed
+    with no signature check at all."""
+    script = _windows_script(require_signature=True)
+    verify = script[script.index("Get-AuthenticodeSignature"):]
+    verify = verify[:verify.index(":signature_ok") + len(":signature_ok")]
+
+    assert 'if "%ERRORLEVEL%"=="0" goto signature_ok' in verify
+    # No "anything-but-1 passes" escape hatch may remain.
+    assert 'goto signature_ok' not in verify.replace(
+        'if "%ERRORLEVEL%"=="0" goto signature_ok', "")
+    # A refusal still relaunches the app and records why.
+    assert "stage=verify" in verify
+    assert "goto relaunchonly" in verify
+
+
 def test_windows_helper_writes_a_result_for_the_relaunched_app():
     script = _windows_script()
 
