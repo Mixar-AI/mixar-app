@@ -138,15 +138,46 @@ def reopen_last_sent(scene) -> int:
     return reopened
 
 
-def remove_last(scene):
-    """Undo the most recent mark, releasing what it created. Returns True."""
+def remove_last(scene, keep_view=""):
+    """Undo the most recent DRAFT mark, releasing what it created.
+
+    SENT marks are never touched. They are scene nouns the conversation
+    already refers to — the agent has been told their ids, and the vertex
+    groups and baked camera they name are still live — so "undo" means the
+    last mark the user DREW, never the last one they sent. Popping the newest
+    item blind is how one Backspace on a freshly armed freeze deleted a mark
+    from the previous turn, took its vertex group with it, and reported
+    "Mark removed" while the pill still read zero.
+
+    ``keep_view`` names the LIVE freeze's baked camera. That freeze is still
+    on screen and the next mark will be drawn against it, so it outlives the
+    mark that happened to be its only reference — the freeze owns it and
+    gives it back itself (``FreezeSession.release_if_unused``).
+
+    Returns True when a mark was removed.
+    """
     collection = _collection(scene)
     if not collection:
         return False
-    index = len(collection) - 1
-    _release_item(collection[index], collection)
-    collection.remove(index)
-    return True
+    for index in range(len(collection) - 1, -1, -1):
+        if collection[index].state != STATE_DRAFT:
+            continue
+        _release_item(collection[index], collection, keep_view=keep_view)
+        collection.remove(index)
+        return True
+    return False
+
+
+def view_referenced(scene, view_name):
+    """Whether any mark still names *view_name*.
+
+    The freeze asks this after an undo: its camera and still are unreferenced
+    again once the last mark drawn on them is gone, and only then may
+    disarming release them.
+    """
+    if not view_name:
+        return False
+    return any(i.view_name == view_name for i in _collection(scene) or ())
 
 
 def clear(scene, drafts_only=False):
@@ -172,7 +203,7 @@ def clear(scene, drafts_only=False):
     return removed
 
 
-def _release_item(item, collection=None):
+def _release_item(item, collection=None, keep_view=""):
     """Give back the scene entities one mark owns.
 
     The baked view camera is SHARED by every mark from the same freeze, so it
@@ -180,6 +211,8 @@ def _release_item(item, collection=None):
     unconditionally is how undoing one of three marks left the other two
     pointing at a deleted camera — and ``render_viewport(view="mark")`` then
     silently renders the scene camera instead of the frame they describe.
+    ``keep_view`` extends that to the one reference no mark can express: the
+    LIVE freeze, which still holds the camera for the mark not drawn yet.
 
     Best-effort throughout: a mark whose object was deleted between marking
     and undoing must still be removable.
@@ -197,7 +230,9 @@ def _release_item(item, collection=None):
             if obj is not None:
                 vertex_groups.remove_group(obj, group)
 
-    if item.view_name and not _view_shared(item, collection):
+    if (item.view_name
+            and item.view_name != keep_view
+            and not _view_shared(item, collection)):
         view_bake.release(item.view_name)
 
 

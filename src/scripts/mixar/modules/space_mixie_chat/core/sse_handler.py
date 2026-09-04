@@ -619,8 +619,19 @@ class SSEStreamHandler:
         project_context: Optional[dict] = None,
         mark_context: Optional[dict] = None,
         user_preferences: Optional[dict] = None,
+        _connect_attempt: int = 0,
     ) -> None:
-        """Background thread that handles V2 SSE streaming."""
+        """Background thread that handles V2 SSE streaming.
+
+        ``_connect_attempt`` is the bounded pre-request connect retry, the
+        same counter ``_input_stream_loop`` carries. It is a real parameter
+        rather than a closure read because the recursion below already passes
+        it positionally: without it the ``httpx.ConnectError`` handler raised
+        ``NameError``, and a NameError raised INSIDE an except clause is not
+        caught by that try's own ``except Exception`` — so an unreachable
+        backend killed the thread before ``_on_error`` ever ran, and the turn
+        span forever with nothing said.
+        """
         try:
             headers = _base_headers(auth_token)
 

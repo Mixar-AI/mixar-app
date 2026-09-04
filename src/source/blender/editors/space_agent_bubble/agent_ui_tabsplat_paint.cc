@@ -378,13 +378,21 @@ void splat_pane_paint(const bContext *C,
    * cannot cover a line drawn above it. */
   pane_report_line_draw(C, rects.prompt_box, u);
 
-  /* Generate — the kit's shared button, armed only where the prompt field
-   * could actually be drawn (paid action, see SplatPaneRects::prompt_ok) and
-   * while this pane has no job already in the unified queue. "Queued..." is
-   * the same word the 3D and Media panes use for the same queue state. */
-  const bool busy = state.active_jobs > 0;
-  pane_generate_paint(
-      rects.btn_generate, busy ? "Queued..." : "Generate", rects.prompt_ok && !busy, u);
+  /* Generate — the kit's shared button and the kit's shared label, so this
+   * pane says "Queued (N)" in the same words as 3D and Media and counts the
+   * queue the same way.
+   *
+   * Armed on `prompt_ok` ALONE, which is the rule the control layout applies
+   * (agent_ui_tabsplat.cc): a live job is a QUEUE entry, not a lock, and
+   * stacking is the point. Painting it disabled while busy was the one place
+   * the paint and the arm disagreed — the button read "Queued..." and dimmed
+   * but still submitted a paid world_labs generation on click, which is
+   * exactly the failure the "a click and a keypress can never submit
+   * different PAID generations" contract exists to prevent. The two rules
+   * must be written from the same expression; they are now both prompt_ok. */
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs);
+  pane_generate_paint(rects.btn_generate, gen_label, rects.prompt_ok, u);
 }
 
 /** \} */

@@ -386,14 +386,16 @@ void agent_ui_tabsplat_draw(const bContext *C,
    * on the tab PropertyGroup's own RNA identifier — the string
    * interface_handlers.cc forwards. One path, so a click and a keypress can
    * never resolve to different paid generations. Armed only where the prompt
-   * field was actually drawn, and only while this pane has nothing live in the
-   * unified queue — the painter dims the button in exactly the same two cases
-   * (splat_pane_paint), and a button that paints disabled must not still be
-   * clickable. */
-  /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
+   * field was actually drawn — and a button that paints disabled must not
+   * still be clickable, so `splat_pane_paint` enables it on this same
+   * `prompt_ok` and nothing else.
+   *
+   * A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
    * the point — so an active job is INFORMATION (the label carries the
    * count), never a lock. Only a missing prompt field or an unusable
-   * catalog can disarm it. */
+   * catalog can disarm it. The painter used to dim on `busy` as well, which
+   * left a Generate that read "Queued..." and looked disabled still
+   * submitting a paid world_labs job when clicked. */
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",

@@ -142,11 +142,24 @@ def reset():
 # Drawing
 # =============================================================================
 
-def _ui_scale():
+def ui_scale():
+    """The interface scale every pixel threshold in this module is measured in.
+
+    Public because the mark modal samples strokes and classifies gestures in
+    the same units the overlay draws them in — it kept a byte-identical
+    private copy, and a threshold that disagreed with what the user saw is
+    exactly the drift that costs.
+    """
     try:
         return float(bpy.context.preferences.system.ui_scale)
     except Exception:  # noqa: BLE001
         return 1.0
+
+
+def point_in_region(region, x, y):
+    """Whether a WINDOW-relative event position is inside *region*."""
+    return (region.x <= x < region.x + region.width
+            and region.y <= y < region.y + region.height)
 
 
 def _armed():
@@ -312,7 +325,7 @@ def _draw_callback():
                 _draw_still(region, texture)
             _draw_scrim(region)
 
-            scale = _ui_scale()
+            scale = ui_scale()
             width = MARK_INK_WIDTH * scale
             for strokes in _settled_strokes:
                 _draw_strokes(strokes, MARK_INK_COLOR_SETTLED, width)

@@ -97,6 +97,19 @@ class TestStreamArgumentChain:
 
         assert calls, "no positional call to _stream_loop found — did it move?"
         for names in calls:
+            # A name passed positionally that the signature does not declare
+            # is the bug this class exists for, read from the other end: the
+            # httpx.ConnectError handler read `_connect_attempt` and the
+            # recursion passed it, while the signature had no such parameter
+            # — so an unreachable backend raised NameError inside an except
+            # clause (which that try's own `except Exception` cannot catch)
+            # and killed the turn silently. Skipping unknown names, as this
+            # loop used to, is what let it pass here.
+            unknown = [n for n in names if n not in params]
+            assert not unknown, (
+                f"_stream_loop is passed {unknown} positionally but declares "
+                f"no such parameter: {names}"
+            )
             # Every name passed must appear in the signature, in the same
             # relative order. A dropped or reordered argument fails here.
             positions = [params.index(n) for n in names if n in params]
