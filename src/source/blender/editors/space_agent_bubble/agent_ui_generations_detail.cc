@@ -95,9 +95,21 @@ void wrap_two_lines(
     split = i;
   }
   if (split == 0) {
-    /* One unbreakable run — let the fitter cut it mid-word. */
+    /* One unbreakable run — let the fitter cut it mid-word.
+     *
+     * `pane_fit_text` appends a 3-byte U+2026 at the cut, so `strlen(r_a)` is
+     * NOT how many bytes of `text` it consumed: resuming the second line at
+     * `text + strlen(r_a)` skipped three real bytes and, when those bytes sat
+     * inside a multi-byte character, started the tail mid-sequence and drew
+     * mojibake. Subtract the ellipsis to get the true head length. */
     pane_fit_text(r_a, max_w, font);
-    BLI_strncpy(r_b, text + strlen(r_a), 160);
+    static const char ELLIPSIS[] = "\xE2\x80\xA6"; /* U+2026, as pane_fit_text writes */
+    const size_t ellipsis_len = sizeof(ELLIPSIS) - 1;
+    size_t head = strlen(r_a);
+    if (head >= ellipsis_len && STREQ(r_a + head - ellipsis_len, ELLIPSIS)) {
+      head -= ellipsis_len;
+    }
+    BLI_strncpy(r_b, text + head, 160);
   }
   else {
     BLI_strncpy(r_b, r_a + split + 1, 160);
