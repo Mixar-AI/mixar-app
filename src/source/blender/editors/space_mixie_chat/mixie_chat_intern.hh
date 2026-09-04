@@ -582,6 +582,30 @@ bool mixie_chat_rules_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_rules_set_visible(bContext *C, bool visible);
 
+/* Scribble ink overlay (mixie_chat_ink_overlay.cc / _events.cc / _util.cc):
+ * stylus handwriting captured over the chat main region, recognized via the
+ * Python `mixie_chat.ink_commit` operator (backend vision OCR) and appended
+ * to the composer. Visibility: Python-registered WindowManager bool
+ * `mixie_chat_ink_visible`. Auto-opens on a stylus press over the composer
+ * (footer handler) or on empty chat background (try_auto_open, checked
+ * LAST in mixie_chat_ui_handler so interactive targets keep pen taps). */
+void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
+bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_ink_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_ink_set_visible(bContext *C, bool visible);
+bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event);
+/** Open from a stylus press seen INSIDE the composer's active text-edit
+ * (interface_handlers.cc hook — the footer region handler never gets that
+ * press; the caller then exits editing via BUTTON_STATE_EXIT). */
+bool mixie_chat_ink_composer_stylus_open(bContext *C);
+void mixie_chat_ink_footer_handler_register(ARegion *region);
+/** Region-exit cleanup for the idle-commit timer (window close / file load
+ * would otherwise leave the process-global wmTimer pointer dangling). */
+void mixie_chat_ink_idle_timer_remove(wmWindowManager *wm);
+void MIXIE_CHAT_OT_ink_flush(wmOperatorType *ot);
+void MIXIE_CHAT_OT_ink_release_composer(wmOperatorType *ot);
+
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,

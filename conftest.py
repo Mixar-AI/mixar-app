@@ -16,6 +16,16 @@ def _install_bpy_stubs():
         'bpy', 'bpy.types', 'bpy.props', 'bpy.utils', 'bpy.app',
         'bpy.app.handlers', 'bpy.app.timers', 'bpy.context', 'bpy.data',
         'bpy.ops', 'bpy.ops.mixar',
+        # The rest of what Blender puts on sys.path. Without these, a module
+        # is untestable purely because it imports one of them at module
+        # scope, which pushes its logic into source-level assertions that
+        # cannot actually run it. Stubbing them costs nothing: nothing here
+        # can import the real ones anyway.
+        'bpy_extras', 'bpy_extras.view3d_utils', 'bpy_extras.object_utils',
+        'mathutils', 'mathutils.geometry',
+        'gpu', 'gpu.state', 'gpu.shader', 'gpu.texture',
+        'gpu_extras', 'gpu_extras.batch', 'gpu_extras.presets',
+        'blf', 'bmesh', 'addon_utils', 'idprop', 'aud',
     ]
     for name in stub_names:
         if name not in sys.modules:

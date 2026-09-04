@@ -52,6 +52,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
     # Agent-chosen name for the imported mesh; empty falls back to the input
     # image name, then a prompt slug (see generation_enqueue.derive_model_name).
     name: bpy.props.StringProperty(default="")
+    # Where the import lands, as JSON (job_queue.core.placement). Applied by
+    # the post-import hook, so the agent's turn need not outlive the job.
+    placement: bpy.props.StringProperty(default="")
 
     # Trellis-specific
     texture_size: bpy.props.IntProperty(default=0, min=0, max=4096)
@@ -367,6 +370,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             derive_model_name, make_model_rename_on_imported, model_front_zrot,
         )
         mesh_name = derive_model_name(img, prompt or "", explicit=self.name)
+        from mixar.modules.common.job_queue.core.placement import parse_placement
+        placement = parse_placement(self.placement)
 
         job = enqueue_generation(
             kind="glb",
@@ -377,7 +382,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             label=job_label,
             fail_message="3D model generation failed",
             on_imported=make_model_rename_on_imported(
-                mesh_name, model_front_zrot(model_name)),
+                mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",
             batch_popup_title="Image to 3D batch complete",
         )
