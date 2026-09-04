@@ -31,6 +31,25 @@ SPLAT_PAINT_CC = (CPP / "agent_ui_tabsplat_paint.cc").read_text(encoding="utf-8"
 SPLAT_CC = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
 TAB3D_CC = (CPP / "agent_ui_tab3d.cc").read_text(encoding="utf-8")
 MEDIA_CC = (CPP / "agent_ui_tabmedia.cc").read_text(encoding="utf-8")
+GEN_DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
+PANE_KIT_CC = (CPP / "agent_ui_pane_kit.cc").read_text(encoding="utf-8")
+
+
+def _strip_comments(source: str) -> str:
+    """Drop /* */ and // comments — a contract is about code, and the prose
+    explaining a fix routinely quotes the very expression it removed."""
+    out, i, n = [], 0, len(source)
+    while i < n:
+        if source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+        elif source.startswith("//", i):
+            end = source.find("\n", i)
+            i = n if end < 0 else end
+        else:
+            out.append(source[i])
+            i += 1
+    return "".join(out)
 
 
 def _function_body(source: str, signature_start: str) -> str:
@@ -120,3 +139,24 @@ def test_the_splat_arm_side_ignores_the_live_job_count():
     generate = generate[: generate.index("mixie.moodboard_prompt_generate") + 200]
     assert "if (rects.prompt_ok) {" in generate
     assert "active_jobs" not in generate
+
+
+# ---------------------------------------------------------------------------
+# 3. A two-line caption resumes where the first line actually ended
+# ---------------------------------------------------------------------------
+
+def test_the_second_line_skips_the_ellipsis_not_three_real_bytes():
+    """`pane_fit_text` appends a 3-byte U+2026 at its cut, so `strlen()` of
+    the fitted head overshoots the bytes of the ORIGINAL it consumed. Taking
+    the tail from `text + strlen(r_a)` dropped three real bytes and could
+    start inside a multi-byte character."""
+    assert '"\\xE2\\x80\\xA6"' in PANE_KIT_CC, (
+        "pane_fit_text no longer writes U+2026 — the detail column's "
+        "compensation below is keyed to it"
+    )
+    body = _strip_comments(_function_body(GEN_DETAIL_CC, "void wrap_two_lines"))
+    assert "text + strlen(r_a)" not in body, (
+        "the fitted head carries an ellipsis; its length is not the offset "
+        "into the source string"
+    )
+    assert "ellipsis_len" in body and "text + head" in body
