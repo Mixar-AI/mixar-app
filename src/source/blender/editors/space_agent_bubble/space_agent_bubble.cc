@@ -467,11 +467,15 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
    * Bound to the same scene.mixie_chat_input the chat footer uses, with the
    * same ui::BUT_TEXTEDIT_UPDATE flag — that is what makes Enter submit, via
    * the property's own update callback. */
-  /* In the empty state the WINDOW region hosts the whole-panel field; the
-   * strip here would be a second box for the same property. */
-  PropertyRNA *input_prop = state->has_transcript ?
-                                RNA_struct_find_property(&scene_ptr, "mixie_chat_input") :
-                                nullptr;
+  /* Exactly ONE field box, always. The WINDOW region hosts the whole-panel
+   * field only in the empty state with the canvas DOWN; a strip here then
+   * would be a second box for the same property. While the canvas is up that
+   * field is not built, so the strip is the only composer there is — and
+   * without it a landed transcription has nowhere to appear. */
+  const bool window_hosts_field = !state->has_transcript && !state->ink_visible;
+  PropertyRNA *input_prop = window_hosts_field ?
+                                nullptr :
+                                RNA_struct_find_property(&scene_ptr, "mixie_chat_input");
   if (input_prop) {
     /* Clamp the field to its region. The panel can be taller than the slab
      * (Blender reserves a minimum for the main region), and a ui::Button whose rect
@@ -741,11 +745,20 @@ static bool agent_bubble_island_begin(const bContext *C,
    * region sizes) makes the island vanish entirely. The two spaces are not
    * interchangeable here; verify any change to this line by LOOKING at the
    * bubble, not by comparing numbers. */
+  /* The input collapses to a strip whenever the WINDOW region is NOT hosting
+   * the whole-panel field — with a transcript, and equally while the ink
+   * canvas is up, because that field is deliberately not built then (its
+   * embossed chrome would cover the canvas). Passing has_transcript alone
+   * left the empty state laying the field across the whole panel while
+   * nothing drew it, so the island had NO composer at all: handwriting was
+   * recognized and written to mixie_chat_input with no box on screen to show
+   * it, and it only appeared once Scribble was closed. */
+  const bool input_is_strip = r_state->has_transcript || r_state->ink_visible;
   agent_ui_layout_build(WM_window_native_pixel_x(win),
                         WM_window_native_pixel_y(win),
                         AgentTabId(r_state->active_tab),
                         r_state->agent_mode,
-                        r_state->has_transcript,
+                        input_is_strip,
                         r_layout);
   if (!r_layout->valid) {
     return false;
@@ -1084,7 +1097,15 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
     else if (other->regiontype == RGN_TYPE_TOOLS) {
       int units;
       if (agent_tab_active) {
-        units = has_conversation ? bottom_units : bottom_units_empty;
+        /* The short "chips + foot" band is only right when the WINDOW region
+         * actually hosts the whole-panel field. While the ink canvas is up it
+         * does not (that field is not built, its chrome would cover the
+         * canvas), so TOOLS must make room for the input strip — otherwise
+         * the strip clamps to zero height inside a band with no space for it
+         * and the island has no composer at all, which is how a landed
+         * handwriting transcription ended up with nowhere to be seen. */
+        const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
+        units = wants_input_strip ? bottom_units : bottom_units_empty;
       }
       else {
         units = 4; /* Card foot only — the pane owns everything above. */
