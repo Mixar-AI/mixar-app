@@ -160,3 +160,34 @@ def test_the_second_line_skips_the_ellipsis_not_three_real_bytes():
         "into the source string"
     )
     assert "ellipsis_len" in body and "text + head" in body
+
+
+# ---------------------------------------------------------------------------
+# 4. There is ALWAYS exactly one composer
+# ---------------------------------------------------------------------------
+
+def test_the_empty_state_keeps_a_composer_while_the_canvas_is_up():
+    """The whole-panel field is the empty state's input, but it is NOT built
+    while the ink canvas is open (its chrome would cover the canvas). Sizing
+    the TOOLS band and laying out the input off `has_transcript` alone left
+    that state with NO composer at all: handwriting was recognized and
+    written to `mixie_chat_input` with no box on screen to show it, and it
+    surfaced only once Scribble was closed."""
+    body = _strip_comments(BUBBLE_CC)
+    # The input collapses to a strip whenever the WINDOW field is suppressed.
+    assert "input_is_strip = r_state->has_transcript || r_state->ink_visible" in body
+    # The band must make room for that strip, or it clamps to zero height.
+    assert "wants_input_strip = has_conversation || tab_probe.ink_visible" in body
+    # And the strip is built exactly when the WINDOW is not hosting the field.
+    assert ("window_hosts_field = !state->has_transcript && !state->ink_visible"
+            in body)
+
+
+def test_the_two_composers_are_mutually_exclusive():
+    """Exactly ONE field box, always — the WINDOW whole-panel field and the
+    TOOLS strip must never both be built for the same property."""
+    body = _strip_comments(BUBBLE_CC)
+    # WINDOW builds its field only when the canvas is down (else-branch of
+    # `ink_canvas_open`), and TOOLS builds its strip only when WINDOW does not.
+    assert "window_hosts_field ?" in body
+    assert "nullptr :" in body
