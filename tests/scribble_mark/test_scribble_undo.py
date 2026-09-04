@@ -87,6 +87,41 @@ class TestUndoTakesBackDraftsOnly:
     def test_an_empty_scene_is_a_no_op(self, released):
         assert mark_store.remove_last(_Scene([])) is False
 
+    def test_clear_discards_the_queued_marks_only(self, released):
+        scene = _Scene([_Item(1, "SENT", "v3"), _Item(2, "DRAFT", "v7")])
+        assert mark_store.clear(scene, drafts_only=True) == 1
+        assert [i.serial for i in scene.mixar_marks] == [1]
+        assert released == ["v7"], "the sent mark keeps its camera"
+
+    def test_clear_keeps_the_frame_while_a_sent_mark_still_names_it(self, monkeypatch):
+        gone = []
+
+        class _Freeze:
+            @staticmethod
+            def release(name):
+                gone.append(name)
+
+        monkeypatch.setattr(mark_store, "freeze", _Freeze)
+        monkeypatch.setattr(mark_store, "view_bake", type("_B", (), {
+            "release": staticmethod(lambda name: None)}))
+        scene = _Scene([_Item(1, "SENT"), _Item(2, "DRAFT")])
+        scene.mixar_mark_frame_name = "mixar_mark_frame_0007"
+        mark_store.clear(scene, drafts_only=True)
+        assert gone == [], "a sent mark still describes that frame"
+
+        mark_store.clear(scene)
+        assert gone == ["mixar_mark_frame_0007"], (
+            "with no mark left the still is unreferenced"
+        )
+
+    def test_the_clear_operator_and_its_surfaces_agree_on_drafts(self):
+        text = source("ui/operators/mark_arm_ops.py")
+        clear = text[text.index("class MIXAR_OT_scribble_mark_clear"):]
+        assert clear.count("drafts_only=True") == 2, (
+            "both the poll and the execute must be draft-scoped — the chip "
+            "shows the DRAFT count and its tooltip says 'queued'"
+        )
+
     def test_the_header_undo_polls_drafts_only(self):
         text = source("ui/operators/mark_arm_ops.py")
         undo = text[text.index("class MIXAR_OT_scribble_mark_undo"):]

@@ -195,7 +195,10 @@ def clear(scene, drafts_only=False):
         collection.remove(index)
         removed += 1
 
-    if not drafts_only:
+    if not len(collection):
+        # The still is unreferenced once NO mark is left — which is the rule,
+        # not "the caller asked for everything": clearing the drafts of a turn
+        # whose sent marks are still around must leave their frame alone.
         # getattr, not scene.get(): the latter reads custom IDProperties and
         # would always miss the registered RNA property, so the frozen still
         # was never released and got saved into the .blend.

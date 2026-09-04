@@ -308,8 +308,11 @@ where they write, never by which button they pressed.
   mark is undone, but the freeze does and the next mark is drawn against it;
   the modal then re-reads `view_used` through `marks.view_referenced`, or
   `release_if_unused` believes the freeze is still referenced and leaks the
-  packed still into the .blend. Clear is the deliberate exception: it says
-  "every mark" and means it.
+  packed still into the .blend. Clear follows the same rule — both surfaces
+  that offer it show the DRAFT count and the island's tooltip says "discard
+  the queued marks", so it is draft-scoped in poll AND execute — and the
+  frozen still is released when NO mark is left, never merely because the
+  caller asked for everything.
 - The draw pass (`core/overlay.py`) READS ONLY — the live stroke is handed in
   by the modal rather than read back off RNA. Strokes group by a 0.6 s pen-up
   pause into ONE mark, which is what makes an arrow's shaft+head and an X's two
