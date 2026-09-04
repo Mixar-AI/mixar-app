@@ -609,9 +609,28 @@ class TestOneScribbleMode:
         canvas's idle-commit timer: with a docked chat in the same window,
         handwriting would never convert while the viewport was frozen."""
         text = source(self.MODAL)
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Undo, reachable")]
+        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
         assert 'return {"PASS_THROUGH"}' in timer
         assert 'return {"RUNNING_MODAL"}' not in timer
+
+    def test_only_esc_is_bound_window_wide(self):
+        """This is a WINDOW-level modal, so it is offered every event in the
+        window — including keys meant for the Outliner, the Properties editor
+        or a docked chat. Everything but Esc (the promised way out) and the
+        pen-up that closes an open stroke must sit BELOW the region test, or
+        Delete in the Outliner silently undoes a mark and reports "Mark
+        removed", and Tab in the Properties editor flips the ink reading."""
+        text = source(self.MODAL)
+        modal = text[text.index("def modal"):text.index("def cancel")]
+        gate = modal.index('if not inside:')
+        for binding, name in (('"BACK_SPACE"', "undo"), ('"TAB"', "reading flip")):
+            assert modal.index(binding) > gate, (
+                f"the {name} binding is handled before the region test — it "
+                f"would fire for the whole window"
+            )
+        assert modal.index('event.type == "ESC"') < gate, (
+            "Esc is the way out and must work from anywhere"
+        )
 
     def test_the_freeze_follows_the_canvas_down(self):
         """Esc or the close X over the chat canvas are C++ paths the modal
@@ -619,7 +638,7 @@ class TestOneScribbleMode:
         text = source(self.MODAL)
         invoke = text[text.index("def invoke"):text.index("def modal")]
         assert "_ink_linked = scribble_mode.ink_open" in invoke
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Undo, reachable")]
+        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
         assert "_ink_linked and not scribble_mode.ink_open" in timer
 
     def test_every_freeze_exit_lowers_the_canvas(self):

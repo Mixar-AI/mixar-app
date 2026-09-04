@@ -288,7 +288,13 @@ where they write, never by which button they pressed.
   consumes every pointer event over the region, so a hint pill names the way
   out (Esc) and the way back (Backspace undoes the last mark, bound in the
   modal rather than a keymap — the modal already owns the events, and a GUI
-  keyconfig reload wipes C-registered items). Queued marks can be cleared from
+  keyconfig reload wipes C-registered items). **Only Esc is bound
+  window-wide.** This is a WINDOW-level modal, so it is offered every event in
+  the window; every other binding sits BELOW the `point_in_region` test, or a
+  Delete meant for the Outliner silently undoes a mark and reports "Mark
+  removed", and Tab in the Properties editor flips the ink reading. The two
+  deliberate exceptions above it are Esc (the promised way out) and the
+  pen-up that closes an open stroke. Queued marks can be cleared from
   the chat header without re-arming. This is the failure ink tools hit first
   (arXiv:2607.21468, Thinkink): users cannot tell which mode they are in, and
   ask for visible controls and a way to undo.

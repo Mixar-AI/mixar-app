@@ -213,29 +213,13 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             # while the viewport was frozen.
             return {"PASS_THROUGH"}
 
-        # Undo, reachable from inside the freeze. Drawing a mark you did not
-        # mean and having no way back short of leaving the mode is exactly the
-        # brittleness users report of ink tools; the freeze owns every event
-        # over this region, so the binding lives here rather than in a keymap
-        # (which a GUI keyconfig reload would wipe).
-        if (event.value == "PRESS"
-                and (event.type in ("BACK_SPACE", "DEL")
-                     or (event.type == "Z" and (event.ctrl or event.oskey)))):
-            self._undo_last(context)
-            return {"RUNNING_MODAL"}
-
+        # Esc is the ONE binding that is deliberately window-wide: it is the
+        # way out, and the hint pill promises it works wherever the pointer is.
         if event.type == "ESC" and event.value == "PRESS":
             self._commit_pending(context)
             self._disarm(context)
             self._finish(context)
             return {"FINISHED"}
-
-        # Flip how the ink is read. The reading is on screen in the pill;
-        # this is the way to disagree with it without leaving the freeze.
-        if event.type == "TAB" and event.value == "PRESS":
-            self._commit_pending(context)
-            self._flip_reading(context)
-            return {"RUNNING_MODAL"}
 
         # A pen-up can land OUTSIDE the frozen frame — the stylus lifted over
         # the chat composer. Ending the open stroke matters wherever it
@@ -253,8 +237,32 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if not inside:
             # Outside the frozen viewport the app is entirely normal — the
             # chat, the sidebar and every other editor keep working, which is
-            # how the user types the prompt that goes with their marks.
+            # how the user types the prompt that goes with their marks. This
+            # test must come BEFORE every key binding below except Esc: this
+            # is a WINDOW-level modal, so it is offered the whole window's
+            # events, and handling Backspace/Delete/Tab above it meant a
+            # Delete meant for the Outliner silently ate a mark and reported
+            # "Mark removed", and Tab in the Properties editor flipped the
+            # ink reading instead of switching mode.
             return {"PASS_THROUGH"}
+
+        # Undo, reachable from inside the freeze. Drawing a mark you did not
+        # mean and having no way back short of leaving the mode is exactly the
+        # brittleness users report of ink tools; the freeze owns every event
+        # over this region, so the binding lives here rather than in a keymap
+        # (which a GUI keyconfig reload would wipe).
+        if (event.value == "PRESS"
+                and (event.type in ("BACK_SPACE", "DEL")
+                     or (event.type == "Z" and (event.ctrl or event.oskey)))):
+            self._undo_last(context)
+            return {"RUNNING_MODAL"}
+
+        # Flip how the ink is read. The reading is on screen in the pill;
+        # this is the way to disagree with it without leaving the freeze.
+        if event.type == "TAB" and event.value == "PRESS":
+            self._commit_pending(context)
+            self._flip_reading(context)
+            return {"RUNNING_MODAL"}
 
         point = (float(event.mouse_x - region.x), float(event.mouse_y - region.y))
 
