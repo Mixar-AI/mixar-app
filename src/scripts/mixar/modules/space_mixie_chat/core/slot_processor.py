@@ -387,7 +387,13 @@ class SlotEventProcessor:
         input_type = input_type or ""
         bubble.input_type = input_type
 
-        if input_type in ('text', 'choice', 'approval', 'file_save', 'file_open'):
+        # 'confirm' is the Yes/No/Cancel prompt (request_user_input's fourth
+        # input_type). Its omission here is why the actions slot grew a
+        # derive-the-state-from-the-buttons fallback: without it a confirm
+        # decayed to Idle on SSE-complete with its buttons still on screen,
+        # and typed text went to /agent/chat instead of answering the question.
+        if input_type in ('text', 'choice', 'confirm', 'approval',
+                          'file_save', 'file_open'):
             # Agent has paused for the user — free-form text, a choice
             # button, or an approval button. All three use AWAITING_INPUT:
             # the state survives SSE stream completion (see
@@ -484,7 +490,7 @@ class SlotEventProcessor:
             bubble: Message PropertyGroup
             actions: List of dicts with label, value, style, and (for
                 asset-picker options) asset_name/library/blend_file/asset_type
-            scene: The Blender scene (for the AWAITING_INPUT state set)
+            scene: The Blender scene (for asset-picker preview generation)
         """
         from . import asset_choice_previews
 
@@ -531,24 +537,18 @@ class SlotEventProcessor:
         if has_asset_options and scene is not None:
             asset_choice_previews.schedule(scene, bubble)
 
-        # Non-empty action buttons (choice / approval, e.g. Yes / No /
-        # Cancel) unambiguously mean the agent has paused for the user.
-        # The dedicated input_type slot also sets AWAITING_INPUT, but it
-        # can be absent, out-of-order across events, or carry an
-        # unrecognized value — in which case the pill would decay to
-        # "Idle" on SSE-complete while the buttons are still on screen.
-        # Deriving the state from the buttons themselves guarantees the
-        # pill reads "Awaiting input" whenever a prompt is shown. (Free-
-        # form text prompts have no buttons and stay covered by
-        # _apply_input_type_slot.) An empty list clears buttons on answer
-        # submission — leave the state alone so the answer flow can drive
-        # the transition back to BUSY/IDLE.
-        if actions and scene is not None:
-            self._session.set_state(scene, SessionState.AWAITING_INPUT)
-            logger.info(
-                f"[SLOT:ACTIONS] Set state to AWAITING_INPUT "
-                f"({len(actions)} action button(s) shown)"
-            )
+        # Buttons alone must NEVER drive the session state — _apply_input_type_slot
+        # is the one owner of the AWAITING_INPUT transition. Every paused turn
+        # carries its input_type in the SAME slot event as its actions (backend
+        # SlotTransformer, INPUT_REQUIRED case), so nothing is lost; but buttons
+        # also ride events where the turn is NOT paused — the post-turn
+        # "Retry failed tasks" chip (turn_actions, graph already at END), the
+        # credits-upgrade CTA, the turn-resume prompt, and the locally replayed
+        # batched-choice cards. Deriving the state here flipped those into
+        # AWAITING_INPUT, which SSE-complete deliberately refuses to reset
+        # (queue_processor._handle_sse_complete_internal), stranding the pill on
+        # "Awaiting Input" and making the retry chip's own IDLE-only handler
+        # reject the click the chip exists to make.
 
     def _apply_images_slot(self, bubble: Any, images: list) -> None:
         """

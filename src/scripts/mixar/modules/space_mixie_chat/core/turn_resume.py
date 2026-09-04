@@ -38,6 +38,23 @@ RESUME_BUBBLE_PREFIX = "turn-resume-"
 RESUME_ACTION_PREFIX = "resume_task:"
 DISMISS_ACTION = "dismiss_resume_task"
 
+# Attach cursors reported by ``turn.status`` (session_id -> last issued seq).
+# The resume prompt is offered on reconnect but confirmed by a human click
+# some seconds later, so the cursor is parked here rather than on the bubble:
+# it never has to survive a .blend reload (a lost entry just degrades to the
+# -1 full replay), and it keeps the ``resume_task:<session_id>`` action value
+# — a frozen client-local contract with chat_special_ops — unchanged.
+_REPORTED_LAST_SEQ: dict[str, int] = {}
+
+
+def reported_last_seq(session_id: str) -> int:
+    """The last seq ``turn.status`` reported for this session, or -1."""
+    try:
+        return int(_REPORTED_LAST_SEQ.get(session_id, -1))
+    except (TypeError, ValueError):
+        return -1
+
+
 _TITLE = "A previous task is still running"
 _BODY = (
     "The connection dropped while the agent was working, and the task kept "
@@ -138,6 +155,17 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
             return
         content = f"**{_TITLE}**\n\n{_BODY}"
         active = bool(info.get("active"))
+        # Park the server's attach cursor for resume_previous_task: without it
+        # a scene whose SSE handler is gone (client restart, cleanup) attaches
+        # at -1 and replays the WHOLE turn.
+        try:
+            last_seq = int(info.get("last_seq", -1))
+        except (TypeError, ValueError):
+            last_seq = -1
+        if last_seq >= 0:
+            _REPORTED_LAST_SEQ[session_id] = last_seq
+        else:
+            _REPORTED_LAST_SEQ.pop(session_id, None)
         if active:
             content += "\n\nThe task is *still running* — resuming will replay what you missed and follow it live."
 
@@ -166,21 +194,34 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
 
 
 def dismiss_resume_prompt(scene) -> None:
-    """Remove the resume bubble (user chose to start fresh)."""
+    """Remove the resume bubble (both "Resume task" and "Start fresh").
+
+    ``bpy_prop_collection.remove()`` takes an INDEX, not the item — passing
+    the PropertyGroup raises ``TypeError: expected one int argument`` and the
+    notice stayed on screen forever (QA 2026-09-04). Collect indices and
+    delete in reverse, the same way every other removal in this module does
+    (slot_processor placeholder sweep, session_ops._reset_loader_bubbles,
+    chat_ops stale-placeholder sweep).
+    """
     try:
         if scene is None or not hasattr(scene, "mixie_chat_messages"):
             return
-        for msg in list(scene.mixie_chat_messages):
-            if getattr(msg, "bubble_id", "").startswith(RESUME_BUBBLE_PREFIX):
-                scene.mixie_chat_messages.remove(msg)
+        stale = [
+            i for i, msg in enumerate(scene.mixie_chat_messages)
+            if getattr(msg, "bubble_id", "").startswith(RESUME_BUBBLE_PREFIX)
+        ]
+        for idx in reversed(stale):
+            scene.mixie_chat_messages.remove(idx)
         _redraw()
     except Exception:
         logger.exception("dismiss_resume_prompt failed (non-fatal)")
 
 
 def _fill_bubble(msg, content: str, session_id: str) -> None:
-    """Populate the bubble manually (NOT via the slot pipeline — this must
-    not flip the session into AWAITING_INPUT, same as the credits notice)."""
+    """Populate the bubble manually — this is a client-originated bubble with
+    no wire event behind it (same as the credits notice). Its buttons must not
+    read as a paused turn; the actions slot no longer infers that from buttons
+    (only input_type does), so this is now presentation, not a workaround."""
     msg.content = content
     msg.text = content
 

@@ -204,7 +204,13 @@ def _prompt_message():
 
 
 class _Messages:
-    """A tiny bpy CollectionProperty stand-in."""
+    """A tiny bpy CollectionProperty stand-in.
+
+    ``remove`` is INDEX-only on purpose — that is Blender's real signature.
+    An item-taking stand-in hid the crash that left the resume bubble on
+    screen forever (QA 2026-09-04: ``TypeError:
+    bpy_prop_collection.remove(): expected one int argument``).
+    """
 
     def __init__(self):
         self.items = []
@@ -214,8 +220,18 @@ class _Messages:
         self.items.append(msg)
         return msg
 
-    def remove(self, item):
-        self.items.remove(item)
+    def remove(self, index):
+        if isinstance(index, bool) or not isinstance(index, int):
+            raise TypeError(
+                "bpy_prop_collection.remove(): expected one int argument"
+            )
+        del self.items[index]
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, index):
+        return self.items[index]
 
     def __iter__(self):
         return iter(self.items)
@@ -298,3 +314,101 @@ def test_resume_stream_refuses_while_running(_httpx):
     h = _handler()
     h._running.set()
     assert h.resume_stream("sid-5") is False
+
+
+# ---------------------------------------------------------------------------
+# dismiss_resume_prompt — index-based removal
+# ---------------------------------------------------------------------------
+
+
+def _plain_message(bubble_id):
+    msg = MagicMock()
+    msg.bubble_id = bubble_id
+    msg.action_items = _ActionItems()
+    return msg
+
+
+def test_dismiss_removes_the_resume_bubble(monkeypatch):
+    """Both [Resume task] and [Start fresh] route here. It must not raise:
+    a failure left the notice on screen for the rest of the session."""
+    scene = MagicMock()
+    scene.mixie_chat_messages = _Messages()
+    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
+
+    scene.mixie_chat_messages.items.append(_plain_message("user-1"))
+    turn_resume.offer_resume_prompt(scene, "sid-3", {"active": True})
+    scene.mixie_chat_messages.items.append(_plain_message("agent-1"))
+    assert len(scene.mixie_chat_messages) == 3
+
+    with patch.object(turn_resume.logger, "exception") as logged:
+        turn_resume.dismiss_resume_prompt(scene)
+    logged.assert_not_called()
+
+    remaining = [m.bubble_id for m in scene.mixie_chat_messages]
+    assert remaining == ["user-1", "agent-1"]
+
+
+def test_dismiss_removes_every_resume_bubble_back_to_front(monkeypatch):
+    """Indices are collected then deleted in reverse — deleting front-first
+    would shift the later ones and skip or delete the wrong row."""
+    scene = MagicMock()
+    scene.mixie_chat_messages = _Messages()
+    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
+
+    for bubble_id in (
+        f"{turn_resume.RESUME_BUBBLE_PREFIX}aaa",
+        "keep-1",
+        f"{turn_resume.RESUME_BUBBLE_PREFIX}bbb",
+        "keep-2",
+    ):
+        scene.mixie_chat_messages.items.append(_plain_message(bubble_id))
+
+    turn_resume.dismiss_resume_prompt(scene)
+    assert [m.bubble_id for m in scene.mixie_chat_messages] == ["keep-1", "keep-2"]
+
+
+def test_dismiss_on_a_scene_without_the_notice_is_a_noop(monkeypatch):
+    scene = MagicMock()
+    scene.mixie_chat_messages = _Messages()
+    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
+    scene.mixie_chat_messages.items.append(_plain_message("agent-1"))
+
+    turn_resume.dismiss_resume_prompt(scene)
+    assert [m.bubble_id for m in scene.mixie_chat_messages] == ["agent-1"]
+
+
+# ---------------------------------------------------------------------------
+# attach cursor parked from turn.status
+# ---------------------------------------------------------------------------
+
+
+def test_offer_parks_the_reported_attach_cursor(monkeypatch):
+    """resume_previous_task attaches with this when the scene has no carried
+    handler — otherwise it falls back to a whole-turn (-1) replay."""
+    scene = MagicMock()
+    scene.mixie_chat_messages = _Messages()
+    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
+    turn_resume._REPORTED_LAST_SEQ.clear()
+
+    turn_resume.offer_resume_prompt(
+        scene, "sid-11", {"active": True, "replayable": True, "last_seq": 41},
+    )
+    assert turn_resume.reported_last_seq("sid-11") == 41
+    assert turn_resume.reported_last_seq("sid-other") == -1
+
+
+@pytest.mark.parametrize("info", [
+    {"active": True},                       # key absent
+    {"active": True, "last_seq": -1},       # Redis failed / not owned
+    {"active": True, "last_seq": None},
+    {"active": True, "last_seq": "nope"},
+])
+def test_unusable_reported_cursor_reads_as_minus_one(monkeypatch, info):
+    scene = MagicMock()
+    scene.mixie_chat_messages = _Messages()
+    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
+    turn_resume._REPORTED_LAST_SEQ.clear()
+    turn_resume._REPORTED_LAST_SEQ["sid-12"] = 7  # a stale entry must not win
+
+    turn_resume.offer_resume_prompt(scene, "sid-12", info)
+    assert turn_resume.reported_last_seq("sid-12") == -1

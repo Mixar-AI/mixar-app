@@ -513,12 +513,31 @@ class MIXIE_CHAT_OT_resume_previous_task(Operator):
             on_error=lambda error: queue_sse_error(error, target_scene_name),
             on_complete=lambda: queue_sse_complete(target_scene_name),
         )
-        # Adopt the carried cursor when it belongs to this session; otherwise
-        # follow from now (after_seq=-1 replays the WHOLE turn — a stale or
-        # lost cursor would re-render everything as duplicates).
+        # Best cursor available, in order:
+        #   1. the cursor this scene's handler carried across the swap
+        #      (create_sse_handler copies it) — exactly what we last rendered;
+        #   2. the ``last_seq`` turn.status reported on reconnect — the server
+        #      side of the same turn, parked by turn_resume.offer_resume_prompt.
+        #      Reached whenever the scene has no carried handler at all (client
+        #      restart, cleanup_sse_handler, a never-streamed scene), which is
+        #      the live path that produced after_seq=-1 in QA;
+        #   3. -1, a full replay.
+        #
+        # -1 is deliberately the LAST resort, not the default: content slots
+        # stream as ``append``, and the bubbles of the dropped turn are still
+        # in scene.mixie_chat_messages, so a whole-turn replay re-appends every
+        # token into bubbles that already hold it (bubble_id lookup is
+        # idempotent, so the message COUNT stays right while each bubble's
+        # prose doubles — the same duplication documented in
+        # create_sse_handler's cursor carry-over).
         after_seq = None
         if sse_handler._session_id == target_session and sse_handler._last_seq >= 0:
             after_seq = sse_handler._last_seq
+        else:
+            from ...core.turn_resume import reported_last_seq
+            reported = reported_last_seq(target_session)
+            if reported >= 0:
+                after_seq = reported
         started = sse_handler.resume_stream(target_session, after_seq=after_seq)
         if not started:
             session.set_state(scene, SessionState.IDLE)
