@@ -82,7 +82,16 @@ class MIXAR_OT_scribble_mark_undo(Operator):
 
 
 class MIXAR_OT_scribble_mark_clear(Operator):
-    """Remove every mark and release what they created"""
+    """Discard the queued marks and release what they created
+
+    QUEUED, not every mark. Both surfaces that offer this — the chat header
+    and the island chip — show the DRAFT count beside it and the island's
+    tooltip says "Discard the queued marks", so a user looking at "2" and
+    clicking the X means those two. Removing the SENT marks of earlier turns
+    as well would take with them the vertex groups and cameras the
+    conversation still names, which is the same thing ``remove_last`` used to
+    do through the adjacent button.
+    """
 
     bl_idname = "mixar.scribble_mark_clear"
     bl_label = "Clear Marks"
@@ -90,10 +99,10 @@ class MIXAR_OT_scribble_mark_clear(Operator):
 
     @classmethod
     def poll(cls, context):
-        return mark_store.count(context.scene) > 0
+        return mark_store.count(context.scene, drafts_only=True) > 0
 
     def execute(self, context):
-        removed = mark_store.clear(context.scene)
+        removed = mark_store.clear(context.scene, drafts_only=True)
         overlay.reset()
         wm = context.window_manager
         # The reading override described ink that no longer exists.
