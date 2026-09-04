@@ -148,7 +148,17 @@ where they write, never by which button they pressed.
   (the C++ closing edge cannot dispatch operators). Either half may be absent
   — a build without the canvas still marks, a layout without a viewport still
   writes. A stylus press on the composer still auto-opens the canvas ALONE;
-  the control is the full mode.
+  the control is the full mode. **But a HALF arm must say so.** `arm` returns
+  True when either half comes up, and the chip lights on
+  `ink_visible || mark_armed` — so with the viewport half refused (no VIEW_3D,
+  or CAMERA view, which is an ordinary working state) the mode looked fully on
+  while ink over the viewport was captured by nothing and the message sent
+  with no marks and no explanation. `scribble_mode._warn_writing_only` now
+  names the reason (`marking_unavailable_reason`, mirroring the modal's own
+  refusals) as a **toast** under the stable id `scribble_writing_only` — not
+  just an operator report, because the toggle is usually clicked on the Agent
+  island, which is its own window with no status bar, so a report there is
+  invisible. Pinned by `tests/scribble_mark/test_scribble_mode.py`.
 - **The freeze modal passes TIMER events through.** A window-level modal that
   swallows every TIMER starves every other timer in the window, and the chat
   canvas's idle-commit timer is one of them — with a docked chat, handwriting

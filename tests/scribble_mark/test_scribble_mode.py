@@ -248,3 +248,60 @@ class TestDeferUntilIdle:
         tick = self._registered_tick()
         scribble._in_flight.clear()
         assert tick() is None
+
+
+# =============================================================================
+# A half-armed mode must say so
+# =============================================================================
+
+class TestWritingOnlyIsVisible:
+    """`arm` deliberately succeeds when only ONE surface comes up — a layout
+    with no viewport still writes. But the half that goes missing is the one
+    the user is about to draw on: the chip lights from the canvas alone, so
+    the mode looks fully on while viewport ink is captured by nothing and the
+    message sends with no marks. That is the shape of the uat7 report ("I
+    sketched on the viewport, it was not submitted; the chat worked"), and
+    camera view reaches it from an ordinary working state.
+    """
+
+    def _source(self):
+        import pathlib
+        return (pathlib.Path(__file__).resolve().parents[2]
+                / "src/scripts/mixar/modules/scribble_mark/core/scribble_mode.py"
+                ).read_text()
+
+    def test_arm_warns_when_only_the_canvas_came_up(self):
+        text = self._source()
+        arm = text[text.index("def arm("):text.index("def marking_unavailable_reason")]
+        assert "if opened and not froze:" in arm, (
+            "a half arm must be distinguished from a full one"
+        )
+        assert "_warn_writing_only" in arm
+
+    def test_the_notice_names_the_two_real_refusals(self):
+        text = self._source()
+        fn = text[text.index("def marking_unavailable_reason"):]
+        assert "no 3D viewport is open" in fn
+        assert "camera view" in fn, (
+            "camera view is the refusal a user hits from a normal working "
+            "state — it must be named, not folded into a generic failure"
+        )
+
+    def test_it_goes_out_as_a_toast_not_only_an_operator_report(self):
+        text = self._source()
+        fn = text[text.index("def _warn_writing_only"):]
+        assert "get_notification_store" in fn, (
+            "the toggle is usually clicked on the Agent island, which is its "
+            "own window with no status bar — an operator report is invisible "
+            "there"
+        )
+        assert 'id="scribble_writing_only"' in fn, (
+            "one stable id, or re-arming stacks a toast every time"
+        )
+        assert "except Exception" in fn, "the notice must never break arming"
+
+    def test_a_full_arm_stays_silent(self):
+        text = self._source()
+        arm = text[text.index("def arm("):text.index("def marking_unavailable_reason")]
+        # The warning is reached only on the half-armed branch.
+        assert arm.count("_warn_writing_only") == 1

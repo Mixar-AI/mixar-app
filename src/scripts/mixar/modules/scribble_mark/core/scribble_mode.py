@@ -115,7 +115,60 @@ def arm(context, report=None) -> bool:
 
     if not froze and not opened:
         return False
+    if opened and not froze:
+        # HALF armed, and the half that is missing is the one the user is
+        # about to draw on. The chip lights from the canvas alone, so without
+        # this the mode looks fully on: ink over the chat becomes text while
+        # ink over the viewport is captured by nothing, and the message goes
+        # with no marks and no explanation. The modal's own report cannot
+        # carry this — the toggle is usually clicked on the Agent island,
+        # which is its own window and has no status bar — so it goes out as a
+        # toast, which paints over the viewport wherever the user is looking.
+        _warn_writing_only(context, report)
     return True
+
+
+def marking_unavailable_reason(context) -> str | None:
+    """Why the viewport half cannot arm, in the user's words, or ``None``.
+
+    Mirrors the modal's own refusals (``mark_draw_ops.invoke``) so the
+    message names the thing to change rather than "could not freeze".
+    """
+    from .freeze_session import find_view3d
+
+    try:
+        _window, area, region = find_view3d(context)
+    except Exception:  # noqa: BLE001
+        return None
+    if area is None or region is None:
+        return "no 3D viewport is open"
+    rv3d = getattr(getattr(area.spaces, "active", None), "region_3d", None)
+    if getattr(rv3d, "view_perspective", "") == "CAMERA":
+        return "the viewport is in camera view"
+    return None
+
+
+def _warn_writing_only(context, report=None) -> None:
+    """Say that only the handwriting half came up, and why."""
+    reason = marking_unavailable_reason(context) or "the viewport could not be frozen"
+    detail = ("Writing over the chat still becomes text. "
+              "Marking needs a 3D viewport that is not in camera view "
+              "(Numpad 0 leaves it).")
+    if report is not None:
+        report({"WARNING"}, f"Scribble: writing only — {reason}")
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+
+        get_notification_store().push(
+            "warning",
+            f"Scribble: writing only — {reason}",
+            detail,
+            # One stable id: re-arming in the same broken state replaces the
+            # toast instead of stacking a new one each time.
+            id="scribble_writing_only",
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Scribble: could not toast the writing-only notice: %s", exc)
 
 
 def disarm(wm) -> None:
