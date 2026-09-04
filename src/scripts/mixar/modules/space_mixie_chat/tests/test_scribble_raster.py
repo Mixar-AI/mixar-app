@@ -57,6 +57,20 @@ def _load_real_pillow():
     real modules in only for the tests that draw. Returns None when Pillow
     genuinely is not installed.
     """
+    loaded = sys.modules.get("PIL")
+    if loaded is not None and not isinstance(loaded, MagicMock):
+        # The root conftest already imported the genuine Pillow before
+        # collection, so the submodules import straight from it (ImageDraw
+        # is not preloaded, hence the import rather than a lookup). The
+        # purge below must NOT run in this case: it would mint a SECOND
+        # PIL.Image while PIL.PngImagePlugin — loaded by an earlier test's
+        # PNG save — stayed registered against the first, and the copy the
+        # fixture hands out then fails ``save(format="PNG")`` with
+        # KeyError: 'PNG'.
+        try:
+            return {name: importlib.import_module(name) for name in _PIL_MODULES}
+        except ImportError:
+            return None
     stubbed = {
         name: module for name, module in sys.modules.items()
         if name == "PIL" or name.startswith("PIL.")
