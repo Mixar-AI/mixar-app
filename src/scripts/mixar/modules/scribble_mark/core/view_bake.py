@@ -51,6 +51,23 @@ def camera_name(serial):
     return f"{MARK_CAMERA_PREFIX}{int(serial):0{MARK_SERIAL_DIGITS}d}"
 
 
+def view_name_for_frame(frame_name):
+    """The camera name baked alongside *frame_name*, or None.
+
+    One freeze mints the frame image and its camera from the same serial —
+    ``mixar_mark_frame_0007`` / ``mixar_mark_view_0007`` — so a mark's
+    ``view`` can be matched against the frame it was drawn on. Returns None
+    when the name carries no serial (which is also what a freeze whose
+    camera bake failed stored on its marks).
+    """
+    if not frame_name:
+        return None
+    _head, _sep, tail = frame_name.rpartition("_")
+    if not tail.isdigit():
+        return None
+    return camera_name(int(tail))
+
+
 def bake_view(context, area, region, serial):
     """``(camera_name_or_None, view_dict)`` for the current viewport.
 

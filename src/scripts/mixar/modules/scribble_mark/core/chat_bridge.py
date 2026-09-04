@@ -29,7 +29,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 
-from . import annotate, freeze, marks as mark_store
+from . import annotate, freeze, marks as mark_store, view_bake
 from . import payload as payload_mod
 
 logger = get_logger(__name__)
@@ -129,10 +129,24 @@ def _attach_frames(scene, context):
     # which still carry the raw strokes the wire payload leaves behind.
     marks = context.get("marks") or ()
     serial = marks[-1].get("id") if marks else 0
-    annotated = annotate.render_annotated(
-        image, mark_store.draft_marks(scene) or marks,
-        freeze.annotated_name(serial),
-    )
+    all_ink = mark_store.draft_marks(scene) or marks
+
+    # The annotated copy is THIS frame, so only ink drawn ON it lands where
+    # the user put it. A draft from an earlier freeze — the mode was re-armed,
+    # or the viewport resized mid-mode — describes a different camera and
+    # framing; converting its normalized strokes against this frame's size
+    # would ink them where the user never drew, on the one picture the agent
+    # is told shows the marks. Those marks still travel whole: their resolved
+    # data and the prose describe them, and their own view rides the views map.
+    current_view = view_bake.view_name_for_frame(frame_name)
+    own = [m for m in all_ink if m.get("view") == current_view]
+    omitted = len(all_ink) - len(own)
+
+    annotated = None
+    if own:
+        annotated = annotate.render_annotated(
+            image, own, freeze.annotated_name(serial),
+        )
 
     pending = scene.mixie_chat_pending_attachments
     room = MAX_ATTACHMENTS_PER_MESSAGE - len(pending)
@@ -154,7 +168,17 @@ def _attach_frames(scene, context):
     if annotated and queued == 1 and room == 1:
         notes.append("only the marked frame fit; the clean frame was not attached")
     if not annotated:
-        notes.append("the marks could not be drawn onto the frame")
+        if omitted:
+            notes.append("the newest frame carries none of the marks; "
+                         "it is attached clean")
+        else:
+            notes.append("the marks could not be drawn onto the frame")
+    elif omitted:
+        notes.append(
+            f"{omitted} earlier mark(s) were drawn on a previous frame; "
+            "their resolved data describes them, but their ink is not on "
+            "the attached frame"
+        )
 
     return notes
 
