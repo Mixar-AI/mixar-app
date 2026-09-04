@@ -305,3 +305,48 @@ class TestWritingOnlyIsVisible:
         arm = text[text.index("def arm("):text.index("def marking_unavailable_reason")]
         # The warning is reached only on the half-armed branch.
         assert arm.count("_warn_writing_only") == 1
+
+
+# =============================================================================
+# The send waits out a slow queue, but not a stopped one
+# =============================================================================
+
+class TestDeferralIsStallBased:
+    """`defer_until_idle` used a flat total budget calibrated against the
+    model's ~1 s floor. Measured against uat7 the round trip ran 1.2-6.0 s
+    (mean 4.2), and with SCRIBBLE_MAX_IN_FLIGHT at 2 a sentence written with
+    six pauses needs ~15 s of honest work — so the send fired mid-queue and
+    the user's last handwritten words never reached the message."""
+
+    def _source(self):
+        import pathlib
+        return (pathlib.Path(__file__).resolve().parents[2]
+                / "src/scripts/mixar/modules/space_mixie_chat/core/scribble.py"
+                ).read_text()
+
+    def _fn(self):
+        t = self._source()
+        return t[t.index("def defer_until_idle"):t.index("def _report_handwriting_dropped")]
+
+    def test_progress_resets_the_deadline(self):
+        fn = self._fn()
+        assert "_deliver_seq" in fn, "progress is measured by batches DELIVERED"
+        assert 'state["deadline"] = now + timeout_s' in fn, (
+            "a batch landing must buy the queue more time"
+        )
+
+    def test_a_stopped_queue_still_gives_up(self):
+        fn = self._fn()
+        assert 'now < state["deadline"]' in fn
+        assert "max_wait_s" in fn, "and the whole wait stays bounded"
+
+    def test_dropping_handwriting_is_announced(self):
+        fn = self._fn()
+        assert "_report_handwriting_dropped()" in fn, (
+            "sending without words the user watched themselves write must "
+            "not be silent — the late text lands in the NEXT message"
+        )
+        notice = self._source()
+        notice = notice[notice.index("def _report_handwriting_dropped"):]
+        assert "get_notification_store" in notice
+        assert "except Exception" in notice, "a notice must never break the send"
