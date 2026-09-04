@@ -463,6 +463,60 @@ void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *stat
     label_left("Upload Reference", icon.xmax + icon_gap, cy, size, text);
   }
 
+  /* Scribble. Lit in the accent while either half is up (the viewport freeze
+   * or the chat ink canvas) — the same "pressed" the headers show — and
+   * carrying the count of draft marks that will ride with the next message.
+   * The reading chip and the clear X exist only while marks are queued: a
+   * drawing silently read as nine placement targets is a mode the user could
+   * neither see nor correct, so the reading is on the surface, and queued
+   * marks need a way out that does not re-enter the freeze. */
+  if (state->scribble_available) {
+    const float accent[4] = AGENT_COL_ACCENT;
+    const float *scribble_fill = state->scribble_armed ? accent : chip;
+    fill_round(&layout->chip_scribble, radius, scribble_fill);
+    {
+      rctf icon = layout->chip_scribble;
+      icon.xmin += pad;
+      icon.xmax = icon.xmin + icon_edge;
+      const float cy = BLI_rctf_cent_y(&layout->chip_scribble);
+      icon.ymin = cy - icon_edge * 0.5f;
+      icon.ymax = cy + icon_edge * 0.5f;
+      agent_ui_icon_draw(AGENT_ICON_PEN, &icon, text, scribble_fill);
+      char label[32];
+      if (state->mark_count > 0) {
+        SNPRINTF(label, "Scribble · %d", state->mark_count);
+      }
+      else {
+        BLI_strncpy(label, "Scribble", sizeof(label));
+      }
+      label_left(label, icon.xmax + icon_gap, cy, size, text);
+    }
+
+    if (state->mark_count > 0) {
+      fill_round(&layout->chip_reading, radius, chip);
+      const float cy = BLI_rctf_cent_y(&layout->chip_reading);
+      const char *reading = state->mark_intent[0] ? state->mark_intent : "Auto";
+      label_left(reading, layout->chip_reading.xmin + pad, cy, size, text);
+      rctf chevron = layout->chip_reading;
+      chevron.xmax -= pad;
+      chevron.xmin = chevron.xmax - icon_edge * 0.7f;
+      chevron.ymin = cy - icon_edge * 0.35f;
+      chevron.ymax = cy + icon_edge * 0.35f;
+      agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chevron, text, chip);
+
+      if (!state->scribble_armed) {
+        fill_round(&layout->chip_clear, radius, chip);
+        rctf cross = layout->chip_clear;
+        const float ccx = BLI_rctf_cent_x(&cross);
+        cross.xmin = ccx - icon_edge * 0.5f;
+        cross.xmax = ccx + icon_edge * 0.5f;
+        cross.ymin = cy - icon_edge * 0.5f;
+        cross.ymax = cy + icon_edge * 0.5f;
+        agent_ui_icon_draw(AGENT_ICON_CROSS, &cross, text, chip);
+      }
+    }
+  }
+
   /* Generate. */
   fill_round(&layout->btn_generate, radius, generate);
   label_centre(state->status_busy ? "Stop" : "Generate",

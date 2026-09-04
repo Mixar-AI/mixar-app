@@ -260,6 +260,10 @@ void footer_thumbnails_draw_image(
     Main *bmain, const char *path, int source, float x, float y, float size);
 void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+/* Scribble ink canvas painter (mixie_chat_ink_overlay.cc). Drawn directly by
+ * the transcript region in the EMPTY state, where the whole-panel field would
+ * otherwise cover the canvas the user is writing on. */
+void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
 void mixie_chat_main_region_draw(const bContext *C, ARegion *region);
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion *region);
@@ -506,6 +510,47 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_image_from_file",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
             "Attach a reference image");
+
+  /* --- Scribble chips, right of Upload ---
+   * The same operators the chat header binds (space_mixie_chat/ui/header.py):
+   * the toggle arms BOTH halves through scribble_mode, the reading dropdown is
+   * a stock wm.context_menu_enum over wm.mixar_mark_intent (the panes' own
+   * dropdown idiom), and Clear is mixar.scribble_mark_clear. The last chip
+   * actually shown is where the attachment thumbnails start. */
+  rctf thumbs_after = layout->chip_upload;
+  if (state->scribble_available) {
+    agent_bubble_rect_to_region(region, layout->chip_scribble, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              state->scribble_armed ?
+                  "Stop scribbling (Esc). Queued marks are kept for the next message" :
+                  "Scribble: write over the chat to type, draw on the 3D viewport to "
+                  "mark what you mean");
+    thumbs_after = layout->chip_scribble;
+
+    if (state->mark_count > 0) {
+      agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
+      ui::Button *reading_but = uiDefButO(
+          block, ui::ButtonType::But, "wm.context_menu_enum",
+          blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+          "How the ink is read: separate marks that each point at something, or "
+          "one sketch of what to build (Tab flips it while drawing)");
+      if (reading_but) {
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(reading_but);
+        RNA_string_set(op_ptr, "data_path", "window_manager.mixar_mark_intent");
+      }
+      thumbs_after = layout->chip_reading;
+
+      if (!state->scribble_armed) {
+        agent_bubble_rect_to_region(region, layout->chip_clear, &bx, &by, &bw, &bh);
+        uiDefButO(block, ui::ButtonType::But, "mixar.scribble_mark_clear",
+                  blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                  "Discard the queued marks");
+        thumbs_after = layout->chip_clear;
+      }
+    }
+  }
+  agent_bubble_rect_to_region(region, thumbs_after, &bx, &by, &bw, &bh);
 
   /* --- Pending-attachment thumbnails, right of the Upload chip ---
    * Small rounded previews at chip height (the Figma treatment), each one a
@@ -863,10 +908,31 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
     draw_chat = messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
   }
+  /* Scribble's ink canvas is painted at the end of mixie_chat_main_region_draw,
+   * so with a transcript it simply appears over the messages. With NO
+   * transcript this region is the whole-panel prompt field, an embossed
+   * ui::Button whose chrome would cover the canvas — so while the canvas is
+   * open the field is not built at all and the canvas is painted over the
+   * bare panel instead. Events already reach the ink handler: this region
+   * runs the chat editor's own mixie_chat_main_region_init. */
+  AgentIslandState empty_probe;
+  agent_ui_state_gather(C, &empty_probe);
+  const bool ink_canvas_open = empty_probe.ink_visible;
   if (draw_chat) {
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
     mixie_chat_clear_bg_override();
+  }
+  else if (ink_canvas_open) {
+    rctf r;
+    r.xmin = 0.0f;
+    r.ymin = 0.0f;
+    r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+    r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&r, true, 0.0f, panel_bg);
+    mixie_chat_draw_ink_overlay(C, region);
   }
   else {
     /* Empty state: this region IS the whole-panel input field. Paint the
@@ -2871,6 +2937,27 @@ static int g_hover_outside_ticks = 0;
 static double g_hover_cooldown_until = 0.0;
 
 
+/** Either half of Scribble is up: the viewport freeze (`wm.mixar_mark_armed`)
+ *  or the chat ink canvas (`wm.mixie_chat_ink_visible`). Both are
+ *  Python-registered WindowManager bools; absent reads as off. */
+static bool agent_bubble_scribble_active(const bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  for (const char *name : {"mixar_mark_armed", "mixie_chat_ink_visible"}) {
+    PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, name);
+    if (prop && RNA_property_type(prop) == PROP_BOOLEAN &&
+        RNA_property_boolean_get(&wm_ptr, prop))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
@@ -2917,6 +3004,16 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   }
   if (g_hover_await_enter) {
     /* Opened programmatically and never visited — see the latch's note. */
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+
+  /* Never collapse while Scribble is armed. Marking the scene means drawing
+   * on the 3D viewport — by definition outside the island — and the freeze,
+   * the mark count and the reading chip all live on the composer. Minimising
+   * mid-gesture would pull the surface the user is reading out from under
+   * them; disarming (Esc, the chip, the send) hands the collapse back. */
+  if (agent_bubble_scribble_active(C)) {
     g_hover_outside_ticks = 0;
     return OPERATOR_FINISHED;
   }
