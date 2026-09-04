@@ -199,15 +199,25 @@ def is_busy() -> bool:
     return bool(_in_flight or _pending or _landed)
 
 
-def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> bool:
+def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1,
+                     max_wait_s: float = 60.0) -> bool:
     """Run *callback* once no recognition is in flight. True if it was deferred.
 
     False means nothing is pending and the caller should simply proceed.
     Used by the send path: handwriting still being converted belongs to the
     message about to go out, and a prompt written entirely by hand is EMPTY
-    until its last batch lands. The timeout bounds a stalled request — a
-    message that waits forever on a transcription that will never arrive is
-    worse than one sent without its final handwritten words.
+    until its last batch lands.
+
+    The wait is STALL-based, not total. ``timeout_s`` bounds how long the
+    queue may go without DELIVERING anything; every batch that lands resets
+    it, and ``max_wait_s`` caps the whole wait. A flat total budget is what
+    this used to be, and it was calibrated against the model's ~1 s floor —
+    measured against uat7 the round trip ran 1.2-6.0 s (mean 4.2), and with
+    ``SCRIBBLE_MAX_IN_FLIGHT`` at 2 a sentence written with six pauses needs
+    ~15 s of honest, progressing work. The send then fired mid-queue and the
+    user's last handwritten words never made it into the message they had
+    just watched themselves write. Giving up on a queue that has STOPPED is
+    still right; giving up on one that is merely slow is not.
     """
     if not is_busy():
         return False
@@ -216,11 +226,27 @@ def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> 
 
     import bpy
 
-    deadline = time.monotonic() + timeout_s
+    start = time.monotonic()
+    state = {"deadline": start + timeout_s, "seen": _deliver_seq}
 
     def _tick():
-        if is_busy() and time.monotonic() < deadline:
+        now = time.monotonic()
+        if _deliver_seq != state["seen"]:
+            # Progress: something landed, so the queue is alive.
+            state["seen"] = _deliver_seq
+            state["deadline"] = now + timeout_s
+        if is_busy() and now < state["deadline"] and now - start < max_wait_s:
             return poll_s
+        if is_busy():
+            # Sending anyway, without words the user watched themselves
+            # write — say so rather than let them find the gap in the sent
+            # message (and the late text land in the NEXT one).
+            logger.warning(
+                "[Scribble] giving up on handwriting after %.1fs with %d batch(es) "
+                "outstanding; sending without them", now - start,
+                len(_in_flight) + len(_pending),
+            )
+            _report_handwriting_dropped()
         try:
             callback()
         except Exception:  # noqa: BLE001 — a timer callback must not raise
@@ -229,6 +255,22 @@ def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> 
 
     bpy.app.timers.register(_tick, first_interval=poll_s)
     return True
+
+
+def _report_handwriting_dropped() -> None:
+    """Tell the user the send went without their last handwriting."""
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+
+        get_notification_store().push(
+            "warning",
+            "Sent without the last handwriting",
+            "Transcription was still running. Anything that lands now stays in "
+            "the message box for your next message.",
+            id="scribble_handwriting_dropped",
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[Scribble] could not toast the dropped-handwriting notice: %s", exc)
 
 
 def _c_operator_available(name: str) -> bool:

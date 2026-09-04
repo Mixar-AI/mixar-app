@@ -171,11 +171,21 @@ where they write, never by which button they pressed.
   composer out of order. The hint is resolved when a batch is posted, not
   when it is queued. Delivery is deduplicated by in-flight membership: the
   shared request queue is at-least-once.
-- **The send waits for the last transcription.** `send_message` flushes the
-  canvas and, if a recognition request is in flight, re-sends once it lands
-  (`scribble.defer_until_idle`, bounded) — ABOVE the empty-message check,
-  because a prompt written entirely by hand is empty until its last batch
-  arrives. Sending then ends the gesture on both surfaces.
+- **The send waits for the last transcription, and the wait is STALL-based.**
+  `send_message` flushes the canvas and, if a recognition request is in
+  flight, re-sends once it lands (`scribble.defer_until_idle`) — ABOVE the
+  empty-message check, because a prompt written entirely by hand is empty
+  until its last batch arrives. `timeout_s` bounds how long the queue may go
+  without DELIVERING anything (every landed batch resets it; `max_wait_s`
+  caps the whole wait), never the total. It was a flat total budget
+  calibrated against the model's ~1 s floor, but measured against uat7 the
+  round trip runs **1.2-6.0 s (mean 4.2)**, and at `SCRIBBLE_MAX_IN_FLIGHT`
+  = 2 a sentence written with six pauses needs ~15 s of honest, progressing
+  work — so the send fired mid-queue and the user's last handwritten words
+  never reached the message. Giving up on a queue that has STOPPED is still
+  right; giving up on one that is merely slow is not, and when it does give
+  up it says so (`_report_handwriting_dropped`) because the late text lands
+  in the NEXT message. Sending then ends the gesture on both surfaces.
 - **A mark on empty space lands on the ground** (`core/ground.py`,
   `resolve._ground_fallback`). A layout sketch is drawn on nothing, and a
   "background" mark with no position cannot place anything (uat7: three
