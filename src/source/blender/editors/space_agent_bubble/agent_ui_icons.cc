@@ -409,6 +409,62 @@ void glyph_chevron_down(const float cx, const float cy, const float s, const flo
   poly(pts, 3, col);
 }
 
+/** A stylus at 45°: body quad, nib triangle, a dot for the cap. Convex
+ *  pieces only, so each is one `poly` — a rotated rounded box would need
+ *  its own fan and the punch idiom has nothing to punch here. */
+void glyph_pen(const float cx, const float cy, const float s, const float col[4])
+{
+  const float d = 0.70710678f; /* unit diagonal, tail bottom-left -> nib top-right */
+  const float hw = s * 0.11f;   /* half the body width */
+  const float tail = s * 0.38f;
+  const float nib_base = s * 0.14f;
+  const float tip = s * 0.44f;
+
+  /* Along the axis: t < 0 is toward the tail. Across: n = (-d, d). */
+  auto at = [&](const float t, const float across, float out[2]) {
+    out[0] = cx + d * t - d * across;
+    out[1] = cy + d * t + d * across;
+  };
+  float body[4][2];
+  at(-tail, -hw, body[0]);
+  at(nib_base, -hw, body[1]);
+  at(nib_base, hw, body[2]);
+  at(-tail, hw, body[3]);
+  poly(body, 4, col);
+
+  float nib[3][2];
+  at(nib_base, -hw, nib[0]);
+  at(tip, 0.0f, nib[1]);
+  at(nib_base, hw, nib[2]);
+  poly(nib, 3, col);
+
+  float cap[2];
+  at(-tail, 0.0f, cap);
+  disc(cap[0], cap[1], hw, col);
+}
+
+/** Two bars at 45° — the plus glyph turned, as a pair of convex quads. */
+void glyph_cross(const float cx, const float cy, const float s, const float col[4])
+{
+  const float w = std::max(1.5f, s * 0.14f) * 0.5f;
+  const float arm = s * 0.30f;
+  const float d = 0.70710678f;
+  for (int bar = 0; bar < 2; bar++) {
+    /* Axis of this bar and its perpendicular, both unit length. */
+    const float ax = d;
+    const float ay = (bar == 0) ? d : -d;
+    const float nx = -ay;
+    const float ny = ax;
+    const float pts[4][2] = {
+        {cx - ax * arm - nx * w, cy - ay * arm - ny * w},
+        {cx + ax * arm - nx * w, cy + ay * arm - ny * w},
+        {cx + ax * arm + nx * w, cy + ay * arm + ny * w},
+        {cx - ax * arm + nx * w, cy - ay * arm + ny * w},
+    };
+    poly(pts, 4, col);
+  }
+}
+
 }  // namespace
 
 void agent_ui_icon_draw(const AgentIcon icon,
@@ -454,6 +510,12 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
     case AGENT_ICON_CHEVRON_DOWN:
       glyph_chevron_down(cx, cy, s, color);
+      break;
+    case AGENT_ICON_PEN:
+      glyph_pen(cx, cy, s, color);
+      break;
+    case AGENT_ICON_CROSS:
+      glyph_cross(cx, cy, s, color);
       break;
     case AGENT_ICON_COUNT:
       break;

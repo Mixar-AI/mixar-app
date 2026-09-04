@@ -246,6 +246,12 @@ void agent_ui_layout_build(const int window_w,
    * takes the row's left edge where the toggle sat. */
   r_layout->chip_upload = f.box(
       AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
+  const float scribble_x = AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP;
+  r_layout->chip_scribble = f.box(scribble_x, chip_y, AGENT_CHIP_SCRIBBLE_W, AGENT_CHIP_H);
+  const float reading_x = scribble_x + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_GAP;
+  r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
+  r_layout->chip_clear = f.box(
+      reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   r_layout->btn_generate = f.box(
       AGENT_BTN_GENERATE_X, chip_y, AGENT_BTN_GENERATE_W, AGENT_CHIP_H);
 }

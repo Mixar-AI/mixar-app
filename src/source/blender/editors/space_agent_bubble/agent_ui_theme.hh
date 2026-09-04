@@ -274,6 +274,15 @@ namespace blender {
  * Its slot is left empty rather than reflowed: the chips that remain keep
  * the artboard's x positions. */
 
+/** Scribble chips, right of Upload Reference in the model chip's old slot:
+ *  the toggle (pen + "Scribble", or "Scribble · N" with N draft marks), then,
+ *  only while marks are queued, the reading dropdown (Auto / Sketch / Marks)
+ *  and a clear X. Sized like the Upload chip; the same 12-unit gap between. */
+#define AGENT_CHIP_GAP 12
+#define AGENT_CHIP_SCRIBBLE_W 150
+#define AGENT_CHIP_READING_W 104
+#define AGENT_CHIP_CLEAR_W 44
+
 /** Generate button: artboard 1441,842 114x44. */
 #define AGENT_BTN_GENERATE_X 1174
 #define AGENT_BTN_GENERATE_W 114

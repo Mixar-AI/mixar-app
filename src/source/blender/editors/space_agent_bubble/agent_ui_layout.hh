@@ -87,6 +87,13 @@ struct AgentIslandLayout {
   float prompt_y;
 
   rctf chip_upload;
+  /* Scribble: toggle, then (only with queued marks) the reading dropdown and
+   * the clear X. Always laid out; the painter and the controls skip the two
+   * conditional chips, and the attachment thumbnails start after the last one
+   * actually shown. */
+  rctf chip_scribble;
+  rctf chip_reading;
+  rctf chip_clear;
   rctf btn_generate;
 };
 

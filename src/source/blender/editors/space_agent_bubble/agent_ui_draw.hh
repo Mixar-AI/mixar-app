@@ -49,6 +49,16 @@ struct AgentIslandState {
   float credits_remaining;
   bool splat_is_new;        /* Draws the NEW badge on the Gaussian Splat tab. */
 
+  /* Scribble (modules/scribble_mark + the chat ink canvas). The composer chip
+   * mirrors what the chat and bubble headers show: pressed while EITHER half is
+   * up, the DRAFT mark count riding with the next message, and how that ink is
+   * read. Absent until Python registers mixar.scribble_toggle. */
+  bool scribble_available;
+  bool scribble_armed;      /* Viewport freeze up, or the chat ink canvas open. */
+  bool ink_visible;         /* The chat handwriting canvas is open. */
+  int mark_count;           /* DRAFT marks queued for the next message. */
+  char mark_intent[32];     /* UI name of wm.mixar_mark_intent (Auto / Sketch / Marks). */
+
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

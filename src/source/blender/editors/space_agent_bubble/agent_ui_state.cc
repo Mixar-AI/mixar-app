@@ -39,6 +39,8 @@
 #include "RNA_access.hh"
 #include "RNA_prototypes.hh"
 
+#include "WM_api.hh"
+
 #include "agent_ui_draw.hh"
 #include "agent_ui_layout.hh"
 
@@ -261,6 +263,40 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   }
 
   r_state->queue_count = read_queue_count(wm);
+
+  /* Scribble — read-only off the Python-registered properties, exactly what
+   * the chat/bubble headers read (space_mixie_chat/ui/header.py). The chip is
+   * not drawn at all until the toggle operator exists: a chip over a missing
+   * operator would be inert for the deferred UI pass and read as broken. */
+  r_state->scribble_available = WM_operatortype_find("MIXAR_OT_scribble_toggle", true) !=
+                                nullptr;
+  if (wm) {
+    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+    r_state->ink_visible = read_bool_prop(&wm_ptr, "mixie_chat_ink_visible");
+    r_state->scribble_armed = r_state->ink_visible ||
+                              read_bool_prop(&wm_ptr, "mixar_mark_armed");
+    read_enum_name(&wm_ptr, "mixar_mark_intent", r_state->mark_intent,
+                   sizeof(r_state->mark_intent));
+  }
+  if (scene) {
+    /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but
+     * no longer ride with the next message, so they are not counted. */
+    PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+    PropertyRNA *marks = RNA_struct_find_property(&scene_ptr, "mixar_marks");
+    if (marks && RNA_property_type(marks) == PROP_COLLECTION) {
+      CollectionPropertyIterator iter;
+      RNA_property_collection_begin(&scene_ptr, marks, &iter);
+      for (; iter.valid; RNA_property_collection_next(&iter)) {
+        PointerRNA item = iter.ptr;
+        char mark_state[16];
+        read_string_prop(&item, "state", mark_state, sizeof(mark_state));
+        if (STREQ(mark_state, "DRAFT")) {
+          r_state->mark_count++;
+        }
+      }
+      RNA_property_collection_end(&iter);
+    }
+  }
 
   /* Same property the account card meters — one source of truth for credits.
    * The backend owns the percentage (grandfathered allocations, trials and
