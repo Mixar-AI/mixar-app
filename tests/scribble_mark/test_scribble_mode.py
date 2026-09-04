@@ -196,7 +196,13 @@ class TestDeferUntilIdle:
         scribble.reset_state()
 
     def _registered_tick(self):
-        return bpy.app.timers.register.call_args[0][0]
+        # defer_until_idle does ``import bpy`` at CALL time, so the timer it
+        # registers lands on whatever sys.modules["bpy"] is THEN — and
+        # modules/testing/mock_bpy.install_bpy_mock (run by several tests/
+        # modules) swaps in a fresh MagicMock for the rest of the session.
+        # The module-level ``bpy`` above is the collection-time stub; in a
+        # full run its register() was never called.
+        return sys.modules["bpy"].app.timers.register.call_args[0][0]
 
     def test_nothing_pending_means_proceed_now(self):
         assert scribble.defer_until_idle(lambda: None) is False
