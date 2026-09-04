@@ -318,6 +318,60 @@ MENTION_QUERY_MAXLEN = 96
 MENTION_INSERT_MAXLEN = 300
 
 # ============================================================================
+# SCRIBBLE (STYLUS HANDWRITING INPUT)
+# ============================================================================
+
+# Caps on one ink commit, frozen in lockstep with the C++ ink overlay
+# (INK_JSON_MAX / CHAT_INK_MAX_STROKES / CHAT_INK_MAX_POINTS in
+# mixie_chat_ink_intern.hh, which static_asserts the last two). C++ enforces
+# them while capturing; Python re-checks because the two halves ship in the
+# same binary today but a stale payload from a skewed build must be
+# rejected, not rasterized.
+#
+# The byte cap is derived from the point cap, NOT chosen: one serialized
+# point is up to ~17 bytes ("[3840,2160,0.88],"), so a full 4096-point page
+# reaches ~70 KB. Sizing this below INK_JSON_MAX would make a densely
+# written page serialize fine on the C++ side and then be thrown away here,
+# losing the user's handwriting with no way to get it back.
+SCRIBBLE_COMMIT_MAXLEN = 98304
+SCRIBBLE_MAX_STROKES = 64
+SCRIBBLE_MAX_POINTS = 4096
+
+# Idle delay after the last pen-up before C++ dispatches mixie_chat.ink_commit.
+# Informational mirror of the C++ wmTimer — Python never waits on it.
+SCRIBBLE_IDLE_COMMIT_MS = 850
+
+# Recognition requests allowed on the wire at once. Each round trip sits at
+# the model's ~1 s floor, and a continuous writer commits a batch every
+# pause; with one slot the composer falls a full round trip further behind
+# the pen at every pause. Text still enters the composer strictly in written
+# order (core/scribble.py holds an early result until its predecessors
+# land). Two is enough to hide the round trip for a steady writer; more only
+# adds requests that then wait on each other's order.
+SCRIBBLE_MAX_IN_FLIGHT = 2
+
+# Longest edge (px) of the ink bounding box in the rasterized PNG. Small
+# writing is upscaled to this too: the recognizer reads pixels, not strokes.
+SCRIBBLE_RASTER_MAX_EDGE = 1280
+
+# Blank margin around the ink in the rasterized PNG, in output pixels.
+# Handwriting pushed flush against the frame reads worse.
+SCRIBBLE_RASTER_PADDING = 24
+
+# Floor on BOTH output dimensions of the rasterized PNG. Frozen contract
+# with the backend: core/validators.validate_image 400-rejects any upload
+# under 64x64 before the recognition handler runs, and a thin stroke batch
+# (a single dash, one vertical bar) otherwise scales to a sliver — e.g.
+# 2000x2 px of ink pads and scales to ~1280x31. The minor axis is padded
+# out to this floor with the ink centred.
+SCRIBBLE_RASTER_MIN_EDGE = 64
+
+# Tail of the current composer text sent as the recognition hint — advisory
+# context so a continued sentence is transcribed in keeping with what is
+# already typed.
+SCRIBBLE_HINT_TAIL_CHARS = 200
+
+# ============================================================================
 # IMAGE ATTACHMENT CONSTANTS
 # ============================================================================
 

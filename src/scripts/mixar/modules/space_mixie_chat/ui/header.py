@@ -77,6 +77,39 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
 
+            # Scribble — one mode, two surfaces: ink over the chat becomes
+            # text in the composer (the C++ ink canvas), ink over the frozen
+            # 3D viewport becomes marks the agent resolves against the scene,
+            # so it knows what "this" refers to. The count is how many marks
+            # ride with the next message. depress reflects EITHER half being
+            # up, like the overlays above — a pressed button turns it all off.
+            # hasattr guard: deferred UI registration pass.
+            if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle'):
+                armed = bool(getattr(wm, 'mixar_mark_armed', False)
+                             or getattr(wm, 'mixie_chat_ink_visible', False))
+                mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
+                                 if m.state == 'DRAFT')
+                mark_row = layout.row(align=True)
+                mark_row.operator(
+                    "mixar.scribble_toggle",
+                    text=str(mark_count) if mark_count else "",
+                    icon='GREASEPENCIL',
+                    depress=armed,
+                )
+                # How the ink is READ — marks, or one sketch. Visible and
+                # flippable beside the count, because a drawing silently
+                # taken as nine placement targets is a mode the user can
+                # neither see nor correct (arXiv:2607.21468).
+                if mark_count and hasattr(wm, 'mixar_mark_intent'):
+                    mark_row.prop(wm, "mixar_mark_intent", text="", icon_only=True)
+                # Queued marks need a way out without re-entering the freeze:
+                # a user who changed their mind should not have to arm the
+                # mode again just to discard what it left behind.
+                if mark_count and not armed:
+                    mark_row.operator(
+                        "mixar.scribble_mark_clear", text="", icon='X',
+                    )
+
             if getattr(scene, 'mixie_chat_mode', '') == 'ADDON_PROJECT':
                 layout.separator()
                 draw_project_controls(layout, scene)

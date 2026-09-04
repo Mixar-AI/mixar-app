@@ -188,6 +188,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # Agent-chosen name for the imported mesh (Pro / Rapid direct paths);
     # empty falls back to the input image name, then a prompt slug.
     name: StringProperty(default="")
+    # Where the import lands, as JSON (job_queue.core.placement); applied by
+    # the post-import hook so the agent's turn need not outlive the job.
+    placement: StringProperty(default="")
     # Redundant now that an active view set is signal enough (see execute) —
     # kept so an explicit agent call still reads clearly and still FAILS LOUDLY
     # when no set exists, instead of quietly generating from one image.
@@ -377,9 +380,10 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # queue row reads like the user's intent — see image_to_3d_ops for
         # the same reasoning.
         label = (prompt[:40] if prompt else None) or (image.name if image else "3D")
+        from mixar.modules.common.job_queue.core.placement import parse_placement
         enqueue_pro_job(
             image=image, shared=shared, label=label, turnaround=turnaround,
-            mesh_name=self.name)
+            mesh_name=self.name, placement=parse_placement(self.placement))
 
     def _resolve_turnaround(self, context, image):
         """Multi-view payload built from *image* plus the tab's view set.
@@ -466,6 +470,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
         )
         mesh_name = derive_model_name(
             image, prompt if has_prompt else "", explicit=self.name)
+        from mixar.modules.common.job_queue.core.placement import parse_placement
         enqueue_generation(
             kind="glb",
             feature_key=FEATURE_HUNYUAN_RAPID,
@@ -473,7 +478,8 @@ class MIXIE_OT_hunyuan_generate(Operator):
             model=HUNYUAN_RAPID_MODEL,
             payload=payload,
             label=label,
-            on_imported=make_model_rename_on_imported(mesh_name),
+            on_imported=make_model_rename_on_imported(
+                mesh_name, placement=parse_placement(self.placement)),
             scene_flag="mixie_hunyuan_rapid_is_generating",
         )
 

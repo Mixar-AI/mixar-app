@@ -106,6 +106,12 @@ void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
+/* Mixar Scribble: a stylus press on the composer while its text-edit is
+ * active opens the handwriting canvas (the footer region UI handler never
+ * sees that press — the active button's window-level modal handler consumes
+ * it first). Defined in editors/space_mixie_chat/mixie_chat_ink_events.cc
+ * inside namespace blender, so the prototype lives here, not in blender::ui. */
+bool mixie_chat_ink_composer_stylus_open(bContext *C);
 }  // namespace blender
 
 namespace blender::ui {
@@ -4550,6 +4556,24 @@ static int do_but_textedit(
               break;
             }
           }
+        }
+      }
+
+      /* Mixar Scribble: pen-touching the composer means "write by hand" —
+       * open the ink canvas instead of moving the caret. Only for a real
+       * stylus (mouse presses keep normal caret behaviour), only for the
+       * chat composer (the mention-scene gate identifies it), and checked
+       * AFTER the mention rows above so a pen tap still accepts a
+       * suggestion. Editing exits through the normal BUTTON_STATE_EXIT
+       * path — the ink code must not free the active button from inside
+       * its own handler. */
+      if (event->val == KM_PRESS && event->tablet.active == EVT_TABLET_STYLUS &&
+          ui_but_mixie_mention_scene(but) != nullptr)
+      {
+        if (mixie_chat_ink_composer_stylus_open(C)) {
+          button_activate_state(C, but, BUTTON_STATE_EXIT);
+          retval = WM_UI_HANDLER_BREAK;
+          break;
         }
       }
 

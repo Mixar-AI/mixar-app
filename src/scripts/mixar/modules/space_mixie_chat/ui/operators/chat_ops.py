@@ -72,6 +72,20 @@ def cleanup_image_encoder():
         _image_encoder_executor = None
 
 
+def _send_when_handwriting_lands():
+    """Re-run the send once Scribble's last recognition request has landed.
+
+    Runs from an app timer (see ``scribble.defer_until_idle``), the same way
+    the Enter key reaches the operator, so every pre-flight check runs again
+    against the composer as it is NOW — with the transcription in it.
+    """
+    try:
+        if hasattr(bpy.ops.mixie_chat, 'send_message'):
+            bpy.ops.mixie_chat.send_message()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("deferred send after handwriting failed: %s", e, exc_info=True)
+
+
 class MIXIE_CHAT_OT_send_message(Operator):
     """Send a chat message via HTTP/SSE"""
     bl_idname = "mixie_chat.send_message"
@@ -109,15 +123,36 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return library_browse.execute_library_mode(self, context)
 
-        message_text = scene.mixie_chat_input.strip()
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
         is_awaiting_input = (session.get_state(scene) == SessionState.AWAITING_INPUT)
+
+        # Scribble: handwriting still on the chat canvas, or still being
+        # converted, belongs to THIS message. Flush the canvas and, if a
+        # recognition request is in flight, send again once it has landed.
+        # This sits ABOVE the empty-message check on purpose: a prompt
+        # written entirely by hand is empty until its last batch lands, and
+        # bouncing it as "empty" would throw away what the user just wrote.
+        if not (is_modify or is_awaiting_input):
+            try:
+                from ...core import scribble
+                scribble.flush_pending_ink()
+                if scribble.defer_until_idle(_send_when_handwriting_lands):
+                    self.report({'INFO'}, "Converting handwriting…")
+                    metrics.stop_timer('send_message_total')
+                    return {'CANCELLED'}
+            except Exception as e:  # noqa: BLE001
+                # Never lose a message over its optional handwriting.
+                logger.debug("scribble flush before send skipped: %s", e, exc_info=True)
+
+        message_text = scene.mixie_chat_input.strip()
         pending_attachments = scene.mixie_chat_pending_attachments
 
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
+
+        mark_context = None
 
         project_context = None
         if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
@@ -175,6 +210,23 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not ws_client.connection_id:
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
+
+        # Scribble Marks: where the user pointed, already resolved against the
+        # live scene. Placed HERE deliberately — after every pre-flight bail-out
+        # and before the attachment encoding below. prepare_for_send appends the
+        # frozen frames to pending_attachments, so running it any earlier would
+        # leave those frames queued for the NEXT message whenever a pre-flight
+        # check cancels this one.
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
+                for note in mark_notes:
+                    self.report({'INFO'}, f"Marks: {note}")
+            except Exception as e:  # noqa: BLE001
+                # The words are a complete request on their own; never lose a
+                # message because the marks could not be assembled.
+                logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
 
         # Clear any STALE loader left by a prior turn before starting a new one.
         # If the previous turn was cancelled or the stream was closed client-side,
@@ -398,6 +450,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 attachment_names=attachment_names if attachment_names else None,
                 imported_object_names=imported_object_names or None,
                 project_context=project_context,
+                mark_context=mark_context,
             )
             if not success:
                 self.report({'ERROR'}, "Failed to start chat stream")
@@ -431,6 +484,19 @@ class MIXIE_CHAT_OT_send_message(Operator):
             logger.debug(
                 "moodboard deselect on send skipped: %s", e, exc_info=True
             )
+
+        # Settle the marks that just went out and lower the freeze. The marks
+        # themselves are KEPT — a follow-up turn refers back to them, and the
+        # vertex groups and cameras they name are still live in the scene.
+        # Unconditional: sending is the end of the gesture whether or not
+        # anything was drawn. Gated on mark_context, arming and then sending
+        # without marking left the viewport frozen with no marks to explain it.
+        if not is_modify and not is_awaiting_input:
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                chat_bridge.finish_send(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("scribble mark settle skipped: %s", e, exc_info=True)
 
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()
