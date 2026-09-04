@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import time
 
-import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -62,15 +61,25 @@ logger = get_logger(__name__)
 #: path and the load handler both clear it.
 _running = False
 
+#: The freeze on screen, for the few things outside the modal that must not
+#: release what it still holds (the header Undo). Cleared with the guard.
+_live_session = None
+
 
 def is_running():
     return _running
 
 
+def live_view_name():
+    """The baked camera of the freeze on screen, or ``""`` when none is."""
+    return getattr(_live_session, "view_name", "") or ""
+
+
 def reset_running_guard():
     """Clear the stale guard after a file load tore the modal down."""
-    global _running
+    global _running, _live_session
     _running = False
+    _live_session = None
 
 
 class MIXAR_OT_scribble_mark_draw(Operator):
@@ -94,7 +103,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     # -- lifecycle -------------------------------------------------------
 
     def invoke(self, context, event):
-        global _running
+        global _running, _live_session
         if _running:
             return {"CANCELLED"}
 
@@ -159,6 +168,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self.report({"ERROR"}, "Could not start the mark overlay")
                 return {"CANCELLED"}
         _running = True
+        _live_session = self._session
         overlay.tag_redraw()
         return {"RUNNING_MODAL"}
 
@@ -239,7 +249,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
-        inside = _point_in_region(region, event.mouse_x, event.mouse_y)
+        inside = overlay.point_in_region(region, event.mouse_x, event.mouse_y)
         if not inside:
             # Outside the frozen viewport the app is entirely normal — the
             # chat, the sidebar and every other editor keep working, which is
@@ -289,7 +299,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if stroke is None or len(stroke) >= MAX_POINTS_PER_STROKE:
             return
         last = stroke[-1]
-        threshold = MIN_SAMPLE_DIST_PX * _ui_scale()
+        threshold = MIN_SAMPLE_DIST_PX * overlay.ui_scale()
         if abs(point[0] - last[0]) < threshold and abs(point[1] - last[1]) < threshold:
             return
         stroke.append(point)
@@ -322,9 +332,18 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             overlay.tag_redraw()
             return
 
-        if mark_store.remove_last(context.scene):
+        # keep_view: this freeze is still on screen and the next mark will be
+        # drawn against its camera, so undoing the mark that happened to be
+        # its only reference must not release it.
+        if mark_store.remove_last(context.scene, keep_view=self._session.view_name):
             overlay.pop_settled()
             self.report({"INFO"}, "Mark removed")
+            # Unreferenced again once no mark names it, so a disarm with
+            # nothing committed can give the still and camera back rather
+            # than leaving both in the .blend.
+            self._session.view_used = mark_store.view_referenced(
+                context.scene, self._session.view_name
+            )
         mark_store.refresh_reading(context.scene, context.window_manager)
         overlay.tag_redraw()
 
@@ -352,7 +371,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         self._current = None
         overlay.set_live_strokes([])
 
-        reading = gesture.classify(strokes, scale=_ui_scale())
+        reading = gesture.classify(strokes, scale=overlay.ui_scale())
         if reading is None:
             overlay.tag_redraw()
             return
@@ -390,7 +409,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if stored is not None:
             self._session.view_used = True
             overlay.push_settled(strokes)
-            self.report({"INFO"}, _commit_message(resolved))
+            self.report({"INFO"}, resolve.commit_message(resolved))
         mark_store.refresh_reading(context.scene, wm)
         overlay.tag_redraw()
 
@@ -441,7 +460,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             pass
 
     def _finish(self, context):
-        global _running
+        global _running, _live_session
         # A freeze that committed no mark owns a still and a camera nothing
         # references. Left behind, every arm/disarm cycle adds both to the
         # .blend.
@@ -461,34 +480,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         # canvas that is already down makes this a no-op.
         scribble_mode.close_ink(context.window_manager)
         _running = False
-
-
-# =============================================================================
-# Helpers
-# =============================================================================
-
-def _ui_scale():
-    try:
-        return float(bpy.context.preferences.system.ui_scale)
-    except Exception:  # noqa: BLE001
-        return 1.0
-
-
-def _point_in_region(region, x, y):
-    return (region.x <= x < region.x + region.width
-            and region.y <= y < region.y + region.height)
-
-
-def _commit_message(resolved):
-    if not resolved or not resolved.get("hit"):
-        return "Mark added — nothing under it"
-    objects = resolved.get("objects") or []
-    if not objects:
-        return "Mark added"
-    name = objects[0].get("name")
-    if objects[0].get("vertex_group"):
-        return f"Mark added on {name} (part of it)"
-    return f"Mark added on {name}"
+        _live_session = None
 
 
 classes = (MIXAR_OT_scribble_mark_draw,)

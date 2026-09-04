@@ -939,7 +939,19 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
      * panel fill, then lay the embossed field ui::Button over the full region —
      * mixie_chat_main_region_init installed UI_region_handlers, so the block
      * dispatches normally. The composer skips its input strip in this state
-     * (agent_bubble_island_controls_bottom), keeping exactly ONE field box. */
+     * (agent_bubble_island_controls_bottom), keeping exactly ONE field box.
+     *
+     * The canvas's CLOSING edge is run here first. mixie_chat_draw_ink_overlay
+     * is the only writer of rt->ink_overlay_active, and with a transcript it
+     * runs unconditionally at the end of mixie_chat_main_region_draw — but in
+     * this state nothing draws the chat, so skipping it once the canvas is
+     * down left the latch stuck at true: mixie_chat_ink_handle_event then
+     * consumed every press and keystroke over the field for an invisible
+     * canvas, and the stylus auto-open (which stands down while "already
+     * open") never fired again. With visibility false the call draws nothing
+     * — it resets the runtime and drops the idle timer, which is the point. */
+    mixie_chat_draw_ink_overlay(C, region);
+
     rctf r;
     r.xmin = 0.0f;
     r.ymin = 0.0f;

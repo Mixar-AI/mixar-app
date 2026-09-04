@@ -321,3 +321,20 @@ def _empty(reason):
         "hit_count": 0,
         "empty_reason": reason,
     }
+
+
+def commit_message(resolved):
+    """The one-line report for a mark just committed.
+
+    Lives beside the resolution it describes: what the user is told a mark
+    landed on must be read off the same record the agent is sent.
+    """
+    if not resolved or not resolved.get("hit"):
+        return "Mark added — nothing under it"
+    objects = resolved.get("objects") or []
+    if not objects:
+        return "Mark added"
+    name = objects[0].get("name")
+    if objects[0].get("vertex_group"):
+        return f"Mark added on {name} (part of it)"
+    return f"Mark added on {name}"

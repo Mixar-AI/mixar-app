@@ -67,10 +67,13 @@ class MIXAR_OT_scribble_mark_undo(Operator):
 
     @classmethod
     def poll(cls, context):
-        return mark_store.count(context.scene) > 0
+        # Drafts only: undo takes back what the user drew this turn. With a
+        # SENT mark under the cursor this button would delete something the
+        # conversation still refers to.
+        return mark_store.count(context.scene, drafts_only=True) > 0
 
     def execute(self, context):
-        if not mark_store.remove_last(context.scene):
+        if not mark_store.remove_last(context.scene, keep_view=_live_view_name()):
             return {"CANCELLED"}
         overlay.pop_settled()
         mark_store.refresh_reading(context.scene, context.window_manager)
@@ -99,6 +102,19 @@ class MIXAR_OT_scribble_mark_clear(Operator):
         overlay.tag_redraw()
         self.report({"INFO"}, f"Cleared {removed} mark(s)")
         return {"FINISHED"}
+
+
+def _live_view_name():
+    """The baked camera of the freeze currently on screen, or ``""``.
+
+    The header Undo is reachable while the viewport half is running (the
+    freeze blocks the viewport, not the chat header), and the camera of a
+    live freeze belongs to the freeze, not to the mark being undone.
+    Imported late so arming stays the only thing that pulls the modal in.
+    """
+    from mixar.modules.scribble_mark.ui.operators import mark_draw_ops
+
+    return mark_draw_ops.live_view_name()
 
 
 classes = (
