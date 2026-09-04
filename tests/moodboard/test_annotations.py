@@ -95,14 +95,13 @@ def test_annotation_tool_exposes_complete_editing_workflow():
     assert 'bl_options = {"REGISTER", "UNDO"}' in operators
     assert '"BLOCKING"' not in operators
     assert 'self.report({"INFO"}, "Annotation stroke added")' in operators
-    # The toolbar's annotate slot is hidden for now — the gaming workflow
-    # puts a direct Multi-Lasso button there instead. The annotation
-    # operators and settings popover stay registered for the popover class
-    # (and future re-surfacing), but the toolbar draw must not show them.
+    # Lasso keeps its direct gaming-workflow shortcut, while annotations get
+    # a dedicated split row: one-click drawing plus settings/history.
     assert 'row.operator(\n            "mixie.moodboard_lasso_tool"' in toolbar
-    assert 'row.operator(\n            "mixie.moodboard_annotate_tool"' not in toolbar
+    assert 'row.operator(\n            "mixie.moodboard_annotate_tool"' in toolbar
+    assert 'panel="MIXIE_PT_annotation_tools_popover"' in toolbar
     assert 'bl_idname = "MIXIE_PT_annotation_tools_popover"' in toolbar
-    assert "MIXIE_PT_annotation_tools_popover," in toolbar  # still registered
+    assert "MIXIE_PT_annotation_tools_popover," in toolbar
     assert 'col.prop(state, "annotation_color"' in toolbar
     assert 'col.prop(state, "annotation_width"' in toolbar
     assert "for original_stroke in orig_img.annotations" in duplicate
