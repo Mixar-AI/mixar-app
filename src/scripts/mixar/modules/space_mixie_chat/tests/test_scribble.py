@@ -394,6 +394,16 @@ class TestErrorMessages:
         error.status_code = 502
         assert "again" in scribble._error_message(error)
 
+    def test_missing_route_reads_as_unavailable_not_as_lost_text(self):
+        """A 404 is the handwriting ROUTE missing on this backend, not a
+        resource of the user's — the shared "Resource not found" would read
+        as if their writing had been lost."""
+        error = RuntimeError("Not Found")
+        error.status_code = 404
+        message = scribble._error_message(error)
+        assert "isn't available" in message
+        assert "type the message" in message
+
     def test_out_of_credits_uses_the_shared_classifier(self):
         from mixar.modules.common.api.exceptions import InsufficientCreditsError
 

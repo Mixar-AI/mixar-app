@@ -231,6 +231,22 @@ def defer_until_idle(callback, timeout_s: float = 15.0, poll_s: float = 0.1) -> 
     return True
 
 
+def _c_operator_available(name: str) -> bool:
+    """Whether the C++ chat editor registered ``mixie_chat.<name>``.
+
+    ``hasattr(bpy.ops.mixie_chat, name)`` is useless (bpy.ops fabricates a
+    wrapper for any name and only fails on call), and ``bpy.types`` lists
+    only Python-registered operator classes — so the C ink operators have to
+    be looked up in the submodule's real listing.
+    """
+    try:
+        import bpy
+
+        return name in dir(bpy.ops.mixie_chat)
+    except Exception:
+        return False
+
+
 def flush_pending_ink() -> None:
     """Ask the C++ overlay to convert any un-committed strokes NOW.
 
@@ -243,7 +259,11 @@ def flush_pending_ink() -> None:
     try:
         import bpy
 
-        if hasattr(bpy.types, "MIXIE_CHAT_OT_ink_flush"):
+        # C-registered operators (WM_operatortype_append) are NOT exposed on
+        # bpy.types — only Python-registered classes are — so a bpy.types gate
+        # here was always False in the built app and the flush never ran. The
+        # operator submodule's dir() lists what actually exists.
+        if _c_operator_available("ink_flush"):
             bpy.ops.mixie_chat.ink_flush()
     except Exception:
         logger.debug("[Scribble] ink flush failed", exc_info=True)
@@ -456,7 +476,7 @@ def _release_composer() -> None:
     try:
         import bpy
 
-        if hasattr(bpy.types, "MIXIE_CHAT_OT_ink_release_composer"):
+        if _c_operator_available("ink_release_composer"):
             bpy.ops.mixie_chat.ink_release_composer()
     except Exception:
         logger.debug("[Scribble] could not release composer focus",
@@ -526,6 +546,13 @@ def _error_message(error) -> str:
     )
     if engine_failed:
         return "Couldn't read that handwriting — please try writing it again"
+    # A 404 here is the ROUTE missing — a backend without the handwriting
+    # half (seen on uat7 during the first in-app pass) — not a missing
+    # resource of the user's. The shared classifier's "Resource not found"
+    # reads as if something they wrote was lost.
+    if getattr(error, "status_code", None) == 404 or "Not Found" in str(error):
+        return ("Handwriting recognition isn't available on this server yet — "
+                "type the message instead")
     return classify_error(error) or sanitize_message(
         str(error), "Handwriting conversion failed"
     )
