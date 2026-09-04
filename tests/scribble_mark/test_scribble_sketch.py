@@ -383,7 +383,8 @@ class TestAnnotatedFrame:
 
     def test_the_frame_is_drawn_from_the_stored_records_not_the_wire_copy(self):
         text = source(f"{MODULE}/core/chat_bridge.py")
-        assert "mark_store.draft_marks(scene)" in text[text.index("render_annotated("):]
+        body = text[text.index("def _attach_frames"):]
+        assert 'mark_store.draft_marks(scene) or marks' in body
 
 
 class TestResolverStrokes:

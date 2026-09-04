@@ -144,7 +144,20 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         # window the button was clicked in — see freeze_session.find_view3d.
         with context.temp_override(window=window, area=area, region=region):
             self._timer = wm.event_timer_add(MARK_TIMER_STEP_S, window=window)
-            wm.modal_handler_add(self)
+            if not wm.modal_handler_add(self):
+                # Registration failed: no modal will ever run to clean this
+                # session up, so undo everything invoke armed here — the
+                # timer, the overlay, the armed flag, and the still and
+                # camera of a freeze nothing will ever mark on. Leaving any
+                # of them behind wedges Scribble until the file reloads.
+                wm.event_timer_remove(self._timer)
+                self._timer = None
+                context.window_manager.mixar_mark_armed = False
+                overlay.remove()
+                self._session.release_if_unused()
+                self._session = None
+                self.report({"ERROR"}, "Could not start the mark overlay")
+                return {"CANCELLED"}
         _running = True
         overlay.tag_redraw()
         return {"RUNNING_MODAL"}
@@ -212,6 +225,18 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         if event.type == "TAB" and event.value == "PRESS":
             self._commit_pending(context)
             self._flip_reading(context)
+            return {"RUNNING_MODAL"}
+
+        # A pen-up can land OUTSIDE the frozen frame — the stylus lifted over
+        # the chat composer. Ending the open stroke matters wherever it
+        # happens: left open, every later MOUSEMOVE over the frame (a stylus
+        # hovering, button up) keeps extending it, and the commit paths —
+        # which all wait for the pen to be up — would drop the mark whole on
+        # the way out. The event is consumed: the release belongs to this
+        # stroke, not to whatever UI sits under the cursor.
+        if (event.type == "LEFTMOUSE" and event.value == "RELEASE"
+                and self._current is not None):
+            self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
         inside = _point_in_region(region, event.mouse_x, event.mouse_y)
