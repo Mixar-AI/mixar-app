@@ -154,6 +154,10 @@ def sequence_steps(params, on_progress=None):
     keep the partial results if the pump interrupts the generator.
     """
     plan = validate_steps(params.get("steps"))
+    # A step that targets a popup (click popup=true / expect_popup) means the
+    # caller wants the popup that is open; otherwise clear stale ones first.
+    if not any(k in ("click", "expect_popup") and (b or {}).get("popup") for k, b in plan[:1]):
+        yield from drv.dismiss_foreign_popups_steps()
     results = []
     failed = False
     for i, (kind, body) in enumerate(plan):
@@ -226,6 +230,7 @@ def menu_idname_ok(menu) -> bool:
 
 
 def open_menu_steps(params):
+    yield from drv.dismiss_foreign_popups_steps()
     menu = params.get("menu")
     if not menu_idname_ok(menu):
         raise UIControlError(ERR_INVALID_PARAMS,
@@ -396,6 +401,7 @@ def run_operator_steps(params):
         drv.key_for_char(ch)
     settings = _validate_settings(params.get("settings"))
 
+    yield from drv.dismiss_foreign_popups_steps()
     yield from drv.focus_area_steps("VIEW_3D")
     win, area, region = _view3d_override()
     # Menu search first (labels a user sees: "Bevel Edges"); the operator

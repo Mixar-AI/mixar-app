@@ -536,6 +536,7 @@ def _click_element_steps(win, record, shift=False):
 
 
 def click_geometry_steps(params):
+    yield from drv.dismiss_foreign_popups_steps()
     obj = _resolve_object(params.get("object"))
     element = _element(params.get("element"))
     index = _index(params.get("index"))
@@ -563,6 +564,7 @@ def click_geometry_steps(params):
 
 
 def select_geometry_steps(params):
+    yield from drv.dismiss_foreign_popups_steps()
     obj = _resolve_object(params.get("object"))
     element = _element(params.get("element"))
     raw = params.get("indices")

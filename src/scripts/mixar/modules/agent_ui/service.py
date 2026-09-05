@@ -267,7 +267,13 @@ class AgentUIService:
         except Exception:
             scene = None
         enabled_prop = _wm_get(WM_PROP_INPUT_ENABLED, False) is True
+        try:
+            popup_count, popup_labels = drv.popup_summary()
+        except Exception:
+            popup_count, popup_labels = 0, []
         return {
+            "popup_open": popup_count,
+            "popup_labels": popup_labels,
             "agent_input_enabled": enabled_prop or (self._enabled and drv.event_simulate_mode()),
             "event_simulate": drv.event_simulate_mode(),
             "input_available": self.input_available(),

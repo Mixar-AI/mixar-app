@@ -573,3 +573,28 @@ def drag(from_spec, to_spec, steps=10, shift=False, button='LEFTMOUSE'):
     return {"from_widget": public_widget(src[3]) if src[3] else None,
             "to_widget": public_widget(dst[3]) if dst[3] else None,
             "from": [src[1], src[2]], "to": [dst[1], dst[2]]}
+
+
+def popup_summary(limit=3):
+    """(count, first labels) of open popup widgets — for ui.state and hygiene."""
+    pops = find(popup=True)
+    labels = [(w.get("text") or "") for w in pops if (w.get("text") or "").strip()][:limit]
+    return len(pops), labels
+
+
+def dismiss_foreign_popups_steps(max_rounds=3):
+    """Generator: Esc until no popup is open. A stale menu, Mixar's mode-chooser
+    splash or an F9 panel left open holds keyboard focus and silently eats every
+    key routed to the viewport (a whole live run was lost that way). Actions
+    call this BEFORE their first input; callers that intend to click INSIDE a
+    popup (ui.click with popup=true, choose) must not."""
+    dismissed = 0
+    for _ in range(max_rounds):
+        count, _labels = popup_summary()
+        if not count:
+            break
+        press(main_window(), 'ESC')
+        dismissed += 1
+        yield 0.06
+        yield 0.06
+    return dismissed
