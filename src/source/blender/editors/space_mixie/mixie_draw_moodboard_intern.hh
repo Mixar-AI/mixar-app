@@ -140,9 +140,14 @@ void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
 /** Draw image/movie content fitted inside an inference-node result area. */
 void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);
 
-/** Draw the screen-size-stable play/pause affordance over a movie frame. */
-void mixie_draw_moodboard_video_overlay(
-    View2D *v2d, float center_x, float center_y, bool is_playing);
+/** Draw the play/pause affordance centred on a movie frame.
+ *
+ * Takes the tile's rect rather than a centre so it can size itself through
+ * #moodboard_video_play_radius -- screen-size-stable, but never bigger than a
+ * fraction of the tile it sits on. */
+void mixie_draw_moodboard_video_overlay(View2D *v2d,
+                                        const rctf &media_rect,
+                                        bool is_playing);
 
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
@@ -214,15 +219,16 @@ void moodboard_add_node_card_actions(uiBlock *block,
                                      const char *node_id);
 void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
 
-/* Shared by the node-UI toolbar and the selected-media label bar
+/* Shared by the node-UI toolbar and the selected-media name
  * (mixie_draw_moodboard_node_ui.cc / mixie_draw_moodboard_media_labels.cc). */
 bool moodboard_view_rect_to_region(View2D *v2d,
                                    ARegion *region,
                                    const rctf &view_rect,
                                    rcti *r_region_rect);
 void moodboard_draw_floating_background(const rctf &rect);
-void mixie_draw_moodboard_selected_media_labels(uiBlock *block,
-                                                View2D *v2d,
+/** Paint each selected standalone media's own name just above it. Plain BLF
+ * text, no widgets and no background -- it takes no uiBlock. */
+void mixie_draw_moodboard_selected_media_labels(View2D *v2d,
                                                 ARegion *region,
                                                 PointerRNA *scene_ptr,
                                                 const MoodboardGraphCache *cache);

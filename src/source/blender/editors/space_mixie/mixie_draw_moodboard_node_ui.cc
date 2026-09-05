@@ -440,9 +440,9 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   UI_block_end(C, block);
   UI_block_draw(C, block);
 
-  /* Screen-space pass. Icon previews are pixel blits and the media label bar is
-   * a fixed-size overlay on standalone media, so both stay a constant screen
-   * size — they are NOT part of the canvas block above. Restore pixel space for
+  /* Screen-space pass. Icon previews are pixel blits and a selected media's
+   * name is painted at a fixed point size, so both stay a constant screen size
+   * — they are NOT part of the canvas block above. Restore pixel space for
    * them, then put back the View2D ortho our caller expects on return. */
   UI_view2d_view_restore(C);
   for (const ObjectPreviewDraw &preview : object_previews) {
@@ -453,11 +453,8 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     UI_icon_draw_preview(
         preview.rect.xmin, preview.rect.ymin, icon_id, 1.0f, 1.0f, size);
   }
-  uiBlock *screen_block = UI_block_begin(
-      C, region, "moodboard_media_labels", blender::ui::EmbossType::Emboss);
-  mixie_draw_moodboard_selected_media_labels(screen_block, v2d, region, &scene_ptr, cache);
-  UI_block_end(C, screen_block);
-  UI_block_draw(C, screen_block);
+  /* moodboard_media_labels: painted text, so no uiBlock of its own. */
+  mixie_draw_moodboard_selected_media_labels(v2d, region, &scene_ptr, cache);
   UI_view2d_view_ortho(v2d);
 }
 

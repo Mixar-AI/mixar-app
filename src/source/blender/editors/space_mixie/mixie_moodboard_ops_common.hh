@@ -21,6 +21,7 @@
 #include "BLI_time.h"
 
 #include "BLI_path_utils.hh"
+#include "BLI_vector.hh"
 #include "BLI_string.h"
 
 #include "DNA_scene_types.h"
@@ -189,6 +190,51 @@ extern int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
                                                   float *r_width,
                                                   float *r_height);
 
+/* -------------------------------------------------------------------- */
+/** \name Drag Set
+ *
+ * What a drag carries. See mixie_moodboard_move_selection.cc -- a board has
+ * two drag operators (media and graph cards) and one selection, so both build
+ * the moved set through the same capture.
+ * \{ */
+
+enum MoodboardDragKinds {
+  MOODBOARD_DRAG_IMAGES = (1 << 0),
+  MOODBOARD_DRAG_TEXTBOXES = (1 << 1),
+  MOODBOARD_DRAG_NODES = (1 << 2), /* Action + asset cards. */
+  MOODBOARD_DRAG_ALL = MOODBOARD_DRAG_IMAGES | MOODBOARD_DRAG_TEXTBOXES |
+                       MOODBOARD_DRAG_NODES,
+};
+
+struct MoodboardDragItem {
+  /* Static string from the table in mixie_moodboard_move_selection.cc, so the
+   * entry owns no memory and the set stays trivially copyable. */
+  const char *collection;
+  int index;
+  float initial_x;
+  float initial_y;
+};
+
+struct MoodboardDragSet {
+  blender::Vector<MoodboardDragItem> items;
+};
+
+/** Record every selected item of `kinds` and the position it starts at. */
+void moodboard_drag_set_capture(PointerRNA *scene_ptr,
+                                MoodboardDragKinds kinds,
+                                MoodboardDragSet *drag);
+
+/** Place the whole set at its captured start offset by (delta_x, delta_y). */
+void moodboard_drag_set_apply(PointerRNA *scene_ptr,
+                              const MoodboardDragSet &drag,
+                              float delta_x,
+                              float delta_y);
+
+/** Put the set back where the drag found it (Esc / right-click). */
+void moodboard_drag_set_restore(PointerRNA *scene_ptr, const MoodboardDragSet &drag);
+
+/** \} */
+
 /** Context for moodboard selection operations */
 struct MoodboardSelectionContext {
   PointerRNA *scene_ptr;
@@ -244,6 +290,13 @@ struct MoodboardMoveData {
 
   /* Text box resize support */
   int initial_font_size;
+
+  /* Cards travelling with this media drag -- inference and 3D asset nodes.
+   * They live in a MoodboardDragSet rather than in arrays beside the image and
+   * text-box ones above, because the graph drag has to carry the same set the
+   * other way round and there must be one capture, not two. The media arrays
+   * stay as they are: they also feed resizing, which cards do not share. */
+  MoodboardDragSet node_drag;
 
   /* Text box multi-select support */
   int selected_textbox_count;

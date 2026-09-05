@@ -2,25 +2,51 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Align / distribute / tidy for moodboard nodes.
+"""Align / distribute / tidy for the moodboard canvas.
 
 Exercised against plain objects rather than the bpy mock: this is position
 arithmetic, and a MagicMock would accept every assignment and assert nothing.
 """
 
-from pathlib import Path
-
 import pytest
 
+from mixar.modules.moodboard.constants import MOODBOARD_IMAGE_BASE_SIZE
 from mixar.modules.moodboard.core import node_layout
-
-ROOT = Path(__file__).resolve().parents[2]
-MOODBOARD = ROOT / "src/scripts/mixar/modules/moodboard"
 
 
 class _Node:
     def __init__(self, node_id="", x=0.0, y=0.0, w=100.0, h=100.0, selected=False):
         self.node_id = node_id
+        self.position_x = x
+        self.position_y = y
+        self.width = w
+        self.height = h
+        self.selected = selected
+
+
+class _Image:
+    """Stand-in for a bpy Image: only its pixel size is ever read."""
+
+    def __init__(self, width=100, height=50):
+        self.size = (width, height)
+
+
+class _Media:
+    """A moodboard image item, which has a scale rather than a size."""
+
+    def __init__(self, node_id="", x=0.0, y=0.0, scale=1.0, image=None,
+                 selected=False, embedded_node_id=""):
+        self.node_id = node_id
+        self.position_x = x
+        self.position_y = y
+        self.scale = scale
+        self.image = image if image is not None else _Image()
+        self.selected = selected
+        self.embedded_node_id = embedded_node_id
+
+
+class _TextBox:
+    def __init__(self, x=0.0, y=0.0, w=200.0, h=80.0, selected=False):
         self.position_x = x
         self.position_y = y
         self.width = w
@@ -35,10 +61,17 @@ class _Link:
 
 
 class _Scene:
-    def __init__(self, action=(), asset=(), links=()):
+    def __init__(self, action=(), asset=(), links=(), images=(), textboxes=()):
         self.mixie_moodboard_action_nodes = list(action)
         self.mixie_moodboard_asset_nodes = list(asset)
         self.mixie_moodboard_links = list(links)
+        self.mixie_moodboard_images = list(images)
+        self.mixie_moodboard_textboxes = list(textboxes)
+
+
+def _wrapped(scene):
+    """``layout_targets`` returns wrappers; compare the items they move."""
+    return [target.item for target in node_layout.layout_targets(scene)]
 
 
 # --------------------------------------------------------------------------- #
@@ -140,6 +173,33 @@ def test_tidy_anchors_on_the_current_top_left():
     assert min(n.position_x for n in (a, b)) == pytest.approx(5000.0)
 
 
+def test_tidy_places_items_that_carry_no_graph_id():
+    """A text box has no node id at all. Keying the layout by id dropped every
+    one of them on the floor -- silently, since nothing raises."""
+    node = _Node("a", x=0.0, y=0.0)
+    text = _TextBox(x=4000.0, y=4000.0)
+    scene = _Scene(action=[node], textboxes=[text], links=[])
+    targets = node_layout.layout_targets(scene)
+
+    assert node_layout.tidy_nodes(scene, targets) == 2
+    assert text.position_x < 4000.0
+
+
+def test_tidy_wraps_a_tall_column_instead_of_building_a_tower():
+    """Loose items are all roots, so they share column zero. Without a wrap
+    a board of reference images tidies into one endless vertical strip."""
+    tall = node_layout.TIDY_MAX_COLUMN_HEIGHT
+    nodes = [_Node(f"n{i}", y=-i * 10.0, h=tall * 0.4) for i in range(4)]
+    scene = _Scene(action=nodes)
+    top_before = max(n.position_y + n.height for n in nodes)
+
+    node_layout.tidy_nodes(scene, nodes)
+    assert len({n.position_x for n in nodes}) > 1
+    # Each stack restarts at the top, so nothing runs off below the anchor.
+    for node in nodes:
+        assert node.position_y + node.height <= top_before + 1e-6
+
+
 def test_tidy_ignores_links_that_leave_the_set():
     """Only links inside the arranged set order it; an outside feeder must not
     push a node into a phantom column."""
@@ -154,12 +214,12 @@ def test_tidy_ignores_links_that_leave_the_set():
 # --------------------------------------------------------------------------- #
 
 
-def test_two_or_more_selected_nodes_scope_the_arrange():
+def test_two_or_more_selected_items_scope_the_arrange():
     a = _Node("a", selected=True)
     b = _Node("b", selected=True)
     c = _Node("c")
     scene = _Scene(action=[a, b, c])
-    assert node_layout.layout_targets(scene) == [a, b]
+    assert _wrapped(scene) == [a, b]
 
 
 def test_fewer_than_two_selected_means_the_whole_board():
@@ -167,17 +227,48 @@ def test_fewer_than_two_selected_means_the_whole_board():
     a = _Node("a", selected=True)
     b = _Node("b")
     scene = _Scene(action=[a, b])
-    assert node_layout.layout_targets(scene) == [a, b]
+    assert _wrapped(scene) == [a, b]
 
 
-def test_targets_span_action_and_asset_nodes_but_nothing_else():
-    """Reference images and text boxes are composition the user made on
-    purpose, so arranging never moves them."""
+def test_the_whole_board_means_images_and_text_boxes_too():
+    """The arrange is asked for when the CANVAS is a mess; one that skipped
+    most of what is on screen read as broken."""
+    media = _Media("m")
+    text = _TextBox()
     action = _Node("a")
     asset = _Node("b")
-    scene = _Scene(action=[action], asset=[asset])
-    assert node_layout.layout_targets(scene) == [action, asset]
+    scene = _Scene(action=[action], asset=[asset], images=[media], textboxes=[text])
+    assert set(map(id, _wrapped(scene))) == {id(media), id(text), id(action), id(asset)}
 
-    source = (MOODBOARD / "core/node_layout.py").read_text(encoding="utf-8")
-    assert "mixie_moodboard_images" not in source
-    assert "mixie_moodboard_textboxes" not in source
+
+def test_selection_across_kinds_scopes_the_arrange():
+    media = _Media("m", selected=True)
+    text = _TextBox(selected=True)
+    scene = _Scene(action=[_Node("a")], images=[media], textboxes=[text])
+    assert _wrapped(scene) == [media, text]
+
+
+def test_node_owned_media_is_never_a_target():
+    """A generated result is drawn inside its node's card, so moving it moves
+    nothing on screen -- the node is the thing to arrange."""
+    owned = _Media("m", embedded_node_id="a")
+    node = _Node("a")
+    scene = _Scene(action=[node], images=[owned])
+    assert _wrapped(scene) == [node]
+
+
+def test_media_is_sized_from_its_image_aspect_not_a_width_property():
+    """Media carries a scale, not a size: a wrapper that read a `width` that
+    is not there would arrange every image as a zero-width point."""
+    media = _Media("m", scale=0.5, image=_Image(1000, 500))
+    (target,) = node_layout.board_items(_Scene(images=[media]))
+    assert target.width == pytest.approx(MOODBOARD_IMAGE_BASE_SIZE * 0.5)
+    assert target.height == pytest.approx(target.width * 0.5)
+
+
+def test_moving_a_wrapper_moves_the_underlying_item():
+    media = _Media("m", x=10.0, y=20.0)
+    (target,) = node_layout.board_items(_Scene(images=[media]))
+    target.position_x = 300.0
+    target.position_y = 400.0
+    assert (media.position_x, media.position_y) == (300.0, 400.0)

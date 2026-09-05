@@ -54,10 +54,11 @@ def test_clicking_a_node_preview_toggles_playback_before_the_move_modal():
     assert modal_at == -1 or toggle_at < modal_at
 
     # The gesture itself lives in its own unit (500-line rule); the play radius
-    # is a fixed PIXEL size, so it must convert through the view scale.
+    # comes from the ONE shared definition the draw pass uses, so the target
+    # cannot drift off the glyph at any zoom.
     video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in video
-    assert "UI_view2d_scale_get_x" in video
+    assert "moodboard_video_play_radius(v2d, preview_bounds)" in video
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" not in video
     assert "double_click" in video
     assert "moodboard_toggle_video_playback" in video
 

@@ -9,6 +9,7 @@ standalone checks pin the registration and Python/C++ seams that make the
 feature reachable in-app.
 """
 
+import types
 from pathlib import Path
 
 
@@ -93,12 +94,12 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     # UI_block_begin captures the zoomed projection (widgets scale, and clicks
     # hit them because the same matrix is inverted for hit-testing). Pixel space
     # is restored only afterwards, for the screen-space pass — the 3D preview
-    # icon blits and the media label bar.
+    # icon blits and the selected media's name.
     assert controls.index("UI_block_begin(") < controls.index(
         "UI_view2d_view_restore(C)"
     )
     assert controls.index("UI_view2d_view_restore(C)") < controls.index(
-        "moodboard_media_labels"
+        "mixie_draw_moodboard_selected_media_labels("
     )
     assert "UI_region_handlers_add" in space
     assert "ED_KEYMAP_UI | ED_KEYMAP_GIZMO" in space
@@ -169,3 +170,83 @@ def test_queue_state_bridge_targets_originating_scene_and_node():
     assert "action_node_by_id(scene, node_id)" in bridge
     assert "JobState.SUCCESS" in bridge
     assert "JobState.FAILED" in bridge
+
+
+class _FakeNode:
+    """The handful of node fields the queue bridge mirrors onto."""
+
+    def __init__(self, state='RUNNING', edit_mode=True):
+        self.state = state
+        self.edit_mode = edit_mode
+        self.job_id = ""
+        self.error = ""
+        self.progress_text = ""
+
+
+class _FakeJob:
+    def __init__(self, state, node_id="n1"):
+        self.state = state
+        self.graph_node_id = node_id
+        self.scene_name = "Scene"
+        self.id = "local-1"
+        self.backend_job_id = "backend-1"
+        self.user_message = ""
+        self.error = ""
+
+
+class _FakeQueue:
+    def __init__(self, jobs):
+        self._jobs = jobs
+
+    def snapshot(self):
+        return self._jobs
+
+
+def _run_sync(monkeypatch, job, node):
+    """Drive sync_graph_jobs against fakes, with the bpy-touching edges stubbed."""
+    from mixar.modules.moodboard.core import node_job_bridge as bridge
+
+    monkeypatch.setattr(bridge, "action_node_by_id", lambda scene, node_id: node)
+    monkeypatch.setattr(bridge, "_redraw_mixie_areas", lambda: None)
+    monkeypatch.setattr(bridge, "ensure_pulse_timer", lambda: None)
+    monkeypatch.setattr(
+        bridge.bpy, "data", types.SimpleNamespace(scenes={"Scene": object()}), raising=False
+    )
+    bridge.sync_graph_jobs(_FakeQueue([job]))
+    return node
+
+
+def test_a_finished_generation_folds_the_node_editor_away(monkeypatch):
+    """Editing a node and pressing Generate used to leave the prompt parked over
+    the card after the run completed, hiding the very result it produced. The
+    SUCCESS transition closes the editor so the result is what comes back."""
+    from mixar.modules.common.job_queue.core.job import JobState
+
+    node = _run_sync(monkeypatch, _FakeJob(JobState.SUCCESS), _FakeNode(edit_mode=True))
+    assert node.state == 'SUCCESS'
+    assert node.edit_mode is False
+
+
+def test_a_failed_or_cancelled_node_keeps_its_editor_open(monkeypatch):
+    """Fixing the prompt is where that user is going next, so the editor stays."""
+    from mixar.modules.common.job_queue.core.job import JobState
+
+    for job_state, expected in (
+        (JobState.FAILED, 'FAILED'),
+        (JobState.CANCELLED, 'CANCELLED'),
+    ):
+        node = _run_sync(monkeypatch, _FakeJob(job_state), _FakeNode(edit_mode=True))
+        assert node.state == expected
+        assert node.edit_mode is True, job_state
+
+
+def test_reopening_the_editor_on_a_finished_node_is_not_undone(monkeypatch):
+    """The clear rides the state TRANSITION, not the state. Once a node is
+    already SUCCESS, later queue syncs must leave the user's toggle alone."""
+    from mixar.modules.common.job_queue.core.job import JobState
+
+    # Already SUCCESS, and the user has re-opened the editor by hand.
+    node = _run_sync(
+        monkeypatch, _FakeJob(JobState.SUCCESS), _FakeNode(state='SUCCESS', edit_mode=True)
+    )
+    assert node.edit_mode is True

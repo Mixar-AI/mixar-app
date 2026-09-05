@@ -16,6 +16,7 @@ from mixar.modules.common.utils.mixie_space_utils import (
     MIXIE_SPACE_AVAILABLE,
     get_selected_moodboard_items,
 )
+from mixar.modules.moodboard.core import node_layout
 
 
 def _capability_available(capability: str) -> bool:
@@ -141,6 +142,15 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             except Exception:
                 action_node = None
             if action_node is not None:
+                # A node that has already produced a result is past the point
+                # this menu was written for: Edit reopens the tile with its own
+                # prompt and Generate, so a second Generate here (and the rename
+                # entry, which stays on F2 and the card header) is chrome the
+                # card already carries.
+                finished = bool(
+                    (action_node.preview_image or action_node.preview_object)
+                    and action_node.state in {'SUCCESS', 'FAILED', 'CANCELLED'}
+                )
                 if action_node.state in {'QUEUED', 'RUNNING'}:
                     # Running work offers the one action that applies to it —
                     # "Run Node" here could only report "already running".
@@ -150,24 +160,25 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                         icon='CANCEL',
                     )
                     cancel.node_id = action_node.node_id
-                else:
+                elif finished:
                     # A finished node's way back into editing is the card's
                     # floating Edit toggle. Mirror it here rather than the old
                     # `edit_before_run` path, which reset the node's state to
                     # DRAFT — discarding its real outcome and its error — just
                     # to make the prompt reappear.
-                    finished = bool(
-                        (action_node.preview_image or action_node.preview_object)
-                        and action_node.state in {'SUCCESS', 'FAILED', 'CANCELLED'}
+                    #
+                    # "Cancel Edit", not "Done": finishing an edit is pressing
+                    # Generate in the tile. The only thing this can mean while
+                    # editing is backing out and keeping the existing result.
+                    toggle = layout.operator(
+                        "mixie.moodboard_toggle_node_edit",
+                        text="Cancel Edit" if action_node.edit_mode
+                        else "Edit Node",
+                        icon='X' if action_node.edit_mode
+                        else 'GREASEPENCIL',
                     )
-                    if finished:
-                        toggle = layout.operator(
-                            "mixie.moodboard_toggle_node_edit",
-                            text="Done Editing" if action_node.edit_mode
-                            else "Edit Node",
-                            icon='GREASEPENCIL',
-                        )
-                        toggle.node_id = action_node.node_id
+                    toggle.node_id = action_node.node_id
+                else:
                     run = layout.operator(
                         "mixie.moodboard_run_action_node",
                         text="Generate",
@@ -175,29 +186,26 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     )
                     run.node_id = action_node.node_id
                     run.edit_before_run = False
-                rename = layout.operator(
-                    "mixie.moodboard_rename_node", text="Rename Node", icon='FONT_DATA'
-                )
-                rename.node_id = action_node.node_id
+                if not finished:
+                    rename = layout.operator(
+                        "mixie.moodboard_rename_node",
+                        text="Rename Node",
+                        icon='FONT_DATA',
+                    )
+                    rename.node_id = action_node.node_id
                 delete = layout.operator(
                     "mixie.moodboard_delete_action_node", text="Delete Node", icon='TRASH'
                 )
                 delete.node_id = action_node.node_id
                 # Act on the whole node SELECTION, not just the right-clicked
-                # node, so several nodes copy or duplicate together with the
-                # links between them intact.
+                # node, so several nodes duplicate together with the links
+                # between them intact. The shortcut is spelled out in the label:
+                # Shift+D reaches this through `mixie.moodboard_duplicate`, a
+                # different operator, so Blender cannot show it here by itself.
                 layout.operator(
                     "mixie.moodboard_duplicate_nodes",
-                    text="Duplicate Nodes",
+                    text="Duplicate Nodes (Shift D)",
                     icon='DUPLICATE',
-                )
-                layout.operator(
-                    "mixie.moodboard_copy_nodes", text="Copy Nodes", icon='COPYDOWN'
-                )
-                paste_row = layout.row()
-                paste_row.operator_context = 'INVOKE_DEFAULT'
-                paste_row.operator(
-                    "mixie.moodboard_paste_nodes", text="Paste Nodes", icon='PASTEDOWN'
                 )
                 layout.separator()
 
@@ -303,14 +311,6 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         # "add stuff to the canvas" actions.
         if selected_images == 0:
             layout.operator_context = 'INVOKE_DEFAULT'
-            # Paste onto empty canvas — the only way to place copied nodes when
-            # no node is selected, since the node block above needs an active
-            # node to draw. The operator polls the node clipboard, so it is
-            # simply absent when nothing was copied.
-            if action_node is None:
-                layout.operator(
-                    "mixie.moodboard_paste_nodes", text="Paste Nodes", icon='PASTEDOWN'
-                )
             layout.operator("mixie.moodboard_add_existing_image", text="Add Existing Media", icon='TRIA_DOWN')
             layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
             layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
@@ -364,9 +364,20 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         layout.separator()
 
-        # Arrange acts on the node selection, or the whole board when nothing
-        # is selected, so it belongs at canvas level rather than on one card.
-        if scene.mixie_moodboard_action_nodes or scene.mixie_moodboard_asset_nodes:
+        # One walk of the board, shared by Arrange and Frame Selected below:
+        # `board_items` is the definition of "everything on the canvas that has
+        # a position and a size", which is also exactly the set the C++ frame
+        # operator unions (media, text boxes, action and asset nodes).
+        try:
+            board = node_layout.board_items(scene)
+        except Exception:
+            board = []
+
+        # Arrange acts on the selection, or the whole board when nothing is
+        # selected, so it belongs at canvas level rather than on one card. It
+        # moves images and text boxes as well as nodes, so gating it on nodes
+        # alone hid it from exactly the boards that most need tidying.
+        if len(board) >= 2:
             layout.menu("MIXIE_MT_moodboard_arrange", icon='SNAP_GRID')
             layout.separator()
 
@@ -374,7 +385,26 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         if selected_images == 0:
             layout.operator("mixie.moodboard_select_all", text="Select All", icon='CHECKBOX_HLT')
             layout.operator("mixie.moodboard_deselect_all", text="Deselect All", icon='CHECKBOX_DEHLT')
-            layout.separator()
+
+        # Frame Selected belongs with them, but must NOT hide when an image is
+        # selected -- that is precisely when it is wanted. Disabled rather than
+        # dropped when nothing is selected, so the shortcut beside it is still
+        # there to be read and used later.
+        #
+        # The shortcut is written into the label: the binding lives in the
+        # C-registered Mixie space keymap (`space_mixie.cc`, Numpad Period with
+        # `selected_only`), and Blender only draws a menu item's shortcut when
+        # it can match one whose properties agree -- which it does not do for a
+        # property-carrying item in a custom space keymap.
+        frame_row = layout.row()
+        frame_row.enabled = any(item.selected for item in board)
+        frame = frame_row.operator(
+            "mixie.moodboard_frame",
+            text="Frame Selected (Numpad .)",
+            icon='ZOOM_SELECTED',
+        )
+        frame.selected_only = True
+        layout.separator()
 
         # Export. Gated on the same set the operator exports, which includes a
         # selected node's generated result — that media is never `selected`

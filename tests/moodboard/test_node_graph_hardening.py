@@ -292,6 +292,69 @@ def test_repeatable_inputs_keep_their_own_type_and_name():
     assert contract["limits"]["TOTAL"] == 5
 
 
+def test_a_large_input_group_cannot_starve_a_later_one_of_sockets():
+    """Generate Video declares 30 reference images and THEN 10 reference videos.
+    The socket budget used to be handed out in declaration order, so images took
+    30 of the 32 slots and the node minted just TWO video sockets -- while
+    `limits` still advertised ten, so eight of them could never be connected and
+    nothing reported why. Sockets and limits must agree, and no group may be
+    starved by an earlier one."""
+    from mixar.modules.moodboard.core.node_schema import build_input_contract
+
+    # The live catalog contract for video_gen / seedance-2-5.
+    service = {
+        "input_spec": {
+            "max_materials": 50,
+            "inputs": [
+                {"kind": "prompt", "name": "prompt", "required": True},
+                {
+                    "name": "reference_images",
+                    "kind": "image",
+                    "multiple": True,
+                    "max_count": 30,
+                },
+                {
+                    "name": "reference_videos",
+                    "kind": "video",
+                    "multiple": True,
+                    "max_count": 10,
+                },
+            ],
+        }
+    }
+    contract = build_input_contract(service, {})
+    per_type = {}
+    for socket in contract["sockets"]:
+        accepted = socket["accepted_types"][0]
+        per_type[accepted] = per_type.get(accepted, 0) + 1
+
+    assert per_type["VIDEO"] == 10, per_type
+    assert per_type["IMAGE"] == 30, per_type
+
+    # A limit the sockets cannot satisfy is the failure this regressed on.
+    assert contract["limits"]["VIDEO"] == per_type["VIDEO"]
+    assert contract["limits"]["IMAGE"] == per_type["IMAGE"]
+
+
+def test_socket_budget_is_shared_rather_than_drained_in_order():
+    """The budget allocator itself: an over-subscribed contract degrades by
+    sharing what is left, never by giving the first group everything."""
+    from mixar.modules.moodboard.core.node_schema import (
+        _MAX_INPUT_SOCKETS,
+        _allocate_socket_budget,
+    )
+
+    # Fits: everyone gets what they asked for.
+    assert _allocate_socket_budget([30, 10], _MAX_INPUT_SOCKETS) == [30, 10]
+    # Over-subscribed: the budget is spent in full and the small group survives.
+    granted = _allocate_socket_budget([100, 4], 10)
+    assert sum(granted) == 10
+    assert granted[1] == 4, granted
+    # Never hands out more than a group wants, or more than the budget.
+    assert _allocate_socket_budget([2, 2], 50) == [2, 2]
+    assert _allocate_socket_budget([], 10) == []
+
+
 def test_node_service_and_model_resolve_from_saved_slugs():
     """A dynamic EnumProperty is stored as an index into the items list, so it
     drifts when the catalog reorders or has not loaded yet."""

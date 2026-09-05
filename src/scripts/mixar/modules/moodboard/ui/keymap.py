@@ -110,30 +110,11 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Node copy/paste share Ctrl/Cmd+C and +V with the image ones below and
-        # resolve by poll(): Blender skips a keymap item whose operator cannot
-        # poll and tries the next matching one, and items are walked in the
-        # order they were added -- so these must be registered FIRST to get
-        # first refusal. With an inference node selected the node operator
-        # runs; otherwise it declines and the image operator handles the key.
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_copy_nodes',
-            type='C',
-            value='PRESS',
-            ctrl=modifier.get('ctrl', False),
-            oskey=modifier.get('oskey', False)
-        )
-        addon_keymaps.append((km, kmi))
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_paste_nodes',
-            type='V',
-            value='PRESS',
-            ctrl=modifier.get('ctrl', False),
-            oskey=modifier.get('oskey', False)
-        )
-        addon_keymaps.append((km, kmi))
-
-        # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
+        # Cmd/Ctrl+C and +V have ONE meaning on this canvas: they copy and
+        # paste MEDIA. With an inference node selected the copy resolves
+        # through the node to the image or video it generated, so a result can
+        # be pasted back as an ordinary board item -- or into another
+        # application. Nodes themselves duplicate with Shift+D.
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
             type='C',

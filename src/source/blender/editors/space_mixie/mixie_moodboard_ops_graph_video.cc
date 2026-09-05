@@ -36,10 +36,10 @@ bool moodboard_graph_node_video_click(bContext *C,
   }
   rctf preview_bounds{};
   moodboard_graph_node_preview_bounds(node_rect, &preview_bounds);
-  /* The play affordance is a fixed PIXEL radius, so it converts through the
-   * view scale rather than being compared against canvas units. */
-  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-  const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  /* Radius through the shared definition the draw pass uses: a fixed PIXEL
+   * size converted into canvas units, capped against the tile so the target
+   * follows the glyph when zooming shrinks it. */
+  const float play_radius = moodboard_video_play_radius(v2d, preview_bounds);
   const float delta_x = mouse_x - BLI_rctf_cent_x(&preview_bounds);
   const float delta_y = mouse_y - BLI_rctf_cent_y(&preview_bounds);
   const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=

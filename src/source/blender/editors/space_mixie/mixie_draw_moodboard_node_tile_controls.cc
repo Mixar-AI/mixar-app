@@ -97,12 +97,18 @@ void moodboard_add_node_card_actions(uiBlock *block,
   /* Edit toggles the settings panel and the prompt back in and out. It replaced
    * an "Edit & Run Again" row buried in the panel -- only reachable once the
    * panel was already open, and it reset the node's state to DRAFT just to make
-   * the prompt reappear. */
+   * the prompt reappear.
+   *
+   * While editing it is CANCEL, not "Done": finishing an edit means pressing
+   * Generate, which the open tile already offers. The only thing this button
+   * can mean there is backing out and keeping the existing result -- hence the
+   * cross rather than a checkmark, which would read as a second, competing
+   * confirm beside Generate. */
   uiBut *toggle = uiDefIconButO(block,
                                 ButType::But,
                                 "MIXIE_OT_moodboard_toggle_node_edit",
                                 blender::wm::OpCallContext::ExecDefault,
-                                edit_mode ? ICON_CHECKMARK : ICON_GREASEPENCIL,
+                                edit_mode ? ICON_X : ICON_GREASEPENCIL,
                                 x,
                                 row_y,
                                 width,
@@ -112,8 +118,8 @@ void moodboard_add_node_card_actions(uiBlock *block,
   moodboard_set_node_tooltip(
       toggle,
       edit_mode ?
-          "Done editing\n\nHide this node's settings and prompt, and show "
-          "its result." :
+          "Cancel edit\n\nStop editing without generating, and show this "
+          "node's result again. Any settings changed stay on the node." :
           "Edit\n\nShow this node's settings and prompt so it can be "
           "adjusted and run again.");
 }

@@ -26,6 +26,10 @@ struct GraphMoveData {
   float initial_mouse_y;
   float initial_x;
   float initial_y;
+  /* Every OTHER selected item this drag carries -- cards, pictures and text
+   * boxes alike. The grabbed card keeps its own initial_x/y above because the
+   * snap anchors on it. */
+  MoodboardDragSet drag;
   MoodboardGraphResizeState resize_state;
   int initial_region_x;
   int initial_region_y;
@@ -245,7 +249,22 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   }
 
   PointerRNA node;
-  moodboard_graph_select_node(&scene_ptr, kind, index, &node);
+  if (!graph_node_pointer(&scene_ptr, kind, index, &node)) {
+    return OPERATOR_CANCELLED;
+  }
+  /* A plain press on a card that is ALREADY selected keeps the selection and
+   * only makes this card active -- the same rule media follows ("if already
+   * selected, do nothing, allow drag"). Reselecting unconditionally wiped the
+   * rest of the selection before the drag could start, which is why a picture
+   * and a card selected together came apart the moment the card was grabbed. */
+  if (RNA_boolean_get(&node, "selected")) {
+    char active_id[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(&node, "node_id", active_id, sizeof(active_id));
+    RNA_string_set(&scene_ptr, "mixie_moodboard_active_node_id", active_id);
+  }
+  else {
+    moodboard_graph_select_node(&scene_ptr, kind, index, &node);
+  }
   ED_area_tag_redraw(CTX_wm_area(C));
 
   char node_id[MIXIE_GRAPH_ID_BUF];
@@ -300,6 +319,10 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
   data->initial_region_y = event->mval[1];
   data->initial_x = RNA_float_get(&node, "position_x");
   data->initial_y = RNA_float_get(&node, "position_y");
+  /* Everything else the selection holds travels with this card -- other cards,
+   * pictures and text boxes. Captured now, while the positions are still the
+   * ones the user sees. */
+  moodboard_drag_set_capture(&scene_ptr, MOODBOARD_DRAG_ALL, &data->drag);
   op->customdata = data;
   WM_event_add_modal_handler(C, op);
   return OPERATOR_RUNNING_MODAL;
@@ -395,13 +418,22 @@ static wmOperatorStatus graph_select_modal(bContext *C,
     float new_x = data->initial_x + mouse_x - data->initial_mouse_x;
     float new_y = data->initial_y + mouse_y - data->initial_mouse_y;
     if (event->modifier & KM_CTRL) {
-      /* Snap the card's own corner to the canvas grid, not the cursor: the
-       * user is placing the CARD, and snapping the pointer would leave the
-       * card off-grid by wherever they happened to grab it. */
+      /* Snap the GRABBED card's own corner to the canvas grid, not the cursor:
+       * the user is placing the CARD, and snapping the pointer would leave it
+       * off-grid by wherever they happened to grab it. Everything else in the
+       * selection then moves by the same delta, so the arrangement keeps its
+       * shape and only the anchor lands on the grid -- the media drag's rule. */
       const float grid = MOODBOARD_SNAP_GRID;
       new_x = std::round(new_x / grid) * grid;
       new_y = std::round(new_y / grid) * grid;
     }
+    /* The rest of the selection moves by the delta the grabbed card just took,
+     * so the arrangement keeps its shape. The set contains the grabbed card too
+     * and would place it identically; it is still written explicitly below, so
+     * that a card missing from the capture is at worst a selection bug and
+     * never a card that has stopped following the mouse. */
+    moodboard_drag_set_apply(
+        &scene_ptr, data->drag, new_x - data->initial_x, new_y - data->initial_y);
     RNA_float_set(&node, "position_x", new_x);
     RNA_float_set(&node, "position_y", new_y);
     ED_area_tag_redraw(CTX_wm_area(C));
@@ -413,6 +445,7 @@ static wmOperatorStatus graph_select_modal(bContext *C,
     return OPERATOR_FINISHED;
   }
   if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE)) {
+    moodboard_drag_set_restore(&scene_ptr, data->drag);
     RNA_float_set(&node, "position_x", data->initial_x);
     RNA_float_set(&node, "position_y", data->initial_y);
     MEM_delete(data);

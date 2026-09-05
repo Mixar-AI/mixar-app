@@ -353,10 +353,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
                * no way to start it. Same affordance as an uploaded movie. */
               bool is_playing = false;
               moodboard_video_playback_frame(tile_image, &is_playing);
-              mixie_draw_moodboard_video_overlay(v2d,
-                                                 BLI_rctf_cent_x(&preview_bounds),
-                                                 BLI_rctf_cent_y(&preview_bounds),
-                                                 is_playing);
+              mixie_draw_moodboard_video_overlay(v2d, preview_bounds, is_playing);
             }
           }
         }

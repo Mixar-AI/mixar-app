@@ -143,6 +143,20 @@ def sync_graph_jobs(queue) -> None:
         state = 'RUNNING' if job.state in RUNNING_STATES else _STATE_MAP.get(job.state)
         if state and node.state != state:
             node.state = state
+            # A finished generation puts the RESULT back on the card, so the
+            # edit surface the user opened to launch it has done its job and is
+            # folded away -- otherwise the prompt stays parked over the picture
+            # that was just generated, hiding the thing the user was waiting for.
+            #
+            # SUCCESS only. A FAILED or CANCELLED node keeps its editor open,
+            # because adjusting the prompt is exactly where that user is headed
+            # next, and its error is drawn over the card either way.
+            #
+            # This is the state TRANSITION, so it fires once: re-opening the
+            # editor on a finished node stays open, the toggle is still the
+            # user's from here on.
+            if state == 'SUCCESS':
+                node.edit_mode = False
             changed = True
         job_id = str(getattr(job, "backend_job_id", "") or job.id)
         if node.job_id != job_id:

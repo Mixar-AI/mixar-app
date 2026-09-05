@@ -44,6 +44,11 @@ struct wmWindowManager;
 #define MOODBOARD_IMAGE_SCALE_DELTA 0.1f
 #define MOODBOARD_MAX_SELECTED_IMAGES 256
 #define MOODBOARD_VIDEO_PLAY_RADIUS_PX 28.0f
+/* The play affordance is a fixed SCREEN size -- but only until it starts to
+ * crowd the frame behind it. Past this fraction of the tile's shorter side it
+ * shrinks WITH the tile, so zooming out can never leave a play button wider
+ * than the video it sits on. */
+#define MOODBOARD_VIDEO_PLAY_MAX_FRACTION 0.22f
 
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
@@ -328,6 +333,17 @@ bool moodboard_toggle_video_playback(bContext *C,
 
 /** Current inline playback frame and state for a movie image. */
 int moodboard_video_playback_frame(Image *image, bool *r_is_playing);
+
+/**
+ * Canvas-unit radius of a movie tile's centred play/pause affordance.
+ *
+ * The button is a fixed pixel size, so it converts through the view scale, and
+ * is then capped at #MOODBOARD_VIDEO_PLAY_MAX_FRACTION of the tile's shorter
+ * side. Draw and BOTH hit-tests (standalone tile, node preview) share this one
+ * definition -- otherwise the pixels the user aims at and the region that
+ * responds drift apart at some zoom.
+ */
+float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);
 
 /** Stop inline movie playback and its redraw timer. */
 void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm);

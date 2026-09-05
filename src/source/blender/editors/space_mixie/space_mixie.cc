@@ -387,16 +387,17 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
 
   /* Zoom selected images - Pinch Gesture */
-  /* Home frames the board, Period the selection -- the pair every Blender
-   * editor uses. MIXIE_OT_moodboard_ensure_visible cannot serve here: it only
-   * grows the visible rect and so never zooms in. */
+  /* Home frames the board, Numpad-Period the selection -- the pair every
+   * Blender editor uses (View Selected is Numpad `.`, never the main-row `.`).
+   * MIXIE_OT_moodboard_ensure_visible cannot serve here: it only grows the
+   * visible rect and so never zooms in. */
   KeyMapItem_Params frame_params{};
   frame_params.type = EVT_HOMEKEY;
   frame_params.value = KM_PRESS;
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_frame", &frame_params);
 
   KeyMapItem_Params frame_sel_params{};
-  frame_sel_params.type = EVT_PERIODKEY;
+  frame_sel_params.type = EVT_PADPERIOD;
   frame_sel_params.value = KM_PRESS;
   wmKeyMapItem *kmi_frame_sel = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_frame", &frame_sel_params);

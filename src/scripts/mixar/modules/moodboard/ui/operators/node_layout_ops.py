@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Align, distribute and tidy operators for moodboard nodes.
+"""Align, distribute and tidy operators for the moodboard canvas.
 
 Thin wrappers: the arrangement itself lives in ``core.node_layout``, which is
-``bpy``-free position math and is unit-tested directly.
+position math over plain objects and is unit-tested directly.
 """
 
 import bpy
@@ -21,18 +21,22 @@ def _tag_redraw(context):
 
 
 def _poll_nodes(context) -> bool:
+    """Arranging needs two things to arrange, whatever kind they are."""
     scene = getattr(context, "scene", None)
     if scene is None:
         return False
-    return bool(node_layout.layout_targets(scene))
+    return len(node_layout.layout_targets(scene)) >= 2
 
 
 class MIXIE_OT_moodboard_align_nodes(Operator):
-    """Line the selected nodes up on one edge"""
+    """Line the selected items up on one edge"""
 
     bl_idname = "mixie.moodboard_align_nodes"
-    bl_label = "Align Nodes"
-    bl_description = "Line the selected nodes up on one edge"
+    bl_label = "Align Items"
+    bl_description = (
+        "Line up the selected items on one edge. Acts on the selection when "
+        "several items are selected, otherwise on everything on the board"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     # SKIP_SAVE: REGISTER operators refill unset properties from the previous
@@ -60,19 +64,23 @@ class MIXIE_OT_moodboard_align_nodes(Operator):
             node_layout.layout_targets(context.scene), self.edge
         )
         if not moved:
-            self.report({'WARNING'}, "Select at least two nodes to align")
+            self.report({'WARNING'}, "Nothing to align: the board needs two items")
             return {'CANCELLED'}
         _tag_redraw(context)
-        self.report({'INFO'}, f"Aligned {moved} node(s)")
+        self.report({'INFO'}, f"Aligned {moved} item(s)")
         return {'FINISHED'}
 
 
 class MIXIE_OT_moodboard_distribute_nodes(Operator):
-    """Even out the gaps between the selected nodes"""
+    """Even out the gaps between the selected items"""
 
     bl_idname = "mixie.moodboard_distribute_nodes"
-    bl_label = "Distribute Nodes"
-    bl_description = "Space the selected nodes evenly along one axis"
+    bl_label = "Distribute Items"
+    bl_description = (
+        "Space the selected items evenly along one axis. Acts on the "
+        "selection when several items are selected, otherwise on everything "
+        "on the board"
+    )
     bl_options = {'REGISTER', 'UNDO'}
 
     axis: bpy.props.EnumProperty(
@@ -93,22 +101,24 @@ class MIXIE_OT_moodboard_distribute_nodes(Operator):
             node_layout.layout_targets(context.scene), self.axis
         )
         if not moved:
-            self.report({'WARNING'}, "Select at least three nodes to distribute")
+            self.report(
+                {'WARNING'}, "Nothing to distribute: the board needs three items"
+            )
             return {'CANCELLED'}
         _tag_redraw(context)
-        self.report({'INFO'}, f"Distributed {moved} node(s)")
+        self.report({'INFO'}, f"Distributed {moved} item(s)")
         return {'FINISHED'}
 
 
 class MIXIE_OT_moodboard_tidy_nodes(Operator):
-    """Lay the nodes out in the order the graph flows"""
+    """Lay the board out in the order the graph flows"""
 
     bl_idname = "mixie.moodboard_tidy_nodes"
-    bl_label = "Tidy Nodes"
+    bl_label = "Tidy"
     bl_description = (
-        "Arrange nodes into columns following their connections. Acts on the "
-        "selection when several nodes are selected, otherwise the whole board. "
-        "Reference images and text boxes are left where they are"
+        "Arrange the board into columns following the connections between "
+        "nodes. Acts on the selection when several items are selected, "
+        "otherwise on everything on the board"
     )
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -123,7 +133,7 @@ class MIXIE_OT_moodboard_tidy_nodes(Operator):
             self.report({'WARNING'}, "Nothing to tidy")
             return {'CANCELLED'}
         _tag_redraw(context)
-        self.report({'INFO'}, f"Tidied {moved} node(s)")
+        self.report({'INFO'}, f"Tidied {moved} item(s)")
         return {'FINISHED'}
 
 

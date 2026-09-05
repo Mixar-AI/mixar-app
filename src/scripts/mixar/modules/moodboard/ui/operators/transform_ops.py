@@ -272,9 +272,9 @@ class MIXIE_OT_moodboard_duplicate(Operator):
         # only). Shift+D therefore acts on whatever is actually selected.
         node_count = 0
         try:
-            from mixar.modules.moodboard.core import node_clipboard
+            from mixar.modules.moodboard.core import node_duplicate
 
-            node_count = len(node_clipboard.duplicate_selected_nodes(scene))
+            node_count = len(node_duplicate.duplicate_selected_nodes(scene))
         except Exception:
             node_count = 0
 

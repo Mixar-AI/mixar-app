@@ -91,7 +91,12 @@ _ALIGN_ITEMS = (
 
 
 class MIXIE_MT_moodboard_arrange(Menu):
-    """Align, distribute and tidy the nodes on the canvas."""
+    """Align, distribute and tidy the canvas.
+
+    Every entry acts on the selection when several items are selected, and on
+    the whole board otherwise: images and text boxes included, not just the
+    inference nodes.
+    """
 
     bl_label = "Arrange"
     bl_idname = "MIXIE_MT_moodboard_arrange"

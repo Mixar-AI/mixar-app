@@ -151,7 +151,7 @@ class MIXIE_OT_moodboard_toggle_node_edit(Operator):
     bl_label = "Edit Node"
     bl_description = (
         "Show this node's settings and prompt so it can be adjusted and run "
-        "again; click again to go back to the result"
+        "again; click again to cancel editing and go back to the result"
     )
     bl_options = {'REGISTER', 'UNDO'}
 

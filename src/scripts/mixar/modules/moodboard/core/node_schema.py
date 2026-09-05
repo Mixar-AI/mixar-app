@@ -52,7 +52,12 @@ _CONNECTABLE_TYPES = {
     "mesh": "MESH",
     "model_3d": "MESH",
 }
-_MAX_INPUT_SOCKETS = 32
+# Client-side ceiling on how many socket records a node mints. Not a C++ limit
+# (the canvas walks the `input_sockets` RNA collection dynamically) and not a
+# visual one (`visible_input_socket_ids` reveals only the connected slots plus
+# one next empty per group). It only has to be roomy enough for the real
+# catalog contracts: Generate Video alone declares 30 images + 10 videos.
+_MAX_INPUT_SOCKETS = 64
 _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
@@ -118,6 +123,30 @@ def _positive_int(value) -> int | None:
     return result if result > 0 else None
 
 
+def _allocate_socket_budget(wanted: list[int], budget: int) -> list[int]:
+    """Share ``budget`` slots across groups round-robin, never starving one.
+
+    Handing the budget out in declaration order lets a large first group take
+    everything and leave later ones with a couple of sockets (or none), which
+    silently caps an input far below what the backend accepts.
+    """
+    granted = [0] * len(wanted)
+    remaining = budget
+    while remaining > 0:
+        progressed = False
+        for index, want in enumerate(wanted):
+            if remaining <= 0:
+                break
+            if granted[index] >= want:
+                continue
+            granted[index] += 1
+            remaining -= 1
+            progressed = True
+        if not progressed:
+            break
+    return granted
+
+
 def build_input_contract(service: dict, model: dict) -> dict:
     """Normalize backend input metadata into bounded, progressive sockets.
 
@@ -152,7 +181,6 @@ def build_input_contract(service: dict, model: dict) -> dict:
         required = bool(raw.get("required", False))
         if not raw.get("multiple"):
             single_inputs.append((name, accepted, required))
-            limits[accepted] = limits.get(accepted, 0) + 1
             continue
         maximum = _positive_int(raw.get("max_count"))
         if maximum is None and accepted == "IMAGE":
@@ -161,7 +189,6 @@ def build_input_contract(service: dict, model: dict) -> dict:
             continue
         maximum = min(maximum, _MAX_INPUT_SOCKETS)
         multiple_inputs.append((name, accepted, required, maximum))
-        limits[accepted] = limits.get(accepted, 0) + maximum
 
     total_limit = _positive_int(raw_spec.get("max_materials"))
     sockets = []
@@ -182,9 +209,18 @@ def build_input_contract(service: dict, model: dict) -> dict:
     # some images AND some videos, each with its own ceiling. The budget is a
     # limit, not a description of the inputs, so it is expressed as one below
     # instead of flattening them.
-    for name, accepted, required, maximum in multiple_inputs:
-        remaining = _MAX_INPUT_SOCKETS - len(sockets)
-        for index in range(min(maximum, remaining)):
+    # The budget is SHARED between the groups, not handed to them in order.
+    # First-come-first-served let one large group starve every later one:
+    # Generate Video declares 30 reference images and then 10 reference videos,
+    # so images took 30 of the 32 slots and the node minted just TWO video
+    # sockets -- while `limits` still advertised ten, leaving eight videos the
+    # user could never connect.
+    granted = _allocate_socket_budget(
+        [maximum for _, _, _, maximum in multiple_inputs],
+        max(_MAX_INPUT_SOCKETS - len(sockets), 0),
+    )
+    for (name, accepted, required, maximum), allowed in zip(multiple_inputs, granted):
+        for index in range(allowed):
             sockets.append({
                 "id": f"{name}:{index}",
                 "label": _clamp(
@@ -201,6 +237,14 @@ def build_input_contract(service: dict, model: dict) -> dict:
     # accumulated above. `connect_nodes` and `reconcile_node_links` enforce both
     # -- so a model that takes "4 images, 2 videos, 5 materials total" refuses
     # the 5th image, the 3rd video, and the 6th of any mix.
+    # Per-type ceilings are counted off the sockets that EXIST. Deriving them
+    # from the catalog maximum instead is what hid the starvation above: the
+    # limit said ten videos were welcome and there were only two sockets to put
+    # them in, so the node failed silently rather than reporting a full input.
+    for socket in sockets:
+        accepted = socket["accepted_types"][0]
+        limits[accepted] = limits.get(accepted, 0) + 1
+
     if total_limit and multiple_inputs:
         limits["TOTAL"] = min(total_limit, _MAX_INPUT_SOCKETS)
 

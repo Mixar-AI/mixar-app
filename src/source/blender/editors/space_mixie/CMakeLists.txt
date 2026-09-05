@@ -32,6 +32,7 @@ set(SRC
   mixie_draw_moodboard_tools.cc
   mixie_draw_sam3d.cc
   mixie_header.cc
+  mixie_moodboard_move_selection.cc
   mixie_moodboard_ops_box_select.cc
   mixie_moodboard_ops_crop.cc
   mixie_moodboard_ops_drop.cc
