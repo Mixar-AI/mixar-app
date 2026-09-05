@@ -381,18 +381,43 @@ def run_operator_steps(params):
             bpy.ops.wm.search_operator("INVOKE_DEFAULT")
     except Exception as exc:
         raise UIControlError(ERR_INTERNAL, f"operator search could not be opened: {exc}")
-    yield _TICK
-    yield _TICK
-    if not drv.find(popup=True, but_type="SearchMenu"):
+    # The search box takes several redraws to appear AND take keyboard focus;
+    # characters typed before that are dropped and Enter then runs nothing
+    # (a live run "ran" the previous operator's redo panel that way). Wait for
+    # the box, give it time to focus, type, then wait until the box echoes the
+    # typed label before pressing Enter.
+    for _ in range(20):
+        if drv.find(popup=True, but_type="SearchMenu"):
+            break
+        yield _TICK
+    else:
         raise UIControlError(ERR_INTERNAL, "search popup did not open")
+    for _ in range(8):
+        yield _TICK
     # Modals that were ALREADY running (Mixar keeps e.g. MIXIE_OT_train_asset_model
     # alive as a background modal) must not be mistaken for the operator's own.
     modal_baseline = set(_modal_operators())
     drv.type_text(win, label)
-    for _ in range(3):
+    landed = False
+    for _ in range(20):
+        yield _TICK
+        boxes = drv.find(popup=True, but_type="SearchMenu")
+        if boxes and label.lower() in (boxes[0].get("text") or "").lower():
+            landed = True
+            break
+    if not landed:
+        # Retype once from a clean box, then proceed regardless (the mismatch
+        # check below still guards the outcome).
+        drv.press(win, "A", ctrl=True)
+        drv.press(win, "BACK_SPACE")
+        yield _TICK
+        drv.type_text(win, label)
+        for _ in range(8):
+            yield _TICK
+    for _ in range(4):
         yield _TICK
     drv.press(win, "RET")
-    for _ in range(4):
+    for _ in range(6):
         yield _TICK
     if drv.find(popup=True, but_type="SearchMenu"):
         # Enter did not run anything: nothing matched the label.
