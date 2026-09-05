@@ -11,8 +11,8 @@ a whole keystroke phrase (``S, Z, 0.1, RET``) instead of four.
 ``ui.open_menu`` opens a Blender menu by idname as a popup at the pointer
 (``wm.call_menu`` under the largest VIEW_3D WINDOW override), because Mixar's
 default viewport header carries no Blender menus and F3 is bound to
-onboarding. ``ui.run_operator`` invokes ``wm.search_operator``, types the
-label, runs the top match with Enter, then presses F9 and reads/sets the
+onboarding. ``ui.run_operator`` invokes ``wm.search_menu`` (falling back to
+``wm.search_operator``), types the label, runs the top match with Enter, then presses F9 and reads/sets the
 redo ("Adjust Last Operation") popup. Search results are NOT exported
 widgets (only the SearchMenu box is), so the F9 label check is what proves
 the intended operator ran.
@@ -366,6 +366,28 @@ def _apply_setting(setting):
     return {"prop": prop, "text_after": text_after, "type": wtype}, None
 
 
+
+def _op_history():
+    """(count, last idname, last name) of the window-manager operator history."""
+    try:
+        ops = bpy.context.window_manager.operators
+        n = len(ops)
+        last = ops[-1] if n else None
+        return n, (getattr(last, "bl_idname", "") if last else ""), (getattr(last, "name", "") if last else "")
+    except Exception:
+        return 0, "", ""
+
+
+def _label_matches(found, label, op_name=""):
+    """Lenient title check: menu labels are longer than operator names
+    ('Bevel Edges' -> redo title 'Bevel'); either containment or the operator
+    history name counts."""
+    f, l, o = _norm_label(found), _norm_label(label), _norm_label(op_name)
+    if not f and not o:
+        return False
+    return bool(f) and (f == l or f in l or l in f) or bool(o) and (o == l or o in l or l in o)
+
+
 def run_operator_steps(params):
     label = params.get("label")
     if not isinstance(label, str) or not label.strip():
@@ -376,9 +398,14 @@ def run_operator_steps(params):
 
     yield from drv.focus_area_steps("VIEW_3D")
     win, area, region = _view3d_override()
+    # Menu search first (labels a user sees: "Bevel Edges"); the operator
+    # search ("Bevel") is the fallback when the menu search ran nothing.
+    search_ops = ["search_menu", "search_operator"]
+    history_before = _op_history()
+    search_op = search_ops[0]
     try:
         with bpy.context.temp_override(window=win, area=area, region=region):
-            bpy.ops.wm.search_operator("INVOKE_DEFAULT")
+            getattr(bpy.ops.wm, search_op)("INVOKE_DEFAULT")
     except Exception as exc:
         raise UIControlError(ERR_INTERNAL, f"operator search could not be opened: {exc}")
     # The search box takes several redraws to appear AND take keyboard focus;
@@ -430,6 +457,30 @@ def run_operator_steps(params):
     # through the redo popup like a user would.
     modal_confirmed = False
     modal_before = [m for m in _modal_operators() if m not in modal_baseline]
+    if not modal_before and _op_history() == history_before and search_op == "search_menu":
+        # "No results found" + Enter closes the menu search silently. Retry
+        # once with the operator-name search ("Bevel Edges" -> "Bevel").
+        search_op = "search_operator"
+        try:
+            with bpy.context.temp_override(window=win, area=area, region=region):
+                bpy.ops.wm.search_operator("INVOKE_DEFAULT")
+        except Exception as exc:
+            raise UIControlError(ERR_INTERNAL, f"operator search could not be opened: {exc}")
+        for _ in range(10):
+            yield _TICK
+        drv.type_text(win, label.split()[0])
+        for _ in range(10):
+            yield _TICK
+        drv.press(win, "RET")
+        for _ in range(6):
+            yield _TICK
+        if drv.find(popup=True, but_type="SearchMenu"):
+            drv.press(win, "ESC")
+            yield _TICK
+            raise UIControlError(ERR_NO_MATCH, f"no operator matches {label!r}")
+        modal_before = [m for m in _modal_operators() if m not in modal_baseline]
+        if not modal_before and _op_history() == history_before:
+            raise UIControlError(ERR_NO_MATCH, f"no operator ran for {label!r}")
     if modal_before:
         drv.press(win, "RET")
         for _ in range(3):
@@ -445,7 +496,8 @@ def run_operator_steps(params):
                 "redo_panel": False, "popup_closed": True,
                 "modal_confirmed": modal_confirmed, "modal": modal_before}
     found = next(((w.get("text") or "") for w in popup if w.get("type") == "Label"), "")
-    if _norm_label(found) != _norm_label(label):
+    _n, _idname, op_name = _op_history()
+    if not _label_matches(found, label, op_name):
         drv.press(win, "ESC")
         yield _TICK
         yield from drv.focus_area_steps("VIEW_3D")
