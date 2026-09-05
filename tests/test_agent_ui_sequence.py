@@ -246,7 +246,7 @@ def test_open_menu_calls_menu_under_viewport_override_and_lists_items(monkeypatc
 def _search_rig(monkeypatch, rig, redo_label, modal=False, redo_fields=()):
     """Fake wm.search_operator: typing + RET runs an operator whose F9 popup
     shows ``redo_label`` and ``redo_fields``."""
-    state = {"search_open": False, "popup": [], "modal": [], "undo": 0}
+    state = {"search_open": False, "popup": [], "modal": [], "undo": 0, "ran": False, "ops": []}
 
     def _open_search():
         state["search_open"] = True
@@ -260,9 +260,14 @@ def _search_rig(monkeypatch, rig, redo_label, modal=False, redo_fields=()):
 
         def __exit__(self, *a):
             return False
-    monkeypatch.setattr(S.bpy, "context", types.SimpleNamespace(temp_override=_Override))
+    # The real app records every registered operator in wm.operators; the code
+    # uses that history (plus modals and the redo title) to know something ran.
+    monkeypatch.setattr(S.bpy, "context", types.SimpleNamespace(
+        temp_override=_Override,
+        window_manager=types.SimpleNamespace(operators=state["ops"])))
     monkeypatch.setattr(S.bpy, "ops", types.SimpleNamespace(
-        wm=types.SimpleNamespace(search_operator=lambda *a, **k: _open_search())))
+        wm=types.SimpleNamespace(search_operator=lambda *a, **k: _open_search(),
+                                 search_menu=lambda *a, **k: _open_search())))
 
     def fake_find(widgets=None, **q):
         hits = []
@@ -282,12 +287,14 @@ def _search_rig(monkeypatch, rig, redo_label, modal=False, redo_fields=()):
         rig.win.events.append({"type": key, "ctrl": ctrl})
         if key == "RET" and state["search_open"]:
             state["search_open"] = False
+            state["ran"] = True
+            state["ops"].append(types.SimpleNamespace(bl_idname="MESH_OT_fake", name=redo_label or "Fake"))
             if modal:
                 state["modal"] = ["MESH_OT_inset"]
         elif key == "RET" and state["modal"]:
             state["modal"] = []
         elif key == "F9" and not state["search_open"]:
-            if not redo_label:  # operator without a redo panel: F9 opens nothing
+            if not redo_label or not state["ran"]:  # no redo panel / nothing ran yet
                 state["popup"] = []
                 return
             fields = [widget(rig.win, rig.area, rig.region, redo_label, type="Label", popup=True)]

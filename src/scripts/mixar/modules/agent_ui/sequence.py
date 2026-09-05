@@ -425,23 +425,9 @@ def run_operator_steps(params):
     # alive as a background modal) must not be mistaken for the operator's own.
     modal_baseline = set(_modal_operators())
     drv.type_text(win, label)
-    landed = False
-    for _ in range(20):
-        yield _TICK
-        boxes = drv.find(popup=True, but_type="SearchMenu")
-        if boxes and label.lower() in (boxes[0].get("text") or "").lower():
-            landed = True
-            break
-    if not landed:
-        # Retype once from a clean box, then proceed regardless (the mismatch
-        # check below still guards the outcome).
-        drv.press(win, "A", ctrl=True)
-        drv.press(win, "BACK_SPACE")
-        yield _TICK
-        drv.type_text(win, label)
-        for _ in range(8):
-            yield _TICK
-    for _ in range(4):
+    # The search box's text is NOT exported by the inspector, so the only
+    # safe pacing is time: let the results list rebuild before Enter.
+    for _ in range(14):
         yield _TICK
     drv.press(win, "RET")
     for _ in range(6):
@@ -457,7 +443,11 @@ def run_operator_steps(params):
     # through the redo popup like a user would.
     modal_confirmed = False
     modal_before = [m for m in _modal_operators() if m not in modal_baseline]
-    if not modal_before and _op_history() == history_before and search_op == "search_menu":
+    # Registered operators append to wm.operators; a modal shows up in the
+    # window's modal list. Neither -> the search matched nothing (Blender closes
+    # "No results found" silently on Enter).
+    nothing_ran = not modal_before and _op_history() == history_before
+    if nothing_ran and search_op == "search_menu":
         # "No results found" + Enter closes the menu search silently. Retry
         # once with the operator-name search ("Bevel Edges" -> "Bevel").
         search_op = "search_operator"
