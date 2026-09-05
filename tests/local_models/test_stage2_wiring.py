@@ -127,17 +127,21 @@ class _FakeWS:
     def send(self, data):
         self.sent.append(data)
 
-    def recv(self):
-        return json.dumps({"result": {"success": True}})
+    def recv_data(self, control_frame=False):
+        from websocket import ABNF
+
+        return ABNF.OPCODE_TEXT, json.dumps({"result": {"success": True}}).encode()
 
     def settimeout(self, _timeout):
         pass
 
 
 def test_handshake_advertises_local_llm_capability():
+    from mixar.modules.space_mixie_chat.core.jsonrpc_frames import HANDSHAKE_OK
+
     client = _client()
     client._ws = _FakeWS()
-    assert client._perform_handshake() is True
+    assert client._perform_handshake() == HANDSHAKE_OK
     handshake = json.loads(client._ws.sent[0])
     assert handshake["method"] == JSONRPCMethod.SYSTEM_HANDSHAKE
     capabilities = handshake["params"]["capabilities"]

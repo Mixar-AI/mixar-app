@@ -45,6 +45,11 @@ from ..constants import (
     PROVIDER_LOADING_SENTINEL,
 )
 
+# Providers whose model dropdown is served from another provider's catalog
+# group. Codex runs OpenAI's gpt-5.x lineup through the user's ChatGPT
+# subscription, so it reuses the "openai" models — no separate catalog rows.
+_MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai'}
+
 # Module-level caches. Stored as Python-stable references so the
 # EnumProperty callbacks can return them directly without GC issues.
 _provider_cache: list[tuple[str, str, str]] = []
@@ -102,8 +107,10 @@ def get_model_items(provider: str) -> list[tuple[str, str, str]]:
     Returns the provider's cached models when available; otherwise a
     single sentinel item. Always returns a non-empty list — Blender
     renders a blank/broken dropdown when items is [].
+
+    Codex shows the "openai" group (see _MODEL_SOURCE_PROVIDER).
     """
-    cached = _model_cache.get(provider)
+    cached = _model_cache.get(_MODEL_SOURCE_PROVIDER.get(provider, provider))
     if cached:
         return cached
     return [MODEL_EMPTY_SENTINEL]
@@ -118,7 +125,8 @@ def is_valid_model(provider: str, model: str) -> bool:
     """
     if not provider or not model or model == "NONE":
         return False
-    return any(item[0] == model for item in (_model_cache.get(provider) or ()))
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    return any(item[0] == model for item in (_model_cache.get(source) or ()))
 
 
 def is_loaded() -> bool:

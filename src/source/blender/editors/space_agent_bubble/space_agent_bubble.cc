@@ -301,13 +301,11 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
   g_bubble_last_min_height = 0;
   bubble_set_min_content_size(ghostwin, AGENT_BUBBLE_MIN_HEIGHT);
 
-  int pixel_width = width;
-  int pixel_height = height;
+  /* BACKING pixels (0 when the query fails). `width`/`height` — like
+   * every Mixar_Window* size — are LOGICAL points. */
+  int pixel_width = 0;
+  int pixel_height = 0;
   Mixar_WindowGetContentPixelSize(ghostwin, &pixel_width, &pixel_height);
-  if (pixel_width <= 0 || pixel_height <= 0) {
-    pixel_width = width;
-    pixel_height = height;
-  }
 
   wmWindowManager *wm = CTX_wm_manager(C);
   if (wm == nullptr) {
@@ -317,8 +315,36 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
     if (w->ghostwin != ghostwin) {
       continue;
     }
-    w->sizex = pixel_width;
-    w->sizey = pixel_height;
+    /* THE TWO SIZES LIVE IN DIFFERENT SPACES, and mixing them silently
+     * doubles the bubble's layout on Retina:
+     *   - wmWindow::sizex/sizey are LOGICAL POINTS. Blender derives the
+     *     screen rect from them as sizex * GHOST_GetNativePixelSize()
+     *     (see WM_window_native_pixel_x / WM_window_rect_calc).
+     *   - ScrVert coordinates, and Mixar_WindowGetContentPixelSize, are
+     *     BACKING PIXELS — the space ED_screen_refresh rescales the
+     *     verts against.
+     * Assigning the backing size straight into sizex left a 400pt (800px)
+     * bubble claiming an 800pt window, so the area was laid out 1600px
+     * wide inside an 800px one: the Send button and the header's
+     * history/rules controls landed off-window and the composer field ran
+     * past the right edge. Attaching an image was the usual trigger,
+     * because that is what re-runs this force-size. */
+    const int native_x = WM_window_native_pixel_x(w);
+    const float fac = (w->sizex > 0 && native_x > 0) ?
+                          float(native_x) / float(w->sizex) :
+                          1.0f;
+
+    int logical_width = width;
+    int logical_height = height;
+    if (pixel_width > 0 && pixel_height > 0) {
+      logical_width = int(float(pixel_width) / fac);
+      logical_height = int(float(pixel_height) / fac);
+    }
+    const int backing_width = int(float(logical_width) * fac);
+    const int backing_height = int(float(logical_height) * fac);
+
+    w->sizex = logical_width;
+    w->sizey = logical_height;
     bScreen *screen = WM_window_get_active_screen(w);
     if (screen == nullptr) {
       break;
@@ -333,14 +359,14 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
     }
     if (area->v2 != nullptr) {
       area->v2->vec.x = 0;
-      area->v2->vec.y = pixel_height - 1;
+      area->v2->vec.y = backing_height - 1;
     }
     if (area->v3 != nullptr) {
-      area->v3->vec.x = pixel_width - 1;
-      area->v3->vec.y = pixel_height - 1;
+      area->v3->vec.x = backing_width - 1;
+      area->v3->vec.y = backing_height - 1;
     }
     if (area->v4 != nullptr) {
-      area->v4->vec.x = pixel_width - 1;
+      area->v4->vec.x = backing_width - 1;
       area->v4->vec.y = 0;
     }
     ED_screen_refresh(C, wm, w);
@@ -2224,8 +2250,15 @@ static void agent_bubble_keymap(wmKeyConfig *keyconf)
   wmKeyMap *km = WM_keymap_ensure(
       keyconf, "Agent Bubble", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
 
-  /* Ctrl+V / Cmd+V: paste image from clipboard — reuses the Mixie Chat
-   * paste operator which writes to the shared pending-attachments collection. */
+  /* Ctrl+V / Cmd+V: paste the clipboard — reuses the Mixie Chat paste
+   * operator, which attaches an image to the shared pending-attachments
+   * collection or appends text to the shared composer.
+   *
+   * MIXIE_CHAT_OT_paste, not MIXIE_CHAT_OT_paste_image: paste_image
+   * returns CANCELLED when the clipboard holds no image, so binding it to
+   * the plain chord meant every text paste that reached a keymap — i.e.
+   * every paste made while the composer did not hold text-edit focus —
+   * was silently dropped. */
   KeyMapItem_Params paste_params{};
   paste_params.type = EVT_VKEY;
   paste_params.value = KM_PRESS;
@@ -2234,13 +2267,13 @@ static void agent_bubble_keymap(wmKeyConfig *keyconf)
 #else
   paste_params.modifier = KM_CTRL;
 #endif
-  WM_keymap_add_item(km, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(km, "MIXIE_CHAT_OT_paste", &paste_params);
 
   /* Also register on the footer (TOOLS) region so paste works when the
    * text input has focus. */
   wmKeyMap *km_footer = WM_keymap_ensure(
       keyconf, "Agent Bubble", SPACE_AGENT_BUBBLE, RGN_TYPE_TOOLS);
-  WM_keymap_add_item(km_footer, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(km_footer, "MIXIE_CHAT_OT_paste", &paste_params);
 
   WM_keymap_ensure(
       keyconf, "Agent Bubble Header", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);

@@ -24,7 +24,10 @@ from ...core import (
     get_image_display_name,
     validate_image_file,
 )
-from ...core.attachment_board_sync import mirror_attachment_to_moodboard
+from ...core.attachment_board_sync import (
+    find_attachment_for_file,
+    mirror_attachment_to_moodboard,
+)
 from ...core.model_attachment import import_model_attachment, is_model_file
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
@@ -102,13 +105,10 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
 
             is_valid, error = validate_image_file(filepath)
 
-            # Skip duplicates
-            already = False
-            for att in attachments:
-                if att.image_path == filepath and att.image_source == 'FILE':
-                    already = True
-                    break
-            if already:
+            # Skip duplicates — a FILE pill for the same path, or a board
+            # pill (moodboard-origin BLEND_DATA) whose image was loaded
+            # from this file: the drop would otherwise show twice.
+            if find_attachment_for_file(attachments, filepath) is not None:
                 continue
 
             attachment = attachments.add()
@@ -255,19 +255,24 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
         name = att.display_name
         image_path = att.image_path
         image_source = att.image_source
-        is_moodboard = getattr(att, "is_moodboard", False)
 
-        # For moodboard-origin attachments, deselect the source image
-        # FIRST. Otherwise the moodboard polling tick (~200 ms) re-adds
-        # the attachment immediately and the X-click appears to do
-        # nothing. Doing this before the remove() also keeps the
-        # polling signature consistent.
-        if is_moodboard:
+        # Deselect the board image this pill stands for FIRST. Otherwise
+        # the moodboard polling tick (~200 ms) re-adds the attachment
+        # immediately and the X-click appears to do nothing. Doing this
+        # before the remove() also keeps the polling signature
+        # consistent. Not only for moodboard-origin pills: a dropped
+        # FILE image is mirrored onto the board, and once selected there
+        # the sync de-dupes against this very pill — so removing it must
+        # release the board selection too (chat_sync_dedupe owns the
+        # FILE-path / BLEND_DATA-name identity rules).
+        if image_source in {'FILE', 'BLEND_DATA'}:
             try:
                 from mixar.modules.moodboard.core.chat_sync import (
-                    deselect_moodboard_image_by_name,
+                    deselect_moodboard_image_for_attachment,
                 )
-                deselect_moodboard_image_by_name(context.scene, image_path)
+                deselect_moodboard_image_for_attachment(
+                    context.scene, image_path, image_source
+                )
             except Exception as e:  # noqa: BLE001
                 # Never block the remove if the moodboard module isn't
                 # loaded — fall through to the standard remove path.
