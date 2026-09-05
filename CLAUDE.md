@@ -170,62 +170,6 @@ retrying at the auth cadence (30 s, then 60 s) and never stops. A server ping
 now counts as traffic for `is_transport_live`. Pinned by
 `tests/test_ws_reconnect_after_backend_restart.py`.
 
-**Render-job contract (a render never blocks the agent):** the agent's final
-render (`mixie_chat.agent_final_render`) is fire-and-forget on Blender's WM job
-thread (`render.render` INVOKE_DEFAULT → `screen_render_invoke` → `WM_jobs_start`);
-the job evaluates its OWN depsgraph, so the agent keeps running sandbox scripts
-and the user keeps working while it goes — the same contract a user's F12 has
-with Lock Interface off (Blender's default). 3.4.2 briefly HELD every script in
-`main_thread_executor` while `bpy.app.is_job_running("RENDER")` was true and
-failed it after 20 s, and forced `render.use_lock_interface` on for the job.
-The hold stalled the whole turn (the verification script after every render,
-and any message the user typed) and the lock froze every UI handler, and no
-crash report ever showed a render-thread frame — both are removed and pinned
-absent by `tests/test_render_job_guard.py`. Do not reintroduce a render gate
-on the executor; the operator leaves `use_lock_interface` exactly as the user
-has it. The only render-thread rule that stands: `render_complete`/`render_cancel`
-handlers fire ON the job thread (`RE_RenderFrame`), so the operator's handlers
-only register a one-shot timer and `_finalize` (save, moodboard import, settings
-restore) runs on the main thread. The splat path (`splat_render_camera.py`) is a
-DIFFERENT contract and keeps its forced Lock Interface: it mutates IDs from a
-frame handler during the render. Full write-up, the 3.4.2 → 3.4.4 history, and
-the pinned test list: `docs/render-job-contract.md`.
-Two sibling rules from the same hunt: **`on_connected` runs on the WebSocket
-thread**, so anything that walks `bpy.data` (the orphaned-turn check,
-`check_orphaned_turns`) reaches it through `run_on_main_thread` — a reconnect
-fires on every 50 s liveness teardown a GIL-holding script causes, exactly
-while the main thread is adding and removing lane scenes, and iterating that
-ListBase concurrently is a segfault; the connector sidecar's `_instance()`
-reads (and lazily WRITES) `wm.mixie_instance_id` under `_run_on_main` for the
-same reason. And **the offscreen scene render encodes its PNG in pure Python**
-(`scene_render_ops.encode_rgba_png`): its deferred path runs inside a VIEW_3D
-POST_PIXEL draw callback, where creating/saving/removing a `bpy.data.images`
-datablock (the previous encoder) is an ID free mid-draw. Bundled procedural
-material scripts snapshot `list(tree.nodes)` before clearing the tree — the
-live-collection remove-while-iterating idiom `sandbox_transform` strips from
-agent scripts was still present in seven first-party ones.
-
-**Native crash-class rules from the same audit (3.4.2):** the Agent Bubble's
-footer `layout`/`draw` callbacks never resize the window inline — a region
-draw pass has the bubble's framebuffer bound and is iterating
-`area->regionbase`, so `Mixar_WindowForceSize` + `ED_screen_refresh` from
-inside it re-enter region init for the region on the stack, recompute every
-`winrct` under a stale viewport and resize the GL window mid-present. They
-call `agent_bubble_request_resize` (pending size + `NC_WINDOW` notifier) and
-`agent_bubble_footer_region_listener` applies it from the event loop through
-`bubble_apply_window_size(C=nullptr, …)`, which only tags `screen->do_refresh`
-so `ED_screen_ensure_updated` runs the refresh in the same pass; operator exec
-keeps the immediate form. Every fixed-buffer slot string read in
-`mixie_chat_slots.cc` goes through `read_rna_string_bounded` — a
-`StringProperty(maxlen=N)` registers maxlength N + 1, so a raw
-`RNA_property_string_get` into `char[N]` is an off-by-one, and `local_path`
-had no `maxlen` at all (now 1024, mirroring `ImageSlotData`). Both chat
-spaces null `runtime` in `blend_read_data` (never trust a pointer read from
-disk), the Director timeline region has an `exit` that removes its static
-playback timer before `wm_window_free` frees it, and `mixie_chat_free_runtime`
-calls `mixie_chat_code_hits_forget` so the code-copy collector cannot append
-into a freed runtime.
-
 **Chat mode enum contract:** `scene.mixie_chat_mode` (`chat_props.py`) is the
 ONE list every mode dropdown enumerates — the C++ chat footer, the agent
 bubble's footer panel and the bubble menu all bind that property — so an
@@ -444,7 +388,6 @@ The safe executor exposes `hashlib` and `struct` for local content digests and d
 
 ## Key Patterns & Gotchas
 
-- **Config persistence contract** (`mixar/config/config.py`, pinned by `tests/test_config_persistence.py`): the bundled `<install>/5.0/config/mixar.json` is BUILD-GENERATED, READ-ONLY input (backend URLs, environment, update channel) — on Windows the MSI puts it under `C:\Program Files`, where a standard user has no write access, and macOS updates replace the whole `.app`. Every key a running app persists (`ui_mode`, `share_usage_data`, the fallback `device_id`) goes through `add_config` into the per-user overlay `bpy.utils.user_resource('CONFIG')/mixar/mixar.json`, which holds ONLY keys written that way (a copied bundled key would shadow the next build's value forever); reads merge the overlay over the bundled defaults. Never write into `resource_path('LOCAL')`: doing so HUNG the installed Windows build the moment the user clicked "Start with Zen Mode" / "Engine Mode" on the splash — CPython's `tempfile.mkstemp` treats a `PermissionError` on Windows as a name collision whenever `os.access(dir, W_OK)` is true (and there `os.access` only checks the read-only attribute, never the ACL), so it retried `TMP_MAX` (2**31) times on the main thread. `_write_config_file` therefore exclusive-creates its own temp name with a bounded retry and no `tempfile.mkstemp`; a write failure returns False at once and the in-memory value still applies for the session. Dev builds never showed it because `build/<env>/bin` is user-writable.
 - **Programmatic layer-override binds owe the layer a finalize**: a COLOR fill layer only becomes vector-using once its channel overrides are IMAGE, so its **Mapping node** is created by the node check that `update_layer_channel_override` runs. Builders bind overrides under `mp.halt_update = True`, which blocks that callback — so every one of them (`layered_build/pbr_layer._bind_prepared_maps` for MatGen/manifest and imported-glTF layers, `moodboard/core/lookdev360_paint_integration.add_lookdev360_fill_layer` for Texture Gen) must call `core/node/check_nodes.finalize_layer_channel_overrides(layer)` AFTER restoring `halt_update`. Reconnecting alone is not enough: the image textures come out wired straight to the layer's UV input, and a generated material's UV offset/rotation/scale (incl. the builder's coordinated `uniform_scale_value` tiling) silently does nothing. Pinned by `paint/layered_build/tests/test_generated_layer_mapping.py`.
 - **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks.
 - **Internal node groups hidden from the Properties socket menu**: the paint system creates many helper `ShaderNodeTree` datablocks (`Mixar <mat>`, `~yP Layer/Mask/Modifiers ...`, `~yPL ...`, `~TL ...`); Blender's Properties-editor socket link menu (the dot next to a shader socket, e.g. World > Surface > Color) lists every shader group, so these leak in and pile up as layers are added. C++ overlay `src/source/.../space_node/node_templates.cc` filters them via `node_group_is_mixar_internal` in `ui_node_link_items`, keyed on prefixes `~yP`/`~TL`/`Mixar ` (alongside Blender's existing `.`-prefix hide check). Blender's own `.`-prefix hide convention is NOT viable — dozens of name-based `.startswith` lookups depend on the current prefixes, the `~yPL` groups are appended **by exact name from a bundled `lib.blend`**, and saved `.blend` files depend on the names. (The node-editor Add > Group menu is a separate Python code path and is left as-is.)
@@ -542,4 +485,4 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 
 ## Repo Docs Map
 
-`README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover. `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.
+`README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover.
