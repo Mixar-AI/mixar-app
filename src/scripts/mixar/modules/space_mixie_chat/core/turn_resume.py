@@ -12,10 +12,21 @@ Flow:
 1. On WS reconnect (``connection_manager.on_connected``), collect the chat
    session ids of scenes that look idle locally and ask the server
    ``turn.status`` for them (ownership-scoped Redis liveness).
-2. A hit (active or replayable) surfaces a chat bubble with a
-   ``resume_task:<session_id>`` PRIMARY action — the same manual-bubble
-   pattern as the credits notice, so it never flips the session into
-   AWAITING_INPUT.
+2. A hit surfaces a chat bubble with a ``resume_task:<session_id>`` PRIMARY
+   action — the same manual-bubble pattern as the credits notice, so it never
+   flips the session into AWAITING_INPUT.
+
+   A hit is ``status`` RUNNING (a producer still owns the turn) or ABANDONED
+   (the drain gave up with nobody attached, so the turn died and its tail was
+   never seen). ENDED is never a hit. This used to key off ``replayable``,
+   which is the existence of the replay list — and that list deliberately
+   outlives its turn by an hour so a late attach can still collect the tail.
+   Every reconnect within that hour therefore announced "a previous task is
+   still running" about a turn the user had watched finish, and because
+   dismissal is local-only the notice came back on the next reconnect. The
+   backend now stamps the turn's terminal disposition at close, so liveness
+   and "worth announcing" are read from what happened rather than from which
+   Redis keys have not expired yet.
 3. Confirming runs ``bpy.ops.mixie_chat.resume_previous_task`` which adopts
    the session into a per-scene SSE handler and replays + follows via the
    existing attach endpoint. Dismiss removes the bubble.
@@ -55,11 +66,25 @@ def reported_last_seq(session_id: str) -> int:
         return -1
 
 
-_TITLE = "A previous task is still running"
-_BODY = (
+# Server-reported turn dispositions (mixar-backend resume_buffer.TURN_*).
+STATUS_RUNNING = "running"
+STATUS_ABANDONED = "abandoned"
+STATUS_ENDED = "ended"
+# Only these two are worth telling the user about; ENDED ended in front of
+# them and needs no notice.
+_HIT_STATUSES = (STATUS_RUNNING, STATUS_ABANDONED)
+
+_RUNNING_TITLE = "A previous task is still running"
+_RUNNING_BODY = (
     "The connection dropped while the agent was working, and the task kept "
     "running on the server. Resume it to see what it produced — or dismiss "
     "this and start fresh."
+)
+_ABANDONED_TITLE = "A previous task was interrupted"
+_ABANDONED_BODY = (
+    "The connection dropped while the agent was working, and the task was "
+    "stopped before anyone saw it finish. Resume it to see how far it got — "
+    "or dismiss this and start fresh."
 )
 
 
@@ -111,7 +136,7 @@ def check_orphaned_turns() -> None:
                 sid: (info or {})
                 for sid, info in turns.items()
                 if isinstance(info, dict)
-                and (info.get("active") or info.get("replayable"))
+                and _status_of(info) in _HIT_STATUSES
             }
             if not hits:
                 return
@@ -138,6 +163,20 @@ def check_orphaned_turns() -> None:
         logger.exception("check_orphaned_turns failed (non-fatal)")
 
 
+def _status_of(info: dict) -> str:
+    """The turn disposition a ``turn.status`` entry reports.
+
+    Falls back to the pre-``status`` ``active`` bit so a new client keeps
+    working against a backend that has not shipped the stamp yet; an entry
+    with neither reads as ENDED, which is the silent direction — the failure
+    being guarded here is a notice raised about a turn that is not there.
+    """
+    status = info.get("status")
+    if isinstance(status, str) and status:
+        return status
+    return STATUS_RUNNING if info.get("active") else STATUS_ENDED
+
+
 def _scene_has_live_stream(scene_name: str) -> bool:
     from .sse_handler import get_sse_handler
 
@@ -153,8 +192,17 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
     try:
         if scene is None or not hasattr(scene, "mixie_chat_messages"):
             return
-        content = f"**{_TITLE}**\n\n{_BODY}"
-        active = bool(info.get("active"))
+        status = _status_of(info)
+        if status not in _HIT_STATUSES:
+            # Defence in depth: this function is what puts a claim about a
+            # turn on screen, so it refuses to make one the status does not
+            # support — a caller that stops filtering cannot resurrect the
+            # notice-about-a-finished-turn bug on its own.
+            return
+        active = status == STATUS_RUNNING
+        title = _RUNNING_TITLE if active else _ABANDONED_TITLE
+        body = _RUNNING_BODY if active else _ABANDONED_BODY
+        content = f"**{title}**\n\n{body}"
         # Park the server's attach cursor for resume_previous_task: without it
         # a scene whose SSE handler is gone (client restart, cleanup) attaches
         # at -1 and replays the WHOLE turn.

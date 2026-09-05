@@ -236,8 +236,10 @@ class ConnectionManager:
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
                 # #1258: a turn that outlived the disconnect is invisible to
-                # the user — ask the server which local sessions still have a
-                # live/replayable turn and surface "Resume previous task".
+                # the user — ask the server which local sessions have a turn
+                # still running, or abandoned unwatched by the drain, and
+                # surface "Resume previous task" for those. A turn that ended
+                # in front of the user is never announced.
                 try:
                     from .turn_resume import check_orphaned_turns
 
