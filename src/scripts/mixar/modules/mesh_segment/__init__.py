@@ -8,9 +8,8 @@ Mesh Segment Module.
 Provides UV mesh segmentation functionality with API integration.
 """
 
-from .core import get_mesh_segment_manager, apply_labels_to_mesh
+from .core import apply_labels_to_mesh
 
 __all__ = [
-    "get_mesh_segment_manager",
     "apply_labels_to_mesh",
 ]

@@ -18,6 +18,9 @@
 
 #include "MEM_guardedalloc.h"
 
+#include "BLI_utildefines.h"
+
+#include "DNA_space_enums.h"
 #include "DNA_space_types.h"
 
 #include "BKE_context.hh"
@@ -89,8 +92,13 @@ static bool mixie_chat_image_drop_poll(bContext *C,
                                        wmDrag *drag,
                                        const wmEvent * /*event*/)
 {
+  /* SPACE_AGENT_BUBBLE reuses mixie_chat_main_region_init /
+   * mixie_chat_footer_region_init, so it already carries these dropbox
+   * handlers; without accepting its spacetype here the poll rejected every
+   * drop onto the floating bubble. Same dual-spacetype contract as every
+   * other shared chat callback (selection, hit-testing, code copy, ...). */
   ScrArea *area = CTX_wm_area(C);
-  if (!area || area->spacetype != SPACE_MIXIE_CHAT) {
+  if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
     return false;
   }
 

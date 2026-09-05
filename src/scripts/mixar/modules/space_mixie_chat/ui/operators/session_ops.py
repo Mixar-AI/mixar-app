@@ -305,6 +305,12 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 3. Flush queued tool scripts (global — scripts aren't scene-tagged)
         flush_executor_queue()
 
+        # 3b. End the executor's undo turn: the drained queue may have held
+        # the stream's complete/error event, so nothing else would end it and
+        # the next turn would inherit this one's checkpoint budget.
+        from ...core.executor import get_executor
+        get_executor().end_agent_turn()
+
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
 
@@ -434,10 +440,139 @@ class MIXIE_CHAT_OT_abort_session(Operator):
             logger.error(f"Failed to send abort request: {e}")
 
 
+class MIXIE_CHAT_OT_resume_previous_task(Operator):
+    """Adopt an orphaned turn: replay what was missed and follow it live."""
+
+    bl_idname = "mixie_chat.resume_previous_task"
+    bl_label = "Resume Previous Task"
+    bl_description = (
+        "The connection dropped while the agent was working. Reconnect to the "
+        "running task and see everything it produced."
+    )
+    bl_options = {'REGISTER'}
+
+    session_id: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        if context.scene is None or not context.scene.mixie_session_id:
+            return False
+        session = get_session_manager()
+        return session.get_state(context.scene) == SessionState.IDLE
+
+    def execute(self, context):
+        import json as _json
+        import uuid as _uuid
+
+        from ...constants import TEMP_PLACEHOLDER_PREFIX
+        from ...core.queue_processor import (
+            queue_sse_complete,
+            queue_sse_error,
+            queue_sse_event,
+        )
+        from ...core.sse_handler import create_sse_handler
+        from mixar.config.config import get_server_url
+
+        scene = context.scene
+        session = get_session_manager()
+        target_session = self.session_id or session.get_session_id(scene)
+        if not target_session:
+            self.report({'WARNING'}, "No session to resume")
+            return {'CANCELLED'}
+
+        # A live handler for this scene means recovery is already owned by
+        # its attach loop (or a stream is running) — never double-attach.
+        from ...core.sse_handler import get_sse_handler
+        existing = get_sse_handler(scene.name)
+        if existing is not None and existing.is_running:
+            self.report({'WARNING'}, "A task is already streaming")
+            return {'CANCELLED'}
+
+        # Show the turn as live again before attaching: loader bubble + BUSY,
+        # the same optimistic UI a fresh send gets.
+        self._reset_loader_bubbles(scene)
+        placeholder = scene.mixie_chat_messages.add()
+        placeholder.sender = 'AGENT'
+        placeholder.bubble_id = f"{TEMP_PLACEHOLDER_PREFIX}{_uuid.uuid4().hex[:12]}"
+        placeholder.loader_visible = True
+        placeholder.loader_texts = _json.dumps(["Resuming previous task..."])
+        try:
+            from ...core.animation_manager import start_loader_animation
+            start_loader_animation()
+        except Exception:
+            pass
+
+        session.set_state(scene, SessionState.BUSY)
+
+        base_url = get_server_url()
+        target_scene_name = scene.name
+        sse_handler = create_sse_handler(
+            scene_name=target_scene_name,
+            host=base_url,
+            on_event=lambda event: queue_sse_event(event, target_scene_name),
+            on_error=lambda error: queue_sse_error(error, target_scene_name),
+            on_complete=lambda: queue_sse_complete(target_scene_name),
+        )
+        # Best cursor available, in order:
+        #   1. the cursor this scene's handler carried across the swap
+        #      (create_sse_handler copies it) — exactly what we last rendered;
+        #   2. the ``last_seq`` turn.status reported on reconnect — the server
+        #      side of the same turn, parked by turn_resume.offer_resume_prompt.
+        #      Reached whenever the scene has no carried handler at all (client
+        #      restart, cleanup_sse_handler, a never-streamed scene), which is
+        #      the live path that produced after_seq=-1 in QA;
+        #   3. -1, a full replay.
+        #
+        # -1 is deliberately the LAST resort, not the default: content slots
+        # stream as ``append``, and the bubbles of the dropped turn are still
+        # in scene.mixie_chat_messages, so a whole-turn replay re-appends every
+        # token into bubbles that already hold it (bubble_id lookup is
+        # idempotent, so the message COUNT stays right while each bubble's
+        # prose doubles — the same duplication documented in
+        # create_sse_handler's cursor carry-over).
+        after_seq = None
+        if sse_handler._session_id == target_session and sse_handler._last_seq >= 0:
+            after_seq = sse_handler._last_seq
+        else:
+            from ...core.turn_resume import reported_last_seq
+            reported = reported_last_seq(target_session)
+            if reported >= 0:
+                after_seq = reported
+        started = sse_handler.resume_stream(target_session, after_seq=after_seq)
+        if not started:
+            session.set_state(scene, SessionState.IDLE)
+            self.report({'WARNING'}, "Could not resume the previous task")
+            return {'CANCELLED'}
+
+        from ...core.ui_utils import redraw_chat_areas
+        redraw_chat_areas()
+        logger.info("Resuming previous task for session %s", target_session[:8])
+        return {'FINISHED'}
+
+    @staticmethod
+    def _reset_loader_bubbles(scene) -> None:
+        """Settle stale loader bubbles left by the dropped turn's UI."""
+        try:
+            from ...constants import TEMP_PLACEHOLDER_PREFIX
+
+            for i, m in enumerate(scene.mixie_chat_messages):
+                if getattr(m, 'loader_visible', False):
+                    m.loader_visible = False
+            stale = [
+                i for i, m in enumerate(scene.mixie_chat_messages)
+                if getattr(m, 'bubble_id', '').startswith(TEMP_PLACEHOLDER_PREFIX)
+            ]
+            for idx in reversed(stale):
+                scene.mixie_chat_messages.remove(idx)
+        except Exception as e:
+            logger.debug(f"_reset_loader_bubbles skipped: {e}")
+
+
 classes = (
     MIXIE_CHAT_OT_connect,
     MIXIE_CHAT_OT_disconnect,
     MIXIE_CHAT_OT_new_session,
     MIXIE_CHAT_OT_dev_cycle_state,
     MIXIE_CHAT_OT_abort_session,
+    MIXIE_CHAT_OT_resume_previous_task,
 )

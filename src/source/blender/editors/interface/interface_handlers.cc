@@ -3671,6 +3671,40 @@ static bool ui_textedit_copypaste(uiBut *but, uiTextEdit &text_edit, const int m
   return changed;
 }
 
+/**
+ * Does this key press carry the platform's copy/cut/paste modifier?
+ *
+ * Outside the Mixar chat surfaces this is Blender's stock test: the modifier
+ * set has to be exactly Ctrl, or on macOS exactly Cmd or exactly Ctrl.
+ *
+ * The chat composer relaxes it to "the clipboard modifier is held, and
+ * neither Shift nor Alt is". External dictation and clipboard utilities
+ * inject the paste chord programmatically while their own push-to-talk
+ * modifier is still physically down, so what arrives is e.g. Cmd+Ctrl+V —
+ * which an exact-match test drops on the floor with no feedback of any kind.
+ * Shift stays excluded because Ctrl/Cmd+Shift+V is the explicit paste-image
+ * chord; Alt stays excluded because it is not a clipboard chord at all.
+ */
+static bool ui_textedit_clipboard_modifier_match(const wmEvent *event, const bool is_chat_space)
+{
+#if defined(__APPLE__)
+  const int clipboard_mod = KM_OSKEY | KM_CTRL;
+#else
+  const int clipboard_mod = KM_CTRL;
+#endif
+
+  if (is_chat_space) {
+    return (event->modifier & clipboard_mod) != 0 &&
+           (event->modifier & (KM_SHIFT | KM_ALT)) == 0;
+  }
+
+#if defined(__APPLE__)
+  return ELEM(event->modifier, KM_OSKEY, KM_CTRL);
+#else
+  return event->modifier == KM_CTRL;
+#endif
+}
+
 #ifdef WITH_INPUT_IME
 /* Enable IME, and setup #uiBut IME data. */
 static void ui_textedit_ime_begin(wmWindow *win, uiBut * /*but*/)
@@ -4345,16 +4379,17 @@ static int ui_do_but_textedit(
     switch (event->type) {
       case EVT_VKEY:
       case EVT_XKEY:
-      case EVT_CKEY:
-#if defined(__APPLE__)
-        if (ELEM(event->modifier, KM_OSKEY, KM_CTRL))
-#else
-        if (event->modifier == KM_CTRL)
-#endif
-        {
+      case EVT_CKEY: {
+        /* Guarded on the modifier so a bare "v"/"x"/"c" keystroke — the hot
+         * path for every text field in Blender — costs no context lookup. */
+        const ScrArea *clipboard_area = (event->modifier != 0) ? CTX_wm_area(C) : nullptr;
+        const bool is_chat_space = clipboard_area &&
+                                   ELEM(clipboard_area->spacetype,
+                                        SPACE_MIXIE_CHAT,
+                                        SPACE_AGENT_BUBBLE);
+        if (ui_textedit_clipboard_modifier_match(event, is_chat_space)) {
           if (event->type == EVT_VKEY) {
-            const ScrArea *area = CTX_wm_area(C);
-            if (area && ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+            if (is_chat_space) {
               /* In Mixie Chat / Agent Bubble, try the Python image-paste
                * operator first. If it finds image data on the clipboard it
                * attaches the image and returns OPERATOR_FINISHED — we skip
@@ -4387,6 +4422,7 @@ static int ui_do_but_textedit(
           retval = WM_UI_HANDLER_BREAK;
         }
         break;
+      }
       case EVT_RIGHTARROWKEY:
       case EVT_LEFTARROWKEY: {
         const eStrCursorJumpDirection direction = (event->type == EVT_RIGHTARROWKEY) ?

@@ -94,10 +94,6 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                 # OpenRouter uses a free-text model slug, not the catalog dropdown.
                 if wm.byok_current_model:
                     wm.byok_form_openrouter_model = wm.byok_current_model
-            elif model_suggestions.is_codex(wm.byok_current_provider):
-                # Codex uses a free-text model slug, not the catalog dropdown.
-                if wm.byok_current_model:
-                    wm.byok_form_codex_model = wm.byok_current_model
             elif model_suggestions.is_local(wm.byok_current_provider):
                 pass  # prefilled below by byok_local_ops.prepare_dialog
             elif wm.byok_current_model:
@@ -232,12 +228,13 @@ class MIXAR_BYOK_OT_save(Operator):
 
     def _execute_codex(self, wm):
         """Codex save: send the pasted auth.json bundle as the credential. The
-        backend refreshes the token (validating it) and stores the bundle."""
-        model = wm.byok_form_codex_model.strip()
+        backend refreshes the token (validating it) and stores the bundle.
+        The model is the shared catalog dropdown, fed by the "openai" group."""
+        model = wm.byok_form_model
         bundle = wm.byok_form_codex_bundle.strip()
-        if not model or not bundle:
+        if not model_suggestions.is_valid_model('codex', model) or not bundle:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Model and your auth.json bundle are required."
+            wm.byok_last_error = "Choose a Codex model and load your auth.json bundle."
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'

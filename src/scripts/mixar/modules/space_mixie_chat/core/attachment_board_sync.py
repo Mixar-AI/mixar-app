@@ -99,6 +99,34 @@ def _add_file_to_board(scene, filepath: str):
     return load_media_file_to_board(scene, bpy.path.abspath(filepath))
 
 
+def find_attachment_for_file(attachments, filepath: str):
+    """Return the pending attachment already showing *filepath*, else None.
+
+    A ``FILE`` attachment matches on the file itself. A ``BLEND_DATA`` one
+    matches when its datablock was loaded from that file — which is what a
+    moodboard-origin pill for a previously dropped image looks like, since the
+    board mirror loads the dropped file and keeps its ``filepath``. Without the
+    second rule, re-dropping a file whose board copy is selected showed the
+    picture twice. Shares its identity rules with ``moodboard.core.chat_sync``
+    (``chat_sync_dedupe``), which de-dupes in the other direction.
+    """
+    if not filepath:
+        return None
+    for att in attachments:
+        source = getattr(att, "image_source", "")
+        path = getattr(att, "image_path", "")
+        if source == 'FILE':
+            if path == filepath or _same_file(path, filepath):
+                return att
+        elif source == 'BLEND_DATA' and path:
+            image = bpy.data.images.get(path)
+            if image is None:
+                continue
+            if _same_file(getattr(image, "filepath", ""), filepath):
+                return att
+    return None
+
+
 def _redraw_moodboard_areas() -> None:
     """Tag MIXIE areas so a newly boarded item shows up immediately."""
     try:

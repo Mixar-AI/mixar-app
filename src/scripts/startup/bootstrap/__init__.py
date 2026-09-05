@@ -504,6 +504,19 @@ def register():
         # 0. Set up mixar packages in sys.modules first (required for relative imports)
         _setup_mixar_packages()
 
+        # 0b. Trust store + proxy. Must precede every bootstrap module: the
+        # OS trust store is installed by replacing ssl.SSLContext, which only
+        # affects contexts created afterwards, and the proxy is exported via
+        # the environment that each HTTP/WebSocket client reads at connect.
+        try:
+            from mixar.modules.common.network import configure_network
+            configure_network()
+        except Exception as e:
+            logger.error(
+                "Network configuration failed; continuing with library defaults: %s",
+                e, exc_info=True,
+            )
+
         # 1. Load and register bootstrap modules first (synchronous, only ~5 files)
         _load_bootstrap_modules()
 

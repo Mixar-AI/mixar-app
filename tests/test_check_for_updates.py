@@ -205,3 +205,58 @@ def test_forced_update_re_announces_every_check(monkeypatch):
     trigger._on_check_success(_response(force_update=True))
 
     assert _toast().title == "Mixar Update Required"
+
+
+# ============================================================================
+# The announcement stamp is monotonic per version
+#
+# A recorded "ready" (the one announcement that survives dismissal) must
+# never be demoted back to "available" by a later interactive check —
+# otherwise a re-completed download interrupts the user a second time,
+# breaking "a version is announced at most twice".
+# ============================================================================
+
+
+def _real_announcements(monkeypatch, tmp_path):
+    from mixar.modules.common.updates.core import update_checker
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    monkeypatch.setattr(
+        update_checker, "_announced_version_path",
+        lambda: str(config_dir / "announced.txt"),
+    )
+    return update_checker
+
+
+def test_ready_stamp_is_never_demoted_to_available(monkeypatch, tmp_path):
+    uc = _real_announcements(monkeypatch, tmp_path)
+
+    uc.set_announced_stage("3.9.0", uc.ANNOUNCE_READY)
+    assert uc.get_announced_stage("3.9.0") == "ready"
+
+    # The interactive-check path writes "available" unconditionally; the
+    # monotonic guard must keep the stronger "ready" stamp.
+    uc.set_announced_stage("3.9.0", uc.ANNOUNCE_AVAILABLE)
+    assert uc.get_announced_stage("3.9.0") == "ready"
+
+
+def test_available_stamp_still_writes_and_upgrades(monkeypatch, tmp_path):
+    uc = _real_announcements(monkeypatch, tmp_path)
+
+    uc.set_announced_stage("3.9.0", uc.ANNOUNCE_AVAILABLE)
+    assert uc.get_announced_stage("3.9.0") == "available"
+
+    # available -> ready is an upgrade and must go through.
+    uc.set_announced_stage("3.9.0", uc.ANNOUNCE_READY)
+    assert uc.get_announced_stage("3.9.0") == "ready"
+
+
+def test_a_new_version_gets_its_own_stamp(monkeypatch, tmp_path):
+    uc = _real_announcements(monkeypatch, tmp_path)
+
+    uc.set_announced_stage("3.9.0", uc.ANNOUNCE_READY)
+    uc.set_announced_stage("4.0.0", uc.ANNOUNCE_AVAILABLE)
+
+    assert uc.get_announced_stage("3.9.0") == ""
+    assert uc.get_announced_stage("4.0.0") == "available"

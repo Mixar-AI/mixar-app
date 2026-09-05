@@ -233,7 +233,8 @@ def test_single_keyframe_is_draggable_along_the_timeline():
     click that never moves still just views the keyframe, matching the old
     jump behaviour) and slides the beat plus its matching native camera keys
     on MOUSEMOVE. A single beat is clamped to stay between its time-neighbours
-    because two Director keys must never share a frame. Locked shots stay
+    because two Director keys must never share a frame. First and last
+    handles stay draggable too — see test_timeline_drag.py. Locked shots stay
     view-only: the C++ handler only starts the drag when the shot is unlocked
     and otherwise falls back to jump_beat.
     """
@@ -370,6 +371,28 @@ def test_capture_still_works_on_video_output_scenes():
     restore_media = capture.index('image_settings.media_type = old["media_type"]')
     restore_format = capture.index('image_settings.file_format = old["format"]')
     assert restore_media < restore_format
+
+
+def test_splat_scene_stills_capture_through_a_real_render():
+    """A splat scene's keyframe still must be a real EEVEE render.
+
+    ``render.opengl`` produces a blank frame in splat scenes: the KIRI
+    proxy draws only during interactive viewport redraws (never inside an
+    OpenGL render), the splat mesh itself is eye-hidden, and the
+    ``splat_render_camera`` handlers that push camera matrices into the
+    geometry-nodes sockets fire only for real renders. The capture path
+    must branch to ``render.render`` with the shot camera and restore
+    engine, samples, and scene camera afterwards.
+    """
+    capture = _read("core/capture.py")
+
+    assert "def _render_splat_still" in capture
+    assert "scene_has_splats(scene)" in capture
+    assert "_render_splat_still(scene, camera)" in capture
+    assert "enable_render_updates(scene.objects)" in capture
+    assert "bpy.ops.render.render(write_still=True)" in capture
+    assert "render.engine = old_engine" in capture
+    assert "scene.camera = old_camera" in capture
 
 
 def test_navigate_supervises_walk_for_esc_and_cursor_reset():

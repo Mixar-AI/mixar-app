@@ -361,9 +361,12 @@ def _schedule_retrain() -> None:
                 win = wm.windows[0] if wm and wm.windows else None
             if win is not None:
                 with bpy.context.temp_override(window=win, screen=win.screen):
-                    bpy.ops.mixie.train_asset_model()
+                    # auto=True, like auto_train.schedule_auto_train: a failed
+                    # background retrain must not paint a red failure banner
+                    # after every generation drain.
+                    bpy.ops.mixie.train_asset_model(auto=True)
             else:
-                bpy.ops.mixie.train_asset_model()
+                bpy.ops.mixie.train_asset_model(auto=True)
 
             _batch_dirty = False
             logger.info("[GenLibrary] Incremental embedding retrain triggered")
