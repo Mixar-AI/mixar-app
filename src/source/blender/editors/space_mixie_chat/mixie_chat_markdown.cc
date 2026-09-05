@@ -23,99 +23,21 @@
 #include "mixie_chat_markdown_intern.hh"
 #include "mixie_chat_ui_types.hh"
 
-/* -------------------------------------------------------------------- */
-/** \name Parsed Segment Cache
- *
- * Height calculation and drawing both run for every markdown message on
- * every redraw. Re-parsing the metadata JSON each time rebuilt a
- * MARKDOWN_MAX_SEGMENTS array (~680 KB) on the stack per call — a large
- * per-frame cost and a stack-exhaustion risk. Parsed segments are cached
- * here keyed by a hash of the JSON, with lazily heap-allocated slots.
- *
- * Main-thread only (like all chat drawing) — no locking needed.
- * \{ */
-
-/* 24 slots so a whole conversation stays cached. With only 4 slots, any
- * chat with more than 4 markdown messages thrashed the LRU during the
- * layout pass (which measures every message), forcing a full JSON
- * re-parse of every message on every layout rebuild — i.e. every frame
- * while the agent streams. Entries hold a right-sized copy of the
- * parsed segments (one segment is ~11 KB, messages rarely exceed a
- * handful), so total cache memory scales with real content. */
-#define MD_PARSE_CACHE_SLOTS 24
-
-struct MarkdownParseCacheEntry {
-  uint64_t key_hash = 0;
-  size_t key_len = 0;
-  int segment_count = -1; /* -1 = slot unused */
-  uint64_t stamp = 0;
-  std::unique_ptr<MarkdownSegment[]> segments;
-};
-
-static MarkdownParseCacheEntry g_md_parse_cache[MD_PARSE_CACHE_SLOTS];
-static uint64_t g_md_parse_stamp = 0;
-
-/* FNV-1a, also reporting the string length so hash collisions additionally
- * need a length match. A collision only risks one stale frame, not memory
- * unsafety. */
-static uint64_t md_metadata_hash(const char *s, size_t *r_len)
-{
-  uint64_t h = 1469598103934665603ULL;
-  const char *p = s;
-  while (*p) {
-    h = (h ^ uint64_t(uint8_t(*p))) * 1099511628211ULL;
-    p++;
-  }
-  *r_len = size_t(p - s);
-  return h;
-}
-
-static const MarkdownSegment *markdown_segments_get_cached(const char *metadata_json,
-                                                           int *r_count)
-{
-  size_t len = 0;
-  const uint64_t hash = md_metadata_hash(metadata_json, &len);
-
-  MarkdownParseCacheEntry *lru = &g_md_parse_cache[0];
-  for (int i = 0; i < MD_PARSE_CACHE_SLOTS; i++) {
-    MarkdownParseCacheEntry &entry = g_md_parse_cache[i];
-    if (entry.segment_count >= 0 && entry.key_hash == hash && entry.key_len == len) {
-      entry.stamp = ++g_md_parse_stamp;
-      *r_count = entry.segment_count;
-      return entry.segments.get();
-    }
-    if (entry.stamp < lru->stamp) {
-      lru = &entry;
-    }
-  }
-
-  /* Miss: (re)parse into a static scratch array, then keep a copy sized
-   * to the actual segment count so slot memory scales with real content
-   * instead of a fixed MARKDOWN_MAX_SEGMENTS array per slot. Drawing is
-   * main-thread only, so the shared scratch is safe. Parse failures are
-   * cached too (count 0) so malformed JSON isn't re-parsed every frame. */
-  static MarkdownSegment scratch[MARKDOWN_MAX_SEGMENTS];
-  const int count = parse_markdown_segments(metadata_json, scratch, MARKDOWN_MAX_SEGMENTS);
-  if (count > 0) {
-    lru->segments = std::make_unique<MarkdownSegment[]>(size_t(count));
-    memcpy(lru->segments.get(), scratch, sizeof(MarkdownSegment) * size_t(count));
-  }
-  else {
-    lru->segments.reset();
-  }
-  lru->segment_count = count;
-  lru->key_hash = hash;
-  lru->key_len = len;
-  lru->stamp = ++g_md_parse_stamp;
-  *r_count = lru->segment_count;
-  return lru->segments.get();
-}
-
-/** \} */
+/* Parsed-segment cache lives in mixie_chat_markdown_parse.cc
+ * (markdown_segments_get_cached in mixie_chat_markdown_intern.hh). */
 
 /* -------------------------------------------------------------------- */
 /** \name Segment Height Calculation
  * \{ */
+
+/* Header row of a code card (language label + Copy button). ALWAYS reserved
+ * — even without a language tag — so the Copy button never overlaps the
+ * first code line. Must match between calc_segment_height, draw_code_block
+ * and nothing else. */
+static float code_block_header_height(const ChatBubbleStyle *style, float scale_factor)
+{
+  return float(style->font_size) + 10.0f * scale_factor;
+}
 
 static float calc_segment_height(const MarkdownSegment *seg,
                                  const ChatBubbleStyle *style,
@@ -152,10 +74,19 @@ static float calc_segment_height(const MarkdownSegment *seg,
 
     case MD_SEGMENT_CODE_BLOCK: {
       float code_width = content_width - 16.0f * scale_factor;
-      chat_ui_calc_text_bounds_font(
-          seg->text, code_width, font_size, 0, chat_ui_mono_font(), &text_width, &text_height);
-      float lang_height = seg->lang[0] ? 16.0f * scale_factor : 0;
-      return text_height + 16.0f * scale_factor + lang_height;
+      /* HardLimit: an unbreakable token (bpy.context.collection.objects...)
+       * wraps at the card edge instead of overflowing it — MUST match
+       * draw_code_block and the selection mapping. */
+      chat_ui_calc_text_bounds_font(seg->text,
+                                    code_width,
+                                    font_size,
+                                    0,
+                                    chat_ui_mono_font(),
+                                    &text_width,
+                                    &text_height,
+                                    BLFWrapMode::HardLimit);
+      return text_height + 16.0f * scale_factor +
+             code_block_header_height(style, scale_factor);
     }
 
     case MD_SEGMENT_LIST: {
@@ -215,11 +146,19 @@ static float draw_code_block(const MarkdownSegment *seg,
   float code_width = content_width - padding * 2;
 
   float text_width, text_height;
-  chat_ui_calc_text_bounds_font(
-      seg->text, code_width, style->font_size, 0, chat_ui_mono_font(), &text_width, &text_height);
+  /* HardLimit wrap — MUST match calc_segment_height and the text draw so
+   * unbreakable tokens fold at the card edge instead of overflowing it. */
+  chat_ui_calc_text_bounds_font(seg->text,
+                                code_width,
+                                style->font_size,
+                                0,
+                                chat_ui_mono_font(),
+                                &text_width,
+                                &text_height,
+                                BLFWrapMode::HardLimit);
 
-  float lang_height = seg->lang[0] ? 16.0f * scale_factor : 0;
-  float block_height = text_height + padding * 2 + lang_height;
+  const float header_height = code_block_header_height(style, scale_factor);
+  float block_height = text_height + padding * 2 + header_height;
 
   float bg_color[4];
   chat_ui_get_button_bg_color(bg_color);
@@ -233,13 +172,16 @@ static float draw_code_block(const MarkdownSegment *seg,
 
   chat_ui_draw_rounded_rect(&code_rect, 4.0f * scale_factor, bg_color);
 
+  /* Header row: language label on the left, Copy button on the right. The
+   * row is always reserved (code_block_header_height) so the button never
+   * sits on top of code. */
   float text_y = y - padding;
   if (seg->lang[0]) {
     float label_color[4] = {0.6f, 0.6f, 0.6f, 1.0f};
     chat_ui_draw_label(seg->lang, x + padding, text_y - 12.0f * scale_factor,
                        int(style->font_size * 0.8f), 0, label_color, false);
-    text_y -= lang_height;
   }
+  text_y -= header_height;
 
   rctf text_rect;
   text_rect.xmin = x + padding;
@@ -247,8 +189,20 @@ static float draw_code_block(const MarkdownSegment *seg,
   text_rect.ymin = code_rect.ymin + padding;
   text_rect.ymax = text_y;
 
-  chat_ui_draw_text_wrapped_font(
-      seg->text, &text_rect, style->font_size, 0, chat_ui_mono_font(), style->text_color);
+  chat_ui_draw_text_wrapped_font(seg->text,
+                                 &text_rect,
+                                 style->font_size,
+                                 0,
+                                 chat_ui_mono_font(),
+                                 style->text_color,
+                                 BLFWrapMode::HardLimit);
+
+  /* Selection maps against this exact rect/font/wrap. */
+  mixie_chat_md_seg_record(&text_rect, /*mono=*/true, style->font_size);
+
+  /* Copy button in the card's header row (drawn over the card, after the
+   * text). No-op unless the messages pass activated the hit collector. */
+  mixie_chat_code_chip_draw(code_rect.xmax, code_rect.ymax, scale_factor, style->font_size);
 
   return block_height;
 }
@@ -298,6 +252,8 @@ static float draw_quote(const MarkdownSegment *seg,
 
   chat_ui_rich_text(
       seg->text, &text_rect, style->font_size, BLF_ITALIC, quote_text_color, scale_factor, true, nullptr);
+
+  mixie_chat_md_seg_record(&text_rect, /*mono=*/false, style->font_size);
 
   return block_height;
 }
@@ -386,6 +342,11 @@ static float draw_segment(const MarkdownSegment *seg,
 
       text_height = chat_ui_rich_text(seg->text, &text_rect, style->font_size, 0,
                                       style->text_color, scale_factor, true, nullptr);
+
+      rctf sel_rect = text_rect;
+      sel_rect.ymin = y - text_height;
+      mixie_chat_md_seg_record(&sel_rect, /*mono=*/false, style->font_size);
+
       return text_height + 8.0f * scale_factor;
     }
 
@@ -405,6 +366,10 @@ static float draw_segment(const MarkdownSegment *seg,
       /* Headings are BOLD; capture the widest line for the underline. */
       text_height = chat_ui_rich_text(seg->text, &text_rect, style->font_size, BLF_BOLD,
                                       heading_color, scale_factor, true, &text_width);
+
+      rctf sel_rect = text_rect;
+      sel_rect.ymin = y - text_height;
+      mixie_chat_md_seg_record(&sel_rect, /*mono=*/false, style->font_size);
 
       float underline_height = 0;
       if (seg->heading_level <= 2) {
@@ -553,11 +518,42 @@ void chat_ui_draw_markdown(const char *metadata_json,
         segments[i].text[0] == '\0') {
       continue;
     }
+    /* Report the segment index so code-block copy chips can identify their
+     * block (mixie_chat_code_copy.cc). Must be the PARSED index — clicks
+     * re-resolve the text via chat_ui_markdown_segment_text below. */
+    mixie_chat_code_hits_set_segment(i);
     float seg_height = draw_segment(&segments[i], x, current_y, content_width, style, scale_factor);
     if (seg_height > 0) {
       current_y -= seg_height;
     }
   }
+  mixie_chat_code_hits_set_segment(-1);
+}
+
+const char *chat_ui_markdown_segment_text(const char *metadata_json,
+                                          int seg_index,
+                                          bool code_only)
+{
+  if (!metadata_json || metadata_json[0] == '\0' || seg_index < 0) {
+    return nullptr;
+  }
+  int segment_count = 0;
+  const MarkdownSegment *segments = markdown_segments_get_cached(metadata_json, &segment_count);
+  if (seg_index >= segment_count) {
+    return nullptr;
+  }
+  const MarkdownSegmentType type = segments[seg_index].type;
+  if (code_only) {
+    if (type != MD_SEGMENT_CODE_BLOCK) {
+      return nullptr;
+    }
+  }
+  else if (type != MD_SEGMENT_CODE_BLOCK && type != MD_SEGMENT_PARAGRAPH &&
+           type != MD_SEGMENT_HEADING && type != MD_SEGMENT_QUOTE)
+  {
+    return nullptr;
+  }
+  return segments[seg_index].text;
 }
 
 /** \} */

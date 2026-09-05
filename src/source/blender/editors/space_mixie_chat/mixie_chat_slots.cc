@@ -259,6 +259,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       action.label[0] = '\0';
       action.value[0] = '\0';
       action.style = 1; /* default */
+      action.image[0] = '\0';
       action.height = 0.0f;
       action.is_hovered = false;
       memset(&action.bounds, 0, sizeof(action.bounds));
@@ -271,6 +272,9 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       }
       if (g_action_props.style) {
         action.style = RNA_property_enum_get(&action_ptr, g_action_props.style);
+      }
+      if (g_action_props.image) {
+        RNA_property_string_get(&action_ptr, g_action_props.image, action.image);
       }
 
       layout->slot_action_count++;

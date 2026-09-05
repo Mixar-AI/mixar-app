@@ -20,6 +20,10 @@ import tempfile
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.moodboard.core.splat_lifecycle import (
+    finalize_splat_handles,
+    note_splats_imported,
+)
 from mixar.modules.moodboard.core.world_labs_importer import (
     _enable_splat_render,
     _ensure_object_mode,
@@ -110,7 +114,11 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         new_objects = splat_objs + proxy_objs
         _move_to_collection(new_objects, collection)
         _finalize_visibility(splat_objs, [], proxy_objs)
+        # Same outliner contract as a generated world: taggable, selectable,
+        # deletable (see splat_lifecycle).
+        finalize_splat_handles(collection, splat_objs, proxy_objs)
         _frame_objects(proxy_objs or splat_objs)
+        note_splats_imported()
 
         logger.info(
             "[SplatImport] imported '%s' into '%s' (%d splat, %d proxy)",

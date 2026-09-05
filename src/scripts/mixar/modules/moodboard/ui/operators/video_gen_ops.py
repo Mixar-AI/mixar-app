@@ -4,8 +4,6 @@
 
 """Submit selected moodboard images/videos to catalogued video generation."""
 
-import os
-
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -53,69 +51,55 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, "No enabled video model is available")
             return {'CANCELLED'}
 
-        refs = get_selected_moodboard_media_inputs(context)
+        refs = get_selected_moodboard_media_inputs(context, fresh=True)
         from mixar.modules.moodboard.core.video_generation_catalog import (
+            build_image_reference_inputs,
+            build_video_reference_inputs,
             get_video_generation_limits,
+            seedance_reference_count_error,
         )
 
         limits = get_video_generation_limits(service_key)
         if limits is None:
             self.report({'ERROR'}, "Video generation catalog config is incomplete")
             return {'CANCELLED'}
-        if len(refs["images"]) > limits["max_images"]:
-            self.report({'WARNING'}, f"Select at most {limits['max_images']} images")
-            return {'CANCELLED'}
-        if len(refs["videos"]) > limits["max_videos"]:
-            self.report({'WARNING'}, f"Select at most {limits['max_videos']} videos")
-            return {'CANCELLED'}
-        if refs["count"] > limits["max_materials"]:
-            self.report(
-                {'WARNING'},
-                f"Select at most {limits['max_materials']} reference materials",
-            )
+
+        params = collect_params(service_key, model)
+        count_error = seedance_reference_count_error(
+            limits,
+            image_count=len(refs["images"]),
+            video_count=len(refs["videos"]),
+            image_mode=(params or {}).get("image_mode"),
+        )
+        if count_error:
+            self.report({'WARNING'}, count_error)
             return {'CANCELLED'}
         if not refs["all_video_sources_available"]:
             self.report({'ERROR'}, "A selected video was moved or deleted")
             return {'CANCELLED'}
 
-        video_inputs = []
-        for video in refs["videos"]:
-            if video["file_size_bytes"] > limits["max_video_bytes"]:
-                self.report({'ERROR'}, f"Video is too large: {video['filename']}")
-                return {'CANCELLED'}
-            if (
-                os.path.splitext(video["filename"])[1].lower()
-                not in limits["video_extensions"]
-            ):
-                self.report(
-                    {'ERROR'},
-                    f"Unsupported video reference: {video['filename']}",
-                )
-                return {'CANCELLED'}
-            video_inputs.append({
-                "filename": video["filename"],
-                "mime_type": video["mime_type"],
-                "filepath": video["resolved_filepath"],
-                "file_size_bytes": video["file_size_bytes"],
-            })
+        try:
+            video_inputs = build_video_reference_inputs(refs["videos"], limits)
+        except ValueError as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
 
         image_inputs = []
         try:
             from mixar.modules.common.utils.image_utils import compress_for_service
 
-            for index, image in enumerate(refs["images"]):
-                image_inputs.append({
-                    "filename": f"reference_{index + 1}.jpg",
-                    "mime_type": "image/jpeg",
-                    "bytes": compress_for_service(image["image"], "video_gen"),
-                })
+            image_inputs = build_image_reference_inputs(
+                refs["images"], limits, compress_for_service
+            )
+        except ValueError as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
         except Exception as exc:
             logger.exception("Could not prepare Seedance image references")
             self.report({'ERROR'}, f"Could not prepare image references: {exc}")
             return {'CANCELLED'}
 
         try:
-            params = collect_params(service_key, model)
             from mixar.modules.common.job_queue import enqueue_generation
             from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
 

@@ -113,6 +113,14 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     except ImportError:
         pass
 
+    # 5. Kill the managed local llama-server — it holds gigabytes of RAM and
+    #    must never outlive Blender (same contract as the sandbox children).
+    try:
+        from mixar.modules.local_models.core.server_supervisor import stop_all
+        _safe("stop_local_model_server", stop_all)
+    except ImportError:
+        pass
+
 
 def register() -> None:
     """Register the atexit fallback so hard-exit paths still flush."""

@@ -84,7 +84,20 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
   /* Ctrl+V / Cmd+V: paste image or text into chat.
    * Added to the main "Mixie Chat" keymap (not a separate footer keymap)
    * to avoid keyconfig lookup mismatches. The footer region also registers
-   * this keymap as a handler so the binding works in both regions. */
+   * this keymap as a handler so the binding works in both regions.
+   *
+   * MIXIE_CHAT_OT_paste, not MIXIE_CHAT_OT_paste_image: this chord fires
+   * when the composer does NOT hold text-edit focus, and paste_image
+   * returns CANCELLED for a clipboard that holds no image, so a text paste
+   * arriving here used to be dropped without a trace. The unified operator
+   * attaches an image if there is one and appends the text otherwise.
+   * (The inline hook in interface_handlers.cc still calls paste_image
+   * directly — it needs the CANCELLED to fall back to its own
+   * cursor-accurate ui_textedit_copypaste.)
+   *
+   * The Python addon keyconfig registers this chord too
+   * (space_mixie_chat/ui/keymap.py); it has to, because the GUI keyconfig
+   * preset reload wipes items from C-registered default-config keymaps. */
   KeyMapItem_Params paste_params{};
   paste_params.type = EVT_VKEY;
   paste_params.value = KM_PRESS;
@@ -93,7 +106,7 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
 #else
   paste_params.modifier = KM_CTRL;
 #endif
-  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste", &paste_params);
 }
 
 /** \} */
@@ -362,6 +375,10 @@ void ED_spacetype_mixie_chat()
   art->draw = mixie_chat_footer_region_draw;
 
   BLI_addhead(&st->regiontypes, art);
+
+  /* QA harness: export chat action/gate buttons + feedback stars as targets. */
+  void mixie_chat_qa_targets_register();
+  mixie_chat_qa_targets_register();
 
   BKE_spacetype_register(std::move(st));
 }

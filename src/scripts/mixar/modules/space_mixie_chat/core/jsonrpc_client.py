@@ -29,6 +29,15 @@ from ..constants import (
     WS_UI_STALE_THRESHOLD,
 )
 from .jsonrpc_auth import AuthBackoffManager
+from .jsonrpc_frames import (
+    HANDSHAKE_AUTH_FAILED,
+    HANDSHAKE_OK,
+    HANDSHAKE_TRANSIENT,
+    KIND_CLOSED,
+    KIND_MESSAGE,
+    read_frame,
+    wait_for_handshake,
+)
 
 try:
     import websocket
@@ -69,6 +78,12 @@ class JSONRPCWebSocketClient:
         on_notification: Optional[Callable[[dict], None]] = None,
         on_job_update: Optional[Callable[[dict], None]] = None,
         on_sandbox_control: Optional[Callable[[dict], dict]] = None,
+        on_llm_request: Optional[
+            Callable[[dict, Optional[str]], Optional[dict]]
+        ] = None,
+        on_addon_project_request: Optional[
+            Callable[[str, dict, Optional[str]], Optional[dict]]
+        ] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -93,6 +108,8 @@ class JSONRPCWebSocketClient:
         self._on_notification = on_notification
         self._on_job_update = on_job_update
         self._on_sandbox_control = on_sandbox_control
+        self._on_llm_request = on_llm_request
+        self._on_addon_project_request = on_addon_project_request
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -238,24 +255,34 @@ class JSONRPCWebSocketClient:
                 )
 
     def _do_connect(self) -> bool:
-        """Establish connection and perform handshake."""
-        # Stop if max auth failures reached
-        if self._auth.max_failures_reached:
-            logger.error("Max auth failures reached - stopping reconnection")
-            if self._on_disconnected:
-                self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
-            self._running.clear()
-            return False
+        """Establish connection and perform handshake.
 
+        Returns False on ANY failure; the run loop retries after its backoff
+        unless this method cleared ``_running``. Only a confirmed auth
+        rejection whose token refresh is not retryable stops the loop — a
+        backend that is down or still warming up produces connection
+        errors, handshake timeouts and non-4001 closes, none of which are
+        auth failures and all of which must keep the loop alive so the
+        client reconnects by itself once the backend is back.
+        """
+        token = None
         try:
             logger.info(f"Connecting to {self.ws_url}")
 
-            # Get auth token - attempt refresh if previous attempt failed
+            # Get auth token - after a confirmed auth rejection, refresh it
+            # first (an access token that expired during an outage is the
+            # common case) and stop only when the refresh path says a
+            # retry can never help.
             token = self._token_getter() if self._token_getter else None
-            if self._auth.failure_count > 0 and token:
-                refreshed = self._try_refresh_token()
+            if self._auth.failure_count > 0:
+                refreshed, refresh_retryable = self._try_refresh_token()
                 if refreshed:
                     token = refreshed
+                if self._auth.should_stop(refresh_retryable):
+                    if self._on_disconnected:
+                        self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
+                    self._running.clear()
+                    return False
             headers = [f"Authorization: Bearer {token}"] if token else []
             # Extend the "Share Usage Data" toggle to the backend's
             # server-side ws-connect/agent telemetry. Guarded: an
@@ -283,15 +310,28 @@ class JSONRPCWebSocketClient:
             # bare TCP/WS connect meant a server that accepts the upgrade but
             # rejects the token was retried in a tight ~1s loop forever
             # (failure count wiped each cycle, so max_failures never tripped).
-            if not self._perform_handshake():
-                # Handshake failure right after connect likely means auth rejection
-                # (server accepted WS upgrade but closed on token validation)
-                self._auth.record_failure(token)
-                logger.warning(
-                    f"Handshake failed (likely auth), attempt {self._auth.failure_count}/{self._auth._max_failures}"
-                )
-                self._ws.close()
+            outcome = self._perform_handshake()
+            if outcome != HANDSHAKE_OK:
+                try:
+                    self._ws.close()
+                except Exception:
+                    pass
                 self._connected = False
+                if outcome == HANDSHAKE_AUTH_FAILED:
+                    # The server said so explicitly (close 4001 or a
+                    # NOT_AUTHENTICATED reply). A timeout or any other
+                    # close is NOT counted: it used to be, and three of
+                    # them during a backend restart stopped the loop for
+                    # good.
+                    self._auth.record_failure(token)
+                    self._current_delay = self._auth.retry_delay(
+                        self._current_delay
+                    )
+                    logger.warning(
+                        f"Handshake rejected (auth), attempt "
+                        f"{self._auth.failure_count}; retrying in "
+                        f"{self._current_delay:.0f}s after a token refresh"
+                    )
                 return False
 
             self._handshake_complete = True
@@ -311,13 +351,16 @@ class JSONRPCWebSocketClient:
             return True
 
         except websocket.WebSocketException as e:
-            # Check for auth failure close code
-            close_code = getattr(e, 'status_code', None)
-            if close_code == WS_CLOSE_AUTH_FAILED:
+            # ``status_code`` is the HTTP status of a refused upgrade. Only
+            # 401/403 mean the credentials were rejected; a 502/503 from the
+            # load balancer while the backend is down is a plain retry.
+            status_code = getattr(e, 'status_code', None)
+            if status_code in (401, 403):
                 self._auth.record_failure(token)
+                self._current_delay = self._auth.retry_delay(self._current_delay)
                 logger.error(
-                    f"WebSocket auth failed (code {close_code}), "
-                    f"attempt {self._auth.failure_count}/{self._auth._max_failures}: {e}"
+                    f"WebSocket upgrade refused with HTTP {status_code}, "
+                    f"auth attempt {self._auth.failure_count}: {e}"
                 )
                 self._connected = False
                 return False
@@ -329,28 +372,58 @@ class JSONRPCWebSocketClient:
             self._connected = False
             return False
 
-    def _try_refresh_token(self) -> Optional[str]:
-        """Attempt to refresh the access token. Returns new token or None."""
+    def _try_refresh_token(self) -> tuple[Optional[str], bool]:
+        """Attempt to refresh the access token.
+
+        Returns ``(new_token_or_None, retryable)``. ``retryable`` is False
+        only when the refresh itself was rejected (401/403 — the tokens are
+        deleted by then) or there is no refresh token: a later attempt can
+        never succeed without a new login. A transport error or 5xx keeps
+        it True — the backend may simply not be back yet.
+        """
         try:
             from ...auth.core.auth import refresh_access_token, get_access_token
             result = refresh_access_token()
             if result.get("success"):
                 logger.info("Token refreshed successfully before reconnect")
-                return get_access_token()
-            else:
-                logger.warning(f"Token refresh failed: {result.get('message')}")
+                return get_access_token(), True
+            retryable = bool(result.get("retryable", True))
+            logger.warning(
+                f"Token refresh failed: {result.get('message')} "
+                f"(retryable={retryable})"
+            )
+            return None, retryable
         except Exception as e:
             logger.warning(f"Token refresh error: {e}")
-        return None
+        return None, True
 
-    def _perform_handshake(self) -> bool:
-        """Send handshake request and wait for response."""
+    def _perform_handshake(self) -> str:
+        """Send the handshake and wait for the reply.
+
+        Returns a HANDSHAKE_* outcome. Only HANDSHAKE_AUTH_FAILED counts
+        toward the auth backoff; a timeout, a non-4001 close or a malformed
+        reply is HANDSHAKE_TRANSIENT and just retries (jsonrpc_frames).
+        """
+        from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
+
         request_id = f"handshake_{self._next_request_id()}"
 
         params = {
             "blender_version": self._blender_version,
             "addon_version": self._addon_version,
-            "capabilities": ["script_execution", "notifications"],
+            # "local_llm": this client can execute llm.request relays against
+            # a local model server (modules/local_models) — the backend only
+            # sends them when the user's BYOK provider is "local".
+            "capabilities": [
+                "script_execution",
+                "notifications",
+                "local_llm",
+                # Client answers blender.liveness on the WS thread; the
+                # backend only probes instances that advertise it (older
+                # clients would silently never reply).
+                "liveness",
+                ADDON_PROJECT_CAPABILITY,
+            ],
         }
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:
@@ -369,26 +442,18 @@ class JSONRPCWebSocketClient:
 
         self._ws.send(json.dumps(handshake))
 
-        # Wait for response with timeout
-        self._ws.settimeout(10)
         try:
-            data = self._ws.recv()
-            if not data:
-                logger.warning("Handshake received empty response (connection closing)")
-                return False
-            response = json.loads(data)
-
-            if response.get("result", {}).get("success"):
-                logger.info("Handshake successful")
-                return True
-            else:
-                error = response.get("error", {})
-                logger.error(f"Handshake failed: {error.get('message', 'Unknown')}")
-                return False
-
+            outcome, detail = wait_for_handshake(self._ws, timeout=10.0)
         except Exception as e:
-            logger.error(f"Handshake error: {e}")
-            return False
+            logger.warning(f"Handshake error: {e} - transient, will retry")
+            return HANDSHAKE_TRANSIENT
+        if outcome == HANDSHAKE_OK:
+            logger.info("Handshake successful")
+        elif outcome == HANDSHAKE_AUTH_FAILED:
+            logger.error(f"Handshake rejected: {detail}")
+        else:
+            logger.warning(f"Handshake not answered: {detail} - will retry")
+        return outcome
 
     def _receive_loop(self) -> None:
         """Receive and process incoming messages."""
@@ -422,16 +487,19 @@ class JSONRPCWebSocketClient:
                         # The probe's answer may already sit in the socket
                         # buffer if this thread was starved again during the
                         # grace window — drain once more before the verdict.
-                        _probe_data = None
+                        _probe = None
                         try:
                             self._ws.settimeout(1.0)
-                            _probe_data = self._ws.recv()
+                            _probe = read_frame(self._ws)
                         except Exception:
                             pass
-                        if _probe_data:
+                        if _probe is not None and _probe.kind != KIND_CLOSED:
+                            # Any frame — a protocol ping included — is
+                            # proof the link is alive.
                             self._last_recv_time = time.time()
                             self._liveness_probe_started = None
-                            self._handle_message(json.loads(_probe_data))
+                            if _probe.kind == KIND_MESSAGE:
+                                self._handle_message(json.loads(_probe.text))
                             continue
                         logger.warning(
                             f"No WebSocket traffic for "
@@ -458,32 +526,40 @@ class JSONRPCWebSocketClient:
                 # NOTE: Responses are now pushed directly to _outbound queue by
                 # main_thread_executor via queue_response() - no cross-thread polling needed
 
-                # Receive with timeout
+                # Receive with timeout. read_frame keeps control frames and
+                # the close code — recv() returned "" for all of them, so a
+                # server ping never counted as traffic and a close never
+                # said why.
                 self._ws.settimeout(0.5)
                 try:
-                    data = self._ws.recv()
+                    frame = read_frame(self._ws)
                 except websocket.WebSocketTimeoutException:
                     continue
-                except websocket.WebSocketConnectionClosedException as e:
-                    # Check for auth failure close code
-                    close_code = getattr(e, 'status_code', None)
-                    if close_code == WS_CLOSE_AUTH_FAILED:
-                        self._auth.record_failure(None)
-                        logger.error(
-                            f"WebSocket auth failed during receive (code {close_code}), "
-                            f"attempt {self._auth.failure_count}"
-                        )
-                        if self._on_disconnected:
-                            self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
-                        if self._auth.max_failures_reached:
-                            self._running.clear()
-                        return
+                except websocket.WebSocketConnectionClosedException:
                     logger.info("WebSocket connection closed by server")
                     break
 
-                if data:
-                    self._last_recv_time = time.time()
-                    self._handle_message(json.loads(data))
+                if frame.kind == KIND_CLOSED:
+                    if frame.close_code == WS_CLOSE_AUTH_FAILED:
+                        # Recorded, not terminal: the run loop reconnects
+                        # and _do_connect refreshes the token first, then
+                        # decides whether a retry can help.
+                        self._auth.record_failure(None)
+                        logger.error(
+                            f"Server closed the connection with "
+                            f"{WS_CLOSE_AUTH_FAILED} (authentication failed), "
+                            f"auth attempt {self._auth.failure_count}"
+                        )
+                    else:
+                        logger.info(
+                            f"WebSocket connection closed by server "
+                            f"(code {frame.close_code})"
+                        )
+                    break
+
+                self._last_recv_time = time.time()
+                if frame.kind == KIND_MESSAGE:
+                    self._handle_message(json.loads(frame.text))
 
             except Exception as e:
                 logger.error(f"Receive error: {e}")
@@ -523,6 +599,26 @@ class JSONRPCWebSocketClient:
         logger.debug(f"Queued request {request_id} ({method})")
         return request_id
 
+    def send_notification(self, method: str, params: dict) -> bool:
+        """Queue a JSON-RPC notification (no id, no response expected).
+
+        Fire-and-forget client -> server reporting (e.g. the final-render
+        outcome). Thread-safe: the payload only enters the outbound queue,
+        which the WS thread drains. Returns False immediately when the client
+        is not connected — the caller decides whether that matters (reporting
+        is best-effort; the server's pending marker expires instead).
+        """
+        if not self._connected:
+            return False
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+        }
+        self._outbound.put(json.dumps(notification))
+        logger.debug(f"Queued notification ({method})")
+        return True
+
     def _handle_message(self, msg: dict) -> None:
         """Handle incoming JSON-RPC message."""
         # Check if it's a response (to our ping, handshake, or send_request)
@@ -547,8 +643,17 @@ class JSONRPCWebSocketClient:
         if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
 
+        elif method == JSONRPCMethod.BLENDER_LIVENESS:
+            self._handle_liveness(request_id)
+
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
+
+        elif method == JSONRPCMethod.LLM_REQUEST:
+            self._handle_llm_request(params, request_id)
+
+        elif isinstance(method, str) and method.startswith(JSONRPCMethod.ADDON_PROJECT_PREFIX):
+            self._handle_addon_project_request(method, params, request_id)
 
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
@@ -587,6 +692,67 @@ class JSONRPCWebSocketClient:
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
+
+    def _handle_addon_project_request(
+        self, method: str, params: dict, request_id: Optional[str]
+    ) -> None:
+        """Handle a capability-scoped local project operation.
+
+        The callback normally defers disk work to a worker and replies through
+        ``queue_response``. A synchronous result remains useful in tests and
+        for immediate refusals.
+        """
+        result = None
+        if self._on_addon_project_request:
+            try:
+                result = self._on_addon_project_request(method, params, request_id)
+                if result is None:
+                    return
+            except Exception as exc:
+                logger.error("add-on project request failed: %s", exc)
+                result = {
+                    "success": False,
+                    "error": {
+                        "code": "handler_error",
+                        "message": "The local add-on project handler failed",
+                    },
+                }
+        else:
+            result = {
+                "success": False,
+                "error": {
+                    "code": "capability_unavailable",
+                    "message": "Add-on Project Mode is unavailable in this client",
+                },
+            }
+        if request_id and result is not None:
+            self.queue_response(request_id, result)
+
+    def _handle_liveness(self, request_id: Optional[str]) -> None:
+        """Answer blender.liveness WITHOUT touching bpy or the main thread.
+
+        The backend sends this before counting a script timeout toward its
+        "Blender stopped responding" breaker. A legitimately long script
+        holds the main thread (and mostly the GIL) while Blender is perfectly
+        alive; this handler runs entirely on the WebSocket receive thread and
+        answers whenever the GIL is acquirable at all — answering AT ALL is
+        the proof of life the backend needs. Never import bpy-dependent
+        modules on this path beyond the lock-guarded in-flight snapshot.
+        """
+        if request_id is None:
+            return
+        try:
+            from .main_thread_executor import get_inflight_script, has_pending_requests
+
+            inflight = get_inflight_script()
+            self.queue_response(request_id, {
+                "alive": True,
+                "script_in_flight": inflight,
+                "queue_pending": has_pending_requests(),
+                "handshake_complete": self._handshake_complete,
+            })
+        except Exception as e:  # never let a probe raise inside the recv loop
+            logger.error(f"Error in liveness handler: {e}")
 
     def _handle_execute_script(self, params: dict, request_id: Optional[str]) -> None:
         """Handle script execution request.
@@ -627,6 +793,43 @@ class JSONRPCWebSocketClient:
                 "result": result,
             }
             self._outbound.put(json.dumps(response))
+
+    def _handle_llm_request(self, params: dict, request_id: Optional[str]) -> None:
+        """Handle a server-initiated llm.request (local model relay).
+
+        Mirrors ``_handle_execute_script``'s deferred contract: the callback
+        returns ``None`` to indicate async handling — it spawns its own worker
+        thread and replies later via ``queue_response(request_id, result)``.
+        The WS receive thread must NEVER run the (up to ~minutes-long) local
+        HTTP call itself; a synchronous return here is only used for
+        immediate refusals.
+
+        Failure results reuse the shape the relay layer defines —
+        ``{"error": {"code", "message"}}`` — sent through the same
+        ``queue_response`` path as every other response (matching how
+        execute_script failures travel as result payloads).
+        """
+        result: Optional[dict] = None
+        if self._on_llm_request:
+            try:
+                result = self._on_llm_request(params, request_id)
+                if result is None:
+                    # Deferred — the handler responds via queue_response later.
+                    return
+            except Exception as e:
+                logger.error(f"llm.request handler error: {e}")
+                result = {
+                    "error": {"code": "relay_internal", "message": str(e)},
+                }
+        else:
+            result = {
+                "error": {
+                    "code": "relay_unavailable",
+                    "message": "No local LLM relay handler registered",
+                },
+            }
+        if request_id and result is not None:
+            self.queue_response(request_id, result)
 
     def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
         """Handle a server-initiated agent.sandbox_control request (parent side).

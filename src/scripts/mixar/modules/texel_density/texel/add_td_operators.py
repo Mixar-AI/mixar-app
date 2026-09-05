@@ -9,7 +9,6 @@ from datetime import datetime
 import webbrowser
 
 from . import utils
-from .cpp_interface import TDCoreWrapper
 from .core_td_operators import find_image_editor_area
 
 # Copy average TD from object to object
@@ -23,6 +22,10 @@ class TexelDensityCopy(bpy.types.Operator):
 		start_time = datetime.now()
 		td = context.scene.td
 		start_active_obj = context.active_object
+
+		if start_active_obj is None:
+			return {"CANCELLED"}
+
 		start_selected_obj = context.selected_objects
 
 		# Calculate TD for active object only and copy value to "Set TD Value" field
@@ -139,10 +142,11 @@ class SelectByTDOrUVSpace(bpy.types.Operator):
 		# Set Selection Mode to Face for 3D View and UV Editor
 		bpy.ops.object.mode_set(mode='EDIT')
 		bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='FACE')
+		start_uv_select_mode = bpy.context.scene.tool_settings.uv_select_mode
 		bpy.context.scene.tool_settings.uv_select_mode = 'FACE'
 		bpy.ops.object.mode_set(mode='OBJECT')
 
-		tdcore_lib = TDCoreWrapper() if utils.get_preferences().calculation_backend == 'CPP' else None
+		tdcore_lib = utils.get_tdcore_wrapper()
 
 		def is_in_threshold(value):
 			if td.select_type == "EQUAL":
@@ -230,14 +234,18 @@ class SelectByTDOrUVSpace(bpy.types.Operator):
 
 		bpy.ops.object.select_all(action='DESELECT')
 
-		if start_mode == 'EDIT':
-			for obj in start_selected_obj:
-				context.view_layer.objects.active = obj
-				bpy.ops.object.mode_set(mode='EDIT')
-
-		context.view_layer.objects.active = start_active_obj
+		# Restore original selection, edit mode and UV select mode.
+		# Enter edit mode once with all objects selected so multi-object edit
+		# mode is restored; per-object mode_set calls are no-ops after the
+		# first and leave only the last object in edit mode
 		for j in need_select_again_obj:
 			j.select_set(True)
+		context.view_layer.objects.active = start_active_obj
+
+		if start_mode == 'EDIT':
+			bpy.ops.object.mode_set(mode='EDIT')
+
+		bpy.context.scene.tool_settings.uv_select_mode = start_uv_select_mode
 
 		utils.print_execution_time("Select by TD Space", start_time)
 		return {'FINISHED'}

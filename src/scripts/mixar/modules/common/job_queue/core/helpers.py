@@ -7,14 +7,11 @@
 Consolidates patterns duplicated across 16+ queue files:
 - Scene flag listener factory
 - Batch summary popup
-- Image download + moodboard add
 - Image URL extraction from response dicts
 - Queue-with-listener accessor
-"""
 
-import os
-import threading
-import time
+Image result transfer lives in ``image_results.py``.
+"""
 
 import bpy
 
@@ -32,12 +29,32 @@ logger = get_logger(__name__)
 _attached_listeners: set = set()
 
 
+def _listener_key(listener):
+    """Stable dedupe identity for a listener.
+
+    Fresh-closure listeners (the scene-flag listener is rebuilt on every
+    enqueue) stamp a stable ``_mixar_listener_key``; stable module functions and
+    cached singletons fall back to their own object identity.
+    """
+    return getattr(listener, "_mixar_listener_key", listener)
+
+
 def get_queue_with_listener(feature_key: str, listener) -> FeatureQueue:
-    """Get or create a FeatureQueue, attaching ``listener`` once per key."""
+    """Get or create a FeatureQueue, attaching ``listener`` exactly once.
+
+    Dedup is per ``(feature_key, listener)`` — NOT per ``feature_key`` alone.
+    Several DISTINCT listeners legitimately watch the same queue (e.g. the
+    generation-library archiver AND the image-to-3D scene-flag listener both on
+    ``image_to_3d_pro``); keying on the feature_key alone let whichever attached
+    FIRST silently suppress the other. That regressed shipped UI: the startup
+    archiver claimed the key, so enqueue's ``mixie_image_to_3d_is_generating``
+    flag listener never attached and the loader/success state broke.
+    """
     queue = get_queue(feature_key)
-    if feature_key not in _attached_listeners:
+    key = (feature_key, _listener_key(listener))
+    if key not in _attached_listeners:
         queue.add_listener(listener)
-        _attached_listeners.add(feature_key)
+        _attached_listeners.add(key)
     return queue
 
 
@@ -160,6 +177,10 @@ def create_scene_flag_listener(
                         batch_popup_title, succeeded, failed, cancelled,
                     )
 
+    # Stable dedupe identity: this factory returns a NEW closure on every
+    # enqueue, but all closures for the same scene property are the same logical
+    # listener and must attach only once (see get_queue_with_listener).
+    _on_queue_changed._mixar_listener_key = f"scene_flag:{property_name}"
     return _on_queue_changed
 
 
@@ -241,232 +262,3 @@ def extract_image_urls(result: dict) -> list:
     return images
 
 
-# ---------------------------------------------------------------------------
-# Image download + moodboard add
-# ---------------------------------------------------------------------------
-
-
-def download_images_to_moodboard(
-    *,
-    urls: list,
-    name_prefix: str,
-    prompt: str,
-    job_id: str,
-    on_added=None,
-    on_done,
-    on_error,
-    undo_message: str = "",
-    base_name: str = "",
-    scene_name: str = "",
-    should_apply=None,
-) -> None:
-    """Download images from URLs in bg thread, add to moodboard on main thread.
-
-    Parameters
-    ----------
-    urls : list[str]
-        Image URLs to download.
-    name_prefix : str
-        Prefix for bpy.data.images names (e.g. ``"imagegen"``).
-    prompt : str
-        Prompt text stored with the moodboard entry.
-    job_id : str
-        Job ID for moodboard handle tracking.
-    on_done : callable(names_str)
-        Called on main thread with comma-separated image names.
-    on_added : callable(names_str), optional
-        Called after moodboard insertion but before the undo snapshot. Use for
-        durable metadata/placement that redo must restore with the image.
-        Failure rolls back the new cards and image datablocks.
-    on_error : callable(error_str)
-        Called on main thread if all downloads fail.
-    undo_message : str, optional
-        If set, pushes an undo step with this message after adding images.
-    scene_name : str, optional
-        Originating Blender scene. Queue jobs set this so changing the active
-        scene while a download runs cannot redirect the generated images.
-    should_apply : callable, optional
-        Main-thread cancellation guard. When false, downloaded temp files are
-        discarded without inserting images or firing completion callbacks.
-    """
-
-    def _bg_download():
-        try:
-            from mixar.modules.common.utils.image_utils import (
-                download_image_to_tempfile,
-                filename_from_url,
-            )
-
-            batch_started_at = time.time()
-            downloaded_files = []
-            for i, url in enumerate(urls):
-                try:
-                    s3_filename = filename_from_url(url)
-                    if base_name:
-                        # Agent-chosen or backend-suggested name. Blender auto-dedups collisions
-                        # (e.g. "dog" -> "dog.001"); index only when >1 image.
-                        name = base_name if len(urls) == 1 else f"{base_name}_{i + 1}"
-                    elif s3_filename:
-                        # No suggested name — mirror the server-side S3 file
-                        # name (prompt-derived, unique per image) so outliner
-                        # name, filepath and S3 key stay aligned.
-                        name = os.path.splitext(s3_filename)[0]
-                    else:
-                        timestamp = int(time.time())
-                        name = f"{name_prefix}_{timestamp}_{i}"
-                    download_started_at = time.time()
-                    # Keep the server-side (S3) file name on the temp file so
-                    # the packed datablock's filepath shows the same name.
-                    temp_path, byte_count = download_image_to_tempfile(
-                        url, filename=s3_filename,
-                    )
-                    logger.debug(
-                        "[Queue] image download completed job=%s index=%d bytes=%d duration=%.3fs",
-                        job_id,
-                        i,
-                        byte_count,
-                        time.time() - download_started_at,
-                    )
-                    downloaded_files.append((temp_path, name, byte_count))
-                except Exception as e:
-                    logger.error("Failed to download image %d: %s", i, e)
-
-            def _apply():
-                if not downloaded_files:
-                    on_error("Failed to download generated images")
-                    return None
-                from mixar.modules.common.utils.image_utils import (
-                    add_image_to_moodboard,
-                    cleanup_temp_image,
-                    load_image_from_file,
-                )
-
-                if should_apply is not None and not should_apply():
-                    for temp_path, _name, _byte_count in downloaded_files:
-                        cleanup_temp_image(temp_path)
-                    return None
-
-                loaded_images = []
-                for temp_path, name, byte_count in downloaded_files:
-                    load_started_at = time.time()
-                    try:
-                        img = load_image_from_file(
-                            temp_path, name, keep_filename=True,
-                        )
-                        logger.debug(
-                            "[Queue] image load completed job=%s image=%s bytes=%d duration=%.3fs total=%.3fs",
-                            job_id,
-                            img.name,
-                            byte_count,
-                            time.time() - load_started_at,
-                            time.time() - batch_started_at,
-                        )
-                        loaded_images.append(img)
-                    except Exception as e:
-                        logger.error("Failed to load image into Blender: %s", e)
-                    finally:
-                        cleanup_temp_image(temp_path)
-
-                if not loaded_images:
-                    on_error("Failed to load generated images")
-                    return None
-
-                target_scene = None
-                if scene_name:
-                    try:
-                        target_scene = bpy.data.scenes.get(scene_name)
-                    except Exception:
-                        target_scene = None
-                    if target_scene is None:
-                        for img in loaded_images:
-                            try:
-                                bpy.data.images.remove(img)
-                            except Exception:
-                                pass
-                        on_error(f"Originating scene '{scene_name}' no longer exists")
-                        return None
-                else:
-                    target_scene = getattr(bpy.context, "scene", None)
-                if target_scene is None:
-                    for img in loaded_images:
-                        try:
-                            bpy.data.images.remove(img)
-                        except Exception:
-                            pass
-                    on_error("No Blender scene is available for generated images")
-                    return None
-
-                added_images = []
-                for img in loaded_images:
-                    try:
-                        add_image_to_moodboard(
-                            img,
-                            prompt,
-                            job_handle=job_id,
-                            scene=target_scene,
-                        )
-                        added_images.append(img)
-                    except Exception as e:
-                        logger.error(
-                            "Failed to add image to moodboard: %s", e,
-                        )
-                        try:
-                            bpy.data.images.remove(img)
-                        except Exception:
-                            pass
-
-                if not added_images:
-                    on_error("Failed to add generated images to the moodboard")
-                    return None
-
-                names = ", ".join(img.name for img in added_images)
-                if on_added is not None:
-                    try:
-                        on_added(names)
-                    except Exception as e:
-                        # Metadata hooks may be part of the result contract
-                        # (for example, character-component provenance). Roll
-                        # back the cards and their freshly loaded datablocks so
-                        # a failed hook cannot leave a successful-looking,
-                        # untraceable result on the moodboard.
-                        items = target_scene.mixie_moodboard_images
-                        for index in range(len(items) - 1, -1, -1):
-                            try:
-                                item = items[index]
-                                if (
-                                    getattr(item, "mixar_job_handle", "") == job_id
-                                    and getattr(item, "image", None) in added_images
-                                ):
-                                    items.remove(index)
-                            except Exception:
-                                pass
-                        for img in added_images:
-                            try:
-                                bpy.data.images.remove(img)
-                            except Exception:
-                                pass
-                        on_error(f"Could not finalize generated images: {e}")
-                        return None
-                if undo_message:
-                    bpy.ops.ed.undo_push(message=undo_message)
-                logger.debug(
-                    "[Queue] image moodboard update completed job=%s count=%d total=%.3fs",
-                    job_id,
-                    len(added_images),
-                    time.time() - batch_started_at,
-                )
-                on_done(names)
-                return None
-
-            bpy.app.timers.register(_apply, first_interval=0.0)
-        except Exception as e:
-            err = f"Unexpected error during image download: {e}"
-            logger.error(err)
-
-            def _fail():
-                on_error(err)
-                return None
-
-            bpy.app.timers.register(_fail, first_interval=0.0)
-
-    threading.Thread(target=_bg_download, daemon=True).start()

@@ -16,7 +16,9 @@
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLI_string_ref.hh"
 #include "BLI_time.h"
+#include "BLI_vector.hh"
 
 #include "BLF_api.hh"
 
@@ -60,260 +62,223 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
 
 /* -------------------------------------------------------------------- */
 /** \name Position to Text Conversion
+ *
+ * Hit-testing runs on the SAME layout cache the draw pass produced —
+ * re-deriving the geometry here (the original implementation) went stale
+ * the moment the renderer learned steps/thinking blocks, action buttons,
+ * feedback rows and markdown sizing, which put every computed bubble rect
+ * at the wrong y and made text selection dead in practice.
  * \{ */
 
-struct MessageLayoutInfo {
-  rctf bubble_rect;
-  rctf text_rect;
-  int message_index;
-  char text[8192];
-  int font_size;
-};
-
-static float calc_message_attachments_height(Main *bmain,
-                                             PointerRNA *msg_ptr,
-                                             const ChatImageStyle *image_style)
+bool mixie_chat_layout_text_rect(const MessageLayoutData *layout, rctf *r_rect)
 {
-  PropertyRNA *att_prop = RNA_struct_find_property(msg_ptr, "attachments");
-  if (!att_prop) {
-    return 0.0f;
+  if (layout->text_height <= 0.0f || layout->bubble_height <= 0.0f) {
+    return false;
   }
 
-  int att_count = RNA_property_collection_length(msg_ptr, att_prop);
-  if (att_count == 0) {
-    return 0.0f;
+  r_rect->xmin = layout->bubble_x + layout->style.h_padding;
+  r_rect->xmax = r_rect->xmin + layout->content_width;
+
+  if (layout->is_markdown_content) {
+    /* Markdown content draws top-down from the bubble's top padding. */
+    r_rect->ymax = layout->y_pos + layout->bubble_height - layout->style.v_padding;
+    r_rect->ymin = r_rect->ymax - layout->text_height;
+  }
+  else {
+    /* Plain bubbles vertically center the text (bottom-anchor it when
+     * attachments fill the top) — mirror chat_ui_draw_bubble exactly. */
+    const float text_area_height = layout->bubble_height - layout->attachments_height -
+                                   layout->style.v_padding * 2.0f;
+    const float vertical_offset = (layout->attachments_height > 0.0f) ?
+                                      0.0f :
+                                      (text_area_height - layout->text_height) / 2.0f;
+    r_rect->ymin = layout->y_pos + layout->style.v_padding + vertical_offset;
+    r_rect->ymax = r_rect->ymin + layout->text_height;
+  }
+  return true;
+}
+
+/**
+ * Map a point inside a wrapped-text rect to a byte offset in `text`,
+ * using the same BLF word-wrap the draw pass uses. `local_x` is measured
+ * from the text rect's left edge, `y_from_top` down from its top edge.
+ * `line_height` <= 0 derives the plain BLF line height.
+ */
+static int wrapped_text_byte_offset(const char *text,
+                                    float wrap_width,
+                                    int font_size,
+                                    int font_id,
+                                    float line_height,
+                                    float local_x,
+                                    float y_from_top,
+                                    BLFWrapMode wrap_mode)
+{
+  BLF_size(font_id, font_size);
+
+  const blender::Vector<blender::StringRef> lines =
+      BLF_string_wrap(font_id, text, int(wrap_width), wrap_mode);
+  if (lines.is_empty()) {
+    return 0;
   }
 
-  float total_height = 0.0f;
-  char path_buffer[1024];
-  PropertyRNA *path_prop = nullptr;
-  PropertyRNA *source_prop = nullptr;
-
-  CollectionPropertyIterator att_iter{};
-  RNA_property_collection_begin(msg_ptr, att_prop, &att_iter);
-
-  if (att_iter.valid) {
-    path_prop = RNA_struct_find_property(&att_iter.ptr, "image_path");
-    source_prop = RNA_struct_find_property(&att_iter.ptr, "image_source");
+  if (line_height <= 0.0f) {
+    line_height = float(BLF_height_max(font_id));
+  }
+  int line_idx = (line_height > 0.0f) ? int(y_from_top / line_height) : 0;
+  if (line_idx < 0) {
+    line_idx = 0;
+  }
+  if (line_idx >= int(lines.size())) {
+    line_idx = int(lines.size()) - 1;
   }
 
-  while (att_iter.valid) {
-    if (path_prop && source_prop) {
-      /* image_path has no RNA maxlen, so RNA_property_string_get would copy
-       * the full string unbounded; guard against overflowing the fixed stack
-       * buffer (same pattern as footer_cache). */
-      path_buffer[0] = '\0';
-      const int path_len = RNA_property_string_length(&att_iter.ptr, path_prop);
-      if (path_len > 0 && path_len < int(sizeof(path_buffer))) {
-        RNA_property_string_get(&att_iter.ptr, path_prop, path_buffer);
-      }
-      int source = RNA_property_enum_get(&att_iter.ptr, source_prop);
+  const blender::StringRef line = lines[line_idx];
+  const int line_start = int(line.data() - text);
+  if (local_x <= 0.0f || line.is_empty()) {
+    return line_start;
+  }
+  const size_t within = BLF_str_offset_from_cursor_position(
+      font_id, line.data(), size_t(line.size()), int(local_x));
+  return line_start + int(within);
+}
 
-      if (path_buffer[0] != '\0') {
-        float img_height = chat_ui_calc_image_attachment_height(
-            bmain, path_buffer, source, image_style);
-        total_height += img_height;
-      }
+/* Line height the draw pass used for a markdown segment: code blocks are
+ * drawn with plain BLF wrap (mono line height), everything else through
+ * chat_ui_rich_text (default line height * 1.15). */
+static float md_seg_line_height(const MarkdownSegHit &hit)
+{
+  const int font_id = hit.mono ? chat_ui_mono_font() : BLF_default();
+  BLF_size(font_id, hit.font_size);
+  const float base = float(BLF_height_max(font_id));
+  return hit.mono ? base : base * 1.15f;
+}
+
+bool mixie_chat_pos_in_message_bubble(const bContext *C, ARegion *region, const int mval[2])
+{
+  SpaceMixieChat *smixie = get_space_mixie_chat(C);
+  if (!smixie) {
+    return false;
+  }
+  float view_x, view_y;
+  UI_view2d_region_to_view(&region->v2d, mval[0], mval[1], &view_x, &view_y);
+  for (const MessageLayoutData &layout : mixie_chat_get_layout_cache(smixie)) {
+    if (layout.bubble_height <= 0.0f) {
+      continue;
     }
-    RNA_property_collection_next(&att_iter);
+    rctf bubble_rect;
+    bubble_rect.xmin = layout.bubble_x;
+    bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
+    bubble_rect.ymin = layout.y_pos;
+    bubble_rect.ymax = layout.y_pos + layout.bubble_height;
+    if (BLI_rctf_isect_pt(&bubble_rect, view_x, view_y)) {
+      return true;
+    }
   }
-  RNA_property_collection_end(&att_iter);
-
-  return total_height;
+  return false;
 }
 
 bool mixie_chat_pos_to_text(const bContext *C,
                             ARegion *region,
                             const int mval[2],
                             int *r_message_index,
+                            int *r_seg_index,
                             int *r_char_offset)
 {
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
+  SpaceMixieChat *smixie = get_space_mixie_chat(C);
+  if (!smixie) {
     return false;
   }
-
-  Main *bmain = CTX_data_main(C);
-  View2D *v2d = &region->v2d;
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
   float view_x, view_y;
-  UI_view2d_region_to_view(v2d, mval[0], mval[1], &view_x, &view_y);
+  UI_view2d_region_to_view(&region->v2d, mval[0], mval[1], &view_x, &view_y);
 
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
-  if (!prop) {
-    return false;
-  }
-
-  int msg_count = RNA_property_collection_length(&scene_ptr, prop);
-  if (msg_count == 0) {
-    return false;
-  }
-
-  ChatLayoutMetrics metrics = chat_ui_get_layout_metrics();
-  ChatImageStyle image_style = chat_ui_get_image_style(&metrics);
-  const float max_bubble_width = float(region->winx) * metrics.max_bubble_width_ratio;
-
-  PropertyRNA *sender_prop = nullptr;
-  PropertyRNA *text_prop = nullptr;
-
-  /* First pass: calculate total height */
-  float total_height = metrics.padding;
-
-  CollectionPropertyIterator iter{};
-  RNA_property_collection_begin(&scene_ptr, prop, &iter);
-
-  if (iter.valid) {
-    sender_prop = RNA_struct_find_property(&iter.ptr, "sender");
-    text_prop = RNA_struct_find_property(&iter.ptr, "content");
-    if (!text_prop) {
-      text_prop = RNA_struct_find_property(&iter.ptr, "text");
+  /* Markdown bubbles: hit-test the RENDERED segment rects and map the click
+   * against that segment's own text, font and wrap — mapping the raw
+   * markdown string over the laid-out bubble put offsets nowhere near the
+   * glyphs (code cards use the mono font, a narrower wrap width, and a
+   * language header row). */
+  for (const MarkdownSegHit &hit : rt->md_seg_hits) {
+    if (!BLI_rctf_isect_pt(&hit.text_rect, view_x, view_y)) {
+      continue;
     }
-  }
-
-  while (iter.valid) {
-    if (text_prop) {
-      PointerRNA msg_ptr = iter.ptr;
-
-      int text_len = RNA_property_string_length(&msg_ptr, text_prop);
-      char *text_buffer = static_cast<char *>(MEM_mallocN(text_len + 1, "chat_text"));
-      RNA_property_string_get(&msg_ptr, text_prop, text_buffer);
-      int sender_enum = sender_prop ? RNA_property_enum_get(&msg_ptr, sender_prop) : 0;
-      bool is_user = (sender_enum == 0);
-      ChatBubbleStyle style = is_user ? chat_ui_get_user_bubble_style(&metrics) :
-                                        chat_ui_get_agent_bubble_style(&metrics);
-
-      float content_width = max_bubble_width - style.h_padding * 2.0f;
-      float text_width, text_height;
-      chat_ui_calc_text_bounds(
-          text_buffer, content_width, style.font_size, 0, &text_width, &text_height);
-
-      float attachments_height = calc_message_attachments_height(bmain, &msg_ptr, &image_style);
-
-      float bubble_width = text_width + style.h_padding * 2.0f + 4.0f;
-      float bubble_height = text_height + attachments_height + style.v_padding * 2.0f;
-
-      float min_width = 100.0f * metrics.scale_factor;
-      if (attachments_height > 0) {
-        min_width = image_style.max_width + image_style.margin * 2.0f + style.h_padding * 2.0f;
-      }
-      if (bubble_width < min_width) {
-        bubble_width = min_width;
-      }
-
-      total_height += metrics.label_height;
-      total_height += bubble_height;
-      total_height += metrics.bubble_spacing;
-
-      MEM_freeN(text_buffer);
+    const char *seg_text = mixie_chat_message_segment_text(
+        C, hit.message_index, hit.seg_index, /*code_only=*/false);
+    if (!seg_text || seg_text[0] == '\0') {
+      continue;
     }
-    RNA_property_collection_next(&iter);
-  }
-  RNA_property_collection_end(&iter);
-
-  /* Second pass: find message at mouse position */
-  float y_pos = total_height - metrics.padding;
-  int message_index = 0;
-
-  RNA_property_collection_begin(&scene_ptr, prop, &iter);
-
-  while (iter.valid) {
-    if (sender_prop && text_prop) {
-      PointerRNA msg_ptr = iter.ptr;
-      int sender_enum = RNA_property_enum_get(&msg_ptr, sender_prop);
-      bool is_user = (sender_enum == 0);
-
-      int text_len = RNA_property_string_length(&msg_ptr, text_prop);
-      char *text_buffer = static_cast<char *>(MEM_mallocN(text_len + 1, "chat_text"));
-      RNA_property_string_get(&msg_ptr, text_prop, text_buffer);
-
-      ChatBubbleStyle style = is_user ? chat_ui_get_user_bubble_style(&metrics) :
-                                        chat_ui_get_agent_bubble_style(&metrics);
-
-      float content_width = max_bubble_width - style.h_padding * 2.0f;
-      float text_width, text_height;
-      chat_ui_calc_text_bounds(
-          text_buffer, content_width, style.font_size, 0, &text_width, &text_height);
-
-      float attachments_height = calc_message_attachments_height(bmain, &msg_ptr, &image_style);
-
-      float bubble_width = text_width + style.h_padding * 2.0f + 4.0f;
-      float bubble_height = text_height + attachments_height + style.v_padding * 2.0f;
-
-      float min_width = 100.0f * metrics.scale_factor;
-      if (attachments_height > 0) {
-        min_width = image_style.max_width + image_style.margin * 2.0f + style.h_padding * 2.0f;
-      }
-      if (bubble_width < min_width) {
-        bubble_width = min_width;
-      }
-
-      float bubble_x = is_user ? (float(region->winx) - bubble_width - metrics.padding) :
-                                 metrics.padding;
-
-      y_pos -= metrics.label_height;
-      y_pos -= bubble_height;
-
-      rctf bubble_rect;
-      bubble_rect.xmin = bubble_x;
-      bubble_rect.xmax = bubble_x + bubble_width;
-      bubble_rect.ymin = y_pos;
-      bubble_rect.ymax = y_pos + bubble_height;
-
-      if (BLI_rctf_isect_pt(&bubble_rect, view_x, view_y)) {
-        rctf text_rect;
-        text_rect.xmin = bubble_x + style.h_padding;
-        text_rect.xmax = bubble_x + style.h_padding + content_width;
-        text_rect.ymin = y_pos + style.v_padding;
-        text_rect.ymax = y_pos + bubble_height - style.v_padding;
-
-        const int font_id = BLF_default();
-        BLF_size(font_id, style.font_size);
-        BLF_enable(font_id, BLF_WORD_WRAP);
-        BLF_wordwrap(font_id, int(content_width));
-
-        float click_x = view_x - text_rect.xmin;
-        int text_len_int = text_len;
-        int char_offset = text_len_int;
-
-        for (int i = 0; i < text_len_int; i++) {
-          float prefix_width = BLF_width(font_id, text_buffer, i);
-          if (prefix_width >= click_x) {
-            if (i > 0) {
-              float prev_width = BLF_width(font_id, text_buffer, i - 1);
-              if ((click_x - prev_width) < (prefix_width - click_x)) {
-                char_offset = i - 1;
-              }
-              else {
-                char_offset = i;
-              }
-            }
-            else {
-              char_offset = 0;
-            }
-            break;
-          }
-        }
-
-        BLF_disable(font_id, BLF_WORD_WRAP);
-
-        *r_message_index = message_index;
-        *r_char_offset = char_offset;
-
-        MEM_freeN(text_buffer);
-        RNA_property_collection_end(&iter);
-        return true;
-      }
-
-      y_pos -= metrics.bubble_spacing;
-      message_index++;
-
-      MEM_freeN(text_buffer);
+    float local_x = view_x - hit.text_rect.xmin;
+    float y_from_top = hit.text_rect.ymax - view_y;
+    if (local_x < 0.0f) {
+      local_x = 0.0f;
     }
-    RNA_property_collection_next(&iter);
+    if (y_from_top < 0.0f) {
+      y_from_top = 0.0f;
+    }
+    const int font_id = hit.mono ? chat_ui_mono_font() : BLF_default();
+    /* Code cards draw with HardLimit wrap (unbreakable tokens fold at the
+     * card edge) — the mapping must wrap the same way. */
+    const BLFWrapMode wrap_mode = hit.mono ? BLFWrapMode::HardLimit : BLFWrapMode::Minimal;
+    *r_message_index = hit.message_index;
+    *r_seg_index = hit.seg_index;
+    *r_char_offset = wrapped_text_byte_offset(seg_text,
+                                              BLI_rctf_size_x(&hit.text_rect),
+                                              hit.font_size,
+                                              font_id,
+                                              md_seg_line_height(hit),
+                                              local_x,
+                                              y_from_top,
+                                              wrap_mode);
+    return true;
   }
 
-  RNA_property_collection_end(&iter);
+  /* Plain-text bubbles: map against the message's copy text. */
+  const blender::Vector<MessageLayoutData> &layout_cache = mixie_chat_get_layout_cache(smixie);
+
+  for (const MessageLayoutData &layout : layout_cache) {
+    /* Selection offsets index the copyable text (content > legacy text,
+     * cached at layout time) — a message without it has nothing to select.
+     * Markdown bubbles were handled above via their segment rects. */
+    if (layout.is_markdown_content || !layout.copy_text || layout.copy_text[0] == '\0') {
+      continue;
+    }
+
+    rctf bubble_rect;
+    bubble_rect.xmin = layout.bubble_x;
+    bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
+    bubble_rect.ymin = layout.y_pos;
+    bubble_rect.ymax = layout.y_pos + layout.bubble_height;
+    if (!BLI_rctf_isect_pt(&bubble_rect, view_x, view_y)) {
+      continue;
+    }
+
+    rctf text_rect;
+    if (!mixie_chat_layout_text_rect(&layout, &text_rect)) {
+      continue;
+    }
+
+    float local_x = view_x - text_rect.xmin;
+    float y_from_top = text_rect.ymax - view_y;
+    if (local_x < 0.0f) {
+      local_x = 0.0f;
+    }
+    if (y_from_top < 0.0f) {
+      y_from_top = 0.0f;
+    }
+
+    *r_message_index = layout.message_index;
+    *r_seg_index = -1;
+    *r_char_offset = wrapped_text_byte_offset(layout.copy_text,
+                                              BLI_rctf_size_x(&text_rect),
+                                              layout.style.font_size,
+                                              BLF_default(),
+                                              -1.0f,
+                                              local_x,
+                                              y_from_top,
+                                              BLFWrapMode::Minimal);
+    return true;
+  }
+
   return false;
 }
 

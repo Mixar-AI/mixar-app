@@ -41,7 +41,12 @@ set(SRC
   interface_icons.cc
   interface_icons_event.cc
   interface_layout.cc
+  interface_mixar_card_button.cc
+  interface_mixar_card_icons.cc
+  interface_mixar_profile_card.cc
+  interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
+  interface_qa_inspect.cc
   interface_ops.cc
   interface_panel.cc
   interface_query.cc
@@ -108,7 +113,12 @@ set(SRC
   views/tree_view.cc
 
   eyedroppers/eyedropper_intern.hh
+  interface_mixar_card_icons.hh
+  interface_mixar_card_paint.hh
+  interface_mixar_palette.hh
+  interface_mixar_profile_card.hh
   interface_mixar_section.hh
+  interface_qa_inspect.hh
   templates/interface_templates_intern.hh
   interface_intern.hh
   regions/interface_regions_intern.hh

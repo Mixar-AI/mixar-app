@@ -16,7 +16,8 @@ Public surface:
 * :func:`compute_layout` — measure and position a card given a step.
 * :func:`draw_card` — POST_PIXEL draw callback (region-relative).
 * :func:`hit_test` — translate a window-space mouse event to a
-  button id (``"primary"``, ``"skip"``, or ``None``).
+  button id (``"primary"``, ``"alt"``, ``"back"``, ``"skip"``,
+  ``"card"``, or ``None``).
 """
 
 from .layout import CardLayout, compute_layout, hit_test

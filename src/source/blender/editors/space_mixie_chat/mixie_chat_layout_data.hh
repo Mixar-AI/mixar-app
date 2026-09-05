@@ -87,6 +87,9 @@ struct ChatActionItemProps {
   PropertyRNA *label;
   PropertyRNA *value;
   PropertyRNA *style;
+  /* Asset-picker preview thumbnail (bpy image name); may be null when the
+   * scripts overlay predates the property — buttons then render text-only. */
+  PropertyRNA *image;
   bool initialized;
 };
 
@@ -175,6 +178,10 @@ struct MessageLayoutData {
   int message_index;
   bool is_user;
   bool is_error;  /* True if message_type == ERROR */
+  /* True when the bubble renders parsed markdown segments (top-aligned)
+   * rather than plain wrapped text (vertically centered) — the selection
+   * text rect depends on which one the draw pass used. */
+  bool is_markdown_content;
   blender::Vector<AttachmentLayout> attachments;  /* Cached attachment data */
 
   /* Action buttons (Copy/Retry) - shown on hover */
@@ -268,6 +275,35 @@ struct MessageLayoutData {
   int thinking_duration_ms;
   float thinking_height;
   rctf thinking_header_bounds;  /* dropdown header hit area */
+};
+
+/**
+ * One clickable copy chip on a markdown code block (mixie_chat_code_copy.cc).
+ * Bounds are in View2D view coords like the message action buttons; rebuilt
+ * on every messages draw pass. The code text is NOT stored here — clicks
+ * re-resolve it from the message's metadata through the markdown parse
+ * cache, so per-frame rebuilds allocate nothing.
+ */
+struct CodeCopyHit {
+  rctf bounds = {0, 0, 0, 0};
+  int message_index = -1;
+  int seg_index = -1;
+};
+
+/**
+ * Text rect of one rendered markdown segment (mixie_chat_code_copy.cc).
+ * Character-level selection in markdown bubbles maps clicks against the
+ * SEGMENT's own text/font/wrap — mapping the raw markdown string over the
+ * laid-out bubble put the highlight nowhere near the glyphs (code blocks
+ * use the mono font, a narrower wrap width, and a language header row).
+ * Rebuilt every messages draw pass, view coords.
+ */
+struct MarkdownSegHit {
+  rctf text_rect = {0, 0, 0, 0};
+  int message_index = -1;
+  int seg_index = -1;
+  bool mono = false; /* mono font (code block) vs default font */
+  int font_size = 0;
 };
 
 /* Get the layout cache for button hit testing (from SpaceMixieChat runtime) */
@@ -439,6 +475,20 @@ struct MixieChatRuntime {
 
   /** Copy feedback: timestamp when copy was triggered. */
   double copy_feedback_time = 0.0;
+
+  /** Copy chips on markdown code blocks — rebuilt every messages draw pass
+   * (mixie_chat_code_copy.cc owns hover/feedback state + click dispatch). */
+  blender::Vector<CodeCopyHit> code_copy_hits;
+
+  /** Rendered markdown segment text rects — rebuilt every messages draw
+   * pass; selection in markdown bubbles hit-tests and highlights against
+   * these (mixie_chat_code_copy.cc collector). */
+  blender::Vector<MarkdownSegHit> md_seg_hits;
+
+  /** When >= 0, the active selection (sel_message_index/sel_start/sel_end
+   * on the space) indexes THIS markdown segment's text instead of the
+   * message's raw copy text. -1 for plain-text bubbles. */
+  int sel_md_seg = -1;
 
   /** Scroll-to-bottom indicator: bounds in screen-space for click testing. */
   rctf scroll_indicator_bounds = {0, 0, 0, 0};

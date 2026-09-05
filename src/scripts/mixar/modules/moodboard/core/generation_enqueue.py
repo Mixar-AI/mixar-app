@@ -12,7 +12,6 @@ Builds payloads and calls ``enqueue_generation()`` for:
 
 import base64 as _b64
 import os
-import re
 from typing import Callable, List, Optional, Tuple
 
 import bpy
@@ -43,63 +42,10 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-# Only these trailing extensions are stripped from a label — a bare "." in a
-# name (e.g. "R2.D2", "v1.5") must NOT be treated as a file extension.
-_STRIPPABLE_EXTS = (
-    ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
-    ".glb", ".gltf", ".fbx", ".obj", ".usd", ".usdz",
+from mixar.modules.moodboard.core.generation_names import (
+    derive_model_name,
+    sanitize_label as _sanitize_label,
 )
-
-
-def _sanitize_label(label: str) -> str:
-    base = label or ""
-    lower = base.lower()
-    for ext in _STRIPPABLE_EXTS:
-        if lower.endswith(ext):
-            base = base[: -len(ext)]
-            break
-    base = re.sub(r'[^a-zA-Z0-9_]', '_', base)
-    base = re.sub(r'_+', '_', base).strip('_') or "object"
-    return base
-
-
-def _slug_from_prompt(prompt: str, max_words: int = 6, max_len: int = 40) -> str:
-    """Concise underscore slug from a prompt.
-
-    Mirrors the backend imagegen naming (`_derive_image_name_from_prompt`)
-    so a mesh generated from a prompt reads like its image-gen twin:
-    'A red sports car on a road' -> 'red_sports_car_on_a_road'. Returns ''
-    when the prompt has no usable words.
-    """
-    if not prompt:
-        return ""
-    words = re.findall(r"[a-z0-9]+", prompt.lower())
-    # Drop a single leading article so 'a wizard' -> 'wizard'.
-    if words and words[0] in ("a", "an", "the"):
-        words = words[1:]
-    name = ""
-    for word in words[:max_words]:
-        candidate = f"{name}_{word}" if name else word
-        if len(candidate) > max_len:
-            break
-        name = candidate
-    return name
-
-
-def derive_model_name(image=None, prompt: str = "", explicit: str = "") -> str:
-    """Resolve the object name for a generated 3D mesh.
-
-    Priority: an explicit (agent-supplied) name, else the input image's
-    name, else a semantic slug derived from the prompt. Returns '' when
-    nothing usable is available — the caller's on_imported hook then falls
-    back to the queue label.
-    """
-    if explicit and explicit.strip():
-        return _sanitize_label(explicit)
-    if image is not None and getattr(image, "name", ""):
-        return _sanitize_label(image.name)
-    slug = _slug_from_prompt(prompt or "")
-    return _sanitize_label(slug) if slug else ""
 
 
 def model_front_zrot(model_slug: str) -> float:
@@ -132,7 +78,7 @@ def make_model_rename_on_imported(
     the result about world Z so every engine's front faces -Y.
     """
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = mesh_name or _sanitize_label(job.label)
         try:
             from mixar.modules.common.job_queue.core.model_io import (
@@ -144,9 +90,15 @@ def make_model_rename_on_imported(
             final = rename_generated_model(
                 object_names, target, front_zrot=front_zrot)
             convert_imported_material_to_paint_layers(final or target)
+            # Hand the final name back so the job stops pointing at the name
+            # the GLB carried — see AsyncGLBJob.on_imported. Without this the
+            # generations-library archiver looks the mesh up by a freed name
+            # and every Model Gen result goes unarchived.
+            return final
         except Exception as e:
             logger.warning(
                 "[ModelGen] post-import processing failed: %s", e)
+        return None
 
     return _hook
 
@@ -161,7 +113,7 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
     re-textured and must keep its pose.
     """
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = mesh_name or _sanitize_label(job.label)
         try:
             from mixar.modules.common.job_queue.core.model_io import (
@@ -172,9 +124,11 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
             )
             final = rename_imported_object(object_names, target)
             convert_imported_material_to_paint_layers(final or target)
+            return final  # see AsyncGLBJob.on_imported
         except Exception as e:
             logger.warning(
                 "[TextureGen] post-import processing failed: %s", e)
+        return None
 
     return _hook
 
@@ -182,13 +136,14 @@ def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
 def _make_hp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that renames + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = _sanitize_label(job.label) + "_high"
+        final = None
         try:
             from mixar.modules.common.job_queue.core.model_io import (
                 post_import_rename_and_setup,
             )
-            post_import_rename_and_setup(object_names, target)
+            final = post_import_rename_and_setup(object_names, target)
         except Exception as e:
             logger.warning("[SceneGenHP] post_import_rename_and_setup failed: %s", e)
 
@@ -201,15 +156,18 @@ def _make_hp_on_imported(chain_id: str) -> Callable:
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
 
+        return final  # see AsyncGLBJob.on_imported
+
     return _hook
 
 
 def _make_lp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that handles retopo mesh + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         names = [n.strip() for n in object_names.split(",") if n.strip()]
         has_low_suffix = any("_low" in n for n in names)
+        final = None
 
         if has_low_suffix:
             logger.info("[SceneGenLP] Post-processed mesh detected, skipping client-side cleanup")
@@ -225,7 +183,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 from mixar.modules.common.job_queue.core.model_io import (
                     post_import_rename_and_setup,
                 )
-                post_import_rename_and_setup(object_names, target, smart_uv=True)
+                final = post_import_rename_and_setup(
+                    object_names, target, smart_uv=True)
             except Exception as e:
                 logger.warning("[SceneGenLP] post_import_rename_and_setup failed: %s", e)
 
@@ -240,6 +199,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 obj = bpy.data.objects.get(name)
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
+
+        return final  # see AsyncGLBJob.on_imported
 
     return _hook
 

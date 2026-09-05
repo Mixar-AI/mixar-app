@@ -138,9 +138,13 @@ class MNewUDIMAtlasSegmentTest(bpy.types.Operator):
             context: Blender context.
 
         Returns:
-            bool: Always True.
+            bool: True if the active object is a mesh with an active UV layer,
+                False otherwise.
         """
-        return True
+        obj = get_active_object()
+        if not obj or obj.type != "MESH":
+            return False
+        return bool(obj.data.uv_layers.active)
 
     def execute(self, context):
         """Create a new UDIM atlas segment for testing purposes.
@@ -170,7 +174,7 @@ class MNewUDIMAtlasSegmentTest(bpy.types.Operator):
         image = new_segment.id_data
 
         area = context.area
-        if hasattr(area.spaces[0], "image"):
+        if area and hasattr(area.spaces[0], "image"):
             area.spaces[0].image = image
 
         return {"FINISHED"}
@@ -190,9 +194,13 @@ class MRefreshUDIMAtlasOffset(bpy.types.Operator):
             context: Blender context.
 
         Returns:
-            bool: Always True.
+            bool: True if the active area is showing an image, False otherwise.
         """
-        return True
+        area = context.area
+        if not area or not area.spaces:
+            return False
+        space = area.spaces[0]
+        return hasattr(space, "image") and bool(space.image)
 
     def execute(self, context):
         """Refresh UDIM atlas offset based on current UV islands.
@@ -225,6 +233,22 @@ class MRemoveUDIMAtlasSegment(bpy.types.Operator):
     index: IntProperty(
         name="Segment Index", description="UDIM Atlas Segment Index", default=0
     )
+
+    @classmethod
+    def poll(cls, context):
+        """Check if operator can be executed.
+
+        Args:
+            context: Blender context.
+
+        Returns:
+            bool: True if the active area is showing an image, False otherwise.
+        """
+        area = context.area
+        if not area or not area.spaces:
+            return False
+        space = area.spaces[0]
+        return hasattr(space, "image") and bool(space.image)
 
     def invoke(self, context, event):
         """Display property dialog for operator.
@@ -291,8 +315,10 @@ class MRemoveUDIMAtlasSegment(bpy.types.Operator):
         uv_name = "UVMap"
 
         area = context.area
+        if not area or not area.spaces or not hasattr(area.spaces[0], "image"):
+            return {"CANCELLED"}
         image = area.spaces[0].image
-        if not image.yua.is_udim_atlas:
+        if not image or not image.yua.is_udim_atlas:
             return {"CANCELLED"}
 
         # Remove segment

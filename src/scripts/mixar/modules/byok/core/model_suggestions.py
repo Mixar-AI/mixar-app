@@ -36,12 +36,19 @@ combination of "no real selection yet".
 from ..constants import (
     CODEX_PROVIDER_ID,
     CODEX_PROVIDER_ITEM,
+    LOCAL_PROVIDER_ID,
+    LOCAL_PROVIDER_ITEM,
     MODEL_EMPTY_SENTINEL,
     OPENROUTER_PROVIDER_ID,
     OPENROUTER_PROVIDER_ITEM,
     PROVIDER_EMPTY_SENTINEL,
     PROVIDER_LOADING_SENTINEL,
 )
+
+# Providers whose model dropdown is served from another provider's catalog
+# group. Codex runs OpenAI's gpt-5.x lineup through the user's ChatGPT
+# subscription, so it reuses the "openai" models — no separate catalog rows.
+_MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai'}
 
 # Module-level caches. Stored as Python-stable references so the
 # EnumProperty callbacks can return them directly without GC issues.
@@ -64,13 +71,19 @@ def is_codex(provider: str) -> bool:
     return provider == CODEX_PROVIDER_ID
 
 
+def is_local(provider: str) -> bool:
+    """True when ``provider`` is the client-side Local (this computer) option."""
+    return provider == LOCAL_PROVIDER_ID
+
+
 def get_provider_items() -> list[tuple[str, str, str]]:
     """EnumProperty items for the provider dropdown.
 
-    Always ends with the client-side "OpenRouter" and "Codex (ChatGPT sub)"
-    options (neither is part of the backend catalog), so a user can pick either
-    even offline / before the catalog loads. The cloud providers come first (the
-    cached catalog list, or a sentinel while it loads).
+    Always ends with the client-side "OpenRouter", "Codex (ChatGPT sub)" and
+    "Local (this computer)" options (none is part of the backend catalog), so a
+    user can pick any of them even offline / before the catalog loads. The
+    cloud providers come first (the cached catalog list, or a sentinel while it
+    loads).
     """
     if _provider_cache:
         cloud = list(_provider_cache)
@@ -80,7 +93,9 @@ def get_provider_items() -> list[tuple[str, str, str]]:
         cloud = [PROVIDER_LOADING_SENTINEL]
     items = list(cloud)
     identifiers = {item[0] for item in items}
-    for client_item in (OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM):
+    for client_item in (
+        OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM, LOCAL_PROVIDER_ITEM,
+    ):
         if client_item[0] not in identifiers:
             items.append(client_item)
     return items
@@ -92,8 +107,10 @@ def get_model_items(provider: str) -> list[tuple[str, str, str]]:
     Returns the provider's cached models when available; otherwise a
     single sentinel item. Always returns a non-empty list — Blender
     renders a blank/broken dropdown when items is [].
+
+    Codex shows the "openai" group (see _MODEL_SOURCE_PROVIDER).
     """
-    cached = _model_cache.get(provider)
+    cached = _model_cache.get(_MODEL_SOURCE_PROVIDER.get(provider, provider))
     if cached:
         return cached
     return [MODEL_EMPTY_SENTINEL]
@@ -108,7 +125,8 @@ def is_valid_model(provider: str, model: str) -> bool:
     """
     if not provider or not model or model == "NONE":
         return False
-    return any(item[0] == model for item in (_model_cache.get(provider) or ()))
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    return any(item[0] == model for item in (_model_cache.get(source) or ()))
 
 
 def is_loaded() -> bool:

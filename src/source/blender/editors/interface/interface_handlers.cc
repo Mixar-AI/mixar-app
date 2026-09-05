@@ -3671,6 +3671,40 @@ static bool ui_textedit_copypaste(uiBut *but, uiTextEdit &text_edit, const int m
   return changed;
 }
 
+/**
+ * Does this key press carry the platform's copy/cut/paste modifier?
+ *
+ * Outside the Mixar chat surfaces this is Blender's stock test: the modifier
+ * set has to be exactly Ctrl, or on macOS exactly Cmd or exactly Ctrl.
+ *
+ * The chat composer relaxes it to "the clipboard modifier is held, and
+ * neither Shift nor Alt is". External dictation and clipboard utilities
+ * inject the paste chord programmatically while their own push-to-talk
+ * modifier is still physically down, so what arrives is e.g. Cmd+Ctrl+V —
+ * which an exact-match test drops on the floor with no feedback of any kind.
+ * Shift stays excluded because Ctrl/Cmd+Shift+V is the explicit paste-image
+ * chord; Alt stays excluded because it is not a clipboard chord at all.
+ */
+static bool ui_textedit_clipboard_modifier_match(const wmEvent *event, const bool is_chat_space)
+{
+#if defined(__APPLE__)
+  const int clipboard_mod = KM_OSKEY | KM_CTRL;
+#else
+  const int clipboard_mod = KM_CTRL;
+#endif
+
+  if (is_chat_space) {
+    return (event->modifier & clipboard_mod) != 0 &&
+           (event->modifier & (KM_SHIFT | KM_ALT)) == 0;
+  }
+
+#if defined(__APPLE__)
+  return ELEM(event->modifier, KM_OSKEY, KM_CTRL);
+#else
+  return event->modifier == KM_CTRL;
+#endif
+}
+
 #ifdef WITH_INPUT_IME
 /* Enable IME, and setup #uiBut IME data. */
 static void ui_textedit_ime_begin(wmWindow *win, uiBut * /*but*/)
@@ -4345,16 +4379,17 @@ static int ui_do_but_textedit(
     switch (event->type) {
       case EVT_VKEY:
       case EVT_XKEY:
-      case EVT_CKEY:
-#if defined(__APPLE__)
-        if (ELEM(event->modifier, KM_OSKEY, KM_CTRL))
-#else
-        if (event->modifier == KM_CTRL)
-#endif
-        {
+      case EVT_CKEY: {
+        /* Guarded on the modifier so a bare "v"/"x"/"c" keystroke — the hot
+         * path for every text field in Blender — costs no context lookup. */
+        const ScrArea *clipboard_area = (event->modifier != 0) ? CTX_wm_area(C) : nullptr;
+        const bool is_chat_space = clipboard_area &&
+                                   ELEM(clipboard_area->spacetype,
+                                        SPACE_MIXIE_CHAT,
+                                        SPACE_AGENT_BUBBLE);
+        if (ui_textedit_clipboard_modifier_match(event, is_chat_space)) {
           if (event->type == EVT_VKEY) {
-            const ScrArea *area = CTX_wm_area(C);
-            if (area && ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+            if (is_chat_space) {
               /* In Mixie Chat / Agent Bubble, try the Python image-paste
                * operator first. If it finds image data on the clipboard it
                * attaches the image and returns OPERATOR_FINISHED — we skip
@@ -4387,6 +4422,7 @@ static int ui_do_but_textedit(
           retval = WM_UI_HANDLER_BREAK;
         }
         break;
+      }
       case EVT_RIGHTARROWKEY:
       case EVT_LEFTARROWKEY: {
         const eStrCursorJumpDirection direction = (event->type == EVT_RIGHTARROWKEY) ?
@@ -4495,12 +4531,24 @@ static int ui_do_but_textedit(
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;
         bool is_moodboard_node_prompt = false;
+        bool is_moodboard_sidebar_prompt = false;
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
-          is_moodboard_node_prompt =
-              area && area->spacetype == SPACE_MIXIE && prop_id && STREQ(prop_id, "prompt") &&
-              RNA_struct_find_property(&but->rnapoin, "node_id");
+          const bool is_moodboard_prompt = area && area->spacetype == SPACE_MIXIE && prop_id &&
+                                           STREQ(prop_id, "prompt");
+          if (is_moodboard_prompt) {
+            if (RNA_struct_find_property(&but->rnapoin, "node_id")) {
+              is_moodboard_node_prompt = true;
+            }
+            else {
+              /* An N-panel tab prompt: the sidebar is the UI region. Popup
+               * dialogs (TEMP regions) keep the native Enter-confirms-dialog
+               * behavior, and the canvas node prompt is the branch above. */
+              is_moodboard_sidebar_prompt = data->region &&
+                                            data->region->regiontype == RGN_TYPE_UI;
+            }
+          }
         }
 
         if (is_moodboard_node_prompt &&
@@ -4526,6 +4574,34 @@ static int ui_do_but_textedit(
             WM_operator_name_call_ptr(
                 C, run_ot, blender::wm::OpCallContext::ExecDefault, &run_props, nullptr);
             WM_operator_properties_free(&run_props);
+          }
+          retval = WM_UI_HANDLER_BREAK;
+          break;
+        }
+
+        if (is_moodboard_sidebar_prompt &&
+            (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
+        {
+          /* Enter in an N-panel prompt runs that tab's Generate, exactly like
+           * Enter in a canvas node prompt runs the node. The owner
+           * PropertyGroup names the tab; the Python dispatcher
+           * (moodboard/core/prompt_submit.py) resolves the tab's
+           * mode-dependent generate operator so the routing lives beside the
+           * drawers it mirrors rather than being frozen into C++. Read the
+           * identifier before apply/exit while the button's RNA pointer is
+           * guaranteed live. */
+          const std::string owner_type = RNA_struct_identifier(but->rnapoin.type);
+          ui_apply_but(C, block, but, data, true);
+          button_activate_state(C, but, BUTTON_STATE_EXIT);
+          if (wmOperatorType *submit_ot = WM_operatortype_find(
+                  "MIXIE_OT_moodboard_prompt_generate", false))
+          {
+            PointerRNA submit_props;
+            WM_operator_properties_create_ptr(&submit_props, submit_ot);
+            RNA_string_set(&submit_props, "owner_type", owner_type.c_str());
+            WM_operator_name_call_ptr(
+                C, submit_ot, blender::wm::OpCallContext::ExecDefault, &submit_props, nullptr);
+            WM_operator_properties_free(&submit_props);
           }
           retval = WM_UI_HANDLER_BREAK;
           break;

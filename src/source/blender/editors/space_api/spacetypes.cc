@@ -58,6 +58,7 @@
 #include "ED_uvedit.hh"
 
 #include "io_ops.hh"
+#include "mixar_file_drop.hh"
 
 void ED_spacetypes_init()
 {
@@ -194,6 +195,7 @@ void ED_spacetypes_keymap(wmKeyConfig *keyconf)
 {
   using namespace blender::ed;
   ED_keymap_screen(keyconf);
+  ED_dropboxes_mixar_file();
   ED_keymap_anim(keyconf);
   ED_keymap_animchannels(keyconf);
   ED_keymap_gpencil_legacy(keyconf);

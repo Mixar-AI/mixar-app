@@ -19,6 +19,7 @@ from bpy.types import Operator
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
+from mixar.modules.asset_search.core.api_client import metered_client
 from mixar.modules.common.api.client import HTTPClient
 
 logger = get_logger(__name__)
@@ -67,6 +68,24 @@ class MIXIE_OT_search_assets(Operator):
         # Extract image bytes on main thread (bpy.data access required)
         if state.search_image is not None:
             self._image_bytes = _extract_search_image_bytes(state.search_image)
+            if self._image_bytes is None:
+                # An unreadable reference image (e.g. no pixel data) must not
+                # degrade to a text-only search silently — say so, or cancel
+                # when there is nothing else to search with.
+                if not state.search_prompt.strip():
+                    state.is_searching = False
+                    self.report(
+                        {'ERROR'},
+                        "Could not read the reference image — it has no "
+                        "usable pixel data. Re-save the image or search "
+                        "with a text prompt.",
+                    )
+                    return {'CANCELLED'}
+                self.report(
+                    {'WARNING'},
+                    "Reference image could not be read — searching with "
+                    "the text prompt only",
+                )
 
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, window=context.window)
@@ -97,6 +116,15 @@ class MIXIE_OT_search_assets(Operator):
 
             res = self._result or {}
             state.search_message = res.get("message", "Search failed")
+            # Structured rows for the actionable results list (panel).
+            state.search_results.clear()
+            for hit in res.get("results", []):
+                row = state.search_results.add()
+                row.name = hit.get("name", "?")
+                row.score = float(hit.get("score", 0.0))
+                row.library = hit.get("library", "")
+                row.blend_file = hit.get("blend_file", "")
+                row.asset_type = hit.get("type", "")
             self._cleanup(context)
 
             report_type = "INFO" if res.get("success") else "WARNING"
@@ -235,12 +263,22 @@ def _extract_search_image_bytes(img):
     if img.packed_file and img.packed_file.data:
         return bytes(img.packed_file.data)
 
-    # Fall back to saving a render to a temp file
-    tmp_path = os.path.join(
-        tempfile.gettempdir(), f"_mixar_search_{img.name}.jpg",
-    )
+    # Fall back to saving a render to a temp file. mkstemp: a predictable
+    # name in the shared tempdir invites collisions and symlink attacks
+    # (the rest of the module uses mkdtemp for the same reason).
+    fd, tmp_path = tempfile.mkstemp(prefix="mixar_search_", suffix=".jpg")
+    os.close(fd)
     try:
-        img.save_render(filepath=tmp_path)
+        # save_render writes in the SCENE's image format (PNG by default,
+        # worse: a user's EXR), while the upload is always image/jpeg —
+        # force JPEG the way render_to_jpeg() does, then restore.
+        settings = bpy.context.scene.render.image_settings
+        orig_format = settings.file_format
+        settings.file_format = 'JPEG'
+        try:
+            img.save_render(filepath=tmp_path)
+        finally:
+            settings.file_format = orig_format
         with open(tmp_path, "rb") as fh:
             return fh.read()
     except Exception as exc:
@@ -254,7 +292,8 @@ def _extract_search_image_bytes(img):
 def _search_api(prompt, image_bytes, operator):
     """POST a search query to the backend proxy in a background thread."""
     try:
-        client = HTTPClient(base_url=get_server_url())
+        # Credit-metered per call — never auto-retried (see core/api_client).
+        client = metered_client()
         form_data = {"prompt": prompt or ""}
         files = None
         if image_bytes:
@@ -288,17 +327,26 @@ def _search_api(prompt, image_bytes, operator):
             operator._result = {
                 "success": True,
                 "message": "No matching assets found",
+                "results": [],
             }
             return
 
-        lines = []
+        # Structured rows: the panel renders these with score bars and a
+        # "locate in browser" action, not raw text.
+        rows = []
         for r in results:
-            name = r.get("model_name", "?")
-            score = r.get("similarity_score", 0)
-            lines.append(f"{name} ({score:.2f})")
+            meta = r.get("metadata", {}) or {}
+            rows.append({
+                "name": meta.get("name") or r.get("model_name", "?"),
+                "score": float(r.get("similarity_score", 0) or 0),
+                "library": meta.get("library", ""),
+                "blend_file": meta.get("blend_file", ""),
+                "type": meta.get("type", ""),
+            })
         operator._result = {
             "success": True,
-            "message": f"Found {len(results)} results:\n" + "\n".join(lines),
+            "message": f"Found {len(rows)} matching asset(s)",
+            "results": rows,
         }
     except Exception as exc:
         operator._result = {
@@ -346,9 +394,11 @@ def _status_api(metadata, operator):
 
 
 def _scan_asset_library_metadata(context):
-    """Scan asset libraries for names/metadata without rendering."""
+    """Scan ENROLLED asset libraries for names/metadata without rendering."""
+    from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
+
     metadata = []
-    for lib in context.preferences.filepaths.asset_libraries:
+    for lib in enrolled_libraries(context):
         library_path = Path(lib.path)
         if not library_path.exists():
             continue
@@ -467,6 +517,33 @@ def _start_auto_check():
     return None  # one-shot
 
 
+def _start_generation_library():
+    """Deferred startup: register the Mixar Generations library + attach the
+    queue listener that archives generations and triggers incremental
+    embedding when the generation queue drains. One-shot, non-fatal."""
+    try:
+        from mixar.modules.asset_search.core import generation_library
+        generation_library.ensure_registered()
+        # Self-heal stale/uncreated library folders so agent saves that default
+        # to a missing directory don't fail with an opaque write error.
+        generation_library.ensure_library_dirs()
+        generation_library.attach_listeners()
+    except Exception as exc:
+        logger.warning("[Asset Search] Generation library init failed: %s", exc)
+    return None  # one-shot
+
+
+@bpy.app.handlers.persistent
+def _auto_train_on_load(_dummy):
+    """After a file loads, catch library changes made while the app was closed
+    by scheduling a debounced auto-train (silent no-op if nothing changed)."""
+    try:
+        from mixar.modules.asset_search.core.auto_train import schedule_auto_train
+        schedule_auto_train("file_load")
+    except Exception:  # noqa: BLE001 — a load handler must never raise
+        pass
+
+
 classes = (
     MIXIE_OT_search_assets,
     MIXIE_OT_refresh_asset_status,
@@ -481,11 +558,22 @@ def register():
     bpy.app.timers.register(
         _start_auto_check, first_interval=2.0, persistent=True,
     )
+    # Register the Mixar Generations library + generation-archive listener.
+    # Slightly after the auto-check so preferences/queues are settled.
+    bpy.app.timers.register(
+        _start_generation_library, first_interval=3.0, persistent=True,
+    )
+    # Auto-train on file open so a library altered while the app was closed is
+    # re-embedded without a manual Train click.
+    if _auto_train_on_load not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_auto_train_on_load)
 
 
 def unregister():
     """Unregister operator classes and timers"""
-    for fn in (_start_auto_check, _auto_check_poll):
+    if _auto_train_on_load in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_auto_train_on_load)
+    for fn in (_start_auto_check, _auto_check_poll, _start_generation_library):
         if bpy.app.timers.is_registered(fn):
             bpy.app.timers.unregister(fn)
 

@@ -44,6 +44,11 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from .chat_sync_dedupe import (
+    attachment_shows_board_item,
+    board_image_is_attached,
+    attachment_identity_sets,
+)
 from .media_utils import is_video_item
 
 _logger = get_logger(__name__)
@@ -150,11 +155,14 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     leave the collection half-reconciled.
 
     Manually-added attachments (FILE / non-moodboard BLEND_DATA) are
-    never touched. Also de-dupes against existing non-moodboard
-    BLEND_DATA attachments with matching path — if the user manually
-    attached the same image, we don't add a moodboard copy on top of
-    it. This handles the post-reload case where SKIP_SAVE wiped the
-    is_moodboard flag on a previously-mirrored attachment.
+    never touched. Also de-dupes against them — if the user already
+    attached the same picture, we don't add a moodboard copy on top of
+    it. A BLEND_DATA attachment matches by image name (this also covers
+    the post-reload case where SKIP_SAVE wiped the is_moodboard flag on
+    a previously-mirrored attachment); a FILE attachment matches when
+    the board image was loaded from that file — a picture dropped into
+    the chat, mirrored onto the board by ``attachment_board_sync`` and
+    then selected there. Identity rules: ``chat_sync_dedupe``.
 
     The total attachment count is capped at MAX_ATTACHMENTS_PER_MESSAGE
     (matches the backend's per-turn limit) — once the collection is
@@ -179,13 +187,10 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
 
     # Snapshot what's there so we don't mutate while iterating.
     existing_moodboard_indices: list[int] = []
-    existing_paths_by_source: set[tuple[str, str]] = set()
     for i, att in enumerate(attachments):
-        path = att.image_path
-        source = att.image_source
-        existing_paths_by_source.add((path, source))
         if getattr(att, "is_moodboard", False):
             existing_moodboard_indices.append(i)
+    existing_blend_names, existing_file_keys = attachment_identity_sets(attachments)
 
     # Compute the operations.
     to_remove: list[int] = []  # indices in `attachments`
@@ -202,10 +207,12 @@ def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     for name in target_set:
         if name in keeps:
             continue
-        # De-dupe against any pre-existing BLEND_DATA attachment of the
-        # same name (e.g. a survivor of save/reload that lost its
-        # is_moodboard flag, or a manual blend-data add).
-        if (name, 'BLEND_DATA') in existing_paths_by_source:
+        # De-dupe against any pre-existing attachment showing this
+        # picture: a BLEND_DATA one of the same name (a survivor of
+        # save/reload that lost its is_moodboard flag, or a manual
+        # blend-data add), or a FILE one the board image was loaded from
+        # (a chat drop mirrored onto the board, then selected there).
+        if board_image_is_attached(name, existing_blend_names, existing_file_keys):
             continue
         to_add.append(name)
 
@@ -316,29 +323,38 @@ def force_resync(scene=None) -> None:
         _last_signatures.pop(scene.name, None)
 
 
-def deselect_moodboard_image_by_name(scene, image_name: str) -> bool:
-    """Deselect any moodboard images whose ``image.name`` matches.
-    Returns True if at least one image was deselected.
+def deselect_moodboard_image_for_attachment(
+    scene, image_path: str, image_source: str
+) -> bool:
+    """Deselect every moodboard image the composer attachment
+    ``(image_path, image_source)`` stands for. Returns True if at least
+    one image was deselected.
 
-    Called from the chat composer's X-button operator so removing a
-    moodboard pill cleanly drops the moodboard's selection — without
-    this, the polling tick would re-add the attachment on the next
-    cycle.
+    Called from the chat composer's X-button operator so removing a pill
+    cleanly drops the board's selection — without this, the polling tick
+    would re-add the attachment on the next cycle. Manual FILE pills
+    included: a dropped image mirrored onto the board and selected there
+    has that FILE pill as its ONE pill (the sync de-dupes against it).
     """
     images_attr = getattr(scene, "mixie_moodboard_images", None)
     if images_attr is None:
         return False
     changed = False
     for mb_img in images_attr:
-        if mb_img.image is None:
+        if not mb_img.selected:
             continue
-        if mb_img.image.name == image_name and mb_img.selected:
+        if attachment_shows_board_item(mb_img, image_path, image_source):
             mb_img.selected = False
             changed = True
     if changed:
         force_resync(scene)
         _redraw_moodboard_areas()
     return changed
+
+
+def deselect_moodboard_image_by_name(scene, image_name: str) -> bool:
+    """Name-only form of :func:`deselect_moodboard_image_for_attachment`."""
+    return deselect_moodboard_image_for_attachment(scene, image_name, 'BLEND_DATA')
 
 
 def deselect_all_moodboard_origin_attachments(scene) -> int:

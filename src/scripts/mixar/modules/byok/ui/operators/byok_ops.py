@@ -3,13 +3,22 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""BYOK operators: dialog + save/remove/fetch actions.
+"""BYOK operators: dialog + save/remove actions.
 
 State machine lives on WindowManager (see ui/properties/byok_props.py).
-The dialog operator's draw() dispatches on `wm.byok_dialog_state` to
-render IDLE / SAVING / ERROR / CONFIRM_REMOVE. Save and Remove spawn
-async work through `core/byok_client.py`; callbacks mutate WM state on
-the main thread and the props dialog redraws on the next tick.
+The dialog operator's draw() delegates to `byok_dialog_ui.draw_dialog`,
+which dispatches on `wm.byok_dialog_state` (IDLE / SAVING / REMOVING /
+SAVED / REMOVED / ERROR / CONFIRM_REMOVE) and renders with the profile
+card's design system. Save and Remove spawn async work through
+`core/byok_client.py`; callbacks mutate WM state on the main thread and
+the props dialog redraws on the next tick.
+
+The dialog draws its own single-primary-action footer and always marks
+one button active-default, which suppresses the props dialog's automatic
+OK/Cancel row (`wm_block_dialog_create` skips it when the block already
+has a default button) — the redundant Save-plus-OK pair is gone. Success
+lands on an explicit SAVED / REMOVED recap with one Done button, so
+"did it save?" is never a question.
 """
 
 import os
@@ -20,6 +29,13 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 
 from ...core import byok_client, model_suggestions
+from . import byok_dialog_ui
+from .byok_state_ops import (
+    _apply_cached_state,
+    _clear_cached_state,
+    _on_models_catalog_done,
+    _redraw_mixie_chat_areas,
+)
 
 logger = get_logger(__name__)
 
@@ -28,78 +44,17 @@ logger = get_logger(__name__)
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-def _redraw_mixie_chat_areas():
-    """Force a redraw after a state change.
-
-    Two consumers need to update:
-    - The profile popover entry point in the top bar.
-    - The BYOK dialog popup (rendered as a props dialog; its region
-      picks up the next redraw tick but we nudge it by tagging every
-      region, since the popup isn't a predictable area.type).
-    """
-    try:
-        for window in bpy.context.window_manager.windows:
-            for area in window.screen.areas:
-                area.tag_redraw()
-                for region in area.regions:
-                    region.tag_redraw()
-    except Exception as e:
-        logger.debug("BYOK area redraw failed: %s", e)
-
-
-def _clear_cached_state(wm):
-    """Reset all cached BYOK display fields to defaults."""
-    wm.byok_is_active = False
-    wm.byok_current_provider = ''
-    wm.byok_current_model = ''
-    wm.byok_current_supports_vision = True
-    wm.byok_key_preview = ''
-
-
 def _wipe_form_secrets(wm):
     """Remove transient API/token material from the live WindowManager."""
-    for attr in ('byok_form_api_key', 'byok_form_codex_bundle'):
+    for attr in (
+        'byok_form_api_key',
+        'byok_form_codex_bundle',
+        'byok_form_local_custom_key',
+    ):
         try:
             setattr(wm, attr, '')
         except Exception:
             pass
-
-
-def _apply_cached_state(wm, data):
-    """Write the server's `data.items[0]` into the cached display fields.
-
-    All 4 items are identical per the backend contract; just read index 0.
-    """
-    if not isinstance(data, dict):
-        return
-    wm.byok_is_active = bool(data.get('byok_active', False))
-    items = data.get('items') or []
-    if items and isinstance(items[0], dict):
-        wm.byok_current_provider = items[0].get('provider', '') or ''
-        wm.byok_current_model = items[0].get('model', '') or ''
-        # Absent on older backends → default to vision-capable (no false note).
-        wm.byok_current_supports_vision = bool(items[0].get('supports_vision', True))
-        wm.byok_key_preview = items[0].get('key_preview', '') or ''
-
-
-def _lookup_model_label(provider_id: str, model_id: str) -> str:
-    """Resolve a model ID to its human-readable label from the cache.
-
-    Falls back to the raw ID when the cache is empty or the model
-    isn't known (e.g. admin removed the model after the user saved).
-    """
-    for mid, mlabel, _desc in model_suggestions.get_model_items(provider_id):
-        if mid == model_id:
-            return mlabel
-    return model_id
-
-
-def _lookup_provider_label(provider_id: str) -> str:
-    """Resolve a provider ID to its human-readable label from the cache."""
-    for pid, plabel, _desc in model_suggestions.get_provider_items():
-        if pid == provider_id:
-            return plabel
-    return provider_id
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +94,8 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
                 # OpenRouter uses a free-text model slug, not the catalog dropdown.
                 if wm.byok_current_model:
                     wm.byok_form_openrouter_model = wm.byok_current_model
-            elif model_suggestions.is_codex(wm.byok_current_provider):
-                # Codex uses a free-text model slug, not the catalog dropdown.
-                if wm.byok_current_model:
-                    wm.byok_form_codex_model = wm.byok_current_model
+            elif model_suggestions.is_local(wm.byok_current_provider):
+                pass  # prefilled below by byok_local_ops.prepare_dialog
             elif wm.byok_current_model:
                 try:
                     wm.byok_form_model = wm.byok_current_model
@@ -156,6 +109,14 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # and-suspenders — the auth login hook normally fires this already.)
         if not model_suggestions.is_loaded():
             byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
+        # Local provider: refresh the managed-model item cache and prefill
+        # mode/model from the last registration (cheap; guarded — the local
+        # runtime module may be unavailable in stripped builds).
+        try:
+            from . import byok_local_ops
+            byok_local_ops.prepare_dialog(wm)
+        except Exception as e:
+            logger.debug("Local provider dialog prep failed: %s", e)
         # invoke_props_dialog (not invoke_popup) so the dialog redraws
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
@@ -171,243 +132,10 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         _wipe_form_secrets(context.window_manager)
 
     def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = False
-        layout.use_property_decorate = False
-        wm = context.window_manager
-
-        state = wm.byok_dialog_state
-
-        # Header — always shown
-        hero = layout.box()
-        header = hero.row(align=True)
-        header.scale_y = 1.25
-        header.label(text="AI Provider Settings", icon='PREFERENCES')
-        status = header.row(align=True)
-        status.alignment = 'RIGHT'
-        if wm.byok_is_active:
-            status.label(text="Active", icon='KEY_HLT')
-        else:
-            status.label(text="Not configured", icon='UNLOCKED')
-
-        subtitle = hero.row()
-        subtitle.enabled = False
-        subtitle.label(text="Choose the provider and model the Mixar agent should use.")
-        layout.separator(factor=0.9)
-
-        if state == 'CONFIRM_REMOVE':
-            self._draw_confirm_remove(layout)
-            return
-
-        # "Currently in use" info strip — only when active and not mid-edit error
-        if wm.byok_is_active and state != 'ERROR':
-            self._draw_current_usage(layout, wm)
-            layout.separator(factor=0.8)
-
-        # The form — visible in IDLE, SAVING, ERROR
-        self._draw_form(layout, wm, disabled=(state == 'SAVING'))
-
-        # Error message, if any
-        if state == 'ERROR' and wm.byok_last_error:
-            layout.separator(factor=0.4)
-            err_box = layout.box()
-            err_box.alert = True
-            err_col = err_box.column(align=True)
-            err_col.label(text="Save failed", icon='ERROR')
-            for line in _wrap(wm.byok_last_error, width=68):
-                err_col.label(text=line)
-
-        layout.separator(factor=0.9)
-
-        # Action row
-        actions = layout.row(align=True)
-        actions.scale_y = 1.35
-        if state == 'SAVING':
-            actions.enabled = False
-            actions.label(text="Validating with provider...", icon='SORTTIME')
-        else:
-            if wm.byok_is_active:
-                remove_col = actions.row(align=True)
-                remove_col.alert = True
-                remove_col.operator(
-                    MIXAR_BYOK_OT_request_remove.bl_idname,
-                    text="Remove",
-                    icon='TRASH',
-                )
-            actions.operator(
-                MIXAR_BYOK_OT_save.bl_idname,
-                text="Save",
-                icon='CHECKMARK',
-            )
-
-    # --- sub-sections ---
-
-    def _draw_current_usage(self, layout, wm):
-        box = layout.box()
-        heading = box.row()
-        heading.scale_y = 1.15
-        heading.label(text="Current configuration", icon='KEY_HLT')
-        provider_label = _lookup_provider_label(wm.byok_current_provider)
-        model_label = _lookup_model_label(wm.byok_current_provider, wm.byok_current_model)
-
-        col = box.column(align=True)
-        col.separator(factor=0.35)
-        self._draw_value_row(col, "Provider", provider_label)
-        self._draw_value_row(col, "Model", model_label)
-        if model_suggestions.is_codex(wm.byok_current_provider):
-            self._draw_value_row(col, "Account", wm.byok_key_preview or "ChatGPT subscription")
-        else:
-            self._draw_value_row(col, "API Key", wm.byok_key_preview or "Stored securely")
-
-        # Text-only model note: chat works, but 3D modeling/texturing runs
-        # without the viewport visual-feedback loop (images can't be sent).
-        if not wm.byok_current_supports_vision:
-            box.separator(factor=0.4)
-            note = box.column(align=True)
-            note.scale_y = 0.85
-            note.enabled = False
-            note.label(text="Text-only model — no image input.", icon='INFO')
-            note.label(text="Chat works; 3D tasks run without visual feedback.")
-
-    def _draw_form(self, layout, wm, disabled: bool):
-        box = layout.box()
-        heading = box.row()
-        heading.scale_y = 1.15
-        heading.label(text="Provider setup", icon='PREFERENCES')
-
-        col = box.column(align=True)
-        col.separator(factor=0.45)
-        col.enabled = not disabled
-        self._draw_tall_prop(col, wm, 'byok_form_provider', "Provider")
-
-        if model_suggestions.is_openrouter(wm.byok_form_provider):
-            self._draw_openrouter_fields(box, col, wm)
-        elif model_suggestions.is_codex(wm.byok_form_provider):
-            self._draw_codex_fields(box, col, wm)
-        else:
-            self._draw_cloud_fields(box, col, wm)
-
-    def _draw_cloud_fields(self, box, col, wm):
-        self._draw_tall_prop(col, wm, 'byok_form_model', "Model")
-        self._draw_tall_prop(col, wm, 'byok_form_api_key', "API Key")
-
-        box.separator(factor=0.55)
-        hint = box.row()
-        hint.enabled = False
-        hint.label(
-            text="Your API key is stored encrypted and used only for Mixar agent requests.",
-            icon='INFO',
-        )
-        preview_hint = box.row()
-        preview_hint.enabled = False
-        preview_hint.label(text="After saving, only a masked preview is shown.")
-
-    def _draw_openrouter_fields(self, box, col, wm):
-        """Free-text model slug + API key for OpenRouter (base_url is fixed)."""
-        self._draw_tall_prop(col, wm, 'byok_form_openrouter_model', "Model")
-        self._draw_tall_prop(col, wm, 'byok_form_api_key', "API Key")
-
-        box.separator(factor=0.55)
-        warn = box.row()
-        warn.alert = True
-        warn.label(
-            text="Pick a model that supports tool / function calling — the agent needs it.",
-            icon='ERROR',
-        )
-        hint = box.row()
-        hint.enabled = False
-        hint.label(
-            text="Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8.",
-            icon='INFO',
-        )
-        key_hint = box.row()
-        key_hint.enabled = False
-        key_hint.label(text="Your key is stored encrypted; only a masked preview is shown after saving.")
-
-    def _draw_codex_fields(self, box, col, wm):
-        """Model slug + auto-load / paste of the ~/.codex/auth.json token bundle."""
-        self._draw_tall_prop(col, wm, 'byok_form_codex_model', "Model")
-
-        # Easy path: read ~/.codex/auth.json straight off this machine.
-        load_row = col.row()
-        load_row.scale_y = 1.35
-        load_row.operator(
-            MIXAR_BYOK_OT_codex_load_file.bl_idname,
-            text="Load from ~/.codex/auth.json",
-            icon='FILE_REFRESH',
-        )
-        col.separator(factor=0.35)
-
-        # Fallback: the (hidden) field + a Paste-from-clipboard button and a
-        # char-count confirmation, since the field masks the tokens.
-        label_row = col.row()
-        label_row.enabled = False
-        label_row.label(text="…or paste it manually")
-        paste_row = col.row(align=True)
-        paste_row.scale_y = 1.45
-        paste_row.prop(wm, 'byok_form_codex_bundle', text="")
-        paste_row.operator(MIXAR_BYOK_OT_codex_paste.bl_idname, text="", icon='PASTEDOWN')
-        n = len(wm.byok_form_codex_bundle or "")
-        status = col.row()
-        status.enabled = False
-        status.label(
-            text=(f"{n} characters pasted" if n else "Empty — paste your auth.json"),
-            icon='CHECKMARK' if n else 'INFO',
-        )
-        col.separator(factor=0.45)
-
-        box.separator(factor=0.55)
-        for line in (
-            "Run  codex login  in your terminal, then paste the full contents of",
-            "~/.codex/auth.json here (the Paste button reads your clipboard).",
-            "Uses your ChatGPT subscription — Mixar credits are not charged.",
-        ):
-            row = box.row()
-            row.enabled = False
-            row.label(text=line, icon='INFO')
-
-    def _draw_tall_prop(self, layout, data, prop_name: str, label: str):
-        label_row = layout.row()
-        label_row.enabled = False
-        label_row.label(text=label)
-
-        field_row = layout.row()
-        field_row.scale_y = 1.45
-        field_row.prop(data, prop_name, text="")
-        layout.separator(factor=0.45)
-
-    def _draw_value_row(self, layout, label: str, value: str):
-        row = layout.split(factor=0.24, align=True)
-        row.scale_y = 1.15
-        label_col = row.row()
-        label_col.enabled = False
-        label_col.label(text=label)
-        row.label(text=value)
-
-    def _draw_confirm_remove(self, layout):
-        box = layout.box()
-        col = box.column(align=True)
-        col.alert = True
-        col.label(text="Remove your API key?", icon='QUESTION')
-        body = box.column(align=True)
-        body.enabled = False
-        body.label(text="The agent will use Mixar's default provider again.")
-        body.label(text="Mixar credits will be charged for future agent requests.")
-
-        layout.separator(factor=0.8)
-        row = layout.row(align=True)
-        row.operator(
-            MIXAR_BYOK_OT_cancel_remove.bl_idname,
-            text="Cancel",
-            icon='CANCEL',
-        )
-        confirm = row.row(align=True)
-        confirm.alert = True
-        confirm.operator(
-            MIXAR_BYOK_OT_confirm_remove.bl_idname,
-            text="Confirm Remove",
-            icon='TRASH',
-        )
+        # All rendering lives in byok_dialog_ui (500-line rule): the
+        # card-styled states AND the single-primary-action footer whose
+        # active-default button suppresses the native OK/Cancel row.
+        byok_dialog_ui.draw_dialog(self.layout, context.window_manager)
 
 
 # ---------------------------------------------------------------------------
@@ -422,35 +150,25 @@ class MIXAR_BYOK_OT_save(Operator):
 
     @classmethod
     def poll(cls, context):
-        wm = context.window_manager
-        if wm.byok_dialog_state == 'SAVING':
-            return False
-        if model_suggestions.is_openrouter(wm.byok_form_provider):
-            # OpenRouter needs a model slug + API key.
-            return bool(wm.byok_form_openrouter_model.strip()) and bool(
-                wm.byok_form_api_key.strip()
-            )
-        if model_suggestions.is_codex(wm.byok_form_provider):
-            # Codex needs a model slug + the pasted auth.json bundle.
-            return bool(wm.byok_form_codex_model.strip()) and bool(
-                wm.byok_form_codex_bundle.strip()
-            )
-        return (
-            wm.byok_form_provider != 'NONE'   # block while only a sentinel is selectable
-            and model_suggestions.is_valid_model(
-                wm.byok_form_provider, wm.byok_form_model
-            )
-            and bool(wm.byok_form_api_key.strip())
-        )
+        # In-flight guard only. Field validation deliberately lives in
+        # execute(), which routes problems to the ERROR state with a
+        # message the user can act on — the old silently-greyed Save
+        # button gave no clue what was missing (and the card-styled
+        # button has no disabled look to lean on).
+        return context.window_manager.byok_dialog_state not in ('SAVING', 'REMOVING')
 
     def execute(self, context):
         wm = context.window_manager
+        if wm.byok_dialog_state in ('SAVING', 'REMOVING'):
+            return {'CANCELLED'}
         provider = wm.byok_form_provider
 
         if model_suggestions.is_openrouter(provider):
             return self._execute_openrouter(wm)
         if model_suggestions.is_codex(provider):
             return self._execute_codex(wm)
+        if model_suggestions.is_local(provider):
+            return self._execute_local(wm)
 
         model = wm.byok_form_model
         api_key = wm.byok_form_api_key.strip()
@@ -498,14 +216,25 @@ class MIXAR_BYOK_OT_save(Operator):
         )
         return {'FINISHED'}
 
+    def _execute_local(self, wm):
+        """Local save: managed requires the supervised server healthy;
+        custom pings the user's server off-thread first. Both end in the
+        same PUT /agent/byok (with base_url + supports_vision) and the
+        shared _on_save_done callback."""
+        from . import byok_local_ops
+        result = byok_local_ops.execute_local(self, wm, on_done=_on_save_done)
+        _redraw_mixie_chat_areas()
+        return result
+
     def _execute_codex(self, wm):
         """Codex save: send the pasted auth.json bundle as the credential. The
-        backend refreshes the token (validating it) and stores the bundle."""
-        model = wm.byok_form_codex_model.strip()
+        backend refreshes the token (validating it) and stores the bundle.
+        The model is the shared catalog dropdown, fed by the "openai" group."""
+        model = wm.byok_form_model
         bundle = wm.byok_form_codex_bundle.strip()
-        if not model or not bundle:
+        if not model_suggestions.is_valid_model('codex', model) or not bundle:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Model and your auth.json bundle are required."
+            wm.byok_last_error = "Choose a Codex model and load your auth.json bundle."
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'
@@ -521,6 +250,25 @@ class MIXAR_BYOK_OT_save(Operator):
         return {'FINISHED'}
 
 
+def _deregister_local_if_switched_away(active_provider):
+    """The credential set now points at ``active_provider`` (None = removed).
+    If a managed local registration is still on disk, tear it down — the
+    backend will never relay to it again, so keeping llama-server running
+    (and resurrecting it every startup) would waste the user's RAM.
+    Main thread."""
+    try:
+        from mixar.modules.byok.constants import LOCAL_PROVIDER_ID
+        if active_provider == LOCAL_PROVIDER_ID:
+            return
+        from mixar.modules.local_models.core import manifest, orchestrator
+        if manifest.get_registered() is None:
+            return
+        logger.info("BYOK switched off local — deregistering local runtime")
+        orchestrator.deregister()
+    except Exception as e:
+        logger.warning("Local deregistration skipped: %s", e)
+
+
 def _on_save_done(success: bool, data, err):
     """Main-thread save callback."""
     try:
@@ -528,9 +276,13 @@ def _on_save_done(success: bool, data, err):
         if success:
             _apply_cached_state(wm, data or {})
             _wipe_form_secrets(wm)
-            wm.byok_dialog_state = 'IDLE'
+            # SAVED, not IDLE: the dialog shows an explicit recap with a
+            # single Done button, so the user never has to wonder
+            # whether the save landed.
+            wm.byok_dialog_state = 'SAVED'
             wm.byok_last_error = ''
             logger.info("BYOK saved: provider=%s model=%s", wm.byok_current_provider, wm.byok_current_model)
+            _deregister_local_if_switched_away(wm.byok_current_provider)
         else:
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or "Save failed."
@@ -644,7 +396,7 @@ class MIXAR_BYOK_OT_confirm_remove(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        wm.byok_dialog_state = 'SAVING'
+        wm.byok_dialog_state = 'REMOVING'
         wm.byok_last_error = ''
         _redraw_mixie_chat_areas()
 
@@ -659,9 +411,11 @@ def _on_delete_done(success: bool, removed_count: int, err):
         if success:
             _clear_cached_state(wm)
             _wipe_form_secrets(wm)
-            wm.byok_dialog_state = 'IDLE'
+            # REMOVED, not IDLE — explicit recap, same as the save path.
+            wm.byok_dialog_state = 'REMOVED'
             wm.byok_last_error = ''
             logger.info("BYOK removed: %d row(s) deleted", removed_count)
+            _deregister_local_if_switched_away(None)
         else:
             wm.byok_dialog_state = 'ERROR'
             wm.byok_last_error = err or "Remove failed."
@@ -672,140 +426,10 @@ def _on_delete_done(success: bool, removed_count: int, err):
 
 
 # ---------------------------------------------------------------------------
-# Fetch BYOK state (called from auth hooks on login / refresh)
-# ---------------------------------------------------------------------------
-
-class MIXAR_BYOK_OT_fetch_state(Operator):
-    """Refresh cached BYOK state from the server (non-interactive)"""
-    bl_idname = "mixar_byok.fetch_state"
-    bl_label = "Refresh BYOK State"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        byok_client.fetch_state(on_done=_on_fetch_done)
-        return {'FINISHED'}
-
-
-def _on_fetch_done(success: bool, data, err):
-    """Main-thread fetch callback.
-
-    On failure, leave cached state at defaults (byok_is_active=False).
-    The profile menu falls back to "inactive" which is the safe failure mode —
-    subsequent agent calls use Mixar's system keys.
-    """
-    try:
-        wm = bpy.context.window_manager
-        if success:
-            _apply_cached_state(wm, data or {})
-            logger.debug(
-                "BYOK state fetched: is_active=%s provider=%s model=%s",
-                wm.byok_is_active, wm.byok_current_provider, wm.byok_current_model,
-            )
-        else:
-            logger.debug("BYOK state fetch failed: %s", err)
-            _clear_cached_state(wm)
-        _redraw_mixie_chat_areas()
-    except Exception as e:
-        logger.error("BYOK fetch callback failed: %s", e, exc_info=True)
-
-
-# ---------------------------------------------------------------------------
-# Fetch models catalog (called from auth hooks on login)
-# ---------------------------------------------------------------------------
-
-class MIXAR_BYOK_OT_fetch_models_catalog(Operator):
-    """Refresh the provider+model catalog from the backend"""
-    bl_idname = "mixar_byok.fetch_models_catalog"
-    bl_label = "Refresh Models Catalog"
-    bl_options = {'INTERNAL'}
-
-    def execute(self, context):
-        byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
-        return {'FINISHED'}
-
-
-def _on_models_catalog_done(success: bool, data, err):
-    """Main-thread callback for the GET /agent/models fetch.
-
-    Response shape (inner `data`):
-      { "providers": [
-          { "id": "anthropic", "label": "Anthropic",
-            "models": [ {"id": "claude-sonnet-4-5", "label": "..."}, ... ] },
-          ...
-      ] }
-    """
-    try:
-        if not success:
-            logger.debug("Models catalog fetch failed: %s", err)
-            return
-
-        envelope = data or {}
-        provider_entries = envelope.get('providers') or []
-
-        providers: list[tuple[str, str, str]] = []
-        models: dict[str, list[tuple[str, str, str]]] = {}
-        for entry in provider_entries:
-            if not isinstance(entry, dict):
-                continue
-            pid = entry.get('id')
-            if not pid:
-                continue
-            label = entry.get('label') or pid
-            # EnumProperty items need a 3-tuple (id, label, description).
-            # The API doesn't provide a description — the label doubles
-            # as the tooltip.
-            providers.append((pid, label, label))
-
-            model_entries = entry.get('models') or []
-            model_items: list[tuple[str, str, str]] = []
-            for m in model_entries:
-                if not isinstance(m, dict):
-                    continue
-                mid = m.get('id')
-                if not mid:
-                    continue
-                mlabel = m.get('label') or mid
-                # EnumProperty items are (id, label, description); the
-                # API gives us id + label, so label doubles as description.
-                model_items.append((mid, mlabel, mlabel))
-            models[pid] = model_items
-
-        model_suggestions.populate(providers, models)
-        logger.debug(
-            "Models catalog populated: %d providers, %d model lists",
-            len(providers), len(models),
-        )
-        _redraw_mixie_chat_areas()
-    except Exception as e:
-        logger.error("Models catalog callback failed: %s", e, exc_info=True)
-
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def _wrap(text: str, width: int) -> list[str]:
-    """Dumb word-wrap for error rendering inside a box (Blender labels
-    don't wrap on their own).
-    """
-    words = text.split()
-    lines = []
-    current = ""
-    for word in words:
-        if len(current) + len(word) + 1 > width:
-            if current:
-                lines.append(current)
-            current = word if len(word) <= width else word[:width]
-        else:
-            current = f"{current} {word}".strip()
-    if current:
-        lines.append(current)
-    return lines or [""]
-
-
-# ---------------------------------------------------------------------------
 # Registration (picked up by bootstrap auto-discovery)
 # ---------------------------------------------------------------------------
+# The fetch operators (mixar_byok.fetch_state / fetch_models_catalog)
+# and the cached-state mirror live in byok_state_ops.py.
 
 classes = (
     MIXAR_BYOK_OT_open_dialog,
@@ -815,6 +439,4 @@ classes = (
     MIXAR_BYOK_OT_request_remove,
     MIXAR_BYOK_OT_cancel_remove,
     MIXAR_BYOK_OT_confirm_remove,
-    MIXAR_BYOK_OT_fetch_state,
-    MIXAR_BYOK_OT_fetch_models_catalog,
 )

@@ -26,12 +26,15 @@ from mixar.modules.common.api.services.job_queue_service import (
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_WORLD_LABS
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
+from mixar.modules.moodboard.core.world_labs_mode import resolve_world_labs_mode
 
 logger = get_logger(__name__)
 
 _SERVICE_KEY = "world_labs"
 
 _DOWNLOAD_TIMEOUT = 300  # seconds
+
+__all__ = ["WorldLabsJob", "enqueue_world_labs_job", "resolve_world_labs_mode"]
 
 
 @dataclass
@@ -124,6 +127,12 @@ class WorldLabsJob(Job):
         if not self._spz_url:
             on_error("World generation result missing splat (SPZ) URL")
             return True
+        if not self._glb_url:
+            # Placement, seating, and scene layout all require the collider.
+            # Importing a splat-only world looks like success and then fails
+            # later with "collider not found".
+            on_error("World generation result missing collider (GLB) URL")
+            return True
 
         spz_url, glb_url, pano_url, label = (
             self._spz_url, self._glb_url, self._pano_url, self.label,
@@ -136,13 +145,10 @@ class WorldLabsJob(Job):
             pano_path = ""
             try:
                 ply_path = _download_and_convert_spz(spz_url, label)
-                # The collider is secondary — never fail the whole import if it
-                # can't be fetched.
-                if glb_url:
-                    try:
-                        glb_path = _download_glb(glb_url)
-                    except Exception as e:  # noqa: BLE001
-                        logger.warning("[WorldLabs] collider GLB download failed: %s", e)
+                # The collider is required for placement. A download miss
+                # must fail the import rather than succeed as a splat-only
+                # world the user cannot sit objects on.
+                glb_path = _download_glb(glb_url)
                 # Network I/O must stay off Blender's main thread. The pano is
                 # optional, so a failed download never blocks the world import.
                 if pano_url:

@@ -69,8 +69,39 @@ def test_limits_come_from_the_catalog_service(monkeypatch):
         "max_materials": 8,
         "max_video_seconds": 11.0,
         "max_video_bytes": 80 * 1024 * 1024,
+        "max_image_bytes": 30 * 1024 * 1024,
         "video_extensions": (".mp4", ".mov"),
     }
+
+
+def test_image_size_cap_comes_from_catalog_when_present(monkeypatch):
+    service = _service_input_spec()
+    service["input_spec"]["inputs"][0]["max_size_mb"] = 12
+    monkeypatch.setitem(
+        sys.modules,
+        CATALOG_MODULE,
+        _catalog_module(service),
+    )
+
+    limits = _load_module().get_video_generation_limits("video_gen")
+
+    assert limits["max_image_bytes"] == 12 * 1024 * 1024
+
+
+def test_frame_modes_require_exact_image_counts():
+    limits = {
+        "max_images": 30,
+        "max_videos": 10,
+        "max_materials": 50,
+    }
+    error = _load_module().seedance_reference_count_error
+    assert error(limits, image_count=1, video_count=0, image_mode="first_frame") is None
+    assert error(limits, image_count=2, video_count=0, image_mode="first_frame")
+    assert error(limits, image_count=2, video_count=0, image_mode="first_last_frame") is None
+    assert error(limits, image_count=1, video_count=1, image_mode="first_frame")
+    assert error(limits, image_count=8, video_count=0, image_mode="reference") is None
+    tight = {**limits, "max_images": 7}
+    assert "at most 7" in error(tight, image_count=8, video_count=0)
 
 
 def test_missing_catalog_limits_fail_closed(monkeypatch):

@@ -30,10 +30,10 @@ struct ObjectPreviewDraw {
   rcti rect;
 };
 
-static bool view_rect_to_region(View2D *v2d,
-                                ARegion *region,
-                                const rctf &view_rect,
-                                rcti *r_region_rect)
+bool moodboard_view_rect_to_region(View2D *v2d,
+                                   ARegion *region,
+                                   const rctf &view_rect,
+                                   rcti *r_region_rect)
 {
   UI_view2d_view_to_region(
       v2d, view_rect.xmin, view_rect.ymin, &r_region_rect->xmin, &r_region_rect->ymin);
@@ -76,7 +76,7 @@ static uiBut *screen_prop_button(uiBlock *block,
                    nullptr);
 }
 
-static void draw_floating_background(const rctf &rect)
+void moodboard_draw_floating_background(const rctf &rect)
 {
   const float background[4] = {0.14f, 0.14f, 0.15f, 0.98f};
   const float border[4] = {0.34f, 0.35f, 0.38f, 0.88f};
@@ -167,7 +167,7 @@ static void add_action_toolbar(uiBlock *block,
   node_rect.xmax = node_rect.xmin + RNA_float_get(node, "width");
   node_rect.ymax = node_rect.ymin + RNA_float_get(node, "height");
   rcti node_region;
-  if (!view_rect_to_region(v2d, region, node_rect, &node_region)) {
+  if (!moodboard_view_rect_to_region(v2d, region, node_rect, &node_region)) {
     return;
   }
 
@@ -178,7 +178,7 @@ static void add_action_toolbar(uiBlock *block,
                          node_rect.ymin + 6.0f,
                          node_rect.ymax - 6.0f};
     rcti preview_region;
-    if (view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
+    if (moodboard_view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
       object_previews.append({static_cast<Object *>(object_ptr.data), preview_region});
     }
   }
@@ -211,21 +211,26 @@ static void add_action_toolbar(uiBlock *block,
   }
   const bool show_mode = RNA_boolean_get(node, "show_mode");
   const int control_count = 1 + (show_mode ? 1 : 0) + parameter_count;
+  /* A finished/failed/cancelled node that shows its result hides the tile's
+   * prompt + Generate, so the panel carries the way back into the flow. */
+  const bool show_rerun = has_result && ELEM(state, 3, 4, 5);
 
   /* Vertical control panel to the LEFT of the node. Each control occupies its
    * own full-width row so long labels ("Aspect Ratio", model names) stay
    * legible — the previous single horizontal strip forced every control to
    * panel_width / control_count and clipped the text once a handful of
    * parameters were present. A Reset row at the bottom restores catalog
-   * defaults. */
-  const int inset = 14;
-  const int row_h = 32;
-  const int gap = 6;
-  const int reset_gap = 12;
-  const int panel_width = 244;
+   * defaults. All metrics scale with the UI factor: labels render at
+   * UI_SCALE_FAC, so fixed pixel rows clipped every label on high-DPI. */
+  const float ui_scale = UI_SCALE_FAC;
+  const int inset = int(14 * ui_scale);
+  const int row_h = int(32 * ui_scale);
+  const int gap = int(6 * ui_scale);
+  const int reset_gap = int(12 * ui_scale);
+  const int panel_width = int(244 * ui_scale);
   const int field_width = panel_width - inset * 2;
-  const int panel_height =
-      inset * 2 + control_count * row_h + (control_count - 1) * gap + reset_gap + row_h;
+  const int panel_height = inset * 2 + control_count * row_h + (control_count - 1) * gap +
+                           (show_rerun ? row_h + gap : 0) + reset_gap + row_h;
 
   /* Always dock the panel to the LEFT of the node — never flip sides. A
    * side-dependent fallback made image and video nodes disagree on where their
@@ -240,7 +245,7 @@ static void add_action_toolbar(uiBlock *block,
                      float(panel_x + panel_width),
                      float(panel_y),
                      float(panel_y + panel_height)};
-  draw_floating_background(panel_rect);
+  moodboard_draw_floating_background(panel_rect);
 
   const int content_x = panel_x + inset;
   /* Rows are laid out top-down; y tracks the bottom edge of the next control. */
@@ -295,6 +300,25 @@ static void add_action_toolbar(uiBlock *block,
   y -= reset_gap - gap;
   char reset_node_id[MIXIE_GRAPH_ID_BUF];
   mixie_rna_string_get_clamped(node, "node_id", reset_node_id, sizeof(reset_node_id));
+  if (show_rerun) {
+    /* Same action as the context menu's "Edit & Run Again": back to DRAFT with
+     * the prompt editable — discoverable from the node itself, not only from
+     * a right-click. */
+    uiBut *rerun = uiDefButO(block,
+                             ButType::But,
+                             "MIXIE_OT_moodboard_run_action_node",
+                             blender::wm::OpCallContext::ExecDefault,
+                             "Edit & Run Again",
+                             content_x,
+                             y,
+                             field_width,
+                             row_h,
+                             nullptr);
+    PointerRNA *rerun_props = UI_but_operator_ptr_ensure(rerun);
+    RNA_string_set(rerun_props, "node_id", reset_node_id);
+    RNA_boolean_set(rerun_props, "edit_before_run", true);
+    y -= row_h + gap;
+  }
   uiBut *reset = uiDefButO(block,
                            ButType::But,
                            "MIXIE_OT_moodboard_reset_node_params",
@@ -308,11 +332,29 @@ static void add_action_toolbar(uiBlock *block,
   RNA_string_set(UI_but_operator_ptr_ensure(reset), "node_id", reset_node_id);
   disable_while_submitted(reset, generation_running);
 
-  if (!has_result || state == 0) {
+  if (generation_running) {
+    /* The tile already carries the Queued/Generating hint and the glow; the
+     * prompt and Generate would draw disabled straight over that text. The
+     * one action that makes sense mid-flight is stopping it. */
     const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    /* Scale ONLY the Generate button by the UI factor: the label renders at
-     * UI_SCALE_FAC, so a fixed 118px clipped "Generate" to "Gener..." at high
-     * UI scale. Everything else on the node is left untouched. */
+    const int cancel_h = int(36 * UI_SCALE_FAC);
+    const int cancel_w = int(118 * UI_SCALE_FAC);
+    uiBut *cancel = uiDefButO(block,
+                              ButType::But,
+                              "MIXIE_OT_moodboard_cancel_action_node",
+                              blender::wm::OpCallContext::ExecDefault,
+                              "Cancel",
+                              node_region.xmax - prompt_margin - cancel_w,
+                              node_region.ymin + prompt_margin,
+                              cancel_w,
+                              cancel_h,
+                              nullptr);
+    RNA_string_set(UI_but_operator_ptr_ensure(cancel), "node_id", reset_node_id);
+  }
+  else if (!has_result || state == 0) {
+    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
+    /* UI-factor sized like the left panel: the label renders at UI_SCALE_FAC,
+     * so a fixed 118px clipped "Generate" to "Gener..." at high UI scale. */
     const int generate_h = int(36 * UI_SCALE_FAC);
     const int generate_w = int(118 * UI_SCALE_FAC);
     /* Make the prompt a tall multi-line text area: it spans from the top margin
@@ -341,101 +383,28 @@ static void add_action_toolbar(uiBlock *block,
       if (prompt) {
         UI_but_placeholder_set(prompt, "Describe what you want to create...");
         UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
-        disable_while_submitted(prompt, generation_running);
       }
     }
 
     char node_id[MIXIE_GRAPH_ID_BUF];
     mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
-    const char *button_label = generation_running ? "Generating..." : "Generate";
     uiBut *generate = uiDefButO(block,
                                 ButType::But,
                                 "MIXIE_OT_moodboard_run_action_node",
                                 blender::wm::OpCallContext::ExecDefault,
-                                button_label,
+                                "Generate",
                                 node_region.xmax - prompt_margin - generate_w,
                                 node_region.ymin + prompt_margin,
                                 generate_w,
                                 generate_h,
                                 nullptr);
     RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
-    if (generation_running) {
-      UI_but_disable(generate, "Generation is already running");
-    }
   }
 }
 
-static void add_selected_media_toolbar(uiBlock *block,
-                                       View2D *v2d,
-                                       ARegion *region,
-                                       PointerRNA *scene_ptr)
-{
-  PropertyRNA *images = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
-  if (!images) {
-    return;
-  }
-  CollectionPropertyIterator iter{};
-  RNA_property_collection_begin(scene_ptr, images, &iter);
-  while (iter.valid) {
-    PointerRNA media = iter.ptr;
-    PropertyRNA *embedded = RNA_struct_find_property(&media, "embedded_node_id");
-    if (!RNA_boolean_get(&media, "selected") ||
-        (embedded && RNA_property_string_length(&media, embedded) > 0))
-    {
-      RNA_property_collection_next(&iter);
-      continue;
-    }
-    PointerRNA image_ptr = RNA_pointer_get(&media, "image");
-    Image *image = static_cast<Image *>(image_ptr.data);
-    if (!image) {
-      RNA_property_collection_next(&iter);
-      continue;
-    }
-    float aspect = 1.0f;
-    void *lock = nullptr;
-    ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-    if (ibuf && ibuf->x > 0) {
-      aspect = float(ibuf->y) / float(ibuf->x);
-    }
-    BKE_image_release_ibuf(image, ibuf, lock);
-    const float width = MOODBOARD_IMAGE_BASE_SIZE * RNA_float_get(&media, "scale");
-    rctf media_rect;
-    media_rect.xmin = RNA_float_get(&media, "position_x");
-    media_rect.ymin = RNA_float_get(&media, "position_y");
-    media_rect.xmax = media_rect.xmin + width;
-    media_rect.ymax = media_rect.ymin + width * aspect;
-    rcti media_region;
-    if (view_rect_to_region(v2d, region, media_rect, &media_region)) {
-      if (BLI_rcti_size_x(&media_region) < 180 || BLI_rcti_size_y(&media_region) < 120) {
-        RNA_property_collection_next(&iter);
-        continue;
-      }
-      const int bar_width = std::clamp(BLI_rcti_size_x(&media_region), 180, 420);
-      const int bar_x = std::clamp(BLI_rcti_cent_x(&media_region) - bar_width / 2,
-                                   8,
-                                   std::max(8, region->winx - bar_width - 8));
-      const int bar_y = std::clamp(media_region.ymax + 10, 8, std::max(8, region->winy - 54));
-      rctf bar_rect = {float(bar_x), float(bar_x + bar_width), float(bar_y), float(bar_y + 44)};
-      draw_floating_background(bar_rect);
-      uiDefBut(block,
-               ButType::Label,
-               0,
-               image->source == IMA_SRC_MOVIE ? "Video" : "Image",
-               bar_x + 12,
-               bar_y + 10,
-               bar_width - 24,
-               24,
-               nullptr,
-               0,
-               0,
-               nullptr);
-    }
-    RNA_property_collection_next(&iter);
-  }
-  RNA_property_collection_end(&iter);
-}
-
-void mixie_draw_moodboard_graph_controls(const bContext *C, View2D *v2d)
+void mixie_draw_moodboard_graph_controls(const bContext *C,
+                                         View2D *v2d,
+                                         const MoodboardGraphCache *cache)
 {
   ARegion *region = CTX_wm_region(C);
   Scene *scene = CTX_data_scene(C);
@@ -459,7 +428,7 @@ void mixie_draw_moodboard_graph_controls(const bContext *C, View2D *v2d)
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
-  add_selected_media_toolbar(block, v2d, region, &scene_ptr);
+  mixie_draw_moodboard_selected_media_labels(block, v2d, region, &scene_ptr, cache);
 
   UI_block_end(C, block);
   UI_block_draw(C, block);
