@@ -114,16 +114,24 @@ def validate_steps(steps):
 
 def _run_step(kind, body):
     """Generator executing one validated step with the primitives' helpers."""
+    # Pacing: a key that switches mode (Tab), starts a modal (S/E/I) or opens
+    # a popup needs a redraw before the NEXT key is routed, and a pointer move
+    # needs a tick before the region under it becomes active. Callers should
+    # not have to know this, so every step settles on its own.
     if kind == "press":
         win = drv.main_window()
         key = body["key"]
         drv.press(win, key, **{m: body[m] for m in _MODS})
-        yield _TICK
+        for _ in range(3):
+            yield _TICK
     elif kind == "type":
         drv.type_text(drv.main_window(), body)
-        yield _TICK
+        for _ in range(2):
+            yield _TICK
     elif kind == "focus_area":
         yield from drv.focus_area_steps(body)
+        for _ in range(2):
+            yield _TICK
     elif kind == "click":
         w = yield from drv.find_one_steps(body)
         yield from drv.click_steps(w)
