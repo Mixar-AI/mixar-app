@@ -25,8 +25,8 @@
 /** Blender release cycle stage: alpha/beta/rc/release. */
 #define BLENDER_VERSION_CYCLE release
 
-#define MIXAR_VERSION 303
-#define MIXAR_VERSION_PATCH 70
+#define MIXAR_VERSION 304
+#define MIXAR_VERSION_PATCH 0
 #define MIXAR_VERSION_CYCLE release
 
 /* Mixar file format version, stored in FileGlobal.
