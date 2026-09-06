@@ -186,7 +186,10 @@ on the executor; the operator leaves `use_lock_interface` exactly as the user
 has it. The only render-thread rule that stands: `render_complete`/`render_cancel`
 handlers fire ON the job thread (`RE_RenderFrame`), so the operator's handlers
 only register a one-shot timer and `_finalize` (save, moodboard import, settings
-restore) runs on the main thread.
+restore) runs on the main thread. The splat path (`splat_render_camera.py`) is a
+DIFFERENT contract and keeps its forced Lock Interface: it mutates IDs from a
+frame handler during the render. Full write-up, the 3.4.2 → 3.4.4 history, and
+the pinned test list: `docs/render-job-contract.md`.
 Two sibling rules from the same hunt: **`on_connected` runs on the WebSocket
 thread**, so anything that walks `bpy.data` (the orphaned-turn check,
 `check_orphaned_turns`) reaches it through `run_on_main_thread` — a reconnect
@@ -539,4 +542,4 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 
 ## Repo Docs Map
 
-`README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover.
+`README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover. `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.

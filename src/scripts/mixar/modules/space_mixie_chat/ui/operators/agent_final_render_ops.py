@@ -23,6 +23,16 @@ carries NO local paths — the file only ever lives on this machine.
 This must live in unsandboxed addon code: the completion handlers and the
 deferred finalize timer outlive the sandboxed script that started the job.
 
+Thread model (docs/render-job-contract.md): the render never blocks the
+agent. Scripts keep running on the main thread and the user keeps working
+while the job renders its own depsgraph — Lock Interface is left exactly as
+the user has it, and the sandbox executor has no render gate (3.4.2 shipped
+both and was reverted in 3.4.4: the lock froze every UI handler and the hold
+failed every turn whose render outlived 20 s). The one render-thread rule
+that stands: ``render_complete`` / ``render_cancel`` fire ON the job thread
+(``RE_RenderFrame``), so the handlers below only register a one-shot timer
+and ``_finalize`` does all ``bpy.data`` work on the main thread.
+
 Result contract (sandbox-readable, mirrors mixie_chat.render_scene):
     bpy.ops.mixie_chat.agent_final_render(engine=..., samples=...,
         resolution_percentage=..., device=..., label=..., job_key=K)
@@ -329,6 +339,12 @@ def _apply_settings(scene, engine, samples, resolution_percentage, device, path,
 
 
 def _restore_settings(scene, saved):
+    """Put back every value ``_apply_settings`` changed (complete AND cancel).
+
+    Tolerates a ``saved`` dict persisted by the 3.4.2 operator, which carried
+    a ``lock`` key: it is ignored — ``use_lock_interface`` belongs to the
+    user and is never written here (docs/render-job-contract.md).
+    """
     try:
         scene.render.engine = saved["engine"]
         scene.render.resolution_percentage = saved["rp"]
@@ -447,12 +463,15 @@ def _finalize(success: bool):
 
 
 def _on_render_complete(_scene, _depsgraph=None):
-    # Handlers run at a delicate point in the render pipeline — defer the real
-    # work (image save, moodboard mutation, redraws) to a timer tick.
+    # These handlers fire ON the render job thread (RE_RenderFrame), not the
+    # main loop. Touching bpy.data here is the real render-thread crash class;
+    # defer every bit of work (image save, moodboard mutation, settings
+    # restore, redraws) to a main-thread timer tick.
     bpy.app.timers.register(lambda: _finalize(True), first_interval=0.1)
 
 
 def _on_render_cancel(_scene, _depsgraph=None):
+    # Same thread rule as _on_render_complete.
     bpy.app.timers.register(lambda: _finalize(False), first_interval=0.1)
 
 

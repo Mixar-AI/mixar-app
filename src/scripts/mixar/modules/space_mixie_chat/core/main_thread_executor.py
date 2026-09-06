@@ -64,8 +64,13 @@ _execution_gate_until: float = 0.0
 # Render jobs never gate scripts. The agent's final render is fire-and-forget
 # on Blender's job thread and the render evaluates its OWN depsgraph, so the
 # agent keeps working (and the user keeps clicking) while it runs — exactly
-# as a user's F12 does with Lock Interface off. A hold here (3.4.2) stalled
-# every script for the whole render and then failed it; do not bring it back.
+# as a user's F12 does with Lock Interface off. A hold here (3.4.2) parked
+# the head-of-queue script while Blender reported a RENDER job alive, for up
+# to 20 s, then failed it — which stalled every turn for the whole render (the
+# render lane's own post-render verification script included) and turned any
+# render longer than a quick EEVEE preview into a guaranteed failed turn.
+# Removed in 3.4.4; do not bring it back for ANY job type. Full write-up and
+# the pinning tests: docs/render-job-contract.md.
 
 # The user's genuine foreground scene — the one window.scene should return to
 # after a per-scene-routed (or lane) script flips away from it. Tracked by name
