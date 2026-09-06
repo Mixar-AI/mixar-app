@@ -264,18 +264,13 @@ def _apply_settings(scene, engine, samples, resolution_percentage, device, path,
         "rp": scene.render.resolution_percentage,
         "fp": scene.render.filepath,
         "ff": scene.render.image_settings.file_format,
-        "lock": scene.render.use_lock_interface,
     }
     device_note = None
-    # Lock Interface for the duration of the job (restored with the rest).
-    # The render runs on Blender's job thread while the user keeps working
-    # and the agent keeps running scripts; with the interface unlocked the
-    # main loop evaluates the same depsgraph the renderer is reading and
-    # Blender's own docs call the outcome a crash. This is the same guard
-    # the Director/splat render path already applies (fe0e1743) and what
-    # Blender recommends for every scripted background render. The sandbox
-    # executor additionally holds agent scripts while the job is alive.
-    scene.render.use_lock_interface = True
+    # Lock Interface is deliberately left as the user has it. Forcing it on
+    # (3.4.2) froze every UI handler for the whole render — the chat, the
+    # bubble, the viewport — and gave the user no way to keep working while
+    # the agent's render ran. The render evaluates its own depsgraph on the
+    # job thread; a user's F12 runs unlocked by default for the same reason.
     light_originals, lights_capped = _cap_lights(scene, light_caps or {})
 
     target_engine = _resolve_engine(engine) or scene.render.engine
@@ -341,11 +336,6 @@ def _restore_settings(scene, saved):
         scene.render.image_settings.file_format = saved["ff"]
     except Exception:
         logger.exception("agent_final_render: base settings restore failed")
-    if "lock" in saved:
-        try:
-            scene.render.use_lock_interface = saved["lock"]
-        except Exception:
-            logger.exception("agent_final_render: lock-interface restore failed")
     # #1270: the pre-cap light energies come back with everything else.
     try:
         _restore_lights(scene, saved.get("light_originals") or {})
