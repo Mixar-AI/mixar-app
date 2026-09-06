@@ -358,11 +358,11 @@ static void bubble_apply_window_size(
     w->sizey = logical_height;
     bScreen *screen = WM_window_get_active_screen(w);
     if (screen == nullptr) {
-      break;
+      return;
     }
     ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area == nullptr) {
-      break;
+      return;
     }
     if (area->v1 != nullptr) {
       area->v1->vec.x = 0;
@@ -980,7 +980,7 @@ static int agent_bubble_close_all_windows(bContext *C)
   /* Save the host handle before destruction — we need to restore focus
    * afterwards because DestroyWindow on Windows transfers activation to
    * the next window in Z-order (often another application). */
-  void *host_ghost = g_host_ghostwin;
+  [[maybe_unused]] void *host_ghost = g_host_ghostwin;
 
   int closed = 0;
   bool closed_one = true;

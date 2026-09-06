@@ -170,24 +170,23 @@ retrying at the auth cadence (30 s, then 60 s) and never stops. A server ping
 now counts as traffic for `is_transport_live`. Pinned by
 `tests/test_ws_reconnect_after_backend_restart.py`.
 
-**Render-job safety contract (crash class, 3.4.2):** Blender's asynchronous
-render job (the agent's fire-and-forget `mixie_chat.agent_final_render`, a
-user's own F12, a Director shot render) runs on the job thread and reads the
-scene's ORIGINAL datablocks while it goes; Python that mutates or frees that
-data on the main thread in the meantime is Blender's documented "modifying
-data during rendering" segfault. Three guards, pinned by
-`tests/test_render_job_guard.py`: (1) `main_thread_executor` HOLDS the
-head-of-queue sandbox script while `common/utils/render_jobs.render_job_running()`
-is true (FIFO preserved, UI responsive), for at most `RENDER_WAIT_MAX_S`
-(20 s, deliberately under the backend's smallest 30 s per-script RPC timeout),
-then answers the request with the structured `RENDER_IN_PROGRESS_ERROR` so the
-agent tells the user instead of the backend timing out opaquely — a quick
-EEVEE preview finishes inside the hold and the script simply runs late;
-(2) `agent_final_render_ops._apply_settings` turns `render.use_lock_interface`
-ON for the job (saved and restored with the other settings — the same guard
-the splat render path applies); (3) the probe compares against the literal
-`True` because `bpy.app.is_job_running` is a `MagicMock` under the test suite
-and missing on old builds — both must read "no render", never "wait forever".
+**Render-job contract (a render never blocks the agent):** the agent's final
+render (`mixie_chat.agent_final_render`) is fire-and-forget on Blender's WM job
+thread (`render.render` INVOKE_DEFAULT → `screen_render_invoke` → `WM_jobs_start`);
+the job evaluates its OWN depsgraph, so the agent keeps running sandbox scripts
+and the user keeps working while it goes — the same contract a user's F12 has
+with Lock Interface off (Blender's default). 3.4.2 briefly HELD every script in
+`main_thread_executor` while `bpy.app.is_job_running("RENDER")` was true and
+failed it after 20 s, and forced `render.use_lock_interface` on for the job.
+The hold stalled the whole turn (the verification script after every render,
+and any message the user typed) and the lock froze every UI handler, and no
+crash report ever showed a render-thread frame — both are removed and pinned
+absent by `tests/test_render_job_guard.py`. Do not reintroduce a render gate
+on the executor; the operator leaves `use_lock_interface` exactly as the user
+has it. The only render-thread rule that stands: `render_complete`/`render_cancel`
+handlers fire ON the job thread (`RE_RenderFrame`), so the operator's handlers
+only register a one-shot timer and `_finalize` (save, moodboard import, settings
+restore) runs on the main thread.
 Two sibling rules from the same hunt: **`on_connected` runs on the WebSocket
 thread**, so anything that walks `bpy.data` (the orphaned-turn check,
 `check_orphaned_turns`) reaches it through `run_on_main_thread` — a reconnect
