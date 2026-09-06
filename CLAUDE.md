@@ -170,6 +170,60 @@ retrying at the auth cadence (30 s, then 60 s) and never stops. A server ping
 now counts as traffic for `is_transport_live`. Pinned by
 `tests/test_ws_reconnect_after_backend_restart.py`.
 
+**Render-job safety contract (crash class, 3.4.2):** Blender's asynchronous
+render job (the agent's fire-and-forget `mixie_chat.agent_final_render`, a
+user's own F12, a Director shot render) runs on the job thread and reads the
+scene's ORIGINAL datablocks while it goes; Python that mutates or frees that
+data on the main thread in the meantime is Blender's documented "modifying
+data during rendering" segfault. Three guards, pinned by
+`tests/test_render_job_guard.py`: (1) `main_thread_executor` HOLDS the
+head-of-queue sandbox script while `common/utils/render_jobs.render_job_running()`
+is true (FIFO preserved, UI responsive), for at most `RENDER_WAIT_MAX_S`
+(20 s, deliberately under the backend's smallest 30 s per-script RPC timeout),
+then answers the request with the structured `RENDER_IN_PROGRESS_ERROR` so the
+agent tells the user instead of the backend timing out opaquely — a quick
+EEVEE preview finishes inside the hold and the script simply runs late;
+(2) `agent_final_render_ops._apply_settings` turns `render.use_lock_interface`
+ON for the job (saved and restored with the other settings — the same guard
+the splat render path applies); (3) the probe compares against the literal
+`True` because `bpy.app.is_job_running` is a `MagicMock` under the test suite
+and missing on old builds — both must read "no render", never "wait forever".
+Two sibling rules from the same hunt: **`on_connected` runs on the WebSocket
+thread**, so anything that walks `bpy.data` (the orphaned-turn check,
+`check_orphaned_turns`) reaches it through `run_on_main_thread` — a reconnect
+fires on every 50 s liveness teardown a GIL-holding script causes, exactly
+while the main thread is adding and removing lane scenes, and iterating that
+ListBase concurrently is a segfault; the connector sidecar's `_instance()`
+reads (and lazily WRITES) `wm.mixie_instance_id` under `_run_on_main` for the
+same reason. And **the offscreen scene render encodes its PNG in pure Python**
+(`scene_render_ops.encode_rgba_png`): its deferred path runs inside a VIEW_3D
+POST_PIXEL draw callback, where creating/saving/removing a `bpy.data.images`
+datablock (the previous encoder) is an ID free mid-draw. Bundled procedural
+material scripts snapshot `list(tree.nodes)` before clearing the tree — the
+live-collection remove-while-iterating idiom `sandbox_transform` strips from
+agent scripts was still present in seven first-party ones.
+
+**Native crash-class rules from the same audit (3.4.2):** the Agent Bubble's
+footer `layout`/`draw` callbacks never resize the window inline — a region
+draw pass has the bubble's framebuffer bound and is iterating
+`area->regionbase`, so `Mixar_WindowForceSize` + `ED_screen_refresh` from
+inside it re-enter region init for the region on the stack, recompute every
+`winrct` under a stale viewport and resize the GL window mid-present. They
+call `agent_bubble_request_resize` (pending size + `NC_WINDOW` notifier) and
+`agent_bubble_footer_region_listener` applies it from the event loop through
+`bubble_apply_window_size(C=nullptr, …)`, which only tags `screen->do_refresh`
+so `ED_screen_ensure_updated` runs the refresh in the same pass; operator exec
+keeps the immediate form. Every fixed-buffer slot string read in
+`mixie_chat_slots.cc` goes through `read_rna_string_bounded` — a
+`StringProperty(maxlen=N)` registers maxlength N + 1, so a raw
+`RNA_property_string_get` into `char[N]` is an off-by-one, and `local_path`
+had no `maxlen` at all (now 1024, mirroring `ImageSlotData`). Both chat
+spaces null `runtime` in `blend_read_data` (never trust a pointer read from
+disk), the Director timeline region has an `exit` that removes its static
+playback timer before `wm_window_free` frees it, and `mixie_chat_free_runtime`
+calls `mixie_chat_code_hits_forget` so the code-copy collector cannot append
+into a freed runtime.
+
 **Chat mode enum contract:** `scene.mixie_chat_mode` (`chat_props.py`) is the
 ONE list every mode dropdown enumerates — the C++ chat footer, the agent
 bubble's footer panel and the bubble menu all bind that property — so an

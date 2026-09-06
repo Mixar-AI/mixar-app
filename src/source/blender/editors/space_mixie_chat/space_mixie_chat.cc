@@ -296,6 +296,15 @@ static void mixie_chat_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   smixie->runtime = runtime_backup;
 }
 
+static void mixie_chat_space_blend_read_data(BlendDataReader * /*reader*/, SpaceLink *sl)
+{
+  SpaceMixieChat *smixie = (SpaceMixieChat *)sl;
+  /* Never trust a runtime pointer read from disk — the reader keeps an
+   * unhandled pointer's stored value, and mixie_chat_ensure_runtime only
+   * allocates when it sees null. */
+  smixie->runtime = nullptr;
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -319,6 +328,7 @@ void ED_spacetype_mixie_chat()
   st->keymap = mixie_chat_keymap;
   st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = mixie_chat_space_blend_write;
+  st->blend_read_data = mixie_chat_space_blend_read_data;
   st->listener = mixie_chat_space_listener;
 
   /* regions: main window (custom chat drawing) */

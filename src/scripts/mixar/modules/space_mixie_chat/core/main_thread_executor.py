@@ -26,6 +26,8 @@ from typing import Optional
 
 import bpy
 
+from mixar.modules.common.utils.render_jobs import render_job_running
+
 from .executor import get_executor
 from .script_prefetch import maybe_start_prefetch
 from ..constants import (
@@ -60,6 +62,27 @@ _shutdown_requested = False
 
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
+
+# Render-job gate. Blender's asynchronous render job (the agent's
+# fire-and-forget final render, or the user's own F12) reads the scene's
+# ORIGINAL datablocks from its job thread while it runs; a sandbox script
+# mutating or freeing that data on the main thread in the meantime is the
+# documented "modifying data during rendering" crash — a segfault, not an
+# exception. Scripts are therefore HELD (FIFO preserved, UI responsive) while
+# a render is alive, for at most RENDER_WAIT_MAX_S, after which the request is
+# answered with a structured error so the backend can tell the user rather
+# than time out opaquely. The cap sits under the backend's smallest per-script
+# RPC timeout (30 s) on purpose: a quick EEVEE preview finishes inside it and
+# the script simply runs late; a minutes-long Cycles render fails fast and
+# honestly. Main thread only.
+RENDER_WAIT_MAX_S: float = 20.0
+RENDER_IN_PROGRESS_ERROR = (
+    "A final render is in progress in Blender, so scene scripts are paused "
+    "until it finishes (the user can cancel it with Esc in the render "
+    "window). Tell the user the render is still running and try again once "
+    "it has completed; do not retry in a loop."
+)
+_render_wait_started: Optional[float] = None
 
 # The user's genuine foreground scene — the one window.scene should return to
 # after a per-scene-routed (or lane) script flips away from it. Tracked by name
@@ -273,7 +296,7 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call (0.20s) if more requests, None to stop timer
     """
-    global _held
+    global _held, _render_wait_started
     if _held is None and _request_queue.empty():
         stop = _stop_timer_if_idle()
         if stop is None:
@@ -304,6 +327,29 @@ def _process_one_request() -> Optional[float]:
         # completion OR the wait cap, so a stuck download can't stall the
         # queue forever.
         return TIMER_INTERVAL
+    if render_job_running():
+        now = time.monotonic()
+        if _render_wait_started is None:
+            _render_wait_started = now
+            logger.info(
+                "Render job in flight — holding %s (id: %s) until it finishes",
+                tool_name, request_id,
+            )
+        if now - _render_wait_started < RENDER_WAIT_MAX_S:
+            # Same shape as the prefetch hold above: one flag check per tick,
+            # the script stays at the head of the queue, nothing behind it
+            # overtakes it.
+            return TIMER_INTERVAL
+        logger.warning(
+            "Render job still running after %.0fs — refusing %s (id: %s) "
+            "instead of mutating the scene under it",
+            RENDER_WAIT_MAX_S, tool_name, request_id,
+        )
+        _held = None
+        _render_wait_started = None
+        _send_error_response(request_id, RENDER_IN_PROGRESS_ERROR)
+        return _stop_timer_if_idle()
+    _render_wait_started = None
     _held = None
 
     # Safety net: reject scripts that were queued just before load_pre

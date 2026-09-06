@@ -39,7 +39,11 @@ BUBBLE = ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubbl
 
 def _force_size_body() -> str:
     src = BUBBLE.read_text(encoding="utf-8")
-    start = src.index("static void bubble_force_size_and_refresh(")
+    # The unit logic lives in bubble_apply_window_size (3.4.2: the resize is
+    # applied from the footer listener, so the sizing body took a wmWindow
+    # instead of walking wm->windows); bubble_force_size_and_refresh is now
+    # the context-bearing wrapper around it.
+    start = src.index("static void bubble_apply_window_size(")
     end = src.index("\n}\n", start)
     return src[start:end]
 
