@@ -417,6 +417,9 @@ const char *mixie_chat_message_segment_text(const bContext *C,
  * every chat_ui_draw_markdown call with set_message(index)/set_message(-1);
  * draw_code_block registers each chip through mixie_chat_code_chip_draw. */
 void mixie_chat_code_hits_reset(MixieChatRuntime *rt);
+/* Drop the collector's reference when `rt` is about to be freed, so a later
+ * markdown draw can never append hits into freed memory. */
+void mixie_chat_code_hits_forget(const MixieChatRuntime *rt);
 void mixie_chat_code_hits_set_message(int message_index);
 void mixie_chat_code_hits_set_segment(int seg_index);
 /* Draw the Copy button for the current (message, segment) into the code
