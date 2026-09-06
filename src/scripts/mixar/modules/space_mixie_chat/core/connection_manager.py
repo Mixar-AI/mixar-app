@@ -240,10 +240,16 @@ class ConnectionManager:
                 # still running, or abandoned unwatched by the drain, and
                 # surface "Resume previous task" for those. A turn that ended
                 # in front of the user is never announced.
+                # on_connected runs on the WebSocket thread. The check walks
+                # bpy.data.scenes and reads scene RNA, so it MUST be marshalled
+                # to the main thread — a reconnect fires routinely mid-turn
+                # (every 50 s liveness teardown a GIL-holding script causes)
+                # while the main thread is adding and removing lane scenes,
+                # and iterating that ListBase concurrently is a segfault.
                 try:
                     from .turn_resume import check_orphaned_turns
 
-                    check_orphaned_turns()
+                    run_on_main_thread(check_orphaned_turns)
                 except Exception:
                     logger.exception("orphaned-turn check failed (non-fatal)")
 

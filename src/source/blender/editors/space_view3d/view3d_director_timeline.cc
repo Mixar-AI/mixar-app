@@ -67,6 +67,19 @@ void playback_redraw_timer_update(const bContext *C, const bool enabled)
   }
 }
 
+/* Region exit (area close, window close, file load): the playback timer
+ * belongs to the window that hosted this region, and wm_window_free drops
+ * every timer of a dying window — leaving the static pointing at freed
+ * memory. Remove it here, while it is still alive, so playback in a
+ * surviving viewport recreates a fresh one on its next draw. */
+static void director_timeline_region_exit(wmWindowManager *wm, ARegion * /*region*/)
+{
+  if (g_playback_redraw_timer && wm) {
+    WM_event_timer_remove(wm, nullptr, g_playback_redraw_timer);
+  }
+  g_playback_redraw_timer = nullptr;
+}
+
 void draw_rect(
     const float x1, const float y1, const float x2, const float y2, const float color[4])
 {
@@ -412,6 +425,7 @@ void view3d_director_timeline_region_register(SpaceType *st)
   art->poll = director_timeline_poll;
   art->init = view3d_director_timeline_region_init;
   art->draw = director_timeline_draw;
+  art->exit = director_timeline_region_exit;
   art->free = view3d_director_timeline_region_free;
   art->duplicate = view3d_director_timeline_region_duplicate;
   art->listener = director_timeline_listener;

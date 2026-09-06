@@ -135,6 +135,7 @@ void mixie_chat_free_runtime(SpaceMixieChat *smixie)
         layout.ephemeral_text = nullptr;
       }
     }
+    mixie_chat_code_hits_forget(rt);
     MEM_delete(rt);
     smixie->runtime = nullptr;
   }

@@ -142,6 +142,11 @@ class MixieChatImageItem(PropertyGroup):
         name="Local Path",
         description="Local file path after download",
         default="",
+        # Mirrors ImageSlotData::local_path (char[1024]) in
+        # mixie_chat_ui_types.hh. Every sibling carried a maxlen; this one
+        # did not, so a long backend-supplied path was an unbounded copy
+        # into the C++ layout cache.
+        maxlen=1024,
         subtype='FILE_PATH'
     )
     width: FloatProperty(
