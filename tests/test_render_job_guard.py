@@ -2,18 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Agent scripts must not mutate the scene under a running render job.
+"""A running render never blocks the agent.
 
-The agent's final render is fire-and-forget (Blender's F12 job thread), so
-the next agent script — same turn's verification canary, or the user's next
-message — used to run against the datablocks the renderer was reading. That
-is Blender's documented "modifying data during rendering" crash: a segfault,
-never an exception. Two guards, both pinned here:
-
-* the sandbox executor HOLDS the head-of-queue script while a RENDER job is
-  alive (bounded, then a structured error — never an opaque RPC timeout);
-* the final-render operator turns Lock Interface on for the job and restores
-  the user's setting afterwards (the same guard the splat render path uses).
+The agent's final render is fire-and-forget on Blender's job thread and the
+render evaluates its OWN depsgraph, so the agent keeps running scripts and the
+user keeps working while it goes — exactly what a user's F12 does with Lock
+Interface off. 3.4.2 briefly HELD every sandbox script while a RENDER job was
+alive (then failed it after 20 s) and forced ``render.use_lock_interface`` on,
+which froze every UI handler for the whole render. Both are gone and pinned
+absent here; the thread-marshalling fixes from the same audit stay.
 """
 
 import importlib.util
@@ -29,35 +26,7 @@ CHAT_ROOT = ROOT / "src/scripts/mixar/modules/space_mixie_chat"
 
 
 # --------------------------------------------------------------------------
-# render_job_running()
-# --------------------------------------------------------------------------
-
-
-def test_probe_reads_only_a_literal_true_as_running(monkeypatch):
-    from mixar.modules.common.utils import render_jobs
-
-    fake_bpy = MagicMock(name="bpy")
-    monkeypatch.setitem(sys.modules, "bpy", fake_bpy)
-    # A MagicMock return (the test-suite bpy) is truthy but is NOT a render.
-    assert render_jobs.render_job_running() is False
-    fake_bpy.app.is_job_running.return_value = True
-    assert render_jobs.render_job_running() is True
-    fake_bpy.app.is_job_running.assert_called_with("RENDER")
-    fake_bpy.app.is_job_running.return_value = False
-    assert render_jobs.render_job_running() is False
-
-
-def test_probe_fails_open_when_the_api_is_missing(monkeypatch):
-    from mixar.modules.common.utils import render_jobs
-
-    fake_bpy = MagicMock(name="bpy")
-    fake_bpy.app.is_job_running.side_effect = AttributeError("old build")
-    monkeypatch.setitem(sys.modules, "bpy", fake_bpy)
-    assert render_jobs.render_job_running() is False
-
-
-# --------------------------------------------------------------------------
-# main_thread_executor: hold, then refuse
+# main_thread_executor: a live render job is not a gate
 # --------------------------------------------------------------------------
 
 
@@ -88,7 +57,6 @@ def executor(monkeypatch):
     module = _load_executor(monkeypatch)
     # Timer registration is a no-op under the mock; drive ticks by hand.
     monkeypatch.setattr(module, "_execution_gate_until", 0.0)
-    monkeypatch.setattr(module, "_render_wait_started", None)
     monkeypatch.setattr(module, "_held", None)
     while not module._request_queue.empty():
         module._request_queue.get_nowait()
@@ -114,81 +82,55 @@ def _fake_client(monkeypatch):
     return client
 
 
-def test_script_is_held_while_a_render_job_runs(executor, monkeypatch):
-    client = _fake_client(monkeypatch)
-    monkeypatch.setattr(executor, "render_job_running", lambda: True)
-    _queue(executor)
-
-    assert executor._process_one_request() == executor.TIMER_INTERVAL
-    # Still at the head of the queue, nothing executed, nothing answered.
-    assert executor._held is not None
-    assert executor._held[0] == "req-1"
-    assert executor._render_wait_started is not None
-    client.queue_response.assert_not_called()
-    assert executor.get_inflight_script() is None
-
-    # Later ticks keep holding (FIFO preserved) while the render is alive.
-    assert executor._process_one_request() == executor.TIMER_INTERVAL
-    client.queue_response.assert_not_called()
-
-
-def test_held_script_is_refused_with_a_structured_error_after_the_cap(
-    executor, monkeypatch
-):
-    client = _fake_client(monkeypatch)
-    monkeypatch.setattr(executor, "render_job_running", lambda: True)
-    _queue(executor)
-    executor._process_one_request()
-
-    # Pretend the render has outlived the cap.
-    executor._render_wait_started -= executor.RENDER_WAIT_MAX_S + 1
-    ret = executor._process_one_request()
-
-    client.queue_response.assert_called_once()
-    req_id, payload = client.queue_response.call_args[0]
-    assert req_id == "req-1"
-    assert payload["success"] is False
-    assert payload["error"] == executor.RENDER_IN_PROGRESS_ERROR
-    assert "render" in payload["error"].lower()
-    # Refused request is dropped; the gate resets for the next one.
-    assert executor._held is None
-    assert executor._render_wait_started is None
-    assert ret is None  # queue empty -> timer stops
-
-
-def test_hold_lifts_the_moment_the_render_finishes(executor, monkeypatch):
-    _fake_client(monkeypatch)
-    running = {"v": True}
-    monkeypatch.setattr(executor, "render_job_running", lambda: running["v"])
-    _queue(executor)
-    assert executor._process_one_request() == executor.TIMER_INTERVAL
-    assert executor._held is not None
-
-    running["v"] = False
-    # Stop before the session lookup: a stale-session drop is the cheapest
-    # proof the request left the hold and proceeded down the normal path.
+def _stub_session_path(monkeypatch, active=False):
+    """Stop the request right after the (removed) render gate: the stale-session
+    drop is the cheapest proof the script left the queue head and proceeded."""
     session_mod = ModuleType("mixar.modules.space_mixie_chat.core.session")
     session = MagicMock()
-    session.has_active_session.return_value = False
+    session.has_active_session.return_value = active
     session_mod.get_session_manager = lambda: session
     monkeypatch.setitem(sys.modules, session_mod.__name__, session_mod)
     sweep = ModuleType("mixar.modules.space_mixie_chat.core.lane_scene_sweep")
     sweep.schedule_lane_scene_sweep = lambda: None
     monkeypatch.setitem(sys.modules, sweep.__name__, sweep)
 
+
+def test_script_runs_while_a_render_job_is_alive(executor, monkeypatch):
+    """bpy.app.is_job_running('RENDER') is True for the whole render; the
+    head-of-queue script must still proceed on the very first tick."""
+    client = _fake_client(monkeypatch)
+    executor.bpy.app.is_job_running.return_value = True
+    _stub_session_path(monkeypatch, active=False)
+    _queue(executor)
+
     executor._process_one_request()
+
+    # Left the queue head and went down the normal path (dropped by the
+    # stale-session net, which answers the request) — never parked.
     assert executor._held is None
-    assert executor._render_wait_started is None
+    client.queue_response.assert_called_once()
+    req_id, _payload = client.queue_response.call_args[0]
+    assert req_id == "req-1"
 
 
-def test_render_wait_cap_is_under_the_backend_script_timeout(executor):
-    # decorator.execute_script_on_instance defaults to 30 s; a hold longer
-    # than that turns a clean error into an opaque RPC timeout.
-    assert 0 < executor.RENDER_WAIT_MAX_S < 30
+def test_executor_never_consults_the_render_job_state():
+    src = (CHAT_ROOT / "core/main_thread_executor.py").read_text()
+    for token in (
+        "is_job_running",
+        "render_job_running",
+        "RENDER_WAIT_MAX_S",
+        "RENDER_IN_PROGRESS_ERROR",
+        "_render_wait_started",
+    ):
+        assert token not in src, f"{token}: a render must never gate scripts"
+
+
+def test_render_probe_helper_is_gone():
+    assert not (ROOT / "src/scripts/mixar/modules/common/utils/render_jobs.py").exists()
 
 
 # --------------------------------------------------------------------------
-# agent_final_render_ops: Lock Interface for the job
+# agent_final_render_ops: Lock Interface is the user's, never forced
 # --------------------------------------------------------------------------
 
 
@@ -200,18 +142,33 @@ def _ops_module():
     return agent_final_render_ops
 
 
+class _Render:
+    """Attribute writes are recorded so a stray lock write is visible."""
+
+    def __init__(self, lock):
+        object.__setattr__(self, "writes", [])
+        self.engine = "BLENDER_EEVEE_NEXT"
+        self.resolution_percentage = 100
+        self.filepath = "/tmp/x"
+        self.image_settings = MagicMock()
+        self.image_settings.file_format = "PNG"
+        self.use_lock_interface = lock
+        object.__setattr__(self, "writes", [])
+
+    def __setattr__(self, name, value):
+        self.writes.append(name)
+        object.__setattr__(self, name, value)
+
+
 def _scene(lock=False):
     scene = MagicMock()
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
-    scene.render.resolution_percentage = 100
-    scene.render.filepath = "/tmp/x"
-    scene.render.image_settings.file_format = "PNG"
-    scene.render.use_lock_interface = lock
+    scene.render = _Render(lock)
     scene.world = None
     return scene
 
 
-def test_final_render_locks_the_interface_and_restores_it(monkeypatch):
+@pytest.mark.parametrize("lock", [False, True])
+def test_final_render_leaves_lock_interface_alone(monkeypatch, lock):
     ops = _ops_module()
     fake_bpy = MagicMock(name="bpy")
     fake_bpy.data.lights = []
@@ -219,38 +176,34 @@ def test_final_render_locks_the_interface_and_restores_it(monkeypatch):
     monkeypatch.setattr(ops, "bpy", fake_bpy)
     monkeypatch.setattr(ops, "_resolve_engine", lambda engine: None)
 
-    scene = _scene(lock=False)
+    scene = _scene(lock=lock)
     saved, _note, _orig, _capped = ops._apply_settings(
         scene, "current", 0, 0, "current", "/tmp/out.png"
     )
-    assert scene.render.use_lock_interface is True
-    assert saved["lock"] is False
+    assert scene.render.use_lock_interface is lock
+    assert "lock" not in saved
+    assert "use_lock_interface" not in scene.render.writes
 
     ops._restore_settings(scene, saved)
-    assert scene.render.use_lock_interface is False
+    assert scene.render.use_lock_interface is lock
+    assert "use_lock_interface" not in scene.render.writes
 
 
-def test_final_render_keeps_a_user_lock_on(monkeypatch):
-    ops = _ops_module()
-    fake_bpy = MagicMock(name="bpy")
-    fake_bpy.data.lights = []
-    fake_bpy.data.materials = []
-    monkeypatch.setattr(ops, "bpy", fake_bpy)
-    monkeypatch.setattr(ops, "_resolve_engine", lambda engine: None)
-
-    scene = _scene(lock=True)
-    saved, *_ = ops._apply_settings(scene, "current", 0, 0, "current", "/tmp/o.png")
-    ops._restore_settings(scene, saved)
-    assert scene.render.use_lock_interface is True
-
-
-def test_restore_tolerates_a_pre_lock_saved_dict():
+def test_restore_ignores_a_3_4_2_saved_dict_with_a_lock_key():
+    """A job dict persisted by the 3.4.2 operator still restores cleanly and
+    does not resurrect the lock write."""
     ops = _ops_module()
     scene = _scene(lock=False)
     ops._restore_settings(
-        scene, {"engine": "CYCLES", "rp": 50, "fp": "/tmp/a", "ff": "PNG"}
+        scene, {"engine": "CYCLES", "rp": 50, "fp": "/tmp/a", "ff": "PNG", "lock": True}
     )
     assert scene.render.use_lock_interface is False
+    assert "use_lock_interface" not in scene.render.writes
+
+
+def test_final_render_operator_never_writes_the_lock():
+    src = (CHAT_ROOT / "ui/operators/agent_final_render_ops.py").read_text()
+    assert "use_lock_interface =" not in src
 
 
 # --------------------------------------------------------------------------
