@@ -129,6 +129,30 @@ def test_render_probe_helper_is_gone():
     assert not (ROOT / "src/scripts/mixar/modules/common/utils/render_jobs.py").exists()
 
 
+def test_contract_doc_exists_and_is_linked():
+    """docs/render-job-contract.md is the write-up the code comments point at;
+    it must exist, describe both retired guards, and be reachable from the
+    agent guides and the two modules that implement the contract."""
+    doc = ROOT / "docs/render-job-contract.md"
+    assert doc.exists()
+    text = doc.read_text()
+    for needle in (
+        "is_job_running",
+        "use_lock_interface",
+        "render_complete",
+        "splat_render_camera",
+        "tests/test_render_job_guard.py",
+    ):
+        assert needle in text, needle
+    for path in (
+        "CLAUDE.md",
+        "AGENTS.md",
+        "src/scripts/mixar/modules/space_mixie_chat/core/main_thread_executor.py",
+        "src/scripts/mixar/modules/space_mixie_chat/ui/operators/agent_final_render_ops.py",
+    ):
+        assert "docs/render-job-contract.md" in (ROOT / path).read_text(), path
+
+
 # --------------------------------------------------------------------------
 # agent_final_render_ops: Lock Interface is the user's, never forced
 # --------------------------------------------------------------------------
