@@ -50,6 +50,13 @@ REM Bundle settings (constants)
 if not defined MIXAR_BUNDLE_IDENTIFIER set "MIXAR_BUNDLE_IDENTIFIER=com.mixar.mixar"
 if not defined MIXAR_BUNDLE_COPYRIGHT set "MIXAR_BUNDLE_COPYRIGHT=© 2025 Mixar"
 
+REM NVIDIA GPU rendering (read by cmake\mixar_overrides.cmake)
+REM   MIXAR_CUDA=0          -> no CUDA/OptiX/cubins (much faster clean builds)
+REM   MIXAR_CUDA_BINARIES=0 -> keep CUDA/OptiX, skip the per-architecture cubins
+REM   MIXAR_CUDA_ARCH       -> narrow the cubin architecture list, e.g. sm_89
+if not defined MIXAR_CUDA set "MIXAR_CUDA=1"
+if not defined MIXAR_CUDA_BINARIES set "MIXAR_CUDA_BINARIES=%MIXAR_CUDA%"
+
 REM Build settings (constants)
 if not defined BLENDER_VERSION set "BLENDER_VERSION=5.2"
 if not defined PYTHON_VERSION set "PYTHON_VERSION=3.11"
