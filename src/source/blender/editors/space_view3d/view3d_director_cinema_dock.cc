@@ -53,6 +53,8 @@ constexpr float CHIP_H = 24.0f;
 constexpr float FIELD_W = 100.0f;
 constexpr float TRANSPORT_SIZE = 26.0f;
 constexpr float TRANSPORT_GAP = 26.0f;
+/** Preview glyph over step glyph size. */
+constexpr float PLAY_SCALE = 1.35f;
 constexpr float TOOL_SIZE = 24.0f;
 constexpr float TOOL_GAP = 6.0f;
 /** Clear space the frame fields must keep from the centred transport. */
@@ -213,10 +215,11 @@ void draw_transport(ui::Block *block,
   };
   const bool no_beats = state.beats.is_empty();
   for (int index = 0; index < 3; index++) {
-    const rctf box = {tx,
-                      tx + TRANSPORT_SIZE * u,
-                      cy - TRANSPORT_SIZE * u * 0.5f,
-                      cy + TRANSPORT_SIZE * u * 0.5f};
+    /* The design draws the preview (play) glyph a third larger than the
+     * step glyphs; the slot pitch stays so the group's centring holds. */
+    const float size = (index == 1 ? TRANSPORT_SIZE * PLAY_SCALE : TRANSPORT_SIZE) * u;
+    const float slot_cx = tx + TRANSPORT_SIZE * u * 0.5f;
+    const rctf box = {slot_cx - size * 0.5f, slot_cx + size * 0.5f, cy - size * 0.5f, cy + size * 0.5f};
     transport_glyph(box, transport[index].forward, transport[index].bar, index == 1 && playing);
     cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
     ui::Button *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
@@ -299,9 +302,9 @@ float cinema_dock_control_height()
 void cinema_draw_dock_panel(const ARegion *region)
 {
   const float u = cinema_unit();
-  const float top[4] = {0.098f, 0.098f, 0.098f, 1.0f};
-  const float bottom[4] = {0.043f, 0.043f, 0.043f, 1.0f};
-  const float line[4] = {0.145f, 0.145f, 0.145f, 1.0f};
+  const float top[4] = {0.110f, 0.110f, 0.110f, 1.0f};
+  const float bottom[4] = {0.070f, 0.070f, 0.070f, 1.0f};
+  const float line[4] = {0.180f, 0.180f, 0.180f, 1.0f};
   rctf panel = {float(region->winx) * 0.0f + 8.0f * u,
                 float(region->winx) - 8.0f * u,
                 6.0f * u,

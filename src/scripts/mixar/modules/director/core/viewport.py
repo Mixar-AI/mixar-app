@@ -109,6 +109,13 @@ def remember_view(context, scene) -> None:
             )
             if hasattr(space, name)
         },
+        # Overlay text ("Camera Perspective", the collection path) is the one
+        # stock overlay the designed surface has no place for.
+        "overlay": {
+            name: getattr(space.overlay, name)
+            for name in ("show_text",)
+            if hasattr(getattr(space, "overlay", None), name)
+        },
     }
 
 
@@ -125,6 +132,9 @@ def enter_director_surface(context):
     for name in ("show_region_ui", "show_region_toolbar", "show_region_hud"):
         if hasattr(space, name) and getattr(space, name):
             setattr(space, name, False)
+    overlay = getattr(space, "overlay", None)
+    if overlay is not None and getattr(overlay, "show_text", False):
+        overlay.show_text = False
     area.tag_redraw()
     return target
 
@@ -205,6 +215,10 @@ def restore_view(context, scene) -> None:
     for name, value in state.get("chrome", {}).items():
         if hasattr(space, name) and getattr(space, name) != value:
             setattr(space, name, value)
+    overlay = getattr(space, "overlay", None)
+    for name, value in state.get("overlay", {}).items():
+        if overlay is not None and hasattr(overlay, name) and getattr(overlay, name) != value:
+            setattr(overlay, name, value)
     region_3d.view_perspective = state["view_perspective"]
     if state["view_perspective"] != 'CAMERA':
         region_3d.view_location = state["view_location"]

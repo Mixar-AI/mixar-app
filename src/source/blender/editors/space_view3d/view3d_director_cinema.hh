@@ -49,6 +49,13 @@ struct DirectorViewState;
 #define CINEMA_MARGIN 70.0f     /* Window edge -> panel edge, at design width. */
 #define CINEMA_MARGIN_MIN 20.0f /* Floor when the viewport is narrower. */
 #define CINEMA_GATE_MIN_W 180.0f /* Clear width kept between the two columns. */
+/**
+ * Smallest fit the designed surface is allowed to shrink to before the compact
+ * rail takes over. The design is fitted to the region (see #cinema_fit_scale):
+ * a laptop viewport that cannot hold it at 1x shows it at, say, 0.8x — the
+ * mock itself is a 0.8x render — rather than a different UI.
+ */
+#define CINEMA_SCALE_MIN 0.6f
 
 /* Rows inside a panel. */
 #define CINEMA_ROW_W 216.0f
@@ -60,7 +67,6 @@ struct DirectorViewState;
 #define CINEMA_LIST_MAX_ROWS 4
 
 /* Top strip. */
-#define CINEMA_CHIP_H 41.0f
 #define CINEMA_KEYCAP_W 19.0f
 #define CINEMA_KEYCAP_H 21.0f
 #define CINEMA_KEYCAP_RADIUS 4.0f
@@ -73,6 +79,12 @@ struct DirectorViewState;
 #define CINEMA_SEGMENT_CHIP_H 37.0f
 #define CINEMA_EXPORT_H 59.0f
 #define CINEMA_PREVIEW_H 170.0f
+
+/* The columns' top edge and the stage's inset from them. The stage (the
+ * rounded frame around the working viewport) spans exactly the columns'
+ * vertical extent: from here down to #cinema_content_bottom(). */
+#define CINEMA_COLUMN_TOP 206.0f
+#define CINEMA_STAGE_INSET 18.0f
 
 /* Lowest content in either column. The height gate is DERIVED from these, so
  * moving a card down moves the gate with it instead of silently laying the
@@ -118,8 +130,23 @@ struct DirectorViewState;
 /** \name Shared painters (view3d_director_cinema_paint.cc)
  * \{ */
 
-/** Design px -> region px. One scale rule for the whole surface. */
+/**
+ * Design px -> region px. One scale rule for the whole surface.
+ *
+ * Set per draw by #cinema_unit_begin from the VIEWPORT region: UI scale times
+ * the fit that lets the whole design sit inside that region (never above 1).
+ * The dock's draw passes the viewport region too, so both regions agree.
+ */
 float cinema_unit();
+
+/** Resolve the unit for this draw. Call first, before any painter. */
+void cinema_unit_begin(const ARegion *main_region);
+
+/**
+ * How much of the 1x design fits \a region: `min(1, width fit, height fit)`
+ * over the columns-plus-gate width and the lowest content's height.
+ */
+float cinema_fit_scale(const ARegion *region);
 
 /**
  * Side margin in design px for \a region.
@@ -130,8 +157,20 @@ float cinema_unit();
  */
 float cinema_margin(const ARegion *region);
 
-/** Whether the region can host the designed surface at all. */
+/** Whether the region can host the designed surface: its fit is at least #CINEMA_SCALE_MIN. */
 bool cinema_surface_fits(const ARegion *region);
+
+/** Design y (window coords) of the lowest content in either column. */
+float cinema_content_bottom();
+
+/**
+ * The stage rect in region px: the design's rounded frame between the two
+ * columns, top-aligned with them and ending at the lowest content. Resolves
+ * the unit for \a region itself. False when the designed surface is not what
+ * this region draws (Director inactive, or below the fit floor) — callers such
+ * as the navigation gizmo then keep their stock placement.
+ */
+bool cinema_stage_rect(const bContext *C, const ARegion *region, rctf *r_rect);
 
 /**
  * Height of one list row, in design px.

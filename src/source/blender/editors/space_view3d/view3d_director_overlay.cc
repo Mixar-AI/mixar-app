@@ -318,6 +318,9 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
+  cinema_unit_begin(region);
+  /* Records from a previous wide draw must not outlive a compact one. */
+  cinema_qa_begin(region);
 
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
   const int gap = std::max(4, int(6.0f * UI_SCALE_FAC));

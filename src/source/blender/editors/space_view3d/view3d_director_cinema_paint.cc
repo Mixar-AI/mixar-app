@@ -8,9 +8,11 @@
  * Drawing primitives for the Cinema Mode surface.
  *
  * Every painter here takes REGION pixels; callers convert from the design's
- * units through #cinema_unit(). Interaction is always a separate, invisible
- * ui::Button laid over the painted pixels (see #cinema_op_button) so Blender keeps
- * owning hit-testing, tooltips and operator dispatch.
+ * units through #cinema_unit() (`view3d_director_cinema_layout.cc` owns the
+ * scale, the fit gate and the stage geometry). Interaction is always a
+ * separate, invisible ui::Button laid over the painted pixels (see
+ * #cinema_op_button) so Blender keeps owning hit-testing, tooltips and
+ * operator dispatch.
  */
 
 #include <algorithm>
@@ -41,91 +43,6 @@
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
-
-/* -------------------------------------------------------------------- */
-/** \name Scale
- * \{ */
-
-float cinema_unit()
-{
-  /* The design is a 1x window mock, so a design px IS a UI px before DPI. */
-  return UI_SCALE_FAC;
-}
-
-float cinema_margin(const ARegion *region)
-{
-  const float avail = float(region->winx) / cinema_unit();
-  const float slack = (avail - CINEMA_PANEL_W * 2.0f - CINEMA_GATE_MIN_W) * 0.5f;
-  return std::clamp(slack, CINEMA_MARGIN_MIN, CINEMA_MARGIN);
-}
-
-rctf cinema_design_rect(
-    const ARegion *region, const float x, const float y, const float w, const float h)
-{
-  const float u = cinema_unit();
-  rctf rect;
-  rect.xmin = x * u;
-  rect.xmax = (x + w) * u;
-  rect.ymax = float(region->winy) - (y - CINEMA_VIEWPORT_TOP) * u;
-  rect.ymin = rect.ymax - h * u;
-  return rect;
-}
-
-bool cinema_surface_fits(const ARegion *region)
-{
-  const float u = cinema_unit();
-  /* Both columns, the floor margins and a usable gate between them, plus
-   * enough height for every card. The height is DERIVED from the lowest
-   * content in either column (the Speed card's foot and the Export button's)
-   * rather than guessed: #cinema_design_rect anchors on
-   * #CINEMA_VIEWPORT_TOP, so a shorter region pushes `rect.ymin` negative and
-   * lays the Speed slider and the Export button out below the region — drawn
-   * clipped, and not hit-testable, with no compact fallback to fall back on. */
-  const float min_w = CINEMA_PANEL_W * 2.0f + CINEMA_MARGIN_MIN * 2.0f + CINEMA_GATE_MIN_W;
-  const float content_bottom = std::max(CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H,
-                                        CINEMA_EXPORT_Y + CINEMA_EXPORT_H);
-  const float min_h = content_bottom - CINEMA_VIEWPORT_TOP;
-  return float(region->winx) / u >= min_w && float(region->winy) / u >= min_h;
-}
-
-float cinema_list_row_h()
-{
-  return std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH);
-}
-
-int cinema_list_window_start(const int count, const int active)
-{
-  /* The card only has room for #CINEMA_LIST_MAX_ROWS. Window the list around
-   * the live entry rather than always showing the head: with the active shot
-   * off the end no row highlighted at all, so "My Cameras" claimed none was
-   * being directed. */
-  if (count <= CINEMA_LIST_MAX_ROWS) {
-    return 0;
-  }
-  const int centred = std::clamp(active, 0, count - 1) - CINEMA_LIST_MAX_ROWS / 2;
-  return std::clamp(centred, 0, count - CINEMA_LIST_MAX_ROWS);
-}
-
-void cinema_draw_stage(const ARegion *region)
-{
-  const float u = cinema_unit();
-  const float margin = cinema_margin(region);
-  const float inset = 18.0f * u;
-  rctf stage;
-  stage.xmin = (margin + CINEMA_PANEL_W) * u + inset;
-  stage.xmax = float(region->winx) - (margin + CINEMA_PANEL_W) * u - inset;
-  stage.ymax = float(region->winy) - 125.0f * u;
-  stage.ymin = 70.0f * u;
-  if (BLI_rctf_size_x(&stage) <= 0.0f || BLI_rctf_size_y(&stage) <= 0.0f) {
-    return;
-  }
-  const float fill[4] = CINEMA_COL_GATE_FILL;
-  const float line[4] = CINEMA_COL_GATE_LINE;
-  cinema_fill(stage, 18.5f * u, fill);
-  cinema_outline(stage, 18.5f * u, line, u);
-}
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Shapes

@@ -30,6 +30,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "view3d_director_cinema.hh"
 #include "view3d_intern.hh" /* own include */
 
 namespace blender {
@@ -282,7 +283,19 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
     copy_v3_v3(navgroup->gz_array[GZ_INDEX_ROTATE]->matrix_offset[i], rv3d->viewmat[i]);
   }
 
-  const rcti *rect_visible = ED_region_visible_rect(region);
+  /* Mixar: while the Cinema Mode surface draws, the gizmos sit inside its
+   * stage frame (the design's top-right corner of the working viewport)
+   * instead of the region corner, where they would lie across the right
+   * column's My Cameras card. */
+  rcti rect_adjusted = *ED_region_visible_rect(region);
+  rctf stage;
+  if (cinema_stage_rect(C, region, &stage)) {
+    /* Clear of the frame's rounded corner, as in the design. */
+    const float pad = 10.0f * cinema_unit();
+    rect_adjusted.xmax = int(stage.xmax - pad);
+    rect_adjusted.ymax = int(stage.ymax - pad);
+  }
+  const rcti *rect_visible = &rect_adjusted;
 
   /* Ensure types match so bits are never lost on assignment. */
   CHECK_TYPE_PAIR(navgroup->state.rv3d.viewlock, rv3d->viewlock);

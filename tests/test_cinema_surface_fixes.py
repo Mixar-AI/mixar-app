@@ -23,6 +23,7 @@ WORKFLOW = ROOT / "src/scripts/mixar/modules/workflow"
 
 HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
 PAINT = (VIEW3D / "view3d_director_cinema_paint.cc").read_text(encoding="utf-8")
+LAYOUT = (VIEW3D / "view3d_director_cinema_layout.cc").read_text(encoding="utf-8")
 LEFT = (VIEW3D / "view3d_director_cinema_left.cc").read_text(encoding="utf-8")
 RIGHT = (VIEW3D / "view3d_director_cinema_right.cc").read_text(encoding="utf-8")
 DOCK = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
@@ -85,7 +86,7 @@ def test_the_resolution_operator_still_scales_the_short_side():
 
 
 def test_list_row_height_is_clamped_to_the_pitch():
-    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in PAINT
+    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in LAYOUT
     # Both lists draw through the clamp; a raw CINEMA_ROW_H row overlaps the
     # next one, and the later-created ui::Button wins the shared band.
     assert "cinema_list_row_h()" in RIGHT
@@ -102,10 +103,10 @@ def test_the_clamp_actually_bites_for_the_current_tokens():
 
 
 def test_height_gate_is_derived_from_the_lowest_content():
-    assert "700.0f" not in PAINT
-    assert "CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H" in PAINT
-    assert "CINEMA_EXPORT_Y + CINEMA_EXPORT_H" in PAINT
-    assert "content_bottom - CINEMA_VIEWPORT_TOP" in PAINT
+    assert "700.0f" not in LAYOUT
+    assert "CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H" in LAYOUT
+    assert "CINEMA_EXPORT_Y + CINEMA_EXPORT_H" in LAYOUT
+    assert "content_bottom - CINEMA_VIEWPORT_TOP" in LAYOUT
 
 
 def test_height_gate_leaves_the_speed_slider_and_export_inside_the_region():
@@ -117,6 +118,64 @@ def test_height_gate_leaves_the_speed_slider_and_export_inside_the_region():
     # The old gate was 700 design units; the surface needs 728.
     assert required == pytest.approx(728.0)
     assert required > 700.0
+
+
+def test_the_surface_shrinks_to_fit_before_it_gives_up():
+    # A laptop viewport (1512x982 logical, timeline expanded) is ~680 design
+    # px tall against the 728 the design needs. Before the fit rule that meant
+    # the compact rail on every MacBook; now the design draws at ~0.93x, and
+    # only below CINEMA_SCALE_MIN does the compact fallback take over.
+    assert 0.5 <= _define("CINEMA_SCALE_MIN") <= 0.8
+    fits = LAYOUT[LAYOUT.index("bool cinema_surface_fits(") :]
+    fits = fits[: fits.index("\n}\n")]
+    assert "cinema_fit_scale(region) >= CINEMA_SCALE_MIN" in fits
+    # The unit is the fit, never below the floor, and never above 1x.
+    begin = LAYOUT[LAYOUT.index("void cinema_unit_begin(") :]
+    begin = begin[: begin.index("\n}\n")]
+    assert "std::max(fit, CINEMA_SCALE_MIN)" in begin
+    scale = LAYOUT[LAYOUT.index("float cinema_fit_scale(") :]
+    scale = scale[: scale.index("\n}\n")]
+    assert "std::clamp(fit, 0.0f, 1.0f)" in scale
+
+
+def test_every_draw_resolves_the_unit_from_the_viewport_region():
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert OVERLAY.index("cinema_unit_begin(region)") < OVERLAY.index(
+        "cinema_surface_fits(region)"
+    )
+    # The dock is one control row tall; its unit comes from the main region.
+    assert "cinema_unit_begin(main_region)" in TIMELINE
+    assert TIMELINE.index("cinema_unit_begin(main_region)") < TIMELINE.index(
+        "cinema_draw_dock_panel(region)"
+    )
+
+
+def test_qa_records_are_cleared_before_either_layout_draws():
+    # A compact draw after a wide one must not keep publishing the wide
+    # surface's rects: the harness would click controls that are not there.
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert OVERLAY.index("cinema_qa_begin(region)") < OVERLAY.index(
+        "if (cinema_surface_fits(region))"
+    )
+    assert TIMELINE.index("cinema_qa_begin(region)") < TIMELINE.index(
+        "cinema_draw_dock_panel(region)"
+    )
+
+
+def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
+    # Stage top = column top, stage bottom = lowest content: one rect, used
+    # by the painter and by the navigation gizmo placement.
+    stage = LAYOUT[LAYOUT.index("bool cinema_stage_rect(") :]
+    stage = stage[: stage.index("\n}\n")]
+    assert "CINEMA_COLUMN_TOP" in stage and "cinema_content_bottom()" in stage
+    draw = LAYOUT[LAYOUT.index("void cinema_draw_stage(") :]
+    draw = draw[: draw.index("\n}\n")]
+    assert "CINEMA_COLUMN_TOP" in draw and "cinema_content_bottom()" in draw
+    GIZMO = (VIEW3D / "view3d_gizmo_navigate.cc").read_text(encoding="utf-8")
+    assert "cinema_stage_rect(C, region, &stage)" in GIZMO
+    assert "rect_adjusted.xmax = int(stage.xmax - pad)" in GIZMO
+    # No branding chip: the top strip is hints and the phone hand-off only.
+    assert "Cinema Mode" not in TOP.split("namespace blender {", 1)[1]
 
 
 def test_the_columns_place_their_lowest_cards_through_those_constants():
@@ -205,7 +264,7 @@ def test_camera_list_windows_around_the_active_shot():
 
 
 def test_window_start_clamps_into_range():
-    start = PAINT[PAINT.index("int cinema_list_window_start") :]
+    start = LAYOUT[LAYOUT.index("int cinema_list_window_start") :]
     assert "count <= CINEMA_LIST_MAX_ROWS" in start
     assert "std::clamp(centred, 0, count - CINEMA_LIST_MAX_ROWS)" in start
 
