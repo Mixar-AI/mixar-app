@@ -11,6 +11,22 @@ Handles paste operations for text and images.
 Note: The per-bubble copy button is handled entirely in C++
 (mixie_chat_hit_testing.cc → WM_clipboard_text_set). These Python
 operators are only for keyboard/menu-driven copy and paste.
+
+Three paste entry points, deliberately kept distinct:
+
+* ``mixie_chat.paste_image`` — image only. It returns ``CANCELLED`` when the
+  clipboard holds no image, and ``interface_handlers.cc`` depends on that:
+  while the composer is in text-edit mode the C++ hook calls this operator
+  first and, on ``CANCELLED``, runs its own ``ui_textedit_copypaste`` so text
+  lands at the cursor. Do not give this operator a text fallback.
+* ``mixie_chat.paste`` — the keymap-bound chord. Image first, then text.
+  This is the path taken whenever the composer does *not* hold text-edit
+  focus, which is the normal state after the window has been deactivated —
+  and it is exactly the state an external dictation / paste utility leaves
+  behind when it injects Ctrl/Cmd+V. Before this operator existed the plain
+  chord was bound to ``paste_image`` alone, so every such paste was silently
+  dropped.
+* ``mixie_chat.paste_text`` — text only, for menus and scripts.
 """
 
 import os
@@ -38,6 +54,11 @@ from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_defe
 
 logger = get_logger(__name__)
 
+# The control character interface_handlers.cc appends to the composer buffer to
+# mean "Enter was pressed"; chat_props.py's update callback strips it and
+# submits. Pasted text must never carry one — see normalize_pasted_text().
+SUBMIT_MARKER = "\x1F"
+
 # Try to import PIL for Windows clipboard BMP decoding
 try:
     from PIL import Image as PILImage
@@ -45,6 +66,60 @@ try:
 except ImportError:
     HAS_PIL = False
     logger.warning("PIL/Pillow not available - image clipboard features disabled")
+
+
+def normalize_pasted_text(text):
+    r"""Make clipboard text safe to append to the composer.
+
+    Two things have to go. CRLF, because the composer stores plain "\n"
+    newlines (Shift+Enter inserts one) and a stray "\r" renders as a box.
+    And SUBMIT_MARKER, because ``scene.mixie_chat_input``'s update callback
+    treats that control character as "the user pressed Enter" — a clipboard
+    that happened to carry one would send the message mid-paste.
+    """
+    if not text:
+        return ""
+    return (
+        text.replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace(SUBMIT_MARKER, "")
+    )
+
+
+def append_clipboard_text_to_input(context, report=None):
+    """Append the clipboard's text to the chat composer.
+
+    Returns True when something was inserted. Appends rather than inserting
+    at the caret on purpose: this path only runs while the composer is NOT
+    in text-edit mode, so there is no caret to insert at — when there is one,
+    the C++ hook in ``interface_handlers.cc`` handles the paste itself and
+    consumes the event before any keymap sees it.
+    """
+    scene = getattr(context, "scene", None)
+    if scene is None:
+        return False
+
+    # Get clipboard text via operator context (not bpy.context)
+    clipboard_text = normalize_pasted_text(context.window_manager.clipboard)
+
+    if not clipboard_text:
+        return False
+
+    # Append clipboard to current input (at end)
+    new_input = scene.mixie_chat_input + clipboard_text
+
+    # Security: Validate total length
+    if len(new_input) > MAX_MESSAGE_LENGTH:
+        if report is not None:
+            report({'WARNING'},
+                   f"Pasted text too long (max {MAX_MESSAGE_LENGTH} chars)")
+        new_input = new_input[:MAX_MESSAGE_LENGTH]
+
+    scene.mixie_chat_input = new_input
+    redraw_chat_areas()
+
+    logger.debug(f"Pasted {len(clipboard_text)} characters into chat input")
+    return True
 
 
 class MIXIE_CHAT_OT_paste_text(Operator):
@@ -59,31 +134,42 @@ class MIXIE_CHAT_OT_paste_text(Operator):
         return context.scene is not None
 
     def execute(self, context):
-        scene = context.scene
+        if append_clipboard_text_to_input(context, self.report):
+            return {'FINISHED'}
+        return {'CANCELLED'}
 
-        # Get clipboard text via operator context (not bpy.context)
-        clipboard_text = context.window_manager.clipboard
 
-        if not clipboard_text:
-            return {'CANCELLED'}
+class MIXIE_CHAT_OT_paste(Operator):
+    """Paste clipboard contents into the chat composer"""
+    bl_idname = "mixie_chat.paste"
+    bl_label = "Paste"
+    bl_options = {'REGISTER'}
 
-        # Get current input
-        current_input = scene.mixie_chat_input
+    @classmethod
+    def poll(cls, context):
+        """Allow paste when a chat surface is active."""
+        return context.scene is not None
 
-        # Append clipboard to current input (at end)
-        new_input = current_input + clipboard_text
+    def execute(self, context):
+        # An image on the clipboard becomes an attachment, same as the
+        # explicit Ctrl/Cmd+Shift+V chord.
+        try:
+            image_result = bpy.ops.mixie_chat.paste_image()
+        except RuntimeError as exc:  # poll failed / operator unavailable
+            logger.debug(f"paste_image unavailable, pasting text instead: {exc}")
+            image_result = {'CANCELLED'}
 
-        # Security: Validate total length
-        if len(new_input) > MAX_MESSAGE_LENGTH:
-            self.report({'WARNING'},
-                       f"Pasted text too long (max {MAX_MESSAGE_LENGTH} chars)")
-            new_input = new_input[:MAX_MESSAGE_LENGTH]
+        if 'FINISHED' in image_result:
+            return {'FINISHED'}
 
-        scene.mixie_chat_input = new_input
-        redraw_chat_areas()
+        # Otherwise it is a text paste. This is the branch an external
+        # dictation tool lands in: it drops its transcript on the clipboard
+        # and injects Ctrl/Cmd+V, by which point the composer has lost
+        # text-edit focus and the C++ inline paste path is out of reach.
+        if append_clipboard_text_to_input(context, self.report):
+            return {'FINISHED'}
 
-        logger.debug(f"Pasted {len(clipboard_text)} characters into chat input")
-        return {'FINISHED'}
+        return {'CANCELLED'}
 
 
 class MIXIE_CHAT_OT_paste_image(Operator):
@@ -396,4 +482,5 @@ class MIXIE_CHAT_OT_paste_image(Operator):
 classes = (
     MIXIE_CHAT_OT_paste_text,
     MIXIE_CHAT_OT_paste_image,
+    MIXIE_CHAT_OT_paste,
 )

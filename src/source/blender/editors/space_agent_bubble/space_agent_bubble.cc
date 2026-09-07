@@ -289,9 +289,27 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
 #endif
 }
 
-static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height)
+/* A resize the footer's draw/layout callback asked for, applied later by
+ * agent_bubble_footer_region_listener. Draw callbacks must never resize the
+ * OS window or re-run ED_screen_refresh themselves: the region draw pass
+ * has the bubble's framebuffer bound and is iterating area->regionbase, so
+ * a refresh from inside it re-enters region init for the region on the
+ * stack, recomputes every winrct under a viewport still set from the old
+ * rects, and resizes the GL window mid-present — the nvoglv64 access
+ * violations wm_draw.cc documents for this window. */
+static int g_bubble_pending_resize_height = 0;
+static int g_bubble_pending_resize_floor = 0;
+
+/* Push a new bubble size onto the OS window, the wmWindow and its screen
+ * verts. `C` may be null: the screen is then only TAGGED (`do_refresh`) and
+ * the event loop runs ED_screen_refresh itself in ED_screen_ensure_updated
+ * later in the same pass — the form the footer listener uses, because a
+ * listener carries no context. With a context (operator exec) the refresh
+ * is immediate, as before. */
+static void bubble_apply_window_size(
+    bContext *C, wmWindowManager *wm, wmWindow *w, void *ghostwin, int width, int height)
 {
-  if (ghostwin == nullptr) {
+  if (ghostwin == nullptr || w == nullptr) {
     return;
   }
 
@@ -301,31 +319,50 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
   g_bubble_last_min_height = 0;
   bubble_set_min_content_size(ghostwin, AGENT_BUBBLE_MIN_HEIGHT);
 
-  int pixel_width = width;
-  int pixel_height = height;
+  /* BACKING pixels (0 when the query fails). `width`/`height` — like
+   * every Mixar_Window* size — are LOGICAL points. */
+  int pixel_width = 0;
+  int pixel_height = 0;
   Mixar_WindowGetContentPixelSize(ghostwin, &pixel_width, &pixel_height);
-  if (pixel_width <= 0 || pixel_height <= 0) {
-    pixel_width = width;
-    pixel_height = height;
-  }
 
-  wmWindowManager *wm = CTX_wm_manager(C);
-  if (wm == nullptr) {
-    return;
-  }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != ghostwin) {
-      continue;
+  {
+    /* THE TWO SIZES LIVE IN DIFFERENT SPACES, and mixing them silently
+     * doubles the bubble's layout on Retina:
+     *   - wmWindow::sizex/sizey are LOGICAL POINTS. Blender derives the
+     *     screen rect from them as sizex * GHOST_GetNativePixelSize()
+     *     (see WM_window_native_pixel_x / WM_window_rect_calc).
+     *   - ScrVert coordinates, and Mixar_WindowGetContentPixelSize, are
+     *     BACKING PIXELS — the space ED_screen_refresh rescales the
+     *     verts against.
+     * Assigning the backing size straight into sizex left a 400pt (800px)
+     * bubble claiming an 800pt window, so the area was laid out 1600px
+     * wide inside an 800px one: the Send button and the header's
+     * history/rules controls landed off-window and the composer field ran
+     * past the right edge. Attaching an image was the usual trigger,
+     * because that is what re-runs this force-size. */
+    const int native_x = WM_window_native_pixel_x(w);
+    const float fac = (w->sizex > 0 && native_x > 0) ?
+                          float(native_x) / float(w->sizex) :
+                          1.0f;
+
+    int logical_width = width;
+    int logical_height = height;
+    if (pixel_width > 0 && pixel_height > 0) {
+      logical_width = int(float(pixel_width) / fac);
+      logical_height = int(float(pixel_height) / fac);
     }
-    w->sizex = pixel_width;
-    w->sizey = pixel_height;
+    const int backing_width = int(float(logical_width) * fac);
+    const int backing_height = int(float(logical_height) * fac);
+
+    w->sizex = logical_width;
+    w->sizey = logical_height;
     bScreen *screen = WM_window_get_active_screen(w);
     if (screen == nullptr) {
-      break;
+      return;
     }
     ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
     if (area == nullptr) {
-      break;
+      return;
     }
     if (area->v1 != nullptr) {
       area->v1->vec.x = 0;
@@ -333,22 +370,83 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
     }
     if (area->v2 != nullptr) {
       area->v2->vec.x = 0;
-      area->v2->vec.y = pixel_height - 1;
+      area->v2->vec.y = backing_height - 1;
     }
     if (area->v3 != nullptr) {
-      area->v3->vec.x = pixel_width - 1;
-      area->v3->vec.y = pixel_height - 1;
+      area->v3->vec.x = backing_width - 1;
+      area->v3->vec.y = backing_height - 1;
     }
     if (area->v4 != nullptr) {
-      area->v4->vec.x = pixel_width - 1;
+      area->v4->vec.x = backing_width - 1;
       area->v4->vec.y = 0;
     }
-    ED_screen_refresh(C, wm, w);
+    if (C != nullptr && wm != nullptr) {
+      ED_screen_refresh(C, wm, w);
+    }
+    else {
+      /* Deferred: ED_screen_ensure_updated picks this up before the next
+       * draw, outside any region draw pass. */
+      screen->do_refresh = true;
+    }
     ED_area_tag_redraw(area);
-    break;
   }
 }
+
+static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height)
+{
+  if (ghostwin == nullptr) {
+    return;
+  }
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return;
+  }
+  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
+    if (w->ghostwin == ghostwin) {
+      bubble_apply_window_size(C, wm, w, ghostwin, width, height);
+      break;
+    }
+  }
+}
+
+/* Called from the footer draw/layout pass: record the wanted size and wake
+ * the event loop; the footer listener applies it. */
+static void agent_bubble_request_resize(const bContext *C, int target_height, int height_floor)
+{
+  g_bubble_pending_resize_height = target_height;
+  g_bubble_pending_resize_floor = height_floor;
+  /* Only appends to the WM notifier queue — safe from a draw callback. */
+  WM_event_add_notifier(C, NC_WINDOW, nullptr);
+}
 #endif
+
+/* Footer region listener: apply a resize the draw/layout pass asked for.
+ * Runs from wm_event_do_notifiers — nothing bound, no region draw on the
+ * stack — and only tags the screen; the same pass then refreshes it. */
+static void agent_bubble_footer_region_listener(const wmRegionListenerParams *params)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (g_bubble_pending_resize_height <= 0) {
+    return;
+  }
+  wmWindow *win = params->window;
+  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin) {
+    return;
+  }
+  const int target_height = g_bubble_pending_resize_height;
+  const int height_floor = g_bubble_pending_resize_floor;
+  g_bubble_pending_resize_height = 0;
+  g_bubble_pending_resize_floor = 0;
+  if (g_bubble_minimised) {
+    return;
+  }
+  bubble_apply_window_size(
+      nullptr, nullptr, win, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
+  bubble_set_min_content_size(win->ghostwin, height_floor);
+#else
+  (void)params;
+#endif
+}
 
 static int agent_bubble_pending_attachment_count(const bContext *C)
 {
@@ -371,7 +469,12 @@ static int agent_bubble_collapsed_height_for_current_attachments(const bContext 
   return agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
 }
 
-static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *region)
+/* `from_draw`: called from the footer's layout/draw callback, where the
+ * resize must be REQUESTED (agent_bubble_request_resize) and never applied
+ * inline; operator exec passes false and resizes immediately. */
+static void agent_bubble_sync_footer_window_size(const bContext *C,
+                                                 ARegion *region,
+                                                 const bool from_draw)
 {
 #if defined(__APPLE__) || defined(_WIN32)
   wmWindow *win = CTX_wm_window(C);
@@ -449,19 +552,25 @@ static void agent_bubble_sync_footer_window_size(const bContext *C, ARegion *reg
   if (target_height > win->sizey ||
       (has_attachments && !was_had_pending && !g_bubble_expanded))
   {
-    bubble_force_size_and_refresh(
-        const_cast<bContext *>(C), win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
-    bubble_set_min_content_size(win->ghostwin, height_floor);
+    if (from_draw) {
+      agent_bubble_request_resize(C, target_height, height_floor);
+    }
+    else {
+      bubble_force_size_and_refresh(
+          const_cast<bContext *>(C), win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
+      bubble_set_min_content_size(win->ghostwin, height_floor);
+    }
   }
 #else
   (void)C;
   (void)region;
+  (void)from_draw;
 #endif
 }
 
 static void agent_bubble_footer_region_draw(const bContext *C, ARegion *region)
 {
-  agent_bubble_sync_footer_window_size(C, region);
+  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
 
   /* Read footer background from the Agent Bubble theme.  The colour is
    * stored as uchar[4] (0-255) and the override API expects float (0-1).
@@ -492,7 +601,7 @@ static void agent_bubble_footer_region_draw(const bContext *C, ARegion *region)
 static void agent_bubble_footer_region_layout(const bContext *C, ARegion *region)
 {
   mixie_chat_footer_region_layout(C, region);
-  agent_bubble_sync_footer_window_size(C, region);
+  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
 }
 
 
@@ -871,7 +980,7 @@ static int agent_bubble_close_all_windows(bContext *C)
   /* Save the host handle before destruction — we need to restore focus
    * afterwards because DestroyWindow on Windows transfers activation to
    * the next window in Z-order (often another application). */
-  void *host_ghost = g_host_ghostwin;
+  [[maybe_unused]] void *host_ghost = g_host_ghostwin;
 
   int closed = 0;
   bool closed_one = true;
@@ -1751,7 +1860,7 @@ static wmOperatorStatus mixar_bubble_sync_attachment_size_exec(bContext *C, wmOp
     g_bubble_had_pending_attachments = true;
     return OPERATOR_FINISHED;
   }
-  agent_bubble_sync_footer_window_size(C, CTX_wm_region(C));
+  agent_bubble_sync_footer_window_size(C, CTX_wm_region(C), /*from_draw=*/false);
   /* Always force a redraw — agent_bubble_sync_footer_window_size
    * may early-return without tagging when the bubble is already the
    * right size, but the footer thumbnails still need rendering. */
@@ -2224,8 +2333,15 @@ static void agent_bubble_keymap(wmKeyConfig *keyconf)
   wmKeyMap *km = WM_keymap_ensure(
       keyconf, "Agent Bubble", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
 
-  /* Ctrl+V / Cmd+V: paste image from clipboard — reuses the Mixie Chat
-   * paste operator which writes to the shared pending-attachments collection. */
+  /* Ctrl+V / Cmd+V: paste the clipboard — reuses the Mixie Chat paste
+   * operator, which attaches an image to the shared pending-attachments
+   * collection or appends text to the shared composer.
+   *
+   * MIXIE_CHAT_OT_paste, not MIXIE_CHAT_OT_paste_image: paste_image
+   * returns CANCELLED when the clipboard holds no image, so binding it to
+   * the plain chord meant every text paste that reached a keymap — i.e.
+   * every paste made while the composer did not hold text-edit focus —
+   * was silently dropped. */
   KeyMapItem_Params paste_params{};
   paste_params.type = EVT_VKEY;
   paste_params.value = KM_PRESS;
@@ -2234,13 +2350,13 @@ static void agent_bubble_keymap(wmKeyConfig *keyconf)
 #else
   paste_params.modifier = KM_CTRL;
 #endif
-  WM_keymap_add_item(km, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(km, "MIXIE_CHAT_OT_paste", &paste_params);
 
   /* Also register on the footer (TOOLS) region so paste works when the
    * text input has focus. */
   wmKeyMap *km_footer = WM_keymap_ensure(
       keyconf, "Agent Bubble", SPACE_AGENT_BUBBLE, RGN_TYPE_TOOLS);
-  WM_keymap_add_item(km_footer, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(km_footer, "MIXIE_CHAT_OT_paste", &paste_params);
 
   WM_keymap_ensure(
       keyconf, "Agent Bubble Header", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);
@@ -2260,6 +2376,15 @@ static void agent_bubble_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   sbubble->runtime = nullptr;
   BLO_write_struct(writer, SpaceAgentBubble, sl);
   sbubble->runtime = runtime_backup;
+}
+
+static void agent_bubble_space_blend_read_data(BlendDataReader * /*reader*/, SpaceLink *sl)
+{
+  SpaceAgentBubble *sbubble = (SpaceAgentBubble *)sl;
+  /* Never trust a runtime pointer read from disk: the reader keeps an
+   * unhandled pointer's stored value, and a non-null one is dereferenced by
+   * the first draw and MEM_delete'd by the strip-on-load window close. */
+  sbubble->runtime = nullptr;
 }
 
 /** \} */
@@ -2284,6 +2409,7 @@ void ED_spacetype_agent_bubble()
   st->operatortypes = agent_bubble_operatortypes;
   st->keymap = agent_bubble_keymap;
   st->blend_write = agent_bubble_space_blend_write;
+  st->blend_read_data = agent_bubble_space_blend_read_data;
 
   /* Main region — REUSES MIXIE CHAT'S CUSTOM-DRAWN MESSAGE LIST.
    *
@@ -2355,6 +2481,7 @@ void ED_spacetype_agent_bubble()
   art->init = mixie_chat_footer_region_init;
   art->layout = agent_bubble_footer_region_layout;
   art->draw = agent_bubble_footer_region_draw;
+  art->listener = agent_bubble_footer_region_listener;
   /* No prefsizey — mixie chat's layout callback computes the height
    * dynamically based on input line count + pending attachments, so
    * a static prefsizey would be overridden every layout pass. */
