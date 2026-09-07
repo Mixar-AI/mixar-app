@@ -5,9 +5,10 @@
 /** \file
  * \ingroup spview3d
  *
- * Cinema Mode: the top strip — keyboard hints on the left; on the right,
- * flowing leftwards from the stage's edge, the phone hand-off button, the
- * keyframe interpolation dropdown and the object-tracking eyedropper.
+ * Cinema Mode: the top strip — the Mixar banner chip above the left column,
+ * keyboard hints from the camera border's left edge; on the right, flowing
+ * leftwards from the stage's edge, the phone hand-off button, the keyframe
+ * interpolation dropdown and the object-tracking eyedropper.
  *
  * Painting only; see `view3d_director_cinema_paint.cc` for the primitives.
  * The controls read the active shot's RNA and invoke Python-owned operators.
@@ -25,8 +26,11 @@
 
 #include "RNA_access.hh"
 
+#include "GPU_state.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_interface_icons.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
@@ -40,6 +44,54 @@ namespace {
 
 /** Design y of the strip's control row (the phone button's top). */
 constexpr float STRIP_Y = 159.0f;
+
+/**
+ * Mixar banner chip: the brand gradient pill with the round logo chip, the
+ * "mixar" wordmark, the mode name and the version. INERT — no button, no QA
+ * record, no tooltip; it only names what the surface is.
+ */
+void brand_chip(const rctf &pill)
+{
+  const float u = cinema_unit();
+  const float brand_top[4] = CINEMA_COL_BRAND_TOP;
+  const float brand_bottom[4] = CINEMA_COL_BRAND_BOTTOM;
+  cinema_panel(pill, CINEMA_ROW_RADIUS * u, brand_top, brand_bottom);
+
+  const float cy = BLI_rctf_cent_y(&pill);
+  const float logo_d = CINEMA_BRAND_LOGO * u;
+  const rctf logo = {pill.xmin + CINEMA_BRAND_PAD * u,
+                     pill.xmin + (CINEMA_BRAND_PAD + CINEMA_BRAND_LOGO) * u,
+                     cy - logo_d * 0.5f,
+                     cy + logo_d * 0.5f};
+  const float logo_top[4] = CINEMA_COL_LOGO_TOP;
+  const float logo_bottom[4] = CINEMA_COL_LOGO_BOTTOM;
+  cinema_panel(logo, logo_d * 0.5f, logo_top, logo_bottom);
+
+  const float value_col[4] = CINEMA_COL_VALUE;
+  const float label_col[4] = CINEMA_COL_LABEL;
+  const float wordmark_x = logo.xmax + CINEMA_BRAND_GAP * u;
+  cinema_text_left("mixar", wordmark_x, cy, CINEMA_FONT_VALUE * u, value_col);
+  const float mode_x = wordmark_x + cinema_text_width("mixar", CINEMA_FONT_VALUE * u) +
+                       CINEMA_BRAND_GAP * u;
+  cinema_text_left("Cinema Mode", mode_x, cy, CINEMA_FONT_VALUE * u, label_col);
+  cinema_text_right(
+      "V1", pill.xmax - CINEMA_BRAND_VERSION_PAD * u, cy, CINEMA_FONT_LABEL * u, label_col);
+
+  /* The mark last: the icon pass leaves its own blend state behind, which
+   * the primitives above would otherwise inherit. Same call as the Agent
+   * island's chip (`agent_ui_draw.cc`): icons draw at 16/aspect px. */
+  const float mark_edge = CINEMA_BRAND_MARK * u;
+  ui::icon_draw_ex(BLI_rctf_cent_x(&logo) - mark_edge * 0.5f,
+                   cy - mark_edge * 0.5f,
+                   ICON_MIXAR_ICON,
+                   /*aspect=*/16.0f / mark_edge, /* icons draw at 16/aspect px */
+                   /*alpha=*/1.0f,
+                   /*desaturate=*/0.0f,
+                   /*mono_color=*/nullptr,
+                   /*mono_border=*/false,
+                   /*text_overlay=*/nullptr);
+  GPU_blend(GPU_BLEND_ALPHA);
+}
 
 /** Phone glyph + label, centred as a pair; glyph only when \a compact. */
 void phone_button(const rctf &rect, const bool compact)
@@ -176,8 +228,8 @@ void cinema_draw_top_strip(ui::Block *block,
   };
   /* Groups pack at CINEMA_HINT_GAP from the camera gate's left edge (the
    * stage inset by the gate's pad), so the hints line up with the frame and
-   * nothing is drawn above the left column. `x` is resolved here from the
-   * measured label widths. */
+   * clear the banner chip above the left column. `x` is resolved here from
+   * the measured label widths. */
   Hint hints[] = {
       {0.0f, {"O"}, 1, "Navigate", false},
       {0.0f, {"F"}, 1, "Insert keyframe", false},
@@ -209,6 +261,11 @@ void cinema_draw_top_strip(ui::Block *block,
   }
 
   const rctf band = cinema_design_rect(region, 0.0f, STRIP_Y, 0.0f, CINEMA_PHONE_H);
+
+  /* Mixar banner chip above the left column, the column's full width, on
+   * the same band as the strip's controls. Only the wide surface calls this
+   * painter, so the compact rail never shows it. */
+  brand_chip(cinema_design_rect(region, margin, STRIP_Y, CINEMA_PANEL_W, CINEMA_PHONE_H));
 
   /* Phone hand-off above the right column, the column's full width; the
    * label gives way to the glyph only if the column cannot hold it. */

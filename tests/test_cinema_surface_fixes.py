@@ -195,8 +195,34 @@ def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
     GIZMO = (VIEW3D / "view3d_gizmo_navigate.cc").read_text(encoding="utf-8")
     assert "cinema_stage_rect(C, region, &stage)" in GIZMO
     assert "rect_adjusted.xmax = int(stage.xmax - pad)" in GIZMO
-    # No branding chip: the top strip is hints and the phone hand-off only.
-    assert "Cinema Mode" not in TOP.split("namespace blender {", 1)[1]
+    # The Mixar banner chip sits above the left column: the column's width
+    # from the side margin, on the strip band, in the brand gradient with
+    # the Mixar mark. It is chrome only.
+    assert "brand_chip(" in TOP
+    assert "ICON_MIXAR_ICON" in TOP
+    assert "CINEMA_COL_BRAND_TOP" in TOP
+    assert (
+        "brand_chip(cinema_design_rect(region, margin, STRIP_Y, CINEMA_PANEL_W, CINEMA_PHONE_H))"
+        in TOP
+    )
+    assert "const float margin = cinema_margin(region);" in TOP
+
+
+def test_the_banner_chip_is_inert_and_only_on_the_wide_surface():
+    chip = TOP[TOP.index("void brand_chip(") :]
+    chip = chip[: chip.index("\n}\n")]
+    # No button, no QA record, no tooltip: nothing for the harness to find.
+    for forbidden in ("cinema_op_button", "cinema_icon_button", "cinema_popup_button",
+                      "cinema_qa_record"):
+        assert forbidden not in chip, forbidden
+    # Same icon call the Agent island uses; the mark is drawn in colour.
+    assert "ui::icon_draw_ex(" in chip and "/*mono_color=*/nullptr" in chip
+    # Only the wide surface's strip paints it (the compact rail never does).
+    assert TOP.count("brand_chip(") == 2
+    assert TOP.index("void cinema_draw_top_strip(") < TOP.rindex("brand_chip(")
+    # The tokens it lays out with exist and read sensibly.
+    assert _define("CINEMA_BRAND_LOGO") < _define("CINEMA_PHONE_H")
+    assert _define("CINEMA_BRAND_MARK") < _define("CINEMA_BRAND_LOGO")
 
 
 def test_the_columns_place_their_lowest_cards_through_those_constants():

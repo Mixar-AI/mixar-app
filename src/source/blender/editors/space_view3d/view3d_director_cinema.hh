@@ -84,6 +84,13 @@ struct DirectorViewState;
  * the controls. */
 #define CINEMA_INTERP_W 150.0f
 #define CINEMA_STRIP_GAP 10.0f
+/* The Mixar banner chip above the left column: a CINEMA_PANEL_W pill on the
+ * strip band (row class height and radius), inert. */
+#define CINEMA_BRAND_PAD 10.0f         /* Pill edge -> logo chip. */
+#define CINEMA_BRAND_LOGO 22.0f        /* Round logo chip diameter. */
+#define CINEMA_BRAND_MARK 14.0f        /* Mixar mark edge inside the logo chip. */
+#define CINEMA_BRAND_GAP 8.0f          /* Logo -> wordmark -> mode name. */
+#define CINEMA_BRAND_VERSION_PAD 12.0f /* Pill's right edge -> "V1". */
 
 /* Right panel. Cards stack from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP so the
  * column's foot lands on the same design y as the left column's. */
@@ -141,6 +148,9 @@ struct DirectorViewState;
 #define CINEMA_COL_EXPORT {0.102f, 0.251f, 0.149f, 1.0f} /* #1A4026 */
 #define CINEMA_COL_BRAND_TOP {0.043f, 0.192f, 0.102f, 1.0f}    /* #0B311A */
 #define CINEMA_COL_BRAND_BOTTOM {0.059f, 0.059f, 0.059f, 1.0f} /* #0F0F0F */
+/** The banner's logo chip: the Agent island's own chip ramp. */
+#define CINEMA_COL_LOGO_TOP {0.125f, 0.345f, 0.212f, 1.0f}    /* #205836 */
+#define CINEMA_COL_LOGO_BOTTOM {0.227f, 0.518f, 0.341f, 1.0f} /* #3A8457 */
 #define CINEMA_COL_GATE_FILL {0.851f, 0.851f, 0.851f, 0.07f}
 #define CINEMA_COL_GATE_LINE {0.247f, 0.247f, 0.247f, 1.0f} /* #3F3F3F */
 #define CINEMA_COL_SPEED_ON {0.165f, 0.475f, 0.286f, 1.0f}  /* #2A7949 */
