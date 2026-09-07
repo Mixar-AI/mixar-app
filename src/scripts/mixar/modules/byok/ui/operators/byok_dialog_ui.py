@@ -353,7 +353,7 @@ def _draw_openrouter_fields(body, wm):
 
 def _draw_codex_fields(body, wm):
     field_label(body, "Model")
-    field_input(body, wm, 'byok_form_codex_model')
+    field_dropdown(body, wm, 'byok_form_model')
     body.separator(factor=0.45)
 
     load_row = body.row()

@@ -122,6 +122,49 @@ def test_save_rejects_stale_model_from_another_provider(monkeypatch):
     model_suggestions.clear()
 
 
+def test_codex_save_uses_openai_catalog_models(monkeypatch):
+    """Codex has no catalog group of its own: its model dropdown reuses the
+    "openai" models. A stale/sentinel selection is rejected before the
+    network; a real openai catalog model is sent with the pasted auth.json
+    bundle as the key."""
+    model_suggestions.populate(
+        providers=[("openai", "OpenAI", "From catalog")],
+        models={"openai": [("gpt-5.5", "GPT-5.5", "GPT-5.5")]},
+    )
+    assert model_suggestions.get_model_items("codex") == [("gpt-5.5", "GPT-5.5", "GPT-5.5")]
+    assert model_suggestions.is_valid_model("codex", "gpt-5.5") is True
+
+    sent = []
+    monkeypatch.setattr(byok_ops, "_redraw_mixie_chat_areas", lambda: None)
+    monkeypatch.setattr(
+        byok_ops.byok_client, "save_credentials", lambda **kwargs: sent.append(kwargs),
+    )
+
+    def _wm(model):
+        return SimpleNamespace(
+            byok_dialog_state="IDLE",
+            byok_last_error="",
+            byok_form_provider="codex",
+            byok_form_model=model,
+            byok_form_codex_bundle='{"tokens": {}}',
+        )
+
+    stale = _wm("NONE")
+    assert byok_ops.MIXAR_BYOK_OT_save().execute(
+        SimpleNamespace(window_manager=stale)) == {'CANCELLED'}
+    assert stale.byok_dialog_state == "ERROR"
+    assert sent == []
+
+    ok = _wm("gpt-5.5")
+    assert byok_ops.MIXAR_BYOK_OT_save().execute(
+        SimpleNamespace(window_manager=ok)) == {'FINISHED'}
+    assert ok.byok_dialog_state == "SAVING"
+    assert sent[0]["provider"] == "codex"
+    assert sent[0]["model"] == "gpt-5.5"
+    assert sent[0]["api_key"] == '{"tokens": {}}'
+    model_suggestions.clear()
+
+
 def test_dialog_cancel_wipes_live_secret_fields():
     wm = SimpleNamespace(
         byok_form_api_key="provider-secret",

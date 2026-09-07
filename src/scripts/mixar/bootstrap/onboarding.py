@@ -112,6 +112,14 @@ def _end_onboarding() -> None:
         logger.debug("Onboarding: end-onboarding failed: %s", exc)
 
 
+def _drop_card_texture_cache() -> None:
+    try:
+        from mixar.modules.onboarding.core.card import image_loader
+        image_loader.reset_cache()
+    except Exception as exc:
+        logger.debug("Onboarding: card texture cache reset skipped: %s", exc)
+
+
 @persistent
 def _on_load_post(_dummy):
     """``load_post`` runs on every file open. We split it into three
@@ -133,6 +141,12 @@ def _on_load_post(_dummy):
     """
     global _load_post_count
     _load_post_count += 1
+    # The card renderer caches GPUTextures borrowed from Image datablocks
+    # (gpu.texture.from_image — owned by the image, not by Python). A file
+    # load frees every image, so a cached handle sampled by the next tour
+    # draw is a freed GL texture. Drop the cache on every load, first
+    # (boot-time) load included.
+    _drop_card_texture_cache()
     if _load_post_count < 2:
         return
     if _load_post_count == 2:
@@ -240,6 +254,7 @@ def register():
 def unregister():
     if _on_load_post in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(_on_load_post)
+    _drop_card_texture_cache()
     for fn in (
         _fallback_timer,
         _invoke_welcome_dialog,

@@ -48,16 +48,26 @@ def _run_on_main(fn):
 
 
 def _instance() -> tuple[str, bool]:
+    """Instance id + connection state, read on the MAIN thread.
+
+    ``manager.instance_id`` reads ``bpy.context.window_manager`` and, on first
+    access, WRITES ``wm.mixie_instance_id``; this runs on an HTTP handler
+    thread, so it goes through ``_run_on_main`` like every other bpy touch in
+    the sidecar.
+    """
     instance_id = ""
     connected = False
-    try:
+
+    def _read():
         from mixar.modules.space_mixie_chat.core.connection_manager import (
             get_connection_manager,
         )
 
         manager = get_connection_manager()
-        instance_id = manager.instance_id or ""
-        connected = bool(manager.is_connected)
+        return manager.instance_id or "", bool(manager.is_connected)
+
+    try:
+        instance_id, connected = _run_on_main(_read)
     except Exception as exc:
         logger.debug("connector sidecar instance: %s", exc)
     return instance_id, connected

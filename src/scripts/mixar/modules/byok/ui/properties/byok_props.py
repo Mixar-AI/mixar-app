@@ -21,7 +21,6 @@ from bpy.props import BoolProperty, EnumProperty, StringProperty
 
 from ...constants import (
     BYOK_API_KEY_MAX_LENGTH,
-    CODEX_DEFAULT_MODEL,
     DIALOG_STATE_ITEMS,
     LOCAL_MODE_ITEMS,
     OPENROUTER_DEFAULT_MODEL,
@@ -132,7 +131,6 @@ _WM_ATTRS = (
     'byok_form_api_key',
     'byok_form_openrouter_model',
     'byok_form_codex_bundle',
-    'byok_form_codex_model',
     'byok_form_local_mode',
     'byok_form_local_model',
     'byok_form_local_detected',
@@ -188,11 +186,11 @@ def register():
         default=OPENROUTER_DEFAULT_MODEL,
     )
 
-    # --- Codex form fields (shown when provider == 'codex') ---
+    # --- Codex form field (shown when provider == 'codex') ---
     # The bundle is the full ~/.codex/auth.json (multi-KB, contains JWTs), so
     # a generous maxlen; PASSWORD hides the tokens (the Paste button + a char
-    # count confirm it landed). Model is a free-text slug (lineup varies per
-    # subscription tier).
+    # count confirm it landed). The model uses the shared catalog-backed
+    # byok_form_model dropdown (served from the "openai" catalog group).
     WM.byok_form_codex_bundle = StringProperty(
         name="Codex auth.json",
         description="Contents of ~/.codex/auth.json (run `codex login` first)",
@@ -200,11 +198,6 @@ def register():
         default='',
         subtype='PASSWORD',
         options={'SKIP_SAVE'},
-    )
-    WM.byok_form_codex_model = StringProperty(
-        name="Model",
-        description="Codex model slug, e.g. gpt-5.5 / gpt-5.4 / gpt-5.4-mini",
-        default=CODEX_DEFAULT_MODEL,
     )
 
     # --- Local (this computer) form fields (shown when provider == 'local') ---
