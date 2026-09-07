@@ -36,6 +36,7 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 
 from .anim_curves import assigned_fcurves
+from .retime import note_beat_timing
 from .rotation_curves import repair_rotation_continuity
 from .shot_api import active_shot, refresh_manifest, scope_preview_range
 
@@ -141,6 +142,7 @@ def adopt_native_keyframes(scene, shot) -> int:
         beat = shot.beats.add()
         beat.beat_id = uuid.uuid4().hex
         beat.frame = frame
+        note_beat_timing(shot, beat)
     shot.active_beat_index = len(shot.beats) - 1
     scene.frame_end = max(scene.frame_end, missing[-1])
     repair_rotation_continuity(camera)

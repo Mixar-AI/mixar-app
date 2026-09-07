@@ -13,6 +13,7 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
+from .retime import note_beat_timing
 from .rotation_curves import repair_rotation_continuity, rotation_data_path
 from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
@@ -237,6 +238,7 @@ def capture_beat(context, shot, beat_seconds: float):
         beat = shot.beats.add()
         beat.beat_id = uuid.uuid4().hex
         beat.frame = target_frame
+        note_beat_timing(shot, beat)
         beat.image = image
         shot.active_beat_index = len(shot.beats) - 1
         scene.frame_end = max(scene.frame_end, target_frame)

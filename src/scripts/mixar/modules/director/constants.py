@@ -12,6 +12,14 @@ DEFAULT_BEAT_SECONDS = 1.0
 MIN_BEAT_SECONDS = 0.1
 MAX_BEAT_SECONDS = 10.0
 
+# The Cinema Mode Speed slider retimes the ACTIVE SHOT: every interval between
+# its keyframes is scaled by ``2 ** (-speed)``, so +1 plays twice as fast, -1
+# half as fast, and the slider rests in the middle at the timing as captured.
+# (``beat_seconds`` above stays the spacing for future captures.)
+SPEED_MIN = -1.0
+SPEED_MAX = 1.0
+DEFAULT_SPEED = 0.0
+
 # Familiar photographic focal lengths; directors think in millimetres, so
 # the surface never presents field-of-view degrees.
 LENS_PRESET_ITEMS = (

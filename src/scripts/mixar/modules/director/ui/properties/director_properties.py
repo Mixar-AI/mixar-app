@@ -19,12 +19,15 @@ from bpy.types import PropertyGroup
 from ...constants import (
     CAMERA_TEMPLATE_ITEMS,
     DEFAULT_BEAT_SECONDS,
+    DEFAULT_SPEED,
     GUIDANCE_STRENGTH_ITEMS,
     INTERPOLATION_ITEMS,
     MAX_BEAT_SECONDS,
     MIN_BEAT_SECONDS,
     SHOT_RENDER_OUTPUT_ITEMS,
     SHOT_STATE_ITEMS,
+    SPEED_MAX,
+    SPEED_MIN,
 )
 from ...core.shot_api import scope_preview_range
 from ...core.viewport import enter_camera_view, select_camera_object
@@ -116,6 +119,28 @@ def _on_interpolation_update(self, _context):
         pass
 
 
+def _on_speed_update(self, context):
+    """Retime the shot to its new speed (``core/retime.py``).
+
+    Locked shots return untouched (the surface disables their slider); the
+    value is never fought over. Load-safe: no operators, and a shot whose
+    animation is not reachable yet keeps its frames until the next edit.
+    """
+    from ...core.retime import apply_shot_speed
+
+    if self.state != 'DRAFT':
+        return
+    scene = getattr(self, "scene_ref", None)
+    if scene is None:
+        scene = getattr(context, "scene", None) or bpy.context.scene
+    if scene is None:
+        return
+    try:
+        apply_shot_speed(scene, self)
+    except Exception:
+        pass
+
+
 def _track_target_poll(self, obj):
     return getattr(obj, "type", None) != 'CAMERA'
 
@@ -163,6 +188,13 @@ class MixarDirectorBeat(PropertyGroup):
 
     beat_id: StringProperty(name="Beat ID", default="")
     frame: IntProperty(name="Frame", default=1, min=-1048574, max=1048574)
+    # The frame at shot speed 0; `core/retime.py` derives `frame` from it
+    # (never the reverse). 0.0 on a non-zero frame = unrecorded (old file).
+    time_base: FloatProperty(
+        name="Time Base",
+        default=0.0,
+        options={'HIDDEN'},
+    )
     image: PointerProperty(
         name="Reference Frame",
         description="Packed viewport capture associated with this keyframe",
@@ -245,6 +277,24 @@ class MixarDirectorShot(PropertyGroup):
         items=INTERPOLATION_ITEMS,
         default="BEZIER",
         update=_on_interpolation_update,
+    )
+    # Cinema Mode Speed slider: intervals scale by 2 ** (-speed) around the
+    # first keyframe (`core/retime.py`); 0 in the middle is as captured.
+    speed: FloatProperty(
+        name="Speed",
+        description=(
+            "Speed of the camera through this shot: right contracts the "
+            "shot (faster), left expands it (slower); the middle is the "
+            "timing as captured"
+        ),
+        default=DEFAULT_SPEED,
+        min=SPEED_MIN,
+        max=SPEED_MAX,
+        soft_min=SPEED_MIN,
+        soft_max=SPEED_MAX,
+        step=5,
+        precision=2,
+        update=_on_speed_update,
     )
     track_target: PointerProperty(
         name="Track Target",
