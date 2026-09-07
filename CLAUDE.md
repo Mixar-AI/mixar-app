@@ -38,6 +38,8 @@ python -m pytest -q  # standalone suite, runs OUTSIDE Blender (root conftest.py 
 python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (needs runtime deps)
 ```
 
+- Python packages are installed from `scripts/python_requirements.txt` into the embedded Blender Python (`make install`).
+- **Windows code signing**: Azure Artifact Signing tools live in `scripts/windows/codesign-tools/`. Sign production app binaries in `build/Prod/bin` before MSI creation (`scripts/windows/codesign_files.bat`), then sign the generated MSI in `dist/` last (`scripts/windows/codesign_package.bat`); both wrap `scripts/windows/codesign-tools/sign-package.ps1`. `scripts/windows/codesign-tools/audit-signatures.ps1` audits Authenticode state for `.exe`, `.dll`, `.pyd`, `.ocx`, `.sys`, `.msi`, `.cab` and `.cat` files. Signing uses Windows SDK SignTool with the Azure Artifact Signing dlib, SHA256 file and timestamp digests, and `http://timestamp.acs.microsoft.com`. Release pipeline: `docs/release-pipeline-setup.md`.
 - `pytest.ini` testpaths: `tests/`, plus in-tree suites under `space_mixie_chat/tests` and `paint/{layered_build,procedural_materials}/tests`. `pythonpath = src/scripts`.
 - `bpy` is a MagicMock in tests, so `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
 - The root `conftest.py` imports the REAL `numpy`/`PIL` before collection: `modules/testing/mock_bpy` stubs third-party modules only when ABSENT from `sys.modules`, so without the preload the first importer decided whether PIL was real for the whole session.
@@ -58,9 +60,25 @@ The QA harness drives the REAL built app like a human — semantic clicks by ope
 - No file larger than **500 lines** — split aggressively. Use C++ for performance-critical paths.
 - Module layout (strict): `constants.py` at module root; `core/` for logic; `ui/` for auto-discovered UI split into `properties/`, `operators/`, `panels/`, `menus/`, `lists/`. **Properties and operators stay in separate folders.**
 - Cross-module shared code goes in `modules/common/` (`common/utils` for utilities).
-- **Always update this CLAUDE.md and the module doc** when features are added/modified/deleted.
+- **Always update this guide and the module doc** when features are added/modified/deleted. `AGENTS.md` is a byte-identical copy of `CLAUDE.md` (a copy, not a symlink — Windows checkouts); edit CLAUDE.md and re-copy.
+- Branch names follow the table in `CONTRIBUTING.md` — lowercase kebab-case, most specific prefix wins (`bugfix/` over `task/` for a bug fix).
 - **The keyconfig-reload rule**: custom C region keymaps and any C-registered default-keyconfig binding must ALSO be registered in the addon keyconfig (Python side), never only via C `WM_keymap_add_item` — a GUI keyconfig preset reload wipes C-registered items. Applies to agent_scene_strip, chat select/copy/paste, Director `F` capture, and anything new.
 - Blender 5.2 porting conventions (namespaces, `ListBaseT`, `MEM_new`, RNA pointer args, geonodes IO, animation channelbags): `docs/blender-5.2-porting.md`. Merging `develop` into this branch brings 5.0-shaped code that must be re-ported against it.
+
+Project layout:
+
+```text
+.env.example                       # environment config template (copy to .env)
+scripts/generate_config.py         # emits runtime mixar.json at build time
+src/scripts/mixar/
+├── bootstrap/                     # startup modules (agent_connection, paint_module, …)
+├── config/                        # logging + config persistence
+└── modules/{module}/
+    ├── constants.py
+    ├── core/                      # logic
+    └── ui/{properties,operators,panels,menus,lists}/   # auto-discovered
+src/source/blender/                # C/C++ overlay
+```
 
 ## Bootstrap & Registration
 
@@ -105,7 +123,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 
 ## Agent System (backend-driven)
 
-Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → backend validates → Blender script over WebSocket → script reads `__PARAMS__`, emits `print("__RESULT__" + json.dumps(...))` → result returns to LLM. Client-side execution runs through `space_mixie_chat/core/main_thread_executor.py` / `core/executor.py`. The safe executor exposes `hashlib` and `struct` for local content digests and deterministic binary packing in first-party transaction scripts; filesystem, process, and unrestricted network modules remain blocked.
+Backend runs a LangGraph orchestrator (Claude Sonnet 4.6 primary, Gemini 3.1 Pro fallback) with 18 tool domains / 200+ tools covering modeling, texturing, UV, rigging, particles, scene management and layer painting, and 12+ workflow modes (MODELING, TEXTURING, RIGGING, UV_UNWRAP, SCENE, LAYER_PAINTING, …) that filter which tools the LLM sees. The layer-painting tools call the Blender-side `paint.core.agent_tools` package to initialize Mixar Paint projects, apply Patina layered manifests, search procedural libraries, queue MatGen jobs by pipeline alias, and add procedural materials through the real layer stack. Tool execution: LLM → backend validates → Blender script over WebSocket → script reads `__PARAMS__`, emits `print("__RESULT__" + json.dumps(...))` → result returns to LLM. Client-side execution runs through `space_mixie_chat/core/main_thread_executor.py` / `core/executor.py`. The safe executor exposes `hashlib` and `struct` for local content digests and deterministic binary packing in first-party transaction scripts; filesystem, process, and unrestricted network modules remain blocked.
 
 ## Cross-cutting Patterns & Gotchas
 
@@ -114,6 +132,8 @@ Backend runs a LangGraph orchestrator with 200+ tools. Tool execution: LLM → b
 - **atexit cleanups must not touch `bpy` data** (pinned by `tests/test_shutdown_hooks_atexit.py`): `BPY_python_end` runs *after* `BKE_blender_free()` in `WM_exit_ex`, so an RNA/ID-property write or `draw_handler_remove` there is a use-after-free. `shutdown_hooks._run_all_cleanups` forwards `app_exit` so UI-side cleanup is skipped on that path; thread/process/socket teardown is what atexit is for.
 - **Network contract**: never hand-roll `verify=`/`proxies=`/`sslopt=` at a call site — trust and proxy are process-wide (startup phase 2) so all five bundled clients (`requests`, `httpx`, `urllib`, `http.client`, `websocket-client`) agree. Catch `requests.exceptions.RequestException` (or the client's equivalent) and route it through `classify_network_error` (→ `NetworkFailure` with `NET-*` support codes) + `log_network_failure`; generic "Unable to connect" strings are banned (pinned by `tests/network/`). Explicit CA bundle = plain OpenSSL with `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE`/`WEBSOCKET_CLIENT_CA_BUNDLE` exported; otherwise `truststore`; Linux without a system bundle falls back to certifi. PAC and SOCKS are unsupported by design.
 - **Config persistence** (`mixar/config/config.py`; pinned by `tests/test_config_persistence.py`): the bundled `<install>/<blender version>/config/mixar.json` is BUILD-GENERATED, READ-ONLY input (on Windows the MSI puts it under `C:\Program Files`; macOS updates replace the whole `.app`). Every key a running app persists (`ui_mode`, `share_usage_data`, the fallback `device_id`) goes through `add_config` into the per-user overlay `bpy.utils.user_resource('CONFIG')/mixar/mixar.json`, which holds ONLY keys written that way; reads merge the overlay over the bundled defaults. Never write into `resource_path('LOCAL')`. `_write_config_file` exclusive-creates its own temp name with a bounded retry and no `tempfile.mkstemp` (which on Windows retries `TMP_MAX` times on a `PermissionError` when `os.access(dir, W_OK)` is true); a write failure returns False at once and the in-memory value still applies.
+- **Headless sandbox supervision**: the parent Mixar process spawns a background sandbox child with platform-specific process flags; Windows children use Win32 process APIs for parent liveness checks.
+- **Custom C++ editor spaces**: `space_mixie_chat`, `space_agent_bubble`, `space_mixar_properties`, `space_mixar_layers`, `space_mixar_assets`, plus the native chat renderer (markdown, thinking visualization, hit testing, thumbnails) and View3D overlays (Director, agent strip, gizmos). Authentication is cross-platform keyring + a local OAuth PKCE callback server.
 - **DRW offscreen passes reset the region framebuffer viewport/scissor** — capture and restore manually or the region renders black.
 - **Project-file drop contract**: `.mixar` is classified as `FILE_TYPE_MIXAR`, not `FILE_TYPE_BLENDER`; `editors/space_api/mixar_file_drop.cc` registers an explicit whole-window dropbox that routes projects to the standard Open / Link / Append choice.
 - **Safety contracts**: backend-authoritative option lists fail closed (empty list → disabled, never resurrect hardcoded services); feedback locks only after confirmed 2xx; BYOK keys are transient `SKIP_SAVE` fields; terminal queue states release large payloads but keep lightweight history; multi-view/turnaround submits refuse loudly rather than degrading to a single image.
