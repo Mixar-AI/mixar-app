@@ -66,12 +66,13 @@ void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for M
 void ED_agent_bubble_windows_closed();
 
 /* Mixar: Cinema Mode's chat bar IS the resting Agent pill, seated under the
- * camera gate. The View3D overlay hands over the seat (centre x, bottom y in
- * the host's window pixels) while the Cinema surface draws and clears it
- * otherwise; a resting pill moves at once, an open island takes the seat at
- * its next minimise. `ED_agent_bubble_pill_band_px` is the resting pill's
- * height in that host's window pixels, so the gate can leave room for it. */
-void ED_agent_bubble_set_cinema_seat(const wmWindow *host, bool valid, int centre_x_px, int bottom_y_px);
+ * camera gate. The View3D overlay hands over the seat (its bottom y in the
+ * host's window pixels; the pill is centred on the host) while the Cinema
+ * surface draws and clears it otherwise; a resting pill moves at once, an
+ * open island takes the seat at its next minimise. `ED_agent_bubble_pill_band_px`
+ * is the resting pill's height in that host's window pixels, so the gate
+ * can leave room for it. */
+void ED_agent_bubble_set_cinema_seat(const wmWindow *host, bool valid, int bottom_y_px);
 int ED_agent_bubble_pill_band_px(const wmWindow *host);
 
 /* Mixar: notify the Agent Bubble cache that a native GHOST window is being

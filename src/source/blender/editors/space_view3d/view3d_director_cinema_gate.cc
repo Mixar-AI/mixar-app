@@ -61,7 +61,7 @@ bool fit_matches(const GateFit &a, const GateFit &b)
 
 void cinema_release_chat_seat(const bContext *C)
 {
-  ED_agent_bubble_set_cinema_seat(CTX_wm_window(C), false, 0, 0);
+  ED_agent_bubble_set_cinema_seat(CTX_wm_window(C), false, 0);
 }
 
 void cinema_fit_camera_gate(const bContext *C, ARegion *region)
@@ -82,13 +82,12 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   wmWindow *win = CTX_wm_window(C);
 
   /* The chat bar — the resting Agent pill — sits under the gate, centred on
-   * the stage with its foot on the columns' foot; the gate keeps clear of
-   * its band. The seat is handed over every draw and no-ops when unchanged. */
+   * the host with its foot on the columns' foot (a bottom margin from the
+   * host's content bottom, which is what the columns' foot is in window
+   * pixels); the gate keeps clear of its band. Handed over every draw,
+   * no-op when unchanged. */
   const float band = float(ED_agent_bubble_pill_band_px(win)) + CINEMA_CHAT_GAP * u;
-  ED_agent_bubble_set_cinema_seat(win,
-                                  true,
-                                  region->winrct.xmin + int(BLI_rctf_cent_x(&stage)),
-                                  region->winrct.ymin + int(stage.ymin));
+  ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(stage.ymin));
   stage.ymin += band;
 
   GateFit fit;

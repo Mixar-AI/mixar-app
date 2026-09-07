@@ -439,7 +439,7 @@ def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
     GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
     assert "ED_agent_bubble_pill_band_px(win)" in GATE
     assert "stage.ymin += band;" in GATE
-    assert "ED_agent_bubble_set_cinema_seat(win,\n                                  true," in GATE
+    assert "ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(stage.ymin));" in GATE
     assert GATE.index("ED_agent_bubble_set_cinema_seat(win,") < GATE.index("GateFit fit;")
     OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
     assert OVERLAY.count("cinema_release_chat_seat(C);") == 2
@@ -448,7 +448,12 @@ def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
     )
     seat = BUBBLE[BUBBLE.index("static void pill_seat_on_host()") :]
     seat = seat[: seat.index("\n}\n")]
-    assert seat.index("pill_cinema_offset(&cinema_x, &cinema_y)") < seat.index("if (g_pill_user_placed)")
+    # A bottom MARGIN through the centre-bottom anchor: parent offsets are
+    # measured from the host's frame top, and a content-relative y converted
+    # to one lands a title bar too high.
+    assert seat.index("pill_cinema_margin(&cinema_margin)") < seat.index("if (g_pill_user_placed)")
+    assert "Mixar_WindowAnchorAtParentCentreBottom(g_pill_ghostwin, g_host_ghostwin, cinema_margin)" in seat
+    assert "pill_cinema_offset" not in BUBBLE
     closed = BUBBLE[BUBBLE.index("void ED_agent_bubble_windows_closed()") :]
     closed = closed[: closed.index("\n}\n")]
     assert "g_pill_cinema_seat_valid = false;" in closed

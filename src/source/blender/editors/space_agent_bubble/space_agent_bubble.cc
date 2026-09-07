@@ -1928,14 +1928,17 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  */
 /* Cinema Mode dock seat. While the Cinema surface draws, the resting pill
  * is the design's chat bar under the camera gate: the View3D overlay hands
- * over the seat's centre x and bottom y in the host's WINDOW PIXELS (the
- * only coordinates it has), and the offset in logical points is derived
- * here, where the pill's own size is known. It outranks the user-placed
- * seat only while it is valid; leaving Cinema Mode restores whatever seat
- * rule applied before. Cleared with the window pointers on close. */
+ * over the seat's bottom y in the host's WINDOW PIXELS (the only coordinate
+ * it has) and the pill is anchored centre-bottom with that margin. The
+ * margin is measured from the host's CONTENT bottom, which is why this goes
+ * through the centre-bottom anchor and not the offset one: parent offsets
+ * are measured from the FRAME top (see the pad's insets), and converting a
+ * content-relative y to a frame offset needs the title bar height, which
+ * no helper reports. It outranks the user-placed seat only while it is
+ * valid; leaving Cinema Mode restores whatever seat rule applied before.
+ * Cleared with the window pointers on close. */
 static bool g_pill_cinema_seat_valid = false;
 static void *g_pill_cinema_host = nullptr;
-static int g_pill_cinema_centre_px = 0;
 static int g_pill_cinema_bottom_px = 0;
 
 static float host_pixels_per_point(void *host)
@@ -1948,7 +1951,7 @@ static float host_pixels_per_point(void *host)
   return pw > 0 ? float(pw) / float(lw) : 0.0f;
 }
 
-static bool pill_cinema_offset(int *r_offset_x, int *r_offset_y)
+static bool pill_cinema_margin(int *r_margin_bottom)
 {
   if (!g_pill_cinema_seat_valid || g_host_ghostwin == nullptr ||
       g_pill_cinema_host != g_host_ghostwin)
@@ -1956,15 +1959,10 @@ static bool pill_cinema_offset(int *r_offset_x, int *r_offset_y)
     return false;
   }
   const float scale = host_pixels_per_point(g_host_ghostwin);
-  int pw = 0, ph = 0;
-  Mixar_WindowGetContentPixelSize(g_host_ghostwin, &pw, &ph);
-  if (scale <= 0.0f || ph <= 0) {
+  if (scale <= 0.0f) {
     return false;
   }
-  *r_offset_x = int(roundf(float(g_pill_cinema_centre_px) / scale -
-                           AGENT_BUBBLE_PILL_WIDTH_LARGE * 0.5f));
-  *r_offset_y = int(roundf(float(ph - g_pill_cinema_bottom_px) / scale -
-                           AGENT_BUBBLE_PILL_HEIGHT_LARGE));
+  *r_margin_bottom = int(roundf(float(g_pill_cinema_bottom_px) / scale));
   return true;
 }
 
@@ -1977,9 +1975,9 @@ static void pill_seat_on_host()
     Mixar_WindowSnapToCentreBottom(g_pill_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
     return;
   }
-  int cinema_x = 0, cinema_y = 0;
-  if (pill_cinema_offset(&cinema_x, &cinema_y)) {
-    Mixar_WindowAnchorAtParentOffset(g_pill_ghostwin, g_host_ghostwin, cinema_x, cinema_y);
+  int cinema_margin = 0;
+  if (pill_cinema_margin(&cinema_margin)) {
+    Mixar_WindowAnchorAtParentCentreBottom(g_pill_ghostwin, g_host_ghostwin, cinema_margin);
     return;
   }
   if (g_pill_user_placed) {
@@ -2000,22 +1998,16 @@ static void pill_seat_on_host()
  * the pill — the default centre-bottom seat must keep re-centring on host
  * resizes, which a captured fixed offset would not.
  */
-void ED_agent_bubble_set_cinema_seat(const wmWindow *host,
-                                     const bool valid,
-                                     const int centre_x_px,
-                                     const int bottom_y_px)
+void ED_agent_bubble_set_cinema_seat(const wmWindow *host, const bool valid, const int bottom_y_px)
 {
   void *ghost = (host != nullptr && host->runtime != nullptr) ? host->runtime->ghostwin : nullptr;
   const bool changed = (valid != g_pill_cinema_seat_valid) ||
-                       (valid && (ghost != g_pill_cinema_host ||
-                                  centre_x_px != g_pill_cinema_centre_px ||
-                                  bottom_y_px != g_pill_cinema_bottom_px));
+                       (valid && (ghost != g_pill_cinema_host || bottom_y_px != g_pill_cinema_bottom_px));
   if (!changed) {
     return;
   }
   g_pill_cinema_seat_valid = valid && ghost != nullptr;
   g_pill_cinema_host = g_pill_cinema_seat_valid ? ghost : nullptr;
-  g_pill_cinema_centre_px = centre_x_px;
   g_pill_cinema_bottom_px = bottom_y_px;
   /* A pill already resting moves to (or back from) the dock seat at once. */
   if (g_bubble_minimised && g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
