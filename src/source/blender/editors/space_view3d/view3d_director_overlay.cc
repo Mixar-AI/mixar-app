@@ -337,8 +337,9 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
    * old compact controls are still the honest fallback. */
   if (cinema_surface_fits(region)) {
     /* No empty-state card here: it would sit on top of the two columns, and
-     * the right column's own "+ Add Camera" is the same first action. */
-    cinema_draw_stage(region);
+     * the right column's own "+ Add Camera" is the same first action. The
+     * camera gate is the frame: fitted to the stage, no chrome around it. */
+    cinema_fit_camera_gate(C, region);
     cinema_draw_top_strip(block, C, region, state);
     cinema_draw_left_panel(block, C, region, state);
     cinema_draw_right_panel(block, C, region, state);

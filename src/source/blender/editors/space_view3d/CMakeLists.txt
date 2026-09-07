@@ -28,6 +28,7 @@ set(SRC
   view3d_context.cc
   view3d_cursor_snap.cc
   view3d_director_cinema_dock.cc
+  view3d_director_cinema_gate.cc
   view3d_director_cinema_layout.cc
   view3d_director_cinema_left.cc
   view3d_director_cinema_paint.cc

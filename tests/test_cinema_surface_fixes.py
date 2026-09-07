@@ -57,12 +57,14 @@ def test_speed_meter_range_mirrors_the_python_speed_bounds():
     assert _define("CINEMA_SPEED_MIN") == -_define("CINEMA_SPEED_MAX")
 
 
-def test_speed_meter_is_bipolar_and_bound_to_the_shot():
+def test_speed_meter_is_the_level_bar_bound_to_the_shot():
     # The slider is a ButtonType::Scroll bound straight to `shot.speed`; the
-    # meter lights from the centre towards the value, both ways.
-    assert "cinema_tick_meter_bipolar(meter, TICKS, (speed - centre_value) / half_span)" in LEFT
+    # meter is the design's level bar, lit from the left as the slider
+    # travels (0 sits half-lit in the middle).
+    assert "(speed - CINEMA_SPEED_MIN) / span" in LEFT
+    assert "cinema_tick_meter(meter, TICKS, int(std::round(travel * float(TICKS))));" in LEFT
     assert '"speed",' in LEFT and "beat_seconds" not in LEFT
-    assert "count |= 1;" in PAINT  # a centre tick always exists
+    assert "cinema_tick_meter_bipolar" not in PAINT
     # The old hardcoded, inverted window is gone.
     assert "4.0f - beat_seconds" not in LEFT
     assert "4.0f - 0.1f" not in LEFT
@@ -178,9 +180,15 @@ def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
     stage = LAYOUT[LAYOUT.index("bool cinema_stage_rect(") :]
     stage = stage[: stage.index("\n}\n")]
     assert "CINEMA_COLUMN_TOP" in stage and "cinema_content_bottom()" in stage
-    draw = LAYOUT[LAYOUT.index("void cinema_draw_stage(") :]
-    draw = draw[: draw.index("\n}\n")]
-    assert "CINEMA_COLUMN_TOP" in draw and "cinema_content_bottom()" in draw
+    # No decorative frame is painted any more: the camera gate is fitted to
+    # the stage instead, once per layout change.
+    assert "cinema_draw_stage" not in LAYOUT
+    GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
+    assert "cinema_stage_rect(C, region, &stage)" in GATE
+    assert "fit_matches(*record, fit)" in GATE
+    assert "BKE_screen_view3d_zoom_from_fac(fac * scale)" in GATE
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert "cinema_fit_camera_gate(C, region);" in OVERLAY
     GIZMO = (VIEW3D / "view3d_gizmo_navigate.cc").read_text(encoding="utf-8")
     assert "cinema_stage_rect(C, region, &stage)" in GIZMO
     assert "rect_adjusted.xmax = int(stage.xmax - pad)" in GIZMO
@@ -404,3 +412,19 @@ def test_captions_use_the_dimmer_caption_colour():
     assert "const float caption_col[4] = CINEMA_COL_CAPTION;" in LEFT
     assert "const float label_col[4] = CINEMA_COL_CAPTION;" in LEFT
     assert "const float label_col[4] = CINEMA_COL_CAPTION;" in RIGHT
+
+
+def test_popup_rows_paint_as_the_surface_row_class():
+    """Dropdown popups are stock block popups; every option row is tagged as
+    a CinemaRow card element so it paints as the graded chip / dim text the
+    surface uses, with tokens mirrored from the cinema header."""
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
+    state = popup[popup.index("void director_popup_state(") :]
+    state = state[: state.index("\n}\n")]
+    assert "UI_mixar_cinema_row_tag(but, active)" in state
+    row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
+    assert f"ROW_RADIUS = {_define('CINEMA_ROW_RADIUS'):.1f}f" in row
+    assert "ROW_TOP[4] = {0x58, 0x58, 0x58, 255}" in row  # CINEMA_COL_ROW_TOP #585858
+    assert "ROW_BOTTOM[4] = {0x24, 0x24, 0x24, 255}" in row  # CINEMA_COL_ROW_BOTTOM #242424
+    topbar = (INTERFACE / "interface_mixar_topbar.cc").read_text(encoding="utf-8")
+    assert "case MixarCardElement::CinemaRow:" in topbar

@@ -95,8 +95,9 @@ struct DirectorViewState;
 #define CINEMA_EXPORT_H 48.0f
 
 /* The columns' top edge and the stage's inset from them. The stage (the
- * rounded frame around the working viewport) spans exactly the columns'
- * vertical extent: from here down to #cinema_content_bottom(). */
+ * working area between the columns that the camera gate is fitted to) spans
+ * exactly the columns' vertical extent: from here down to
+ * #cinema_content_bottom(). */
 #define CINEMA_COLUMN_TOP 206.0f
 #define CINEMA_STAGE_INSET 18.0f
 
@@ -242,12 +243,6 @@ void cinema_keycap(float x, float y, const char *letter);
  */
 void cinema_tick_meter(const rctf &rect, int count, int filled);
 
-/**
- * Bipolar tick meter for a value in [-1, 1]: the centre tick is the neutral
- * mark and the ticks between it and the value light up towards either end.
- * \a count is made odd so a centre tick exists.
- */
-void cinema_tick_meter_bipolar(const rctf &rect, int count, float value);
 
 /** Packed still preview, aspect-fitted and rounded. Silent when unavailable. */
 void cinema_image_preview(struct Image *image, const rctf &rect, float radius);
@@ -306,10 +301,14 @@ ui::Button *cinema_icon_button(ui::Block *block,
  * \{ */
 
 /**
- * The stage: the design's rounded frame around the working viewport, inset
- * between the two columns. Decorative chrome, not the camera gate.
+ * Fit the camera gate to the stage: while the designed surface draws in
+ * camera view, the camera border fills the space between the columns (the
+ * rounded frame the design drew around it is gone — the gate IS the frame).
+ * Writes `rv3d->camzoom` and `camdx/camdy` only when the region size, the
+ * stage rect or the camera changed since the last fit, so a director's own
+ * zoom and pan survive until the layout moves.
  */
-void cinema_draw_stage(const ARegion *region);
+void cinema_fit_camera_gate(const bContext *C, ARegion *region);
 
 /** Shortcut hints; tracking eyedropper, interpolation dropdown, phone button. */
 void cinema_draw_top_strip(ui::Block *block,

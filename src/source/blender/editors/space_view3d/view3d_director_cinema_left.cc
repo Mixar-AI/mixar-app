@@ -348,18 +348,20 @@ void cinema_draw_left_panel(ui::Block *block,
   /* The meter IS the slider's painted track, so it has to light over the
    * property's OWN range (CINEMA_SPEED_MIN/MAX, mirroring SPEED_MIN/MAX in
    * `director/constants.py`) and in the direction the slider travels:
-   * `shot.speed` rests at 0 in the middle, dragging right contracts the shot
-   * (faster) and lights the ticks rightwards, dragging left expands it. */
+   * `shot.speed` rests at 0 in the middle (half-lit), dragging right contracts
+   * the shot (faster) and fills the bar, dragging left expands it. */
   float speed = 0.0f;
   PropertyRNA *speed_prop = shot_ptr.data ? RNA_struct_find_property(&shot_ptr, "speed") :
                                             nullptr;
   if (speed_prop != nullptr) {
     speed = RNA_property_float_get(&shot_ptr, speed_prop);
   }
-  constexpr int TICKS = 31;
-  const float half_span = std::max(0.001f, (CINEMA_SPEED_MAX - CINEMA_SPEED_MIN) * 0.5f);
-  const float centre_value = (CINEMA_SPEED_MAX + CINEMA_SPEED_MIN) * 0.5f;
-  cinema_tick_meter_bipolar(meter, TICKS, (speed - centre_value) / half_span);
+  /* The design's level bar: lit from the left as the slider travels, so the
+   * neutral 0 sits half-lit in the middle and a faster shot reads as more. */
+  constexpr int TICKS = 30;
+  const float span = std::max(0.001f, CINEMA_SPEED_MAX - CINEMA_SPEED_MIN);
+  const float travel = std::clamp((speed - CINEMA_SPEED_MIN) / span, 0.0f, 1.0f);
+  cinema_tick_meter(meter, TICKS, int(std::round(travel * float(TICKS))));
 
   /* The real control rides on top of the painted meter so dragging behaves
    * exactly like any Blender slider.

@@ -45,6 +45,7 @@ set(SRC
   interface_layout.cc
   interface_mixar_card_button.cc
   interface_mixar_card_icons.cc
+  interface_mixar_cinema_row.cc
   interface_mixar_drag_query.cc
   interface_mixar_profile_card.cc
   interface_mixar_profile_card_draw.cc

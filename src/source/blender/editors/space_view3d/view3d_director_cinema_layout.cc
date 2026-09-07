@@ -157,27 +157,4 @@ bool cinema_stage_rect(const bContext *C, const ARegion *region, rctf *r_rect)
   return BLI_rctf_size_x(r_rect) > 0.0f && BLI_rctf_size_y(r_rect) > 0.0f;
 }
 
-void cinema_draw_stage(const ARegion *region)
-{
-  const float u = cinema_unit();
-  const float margin = cinema_margin(region);
-  const float inset = CINEMA_STAGE_INSET * u;
-  rctf stage;
-  stage.xmin = (margin + CINEMA_PANEL_W) * u + inset;
-  stage.xmax = float(region->winx) - (margin + CINEMA_PANEL_W) * u - inset;
-  const rctf span = cinema_design_rect(
-      region, 0.0f, CINEMA_COLUMN_TOP, 0.0f, cinema_content_bottom() - CINEMA_COLUMN_TOP);
-  stage.ymax = span.ymax;
-  stage.ymin = span.ymin;
-  if (BLI_rctf_size_x(&stage) <= 0.0f || BLI_rctf_size_y(&stage) <= 0.0f) {
-    return;
-  }
-  const float fill[4] = CINEMA_COL_GATE_FILL;
-  const float line[4] = CINEMA_COL_GATE_LINE;
-  cinema_fill(stage, 18.5f * u, fill);
-  cinema_outline(stage, 18.5f * u, line, u);
-}
-
-/** \} */
-
 }  // namespace blender

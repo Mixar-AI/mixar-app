@@ -206,44 +206,6 @@ void cinema_tick_meter(const rctf &rect, const int count, const int filled)
   }
 }
 
-void cinema_tick_meter_bipolar(const rctf &rect, int count, const float value)
-{
-  if (count <= 0) {
-    return;
-  }
-  count |= 1; /* Odd: a centre tick. */
-  const float u = cinema_unit();
-  const float tick_w = 3.0f * u;
-  const float pitch = (BLI_rctf_size_x(&rect) - tick_w) / float(count - 1);
-  const float off[4] = CINEMA_COL_SPEED_OFF;
-  const float on[4] = CINEMA_COL_SPEED_ON;
-  const float neutral[4] = {0.85f, 0.85f, 0.85f, 1.0f};
-  const int centre = count / 2;
-  const float v = std::clamp(value, -1.0f, 1.0f);
-  const int lit = int(std::round(std::abs(v) * float(centre)));
-  const int dir = v < 0.0f ? -1 : 1;
-  for (int index = 0; index < count; index++) {
-    rctf tick;
-    tick.xmin = rect.xmin + pitch * float(index);
-    tick.xmax = tick.xmin + tick_w;
-    tick.ymin = rect.ymin;
-    tick.ymax = rect.ymax;
-    const int from_centre = (index - centre) * dir;
-    if (index == centre) {
-      cinema_fill(tick, tick_w * 0.5f, neutral);
-    }
-    else if (from_centre > 0 && from_centre <= lit) {
-      /* Ramp up from the centre so the bar reads as a level either way. */
-      const float t = float(from_centre) / float(std::max(lit, 1));
-      const float col[4] = {on[0] * t, on[1] * t, on[2] * t, 1.0f};
-      cinema_fill(tick, tick_w * 0.5f, col);
-    }
-    else {
-      cinema_fill(tick, tick_w * 0.5f, off);
-    }
-  }
-}
-
 /** \} */
 
 /* -------------------------------------------------------------------- */

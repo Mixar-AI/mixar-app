@@ -87,6 +87,11 @@ enum class MixarCardElement : int {
   /** Topbar account chip: dark slab, label left, full-height avatar disc at
    * the right end carrying the stock person glyph. */
   ProfilePill,
+  /** Cinema Mode popup row (aspect / lens / output / interpolation lists):
+   * the surface's graded row chip when live (payload 1.0), plain dim text
+   * otherwise, so a dropdown's list matches the value blocks it opens from.
+   * Painted in `interface_mixar_cinema_row.cc`. */
+  CinemaRow,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
@@ -133,6 +138,15 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
 
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);
+
+/**
+ * Tag \a but (created straight on a Block, not through a Layout) as a
+ * Cinema Mode popup row; \a active lights it as the current choice.
+ */
+void UI_mixar_cinema_row_tag(Button *but, bool active);
+
+/** Paint one #MixarCardElement::CinemaRow (`interface_mixar_cinema_row.cc`). */
+void UI_mixar_cinema_row_draw(Button *but, const rcti *rect, bool is_hover, bool is_active);
 
 /**
  * Paint the topbar elements (mode slider halves, Cinema Mode pill).

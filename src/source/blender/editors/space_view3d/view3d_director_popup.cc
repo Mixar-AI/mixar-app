@@ -26,6 +26,8 @@
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
 
+#include "../interface/interface_mixar_profile_card.hh"
+
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -75,6 +77,9 @@ void director_popup_state(ui::Button *but, const bool active, const bool enabled
   if (!enabled) {
     ui::button_flag_enable(but, ui::BUT_DISABLED);
   }
+  /* Paint as the Cinema surface's row class (graded chip when live) rather
+   * than a stock menu item, so a list matches the block it opened from. */
+  ui::UI_mixar_cinema_row_tag(but, active);
 }
 
 void director_popup_section_label(ui::Block *block,
