@@ -144,7 +144,12 @@ def test_the_surface_shrinks_to_fit_before_it_gives_up():
     assert "std::max(fit, CINEMA_SCALE_MIN)" in begin
     scale = LAYOUT[LAYOUT.index("float cinema_fit_scale(") :]
     scale = scale[: scale.index("\n}\n")]
-    assert "std::clamp(fit, 0.0f, 1.0f)" in scale
+    # Width-referenced: 1x at the MacBook window the design was tuned on,
+    # scaling UP on wider viewports so the gate keeps its proportions.
+    assert "avail_w / CINEMA_REF_W" in scale
+    assert "std::clamp(fit, 0.0f, CINEMA_SCALE_MAX)" in scale
+    assert _define("CINEMA_REF_W") == 1512.0
+    assert 1.0 < _define("CINEMA_SCALE_MAX") <= 2.5
 
 
 def test_every_draw_resolves_the_unit_from_the_viewport_region():
@@ -450,8 +455,11 @@ def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
     Cinema seat outranks the user-placed one only while it is valid."""
     GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
     assert "ED_agent_bubble_pill_band_px(win)" in GATE
-    assert "stage.ymin += band;" in GATE
-    assert "ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(stage.ymin));" in GATE
+    # Foot CINEMA_CHAT_GAP above the timeline's top border (the region's
+    # bottom), gate kept clear above it or on the columns' foot if higher.
+    assert "const float pill_bottom = chat_gap;" in GATE
+    assert "ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(pill_bottom));" in GATE
+    assert "stage.ymin = std::max(stage.ymin, pill_top + chat_gap);" in GATE
     assert GATE.index("ED_agent_bubble_set_cinema_seat(win,") < GATE.index("GateFit fit;")
     OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
     assert OVERLAY.count("cinema_release_chat_seat(C);") == 2

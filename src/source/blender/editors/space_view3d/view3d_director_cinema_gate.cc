@@ -99,14 +99,16 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   const float u = cinema_unit();
   wmWindow *win = CTX_wm_window(C);
 
-  /* The chat bar — the resting Agent pill — sits under the gate, centred on
-   * the host with its foot on the columns' foot (a bottom margin from the
-   * host's content bottom, which is what the columns' foot is in window
-   * pixels); the gate keeps clear of its band. Handed over every draw,
-   * no-op when unchanged. */
-  const float band = float(ED_agent_bubble_pill_band_px(win)) + CINEMA_CHAT_GAP * u;
-  ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(stage.ymin));
-  stage.ymin += band;
+  /* The chat bar — the resting Agent pill — sits centred on the host with
+   * its foot CINEMA_CHAT_GAP above the timeline's top border (the region's
+   * bottom edge, as a margin from the host's content bottom). The gate
+   * keeps CINEMA_CHAT_GAP clear above the pill, or ends on the columns'
+   * foot when that is higher. Handed over every draw, no-op when unchanged. */
+  const float chat_gap = CINEMA_CHAT_GAP * u;
+  const float pill_bottom = chat_gap;
+  const float pill_top = pill_bottom + float(ED_agent_bubble_pill_band_px(win));
+  ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(pill_bottom));
+  stage.ymin = std::max(stage.ymin, pill_top + chat_gap);
 
   GateFit fit;
   fit.region = region;

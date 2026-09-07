@@ -42,12 +42,6 @@ namespace {
  * so one static is the whole book-keeping. */
 float g_unit = 1.0f;
 
-/** Design px the surface needs, before any scale. */
-float cinema_need_w()
-{
-  return CINEMA_PANEL_W * 2.0f + CINEMA_MARGIN_MIN * 2.0f + CINEMA_GATE_MIN_W;
-}
-
 float cinema_need_h()
 {
   /* DERIVED from the lowest content in either column rather than guessed:
@@ -73,8 +67,11 @@ float cinema_fit_scale(const ARegion *region)
   /* The design is a 1x window mock, so a design px IS a UI px before DPI. */
   const float avail_w = float(region->winx) / UI_SCALE_FAC;
   const float avail_h = float(region->winy) / UI_SCALE_FAC;
-  const float fit = std::min(avail_w / cinema_need_w(), avail_h / cinema_need_h());
-  return std::clamp(fit, 0.0f, 1.0f);
+  /* Width-referenced, height-bounded: the surface fills the window the way
+   * it does at CINEMA_REF_W, and never taller than the lowest content. The
+   * columns-plus-gate minimum is what CINEMA_SCALE_MIN protects. */
+  const float fit = std::min(avail_w / CINEMA_REF_W, avail_h / cinema_need_h());
+  return std::clamp(fit, 0.0f, CINEMA_SCALE_MAX);
 }
 
 void cinema_unit_begin(const ARegion *main_region)

@@ -56,6 +56,15 @@ struct DirectorViewState;
  * mock itself is a 0.8x render — rather than a different UI.
  */
 #define CINEMA_SCALE_MIN 0.6f
+/**
+ * The design is FITTED TO THE WINDOW WIDTH: at CINEMA_REF_W (the MacBook
+ * window the layout was tuned on) it draws at 1x; a wider viewport scales the
+ * whole surface up (to CINEMA_SCALE_MAX) so the camera gate keeps the same
+ * proportions and the same gap to the columns instead of shrinking to a
+ * fixed-size island in the middle of a big screen.
+ */
+#define CINEMA_REF_W 1512.0f
+#define CINEMA_SCALE_MAX 2.0f
 
 /* Rows inside a panel. */
 /* ONE row class for every rounded control — dropdown rows, list rows,
@@ -99,7 +108,8 @@ struct DirectorViewState;
  * #cinema_content_bottom(). */
 #define CINEMA_COLUMN_TOP 206.0f
 #define CINEMA_STAGE_INSET 18.0f
-/** Gap between the camera gate's foot and the chat bar (the resting pill). */
+/** Gap between the camera gate's foot and the chat bar (the resting pill),
+ * and between the chat bar's foot and the timeline's top border. */
 #define CINEMA_CHAT_GAP 10.0f
 /** Inset of the fitted camera border inside the stage. */
 #define CINEMA_GATE_PAD 6.0f
@@ -164,8 +174,8 @@ float cinema_unit();
 void cinema_unit_begin(const ARegion *main_region);
 
 /**
- * How much of the 1x design fits \a region: `min(1, width fit, height fit)`
- * over the columns-plus-gate width and the lowest content's height.
+ * The design's scale for \a region: `min(width / CINEMA_REF_W, height fit)`
+ * over the lowest content's height, clamped to CINEMA_SCALE_MAX.
  */
 float cinema_fit_scale(const ARegion *region);
 
