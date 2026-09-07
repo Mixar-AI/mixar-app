@@ -76,7 +76,7 @@ static SpaceMixieChat *ink_space_from_area(ScrArea *area)
   return static_cast<SpaceMixieChat *>(area->spacedata.first);
 }
 
-static ARegion *ink_area_main_region(ScrArea *area)
+ARegion *mixie_chat_ink_area_main_region(ScrArea *area)
 {
   for (ARegion &region_ref : area->regionbase) {
     ARegion *region = &region_ref;
@@ -85,6 +85,11 @@ static ARegion *ink_area_main_region(ScrArea *area)
     }
   }
   return nullptr;
+}
+
+static inline ARegion *ink_area_main_region(ScrArea *area)
+{
+  return mixie_chat_ink_area_main_region(area);
 }
 
 static int ink_completed_stroke_count(const MixieChatRuntime *rt)
@@ -110,7 +115,7 @@ static void ink_open_for_area(bContext *C, ScrArea *area, MixieChatRuntime *rt)
  * TEXTEDIT_UPDATE writes mean cancel loses nothing). NOT for use from
  * inside the text-edit handler itself — freeing the active button there
  * is a use-after-free; that path exits via BUTTON_STATE_EXIT instead
- * (see mixie_chat_ink_composer_stylus_open). */
+ * (see mixie_chat_ink_composer_stylus_stroke). */
 static void ink_open_from_event(bContext *C, ScrArea *area, MixieChatRuntime *rt)
 {
   for (ARegion &region_ref : area->regionbase) {
@@ -319,11 +324,14 @@ bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event)
 /* -------------------------------------------------------------------- */
 /** \name Footer Composer Intercept (footer region UI handler)
  *
- * The iPadOS gesture: pen-touch the text field to write. A stylus press
- * on the composer input box opens the ink canvas instead of entering
- * text-edit. While the canvas is open, ALL presses on the input box are
- * consumed — entering text-edit mid-scribble would clobber recognized
- * appends with the button's stale private edit buffer.
+ * While the canvas is open this handler owns the composer band: strokes over
+ * it are captured, and presses on the input box are consumed — entering
+ * text-edit mid-scribble would clobber recognized appends with the button's
+ * stale private edit buffer. While it is CLOSED a press on the input box is
+ * an ordinary press: a pen TAP focuses the field (so it can be typed into)
+ * and only a pen STROKE opens the canvas — decided in the text-edit hooks of
+ * interface_handlers.cc (MixiePenPress), which see the pen travel. The old
+ * press-time open made every pen tap on the field a trip into Scribble.
  * \{ */
 
 static bool ink_footer_input_rect(const bContext *C, ARegion *region, rctf *r_rect)
@@ -379,6 +387,41 @@ static int mixie_chat_ink_footer_ui_handler(bContext *C, const wmEvent *event, v
     return WM_UI_HANDLER_CONTINUE;
   }
 
+  if (rt->ink_overlay_active) {
+    ARegion *main_region = ink_area_main_region(area);
+    if (main_region) {
+      const float mx = float(event->mval[0] + region->winrct.xmin - main_region->winrct.xmin);
+      const float my = float(event->mval[1] + region->winrct.ymin - main_region->winrct.ymin);
+
+      if (ELEM(event->type, MOUSEMOVE, INBETWEEN_MOUSEMOVE)) {
+        if (rt->ink_stroke_live) {
+          mixie_chat_ink_stroke_extend(rt, mx, my, event->tablet.pressure);
+          ED_area_tag_redraw(area);
+          return WM_UI_HANDLER_BREAK;
+        }
+      }
+      else if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
+        if (rt->ink_stroke_live) {
+          mixie_chat_ink_stroke_end(rt);
+          mixie_chat_ink_idle_timer_ensure(C);
+          ED_area_tag_redraw(area);
+          return WM_UI_HANDLER_BREAK;
+        }
+      }
+      else if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
+        rctf input_rect;
+        bool on_input = ink_footer_input_rect(C, region, &input_rect) &&
+                        BLI_rctf_isect_pt(&input_rect, float(event->mval[0]), float(event->mval[1]));
+        if (on_input || event->mval[1] > int(48.0f * UI_SCALE_FAC)) {
+          if (mixie_chat_ink_stroke_begin(rt, mx, my, event->tablet.pressure)) {
+            ED_area_tag_redraw(area);
+            return WM_UI_HANDLER_BREAK;
+          }
+        }
+      }
+    }
+  }
+
   if (event->type != LEFTMOUSE || event->val != KM_PRESS) {
     return WM_UI_HANDLER_CONTINUE;
   }
@@ -393,34 +436,95 @@ static int mixie_chat_ink_footer_ui_handler(bContext *C, const wmEvent *event, v
   if (rt->ink_overlay_active) {
     return WM_UI_HANDLER_BREAK; /* No text-edit while the canvas is open. */
   }
-  if (event->tablet.active == EVT_TABLET_STYLUS &&
-      mixie_chat_ink_feature_available(CTX_wm_manager(C)))
-  {
-    ink_open_from_event(C, area, rt);
-    return WM_UI_HANDLER_BREAK;
-  }
+  /* Canvas closed: the press goes on to the text button. A pen tap focuses
+   * the field; a pen stroke opens the canvas from the text-edit hooks. */
   return WM_UI_HANDLER_CONTINUE;
 }
 
-/** Called from ui_do_but_textedit in the overlaid interface_handlers.cc:
- * a stylus press on the composer WHILE ITS TEXT-EDIT IS ACTIVE never
- * reaches the footer region handler (the active button's window-level
- * modal handler consumes it first), so the text-edit hook opens the
- * canvas itself and then exits editing via BUTTON_STATE_EXIT — which is
- * also why this variant must NOT free the active button. Returns true
- * when the canvas opened. */
-bool mixie_chat_ink_composer_stylus_open(bContext *C)
+int mixie_chat_ink_header_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+{
+  ScrArea *area = CTX_wm_area(C);
+  ARegion *region = CTX_wm_region(C);
+  SpaceMixieChat *smixie = ink_space_from_area(area);
+  if (!smixie || !region || region->regiontype != RGN_TYPE_HEADER) {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (!rt->ink_overlay_active) {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
+  ARegion *main_region = ink_area_main_region(area);
+  if (!main_region) {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
+  const float mx = float(event->mval[0] + region->winrct.xmin - main_region->winrct.xmin);
+  const float my = float(event->mval[1] + region->winrct.ymin - main_region->winrct.ymin);
+
+  if (ELEM(event->type, MOUSEMOVE, INBETWEEN_MOUSEMOVE)) {
+    if (rt->ink_stroke_live) {
+      mixie_chat_ink_stroke_extend(rt, mx, my, event->tablet.pressure);
+      ED_area_tag_redraw(area);
+      return WM_UI_HANDLER_BREAK;
+    }
+  }
+  else if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
+    if (rt->ink_stroke_live) {
+      mixie_chat_ink_stroke_end(rt);
+      mixie_chat_ink_idle_timer_ensure(C);
+      ED_area_tag_redraw(area);
+      return WM_UI_HANDLER_BREAK;
+    }
+  }
+  else if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
+    if (event->mval[0] > int(115.0f * UI_SCALE_FAC) &&
+        event->mval[0] < region->winx - int(85.0f * UI_SCALE_FAC))
+    {
+      if (mixie_chat_ink_stroke_begin(rt, mx, my, event->tablet.pressure)) {
+        ED_area_tag_redraw(area);
+        return WM_UI_HANDLER_BREAK;
+      }
+    }
+  }
+
+  return WM_UI_HANDLER_CONTINUE;
+}
+
+/** Called from the text-edit hooks in the overlaid interface_handlers.cc
+ * once a PEN press on the composer has travelled past the drag threshold
+ * while held: open the canvas and seed its first stroke from the press
+ * point, so the ink the user is already laying down is not lost. Presses
+ * while the text-edit is active never reach the footer region handler (the
+ * active button's window-level modal handler consumes them first), which is
+ * why this lives on the text-edit side; the caller exits editing via
+ * BUTTON_STATE_EXIT — this must NOT free the active button. Window
+ * coordinates in; the stroke store is main-region-local. */
+bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
+                                           const int press_xy[2],
+                                           const int cur_xy[2],
+                                           const float pressure)
 {
   ScrArea *area = CTX_wm_area(C);
   SpaceMixieChat *smixie = ink_space_from_area(area);
   if (!smixie || !mixie_chat_ink_feature_available(CTX_wm_manager(C))) {
     return false;
   }
-  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
-  if (rt->ink_overlay_active) {
+  ARegion *main_region = ink_area_main_region(area);
+  if (!main_region) {
     return false;
   }
-  ink_open_for_area(C, area, rt);
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (!rt->ink_overlay_active) {
+    ink_open_for_area(C, area, rt);
+  }
+  const float ox = float(main_region->winrct.xmin);
+  const float oy = float(main_region->winrct.ymin);
+  if (!rt->ink_stroke_live) {
+    mixie_chat_ink_stroke_begin(rt, float(press_xy[0]) - ox, float(press_xy[1]) - oy, pressure);
+  }
+  mixie_chat_ink_stroke_extend(rt, float(cur_xy[0]) - ox, float(cur_xy[1]) - oy, pressure);
+  ED_area_tag_redraw(area);
   return true;
 }
 
@@ -440,6 +544,26 @@ void mixie_chat_ink_footer_handler_register(ARegion *region)
                           &region->runtime->handlers,
                           mixie_chat_ink_footer_ui_handler,
                           mixie_chat_ink_footer_ui_handler_remove,
+                          nullptr,
+                          eWM_EventHandlerFlag(0));
+}
+
+static void mixie_chat_ink_header_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
+{
+  /* Nothing to free. */
+}
+
+void mixie_chat_ink_header_handler_register(ARegion *region)
+{
+  WM_event_remove_ui_handler(&region->runtime->handlers,
+                             mixie_chat_ink_header_ui_handler,
+                             mixie_chat_ink_header_ui_handler_remove,
+                             nullptr,
+                             false);
+  WM_event_add_ui_handler(nullptr,
+                          &region->runtime->handlers,
+                          mixie_chat_ink_header_ui_handler,
+                          mixie_chat_ink_header_ui_handler_remove,
                           nullptr,
                           eWM_EventHandlerFlag(0));
 }

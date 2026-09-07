@@ -50,12 +50,15 @@ struct wmWindowManager;
 inline constexpr int INK_JSON_MAX = 98304;
 
 /** Idle time after the last pen-up before pending strokes auto-commit for
- * recognition (mirrored informationally as SCRIBBLE_IDLE_COMMIT_MS). */
-inline constexpr double INK_IDLE_COMMIT_SEC = 0.85;
+ * recognition (mirrored informationally as SCRIBBLE_IDLE_COMMIT_MS). Short:
+ * with the on-device recogniser the round trip is a few hundred ms, so this
+ * pause IS most of the delay between lifting the pen and seeing text. A
+ * between-words pause is ~0.3 s; a between-letters pause well under it. */
+inline constexpr double INK_IDLE_COMMIT_SEC = 0.45;
 
 /** Idle-commit timer period. Shorter than the idle threshold so a commit
  * fires at most one period late. */
-inline constexpr double INK_IDLE_TIMER_STEP = 0.25;
+inline constexpr double INK_IDLE_TIMER_STEP = 0.15;
 
 /** \} */
 

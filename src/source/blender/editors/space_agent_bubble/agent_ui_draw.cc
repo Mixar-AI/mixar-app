@@ -15,12 +15,14 @@
  */
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "BLF_api.hh"
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLI_time.h"
 
 #include "DNA_screen_types.h"
 
@@ -517,6 +519,22 @@ void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *stat
     }
   }
 
+  /* Voice, right of Scribble: lit in the accent while a dictation session is
+   * up. Only drawn when the toggle exists (see AgentIslandState). */
+  if (state->voice_available) {
+    const float accent[4] = AGENT_COL_ACCENT;
+    const float *voice_fill = state->voice_listening ? accent : chip;
+    fill_round(&layout->chip_voice, radius, voice_fill);
+    rctf icon = layout->chip_voice;
+    icon.xmin += pad;
+    icon.xmax = icon.xmin + icon_edge;
+    const float cy = BLI_rctf_cent_y(&layout->chip_voice);
+    icon.ymin = cy - icon_edge * 0.5f;
+    icon.ymax = cy + icon_edge * 0.5f;
+    agent_ui_icon_draw(AGENT_ICON_MIC, &icon, text, voice_fill);
+    label_left(state->voice_listening ? "Listening" : "Voice", icon.xmax + icon_gap, cy, size, text);
+  }
+
   /* Generate. */
   fill_round(&layout->btn_generate, radius, generate);
   label_centre(state->status_busy ? "Stop" : "Generate",
@@ -550,10 +568,18 @@ void agent_ui_draw_status_pill(const float width,
 
   /* ELONGATED resting pill (aspect says which window shape this is): the
    * minimised bubble's whole identity — dim last-prompt preview + the Mixar
-   * logo on a green gradient chip (Frame 1533210248.svg). Hovering it
-   * expands the island (mixar.bubble_hover_tick). */
+   * logo on a green gradient chip (Frame 1533210248.svg). When working
+   * (busy or active queue jobs), it shows a glowing green pulse animation,
+   * animated activity dot, and moving progress dots on the status label.
+   * Clicking it expands the island; dragging it moves it (the pill
+   * gesture in agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
     const float u = h / 85.0f; /* design pill is 85 artboard units tall */
+    const bool is_working = state->status_busy || (state->queue_count > 0);
+    const double now = BLI_time_now_seconds();
+    const float pulse = is_working ?
+                            (0.5f + 0.5f * float(std::sin(now * 3.2))) :
+                            0.0f;
 
     rctf pill;
     pill.xmin = 0.0f;
@@ -567,21 +593,62 @@ void agent_ui_draw_status_pill(const float width,
     const float pill_grad_b[2] = {w * 0.947f, 0.0f};
     fill_round_gradient(&pill, h * 0.5f, grad_top, grad_bottom, pill_grad_a, pill_grad_b);
     GPU_blend(GPU_BLEND_ALPHA);
-    /* Faint rim, brightest toward the top-right like the export's stroke. */
-    const float rim[4] = {1.0f, 1.0f, 1.0f, 0.14f};
-    outline_round(&pill, h * 0.5f, rim);
 
-    /* Logo chip, right-inset 10.5 units, 85x68 rx25. */
+    if (is_working) {
+      /* Subtle breathing halo around the capsule when working. */
+      rctf halo = pill;
+      const float halo_pad = 3.0f * u;
+      halo.xmin -= halo_pad;
+      halo.ymin -= halo_pad;
+      halo.xmax += halo_pad;
+      halo.ymax += halo_pad;
+      const float halo_col[4] = {0.0f, 1.0f, 0.549f, 0.04f + 0.08f * pulse};
+      outline_round(&halo, (h * 0.5f) + halo_pad, halo_col);
+
+      /* Pulsing animated green rim. */
+      const float rim_work[4] = {
+          0.10f * (1.0f - pulse),
+          1.0f,
+          0.549f * pulse + 0.294f * (1.0f - pulse),
+          0.30f + 0.35f * pulse};
+      outline_round(&pill, h * 0.5f, rim_work);
+    }
+    else {
+      /* Faint rim, brightest toward the top-right like the export's stroke. */
+      const float rim[4] = {1.0f, 1.0f, 1.0f, 0.14f};
+      outline_round(&pill, h * 0.5f, rim);
+    }
+
+    /* Pill behind the logo, right-inset 10.5 units, 85x68. */
     rctf chip;
     chip.xmax = w - 10.5f * u;
     chip.xmin = chip.xmax - 85.0f * u;
     chip.ymin = h * 0.5f - 34.0f * u;
     chip.ymax = h * 0.5f + 34.0f * u;
-    const float chip_a[4] = {0.125f, 0.345f, 0.212f, 1.0f}; /* #205836 */
-    const float chip_b[4] = {0.227f, 0.518f, 0.341f, 1.0f}; /* #3A8457 */
+    const float chip_a[4] = {
+        0.125f + (is_working ? 0.05f * pulse : 0.0f),
+        0.345f + (is_working ? 0.25f * pulse : 0.0f),
+        0.212f + (is_working ? 0.15f * pulse : 0.0f),
+        1.0f};
+    const float chip_b[4] = {
+        0.227f + (is_working ? 0.05f * pulse : 0.0f),
+        0.518f + (is_working ? 0.35f * pulse : 0.0f),
+        0.341f + (is_working ? 0.20f * pulse : 0.0f),
+        1.0f};
+    /* Pill behind the logo: right-inset 10.5 units, 85x68. Corner radius matches
+     * the minimized bubble capsule (half-height pill radius, concentric with the
+     * outer pill). */
+    const float chip_r = (chip.ymax - chip.ymin) * 0.5f;
     const float chip_grad_a[2] = {chip.xmax - 7.0f * u, chip.ymax - 14.0f * u};
     const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
-    fill_round_gradient(&chip, 25.0f * u, chip_a, chip_b, chip_grad_a, chip_grad_b);
+    fill_round_gradient(&chip, chip_r, chip_a, chip_b, chip_grad_a, chip_grad_b);
+
+    if (is_working) {
+      /* Animated glowing rim around the chip. */
+      const float chip_rim[4] = {0.0f, 1.0f, 0.549f, 0.25f + 0.35f * pulse};
+      outline_round(&chip, chip_r, chip_rim);
+    }
+
     const float icon_edge = 45.0f * u;
     ui::icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
                     BLI_rctf_cent_y(&chip) - icon_edge * 0.5f,
@@ -607,21 +674,86 @@ void agent_ui_draw_status_pill(const float width,
     }
     const float text_size = 27.0f * u;
     const float text_x = 28.0f * u;
-    const float text_max_w = chip.xmin - 16.0f * u - text_x;
-    const float dim_col[4] = {0.62f, 0.62f, 0.62f, 1.0f};
-    if (text_width(preview, text_size) > text_max_w) {
-      size_t len = strlen(preview);
-      while (len > 1) {
-        preview[--len] = '\0';
-        char probe[164];
-        SNPRINTF(probe, "%s...", preview);
-        if (text_width(probe, text_size) <= text_max_w) {
-          BLI_strncpy(preview, probe, sizeof(preview));
-          break;
+
+    if (is_working) {
+      /* Pulsing indicator dot on the left. */
+      const float dot_cx = text_x + 5.0f * u;
+      const float dot_cy = h * 0.5f;
+      const float dot_r = 4.5f * u;
+
+      /* Ripple ring around the dot. */
+      const float rip_r = dot_r + 3.5f * u * pulse;
+      rctf ripple;
+      ripple.xmin = dot_cx - rip_r;
+      ripple.xmax = dot_cx + rip_r;
+      ripple.ymin = dot_cy - rip_r;
+      ripple.ymax = dot_cy + rip_r;
+      const float rip_col[4] = {0.0f, 1.0f, 0.549f, (1.0f - pulse) * 0.45f};
+      fill_round(&ripple, rip_r, rip_col);
+
+      /* Solid active dot. */
+      rctf dot;
+      dot.xmin = dot_cx - dot_r;
+      dot.xmax = dot_cx + dot_r;
+      dot.ymin = dot_cy - dot_r;
+      dot.ymax = dot_cy + dot_r;
+      const float dot_col[4] = {0.0f, 1.0f, 0.549f, 0.95f};
+      fill_round(&dot, dot_r, dot_col);
+
+      /* Trailing dots animation: 0, 1, 2, 3 dots on a 1.6s cycle. */
+      const int dot_count = int(fmod(now * 2.5, 4.0));
+      char dots[5] = "";
+      for (int i = 0; i < dot_count; i++) {
+        dots[i] = '.';
+      }
+      dots[dot_count] = '\0';
+
+      const char *base_status = (state->queue_count > 0 && !state->status_busy) ?
+                                    "Generating" :
+                                    "Working";
+      char label[160];
+      if (state->last_prompt[0] != '\0') {
+        SNPRINTF(label, "%s%s · %s", base_status, dots, preview);
+      }
+      else {
+        SNPRINTF(label, "%s%s", base_status, dots);
+      }
+
+      const float label_x = dot_cx + dot_r + 10.0f * u;
+      const float text_max_w = chip.xmin - 16.0f * u - label_x;
+      if (text_width(label, text_size) > text_max_w) {
+        size_t len = strlen(label);
+        while (len > 1) {
+          label[--len] = '\0';
+          char probe[164];
+          SNPRINTF(probe, "%s...", label);
+          if (text_width(probe, text_size) <= text_max_w) {
+            BLI_strncpy(label, probe, sizeof(label));
+            break;
+          }
         }
       }
+      const float work_col[4] = {0.95f, 0.96f, 0.98f, 1.0f};
+      label_left(label, label_x, h * 0.5f, text_size, work_col);
     }
-    label_left(preview, text_x, h * 0.5f, text_size, dim_col);
+    else {
+      const float text_max_w = chip.xmin - 16.0f * u - text_x;
+      const float dim_col[4] = {0.62f, 0.62f, 0.62f, 1.0f};
+      if (text_width(preview, text_size) > text_max_w) {
+        size_t len = strlen(preview);
+        while (len > 1) {
+          preview[--len] = '\0';
+          char probe[164];
+          SNPRINTF(probe, "%s...", preview);
+          if (text_width(probe, text_size) <= text_max_w) {
+            BLI_strncpy(preview, probe, sizeof(preview));
+            break;
+          }
+        }
+      }
+      label_left(preview, text_x, h * 0.5f, text_size, dim_col);
+    }
+
     GPU_blend(GPU_BLEND_NONE);
     return;
   }
@@ -699,8 +831,10 @@ void agent_ui_draw_island(const ARegion * /*region*/,
    * opaque black above the tab strip, because the bubble window composites
    * alpha as opaque. */
 
-  /* --- Tab strip --- */
-  draw_tab_strip(layout, state);
+  /* --- Tab strip --- (none on the Scribble pad; its rects are empty) */
+  if (!layout->pad) {
+    draw_tab_strip(layout, state);
+  }
 
   /* --- Card --- */
   {
@@ -737,11 +871,67 @@ void agent_ui_draw_island(const ARegion * /*region*/,
                accent);
     agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, accent);
 
-    label_centre(state->title,
-                 layout->hdr_title_cx,
-                 layout->hdr_title_y,
-                 AGENT_HDR_TITLE_FONT * u,
-                 strong);
+    if (state->ink_visible) {
+      /* Scribble text output window over the new chat topbar */
+      const float left_limit = layout->hdr_new_chat.xmax + 16.0f * u;
+      const float right_limit = layout->hdr_faq.xmin - 16.0f * u;
+      const float max_w = right_limit - left_limit;
+      const float cx = layout->hdr_title_cx;
+      const float cy = layout->hdr_title_y;
+      const float win_h = 42.0f * u;
+
+      char disp[512];
+      BLI_strncpy(disp,
+                  state->input_text[0] ? state->input_text : "Scribble to type...",
+                  sizeof(disp));
+      for (char *c = disp; *c; c++) {
+        if (*c == '\n' || *c == '\r') {
+          *c = ' ';
+        }
+      }
+
+      const float font_size = 18.0f * u;
+      const float text_w = text_width(disp, font_size);
+      const float pad_x = 18.0f * u;
+      const float win_w = std::clamp(text_w + pad_x * 2.0f, 220.0f * u, max_w);
+
+      rctf text_win;
+      text_win.xmin = cx - win_w * 0.5f;
+      text_win.xmax = cx + win_w * 0.5f;
+      text_win.ymin = cy - win_h * 0.5f;
+      text_win.ymax = cy + win_h * 0.5f;
+
+      const float win_bg[4] = {0.05f, 0.05f, 0.07f, 0.90f};
+      const float win_border[4] = {0.20f, 0.52f, 0.32f, 0.70f};
+      fill_round(&text_win, 14.0f * u, win_bg);
+      outline_round(&text_win, 14.0f * u, win_border);
+
+      const float max_text_w = win_w - pad_x * 2.0f;
+      if (text_width(disp, font_size) > max_text_w) {
+        size_t len = strlen(disp);
+        while (len > 1) {
+          disp[--len] = '\0';
+          char probe[516];
+          SNPRINTF(probe, "%s...", disp);
+          if (text_width(probe, font_size) <= max_text_w) {
+            BLI_strncpy(disp, probe, sizeof(disp));
+            break;
+          }
+        }
+      }
+
+      const float col_active[4] = {0.96f, 0.97f, 0.98f, 1.0f};
+      const float col_dim[4] = {0.50f, 0.50f, 0.50f, 0.80f};
+      const float *text_col = state->input_text[0] ? col_active : col_dim;
+      label_centre(disp, cx, cy, font_size, text_col);
+    }
+    else {
+      label_centre(state->title,
+                   layout->hdr_title_cx,
+                   layout->hdr_title_y,
+                   AGENT_HDR_TITLE_FONT * u,
+                   strong);
+    }
     label_right("FAQs",
                 layout->hdr_faq.xmax,
                 BLI_rctf_cent_y(&layout->hdr_faq),
@@ -783,6 +973,60 @@ void agent_ui_draw_island(const ARegion * /*region*/,
   /* --- Chip row --- */
   draw_chip_row(layout, state);
 
+  GPU_blend(GPU_BLEND_NONE);
+}
+
+void agent_ui_draw_scribble_input_overlay(const rctf *input_rect, const float scale)
+{
+  if (!input_rect || input_rect->xmin >= input_rect->xmax || input_rect->ymin >= input_rect->ymax) {
+    return;
+  }
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  const float scrim[4] = {0.05f, 0.05f, 0.06f, 0.85f};
+  const float radius = 0.0f;
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(input_rect, true, radius, scrim);
+
+  /* Moodboard dot grid pattern over the input field overlay. */
+  const float grid_step = 36.0f * scale;
+  const float dot_radius = 2.0f * scale;
+  const float dot_color[4] = {0.45f, 0.45f, 0.45f, 0.35f};
+  const int segments = 12;
+
+  const int first_col = int(floorf(input_rect->xmin / grid_step));
+  const int last_col = int(ceilf(input_rect->xmax / grid_step));
+  const int first_row = int(floorf(input_rect->ymin / grid_step));
+  const int last_row = int(ceilf(input_rect->ymax / grid_step));
+  const int dot_count = (last_col - first_col + 1) * (last_row - first_row + 1);
+
+  if (dot_count > 0) {
+    GPUVertFormat *format = immVertexFormat();
+    const uint pos = GPU_vertformat_attr_add(
+        format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+    immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+    immUniformColor4fv(dot_color);
+    immBegin(GPU_PRIM_TRIS, dot_count * segments * 3);
+    for (int r = first_row; r <= last_row; r++) {
+      const float cy = float(r) * grid_step;
+      for (int c = first_col; c <= last_col; c++) {
+        const float cx = float(c) * grid_step;
+        if (cx >= input_rect->xmin && cx <= input_rect->xmax &&
+            cy >= input_rect->ymin && cy <= input_rect->ymax)
+        {
+          for (int s = 0; s < segments; s++) {
+            const float a0 = (2.0f * float(M_PI) * float(s)) / float(segments);
+            const float a1 = (2.0f * float(M_PI) * float(s + 1)) / float(segments);
+            immVertex2f(pos, cx, cy);
+            immVertex2f(pos, cx + cosf(a0) * dot_radius, cy + sinf(a0) * dot_radius);
+            immVertex2f(pos, cx + cosf(a1) * dot_radius, cy + sinf(a1) * dot_radius);
+          }
+        }
+      }
+    }
+    immEnd();
+    immUnbindProgram();
+  }
   GPU_blend(GPU_BLEND_NONE);
 }
 

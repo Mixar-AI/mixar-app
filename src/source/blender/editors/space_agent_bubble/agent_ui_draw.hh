@@ -33,6 +33,7 @@ struct AgentIslandState {
   /* Last USER message, for the minimised pill's preview line. Empty when the
    * conversation has none. */
   char last_prompt[160];          /* Card header — the current session's history title. */
+  char input_text[512];           /* Current composer input / recognized scribble text. */
   const char *placeholder;  /* Drawn only while the input is empty. */
   bool prompt_empty;
   /* A conversation exists, so the panel splits: transcript above, input below.
@@ -59,6 +60,12 @@ struct AgentIslandState {
   int mark_count;           /* DRAFT marks queued for the next message. */
   char mark_intent[32];     /* UI name of wm.mixar_mark_intent (Auto / Sketch / Marks). */
 
+  /* Voice input (space_mixie_chat/core/voice.py). Absent until Python
+   * registers mixie_chat.voice_toggle, which it does only on platforms with a
+   * recogniser — so no surface ever draws a dead microphone. */
+  bool voice_available;
+  bool voice_listening;     /* A dictation session is up. */
+
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */
@@ -78,5 +85,8 @@ void agent_ui_draw_status_pill(float width, float height, const AgentIslandState
 void agent_ui_draw_island(const ARegion *region,
                           const AgentIslandLayout *layout,
                           const AgentIslandState *state);
+
+/** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
+void agent_ui_draw_scribble_input_overlay(const rctf *input_rect, float scale);
 
 }  // namespace blender

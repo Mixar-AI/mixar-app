@@ -31,6 +31,7 @@ set(SRC
   mixie_chat_hit_testing.cc
   mixie_chat_qa_targets.cc
   mixie_chat_ink_events.cc
+  mixie_chat_ink_local.cc
   mixie_chat_ink_overlay.cc
   mixie_chat_ink_util.cc
   mixie_chat_main_region.cc
@@ -55,6 +56,7 @@ set(SRC
   mixie_chat_thinking.cc
   mixie_chat_ui_primitives.cc
   mixie_chat_ui_theme.cc
+  mixie_chat_voice.cc
   mixie_chat_ui_widgets.cc
   space_mixie_chat.cc
 

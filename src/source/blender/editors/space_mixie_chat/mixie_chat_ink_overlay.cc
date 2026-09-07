@@ -18,13 +18,17 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
+#include <string>
+#include <vector>
 
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
+#include "BLI_vector.hh"
 
 #include "BKE_context.hh"
 
@@ -37,10 +41,13 @@
 #include "ED_screen.hh"
 
 #include "GPU_immediate.hh"
+#include "GPU_matrix.hh"
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
 #include "UI_resources.hh"
+
+#include "RNA_access.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -92,7 +99,101 @@ static void ink_draw_dot(float cx, float cy, float radius, const float color[4])
   immUnbindProgram();
 }
 
-/** One stroke as a smooth line strip; pressure drives per-vertex alpha. */
+/* Draw-time Catmull-Rom resampling of one captured stroke. Pointer samples
+ * are distance-decimated on capture (INK_MIN_SAMPLE_DIST), so a fast stroke
+ * is a handful of points and every corner of the polyline showed. The spline
+ * passes through every captured sample and only adds points between them;
+ * the store itself is never touched — the recogniser reads the raw samples,
+ * and this is only what the eye sees. Pressure interpolates linearly. */
+static constexpr int INK_SMOOTH_SUBDIV = 4;
+/* Segments already shorter than this (base px) are sub-pixel curves. */
+static constexpr float INK_SMOOTH_MIN_SEG = 2.5f;
+
+static void ink_smooth_stroke(const float (*points)[3],
+                              const int count,
+                              const float min_seg,
+                              std::vector<std::array<float, 3>> &r_out)
+{
+  r_out.clear();
+  if (count <= 0) {
+    return;
+  }
+  r_out.reserve(size_t(count) * INK_SMOOTH_SUBDIV + 1);
+  r_out.push_back({points[0][0], points[0][1], points[0][2]});
+  if (count < 3) {
+    for (int i = 1; i < count; i++) {
+      r_out.push_back({points[i][0], points[i][1], points[i][2]});
+    }
+    return;
+  }
+  const float min_seg_sq = min_seg * min_seg;
+  for (int i = 0; i < count - 1; i++) {
+    const float *p0 = points[std::max(i - 1, 0)];
+    const float *p1 = points[i];
+    const float *p2 = points[i + 1];
+    const float *p3 = points[std::min(i + 2, count - 1)];
+    const float dx = p2[0] - p1[0];
+    const float dy = p2[1] - p1[1];
+    if (dx * dx + dy * dy < min_seg_sq) {
+      r_out.push_back({p2[0], p2[1], p2[2]});
+      continue;
+    }
+    for (int k = 1; k <= INK_SMOOTH_SUBDIV; k++) {
+      if (k == INK_SMOOTH_SUBDIV) {
+        r_out.push_back({p2[0], p2[1], p2[2]});
+        break;
+      }
+      const float t = float(k) / float(INK_SMOOTH_SUBDIV);
+      const float t2 = t * t;
+      const float t3 = t2 * t;
+      std::array<float, 3> q;
+      for (int c = 0; c < 2; c++) {
+        q[c] = 0.5f * ((2.0f * p1[c]) + (-p0[c] + p2[c]) * t +
+                       (2.0f * p0[c] - 5.0f * p1[c] + 4.0f * p2[c] - p3[c]) * t2 +
+                       (-p0[c] + 3.0f * p1[c] - 3.0f * p2[c] + p3[c]) * t3);
+      }
+      q[2] = p1[2] + (p2[2] - p1[2]) * t;
+      r_out.push_back(q);
+    }
+  }
+}
+
+/** One resampled stroke through Blender's anti-aliased polyline shader at the
+ * real width. GPU_line_width is deliberately NOT used: the Metal backend has
+ * no wide lines and drew the strip one pixel wide with no anti-aliasing at
+ * all — the jagged hairline this replaced. Per-vertex alpha still follows
+ * pressure. */
+static void ink_draw_polyline(const std::vector<std::array<float, 3>> &pts,
+                              const float width,
+                              const float base_color[4],
+                              const float ease)
+{
+  if (pts.size() < 2) {
+    return;
+  }
+  float viewport[4];
+  GPU_viewport_size_get_f(viewport);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32_32);
+  const uint col = GPU_vertformat_attr_add(
+      format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_SMOOTH_COLOR);
+  immUniform2fv("viewportSize", &viewport[2]);
+  immUniform1f("lineWidth", width);
+  immUniform1i("lineSmooth", 1);
+  immBegin(GPU_PRIM_LINE_STRIP, int(pts.size()));
+  for (const std::array<float, 3> &p : pts) {
+    const float alpha = base_color[3] * ease * (0.55f + 0.45f * p[2]);
+    immAttr4f(col, base_color[0], base_color[1], base_color[2], alpha);
+    immVertex3f(pos, p[0], p[1], 0.0f);
+  }
+  immEnd();
+  immUnbindProgram();
+}
+
+/** One stroke: resampled, then an anti-aliased polyline; pressure drives
+ * per-vertex alpha. */
 static void ink_draw_stroke(
     const float (*points)[3], int count, float width, const float base_color[4], float ease)
 {
@@ -109,20 +210,10 @@ static void ink_draw_stroke(
     return;
   }
 
-  GPUVertFormat *format = immVertexFormat();
-  uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  uint col = GPU_vertformat_attr_add(format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_SMOOTH_COLOR);
-  GPU_line_width(width);
-  immBegin(GPU_PRIM_LINE_STRIP, count);
-  for (int i = 0; i < count; i++) {
-    const float alpha = base_color[3] * ease * (0.55f + 0.45f * points[i][2]);
-    immAttr4f(col, base_color[0], base_color[1], base_color[2], alpha);
-    immVertex2f(pos, points[i][0], points[i][1]);
-  }
-  immEnd();
-  immUnbindProgram();
-  GPU_line_width(1.0f);
+  /* Scratch for the resampled stroke — main thread only, reused per stroke. */
+  static std::vector<std::array<float, 3>> smooth;
+  ink_smooth_stroke(points, count, INK_SMOOTH_MIN_SEG * (width / INK_STROKE_WIDTH), smooth);
+  ink_draw_polyline(smooth, width, base_color, ease);
 
   /* Round caps: a dot at each end hides the strip's square ends. */
   for (const int i : {0, count - 1}) {
@@ -132,6 +223,102 @@ static void ink_draw_stroke(
                                base_color[3] * ease * (0.55f + 0.45f * points[i][2]) * 0.9f};
     ink_draw_dot(points[i][0], points[i][1], dot_r * 0.8f, cap_color);
   }
+}
+
+void mixie_chat_ink_draw_strokes(
+    MixieChatRuntime *rt, float scale, float ease, float offset_x, float offset_y)
+{
+  if (!rt || rt->ink_stroke_count <= 0) {
+    return;
+  }
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(offset_x, offset_y);
+  GPU_line_smooth(true);
+  const float width = INK_STROKE_WIDTH * scale;
+  for (int s = 0; s < rt->ink_stroke_count; s++) {
+    const int start = rt->ink_stroke_starts[s];
+    const int end = (s + 1 < rt->ink_stroke_count) ? rt->ink_stroke_starts[s + 1] :
+                                                     rt->ink_point_count;
+    ink_draw_stroke(&rt->ink_points[start], end - start, width, INK_COL_STROKE, ease);
+  }
+  GPU_line_smooth(false);
+  GPU_matrix_pop();
+}
+
+void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region)
+{
+  if (!C || !region) {
+    return;
+  }
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!mixie_chat_ink_read_visible(wm)) {
+    return;
+  }
+  ScrArea *area = CTX_wm_area(C);
+  SpaceMixieChat *smixie = ink_space_from_area(area);
+  if (!smixie) {
+    return;
+  }
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (!rt || !rt->ink_overlay_active || rt->ink_stroke_count <= 0) {
+    return;
+  }
+  ARegion *main_region = mixie_chat_ink_area_main_region(area);
+  if (!main_region) {
+    return;
+  }
+
+  const float ox = float(main_region->winrct.xmin - region->winrct.xmin);
+  const float oy = float(main_region->winrct.ymin - region->winrct.ymin);
+  const float scale = UI_SCALE_FAC;
+  const float ease = 1.0f;
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  mixie_chat_ink_draw_strokes(rt, scale, ease, ox, oy);
+  GPU_blend(GPU_BLEND_NONE);
+}
+
+/**
+ * Draw the moodboard background dot grid pattern across the writing surface.
+ */
+static void ink_draw_moodboard_grid(float winx, float winy, float scale, float ease)
+{
+  const float grid_step = 36.0f * scale;
+  const float dot_radius = 2.0f * scale;
+  const int segments = 12;
+
+  const int cols = int(ceilf(winx / grid_step)) + 1;
+  const int rows = int(ceilf(winy / grid_step)) + 1;
+  const int dot_count = cols * rows;
+  if (dot_count <= 0) {
+    return;
+  }
+
+  const float dot_color[4] = {0.45f, 0.45f, 0.45f, 0.35f * ease};
+
+  GPUVertFormat *format = immVertexFormat();
+  uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(dot_color);
+
+  immBegin(GPU_PRIM_TRIS, dot_count * segments * 3);
+  for (int r = 0; r < rows; r++) {
+    const float cy = float(r) * grid_step;
+    for (int c = 0; c < cols; c++) {
+      const float cx = float(c) * grid_step;
+      for (int s = 0; s < segments; s++) {
+        const float a0 = (2.0f * float(M_PI) * float(s)) / float(segments);
+        const float a1 = (2.0f * float(M_PI) * float(s + 1)) / float(segments);
+        immVertex2f(pos, cx, cy);
+        immVertex2f(pos, cx + cosf(a0) * dot_radius, cy + sinf(a0) * dot_radius);
+        immVertex2f(pos, cx + cosf(a1) * dot_radius, cy + sinf(a1) * dot_radius);
+      }
+    }
+  }
+  immEnd();
+  immUnbindProgram();
 }
 
 /** \} */
@@ -183,14 +370,15 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
 
   GPU_blend(GPU_BLEND_ALPHA);
 
-  /* Scrim — lighter than the card overlays: this is a writing surface,
-   * not a dialog; the conversation stays readable. */
+  /* Translucent surface with the moodboard background pattern over the chat window. */
   {
     rctf full;
     BLI_rctf_init(&full, 0.0f, float(winx), 0.0f, float(winy));
-    const float scrim[4] = {
-        INK_COL_SCRIM[0], INK_COL_SCRIM[1], INK_COL_SCRIM[2], INK_COL_SCRIM[3] * ease};
+    const float scrim[4] = {0.05f, 0.05f, 0.06f, 0.82f * ease};
     chat_ui_draw_rounded_rect(&full, 0.0f, scrim);
+
+    /* Moodboard dot grid pattern over the translucent surface. */
+    ink_draw_moodboard_grid(float(winx), float(winy), scale, ease);
   }
 
   /* Ink strokes (completed + live). */

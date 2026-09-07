@@ -136,6 +136,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if not (is_modify or is_awaiting_input):
             try:
                 from ...core import scribble
+                from ...core import voice as voice_input
+                # A message sent mid-dictation takes what has been recognised
+                # so far; the session ends here so its final transcription
+                # cannot land in the NEXT message's composer.
+                voice_input.stop_if_listening()
                 scribble.flush_pending_ink()
                 if scribble.defer_until_idle(_send_when_handwriting_lands):
                     self.report({'INFO'}, "Converting handwriting…")

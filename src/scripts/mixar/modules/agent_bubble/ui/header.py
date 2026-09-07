@@ -493,5 +493,18 @@ class AGENT_BUBBLE_HT_header(Header):
                     emboss=False,
                 )
 
+        # Voice — the same toggle the chat header binds; registered only on
+        # platforms with a recogniser, so hasattr is the platform gate.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_voice_toggle') and not agent_running:
+            wm = context.window_manager
+            listening = bool(getattr(wm, 'mixie_chat_voice_listening', False))
+            right_controls.operator(
+                "mixie_chat.voice_toggle",
+                text="",
+                icon='REC' if listening else 'PLAY_SOUND',
+                emboss=False,
+                depress=listening,
+            )
+
 
 classes = (AGENT_BUBBLE_HT_header,)

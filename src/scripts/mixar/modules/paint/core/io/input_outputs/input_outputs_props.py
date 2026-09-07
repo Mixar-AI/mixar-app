@@ -11,6 +11,8 @@ data path management.
 
 import re
 
+from mixar.modules.common.utils.animation import assigned_fcurves
+
 from mathutils import Color
 
 from ......config.logging_config import get_logger
@@ -107,7 +109,7 @@ def create_prop_input(entity, prop_name, valid_inputs, input_index, dirty):
         # Example: mp.layers[0].channels[0].intensity_value'
 
         if root_tree.animation_data.action:
-            for fc in root_tree.animation_data.action.fcurves:
+            for fc in assigned_fcurves(root_tree):
                 if fc.data_path == 'mp.layers[' + str(layer_index) + ']' + input_name:
                     fc.data_path = 'nodes["' + layer_node.name + '"].inputs[' + str(input_index) + '].default_value'
 

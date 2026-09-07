@@ -218,12 +218,13 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
 
     read_enum_name(&scene_ptr, "mixie_chat_state", r_state->status_text,
                    sizeof(r_state->status_text));
-    r_state->status_busy = read_bool_prop(&scene_ptr, "mixie_chat_is_busy");
+    r_state->status_busy = read_bool_prop(&scene_ptr, "mixie_chat_is_busy") ||
+                           enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
+                           enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
 
-    char input[512];
-    read_string_prop(&scene_ptr, "mixie_chat_input", input, sizeof(input));
-    r_state->prompt_empty = (input[0] == '\0');
+    read_string_prop(&scene_ptr, "mixie_chat_input", r_state->input_text, sizeof(r_state->input_text));
+    r_state->prompt_empty = (r_state->input_text[0] == '\0');
 
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
     r_state->has_transcript =
@@ -277,6 +278,13 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                               read_bool_prop(&wm_ptr, "mixar_mark_armed");
     read_enum_name(&wm_ptr, "mixar_mark_intent", r_state->mark_intent,
                    sizeof(r_state->mark_intent));
+  }
+
+  /* Voice — the toggle registers only where the platform has a recogniser. */
+  r_state->voice_available = WM_operatortype_find("MIXIE_CHAT_OT_voice_toggle", true) != nullptr;
+  if (wm) {
+    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+    r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
   }
   if (scene) {
     /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but

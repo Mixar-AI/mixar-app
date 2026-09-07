@@ -465,6 +465,39 @@ void glyph_cross(const float cx, const float cy, const float s, const float col[
   }
 }
 
+/** Microphone: a capsule over a U-shaped cradle, on a stem and base. The
+ * cradle is a run of thin quads along a half circle — `poly` is the one
+ * primitive every glyph here already uses. */
+void glyph_mic(const float cx, const float cy, const float s, const float col[4])
+{
+  const float w = stroke_width(s);
+  const float cap_w = s * 0.32f;
+  const float cap_top = cy + s * 0.46f;
+  const float cap_bottom = cy - s * 0.04f;
+  box_fill(cx - cap_w * 0.5f, cx + cap_w * 0.5f, cap_bottom, cap_top, cap_w * 0.5f, col);
+
+  const float r = s * 0.30f;
+  const float ccy = cap_bottom + s * 0.12f;
+  const int segments = 10;
+  for (int i = 0; i < segments; i++) {
+    const float a0 = float(M_PI) + float(M_PI) * float(i) / float(segments);
+    const float a1 = float(M_PI) + float(M_PI) * float(i + 1) / float(segments);
+    const float ax = cosf(a0), ay = sinf(a0), bx = cosf(a1), by = sinf(a1);
+    const float half = w * 0.5f;
+    const float pts[4][2] = {
+        {cx + ax * (r - half), ccy + ay * (r - half)},
+        {cx + bx * (r - half), ccy + by * (r - half)},
+        {cx + bx * (r + half), ccy + by * (r + half)},
+        {cx + ax * (r + half), ccy + ay * (r + half)},
+    };
+    poly(pts, 4, col);
+  }
+  const float stem_top = ccy - r;
+  const float stem_bottom = stem_top - s * 0.14f;
+  vrule(stem_bottom, stem_top, cx, w, col);
+  rule(cx - s * 0.20f, cx + s * 0.20f, stem_bottom, w, col);
+}
+
 }  // namespace
 
 void agent_ui_icon_draw(const AgentIcon icon,
@@ -516,6 +549,9 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
     case AGENT_ICON_CROSS:
       glyph_cross(cx, cy, s, color);
+      break;
+    case AGENT_ICON_MIC:
+      glyph_mic(cx, cy, s, color);
       break;
     case AGENT_ICON_COUNT:
       break;

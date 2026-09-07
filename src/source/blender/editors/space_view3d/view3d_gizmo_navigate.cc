@@ -38,8 +38,8 @@ namespace blender {
 /** \name View3D Navigation Gizmo Group
  * \{ */
 
-/* Size of main icon. */
-#define GIZMO_SIZE U.gizmo_size_navigate_v3d
+/* Size of main icon (50% smaller for Mixar viewport layout). */
+#define GIZMO_SIZE (U.gizmo_size_navigate_v3d * 0.5f)
 
 /* Main gizmo offset from screen edges in unscaled pixels. */
 #define GIZMO_OFFSET 10.0f
@@ -319,7 +319,9 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
   float icon_offset_from_axis = icon_offset_mini * 0.75f;
   switch (eUserpref_MiniAxisType(U.mini_axis_type)) {
     case USER_MINI_AXIS_TYPE_GIZMO:
-      icon_offset_from_axis = icon_offset * 2.2f;
+      icon_offset_from_axis = icon_offset +
+                              ((GIZMO_SIZE / 2.0f) + GIZMO_OFFSET + (GIZMO_MINI_SIZE / 2.0f)) *
+                                  UI_SCALE_FAC;
       break;
     case USER_MINI_AXIS_TYPE_MINIMAL:
       if (region->alignment != RGN_ALIGN_QSPLIT ||
@@ -334,7 +336,7 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
   }
 
   const float co[2] = {
-      roundf(rect_visible->xmax - icon_offset_mini * 0.75f),
+      roundf(show_rotate_gizmo ? co_rotate[0] : (rect_visible->xmax - icon_offset_mini * 0.75f)),
       roundf(rect_visible->ymax - icon_offset_from_axis),
   };
 
