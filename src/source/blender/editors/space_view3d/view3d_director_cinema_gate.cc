@@ -108,7 +108,9 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   const float pill_bottom = chat_gap;
   const float pill_top = pill_bottom + float(ED_agent_bubble_pill_band_px(win));
   ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(pill_bottom));
-  stage.ymin = std::max(stage.ymin, pill_top + chat_gap);
+  /* The frame's foot is free: it may run below the columns' foot, down to
+   * the chat bar. Only the gap above the bar bounds it. */
+  stage.ymin = pill_top + chat_gap;
 
   GateFit fit;
   fit.region = region;
@@ -137,7 +139,9 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
     return;
   }
 
-  /* The border scales linearly with the zoom factor: size it first. */
+  /* The border scales linearly with the zoom factor: size it first. The
+   * width between the columns is what the frame is sized to; the height
+   * only bounds it (a portrait aspect must still end above the chat bar). */
   rctf border;
   ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, &border);
   const float border_w = BLI_rctf_size_x(&border);
@@ -153,12 +157,13 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
                              float(RV3D_CAMZOOM_MAX));
   const float fac_now = BKE_screen_view3d_zoom_to_fac(rv3d->camzoom);
 
-  /* Then centre it. The view plane shifts by `winx * 2 * camdx * fac` (see
+  /* Then place it: centred between the columns, TOP on the columns' top.
+   * The view plane shifts by `winx * 2 * camdx * fac` (see
    * BKE_camera_params_from_view3d / _compute_viewplane), which moves the
    * border the OTHER way by the same amount in region px. */
   ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, &border);
   const float dx = BLI_rctf_cent_x(&target) - BLI_rctf_cent_x(&border);
-  const float dy = BLI_rctf_cent_y(&target) - BLI_rctf_cent_y(&border);
+  const float dy = target.ymax - border.ymax;
   rv3d->camdx = std::clamp(rv3d->camdx - dx / (2.0f * fac_now * float(region->winx)), -1.0f, 1.0f);
   rv3d->camdy = std::clamp(rv3d->camdy - dy / (2.0f * fac_now * float(region->winy)), -1.0f, 1.0f);
 

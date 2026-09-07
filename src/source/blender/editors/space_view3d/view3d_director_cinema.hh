@@ -56,15 +56,6 @@ struct DirectorViewState;
  * mock itself is a 0.8x render — rather than a different UI.
  */
 #define CINEMA_SCALE_MIN 0.6f
-/**
- * The design is FITTED TO THE WINDOW WIDTH: at CINEMA_REF_W (the MacBook
- * window the layout was tuned on) it draws at 1x; a wider viewport scales the
- * whole surface up (to CINEMA_SCALE_MAX) so the camera gate keeps the same
- * proportions and the same gap to the columns instead of shrinking to a
- * fixed-size island in the middle of a big screen.
- */
-#define CINEMA_REF_W 1512.0f
-#define CINEMA_SCALE_MAX 2.0f
 
 /* Rows inside a panel. */
 /* ONE row class for every rounded control — dropdown rows, list rows,
@@ -174,8 +165,9 @@ float cinema_unit();
 void cinema_unit_begin(const ARegion *main_region);
 
 /**
- * The design's scale for \a region: `min(width / CINEMA_REF_W, height fit)`
- * over the lowest content's height, clamped to CINEMA_SCALE_MAX.
+ * How much of the 1x design fits \a region: `min(1, width fit, height fit)`
+ * over the columns-plus-gate width and the lowest content's height. The
+ * panels never grow past 1x; on a big screen only the camera gate does.
  */
 float cinema_fit_scale(const ARegion *region);
 
@@ -315,11 +307,12 @@ ui::Button *cinema_icon_button(ui::Block *block,
 
 /**
  * Fit the camera gate to the stage: while the designed surface draws in
- * camera view, the camera border fills the space between the columns (the
- * rounded frame the design drew around it is gone — the gate IS the frame).
- * Writes `rv3d->camzoom` and `camdx/camdy` only when the region size, the
- * stage rect or the camera changed since the last fit, so a director's own
- * zoom and pan survive until the layout moves.
+ * camera view, the camera border spans the width between the columns with
+ * its top on the columns' top; its foot is free down to the chat bar (the
+ * gate IS the frame — nothing is drawn around it). Writes `rv3d->camzoom`
+ * and `camdx/camdy` only when the region size, the stage rect or the camera
+ * changed since the last fit, so a director's own zoom and pan survive
+ * until the layout moves.
  */
 void cinema_fit_camera_gate(const bContext *C, ARegion *region);
 

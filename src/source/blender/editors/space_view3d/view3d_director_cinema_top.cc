@@ -188,9 +188,12 @@ void cinema_draw_top_strip(ui::Block *block,
    * height-limited and sit inside the stage, so read the real one; the
    * stage's own gate edge is only the fallback outside camera view. */
   float gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;
+  float gate_right = float(region->winx) / u - (margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET +
+                                                 CINEMA_GATE_PAD);
   rctf border;
   if (cinema_camera_gate_rect(C, region, &border)) {
     gate_left = border.xmin / u;
+    gate_right = border.xmax / u;
   }
   /* Design x where each hint ends; the controls decide what fits from it. */
   float hint_end[4];
@@ -216,9 +219,9 @@ void cinema_draw_top_strip(ui::Block *block,
                            (11.0f + 9.0f + 32.0f) * u;
   const bool phone_full = phone_need <= BLI_rctf_size_x(&phone);
 
-  /* Eyedropper and interpolation dropdown, right-to-left from the stage's
-   * right edge. */
-  const float strip_right = float(region->winx) - (margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET) * u;
+  /* Eyedropper and interpolation dropdown, right-to-left from the camera
+   * frame's right edge, so the dropdown's edge lines up with the frame. */
+  const float strip_right = gate_right * u;
   rctf interp = {strip_right - CINEMA_INTERP_W * u, strip_right, band.ymin, band.ymax};
   rctf eyedrop = {interp.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
                   interp.xmin - CINEMA_STRIP_GAP * u,
