@@ -180,7 +180,9 @@ scripts/upgrade/patches/
 src/scripts/mixar/modules/agent/vendor/
 src/scripts/mixar/modules/sample_images/
 ucupaint-master/
-.claude/
+# Claude Code local state stays ignored; .claude/rules/ is the tracked, private-only docs map.
+.claude/*
+!.claude/rules/
 .codex/
 
 # cef

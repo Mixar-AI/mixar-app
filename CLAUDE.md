@@ -5,7 +5,7 @@
 
 **Mixar is a custom fork of Blender 5.2 that turns Blender into an AI-powered 3D content creation tool** — layered texture painting, AI 3D generation, and a real-time chat agent that drives the scene. This repo is the **desktop client**; the AI backend is the separate `mixar-backend` repo (FastAPI), and the admin dashboard is `mixar-admin-dashboard`.
 
-This file holds the build model, the rules, and a map. The per-feature contracts live in `docs/modules/` — **read the linked doc before editing a module**, and update it (and this map) when features change.
+This file holds the build model, the rules, and the module map. It is published with the source, so it references only published paths.
 
 ## Overlay Build Model (the #1 thing to understand)
 
@@ -23,7 +23,7 @@ build/<env>/ CMake build output (e.g. build/Prod/bin, build/Dev/bin)
 - CMake install clears the bundled `scripts/mixar` package before recopying, so incremental builds cannot retain Python modules deleted from `/src`.
 - The overlay copy (`overlay.sh` rsync / `overlay.bat` robocopy) skips git-ignored local junk inside `src/` — `.venv/`, `venv/`, `__pycache__/`, `.pytest_cache/`, `.DS_Store`. CMake's `scripts/` install rule filters only `__pycache__`, so a stray dev venv would otherwise ship in the app bundle.
 - **Git worktrees build out of the box**: `settings.sh` falls back to the main checkout's `upstream/` (the multi-GB submodule doesn't carry into linked worktrees; used read-only as the rsync source, warns if not at the pinned commit). Override with `MIXAR_UPSTREAM_DIR`; each worktree still assembles its own `source/` and `build/` — never share those.
-- **macOS dev codesign (optional)**: `MIXAR_DEV_SIGN_ID` in `.env` makes `build.sh` re-sign the built `Mixar` executable with a stable self-signed identity (one-time setup: `scripts/unix/setup_dev_codesign.sh`), so the Keychain "Always Allow" sticks across rebuilds. Signs with `get-task-allow` so lldb attach keeps working. Local dev only — release signing stays in `package.sh`.
+- **macOS dev codesign (optional)**: `MIXAR_DEV_SIGN_ID` in `.env` makes `build.sh` re-sign the built `Mixar` executable with a stable self-signed identity (one-time setup: `scripts/unix/setup_dev_codesign.sh`), so the Keychain "Always Allow" sticks across rebuilds. Signs with `get-task-allow` so lldb attach keeps working. Local dev only — release signing is a separate pipeline.
 
 ## Build, Run, Test
 
@@ -39,7 +39,6 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 ```
 
 - Python packages are installed from `scripts/python_requirements.txt` into the embedded Blender Python (`make install`).
-- **Windows code signing**: Azure Artifact Signing tools live in `scripts/windows/codesign-tools/`. Sign production app binaries in `build/Prod/bin` before MSI creation (`scripts/windows/codesign_files.bat`), then sign the generated MSI in `dist/` last (`scripts/windows/codesign_package.bat`); both wrap `scripts/windows/codesign-tools/sign-package.ps1`. `scripts/windows/codesign-tools/audit-signatures.ps1` audits Authenticode state for `.exe`, `.dll`, `.pyd`, `.ocx`, `.sys`, `.msi`, `.cab` and `.cat` files. Signing uses Windows SDK SignTool with the Azure Artifact Signing dlib, SHA256 file and timestamp digests, and `http://timestamp.acs.microsoft.com`. Release pipeline: `docs/release-pipeline-setup.md`.
 - `pytest.ini` testpaths: `tests/`, plus in-tree suites under `space_mixie_chat/tests` and `paint/{layered_build,procedural_materials}/tests`. `pythonpath = src/scripts`.
 - `bpy` is a MagicMock in tests, so `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
 - The root `conftest.py` imports the REAL `numpy`/`PIL` before collection: `modules/testing/mock_bpy` stubs third-party modules only when ABSENT from `sys.modules`, so without the preload the first importer decided whether PIL was real for the whole session.
@@ -60,10 +59,10 @@ The QA harness drives the REAL built app like a human — semantic clicks by ope
 - No file larger than **500 lines** — split aggressively. Use C++ for performance-critical paths.
 - Module layout (strict): `constants.py` at module root; `core/` for logic; `ui/` for auto-discovered UI split into `properties/`, `operators/`, `panels/`, `menus/`, `lists/`. **Properties and operators stay in separate folders.**
 - Cross-module shared code goes in `modules/common/` (`common/utils` for utilities).
-- **Always update this guide and the module doc** when features are added/modified/deleted. `AGENTS.md` is a byte-identical copy of `CLAUDE.md` (a copy, not a symlink — Windows checkouts); edit CLAUDE.md and re-copy.
+- **Always update this guide** when features are added/modified/deleted.
 - Branch names follow the table in `CONTRIBUTING.md` — lowercase kebab-case, most specific prefix wins (`bugfix/` over `task/` for a bug fix).
 - **The keyconfig-reload rule**: custom C region keymaps and any C-registered default-keyconfig binding must ALSO be registered in the addon keyconfig (Python side), never only via C `WM_keymap_add_item` — a GUI keyconfig preset reload wipes C-registered items. Applies to agent_scene_strip, chat select/copy/paste, Director `F` capture, and anything new.
-- Blender 5.2 porting conventions (namespaces, `ListBaseT`, `MEM_new`, RNA pointer args, geonodes IO, animation channelbags): `docs/blender-5.2-porting.md`. Merging `develop` into this branch brings 5.0-shaped code that must be re-ported against it.
+- Upstream is pinned at Blender `v5.2.0`; Mixar C++ is wrapped in `namespace blender` (interface files in `blender::ui`), DNA lists are `ListBaseT<T>`, allocation is `MEM_new*`, runtime operator pointer props use `RNA_def_pointer_runtime`, and animation access goes through the ID's own channelbag via `common/utils/animation.py` (never `Action.fcurves`). Merging `develop` brings 5.0-shaped code that must be re-ported to these conventions.
 
 Project layout:
 
@@ -93,27 +92,27 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 
 ## Modules (`src/scripts/mixar/modules/`)
 
-| Module | Purpose | Doc |
+| Module | Purpose |
 |--------|---------|-----|
-| **paint** (largest) | Layer-based texture painting: node trees, modifiers, baking, procedural materials/MatGen, decals, UDIM, vertex colors, asset export; agent-facing layer-stack tools in `paint/core/agent_tools` | `docs/mixar_paint_overview.md`, `docs/modules/model-import-pipeline.md` |
-| **addon_project** | Blender-local production add-on workspace driven by the versioned `addon_project_v1` RPC | `docs/modules/addon-project.md` |
-| **space_mixie_chat** | Agent chat: WebSocket JSON-RPC + SSE streaming, reconnect-resume, sandboxed script execution, `llm.request` local-LLM relay, project/global rules, @-mention autocomplete, feedback stars, export lane, batched choice wizard, message copy, paste, attachments, voice | `docs/modules/agent-chat.md`, `docs/render-job-contract.md` |
-| **agent_bubble** | The Agent island: floating always-on-top chat window with tabs (Agent, 3D, Media, Gaussian Splat, My Generations, Queue), elongated pill resting state, hover collapse; shares ConnectionManager/message store with space_mixie_chat | `docs/modules/agent-bubble.md`, `docs/agent-bubble-linux-window-controls.md` |
-| **scribble_mark** | The viewport half of Scribble plus the coordinator that makes Scribble ONE mode (`core/scribble_mode.py`) | `docs/modules/scribble.md` |
-| **agent_viewport_lock** | "Agent working" halo + input-block modal, keyed to the mode the *running* turn started in (`mixie_chat_active_turn_mode`); toasts pass through | — |
-| **agent_scene_strip** | Bottom View3D region (C++ `view3d_agent_strip*`) with live tiles of non-active scenes; keymap in addon keyconfig | — |
-| **moodboard** | Reference boards + node canvas, catalog-driven generation sidebar (Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character Parts, Retopology, UV Unwrap, Mesh Segment, Auto Rig, Video Gen, World Labs + Queue), turnaround/multi-view image-to-3D, clipboard, scene recon, annotations, SAM3 character components, Gaussian splats | `docs/modules/moodboard.md`, `docs/modules/world-labs-splats.md` |
-| **director** | Phase-zero camera directing as a viewport mode: native C++ Cinema Mode surface plus gate/popups/timeline over Python-owned operators | `docs/modules/director.md` |
-| **hunyuan** | 3D generation enqueue helpers: text/image→3D, retopology (Hunyuan/Tripo engines), UV unwrap, auto-rig (`core/animate_enqueue.py`) | `docs/modules/job-queue.md`, `docs/modules/model-import-pipeline.md` |
-| **common** | API clients (`common/api/services/`), content-free UX telemetry (`common/analytics`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, self-updates, job_queue, generation_params, usage, network | `docs/telemetry-events.md`, `docs/modules/self-update.md`, `docs/modules/job-queue.md`, `docs/modules/account-card-usage.md`, `docs/enterprise-network.md` |
-| **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager). Browser SSO callback (`core/sso.py`) is a threaded loopback server with a per-connection read timeout (endpoint-security agents connect without sending a request); `SSO_LOGIN_TIMEOUT_S` (300s) covers corporate IdP + MFA; the login operator has a scoped UI watchdog. Transport failures return `failure_kind` + a support-coded message via `common/network` | — |
-| **byok** / **local_models** | Bring-your-own-key provider settings (cloud catalog, OpenRouter, Codex, Local); zero-setup local llama.cpp runtime | `docs/modules/byok-local-models.md`, `docs/byok-frontend-api.md` |
-| **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune | — |
-| **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` | — |
-| **onboarding** / **plugin_import** | First-run GPU-rendered tour cards; one-click import of the user's vanilla-Blender plugins | `docs/modules/onboarding-plugin-import.md` |
-| **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider and Mixar topbar widgets | `docs/modules/workflow-topbar.md` |
-| **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space | `docs/modules/job-queue.md` (archive) |
-| **testing** | Legacy embedded test suite (explicit opt-in) | — |
+| **paint** (largest) | Layer-based texture painting: node trees, modifiers, baking, procedural materials/MatGen, decals, UDIM, vertex colors, asset export; agent-facing layer-stack tools in `paint/core/agent_tools` |
+| **addon_project** | Blender-local production add-on workspace driven by the versioned `addon_project_v1` RPC |
+| **space_mixie_chat** | Agent chat: WebSocket JSON-RPC + SSE streaming, reconnect-resume, sandboxed script execution, `llm.request` local-LLM relay, project/global rules, @-mention autocomplete, feedback stars, export lane, batched choice wizard, message copy, paste, attachments, voice |
+| **agent_bubble** | The Agent island: floating always-on-top chat window with tabs (Agent, 3D, Media, Gaussian Splat, My Generations, Queue), elongated pill resting state, hover collapse; shares ConnectionManager/message store with space_mixie_chat |
+| **scribble_mark** | The viewport half of Scribble plus the coordinator that makes Scribble ONE mode (`core/scribble_mode.py`) |
+| **agent_viewport_lock** | "Agent working" halo + input-block modal, keyed to the mode the *running* turn started in (`mixie_chat_active_turn_mode`); toasts pass through |
+| **agent_scene_strip** | Bottom View3D region (C++ `view3d_agent_strip*`) with live tiles of non-active scenes; keymap in addon keyconfig |
+| **moodboard** | Reference boards + node canvas, catalog-driven generation sidebar (Image Gen, AI Render, Model Gen, Texture Gen, Scene Gen, Character Parts, Retopology, UV Unwrap, Mesh Segment, Auto Rig, Video Gen, World Labs + Queue), turnaround/multi-view image-to-3D, clipboard, scene recon, annotations, SAM3 character components, Gaussian splats |
+| **director** | Phase-zero camera directing as a viewport mode: native C++ Cinema Mode surface plus gate/popups/timeline over Python-owned operators |
+| **hunyuan** | 3D generation enqueue helpers: text/image→3D, retopology (Hunyuan/Tripo engines), UV unwrap, auto-rig (`core/animate_enqueue.py`) |
+| **common** | API clients (`common/api/services/`), content-free UX telemetry (`common/analytics`; the client stamps `x-telemetry-consent` on all HTTP requests and the WS handshake, so the Share Usage Data toggle also governs backend-emitted events like `generation.submitted`), WebSocket infra, notifications, versioning, self-updates, job_queue, generation_params, usage, network |
+| **auth** | OAuth PKCE with native keyring (macOS Keychain, Windows Credential Manager). Browser SSO callback (`core/sso.py`) is a threaded loopback server with a per-connection read timeout (endpoint-security agents connect without sending a request); `SSO_LOGIN_TIMEOUT_S` (300s) covers corporate IdP + MFA; the login operator has a scoped UI watchdog. Transport failures return `failure_kind` + a support-coded message via `common/network` |
+| **byok** / **local_models** | Bring-your-own-key provider settings (cloud catalog, OpenRouter, Codex, Local); zero-setup local llama.cpp runtime |
+| **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune |
+| **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
+| **onboarding** / **plugin_import** | First-run GPU-rendered tour cards; one-click import of the user's vanilla-Blender plugins |
+| **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider and Mixar topbar widgets |
+| **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
+| **testing** | Legacy embedded test suite (explicit opt-in) |
 
 ## Generation Catalog & Dynamic Params
 
@@ -142,14 +141,10 @@ Backend runs a LangGraph orchestrator (Claude Sonnet 4.6 primary, Gemini 3.1 Pro
 
 ## Self-Update (`modules/common/updates/`)
 
-One **Restart & Update** click stages the release installer, spawns a detached helper, quits, and relaunches; the downloads page is the fallback. Decisions live in `core/install_flow.py` (`plan_restart`, `apply_and_restart`) so they are testable under the `bpy` mock; config is `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`. Install paths carry no version (pinned by `tests/test_update_packaging_paths.py`). Full contract — Windows `%ProgramData%` staging, signature verification, helper lifecycle, toast/badge states, the quit watchdog — in `docs/modules/self-update.md`; flow narrative and manual test cases in `docs/seamless-updates.md`.
+One **Restart & Update** click stages the release installer, spawns a detached helper, quits, and relaunches; the downloads page is the fallback. Decisions live in `core/install_flow.py` (`plan_restart`, `apply_and_restart`) so they are testable under the `bpy` mock; config is `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`. Install paths carry no version (pinned by `tests/test_update_packaging_paths.py`). Windows staging lives in `%ProgramData%\Mixar\Updates` (a per-machine MSI runs elevated and must read the installer from a shared location); the installer is trusted only after the backend `sha256` matches AND its signature matches the running app's; the detached helper never lives in the install directory; a quit that does not happen is recovered by a 15s watchdog that returns state to READY.
 
 ## Repo Docs Map
 
-- `README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync.
-- `docs/modules/` — per-feature contracts: `addon-project.md`, `agent-chat.md`, `agent-bubble.md`, `scribble.md`, `byok-local-models.md`, `onboarding-plugin-import.md`, `workflow-topbar.md`, `moodboard.md`, `director.md`, `world-labs-splats.md`, `job-queue.md`, `account-card-usage.md`, `model-import-pipeline.md`, `self-update.md`.
-- `docs/blender-5.2-porting.md` — C++/RNA/Python conventions of the 5.2 upstream pin and what to re-port after a develop merge.
-- `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.
-- `docs/seamless-updates.md` — the self-update flow and the manual cases CI can't cover. `docs/agent-bubble-linux-window-controls.md` — why the bubble's window controls are platform-gated.
-- `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `docs/telemetry-events.md` — telemetry event reference. `docs/byok-frontend-api.md` — BYOK endpoints.
-- `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs).
+- `README.md` — public build-from-source guide and licensing.
+- `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …).
+- `SECURITY.md` — vulnerability reporting. `NOTICE.md` — third-party notices.
