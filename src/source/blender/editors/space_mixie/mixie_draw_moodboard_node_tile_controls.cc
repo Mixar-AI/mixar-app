@@ -92,6 +92,26 @@ void moodboard_add_node_card_actions(uiBlock *block,
     moodboard_set_node_tooltip(
         save, "Export\n\nSave this node's generated result to disk.");
     x -= width + gap;
+
+    /* Between Edit and Export, which is the order the actions are reached in:
+     * adjust it, look at it, take it away. A card is a thumbnail sized for the
+     * graph, so judging a result means opening it at its own size. */
+    uiBut *preview = uiDefIconButO(block,
+                                   ButType::But,
+                                   "MIXIE_OT_moodboard_preview_media",
+                                   blender::wm::OpCallContext::ExecDefault,
+                                   ICON_WINDOW,
+                                   x,
+                                   row_y,
+                                   width,
+                                   height,
+                                   nullptr);
+    RNA_string_set(UI_but_operator_ptr_ensure(preview), "node_id", node_id);
+    moodboard_set_node_tooltip(
+        preview,
+        "Preview\n\nOpen this result in its own window. Several previews can "
+        "be open at once.");
+    x -= width + gap;
   }
 
   /* Edit toggles the settings panel and the prompt back in and out. It replaced

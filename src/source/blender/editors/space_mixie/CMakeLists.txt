@@ -43,6 +43,7 @@ set(SRC
   mixie_moodboard_ops_graph_video.cc
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
+  mixie_moodboard_ops_preview_window.cc
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
   mixie_ops.cc

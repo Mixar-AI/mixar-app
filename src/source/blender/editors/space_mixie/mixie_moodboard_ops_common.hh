@@ -90,6 +90,11 @@ void moodboard_graph_select_node(PointerRNA *scene_ptr,
 /** Select one link by index, clearing any other. False when it does not exist. */
 bool moodboard_graph_select_link(PointerRNA *scene_ptr, int index);
 
+/* mixie_moodboard_ops_preview.cc */
+/** The Image datablock a moodboard item references, or null. Shared so the
+ * preview window resolves media exactly the way playback does. */
+Image *moodboard_item_image(PointerRNA *scene_ptr, int index);
+
 /* mixie_moodboard_ops_graph_video.cc */
 /**
  * Handle a press on a node-owned movie's play affordance (or a double-click on

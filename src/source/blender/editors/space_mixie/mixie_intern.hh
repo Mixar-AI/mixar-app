@@ -391,6 +391,7 @@ void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot);
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame(wmOperatorType *ot);
+void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot);

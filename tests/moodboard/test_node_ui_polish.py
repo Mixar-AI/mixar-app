@@ -269,6 +269,43 @@ def test_node_panel_width_follows_the_card_not_the_ui_factor():
     assert "MOODBOARD_NODE_PANEL_MIN_TEXT_W * ui_scale" in node_ui
 
 
+def test_a_result_can_be_opened_in_its_own_preview_window():
+    """A card is a thumbnail sized for the graph, not for judging a result.
+    Each press opens a NEW window -- nothing reuses or reclaims an existing one,
+    which is what lets several results be compared side by side."""
+    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview_window.cc")
+    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
+    space = _read(SPACE_MIXIE / "space_mixie.cc")
+    cmake = _read(SPACE_MIXIE / "CMakeLists.txt")
+
+    assert "mixie_moodboard_ops_preview_window.cc" in cmake
+    assert "WM_operatortype_append(MIXIE_OT_moodboard_preview_media)" in space
+
+    # Built on the same primitive Blender's own render window uses; the context
+    # moves to the new area, so the space to fill is CTX_wm_area afterwards.
+    assert "WM_window_open(" in preview
+    assert "SPACE_IMAGE" in preview
+    assert "ED_space_image_set(bmain, sima, image, false)" in preview
+    # Nothing looks for an existing preview to reuse -- that is the feature.
+    assert "WM_window_find" not in preview
+
+    # A movie needs its range and auto-refresh, or it sits on frame one.
+    assert "IMA_ANIM_ALWAYS" in preview
+    assert "IMA_SRC_MOVIE" in preview
+
+    # REGISTER operator: a remembered id would preview the wrong card.
+    node_id = preview.split('"node_id"')[1]
+    assert "PROP_SKIP_SAVE" in preview.split("RNA_def_string(")[1]
+
+    # The button sits between Edit and Export, and only when there is media.
+    assert '"MIXIE_OT_moodboard_preview_media"' in tile
+    assert "ICON_WINDOW" in tile
+    assert tile.index("MIXIE_OT_moodboard_export_images") < tile.index(
+        "MIXIE_OT_moodboard_preview_media"
+    ) < tile.index("MIXIE_OT_moodboard_toggle_node_edit")
+    assert "if (has_media_result) {" in tile
+
+
 def test_sockets_name_themselves_while_a_noodle_is_in_flight():
     """Selection is no help mid-drag: the node being aimed at is usually not
     the selected one, and "what does this accept?" is exactly the question a
