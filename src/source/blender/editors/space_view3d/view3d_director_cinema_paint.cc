@@ -335,6 +335,29 @@ ui::Button *cinema_op_button(ui::Block *block,
   return but;
 }
 
+ui::Button *cinema_icon_button(ui::Block *block,
+                               const char *operator_id,
+                               const int icon,
+                               const rctf &rect,
+                               const char *tooltip)
+{
+  /* Emboss::None draws the icon and nothing else; the chip behind it is the
+   * caller's paint. */
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = uiDefIconButO(block,
+                                  ui::ButtonType::But,
+                                  operator_id,
+                                  blender::wm::OpCallContext::InvokeRegionWin,
+                                  icon,
+                                  int(rect.xmin),
+                                  int(rect.ymin),
+                                  int(BLI_rctf_size_x(&rect)),
+                                  int(BLI_rctf_size_y(&rect)),
+                                  tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  return but;
+}
+
 ui::Button *cinema_popup_button(ui::Block *block,
                            ui::BlockCreateFunc block_func,
                            const rctf &rect,

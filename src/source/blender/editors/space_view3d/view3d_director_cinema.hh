@@ -72,6 +72,12 @@ struct DirectorViewState;
 #define CINEMA_KEYCAP_RADIUS 4.0f
 #define CINEMA_PHONE_W 292.0f
 #define CINEMA_PHONE_H 37.0f
+/* The strip's controls flow right-to-left from the stage's right edge: phone,
+ * interpolation dropdown, tracking eyedropper. The phone collapses to an
+ * icon chip (CINEMA_PHONE_H square) when the hints would otherwise run into
+ * the controls. */
+#define CINEMA_INTERP_W 170.0f
+#define CINEMA_STRIP_GAP 10.0f
 
 /* Right panel. */
 #define CINEMA_SEGMENT_H 41.0f
@@ -268,6 +274,13 @@ ui::Button *cinema_popup_button(ui::Block *block,
                            const rctf &rect,
                            const char *tooltip);
 
+/** Icon-only operator button over painted chrome (the icon is the label). */
+ui::Button *cinema_icon_button(ui::Block *block,
+                               const char *operator_id,
+                               int icon,
+                               const rctf &rect,
+                               const char *tooltip);
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -280,8 +293,11 @@ ui::Button *cinema_popup_button(ui::Block *block,
  */
 void cinema_draw_stage(const ARegion *region);
 
-/** Branding chip, shortcut hints, phone button. */
-void cinema_draw_top_strip(ui::Block *block, const ARegion *region, const DirectorViewState &state);
+/** Shortcut hints; tracking eyedropper, interpolation dropdown, phone button. */
+void cinema_draw_top_strip(ui::Block *block,
+                           const bContext *C,
+                           const ARegion *region,
+                           const DirectorViewState &state);
 
 /** Settings card, template styles, speed. */
 void cinema_draw_left_panel(ui::Block *block,

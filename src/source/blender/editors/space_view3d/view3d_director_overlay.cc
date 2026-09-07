@@ -339,7 +339,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
     /* No empty-state card here: it would sit on top of the two columns, and
      * the right column's own "+ Add Camera" is the same first action. */
     cinema_draw_stage(region);
-    cinema_draw_top_strip(block, region, state);
+    cinema_draw_top_strip(block, C, region, state);
     cinema_draw_left_panel(block, C, region, state);
     cinema_draw_right_panel(block, C, region, state);
   }

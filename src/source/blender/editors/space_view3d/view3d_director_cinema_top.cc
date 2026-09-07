@@ -5,38 +5,161 @@
 /** \file
  * \ingroup spview3d
  *
- * Cinema Mode: the top strip — branding chip, keyboard hints, and the
- * phone hand-off button.
+ * Cinema Mode: the top strip — keyboard hints on the left; on the right,
+ * flowing leftwards from the stage's edge, the phone hand-off button, the
+ * keyframe interpolation dropdown and the object-tracking eyedropper.
  *
  * Painting only; see `view3d_director_cinema_paint.cc` for the primitives.
+ * The controls read the active shot's RNA and invoke Python-owned operators.
  */
 
 #include <algorithm>
+#include <cstring>
 
 #include "BLI_rect.h"
+#include "BLI_string.h"
+
+#include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
 
+#include "RNA_access.hh"
+
 #include "UI_interface.hh"
+#include "UI_interface_c.hh"
+#include "UI_resources.hh"
 
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
+#include "view3d_director_overlay_intern.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
+
+namespace {
+
+/** Design y of the strip's control row (the phone button's top). */
+constexpr float STRIP_Y = 159.0f;
+
+/** Phone glyph + label, centred as a pair; glyph only when \a compact. */
+void phone_button(const rctf &rect, const bool compact)
+{
+  const float u = cinema_unit();
+  const float phone_bg[4] = CINEMA_COL_PHONE;
+  const float phone_text[4] = {0.957f, 0.957f, 0.957f, 0.9f};
+  cinema_fill(rect, 18.0f * u, phone_bg);
+  const char *label = "Drive camera from your phone";
+  const float glyph_w = 12.0f * u;
+  const float glyph_gap = 9.0f * u;
+  const float label_w = compact ? 0.0f : cinema_text_width(label, CINEMA_FONT_VALUE * u);
+  const float pair_w = compact ? glyph_w : glyph_w + glyph_gap + label_w;
+  const float x0 = BLI_rctf_cent_x(&rect) - pair_w * 0.5f;
+  const float cy = BLI_rctf_cent_y(&rect);
+  /* A phone outline: rounded body with a short speaker line. */
+  const rctf body = {x0, x0 + glyph_w, cy - 9.0f * u, cy + 9.0f * u};
+  cinema_outline(body, 3.0f * u, phone_text, std::max(1.0f, 1.2f * u));
+  const rctf speaker = {x0 + glyph_w * 0.3f, x0 + glyph_w * 0.7f, cy + 5.5f * u, cy + 6.5f * u};
+  cinema_fill(speaker, 0.5f * u, phone_text);
+  if (!compact) {
+    cinema_text_left(label, x0 + glyph_w + glyph_gap, cy, CINEMA_FONT_VALUE * u, phone_text);
+  }
+}
+
+/** Interpolation dropdown: graded row, the current type's name, chevron. */
+void interpolation_dropdown(ui::Block *block,
+                            const bContext *C,
+                            const ARegion *region,
+                            const rctf &row,
+                            PointerRNA *shot_ptr,
+                            const bool enabled)
+{
+  const float u = cinema_unit();
+  const float top[4] = CINEMA_COL_ROW_TOP;
+  const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+  const float value_col[4] = CINEMA_COL_VALUE;
+  const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
+  cinema_panel(row, BLI_rctf_size_y(&row) * 0.5f, top, bottom);
+
+  const char *name = "Bezier";
+  const char *identifier = "BEZIER";
+  PropertyRNA *prop = shot_ptr->data ? RNA_struct_find_property(shot_ptr, "interpolation") :
+                                       nullptr;
+  if (prop != nullptr) {
+    const int value = RNA_property_enum_get(shot_ptr, prop);
+    const char *found = nullptr;
+    if (RNA_property_enum_name(const_cast<bContext *>(C), shot_ptr, prop, value, &found) &&
+        found != nullptr)
+    {
+      name = found;
+    }
+    if (RNA_property_enum_identifier(const_cast<bContext *>(C), shot_ptr, prop, value, &found) &&
+        found != nullptr)
+    {
+      identifier = found;
+    }
+  }
+  cinema_text_left(name, row.xmin + 16.0f * u, BLI_rctf_cent_y(&row), CINEMA_FONT_VALUE * u, value_col);
+  cinema_chevron(row.xmax - 18.0f * u, BLI_rctf_cent_y(&row), 10.0f * u, chevron);
+
+  ui::Button *but = cinema_popup_button(block,
+                                        view3d_director_interpolation_popup_create,
+                                        row,
+                                        "Interpolation: how the camera eases between keyframes");
+  director_overlay_disable_button(but, !enabled);
+  cinema_qa_record(region, row, "director_interpolation", identifier, -1);
+}
+
+/** Tracking eyedropper chip: green while a target is live. */
+void track_eyedropper(ui::Block *block,
+                      const ARegion *region,
+                      const rctf &chip,
+                      PointerRNA *shot_ptr,
+                      const bool enabled)
+{
+  bool tracking = false;
+  if (shot_ptr->data != nullptr) {
+    PropertyRNA *prop = RNA_struct_find_property(shot_ptr, "track_target");
+    if (prop != nullptr) {
+      tracking = RNA_property_pointer_get(shot_ptr, prop).data != nullptr;
+    }
+  }
+  if (tracking) {
+    const float on[4] = CINEMA_COL_EXPORT;
+    cinema_fill(chip, BLI_rctf_size_y(&chip) * 0.5f, on);
+  }
+  else {
+    const float top[4] = CINEMA_COL_ROW_TOP;
+    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    cinema_panel(chip, BLI_rctf_size_y(&chip) * 0.5f, top, bottom);
+  }
+  /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
+  ui::Button *but = cinema_icon_button(
+      block,
+      "MIXAR_OT_director_pick_track_target",
+      ICON_EYEDROPPER,
+      chip,
+      tracking ? "Stop tracking the picked object" :
+                 "Eyedropper: pick an object for the camera to keep pointing at");
+  if (but != nullptr) {
+    RNA_boolean_set(ui::button_operator_ptr_ensure(but), "clear", tracking);
+    director_overlay_disable_button(but, !enabled);
+  }
+  cinema_qa_record(region, chip, "director_track", tracking ? "clear" : "pick", -1);
+}
+
+}  // namespace
 
 /* -------------------------------------------------------------------- */
 /** \name Top strip
  * \{ */
 
 void cinema_draw_top_strip(ui::Block *block,
+                           const bContext *C,
                            const ARegion *region,
                            const DirectorViewState &state)
 {
   const float u = cinema_unit();
-
-  /* No branding chip: the design's top strip is the shortcut hints and the
-   * phone hand-off only; the topbar pill already names the mode. */
+  const bool editable = state.has_shot && !state.locked;
 
   /* Shortcut hints. The keys are what the Director keymap actually binds
    * (`director/ui/keymap.py`): O -> `mixar.director_navigate`, F -> capture
@@ -56,28 +179,62 @@ void cinema_draw_top_strip(ui::Block *block,
       {616.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
       {831.0f, {"Q", "E"}, 2, "Z-axis", false},
   };
+  /* Design x where each hint ends; the controls decide their width from it. */
+  float hint_end[4];
+  float hints_end = 0.0f;
+  for (int index = 0; index < 4; index++) {
+    const Hint &hint = hints[index];
+    hint_end[index] = hint.x +
+                      float(hint.stacked ? 3 : hint.key_count) * (CINEMA_KEYCAP_W + 2.0f) + 8.0f +
+                      cinema_text_width(hint.label, CINEMA_FONT_LABEL * u) / u;
+    hints_end = std::max(hints_end, hint_end[index]);
+  }
+
+  /* Controls, right-to-left from the stage's right edge. The phone keeps its
+   * full label only when the hints stay clear of it; otherwise it collapses
+   * to its glyph so the eyedropper and dropdown never push the hints out. */
+  const float strip_right = float(region->winx) -
+                            (cinema_margin(region) + CINEMA_PANEL_W + CINEMA_STAGE_INSET) * u;
+  const rctf band = cinema_design_rect(region, 0.0f, STRIP_Y, 0.0f, CINEMA_PHONE_H);
+  const float controls_w_full = CINEMA_PHONE_W + CINEMA_STRIP_GAP + CINEMA_INTERP_W +
+                                CINEMA_STRIP_GAP + CINEMA_PHONE_H;
+  const bool phone_full = (strip_right / u - controls_w_full) >= hints_end + 16.0f;
+  const float phone_w = (phone_full ? CINEMA_PHONE_W : CINEMA_PHONE_H) * u;
+
+  rctf phone = {strip_right - phone_w, strip_right, band.ymin, band.ymax};
+  rctf interp = {phone.xmin - (CINEMA_STRIP_GAP + CINEMA_INTERP_W) * u,
+                 phone.xmin - CINEMA_STRIP_GAP * u,
+                 band.ymin,
+                 band.ymax};
+  rctf eyedrop = {interp.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
+                  interp.xmin - CINEMA_STRIP_GAP * u,
+                  band.ymin,
+                  band.ymax};
+  const float controls_left = eyedrop.xmin;
+
   const float hint_col[4] = CINEMA_COL_LABEL;
-  for (const Hint &hint : hints) {
-    /* A hint clipped in half reads as a rendering bug; drop the whole group. */
-    const float need = hint.x + float(hint.stacked ? 3 : hint.key_count) *
-                                    (CINEMA_KEYCAP_W + 2.0f) +
-                       8.0f + cinema_text_width(hint.label, CINEMA_FONT_LABEL * u) / u;
-    if (need * u > float(region->winx)) {
+  for (int index = 0; index < 4; index++) {
+    const Hint &hint = hints[index];
+    /* A hint clipped in half, or run under a control, reads as a rendering
+     * bug; drop the whole group. */
+    if (hint_end[index] * u + 12.0f * u > std::min(controls_left, float(region->winx))) {
       continue;
     }
     float x = hint.x * u;
     const float row_y = cinema_design_rect(region, 0.0f, 168.0f, 0.0f, CINEMA_KEYCAP_H).ymin;
     if (hint.stacked) {
       /* W sits above the middle of A S D, as in the design. */
-      cinema_keycap(x + (CINEMA_KEYCAP_W + 2.0f) * u, cinema_design_rect(region, 0.0f, 145.0f, 0.0f, CINEMA_KEYCAP_H).ymin, "W");
-      for (int index = 1; index < hint.key_count; index++) {
-        cinema_keycap(x, row_y, hint.keys[index]);
+      cinema_keycap(x + (CINEMA_KEYCAP_W + 2.0f) * u,
+                    cinema_design_rect(region, 0.0f, 145.0f, 0.0f, CINEMA_KEYCAP_H).ymin,
+                    "W");
+      for (int key = 1; key < hint.key_count; key++) {
+        cinema_keycap(x, row_y, hint.keys[key]);
         x += (CINEMA_KEYCAP_W + 2.0f) * u;
       }
     }
     else {
-      for (int index = 0; index < hint.key_count; index++) {
-        cinema_keycap(x, row_y, hint.keys[index]);
+      for (int key = 0; key < hint.key_count; key++) {
+        cinema_keycap(x, row_y, hint.keys[key]);
         x += (CINEMA_KEYCAP_W + 2.0f) * u;
       }
     }
@@ -88,29 +245,18 @@ void cinema_draw_top_strip(ui::Block *block,
                      hint_col);
   }
 
+  PointerRNA shot_ptr = {};
+  view3d_director_active_shot_pointer(CTX_data_scene(const_cast<bContext *>(C)), &shot_ptr);
+
+  if (eyedrop.xmin > 0.0f) {
+    track_eyedropper(block, region, eyedrop, &shot_ptr, editable);
+    interpolation_dropdown(block, C, region, interp, &shot_ptr, editable);
+  }
   /* Phone hand-off. Painted per the design but INERT: nothing on the backend
    * (checked `origin/develop`) drives a camera from a phone, and a button
    * that silently does nothing is worse than one that says so. */
-  const rctf phone = cinema_design_rect(region, 1174.0f, 159.0f, CINEMA_PHONE_W, CINEMA_PHONE_H);
-  if (phone.xmax < float(region->winx)) {
-    const float phone_bg[4] = CINEMA_COL_PHONE;
-    const float phone_text[4] = {0.957f, 0.957f, 0.957f, 0.9f};
-    cinema_fill(phone, 18.0f * u, phone_bg);
-    /* Glyph + label, centred as a pair like the design. */
-    const char *label = "Drive camera from your phone";
-    const float glyph_w = 12.0f * u;
-    const float glyph_gap = 9.0f * u;
-    const float label_w = cinema_text_width(label, CINEMA_FONT_VALUE * u);
-    const float x0 = BLI_rctf_cent_x(&phone) - (glyph_w + glyph_gap + label_w) * 0.5f;
-    const float cy = BLI_rctf_cent_y(&phone);
-    /* A phone outline: rounded body with a short speaker line. */
-    const rctf body = {x0, x0 + glyph_w, cy - 9.0f * u, cy + 9.0f * u};
-    cinema_outline(body, 3.0f * u, phone_text, std::max(1.0f, 1.2f * u));
-    const rctf speaker = {x0 + glyph_w * 0.3f, x0 + glyph_w * 0.7f, cy + 5.5f * u, cy + 6.5f * u};
-    cinema_fill(speaker, 0.5f * u, phone_text);
-    cinema_text_left(label, x0 + glyph_w + glyph_gap, cy, CINEMA_FONT_VALUE * u, phone_text);
-  }
-  UNUSED_VARS(block, state);
+  phone_button(phone, !phone_full);
+  UNUSED_VARS(block);
 }
 
 /** \} */

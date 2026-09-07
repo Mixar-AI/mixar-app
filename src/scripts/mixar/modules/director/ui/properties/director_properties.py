@@ -20,6 +20,7 @@ from ...constants import (
     CAMERA_TEMPLATE_ITEMS,
     DEFAULT_BEAT_SECONDS,
     GUIDANCE_STRENGTH_ITEMS,
+    INTERPOLATION_ITEMS,
     MAX_BEAT_SECONDS,
     MIN_BEAT_SECONDS,
     SHOT_RENDER_OUTPUT_ITEMS,
@@ -101,6 +102,30 @@ def _on_handheld_update(self, _context):
     except Exception:
         # Property updates can fire during file load before the camera's
         # animation data is reachable; the next capture refreshes anyway.
+        pass
+
+
+def _on_interpolation_update(self, _context):
+    from ...core.interpolation import apply_interpolation
+
+    try:
+        apply_interpolation(self)
+    except Exception:
+        # Property updates can fire during file load before the camera's
+        # animation data is reachable; the next capture re-applies anyway.
+        pass
+
+
+def _track_target_poll(self, obj):
+    return getattr(obj, "type", None) != 'CAMERA'
+
+
+def _on_track_target_update(self, _context):
+    from ...core.tracking import refresh_tracking
+
+    try:
+        refresh_tracking(self)
+    except Exception:
         pass
 
 
@@ -213,6 +238,20 @@ class MixarDirectorShot(PropertyGroup):
         max=1.0,
         subtype='FACTOR',
         update=_on_handheld_update,
+    )
+    interpolation: EnumProperty(
+        name="Interpolation",
+        description="How the camera eases between this shot's keyframes",
+        items=INTERPOLATION_ITEMS,
+        default="BEZIER",
+        update=_on_interpolation_update,
+    )
+    track_target: PointerProperty(
+        name="Track Target",
+        description="Object the shot camera keeps pointing at (Track To constraint)",
+        type=bpy.types.Object,
+        poll=_track_target_poll,
+        update=_on_track_target_update,
     )
     camera_template: EnumProperty(
         name="Template Style",

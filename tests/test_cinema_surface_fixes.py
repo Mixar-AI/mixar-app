@@ -160,6 +160,9 @@ def test_qa_records_are_cleared_before_either_layout_draws():
     assert TIMELINE.index("cinema_qa_begin(region)") < TIMELINE.index(
         "cinema_draw_dock_panel(region)"
     )
+    # The top strip publishes its rects first; no column may clear them.
+    for name in ("view3d_director_cinema_left.cc", "view3d_director_cinema_right.cc"):
+        assert "cinema_qa_begin(" not in (VIEW3D / name).read_text(encoding="utf-8"), name
 
 
 def test_the_stage_spans_the_columns_and_hosts_the_gizmos():

@@ -237,7 +237,8 @@ void cinema_draw_left_panel(ui::Block *block,
                             const ARegion *region,
                             const DirectorViewState &state)
 {
-  cinema_qa_begin(region);
+  /* Records are cleared once per draw by the overlay, before the top strip
+   * (which publishes the eyedropper and interpolation rects) — not here. */
   const float u = cinema_unit();
   const float card_top[4] = CINEMA_COL_CARD_TOP;
   const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
