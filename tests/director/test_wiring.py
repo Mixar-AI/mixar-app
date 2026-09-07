@@ -35,7 +35,7 @@ def test_camera_beats_key_native_data_and_pack_stills():
 
     assert 'camera.keyframe_insert(data_path="location"' in capture
     assert 'camera.data.keyframe_insert(data_path="lens"' in capture
-    assert "repair_euler_rotation_continuity(camera)" in capture
+    assert "repair_rotation_continuity(camera)" in capture
     assert "bpy.ops.render.opengl" in capture
     # Capture packs the still into the blend but never boards it — stills reach
     # the moodboard only through the explicit Director export.
@@ -45,18 +45,31 @@ def test_camera_beats_key_native_data_and_pack_stills():
     assert "place_new_moodboard_item" in media_import
 
 
-def test_camera_euler_continuity_is_repaired_at_every_output_boundary():
+def test_rotation_continuity_is_repaired_on_every_key_writing_path():
     capture = _read("core/capture.py")
     preview = _read("ui/operators/capture_ops.py")
     render = _read("core/render_outputs.py")
     shot_api = _read("core/shot_api.py")
+    presets = _read("core/animation_presets.py")
+    beat_sync = _read("core/beat_sync.py")
 
     # New or deleted keys normalize immediately. Existing files normalize at
     # every action that evaluates an in-between camera pose.
-    assert capture.count("repair_euler_rotation_continuity(camera)") == 2
-    assert "repair_euler_rotation_continuity(shot.camera)" in preview
-    assert "repair_euler_rotation_continuity(shot.camera)" in render
-    assert "repair_euler_rotation_continuity(shot.camera)" in shot_api
+    assert capture.count("repair_rotation_continuity(camera)") == 2
+    assert "repair_rotation_continuity(shot.camera)" in preview
+    assert "repair_rotation_continuity(shot.camera)" in render
+    assert "repair_rotation_continuity(shot.camera)" in shot_api
+    # Character Turn presets key through matrix_world too (a 90 degree turn
+    # must never play as a 270 degree spin the other way).
+    assert "repair_rotation_continuity(obj)" in presets
+    # Keys adopted from the native timeline never pass capture_beat, and a
+    # native key MOVE reorders the chain the filter walks.
+    assert "repair_rotation_continuity(camera)" in beat_sync
+    assert "repair_rotation_continuity(shot.camera)" in beat_sync
+    # The mode-aware filter is the ONLY rotation path resolver: no caller
+    # keeps a private Euler-only copy.
+    assert "def _rotation_data_path" not in capture
+    assert "def _rotation_data_path" not in presets
 
 
 def test_video_handoff_remains_catalog_driven_and_provider_neutral():

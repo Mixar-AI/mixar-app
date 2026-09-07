@@ -17,9 +17,13 @@ A drop below the beat count (a genuine deletion — never a move, which keeps
 the count) prunes orphaned beats through the ordinary ``remove_beat`` path;
 growth — or a shot freshly under watch — adopts keys the strip has never
 seen as beats of the active draft shot, mirroring the native timeline's
-insertion behavior. Following ``auto_key``: the handler only *detects*, the
-debounced timer *mutates*, because editing scene data inside
-``depsgraph_update_post`` is unsafe (re-entrancy / crashes).
+insertion behavior. Any change to WHICH frames carry keys (including a
+move, which reorders the chronological chain) re-runs the rotation
+continuity filter: natively written keys never pass ``capture_beat``, so
+this is the only place their representation gets aligned. Following
+``auto_key``: the handler only *detects*, the debounced timer *mutates*,
+because editing scene data inside ``depsgraph_update_post`` is unsafe
+(re-entrancy / crashes).
 """
 
 from __future__ import annotations
@@ -32,6 +36,7 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 
 from .anim_curves import assigned_fcurves
+from .rotation_curves import repair_rotation_continuity
 from .shot_api import active_shot, refresh_manifest, scope_preview_range
 
 logger = get_logger(__name__)
@@ -45,7 +50,15 @@ _CAMERA_PATHS = {
     "rotation_axis_angle",
 }
 
-_state = {"key": None, "count": None, "prune": False, "adopt": False}
+_INITIAL_STATE = {
+    "key": None,
+    "count": None,
+    "frames": None,
+    "prune": False,
+    "adopt": False,
+    "repair": False,
+}
+_state = dict(_INITIAL_STATE)
 
 
 def _native_key_frames(camera) -> set[int]:
@@ -104,7 +117,8 @@ def adopt_native_keyframes(scene, shot) -> int:
     the camera animated while Director showed no keyframes. Adopted beats
     carry no packed still — only a capture can render one. Frames already
     claimed by any shot directing the same camera stay put: takes and
-    split shots deliberately share one camera timeline.
+    split shots deliberately share one camera timeline. The adopted keys
+    also never met the rotation continuity filter, so it runs here.
     """
     camera = getattr(shot, "camera", None)
     if camera is None or shot.state != 'DRAFT':
@@ -129,6 +143,7 @@ def adopt_native_keyframes(scene, shot) -> int:
         beat.frame = frame
     shot.active_beat_index = len(shot.beats) - 1
     scene.frame_end = max(scene.frame_end, missing[-1])
+    repair_rotation_continuity(camera)
     refresh_manifest(scene, shot)
     scope_preview_range(scene, shot)
     return len(missing)
@@ -159,14 +174,19 @@ def _on_depsgraph_update(scene, _depsgraph) -> None:
     if shot is None:
         _state["key"] = None
         _state["count"] = None
+        _state["frames"] = None
         return
     # Counts are only comparable while the same camera stays under watch;
     # switching shots resets the baseline instead of faking an edit.
     key = (scene.as_pointer(), shot.camera.name)
-    previous = _state["count"] if _state["key"] == key else None
-    count = len(_native_key_frames(shot.camera))
+    same_camera = _state["key"] == key
+    previous = _state["count"] if same_camera else None
+    previous_frames = _state["frames"] if same_camera else None
+    frames = _native_key_frames(shot.camera)
+    count = len(frames)
     _state["key"] = key
     _state["count"] = count
+    _state["frames"] = frames
     # A drop below the beat count is a deletion the timeline hasn't followed.
     if previous is not None and count < previous and count < len(shot.beats):
         _state["prune"] = True
@@ -177,32 +197,44 @@ def _on_depsgraph_update(scene, _depsgraph) -> None:
     if count and (previous is None or count > previous):
         _state["adopt"] = True
         _ensure_timer()
+    # Any change to which frames are keyed — fresh watch, growth, or a MOVE
+    # that keeps the count — can reorder the chronological key chain that
+    # the rotation continuity filter walks, so it must run again.
+    if count and frames != previous_frames:
+        _state["repair"] = True
+        _ensure_timer()
 
 
 def _sync_timer():
-    prune, adopt = _state["prune"], _state["adopt"]
-    _state["prune"] = _state["adopt"] = False
-    if not (prune or adopt):
+    prune, adopt, repair = _state["prune"], _state["adopt"], _state["repair"]
+    _state["prune"] = _state["adopt"] = _state["repair"] = False
+    if not (prune or adopt or repair):
         return None
     scene = getattr(bpy.context, "scene", None)
     shot = _watchable_shot(scene) if scene is not None else None
     if shot is None:
         return None
-    pruned = adopted = 0
+    pruned = adopted = repaired = 0
     try:
         if prune:
             pruned = prune_orphaned_beats(scene, shot)
         if adopt:
             adopted = adopt_native_keyframes(scene, shot)
+        if repair:
+            repaired = repair_rotation_continuity(shot.camera)
     except Exception:
         logger.exception("Beat sync could not reconcile native keyframes")
         return None
-    if pruned or adopted:
+    if pruned or adopted or repaired:
         if pruned:
             logger.info("Beat sync pruned %s orphaned keyframe(s)", pruned)
         if adopted:
             logger.info("Beat sync adopted %s native keyframe(s)", adopted)
-        _state["count"] = len(_native_key_frames(shot.camera))
+        if repaired:
+            logger.info("Beat sync realigned %s rotation key(s)", repaired)
+        frames = _native_key_frames(shot.camera)
+        _state["count"] = len(frames)
+        _state["frames"] = frames
         _redraw()
     return None
 
@@ -239,4 +271,4 @@ def unregister() -> None:
         handlers.remove(_on_depsgraph_update)
     if bpy.app.timers.is_registered(_sync_timer):
         bpy.app.timers.unregister(_sync_timer)
-    _state.update({"key": None, "count": None, "prune": False, "adopt": False})
+    _state.update(_INITIAL_STATE)
