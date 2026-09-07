@@ -49,7 +49,7 @@ constexpr float ROW_H = 30.0f;
 constexpr float ROW_TOP_GAP = 18.0f;
 constexpr float SIDE_PAD = 26.0f;
 constexpr float CHIP_W = 44.0f;
-constexpr float CHIP_H = 24.0f;
+constexpr float CHIP_H = 26.0f;
 constexpr float FIELD_W = 100.0f;
 constexpr float TRANSPORT_SIZE = 26.0f;
 constexpr float TRANSPORT_GAP = 26.0f;
@@ -103,9 +103,10 @@ void frame_field(ui::Block *block,
   const float u = cinema_unit();
   const float bg[4] = {0.149f, 0.149f, 0.149f, 1.0f};
   const float label_col[4] = CINEMA_COL_DIM;
-  cinema_fill(rect, BLI_rctf_size_y(&rect) * 0.5f, bg);
+  /* The same radius as every other rounded control, capped to a pill. */
+  cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), bg);
   cinema_text_left(label,
-                   rect.xmin + 14.0f * u,
+                   rect.xmin + 12.0f * u,
                    BLI_rctf_cent_y(&rect),
                    CINEMA_FONT_VALUE * u,
                    label_col);
@@ -145,7 +146,7 @@ void unit_chip(ui::Block *block,
   const float off_bg[4] = {0.176f, 0.176f, 0.176f, 1.0f};
   const float on[4] = CINEMA_COL_VALUE;
   const float off[4] = CINEMA_COL_DIM;
-  cinema_fill(rect, BLI_rctf_size_y(&rect) * 0.5f, active ? on_bg : off_bg);
+  cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), active ? on_bg : off_bg);
   cinema_text_center(label,
                      BLI_rctf_cent_x(&rect),
                      BLI_rctf_cent_y(&rect),

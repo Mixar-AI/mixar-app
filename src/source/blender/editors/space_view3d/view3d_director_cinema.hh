@@ -58,33 +58,41 @@ struct DirectorViewState;
 #define CINEMA_SCALE_MIN 0.6f
 
 /* Rows inside a panel. */
+/* ONE row class for every rounded control — dropdown rows, list rows,
+ * segment tracks, the strip's chips and dropdown, the dock's chips and fields
+ * — so the design reads as one system: same height, same radius, same
+ * gradient. Cards keep CINEMA_PANEL_RADIUS. */
 #define CINEMA_ROW_W 216.0f
-#define CINEMA_ROW_H 38.0f
-#define CINEMA_ROW_RADIUS 15.0f
-#define CINEMA_ROW_PITCH 79.0f  /* Labelled dropdown to the next one. */
-#define CINEMA_LIST_PITCH 34.0f /* Template / camera list rows. */
+#define CINEMA_ROW_H 32.0f
+#define CINEMA_ROW_RADIUS 14.0f
+#define CINEMA_ROW_PITCH 68.0f  /* Labelled dropdown to the next one. */
+#define CINEMA_LIST_PITCH 32.0f /* Template / camera list rows. */
 /** Rows a list can show before it has to window around the live one. */
 #define CINEMA_LIST_MAX_ROWS 4
 
 /* Top strip. */
-#define CINEMA_KEYCAP_W 19.0f
-#define CINEMA_KEYCAP_H 21.0f
+#define CINEMA_KEYCAP_W 17.0f
+#define CINEMA_KEYCAP_H 19.0f
 #define CINEMA_KEYCAP_RADIUS 4.0f
-#define CINEMA_PHONE_W 292.0f
-#define CINEMA_PHONE_H 37.0f
+/** First hint's design x; groups then pack leftwards-tight at this gap. */
+#define CINEMA_HINT_X 332.0f
+#define CINEMA_HINT_GAP 26.0f
+#define CINEMA_PHONE_W 260.0f
+#define CINEMA_PHONE_H 32.0f
 /* The strip's controls flow right-to-left from the stage's right edge: phone,
  * interpolation dropdown, tracking eyedropper. The phone collapses to an
  * icon chip (CINEMA_PHONE_H square) when the hints would otherwise run into
  * the controls. */
-#define CINEMA_INTERP_W 170.0f
+#define CINEMA_INTERP_W 150.0f
 #define CINEMA_STRIP_GAP 10.0f
 
-/* Right panel. */
-#define CINEMA_SEGMENT_H 41.0f
-#define CINEMA_SEGMENT_CHIP_W 81.0f
-#define CINEMA_SEGMENT_CHIP_H 37.0f
-#define CINEMA_EXPORT_H 59.0f
-#define CINEMA_PREVIEW_H 170.0f
+/* Right panel. Cards stack from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP so the
+ * column's foot lands on the same design y as the left column's. */
+#define CINEMA_CARD_GAP 11.0f
+#define CINEMA_CAMERAS_H 200.0f
+#define CINEMA_PREVIEW_H 178.0f
+#define CINEMA_SEGMENT_H 32.0f
+#define CINEMA_EXPORT_H 48.0f
 
 /* The columns' top edge and the stage's inset from them. The stage (the
  * rounded frame around the working viewport) spans exactly the columns'
@@ -95,20 +103,21 @@ struct DirectorViewState;
 /* Lowest content in either column. The height gate is DERIVED from these, so
  * moving a card down moves the gate with it instead of silently laying the
  * Speed slider and the Export button out below the region. */
-#define CINEMA_SPEED_CARD_Y 732.0f
-#define CINEMA_SPEED_CARD_H 81.0f
-#define CINEMA_EXPORT_Y 754.0f
+#define CINEMA_SPEED_CARD_Y 670.0f
+#define CINEMA_SPEED_CARD_H 70.0f
+#define CINEMA_EXPORT_Y 692.0f
 
-/* Keyframe spacing bounds. These MIRROR MIN_BEAT_SECONDS / MAX_BEAT_SECONDS
- * in `director/constants.py`, which are the `beat_seconds` RNA property's own
- * limits and therefore the slider's travel; keep the two in step. */
-#define CINEMA_BEAT_SECONDS_MIN 0.1f
-#define CINEMA_BEAT_SECONDS_MAX 10.0f
+/* Speed bounds. These MIRROR SPEED_MIN / SPEED_MAX in `director/constants.py`,
+ * the `shot.speed` RNA property's own limits and therefore the slider's
+ * travel; keep the two in step. The slider rests in the middle at 0 (the
+ * timing as captured); right contracts the shot, left expands it. */
+#define CINEMA_SPEED_MIN -1.0f
+#define CINEMA_SPEED_MAX 1.0f
 
 /* Type sizes. */
-#define CINEMA_FONT_LABEL 13.0f /* "Aspect Ratio", "My Cameras". */
-#define CINEMA_FONT_VALUE 15.0f /* Dropdown values, list rows. */
-#define CINEMA_FONT_TITLE 17.0f /* "Cinema Mode". */
+#define CINEMA_FONT_LABEL 12.0f /* "Aspect Ratio", "My Cameras", hints. */
+#define CINEMA_FONT_VALUE 13.0f /* Dropdown values, list rows. */
+#define CINEMA_FONT_TITLE 15.0f /* Dock "Duration". */
 
 /* Palette. */
 #define CINEMA_COL_CARD_TOP {0.133f, 0.137f, 0.137f, 0.96f}    /* #222323 */
@@ -116,6 +125,8 @@ struct DirectorViewState;
 #define CINEMA_COL_ROW_TOP {0.345f, 0.345f, 0.345f, 1.0f}      /* #585858 */
 #define CINEMA_COL_ROW_BOTTOM {0.141f, 0.141f, 0.141f, 1.0f}   /* #242424 */
 #define CINEMA_COL_LABEL {0.502f, 0.502f, 0.502f, 1.0f}        /* #808080 */
+/** Dropdown captions and card titles: darker and a little translucent. */
+#define CINEMA_COL_CAPTION {0.40f, 0.40f, 0.40f, 0.85f}
 #define CINEMA_COL_VALUE {1.0f, 1.0f, 1.0f, 1.0f}
 #define CINEMA_COL_DIM {0.388f, 0.388f, 0.388f, 1.0f}    /* #636363 */
 #define CINEMA_COL_DIMMER {0.216f, 0.216f, 0.216f, 1.0f} /* #373737 */
@@ -230,6 +241,13 @@ void cinema_keycap(float x, float y, const char *letter);
  * The bar is the Speed control's whole visual — the live slider sits over it.
  */
 void cinema_tick_meter(const rctf &rect, int count, int filled);
+
+/**
+ * Bipolar tick meter for a value in [-1, 1]: the centre tick is the neutral
+ * mark and the ticks between it and the value light up towards either end.
+ * \a count is made odd so a centre tick exists.
+ */
+void cinema_tick_meter_bipolar(const rctf &rect, int count, float value);
 
 /** Packed still preview, aspect-fitted and rounded. Silent when unavailable. */
 void cinema_image_preview(struct Image *image, const rctf &rect, float radius);

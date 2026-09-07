@@ -44,6 +44,15 @@ constexpr float VIEWPORT_TOP = 85.0f;
 /** Right column's left edge in the design's window space. */
 constexpr float COLUMN_X = 1486.0f;
 
+/* The column stacks from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP; the Export
+ * button's design y is a header token (it feeds the fit gate), so the stack
+ * is checked against it here rather than trusted. */
+constexpr float PREVIEW_Y = CINEMA_COLUMN_TOP + CINEMA_CAMERAS_H + CINEMA_CARD_GAP;
+constexpr float FPS_Y = PREVIEW_Y + CINEMA_PREVIEW_H + CINEMA_CARD_GAP;
+constexpr float RES_Y = FPS_Y + CINEMA_SEGMENT_H + CINEMA_CARD_GAP;
+static_assert(RES_Y + CINEMA_SEGMENT_H + CINEMA_CARD_GAP == CINEMA_EXPORT_Y,
+              "CINEMA_EXPORT_Y must be the foot of the right column's stack");
+
 /** Rect from design window coordinates, anchored to the region's right edge. */
 rctf design_rect_right(const ARegion *region,
                        const float x,
@@ -83,7 +92,7 @@ void segment_row(ui::Block *block,
 
   const rctf track = design_rect_right(
       region, COLUMN_X, design_y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
-  cinema_panel(track, CINEMA_PANEL_RADIUS * u, track_top, track_bottom);
+  cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);
 
   const float inset = 2.0f * u;
   const float cell_w = (BLI_rctf_size_x(&track) - inset * 2.0f) / 3.0f;
@@ -123,33 +132,34 @@ void cinema_draw_right_panel(ui::Block *block,
   const float u = cinema_unit();
   const float card_top[4] = CINEMA_COL_CARD_TOP;
   const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
-  const float label_col[4] = CINEMA_COL_LABEL;
+  const float label_col[4] = CINEMA_COL_CAPTION;
   const float value_col[4] = CINEMA_COL_VALUE;
   const float dim_col[4] = CINEMA_COL_DIM;
   Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   /* -------- Cameras -------- */
-  const rctf cameras = design_rect_right(region, COLUMN_X, 206.0f, CINEMA_PANEL_W, 226.0f);
+  const rctf cameras = design_rect_right(
+      region, COLUMN_X, CINEMA_COLUMN_TOP, CINEMA_PANEL_W, CINEMA_CAMERAS_H);
   cinema_panel(cameras, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
   cinema_text_left("My Cameras",
                    cameras.xmin + 13.0f * u,
-                   cameras.ymax - 25.0f * u,
+                   cameras.ymax - 22.0f * u,
                    CINEMA_FONT_LABEL * u,
                    label_col);
 
   /* Add Camera chip. */
   rctf add;
   add.xmax = cameras.xmax - 10.0f * u;
-  add.xmin = add.xmax - 102.0f * u;
-  add.ymax = cameras.ymax - 14.0f * u;
-  add.ymin = add.ymax - 23.0f * u;
+  add.xmin = add.xmax - 96.0f * u;
+  add.ymax = cameras.ymax - 12.0f * u;
+  add.ymin = add.ymax - 22.0f * u;
   const float add_top[4] = CINEMA_COL_ROW_TOP;
   const float add_bottom[4] = {0.192f, 0.192f, 0.192f, 1.0f}; /* #313131 */
   cinema_panel(add, BLI_rctf_size_y(&add) * 0.5f, add_top, add_bottom);
   cinema_text_center("+ Add Camera",
                      BLI_rctf_cent_x(&add),
                      BLI_rctf_cent_y(&add),
-                     11.5f * u,
+                     11.0f * u,
                      value_col);
   /* With nothing directed yet this is the session's entry point, and it must
    * stay `director_start`: that one adopts a camera the scene already has,
@@ -174,7 +184,7 @@ void cinema_draw_right_panel(ui::Block *block,
   }
 
   const float row_h = cinema_list_row_h() * u;
-  const float first_row_y = 276.0f;
+  const float first_row_y = CINEMA_COLUMN_TOP + 66.0f;
   /* The card fits CINEMA_LIST_MAX_ROWS and nothing scrolls, so the window
    * follows the active shot: the live camera is always one of the rows drawn,
    * and the highlight can never go missing. */
@@ -215,7 +225,7 @@ void cinema_draw_right_panel(ui::Block *block,
       cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
     }
     cinema_text_left(name,
-                     row.xmin + 14.0f * u,
+                     row.xmin + 12.0f * u,
                      BLI_rctf_cent_y(&row),
                      CINEMA_FONT_VALUE * u,
                      active ? value_col : dim_col);
@@ -236,7 +246,7 @@ void cinema_draw_right_panel(ui::Block *block,
 
   /* -------- Shot preview -------- */
   const rctf preview = design_rect_right(
-      region, COLUMN_X, 447.0f, CINEMA_PANEL_W, CINEMA_PREVIEW_H);
+      region, COLUMN_X, PREVIEW_Y, CINEMA_PANEL_W, CINEMA_PREVIEW_H);
   cinema_panel(preview, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
   /* The newest captured keyframe still IS the camera preview — Director
    * already packs one per beat, so no new render path is needed. */
@@ -261,7 +271,7 @@ void cinema_draw_right_panel(ui::Block *block,
   if (preview_image != nullptr) {
     rctf inner = preview;
     BLI_rctf_pad(&inner, -2.0f * u, -2.0f * u);
-    cinema_image_preview(preview_image, inner, 18.0f * u);
+    cinema_image_preview(preview_image, inner, CINEMA_ROW_RADIUS * u);
   }
   else {
     cinema_text_center("Capture a keyframe",
@@ -283,7 +293,7 @@ void cinema_draw_right_panel(ui::Block *block,
   }
   segment_row(block,
               region,
-              634.0f,
+              FPS_Y,
               fps_labels,
               fps_active,
               "WM_OT_context_set_int",
@@ -315,8 +325,8 @@ void cinema_draw_right_panel(ui::Block *block,
     const float on[4] = CINEMA_COL_VALUE;
     const float off[4] = CINEMA_COL_DIMMER;
     const rctf track = design_rect_right(
-        region, COLUMN_X, 695.0f, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
-    cinema_panel(track, CINEMA_PANEL_RADIUS * u, track_top, track_bottom);
+        region, COLUMN_X, RES_Y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
+    cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);
     const float inset = 2.0f * u;
     const float cell_w = (BLI_rctf_size_x(&track) - inset * 2.0f) / 3.0f;
     const char *const identifiers[3] = {"HD720", "HD1080", "K2"};
@@ -349,13 +359,13 @@ void cinema_draw_right_panel(ui::Block *block,
   const rctf export_rect = design_rect_right(
       region, COLUMN_X, CINEMA_EXPORT_Y, CINEMA_PANEL_W, CINEMA_EXPORT_H);
   const float export_col[4] = CINEMA_COL_EXPORT;
-  cinema_fill(export_rect, CINEMA_PANEL_RADIUS * u, export_col);
+  cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);
   const bool can_export = !state.beats.is_empty();
   const float export_text[4] = {1.0f, 1.0f, 1.0f, can_export ? 1.0f : 0.45f};
   cinema_text_center("Export to moodboard",
                      BLI_rctf_cent_x(&export_rect),
                      BLI_rctf_cent_y(&export_rect),
-                     16.0f * u,
+                     14.0f * u,
                      export_text);
   ui::Button *export_but = cinema_popup_button(block,
                                           view3d_director_render_popup_create,

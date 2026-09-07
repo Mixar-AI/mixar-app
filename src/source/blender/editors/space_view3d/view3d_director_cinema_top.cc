@@ -47,18 +47,18 @@ void phone_button(const rctf &rect, const bool compact)
   const float u = cinema_unit();
   const float phone_bg[4] = CINEMA_COL_PHONE;
   const float phone_text[4] = {0.957f, 0.957f, 0.957f, 0.9f};
-  cinema_fill(rect, 18.0f * u, phone_bg);
+  cinema_fill(rect, CINEMA_ROW_RADIUS * u, phone_bg);
   const char *label = "Drive camera from your phone";
-  const float glyph_w = 12.0f * u;
+  const float glyph_w = 11.0f * u;
   const float glyph_gap = 9.0f * u;
   const float label_w = compact ? 0.0f : cinema_text_width(label, CINEMA_FONT_VALUE * u);
   const float pair_w = compact ? glyph_w : glyph_w + glyph_gap + label_w;
   const float x0 = BLI_rctf_cent_x(&rect) - pair_w * 0.5f;
   const float cy = BLI_rctf_cent_y(&rect);
   /* A phone outline: rounded body with a short speaker line. */
-  const rctf body = {x0, x0 + glyph_w, cy - 9.0f * u, cy + 9.0f * u};
+  const rctf body = {x0, x0 + glyph_w, cy - 8.0f * u, cy + 8.0f * u};
   cinema_outline(body, 3.0f * u, phone_text, std::max(1.0f, 1.2f * u));
-  const rctf speaker = {x0 + glyph_w * 0.3f, x0 + glyph_w * 0.7f, cy + 5.5f * u, cy + 6.5f * u};
+  const rctf speaker = {x0 + glyph_w * 0.3f, x0 + glyph_w * 0.7f, cy + 4.5f * u, cy + 5.5f * u};
   cinema_fill(speaker, 0.5f * u, phone_text);
   if (!compact) {
     cinema_text_left(label, x0 + glyph_w + glyph_gap, cy, CINEMA_FONT_VALUE * u, phone_text);
@@ -78,7 +78,7 @@ void interpolation_dropdown(ui::Block *block,
   const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
   const float value_col[4] = CINEMA_COL_VALUE;
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
-  cinema_panel(row, BLI_rctf_size_y(&row) * 0.5f, top, bottom);
+  cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
 
   const char *name = "Bezier";
   const char *identifier = "BEZIER";
@@ -98,8 +98,8 @@ void interpolation_dropdown(ui::Block *block,
       identifier = found;
     }
   }
-  cinema_text_left(name, row.xmin + 16.0f * u, BLI_rctf_cent_y(&row), CINEMA_FONT_VALUE * u, value_col);
-  cinema_chevron(row.xmax - 18.0f * u, BLI_rctf_cent_y(&row), 10.0f * u, chevron);
+  cinema_text_left(name, row.xmin + 12.0f * u, BLI_rctf_cent_y(&row), CINEMA_FONT_VALUE * u, value_col);
+  cinema_chevron(row.xmax - 18.0f * u, BLI_rctf_cent_y(&row), 9.0f * u, chevron);
 
   ui::Button *but = cinema_popup_button(block,
                                         view3d_director_interpolation_popup_create,
@@ -125,12 +125,12 @@ void track_eyedropper(ui::Block *block,
   }
   if (tracking) {
     const float on[4] = CINEMA_COL_EXPORT;
-    cinema_fill(chip, BLI_rctf_size_y(&chip) * 0.5f, on);
+    cinema_fill(chip, CINEMA_ROW_RADIUS * cinema_unit(), on);
   }
   else {
     const float top[4] = CINEMA_COL_ROW_TOP;
     const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
-    cinema_panel(chip, BLI_rctf_size_y(&chip) * 0.5f, top, bottom);
+    cinema_panel(chip, CINEMA_ROW_RADIUS * cinema_unit(), top, bottom);
   }
   /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
   ui::Button *but = cinema_icon_button(
@@ -173,21 +173,27 @@ void cinema_draw_top_strip(ui::Block *block,
     const char *label;
     bool stacked; /* WASD draws W above ASD. */
   };
-  const Hint hints[] = {
-      {332.0f, {"O"}, 1, "Navigate", false},
-      {450.0f, {"F"}, 1, "Insert keyframe", false},
-      {616.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
-      {831.0f, {"Q", "E"}, 2, "Z-axis", false},
+  /* Groups pack leftwards at CINEMA_HINT_GAP from CINEMA_HINT_X: the design
+   * spread them across the strip, which read as loose once the strip also
+   * carried controls. `x` is resolved here from the measured label widths. */
+  Hint hints[] = {
+      {0.0f, {"O"}, 1, "Navigate", false},
+      {0.0f, {"F"}, 1, "Insert keyframe", false},
+      {0.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
+      {0.0f, {"Q", "E"}, 2, "Z-axis", false},
   };
   /* Design x where each hint ends; the controls decide their width from it. */
   float hint_end[4];
   float hints_end = 0.0f;
+  float next_x = CINEMA_HINT_X;
   for (int index = 0; index < 4; index++) {
-    const Hint &hint = hints[index];
+    Hint &hint = hints[index];
+    hint.x = next_x;
     hint_end[index] = hint.x +
                       float(hint.stacked ? 3 : hint.key_count) * (CINEMA_KEYCAP_W + 2.0f) + 8.0f +
                       cinema_text_width(hint.label, CINEMA_FONT_LABEL * u) / u;
     hints_end = std::max(hints_end, hint_end[index]);
+    next_x = hint_end[index] + CINEMA_HINT_GAP;
   }
 
   /* Controls, right-to-left from the stage's right edge. The phone keeps its
@@ -221,11 +227,12 @@ void cinema_draw_top_strip(ui::Block *block,
       continue;
     }
     float x = hint.x * u;
-    const float row_y = cinema_design_rect(region, 0.0f, 168.0f, 0.0f, CINEMA_KEYCAP_H).ymin;
+    /* Keycaps centre on the control band; W stacks one cap above. */
+    const float row_y = cinema_design_rect(region, 0.0f, STRIP_Y + (CINEMA_PHONE_H - CINEMA_KEYCAP_H) * 0.5f, 0.0f, CINEMA_KEYCAP_H).ymin;
     if (hint.stacked) {
       /* W sits above the middle of A S D, as in the design. */
       cinema_keycap(x + (CINEMA_KEYCAP_W + 2.0f) * u,
-                    cinema_design_rect(region, 0.0f, 145.0f, 0.0f, CINEMA_KEYCAP_H).ymin,
+                    row_y + (CINEMA_KEYCAP_H + 2.0f) * u,
                     "W");
       for (int key = 1; key < hint.key_count; key++) {
         cinema_keycap(x, row_y, hint.keys[key]);

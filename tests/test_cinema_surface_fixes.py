@@ -50,16 +50,19 @@ def _py_constant(name: str) -> float:
 # 1. Speed meter range and direction.
 
 
-def test_speed_meter_range_mirrors_the_python_beat_bounds():
-    assert _define("CINEMA_BEAT_SECONDS_MIN") == _py_constant("MIN_BEAT_SECONDS")
-    assert _define("CINEMA_BEAT_SECONDS_MAX") == _py_constant("MAX_BEAT_SECONDS")
+def test_speed_meter_range_mirrors_the_python_speed_bounds():
+    assert _define("CINEMA_SPEED_MIN") == _py_constant("SPEED_MIN")
+    assert _define("CINEMA_SPEED_MAX") == _py_constant("SPEED_MAX")
+    # The slider rests in the middle: 0 is the timing as captured.
+    assert _define("CINEMA_SPEED_MIN") == -_define("CINEMA_SPEED_MAX")
 
 
-def test_speed_meter_fills_the_way_the_slider_travels():
-    # The slider is a ButtonType::Scroll bound straight to `beat_seconds`, so it
-    # rises rightwards; the meter it paints over must rise with it.
-    assert "(beat_seconds - CINEMA_BEAT_SECONDS_MIN) / span" in LEFT
-    assert "CINEMA_BEAT_SECONDS_MAX - CINEMA_BEAT_SECONDS_MIN" in LEFT
+def test_speed_meter_is_bipolar_and_bound_to_the_shot():
+    # The slider is a ButtonType::Scroll bound straight to `shot.speed`; the
+    # meter lights from the centre towards the value, both ways.
+    assert "cinema_tick_meter_bipolar(meter, TICKS, (speed - centre_value) / half_span)" in LEFT
+    assert '"speed",' in LEFT and "beat_seconds" not in LEFT
+    assert "count |= 1;" in PAINT  # a centre tick always exists
     # The old hardcoded, inverted window is gone.
     assert "4.0f - beat_seconds" not in LEFT
     assert "4.0f - 0.1f" not in LEFT
@@ -94,8 +97,11 @@ def test_list_row_height_is_clamped_to_the_pitch():
     assert "const float row_h = CINEMA_ROW_H * u;" not in RIGHT
 
 
-def test_the_clamp_actually_bites_for_the_current_tokens():
-    assert _define("CINEMA_ROW_H") > _define("CINEMA_LIST_PITCH")
+def test_rows_never_exceed_the_list_pitch():
+    # One row class everywhere: the dropdown row IS the list row's height.
+    assert _define("CINEMA_ROW_H") >= _define("CINEMA_LIST_PITCH")
+    assert _define("CINEMA_SEGMENT_H") == _define("CINEMA_ROW_H")
+    assert _define("CINEMA_PHONE_H") == _define("CINEMA_ROW_H")
 
 
 # -------------------------------------------------------------------------
@@ -115,9 +121,10 @@ def test_height_gate_leaves_the_speed_slider_and_export_inside_the_region():
         _define("CINEMA_EXPORT_Y") + _define("CINEMA_EXPORT_H"),
     )
     required = content_bottom - _define("CINEMA_VIEWPORT_TOP")
-    # The old gate was 700 design units; the surface needs 728.
-    assert required == pytest.approx(728.0)
-    assert required > 700.0
+    # The compact layout pass brought the design's foot up from 728 so a
+    # MacBook viewport with the timeline open (~680) holds it at 1x.
+    assert required == pytest.approx(655.0)
+    assert required <= 680.0
 
 
 def test_the_surface_shrinks_to_fit_before_it_gives_up():
@@ -232,7 +239,7 @@ def test_frame_fields_yield_to_the_transport():
 
 
 def test_the_navigate_hint_is_bound():
-    assert '{332.0f, {"O"}, 1, "Navigate", false}' in TOP
+    assert '{0.0f, {"O"}, 1, "Navigate", false}' in TOP
     assert '"mixar.director_navigate",' in KEYMAP
     assert "type='O'," in KEYMAP
     assert "director_navigate" in KEYMAP.split("_OPERATOR_NAMES")[1]
@@ -372,3 +379,28 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     # different reading from the lit state.
     assert "const bool pressed =" in body
     assert "UI_SELECT" in body
+
+
+def test_every_rounded_control_shares_the_row_radius():
+    """Dropdowns, segments, chips, list rows, the strip's controls and the
+    Export button all round at CINEMA_ROW_RADIUS; only cards use the panel
+    radius. The dock's 26px chips cap the radius to a pill."""
+    assert "cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);" in RIGHT
+    assert "cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);" in RIGHT
+    assert "CINEMA_PANEL_RADIUS * u, track_top" not in RIGHT
+    assert "cinema_fill(rect, CINEMA_ROW_RADIUS * u, phone_bg);" in TOP
+    assert "cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);" in TOP
+    assert TOP.count("CINEMA_ROW_RADIUS * cinema_unit()") == 2
+    assert DOCK.count("std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f)") == 2
+
+
+def test_hints_pack_leftwards_from_the_first_group():
+    assert "next_x = hint_end[index] + CINEMA_HINT_GAP;" in TOP
+    assert "hint.x = next_x;" in TOP
+    assert "{332.0f," not in TOP
+
+
+def test_captions_use_the_dimmer_caption_colour():
+    assert "const float caption_col[4] = CINEMA_COL_CAPTION;" in LEFT
+    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in LEFT
+    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in RIGHT
