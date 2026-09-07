@@ -128,12 +128,15 @@ src/scripts/mixar/modules/uv_editor/
         └── panels.py            # Texel Density panel wrapper
 ```
 
+The per-panel packages above (`base/` … `texel_density/`) live under `uv_editor/ui/`, beside `ui/properties.py` and `ui/properties_handlers.py`; only `common/` sits at the module root. The table below is relative to `uv_editor/ui/` except where noted.
+
 ### C/C++ Files
 
 ```
-src/source/blender/editors/space_mixar_uv_properties/
-├── space_mixar_uv_properties.cc   # Main C implementation
-└── CMakeLists.txt                 # Build configuration
+src/source/blender/editors/space_image/
+├── image_mixar_uv_panels.cc       # C panels drawn in the Image Editor
+├── image_mixar_uv_panels.hh
+└── image_mixar_uv_helpers.cc
 ```
 
 ### Integration Files
@@ -146,7 +149,7 @@ src/scripts/startup/bl_ui/space_image.py   # Header panel selector (lines 750-76
 
 | File/Module                    | Purpose                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------------- |
-| `common/uv_utils.py`           | Common utilities: decorators (`@with_uv_context`), poll functions, context helpers     |
+| `../common/uv_utils.py`        | Common utilities: decorators (`@with_uv_context`), poll functions, context helpers     |
 | `properties.py`                | Defines `MixarUVUIState` PropertyGroup with `active_panel` enum and expansion states    |
 | `base/operators.py`            | Utility operators for opening/closing UV Properties panel                              |
 | `selection/operators.py`       | Selection tool operators (box, circle, lasso, more, less, similar, linked)             |
@@ -160,7 +163,7 @@ src/scripts/startup/bl_ui/space_image.py   # Header panel selector (lines 750-76
 | `transform/operators.py`       | Transform operators (snap, mirror, align, move/rotate/scale)                           |
 | `uv_set/operators.py`          | UDIM Tile operators (add, remove, fill)                                                |
 | `{module}/panels.py`           | Panel definitions for each module                                                      |
-| `space_mixar_uv_properties.cc` | C panels: Transform (Move/Resize/Cursor/Arrange), Redo panel, Unwrap                   |
+| `image_mixar_uv_panels.cc`     | C panels: Transform (Move/Resize/Cursor/Arrange), Redo panel, Unwrap                   |
 | `space_image.py`               | Panel selector buttons in IMAGE_EDITOR header                                           |
 
 ---
