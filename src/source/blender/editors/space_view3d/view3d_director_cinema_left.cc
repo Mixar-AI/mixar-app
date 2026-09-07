@@ -182,7 +182,7 @@ void dropdown_row(ui::Block *block,
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
   cinema_chevron(row.xmax - 18.0f * u, BLI_rctf_cent_y(&row), 9.0f * u, chevron);
 
-  ui::Button *but = cinema_popup_button(block, popup, row, tooltip);
+  ui::Button *but = cinema_popup_button(block, popup, row, tooltip, CinemaPopupSlot::Row);
   director_overlay_disable_button(but, !enabled);
   cinema_qa_record(region, row, "director_dropdown", caption, -1);
 }

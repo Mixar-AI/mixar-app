@@ -60,8 +60,12 @@ constexpr float TOOL_GAP = 6.0f;
 /** Clear space the frame fields must keep from the centred transport. */
 constexpr float FIELD_CLEARANCE = 16.0f;
 
-/** Left/right pointing media triangle, optionally with a stop bar. */
-void transport_glyph(const rctf &box, const bool forward, const bool bar, const bool pause)
+/**
+ * Media glyphs per the design: the preview (play) is a filled triangle; a
+ * step is a smaller triangle pointing outward with a dot on its INNER side
+ * (`◂●  ▶  ●▸`), not the stock bar-on-the-outside.
+ */
+void transport_glyph(const rctf &box, const bool forward, const bool step, const bool pause)
 {
   const float col[4] = {0.878f, 0.878f, 0.878f, 1.0f};
   const float cx = BLI_rctf_cent_x(&box);
@@ -77,19 +81,24 @@ void transport_glyph(const rctf &box, const bool forward, const bool bar, const 
     return;
   }
   const float dir = forward ? 1.0f : -1.0f;
-  /* The bar sits on the leading edge, so the triangle shifts back to keep the
-   * pair optically centred. */
-  const float shift = bar ? -dir * w * 0.28f : 0.0f;
-  cinema_triangle(cx + shift - dir * w * 0.5f, cy, dir * w, h, col);
-  if (bar) {
-    const float thick = std::max(1.0f, w * 0.30f);
-    const float edge = cx + shift + dir * (w * 0.5f + thick * 0.6f);
-    rctf stop = {std::min(edge, edge + dir * thick),
-                 std::max(edge, edge + dir * thick),
-                 cy - h,
-                 cy + h};
-    cinema_fill(stop, thick * 0.3f, col);
+  if (!step) {
+    cinema_triangle(cx - dir * w * 0.5f, cy, dir * w, h, col);
+    return;
   }
+  /* Step: a smaller triangle plus a dot, the pair centred on the slot. The
+   * dot sits on the side facing the play button. */
+  const float sh = h * 0.62f;
+  const float sw = sh * 0.92f;
+  const float dot = sh * 0.7f;
+  const float gap = sw * 0.35f;
+  const float total = sw + gap + dot;
+  const float outer = cx + dir * total * 0.5f; /* outer end of the pair */
+  /* Triangle: flat edge on the inner side, apex at the outer end. */
+  cinema_triangle(outer - dir * sw, cy, dir * sw, sh, col);
+  const float dot_x0 = outer - dir * (sw + gap);
+  const float dot_x1 = dot_x0 - dir * dot;
+  rctf disc = {std::min(dot_x0, dot_x1), std::max(dot_x0, dot_x1), cy - dot * 0.5f, cy + dot * 0.5f};
+  cinema_fill(disc, dot * 0.5f, col);
 }
 
 /** Small labelled numeric field ("Start 1"). */
@@ -207,7 +216,7 @@ void draw_transport(ui::Block *block,
   const struct {
     const char *op;
     bool forward;
-    bool bar;
+    bool step;
     const char *tip;
   } transport[3] = {
       {"MIXAR_OT_director_previous_beat", false, true, "Previous keyframe"},
@@ -221,7 +230,7 @@ void draw_transport(ui::Block *block,
     const float size = (index == 1 ? TRANSPORT_SIZE * PLAY_SCALE : TRANSPORT_SIZE) * u;
     const float slot_cx = tx + TRANSPORT_SIZE * u * 0.5f;
     const rctf box = {slot_cx - size * 0.5f, slot_cx + size * 0.5f, cy - size * 0.5f, cy + size * 0.5f};
-    transport_glyph(box, transport[index].forward, transport[index].bar, index == 1 && playing);
+    transport_glyph(box, transport[index].forward, transport[index].step, index == 1 && playing);
     cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
     ui::Button *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
     const bool enabled = index == 1 ? (state.beats.size() >= 2 &&

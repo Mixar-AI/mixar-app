@@ -139,11 +139,21 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);
 
+/** How a Cinema Mode popup row paints (the CinemaRow payload). */
+enum class MixarCinemaRowKind : int {
+  /** An option; a Row (toggle) button lights itself from UI_SELECT. */
+  Option = 0,
+  /** The current choice: the graded chip. */
+  Active = 1,
+  /** An action ("Export 2 Keyframes"): white label, hover fill, no chip. */
+  Action = 2,
+};
+
 /**
  * Tag \a but (created straight on a Block, not through a Layout) as a
- * Cinema Mode popup row; \a active lights it as the current choice.
+ * Cinema Mode popup row of \a kind.
  */
-void UI_mixar_cinema_row_tag(Button *but, bool active);
+void UI_mixar_cinema_row_tag(Button *but, MixarCinemaRowKind kind);
 
 /** Paint one #MixarCardElement::CinemaRow (`interface_mixar_cinema_row.cc`). */
 void UI_mixar_cinema_row_draw(Button *but, const rcti *rect, bool is_hover, bool is_active);

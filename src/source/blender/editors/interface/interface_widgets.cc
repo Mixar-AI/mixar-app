@@ -3898,8 +3898,9 @@ static void widget_menu_back(uiWidgetColors *wcol,
 
   widget_init(&wtb);
 
-  /* menu is 2nd level or deeper */
-  if (block_flag & BLOCK_POPUP) {
+  /* menu is 2nd level or deeper. Mixar: BLOCK_MIXAR_ROUND_ALL keeps every
+   * corner round regardless of the open direction. */
+  if (block_flag & (BLOCK_POPUP | BLOCK_MIXAR_ROUND_ALL)) {
     // rect->ymin -= 4.0;
     // rect->ymax += 4.0;
   }

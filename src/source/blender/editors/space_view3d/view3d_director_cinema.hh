@@ -286,11 +286,22 @@ ui::Button *cinema_op_button(ui::Block *block,
                         const rctf &rect,
                         const char *tooltip);
 
-/** Same, but opening a native block popup (the existing Director popups). */
+/**
+ * Which bar a popup opens from. The popup's rows take the bar's width
+ * (#director_popup_width) so a list never runs past the block it hangs
+ * from; one slot per bar class keeps the pointer handed to the popup stable.
+ */
+enum class CinemaPopupSlot : int { Row = 0, Strip = 1, Export = 2, Count };
+
+/**
+ * Same, but opening a native block popup (the existing Director popups). The
+ * popup receives \a rect's width through its create arg, via \a slot.
+ */
 ui::Button *cinema_popup_button(ui::Block *block,
                            ui::BlockCreateFunc block_func,
                            const rctf &rect,
-                           const char *tooltip);
+                           const char *tooltip,
+                           CinemaPopupSlot slot);
 
 /** Icon-only operator button over painted chrome (the icon is the label). */
 ui::Button *cinema_icon_button(ui::Block *block,

@@ -104,7 +104,8 @@ void interpolation_dropdown(ui::Block *block,
   ui::Button *but = cinema_popup_button(block,
                                         view3d_director_interpolation_popup_create,
                                         row,
-                                        "Interpolation: how the camera eases between keyframes");
+                                        "Interpolation: how the camera eases between keyframes",
+                                        CinemaPopupSlot::Strip);
   director_overlay_disable_button(but, !enabled);
   cinema_qa_record(region, row, "director_interpolation", identifier, -1);
 }

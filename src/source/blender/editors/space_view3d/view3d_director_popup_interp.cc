@@ -30,7 +30,7 @@ namespace blender {
 
 namespace {
 
-ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -46,7 +46,7 @@ ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void * /*arg
     return block;
   }
 
-  const int width = UI_UNIT_X * 11;
+  const int width = director_popup_width(arg, UI_UNIT_X * 11);
   const int row_h = int(UI_UNIT_Y * 1.1f);
   const int current = RNA_property_enum_get(&data.shot_ptr, prop);
 

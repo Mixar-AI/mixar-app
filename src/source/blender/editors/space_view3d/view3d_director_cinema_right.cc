@@ -370,7 +370,8 @@ void cinema_draw_right_panel(ui::Block *block,
   ui::Button *export_but = cinema_popup_button(block,
                                           view3d_director_render_popup_create,
                                           export_rect,
-                                          "Export keyframes and rendered guides to the Moodboard");
+                                          "Export keyframes and rendered guides to the Moodboard",
+                                          CinemaPopupSlot::Export);
   director_overlay_disable_button(export_but, !can_export);
   cinema_qa_record(region, export_rect, "director_export", "export", -1);
 }

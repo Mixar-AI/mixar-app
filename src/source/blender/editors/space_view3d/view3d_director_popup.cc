@@ -12,6 +12,7 @@
  * registered Director/camera properties, so no value logic is duplicated.
  */
 
+#include <algorithm>
 #include <cmath>
 
 #include "BKE_context.hh"
@@ -63,10 +64,30 @@ ui::Block *director_popup_block_begin(bContext *C, ARegion *region, const char *
   return block;
 }
 
+/* The bounds padding block_end applies around the rows. */
+static int director_popup_pad()
+{
+  return int(0.4f * UI_UNIT_X);
+}
+
+int director_popup_width(const void *arg, const int fallback)
+{
+  if (arg == nullptr) {
+    return fallback;
+  }
+  const float bar_w = *static_cast<const float *>(arg);
+  if (bar_w <= 0.0f) {
+    return fallback;
+  }
+  return std::max(int(bar_w) - director_popup_pad() * 2, UI_UNIT_X * 6);
+}
+
 void director_popup_block_end(ui::Block *block)
 {
   ui::block_direction_set(block, ui::UI_DIR_DOWN);
-  ui::block_bounds_set_normal(block, int(0.4f * UI_UNIT_X));
+  ui::block_bounds_set_normal(block, director_popup_pad());
+  /* A detached chip under its bar: all four corners round. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_ROUND_ALL);
 }
 
 void director_popup_state(ui::Button *but, const bool active, const bool enabled)
@@ -79,7 +100,8 @@ void director_popup_state(ui::Button *but, const bool active, const bool enabled
   }
   /* Paint as the Cinema surface's row class (graded chip when live) rather
    * than a stock menu item, so a list matches the block it opened from. */
-  ui::UI_mixar_cinema_row_tag(but, active);
+  ui::UI_mixar_cinema_row_tag(
+      but, active ? ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option);
 }
 
 void director_popup_section_label(ui::Block *block,
@@ -119,7 +141,7 @@ ui::Button *popup_op_button(ui::Block *block,
 /* -------------------------------------------------------------------- */
 /* Lens: projection type plus photographic focal-length presets. */
 
-ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -129,7 +151,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     return block;
   }
 
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int gap = int(UI_UNIT_Y * 0.3f);
   int y = 0;
@@ -233,7 +255,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 /* -------------------------------------------------------------------- */
 /* Aspect: named output formats. */
 
-ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -259,7 +281,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       {"VERTICAL", "Social media  ·  9:16", 9, 16},
       {"SQUARE", "Square  ·  1:1", 1, 1},
   };
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   int y = 0;
   for (const AspectPreset &preset : presets) {
@@ -287,7 +309,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 /* -------------------------------------------------------------------- */
 /* Moves: one-click cinematic camera moves, timing, and handheld. */
 
-ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -312,7 +334,7 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       {"Crane", "CRANE_UP", ICON_TRIA_UP, "Up", "CRANE_DOWN", ICON_TRIA_DOWN, "Down"},
       {"Pan", "PAN_LEFT", ICON_BACK, "Left", "PAN_RIGHT", ICON_FORWARD, "Right"},
   };
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int label_h = int(UI_UNIT_Y * 0.85f);
   const int gap = int(UI_UNIT_Y * 0.25f);

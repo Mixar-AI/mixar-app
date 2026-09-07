@@ -358,15 +358,24 @@ ui::Button *cinema_icon_button(ui::Block *block,
   return but;
 }
 
+namespace {
+/* Bar widths handed to popups, one per slot: the popup create function runs
+ * later, so the pointer it receives must outlive the draw. */
+float g_popup_bar_width[int(CinemaPopupSlot::Count)] = {};
+}  // namespace
+
 ui::Button *cinema_popup_button(ui::Block *block,
                            ui::BlockCreateFunc block_func,
                            const rctf &rect,
-                           const char *tooltip)
+                           const char *tooltip,
+                           const CinemaPopupSlot slot)
 {
+  float *width = &g_popup_bar_width[int(slot)];
+  *width = BLI_rctf_size_x(&rect);
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
   ui::Button *but = uiDefIconBlockBut(block,
                                       block_func,
-                                      nullptr,
+                                      width,
                                       ICON_NONE,
                                       int(rect.xmin),
                                       int(rect.ymin),

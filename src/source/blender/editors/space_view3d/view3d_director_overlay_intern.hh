@@ -40,6 +40,12 @@ struct DirectorPopupData {
 
 bool director_popup_data_get(bContext *C, DirectorPopupData *r_data);
 ui::Block *director_popup_block_begin(bContext *C, ARegion *region, const char *name);
+/**
+ * Row width for a popup: the width of the bar that opened it (passed by the
+ * Cinema surface through the block button's \a arg, see #cinema_popup_button)
+ * less the block's own padding, or \a fallback when opened from elsewhere.
+ */
+int director_popup_width(const void *arg, int fallback);
 void director_popup_block_end(ui::Block *block);
 /** Accent-depress the active choice; grey out what a locked take forbids. */
 void director_popup_state(ui::Button *but, bool active, bool enabled);

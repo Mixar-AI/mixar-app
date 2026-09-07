@@ -436,7 +436,7 @@ def test_popup_rows_paint_as_the_surface_row_class():
     popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
     state = popup[popup.index("void director_popup_state(") :]
     state = state[: state.index("\n}\n")]
-    assert "UI_mixar_cinema_row_tag(but, active)" in state
+    assert "ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option" in state
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
     assert f"ROW_RADIUS = {_define('CINEMA_ROW_RADIUS'):.1f}f" in row
     assert "ROW_TOP[4] = {0x58, 0x58, 0x58, 255}" in row  # CINEMA_COL_ROW_TOP #585858
@@ -481,3 +481,52 @@ def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
     closed = BUBBLE[BUBBLE.index("void ED_agent_bubble_windows_closed()") :]
     closed = closed[: closed.index("\n}\n")]
     assert "g_pill_cinema_seat_valid = false;" in closed
+
+
+def test_popups_size_to_their_bar_and_round_every_corner():
+    """A dropdown's list is a detached chip under its bar: the rows take the
+    bar's width (handed through the block button's arg), and the backdrop
+    rounds all four corners instead of squaring the ones facing the bar."""
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
+    assert "int director_popup_width(const void *arg, const int fallback)" in popup
+    assert "ui::block_flag_enable(block, ui::BLOCK_MIXAR_ROUND_ALL);" in popup
+    assert "director_popup_width(arg, UI_UNIT_X * 12)" in popup
+    interp = (VIEW3D / "view3d_director_popup_interp.cc").read_text(encoding="utf-8")
+    render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
+    assert "director_popup_width(arg" in interp and "director_popup_width(arg" in render
+    assert "g_popup_bar_width[int(slot)]" in PAINT
+    for name, slot in (("left", "Row"), ("top", "Strip"), ("right", "Export")):
+        text = (VIEW3D / f"view3d_director_cinema_{name}.cc").read_text(encoding="utf-8")
+        assert f"CinemaPopupSlot::{slot}" in text, name
+    widgets = (INTERFACE / "interface_widgets.cc").read_text(encoding="utf-8")
+    assert "block_flag & (BLOCK_POPUP | BLOCK_MIXAR_ROUND_ALL)" in widgets
+    header = (ROOT / "src/source/blender/editors/include/UI_interface_c.hh").read_text(encoding="utf-8")
+    assert "BLOCK_MIXAR_ROUND_ALL = 1 << 28," in header
+
+
+def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
+    """The Export popup's kind toggles and action rows paint as CinemaRows.
+    A Row (enum-flag toggle) keeps its VALUE in hardmax, so the tag must not
+    write its payload there — that clobbered the bit each toggle set."""
+    render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
+    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option)" in render
+    assert render.count("ui::MixarCinemaRowKind::Action") == 2
+    row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
+    tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
+    tag = tag[: tag.index("\n}\n")]
+    assert "if (but->type != ButtonType::Row) {" in tag
+    # The painter lays the row out itself from the FULL label (Blender clips
+    # drawstr for its stock layout), dropping the icon when the cell is tight.
+    assert "but->str.empty() ? but->drawstr.c_str() : but->str.c_str()" in row
+    assert "icon_size + icon_gap + label_w <= float(BLI_rcti_size_x(&text))" in row
+
+
+def test_transport_steps_are_triangle_plus_inner_dot():
+    """The design's transport: play is a filled triangle; each step is a
+    smaller triangle pointing outward with a dot on the side facing play."""
+    glyph = DOCK[DOCK.index("void transport_glyph(") :]
+    glyph = glyph[: glyph.index("\n}\n")]
+    assert "const float outer = cx + dir * total * 0.5f;" in glyph
+    assert "cinema_triangle(outer - dir * sw, cy, dir * sw, sh, col);" in glyph
+    assert "const float dot_x0 = outer - dir * (sw + gap);" in glyph
+    assert "stop" not in glyph
