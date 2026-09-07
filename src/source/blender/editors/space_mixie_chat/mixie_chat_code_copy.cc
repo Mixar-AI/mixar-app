@@ -93,6 +93,15 @@ void mixie_chat_code_hits_reset(MixieChatRuntime *rt)
   g_collect_seg = -1;
 }
 
+void mixie_chat_code_hits_forget(const MixieChatRuntime *rt)
+{
+  if (rt != nullptr && g_collect_rt == rt) {
+    g_collect_rt = nullptr;
+    g_collect_msg = -1;
+    g_collect_seg = -1;
+  }
+}
+
 void mixie_chat_md_seg_record(const rctf *text_rect, bool mono, int font_size)
 {
   if (!g_collect_rt || g_collect_msg < 0 || g_collect_seg < 0) {

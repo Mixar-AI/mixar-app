@@ -91,7 +91,10 @@ _ABANDONED_BODY = (
 def check_orphaned_turns() -> None:
     """Ask the server which local sessions still have live turns.
 
-    Called on every WS reconnect (main thread). Sessions queried: every
+    MAIN THREAD ONLY: it iterates ``bpy.data.scenes`` and reads scene RNA.
+    ``connection_manager.on_connected`` (WebSocket thread) reaches it through
+    ``run_on_main_thread``; the ``turn.status`` reply is handled off-thread
+    and only its prompt is marshalled back. Sessions queried: every
     scene's ``mixie_session_id`` whose local state is idle-ish and which has
     no SSE handler already running (the attach loop owns recovery then).
     """
