@@ -93,7 +93,20 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
   /* Ctrl+V / Cmd+V: paste image or text into chat.
    * Added to the main "Mixie Chat" keymap (not a separate footer keymap)
    * to avoid keyconfig lookup mismatches. The footer region also registers
-   * this keymap as a handler so the binding works in both regions. */
+   * this keymap as a handler so the binding works in both regions.
+   *
+   * MIXIE_CHAT_OT_paste, not MIXIE_CHAT_OT_paste_image: this chord fires
+   * when the composer does NOT hold text-edit focus, and paste_image
+   * returns CANCELLED for a clipboard that holds no image, so a text paste
+   * arriving here used to be dropped without a trace. The unified operator
+   * attaches an image if there is one and appends the text otherwise.
+   * (The inline hook in interface_handlers.cc still calls paste_image
+   * directly — it needs the CANCELLED to fall back to its own
+   * cursor-accurate ui_textedit_copypaste.)
+   *
+   * The Python addon keyconfig registers this chord too
+   * (space_mixie_chat/ui/keymap.py); it has to, because the GUI keyconfig
+   * preset reload wipes items from C-registered default-config keymaps. */
   KeyMapItem_Params paste_params{};
   paste_params.type = EVT_VKEY;
   paste_params.value = KM_PRESS;
@@ -102,7 +115,7 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
 #else
   paste_params.modifier = KM_CTRL;
 #endif
-  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste", &paste_params);
 }
 
 /** \} */
@@ -293,6 +306,15 @@ static void mixie_chat_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   smixie->runtime = runtime_backup;
 }
 
+static void mixie_chat_space_blend_read_data(BlendDataReader * /*reader*/, SpaceLink *sl)
+{
+  SpaceMixieChat *smixie = (SpaceMixieChat *)sl;
+  /* Never trust a runtime pointer read from disk — the reader keeps an
+   * unhandled pointer's stored value, and mixie_chat_ensure_runtime only
+   * allocates when it sees null. */
+  smixie->runtime = nullptr;
+}
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -316,6 +338,7 @@ void ED_spacetype_mixie_chat()
   st->keymap = mixie_chat_keymap;
   st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = mixie_chat_space_blend_write;
+  st->blend_read_data = mixie_chat_space_blend_read_data;
   st->listener = mixie_chat_space_listener;
 
   /* regions: main window (custom chat drawing) */

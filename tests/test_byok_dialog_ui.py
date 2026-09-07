@@ -143,7 +143,6 @@ def _wm(state='IDLE', **extra):
         byok_form_model='NONE',
         byok_form_api_key='',
         byok_form_openrouter_model='',
-        byok_form_codex_model='',
         byok_form_codex_bundle='',
         byok_form_local_mode='MANAGED',
         byok_form_local_model='NONE',
