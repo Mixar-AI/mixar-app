@@ -27,6 +27,8 @@ import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
 
+from .smoothing import catmull_rom
+
 from mixar.config.logging_config import get_logger
 
 from . import freeze
@@ -236,6 +238,9 @@ def _draw_strokes(strokes, color, width):
             points = points * 2
         if len(points) < 2:
             continue
+        # Draw-time only: the spline passes through every sample; what is
+        # stored, resolved and sent stays the raw stroke.
+        points = catmull_rom(points)
         batch_for_shader(shader, 'LINE_STRIP', {"pos": points}).draw(shader)
 
 

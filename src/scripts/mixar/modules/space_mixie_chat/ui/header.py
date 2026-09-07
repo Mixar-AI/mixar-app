@@ -110,6 +110,18 @@ class MIXIE_CHAT_HT_header(Header):
                         "mixar.scribble_mark_clear", text="", icon='X',
                     )
 
+            # Voice — dictate into the composer. The toggle is registered only
+            # where the platform has a recogniser (core/voice.py), so hasattr
+            # is the whole platform gate here.
+            if hasattr(bpy.types, 'MIXIE_CHAT_OT_voice_toggle'):
+                listening = bool(getattr(wm, 'mixie_chat_voice_listening', False))
+                layout.operator(
+                    "mixie_chat.voice_toggle",
+                    text="",
+                    icon='REC' if listening else 'PLAY_SOUND',
+                    depress=listening,
+                )
+
             if getattr(scene, 'mixie_chat_mode', '') == 'ADDON_PROJECT':
                 layout.separator()
                 draw_project_controls(layout, scene)

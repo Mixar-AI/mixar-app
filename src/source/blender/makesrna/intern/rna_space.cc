@@ -6205,8 +6205,8 @@ static void rna_def_space_properties_filter(StructRNA *srna)
       "show_properties_particles",
       "show_properties_physics",
       "show_properties_effects",
-      "show_properties_layers",
       "show_properties_strip",
+      "show_properties_layers",
       "show_properties_strip_modifier",
   };
 

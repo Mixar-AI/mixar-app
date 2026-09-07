@@ -9,6 +9,7 @@ Space Mixie Chat Module Constants
 Centralized configuration values for the Mixie Chat module.
 """
 
+import sys
 from enum import Enum
 
 
@@ -338,17 +339,20 @@ SCRIBBLE_MAX_STROKES = 64
 SCRIBBLE_MAX_POINTS = 4096
 
 # Idle delay after the last pen-up before C++ dispatches mixie_chat.ink_commit.
-# Informational mirror of the C++ wmTimer — Python never waits on it.
-SCRIBBLE_IDLE_COMMIT_MS = 850
+# Informational mirror of the C++ wmTimer (INK_IDLE_COMMIT_SEC) — Python never
+# waits on it. Short on purpose: with on-device recognition this pause IS most
+# of the delay between lifting the pen and seeing text.
+SCRIBBLE_IDLE_COMMIT_MS = 450
 
 # Recognition requests allowed on the wire at once. Each round trip sits at
 # the model's ~1 s floor, and a continuous writer commits a batch every
 # pause; with one slot the composer falls a full round trip further behind
 # the pen at every pause. Text still enters the composer strictly in written
 # order (core/scribble.py holds an early result until its predecessors
-# land). Two is enough to hide the round trip for a steady writer; more only
-# adds requests that then wait on each other's order.
-SCRIBBLE_MAX_IN_FLIGHT = 2
+# land). Three: the shorter idle commit produces batches faster than two
+# backend slots drain them; more only adds requests that then wait on each
+# other's order.
+SCRIBBLE_MAX_IN_FLIGHT = 3
 
 # Longest edge (px) of the ink bounding box in the rasterized PNG. Small
 # writing is upscaled to this too: the recognizer reads pixels, not strokes.
@@ -370,6 +374,62 @@ SCRIBBLE_RASTER_MIN_EDGE = 64
 # context so a continued sentence is transcribed in keeping with what is
 # already typed.
 SCRIBBLE_HINT_TAIL_CHARS = 200
+
+# On-device recognition (core/scribble_local.py; macOS Vision via the C++
+# mixie_chat.ink_recognize_local operator). Every batch is read locally
+# first — a few hundred ms, offline — and goes to the backend only when the
+# local reading is refused, fails, or is below this confidence. Empty local
+# text is never accepted: that is exactly the batch the stronger model
+# should see.
+SCRIBBLE_LOCAL_MIN_CONFIDENCE = 0.5
+# Poll period of the result pump while local batches are outstanding.
+SCRIBBLE_LOCAL_POLL_S = 0.03
+# A local batch that has not come back by then is failed and sent to the
+# backend, so a hung recogniser can never hang the composer. Measured Vision
+# round trips are 0.1-0.6 s on Apple silicon.
+SCRIBBLE_LOCAL_TIMEOUT_S = 1.5
+
+# How the local copy of the ink is FRAMED for the platform recogniser. The
+# app's raster scales the ink's longest edge to 1280 px for the vision LLM;
+# Vision's text recogniser refuses a one- or two-glyph batch drawn 300+ px
+# tall (line art, not text) and read the same ink perfectly once it was a
+# ~120 px text line with page margins around it — while two- and three-line
+# blocks at that total height still read line by line. So the local copy is
+# the ink scaled DOWN (never up) to this line height, capped at this width,
+# pasted on a white page with these margins.
+SCRIBBLE_LOCAL_LINE_HEIGHT_PX = 120
+SCRIBBLE_LOCAL_MAX_WIDTH_PX = 1400
+SCRIBBLE_LOCAL_PAGE_PAD_X = 160
+SCRIBBLE_LOCAL_PAGE_PAD_Y = 120
+
+# ============================================================================
+# VOICE INPUT CONSTANTS
+# ============================================================================
+# Platforms whose GHOST layer implements the Mixar_Speech* helpers
+# (GHOST_MixarSpeechCocoa.mm). An ALLOWLIST, like the bubble's window
+# controls: a platform earns Voice by having someone write its recogniser,
+# and the operator is not even registered elsewhere, so no surface can draw
+# a dead microphone.
+VOICE_INPUT_SUPPORTED = sys.platform == "darwin"
+
+# Recogniser event kinds — lockstep with SpeechEventKind in
+# GHOST_MixarSpeechCocoa.mm.
+VOICE_EVENT_LISTENING = 1
+VOICE_EVENT_PARTIAL = 2
+VOICE_EVENT_FINAL = 3
+VOICE_EVENT_STOPPED = 4
+VOICE_EVENT_ERROR = 5
+VOICE_EVENT_DENIED = 6
+
+# Poll period of the event pump while a session is up.
+VOICE_EVENT_POLL_S = 0.05
+# After Stop, how long to wait for the recogniser's own STOPPED (which
+# follows its final transcription) before finishing with what we have.
+VOICE_STOP_GRACE_S = 2.0
+# Longest dictation session; the recogniser's own limit is about a minute.
+VOICE_MAX_SESSION_S = 180.0
+# Stable toast id for permission / failure notices (re-pushing replaces).
+VOICE_TOAST_ID = "voice_input"
 
 # ============================================================================
 # IMAGE ATTACHMENT CONSTANTS

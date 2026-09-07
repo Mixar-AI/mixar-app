@@ -323,6 +323,12 @@ def reset_state() -> None:
     _pending.clear()
     _landed.clear()
     _deliver_seq = _next_seq
+    try:
+        from . import scribble_local
+
+        scribble_local.reset()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _pump() -> None:
@@ -341,7 +347,14 @@ def _pump() -> None:
 
 
 def _start(seq: int, scene, image_bytes: bytes) -> None:
-    """POST one batch and wire its completion back onto this queue."""
+    """Recognize one batch and wire its completion back onto this queue.
+
+    On device FIRST (``scribble_local``: a few hundred milliseconds, offline),
+    the backend after — when there is no local recogniser, when it fails or
+    times out, or when it is not confident enough. Whichever answers, the
+    text still enters the composer strictly in written order: both paths
+    settle through ``_finish``.
+    """
     _in_flight[seq] = scene
 
     def _on_success(response):
@@ -350,13 +363,37 @@ def _start(seq: int, scene, image_bytes: bytes) -> None:
     def _on_error(error):
         _finish(seq, "", error)
 
+    def _post_backend():
+        try:
+            _post(image_bytes, _hint_for(scene), _on_success, _on_error)
+        except Exception as e:
+            # A failure to even dispatch must still release the slot, or every
+            # later batch waits on a request that was never made.
+            logger.error("[Scribble] failed to submit handwriting: %s", e)
+            _finish(seq, "", e)
+
+    def _on_local(text: str, confidence: float, ok: bool):
+        from . import scribble_local
+
+        if ok and scribble_local.accept(text, confidence):
+            _finish(seq, _clean_recognized(text), None)
+        else:
+            _post_backend()
+
+    if _try_local(image_bytes, _on_local):
+        return
+    _post_backend()
+
+
+def _try_local(image_bytes: bytes, on_done) -> bool:
+    """Start the on-device reading of one batch; False when there is none."""
     try:
-        _post(image_bytes, _hint_for(scene), _on_success, _on_error)
-    except Exception as e:
-        # A failure to even dispatch must still release the slot, or every
-        # later batch waits on a request that was never made.
-        logger.error("[Scribble] failed to submit handwriting: %s", e)
-        _finish(seq, "", e)
+        from . import scribble_local
+
+        return scribble_local.try_start(image_bytes, on_done)
+    except Exception:  # noqa: BLE001 — the backend path is always there
+        logger.debug("[Scribble] local recognition unavailable", exc_info=True)
+        return False
 
 
 def _finish(seq: int, text: str, error: Optional[Exception]) -> None:
@@ -484,6 +521,15 @@ def _redraw() -> None:
     redraw_chat_areas()
 
 
+def release_composer() -> None:
+    """Public seam for sibling composer writers (voice input)."""
+    _release_composer()
+
+
+def redraw_chat() -> None:
+    _redraw()
+
+
 # =============================================================================
 # Result handling
 # =============================================================================
@@ -499,12 +545,19 @@ def _recognized_text(response) -> str:
     text = data.get("text")
     if not isinstance(text, str):
         return ""
-    # \x1F is in-band protocol on mixie_chat_input: a trailing one is how the
-    # C++ Enter hook asks on_chat_input_changed to submit. Recognized text is
-    # network-sourced, so it must never be able to send the message the user
-    # is still in the middle of writing. Newlines are kept — deliberate line
-    # breaks in the handwriting are transcribed as line breaks.
-    return text.replace("\x1F", "").strip()
+    return _clean_recognized(text)
+
+
+def _clean_recognized(text: str) -> str:
+    """Recognized text, from either recogniser, made safe for the composer.
+
+    \x1F is in-band protocol on mixie_chat_input: a trailing one is how the
+    C++ Enter hook asks on_chat_input_changed to submit. Recognized text is
+    machine-sourced, so it must never be able to send the message the user
+    is still in the middle of writing. Newlines are kept — deliberate line
+    breaks in the handwriting are transcribed as line breaks.
+    """
+    return (text or "").replace("\x1F", "").strip()
 
 
 def _release_composer() -> None:

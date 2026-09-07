@@ -93,9 +93,12 @@ void agent_ui_layout_build(const int window_w,
                            AgentTabId active_tab,
                            const bool /*agent_mode_active*/,
                            const bool has_transcript,
-                           AgentIslandLayout *r_layout)
+                           AgentIslandLayout *r_layout,
+                           const int pad_real_w)
 {
   *r_layout = {};
+  const bool pad = pad_real_w > 0;
+  r_layout->pad = pad;
 
   /* Scale is derived from the WINDOW, not from UI_SCALE_FAC.
    *
@@ -111,10 +114,21 @@ void agent_ui_layout_build(const int window_w,
   const float want_w = AGENT_ISLAND_W * u;
   const float want_h = AGENT_ISLAND_H * u;
 
-  const float region_w = float(window_w);
+  /* The pad lays out across its own (narrower) width with the unit above. */
+  const float region_w = pad ? float(pad_real_w) : float(window_w);
   const float region_h = float(window_h);
 
   r_layout->scale = u;
+
+  /* Horizontal extent in artboard units: the artboard's 1310 normally, the
+   * pad window's width in island units when padded. Every width below is
+   * derived from it so the pad re-flows instead of overflowing. */
+  const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
+  const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  const float panel_w = card_w - (AGENT_PANEL_X - AGENT_CARD_X) * 2.0f;
+  /* Artboard y that sits at the window's top edge: the tab strip normally;
+   * the pad has no strip and starts just above its card. */
+  const float top_du = pad ? float(AGENT_CARD_Y - AGENT_PAD_TOP_INSET) : float(AGENT_ISLAND_TOP);
 
   /* The bubble window is sized to the island, so this only bites during the
    * transient frames of a resize — and while it does, drawing nothing beats
@@ -124,7 +138,18 @@ void agent_ui_layout_build(const int window_w,
    * scaled height — and an exact comparison then rejects the whole island and
    * paints nothing, which reads as a dead black window. */
   const float slack = 2.0f;
-  if (region_w < want_w - slack || region_h < want_h - slack) {
+  if (pad) {
+    /* A pad is valid down to the narrowest width its composer row fits, and
+     * tall enough to hold the card header plus one input line. */
+    const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                         AGENT_CARD_PAD_BOTTOM) *
+                        u;
+    if (island_w < float(AGENT_PAD_MIN_W_UNITS) || region_h < min_h - slack) {
+      r_layout->valid = false;
+      return;
+    }
+  }
+  else if (region_w < want_w - slack || region_h < want_h - slack) {
     r_layout->valid = false;
     return;
   }
@@ -135,24 +160,33 @@ void agent_ui_layout_build(const int window_w,
   Frame f;
   f.left = 0.0f;
   /* Artboard y = AGENT_ISLAND_TOP (the tab strip) sits at the window's top
-   * edge; the status-pill band above it lives in its own window now. */
-  f.top = region_h + AGENT_ISLAND_TOP * u;
+   * edge; the status-pill band above it lives in its own window now. The pad
+   * puts its card top there instead (less the small inset). */
+  f.top = region_h + top_du * u;
   f.u = u;
 
-  r_layout->island = f.box(0, AGENT_ISLAND_TOP, AGENT_ISLAND_W, AGENT_ISLAND_H);
+  r_layout->island = f.box(0, top_du, island_w, region_h / u);
 
   /* --- Status pill --- */
   r_layout->pill = f.box(AGENT_PILL_X, AGENT_PILL_Y, AGENT_PILL_W, AGENT_PILL_H);
   r_layout->pill_dot = f.disc(AGENT_PILL_DOT_CX, AGENT_PILL_DOT_CY, AGENT_PILL_DOT_R);
   r_layout->pill_label_x = f.x(AGENT_PILL_LABEL_X);
 
-  /* --- Tab strip --- */
-  r_layout->strip = f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
+  /* --- Tab strip ---
+   * The pad has none: its rects are left EMPTY (zero-size at the origin) and
+   * the painter and the header controls skip the strip on `pad`; only the
+   * `active` flags are kept, since the card body still switches on them. */
+  r_layout->strip = pad ? rctf{} : f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     AgentTabLayout &tab = r_layout->tabs[i];
     const TabMetric &m = g_tab_metrics[i];
     const bool active = (i == int(active_tab));
+    if (pad) {
+      tab = {};
+      tab.active = active;
+      continue;
+    }
 
     /* The artboard draws the filled pill one unit taller and one unit higher
      * than the outlined ones. Reproduce it rather than normalising: at this
@@ -174,29 +208,37 @@ void agent_ui_layout_build(const int window_w,
     tab.label_x = f.x(label_du);
   }
 
-  r_layout->queue_count = f.box(
-      AGENT_QUEUE_COUNT_X, AGENT_QUEUE_COUNT_Y, AGENT_QUEUE_COUNT_W, AGENT_QUEUE_COUNT_H);
-  r_layout->new_badge = f.box(
-      AGENT_NEW_BADGE_X, AGENT_NEW_BADGE_Y, AGENT_NEW_BADGE_W, AGENT_NEW_BADGE_H);
+  r_layout->queue_count = pad ? rctf{} :
+                                f.box(AGENT_QUEUE_COUNT_X,
+                                      AGENT_QUEUE_COUNT_Y,
+                                      AGENT_QUEUE_COUNT_W,
+                                      AGENT_QUEUE_COUNT_H);
+  r_layout->new_badge = pad ? rctf{} :
+                              f.box(AGENT_NEW_BADGE_X,
+                                    AGENT_NEW_BADGE_Y,
+                                    AGENT_NEW_BADGE_W,
+                                    AGENT_NEW_BADGE_H);
 
   /* --- Card ---
    * Top pinned to the artboard's grid, foot pinned to the window's bottom, so
    * a taller window grows the conversation rather than detaching the composer
-   * from the card. At the compact height this is identical to the artboard. */
-  const float card_h = std::max(float(AGENT_CARD_H),
-                                region_h / u + AGENT_ISLAND_TOP - AGENT_CARD_Y);
-  r_layout->card = f.box(AGENT_CARD_X, AGENT_CARD_Y, AGENT_CARD_W, card_h);
+   * from the card. At the compact height this is identical to the artboard.
+   * (The pad's top is its own inset, so its card runs the whole window.) */
+  const float card_h = std::max(float(AGENT_CARD_H), region_h / u + top_du - AGENT_CARD_Y);
+  r_layout->card = f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, card_h);
   r_layout->card_fill = f.box(AGENT_CARD_X + AGENT_CARD_BORDER,
                               AGENT_CARD_Y + AGENT_CARD_BORDER,
-                              AGENT_CARD_W - AGENT_CARD_BORDER * 2,
+                              card_w - AGENT_CARD_BORDER * 2,
                               card_h - AGENT_CARD_BORDER * 2);
-  r_layout->card_grad_a[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X0);
+  /* The diagonal ramp's axis is measured on the artboard card; scale its x
+   * endpoints with the card so the pad keeps the same falloff. */
+  const float grad_kx = card_w / float(AGENT_CARD_W);
+  r_layout->card_grad_a[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X0 * grad_kx);
   r_layout->card_grad_a[1] = f.y(AGENT_CARD_Y + AGENT_CARD_GRAD_Y0);
-  r_layout->card_grad_b[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X1);
+  r_layout->card_grad_b[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X1 * grad_kx);
   r_layout->card_grad_b[1] = f.y(AGENT_CARD_Y + AGENT_CARD_GRAD_Y1);
 
-  r_layout->card_header = f.box(
-      AGENT_CARD_X, AGENT_CARD_Y, AGENT_CARD_W, AGENT_CARD_HEADER_H);
+  r_layout->card_header = f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, AGENT_CARD_HEADER_H);
 
   const float hdr_cy = AGENT_CARD_Y + AGENT_HDR_BTN_CY;
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
@@ -205,10 +247,10 @@ void agent_ui_layout_build(const int window_w,
   /* "FAQs" is right-aligned against the card's inner edge; the hit rect is
    * grown to the header's full height so a near-miss above or below the
    * 15-unit ink box still lands. */
-  const float faq_right = AGENT_CARD_X + AGENT_CARD_W - AGENT_HDR_FAQ_INSET;
+  const float faq_right = AGENT_CARD_X + card_w - AGENT_HDR_FAQ_INSET;
   r_layout->hdr_faq = f.box(faq_right - 60, AGENT_CARD_Y + 20, 60, 34);
 
-  r_layout->hdr_title_cx = f.x(AGENT_CARD_X + AGENT_CARD_W * 0.5f);
+  r_layout->hdr_title_cx = f.x(AGENT_CARD_X + card_w * 0.5f);
   r_layout->hdr_title_y = f.y(AGENT_CARD_Y + AGENT_CARD_HEADER_H * 0.5f);
 
   /* --- Inner panel, and the stack that hangs off the card's foot --- */
@@ -218,23 +260,25 @@ void agent_ui_layout_build(const int window_w,
    * card-top offset here instead left a 76-unit band of bare card gradient
    * under every pane — the "green strip" under the prompt box. */
   const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_X - AGENT_CARD_X);
-  r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, AGENT_PANEL_W, panel_h);
+  r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, panel_w, panel_h);
 
   const float chip_y = card_bottom - AGENT_CARD_PAD_BOTTOM - AGENT_CHIP_H;
 
-  /* The input is not a box inside the panel — with no conversation it IS the
-   * panel (the artboard's one big field with the ghost text at its top-left).
+  /* The input bubble shares the same horizontal bounds (AGENT_SEG_X) as the
+   * button row below it, aligning them on both sides with uniform margins.
    * Once a transcript exists it collapses to a strip above the chip row and
    * the transcript region owns the panel. */
+  const float input_x = AGENT_SEG_X;
+  const float input_w = card_w - AGENT_SEG_X * 2.0f;
   const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - AGENT_INPUT_H)
                                        : AGENT_PANEL_Y;
-  r_layout->input = f.box(AGENT_PANEL_X,
+  r_layout->input = f.box(input_x,
                           input_y,
-                          AGENT_PANEL_W,
+                          input_w,
                           chip_y - AGENT_INPUT_GAP - input_y);
   r_layout->transcript = f.box(AGENT_PANEL_X,
                                AGENT_PANEL_Y,
-                               AGENT_PANEL_W,
+                               panel_w,
                                input_y - AGENT_TRANSCRIPT_GAP - AGENT_PANEL_Y);
   r_layout->prompt_x = f.x(AGENT_PROMPT_X);
   /* Optical centre of the first line's ink box, not its baseline — the
@@ -248,12 +292,18 @@ void agent_ui_layout_build(const int window_w,
       AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
   const float scribble_x = AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP;
   r_layout->chip_scribble = f.box(scribble_x, chip_y, AGENT_CHIP_SCRIBBLE_W, AGENT_CHIP_H);
-  const float reading_x = scribble_x + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_GAP;
+  const float voice_x = scribble_x + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_GAP;
+  r_layout->chip_voice = f.box(voice_x, chip_y, AGENT_CHIP_VOICE_W, AGENT_CHIP_H);
+  const float reading_x = voice_x + AGENT_CHIP_VOICE_W + AGENT_CHIP_GAP;
   r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(
       reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
-  r_layout->btn_generate = f.box(
-      AGENT_BTN_GENERATE_X, chip_y, AGENT_BTN_GENERATE_W, AGENT_CHIP_H);
+  /* Generate keeps the artboard's right inset against whatever card width
+   * this layout has (AGENT_BTN_GENERATE_X generalised to `card_w`). */
+  r_layout->btn_generate = f.box(card_w - AGENT_SEG_X - AGENT_BTN_GENERATE_W,
+                                 chip_y,
+                                 AGENT_BTN_GENERATE_W,
+                                 AGENT_CHIP_H);
 }
 
 /** \} */

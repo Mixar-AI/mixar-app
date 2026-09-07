@@ -3806,6 +3806,96 @@ extern "C" void Mixar_WindowAnchorAtParentCentreBottom(void *child_handle,
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
+/* Anchor `child` at a fixed OFFSET from `parent`'s top-left — logical
+ * 96-DPI units, y-down, the convention the Cocoa counterpart shares — and
+ * keep it there across parent moves and resizes. This is the minimised
+ * pill's seat once the user has dragged it: RELATIVE_OFFSET tracking, which
+ * Mixar_WindowEndDrag already updates after a drag and which clamps the
+ * child inside the parent on every reposition. */
+extern "C" void Mixar_WindowAnchorAtParentOffset(void *child_handle,
+                                                 void *parent_handle,
+                                                 int offset_x,
+                                                 int offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent) return;
+
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  int dx = (int)(offset_x * scale);
+  int dy = (int)(offset_y * scale);
+
+  SetWindowLongPtr(child, GWLP_HWNDPARENT, (LONG_PTR)parent);
+  s_child_windows.insert(child);
+  mixar_install_parent_hook(child, parent, MIXAR_TRACK_RELATIVE_OFFSET, 0, dx, dy);
+
+  auto it = s_parent_tracks.find(child);
+  if (it != s_parent_tracks.end()) {
+    mixar_reposition_child(it->second);
+  }
+
+  /* Same Z-order guard as the centre-bottom anchor. */
+  SetWindowPos(child, HWND_TOP, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+/* Where `child` currently sits relative to `parent`, in the convention
+ * Mixar_WindowAnchorAtParentOffset takes (logical units from the parent's
+ * top-left to the child's top-left, y-down). False when either HWND is
+ * gone. */
+extern "C" bool Mixar_WindowGetParentOffset(void *child_handle,
+                                            void *parent_handle,
+                                            int *r_offset_x,
+                                            int *r_offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent || !r_offset_x || !r_offset_y) return false;
+
+  RECT pr, cr;
+  if (!GetWindowRect(parent, &pr) || !GetWindowRect(child, &cr)) return false;
+
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  *r_offset_x = (int)((cr.left - pr.left) / scale);
+  *r_offset_y = (int)((cr.top - pr.top) / scale);
+  return true;
+}
+
+/* Logical (96-DPI) client size — the units Mixar_WindowForceSize takes. */
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *r_width, int *r_height)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd || !r_width || !r_height) return false;
+  RECT rc;
+  if (!GetClientRect(hwnd, &rc)) return false;
+  float scale = mixar_get_dpi_scale_from_ghost(window_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  *r_width = (int)((rc.right - rc.left) / scale);
+  *r_height = (int)((rc.bottom - rc.top) / scale);
+  return true;
+}
+
+/* Move `child` so its top-left sits `offset` (logical units, y-down) from
+ * `parent`'s top-left. Position only — re-seat the parent tracking
+ * (Mixar_WindowSetParentTracked) afterwards so the RELATIVE_OFFSET hook
+ * follows from the new place instead of snapping back to the old one. */
+extern "C" void Mixar_WindowPlaceInParent(void *child_handle,
+                                          void *parent_handle,
+                                          int offset_x,
+                                          int offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent) return;
+  RECT pr;
+  if (!GetWindowRect(parent, &pr)) return;
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  int x = pr.left + (int)(offset_x * scale);
+  int y = pr.top + (int)(offset_y * scale);
+  SetWindowPos(child, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 /* ---- Win32 animation engine ----------------------------------------- */
 
 /* Ease-out cubic: fast start, smooth deceleration. */

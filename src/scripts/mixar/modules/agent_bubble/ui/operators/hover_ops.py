@@ -3,14 +3,16 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Hover expand/collapse pump for the agent bubble (Higgsfield-style).
+"""Hover-collapse pump for the agent bubble (Higgsfield-style).
 
-The resting state of the chat is the elongated pill; hovering it expands the
-island, and moving the cursor off the island collapses it back. All policy
-(hit-testing in native screen space, grace ticks, cooldowns, the open-popup
-guard) lives in the C++ operator ``mixar.bubble_hover_tick`` — this module
-only provides the heartbeat, because ``bpy.app.timers`` is the one sanctioned
-way to poll from Python without touching ``bpy`` from a thread.
+The resting state of the chat is the elongated pill. Moving the cursor off the
+open island collapses it back to the pill; the pill itself opens on CLICK, not
+on hover (``bubble_header_drag_op.py``'s pill gesture), so this pump only ever
+takes the island away. All policy (hit-testing in native screen space, grace
+ticks, cooldowns, the open-popup guard) lives in the C++ operator
+``mixar.bubble_hover_tick`` — this module only provides the heartbeat, because
+``bpy.app.timers`` is the one sanctioned way to poll from Python without
+touching ``bpy`` from a thread.
 
 Two gates keep the heartbeat honest:
 

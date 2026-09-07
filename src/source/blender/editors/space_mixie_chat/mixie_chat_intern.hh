@@ -590,21 +590,38 @@ void mixie_chat_rules_set_visible(bContext *C, bool visible);
  * (footer handler) or on empty chat background (try_auto_open, checked
  * LAST in mixie_chat_ui_handler so interactive targets keep pen taps). */
 void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
+void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
+void mixie_chat_ink_draw_strokes(
+    MixieChatRuntime *rt, float scale, float ease, float offset_x, float offset_y);
+ARegion *mixie_chat_ink_area_main_region(ScrArea *area);
+int mixie_chat_ink_header_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ink_header_handler_register(ARegion *region);
 bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event);
 bool mixie_chat_ink_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_ink_set_visible(bContext *C, bool visible);
 bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event);
-/** Open from a stylus press seen INSIDE the composer's active text-edit
- * (interface_handlers.cc hook — the footer region handler never gets that
- * press; the caller then exits editing via BUTTON_STATE_EXIT). */
-bool mixie_chat_ink_composer_stylus_open(bContext *C);
+/** Open from a PEN STROKE that started on the composer (interface_handlers.cc
+ * text-edit hooks — the footer region handler never gets those presses; the
+ * caller then exits editing via BUTTON_STATE_EXIT). Seeds the first stroke
+ * from the press point. Window coordinates. */
+bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
+                                           const int press_xy[2],
+                                           const int cur_xy[2],
+                                           float pressure);
 void mixie_chat_ink_footer_handler_register(ARegion *region);
 /** Region-exit cleanup for the idle-commit timer (window close / file load
  * would otherwise leave the process-global wmTimer pointer dangling). */
 void mixie_chat_ink_idle_timer_remove(wmWindowManager *wm);
 void MIXIE_CHAT_OT_ink_flush(wmOperatorType *ot);
 void MIXIE_CHAT_OT_ink_release_composer(wmOperatorType *ot);
+/* On-device recognition (mixie_chat_ink_local.cc): start one batch / pop one result. */
+void MIXIE_CHAT_OT_ink_recognize_local(wmOperatorType *ot);
+void MIXIE_CHAT_OT_ink_local_poll(wmOperatorType *ot);
+/* Voice input (mixie_chat_voice.cc): session start/stop, pop one recogniser event. */
+void MIXIE_CHAT_OT_voice_start(wmOperatorType *ot);
+void MIXIE_CHAT_OT_voice_stop(wmOperatorType *ot);
+void MIXIE_CHAT_OT_voice_poll(wmOperatorType *ot);
 
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
 bool mixie_chat_handle_slot_action_click(bContext *C,

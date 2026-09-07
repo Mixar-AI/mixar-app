@@ -653,8 +653,7 @@ def test_timeline_strip_can_split_and_delete():
     anim_curves = _read("core/anim_curves.py")
     handheld_source = _read("core/handheld.py")
     timeline_source = _read("core/timeline.py")
-    assert "animdata_get_channelbag_for_assigned_slot" in anim_curves
-    assert "def remove_fcurves" in anim_curves
+    assert "common.utils.animation import assigned_fcurves, remove_fcurves" in anim_curves
     assert "action.fcurves" not in capture
     assert "action.fcurves" not in handheld_source
     assert "assigned_fcurves" in handheld_source

@@ -6,6 +6,8 @@
 
 import re
 
+from ...common.utils.animation import action_fcurves, assigned_fcurves
+
 
 def get_action_and_driver_fcurves(obj):
     """Get F-curves from both actions and drivers of an object.
@@ -17,19 +19,12 @@ def get_action_and_driver_fcurves(obj):
         list: List of F-curve collections from actions and drivers.
     """
     fcs = []
-    if obj.animation_data:
-
-        # Fcurves from action
-        if obj.animation_data.action:
-            fcs.append(obj.animation_data.action.fcurves)
-            # for fc in obj.animation_data.action.fcurves:
-            #    fcs.append(fc)
-
-        # Fcurves from drivers
-        for fc in obj.animation_data.drivers:
-            fcs.append(obj.animation_data.drivers)
-            # for fc in obj.animation_data.drivers:
-            #    fcs.append(fc)
+    collection = action_fcurves(obj)
+    if collection is not None:
+        fcs.append(collection)
+    if obj.animation_data and obj.animation_data.drivers:
+        # One collection, not one reference per driver: callers mutate it.
+        fcs.append(obj.animation_data.drivers)
 
     return fcs
 
@@ -48,7 +43,7 @@ def get_material_fcurves(mat):
     fcurves = []
 
     if tree.animation_data and tree.animation_data.action:
-        for fc in tree.animation_data.action.fcurves:
+        for fc in assigned_fcurves(tree):
             match = re.match(
                 r'^nodes\[".+"\]\.inputs\[(\d+)\]\.default_value$', fc.data_path
             )
@@ -110,7 +105,7 @@ def get_mp_fcurves(mp):
     fcurves = []
 
     if tree.animation_data and tree.animation_data.action:
-        for fc in tree.animation_data.action.fcurves:
+        for fc in assigned_fcurves(tree):
             match = re.match(
                 r'^nodes\[".+"\]\.inputs\[(\d+)\]\.default_value$', fc.data_path
             )

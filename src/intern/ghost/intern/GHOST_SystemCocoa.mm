@@ -1050,6 +1050,216 @@ extern "C" void Mixar_WindowAnchorAtParentCentreBottom(void *child_handle,
   }
 }
 
+/* Anchor `child` at a fixed OFFSET from `parent`'s top-left — the seat the
+ * user gave the minimised pill by dragging it — and keep it there across
+ * parent moves and resizes, as Mixar_WindowAnchorAtParentCentreBottom does
+ * for the design's default seat. Offsets are AppKit points from the parent's
+ * top-left to the child's top-left, y-DOWN: the screen convention the Win32
+ * counterpart shares, so the same two numbers seat the pill on both
+ * platforms.
+ *
+ * The child stays user-movable while anchored. A window-server drag
+ * (performWindowDragWithEvent:) hands the app no per-frame events and no
+ * end signal, so an observer on the CHILD's own DidMove adopts a move as
+ * the new offset. Two kinds of child move are NOT adopted: the anchor's own
+ * re-seat (it lands exactly on the origin just applied) and AppKit carrying
+ * the child along while the PARENT moves (the parent's origin has changed
+ * since the last seat) — the parent observers then re-seat from the clean
+ * stored offset, which is what keeps a cross-monitor host drag from
+ * drifting the offset the way the centre-bottom anchor's comment describes.
+ * The seat is clamped to the parent's screen so a host move can never park
+ * the pill off-screen. */
+extern "C" void Mixar_WindowAnchorAtParentOffset(void *child_handle,
+                                                 void *parent_handle,
+                                                 int offset_x,
+                                                 int offset_y)
+{
+  if (child_handle == nullptr || parent_handle == nullptr) {
+    return;
+  }
+  GHOST_WindowCocoa *child_cocoa = static_cast<GHOST_WindowCocoa *>(child_handle);
+  GHOST_WindowCocoa *parent_cocoa = static_cast<GHOST_WindowCocoa *>(parent_handle);
+  NSWindow *child = (NSWindow *)child_cocoa->getViewWindow();
+  NSWindow *parent = (NSWindow *)parent_cocoa->getViewWindow();
+  if (child == nil || parent == nil) {
+    return;
+  }
+  @autoreleasepool {
+    mixar_clear_parent_observers_for_child(child);
+    /* The drag switches an already-attached pill from the centre-bottom
+     * anchor to this one; only (re)attach when the parent really changes. */
+    if ([child parentWindow] != parent) {
+      [parent addChildWindow:child ordered:NSWindowAbove];
+    }
+
+    __block CGFloat off_x = (CGFloat)offset_x;
+    __block CGFloat off_y = (CGFloat)offset_y;
+    __block NSPoint last_applied = NSMakePoint(CGFLOAT_MAX, CGFLOAT_MAX);
+    __block NSPoint last_parent_origin = parent.frame.origin;
+    __block BOOL reposition_pending = NO;
+
+    void (^apply_reposition)(void) = ^{
+      reposition_pending = NO;
+      if (![parent isVisible] || ![child isVisible]) {
+        return;
+      }
+      NSRect parent_frame = parent.frame;
+      NSRect child_frame = child.frame;
+      NSPoint origin;
+      origin.x = parent_frame.origin.x + off_x;
+      origin.y = NSMaxY(parent_frame) - off_y - child_frame.size.height;
+      NSScreen *screen = [parent screen];
+      if (screen == nil) {
+        screen = [child screen];
+      }
+      if (screen != nil) {
+        NSRect visible = [screen visibleFrame];
+        origin.x = MAX(NSMinX(visible), MIN(origin.x, NSMaxX(visible) - child_frame.size.width));
+        origin.y = MAX(NSMinY(visible), MIN(origin.y, NSMaxY(visible) - child_frame.size.height));
+      }
+      last_parent_origin = parent_frame.origin;
+      last_applied = origin;
+      [child setFrameOrigin:origin];
+    };
+    void (^reposition)(NSNotification *) = ^(NSNotification *note) {
+      if ([note.name isEqualToString:NSWindowDidResizeNotification] && [parent inLiveResize]) {
+        if (!reposition_pending) {
+          reposition_pending = YES;
+          dispatch_async(dispatch_get_main_queue(), apply_reposition);
+        }
+        return;
+      }
+      apply_reposition();
+    };
+    void (^adopt_child_move)(NSNotification *) = ^(NSNotification * /*note*/) {
+      if (![parent isVisible] || ![child isVisible]) {
+        return;
+      }
+      NSRect parent_frame = parent.frame;
+      NSRect child_frame = child.frame;
+      if (!NSEqualPoints(parent_frame.origin, last_parent_origin)) {
+        /* The parent moved: AppKit is carrying the child along, and the
+         * parent observer re-seats it from the stored offset. */
+        last_parent_origin = parent_frame.origin;
+        return;
+      }
+      if (fabs(child_frame.origin.x - last_applied.x) < 0.5 &&
+          fabs(child_frame.origin.y - last_applied.y) < 0.5)
+      {
+        return; /* The anchor's own re-seat. */
+      }
+      /* The child moved on its own — the user dragged it. */
+      off_x = child_frame.origin.x - parent_frame.origin.x;
+      off_y = NSMaxY(parent_frame) - NSMaxY(child_frame);
+      last_applied = child_frame.origin;
+    };
+
+    NSNotificationCenter *centre = [NSNotificationCenter defaultCenter];
+    id move_token = [centre addObserverForName:NSWindowDidMoveNotification
+                                        object:parent
+                                         queue:[NSOperationQueue mainQueue]
+                                    usingBlock:reposition];
+    id resize_token = [centre addObserverForName:NSWindowDidResizeNotification
+                                          object:parent
+                                           queue:[NSOperationQueue mainQueue]
+                                      usingBlock:reposition];
+    id end_resize_token = [centre addObserverForName:NSWindowDidEndLiveResizeNotification
+                                              object:parent
+                                               queue:[NSOperationQueue mainQueue]
+                                          usingBlock:reposition];
+    id child_move_token = [centre addObserverForName:NSWindowDidMoveNotification
+                                              object:child
+                                               queue:[NSOperationQueue mainQueue]
+                                          usingBlock:adopt_child_move];
+    mixar_store_parent_observers_for_child(
+        child, @[ move_token, resize_token, end_resize_token, child_move_token ]);
+
+    reposition(nil);
+  }
+}
+
+
+/* Where `child` currently sits relative to `parent`, in the convention
+ * Mixar_WindowAnchorAtParentOffset takes: points from the parent's
+ * top-left to the child's top-left, y-down. False when either window is
+ * gone. */
+extern "C" bool Mixar_WindowGetParentOffset(void *child_handle,
+                                            void *parent_handle,
+                                            int *r_offset_x,
+                                            int *r_offset_y)
+{
+  if (child_handle == nullptr || parent_handle == nullptr || r_offset_x == nullptr ||
+      r_offset_y == nullptr)
+  {
+    return false;
+  }
+  GHOST_WindowCocoa *child_cocoa = static_cast<GHOST_WindowCocoa *>(child_handle);
+  GHOST_WindowCocoa *parent_cocoa = static_cast<GHOST_WindowCocoa *>(parent_handle);
+  NSWindow *child = (NSWindow *)child_cocoa->getViewWindow();
+  NSWindow *parent = (NSWindow *)parent_cocoa->getViewWindow();
+  if (child == nil || parent == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    NSRect parent_frame = parent.frame;
+    NSRect child_frame = child.frame;
+    *r_offset_x = (int)lround(child_frame.origin.x - parent_frame.origin.x);
+    *r_offset_y = (int)lround(NSMaxY(parent_frame) - NSMaxY(child_frame));
+  }
+  return true;
+}
+
+
+/* Logical (point) content size of a window — the units Mixar_WindowForceSize
+ * takes, as opposed to Mixar_WindowGetContentPixelSize's backing pixels. */
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *r_width, int *r_height)
+{
+  if (window_handle == nullptr || r_width == nullptr || r_height == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    NSRect content = [win contentRectForFrameRect:[win frame]];
+    *r_width = (int)lround(content.size.width);
+    *r_height = (int)lround(content.size.height);
+  }
+  return true;
+}
+
+/* Move `child` so its top-left sits `offset` from `parent`'s top-left (points,
+ * y-down — the Mixar_Window*ParentOffset convention). Position only: it does
+ * not touch the parent relationship or install observers, so callers re-seat
+ * the tracking (SetParentPlain / SetParentTracked) afterwards if the child
+ * should follow the parent from its new place. */
+extern "C" void Mixar_WindowPlaceInParent(void *child_handle,
+                                          void *parent_handle,
+                                          int offset_x,
+                                          int offset_y)
+{
+  if (child_handle == nullptr || parent_handle == nullptr) {
+    return;
+  }
+  GHOST_WindowCocoa *child_cocoa = static_cast<GHOST_WindowCocoa *>(child_handle);
+  GHOST_WindowCocoa *parent_cocoa = static_cast<GHOST_WindowCocoa *>(parent_handle);
+  NSWindow *child = (NSWindow *)child_cocoa->getViewWindow();
+  NSWindow *parent = (NSWindow *)parent_cocoa->getViewWindow();
+  if (child == nil || parent == nil) {
+    return;
+  }
+  @autoreleasepool {
+    NSRect parent_frame = parent.frame;
+    NSRect child_frame = child.frame;
+    NSPoint origin;
+    origin.x = parent_frame.origin.x + (CGFloat)offset_x;
+    origin.y = NSMaxY(parent_frame) - (CGFloat)offset_y - child_frame.size.height;
+    [child setFrameOrigin:origin];
+  }
+}
+
 
 /* Like Mixar_WindowSetParent but WITHOUT the
  * NSWindowDidResizeNotification observer that pulls the child to

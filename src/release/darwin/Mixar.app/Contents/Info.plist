@@ -58,6 +58,10 @@
 	<string>NSApplication</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mixar uses the microphone for Voice input — dictating into the Agent chat.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Mixar turns your dictation into text for the Agent chat, on this Mac where possible.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

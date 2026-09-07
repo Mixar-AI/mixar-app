@@ -1295,6 +1295,11 @@ const char *BKE_tempdir_base()
 
 void BKE_tempdir_session_purge()
 {
+  if (g_app.temp_dirname_session_can_be_deleted == false) {
+    /* The fallback may be the user's base directory, not an owned session directory.
+     * Preserve upstream's #139585 guard: never recursively delete that fallback. */
+    return;
+  }
   if (g_app.temp_dirname_session[0] && BLI_is_dir(g_app.temp_dirname_session)) {
     BLI_delete(g_app.temp_dirname_session, true, true);
   }

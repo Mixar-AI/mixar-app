@@ -41,6 +41,7 @@ enum AgentIcon {
   AGENT_ICON_MESH, /* Isometric cube — a preview-less 3D asset, and the 3D tab. */
   AGENT_ICON_PEN,  /* Stylus at 45° — the Scribble chip. */
   AGENT_ICON_CROSS, /* X — clear the queued marks. */
+  AGENT_ICON_MIC,   /* Microphone — the Voice chip. */
 
   AGENT_ICON_COUNT,
 };

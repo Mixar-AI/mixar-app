@@ -53,6 +53,12 @@ struct AgentIslandLayout {
    * as a rendering bug, an empty region reads as "too small", which is true. */
   bool valid;
 
+  /* Scribble pad: the island is a tall, narrow writing pad. No tab strip is
+   * laid out (the painter and the header controls skip it), and the card,
+   * panel and composer are re-flowed to the pad's width instead of the
+   * artboard's 1310 units. */
+  bool pad;
+
   float scale; /* AGENT_DU(1) — one artboard unit in device pixels. */
 
   rctf island;
@@ -92,6 +98,9 @@ struct AgentIslandLayout {
    * conditional chips, and the attachment thumbnails start after the last one
    * actually shown. */
   rctf chip_scribble;
+  /* Voice input, right of Scribble; the caller empties it and closes the gap
+   * when no recogniser is registered (agent_bubble_island_begin). */
+  rctf chip_voice;
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;
@@ -110,11 +119,21 @@ struct AgentIslandLayout {
  * matrix translated by its own `winrct` origin, so the region's scissor slices
  * the card rather than any code splitting it. One layout, three views of it.
  */
+/**
+ * `window_w` is the width the island UNIT is derived from (window_w / 1310)
+ * and, in the normal layout, also the width everything is laid out across.
+ * For the Scribble pad the caller passes the width that yields the island's
+ * default-width unit in `window_w` and the pad window's REAL width in
+ * `pad_real_w` (0 otherwise): the unit stays the island's, the geometry
+ * re-flows to the pad. Keeping the unit line untouched is deliberate — the
+ * chrome-scaling contract pins it.
+ */
 void agent_ui_layout_build(int window_w,
                            int window_h,
                            AgentTabId active_tab,
                            bool agent_mode_active,
                            bool has_transcript,
-                           AgentIslandLayout *r_layout);
+                           AgentIslandLayout *r_layout,
+                           int pad_real_w);
 
 }  // namespace blender

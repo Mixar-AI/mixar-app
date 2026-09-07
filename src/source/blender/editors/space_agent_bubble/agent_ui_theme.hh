@@ -70,6 +70,16 @@ namespace blender {
  * always-on-top window instead (parented to the bubble and anchored above it),
  * so the only dark bar on screen is the tab strip's own. */
 #define AGENT_ISLAND_TOP 48
+
+/* Scribble PAD: while Scribble is armed the island is re-seated as a tall,
+ * narrow writing pad on the host's right third so the viewport stays clear
+ * for sketching. The pad keeps the island's DEFAULT-width unit (text and
+ * chips do not shrink with the narrower window), drops the tab strip, and
+ * starts its card this many units below the window's top edge. */
+#define AGENT_PAD_TOP_INSET 8
+/* Narrowest pad the layout will draw, in artboard units (~370 logical px).
+ * Below it the composer's own chips would not fit on one row. */
+#define AGENT_PAD_MIN_W_UNITS 560
 #define AGENT_ISLAND_H (569 - AGENT_ISLAND_TOP)
 
 /** \} */
@@ -220,10 +230,10 @@ namespace blender {
  * above it, which is exactly what a taller window produced.
  *
  * These are the fixed distances measured UP from the card's bottom edge. */
-#define AGENT_CARD_PAD_BOTTOM 23 /* card foot -> chip row bottom */
+#define AGENT_CARD_PAD_BOTTOM 16 /* card foot -> chip row bottom */
 #define AGENT_INPUT_H 56
-#define AGENT_INPUT_GAP 10       /* input line -> chip row */
-#define AGENT_TRANSCRIPT_GAP 10  /* transcript -> input line */
+#define AGENT_INPUT_GAP 16       /* input line -> chip row */
+#define AGENT_TRANSCRIPT_GAP 16  /* transcript -> input line */
 
 /* Where the island is cut into regions, in artboard units. The top slab holds
  * the pill, tab strip and card header; the middle is the transcript (a real
@@ -257,7 +267,7 @@ namespace blender {
 
 /** Segmented Agent/Generate mode control: track 291,842 273x44, and the
  *  active thumb inset 2 units on every side (293,844 125x40). */
-#define AGENT_SEG_X 24
+#define AGENT_SEG_X 16
 #define AGENT_SEG_W 273
 #define AGENT_SEG_THUMB_INSET 2
 #define AGENT_SEG_THUMB_W 125
@@ -280,12 +290,14 @@ namespace blender {
  *  and a clear X. Sized like the Upload chip; the same 12-unit gap between. */
 #define AGENT_CHIP_GAP 12
 #define AGENT_CHIP_SCRIBBLE_W 150
+/* Voice: mic glyph + "Listening" fits. */
+#define AGENT_CHIP_VOICE_W 118
 #define AGENT_CHIP_READING_W 104
 #define AGENT_CHIP_CLEAR_W 44
 
-/** Generate button: artboard 1441,842 114x44. */
-#define AGENT_BTN_GENERATE_X 1174
+/** Generate button: right-aligned to match the input bubble edge. */
 #define AGENT_BTN_GENERATE_W 114
+#define AGENT_BTN_GENERATE_X (AGENT_CARD_W - AGENT_SEG_X - AGENT_BTN_GENERATE_W)
 
 /** \} */
 

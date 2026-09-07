@@ -279,7 +279,8 @@ class TestRequestQueue:
         assert len(posts) == SCRIBBLE_MAX_IN_FLIGHT + 1, "the freed slot is refilled"
         for post in posts[1:]:
             post[1](FakeResponse("still works"))
-        assert scene.mixie_chat_input == "still works still works"
+        # One batch per remaining slot, in order — however many slots there are.
+        assert scene.mixie_chat_input == " ".join(["still works"] * SCRIBBLE_MAX_IN_FLIGHT)
         assert scribble.is_busy() is False
 
     def test_failure_to_dispatch_does_not_wedge_the_queue(self, monkeypatch):

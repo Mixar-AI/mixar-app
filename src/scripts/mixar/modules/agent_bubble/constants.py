@@ -24,3 +24,9 @@ import sys
 # controls by having someone write its window helpers; anything else stays
 # opted out and inherits no dead buttons.
 BUBBLE_WINDOW_CONTROLS_SUPPORTED = sys.platform in {"darwin", "win32"}
+
+# How far (window pixels) a press on the pill window may travel and still be
+# a CLICK. Past it the press becomes a DRAG that moves the pill. The pill's
+# press is decided by how it ends, never at PRESS time — see
+# ui/operators/bubble_header_drag_op.py.
+PILL_DRAG_THRESHOLD_PX = 4

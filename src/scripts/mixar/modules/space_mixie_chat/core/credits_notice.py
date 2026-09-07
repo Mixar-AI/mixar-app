@@ -122,9 +122,10 @@ def _build_content(title: str, body: str) -> str:
 def _fill_bubble(msg, content: str) -> None:
     """Populate a bubble with markdown content + the Upgrade CTA button.
 
-    Built manually (not via the slot pipeline) so it does NOT flip the session
-    into AWAITING_INPUT the way a normal ``actions`` slot would — the user is
-    not answering a prompt, they need to top up.
+    Built manually (not via the slot pipeline): this is a client-originated
+    bubble with no wire event behind it, and the user is not answering a
+    prompt — they need to top up. The actions slot no longer infers a paused
+    turn from the presence of buttons, so this is presentation only.
     """
     from mixar.modules.common.notifications.credit_upgrade import (
         CREDIT_UPGRADE_CHAT_ACTION,

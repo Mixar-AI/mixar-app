@@ -8,6 +8,8 @@ This module contains functions for copying properties between nodes,
 including ID properties, F-curves, and special node type handling.
 """
 
+from mixar.modules.common.utils.animation import assigned_fcurves
+
 from .....config.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -262,8 +264,8 @@ def copy_fcurves(src_fc, dest, subdest, attr):
             # Get new fcurve
             if not nfc:
                 if array_index >= 0:
-                    nfc = [f for f in dest.animation_data.action.fcurves if f.data_path == dest_path and f.array_index == array_index][0]
-                else: nfc = [f for f in dest.animation_data.action.fcurves if f.data_path == dest_path][0]
+                    nfc = [f for f in assigned_fcurves(dest) if f.data_path == dest_path and f.array_index == array_index][0]
+                else: nfc = [f for f in assigned_fcurves(dest) if f.data_path == dest_path][0]
 
             # Get new keyframe point
             nkp = nfc.keyframe_points[i]

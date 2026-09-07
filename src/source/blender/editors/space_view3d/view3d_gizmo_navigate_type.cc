@@ -40,14 +40,17 @@
 
 namespace blender {
 
+/* Size of main icon (50% smaller for Mixar viewport layout). */
+#define GIZMO_SIZE (U.gizmo_size_navigate_v3d * 0.5f)
+
 /* Radius of the entire background. */
-#define WIDGET_RADIUS ((U.gizmo_size_navigate_v3d / 2.0f) * UI_SCALE_FAC)
+#define WIDGET_RADIUS ((GIZMO_SIZE / 2.0f) * UI_SCALE_FAC)
 
 /* Sizes of axis spheres containing XYZ characters in relation to above. */
 #define AXIS_HANDLE_SIZE 0.20f
 
-#define AXIS_LINE_WIDTH ((U.gizmo_size_navigate_v3d / 40.0f) * U.pixelsize)
-#define AXIS_RING_WIDTH ((U.gizmo_size_navigate_v3d / 60.0f) * U.pixelsize)
+#define AXIS_LINE_WIDTH ((GIZMO_SIZE / 40.0f) * U.pixelsize)
+#define AXIS_RING_WIDTH ((GIZMO_SIZE / 60.0f) * U.pixelsize)
 #define AXIS_TEXT_SIZE (WIDGET_RADIUS * AXIS_HANDLE_SIZE * 1.25f)
 
 /* distance within this from center is considered positive. */
@@ -73,7 +76,7 @@ namespace blender {
  * gizmo's full diameter / 27.
  * \{ */
 
-#define GLOBE_LINE_WIDTH ((U.gizmo_size_navigate_v3d / 27.0f) * U.pixelsize)
+#define GLOBE_LINE_WIDTH ((GIZMO_SIZE / 27.0f) * U.pixelsize)
 #define GLOBE_RING_SEGMENTS 64
 
 /* Silhouette ring, #494949 at 24% (design). Deliberately faint in both light
@@ -225,7 +228,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     const bool is_pos = (part % 2) != 0;
 
     float v_local[3] = {0.0f, 0.0f, 0.0f};
-    v_local[axis] = (1.0f - AXIS_HANDLE_SIZE) * (is_pos ? 1.0f : -1.0f);
+    v_local[axis] = 1.0f * (is_pos ? 1.0f : -1.0f);
 
     float m3_offset[3][3];
     copy_m3_m4(m3_offset, gz->matrix_offset);
@@ -239,7 +242,7 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     const float depth = gz->matrix_offset[axis][2] * (is_pos ? 1.0f : -1.0f);
     dot_color[3] = 0.35f + (0.65f * ((depth + 1.0f) * 0.5f));
 
-    const float rad = WIDGET_RADIUS * AXIS_HANDLE_SIZE * 0.55f;
+    const float rad = WIDGET_RADIUS * AXIS_HANDLE_SIZE * 1.25f;
     GPU_matrix_push();
     GPU_matrix_translate_3fv(v_rot);
     GPU_matrix_scale_1f(1.0f / WIDGET_RADIUS);

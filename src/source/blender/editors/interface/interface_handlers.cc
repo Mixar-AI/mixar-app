@@ -106,15 +106,87 @@ void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
-/* Mixar Scribble: a stylus press on the composer while its text-edit is
- * active opens the handwriting canvas (the footer region UI handler never
- * sees that press — the active button's window-level modal handler consumes
- * it first). Defined in editors/space_mixie_chat/mixie_chat_ink_events.cc
- * inside namespace blender, so the prototype lives here, not in blender::ui. */
-bool mixie_chat_ink_composer_stylus_open(bContext *C);
+/* Mixar Scribble: a PEN STROKE that started on the composer opens the
+ * handwriting canvas and seeds its first stroke from the press point (the
+ * footer region UI handler never sees presses while the text-edit is active —
+ * the active button's window-level modal handler consumes them first).
+ * Window coordinates. Defined in editors/space_mixie_chat/
+ * mixie_chat_ink_events.cc inside namespace blender, so the prototype lives
+ * here, not in blender::ui. */
+bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
+                                           const int press_xy[2],
+                                           const int cur_xy[2],
+                                           float pressure);
 }  // namespace blender
 
 namespace blender::ui {
+
+/* -------------------------------------------------------------------- */
+/** \name Mixar Scribble: pen press bookkeeping for the chat composer
+ *
+ * A pen press on the composer ARMS a possible stroke and otherwise behaves
+ * like any press (the caret lands, editing starts). The canvas opens only if
+ * the pen then travels past the drag threshold while held — a TAP is how a
+ * pen user focuses the field to type, a STROKE is how they write on it.
+ *
+ * Everything here is gated on the event TYPE being a mouse button. Blender
+ * builds key events from a copy of the window's event state, and that state
+ * keeps the `tablet` block of the last button press — so a check of
+ * `val == PRESS && tablet.active == STYLUS` alone was also true for every
+ * keystroke typed after a pen tap, and Scribble opened on the first letter.
+ * \{ */
+
+struct MixiePenPress {
+  const Button *but = nullptr;
+  int xy[2] = {0, 0};
+  float pressure = 1.0f;
+  bool armed = false;
+};
+static MixiePenPress g_mixie_pen_press;
+
+static bool mixie_pen_is_stylus_press(const wmEvent *event)
+{
+  return event->type == LEFTMOUSE && event->val == KM_PRESS &&
+         event->tablet.active == EVT_TABLET_STYLUS;
+}
+
+static void mixie_pen_arm(const Button *but, const wmEvent *event)
+{
+  g_mixie_pen_press.but = but;
+  g_mixie_pen_press.xy[0] = event->xy[0];
+  g_mixie_pen_press.xy[1] = event->xy[1];
+  g_mixie_pen_press.pressure = event->tablet.pressure;
+  g_mixie_pen_press.armed = true;
+}
+
+static void mixie_pen_disarm()
+{
+  g_mixie_pen_press.armed = false;
+  g_mixie_pen_press.but = nullptr;
+}
+
+/* The armed pen has travelled past the (tablet-aware) drag threshold: open
+ * the canvas seeded from the press point. The CALLER exits editing via
+ * BUTTON_STATE_EXIT — the ink code must not free the active button from
+ * inside its own handler. */
+static bool mixie_pen_stroke_open(bContext *C, const Button *but, const wmEvent *event)
+{
+  if (!g_mixie_pen_press.armed || g_mixie_pen_press.but != but) {
+    return false;
+  }
+  if (event->tablet.active != EVT_TABLET_STYLUS) {
+    return false;
+  }
+  if (!WM_event_drag_test(event, g_mixie_pen_press.xy)) {
+    return false;
+  }
+  const int press_xy[2] = {g_mixie_pen_press.xy[0], g_mixie_pen_press.xy[1]};
+  const float pressure = g_mixie_pen_press.pressure;
+  mixie_pen_disarm();
+  return mixie_chat_ink_composer_stylus_stroke(C, press_xy, event->xy, pressure);
+}
+
+/** \} */
 
 static CLG_LogRef LOG = {"ui.handler"};
 
@@ -4443,6 +4515,14 @@ static int do_but_textedit(
   switch (event->type) {
     case MOUSEMOVE:
     case MOUSEPAN:
+      /* Mixar Scribble: an armed pen travelling while held (a plain Text
+       * button stays in TEXT_EDITING after do_but_TEX activates it) is
+       * writing — open the canvas from the press point. */
+      if (event->type == MOUSEMOVE && mixie_pen_stroke_open(C, but, event)) {
+        button_activate_state(C, but, BUTTON_STATE_EXIT);
+        retval = WM_UI_HANDLER_BREAK;
+        break;
+      }
       /* Touchpad scroll for multiline text buttons.
        * Accumulate delta to reduce sensitivity — only scroll after enough movement. */
       if (event->type == MOUSEPAN && ui_but_is_multiline_text(but)) {
@@ -4559,22 +4639,19 @@ static int do_but_textedit(
         }
       }
 
-      /* Mixar Scribble: pen-touching the composer means "write by hand" —
-       * open the ink canvas instead of moving the caret. Only for a real
-       * stylus (mouse presses keep normal caret behaviour), only for the
-       * chat composer (the mention-scene gate identifies it), and checked
-       * AFTER the mention rows above so a pen tap still accepts a
-       * suggestion. Editing exits through the normal BUTTON_STATE_EXIT
-       * path — the ink code must not free the active button from inside
-       * its own handler. */
-      if (event->val == KM_PRESS && event->tablet.active == EVT_TABLET_STYLUS &&
-          ui_but_mixie_mention_scene(but) != nullptr)
-      {
-        if (mixie_chat_ink_composer_stylus_open(C)) {
-          button_activate_state(C, but, BUTTON_STATE_EXIT);
-          retval = WM_UI_HANDLER_BREAK;
-          break;
-        }
+      /* Mixar Scribble: a PEN press on the composer (the mention-scene gate
+       * identifies it) ARMS a possible stroke and then falls through to the
+       * normal caret placement below — a pen tap must still let the user
+       * type. The canvas opens only once the pen travels while held
+       * (do_but_textedit_select / MOUSEMOVE here), seeded from this press.
+       * Checked AFTER the mention rows above so a pen tap still accepts a
+       * suggestion. See the MixiePenPress notes for why the event TYPE is
+       * part of the gate. */
+      if (mixie_pen_is_stylus_press(event) && ui_but_mixie_mention_scene(but) != nullptr) {
+        mixie_pen_arm(but, event);
+      }
+      else if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
+        mixie_pen_disarm();
       }
 
       /* Allow clicks on extra icons while editing (skip for multiline text —
@@ -5256,12 +5333,20 @@ static int do_but_textedit_select(
       break;
     }
     case MOUSEMOVE: {
+      /* Mixar Scribble: an armed pen travelling while held is writing, not
+       * drag-selecting — open the canvas from the press point. */
+      if (mixie_pen_stroke_open(C, but, event)) {
+        button_activate_state(C, but, BUTTON_STATE_EXIT);
+        retval = WM_UI_HANDLER_BREAK;
+        break;
+      }
       textedit_set_cursor_select(but, data, float2(event->xy));
       retval = WM_UI_HANDLER_BREAK;
       break;
     }
     case LEFTMOUSE:
       if (event->val == KM_RELEASE) {
+        mixie_pen_disarm();
         if (textbox) {
           textbox_scroll_to_cursor(textbox);
         }
@@ -6060,6 +6145,12 @@ static int do_but_TEX(
       else {
         if (!but_extra_operator_icon_mouse_over_get(but, data->region, event)) {
           HandleButtonData *data = but->active;
+          /* Mixar Scribble: the pen press that activates the composer arms a
+           * possible stroke (see MixiePenPress) — this press is consumed here
+           * and never reaches the text-edit handler. */
+          if (mixie_pen_is_stylus_press(event) && ui_but_mixie_mention_scene(but) != nullptr) {
+            mixie_pen_arm(but, event);
+          }
           button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
           if (event->type == LEFTMOUSE && but->type == ButtonType::TextBox) {
             /* Text-box buttons allows to scroll its content even when they are not in text-edit
