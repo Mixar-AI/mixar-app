@@ -51,6 +51,14 @@ export MIXAR_WEBSITE="${MIXAR_WEBSITE:-https://mixar.app}"
 export MIXAR_BUNDLE_IDENTIFIER="${MIXAR_BUNDLE_IDENTIFIER:-com.mixar.mixar}"
 export MIXAR_BUNDLE_COPYRIGHT="${MIXAR_BUNDLE_COPYRIGHT:-© 2025 Mixar}"
 
+# NVIDIA GPU rendering (read by cmake/mixar_overrides.cmake).
+#   MIXAR_CUDA=0          -> no CUDA/OptiX/cubins (much faster clean builds)
+#   MIXAR_CUDA_BINARIES=0 -> keep CUDA/OptiX, skip the per-architecture cubins
+#   MIXAR_CUDA_ARCH       -> narrow the cubin architecture list, e.g. sm_89
+export MIXAR_CUDA="${MIXAR_CUDA:-1}"
+export MIXAR_CUDA_BINARIES="${MIXAR_CUDA_BINARIES:-$MIXAR_CUDA}"
+export MIXAR_CUDA_ARCH="${MIXAR_CUDA_ARCH:-}"
+
 # Build settings (constants)
 export BLENDER_VERSION="${BLENDER_VERSION:-5.2}"
 export PYTHON_VERSION="${PYTHON_VERSION:-3.13}"
