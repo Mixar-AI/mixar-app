@@ -26,8 +26,10 @@
 
 #include "DNA_screen_types.h"
 #include "DNA_view3d_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 #include "ED_view3d.hh"
 
 #include "UI_interface_c.hh"
@@ -57,6 +59,11 @@ bool fit_matches(const GateFit &a, const GateFit &b)
 
 }  // namespace
 
+void cinema_release_chat_seat(const bContext *C)
+{
+  ED_agent_bubble_set_cinema_seat(CTX_wm_window(C), false, 0, 0);
+}
+
 void cinema_fit_camera_gate(const bContext *C, ARegion *region)
 {
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
@@ -71,6 +78,18 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   if (!cinema_stage_rect(C, region, &stage)) {
     return;
   }
+  const float u = cinema_unit();
+  wmWindow *win = CTX_wm_window(C);
+
+  /* The chat bar — the resting Agent pill — sits under the gate, centred on
+   * the stage with its foot on the columns' foot; the gate keeps clear of
+   * its band. The seat is handed over every draw and no-ops when unchanged. */
+  const float band = float(ED_agent_bubble_pill_band_px(win)) + CINEMA_CHAT_GAP * u;
+  ED_agent_bubble_set_cinema_seat(win,
+                                  true,
+                                  region->winrct.xmin + int(BLI_rctf_cent_x(&stage)),
+                                  region->winrct.ymin + int(stage.ymin));
+  stage.ymin += band;
 
   GateFit fit;
   fit.region = region;
@@ -93,7 +112,6 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   if (depsgraph == nullptr) {
     return;
   }
-  const float u = cinema_unit();
   rctf target = stage;
   BLI_rctf_pad(&target, -6.0f * u, -6.0f * u);
   if (BLI_rctf_size_x(&target) <= 1.0f || BLI_rctf_size_y(&target) <= 1.0f) {

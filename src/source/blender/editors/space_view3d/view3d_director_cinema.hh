@@ -100,6 +100,8 @@ struct DirectorViewState;
  * #cinema_content_bottom(). */
 #define CINEMA_COLUMN_TOP 206.0f
 #define CINEMA_STAGE_INSET 18.0f
+/** Gap between the camera gate's foot and the chat bar (the resting pill). */
+#define CINEMA_CHAT_GAP 10.0f
 
 /* Lowest content in either column. The height gate is DERIVED from these, so
  * moving a card down moves the gate with it instead of silently laying the
@@ -309,6 +311,13 @@ ui::Button *cinema_icon_button(ui::Block *block,
  * zoom and pan survive until the layout moves.
  */
 void cinema_fit_camera_gate(const bContext *C, ARegion *region);
+
+/**
+ * Hand the resting Agent pill back its ordinary seat: called on every draw
+ * that does not show the designed surface (Director off, compact rail).
+ * Cheap when nothing changed.
+ */
+void cinema_release_chat_seat(const bContext *C);
 
 /** Shortcut hints; tracking eyedropper, interpolation dropdown, phone button. */
 void cinema_draw_top_strip(ui::Block *block,

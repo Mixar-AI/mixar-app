@@ -313,6 +313,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 {
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
+    cinema_release_chat_seat(C);
     return;
   }
 
@@ -345,6 +346,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
     cinema_draw_right_panel(block, C, region, state);
   }
   else {
+    cinema_release_chat_seat(C);
     view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
     if (region->winy > unit * 18) {
       draw_tool_rail(block, C, region, state, unit, gap);
