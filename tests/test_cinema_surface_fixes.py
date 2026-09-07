@@ -35,13 +35,13 @@ CONSTANTS = (DIRECTOR / "constants.py").read_text(encoding="utf-8")
 
 
 def _define(name: str) -> float:
-    match = re.search(rf"^#define {name} ([0-9.]+)f?\s*(?:/\*.*)?$", HEADER, re.M)
+    match = re.search(rf"^#define {name} (-?[0-9.]+)f?\s*(?:/\*.*)?$", HEADER, re.M)
     assert match is not None, f"{name} is not defined in view3d_director_cinema.hh"
     return float(match.group(1))
 
 
 def _py_constant(name: str) -> float:
-    match = re.search(rf"^{name} = ([0-9.]+)$", CONSTANTS, re.M)
+    match = re.search(rf"^{name} = (-?[0-9.]+)$", CONSTANTS, re.M)
     assert match is not None, f"{name} is not defined in director/constants.py"
     return float(match.group(1))
 
