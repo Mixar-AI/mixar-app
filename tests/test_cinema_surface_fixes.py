@@ -402,10 +402,22 @@ def test_every_rounded_control_shares_the_row_radius():
     assert DOCK.count("std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f)") == 2
 
 
-def test_hints_pack_leftwards_from_the_first_group():
+def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
+    # Hints align with the fitted camera border's left edge: the stage inset
+    # by the SAME pad the gate fit uses, so nothing draws above the left column.
+    assert "gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;" in TOP
+    # ... but the drawn border can be height-limited and sit inside the
+    # stage, so the live border wins when there is one.
+    assert "if (cinema_camera_gate_rect(C, region, &border)) {" in TOP
+    assert "gate_left = border.xmin / u;" in TOP
+    assert "float next_x = gate_left;" in TOP
     assert "next_x = hint_end[index] + CINEMA_HINT_GAP;" in TOP
-    assert "hint.x = next_x;" in TOP
-    assert "{332.0f," not in TOP
+    GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
+    assert "BLI_rctf_pad(&target, -CINEMA_GATE_PAD * u, -CINEMA_GATE_PAD * u);" in GATE
+    # The phone hand-off spans the right column, in the strip row.
+    assert "const rctf phone = {float(region->winx) - (margin + CINEMA_PANEL_W) * u," in TOP
+    assert "float(region->winx) - margin * u," in TOP
+    assert "CINEMA_HINT_X" not in HEADER and "CINEMA_PHONE_W" not in TOP
 
 
 def test_captions_use_the_dimmer_caption_colour():

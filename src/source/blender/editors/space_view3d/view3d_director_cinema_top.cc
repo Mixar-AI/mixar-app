@@ -173,45 +173,53 @@ void cinema_draw_top_strip(ui::Block *block,
     const char *label;
     bool stacked; /* WASD draws W above ASD. */
   };
-  /* Groups pack leftwards at CINEMA_HINT_GAP from CINEMA_HINT_X: the design
-   * spread them across the strip, which read as loose once the strip also
-   * carried controls. `x` is resolved here from the measured label widths. */
+  /* Groups pack at CINEMA_HINT_GAP from the camera gate's left edge (the
+   * stage inset by the gate's pad), so the hints line up with the frame and
+   * nothing is drawn above the left column. `x` is resolved here from the
+   * measured label widths. */
   Hint hints[] = {
       {0.0f, {"O"}, 1, "Navigate", false},
       {0.0f, {"F"}, 1, "Insert keyframe", false},
       {0.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
       {0.0f, {"Q", "E"}, 2, "Z-axis", false},
   };
-  /* Design x where each hint ends; the controls decide their width from it. */
+  const float margin = cinema_margin(region);
+  /* The fitted camera border's left edge, in design px. The border can be
+   * height-limited and sit inside the stage, so read the real one; the
+   * stage's own gate edge is only the fallback outside camera view. */
+  float gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;
+  rctf border;
+  if (cinema_camera_gate_rect(C, region, &border)) {
+    gate_left = border.xmin / u;
+  }
+  /* Design x where each hint ends; the controls decide what fits from it. */
   float hint_end[4];
-  float hints_end = 0.0f;
-  float next_x = CINEMA_HINT_X;
+  float next_x = gate_left;
   for (int index = 0; index < 4; index++) {
     Hint &hint = hints[index];
     hint.x = next_x;
     hint_end[index] = hint.x +
                       float(hint.stacked ? 3 : hint.key_count) * (CINEMA_KEYCAP_W + 2.0f) + 8.0f +
                       cinema_text_width(hint.label, CINEMA_FONT_LABEL * u) / u;
-    hints_end = std::max(hints_end, hint_end[index]);
     next_x = hint_end[index] + CINEMA_HINT_GAP;
   }
 
-  /* Controls, right-to-left from the stage's right edge. The phone keeps its
-   * full label only when the hints stay clear of it; otherwise it collapses
-   * to its glyph so the eyedropper and dropdown never push the hints out. */
-  const float strip_right = float(region->winx) -
-                            (cinema_margin(region) + CINEMA_PANEL_W + CINEMA_STAGE_INSET) * u;
   const rctf band = cinema_design_rect(region, 0.0f, STRIP_Y, 0.0f, CINEMA_PHONE_H);
-  const float controls_w_full = CINEMA_PHONE_W + CINEMA_STRIP_GAP + CINEMA_INTERP_W +
-                                CINEMA_STRIP_GAP + CINEMA_PHONE_H;
-  const bool phone_full = (strip_right / u - controls_w_full) >= hints_end + 16.0f;
-  const float phone_w = (phone_full ? CINEMA_PHONE_W : CINEMA_PHONE_H) * u;
 
-  rctf phone = {strip_right - phone_w, strip_right, band.ymin, band.ymax};
-  rctf interp = {phone.xmin - (CINEMA_STRIP_GAP + CINEMA_INTERP_W) * u,
-                 phone.xmin - CINEMA_STRIP_GAP * u,
-                 band.ymin,
-                 band.ymax};
+  /* Phone hand-off above the right column, the column's full width; the
+   * label gives way to the glyph only if the column cannot hold it. */
+  const rctf phone = {float(region->winx) - (margin + CINEMA_PANEL_W) * u,
+                      float(region->winx) - margin * u,
+                      band.ymin,
+                      band.ymax};
+  const float phone_need = cinema_text_width("Drive camera from your phone", CINEMA_FONT_VALUE * u) +
+                           (11.0f + 9.0f + 32.0f) * u;
+  const bool phone_full = phone_need <= BLI_rctf_size_x(&phone);
+
+  /* Eyedropper and interpolation dropdown, right-to-left from the stage's
+   * right edge. */
+  const float strip_right = float(region->winx) - (margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET) * u;
+  rctf interp = {strip_right - CINEMA_INTERP_W * u, strip_right, band.ymin, band.ymax};
   rctf eyedrop = {interp.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
                   interp.xmin - CINEMA_STRIP_GAP * u,
                   band.ymin,

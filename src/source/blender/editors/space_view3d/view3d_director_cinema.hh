@@ -74,8 +74,7 @@ struct DirectorViewState;
 #define CINEMA_KEYCAP_W 17.0f
 #define CINEMA_KEYCAP_H 19.0f
 #define CINEMA_KEYCAP_RADIUS 4.0f
-/** First hint's design x; groups then pack leftwards-tight at this gap. */
-#define CINEMA_HINT_X 332.0f
+/** Hint groups start at the camera gate's left edge and pack at this gap. */
 #define CINEMA_HINT_GAP 26.0f
 #define CINEMA_PHONE_W 260.0f
 #define CINEMA_PHONE_H 32.0f
@@ -102,6 +101,8 @@ struct DirectorViewState;
 #define CINEMA_STAGE_INSET 18.0f
 /** Gap between the camera gate's foot and the chat bar (the resting pill). */
 #define CINEMA_CHAT_GAP 10.0f
+/** Inset of the fitted camera border inside the stage. */
+#define CINEMA_GATE_PAD 6.0f
 
 /* Lowest content in either column. The height gate is DERIVED from these, so
  * moving a card down moves the gate with it instead of silently laying the
@@ -318,6 +319,12 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region);
  * Cheap when nothing changed.
  */
 void cinema_release_chat_seat(const bContext *C);
+
+/**
+ * The camera border as currently drawn (region px), after the fit. False
+ * outside camera view; callers then fall back to the stage's gate edge.
+ */
+bool cinema_camera_gate_rect(const bContext *C, const ARegion *region, rctf *r_rect);
 
 /** Shortcut hints; tracking eyedropper, interpolation dropdown, phone button. */
 void cinema_draw_top_strip(ui::Block *block,

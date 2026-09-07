@@ -59,6 +59,24 @@ bool fit_matches(const GateFit &a, const GateFit &b)
 
 }  // namespace
 
+bool cinema_camera_gate_rect(const bContext *C, const ARegion *region, rctf *r_rect)
+{
+  const RegionView3D *rv3d = static_cast<const RegionView3D *>(region->regiondata);
+  const View3D *v3d = CTX_wm_view3d(C);
+  const Scene *scene = CTX_data_scene(C);
+  if (rv3d == nullptr || v3d == nullptr || scene == nullptr || v3d->camera == nullptr ||
+      rv3d->persp != RV3D_CAMOB)
+  {
+    return false;
+  }
+  const Depsgraph *depsgraph = CTX_data_depsgraph_pointer(C);
+  if (depsgraph == nullptr) {
+    return false;
+  }
+  ED_view3d_calc_camera_border(scene, depsgraph, region, v3d, rv3d, false, r_rect);
+  return BLI_rctf_size_x(r_rect) > 1.0f && BLI_rctf_size_y(r_rect) > 1.0f;
+}
+
 void cinema_release_chat_seat(const bContext *C)
 {
   ED_agent_bubble_set_cinema_seat(CTX_wm_window(C), false, 0);
@@ -112,7 +130,7 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
     return;
   }
   rctf target = stage;
-  BLI_rctf_pad(&target, -6.0f * u, -6.0f * u);
+  BLI_rctf_pad(&target, -CINEMA_GATE_PAD * u, -CINEMA_GATE_PAD * u);
   if (BLI_rctf_size_x(&target) <= 1.0f || BLI_rctf_size_y(&target) <= 1.0f) {
     return;
   }
