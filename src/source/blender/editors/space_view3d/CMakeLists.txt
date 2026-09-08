@@ -34,6 +34,7 @@ set(SRC
   view3d_director_cinema_paint.cc
   view3d_director_cinema_right.cc
   view3d_director_cinema_top.cc
+  view3d_director_nudge.cc
   view3d_director_overlay.cc
   view3d_director_overlay_frame.cc
   view3d_director_popup.cc

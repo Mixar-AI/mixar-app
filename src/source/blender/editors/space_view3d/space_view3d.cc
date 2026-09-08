@@ -1629,12 +1629,13 @@ static void view3d_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 }
 
 /* Region-level `operatortypes` callbacks are never invoked by
- * `ED_spacetypes_init()` — the agent strip's operators piggyback on the
- * space-level registration instead. */
+ * `ED_spacetypes_init()` — the agent strip's and the Director's native
+ * operators piggyback on the space-level registration instead. */
 static void view3d_operatortypes_with_agent_strip()
 {
   view3d_operatortypes();
   view3d_agent_strip_operatortypes();
+  view3d_director_operatortypes();
 }
 
 void ED_spacetype_view3d()

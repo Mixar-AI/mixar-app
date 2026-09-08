@@ -55,14 +55,16 @@ _GUARDED_KEYS = (
 # key while directing, and outside Cinema Mode its poll fails and the key
 # falls through to its native meaning untouched.
 #
-# `repeat=True` is what makes a HELD key keep moving: the operator fires again
-# at the OS auto-repeat rate, and `core/camera_nudge` scales each step by the
-# real elapsed time so the speed does not depend on that rate.
+# The operator is the native C++ modal `MIXAR_OT_director_nudge_camera`
+# (`editors/space_view3d/view3d_director_nudge.cc`): the first press starts
+# it, its own timer integrates every held key at walk speed, and releasing
+# the keys ends it as ONE undo step. While it runs it takes the OS repeats
+# itself; `repeat=True` stays so a key still held after Esc ended the modal
+# simply starts a fresh one.
 #
 # Registered in both keymaps that can be dispatched first for these keys:
 # "Object Mode" wins while the user is in Object Mode, and "3D View" covers
-# the other modes (a Pose-mode S still reaches Blender's own scale first —
-# see the module note in `nudge_ops.py`).
+# the other modes (a Pose-mode S still reaches Blender's own scale first).
 _NUDGE_KEYS = (
     ('W', "FORWARD"),
     ('S', "BACK"),
@@ -98,8 +100,9 @@ _NUDGE_KEYMAPS = (
     # nudge in the merged Object Mode keymap no matter which registered
     # first: addon-vs-addon ordering does not follow registration order the
     # way addon-vs-default does. Being global is safe only because
-    # `nudge_ops._in_cinema_viewport` scopes the poll to a directing session
-    # inside a 3D viewport's WINDOW region — keep the two together.
+    # `director_nudge_poll` (view3d_director_nudge.cc) scopes the poll to a
+    # directing session inside a 3D viewport's WINDOW region — keep the two
+    # together.
     ("User Interface", ('EMPTY', 'WINDOW')),
     ("Object Mode", ('EMPTY', 'WINDOW')),
     ("3D View", ('VIEW_3D', 'WINDOW')),

@@ -786,22 +786,24 @@ def test_camera_nudge_keys_beat_the_eyedropper_and_the_block_guard():
     lives there FIRST.
 
     Being global is only safe because the poll scopes it: directing, in a
-    VIEW_3D WINDOW region. The poll must NOT also require a camera — it is
-    what decides whether the key is ABSORBED, and a take with no camera (or
-    a locked one) still has to swallow S rather than leak it to
-    `transform.resize`; `execute` handles those cases.
+    SPACE_VIEW3D WINDOW region. The poll must NOT also require a camera — it
+    is what decides whether the key is ABSORBED, and a take with no camera
+    (or a locked one) still has to swallow S rather than leak it to
+    `transform.resize`; `invoke` handles those cases. The operator is the
+    native modal in `view3d_director_nudge.cc`.
     """
     keymap = _read("ui/keymap.py")
-    nudge = _read("ui/operators/nudge_ops.py")
+    nudge = (VIEW3D / "view3d_director_nudge.cc").read_text(encoding="utf-8")
 
     ui_kbd = keymap.index('("User Interface"')
     object_mode = keymap.index('("Object Mode"', keymap.index("_NUDGE_KEYMAPS"))
     assert ui_kbd < object_mode, "User Interface must come first in _NUDGE_KEYMAPS"
 
-    assert "_in_cinema_viewport" in nudge
-    assert "area.type == 'VIEW_3D'" in nudge
-    assert "region.type == 'WINDOW'" in nudge
-    poll = nudge[nudge.index("    def poll(cls, context):"):]
-    poll = poll[: poll.index("def execute")]
-    assert "_in_cinema_viewport(context)" in poll
-    assert "camera" not in poll, "poll must absorb the key even without a camera"
+    assert 'ot->idname = "MIXAR_OT_director_nudge_camera";' in nudge
+    assert "ot->poll = director_nudge_poll;" in nudge
+    poll = nudge[nudge.index("static bool director_nudge_poll(bContext *C)"):]
+    poll = poll[: poll.index("\n}\n") + 3]
+    assert "view3d_director_is_directing(CTX_data_scene(C))" in poll
+    assert "area->spacetype == SPACE_VIEW3D" in poll
+    assert "region->regiontype == RGN_TYPE_WINDOW" in poll
+    assert "camera" not in poll.lower(), "the poll must not require a camera"

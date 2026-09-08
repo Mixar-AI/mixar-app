@@ -56,6 +56,13 @@ bool view3d_director_state_pointer(Scene *scene, PointerRNA *r_state_ptr)
   return r_state_ptr->data != nullptr;
 }
 
+bool view3d_director_is_directing(Scene *scene)
+{
+  PointerRNA state_ptr;
+  return view3d_director_state_pointer(scene, &state_ptr) &&
+         director_bool(&state_ptr, "is_directing", false);
+}
+
 static bool director_active_shot_pointer_from_state(PointerRNA *state_ptr, PointerRNA *r_shot_ptr)
 {
   PropertyRNA *shots_prop = director_prop(state_ptr, "shots");

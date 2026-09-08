@@ -60,6 +60,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state);
 /** RNA pointer to the Python-owned `scene.mixar_director` state, if any. */
 bool view3d_director_state_pointer(Scene *scene, PointerRNA *r_state_ptr);
 
+/** Cheap `is_directing` read for operator polls (no shot/beat walk). */
+bool view3d_director_is_directing(Scene *scene);
+
 /** Return the active Python-owned shot so native UI can bind its RNA controls.
  */
 bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr);
@@ -73,4 +76,9 @@ void view3d_director_timeline_region_ensure(ScrArea *area);
 
 /* QA harness target provider (view3d_director_qa_targets.cc). */
 void view3d_director_qa_targets_register();
+
+/** Native Director operators (view3d_director_nudge.cc): the hold-to-move
+ * `MIXAR_OT_director_nudge_camera` behind the W/A/S/D/Q/E hints. Appended
+ * from the View3D space-level `operatortypes` callback. */
+void view3d_director_operatortypes();
 }  // namespace blender
