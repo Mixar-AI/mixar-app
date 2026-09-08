@@ -17,9 +17,8 @@ import sys
 import threading
 import time
 import traceback
-from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Optional
+from typing import Optional
 
 import bpy
 
@@ -44,68 +43,17 @@ from .sandbox_modules import (
     RESTRICTED_URLLIB,
     restricted_open,
 )
-from .sandbox_builtins import get_safe_builtins, sanitize_value
+from .sandbox_builtins import get_safe_builtins
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
 
 
-@dataclass
-class ExecutionResult:
-    """Result of script execution."""
+from .execution_result import ExecutionResult
 
-    success: bool
-    output: str = ""
-    error: Optional[str] = None
-    traceback: Optional[str] = None
-
-    # Changes detected
-    created_objects: list[str] = field(default_factory=list)
-    modified_objects: list[str] = field(default_factory=list)
-    deleted_objects: list[str] = field(default_factory=list)
-
-    # Return value if script returned something
-    return_value: Any = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON-RPC response.
-
-        Returns a response with `success` at the top level.
-        If __RESULT__ was set in the script and is a dict, its contents
-        are flattened into the response.
-        """
-        response = {
-            "success": self.success,
-        }
-
-        # Flatten return_value dict into response (for __RESULT__ data)
-        if self.return_value and isinstance(self.return_value, dict):
-            sanitized = sanitize_value(self.return_value)
-            if isinstance(sanitized, dict):
-                response.update(sanitized)
-        elif self.return_value is not None:
-            response["return_value"] = sanitize_value(self.return_value)
-
-        # Include metadata only if present
-        if self.output:
-            response["output"] = self.output
-        if self.created_objects:
-            response["created_objects"] = self.created_objects
-        if self.modified_objects:
-            response["modified_objects"] = self.modified_objects
-        if self.deleted_objects:
-            response["deleted_objects"] = self.deleted_objects
-        if self.error:
-            response["error"] = self.error
-        # Forward the traceback over the (internal) RPC so the backend can log the
-        # failing line. This is an internal channel; the backend strips tracebacks
-        # from any client-facing API response per its own contract.
-        if self.traceback:
-            response["traceback"] = self.traceback
-
-        return response
+from .script_handlers import ScriptHandlers
 
 
-class ScriptExecutor:
+class ScriptExecutor(ScriptHandlers):
     """
     Safely executes generated bpy scripts.
 
@@ -119,35 +67,6 @@ class ScriptExecutor:
       base64, urllib are restricted wrappers
     """
 
-    # Handler list names on bpy.app.handlers to snapshot/restore
-    _HANDLER_NAMES = (
-        "depsgraph_update_post",
-        "depsgraph_update_pre",
-        "frame_change_post",
-        "frame_change_pre",
-        "load_factory_preferences_post",
-        "load_factory_startup_post",
-        "load_post",
-        "load_pre",
-        "object_bake_cancel",
-        "object_bake_complete",
-        "object_bake_pre",
-        "redo_post",
-        "redo_pre",
-        "render_cancel",
-        "render_complete",
-        "render_init",
-        "render_post",
-        "render_pre",
-        "render_stats",
-        "render_write",
-        "save_post",
-        "save_pre",
-        "undo_post",
-        "undo_pre",
-        "version_update",
-    )
-
     # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
     _in_agent_turn: bool = False
     _undo_pushes_this_turn: int = 0          # SUCCESSFUL pushes so far
@@ -157,68 +76,6 @@ class ScriptExecutor:
         """Initialize the executor."""
         self._last_scene_state: Optional[dict] = None
         self._execution_lock = threading.Lock()
-
-    def _snapshot_handlers(self) -> dict[str, list]:
-        """Snapshot all bpy.app.handlers lists before script execution."""
-        snapshot = {}
-        for name in self._HANDLER_NAMES:
-            handler_list = getattr(bpy.app.handlers, name, None)
-            if handler_list is not None:
-                snapshot[name] = list(handler_list)
-        return snapshot
-
-    @staticmethod
-    def _exempt_handler_ids() -> set:
-        """Identities of first-party handlers that scripts install INDIRECTLY
-        via addon operators and that must OUTLIVE the script.
-
-        mixie_chat.agent_final_render starts a background render job during a
-        sandboxed render_scene script; its render_complete/render_cancel
-        handlers do the moodboard import + settings restore AFTER the script
-        is long gone — stripping them orphans the render (settings never
-        restored, image never imported). Matching is by object IDENTITY, not
-        name/module (a script can forge ``__module__`` via ``__name__`` in
-        its globals, but it cannot forge ``id()``); at worst a script can
-        re-append these exact functions, which self-guard (no-op without an
-        active job).
-        """
-        try:
-            from mixar.modules.space_mixie_chat.ui.operators import (
-                agent_final_render_ops as _afr,
-            )
-            return {id(_afr._on_render_complete), id(_afr._on_render_cancel)}
-        except Exception:
-            return set()
-
-    def _cleanup_handlers(self, snapshot: dict[str, list]) -> None:
-        """Remove any handlers that were added since the snapshot.
-
-        Prevents scripts from installing persistent backdoors via handlers.
-        """
-        for name, before_list in snapshot.items():
-            handler_list = getattr(bpy.app.handlers, name, None)
-            if handler_list is None:
-                continue
-            before_set = set(id(h) for h in before_list)
-            added = [h for h in handler_list if id(h) not in before_set]
-            exempt = self._exempt_handler_ids()
-            for handler in added:
-                if id(handler) in exempt:
-                    logger.debug(
-                        "Keeping exempt first-party handler: %s.%s (%s)",
-                        "bpy.app.handlers", name,
-                        getattr(handler, '__name__', repr(handler)),
-                    )
-                    continue
-                try:
-                    handler_list.remove(handler)
-                    logger.warning(
-                        "Cleaned up handler added by script: %s.%s (%s)",
-                        "bpy.app.handlers", name,
-                        getattr(handler, '__name__', repr(handler)),
-                    )
-                except ValueError:
-                    pass
 
     def begin_agent_turn(self) -> None:
         """Signal the start of an agent turn (multi-tool sequence).
@@ -303,7 +160,7 @@ class ScriptExecutor:
             self._undo_failure_logged_this_turn = True
         return False
 
-    def execute(self, script: str, push_undo: bool = True) -> ExecutionResult:
+    def execute(self, script: str, push_undo: bool = True, atomic: bool = False, memory_key: str = "") -> ExecutionResult:
         """
         Execute a bpy script safely.
 
@@ -322,6 +179,20 @@ class ScriptExecutor:
                 error="Previous script still executing",
             )
 
+        transaction_started = False
+        if atomic:
+            try:
+                from .atomic_script import validate_atomic_source, checkpoint
+                error = validate_script_ast(script)
+                if error:
+                    raise SandboxViolationError(error)
+                validate_atomic_source(script)
+                checkpoint("Mixie atomic start")
+                transaction_started = True
+            except Exception as exc:
+                self._execution_lock.release()
+                return ExecutionResult(success=False, error=str(exc), rollback="not_started")
+
         # Capture scene state before execution
         before_state = self._capture_scene_state()
 
@@ -331,8 +202,12 @@ class ScriptExecutor:
         # _should_push_undo; a failed push never aborts the script — it is
         # logged once per turn and retried by the next script, where it used
         # to be silently swallowed (turns got NO checkpoint at all).
-        if push_undo and self._should_push_undo():
+        if not atomic and push_undo and self._should_push_undo():
             self._push_undo_for_script()
+
+        if memory_key:
+            from .scratchpad import scratchpad
+            scratchpad(memory_key)
 
         # Snapshot handlers before execution to detect additions
         handler_snapshot = self._snapshot_handlers()
@@ -399,6 +274,14 @@ class ScriptExecutor:
                 "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,
             }
+
+            if memory_key:
+                from .scratchpad import scratchpad
+                exec_namespace["scratch"] = scratchpad(memory_key)
+
+            if atomic:
+                from .atomic_script import AtomicBpy
+                exec_namespace["bpy"] = AtomicBpy()
 
             # Some first-party scene transaction scripts use
             # ``globals().get(<sentinel>)`` to gate a commit body. Exposing the
@@ -468,6 +351,15 @@ class ScriptExecutor:
             if "__RESULT__" in exec_namespace:
                 result.return_value = exec_namespace["__RESULT__"]
 
+            if atomic:
+                if exec_namespace["bpy"]._failures:
+                    raise RuntimeError("A Blender operator was cancelled during the transaction")
+                payload = result.return_value
+                for line in captured_stdout.getvalue().splitlines():
+                    if line.startswith("__RESULT__"):
+                        payload = json.loads(line[len("__RESULT__"):])
+                if isinstance(payload, dict) and payload.get("success") is False:
+                    raise RuntimeError(str(payload.get("error") or "Script reported failure"))
             result.success = True
 
             # NOTE: Do NOT call view_layer.update() here!
@@ -485,6 +377,15 @@ class ScriptExecutor:
             logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
+            if transaction_started:
+                try:
+                    from .atomic_script import finish
+                    finish(result.success)
+                    result.rollback = "not_needed" if result.success else "restored"
+                except Exception as exc:
+                    result.success = False
+                    result.rollback = "failed"
+                    result.error = f"{result.error or 'Atomic commit failed'}; {exc}"
             self._execution_lock.release()
 
             # Clean up any handlers the script may have installed

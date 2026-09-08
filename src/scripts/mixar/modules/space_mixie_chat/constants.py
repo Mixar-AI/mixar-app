@@ -416,3 +416,6 @@ STREAMING_BATCH_LIMIT = 8
 # Prefix for temporary placeholder bubble IDs (optimistic UI loading indicator).
 # Used in chat_ops.py (creation) and slot_processor.py (cleanup).
 TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
+
+# Maximum number of scene-session L2 namespaces retained in Blender RAM.
+HARNESS_SCRATCHPAD_LIMIT = 64

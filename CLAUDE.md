@@ -543,3 +543,20 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 ## Repo Docs Map
 
 `README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover. `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.
+
+
+## Harness execution contract
+
+The handshake advertises `atomic_script` and `scene_lanes` alongside `liveness`.
+Only `atomic: true` RPCs opt into the native transaction; legacy executor calls
+retain their existing arguments and undo behavior. `core/atomic_script.py`
+suppresses operator undo pushes, requires Global Undo/Object Mode, and rolls
+back exceptions, explicit failures and `CANCELLED` (even when swallowed).
+Deferred work and add-on internals are prohibited in atomic scripts. Undo is
+global and scripts stay serialized on the main thread, including scene lanes.
+Per-route `scratch` memory in `core/scratchpad.py` is invalidated by undo/load.
+`core/harness_jobs.py` submits Jasper jobs through the normal queue and returns
+IDs only; local OBJ paths remain client-local. Retain the real-app scenario in
+`tests/bpy/harness_atomic.py` (use `--enable-event-simulate` for GUI screenshots).
+Execution receipts and handler cleanup live in `execution_result.py` and
+`script_handlers.py`; the executor imports them to keep modules bounded.

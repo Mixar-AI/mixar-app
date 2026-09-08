@@ -415,7 +415,10 @@ def _process_one_request() -> Optional[float]:
                 agent_ctx, session_id, request_id
             )
             set_agent_execution_context(context_session_id, context_turn_id)
-            result = executor.execute(script)
+            if (agent_ctx or {}).get("atomic") is True:
+                result = executor.execute(script, atomic=True, memory_key=session_id)
+            else:
+                result = executor.execute(script)
             result_dict = result.to_dict()
             logger.debug(f"Script execution completed: success={result.success}")
             if result_dict.get("success"):

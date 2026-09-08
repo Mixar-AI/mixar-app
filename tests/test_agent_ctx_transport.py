@@ -70,3 +70,15 @@ def test_queue_tuple_preserves_agent_ctx(monkeypatch):
         "scene-route-3",
         agent_ctx,
     )
+
+
+def test_atomic_opt_in_preserves_provenance_without_mutating_request():
+    received = []
+    client = object.__new__(JSONRPCWebSocketClient)
+    client._on_script_execute = lambda *args: received.append(args)
+    provenance = {"chat_session_id": "chat", "turn_id": "turn"}
+    client._handle_execute_script(
+        {"script": "pass", "atomic": True, "agent_ctx": provenance}, "request"
+    )
+    assert received[0][4] == {**provenance, "atomic": True}
+    assert "atomic" not in provenance

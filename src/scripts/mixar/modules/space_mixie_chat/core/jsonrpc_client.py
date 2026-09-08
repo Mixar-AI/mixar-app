@@ -422,6 +422,8 @@ class JSONRPCWebSocketClient:
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
                 "liveness",
+                "atomic_script",
+                "scene_lanes",
                 ADDON_PROJECT_CAPABILITY,
             ],
         }
@@ -764,6 +766,8 @@ class JSONRPCWebSocketClient:
         tool_name = params.get("tool_name", "unknown")
         session_id = params.get("session_id", "")
         agent_ctx = params.get("agent_ctx")
+        if params.get("atomic") is True:
+            agent_ctx = {**(agent_ctx or {}), "atomic": True}
 
         if self._on_script_execute:
             try:
