@@ -8,7 +8,8 @@
  * Cinema Mode: the top strip — the Mixar banner chip above the left column,
  * keyboard hints from the camera border's left edge; on the right, flowing
  * leftwards from the stage's edge, the phone hand-off button, the keyframe
- * interpolation dropdown and the object-tracking eyedropper.
+ * interpolation dropdown, the object-tracking eyedropper and the grid-lines
+ * toggle chip.
  *
  * Painting only; see `view3d_director_cinema_paint.cc` for the primitives.
  * The controls read the active shot's RNA and invoke Python-owned operators.
@@ -23,6 +24,7 @@
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
+#include "DNA_view3d_types.h"
 
 #include "RNA_access.hh"
 
@@ -200,6 +202,35 @@ void track_eyedropper(ui::Block *block,
   cinema_qa_record(region, chip, "director_track", tracking ? "clear" : "pick", -1);
 }
 
+/**
+ * Grid-lines chip: the row ramp while the grid shows, flat "off" fill while
+ * hidden. Reads the region's View3D (`gridflag & V3D_SHOW_FLOOR`, a positive
+ * flag — RNA `show_floor`); the operator flips floor + X/Y axes together.
+ * View state, so it is never gated on the shot: it works before one exists.
+ */
+void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const rctf &chip)
+{
+  const float u = cinema_unit();
+  const View3D *v3d = CTX_wm_view3d(const_cast<bContext *>(C));
+  const bool shown = v3d != nullptr && (v3d->gridflag & V3D_SHOW_FLOOR) != 0;
+  if (shown) {
+    const float top[4] = CINEMA_COL_ROW_TOP;
+    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    cinema_panel(chip, CINEMA_ROW_RADIUS * u, top, bottom);
+  }
+  else {
+    const float off[4] = CINEMA_COL_PHONE;
+    cinema_fill(chip, CINEMA_ROW_RADIUS * u, off);
+  }
+  /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
+  cinema_icon_button(block,
+                     "MIXAR_OT_director_toggle_grid",
+                     ICON_GRID,
+                     chip,
+                     shown ? "Hide grid lines" : "Show grid lines");
+  cinema_qa_record(region, chip, "director_grid", shown ? "hide" : "show", -1);
+}
+
 }  // namespace
 
 /* -------------------------------------------------------------------- */
@@ -277,15 +308,20 @@ void cinema_draw_top_strip(ui::Block *block,
                            (11.0f + 9.0f + 32.0f) * u;
   const bool phone_full = phone_need <= BLI_rctf_size_x(&phone);
 
-  /* Eyedropper and interpolation dropdown, right-to-left from the camera
-   * frame's right edge, so the dropdown's edge lines up with the frame. */
+  /* Grid chip, eyedropper and interpolation dropdown, right-to-left from
+   * the camera frame's right edge, so the dropdown's edge lines up with the
+   * frame. */
   const float strip_right = gate_right * u;
   rctf interp = {strip_right - CINEMA_INTERP_W * u, strip_right, band.ymin, band.ymax};
   rctf eyedrop = {interp.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
                   interp.xmin - CINEMA_STRIP_GAP * u,
                   band.ymin,
                   band.ymax};
-  const float controls_left = eyedrop.xmin;
+  rctf grid = {eyedrop.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
+               eyedrop.xmin - CINEMA_STRIP_GAP * u,
+               band.ymin,
+               band.ymax};
+  const float controls_left = grid.xmin;
 
   const float hint_col[4] = CINEMA_COL_LABEL;
   for (int index = 0; index < 4; index++) {
@@ -324,7 +360,8 @@ void cinema_draw_top_strip(ui::Block *block,
   PointerRNA shot_ptr = {};
   view3d_director_active_shot_pointer(CTX_data_scene(const_cast<bContext *>(C)), &shot_ptr);
 
-  if (eyedrop.xmin > 0.0f) {
+  if (grid.xmin > 0.0f) {
+    grid_chip(block, C, region, grid);
     track_eyedropper(block, region, eyedrop, &shot_ptr, editable);
     interpolation_dropdown(block, C, region, interp, &shot_ptr, editable);
   }

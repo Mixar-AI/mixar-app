@@ -51,10 +51,20 @@ constexpr float SIDE_PAD = 26.0f;
 constexpr float CHIP_W = 44.0f;
 constexpr float CHIP_H = 26.0f;
 constexpr float FIELD_W = 100.0f;
+/** Transport hit box (square) and the clear space between neighbours: the
+ * glyph centres sit `TRANSPORT_SIZE + TRANSPORT_GAP` = 44 apart. */
 constexpr float TRANSPORT_SIZE = 26.0f;
-constexpr float TRANSPORT_GAP = 26.0f;
-/** Preview glyph over step glyph size. */
-constexpr float PLAY_SCALE = 1.35f;
+constexpr float TRANSPORT_GAP = 18.0f;
+/* Transport glyph sizes, measured off the design mock (see #transport_glyph).
+ * They are explicit so the hit box no longer decides how big a glyph is. */
+constexpr float PLAY_H = 18.0f;
+constexpr float STEP_H = 12.0f;
+constexpr float DOT_D = 5.5f;
+constexpr float STEP_GAP = 3.0f;
+/** Triangle width over height: the mock's play is 16 x 15, a step's 8.5 x 9.5. */
+constexpr float GLYPH_ASPECT = 0.95f;
+/** One muted grey for every transport glyph (mock: RGB 135, pause included). */
+constexpr float TRANSPORT_COL[4] = {0.53f, 0.53f, 0.53f, 1.0f};
 constexpr float TOOL_SIZE = 24.0f;
 constexpr float TOOL_GAP = 6.0f;
 /** Clear space the frame fields must keep from the centred transport. */
@@ -64,33 +74,48 @@ constexpr float FIELD_CLEARANCE = 16.0f;
  * Media glyphs per the design: the preview (play) is a filled triangle; a
  * step is a smaller triangle pointing outward with a dot on its INNER side
  * (`◂●  ▶  ●▸`), not the stock bar-on-the-outside.
+ *
+ * Proportions measured off the 1x design mock (glyph pixel bounding boxes):
+ * play 16 wide x 15 tall (a squat, near-equilateral triangle, NOT tall and
+ * narrow); a step pair 15 x 10 overall — triangle ~8.5 x 9.5, dot ~4.5 in
+ * diameter, ~2.5 between the triangle's flat inner edge and the dot; glyph
+ * centres 36 apart, i.e. ~2.4x the play height; every glyph the same muted
+ * grey. The tokens above (`PLAY_H`, `STEP_H`, `DOT_D`, `STEP_GAP`,
+ * `GLYPH_ASPECT`, `TRANSPORT_COL`) are those numbers rounded to the design's
+ * unit; only `box` centre is used — the hit box never sizes the glyph.
  */
 void transport_glyph(const rctf &box, const bool forward, const bool step, const bool pause)
 {
-  const float col[4] = {0.878f, 0.878f, 0.878f, 1.0f};
+  const float u = cinema_unit();
+  const float *col = TRANSPORT_COL;
   const float cx = BLI_rctf_cent_x(&box);
   const float cy = BLI_rctf_cent_y(&box);
-  const float h = BLI_rctf_size_y(&box) * 0.42f;
-  const float w = h * 0.92f;
   if (pause) {
-    const float thick = w * 0.42f;
-    rctf left = {cx - w * 0.55f - thick, cx - w * 0.55f, cy - h, cy + h};
-    rctf right = {cx + w * 0.55f, cx + w * 0.55f + thick, cy - h, cy + h};
-    cinema_fill(left, thick * 0.3f, col);
-    cinema_fill(right, thick * 0.3f, col);
+    /* Two bars as tall as the play glyph, each ~0.3 of that wide and as far
+     * apart. */
+    const float half = PLAY_H * 0.5f * u;
+    const float bar = PLAY_H * 0.3f * u;
+    const float gap = PLAY_H * 0.3f * u;
+    rctf left = {cx - gap * 0.5f - bar, cx - gap * 0.5f, cy - half, cy + half};
+    rctf right = {cx + gap * 0.5f, cx + gap * 0.5f + bar, cy - half, cy + half};
+    cinema_fill(left, bar * 0.3f, col);
+    cinema_fill(right, bar * 0.3f, col);
     return;
   }
   const float dir = forward ? 1.0f : -1.0f;
   if (!step) {
-    cinema_triangle(cx - dir * w * 0.5f, cy, dir * w, h, col);
+    /* Flat edge left, apex right, the bounding box centred on the slot. */
+    const float half = PLAY_H * 0.5f * u;
+    const float w = PLAY_H * GLYPH_ASPECT * u;
+    cinema_triangle(cx - dir * w * 0.5f, cy, dir * w, half, col);
     return;
   }
   /* Step: a smaller triangle plus a dot, the pair centred on the slot. The
    * dot sits on the side facing the play button. */
-  const float sh = h * 0.62f;
-  const float sw = sh * 0.92f;
-  const float dot = sh * 0.7f;
-  const float gap = sw * 0.35f;
+  const float sh = STEP_H * 0.5f * u; /* half height */
+  const float sw = STEP_H * GLYPH_ASPECT * u;
+  const float dot = DOT_D * u;
+  const float gap = STEP_GAP * u;
   const float total = sw + gap + dot;
   const float outer = cx + dir * total * 0.5f; /* outer end of the pair */
   /* Triangle: flat edge on the inner side, apex at the outer end. */
@@ -225,9 +250,9 @@ void draw_transport(ui::Block *block,
   };
   const bool no_beats = state.beats.is_empty();
   for (int index = 0; index < 3; index++) {
-    /* The design draws the preview (play) glyph a third larger than the
-     * step glyphs; the slot pitch stays so the group's centring holds. */
-    const float size = (index == 1 ? TRANSPORT_SIZE * PLAY_SCALE : TRANSPORT_SIZE) * u;
+    /* Every slot is the same TRANSPORT_SIZE hit box; the glyphs size
+     * themselves (#transport_glyph) and only borrow the box's centre. */
+    const float size = TRANSPORT_SIZE * u;
     const float slot_cx = tx + TRANSPORT_SIZE * u * 0.5f;
     const rctf box = {slot_cx - size * 0.5f, slot_cx + size * 0.5f, cy - size * 0.5f, cy + size * 0.5f};
     transport_glyph(box, transport[index].forward, transport[index].step, index == 1 && playing);

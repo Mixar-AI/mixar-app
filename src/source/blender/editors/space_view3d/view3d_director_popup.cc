@@ -98,10 +98,28 @@ void director_popup_state(ui::Button *but, const bool active, const bool enabled
   if (!enabled) {
     ui::button_flag_enable(but, ui::BUT_DISABLED);
   }
-  /* Paint as the Cinema surface's row class (graded chip when live) rather
-   * than a stock menu item, so a list matches the block it opened from. */
-  ui::UI_mixar_cinema_row_tag(
-      but, active ? ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option);
+  /* Paint as the Cinema surface's row class rather than a stock widget, so
+   * a list matches the block it opened from. The kind follows the button
+   * type: a NumSlider is the Slider track; a Row toggle stays an Option
+   * that lights from UI_SELECT (its value lives in `hardmax`, which the tag
+   * never writes); a Text or Menu field is left STOCK for now (a Field
+   * paints nothing idle — see MixarCinemaRowKind::Field); anything else is
+   * the option row, the graded chip when live. */
+  switch (ui::UI_mixar_button_type(but)) {
+    case ui::ButtonType::NumSlider:
+      ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Slider);
+      break;
+    case ui::ButtonType::Text:
+    case ui::ButtonType::Menu:
+      break;
+    case ui::ButtonType::Row:
+      ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Option);
+      break;
+    default:
+      ui::UI_mixar_cinema_row_tag(
+          but, active ? ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option);
+      break;
+  }
 }
 
 void director_popup_section_label(ui::Block *block,
@@ -109,17 +127,20 @@ void director_popup_section_label(ui::Block *block,
                                   const int y,
                                   const int width)
 {
-  ui::uiDefBut(block,
-           ui::ButtonType::Label,
-           text,
-           0,
-           y,
-           short(width),
-           short(UI_UNIT_Y * 0.85f),
-           nullptr,
-           0,
-           0,
-           std::nullopt);
+  ui::Button *label = ui::uiDefBut(block,
+                                   ui::ButtonType::Label,
+                                   text,
+                                   0,
+                                   y,
+                                   short(width),
+                                   short(UI_UNIT_Y * 0.85f),
+                                   nullptr,
+                                   0,
+                                   0,
+                                   std::nullopt);
+  /* Every Director popup's captions read as the surface's 12 px caption
+   * (dim, no chrome) rather than a stock label. */
+  ui::UI_mixar_cinema_row_tag(label, ui::MixarCinemaRowKind::Caption);
 }
 
 namespace {
@@ -136,6 +157,19 @@ ui::Button *popup_op_button(ui::Block *block,
 {
   return director_overlay_operator_button(
       block, operator_id, icon, label, x, y, width, height, tooltip);
+}
+
+/**
+ * One cell of a segmented group: the row state (BUT_ACTIVE_DEFAULT carries
+ * "active", BUT_DISABLED "locked"), then the Segment kind on top so the
+ * cells on this baseline paint as one hover-expanding group. The cells are
+ * laid out as equal parts of the row; their hit rects never change (a block
+ * popup is not refreshable), only the painted widths do.
+ */
+void popup_segment_state(ui::Button *but, const bool active, const bool enabled)
+{
+  director_popup_state(but, active, enabled);
+  ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Segment);
 }
 
 /* -------------------------------------------------------------------- */
@@ -180,7 +214,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
                                  "Switch the lens projection");
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(but), "lens_type", types[index].identifier);
-    director_popup_state(but, data.camera->type == types[index].camera_type, data.editable);
+    popup_segment_state(but, data.camera->type == types[index].camera_type, data.editable);
   }
   y -= gap;
 

@@ -31,6 +31,8 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 
+#include "../interface/interface_mixar_profile_card.hh"
+
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
@@ -68,6 +70,50 @@ rctf design_rect_right(const ARegion *region,
   rect.ymax = float(region->winy) - (y - VIEWPORT_TOP) * u;
   rect.ymin = rect.ymax - h * u;
   return rect;
+}
+
+/**
+ * In-place editable text over a name the surface painted itself (T12).
+ *
+ * A Text button under Emboss::None is NOT interactive for plain hover or
+ * clicks (`button_is_interactive_ex`): those fall through to the operator
+ * button created before it on the same rect. A label edit (Ctrl held)
+ * reaches it directly, and the operator button — tagged with
+ * #UI_mixar_button_double_click_edits_label — hands it a double-click or
+ * Ctrl+click the way a UI-list row does; the stock text editor then runs
+ * (Enter commits, Esc cancels). Idle it paints nothing; tagged #Field so
+ * the card painter lays the row chip under Blender's edit drawing.
+ */
+ui::Button *cinema_text_field(ui::Block *block,
+                              PointerRNA *ptr,
+                              const char *prop_name,
+                              const rctf &rect,
+                              const char *tooltip)
+{
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = ui::uiDefButR(block,
+                                  ui::ButtonType::Text,
+                                  "",
+                                  int(rect.xmin),
+                                  int(rect.ymin),
+                                  short(BLI_rctf_size_x(&rect)),
+                                  short(BLI_rctf_size_y(&rect)),
+                                  ptr,
+                                  prop_name,
+                                  0,
+                                  0,
+                                  0,
+                                  tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  if (but != nullptr) {
+    /* Contract with the tag: a Text button's `hardmax` IS its edit-buffer
+     * size (`button_string_get_maxncpy`), so the tag must leave it alone for
+     * `ButtonType::Text` and the painter must key #Field on the type, the way
+     * Option is keyed on `ButtonType::Row`. A tag that wrote the kind there
+     * would truncate every rename to five characters. */
+    ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Field);
+  }
+  return but;
 }
 
 /** Three-way segmented row: graded track, chip behind the live choice. */
@@ -198,9 +244,10 @@ void cinema_draw_right_panel(ui::Block *block,
     }
     /* "My Cameras": show the camera's own name, falling back to the shot's. */
     char name[128] = "";
+    PointerRNA camera_ptr = PointerRNA_NULL;
     PropertyRNA *camera_prop = RNA_struct_find_property(&shot_ptr, "camera");
     if (camera_prop != nullptr) {
-      PointerRNA camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
+      camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
       if (camera_ptr.data != nullptr) {
         PropertyRNA *name_prop = RNA_struct_find_property(&camera_ptr, "name");
         if (name_prop != nullptr) {
@@ -208,8 +255,11 @@ void cinema_draw_right_panel(ui::Block *block,
         }
       }
     }
+    /* The row renames the name it shows: the camera's, or the shot's. */
+    PointerRNA *name_ptr = &camera_ptr;
     if (name[0] == '\0') {
       RNA_string_get(&shot_ptr, "name", name);
+      name_ptr = &shot_ptr;
     }
 
     const bool active = index == active_index;
@@ -234,7 +284,15 @@ void cinema_draw_right_panel(ui::Block *block,
         block, "MIXAR_OT_director_set_active_shot", row, "Direct this camera");
     if (but != nullptr) {
       RNA_int_set(ui::button_operator_ptr_ensure(but), "index", index);
+      ui::UI_mixar_button_double_click_edits_label(but);
     }
+    /* The rename field is created AFTER the operator button on the same
+     * rect: hit-testing walks a block backwards, so it is asked first — and
+     * declines everything but a label edit, leaving the click to the
+     * operator, which hands back double-click and Ctrl+click through its
+     * tag. Renaming an ID through RNA keeps names unique on its own. */
+    cinema_text_field(
+        block, name_ptr, "name", row, "Rename this camera: double-click or Ctrl+click");
   }
   if (shot_count == 0) {
     cinema_text_center("No cameras yet",

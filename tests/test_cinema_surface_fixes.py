@@ -549,10 +549,47 @@ def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
 
 def test_transport_steps_are_triangle_plus_inner_dot():
     """The design's transport: play is a filled triangle; each step is a
-    smaller triangle pointing outward with a dot on the side facing play."""
+    smaller triangle pointing outward with a dot on the side facing play.
+
+    Sizes are explicit design-px tokens measured off the mock (play 16 x 15,
+    step triangle ~8.5 x 9.5, dot ~4.5, centres 36 apart, one muted grey) —
+    the hit box must never decide how big a glyph paints, which is how the
+    triangles came out twice too tall, half as wide, and near-white."""
     glyph = DOCK[DOCK.index("void transport_glyph(") :]
     glyph = glyph[: glyph.index("\n}\n")]
+    # Orientation: apex outward, dot on the inner (play-facing) side.
     assert "const float outer = cx + dir * total * 0.5f;" in glyph
     assert "cinema_triangle(outer - dir * sw, cy, dir * sw, sh, col);" in glyph
     assert "const float dot_x0 = outer - dir * (sw + gap);" in glyph
     assert "stop" not in glyph
+
+    def dock_const(name: str) -> float:
+        match = re.search(rf"^constexpr float {name} = (-?[0-9.]+)f;", DOCK, re.M)
+        assert match is not None, f"{name} is not a constexpr in the dock"
+        return float(match.group(1))
+
+    # Explicit glyph tokens: the play is a squat near-equilateral triangle
+    # (width ~= height), the steps two thirds its height.
+    assert dock_const("PLAY_H") == 18.0
+    assert dock_const("STEP_H") == 12.0
+    assert dock_const("DOT_D") == 5.5
+    assert dock_const("STEP_GAP") == 3.0
+    assert 0.9 <= dock_const("GLYPH_ASPECT") <= 1.0
+    # Pitch: 26 hit box + 18 gap = 44 design px between glyph centres.
+    assert dock_const("TRANSPORT_SIZE") == 26.0
+    assert dock_const("TRANSPORT_GAP") == 18.0
+    # The glyph sizes itself from the tokens, never from the slot box.
+    assert "PLAY_SCALE" not in DOCK
+    assert "BLI_rctf_size_y(&box)" not in glyph
+    assert "BLI_rctf_size_x(&box)" not in glyph
+    for token in ("PLAY_H", "STEP_H", "DOT_D", "STEP_GAP", "GLYPH_ASPECT"):
+        assert f"{token} * " in glyph, f"{token} is not what sizes the glyph"
+    # One muted grey for all three glyphs (pause included): RGB 135 / 255.
+    assert re.search(
+        r"^constexpr float TRANSPORT_COL\[4\] = \{0\.53f, 0\.53f, 0\.53f, 1\.0f\};",
+        DOCK,
+        re.M,
+    )
+    assert "const float *col = TRANSPORT_COL;" in glyph
+    assert "0.878f" not in DOCK
+    assert re.search(r"const float col\[4\] = \{", glyph) is None

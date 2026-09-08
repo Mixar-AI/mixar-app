@@ -139,6 +139,30 @@ def enter_director_surface(context):
     return target
 
 
+# The floor grid and the X/Y axis lines are one thing to a director:
+# "gridlines". The floor flag is the truth the chip reads (and what the
+# C++ strip paints from, via View3D.gridflag & V3D_SHOW_FLOOR).
+_GRID_FLAGS = ("show_floor", "show_axis_x", "show_axis_y")
+
+
+def grid_shown(space) -> bool:
+    """Whether the viewport's grid lines are visible."""
+    overlay = getattr(space, "overlay", None)
+    return bool(getattr(overlay, "show_floor", False))
+
+
+def toggle_grid(space) -> bool:
+    """Flip the floor grid and both axis lines together; return the new state."""
+    overlay = getattr(space, "overlay", None)
+    if overlay is None:
+        return False
+    shown = not grid_shown(space)
+    for name in _GRID_FLAGS:
+        if hasattr(overlay, name):
+            setattr(overlay, name, shown)
+    return shown
+
+
 def enter_camera_view(context, camera, *, remember: bool = True):
     """Make *camera* the scene camera and enter lock-to-camera view."""
     target = find_view3d_context(context)
