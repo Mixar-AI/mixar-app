@@ -314,6 +314,10 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     cinema_release_chat_seat(C);
+    /* Director left: the aerial map's render buffers go with it (a GPU
+     * context is bound here), and its click transform must not outlive the
+     * card. Owner-guarded so another viewport's draw never frees them. */
+    view3d_director_minimap_release(region, /*free_gpu=*/true);
     return;
   }
 
@@ -347,6 +351,9 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
   }
   else {
     cinema_release_chat_seat(C);
+    /* Compact rail: no card, so no click target — but keep the render
+     * cached, a second viewport below the fit gate must not thrash it. */
+    view3d_director_minimap_release(region, /*free_gpu=*/false);
     view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
     if (region->winy > unit * 18) {
       draw_tool_rail(block, C, region, state, unit, gap);

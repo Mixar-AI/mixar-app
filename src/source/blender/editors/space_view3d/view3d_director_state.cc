@@ -63,6 +63,15 @@ bool view3d_director_is_directing(Scene *scene)
          director_bool(&state_ptr, "is_directing", false);
 }
 
+int view3d_director_navigation_mode(Scene *scene)
+{
+  PointerRNA state_ptr;
+  if (!view3d_director_state_pointer(scene, &state_ptr)) {
+    return -1;
+  }
+  return director_enum(&state_ptr, "navigation_mode", -1);
+}
+
 static bool director_active_shot_pointer_from_state(PointerRNA *state_ptr, PointerRNA *r_shot_ptr)
 {
   PropertyRNA *shots_prop = director_prop(state_ptr, "shots");
@@ -80,6 +89,25 @@ bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr)
   PointerRNA state_ptr;
   return r_shot_ptr && view3d_director_state_pointer(scene, &state_ptr) &&
          director_active_shot_pointer_from_state(&state_ptr, r_shot_ptr);
+}
+
+Object *view3d_director_shot_camera(Scene *scene, bool *r_locked)
+{
+  *r_locked = false;
+  PointerRNA shot_ptr;
+  if (!view3d_director_active_shot_pointer(scene, &shot_ptr)) {
+    return nullptr;
+  }
+  /* `state` is an enum whose LOCKED item is index 1 (see `SHOT_STATE_ITEMS`). */
+  *r_locked = director_enum(&shot_ptr, "state", 0) == 1;
+
+  PropertyRNA *camera_prop = director_prop(&shot_ptr, "camera");
+  if (!camera_prop) {
+    return nullptr;
+  }
+  PointerRNA camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
+  Object *camera = static_cast<Object *>(camera_ptr.data);
+  return (camera && camera->type == OB_CAMERA) ? camera : nullptr;
 }
 
 bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
@@ -126,6 +154,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   const int navigation_mode = director_enum(&state_ptr, "navigation_mode", 0);
   r_state->navigate_mode = navigation_mode == 0;
   r_state->explore_mode = navigation_mode == 2;
+  r_state->aerial_mode = navigation_mode == 3;
   PropertyRNA *beats_prop = director_prop(&shot_ptr, "beats");
   const int beat_count = beats_prop ? RNA_property_collection_length(&shot_ptr, beats_prop) : 0;
   r_state->beats.reserve(beat_count);

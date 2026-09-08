@@ -421,12 +421,10 @@ class MixarDirectorState(PropertyGroup):
         items=(
             ("NAVIGATE", "Navigate", "Move with WASD and the mouse", 0),
             ("PRECISE", "Precise", "Adjust the camera with transform gizmos", 1),
-            (
-                "EXPLORE",
-                "Explore",
-                "Fly the viewport freely without moving the shot camera",
-                2,
-            ),
+            ("EXPLORE", "Explore",
+             "Fly the viewport freely without moving the shot camera", 2),
+            ("AERIAL", "Aerial",
+             "Look down on the scene from above and click to place the camera", 3),
         ),
         default="NAVIGATE",
         options={'SKIP_SAVE'},

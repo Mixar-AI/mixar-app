@@ -539,6 +539,9 @@ static void view3d_widgets()
 /* type callback, not region itself */
 static void view3d_main_region_free(ARegion *region)
 {
+  /* The Director aerial map's GPU buffers, if this region drew them. */
+  view3d_director_minimap_region_free(region);
+
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
 
   if (rv3d) {

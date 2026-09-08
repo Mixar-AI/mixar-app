@@ -275,15 +275,19 @@ def test_frame_fields_yield_to_the_transport():
 # 7. Every painted keycap hint is a real binding.
 
 
-def test_the_navigate_hint_is_bound():
-    assert '{0.0f, {"O"}, 1, "Navigate", false}' in TOP
-    assert '"mixar.director_navigate",' in KEYMAP
+def test_the_aerial_hint_is_bound():
+    assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
+    assert '"mixar.director_aerial",' in KEYMAP
     assert "type='O'," in KEYMAP
-    assert "director_navigate" in KEYMAP.split("_OPERATOR_NAMES")[1]
+    assert "director_aerial" in KEYMAP.split("_OPERATOR_NAMES")[1]
+    # O no longer starts the walk; the walk operator stays for the gate button.
+    o_item = KEYMAP[: KEYMAP.index("type='O',")]
+    assert o_item.rstrip().endswith('"mixar.director_aerial",')
+    assert '"mixar.director_navigate",\n            type=\'O\'' not in KEYMAP
 
 
-def test_navigate_is_not_bound_globally():
-    # MIXAR_OT_director_navigate.poll has no area/region test, so the binding
+def test_aerial_is_not_bound_globally():
+    # MIXAR_OT_director_aerial.poll has no area/region test, so the binding
     # must live only in keymaps dispatched inside a 3D viewport.
     block = KEYMAP.split("_NAVIGATE_KEYMAPS = (")[1].split("\n)")[0]
     assert "User Interface" not in block

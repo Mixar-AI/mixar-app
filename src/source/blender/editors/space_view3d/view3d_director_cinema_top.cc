@@ -246,8 +246,9 @@ void cinema_draw_top_strip(ui::Block *block,
   const bool editable = state.has_shot && !state.locked;
 
   /* Shortcut hints. The keys are what the Director keymap actually binds
-   * (`director/ui/keymap.py`): O -> `mixar.director_navigate`, F -> capture
-   * (a design label of "I" would be a lie about a live binding), WASD/QE ->
+   * (`director/ui/keymap.py`): O -> `mixar.director_aerial` (the top-down
+   * view; its label lights while the mode is on), F -> capture (a design
+   * label of "I" would be a lie about a live binding), WASD/QE ->
    * `mixar.director_nudge_camera`. A hint here is a promise — never paint one
    * without the matching keymap item. */
   struct Hint {
@@ -262,7 +263,7 @@ void cinema_draw_top_strip(ui::Block *block,
    * clear the banner chip above the left column. `x` is resolved here from
    * the measured label widths. */
   Hint hints[] = {
-      {0.0f, {"O"}, 1, "Navigate", false},
+      {0.0f, {"O"}, 1, "Aerial view", false},
       {0.0f, {"F"}, 1, "Insert keyframe", false},
       {0.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
       {0.0f, {"Q", "E"}, 2, "Z-axis", false},
@@ -324,8 +325,11 @@ void cinema_draw_top_strip(ui::Block *block,
   const float controls_left = grid.xmin;
 
   const float hint_col[4] = CINEMA_COL_LABEL;
+  const float hint_lit[4] = CINEMA_COL_VALUE;
   for (int index = 0; index < 4; index++) {
     const Hint &hint = hints[index];
+    /* The Aerial hint (index 0) reads as a state: lit while the mode is on. */
+    const bool lit = index == 0 && state.aerial_mode;
     /* A hint clipped in half, or run under a control, reads as a rendering
      * bug; drop the whole group. */
     if (hint_end[index] * u + 12.0f * u > std::min(controls_left, float(region->winx))) {
@@ -354,7 +358,7 @@ void cinema_draw_top_strip(ui::Block *block,
                      x + 8.0f * u,
                      row_y + CINEMA_KEYCAP_H * u * 0.5f,
                      CINEMA_FONT_LABEL * u,
-                     hint_col);
+                     lit ? hint_lit : hint_col);
   }
 
   PointerRNA shot_ptr = {};

@@ -146,22 +146,9 @@ static unsigned int nudge_bit(const int direction)
 /** The active shot's camera; `r_locked` reports the take's LOCKED state. */
 static Object *nudge_shot_camera(Scene *scene, bool *r_locked)
 {
-  *r_locked = false;
-  PointerRNA shot_ptr;
-  if (!view3d_director_active_shot_pointer(scene, &shot_ptr)) {
-    return nullptr;
-  }
-  /* `state` is an enum whose LOCKED item is index 1 (see `SHOT_STATE_ITEMS`). */
-  PropertyRNA *state_prop = RNA_struct_find_property(&shot_ptr, "state");
-  *r_locked = state_prop && RNA_property_enum_get(&shot_ptr, state_prop) == 1;
-
-  PropertyRNA *camera_prop = RNA_struct_find_property(&shot_ptr, "camera");
-  if (!camera_prop) {
-    return nullptr;
-  }
-  PointerRNA camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
-  Object *camera = static_cast<Object *>(camera_ptr.data);
-  return (camera && camera->type == OB_CAMERA) ? camera : nullptr;
+  /* One resolver for every native camera writer (nudge, aerial map, its
+   * placement modal), so they can never disagree on which object moves. */
+  return view3d_director_shot_camera(scene, r_locked);
 }
 
 static float nudge_walk_speed()
@@ -434,6 +421,7 @@ static void MIXAR_OT_director_nudge_camera(wmOperatorType *ot)
 void view3d_director_operatortypes()
 {
   WM_operatortype_append(MIXAR_OT_director_nudge_camera);
+  WM_operatortype_append(MIXAR_OT_director_place_camera);
 }
 
 /** \} */

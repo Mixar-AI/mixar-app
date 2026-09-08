@@ -176,11 +176,13 @@ def enter_camera_view(context, camera, *, remember: bool = True):
         space.camera = camera
     space.region_3d.view_perspective = 'CAMERA'
     space.lock_camera = True
-    # Camera view and free-fly exploration are mutually exclusive; every
-    # path back into a camera (shot switch, keyframe jump, new take) must
-    # end Explore or the overlay keeps offering Add Camera Here in-frame.
+    # Camera view, free-fly exploration and the aerial view are mutually
+    # exclusive; every path back into a camera (shot switch, keyframe jump,
+    # new take, Back to Shot) must end Explore — or the overlay keeps
+    # offering Add Camera Here in-frame — and Aerial, or the stage keeps
+    # placing the camera on click.
     state = getattr(context.scene, "mixar_director", None)
-    if state is not None and state.navigation_mode == 'EXPLORE':
+    if state is not None and state.navigation_mode in {'EXPLORE', 'AERIAL'}:
         state.navigation_mode = 'NAVIGATE'
     area.tag_redraw()
     return target
@@ -195,6 +197,50 @@ def enter_free_view(context):
     space.lock_camera = False
     if space.region_3d.view_perspective == 'CAMERA':
         space.region_3d.view_perspective = 'PERSP'
+    area.tag_redraw()
+    return target
+
+
+def enter_aerial_view(context, scene):
+    """Look straight down on the whole scene in an ORTHO top view.
+
+    The viewport that existed before the session is remembered first (a
+    no-op when the session already did), so Finish restores it as usual.
+    The view fits the scene's padded XY bounds — the same rule the aerial
+    map card uses (``core/scene_bounds.py``) — with the shot camera included.
+    """
+    from mathutils import Quaternion
+
+    from . import scene_bounds
+    from .shot_api import active_shot
+
+    target = find_view3d_context(context)
+    if target is None:
+        raise RuntimeError("No 3D viewport is available")
+    _window, area, region, space = target
+    remember_view(context, scene)
+
+    bounds = scene_bounds.world_bounds(scene_bounds.scene_bound_items(scene))
+    shot = active_shot(scene)
+    camera = getattr(shot, "camera", None) if shot is not None else None
+    camera_xy = None
+    if camera is not None:
+        camera_xy = (camera.matrix_world.translation.x, camera.matrix_world.translation.y)
+    rect = scene_bounds.padded_xy(bounds, camera_xy)
+    z_mid = (bounds[0][2] + bounds[1][2]) * 0.5 if bounds is not None else 0.0
+    location, distance = scene_bounds.aerial_view(
+        rect, z_mid, region.width, region.height, getattr(space, "lens", 50.0)
+    )
+
+    region_3d = space.region_3d
+    space.lock_camera = False
+    region_3d.view_perspective = 'ORTHO'
+    region_3d.view_rotation = Quaternion((1.0, 0.0, 0.0, 0.0))
+    region_3d.view_location = location
+    region_3d.view_distance = distance
+    state = getattr(scene, "mixar_director", None)
+    if state is not None:
+        state.navigation_mode = 'AERIAL'
     area.tag_redraw()
     return target
 

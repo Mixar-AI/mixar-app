@@ -5,11 +5,13 @@
 /** \file
  * \ingroup spview3d
  *
- * Cinema Mode: the right column — camera list, shot preview, frame rate and
- * resolution segments, and the export action.
+ * Cinema Mode: the right column — camera list, the aerial map, frame rate
+ * and resolution segments, and the export action.
  *
  * Painting only; the controls are invisible uiButs over the painted pixels
- * driving Python-owned operators and native Director popups.
+ * driving Python-owned operators and native Director popups. The one
+ * exception is the aerial map (`view3d_director_minimap_draw.cc`): it lays
+ * no button, its LEFTMOUSE binding is a keymap item scoped by its poll.
  */
 
 #include <algorithm>
@@ -21,7 +23,6 @@
 
 #include "BKE_context.hh"
 
-#include "DNA_image_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -302,42 +303,14 @@ void cinema_draw_right_panel(ui::Block *block,
                        dim_col);
   }
 
-  /* -------- Shot preview -------- */
+  /* -------- Aerial view -------- */
+  /* A live top-down map of the scene with the shot camera on it; a click or
+   * drag on it places the camera at that world XY (`mixar.director_place_camera`).
+   * Keyframe stills stay packed on the beats, only this card stopped showing
+   * them; `cinema_image_preview` remains in `_paint.cc` for a future home. */
   const rctf preview = design_rect_right(
       region, COLUMN_X, PREVIEW_Y, CINEMA_PANEL_W, CINEMA_PREVIEW_H);
-  cinema_panel(preview, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
-  /* The newest captured keyframe still IS the camera preview — Director
-   * already packs one per beat, so no new render path is needed. */
-  Image *preview_image = nullptr;
-  PointerRNA shot_ptr;
-  if (view3d_director_active_shot_pointer(scene, &shot_ptr)) {
-    PropertyRNA *beats_prop = RNA_struct_find_property(&shot_ptr, "beats");
-    const int beat_count = beats_prop ?
-                               RNA_property_collection_length(&shot_ptr, beats_prop) :
-                               0;
-    if (beat_count > 0) {
-      PointerRNA beat_ptr;
-      if (RNA_property_collection_lookup_int(&shot_ptr, beats_prop, beat_count - 1, &beat_ptr)) {
-        PropertyRNA *image_prop = RNA_struct_find_property(&beat_ptr, "image");
-        if (image_prop != nullptr) {
-          PointerRNA image_ptr = RNA_property_pointer_get(&beat_ptr, image_prop);
-          preview_image = static_cast<Image *>(image_ptr.data);
-        }
-      }
-    }
-  }
-  if (preview_image != nullptr) {
-    rctf inner = preview;
-    BLI_rctf_pad(&inner, -2.0f * u, -2.0f * u);
-    cinema_image_preview(preview_image, inner, CINEMA_ROW_RADIUS * u);
-  }
-  else {
-    cinema_text_center("Capture a keyframe",
-                       BLI_rctf_cent_x(&preview),
-                       BLI_rctf_cent_y(&preview),
-                       CINEMA_FONT_VALUE * u,
-                       dim_col);
-  }
+  cinema_draw_minimap(block, C, region, state, preview);
 
   /* -------- Frame rate -------- */
   const int fps = scene ? scene->r.frs_sec : 24;
