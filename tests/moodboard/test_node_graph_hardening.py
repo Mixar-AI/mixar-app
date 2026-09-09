@@ -64,6 +64,12 @@ def test_graph_strings_declare_a_maxlen_smaller_than_their_cpp_buffer():
         ("GRAPH_WIDGET_MAXLEN", "MIXIE_GRAPH_WIDGET_BUF"),
         ("GRAPH_OBJECT_NAMES_MAXLEN", "MIXIE_GRAPH_NAMES_BUF"),
         ("GRAPH_ERROR_MAXLEN", "MIXIE_GRAPH_ERROR_BUF"),
+        # Read into a stack buffer when composing a parameter's tooltip.
+        ("GRAPH_DESCRIPTION_MAXLEN", "MIXIE_GRAPH_DESCRIPTION_BUF"),
+        # Read into a stack buffer by the card header's state side.
+        ("GRAPH_PROGRESS_MAXLEN", "MIXIE_GRAPH_PROGRESS_BUF"),
+        # Read into a stack buffer by the refused-connection notice.
+        ("GRAPH_NOTICE_MAXLEN", "MIXIE_GRAPH_NOTICE_BUF"),
     )
     for python_name, c_name in pairs:
         maxlen = _int_constant(constants, python_name)
@@ -181,6 +187,172 @@ def test_media_lookup_never_writes_during_draw():
     # The migration still has to run somewhere outside draw.
     chat_sync = _read(MOODBOARD / "core/chat_sync.py")
     assert "ensure_media_node_ids" in chat_sync
+
+
+def test_catalog_swap_refreshes_nodes_independently_of_the_npanel_engine():
+    """The sidebar engine and the moodboard nodes are two independent consumers
+    of the catalog. Sharing one try block meant anything raising in the engine
+    branch — including the blanket `except ImportError` that exists for "the
+    params module is not loaded yet" — skipped the node sweep silently, so the
+    N-panel picked up a catalog change while every node kept its old dropdowns
+    and nothing was logged."""
+    consumers = _read(
+        ROOT / "src/scripts/mixar/bootstrap/generation_catalog/consumers.py"
+    )
+
+    engine_at = consumers.index("rebuild_from_catalog()")
+    nodes_at = consumers.index("sync_all_node_schemas()")
+    # A try of its own, opened AFTER the engine branch has been closed off.
+    between = consumers[engine_at:nodes_at]
+    assert between.count("except") >= 1, "node sweep shares the engine's try block"
+    assert "try:" in between
+    # And its own log line, so a node-side failure is not reported as an
+    # engine failure (or not at all).
+    assert "Moodboard node catalog refresh failed" in consumers
+    # Every consumer is called, and none can stop the next one.
+    fanout = consumers.split("def notify_catalog_swapped()")[1]
+    for call in ("_rebuild_parameter_engine()", "_refresh_moodboard_nodes()",
+                 "_refresh_sidebar_tab_labels()"):
+        assert call in fanout
+
+
+def test_one_unresolvable_node_cannot_strand_the_rest_of_the_board():
+    """The sweep walks every node of every scene. Without per-node isolation a
+    single node whose service/model no longer resolves aborts the loop, leaving
+    every later node — and every later scene — on the previous catalog."""
+    schema = _read(MOODBOARD / "core/node_schema.py")
+    sweep = schema.split("def sync_all_node_schemas()")[1].split(
+        "def _sync_one_node_schema"
+    )[0]
+    assert "try:" in sweep and "except Exception" in sweep
+    assert "_sync_one_node_schema(" in sweep
+    # Named, not swallowed: a stale dropdown is indistinguishable from a node
+    # nobody has touched, so the node id has to reach the log.
+    assert 'getattr(node, "node_id"' in sweep
+
+
+def test_every_extend_select_property_skips_save():
+    """`extend` must never persist between invocations.
+
+    These are REGISTER operators, so `WM_operator_last_properties_init` refills
+    any non-PROP_SKIP_SAVE property the invocation did not set from the previous
+    run -- and the plain-click keymap items set nothing. Without the flag, ONE
+    Shift or Cmd click remembered `extend = true`, so every later plain click
+    took the toggle branch, which returns FINISHED and installs no modal: cards
+    could no longer be dragged at all, a press only selected or deselected them.
+    Media select had the flag and kept working, which is exactly how the two
+    came to behave differently.
+    """
+    # Anchor on the DEFINITION (`"extend", false, ...`), not on the reads
+    # (`RNA_boolean_get(op->ptr, "extend")`), which have no trailing comma.
+    definition = '"extend",'
+    checked = 0
+    for name in ("mixie_moodboard_ops_graph.cc", "mixie_moodboard_ops_select.cc"):
+        source = _read(SPACE_MIXIE / name)
+        for tail in source.split(definition)[1:]:
+            checked += 1
+            assert "PROP_SKIP_SAVE" in tail[:400], (
+                f"{name}: extend is defined without PROP_SKIP_SAVE"
+            )
+    assert checked == 2, f"expected both extend properties, found {checked}"
+
+
+def test_repeatable_inputs_keep_their_own_type_and_name():
+    """A shared `max_materials` budget used to collapse every repeatable input
+    into one pooled, untyped "Material N" group -- which is how Generate Video
+    advertised a single violet socket named "Material 1" when it actually takes
+    images AND videos, each with its own ceiling. The budget is a limit, not a
+    description of the inputs."""
+    from mixar.modules.moodboard.core.node_schema import build_input_contract
+
+    service = {}
+    model = {
+        "input_spec": {
+            "max_materials": 5,
+            "inputs": [
+                {"name": "image", "kind": "image", "multiple": True, "max_count": 4},
+                {"name": "video", "kind": "video", "multiple": True, "max_count": 2},
+            ],
+        }
+    }
+    contract = build_input_contract(service, model)
+    labels = [socket["label"] for socket in contract["sockets"]]
+    accepted = {socket["label"]: socket["accepted_types"] for socket in contract["sockets"]}
+    groups = {socket["group_id"] for socket in contract["sockets"]}
+
+    assert not any(label.startswith("Material") for label in labels), labels
+    assert "Image 1" in labels and "Video 1" in labels
+    assert accepted["Image 1"] == ["IMAGE"]
+    assert accepted["Video 1"] == ["VIDEO"]
+    assert groups == {"image", "video"}
+
+    # Per-type ceilings AND the pooled budget, both enforced by connect_nodes.
+    assert contract["limits"]["IMAGE"] == 4
+    assert contract["limits"]["VIDEO"] == 2
+    assert contract["limits"]["TOTAL"] == 5
+
+
+def test_a_large_input_group_cannot_starve_a_later_one_of_sockets():
+    """Generate Video declares 30 reference images and THEN 10 reference videos.
+    The socket budget used to be handed out in declaration order, so images took
+    30 of the 32 slots and the node minted just TWO video sockets -- while
+    `limits` still advertised ten, so eight of them could never be connected and
+    nothing reported why. Sockets and limits must agree, and no group may be
+    starved by an earlier one."""
+    from mixar.modules.moodboard.core.node_schema import build_input_contract
+
+    # The live catalog contract for video_gen / seedance-2-5.
+    service = {
+        "input_spec": {
+            "max_materials": 50,
+            "inputs": [
+                {"kind": "prompt", "name": "prompt", "required": True},
+                {
+                    "name": "reference_images",
+                    "kind": "image",
+                    "multiple": True,
+                    "max_count": 30,
+                },
+                {
+                    "name": "reference_videos",
+                    "kind": "video",
+                    "multiple": True,
+                    "max_count": 10,
+                },
+            ],
+        }
+    }
+    contract = build_input_contract(service, {})
+    per_type = {}
+    for socket in contract["sockets"]:
+        accepted = socket["accepted_types"][0]
+        per_type[accepted] = per_type.get(accepted, 0) + 1
+
+    assert per_type["VIDEO"] == 10, per_type
+    assert per_type["IMAGE"] == 30, per_type
+
+    # A limit the sockets cannot satisfy is the failure this regressed on.
+    assert contract["limits"]["VIDEO"] == per_type["VIDEO"]
+    assert contract["limits"]["IMAGE"] == per_type["IMAGE"]
+
+
+def test_socket_budget_is_shared_rather_than_drained_in_order():
+    """The budget allocator itself: an over-subscribed contract degrades by
+    sharing what is left, never by giving the first group everything."""
+    from mixar.modules.moodboard.core.node_schema import (
+        _MAX_INPUT_SOCKETS,
+        _allocate_socket_budget,
+    )
+
+    # Fits: everyone gets what they asked for.
+    assert _allocate_socket_budget([30, 10], _MAX_INPUT_SOCKETS) == [30, 10]
+    # Over-subscribed: the budget is spent in full and the small group survives.
+    granted = _allocate_socket_budget([100, 4], 10)
+    assert sum(granted) == 10
+    assert granted[1] == 4, granted
+    # Never hands out more than a group wants, or more than the budget.
+    assert _allocate_socket_budget([2, 2], 50) == [2, 2]
+    assert _allocate_socket_budget([], 10) == []
 
 
 def test_node_service_and_model_resolve_from_saved_slugs():

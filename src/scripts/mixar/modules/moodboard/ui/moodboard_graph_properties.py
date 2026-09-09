@@ -4,8 +4,6 @@
 
 """Persistent, catalog-driven records for moodboard inference blocks."""
 
-import json
-
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -25,10 +23,18 @@ from mixar.modules.moodboard.constants import (
     GRAPH_LABEL_MAXLEN,
     GRAPH_MODEL_SLUG_MAXLEN,
     GRAPH_NODE_ID_MAXLEN,
+    GRAPH_PROGRESS_MAXLEN,
+    GRAPH_PROMPT_MAXLEN,
     GRAPH_OBJECT_NAMES_MAXLEN,
     GRAPH_SERVICE_KEY_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
     GRAPH_WIDGET_MAXLEN,
+)
+from mixar.modules.moodboard.ui.moodboard_graph_param_callbacks import (
+    _clamp_parameter_value,  # noqa: F401  (re-exported for back-compat)
+    _enum_label_from_choices,
+    _parameter_changed,
+    _parameter_enum_items,
 )
 
 
@@ -163,18 +169,6 @@ def _model_label_for_slug(service_key, model_slug) -> str:
     return str(model_slug)
 
 
-def _enum_label_from_choices(choices_json, value) -> str:
-    if not value:
-        return ""
-    try:
-        for choice in json.loads(choices_json or "[]"):
-            if isinstance(choice, dict) and str(choice.get("value")) == str(value):
-                return str(choice.get("label") or choice.get("value") or "")
-    except (TypeError, ValueError):
-        pass
-    return str(value)
-
-
 def refresh_node_dropdown_labels(node) -> None:
     """Cache the Mode/Model dropdown labels (read by the C++ node overlay)."""
     node.service_label = _service_label_for_slug(node.action_type, node.service_key_id)
@@ -209,27 +203,6 @@ def _service_changed(self, _context):
         self.model = ""
 
 
-def _parameter_changed(self, context):
-    """Re-evaluate backend ``visible_if`` rules for this node's controls."""
-    if self.parameter_type == 'ENUM':
-        self.value_label = _enum_label_from_choices(self.choices_json, self.value_enum)
-    scene = getattr(context, "scene", None) if context else None
-    if scene is None:
-        return
-    try:
-        from mixar.modules.moodboard.core.node_schema import (
-            refresh_node_parameter_visibility,
-        )
-
-        pointer = self.as_pointer()
-        for node in scene.mixie_moodboard_action_nodes:
-            if any(parameter.as_pointer() == pointer for parameter in node.parameters):
-                refresh_node_parameter_visibility(node)
-                break
-    except Exception:
-        pass
-
-
 def _model_changed(self, context):
     if _SUPPRESS_ENUM_MIRROR:
         return
@@ -243,35 +216,6 @@ def _model_changed(self, context):
         sync_node_schema(context.scene, self)
     except Exception:
         pass
-
-
-# Blender does not copy the strings a dynamic ``items`` callback returns, so
-# Python must keep them alive for as long as any button can reference them.
-# This cache is therefore deliberately never evicted: dropping an entry that a
-# live enum still points at is a use-after-free. Growth is bounded in practice
-# by the number of distinct parameter schemas the catalog publishes.
-_ENUM_ITEM_CACHE = {}
-
-
-def _parameter_enum_items(self, _context):
-    raw = str(getattr(self, "choices_json", "") or "[]")
-    cached = _ENUM_ITEM_CACHE.get(raw)
-    if cached is not None:
-        return cached
-    try:
-        choices = json.loads(raw)
-    except (TypeError, ValueError):
-        choices = []
-    items = []
-    for choice in choices if isinstance(choices, list) else []:
-        if not isinstance(choice, dict) or choice.get("value") is None:
-            continue
-        identifier = str(choice["value"])
-        label = str(choice.get("label") or identifier)
-        items.append((identifier, label, label))
-    cached = items or [('NONE', "None", "No choices published")]
-    _ENUM_ITEM_CACHE[raw] = cached
-    return cached
 
 
 class MixieMoodboardNodeParameter(PropertyGroup):
@@ -344,7 +288,31 @@ class MixieMoodboardActionNode(PropertyGroup):
     width: FloatProperty(name="Width", default=700.0, min=140.0, max=1400.0)
     height: FloatProperty(name="Height", default=560.0, min=140.0, max=1400.0)
     selected: BoolProperty(name="Selected", default=False)
-    prompt: StringProperty(name="Prompt", default="", maxlen=4096)
+    # Pure UI state, toggled by the floating Edit button on a finished card.
+    # A completed node shows its RESULT: the settings panel and the in-tile
+    # prompt are folded away until this is on. Deliberately not a state change
+    # -- the older "Edit & Run Again" reset `state` to DRAFT to make the prompt
+    # reappear, which threw away the node's real outcome (and its error) just to
+    # open an editor.
+    edit_mode: BoolProperty(
+        name="Edit Mode",
+        description="Show this node's settings and prompt over its result",
+        default=False,
+    )
+    # Shown in the card header. Empty means "use the action type's own name",
+    # which is what makes an unnamed card still identifiable at a glance.
+    label: StringProperty(
+        name="Name",
+        description="Name shown in this node's header; blank uses the node type",
+        default="",
+        maxlen=GRAPH_LABEL_MAXLEN,
+    )
+    # Live queue state for the header's right side ("Queued (#3)", "0:42").
+    # Written by the pulse timer in node_job_bridge, never from a draw callback.
+    progress_text: StringProperty(
+        name="Progress", default="", maxlen=GRAPH_PROGRESS_MAXLEN
+    )
+    prompt: StringProperty(name="Prompt", default="", maxlen=GRAPH_PROMPT_MAXLEN)
     # MASK_DETAIL in-node controls, drawn vertically inside the node card by the
     # C++ layout. Real node props so each mask node is independent; catalog image
     # params come from the node's own `parameters` collection.

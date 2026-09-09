@@ -21,6 +21,8 @@ import bpy
 from bpy.types import PropertyGroup
 from bpy.props import BoolProperty, EnumProperty, PointerProperty, StringProperty
 
+from mixar.modules.moodboard.constants import GRAPH_PROMPT_MAXLEN
+
 from .moodboard_enum_callbacks import (
     _on_model_changed,
     _get_ai_render_mode_items,
@@ -140,7 +142,7 @@ class MixieMoodboardTabVideoGenProps(PropertyGroup):
         name="Prompt",
         description="Describe the video and how selected references should be used",
         default="",
-        maxlen=4096,
+        maxlen=GRAPH_PROMPT_MAXLEN,
         options={'TEXTEDIT_UPDATE'},
     )
 

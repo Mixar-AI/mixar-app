@@ -134,7 +134,10 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
   if (box_width <= CLICK_THRESHOLD && box_height <= CLICK_THRESHOLD) {
     if (select_mode == SEL_OP_SET) {
       PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+      /* Cards too: the box itself selects them (see select_rect_items below),
+       * so the click that clears the box's result has to clear the same set. */
       moodboard_deselect_all(&scene_ptr);
+      moodboard_graph_deselect_nodes(&scene_ptr);
       ED_area_tag_redraw(CTX_wm_area(C));
     }
     return OPERATOR_FINISHED;

@@ -2,11 +2,14 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""In-app clipboard for moodboard images and text boxes.
+"""In-app clipboard for moodboard images, videos and text boxes.
 
 Holds a snapshot of the selected moodboard items so Copy (Ctrl/Cmd+C) and Paste
 (Ctrl/Cmd+V) duplicate them *within* the moodboard reliably, without a lossy
-round-trip through the system clipboard.  Image pastes reuse the source image
+round-trip through the system clipboard. "Selected" resolves through inference
+nodes as well (`media_utils.selected_exportable_media`), so copying a finished
+Generate card copies the image or video it produced -- that result is owned by
+its node and is never `selected` itself.  Image pastes reuse the source image
 datablock (like Duplicate) rather than re-encoding pixels; text boxes copy their
 content and styling.  The copied items' relative layout is preserved on paste.
 
@@ -18,6 +21,7 @@ logic lives in the operators; this module owns only the in-app snapshot.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from .media_utils import selected_exportable_media
 from .moodboard_utils import (
     get_moodboard_image_display_size,
     get_moodboard_viewport_center,
@@ -96,19 +100,23 @@ def copy_selected(scene) -> int:
     """
     snapshot: list[dict] = []
 
-    images = getattr(scene, "mixie_moodboard_images", None)
-    if images:
-        for item in images:
-            if item.selected and item.image:
-                entry = {
-                    "kind": "image",
-                    "image": item.image,
-                    "position_x": item.position_x,
-                    "position_y": item.position_y,
-                }
-                for field in _IMAGE_FIELDS:
-                    entry[field] = _plain(getattr(item, field, None))
-                snapshot.append(entry)
+    # `selected_exportable_media` is the one definition of "the media this
+    # selection means": directly selected items, PLUS the result owned by a
+    # selected inference node. A generated image or video is never `selected`
+    # itself -- its node carries the selection -- so without this, Ctrl+C on a
+    # finished Generate card had nothing to copy. The entry it produces carries
+    # no `embedded_node_id` (it is not in `_IMAGE_FIELDS`), so the paste is a
+    # free-standing board item rather than a second card claiming that result.
+    for item in selected_exportable_media(scene):
+        entry = {
+            "kind": "image",
+            "image": item.image,
+            "position_x": item.position_x,
+            "position_y": item.position_y,
+        }
+        for field in _IMAGE_FIELDS:
+            entry[field] = _plain(getattr(item, field, None))
+        snapshot.append(entry)
 
     textboxes = getattr(scene, "mixie_moodboard_textboxes", None)
     if textboxes:
@@ -180,6 +188,17 @@ def paste_clipboard(scene, anchor: tuple[float, float] | None = None) -> int:
     for tb in textboxes:
         if tb.selected:
             tb.selected = False
+    # Inference nodes lose the selection too. A paste selects exactly what it
+    # created, and the copy may well have come from a selected node's result --
+    # leaving that node selected would make the next copy pick up both it and
+    # the item just pasted. Lazily imported: `node_graph` reaches into the UI
+    # package for its catalog helpers, which core must not do at import time.
+    try:
+        from .node_graph import deselect_graph_nodes
+
+        deselect_graph_nodes(scene)
+    except Exception:
+        logger.debug("Node deselect skipped during paste", exc_info=True)
 
     pasted = 0
     for entry in entries:

@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
     GRAPH_WIDGET_MAXLEN,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _clamp(value, limit: int) -> str:
@@ -49,7 +52,12 @@ _CONNECTABLE_TYPES = {
     "mesh": "MESH",
     "model_3d": "MESH",
 }
-_MAX_INPUT_SOCKETS = 32
+# Client-side ceiling on how many socket records a node mints. Not a C++ limit
+# (the canvas walks the `input_sockets` RNA collection dynamically) and not a
+# visual one (`visible_input_socket_ids` reveals only the connected slots plus
+# one next empty per group). It only has to be roomy enough for the real
+# catalog contracts: Generate Video alone declares 30 images + 10 videos.
+_MAX_INPUT_SOCKETS = 64
 _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
@@ -115,6 +123,30 @@ def _positive_int(value) -> int | None:
     return result if result > 0 else None
 
 
+def _allocate_socket_budget(wanted: list[int], budget: int) -> list[int]:
+    """Share ``budget`` slots across groups round-robin, never starving one.
+
+    Handing the budget out in declaration order lets a large first group take
+    everything and leave later ones with a couple of sockets (or none), which
+    silently caps an input far below what the backend accepts.
+    """
+    granted = [0] * len(wanted)
+    remaining = budget
+    while remaining > 0:
+        progressed = False
+        for index, want in enumerate(wanted):
+            if remaining <= 0:
+                break
+            if granted[index] >= want:
+                continue
+            granted[index] += 1
+            remaining -= 1
+            progressed = True
+        if not progressed:
+            break
+    return granted
+
+
 def build_input_contract(service: dict, model: dict) -> dict:
     """Normalize backend input metadata into bounded, progressive sockets.
 
@@ -149,7 +181,6 @@ def build_input_contract(service: dict, model: dict) -> dict:
         required = bool(raw.get("required", False))
         if not raw.get("multiple"):
             single_inputs.append((name, accepted, required))
-            limits[accepted] = limits.get(accepted, 0) + 1
             continue
         maximum = _positive_int(raw.get("max_count"))
         if maximum is None and accepted == "IMAGE":
@@ -158,7 +189,6 @@ def build_input_contract(service: dict, model: dict) -> dict:
             continue
         maximum = min(maximum, _MAX_INPUT_SOCKETS)
         multiple_inputs.append((name, accepted, required, maximum))
-        limits[accepted] = limits.get(accepted, 0) + maximum
 
     total_limit = _positive_int(raw_spec.get("max_materials"))
     sockets = []
@@ -172,35 +202,51 @@ def build_input_contract(service: dict, model: dict) -> dict:
             "repeatable": False,
         })
 
-    if total_limit and multiple_inputs:
-        total_limit = min(total_limit, _MAX_INPUT_SOCKETS - len(sockets))
-        accepted_types = sorted({item[1] for item in multiple_inputs})
-        required_count = max((1 if item[2] else 0 for item in multiple_inputs), default=0)
-        for index in range(max(total_limit, 0)):
+    # Every repeatable input keeps its OWN typed group. A shared budget
+    # (``max_materials``) used to collapse them all into one pooled, untyped
+    # "Material N" group -- which is how Generate Video came to advertise a
+    # single violet socket named "Material 1" when what it actually takes is
+    # some images AND some videos, each with its own ceiling. The budget is a
+    # limit, not a description of the inputs, so it is expressed as one below
+    # instead of flattening them.
+    # The budget is SHARED between the groups, not handed to them in order.
+    # First-come-first-served let one large group starve every later one:
+    # Generate Video declares 30 reference images and then 10 reference videos,
+    # so images took 30 of the 32 slots and the node minted just TWO video
+    # sockets -- while `limits` still advertised ten, leaving eight videos the
+    # user could never connect.
+    granted = _allocate_socket_budget(
+        [maximum for _, _, _, maximum in multiple_inputs],
+        max(_MAX_INPUT_SOCKETS - len(sockets), 0),
+    )
+    for (name, accepted, required, maximum), allowed in zip(multiple_inputs, granted):
+        for index in range(allowed):
             sockets.append({
-                "id": f"materials:{index}",
-                "label": f"Material {index + 1}",
-                "accepted_types": accepted_types,
-                "required": index < required_count,
-                "group_id": "materials",
+                "id": f"{name}:{index}",
+                "label": _clamp(
+                    f"{name.replace('_', ' ').title()} {index + 1}",
+                    GRAPH_LABEL_MAXLEN,
+                ),
+                "accepted_types": [accepted],
+                "required": required and index == 0,
+                "group_id": name,
                 "repeatable": True,
             })
-        limits["TOTAL"] = total_limit
-    else:
-        for name, accepted, required, maximum in multiple_inputs:
-            remaining = _MAX_INPUT_SOCKETS - len(sockets)
-            for index in range(min(maximum, remaining)):
-                sockets.append({
-                    "id": f"{name}:{index}",
-                    "label": _clamp(
-                        f"{name.replace('_', ' ').title()} {index + 1}",
-                        GRAPH_LABEL_MAXLEN,
-                    ),
-                    "accepted_types": [accepted],
-                    "required": required and index == 0,
-                    "group_id": name,
-                    "repeatable": True,
-                })
+
+    # The pooled ceiling across every type, on top of the per-type ones already
+    # accumulated above. `connect_nodes` and `reconcile_node_links` enforce both
+    # -- so a model that takes "4 images, 2 videos, 5 materials total" refuses
+    # the 5th image, the 3rd video, and the 6th of any mix.
+    # Per-type ceilings are counted off the sockets that EXIST. Deriving them
+    # from the catalog maximum instead is what hid the starvation above: the
+    # limit said ten videos were welcome and there were only two sockets to put
+    # them in, so the node failed silently rather than reporting a full input.
+    for socket in sockets:
+        accepted = socket["accepted_types"][0]
+        limits[accepted] = limits.get(accepted, 0) + 1
+
+    if total_limit and multiple_inputs:
+        limits["TOTAL"] = min(total_limit, _MAX_INPUT_SOCKETS)
 
     return {"sockets": sockets, "limits": limits}
 
@@ -595,17 +641,39 @@ def sync_all_node_schemas() -> None:
 
     for scene in bpy.data.scenes:
         for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
-            capability = _capability_for_action(node.action_type)
-            services = services_for_action(
-                node.action_type,
-                get_services(capability, surface="moodboard"),
-            )
-            service_keys = [service.get("key") for service in services if service.get("key")]
-            service_key = node_service_key(node)
-            if service_keys and service_key not in service_keys:
-                service_key = service_keys[0]
-            model_slug = node_model_slug(node)
-            if service_key and get_model(service_key, model_slug) is None:
-                model_slug = get_default_model_slug(service_key) or ""
-            set_node_selection(node, service_key, model_slug)
-            sync_node_schema(scene, node)
+            # Per-node isolation: one node whose service/model no longer
+            # resolves must not strand every node after it — including every
+            # node in every later scene — on the previous catalog. The failure
+            # is named rather than swallowed, because a stale dropdown looks
+            # exactly like a node nobody has touched.
+            try:
+                _sync_one_node_schema(
+                    scene, node, get_services, get_model, get_default_model_slug
+                )
+            except Exception as exc:
+                logger.error(
+                    "Catalog refresh failed for moodboard node %s (%s): %s",
+                    getattr(node, "node_id", "?"),
+                    getattr(node, "action_type", "?"),
+                    exc,
+                )
+
+
+def _sync_one_node_schema(
+    scene, node, get_services, get_model, get_default_model_slug
+) -> None:
+    """Re-resolve one node's service/model against the current catalog."""
+    capability = _capability_for_action(node.action_type)
+    services = services_for_action(
+        node.action_type,
+        get_services(capability, surface="moodboard"),
+    )
+    service_keys = [service.get("key") for service in services if service.get("key")]
+    service_key = node_service_key(node)
+    if service_keys and service_key not in service_keys:
+        service_key = service_keys[0]
+    model_slug = node_model_slug(node)
+    if service_key and get_model(service_key, model_slug) is None:
+        model_slug = get_default_model_slug(service_key) or ""
+    set_node_selection(node, service_key, model_slug)
+    sync_node_schema(scene, node)

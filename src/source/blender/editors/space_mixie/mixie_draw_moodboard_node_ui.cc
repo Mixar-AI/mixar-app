@@ -4,7 +4,16 @@
 
 /** \file
  * \ingroup spmixie
- * \brief Screen-space floating controls for selected moodboard nodes.
+ * \brief Canvas-space control panel for the selected moodboard node.
+ *
+ * The separated dropdown card docked to the LEFT of a selected inference node,
+ * plus that node's in-tile prompt / Generate / Cancel, are laid out and drawn
+ * in the View2D ortho projection, so they scale and pan with the canvas zoom
+ * exactly like the node card they belong to. Metrics are canvas units (one
+ * canvas unit is one pixel at zoom 1, so the panel is unchanged at zoom 1 and
+ * grows/shrinks from there). The 3D-result preview icons (pixel blits) and the
+ * floating media label bar stay in SCREEN space as fixed-size overlays, drawn
+ * from their own block after pixel space is restored.
  */
 
 #include "mixie_draw_moodboard_intern.hh"
@@ -135,17 +144,23 @@ static uiBut *add_parameter_button(uiBlock *block,
   else if (ELEM(button_type, ButType::Num, ButType::NumSlider, ButType::Text)) {
     display_label = "";
   }
-  return screen_prop_button(block,
-                            parameter,
-                            value_property,
-                            display_label,
-                            button_type,
-                            x,
-                            y,
-                            width,
-                            height,
-                            minimum,
-                            maximum);
+  uiBut *button = screen_prop_button(block,
+                                     parameter,
+                                     value_property,
+                                     display_label,
+                                     button_type,
+                                     x,
+                                     y,
+                                     width,
+                                     height,
+                                     minimum,
+                                     maximum);
+  /* The field shows its VALUE, not its name, so without this there is nothing
+   * on screen saying what "1K" or "1:1" configures. It cannot come from RNA:
+   * every parameter shares one set of value properties, so the property's own
+   * description is the same generic text on every field of every node. */
+  moodboard_set_parameter_tooltip(button, parameter);
+  return button;
 }
 
 static void disable_while_submitted(uiBut *button, const bool submitted)
@@ -167,12 +182,11 @@ static void add_action_toolbar(uiBlock *block,
   node_rect.xmax = node_rect.xmin + RNA_float_get(node, "width");
   node_rect.ymax = node_rect.ymin + RNA_float_get(node, "height");
   rcti node_region;
-  if (!moodboard_view_rect_to_region(v2d, region, node_rect, &node_region)) {
-    return;
-  }
+  const bool node_on_screen = moodboard_view_rect_to_region(
+      v2d, region, node_rect, &node_region);
 
   PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
-  if (object_ptr.data) {
+  if (node_on_screen && object_ptr.data) {
     rctf preview_rect = {node_rect.xmin + 6.0f,
                          node_rect.xmax - 6.0f,
                          node_rect.ymin + 6.0f,
@@ -186,13 +200,14 @@ static void add_action_toolbar(uiBlock *block,
   if (!RNA_boolean_get(node, "selected")) {
     return;
   }
-  /* The toolbar is intentionally screen-sized, like Flora's contextual
-   * strip. Hide it before it becomes visually larger than its zoomed tile. */
-  if (BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X ||
-      BLI_rcti_size_y(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y)
-  {
-    return;
-  }
+  /* No on-screen-size gate. The panel is canvas content now (see the file
+   * header), so at extreme zoom-out it simply shrinks with the card it belongs
+   * to instead of vanishing — a fixed-size panel dwarfing a zoomed-out card is
+   * the only thing the old minimum-on-screen-size gate existed to prevent, and
+   * that cannot happen now. `moodboard_view_rect_to_region` above already
+   * culled nodes that are entirely off-screen, and the graph pass's
+   * `controls_visible` must stay in lockstep with this: it is now `selected`
+   * alone, so exactly one of the panel and the centered draft hint draws. */
 
   PointerRNA preview_ptr = RNA_pointer_get(node, "preview_image");
   const bool has_result = preview_ptr.data || object_ptr.data;
@@ -211,40 +226,99 @@ static void add_action_toolbar(uiBlock *block,
   }
   const bool show_mode = RNA_boolean_get(node, "show_mode");
   const int control_count = 1 + (show_mode ? 1 : 0) + parameter_count;
-  /* A finished/failed/cancelled node that shows its result hides the tile's
-   * prompt + Generate, so the panel carries the way back into the flow. */
-  const bool show_rerun = has_result && ELEM(state, 3, 4, 5);
+
+  /* A finished node shows its RESULT. Its one affordance is a floating Edit
+   * toggle over the card's top-right corner; the settings panel and the in-tile
+   * prompt fold away until that is on. Everything below this point is the edit
+   * surface, so a finished node that is not being edited returns here. */
+  char node_id[MIXIE_GRAPH_ID_BUF];
+  mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
+  const bool finished_with_result = has_result && ELEM(state, 3, 4, 5);
+  const bool edit_mode = RNA_boolean_get(node, "edit_mode");
+  if (finished_with_result) {
+    /* Export needs MEDIA specifically: `has_result` is also true for a 3D
+     * result, which is an object in the scene rather than a board item the
+     * moodboard exporter can write. */
+    moodboard_add_node_card_actions(
+        block, node_rect, edit_mode, preview_ptr.data != nullptr, node_id);
+    if (!edit_mode) {
+      return;
+    }
+  }
 
   /* Vertical control panel to the LEFT of the node. Each control occupies its
    * own full-width row so long labels ("Aspect Ratio", model names) stay
    * legible — the previous single horizontal strip forced every control to
    * panel_width / control_count and clipped the text once a handful of
    * parameters were present. A Reset row at the bottom restores catalog
-   * defaults. All metrics scale with the UI factor: labels render at
-   * UI_SCALE_FAC, so fixed pixel rows clipped every label on high-DPI. */
+   * defaults.
+   *
+   * Metrics are CANVAS units: one canvas unit is one pixel at zoom 1, so these
+   * are the same numbers the old screen-space panel used and the panel is
+   * pixel-identical at zoom 1 — it now grows and shrinks from there with the
+   * card. They still scale with UI_SCALE_FAC, which is the DPI/UI factor and
+   * orthogonal to zoom: labels render at UI_SCALE_FAC, so fixed rows clipped
+   * every label on high-DPI. */
   const float ui_scale = UI_SCALE_FAC;
   const int inset = int(14 * ui_scale);
-  const int row_h = int(32 * ui_scale);
   const int gap = int(6 * ui_scale);
   const int reset_gap = int(12 * ui_scale);
-  const int panel_width = int(244 * ui_scale);
+  /* Width is HALF THE CARD's, not a DPI-scaled constant. The card is a plain
+   * canvas rectangle and does not scale with UI_SCALE_FAC, so a fixed
+   * `244 * ui_scale` panel crept up on the card's own width as the UI factor
+   * rose — on a high-DPI display the "settings" card was nearly as wide as the
+   * node it configures. Tying it to the card keeps the proportion fixed at
+   * every DPI and makes the resize grip scale the panel with the node.
+   *
+   * The floor exists because text does NOT scale with the card: its size comes
+   * from the style × UI_SCALE_FAC, so at the card's minimum width half of it is
+   * too narrow for a model name and the panel stops shrinking rather than
+   * clipping labels. Insets and gaps stay purely DPI-driven for the same
+   * reason; only the row height is negotiated against the card (below). */
+  const int panel_width = std::max(
+      int(BLI_rctf_size_x(&node_rect) * MOODBOARD_NODE_PANEL_WIDTH_RATIO),
+      int(MOODBOARD_NODE_PANEL_MIN_TEXT_W * ui_scale));
   const int field_width = panel_width - inset * 2;
-  const int panel_height = inset * 2 + control_count * row_h + (control_count - 1) * gap +
-                           (show_rerun ? row_h + gap : 0) + reset_gap + row_h;
+
+  /* Height follows the card the same way the width does. The rows are sized to
+   * land on the target rather than the panel being stretched or clipped to it:
+   * the fixed chrome (insets, the gaps between controls, the Reset separator)
+   * comes off the top, and what is left is shared between the control rows and
+   * the Reset row. Clamped at both ends -- never taller than the natural row
+   * height (a two-control panel should not have enormous rows) and never below
+   * what a line of text needs, so a node with many parameters overflows the
+   * target instead of crushing its rows into illegibility. */
+  const int rows = control_count + 1; /* the controls, plus Reset */
+  const int chrome = inset * 2 + (control_count - 1) * gap + reset_gap;
+  const int target_height = int(BLI_rctf_size_y(&node_rect) *
+                                MOODBOARD_NODE_PANEL_HEIGHT_RATIO);
+  const int row_h = std::clamp((target_height - chrome) / std::max(rows, 1),
+                               int(MOODBOARD_NODE_PANEL_MIN_ROW_H * ui_scale),
+                               int(32 * ui_scale));
+  const int panel_height = chrome + rows * row_h;
 
   /* Always dock the panel to the LEFT of the node — never flip sides. A
    * side-dependent fallback made image and video nodes disagree on where their
-   * controls appeared; clamping (rather than flipping) keeps it reachable when
-   * the node is panned against the left edge. */
-  const int panel_x = std::clamp(node_region.xmin - 12 - panel_width,
-                                 8,
-                                 std::max(8, region->winx - panel_width - 8));
-  const int panel_y = std::clamp(
-      node_region.ymax - panel_height, 8, std::max(8, region->winy - panel_height - 8));
+   * controls appeared. The old screen-space clamp into the region is gone with
+   * the screen-space layout: the panel is part of the graph now, so a node
+   * pushed against the viewport edge takes its controls off-screen with it and
+   * panning brings both back, exactly like a node editor. */
+  const int panel_x = int(node_rect.xmin) - int(12 * ui_scale) - panel_width;
+  const int panel_y = int(node_rect.ymax) - panel_height;
   rctf panel_rect = {float(panel_x),
                      float(panel_x + panel_width),
                      float(panel_y),
                      float(panel_y + panel_height)};
+  /* Cull on the PANEL's own footprint as well as the card's. The panel is
+   * docked to the LEFT of the card, so a node pushed just past the right edge
+   * of the viewport can still have its controls fully on screen — culling on
+   * the card alone made them pop out early. */
+  rcti panel_region;
+  if (!node_on_screen &&
+      !moodboard_view_rect_to_region(v2d, region, panel_rect, &panel_region))
+  {
+    return;
+  }
   moodboard_draw_floating_background(panel_rect);
 
   const int content_x = panel_x + inset;
@@ -265,6 +339,14 @@ static void add_action_toolbar(uiBlock *block,
                                      y,
                                      field_width,
                                      row_h);
+    /* Like the parameter fields, this draws the SELECTED value rather than the
+     * word "Mode", so the tooltip carries the field's identity. */
+    std::string mode_tip = "Mode\n\nGeneration service this node runs on.";
+    if (mode_label[0]) {
+      mode_tip += "\nCurrently: ";
+      mode_tip += mode_label;
+    }
+    moodboard_set_node_tooltip(mode, mode_tip.c_str());
     disable_while_submitted(mode, generation_running);
     y -= row_h + gap;
   }
@@ -279,6 +361,12 @@ static void add_action_toolbar(uiBlock *block,
                                     y,
                                     field_width,
                                     row_h);
+  std::string model_tip = "Model\n\nThe model this node generates with.";
+  if (model_label[0]) {
+    model_tip += "\nCurrently: ";
+    model_tip += model_label;
+  }
+  moodboard_set_node_tooltip(model, model_tip.c_str());
   disable_while_submitted(model, generation_running);
   y -= row_h + gap;
 
@@ -298,27 +386,6 @@ static void add_action_toolbar(uiBlock *block,
   }
 
   y -= reset_gap - gap;
-  char reset_node_id[MIXIE_GRAPH_ID_BUF];
-  mixie_rna_string_get_clamped(node, "node_id", reset_node_id, sizeof(reset_node_id));
-  if (show_rerun) {
-    /* Same action as the context menu's "Edit & Run Again": back to DRAFT with
-     * the prompt editable — discoverable from the node itself, not only from
-     * a right-click. */
-    uiBut *rerun = uiDefButO(block,
-                             ButType::But,
-                             "MIXIE_OT_moodboard_run_action_node",
-                             blender::wm::OpCallContext::ExecDefault,
-                             "Edit & Run Again",
-                             content_x,
-                             y,
-                             field_width,
-                             row_h,
-                             nullptr);
-    PointerRNA *rerun_props = UI_but_operator_ptr_ensure(rerun);
-    RNA_string_set(rerun_props, "node_id", reset_node_id);
-    RNA_boolean_set(rerun_props, "edit_before_run", true);
-    y -= row_h + gap;
-  }
   uiBut *reset = uiDefButO(block,
                            ButType::But,
                            "MIXIE_OT_moodboard_reset_node_params",
@@ -329,77 +396,14 @@ static void add_action_toolbar(uiBlock *block,
                            field_width,
                            row_h,
                            nullptr);
-  RNA_string_set(UI_but_operator_ptr_ensure(reset), "node_id", reset_node_id);
+  RNA_string_set(UI_but_operator_ptr_ensure(reset), "node_id", node_id);
   disable_while_submitted(reset, generation_running);
 
-  if (generation_running) {
-    /* The tile already carries the Queued/Generating hint and the glow; the
-     * prompt and Generate would draw disabled straight over that text. The
-     * one action that makes sense mid-flight is stopping it. */
-    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    const int cancel_h = int(36 * UI_SCALE_FAC);
-    const int cancel_w = int(118 * UI_SCALE_FAC);
-    uiBut *cancel = uiDefButO(block,
-                              ButType::But,
-                              "MIXIE_OT_moodboard_cancel_action_node",
-                              blender::wm::OpCallContext::ExecDefault,
-                              "Cancel",
-                              node_region.xmax - prompt_margin - cancel_w,
-                              node_region.ymin + prompt_margin,
-                              cancel_w,
-                              cancel_h,
-                              nullptr);
-    RNA_string_set(UI_but_operator_ptr_ensure(cancel), "node_id", reset_node_id);
-  }
-  else if (!has_result || state == 0) {
-    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
-    /* UI-factor sized like the left panel: the label renders at UI_SCALE_FAC,
-     * so a fixed 118px clipped "Generate" to "Gener..." at high UI scale. */
-    const int generate_h = int(36 * UI_SCALE_FAC);
-    const int generate_w = int(118 * UI_SCALE_FAC);
-    /* Make the prompt a tall multi-line text area: it spans from the top margin
-     * down to just above the Generate button. Height comfortably exceeds
-     * UI_UNIT_Y * 1.5 at any UI scale, which is what flips the native text
-     * button into the word-wrapping, scrollable multi-line renderer
-     * (ui_but_is_multiline_text). A fixed short band stayed single-line on
-     * high-DPI displays where UI_UNIT_Y is large. */
-    /* Mesh-only nodes (Retopology / Mesh Segmentation / Auto Rig) take no text
-     * guidance, so they hide the prompt field entirely; the Generate button
-     * below is still drawn. */
-    if (RNA_boolean_get(node, "show_prompt")) {
-      const int prompt_top = node_region.ymax - prompt_margin;
-      const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
-      const int prompt_height = std::max(46, prompt_top - prompt_bottom);
-      const int prompt_y = prompt_top - prompt_height;
-      uiBut *prompt = screen_prop_button(block,
-                                         node,
-                                         "prompt",
-                                         "",
-                                         ButType::Text,
-                                         node_region.xmin + prompt_margin,
-                                         prompt_y,
-                                         BLI_rcti_size_x(&node_region) - prompt_margin * 2,
-                                         prompt_height);
-      if (prompt) {
-        UI_but_placeholder_set(prompt, "Describe what you want to create...");
-        UI_but_flag_enable(prompt, UI_BUT_TEXTEDIT_UPDATE);
-      }
-    }
-
-    char node_id[MIXIE_GRAPH_ID_BUF];
-    mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
-    uiBut *generate = uiDefButO(block,
-                                ButType::But,
-                                "MIXIE_OT_moodboard_run_action_node",
-                                blender::wm::OpCallContext::ExecDefault,
-                                "Generate",
-                                node_region.xmax - prompt_margin - generate_w,
-                                node_region.ymin + prompt_margin,
-                                generate_w,
-                                generate_h,
-                                nullptr);
-    RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
-  }
+  /* Controls drawn INSIDE the tile (prompt / Generate, or Cancel while a
+   * generation is in flight) live in their own unit — see
+   * mixie_draw_moodboard_node_tile_controls.cc. */
+  moodboard_add_node_tile_controls(
+      block, node, node_rect, generation_running, has_result, state, edit_mode, node_id);
 }
 
 void mixie_draw_moodboard_graph_controls(const bContext *C,
@@ -417,9 +421,14 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     return;
   }
 
-  UI_view2d_view_restore(C);
+  /* Node control panels are CANVAS content. We are called from the graph pass,
+   * which is already inside the View2D ortho projection, and we deliberately do
+   * NOT restore pixel space here: UI_block_begin captures the current (zoomed)
+   * projection into block->winmat, so the widgets scale and pan with the canvas
+   * like a node editor's do — and, because hit-testing inverts that same
+   * matrix, clicks land on them at every zoom. */
   uiBlock *block = UI_block_begin(
-      C, region, "moodboard_floating_node_controls", blender::ui::EmbossType::Emboss);
+      C, region, "moodboard_node_controls", blender::ui::EmbossType::Emboss);
   blender::Vector<ObjectPreviewDraw> object_previews;
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, actions, &iter);
@@ -428,10 +437,14 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
-  mixie_draw_moodboard_selected_media_labels(block, v2d, region, &scene_ptr, cache);
-
   UI_block_end(C, block);
   UI_block_draw(C, block);
+
+  /* Screen-space pass. Icon previews are pixel blits and a selected media's
+   * name is painted at a fixed point size, so both stay a constant screen size
+   * — they are NOT part of the canvas block above. Restore pixel space for
+   * them, then put back the View2D ortho our caller expects on return. */
+  UI_view2d_view_restore(C);
   for (const ObjectPreviewDraw &preview : object_previews) {
     PreviewImage *preview_image = BKE_previewimg_id_ensure(&preview.object->id);
     const int icon_id = BKE_icon_preview_ensure(&preview.object->id, preview_image);
@@ -440,6 +453,8 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     UI_icon_draw_preview(
         preview.rect.xmin, preview.rect.ymin, icon_id, 1.0f, 1.0f, size);
   }
+  /* moodboard_media_labels: painted text, so no uiBlock of its own. */
+  mixie_draw_moodboard_selected_media_labels(v2d, region, &scene_ptr, cache);
   UI_view2d_view_ortho(v2d);
 }
 

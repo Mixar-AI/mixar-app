@@ -93,6 +93,18 @@ static void handle_double_click_grouped_image(MoodboardSelectionContext &ctx)
   }
 }
 
+/* A plain click replaces the WHOLE board selection, cards included.
+ * `moodboard_deselect_all` only knows about media, so on its own it left
+ * inference and asset cards selected behind a click on a picture -- the graph
+ * operator has always cleared both sides, and the two must agree. It matters
+ * more now that a drag carries every selected kind: a card left selected by a
+ * click the user read as "select just this image" would travel with it. */
+static void moodboard_replace_selection(PointerRNA *scene_ptr)
+{
+  moodboard_deselect_all(scene_ptr);
+  moodboard_graph_deselect_nodes(scene_ptr);
+}
+
 /** Double-click on individually selected image: deselect it */
 static void handle_double_click_selected_image(MoodboardSelectionContext &ctx)
 {
@@ -104,7 +116,7 @@ static void handle_double_click_selected_image(MoodboardSelectionContext &ctx)
 /** Double-click on non-grouped unselected image: deselect all, select this image */
 static void handle_double_click_ungrouped_image(MoodboardSelectionContext &ctx)
 {
-  moodboard_deselect_all(ctx.scene_ptr);
+  moodboard_replace_selection(ctx.scene_ptr);
   if (ctx.sel_prop) {
     RNA_property_boolean_set(&ctx.item_ptr, ctx.sel_prop, true);
   }
@@ -122,7 +134,7 @@ static void handle_extend_click_ungrouped(MoodboardSelectionContext &ctx)
 /** Single click on grouped image: deselect all, select the group */
 static void handle_click_select_group(MoodboardSelectionContext &ctx)
 {
-  moodboard_deselect_all(ctx.scene_ptr);
+  moodboard_replace_selection(ctx.scene_ptr);
 
   PropertyRNA *groups_prop = RNA_struct_find_property(ctx.scene_ptr, "mixie_moodboard_groups");
   if (groups_prop) {
@@ -138,7 +150,7 @@ static void handle_click_select_group(MoodboardSelectionContext &ctx)
 /** Single click on non-grouped image: deselect all, select this image */
 static void handle_click_select_image(MoodboardSelectionContext &ctx)
 {
-  moodboard_deselect_all(ctx.scene_ptr);
+  moodboard_replace_selection(ctx.scene_ptr);
   if (ctx.sel_prop) {
     RNA_property_boolean_set(&ctx.item_ptr, ctx.sel_prop, true);
   }
@@ -289,8 +301,13 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   {
     const float center_x = clicked_pos_x + clicked_width * 0.5f;
     const float center_y = clicked_pos_y + clicked_height * 0.5f;
-    const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-    const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+    /* Shared with the draw pass: a fixed PIXEL size in canvas units, capped
+     * against the tile so a zoomed-out button and its target shrink together. */
+    const rctf media_rect = {clicked_pos_x,
+                             clicked_pos_x + clicked_width,
+                             clicked_pos_y,
+                             clicked_pos_y + clicked_height};
+    const float play_radius = moodboard_video_play_radius(v2d, media_rect);
     const float delta_x = mouse_x - center_x;
     const float delta_y = mouse_y - center_y;
     const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
@@ -307,7 +324,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
     bool extend = RNA_boolean_get(op->ptr, "extend");
 
     if (!extend) {
-      moodboard_deselect_all(&scene_ptr);
+      moodboard_replace_selection(&scene_ptr);
       ED_area_tag_redraw(CTX_wm_area(C));
     }
 
@@ -925,6 +942,31 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               }
             }
           }
+
+          /* Inference and 3D asset cards selected alongside this media come
+           * with it. Without this a picture and a card selected together came
+           * apart under the mouse: the picture moved and the card stayed put.
+           * Captured through the shared drag set, which the graph drag uses in
+           * the other direction. */
+          moodboard_drag_set_capture(
+              &scene_ptr, MOODBOARD_DRAG_NODES, &move_data->node_drag);
+        }
+
+        if (event->modifier & KM_CTRL) {
+          /* Snap the GRABBED item to the grid and move everything else by the
+           * same delta, so a multi-item selection keeps its shape and only its
+           * anchor lands on the grid. Snapping each item independently would
+           * collapse the spacing the user arranged. Applied here, after the
+           * drag threshold above has already used the raw delta. */
+          const float grid = MOODBOARD_SNAP_GRID;
+          const float snapped_x = std::round(
+                                      (move_data->initial_pos_x + delta_x) / grid) *
+                                  grid;
+          const float snapped_y = std::round(
+                                      (move_data->initial_pos_y + delta_y) / grid) *
+                                  grid;
+          delta_x = snapped_x - move_data->initial_pos_x;
+          delta_y = snapped_y - move_data->initial_pos_y;
         }
 
         PropertyRNA *img_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
@@ -966,6 +1008,10 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
             }
           }
         }
+
+        /* Cards move by the delta the media already applied, so a mixed
+         * selection keeps its arrangement. */
+        moodboard_drag_set_apply(&scene_ptr, move_data->node_drag, delta_x, delta_y);
 
         /* Throttle redraws to avoid excessive GPU load during move */
         double current_time = BLI_time_now_seconds();
@@ -1104,6 +1150,8 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               }
             }
           }
+
+          moodboard_drag_set_restore(&scene_ptr, move_data->node_drag);
         }
 
         ED_area_tag_redraw(CTX_wm_area(C));

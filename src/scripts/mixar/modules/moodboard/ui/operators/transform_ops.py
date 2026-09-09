@@ -266,7 +266,28 @@ class MIXIE_OT_moodboard_duplicate(Operator):
         # Get all items to duplicate (including from groups)
         image_indices, textbox_indices = get_all_items_to_transform(scene)
 
+        # Inference nodes duplicate through their own path: they carry links,
+        # sockets and catalog parameters, and they are placed at a fixed offset
+        # rather than handed to grab mode (which moves images and text boxes
+        # only). Shift+D therefore acts on whatever is actually selected.
+        node_count = 0
+        try:
+            from mixar.modules.moodboard.core import node_duplicate
+
+            node_count = len(node_duplicate.duplicate_selected_nodes(scene))
+        except Exception:
+            node_count = 0
+
         if not image_indices and not textbox_indices:
+            if node_count:
+                tag_mixie_redraw(context)
+                self.report(
+                    {'INFO'}, f"Duplicated {node_count} node(s) - move to position"
+                )
+                # Same hand-off as the image path below: the copies land on the
+                # originals and grab mode places them.
+                bpy.ops.mixie.moodboard_grab('INVOKE_DEFAULT')
+                return {'FINISHED'}
             self.report({'WARNING'}, "No items selected to duplicate")
             return {'CANCELLED'}
 
@@ -343,6 +364,7 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
         tag_mixie_redraw(context)
 
+        duplicated_count += node_count
         self.report({'INFO'}, f"Duplicated {duplicated_count} item(s) - move to position")
 
         # Invoke grab mode for the duplicated items
@@ -352,11 +374,11 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
 
 class MIXIE_OT_moodboard_select_all(Operator):
-    """Select all moodboard images and text boxes"""
+    """Select everything on the moodboard"""
 
     bl_idname = "mixie.moodboard_select_all"
     bl_label = "Select All"
-    bl_description = "Select all images and text boxes"
+    bl_description = "Select all images, text boxes and nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -370,6 +392,20 @@ class MIXIE_OT_moodboard_select_all(Operator):
             if not tb.selected:
                 tb.selected = True
                 count += 1
+        # Nodes too. Deselect All has always cleared them, so leaving them out
+        # here meant Select All followed by Delete silently spared every node.
+        last_node_id = ""
+        for collection in (scene.mixie_moodboard_action_nodes,
+                           scene.mixie_moodboard_asset_nodes):
+            for node in collection:
+                if not node.selected:
+                    node.selected = True
+                    count += 1
+                last_node_id = node.node_id
+        # Give the settings panel a subject, mirroring the way Deselect All
+        # clears it.
+        if last_node_id:
+            scene.mixie_moodboard_active_node_id = last_node_id
         tag_mixie_redraw(context)
         self.report({'INFO'}, f"Selected {count} item(s)")
         return {'FINISHED'}

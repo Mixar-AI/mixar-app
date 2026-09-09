@@ -110,7 +110,11 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
+        # Cmd/Ctrl+C and +V have ONE meaning on this canvas: they copy and
+        # paste MEDIA. With an inference node selected the copy resolves
+        # through the node to the image or video it generated, so a result can
+        # be pasted back as an ordinary board item -- or into another
+        # application. Nodes themselves duplicate with Shift+D.
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
             type='C',
@@ -138,6 +142,18 @@ def register():
                 'mixie.moodboard_delete', type=key, value='PRESS'
             )
             addon_keymaps.append((km, kmi))
+
+        # Shift+A: searchable Add-Node menu at the cursor, like the 3D viewport.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_add_menu', type='A', value='PRESS', shift=True
+        )
+        addon_keymaps.append((km, kmi))
+
+        # F2 renames the active node, matching Blender's rename shortcut.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_rename_node', type='F2', value='PRESS'
+        )
+        addon_keymaps.append((km, kmi))
 
         # Pie menu keymap - follows user's VIEW3D pie menu key preference
         pie_key = get_user_pie_menu_key()

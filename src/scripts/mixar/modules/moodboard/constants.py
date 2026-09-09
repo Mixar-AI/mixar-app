@@ -376,3 +376,19 @@ GRAPH_OBJECT_NAMES_MAXLEN = 2048   # <-> char names[4096]
 GRAPH_JOB_ID_MAXLEN = 128
 GRAPH_ERROR_MAXLEN = 512
 GRAPH_PARAM_NAME_MAXLEN = 96
+GRAPH_PROGRESS_MAXLEN = 96          # <-> char progress[128]
+GRAPH_NOTICE_MAXLEN = 192           # <-> char notice[256]
+# Canvas grid Ctrl snaps to during a move. Must equal MOODBOARD_SNAP_GRID in
+# mixie_intern.hh: the C++ media/node drags and the Python grab modal move the
+# same items, so a mismatch would snap them to two different grids depending on
+# which gesture was used.
+GRAPH_SNAP_GRID = 40.0
+# Prompt fields (the node's and the sidebar tabs'). Deliberately generous:
+# video models in particular take long, shot-by-shot production notes, and the
+# old 4096 was a guess that no provider actually asks for. Still BOUNDED --
+# an RNA string without a maxlen is unbounded, which is the overflow hazard
+# `test_node_graph_hardening` exists to prevent. NOT part of the
+# GRAPH_*_MAXLEN <-> MIXIE_*_BUF pairings: C++ only ever reads a prompt through
+# `mixie_rna_string_get_clamped` into MIXIE_GRAPH_PROMPT_PREVIEW_BUF, a
+# deliberately tiny one-line preview buffer that truncates by design.
+GRAPH_PROMPT_MAXLEN = 32768

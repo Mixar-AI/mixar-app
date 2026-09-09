@@ -310,6 +310,8 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
+  WM_operatortype_append(MIXIE_OT_moodboard_frame);
+  WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_box_mask);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_lasso_mask);
@@ -386,6 +388,22 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
 
   /* Zoom selected images - Pinch Gesture */
+  /* Home frames the board, Numpad-Period the selection -- the pair every
+   * Blender editor uses (View Selected is Numpad `.`, never the main-row `.`).
+   * MIXIE_OT_moodboard_ensure_visible cannot serve here: it only grows the
+   * visible rect and so never zooms in. */
+  KeyMapItem_Params frame_params{};
+  frame_params.type = EVT_HOMEKEY;
+  frame_params.value = KM_PRESS;
+  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_frame", &frame_params);
+
+  KeyMapItem_Params frame_sel_params{};
+  frame_sel_params.type = EVT_PADPERIOD;
+  frame_sel_params.value = KM_PRESS;
+  wmKeyMapItem *kmi_frame_sel = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_frame", &frame_sel_params);
+  RNA_boolean_set(kmi_frame_sel->ptr, "selected_only", true);
+
   KeyMapItem_Params zoom_params{};
   zoom_params.type = MOUSEZOOM;
   zoom_params.value = KM_ANY;

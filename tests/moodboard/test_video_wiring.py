@@ -40,7 +40,7 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     assert "moodboard_toggle_video_playback" in select
     assert "play_button_hit" in select
     assert "KM_DBL_CLICK" in select
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in select
+    assert "moodboard_video_play_radius(v2d, media_rect)" in select
     assert "g_video_playback" in preview
     assert "BKE_image_acquire_ibuf" in preview
     assert "MOV_get_duration_frames" in preview
@@ -77,8 +77,34 @@ def test_movie_thumbnail_has_a_play_affordance():
     assert "image->source == IMA_SRC_MOVIE" in draw
     # Shared with the inference-node preview, hence the exported name.
     assert "mixie_draw_moodboard_video_overlay" in draw
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in draw
+    assert "moodboard_video_play_radius(v2d, media_rect)" in draw
     assert "if (is_playing)" in draw
+
+
+def test_the_play_button_never_outgrows_the_video_it_sits_on():
+    """A fixed 28px button is most of a small tile once the canvas is zoomed
+    out, which reads as the button GROWING as you zoom away. It is capped
+    against the tile's shorter side and shrinks with it from there — and draw,
+    the standalone hit-test and the node hit-test all take the radius from the
+    ONE definition, or the clickable disc parts company with the glyph."""
+    intern = _read(SPACE_MIXIE / "mixie_intern.hh")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+
+    assert "MOODBOARD_VIDEO_PLAY_MAX_FRACTION" in intern
+    assert "float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);" in intern
+
+    body = geometry.split("float moodboard_video_play_radius(")[1].split("\n}\n")[0]
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale" in body
+    assert "MOODBOARD_VIDEO_PLAY_MAX_FRACTION" in body
+    assert "std::min(" in body
+
+    # The only places the raw pixel constant may still be spelled out.
+    users = [
+        path.name
+        for path in SPACE_MIXIE.glob("*.cc")
+        if "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in _read(path)
+    ]
+    assert users == ["mixie_moodboard_graph_geometry.cc"]
 
 
 def test_file_picker_keeps_movies_linked_to_their_source():

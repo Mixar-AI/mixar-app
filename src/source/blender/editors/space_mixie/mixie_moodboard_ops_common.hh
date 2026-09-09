@@ -21,6 +21,7 @@
 #include "BLI_time.h"
 
 #include "BLI_path_utils.hh"
+#include "BLI_vector.hh"
 #include "BLI_string.h"
 
 #include "DNA_scene_types.h"
@@ -73,6 +74,72 @@ extern int moodboard_find_textbox_under_mouse(PointerRNA *scene_ptr,
                                               float *r_height);
 extern void moodboard_deselect_all(PointerRNA *scene_ptr);
 
+/* Which graph collection a node index refers to. Shared because the selection
+ * primitives below are, and both units index the same two collections. */
+enum GraphNodeKind { GRAPH_ACTION = 0, GRAPH_ASSET = 1 };
+
+/* mixie_moodboard_ops_graph.cc -- graph selection primitives, shared with the
+ * context-menu unit so "what is selected" has exactly one implementation. */
+/** Clear the selection on every graph node and the active-node id with it. */
+void moodboard_graph_deselect_nodes(PointerRNA *scene_ptr);
+/** Make one node the whole selection; `r_node` receives it when non-null. */
+void moodboard_graph_select_node(PointerRNA *scene_ptr,
+                                 GraphNodeKind kind,
+                                 int index,
+                                 PointerRNA *r_node);
+/** Select one link by index, clearing any other. False when it does not exist. */
+bool moodboard_graph_select_link(PointerRNA *scene_ptr, int index);
+
+/* mixie_moodboard_ops_preview.cc */
+/** The Image datablock a moodboard item references, or null. Shared so the
+ * preview window resolves media exactly the way playback does. */
+Image *moodboard_item_image(PointerRNA *scene_ptr, int index);
+
+/* mixie_moodboard_ops_graph_video.cc */
+/**
+ * Handle a press on a node-owned movie's play affordance (or a double-click on
+ * its tile). Returns true when the gesture was the node's to take, with the
+ * operator status to return in `r_status`.
+ */
+bool moodboard_graph_node_video_click(bContext *C,
+                                      PointerRNA *scene_ptr,
+                                      View2D *v2d,
+                                      const rctf &node_rect,
+                                      const char *node_id,
+                                      float mouse_x,
+                                      float mouse_y,
+                                      bool double_click,
+                                      ReportList *reports,
+                                      wmOperatorStatus *r_status);
+
+/* mixie_moodboard_ops_graph_resize.cc */
+/** Everything a card-resize drag needs to remember from the moment it began.
+ * Owned by the graph select/move operator's customdata; the resize unit is
+ * stateless and works entirely off this. */
+struct MoodboardGraphResizeState {
+  float initial_mouse_x;
+  float initial_mouse_y;
+  float initial_y;
+  float initial_width;
+  float initial_height;
+};
+/** True when the press landed on a node's bottom-right resize grip; fills
+ * `r_state` with the drag origin when it did. */
+bool moodboard_graph_resize_grip_hit(PointerRNA *node,
+                                     const rctf &node_rect,
+                                     float mouse_x,
+                                     float mouse_y,
+                                     MoodboardGraphResizeState *r_state);
+/** Drive one event of an in-progress card resize. Sets `r_done` when the
+ * gesture ended (release, or Esc/right-click, which restores the card), which
+ * is the caller's cue to free its customdata. */
+wmOperatorStatus moodboard_graph_resize_modal(bContext *C,
+                                              ARegion *region,
+                                              PointerRNA *node,
+                                              const MoodboardGraphResizeState &state,
+                                              const wmEvent *event,
+                                              bool *r_done);
+
 /* mixie_moodboard_ops_graph_link.cc */
 /**
  * Decide what a released noodle meant: connect to the input socket under the
@@ -85,7 +152,20 @@ wmOperatorStatus moodboard_graph_link_release(bContext *C,
                                               View2D *v2d,
                                               const wmEvent *event,
                                               const char *from_node_id,
-                                              bool moved);
+                                              bool moved,
+                                              bool detached);
+/**
+ * Press on a CONNECTED input socket: remove its link and report the source it
+ * came from, so the caller carries on as an ordinary link drag from that
+ * source. Returns false when the press was not on an occupied input, in which
+ * case nothing was changed.
+ */
+bool moodboard_graph_detach_input(bContext *C,
+                                  PointerRNA *scene_ptr,
+                                  View2D *v2d,
+                                  const wmEvent *event,
+                                  char *r_from_node_id,
+                                  int from_node_id_maxncpy);
 /** Forget any recorded drop point, so a later menu places beside its source. */
 void moodboard_graph_clear_link_drop_anchor(PointerRNA *scene_ptr);
 
@@ -114,6 +194,51 @@ extern int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
                                                   float *r_scale,
                                                   float *r_width,
                                                   float *r_height);
+
+/* -------------------------------------------------------------------- */
+/** \name Drag Set
+ *
+ * What a drag carries. See mixie_moodboard_move_selection.cc -- a board has
+ * two drag operators (media and graph cards) and one selection, so both build
+ * the moved set through the same capture.
+ * \{ */
+
+enum MoodboardDragKinds {
+  MOODBOARD_DRAG_IMAGES = (1 << 0),
+  MOODBOARD_DRAG_TEXTBOXES = (1 << 1),
+  MOODBOARD_DRAG_NODES = (1 << 2), /* Action + asset cards. */
+  MOODBOARD_DRAG_ALL = MOODBOARD_DRAG_IMAGES | MOODBOARD_DRAG_TEXTBOXES |
+                       MOODBOARD_DRAG_NODES,
+};
+
+struct MoodboardDragItem {
+  /* Static string from the table in mixie_moodboard_move_selection.cc, so the
+   * entry owns no memory and the set stays trivially copyable. */
+  const char *collection;
+  int index;
+  float initial_x;
+  float initial_y;
+};
+
+struct MoodboardDragSet {
+  blender::Vector<MoodboardDragItem> items;
+};
+
+/** Record every selected item of `kinds` and the position it starts at. */
+void moodboard_drag_set_capture(PointerRNA *scene_ptr,
+                                MoodboardDragKinds kinds,
+                                MoodboardDragSet *drag);
+
+/** Place the whole set at its captured start offset by (delta_x, delta_y). */
+void moodboard_drag_set_apply(PointerRNA *scene_ptr,
+                              const MoodboardDragSet &drag,
+                              float delta_x,
+                              float delta_y);
+
+/** Put the set back where the drag found it (Esc / right-click). */
+void moodboard_drag_set_restore(PointerRNA *scene_ptr, const MoodboardDragSet &drag);
+
+/** \} */
 
 /** Context for moodboard selection operations */
 struct MoodboardSelectionContext {
@@ -170,6 +295,13 @@ struct MoodboardMoveData {
 
   /* Text box resize support */
   int initial_font_size;
+
+  /* Cards travelling with this media drag -- inference and 3D asset nodes.
+   * They live in a MoodboardDragSet rather than in arrays beside the image and
+   * text-box ones above, because the graph drag has to carry the same set the
+   * other way round and there must be one capture, not two. The media arrays
+   * stay as they are: they also feed resizing, which cards do not share. */
+  MoodboardDragSet node_drag;
 
   /* Text box multi-select support */
   int selected_textbox_count;

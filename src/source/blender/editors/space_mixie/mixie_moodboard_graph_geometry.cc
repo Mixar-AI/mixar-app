@@ -50,6 +50,24 @@ void mixie_rna_string_get_clamped(PointerRNA *ptr,
       ptr, RNA_struct_find_property(ptr, name), dst, dst_maxncpy);
 }
 
+float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect)
+{
+  /* Fixed pixel size, converted into canvas units so it stays the same size on
+   * screen at every zoom -- until that would leave it covering the frame it
+   * sits on. Zoomed far out a 28px button is most of a small tile, which is
+   * exactly how it came to read as "the play button grows as you zoom out", so
+   * it is capped against the tile's shorter side and shrinks with it from
+   * there. Both hit-tests call this too, so the target never leaves the glyph. */
+  const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
+  const float screen_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  const float shorter_side = std::min(BLI_rctf_size_x(&media_rect),
+                                      BLI_rctf_size_y(&media_rect));
+  if (shorter_side <= 0.0f) {
+    return screen_radius;
+  }
+  return std::min(screen_radius, shorter_side * MOODBOARD_VIDEO_PLAY_MAX_FRACTION);
+}
+
 struct LinkDragPreview {
   /* Keyed on the scene's session UID rather than its pointer: a raw Scene *
    * kept in a static outlives the scene across a file load, and a freshly
@@ -641,6 +659,50 @@ static int find_node_in_collection(PointerRNA *scene_ptr,
   return -1;
 }
 
+bool moodboard_graph_node_id_selected(PointerRNA *scene_ptr, const char *node_id)
+{
+  /* The graph cache is keyed by node id and holds only rects, while `selected`
+   * lives on the item itself -- and an id can belong to a media item, an action
+   * node or an asset node, so all three collections are searched. */
+  if (!node_id || node_id[0] == '\0') {
+    return false;
+  }
+  for (const char *collection_name : {"mixie_moodboard_images",
+                                      "mixie_moodboard_action_nodes",
+                                      "mixie_moodboard_asset_nodes"})
+  {
+    PropertyRNA *prop = RNA_struct_find_property(scene_ptr, collection_name);
+    const int count = prop ? RNA_property_collection_length(scene_ptr, prop) : 0;
+    for (int index = 0; index < count; index++) {
+      PointerRNA item;
+      RNA_property_collection_lookup_int(scene_ptr, prop, index, &item);
+      char id[MIXIE_GRAPH_ID_BUF];
+      mixie_rna_string_get_clamped(&item, "node_id", id, sizeof(id));
+      if (STREQ(id, node_id)) {
+        return RNA_boolean_get(&item, "selected");
+      }
+    }
+  }
+  return false;
+}
+
+bool moodboard_node_is_mask_detail(PointerRNA *node)
+{
+  /* The enum persists as an index, so resolve the identifier rather than
+   * comparing raw values — a catalog/enum reorder must not silently make a
+   * different node type unresizable. */
+  if (!node) {
+    return false;
+  }
+  PropertyRNA *prop = RNA_struct_find_property(node, "action_type");
+  if (!prop) {
+    return false;
+  }
+  const char *id = nullptr;
+  RNA_property_enum_identifier(nullptr, node, prop, RNA_property_enum_get(node, prop), &id);
+  return id && STREQ(id, "MASK_DETAIL");
+}
+
 void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds)
 {
   /* Single source of truth for the preview rect. The draw path, the floating
@@ -724,6 +786,11 @@ static bool link_drag_matches(const Scene *scene)
 {
   const uint32_t uid = scene_drag_uid(scene);
   return g_link_drag.active && uid != 0 && g_link_drag.scene_uid == uid;
+}
+
+bool moodboard_graph_link_drag_active(Scene *scene)
+{
+  return link_drag_matches(scene);
 }
 
 void moodboard_graph_link_drag_begin(Scene *scene, const float x, const float y)

@@ -44,6 +44,11 @@ struct wmWindowManager;
 #define MOODBOARD_IMAGE_SCALE_DELTA 0.1f
 #define MOODBOARD_MAX_SELECTED_IMAGES 256
 #define MOODBOARD_VIDEO_PLAY_RADIUS_PX 28.0f
+/* The play affordance is a fixed SCREEN size -- but only until it starts to
+ * crowd the frame behind it. Past this fraction of the tile's shorter side it
+ * shrinks WITH the tile, so zooming out can never leave a play button wider
+ * than the video it sits on. */
+#define MOODBOARD_VIDEO_PLAY_MAX_FRACTION 0.22f
 
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
@@ -66,16 +71,54 @@ struct wmWindowManager;
 #define MIXIE_GRAPH_WIDGET_BUF 64  /* GRAPH_WIDGET_MAXLEN */
 #define MIXIE_GRAPH_NAMES_BUF 4096 /* GRAPH_OBJECT_NAMES_MAXLEN */
 #define MIXIE_GRAPH_ERROR_BUF 768  /* GRAPH_ERROR_MAXLEN */
+#define MIXIE_GRAPH_DESCRIPTION_BUF 768 /* GRAPH_DESCRIPTION_MAXLEN */
+#define MIXIE_GRAPH_PROGRESS_BUF 128 /* GRAPH_PROGRESS_MAXLEN */
+#define MIXIE_GRAPH_NOTICE_BUF 256 /* GRAPH_NOTICE_MAXLEN */
+/* Canvas grid EVERYTHING snaps to while Ctrl is held during a move -- nodes,
+ * images, videos and text boxes alike, or snapping one kind against another
+ * would be impossible. Canvas units, so the grid belongs to the board rather
+ * than to the current zoom: two items snapped at different zoom levels still
+ * line up. Duplicated as `GRAPH_SNAP_GRID` in moodboard/constants.py for the
+ * Python grab modal; the two MUST agree and a test pins that. */
+#define MOODBOARD_SNAP_GRID 40.0f
+/* The row floating just ABOVE a node card: its name on the left, and on the
+ * right either its live state (while generating) or the Edit/Export icons
+ * (once finished) -- never both, because a node is one or the other. Nothing
+ * sits on the card itself, so the result is never covered.
+ *
+ * Both metrics are multiplied by UI_SCALE_FAC at the point of use: the row has
+ * to fit TEXT, which does not scale with the card. The two are shared by the
+ * painter and the button layout so they cannot drift onto different lines. */
+#define MOODBOARD_NODE_HEADER_LIFT 12.0f
+#define MOODBOARD_NODE_HEADER_ROW_H 30.0f
 /* Display-only echo of a draft node's prompt inside its tile. Deliberately far
  * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
  * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
 #define MIXIE_GRAPH_PROMPT_PREVIEW_BUF 192
-/* Minimum on-screen node size before the floating prompt/toolbar controls
- * draw. Shared with the draft-hint text so exactly one of the two shows. */
-#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_X 360
-#define MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y 220
+/* The separated settings panel docked left of a selected node card: its width
+ * is this fraction of the CARD's width (so the proportion holds at every DPI
+ * and follows the resize grip), floored at the canvas width a model name needs
+ * at the current UI scale (× UI_SCALE_FAC) so labels can never clip. */
+#define MOODBOARD_NODE_PANEL_WIDTH_RATIO 0.5f
+#define MOODBOARD_NODE_PANEL_MIN_TEXT_W 120.0f
+/* Height is the same idea in the other axis: the panel targets this fraction of
+ * the CARD's height, reached by sizing its rows to fit rather than by stretching
+ * or clipping them. The row floor is what a line of text needs at the current UI
+ * scale (x UI_SCALE_FAC); a node with many parameters overflows the target
+ * rather than crushing its rows, and one with few simply ends up shorter. */
+#define MOODBOARD_NODE_PANEL_HEIGHT_RATIO 0.5f
+#define MOODBOARD_NODE_PANEL_MIN_ROW_H 20.0f
 /** Inset of a node card's media preview from the card edge. */
 #define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
+/* Bottom-right resize grip on a standard action node's card. Drag it to
+ * resize the card; the node keeps its current aspect (the card tracks its
+ * result image, see node_schema.refresh_node_height) and its TOP edge stays
+ * put so the card grows down-right. CANVAS units, like the socket radii — the
+ * hit-test converts through the view scale. Width bounds stay inside the
+ * `width` RNA property's own min/max (140..1400). */
+#define MOODBOARD_NODE_RESIZE_GRIP 22.0f
+#define MOODBOARD_ACTION_NODE_MIN_W 360.0f
+#define MOODBOARD_ACTION_NODE_MAX_W 1200.0f
 /* Socket radii/offset are CANVAS units (they zoom with the graph); hit-tests
  * must convert through the view scale, never compare these against pixels
  * (see region_socket_hit). */
@@ -167,6 +210,12 @@ int moodboard_find_action_node_under_mouse(PointerRNA *scene_ptr,
                                            rctf *r_rect);
 /** Media-preview rect of a node card. Shared by draw, toolbar and hit-test. */
 void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds);
+/** True when the action node is a MASK_DETAIL node: it has a fixed square card
+ * (controls over an in-card mask thumbnail), so it is not resizable. */
+/** Is the item owning this graph node id selected? The graph cache is keyed by
+ * id and carries only rects, so framing has to resolve selection separately. */
+bool moodboard_graph_node_id_selected(PointerRNA *scene_ptr, const char *node_id);
+bool moodboard_node_is_mask_detail(PointerRNA *node);
 /** Index into `mixie_moodboard_images` of the media a node owns, or -1. */
 int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id);
 /**
@@ -262,6 +311,9 @@ bool moodboard_find_input_socket_under_mouse(PointerRNA *scene_ptr,
                                               MoodboardGraphSocketHit *r_hit);
 /** Conservative canvas-space bounds of the link curve, for view culling. */
 void moodboard_graph_link_bounds(float x1, float y1, float x2, float y2, rctf *r_bounds);
+/** Is a noodle currently being dragged in this scene? Sockets name themselves
+ * while one is, which is exactly when the user needs to read them. */
+bool moodboard_graph_link_drag_active(Scene *scene);
 void moodboard_graph_link_drag_begin(Scene *scene, float x, float y);
 void moodboard_graph_link_drag_update(Scene *scene, float x, float y);
 void moodboard_graph_link_drag_end(Scene *scene);
@@ -281,6 +333,17 @@ bool moodboard_toggle_video_playback(bContext *C,
 
 /** Current inline playback frame and state for a movie image. */
 int moodboard_video_playback_frame(Image *image, bool *r_is_playing);
+
+/**
+ * Canvas-unit radius of a movie tile's centred play/pause affordance.
+ *
+ * The button is a fixed pixel size, so it converts through the view scale, and
+ * is then capped at #MOODBOARD_VIDEO_PLAY_MAX_FRACTION of the tile's shorter
+ * side. Draw and BOTH hit-tests (standalone tile, node preview) share this one
+ * definition -- otherwise the pixels the user aims at and the region that
+ * responds drift apart at some zoom.
+ */
+float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);
 
 /** Stop inline movie playback and its redraw timer. */
 void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm);
@@ -327,6 +390,8 @@ void MIXIE_OT_moodboard_context_menu(wmOperatorType *ot);
 void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot);
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
+void MIXIE_OT_moodboard_frame(wmOperatorType *ot);
+void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot);
