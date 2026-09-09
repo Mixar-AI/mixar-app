@@ -8,7 +8,7 @@ import logging
 import bpy
 from mathutils import Matrix, Vector
 
-from ..constants import GROUPS, OWNER_KEY
+from ..constants import OWNER_KEY
 from .state import capture, digest, fail, matrix, objects, persist, record, refresh, token, relations, render_eligible_ids, authored_transform
 
 
@@ -45,30 +45,10 @@ def collection(run, name, parent=None):
     return coll
 
 
-def destination(run, category):
-    group = GROUPS[2] if category.startswith('_REVIEW_') else (
-        GROUPS[1] if category in ('_Cull_CONFIRMED', '_DUP_COINCIDENT') else GROUPS[0])
-    root = collection(run, group)
-    # Systems are parent collections, category/type is the leaf.
-    if category.startswith(('_VIZ_', '_SYS_')):
-        from ..constants import EXTERIORS, SYSTEMS
-        prefix = '_VIZ_' if category.startswith('_VIZ_') else '_SYS_'
-        systems = EXTERIORS if prefix == '_VIZ_' else SYSTEMS
-        system = next(s for s in sorted(systems, key=len, reverse=True) if category.startswith(prefix + s + '_'))
-        root = collection(run, prefix + system, root)
-    return collection(run, category, root)
-
-
-def destination_names(category):
-    from ..constants import EXTERIORS, SYSTEMS
-    names = [category, GROUPS[2] if category.startswith('_REVIEW_') else (
-        GROUPS[1] if category in ('_Cull_CONFIRMED', '_DUP_COINCIDENT') else GROUPS[0])]
-    if category.startswith(('_SYS_', '_VIZ_')):
-        prefix = category[:5]
-        systems = SYSTEMS if prefix == '_SYS_' else EXTERIORS
-        names.append(prefix + next(s for s in sorted(systems, key=len, reverse=True)
-                                   if category.startswith(prefix + s + '_')))
-    return names
+def destination(run, path):
+    parent=None
+    for name in path: parent=collection(run,name,parent)
+    return parent
 
 
 def restore_snapshot(obj, snap, memberships=None, defer_visibility=False):
@@ -121,6 +101,10 @@ def apply(run, payload):
     for item in items:
         obj = obs[item['object_id']]
         if item.get('bake_scale') or item.get('unit_factor') is not None:
+            if item.get('unit_factor') is not None:
+                from .state import validate_number
+                factor=validate_number(item['unit_factor'],'unit_factor')
+                if not 1e-6<=factor<=1000: fail('invalid_units','Unit factor exceeds safe execution bounds.')
             if obj.type != 'MESH' or not record(obj, item['object_id'], run, indexes)['geometry_supported']:
                 fail('unsupported_geometry', 'Geometry changes require independent static meshes without dependencies.')
             if item.get('unit_factor') is not None and run['records'][item['object_id']]['unit_factor'] != 1:
@@ -130,8 +114,8 @@ def apply(run, payload):
             recomposed = Matrix.LocRotScale(loc, rot, scale)
             if max(abs(recomposed[r][c] - obj.matrix_world[r][c]) for r in range(4) for c in range(4)) > 1e-6:
                 fail('unsupported_shear', 'Sheared transforms are preserved for review.')
-        if item['category'] == '_DUP_COINCIDENT':
-            discarded = {i['object_id'] for i in items if i['category'] == '_DUP_COINCIDENT'}
+        if item.get('operation') == 'park_duplicate':
+            discarded = {i['object_id'] for i in items if i.get('operation') == 'park_duplicate'}
             compatible = [other for other_key, other in obs.items() if other_key not in discarded
                 and other != obj and other.type == 'MESH' and other.data == obj.data
                 and record(other, other_key, run)['geometry_supported']
@@ -140,12 +124,11 @@ def apply(run, payload):
                 and [s.material for s in other.material_slots] == [s.material for s in obj.material_slots]]
             if not record(obj, item['object_id'], run)['geometry_supported'] or not compatible:
                 fail('unproven_duplicate', 'A surviving identical object with matching visibility is required.')
-        if item['category'] == '_Cull_CONFIRMED':
-            from .rules import parse_name
-            if parse_name(obj.name)['protected'] or obj.children or obj.type != 'MESH':
+        if item.get('operation') == 'park_cull':
+            if obj.children or obj.type != 'MESH':
                 fail('protected_part', 'Protected parts and dependencies must remain identified or in review.')
         # Preflight collection collisions before any mutation.
-        for name in destination_names(item['category']):
+        for name in item['destination']:
             coll = bpy.data.collections.get(name)
             if coll and coll.get(OWNER_KEY) != run['run_id']:
                 fail('collection_collision', 'Destination is not owned by this cleanup run.')
@@ -165,7 +148,7 @@ def apply(run, payload):
             was_visible = obj.as_pointer() in visible_ids
             # Preserve inherited render exclusion when leaving original collections.
             render_eligible = obj.as_pointer() in render_ids
-            target = destination(run, item['category'])
+            target = destination(run, item['destination'])
             if item.get('bake_scale') or item.get('unit_factor') is not None:
                 obj.data.use_fake_user = True
                 obj.data = obj.data.copy()
@@ -196,14 +179,14 @@ def apply(run, payload):
         # per-view-layer visibility on the newly established object bases.
         bpy.context.view_layer.update()
         for obj, hidden in pending_visibility: obj.hide_set(hidden)
-        if preview['stage'] == '10':
+        if preview.get('exclude_collections'):
             for layer in bpy.context.view_layer.layer_collection.children:
-                if layer.collection.get(OWNER_KEY) == run['run_id'] and layer.name == GROUPS[1]:
+                if layer.collection.get(OWNER_KEY) == run['run_id'] and layer.name in preview['exclude_collections']:
                     layer.exclude = True
         bpy.context.view_layer.update()
         # An empty non-visibility stage changes only the local review journal.
         # The full preflight snapshot remains current within this main-thread call.
-        after = before if not items and preview['stage'] != '10' else capture(run, audit_ids=geometry_ids)
+        after = before if not items and not preview.get('exclude_collections') else capture(run, audit_ids=geometry_ids)
         # Names, original mesh attributes, and transforms may change only as declared.
         for item in items:
             key = item['object_id']; a = before['objects'][key]; b = after['objects'][key]
@@ -216,8 +199,8 @@ def apply(run, payload):
                     fail('preservation_failed', 'Classification changed geometry or world transforms.')
         # Unit/geometry changes invalidate later analysis; all mutations invalidate delivery evidence.
         if any(i.get('unit_factor') is not None or i.get('bake_scale') for i in items):
-            from ..constants import STAGES
-            for s in STAGES[STAGES.index(preview['stage']) + 1:]: run['stage_status'][s] = 'pending'
+            stage_keys=list(run['stage_status'])
+            for s in stage_keys[stage_keys.index(preview['stage']) + 1:]: run['stage_status'][s] = 'pending'
         run['stage_status'][preview['stage']] = 'reviewed'
         run.setdefault('stage_notes', {})[preview['stage']] = preview.get('notes', [])
         run['revision'] += 1

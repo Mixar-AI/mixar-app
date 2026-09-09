@@ -581,151 +581,35 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 
 `README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover. `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.
 
-## Agent-controlled CAD cleanup
+## CAD cleanup sub-agent
 
-`common/cad_cleanup` provides bounded, revision-bound stage operations for the
-backend CAD specialist. Name evidence, scene mutation, verification, visual review
-and separate output saving are independent tools. Recovery journals stay local;
-original source files and mesh datablocks are preserved. Existing visibility is
-preserved unless explicitly changed through stage-10 presentation decisions.
-See `docs/cad-cleanup.md` and `tests/CAD_QA.md`; synthetic Blender and running-app
-fixtures cover preservation and delivery, while live LLM routing needs validation.
+CAD implementation lives in `mixar-backend/modules/agent/agents/subagents/cad_cleanup/`:
+the BaseAgent implementation, name classifier, stage helpers, reference taxonomy,
+assembly/evidence checks, Gemini identification and metadata transport. The existing
+agent registry and decorated tool-domain entry points remain in their normal locations.
+The system prompt stays at `modules/agent/prompts/lanes/cad_cleanup.md` so the standard
+prompt loader and admin overrides continue to work.
 
-CAD validation uses checkpoint snapshots (version 3). Baseline/final delivery
-audits hash all meshes in the selected run scope. Routine reads do not audit geometry;
-mutation metadata checks reuse expected mesh hashes. Geometry edits audit their target
-meshes before/after; cad_verify(stage=...) audits the stage's affected objects and
-shared data, ignoring unrelated collection geometry. External geometry changes can
-remain undetected until their checkpoint or final audit; cached hashes are not fresh
-evidence. The write boundary audits again to reject edits after final verification.
-Final completeness verification refuses pending stages before scanning meshes. Backend
-completion consumes the saved integrity receipt without a redundant post-save audit.
-Grouped category summaries permit focused semantic review; samples are not exhaustive.
-Lightweight scene metadata still checks scope and dependency changes globally.
+There is no separate CAD policy framework or delivery authorization token. CAD tools
+call ordinary helper functions; final verify/save call the existing delivery checks
+directly. The LLM chooses stages, evaluates evidence and decides what to investigate
+next. Keep exact reference collection names, one Review collection and a separate
+retained hidden-internals collection. Reuse evidence and inspect scoped candidates;
+verify at major stage boundaries and final delivery, not after each small edit.
 
-Snapshot version 3 records authored transform channels and parent inverse. Classification
-compares those settings rather than unevaluated world-matrix caches on excluded objects.
-Undo/rollback batches membership restoration and never writes a stale cached world
-matrix back through a parent. Older cleanup runs fail closed and require the original
-project. Test with tests/cad_cleanup_excluded_transform_qa.py; add -- --forced-rollback
-to exercise failure recovery and bounded dependency-graph updates.
+The client owns Blender operations: indexing, rendering/object IDs, rays, reversible
+scene edits, collection membership, geometry integrity and local output files. Its
+metadata bridge transfers bounded data and rejects stale targets; it neither selects
+workflow steps nor issues approvals. Local paths, mesh buffers and recovery journals
+do not travel to the backend or the LLM. Delivery compares the scene/assignment
+revision used by the tool before writing. Transport version 2 needs a coordinated
+backend deployment and client rebuild.
 
-CAD inspection rendering removes temporary object/scene/camera IDs with one
-bpy.data.batch_remove call. Per-object remove causes minutes of relationship scans
-on full assemblies. Never include source meshes/materials in the deletion batch.
-tests/cad_cleanup_render_cleanup_qa.py validates success and injected-failure cleanup.
+Validation lives in backend `tests/agent/cad_cleanup` and client
+`tests/cad_cleanup_transport_qa.py`. Backend runtime tests run in CI, not locally.
+Full-car acceptance still requires resolving the Run09 reopen/fingerprint/native
+crash; do not bypass its integrity guard or claim synthetic tests prove car quality.
 
-CAD render evidence retains at most eight PNGs in the app's temporary inspection
-directory. An identical revision/fingerprint/view/target retry returns the same
-evidence ID and pixels with cached=true, allowing recovery after a WebSocket drops
-a long render response. Missing cache files regenerate. Local image filenames stay
-in client run state; they never appear in the tool response. This does not prevent
-the first blocking render from losing its connection; it makes that result retryable.
-tests/cad_cleanup_render_recovery_qa.py checks retry persistence and invalidation.
-
-
-## Reference-guided CAD delivery
-
-`reference_profile.json` captures the exact output.blend taxonomy. CAD start's
-reference_profile flag enables a strict final-delivery gate. The ten-stage tree
-remains intermediate/recovery state; final files contain the reference paths and
-only explicitly retained objects. Counts/examples are guidance, never quotas.
-Native Eevee raster capture supplies visibility selections. Recorded camera-frame
-ray selection supplies bounded candidates; Gemini localization supplies boxes,
-not trusted object classifications. Never omit from visibility absence alone.
-Metadata/category selections avoid retransmitting huge ID lists. Inspect semantic
-groups before reference assignment; annotations do not trigger geometry audits.
-Reference delivery requires resolved dispositions, two current direction reviews,
-and final geometry verification. It writes a separate scene with shared geometry
-dependencies; source objects are never deleted. Static transforms are flattened;
-animated/constrained/modified dependencies fail closed. Joining/retopology and
-fabricating absent variants are not implemented. Full vehicle/Gemini UAT validation
-is pending; synthetic fixture validation is recorded in tests/CAD_QA.md.
-
-Native CAD raster capture uses the existing scene and a nonblocking Eevee render
-job, with ray tracing/compositing/motion blur disabled. Subsets link original objects into a temporary collection/view layer; whole-scene
-capture reuses the original layer. This avoids per-object hide/restore across the
-assembly. Camera, world, render settings and the few changed visibility flags are
-restored on completion. Setup, render and restoration timings are reported separately. CAD mutations are refused
-while the job runs. cad_render/cad_status return running; retry the identical
-cad_render to retrieve completed pixels and stable source-object IDs. No full-car
-mesh-count restriction applies. Ray selection reuses the current evaluated scene;
-hidden subsets absent from that graph fail explicitly rather than inventing hits.
-tests/cad_cleanup_raster_job_qa.py checks the real GUI job and restored state.
-
-
-## CAD semantic recovery and progress snapshots
-Reference policy v2 separates preservation from classification. Only populated reference paths accept keep; structural parents cannot absorb unresolved objects. Resolve at most 200 homogeneous, inspected objects per group and 1000 per call. Review groups, variants/accessories and semantic omissions require current scoped image evidence. Legacy/stale assignment receipts block delivery until re-reviewed. Name evidence explicitly distinguishes WHEEL HOUSE/WHEEL ARCH and RADIATOR GRILL/CROSS MEMBER.
-`inspect_batch` reuses one revision-bound metadata index for up to 20 queries/500 returned rows. Selection IDs refer to the entire filtered group, not a sampled page. Scoped metadata checks include ancestors; stage/save boundaries retain full integrity audits. Indexed reads are labeled as snapshots, and explicit refresh supports manual edits.
-`reference_coverage` tracks verified/partial/unresolved/confirmed_absent per required populated path. Final delivery requires semantic coverage and current-policy receipts as well as the existing two-view and integrity gates. Absence needs distinct whole-inventory searches plus contextual image evidence, never visibility alone.
-`checkpoint` writes local latest index.html and immutable dated HTML/JSON snapshots, with reference previews, cached current/stale images, changed objects/paths, coverage and tool timing. Major assignments, coverage reviews, verification and save refresh reports; explicit interrupted checkpoints are available. Optional project checkpoints are separate copies, never final delivery. HTML generation never rerenders or scans geometry. Paths stay client-local. Repeated identical Gemini targets reuse persisted localization results, including empty results.
-Regression fixtures: tests/cad_cleanup_semantic_qa.py, tests/cad_cleanup_reference_qa.py and tests/cad_cleanup_raster_job_qa.py. The semantic fixture exercises the actual failed-car cases, inventory reuse, stale/legacy receipts, visual requirements and report history. A full UAT car run remains a separate acceptance test after backend synchronization.
-
-
-Assembly-level CAD reference recovery: `cad_inspect_assembly` checks every member
-of a supported assembly locally and returns compact families, dimensions and
-exceptions. A current path/membership-bound `assembly_id` plus current whole-group
-image evidence permits up to 50000 keep members per call; ordinary uncertain
-groups retain bounded inspection. No large-group omission/catchall bypass.
-Reference names and hierarchy are exact, including `EXT/WHEELS/BREAK_DISK`;
-rim/Jante/alloy synonyms are discovery terms, not new output collections. Distinct
-tyres, brake discs and wheel variants retain the reference separation. Partial
-hoops do not prove complete wheel faces. Gemini and ray queries are optional for
-ambiguity. Rays intersect captured meshes only (2048-target cap), with reusable
-complete-query receipts and a cooperative budget; partial results are explicit.
-Major-batch HTML checkpoints and final integrity/coverage gates remain required.
-
-
-## CAD decision evidence after Run09
-
-Assembly inspection and reference assignment share current category/path constraints;
-specific current descriptors supersede stale diagnostic labels. Rejections expose
-bounded conflicting IDs and compatible/conflict selections. Known PneuNuPRV and
-front-bumper-lower-grille phrases are normalized conservatively; unrelated substrings
-and competing components stay unresolved. Exact reference paths are unchanged.
-
-Wheel variant keeps require `cad_review_wheel` and `wheel_review_id`: immutable
-original object/parent descriptors must explicitly establish inch size and construction,
-then an independent Gemini review of the exact scoped image must identify complete
-wheel geometry. Generic Jante/rim names, outer diameter and existing assignments are
-not variant proof. Source failures skip the provider. Identical visual failures are
-cached and cannot be overwritten by retrying. A new image or corrected selection is
-required for new review. Provider uncertainty/unavailability leaves the variant unresolved.
-This is an additional fallible visual opinion, not guaranteed geometric recognition.
-Only wheel variant receipts without this proof become invalid; unrelated policy-2
-receipts are retained. Scope, path, image and scene revision bind the wheel receipt.
-
-The lane batches related reads and changes rejected membership/evidence rather than
-retrying identical decisions with rewritten prose. Subset renders do not call final
-cad_review. Major-batch index.html checkpoints and final delivery gates remain required.
-Client fixture `tests/cad_cleanup_decision_qa.py` tests the gates using synthetic review
-responses. Actual provider accuracy and the agent workflow must be retested on UAT
-after backend sync and client rebuild; backend runtime tests are not run locally.
-
-
-## Organized CAD checkpoints and retained internals
-
-Major reference checkpoints materialize a separate `CAD Organized` scene with
-shared mesh data and independent objects. Accepted keeps use populated exact
-reference paths and their ancestors; unresolved, invalid and pending objects use
-one `REVIEW`; identified concealed mechanisms use `HIDDEN_INTERNALS` with viewport
-and render disabled. Diagnostic groups remain recovery-only. Empty owned shells
-are removed, foreign collection-name collisions fail without taking ownership.
-Organization checks changed target metadata, never mesh buffers, and does not
-change source memberships/revision or invalidate source evidence. Status and HTML
-report actual organized counts separately from planned assignments and flag stale
-organization. Saved checkpoints contain the resumable recovery state plus a
-separate `organized.mixar` inspection copy; only milestone saves write projects.
-Final export retains hidden internals and rejects unresolved semantic coverage.
-Unsupported animated/constrained/modified dependency graphs still block export.
-
-`hidden_internal` decisions require scoped semantic evidence, a current enclosing
-assembly image including the targets, and explicit exterior AND cabin visibility
-reasoning. A raster miss or system-name classification alone cannot justify hiding.
-The agent prioritizes broad exterior/cabin coverage and continues past unavailable
-wheel-variant evidence. Wheel synonyms do not introduce output collections.
-
-Validation: `tests/cad_cleanup_organized_qa.py` exercises real Blender memberships,
-zero geometry hashing at organization, shared mesh preservation, empty collection
-cleanup, collision refusal, hidden evidence gates and saved checkpoint copies.
-Synthetic evidence tests protocol only; full UAT visual classification is separate.
+Windows incremental builds prune deleted files from the Mixar-owned Python
+package before installation (`scripts/windows/prune_mixar_overlay.ps1`). The
+upstream Blender overlay remains additive; stale CAD modules must not survive a rebuild.

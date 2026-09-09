@@ -10,7 +10,7 @@ import uuid
 import bpy
 import numpy as np
 
-from ..constants import OBJECT_KEY, OWNER_KEY, STATE_KEY, STAGES
+from ..constants import OBJECT_KEY, OWNER_KEY, STATE_KEY
 
 _read_cache = None
 _metadata_cache = None
@@ -289,6 +289,8 @@ def refresh(run, snapshot=None):
 
 
 def start(payload):
+    if not isinstance(payload.get('workflow'),dict) or payload['workflow'].get('version') != 2:
+        fail('cad_transport_mismatch','CAD requires backend metadata transport version 2.')
     if not payload.get('owner_id') or not payload.get('request_id'):
         fail('invalid_request', 'owner_id and request_id are required.')
     if bpy.context.scene.get(STATE_KEY):
@@ -321,7 +323,7 @@ def start(payload):
     run = {'snapshot_version': 3, 'run_id': token(), 'owner_id': payload['owner_id'], 'start_request_id': payload['request_id'],
            'root_collection': root_name, 'source_file': bpy.data.filepath,
            'view_layer': bpy.context.view_layer.name, 'revision': 0, 'records': {},
-           'stage_status': {s: 'pending' for s in STAGES}, 'proposals': {}, 'operations': [],
+           'stage_status': {s: 'pending' for s in payload['workflow']['stage_keys']}, 'proposals': {}, 'operations': [],
            'requests': {}, 'artifact': None, 'verified_revision': None, 'visual_review': None,
            'evidence': {}, 'source_scene_objects': sorted(o.name for o in bpy.context.scene.objects)}
     render_ids = render_eligible_ids()
@@ -341,13 +343,15 @@ def start(payload):
 
 
 def record(obj, key, run, indexes=None):
-    from .rules import parse_name
-    parsed = parse_name(obj.name)
     return {'object_id': key, 'name': obj.name, 'type': obj.type,
             'category': run['records'][key]['category'], 'dimensions': list(obj.dimensions),
             'polygons': len(obj.data.polygons) if obj.type == 'MESH' else 0,
             'parent': obj.parent.name if obj.parent else None,
-            'protected': parsed['protected'], 'descriptor': parsed['descriptor'],
+            'scale': list(obj.scale),
+            'duplicate_key': digest({'data':obj.data.as_pointer() if obj.data else None,
+                'matrix':matrix(obj),'visible':obj.visible_get(),
+                'render_eligible':obj.as_pointer() in indexes[2],
+                'materials':[s.material.name if s.material else None for s in obj.material_slots]}) if indexes and len(indexes)>2 else None,
             'collections': (indexes[0][obj.as_pointer()] if indexes is not None else
                             [c.name for c in obj.users_collection]),
             'geometry_supported': not bool(obj.parent or

@@ -51,5 +51,9 @@ if %errorlevel% geq 8 (
     exit /b 1
 )
 
+REM Remove Python modules deleted or relocated from the Mixar-owned package.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%prune_mixar_overlay.ps1"
+if %errorlevel% neq 0 exit /b 1
+
 echo Overlay complete.
 exit /b 0

@@ -8,7 +8,7 @@ major checkpoints synchronize it. Diagnostic groups remain in the recovery scene
 """
 from collections import Counter
 import bpy
-from . import state, reference, reference_policy
+from . import state, reference, assignment_receipts
 from ..constants import OBJECT_KEY
 
 OWNER = 'cad_organized_run'
@@ -19,12 +19,13 @@ REQUIRED = ('MESH', 'CURVE', 'SURFACE', 'FONT', 'META')
 
 def destination(run, key, allowed):
     row = run.get('reference_assignments', {}).get(key, {})
-    if not row or row.get('disposition') == 'review' or not reference_policy.accepted(run, row):
-        return 'REVIEW'
+    config=run['workflow']['organization']
+    if not row or row.get('disposition') == 'review' or not assignment_receipts.accepted(run, row):
+        return config['review_path']
     if row['disposition'] == 'keep':
-        return row['path'] if row.get('path') in allowed else 'REVIEW'
+        return row['path'] if row.get('path') in allowed else config['review_path']
     if row['disposition'] == 'hidden_internal':
-        return 'HIDDEN_INTERNALS'
+        return config['hidden_path']
     return None  # Affirmative omissions remain recoverable in the source.
 
 
@@ -51,7 +52,7 @@ def sync(run, force=False):
     if scene and not force and previous.get('stamp') == stamp:
         return previous
     source = state.objects(run)
-    allowed = reference_policy.leaves(reference.profile())
+    allowed = assignment_receipts.leaves(reference.profile(run))
     routes = {k: destination(run, k, allowed) for k, o in source.items() if o.type in REQUIRED}
     wanted = {k: path for k, path in routes.items() if path is not None}
     # A checkpoint is metadata-only. Final verification/save audits mesh buffers.
@@ -120,7 +121,7 @@ def sync(run, force=False):
         if coll.get(PATH) not in paths and not coll.objects and not coll.children:
             bpy.data.collections.remove(coll)
     for path, coll in collections.items():
-        coll.hide_render = coll.hide_viewport = path == 'HIDDEN_INTERNALS'
+        coll.hide_render = coll.hide_viewport = path == run['workflow']['organization']['hidden_path']
     receipt = {'scene': scene.name, 'stamp': stamp, 'routes': routes,
                'counts': dict(Counter(wanted.values())), 'objects': len(wanted),
                'omitted': sum(p is None for p in routes.values()),

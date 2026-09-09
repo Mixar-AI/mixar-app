@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bpy
 
-from ..constants import OBJECT_KEY, STAGES
+from ..constants import OBJECT_KEY
 from .mutations import _render_eligible, remember, replay
 from .state import capture, digest, fail, objects, persist, token, render_eligible_ids
 
@@ -25,7 +25,7 @@ def summary(run):
     saved = bool(artifact and artifact['revision'] == run['revision'] and
                  Path(artifact['local_path']).is_file())
     return {'run_id': run['run_id'], 'revision': run['revision'], 'scope_count': len(run['records']),
-            'counts': counts, 'review_count': sum(v for k, v in counts.items() if k.startswith('_REVIEW_')),
+            'counts': counts, 'review_count': run.get('backend_summary',{}).get('summary',{}).get('diagnostic_review_count'),
             'reference': __import__(__package__ + '.reference', fromlist=['summary']).summary(run),
             'organized': __import__(__package__ + '.organized', fromlist=['public']).public(run),
             'stage_status': run['stage_status'], 'artifact': public_artifact, 'saved': saved,
@@ -41,7 +41,7 @@ def verify(run, payload=None):
     payload = payload or {}
     stage = payload.get('stage')
     if stage is not None:
-        if stage not in STAGES or run['stage_status'][stage] != 'reviewed':
+        if stage not in run['stage_status'] or run['stage_status'][stage] != 'reviewed':
             fail('stage_pending', 'Apply the stage before checking it.')
         targets = {key for op in run['operations'] if not op['undone'] and op['stage'] == stage
                    for key in op['before']}
@@ -57,21 +57,13 @@ def verify(run, payload=None):
         return {'stage': stage, 'stage_verified': True, 'verified': False,
                 'revision': run['revision'], 'checked_objects': len(targets),
                 'validation_scope': 'stage targets and shared mesh data; not final completeness'}
-    pending = [s for s in STAGES if run['stage_status'][s] != 'reviewed']
-    if pending:
-        fail('stages_pending', 'Final verification is for delivery. Finish stages or request a stage checkpoint.')
-    if run.get('reference_profile'):
-        from . import reference
-        if not reference.summary(run)['semantic_complete']:
-            fail('semantic_coverage_incomplete','Resolve invalid assignments and collection coverage before the expensive final geometry audit.')
     current = capture(run, full=True)
     issues = []
     if digest(current) != run['fingerprint']: issues.append('Scene changed outside the recorded operations.')
     obs = objects(run)
     for key, obj in obs.items():
         row = run['records'][key]
-        if row['category'] is None: issues.append('Unaccounted object: ' + obj.name)
-        elif row['category'] not in current['objects'][key]['collections']:
+        if row['category'] is not None and row['category'] not in current['objects'][key]['collections']:
             issues.append('Recorded category differs from actual membership: ' + obj.name)
     if current['scene_objects'] != run['source_scene_objects']:
         issues.append('Scene object names or object count changed.')
@@ -98,12 +90,6 @@ def save(run, payload):
     if old:
         if not summary(run)['saved']: fail('artifact_missing', 'Saved artifact is missing or stale; save a new revision.')
         return old
-    pending = [s for s in STAGES if run['stage_status'][s] != 'reviewed']
-    if pending: fail('stages_pending', 'Review all stages before delivery. Pending: ' + ', '.join(pending))
-    if run['verified_revision'] != run['revision']: fail('verification_required', 'Run verify on the current revision.')
-    visual = run.get('visual_review')
-    if not visual or visual['revision'] != run['revision'] or visual['verdict'] != 'pass':
-        fail('visual_review_required', 'Render and review the current result before saving.')
     source = Path(run['source_file']).resolve() if run['source_file'] else None
     directory = source.parent if source else Path(bpy.app.tempdir or os.path.expanduser('~')) / 'Mixar CAD Outputs'
     directory.mkdir(parents=True, exist_ok=True)

@@ -59,11 +59,6 @@ def checkpoint(run,payload=None):
     old=previous.get('reference',{}).get('counts',{})
     counts=status['counts']
     captured=[]
-    for path in (Path(__file__).parents[1]/'reference_views').glob('*.png'):
-        target=images/('reference-'+path.name)
-        if not target.exists(): shutil.copyfile(path,target)
-        captured.append({'file':'images/'+target.name,'view':path.stem,'scope':'fixed output.blend reference; neutral clay, all variants',
-                         'revision':None,'assignment_revision':None,'current':True})
     from .visual import cached_path
     for eid,metadata in run.get('evidence',{}).items():
         path=cached_path(metadata)
@@ -83,7 +78,7 @@ def checkpoint(run,payload=None):
     changed=[{'object_id':k,'name':run['records'][k]['name'],'before':old_index.get(k),'after':v}
              for k,v in assignment_index.items() if old_index.get(k)!=v]
     data={'timestamp':stamp,'reason':reason,'status':terminal,'revision':run['revision'],
-        'reference':status,'organized':organized.public(run),'coverage':reference.coverage_rows(run),'images':captured[:3]+captured[3:][-8:],
+        'reference':status,'organized':organized.public(run),'coverage':reference.coverage_rows(run),'images':captured[-8:],
         'assignment_index':assignment_index,'changed_object_count':len(changed),'changed_objects':changed,
         'changed_paths':{k:{'before':old.get(k,0),'after':counts.get(k,0)} for k in old.keys()|counts.keys() if old.get(k,0)!=counts.get(k,0)},
         'issues':[payload['error']] if payload.get('error') else [],

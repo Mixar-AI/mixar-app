@@ -113,17 +113,3 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "KIRI Engine contributors"
 SPDX-License-Identifier = "Apache-2.0"
-
-# CAD cleanup reference data and previews.
-[[annotations]]
-path = [
-  "src/scripts/mixar/modules/common/cad_cleanup/profile.json",
-  "src/scripts/mixar/modules/common/cad_cleanup/reference_profile.json",
-  "src/scripts/mixar/modules/common/cad_cleanup/reference_views/left.png",
-  "src/scripts/mixar/modules/common/cad_cleanup/reference_views/perspective.png",
-  "src/scripts/mixar/modules/common/cad_cleanup/reference_views/top.png",
-  "tests/cad_cleanup_cases.json"
-]
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
