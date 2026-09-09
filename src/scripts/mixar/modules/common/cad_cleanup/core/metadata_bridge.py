@@ -8,7 +8,7 @@ import time
 import zlib
 from . import state, inventory
 
-VERSION = 2
+VERSION = 3
 LIMIT = 64 * 1024 * 1024
 TABLES = ('proposals','reference_assignments','reference_assemblies','reference_coverage',
           'reference_inspected','reference_searches','selections','wheel_reviews','requests')
@@ -33,7 +33,7 @@ def unpack(blob):
 
 def validate_settings(contract):
     if not isinstance(contract,dict) or contract.get('version')!=VERSION:
-        state.fail('cad_transport_mismatch','Update backend and client together for CAD metadata transport version 2.')
+        state.fail('cad_transport_mismatch','Update backend and client together for CAD metadata transport version 3.')
     stages=contract.get('stage_keys')
     if not isinstance(stages,list) or not stages or len(stages)>32 or any(not isinstance(s,str) or len(s)>32 for s in stages):
         state.fail('invalid_contract','Invalid workflow stage contract.')
@@ -51,7 +51,14 @@ def validate_settings(contract):
 
 
 def install(run, contract):
-    run['workflow']=validate_settings(contract)
+    if contract is None:
+        if not run.get('workflow'): state.fail('collection_schema_required','Supply a hierarchy for this new run.')
+        contract=copy.deepcopy(run['workflow'])
+        contract['version']=VERSION
+    contract=validate_settings(contract)
+    if run.get('workflow') and {k:v for k,v in run['workflow'].items() if k!='version'}!={k:v for k,v in contract.items() if k!='version'}:
+        state.fail('request_conflict','A resumed run cannot change its collection schema.')
+    run['workflow']=contract
     state.persist(run)
 
 
@@ -78,7 +85,7 @@ def snapshot(run,payload):
     data['requests']={request_id:old} if action=='reference_assign' and old else {}
     if summary_only:
         data={k:data[k] for k in ('reference_assignments','reference_coverage','wheel_reviews')}
-    data.update({k:run[k] for k in ('run_id','revision','fingerprint','assignment_revision','reference_profile') if k in run})
+    data.update({k:run[k] for k in ('run_id','revision','fingerprint','assignment_revision','reference_profile','workflow') if k in run})
     data.update({k:run.get(k) for k in ('stage_status','verified_revision','reference_review','reference_reviews','visual_review')})
     data['records']={k:{'name':r['name'],'category':r.get('category')} for k,r in run['records'].items()}
     data['_rows']={k:{f:r[f] for f in fields if f in r} for k,r in rows.items()}

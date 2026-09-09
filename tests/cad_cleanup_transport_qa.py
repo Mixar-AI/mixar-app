@@ -10,7 +10,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.mesh.primitive_cube_add()
 obj=bpy.context.view_layer.objects.active
 obj.name='Opaque component - client must not classify this name'
-contract={'version':2,'stage_keys':['classify'],'organization':{'review_path':'REVIEW','hidden_path':'HIDDEN_INTERNALS'},
+contract={'version':3,'stage_keys':['classify'],'organization':{'review_path':'REVIEW','hidden_path':'HIDDEN_INTERNALS'},
     'reference':{'profile_id':'synthetic','assignable_paths':['VISIBLE'],'collections':[{'path':'VISIBLE','mesh_count':1}]}}
 owner={'owner_id':'transport-test'}
 def call(action,**args):

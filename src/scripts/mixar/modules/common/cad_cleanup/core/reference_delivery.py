@@ -13,7 +13,7 @@ from .mutations import replay, remember
 
 def validate(run):
     assigned = run['reference_assignments']
-    chosen = {k: o for k, o in state.objects(run).items() if assigned.get(k, {}).get('disposition') in ('keep', 'hidden_internal')}
+    chosen = {k: o for k, o in state.objects(run).items() if assigned.get(k, {}).get('disposition') in (('keep','hidden_internal','omit') if run['workflow']['organization'].get('removed_path') else ('keep','hidden_internal'))}
     if not chosen: state.fail('empty_delivery', 'No retained objects are assigned.')
     # Flatten only demonstrably static evaluated transforms. Animated assemblies
     # and modifier dependency graphs require their own preservation exporter.
@@ -52,7 +52,7 @@ def save(run, payload):
         artifact['semantic_policy_version']=reference.summary(run)['policy_version']
         artifact['semantic_complete']=True
         report_data = {'artifact': {k: v for k, v in artifact.items() if k not in ('local_path', 'report_path')},
-                       'assignments': run['reference_assignments'], 'visual_review': run['reference_review'],
+                       'collection_schema':run['workflow']['reference'], 'assignments': run['reference_assignments'], 'visual_review': run['reference_review'],
                        'limitations': ['Source preserved separately; static transforms flattened; meshes not joined.',
                                        'Reference counts are not mesh-count quotas; variants may overlap.']}
         scene['cad_reference_delivery'] = json.dumps(report_data)

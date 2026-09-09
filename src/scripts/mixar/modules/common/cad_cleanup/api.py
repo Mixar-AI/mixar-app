@@ -30,7 +30,8 @@ def _dispatch(action, payload):
                 return {'success': True, **raster.progress()}
             state.fail('render_busy', 'Wait for the native raster job and restored scene before other CAD operations.')
         if action == 'start':
-            metadata_bridge.validate_settings(payload.get('workflow'))
+            if payload.get('workflow') is not None:
+                metadata_bridge.validate_settings(payload['workflow'])
             run = state.start(payload)
             metadata_bridge.install(run,payload.get('workflow'))
             if payload.get('reference_profile') and not run.get('reference_profile'):

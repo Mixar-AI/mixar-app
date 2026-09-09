@@ -289,12 +289,12 @@ def refresh(run, snapshot=None):
 
 
 def start(payload):
-    if not isinstance(payload.get('workflow'),dict) or payload['workflow'].get('version') != 2:
-        fail('cad_transport_mismatch','CAD requires backend metadata transport version 2.')
     if not payload.get('owner_id') or not payload.get('request_id'):
         fail('invalid_request', 'owner_id and request_id are required.')
     if bpy.context.scene.get(STATE_KEY):
         run = read(payload)
+        if payload.get('workflow') is not None and run.get('workflow') and {k:v for k,v in payload['workflow'].items() if k!='version'}!={k:v for k,v in run['workflow'].items() if k!='version'}:
+            fail('request_conflict','A resumed run cannot change its collection schema.')
         if payload.get('run_id'):
             if payload.get('root_collection') not in (None, run['root_collection']):
                 fail('request_conflict', 'Resuming cannot change scope.')
@@ -304,6 +304,8 @@ def start(payload):
         elif run['root_collection'] != payload.get('root_collection'):
             fail('request_conflict', 'A start request cannot change its scope.')
         return run
+    if not isinstance(payload.get('workflow'),dict) or payload['workflow'].get('version') != 3:
+        fail('collection_schema_required','Supply a collection hierarchy to start a fresh run.')
     if bpy.context.mode != 'OBJECT': fail('object_mode_required', 'Exit Edit mode before cleanup.')
     root_name = payload.get('root_collection')
     root = bpy.data.collections.get(root_name) if root_name else bpy.context.scene.collection

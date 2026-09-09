@@ -602,7 +602,7 @@ scene edits, collection membership, geometry integrity and local output files. I
 metadata bridge transfers bounded data and rejects stale targets; it neither selects
 workflow steps nor issues approvals. Local paths, mesh buffers and recovery journals
 do not travel to the backend or the LLM. Delivery compares the scene/assignment
-revision used by the tool before writing. Transport version 2 needs a coordinated
+revision used by the tool before writing. Transport version 3 needs a coordinated
 backend deployment and client rebuild.
 
 Validation lives in backend `tests/agent/cad_cleanup` and client
@@ -613,3 +613,10 @@ crash; do not bypass its integrity guard or claim synthetic tests prove car qual
 Windows incremental builds prune deleted files from the Mixar-owned Python
 package before installation (`scripts/windows/prune_mixar_overlay.ps1`). The
 upstream Blender overlay remains additive; stale CAD modules must not survive a rebuild.
+
+CAD fresh runs accept `cad_start(collection_schema=...)` from the user prompt.
+Names and purposes are run data, never hardcoded client-specific defaults. The
+complete hierarchy persists locally and resumes cannot change it. User-supplied
+removed destinations retain excluded/hidden objects; reference-specific naming
+and variant checks apply only to explicitly selected legacy profiles. Do not edit
+`.github/workflows`. Backend runtime tests remain CI-only unless reauthorized.

@@ -26,7 +26,7 @@ def destination(run, key, allowed):
         return row['path'] if row.get('path') in allowed else config['review_path']
     if row['disposition'] == 'hidden_internal':
         return config['hidden_path']
-    return None  # Affirmative omissions remain recoverable in the source.
+    return config.get('removed_path')  # Legacy omissions remain only in recovery.
 
 
 def require_static(objects):
@@ -61,7 +61,8 @@ def sync(run, force=False):
         changed = set(wanted)
     state.check_targets(run, changed)
     require_static(source[k] for k in wanted)
-    paths = set()
+    paths = ({r['path'] for r in reference.profile(run)['collections']}
+             if run['workflow']['organization'].get('keep_empty') else set())
     for path in wanted.values():
         parts = path.split('/')
         paths.update('/'.join(parts[:i]) for i in range(1, len(parts) + 1))
