@@ -27,6 +27,7 @@ def summary(run):
     return {'run_id': run['run_id'], 'revision': run['revision'], 'scope_count': len(run['records']),
             'counts': counts, 'review_count': sum(v for k, v in counts.items() if k.startswith('_REVIEW_')),
             'reference': __import__(__package__ + '.reference', fromlist=['summary']).summary(run),
+            'organized': __import__(__package__ + '.organized', fromlist=['public']).public(run),
             'stage_status': run['stage_status'], 'artifact': public_artifact, 'saved': saved,
             'verified': run['verified_revision'] == run['revision'],
             'visual_review': run.get('visual_review'),

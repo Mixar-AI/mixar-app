@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import bpy
 
-from . import state, reference
+from . import state, reference, organized
 from .mutations import replay, remember
 
 
@@ -30,18 +30,11 @@ def validate(run):
     if len(reviewed) < 2:
         state.fail('reference_review_required', 'Review the retained result from at least two different directions.')
     assigned = run['reference_assignments']
-    chosen = {k: o for k, o in state.objects(run).items() if assigned.get(k, {}).get('disposition') == 'keep'}
+    chosen = {k: o for k, o in state.objects(run).items() if assigned.get(k, {}).get('disposition') in ('keep', 'hidden_internal')}
     if not chosen: state.fail('empty_delivery', 'No retained objects are assigned.')
     # Flatten only demonstrably static evaluated transforms. Animated assemblies
     # and modifier dependency graphs require their own preservation exporter.
-    for obj in chosen.values():
-        chain = obj
-        while chain:
-            if chain.animation_data or chain.constraints:
-                state.fail('unsupported_dependency', 'Animated/constrained retained parts require dependency-preserving export.')
-            chain = chain.parent
-        if obj.modifiers or obj.instance_type != 'NONE' or (obj.type == 'MESH' and obj.data.shape_keys):
-            state.fail('unsupported_dependency', 'Instanced/modified/shape-key parts require dependency-preserving export.')
+    organized.require_static(chosen.values())
     return chosen
 
 
@@ -63,34 +56,16 @@ def save(run, payload):
     report = output.with_suffix('.cad-report.json')
     if output.exists() or report.exists(): state.fail('output_exists', 'Existing files are never overwritten.')
     temporary = output.with_name('.cad-reference-' + state.token() + output.suffix)
-    scene = bpy.data.scenes.new('Reference Delivery')
-    created = [scene]
+    organized.sync(run, force=True)
+    scene = organized.scene_for(run)
     wrote_report = False
     try:
-        collections = {}
-        for row in reference.profile()['collections']:
-            path = row['path']
-            parent, _, leaf = path.rpartition('/')
-            # Exact collection spellings must survive export; fail on a collision.
-            if bpy.data.collections.get(leaf):
-                state.fail('reference_collision', 'A reference collection name already exists in the source.')
-            coll = bpy.data.collections.new(leaf)
-            created.append(coll)
-            (collections[parent] if parent else scene.collection).children.link(coll)
-            collections[path] = coll
-        for key, obj in chosen.items():
-            clone = obj.copy()
-            created.append(clone)
-            clone.parent = None
-            clone.matrix_world = obj.matrix_world.copy()
-            clone.hide_viewport = clone.hide_render = False
-            clone['cad_source_name'] = obj.name
-            collections[run['reference_assignments'][key]['path']].objects.link(clone)
         if len(scene.objects) != len(chosen): state.fail('delivery_mismatch', 'Generated object accounting failed.')
         artifact = {'artifact_id': state.token(), 'filename': output.name, 'report_filename': report.name,
                     'revision': run['revision'], 'assignment_revision': run['assignment_revision'],
                     'integrity_checked': True, 'local_path': str(output), 'report_path': str(report),
-                    'profile_id': run['reference_profile'], 'retained_objects': len(chosen)}
+                    'profile_id': run['reference_profile'], 'retained_objects': len(chosen),
+                    'hidden_internal_objects': sum(r['disposition'] == 'hidden_internal' for r in run['reference_assignments'].values())}
         artifact['semantic_policy_version']=reference.summary(run)['policy_version']
         artifact['semantic_complete']=True
         report_data = {'artifact': {k: v for k, v in artifact.items() if k not in ('local_path', 'report_path')},
@@ -114,4 +89,3 @@ def save(run, payload):
         raise
     finally:
         temporary.unlink(missing_ok=True)
-        bpy.data.batch_remove(ids=created)

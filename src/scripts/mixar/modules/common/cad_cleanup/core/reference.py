@@ -66,10 +66,10 @@ def assign(run, payload):
         disposition = row.get('disposition')
         path = row.get('path')
         reason = row.get('reason')
-        if disposition not in ('keep', 'omit', 'review') or not isinstance(reason, str) or not reason.strip():
-            state.fail('invalid_decision', 'Each group needs keep/omit/review and evidence reasoning.')
+        if disposition not in ('keep', 'hidden_internal', 'omit', 'review') or not isinstance(reason, str) or not reason.strip():
+            state.fail('invalid_decision', 'Each group needs keep/hidden_internal/omit/review and evidence reasoning.')
         if (disposition == 'keep' and path not in allowed) or (disposition != 'keep' and path):
-            state.fail('invalid_path', 'Use an assignable leaf; omit/review have no path. Alternatives: '+', '.join(policy.alternatives(path, data)))
+            state.fail('invalid_path', 'Use an assignable leaf for keep; other dispositions have no path. Alternatives: '+', '.join(policy.alternatives(path, data)))
         # Raster/ray evidence proves visible candidates, never semantic irrelevance.
         if disposition == 'omit' and row.get('evidence_kind') not in ('semantic_review', 'exact_duplicate'):
             state.fail('removal_evidence_required', 'Omission needs semantic review or a proved exact duplicate.')
@@ -94,7 +94,10 @@ def assign(run, payload):
             pending[key] = {'disposition': disposition, 'path': path, 'reason': reason[:2000],
                             'evidence_kind': row.get('evidence_kind'), 'scene_revision': run['revision'],
                             'evidence_ids': row.get('evidence_ids') or [], 'policy_version': policy.VERSION,
-                            'assembly_id': row.get('assembly_id'), 'wheel_review_id': row.get('wheel_review_id')}
+                            'assembly_id': row.get('assembly_id'), 'wheel_review_id': row.get('wheel_review_id'),
+                            'visibility_context': row.get('visibility_context'),
+                            'context_evidence_ids': row.get('context_evidence_ids') or [],
+                            'internal_policy_version': 1 if disposition == 'hidden_internal' else None}
     if sum(r['disposition'] != 'review' and not r.get('assembly_id') for r in pending.values()) > 1000:
         state.fail('batch_too_large', 'Resolve at most 1000 objects per call in homogeneous groups.')
     if len(pending) > 50000:

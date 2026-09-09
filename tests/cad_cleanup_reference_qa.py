@@ -77,7 +77,9 @@ visual.review(run, {'evidence_id': image['evidence_id'], 'verdict': 'pass', 'not
 filename = 'fixture-output-' + state.token()[:8] + '.blend'
 result = reference_delivery.save(run, {'request_id': 'save', 'filename': filename})
 assert result['saved'] and (ROOT / filename).is_file()
-assert set(o.as_pointer() for o in bpy.data.objects) == before_objects
+from mixar.modules.common.cad_cleanup.core import organized
+assert set(o.as_pointer() for o in bpy.data.objects if not o.get(organized.OWNER)) == before_objects
+assert len(organized.scene_for(run).objects) == 2
 assert set(m.as_pointer() for m in bpy.data.meshes) == before_meshes
 assert ids['occluded_piece'] in state.objects(run)
 run['revision'] += 1

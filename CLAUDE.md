@@ -701,3 +701,31 @@ cad_review. Major-batch index.html checkpoints and final delivery gates remain r
 Client fixture `tests/cad_cleanup_decision_qa.py` tests the gates using synthetic review
 responses. Actual provider accuracy and the agent workflow must be retested on UAT
 after backend sync and client rebuild; backend runtime tests are not run locally.
+
+
+## Organized CAD checkpoints and retained internals
+
+Major reference checkpoints materialize a separate `CAD Organized` scene with
+shared mesh data and independent objects. Accepted keeps use populated exact
+reference paths and their ancestors; unresolved, invalid and pending objects use
+one `REVIEW`; identified concealed mechanisms use `HIDDEN_INTERNALS` with viewport
+and render disabled. Diagnostic groups remain recovery-only. Empty owned shells
+are removed, foreign collection-name collisions fail without taking ownership.
+Organization checks changed target metadata, never mesh buffers, and does not
+change source memberships/revision or invalidate source evidence. Status and HTML
+report actual organized counts separately from planned assignments and flag stale
+organization. Saved checkpoints contain the resumable recovery state plus a
+separate `organized.mixar` inspection copy; only milestone saves write projects.
+Final export retains hidden internals and rejects unresolved semantic coverage.
+Unsupported animated/constrained/modified dependency graphs still block export.
+
+`hidden_internal` decisions require scoped semantic evidence, a current enclosing
+assembly image including the targets, and explicit exterior AND cabin visibility
+reasoning. A raster miss or system-name classification alone cannot justify hiding.
+The agent prioritizes broad exterior/cabin coverage and continues past unavailable
+wheel-variant evidence. Wheel synonyms do not introduce output collections.
+
+Validation: `tests/cad_cleanup_organized_qa.py` exercises real Blender memberships,
+zero geometry hashing at organization, shared mesh preservation, empty collection
+cleanup, collision refusal, hidden evidence gates and saved checkpoint copies.
+Synthetic evidence tests protocol only; full UAT visual classification is separate.

@@ -82,6 +82,15 @@ def problems(run, ids, decision, profile):
     if disposition == 'keep':
         from . import wheel_policy
         issues.extend(wheel_policy.problems(run, ids, decision))
+    if disposition == 'hidden_internal':
+        contexts = [run.get('evidence', {}).get(k, {}) for k in decision.get('context_evidence_ids', [])]
+        contexts = [e for e in contexts if e.get('revision') == run['revision'] and
+                    e.get('fingerprint') == run['fingerprint'] and e.get('camera') and
+                    set(ids) < set(e.get('render_ids', []))]
+        if (decision.get('evidence_kind') != 'semantic_review' or ambiguous or
+                not set(ids) <= covered or not contexts or
+                len(str(decision.get('visibility_context') or '').strip()) < 40):
+            issues.append('Hidden internals require identified components, scoped images, a current surrounding-assembly image including the targets, and specific exterior AND cabin visibility reasoning (40+ characters). Non-visibility alone is never proof.')
     if disposition == 'omit':
         if decision.get('evidence_kind') not in ('semantic_review', 'exact_duplicate'):
             issues.append('Omission requires semantic review or exact duplicate proof, never invisibility.')
@@ -96,4 +105,5 @@ def problems(run, ids, decision, profile):
 def accepted(run, row):
     from . import wheel_policy
     return (row.get('policy_version') == VERSION and row.get('scene_revision') == run['revision']
+            and (row.get('disposition') != 'hidden_internal' or row.get('internal_policy_version') == 1)
             and wheel_policy.accepted(run, row))
