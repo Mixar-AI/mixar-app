@@ -217,6 +217,26 @@ void moodboard_add_node_card_actions(uiBlock *block,
                                      bool edit_mode,
                                      bool has_media_result,
                                      const char *node_id);
+/**
+ * The action row floating above a selected reference image or movie: Rename,
+ * Preview and Export, on the same line and in the same order as a finished
+ * card's Edit / Preview / Export (mixie_draw_moodboard_media_actions.cc).
+ * Every button is scoped to the tile it sits on through the media's graph id.
+ */
+void moodboard_add_media_card_actions(uiBlock *block,
+                                      const rctf &media_rect,
+                                      const char *media_id);
+/** One row per selected standalone media, added to the canvas block -- or,
+ * for the media being renamed, the in-place name field in the row's place. */
+void moodboard_add_selected_media_actions(const bContext *C,
+                                          uiBlock *block,
+                                          View2D *v2d,
+                                          ARegion *region,
+                                          PointerRNA *scene_ptr,
+                                          const MoodboardGraphCache *cache);
+/** Canvas rect the row above `media_rect` occupies -- the ONE definition,
+ * shared with the selected-media label so the name never lands under it. */
+void moodboard_media_action_row_rect(const rctf &media_rect, rctf *r_row);
 void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
 
 /* Shared by the node-UI toolbar and the selected-media name

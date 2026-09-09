@@ -220,6 +220,13 @@ class MIXIE_OT_moodboard_rename_node(Operator):
     def invoke(self, context, event):
         node = self._node(context)
         if node is None:
+            # F2 lands here for whatever is selected. With no node it is a
+            # reference image or movie the user means, and that rename is the
+            # C++ in-place field (mixie_moodboard_ops_rename_media.cc), which
+            # resolves the one selected reference itself and reports when
+            # there is not exactly one.
+            if not self.node_id:
+                return bpy.ops.mixie.moodboard_rename_media()
             self.report({'WARNING'}, "Select an inference node")
             return {'CANCELLED'}
         # Resolve the id now: the popup's execute runs without an active-node

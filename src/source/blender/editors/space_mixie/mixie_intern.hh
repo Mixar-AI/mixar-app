@@ -91,6 +91,10 @@ struct wmWindowManager;
  * painter and the button layout so they cannot drift onto different lines. */
 #define MOODBOARD_NODE_HEADER_LIFT 12.0f
 #define MOODBOARD_NODE_HEADER_ROW_H 30.0f
+/* Floor on the in-place rename field above a reference tile (canvas units,
+ * x UI_SCALE_FAC): the field spans the tile's width, but a tile shrunk below
+ * this still needs room to read and type a name. */
+#define MOODBOARD_MEDIA_RENAME_MIN_W 180.0f
 /* Display-only echo of a draft node's prompt inside its tile. Deliberately far
  * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
  * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
@@ -218,6 +222,13 @@ bool moodboard_graph_node_id_selected(PointerRNA *scene_ptr, const char *node_id
 bool moodboard_node_is_mask_detail(PointerRNA *node);
 /** Index into `mixie_moodboard_images` of the media a node owns, or -1. */
 int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id);
+/**
+ * In-place rename of a reference (mixie_moodboard_ops_rename_media.cc).
+ * Runtime-only, keyed on the scene's session uid; the draw pass asks whether a
+ * tile is being renamed and reports the end of the edit back.
+ */
+bool moodboard_media_rename_is_active(const Scene *scene, const char *media_id);
+void moodboard_media_rename_end();
 /**
  * Index into `mixie_moodboard_images` of the movie rendered inside the action
  * node under the cursor, or -1. Deliberately the media index, not the node
@@ -392,6 +403,7 @@ void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame(wmOperatorType *ot);
 void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot);
+void MIXIE_OT_moodboard_rename_media(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot);

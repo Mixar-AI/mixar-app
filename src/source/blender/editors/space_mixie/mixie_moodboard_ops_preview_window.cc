@@ -55,6 +55,30 @@ static Image *preview_image_for_node(PointerRNA *scene_ptr, const char *node_id)
   return moodboard_item_image(scene_ptr, index);
 }
 
+/* A reference on the board is addressed by ITS OWN graph id (`node_id` on the
+ * media entry), where a node's result is addressed through the node that owns
+ * it (`embedded_node_id`). Two properties on the operator, because the two
+ * lookups walk different fields and a single id resolved against both would
+ * silently prefer whichever matched first. */
+static Image *preview_image_for_media(PointerRNA *scene_ptr, const char *media_id)
+{
+  if (!media_id || media_id[0] == '\0') {
+    return nullptr;
+  }
+  PropertyRNA *items = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
+  const int count = items ? RNA_property_collection_length(scene_ptr, items) : 0;
+  for (int index = 0; index < count; index++) {
+    PointerRNA item;
+    RNA_property_collection_lookup_int(scene_ptr, items, index, &item);
+    char item_id[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(&item, "node_id", item_id, sizeof(item_id));
+    if (STREQ(item_id, media_id)) {
+      return moodboard_item_image(scene_ptr, index);
+    }
+  }
+  return nullptr;
+}
+
 /* A movie opens on its first frame and stays there unless the image user knows
  * how long it is: with the range set and auto-refresh on, the space follows the
  * scene frame, so Blender's own playback drives it. */
@@ -85,9 +109,16 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
 
   char node_id[MIXIE_GRAPH_ID_BUF];
   RNA_string_get(op->ptr, "node_id", node_id);
-  Image *image = preview_image_for_node(&scene_ptr, node_id);
+  char media_id[MIXIE_GRAPH_ID_BUF];
+  RNA_string_get(op->ptr, "media_id", media_id);
+  /* A reference's own row passes `media_id`; a card's row passes `node_id`. */
+  Image *image = media_id[0] ? preview_image_for_media(&scene_ptr, media_id) :
+                               preview_image_for_node(&scene_ptr, node_id);
   if (!image) {
-    BKE_report(op->reports, RPT_WARNING, "This node has no image or video to preview");
+    BKE_report(op->reports,
+               RPT_WARNING,
+               media_id[0] ? "This board item has no image or video to preview" :
+                             "This node has no image or video to preview");
     return OPERATOR_CANCELLED;
   }
 
@@ -150,10 +181,10 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
 
 void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot)
 {
-  ot->name = "Preview Result";
+  ot->name = "Preview Media";
   ot->idname = "MIXIE_OT_moodboard_preview_media";
   ot->description =
-      "Open this node's generated image or video in its own preview window. "
+      "Open this image or video in its own preview window. "
       "Several can be open at once";
 
   ot->exec = blender::ed::mixie::moodboard_preview_media_exec;
@@ -166,5 +197,15 @@ void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot)
    * button was pressed. */
   PropertyRNA *prop = RNA_def_string(
       ot->srna, "node_id", nullptr, MIXIE_GRAPH_ID_BUF, "Node ID", "Node whose result to open");
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE);
+  /* Same SKIP_SAVE reasoning: a remembered media id would open a different
+   * reference than the one whose button was pressed. Takes precedence over
+   * `node_id` when both are set, since only a reference's own row sets it. */
+  prop = RNA_def_string(ot->srna,
+                        "media_id",
+                        nullptr,
+                        MIXIE_GRAPH_ID_BUF,
+                        "Media ID",
+                        "Board image or video (by its own graph id) to open");
   RNA_def_property_flag(prop, PROP_SKIP_SAVE);
 }

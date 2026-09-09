@@ -80,6 +80,14 @@ struct MediaLabelTile {
   Image *image;
   rcti region_rect;
   bool selected;
+  /* The Rename / Preview / Export row a SELECTED tile wears above its top
+   * edge (mixie_draw_moodboard_media_actions.cc). The name floats on that same
+   * line, left-aligned where the row is right-aligned, so on a narrow tile the
+   * two meet -- the row counts as taken and the name drops inside instead. */
+  bool has_action_row;
+  rcti action_row;
+  /* The in-place rename field is up on this tile (mixie_moodboard_ops_rename_media.cc). */
+  bool renaming;
 };
 
 static void moodboard_media_label_text(const char *name, char *out, const size_t out_size)
@@ -109,6 +117,7 @@ static bool moodboard_media_label_rect(View2D *v2d,
                                        PointerRNA *media,
                                        Image *image,
                                        const MoodboardGraphCache *cache,
+                                       rctf *r_canvas_rect,
                                        rcti *r_rect)
 {
   char media_id[MIXIE_GRAPH_ID_BUF];
@@ -132,6 +141,7 @@ static bool moodboard_media_label_rect(View2D *v2d,
     media_rect.xmax = media_rect.xmin + width;
     media_rect.ymax = media_rect.ymin + width * aspect;
   }
+  *r_canvas_rect = media_rect;
   return moodboard_view_rect_to_region(v2d, region, media_rect, r_rect);
 }
 
@@ -144,6 +154,9 @@ void mixie_draw_moodboard_selected_media_labels(View2D *v2d,
   if (!images) {
     return;
   }
+  /* `scene_ptr` is the ID pointer the caller made from the scene, so its data
+   * IS the scene; needed to ask whether a tile's in-place rename is up. */
+  const Scene *scene = static_cast<const Scene *>(scene_ptr->data);
 
   /* Nothing selected is the common case and this runs on every redraw, so
    * settle it with a bool read per entry before resolving any geometry. */
@@ -172,11 +185,31 @@ void mixie_draw_moodboard_selected_media_labels(View2D *v2d,
     PropertyRNA *embedded = RNA_struct_find_property(&media, "embedded_node_id");
     /* Node-owned media is drawn as its node's preview, never as a loose tile. */
     const bool standalone = !embedded || RNA_property_string_length(&media, embedded) == 0;
+    rctf media_canvas;
     rcti media_region;
     if (image && standalone &&
-        moodboard_media_label_rect(v2d, region, &media, image, cache, &media_region))
+        moodboard_media_label_rect(
+            v2d, region, &media, image, cache, &media_canvas, &media_region))
     {
-      tiles.append({image, media_region, RNA_boolean_get(&media, "selected")});
+      MediaLabelTile tile{};
+      tile.image = image;
+      tile.region_rect = media_region;
+      tile.selected = RNA_boolean_get(&media, "selected");
+      if (tile.selected) {
+        char media_id[MIXIE_GRAPH_ID_BUF];
+        mixie_rna_string_get_clamped(&media, "node_id", media_id, sizeof(media_id));
+        tile.renaming = moodboard_media_rename_is_active(scene, media_id);
+        /* Same definition the button layout uses, so the obstacle is exactly
+         * where the buttons are. Only an id-carrying tile gets a row (the
+         * buttons address it by id), and the row rect is read from the tile
+         * rect alone, so an id-less tile simply reserves a strip nothing draws
+         * in -- harmless, and gone once the id migration runs. */
+        rctf row_canvas;
+        moodboard_media_action_row_rect(media_canvas, &row_canvas);
+        tile.has_action_row = moodboard_view_rect_to_region(
+            v2d, region, row_canvas, &tile.action_row);
+      }
+      tiles.append(tile);
     }
     RNA_property_collection_next(&iter);
   }
@@ -191,7 +224,9 @@ void mixie_draw_moodboard_selected_media_labels(View2D *v2d,
 
   for (const int index : tiles.index_range()) {
     const MediaLabelTile &tile = tiles[index];
-    if (!tile.selected) {
+    /* A tile being renamed shows its name in the text field standing where
+     * this label would go; painting it too would double the name. */
+    if (!tile.selected || tile.renaming) {
       continue;
     }
     char label[MOODBOARD_MEDIA_LABEL_MAX_CHARS * 4 + 8];
@@ -235,6 +270,14 @@ void mixie_draw_moodboard_selected_media_labels(View2D *v2d,
     auto strip_is_clear = [&](const float x, const float y, const bool inside) {
       rcti strip;
       BLI_rcti_init(&strip, int(x), int(x + text_width), int(y), int(y + line_height));
+      /* Above the tile the name shares its line with the tile's own action
+       * row; a name run under the buttons is a name the user cannot read and
+       * a button they cannot see. Inside the tile the row is above and clear. */
+      if (!inside && tile.has_action_row &&
+          BLI_rcti_isect(&strip, &tile.action_row, nullptr))
+      {
+        return false;
+      }
       for (const int other : tiles.index_range()) {
         if (other == index || (inside && other < index)) {
           continue;

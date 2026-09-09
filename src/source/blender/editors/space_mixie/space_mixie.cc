@@ -312,6 +312,7 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_frame);
   WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
+  WM_operatortype_append(MIXIE_OT_moodboard_rename_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_box_mask);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_lasso_mask);

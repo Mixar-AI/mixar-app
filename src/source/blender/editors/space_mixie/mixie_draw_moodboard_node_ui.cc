@@ -437,6 +437,10 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
+  /* A selected reference image or movie gets its own Rename / Preview / Export
+   * row on this same block, so it scales and hit-tests exactly like a card's
+   * (mixie_draw_moodboard_media_actions.cc). */
+  moodboard_add_selected_media_actions(C, block, v2d, region, &scene_ptr, cache);
   UI_block_end(C, block);
   UI_block_draw(C, block);
 

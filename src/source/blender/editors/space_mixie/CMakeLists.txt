@@ -22,6 +22,7 @@ set(SRC
   mixie_draw_moodboard_graph.cc
   mixie_draw_moodboard_graph_chrome.cc
   mixie_draw_moodboard_graph_sockets.cc
+  mixie_draw_moodboard_media_actions.cc
   mixie_draw_moodboard_media_labels.cc
   mixie_moodboard_graph_geometry.cc
   mixie_draw_moodboard_node_ui.cc
@@ -44,6 +45,7 @@ set(SRC
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_preview_window.cc
+  mixie_moodboard_ops_rename_media.cc
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
   mixie_ops.cc
