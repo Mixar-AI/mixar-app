@@ -64,6 +64,11 @@ class MIXIE_MT_moodboard_add(Menu):
                 layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE',
                 drop=drop, allow_empty=True,
             )
+        if _capability_available("video_upscale"):
+            _connected_action(
+                layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
+                drop=drop, allow_empty=True,
+            )
 
         # Mesh-feature nodes take a 3D mesh input (wire a mesh node into them).
         mesh_items = [

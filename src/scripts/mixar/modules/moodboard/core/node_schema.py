@@ -37,6 +37,8 @@ _OUTPUT_TYPES = {
     'RETOPOLOGY': 'MESH',
     'MESH_SEGMENT': 'MESH',
     'AUTO_RIG': 'MESH',
+    # Video -> video: one connected movie in, an upscaled movie out.
+    'VIDEO_UPSCALE': 'VIDEO',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -92,6 +94,8 @@ def _capability_for_action(action_type: str) -> str:
     """Local capability map (kept inline to avoid a UI-layer import cycle)."""
     if action_type == 'VIDEO_GEN':
         return "video_gen"
+    if action_type == 'VIDEO_UPSCALE':
+        return "video_upscale"
     if action_type == 'MODEL_3D':
         return "model_gen"
     if action_type in _MESH_FEATURE_CAPABILITY:

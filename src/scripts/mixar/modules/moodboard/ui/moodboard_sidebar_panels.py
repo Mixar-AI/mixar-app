@@ -67,6 +67,7 @@ from .animate_drawer import _draw_animate
 from .pbr_gen_drawer import _draw_pbr_gen
 from .scene_gen_drawer import _draw_scene_gen
 from .video_gen_drawer import _draw_video_gen
+from .video_upscale_drawer import _draw_video_upscale
 
 logger = get_logger(__name__)
 
@@ -197,6 +198,37 @@ class MIXIE_PT_gen_video_gen(Panel):
 
     def draw(self, context):
         _safe_draw(_draw_video_gen, self.layout, context)
+
+
+class MIXIE_PT_gen_video_upscale(Panel):
+    # Catalog-only capability (FLUX Video Upscale on fal): hidden until the
+    # backend publishes an enabled `video_upscale` service, exactly like Video
+    # Gen — there is no offline fallback UI or submit path.
+    bl_label = "Video Upscale"
+    bl_idname = "MIXIE_PT_gen_video_upscale"
+    bl_space_type = 'MIXIE' if MIXIE_SPACE_AVAILABLE else 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Video Upscale"
+    bl_order = 19
+    bl_options = set()
+
+    @classmethod
+    def poll(cls, context):
+        if not _moodboard_poll(context):
+            return False
+        try:
+            from mixar.bootstrap.generation_catalog_cache import (
+                get_services, is_loaded,
+            )
+            return is_loaded() and bool(get_services("video_upscale"))
+        except Exception:
+            return False
+
+    def draw_header(self, context):
+        self.layout.label(text="", icon='FULLSCREEN_ENTER')
+
+    def draw(self, context):
+        _safe_draw(_draw_video_upscale, self.layout, context)
 
 
 class MIXIE_PT_gen_image_to_3d(Panel):
@@ -525,6 +557,7 @@ _init_capability_tabs({
     "image_gen": (MIXIE_PT_gen_imagegen, "Image Gen"),
     "ai_render": (MIXIE_PT_gen_ai_render, "AI Render"),
     "video_gen": (MIXIE_PT_gen_video_gen, "Video Gen"),
+    "video_upscale": (MIXIE_PT_gen_video_upscale, "Video Upscale"),
     "model_gen": (MIXIE_PT_gen_image_to_3d, "Model Gen"),
     "texture_gen": (MIXIE_PT_gen_lookdev360, "Texture Gen"),
     "scene_gen": (MIXIE_PT_gen_scene_recon, "Scene Gen"),
@@ -544,6 +577,7 @@ classes = (
     MIXIE_PT_gen_imagegen,
     MIXIE_PT_gen_ai_render,
     MIXIE_PT_gen_video_gen,
+    MIXIE_PT_gen_video_upscale,
     MIXIE_PT_gen_image_to_3d,
     MIXIE_PT_gen_lookdev360,
     MIXIE_PT_gen_scene_recon,
