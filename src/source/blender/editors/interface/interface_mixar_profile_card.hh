@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "BLI_sys_types.h"
 namespace blender {
 struct bContext;
@@ -38,6 +40,7 @@ namespace blender::ui {
 
 struct Button;
 struct Layout;
+enum class ButtonType : int8_t;
 
 /**
  * What a card element draws as. Stored on the button by the builder and
@@ -87,6 +90,11 @@ enum class MixarCardElement : int {
   /** Topbar account chip: dark slab, label left, full-height avatar disc at
    * the right end carrying the stock person glyph. */
   ProfilePill,
+  /** Cinema Mode popup row (aspect / lens / output / interpolation lists):
+   * the surface's graded row chip when live (payload 1.0), plain dim text
+   * otherwise, so a dropdown's list matches the value blocks it opens from.
+   * Painted in `interface_mixar_cinema_row.cc`. */
+  CinemaRow,
   /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
    * it, so a kind appended after it would silently read back as None. */
   Count,
@@ -133,6 +141,73 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
 
 /** Whether \a element is one of the clickable action kinds. */
 bool UI_mixar_card_element_is_button(MixarCardElement element);
+
+/** How a Cinema Mode popup row paints (the CinemaRow payload). */
+enum class MixarCinemaRowKind : int {
+  /** An option; a Row (toggle) button lights itself from UI_SELECT. */
+  Option = 0,
+  /** The current choice: the graded chip. */
+  Active = 1,
+  /** An action ("Export 2 Keyframes"): white label, hover fill, no chip. */
+  Action = 2,
+  /** One cell of a segmented group (the lens popup's Perspective /
+   * Orthographic / Panoramic): consecutive Segment buttons on one baseline
+   * form a group; the hovered cell widens to show its whole label. */
+  Segment = 3,
+  /** A section caption ("Keyframes", "Render Guides", the shot heading):
+   * dim caption text, no chrome. */
+  Caption = 4,
+  /** A NumSlider: the row-class track with a green fill to the value,
+   * label left, value right. */
+  Slider = 5,
+  /** A Text field laid over text the surface painted itself (My Cameras
+   * rename): paints NOTHING while idle; while being edited the chip is
+   * painted and the stock text-edit drawing runs on top. */
+  Field = 6,
+};
+
+/**
+ * Tag \a but (created straight on a Block, not through a Layout) as a
+ * Cinema Mode popup row of \a kind.
+ *
+ * On a button whose `hardmin`/`hardmax` are data (see
+ * #UI_mixar_cinema_row_carries_value) only the card flag is set and the
+ * kind follows the button type; \a kind is ignored there.
+ */
+void UI_mixar_cinema_row_tag(Button *but, MixarCinemaRowKind kind);
+
+/**
+ * Mark the operator button \a but so that a double-click or Ctrl+click on
+ * it starts editing the no-emboss Text button under the cursor instead
+ * (the My Cameras rename): the row keeps its single click, the rename
+ * field gets the label-edit gestures a UI-list row would give it.
+ * Sets #UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL; handled in `do_but_BUT`.
+ */
+void UI_mixar_button_double_click_edits_label(Button *but);
+
+/**
+ * \a but's type, for callers outside the interface module (the Director
+ * popups pick a row kind by type without pulling in `interface_intern.hh`).
+ */
+ButtonType UI_mixar_button_type(const Button *but);
+
+/**
+ * Whether \a but's `hardmin`/`hardmax` hold its value range or string
+ * length (Num / NumSlider / Scroll / Text / Toggle / IconToggle / Menu),
+ * so the CinemaRow tag must not write them. #UI_mixar_card_element_get
+ * reads such a flagged button as a CinemaRow without looking at `hardmin`.
+ */
+bool UI_mixar_cinema_row_carries_value(const Button *but);
+
+/**
+ * The kind a tagged CinemaRow paints as: derived from the button type for
+ * value-carrying buttons (NumSlider -> Slider, Text -> Field, toggles ->
+ * Option), otherwise the payload in `hardmax`.
+ */
+MixarCinemaRowKind UI_mixar_cinema_row_kind_get(const Button *but);
+
+/** Paint one #MixarCardElement::CinemaRow (`interface_mixar_cinema_row.cc`). */
+void UI_mixar_cinema_row_draw(Button *but, const rcti *rect, bool is_hover, bool is_active);
 
 /**
  * Paint the topbar elements (mode slider halves, Cinema Mode pill).

@@ -5,11 +5,13 @@
 /** \file
  * \ingroup spview3d
  *
- * Cinema Mode: the right column — camera list, shot preview, frame rate and
- * resolution segments, and the export action.
+ * Cinema Mode: the right column — camera list, the aerial map, frame rate
+ * and resolution segments, and the export action.
  *
  * Painting only; the controls are invisible uiButs over the painted pixels
- * driving Python-owned operators and native Director popups.
+ * driving Python-owned operators and native Director popups. The one
+ * exception is the aerial map (`view3d_director_minimap_draw.cc`): it lays
+ * no button, its LEFTMOUSE binding is a keymap item scoped by its poll.
  */
 
 #include <algorithm>
@@ -21,7 +23,6 @@
 
 #include "BKE_context.hh"
 
-#include "DNA_image_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -30,6 +31,8 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+
+#include "../interface/interface_mixar_profile_card.hh"
 
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
@@ -43,6 +46,15 @@ namespace {
 constexpr float VIEWPORT_TOP = 85.0f;
 /** Right column's left edge in the design's window space. */
 constexpr float COLUMN_X = 1486.0f;
+
+/* The column stacks from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP; the Export
+ * button's design y is a header token (it feeds the fit gate), so the stack
+ * is checked against it here rather than trusted. */
+constexpr float PREVIEW_Y = CINEMA_COLUMN_TOP + CINEMA_CAMERAS_H + CINEMA_CARD_GAP;
+constexpr float FPS_Y = PREVIEW_Y + CINEMA_PREVIEW_H + CINEMA_CARD_GAP;
+constexpr float RES_Y = FPS_Y + CINEMA_SEGMENT_H + CINEMA_CARD_GAP;
+static_assert(RES_Y + CINEMA_SEGMENT_H + CINEMA_CARD_GAP == CINEMA_EXPORT_Y,
+              "CINEMA_EXPORT_Y must be the foot of the right column's stack");
 
 /** Rect from design window coordinates, anchored to the region's right edge. */
 rctf design_rect_right(const ARegion *region,
@@ -59,6 +71,50 @@ rctf design_rect_right(const ARegion *region,
   rect.ymax = float(region->winy) - (y - VIEWPORT_TOP) * u;
   rect.ymin = rect.ymax - h * u;
   return rect;
+}
+
+/**
+ * In-place editable text over a name the surface painted itself (T12).
+ *
+ * A Text button under Emboss::None is NOT interactive for plain hover or
+ * clicks (`button_is_interactive_ex`): those fall through to the operator
+ * button created before it on the same rect. A label edit (Ctrl held)
+ * reaches it directly, and the operator button — tagged with
+ * #UI_mixar_button_double_click_edits_label — hands it a double-click or
+ * Ctrl+click the way a UI-list row does; the stock text editor then runs
+ * (Enter commits, Esc cancels). Idle it paints nothing; tagged #Field so
+ * the card painter lays the row chip under Blender's edit drawing.
+ */
+ui::Button *cinema_text_field(ui::Block *block,
+                              PointerRNA *ptr,
+                              const char *prop_name,
+                              const rctf &rect,
+                              const char *tooltip)
+{
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = ui::uiDefButR(block,
+                                  ui::ButtonType::Text,
+                                  "",
+                                  int(rect.xmin),
+                                  int(rect.ymin),
+                                  short(BLI_rctf_size_x(&rect)),
+                                  short(BLI_rctf_size_y(&rect)),
+                                  ptr,
+                                  prop_name,
+                                  0,
+                                  0,
+                                  0,
+                                  tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  if (but != nullptr) {
+    /* Contract with the tag: a Text button's `hardmax` IS its edit-buffer
+     * size (`button_string_get_maxncpy`), so the tag must leave it alone for
+     * `ButtonType::Text` and the painter must key #Field on the type, the way
+     * Option is keyed on `ButtonType::Row`. A tag that wrote the kind there
+     * would truncate every rename to five characters. */
+    ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Field);
+  }
+  return but;
 }
 
 /** Three-way segmented row: graded track, chip behind the live choice. */
@@ -83,7 +139,7 @@ void segment_row(ui::Block *block,
 
   const rctf track = design_rect_right(
       region, COLUMN_X, design_y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
-  cinema_panel(track, CINEMA_PANEL_RADIUS * u, track_top, track_bottom);
+  cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);
 
   const float inset = 2.0f * u;
   const float cell_w = (BLI_rctf_size_x(&track) - inset * 2.0f) / 3.0f;
@@ -123,33 +179,34 @@ void cinema_draw_right_panel(ui::Block *block,
   const float u = cinema_unit();
   const float card_top[4] = CINEMA_COL_CARD_TOP;
   const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
-  const float label_col[4] = CINEMA_COL_LABEL;
+  const float label_col[4] = CINEMA_COL_CAPTION;
   const float value_col[4] = CINEMA_COL_VALUE;
   const float dim_col[4] = CINEMA_COL_DIM;
   Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   /* -------- Cameras -------- */
-  const rctf cameras = design_rect_right(region, COLUMN_X, 206.0f, CINEMA_PANEL_W, 226.0f);
+  const rctf cameras = design_rect_right(
+      region, COLUMN_X, CINEMA_COLUMN_TOP, CINEMA_PANEL_W, CINEMA_CAMERAS_H);
   cinema_panel(cameras, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
   cinema_text_left("My Cameras",
                    cameras.xmin + 13.0f * u,
-                   cameras.ymax - 25.0f * u,
+                   cameras.ymax - 22.0f * u,
                    CINEMA_FONT_LABEL * u,
                    label_col);
 
   /* Add Camera chip. */
   rctf add;
   add.xmax = cameras.xmax - 10.0f * u;
-  add.xmin = add.xmax - 102.0f * u;
-  add.ymax = cameras.ymax - 14.0f * u;
-  add.ymin = add.ymax - 23.0f * u;
+  add.xmin = add.xmax - 96.0f * u;
+  add.ymax = cameras.ymax - 12.0f * u;
+  add.ymin = add.ymax - 22.0f * u;
   const float add_top[4] = CINEMA_COL_ROW_TOP;
   const float add_bottom[4] = {0.192f, 0.192f, 0.192f, 1.0f}; /* #313131 */
   cinema_panel(add, BLI_rctf_size_y(&add) * 0.5f, add_top, add_bottom);
   cinema_text_center("+ Add Camera",
                      BLI_rctf_cent_x(&add),
                      BLI_rctf_cent_y(&add),
-                     11.5f * u,
+                     11.0f * u,
                      value_col);
   /* With nothing directed yet this is the session's entry point, and it must
    * stay `director_start`: that one adopts a camera the scene already has,
@@ -174,7 +231,7 @@ void cinema_draw_right_panel(ui::Block *block,
   }
 
   const float row_h = cinema_list_row_h() * u;
-  const float first_row_y = 276.0f;
+  const float first_row_y = CINEMA_COLUMN_TOP + 66.0f;
   /* The card fits CINEMA_LIST_MAX_ROWS and nothing scrolls, so the window
    * follows the active shot: the live camera is always one of the rows drawn,
    * and the highlight can never go missing. */
@@ -188,9 +245,10 @@ void cinema_draw_right_panel(ui::Block *block,
     }
     /* "My Cameras": show the camera's own name, falling back to the shot's. */
     char name[128] = "";
+    PointerRNA camera_ptr = PointerRNA_NULL;
     PropertyRNA *camera_prop = RNA_struct_find_property(&shot_ptr, "camera");
     if (camera_prop != nullptr) {
-      PointerRNA camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
+      camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
       if (camera_ptr.data != nullptr) {
         PropertyRNA *name_prop = RNA_struct_find_property(&camera_ptr, "name");
         if (name_prop != nullptr) {
@@ -198,8 +256,11 @@ void cinema_draw_right_panel(ui::Block *block,
         }
       }
     }
+    /* The row renames the name it shows: the camera's, or the shot's. */
+    PointerRNA *name_ptr = &camera_ptr;
     if (name[0] == '\0') {
       RNA_string_get(&shot_ptr, "name", name);
+      name_ptr = &shot_ptr;
     }
 
     const bool active = index == active_index;
@@ -215,7 +276,7 @@ void cinema_draw_right_panel(ui::Block *block,
       cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
     }
     cinema_text_left(name,
-                     row.xmin + 14.0f * u,
+                     row.xmin + 12.0f * u,
                      BLI_rctf_cent_y(&row),
                      CINEMA_FONT_VALUE * u,
                      active ? value_col : dim_col);
@@ -224,7 +285,15 @@ void cinema_draw_right_panel(ui::Block *block,
         block, "MIXAR_OT_director_set_active_shot", row, "Direct this camera");
     if (but != nullptr) {
       RNA_int_set(ui::button_operator_ptr_ensure(but), "index", index);
+      ui::UI_mixar_button_double_click_edits_label(but);
     }
+    /* The rename field is created AFTER the operator button on the same
+     * rect: hit-testing walks a block backwards, so it is asked first — and
+     * declines everything but a label edit, leaving the click to the
+     * operator, which hands back double-click and Ctrl+click through its
+     * tag. Renaming an ID through RNA keeps names unique on its own. */
+    cinema_text_field(
+        block, name_ptr, "name", row, "Rename this camera: double-click or Ctrl+click");
   }
   if (shot_count == 0) {
     cinema_text_center("No cameras yet",
@@ -234,42 +303,14 @@ void cinema_draw_right_panel(ui::Block *block,
                        dim_col);
   }
 
-  /* -------- Shot preview -------- */
+  /* -------- Aerial view -------- */
+  /* A live top-down map of the scene with the shot camera on it; a click or
+   * drag on it places the camera at that world XY (`mixar.director_place_camera`).
+   * Keyframe stills stay packed on the beats, only this card stopped showing
+   * them; `cinema_image_preview` remains in `_paint.cc` for a future home. */
   const rctf preview = design_rect_right(
-      region, COLUMN_X, 447.0f, CINEMA_PANEL_W, CINEMA_PREVIEW_H);
-  cinema_panel(preview, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
-  /* The newest captured keyframe still IS the camera preview — Director
-   * already packs one per beat, so no new render path is needed. */
-  Image *preview_image = nullptr;
-  PointerRNA shot_ptr;
-  if (view3d_director_active_shot_pointer(scene, &shot_ptr)) {
-    PropertyRNA *beats_prop = RNA_struct_find_property(&shot_ptr, "beats");
-    const int beat_count = beats_prop ?
-                               RNA_property_collection_length(&shot_ptr, beats_prop) :
-                               0;
-    if (beat_count > 0) {
-      PointerRNA beat_ptr;
-      if (RNA_property_collection_lookup_int(&shot_ptr, beats_prop, beat_count - 1, &beat_ptr)) {
-        PropertyRNA *image_prop = RNA_struct_find_property(&beat_ptr, "image");
-        if (image_prop != nullptr) {
-          PointerRNA image_ptr = RNA_property_pointer_get(&beat_ptr, image_prop);
-          preview_image = static_cast<Image *>(image_ptr.data);
-        }
-      }
-    }
-  }
-  if (preview_image != nullptr) {
-    rctf inner = preview;
-    BLI_rctf_pad(&inner, -2.0f * u, -2.0f * u);
-    cinema_image_preview(preview_image, inner, 18.0f * u);
-  }
-  else {
-    cinema_text_center("Capture a keyframe",
-                       BLI_rctf_cent_x(&preview),
-                       BLI_rctf_cent_y(&preview),
-                       CINEMA_FONT_VALUE * u,
-                       dim_col);
-  }
+      region, COLUMN_X, PREVIEW_Y, CINEMA_PANEL_W, CINEMA_PREVIEW_H);
+  cinema_draw_minimap(block, C, region, state, preview);
 
   /* -------- Frame rate -------- */
   const int fps = scene ? scene->r.frs_sec : 24;
@@ -283,7 +324,7 @@ void cinema_draw_right_panel(ui::Block *block,
   }
   segment_row(block,
               region,
-              634.0f,
+              FPS_Y,
               fps_labels,
               fps_active,
               "WM_OT_context_set_int",
@@ -315,8 +356,8 @@ void cinema_draw_right_panel(ui::Block *block,
     const float on[4] = CINEMA_COL_VALUE;
     const float off[4] = CINEMA_COL_DIMMER;
     const rctf track = design_rect_right(
-        region, COLUMN_X, 695.0f, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
-    cinema_panel(track, CINEMA_PANEL_RADIUS * u, track_top, track_bottom);
+        region, COLUMN_X, RES_Y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
+    cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);
     const float inset = 2.0f * u;
     const float cell_w = (BLI_rctf_size_x(&track) - inset * 2.0f) / 3.0f;
     const char *const identifiers[3] = {"HD720", "HD1080", "K2"};
@@ -349,18 +390,19 @@ void cinema_draw_right_panel(ui::Block *block,
   const rctf export_rect = design_rect_right(
       region, COLUMN_X, CINEMA_EXPORT_Y, CINEMA_PANEL_W, CINEMA_EXPORT_H);
   const float export_col[4] = CINEMA_COL_EXPORT;
-  cinema_fill(export_rect, CINEMA_PANEL_RADIUS * u, export_col);
+  cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);
   const bool can_export = !state.beats.is_empty();
   const float export_text[4] = {1.0f, 1.0f, 1.0f, can_export ? 1.0f : 0.45f};
   cinema_text_center("Export to moodboard",
                      BLI_rctf_cent_x(&export_rect),
                      BLI_rctf_cent_y(&export_rect),
-                     16.0f * u,
+                     14.0f * u,
                      export_text);
   ui::Button *export_but = cinema_popup_button(block,
                                           view3d_director_render_popup_create,
                                           export_rect,
-                                          "Export keyframes and rendered guides to the Moodboard");
+                                          "Export keyframes and rendered guides to the Moodboard",
+                                          CinemaPopupSlot::Export);
   director_overlay_disable_button(export_but, !can_export);
   cinema_qa_record(region, export_rect, "director_export", "export", -1);
 }

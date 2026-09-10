@@ -413,6 +413,9 @@ bool UI_mixar_topbar_draw_element(Button *but,
     case MixarCardElement::ProfilePill:
       draw_profile_pill(but, rect, is_hover, is_active);
       return true;
+    case MixarCardElement::CinemaRow:
+      UI_mixar_cinema_row_draw(but, rect, is_hover, is_active);
+      return true;
     default:
       return false;
   }

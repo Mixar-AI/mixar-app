@@ -87,6 +87,7 @@ class _ShotSnapshot:
         "render_resolution_percentage",
         "handheld",
         "handheld_strength",
+        "speed",
     )
 
     def __init__(self, shot):
@@ -99,6 +100,7 @@ class _ShotSnapshot:
         self.render_resolution_percentage = int(shot.render_resolution_percentage)
         self.handheld = bool(shot.handheld)
         self.handheld_strength = float(shot.handheld_strength)
+        self.speed = float(getattr(shot, "speed", 0.0))
 
 
 def create_shot(scene, camera, *, parent=None):
@@ -121,6 +123,10 @@ def create_shot(scene, camera, *, parent=None):
         shot.guidance_strength = parent.guidance_strength
         shot.render_output_types = set(parent.render_output_types)
         shot.render_resolution_percentage = parent.render_resolution_percentage
+        # The take shares the parent's camera keys, so the Speed slider must
+        # rest where the parent left it; no beats exist yet, so this retimes
+        # nothing.
+        shot.speed = parent.speed
     state.active_shot_index = len(state.shots) - 1
     scene.camera = camera
     return shot
@@ -157,16 +163,22 @@ def split_shot(scene, shot, frame: int):
     ]
     camera = shot.camera
 
+    from .retime import note_beat_timing
+
     new_shot = create_shot(scene, camera)
     new_shot.prompt = carried.prompt
     new_shot.guidance_strength = carried.guidance_strength
     new_shot.render_output_types = set(carried.render_output_types)
     new_shot.render_resolution_percentage = carried.render_resolution_percentage
+    # Set before any beat exists: the speed update retimes nothing, and the
+    # copied frames are then recorded under the speed they were made at.
+    new_shot.speed = carried.speed
     for beat_id, beat_frame, beat_image in moved_beats:
         copy = new_shot.beats.add()
         copy.beat_id = beat_id
         copy.frame = beat_frame
         copy.image = beat_image
+        note_beat_timing(new_shot, copy)
 
     # Re-resolve the original shot: its pre-add reference is no longer valid.
     shot = state.shots[original_index]
@@ -315,9 +327,9 @@ def lock_shot(scene, shot) -> str:
         return shot.snapshot_json
     if not shot.beats:
         raise ValueError("Capture at least one camera beat before locking")
-    from .rotation_curves import repair_euler_rotation_continuity
+    from .rotation_curves import repair_rotation_continuity
 
-    repair_euler_rotation_continuity(shot.camera)
+    repair_rotation_continuity(shot.camera)
     serialized = compile_manifest(scene, shot)
     shot.snapshot_json = serialized
     shot.locked_at = str(json.loads(serialized)["exported_at"])

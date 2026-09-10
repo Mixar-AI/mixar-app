@@ -51,6 +51,27 @@ struct Layout;
   ((but)->flag2 = char(uchar((but)->flag2) | uchar(UI_BUT2_MIXAR_CARD)))
 #define UI_BUT2_MIXAR_CARD_TEST(but) ((uchar((but)->flag2) & uchar(UI_BUT2_MIXAR_CARD)) != 0)
 
+/**
+ * Marks an operator `But` whose double-click or Ctrl+click hands off to the
+ * no-emboss Text button laid over it (a My Cameras rename), the way a
+ * UI-list row hands its rename to the label above it — see the Mixar hook
+ * in `do_but_BUT` (interface_handlers.cc) and
+ * #UI_mixar_button_double_click_edits_label.
+ *
+ * `flag2` (above) and `Button::flag` have no free bit, so this lives in
+ * `Button::drawflag`: upstream's anonymous draw-flag enum ends at
+ * `BUT_ICON_INVERT = 1 << 27` and the field is an `int`, so bit 30 is the
+ * safe claim (28/29 left for upstream growth, 31 is the sign bit).
+ * Draw flags survive the per-redraw block rebuild on the active button
+ * (`but_update_old_active_from_new` keeps the old button's own bits).
+ */
+#define UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL (1 << 30)
+
+#define UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_SET(but) \
+  ((but)->drawflag |= UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL)
+#define UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST(but) \
+  (((but)->drawflag & UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL) != 0)
+
 /* -------------------------------------------------------------------- */
 /* Layout helpers                                                        */
 

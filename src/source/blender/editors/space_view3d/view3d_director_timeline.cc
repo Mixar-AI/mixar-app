@@ -104,6 +104,11 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   const int gap = std::max(4, int(5.0f * UI_SCALE_FAC));
   const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
   playback_redraw_timer_update(C, playing);
+  /* The unit is the VIEWPORT's fit, not this one-row dock's. */
+  ScrArea *area = CTX_wm_area(C);
+  const ARegion *main_region = area ? BKE_area_find_region_type(area, RGN_TYPE_WINDOW) : nullptr;
+  cinema_unit_begin(main_region);
+  cinema_qa_begin(region);
   cinema_draw_dock_panel(region);
 
   ui::Block *block = ui::block_begin(
@@ -114,8 +119,6 @@ void director_timeline_draw(const bContext *C, ARegion *region)
    * this dock (whose own height is one control row). Below the gate the old
    * viewport rail draws instead, and the two together stacked duplicate
    * controls on one screen. */
-  ScrArea *area = CTX_wm_area(C);
-  const ARegion *main_region = area ? BKE_area_find_region_type(area, RGN_TYPE_WINDOW) : nullptr;
   if (main_region != nullptr && cinema_surface_fits(main_region)) {
     cinema_draw_dock_controls(block, C, region, state, playing);
   }

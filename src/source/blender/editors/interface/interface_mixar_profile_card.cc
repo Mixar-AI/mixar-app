@@ -473,11 +473,13 @@ MixarCardElement UI_mixar_card_element_get(const Button *but)
   if (but == nullptr || !UI_BUT2_MIXAR_CARD_TEST(but)) {
     return MixarCardElement::None;
   }
-  const int value = int(but->hardmin);
-  if (value <= int(MixarCardElement::None) || value >= int(MixarCardElement::Count)) {
-    return MixarCardElement::None;
+  /* A flagged value button keeps its RANGE in hardmin; only a Cinema row tags one. */
+  if (UI_mixar_cinema_row_carries_value(but)) {
+    return MixarCardElement::CinemaRow;
   }
-  return MixarCardElement(value);
+  const int value = int(but->hardmin);
+  const bool known = value > int(MixarCardElement::None) && value < int(MixarCardElement::Count);
+  return known ? MixarCardElement(value) : MixarCardElement::None;
 }
 
 void UI_layout_mixar_profile_card(Layout *layout, bContext *C)

@@ -30,13 +30,21 @@ set(SRC
   view3d_context.cc
   view3d_cursor_snap.cc
   view3d_director_cinema_dock.cc
+  view3d_director_cinema_gate.cc
+  view3d_director_cinema_layout.cc
   view3d_director_cinema_left.cc
   view3d_director_cinema_paint.cc
   view3d_director_cinema_right.cc
   view3d_director_cinema_top.cc
+  view3d_director_minimap.cc
+  view3d_director_minimap_draw.cc
+  view3d_director_minimap_extents.cc
+  view3d_director_nudge.cc
   view3d_director_overlay.cc
   view3d_director_overlay_frame.cc
+  view3d_director_place_camera.cc
   view3d_director_popup.cc
+  view3d_director_popup_interp.cc
   view3d_director_popup_render.cc
   view3d_director_popup_shot.cc
   view3d_director_state.cc
@@ -92,6 +100,7 @@ set(SRC
   view3d_agent_panel.hh
   view3d_director.hh
   view3d_director_cinema.hh
+  view3d_director_minimap.hh
   view3d_intern.hh
   view3d_navigate.hh
 )

@@ -3,7 +3,7 @@
 
 # `space_mixie_chat` — Plugin Agent Client Architecture
 
-> Companion to `mixar-backend/modules/agent/ARCHITECTURE.md`. This doc covers the **plugin side** of the agent — the two networked channels, the main-thread executor, the dual sandbox, scene routing, the SSE → slot → C++ render pipeline, undo / render / file-load guards. Hold this open alongside the backend doc when working on cross-cutting changes.
+> Companion to the agent `ARCHITECTURE.md` in the private `mixar-backend` repository. This doc covers the **plugin side** of the agent — the two networked channels, the main-thread executor, the dual sandbox, scene routing, the SSE → slot → C++ render pipeline, undo / render / file-load guards. Hold this open alongside the backend doc when working on cross-cutting changes.
 
 ## TL;DR
 
@@ -372,7 +372,5 @@ These are the contracts between the two repos. Breaking any of them on either si
 
 ## Companion docs
 
-- `mixar-backend/modules/agent/ARCHITECTURE.md` — backend-side companion (graph, agents, middleware, transport).
-- `mixar-backend/docs/reviews/AGENT_STUCK_INVESTIGATION.md` — fix rationale for the May 2026 audit.
-- `mixar-backend/docs/reviews/AGENT_REVIEW_2026_05_BACKLOG.md` — deferred items + verified false positives.
-- The `/Users/rahulmehta/Work/Mixar/rahul-memory/Plans/Mixar Backend Agent Architecture - 2026-05-26.md` plan doc has the full SWOT and prioritised improvement list across both repos.
+- Backend-side companion (graph, agents, middleware, transport): `modules/agent/ARCHITECTURE.md` in the private `mixar-backend` repository.
+- Fix rationale for the May 2026 audit and the deferred items / verified false positives: `docs/reviews/AGENT_STUCK_INVESTIGATION.md` and `docs/reviews/AGENT_REVIEW_2026_05_BACKLOG.md` in the private `mixar-backend` repository.

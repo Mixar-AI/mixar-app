@@ -544,6 +544,9 @@ static void view3d_widgets()
 /* type callback, not region itself */
 static void view3d_main_region_free(ARegion *region)
 {
+  /* The Director aerial map's GPU buffers, if this region drew them. */
+  view3d_director_minimap_region_free(region);
+
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
 
   if (rv3d) {
@@ -1633,12 +1636,13 @@ static void view3d_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 }
 
 /* Region-level `operatortypes` callbacks are never invoked by
- * `ED_spacetypes_init()` — the agent panel's operators piggyback on the
- * space-level registration instead. */
+ * `ED_spacetypes_init()` — the agent panel's and the Director's native
+ * operators piggyback on the space-level registration instead. */
 static void view3d_operatortypes_with_agent_panel()
 {
   view3d_operatortypes();
   view3d_agent_panel_operatortypes();
+  view3d_director_operatortypes();
 }
 
 void ED_spacetype_view3d()

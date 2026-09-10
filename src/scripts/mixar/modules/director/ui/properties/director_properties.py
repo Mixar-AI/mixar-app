@@ -19,11 +19,15 @@ from bpy.types import PropertyGroup
 from ...constants import (
     CAMERA_TEMPLATE_ITEMS,
     DEFAULT_BEAT_SECONDS,
+    DEFAULT_SPEED,
     GUIDANCE_STRENGTH_ITEMS,
+    INTERPOLATION_ITEMS,
     MAX_BEAT_SECONDS,
     MIN_BEAT_SECONDS,
     SHOT_RENDER_OUTPUT_ITEMS,
     SHOT_STATE_ITEMS,
+    SPEED_MAX,
+    SPEED_MIN,
 )
 from ...core.shot_api import scope_preview_range
 from ...core.viewport import enter_camera_view, select_camera_object
@@ -104,6 +108,52 @@ def _on_handheld_update(self, _context):
         pass
 
 
+def _on_interpolation_update(self, _context):
+    from ...core.interpolation import apply_interpolation
+
+    try:
+        apply_interpolation(self)
+    except Exception:
+        # Property updates can fire during file load before the camera's
+        # animation data is reachable; the next capture re-applies anyway.
+        pass
+
+
+def _on_speed_update(self, context):
+    """Retime the shot to its new speed (``core/retime.py``).
+
+    Locked shots return untouched (the surface disables their slider); the
+    value is never fought over. Load-safe: no operators, and a shot whose
+    animation is not reachable yet keeps its frames until the next edit.
+    """
+    from ...core.retime import apply_shot_speed
+
+    if self.state != 'DRAFT':
+        return
+    scene = getattr(self, "scene_ref", None)
+    if scene is None:
+        scene = getattr(context, "scene", None) or bpy.context.scene
+    if scene is None:
+        return
+    try:
+        apply_shot_speed(scene, self)
+    except Exception:
+        pass
+
+
+def _track_target_poll(self, obj):
+    return getattr(obj, "type", None) != 'CAMERA'
+
+
+def _on_track_target_update(self, _context):
+    from ...core.tracking import refresh_tracking
+
+    try:
+        refresh_tracking(self)
+    except Exception:
+        pass
+
+
 def _on_directing_update(self, context):
     """Directing entry: refresh the surface and reconcile the watched shot.
 
@@ -138,6 +188,13 @@ class MixarDirectorBeat(PropertyGroup):
 
     beat_id: StringProperty(name="Beat ID", default="")
     frame: IntProperty(name="Frame", default=1, min=-1048574, max=1048574)
+    # The frame at shot speed 0; `core/retime.py` derives `frame` from it
+    # (never the reverse). 0.0 on a non-zero frame = unrecorded (old file).
+    time_base: FloatProperty(
+        name="Time Base",
+        default=0.0,
+        options={'HIDDEN'},
+    )
     image: PointerProperty(
         name="Reference Frame",
         description="Packed viewport capture associated with this keyframe",
@@ -213,6 +270,38 @@ class MixarDirectorShot(PropertyGroup):
         max=1.0,
         subtype='FACTOR',
         update=_on_handheld_update,
+    )
+    interpolation: EnumProperty(
+        name="Interpolation",
+        description="How the camera eases between this shot's keyframes",
+        items=INTERPOLATION_ITEMS,
+        default="BEZIER",
+        update=_on_interpolation_update,
+    )
+    # Cinema Mode Speed slider: intervals scale by 2 ** (-speed) around the
+    # first keyframe (`core/retime.py`); 0 in the middle is as captured.
+    speed: FloatProperty(
+        name="Speed",
+        description=(
+            "Speed of the camera through this shot: right contracts the "
+            "shot (faster), left expands it (slower); the middle is the "
+            "timing as captured"
+        ),
+        default=DEFAULT_SPEED,
+        min=SPEED_MIN,
+        max=SPEED_MAX,
+        soft_min=SPEED_MIN,
+        soft_max=SPEED_MAX,
+        step=5,
+        precision=2,
+        update=_on_speed_update,
+    )
+    track_target: PointerProperty(
+        name="Track Target",
+        description="Object the shot camera keeps pointing at (Track To constraint)",
+        type=bpy.types.Object,
+        poll=_track_target_poll,
+        update=_on_track_target_update,
     )
     camera_template: EnumProperty(
         name="Template Style",
@@ -332,12 +421,10 @@ class MixarDirectorState(PropertyGroup):
         items=(
             ("NAVIGATE", "Navigate", "Move with WASD and the mouse", 0),
             ("PRECISE", "Precise", "Adjust the camera with transform gizmos", 1),
-            (
-                "EXPLORE",
-                "Explore",
-                "Fly the viewport freely without moving the shot camera",
-                2,
-            ),
+            ("EXPLORE", "Explore",
+             "Fly the viewport freely without moving the shot camera", 2),
+            ("AERIAL", "Aerial",
+             "Look down on the scene from above and click to place the camera", 3),
         ),
         default="NAVIGATE",
         options={'SKIP_SAVE'},

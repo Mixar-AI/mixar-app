@@ -3898,8 +3898,9 @@ static void widget_menu_back(uiWidgetColors *wcol,
 
   widget_init(&wtb);
 
-  /* menu is 2nd level or deeper */
-  if (block_flag & BLOCK_POPUP) {
+  /* menu is 2nd level or deeper. Mixar: BLOCK_MIXAR_ROUND_ALL keeps every
+   * corner round regardless of the open direction. */
+  if (block_flag & (BLOCK_POPUP | BLOCK_MIXAR_ROUND_ALL)) {
     // rect->ymin -= 4.0;
     // rect->ymax += 4.0;
   }
@@ -6488,8 +6489,18 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
   /* Account-card elements are claimed before the emboss/type chain: they
    * span several ButTypes (labels and operator buttons), and the card is
    * responsible for all of their chrome regardless of the emboss the
-   * surrounding layout happens to be using. */
-  if (UI_mixar_card_element_get(but) != MixarCardElement::None) {
+   * surrounding layout happens to be using.
+   *
+   * EXCEPT a Cinema popup row being text-edited (a Slider double-clicked,
+   * a Field rename): the card widget type suppresses the stock text pass,
+   * which is the only thing that draws the edit string, its selection and
+   * the cursor. Such a row is NOT claimed here; it falls through to the
+   * stock chain, the row painter lays its chip first (below) and the stock
+   * backdrop is dropped so only the text pass runs on top. */
+  const MixarCardElement mixar_element = UI_mixar_card_element_get(but);
+  const bool mixar_row_editing = mixar_element == MixarCardElement::CinemaRow &&
+                                 but->editstr != nullptr;
+  if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
     wt = widget_type(WidgetStyle::MixarCard);
   }
   /* handle menus separately */
@@ -6799,6 +6810,15 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
   if (wt == nullptr) {
     return;
+  }
+
+  if (mixar_row_editing) {
+    /* Chip under the stock text (Slider / Field kinds; nothing for the
+     * rest), then no stock backdrop: `widget_type` hands back a per-call
+     * static, so clearing its painters here affects only this button. */
+    UI_mixar_cinema_row_draw(but, rect, (but->flag & UI_HOVER) != 0, false);
+    wt->draw = nullptr;
+    wt->custom = nullptr;
   }
 
   // rcti disablerect = *rect; /* rect gets clipped smaller for text */

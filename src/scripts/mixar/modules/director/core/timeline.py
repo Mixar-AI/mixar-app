@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .anim_curves import assigned_fcurves as _assigned_fcurves
 from .frame_math import clamp_frame_delta
+from .retime import note_beat_timing, shift_shot_timing
 from .shot_api import refresh_manifest
 
 
@@ -125,6 +126,7 @@ def move_single_beat(
     ]
     manifest_json = shot.manifest_json
     original_frame_end = int(scene.frame_end)
+    time_bases = [float(getattr(item, "time_base", 0.0)) for item in shot.beats]
 
     try:
         for point in points:
@@ -134,6 +136,9 @@ def move_single_beat(
         for fcurve in curves:
             fcurve.update()
         beat.frame = new_frame
+        # A drag redefines this keyframe's captured timing under the
+        # shot's current speed (all of them when the first beat moves).
+        note_beat_timing(shot, beat)
         scene.frame_end = max(scene.frame_end, new_frame)
         if rebuild_manifest:
             refresh_manifest(scene, shot)
@@ -145,6 +150,8 @@ def move_single_beat(
         for fcurve in curves:
             fcurve.update()
         beat.frame = old_frame
+        for item, time_base in zip(shot.beats, time_bases, strict=True):
+            item.time_base = time_base
         scene.frame_end = original_frame_end
         shot.manifest_json = manifest_json
         raise
@@ -207,6 +214,7 @@ def shift_camera_beats(
     manifest_json = shot.manifest_json
     old_first = min(beat_frames)
     old_last = max(beat_frames)
+    time_bases = [float(getattr(beat, "time_base", 0.0)) for beat in shot.beats]
 
     try:
         for point in points:
@@ -217,6 +225,9 @@ def shift_camera_beats(
             fcurve.update()
         for beat in shot.beats:
             beat.frame += delta
+        # Sliding the whole strip keeps every interval: the captured
+        # timing slides with it exactly instead of being re-rounded.
+        shift_shot_timing(shot, delta)
 
         new_first = old_first + delta
         new_last = old_last + delta
@@ -242,5 +253,7 @@ def shift_camera_beats(
             scene_state,
             manifest_json,
         )
+        for beat, time_base in zip(shot.beats, time_bases, strict=True):
+            beat.time_base = time_base
         raise
     return delta

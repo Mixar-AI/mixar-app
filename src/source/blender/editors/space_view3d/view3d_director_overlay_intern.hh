@@ -40,6 +40,12 @@ struct DirectorPopupData {
 
 bool director_popup_data_get(bContext *C, DirectorPopupData *r_data);
 ui::Block *director_popup_block_begin(bContext *C, ARegion *region, const char *name);
+/**
+ * Row width for a popup: the width of the bar that opened it (passed by the
+ * Cinema surface through the block button's \a arg, see #cinema_popup_button)
+ * less the block's own padding, or \a fallback when opened from elsewhere.
+ */
+int director_popup_width(const void *arg, int fallback);
 void director_popup_block_end(ui::Block *block);
 /** Accent-depress the active choice; grey out what a locked take forbids. */
 void director_popup_state(ui::Button *but, bool active, bool enabled);
@@ -54,6 +60,7 @@ ui::Block *view3d_director_shots_popup_create(bContext *C, ARegion *region, void
 ui::Block *view3d_director_camera_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_animation_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg);
+ui::Block *view3d_director_interpolation_popup_create(bContext *C, ARegion *region, void *arg);
 
 /** Rounded Flow-style panel in the shared Director palette. */
 void director_overlay_panel_draw(const rctf &rect, float radius);
