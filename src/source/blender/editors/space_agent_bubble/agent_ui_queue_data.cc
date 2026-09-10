@@ -106,32 +106,68 @@ void format_elapsed(double seconds, char r_out[32])
   }
 }
 
-/** Fill \a rows from wm.mixie_queue.items (already newest-first). */
-int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row, int &r_active_index)
+static bool queue_items(wmWindowManager *wm, PointerRNA &queue, PropertyRNA *&items)
 {
-  r_active_index = -1;
   if (!wm) {
-    return 0;
+    return false;
   }
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *queue_prop = RNA_struct_find_property(&wm_ptr, "mixie_queue");
-  if (!queue_prop || RNA_property_type(queue_prop) != PROP_POINTER) {
-    return 0;
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_queue");
+  if (!prop || RNA_property_type(prop) != PROP_POINTER) {
+    return false;
   }
-  PointerRNA queue = RNA_property_pointer_get(&wm_ptr, queue_prop);
-  r_active_index = read_item_int(&queue, "active_index");
-  PropertyRNA *items = RNA_struct_find_property(&queue, "items");
-  if (!items || RNA_property_type(items) != PROP_COLLECTION) {
-    return 0;
-  }
+  queue = RNA_property_pointer_get(&wm_ptr, prop);
+  items = RNA_struct_find_property(&queue, "items");
+  return items && RNA_property_type(items) == PROP_COLLECTION;
+}
 
-  int count = 0;
+int total_rows(wmWindowManager *wm)
+{
+  PointerRNA queue;
+  PropertyRNA *items;
+  return queue_items(wm, queue, items) ? RNA_property_collection_length(&queue, items) : 0;
+}
+
+float offset_get(wmWindowManager *wm)
+{
+  PointerRNA ptr = RNA_id_pointer_create(&wm->id);
+  return read_item_float(&ptr, "mixar_queue_offset");
+}
+
+QueueData gather_rows(wmWindowManager *wm, const int capacity)
+{
+  QueueData data;
+  PointerRNA queue;
+  PropertyRNA *items;
+  if (!queue_items(wm, queue, items)) {
+    return data;
+  }
+  data.total = RNA_property_collection_length(&queue, items);
+  data.visible = ui::mixar_list_range(data.total, capacity, int(offset_get(wm)));
+  data.active_index = read_item_int(&queue, "active_index");
   int index = 0;
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&queue, items, &iter);
-  for (; iter.valid && count < QUEUE_MAX_ROWS; RNA_property_collection_next(&iter), index++) {
+  for (; iter.valid; RNA_property_collection_next(&iter), index++) {
     PointerRNA item = iter.ptr;
-    QueueRow &row = rows[count];
+    char state[32] = "";
+    read_item_string(&item, "state", state, sizeof(state));
+    const bool running = state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||
+                         state_is(state, "RUNNING_DOWNLOAD");
+    const bool pending = state_is(state, "PENDING") || state_is(state, "PAUSED_AUTH");
+    const bool done = state_is(state, "SUCCESS");
+    const bool failed = state_is(state, "FAILED") || state_is(state, "CANCELLED");
+    data.active += int(running || pending);
+    data.any_terminal |= done || failed;
+    if (index < data.visible.first || index >= data.visible.end()) {
+      continue;
+    }
+    QueueRow row{};
+    row.mirror_index = index;
+    row.is_running = running;
+    row.is_pending = pending;
+    row.is_done = done;
+    row.is_failed = failed;
 
     read_item_string(&item, "job_id", row.job_id, sizeof(row.job_id));
     read_item_string(&item, "feature_key", row.feature_key, sizeof(row.feature_key));
@@ -155,9 +191,7 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row, int &r
       row.title[0] = char(row.title[0] - 'a' + 'A');
     }
 
-    char state[32] = "";
     char substate[64] = "";
-    read_item_string(&item, "state", state, sizeof(state));
     read_item_string(&item, "substate_text", substate, sizeof(substate));
     status_word(state, substate, row.status);
     read_item_string(&item, "type_label", row.type_label, sizeof(row.type_label));
@@ -165,17 +199,10 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row, int &r
     row.created_epoch = double(read_item_int(&item, "created_epoch"));
     row.elapsed_done = read_item_float(&item, "elapsed_done");
 
-    row.is_running = state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||
-                     state_is(state, "RUNNING_DOWNLOAD");
-    row.is_pending = state_is(state, "PENDING") || state_is(state, "PAUSED_AUTH");
-    row.is_done = state_is(state, "SUCCESS");
-    row.is_failed = state_is(state, "FAILED") || state_is(state, "CANCELLED");
-
-    r_index_of_row[count] = index;
-    count++;
+    data.rows.append(std::move(row));
   }
   RNA_property_collection_end(&iter);
-  return count;
+  return data;
 }
 
 }  // namespace blender::agent_queue

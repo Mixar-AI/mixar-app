@@ -942,16 +942,15 @@ static void agent_bubble_clear_chat_layout_cache(const bContext *C)
 }
 
 /**
- * Build the island against the whole window and translate the GPU matrix so
- * this region's slice lines up.
+ * Resolve the island against the whole window without changing GPU state.
+ * The drawing wrapper below translates each region's slice into place.
  *
  * Every region paints the entire island; each one's scissor keeps only its own
  * band. That is what lets the card enclose the transcript without any code
  * cutting the card into pieces — there is still exactly one layout and one
  * painter.
  */
-static bool agent_bubble_island_begin(const bContext *C,
-                                      const ARegion *region,
+bool agent_bubble_island_layout_get(const bContext *C,
                                       AgentIslandState *r_state,
                                       AgentIslandLayout *r_layout)
 {
@@ -1014,6 +1013,15 @@ static bool agent_bubble_island_begin(const bContext *C,
     return false;
   }
 
+  return true;
+}
+
+static bool agent_bubble_island_begin(const bContext *C, const ARegion *region,
+                                     AgentIslandState *r_state, AgentIslandLayout *r_layout)
+{
+  if (!agent_bubble_island_layout_get(C, r_state, r_layout)) {
+    return false;
+  }
   GPU_matrix_push();
   GPU_matrix_translate_2f(-float(region->winrct.xmin), -float(region->winrct.ymin));
   return true;
@@ -4235,6 +4243,16 @@ void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot)
 
 /** \} */
 
+static void agent_bubble_main_region_init(wmWindowManager *wm, ARegion *region)
+{
+  /* Keymaps run in registration order. Queue navigation precedes transcript
+   * View2D; poll passes other tabs through without changing chat scrolling. */
+  wmKeyMap *keymap = WM_keymap_ensure(
+      wm->runtime->defaultconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
+  mixie_chat_main_region_init(wm, region);
+}
+
 static void agent_bubble_operatortypes()
 {
   WM_operatortype_append(MIXAR_OT_agent_bubble_show_window);
@@ -4249,10 +4267,12 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_restore);
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
+  WM_operatortype_append(MIXAR_OT_queue_navigate);
 }
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
 {
+  WM_keymap_ensure(keyconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   /* Ensure all three region keymap categories exist on the default
    * keyconfig so the Python addon-keyconfig registrations in
    * mixar.bootstrap.agent_bubble_module attach to keymaps Blender's
@@ -4371,7 +4391,7 @@ void ED_spacetype_agent_bubble()
    * mixie_chat_main_region_init installs its handlers itself, in its own
    * order. */
   art->keymapflag = 0;
-  art->init = mixie_chat_main_region_init;
+  art->init = agent_bubble_main_region_init;
   art->layout = agent_bubble_transcript_region_layout;
   art->draw = agent_bubble_island_region_draw;
   art->cursor = mixie_chat_main_region_cursor;

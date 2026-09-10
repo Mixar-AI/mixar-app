@@ -81,15 +81,39 @@ namespace {
 
 }  // namespace
 
+agent_queue::QueueLayout agent_queue::layout(const rctf &panel, float u, int total)
+{
+  QueueLayout result{};
+  const float pad = QPANEL_PAD * u;
+  result.row_height = QROW_H * u;
+  result.row_gap = QROW_GAP * u;
+  result.rows = {
+      panel.xmin + pad, panel.xmax - pad, panel.ymin + pad, panel.ymax - pad - QHEADER_H * u};
+  result.footer = result.rows;
+  result.footer.ymax = result.footer.ymin + ui::mixar_tokens::control_height * u;
+  auto capacity = [&]() {
+    return std::max(0,
+                    int((BLI_rctf_size_y(&result.rows) + result.row_gap) /
+                        (result.row_height + result.row_gap)));
+  };
+  result.capacity = capacity();
+  if (total > result.capacity) {
+    result.rows.ymin = result.footer.ymax + result.row_gap;
+    result.capacity = capacity();
+  }
+  return result;
+}
+
 void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, const float u)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
 
   using namespace agent_queue;
-  QueueRow rows[QUEUE_MAX_ROWS];
-  int mirror_index[QUEUE_MAX_ROWS];
-  int active_index = -1;
-  const int row_count = gather_rows(wm, rows, mirror_index, active_index);
+  const QueueLayout metrics = layout(panel, u, total_rows(wm));
+  const QueueData data = gather_rows(wm, metrics.capacity);
+  const auto &rows = data.rows;
+  const int row_count = data.total;
+  const int active_index = data.active_index;
 
   const float pad = QPANEL_PAD * u;
   const float row_h = QROW_H * u;
@@ -126,12 +150,8 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   }
 
   /* Count and actions share the header strip. */
-  bool any_terminal = false;
-  int active_count = 0;
-  for (int i = 0; i < row_count; i++) {
-    any_terminal |= (rows[i].is_done || rows[i].is_failed);
-    active_count += int(rows[i].is_running || rows[i].is_pending);
-  }
+  const bool any_terminal = data.any_terminal;
+  const int active_count = data.active;
   {
     char counts[64];
     if (active_count > 0) {
@@ -144,15 +164,9 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     const float cy = y_top - header_h * 0.5f;
     pane_label_left(counts, list_left, cy, font_sub, col_dim);
   }
-  y_top -= header_h;
 
-  /* Rows, newest first, as many as fit. */
-  const int fit = std::max(0, int((y_top - panel.ymin - pad) / (row_h + row_gap)));
-  const int shown = std::min(row_count, fit);
-
-  /* Native rectangles own drawing, events and QA. Content is painted afterward.
-   */
-  rctf row_rects[QUEUE_MAX_ROWS];
+  const int shown = rows.size();
+  Vector<rctf> row_rects(shown);
   ui::Block *block = ui::block_begin(
       C, region, "agent_island_queue", blender::ui::EmbossType::None);
 
@@ -175,7 +189,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   for (int i = 0; i < shown; i++) {
     const QueueRow &row = rows[i];
-    const float row_top = panel.ymax - pad - header_h - float(i) * (row_h + row_gap);
+    const float row_top = metrics.rows.ymax - float(i) * (row_h + row_gap);
     const float row_bottom = row_top - row_h;
     const bool cancellable = row.is_running || row.is_pending;
     const float cancel_w = cancellable ? QROW_CANCEL_W * u : 0.0f;
@@ -214,12 +228,41 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                 short(row_h),
                                 "Select this job");
     ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u);
-    ui::mixar_button_lit_set(sel, mirror_index[i] == active_index);
+    ui::mixar_button_lit_set(sel, rows[i].mirror_index == active_index);
     ui::mixar_button_tooltip_owned(sel, row.title.c_str());
     if (sel) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(sel);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixie_queue.active_index");
-      RNA_int_set(op_ptr, "value", mirror_index[i]);
+      RNA_int_set(op_ptr, "value", rows[i].mirror_index);
+    }
+  }
+
+  if (data.total > shown && shown > 0) {
+    const char *labels[] = {"First", "Previous", "Next", "Last"};
+    const Navigation actions[] = {FIRST, PAGE, PAGE, LAST};
+    const float button_w = 100.0f * u;
+    const float gap = 8.0f * u;
+    for (int i = 0; i < 4; i++) {
+      const float x = metrics.footer.xmax - (4 - i) * (button_w + gap) + gap;
+      ui::Button *button = uiDefButO(block,
+                                     ui::ButtonType::But,
+                                     "mixar.queue_navigate",
+                                     wm::OpCallContext::InvokeDefault,
+                                     labels[i],
+                                     int(x),
+                                     int(metrics.footer.ymin),
+                                     short(button_w),
+                                     short(ui::mixar_tokens::control_height * u),
+                                     "Browse queue jobs");
+      ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      if (button) {
+        PointerRNA *ptr = ui::button_operator_ptr_ensure(button);
+        RNA_enum_set(ptr, "action", actions[i]);
+        RNA_float_set(ptr, "delta", i == 1 ? -1.0f : 1.0f);
+        if (i < 2 ? data.visible.first == 0 : data.visible.end() == data.total) {
+          ui::button_flag_enable(button, ui::BUT_DISABLED);
+        }
+      }
     }
   }
 
@@ -230,7 +273,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   for (int i = 0; i < shown; i++) {
     const QueueRow &row = rows[i];
     const rctf &rect = row_rects[i];
-    const bool selected = mirror_index[i] == active_index;
+    const bool selected = rows[i].mirror_index == active_index;
     const float *row_dim = selected ? palette.text : palette.secondary;
 
     const float cy = (rect.ymin + rect.ymax) * 0.5f;
@@ -315,10 +358,15 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   }
 
   if (shown < row_count) {
-    char more[32];
-    SNPRINTF(more, "+%d more", row_count - shown);
-    const float more_y = y_top - float(shown) * (row_h + row_gap) - row_gap;
-    pane_label_centre(more, (list_left + list_right) * 0.5f, more_y, font_sub, col_dim);
+    char range[64];
+    if (shown) {
+      SNPRINTF(range, "%d–%d of %d", data.visible.first + 1, data.visible.end(), data.total);
+    }
+    else {
+      BLI_strncpy(range, "Increase window height to view jobs", sizeof(range));
+    }
+    pane_label_left(
+        range, metrics.footer.xmin, BLI_rctf_cent_y(&metrics.footer), font_sub, col_dim);
   }
 
   GPU_blend(GPU_BLEND_NONE);
