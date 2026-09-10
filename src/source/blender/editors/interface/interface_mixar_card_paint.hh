@@ -12,6 +12,11 @@
  *
  * Names are prefixed `mixar_card_` because they land in the enclosing
  * translation unit's namespace alongside Blender's own helpers.
+ *
+ * This is also the ONE seam the whole interface crosses to become liquid
+ * glass: `mixar_card_fill_round` is the flat shape a control needs and
+ * `mixar_card_glass_round` is the kit's pane a surface wants, side by side so
+ * a painter file picks one per shape without learning the kit.
  */
 
 #pragma once
@@ -23,6 +28,8 @@
 #include "BLI_sys_types.h"
 
 #include "DNA_userdef_types.h"
+
+#include "ED_mixar_glass.hh"
 
 #include "UI_interface_c.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -122,5 +129,51 @@ inline void mixar_card_outline_round(const rctf *rect,
   c[3] = alpha;
   draw_roundbox_corner_set(CNR_ALL);
   draw_roundbox_4fv(rect, false, rad, c);
+}
+
+/**
+ * The kit's pane, where a flat `mixar_card_fill_round` used to sit.
+ *
+ * The interface sorts into surfaces and controls. A surface is a pane the user
+ * reads as a sheet of glass over something else — a button bed, a chip, a
+ * card, a pill. A control is a shape that has to stay flat to read as
+ * machinery — a slider track is a groove, a thumb is a knob, an avatar disc is
+ * a picture. A glassed track shows the surface under it and stops reading as a
+ * groove, so the two need different draws and this is where a painter picks
+ * one. The kit itself never has to be learned to do so.
+ *
+ * A surface that crosses this seam adopts the role's material wholesale — no
+ * call site chooses a tint, which is what keeps the family from drifting
+ * (`ED_mixar_glass.hh`) and re-toning the UI to one table edit. Identity that
+ * is not the bed stays where it was: an accent button keeps its teal ink and
+ * its teal stroke, drawn as before.
+ *
+ * `rad` is passed rather than taken from the role because every surface
+ * measured its own corner against its own height; a pane that changed shape on
+ * conversion would be a different surface. The role still picks the material.
+ *
+ * `alpha` scales the WHOLE pane — every layer at once, see the header — so it
+ * is a hover lift or a fade, never a tint strength. The flat fill's alphas
+ * meant "this much colour over an opaque bed" and do not transfer to a pane,
+ * which carries its own ramp and its own alphas.
+ *
+ * No outline: the kit draws the family's rim. A surface that needs a coloured
+ * stroke keeps its own `mixar_card_outline_round` call after this one.
+ *
+ * The kit takes region-px `rcti` and the design system works in `rctf`; the
+ * conversion is exact for the integer rects the layout hands out.
+ */
+inline void mixar_card_glass_round(const rctf *rect,
+                                   const float rad,
+                                   const eMixarGlassRole role,
+                                   const float alpha = 1.0f)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  MixarGlassStyle style;
+  style.role = role;
+  style.radius = rad;
+  style.alpha = alpha;
+  mixar_glass_draw(pane, style);
 }
 }  // namespace blender::ui
