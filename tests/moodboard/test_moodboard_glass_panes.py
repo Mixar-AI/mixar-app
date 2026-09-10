@@ -82,7 +82,7 @@ def test_the_three_panes_share_one_glass_helper():
 
 def test_the_helper_paints_the_moodboard_role():
     body = _fn(MEDIA_TEXT, "void moodboard_draw_glass_pane(")
-    assert "BLI_rcti_rctf_copy(&pane, rect);" in body
+    assert "BLI_rcti_rctf_copy(&pane, &rect);" in body
     assert "style.role = ui::MIXAR_GLASS_MOODBOARD;" in body
     assert "style.radius = radius;" in body
     assert "ui::mixar_glass_draw(pane, style);" in body

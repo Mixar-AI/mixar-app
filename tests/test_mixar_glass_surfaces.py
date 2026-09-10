@@ -95,7 +95,7 @@ def _overlay_sources() -> dict[str, str]:
     the sweep's own prose names roles it has already painted.
     """
     return {
-        str(path.relative_to(ED)): _code(path.read_text(encoding="utf-8"))
+        path.relative_to(ED).as_posix(): _code(path.read_text(encoding="utf-8"))
         for path in sorted(ED.rglob("*"))
         if path.suffix in {".cc", ".hh"}
     }
@@ -957,12 +957,12 @@ class TestTheIslandCardIsAPane:
         return [arg.strip() for arg in card[0].split(",")]
 
     def test_the_card_bed_is_the_card_role_on_the_cards_own_rect(self) -> None:
-        """The bed's whole shape in one place — rect, radius, role and the two
+        """The bed's whole shape in one place — rect, role, radius and the two
         layers switched off. Any of them moving is a re-material."""
         assert self._card_call() == [
             "&layout->card_fill",
-            "(AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u",
             "ui::MIXAR_GLASS_CARD",
+            "(AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u",
             "false",
             "false",
         ], f"the card bed changed shape: {self._card_call()}"
@@ -975,7 +975,7 @@ class TestTheIslandCardIsAPane:
         assert "AGENT_CARD_X + AGENT_CARD_BORDER" in layout
         assert "AGENT_CARD_Y + AGENT_CARD_BORDER" in layout
         assert "AGENT_CARD_BORDER * 2" in layout
-        assert "AGENT_CARD_BORDER" in self._card_call()[1], "the radius ignores the band"
+        assert "AGENT_CARD_BORDER" in self._card_call()[2], "the radius ignores the band"
 
     def test_only_the_island_turns_the_streak_off(self) -> None:
         """The wrapper keeps the streak on by default, so the pill and every

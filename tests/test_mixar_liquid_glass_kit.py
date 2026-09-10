@@ -77,7 +77,7 @@ WINDOW_GUARD = "defined(__APPLE__) || defined(_WIN32)"
 def _table() -> str:
     """The token table's text, from its first row to the `static_assert`."""
     start = TOKENS.index("const MixarGlassTokens g_glass_tokens[] = {")
-    return TOKENS[start : TOKENS.index("static_assert(BLI_ARRAY_SIZE", start)]
+    return TOKENS[start : TOKENS.index("static_assert(ARRAY_SIZE", start)]
 
 
 def _rows() -> dict[str, str]:
@@ -137,7 +137,7 @@ class TestEveryRoleHasItsOwnRow:
         assert list(_rows()) == ROLES, f"the table grew or reordered: {list(_rows())}"
 
     def test_the_static_assert_covers_every_role(self) -> None:
-        assert "BLI_ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u" in TOKENS, (
+        assert "ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u" in TOKENS, (
             "Without the assert a new role compiles and reads past the table."
         )
 

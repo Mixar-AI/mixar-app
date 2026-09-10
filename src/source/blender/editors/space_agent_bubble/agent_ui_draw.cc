@@ -977,8 +977,8 @@ void agent_ui_draw_island(const ARegion * /*region*/,
    * the PANEL row and `view3d_director_cinema_paint.cc`), and at card scale the
    * difference is a level of quantisation the eye does not separate. */
   glass_fill_round(&layout->card_fill,
-                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
                    ui::MIXAR_GLASS_CARD,
+                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
                    /*shadow=*/false,
                    /*specular=*/false);
 

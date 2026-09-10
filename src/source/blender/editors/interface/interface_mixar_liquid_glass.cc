@@ -51,7 +51,6 @@
 #include "GPU_framebuffer.hh"
 #include "GPU_immediate.hh"
 #include "GPU_matrix.hh"
-#include "GPU_offscreen.hh"
 #include "GPU_shader.hh"
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
@@ -129,10 +128,10 @@ bool glass_chain_ensure(const int w, const int h, const int levels)
     char err_out[256] = "unknown";
     g_chain.levels[i] = GPU_offscreen_create(std::max(1, w >> i),
                                              std::max(1, h >> i),
-                                             /*allow_hdr*/ true,
+                                             /*with_depth_buffer*/ false,
                                              gpu::TextureFormat::UNORM_8_8_8_8,
                                              GPU_TEXTURE_USAGE_SHADER_READ,
-                                             /*with_depth_buffer*/ false,
+                                             /*clear*/ true,
                                              err_out);
     if (g_chain.levels[i] == nullptr) {
       glass_chain_release();

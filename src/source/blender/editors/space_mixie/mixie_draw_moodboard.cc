@@ -224,7 +224,7 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 void moodboard_draw_glass_pane(const rctf &rect, const float radius)
 {
   rcti pane;
-  BLI_rcti_rctf_copy(&pane, rect);
+  BLI_rcti_rctf_copy(&pane, &rect);
   ui::MixarGlassStyle style;
   style.role = ui::MIXAR_GLASS_MOODBOARD;
   style.radius = radius;

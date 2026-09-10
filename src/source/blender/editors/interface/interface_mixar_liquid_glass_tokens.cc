@@ -231,7 +231,7 @@ const MixarGlassTokens g_glass_tokens[] = {
     },
 };
 
-static_assert(BLI_ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u,
+static_assert(ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u,
               "Every role needs a row: the enum and the table are read together.");
 
 /** \} */
