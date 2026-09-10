@@ -36,6 +36,8 @@ CARD_PAINT_PATH = IFACE / "interface_mixar_card_paint.hh"
 CARD_PAINT = CARD_PAINT_PATH.read_text(encoding="utf-8")
 CARD_BUTTON_PATH = IFACE / "interface_mixar_card_button.cc"
 CARD_BUTTON = CARD_BUTTON_PATH.read_text(encoding="utf-8")
+PROFILE_DRAW_PATH = IFACE / "interface_mixar_profile_card_draw.cc"
+PROFILE_DRAW = PROFILE_DRAW_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -207,4 +209,61 @@ class TestTheCardButtonsArePanes:
             assert "MX_" not in call and "uchar" not in call, (
                 f"a role-taking call was given a colour: {call}"
             )
+
+
+class TestTheProfilePlanChipIsAPane:
+    """The plan chip on the account card, and the shapes beside it that are not.
+
+    The chip NAMES the current plan; it sets nothing. So it joins the glass
+    under the CHIP role — the row for a shape that sits on another pane. The
+    divider and the quota bar are the card's machinery and must stay flat.
+    """
+
+    def _pill(self) -> str:
+        return _code(_fn_body(PROFILE_DRAW, "void draw_pill("))
+
+    def test_the_chip_bed_is_the_pane(self) -> None:
+        """A chip left on `MX_GRAY_800` keeps a hand-mixed dark no table edit
+        can reach, and drifts the moment the family is re-toned."""
+        pill = self._pill()
+        assert "mixar_card_glass_round(&chip, rad, MIXAR_GLASS_CHIP);" in pill, (
+            "the plan chip still draws a flat, hand-mixed bed"
+        )
+
+    def test_no_raw_grey_bed_survives_on_the_chip(self) -> None:
+        pill = self._pill()
+        for grey in ("MX_GRAY_700", "MX_GRAY_800"):
+            assert grey not in pill, f"{grey} is still the chip's bed"
+
+    def test_the_chip_keeps_its_own_stroke(self) -> None:
+        """The pane brings the family rim; the chip's stroke is stronger.
+
+        Dropping it would leave the chip outlined only by the family rim and
+        no longer distinguishable from any other chip on the card.
+        """
+        pill = self._pill()
+        assert "mixar_card_outline_round(&chip, rad, MX_BORDER_STRONG, 1.0f);" in pill, (
+            "the chip lost the stroke that separates it from the card"
+        )
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        for call in re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(PROFILE_DRAW)):
+            assert "MX_" not in call and "uchar" not in call, (
+                f"a role-taking call was given a colour: {call}"
+            )
+
+    def test_the_card_machinery_stays_flat(self) -> None:
+        """The divider and the quota bar are controls: a groove and a gauge.
+
+        Showing the card through a divider stops it reading as a separator,
+        and a glassed track or fill makes the quota ambiguous — the reading
+        the flat ramp exists to make unmistakable.
+        """
+        divider = _code(_fn_body(PROFILE_DRAW, "void draw_divider("))
+        usage = _code(_fn_body(PROFILE_DRAW, "void draw_usage_bar("))
+        for name, body in (("draw_divider", divider), ("draw_usage_bar", usage)):
+            assert "mixar_card_glass_round(" not in body, f"{name} was glassed"
+        assert "mixar_card_fill_round(&line, 0.0f, MX_BORDER_STRONG)" in divider
+        assert "mixar_card_fill_round(&track, rad, MX_BG_SUNKEN)" in usage
+        assert "fill_ramp(&fill, rad, CARD_USAGE_RAMP_START, CARD_USAGE_RAMP_END)" in usage
 

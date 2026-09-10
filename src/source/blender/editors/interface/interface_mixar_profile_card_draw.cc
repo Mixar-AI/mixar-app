@@ -174,7 +174,11 @@ void draw_pill(Button *but, rcti *rect)
 
   GPU_blend(GPU_BLEND_ALPHA);
   const float rad = height * 0.35f;
-  mixar_card_fill_round(&chip, rad, MX_GRAY_800);
+  /* The plan chip is a pane, not a control: it names the plan rather than
+   * setting anything, so it joins the glass. `chip` is the role for a shape
+   * that sits on another pane — the card behind it — and the stroke below is
+   * the chip's own, stronger than the family rim. */
+  mixar_card_glass_round(&chip, rad, MIXAR_GLASS_CHIP);
   mixar_card_outline_round(&chip, rad, MX_BORDER_STRONG, 1.0f);
   GPU_blend(GPU_BLEND_NONE);
 
