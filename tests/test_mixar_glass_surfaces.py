@@ -20,7 +20,10 @@ until someone looked at the right widget at the right moment:
 * a seam that re-implements the material instead of delegating lets one
   surface drift out of the family and stops a palette edit from reaching it;
 * a seam that takes a colour lets each call site pick its own tint, which is
-  the drift the role table exists to prevent.
+  the drift the role table exists to prevent;
+* a sweep that keeps no register of what it has covered lets a later pass
+  convert a surface twice or miss one, and neither shows up until two builds
+  are compared by eye.
 
 Run with the repo venv: ``python -m pytest -q`` from the repository root.
 """
@@ -70,6 +73,72 @@ def _code(src: str) -> str:
     """A file with its comments removed, so prose cannot satisfy a contract."""
     without_blocks = re.sub(r"/\*.*?\*/", "", src, flags=re.DOTALL)
     return re.sub(r"//[^\n]*", "", without_blocks)
+
+
+def _overlay_sources() -> dict[str, str]:
+    """The overlay's editors tree, comment-stripped, by path relative to ``ED``.
+
+    ``src/`` holds only the files the overlay adds or replaces, so this is
+    every surface that can reach the painter — not the whole of Blender. The
+    comments go because the register below is about what the code does, and
+    the sweep's own prose names roles it has already painted.
+    """
+    return {
+        str(path.relative_to(ED)): _code(path.read_text(encoding="utf-8"))
+        for path in sorted(ED.rglob("*"))
+        if path.suffix in {".cc", ".hh"}
+    }
+
+
+SOURCES = _overlay_sources()
+
+# The five ways a surface asks the family for a pane: the seam every Mixar
+# surface crosses, the painter itself, and the three per-tree wrappers whose
+# call sites live outside `blender::ui`.
+PANE_ENTRY_POINTS = (
+    "mixar_card_glass_round(",
+    "mixar_glass_draw(",
+    "moodboard_draw_glass_pane(",
+    "glass_fill_round(",
+    "glass_pane(",
+)
+
+# The register: every file that reaches the painter, and the role literals it
+# hands over. The painter draws the role it is given, so it names none. A
+# conversion lands its file here in the same commit.
+PANE_CALLS = {
+    "interface/interface_mixar_liquid_glass_draw.cc": (),
+    "interface/interface_mixar_topbar.cc": ("MIXAR_GLASS_PILL",),
+    "interface/interface_mixar_card_button.cc": ("MIXAR_GLASS_CHIP",),
+    "interface/interface_mixar_profile_card_draw.cc": ("MIXAR_GLASS_CHIP",),
+    "interface/interface_mixar_cinema_row.cc": ("MIXAR_GLASS_CHIP",),
+    "interface/interface_mixar_section.cc": ("MIXAR_GLASS_CHIP",),
+    "interface/interface_widgets.cc": ("MIXAR_GLASS_CHIP",),
+    "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_PILL",),
+    "space_view3d/view3d_agent_panel_draw.cc": ("MIXAR_GLASS_PANEL",),
+    "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
+    "space_mixie/mixie_draw_moodboard_graph.cc": (),
+    "space_mixie/mixie_draw_moodboard_node_ui.cc": (),
+}
+
+# The family declares eight roles; four have a surface. The rest are the queue.
+UNPAINTED_ROLES = (
+    "MIXAR_GLASS_CARD",
+    "MIXAR_GLASS_MENU",
+    "MIXAR_GLASS_ISLAND",
+    "MIXAR_GLASS_CHAT",
+)
+
+# The kit: the header that enumerates the roles, the table that gives each a
+# row, the painter, the backdrop chain and the seam. A role with no surface
+# may live here and nowhere else.
+KIT_FILES = {
+    "include/ED_mixar_glass.hh",
+    "interface/interface_mixar_card_paint.hh",
+    "interface/interface_mixar_liquid_glass.cc",
+    "interface/interface_mixar_liquid_glass_draw.cc",
+    "interface/interface_mixar_liquid_glass_tokens.cc",
+}
 
 
 class TestTheSeamIsAPaneInsteadOfAFlatFill:
@@ -664,4 +733,66 @@ class TestTheSectionCardsArePanes:
         assert calls == ["&card, rad, MIXAR_GLASS_CHIP"], (
             f"a role-taking call was given a colour: {calls}"
         )
+
+
+class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
+    """The sweep's boundary, in one place.
+
+    The conversion lands a few surfaces at a time, and each commit has to be
+    reviewable alone — which means nothing else states what the family already
+    covers. Without that list a later sweep can double-convert a control (a
+    slider track that shows the card through it stops reading as a groove) or
+    leave a surface on a hand-mixed fill that no longer matches the family, and
+    both are invisible until two builds are compared by eye.
+
+    The register is a contract, not a snapshot: the Mixie chat and the agent
+    island are still to come, and each of those commits must add its file and
+    its role here, because these tests fail until it does.
+    """
+
+    def _drawers(self) -> set[str]:
+        return {
+            relpath
+            for relpath, src in SOURCES.items()
+            if relpath.endswith(".cc")
+            and any(entry in src for entry in PANE_ENTRY_POINTS)
+        }
+
+    def test_every_file_that_reaches_the_painter_is_registered(self) -> None:
+        """A file off the register is a conversion that skipped its commit.
+
+        It is also the only warning there will be: the surface looks fine by
+        itself, and only the register says whether it belongs to the family.
+        """
+        assert self._drawers() == set(PANE_CALLS), (
+            "files reach the painter off the register: "
+            f"{sorted(self._drawers() ^ set(PANE_CALLS))}"
+        )
+
+    def test_each_registered_file_paints_the_role_the_register_names(self) -> None:
+        """The role IS the surface's colour, rim and shadow budget.
+
+        A surface switched to another role silently changes material: the pane
+        keeps rendering, the tweak was made for a reason, and only the register
+        records which role the design gave it.
+        """
+        for relpath, roles in PANE_CALLS.items():
+            painted = set(re.findall(r"\bMIXAR_GLASS_[A-Z]+\b", SOURCES[relpath]))
+            assert painted == set(roles), (
+                f"{relpath} paints {sorted(painted)}, register says {sorted(roles)}"
+            )
+
+    def test_the_unpainted_roles_stay_inside_the_kit(self) -> None:
+        """Four roles are declared ahead of their surface.
+
+        Until the chat and the island land, they may appear only in the header
+        that enumerates them and the table that gives each a row — a role
+        painted from anywhere else is a conversion that did not stand on its
+        own.
+        """
+        for role in UNPAINTED_ROLES:
+            holders = {relpath for relpath, src in SOURCES.items() if role in src}
+            assert holders <= KIT_FILES, (
+                f"{role} is painted outside the kit: {sorted(holders - KIT_FILES)}"
+            )
 
