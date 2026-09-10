@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Headless sandbox entry point for create_model sub-builds.
+"""Headless background-worker entry point (harness v3).
 
 Launched by the parent's sandbox_supervisor:
     Mixar --background --python headless_main.py
@@ -10,22 +10,34 @@ Launched by the parent's sandbox_supervisor:
 Connects the real agent bridge to the backend (token + ids from env), then runs
 a MANUAL main-thread pump: in --background, bpy.app.timers do NOT fire, so the
 timer-driven main_thread_executor never executes queued scripts. We drain its
-queue ourselves on the main thread, execute via the sandboxed ScriptExecutor,
-and send the response back over the bridge.
+queue ourselves on the main thread through the SAME take/execute/respond
+helpers the GUI pump uses (``mixar.modules.common.agent_execution.pump``), so
+the two cannot disagree on the request shape again.
+
+Ownership: a worker has no GUI chat session, so it does not gate on
+``has_active_session()``. It validates that each request was assigned to it
+(``identity.check_assignment``) and refuses anything else with an error
+response on the same request id.
 
 Env:
     MIXAR_SANDBOX_ACCESS_TOKEN, MIXAR_BACKEND_URL, MIXAR_SANDBOX_CONNECTION_ID,
     MIXAR_SANDBOX_PARENT_INSTANCE_ID, MIXAR_SANDBOX_PARENT_PID,
-    MIXAR_SANDBOX_PARENT_WATCHDOG_S (optional, default 60)
+    MIXAR_SANDBOX_PARENT_WATCHDOG_S (optional, default 60),
+    MIXAR_SANDBOX_IDLE_TTL_S (optional, 0 = stay until the parent quits)
 """
 
 import os
-import queue as _q
 import time
 
 from mixar.config.logging_config import get_logger
 
 logger = get_logger("mixar.headless")
+
+_PROCESS_STARTED = time.monotonic()
+# Bounded wait on an empty queue: the queue itself wakes us, this is only
+# the cadence of the parent-pid / disconnect / idle watchdog checks.
+_QUEUE_WAIT_S = 0.05
+_HOLD_POLL_S = 0.02
 
 
 def _pid_alive_windows(pid: int) -> bool:
@@ -80,43 +92,93 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def pump_once(q, held, identity, executor, client, mte, pump, check_assignment):
+    """Advance the worker pump by one request. Returns ``(held, worked)``.
+
+    Pure function of its collaborators so it is testable without Blender:
+    ``mte`` supplies the liveness in-flight markers, ``pump`` the shared
+    take/execute/respond helpers.
+    """
+    req, held, status = pump.take_next(q, held, block_s=_QUEUE_WAIT_S)
+    if status == pump.EMPTY:
+        return held, False
+    if status == pump.HOLDING:
+        time.sleep(_HOLD_POLL_S)
+        return held, False
+    if status in (pump.PREFETCH_FAILED, pump.PREFETCH_EXPIRED):
+        pump.respond(client, req, pump.prefetch_refusal(req, status))
+        return held, True
+
+    reason = check_assignment(req, identity)
+    if reason is not None:
+        logger.warning("worker refusing %s (id %s): %s", req.tool_name, req.request_id, reason)
+        pump.respond(client, req, {
+            "success": False, "error": reason, "error_type": "not_assigned",
+        })
+        return held, True
+
+    mte._set_inflight(req.tool_name, req.request_id, req.session_id)
+    try:
+        result = pump.execute_request(req, executor)
+    finally:
+        mte._clear_inflight()
+    logger.info(
+        "worker ran %s (id %s) success=%s queue_wait=%sms exec=%sms",
+        req.tool_name, req.request_id, result.get("success"),
+        req.timing.get("queue_wait_ms"), req.timing.get("exec_ms"),
+    )
+    pump.respond(client, req, result)
+    return held, True
+
+
 def _run() -> None:
     token = os.environ.get("MIXAR_SANDBOX_ACCESS_TOKEN", "")
     backend = os.environ.get("MIXAR_BACKEND_URL", "")
-    conn_id = os.environ.get("MIXAR_SANDBOX_CONNECTION_ID", "")
-    parent_iid = os.environ.get("MIXAR_SANDBOX_PARENT_INSTANCE_ID", "")
     parent_pid = int(os.environ.get("MIXAR_SANDBOX_PARENT_PID", "0") or 0)
     watchdog_s = float(os.environ.get("MIXAR_SANDBOX_PARENT_WATCHDOG_S", "60") or 60)
     # Self-terminate after this many seconds with no build, so a finished
-    # session's warm sandbox is reaped. 0 disables (stay until parent quits).
+    # session's warm worker is reaped. 0 disables (stay until parent quits).
     idle_ttl = float(os.environ.get("MIXAR_SANDBOX_IDLE_TTL_S", "0") or 0)
 
+    from mixar.modules.common.agent_execution import pump
+    from mixar.modules.common.agent_execution.identity import (
+        check_assignment,
+        worker_identity_from_env,
+    )
     from mixar.modules.space_mixie_chat.core import jsonrpc_client as jc
     from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
     from mixar.modules.space_mixie_chat.core.executor import get_executor
 
+    identity = worker_identity_from_env()
+
     def on_script_execute(
-        script, request_id, tool_name="unknown", session_id="", agent_ctx=None
+        script, request_id, tool_name="unknown", session_id="", agent_ctx=None,
+        envelope=None,
     ):
-        # Sandbox has no fork "agent session"; queue unconditionally and let the
-        # pump below execute + respond. (Production's handler gates on an active
-        # session; the sandbox is its own dedicated process so that gate is moot.)
+        # No GUI "agent session" here; queue unconditionally and let the pump
+        # below validate the assignment, execute and respond.
         mte.queue_script_request(
-            script, request_id, tool_name, session_id, agent_ctx
+            script, request_id, tool_name, session_id, agent_ctx, envelope=envelope
         )
         return None
 
     client = jc.create_jsonrpc_client(
         host=backend,
-        connection_id=conn_id,
+        connection_id=identity.connection_id,
         token_getter=lambda: os.environ.get("MIXAR_SANDBOX_ACCESS_TOKEN", token),
         on_script_execute=on_script_execute,
-        role="sandbox",
-        parent_instance_id=parent_iid,
+        role=identity.role,
+        parent_instance_id=identity.parent_instance_id,
     )
     client.connect()
-    logger.info("headless sandbox %s connecting to %s", conn_id, backend)
+    logger.info(
+        "headless worker %s (parent %s) connecting to %s",
+        identity.connection_id, identity.parent_instance_id, backend,
+    )
 
+    executor = get_executor()
+    held = None
+    connected_logged = False
     last_connected = time.monotonic()
     last_activity = time.monotonic()
     while True:
@@ -125,6 +187,12 @@ def _run() -> None:
             break
         if client.is_connected:
             last_connected = time.monotonic()
+            if not connected_logged:
+                connected_logged = True
+                logger.info(
+                    "worker connected %.2fs after process start",
+                    time.monotonic() - _PROCESS_STARTED,
+                )
         elif time.monotonic() - last_connected > watchdog_s:
             logger.info("disconnected > %.0fs; exiting", watchdog_s)
             break
@@ -133,22 +201,12 @@ def _run() -> None:
             break
 
         # MANUAL PUMP — timers do not fire in --background.
-        try:
-            request_id, script, tool_name, session_id = mte._request_queue.get_nowait()
-        except _q.Empty:
-            time.sleep(0.05)
-            continue
-
-        last_activity = time.monotonic()  # received work — reset the idle timer
-        executor = get_executor()
-        try:
-            result = executor.execute(script)
-            rd = result.to_dict()
-        except Exception as e:  # noqa: BLE001
-            rd = {"success": False, "error": "{}: {}".format(type(e).__name__, e)}
-        if client.is_connected:
-            client.queue_response(request_id, rd)
-        last_activity = time.monotonic()  # finished — idle window starts now
+        held, worked = pump_once(
+            mte._request_queue, held, identity, executor, client, mte, pump,
+            check_assignment,
+        )
+        if worked:
+            last_activity = time.monotonic()  # idle window starts after the reply
 
     try:
         client.disconnect()
@@ -156,4 +214,5 @@ def _run() -> None:
         pass
 
 
-_run()
+if __name__ == "__main__":  # `blender --python` runs the file as __main__
+    _run()

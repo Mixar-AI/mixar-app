@@ -20,9 +20,11 @@ set(INC_SYS
 set(SRC
   drawobject.cc
   space_view3d.cc
-  view3d_agent_strip_draw.cc
-  view3d_agent_strip_ops.cc
-  view3d_agent_strip_runtime.cc
+  view3d_agent_panel_cards.cc
+  view3d_agent_panel_draw.cc
+  view3d_agent_panel_glyphs.cc
+  view3d_agent_panel_ops.cc
+  view3d_agent_panel_qa.cc
   view3d_buttons.cc
   view3d_camera_control.cc
   view3d_context.cc
@@ -95,7 +97,7 @@ set(SRC
   view3d_view.cc
   view3d_vr_location_scouting.cc
 
-  view3d_agent_strip.hh
+  view3d_agent_panel.hh
   view3d_director.hh
   view3d_director_cinema.hh
   view3d_director_minimap.hh

@@ -435,6 +435,7 @@ class SSEStreamHandler:
         answers: Optional[dict[str, str]] = None,
         interrupt_id: Optional[str] = None,
         auth_token: Optional[str] = None,
+        question_ref: Optional[dict] = None,
     ) -> bool:
         """
         Start SSE stream for input request (unified interrupt response).
@@ -467,6 +468,7 @@ class SSEStreamHandler:
         self._thread = threading.Thread(
             target=self._input_stream_loop,
             args=(session_id, action, text, answers, interrupt_id, auth_token),
+            kwargs={"question_ref": question_ref},
             daemon=True,
         )
         self._thread.name = "MixarInputStream"
@@ -484,6 +486,7 @@ class SSEStreamHandler:
         interrupt_id: Optional[str],
         auth_token: Optional[str],
         _connect_attempt: int = 0,
+        question_ref: Optional[dict] = None,
     ) -> None:
         """Background thread that handles input SSE streaming."""
         try:
@@ -498,6 +501,12 @@ class SSEStreamHandler:
                 payload["answers"] = answers
             if interrupt_id:
                 payload["interrupt_id"] = interrupt_id
+            # Harness v3: echo the durable question identity so the backend
+            # resumes the addressed child task, never a positional interrupt.
+            if isinstance(question_ref, dict):
+                for key in ("run_id", "task_id", "question_id"):
+                    if question_ref.get(key):
+                        payload[key] = str(question_ref[key])
 
             # A LOCAL BYOK provider relays LLM calls back over the agent
             # WebSocket, and an interrupt resume builds a fresh run config —
@@ -593,6 +602,7 @@ class SSEStreamHandler:
                     interrupt_id,
                     auth_token,
                     _connect_attempt + 1,
+                    question_ref=question_ref,
                 )
             self._on_error(f"Connection error: {e}")
         except httpx.TimeoutException as e:

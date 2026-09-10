@@ -419,11 +419,13 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if is_modify or is_awaiting_input:
             # Send via input stream (modify feedback or user input response)
             action = "modify" if is_modify else "respond"
+            from ...core.question_ref import pending_question_ref
             success = sse_handler.start_input_stream(
                 session_id=session.get_session_id(scene),
                 action=action,
                 text=message_text,
                 auth_token=auth_token,
+                question_ref=pending_question_ref(scene),
             )
             if not success:
                 self.report({'ERROR'}, "Failed to send input")

@@ -262,6 +262,10 @@ class MixieChatMessage(PropertyGroup):
         maxlen=200,
         options={'SKIP_SAVE'},
     )
+    # Harness v3: JSON {run_id, task_id, question_id} of the durable question
+    # this bubble asks; echoed back on /agent/input so the backend resumes the
+    # ADDRESSED child, never a positional first interrupt.
+    question_ref: StringProperty(default="", maxlen=512, options={'SKIP_SAVE'})
     export_format: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})

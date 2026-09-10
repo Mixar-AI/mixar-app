@@ -132,6 +132,39 @@ void blo_do_versions_mixar(Main *bmain)
     }
   }
 
+  /* The Agent Scene Strip became the Parallel Agents panel: same
+   * RGN_TYPE_EXECUTE region, still bottom-aligned but now sized for a stack
+   * of cards rather than a row of tiles. Files saved with the strip carry its
+   * stored size in their screen data, which wins over the region type's own
+   * preference, so zero it and let `prefsizey` be re-taken. */
+  if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 4)) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
+          if (sl->spacetype != SPACE_VIEW3D) {
+            continue;
+          }
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+                                                                           &sl->regionbase;
+          for (ARegion &region_iter : *regionbase) {
+            ARegion *region = &region_iter;
+            if (region->regiontype != RGN_TYPE_EXECUTE) {
+              continue;
+            }
+            region->alignment = RGN_ALIGN_BOTTOM;
+            /* Stored sizes came from the tile strip. Zero them so the region
+             * takes `prefsizey` from its type on the next layout. */
+            region->sizex = 0;
+            region->sizey = 0;
+          }
+        }
+      }
+    }
+  }
+
   /* Future versioning blocks go here, guarded by MAIN_MIXAR_VERSION_FILE_ATLEAST. */
 }
 }  // namespace blender

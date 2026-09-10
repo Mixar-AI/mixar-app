@@ -74,6 +74,15 @@ inline constexpr float INK_MIN_SAMPLE_DIST = 1.2f;
 /** Ink stroke width (base px). Pressure modulates alpha, not width. */
 inline constexpr float INK_STROKE_WIDTH = 2.6f;
 
+/** The writing surface's dot lattice. Measured in UI_SCALE_FAC px, NEVER in
+ * the Agent island's width-derived unit — the island's composer paints the
+ * same lattice over its input line so the two read as one sheet, and stepping
+ * that patch by the island unit changed the grid's pitch at the region seam.
+ * One painter owns these: mixie_chat_ink_draw_grid. */
+inline constexpr float INK_GRID_STEP = 36.0f;
+inline constexpr float INK_GRID_DOT_R = 2.0f;
+inline constexpr int INK_GRID_SEGMENTS = 12;
+
 /** Hint pill along the top edge of the canvas. */
 inline constexpr float INK_HINT_H = 30.0f;
 inline constexpr float INK_HINT_PAD_X = 12.0f;
@@ -84,6 +93,11 @@ inline constexpr float INK_CLEAR_W = 52.0f;
 /** Scrim is lighter than the rules/history overlays: the chat stays
  * readable under the writing surface. */
 inline constexpr float INK_COL_SCRIM[4] = {0.02f, 0.03f, 0.04f, 0.30f};
+
+/** The writing surface's own scrim, under the lattice. Shared with the Agent
+ * island's composer for the same reason the lattice is: the two are one sheet,
+ * and a patch mixed at a different alpha showed as a panel ruled across it. */
+inline constexpr float INK_CANVAS_SCRIM[4] = {0.05f, 0.05f, 0.06f, 0.82f};
 
 /** \} */
 

@@ -279,20 +279,80 @@ void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region)
 }
 
 /**
- * Draw the moodboard background dot grid pattern across the writing surface.
+ * The writing surface itself: scrim, then lattice, clipped to *rect*.
+ *
+ * The Agent island's composer paints its own share of the panel with this, so
+ * that band is the SAME surface as the transcript above it rather than a box
+ * ruled across the pad. It used to be pinned to the input line's rect, which
+ * left a strip of bare panel above and below it and sat inside the
+ * transcript's own left and right edges — three straight lines where there
+ * should have been none.
  */
-static void ink_draw_moodboard_grid(float winx, float winy, float scale, float ease)
+void mixie_chat_ink_draw_canvas(const rctf *rect,
+                                const float scale,
+                                const float origin_x,
+                                const float origin_y,
+                                const float ease)
 {
-  const float grid_step = 36.0f * scale;
-  const float dot_radius = 2.0f * scale;
-  const int segments = 12;
-
-  const int cols = int(ceilf(winx / grid_step)) + 1;
-  const int rows = int(ceilf(winy / grid_step)) + 1;
-  const int dot_count = cols * rows;
-  if (dot_count <= 0) {
+  if (!rect || rect->xmin >= rect->xmax || rect->ymin >= rect->ymax) {
     return;
   }
+  GPU_blend(GPU_BLEND_ALPHA);
+  const float scrim[4] = {INK_CANVAS_SCRIM[0],
+                          INK_CANVAS_SCRIM[1],
+                          INK_CANVAS_SCRIM[2],
+                          INK_CANVAS_SCRIM[3] * ease};
+  chat_ui_draw_rounded_rect(rect, 0.0f, scrim);
+  mixie_chat_ink_draw_grid(rect, scale, origin_x, origin_y, ease);
+}
+
+/**
+ * The writing surface's dot lattice, clipped to *rect*.
+ *
+ * ONE definition, because the canvas is not confined to the transcript: the
+ * Agent island's composer paints the same surface over its input line so the
+ * two read as one sheet of paper. A second copy of the metrics there drifted
+ * — it stepped by the island's width-derived unit instead of UI_SCALE_FAC, so
+ * the patch's dots came out at 24px against the canvas's 36px and the grid
+ * visibly changed pitch at the region seam.
+ *
+ * `origin` anchors the lattice, so a caller drawing into a different region
+ * passes that region's offset and gets the SAME dots continuing, rather than
+ * a lattice that restarts at its own corner.
+ *
+ * The reserved vertex count must equal what the loop emits. Immediate mode
+ * hands back a buffer sized by `immBegin` and draws all of it; emitting fewer
+ * vertices than reserved leaves whatever the previous draw put there, which
+ * reaches the screen as stray triangles from stale coordinates.
+ */
+void mixie_chat_ink_draw_grid(const rctf *rect,
+                              const float scale,
+                              const float origin_x,
+                              const float origin_y,
+                              const float ease)
+{
+  if (!rect || rect->xmin >= rect->xmax || rect->ymin >= rect->ymax) {
+    return;
+  }
+  const float grid_step = INK_GRID_STEP * scale;
+  const float dot_radius = INK_GRID_DOT_R * scale;
+  const int segments = INK_GRID_SEGMENTS;
+  if (grid_step <= 0.0f) {
+    return;
+  }
+
+  /* A dot is drawn when its DISC meets the rect, so the lattice runs to the
+   * edge rather than stopping a step short of it. Deriving the loop bounds
+   * from the same inflated rect is what keeps the count exact: there is no
+   * per-dot test inside the loop that could skip one. */
+  const int first_col = int(ceilf((rect->xmin - dot_radius - origin_x) / grid_step));
+  const int last_col = int(floorf((rect->xmax + dot_radius - origin_x) / grid_step));
+  const int first_row = int(ceilf((rect->ymin - dot_radius - origin_y) / grid_step));
+  const int last_row = int(floorf((rect->ymax + dot_radius - origin_y) / grid_step));
+  if (last_col < first_col || last_row < first_row) {
+    return;
+  }
+  const int dot_count = (last_col - first_col + 1) * (last_row - first_row + 1);
 
   const float dot_color[4] = {0.45f, 0.45f, 0.45f, 0.35f * ease};
 
@@ -304,10 +364,10 @@ static void ink_draw_moodboard_grid(float winx, float winy, float scale, float e
   immUniformColor4fv(dot_color);
 
   immBegin(GPU_PRIM_TRIS, dot_count * segments * 3);
-  for (int r = 0; r < rows; r++) {
-    const float cy = float(r) * grid_step;
-    for (int c = 0; c < cols; c++) {
-      const float cx = float(c) * grid_step;
+  for (int r = first_row; r <= last_row; r++) {
+    const float cy = origin_y + float(r) * grid_step;
+    for (int c = first_col; c <= last_col; c++) {
+      const float cx = origin_x + float(c) * grid_step;
       for (int s = 0; s < segments; s++) {
         const float a0 = (2.0f * float(M_PI) * float(s)) / float(segments);
         const float a1 = (2.0f * float(M_PI) * float(s + 1)) / float(segments);
@@ -374,11 +434,7 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
   {
     rctf full;
     BLI_rctf_init(&full, 0.0f, float(winx), 0.0f, float(winy));
-    const float scrim[4] = {0.05f, 0.05f, 0.06f, 0.82f * ease};
-    chat_ui_draw_rounded_rect(&full, 0.0f, scrim);
-
-    /* Moodboard dot grid pattern over the translucent surface. */
-    ink_draw_moodboard_grid(float(winx), float(winy), scale, ease);
+    mixie_chat_ink_draw_canvas(&full, scale, 0.0f, 0.0f, ease);
   }
 
   /* Ink strokes (completed + live). */

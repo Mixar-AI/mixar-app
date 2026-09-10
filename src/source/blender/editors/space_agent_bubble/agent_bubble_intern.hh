@@ -23,6 +23,12 @@ struct wmWindowManager;
 /** \name Header Region (status pill)
  * \{ */
 
+/* True when DWM composites this build's pill window alpha, so the bed outside
+ * the capsule is painted transparent and the capsule's own anti-aliased edge is
+ * the silhouette. False keeps the opaque bed and the window region that shapes
+ * it (see the "Pill compositing" section in space_agent_bubble.cc). */
+bool agent_bubble_pill_bed_is_transparent();
+
 void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region);
 

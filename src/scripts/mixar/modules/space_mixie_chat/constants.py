@@ -141,6 +141,10 @@ class JSONRPCMethod:
     LLM_REQUEST = "llm.request"
     # Server -> Client (requests - capability-scoped local add-on workspace)
     ADDON_PROJECT_PREFIX = "addon_project."
+    # Server -> Client (requests - harness v3 execution protocol: activate /
+    # bind_task / status / commit / revoke; handled on the main thread by
+    # mixar.modules.common.agent_execution.handlers, replies deferred)
+    AGENT_EXECUTION_PREFIX = "agent.execution."
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"

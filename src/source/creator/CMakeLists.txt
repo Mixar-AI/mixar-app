@@ -2043,6 +2043,7 @@ install(
 install(
   FILES 
     ${CMAKE_SOURCE_DIR}/release/datafiles/startup.mixar
+    ${CMAKE_SOURCE_DIR}/release/datafiles/mixar_logo.png
   DESTINATION ${TARGETDIR_VER}/datafiles
 )
 

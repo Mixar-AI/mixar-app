@@ -144,11 +144,8 @@ def test_contract_doc_exists_and_is_linked():
         "tests/test_render_job_guard.py",
     ):
         assert needle in text, needle
-    # CLAUDE.md is published and may not reference `docs/` (a deny-listed
-    # path); the private docs map is where the agent guides link it, and
-    # AGENTS.md is CLAUDE.md with that map appended.
     for path in (
-        ".claude/rules/private-docs-map.md",
+        "CLAUDE.md",
         "AGENTS.md",
         "src/scripts/mixar/modules/space_mixie_chat/core/main_thread_executor.py",
         "src/scripts/mixar/modules/space_mixie_chat/ui/operators/agent_final_render_ops.py",

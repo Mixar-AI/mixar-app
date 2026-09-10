@@ -3211,6 +3211,106 @@ struct MixarDragState {
 };
 static std::unordered_map<HWND, MixarDragState> s_drag_states;
 
+/* Corner radius requested through Mixar_WindowSetCornerRadius, plus the window
+ * size the region was last built for.
+ *
+ * macOS implements that call as a Core Animation mask
+ * (`layer.cornerRadius` + `masksToBounds`) over a non-opaque window, so the
+ * area outside the radius is genuinely transparent and the pill's capsule is
+ * all the user sees. Windows has no equivalent for a GL-rendered window: the
+ * WGL pixel format Blender asks for carries no alpha channel
+ * (GHOST_WindowWin32 constructs GHOST_ContextWGL with alphaBackground=false),
+ * so DWM composites the client area as opaque no matter what the shader
+ * writes, and the pill's own near-black bed showed as a hard rectangle around
+ * the capsule wherever the viewport behind it was not equally dark.
+ *
+ * The Win32 way to make a window non-rectangular is a window region, so that
+ * is what this is: the same radius, applied as the window's actual shape. */
+struct MixarCornerShape {
+  float radius; /* logical (96-DPI) units, as passed by the caller */
+  int applied_w, applied_h;
+};
+static std::unordered_map<HWND, MixarCornerShape> s_corner_shapes;
+
+/* Windows whose client alpha DWM composites (Mixar_WindowSetPerPixelAlpha).
+ * These need no window region — and must not have one, because a region is
+ * binary coverage and would clip away exactly the anti-aliased edge that
+ * per-pixel alpha exists to produce. */
+static std::unordered_set<HWND> s_per_pixel_alpha_windows;
+
+/* (Re)build the window region for `hwnd` from its stored radius. Cheap to call
+ * on every WM_WINDOWPOSCHANGED: it returns immediately unless the window size
+ * actually changed since the region was last built. */
+static void mixar_window_apply_corner_region(HWND hwnd, bool force)
+{
+  if (s_per_pixel_alpha_windows.count(hwnd)) {
+    /* The alpha channel is the shape. A region here would re-introduce the
+     * staircase it replaces. */
+    SetWindowRgn(hwnd, NULL, TRUE);
+    return;
+  }
+  auto it = s_corner_shapes.find(hwnd);
+  if (it == s_corner_shapes.end()) {
+    return;
+  }
+  RECT wr;
+  if (!GetWindowRect(hwnd, &wr)) {
+    return;
+  }
+  const int w = wr.right - wr.left;
+  const int h = wr.bottom - wr.top;
+  if (w <= 0 || h <= 0) {
+    return;
+  }
+  MixarCornerShape &shape = it->second;
+  if (!force && shape.applied_w == w && shape.applied_h == h) {
+    return;
+  }
+  shape.applied_w = w;
+  shape.applied_h = h;
+
+  if (shape.radius <= 0.0f) {
+    SetWindowRgn(hwnd, NULL, TRUE);
+    return;
+  }
+
+  /* The radius arrives in logical units, like Mixar_WindowForceSize's size.
+   * Read the DPI off the HWND rather than the GHOST handle — this also runs
+   * from the subclass proc, which only has the window. */
+  UINT dpi = 96;
+  if (HMODULE user32 = GetModuleHandleA("user32.dll")) {
+    using GetDpiForWindowFn = UINT(WINAPI *)(HWND);
+    auto get_dpi_for_window = reinterpret_cast<GetDpiForWindowFn>(
+        GetProcAddress(user32, "GetDpiForWindow"));
+    if (get_dpi_for_window) {
+      const UINT win_dpi = get_dpi_for_window(hwnd);
+      if (win_dpi > 0) {
+        dpi = win_dpi;
+      }
+    }
+  }
+  int r = (int)(shape.radius * (float(dpi) / 96.0f) + 0.5f);
+  /* A capsule is radius == half the short side; clamping here means a caller
+   * can pass the design's own rx and get the same shape it drew. */
+  const int r_max = ((w < h) ? w : h) / 2;
+  if (r > r_max) {
+    r = r_max;
+  }
+  if (r < 1) {
+    SetWindowRgn(hwnd, NULL, TRUE);
+    return;
+  }
+
+  /* CreateRoundRectRgn's bottom-right is exclusive and its last two arguments
+   * are the ELLIPSE size, i.e. twice the radius. */
+  HRGN rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, r * 2 + 1, r * 2 + 1);
+  if (rgn == NULL) {
+    return;
+  }
+  /* SetWindowRgn takes ownership of the region — it must not be deleted. */
+  SetWindowRgn(hwnd, rgn, TRUE);
+}
+
 static int mixar_resize_border_px(HWND hwnd)
 {
   UINT dpi = 96;
@@ -3293,8 +3393,17 @@ static LRESULT CALLBACK mixar_min_size_subclass_proc(
     }
     return 0;
   }
+  else if (uMsg == WM_WINDOWPOSCHANGED) {
+    /* Every resize path lands here — Mixar_WindowForceSize, a user drag on the
+     * island's resize border, GHOST's own setState. Rebuilding is a no-op
+     * unless the size actually changed, so this cannot loop on the redraw
+     * SetWindowRgn triggers. */
+    mixar_window_apply_corner_region(hwnd, /*force=*/false);
+  }
   else if (uMsg == WM_NCDESTROY) {
     s_min_sizes.erase(hwnd);
+    s_corner_shapes.erase(hwnd);
+    s_per_pixel_alpha_windows.erase(hwnd);
     s_drag_states.erase(hwnd);
     s_chromeless_windows.erase(hwnd);
     s_resizable_chromeless_windows.erase(hwnd);
@@ -3373,6 +3482,23 @@ extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height
   SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+/* Windows 11 paints a 1px border around every top-level window, WS_POPUP
+ * overlays included, and DWM draws it outside anything the GL surface can
+ * reach. On the Agent pill that border traced the window's RECTANGLE around a
+ * capsule drawn with a half-height radius, so the resting pill read as a
+ * lozenge sitting inside a bright box (the corner areas themselves are the
+ * pill's own near-black bed, which is within a value of the viewport behind
+ * it — the border line was the whole of what showed).
+ *
+ * DWMWA_BORDER_COLOR (34) with DWMWA_COLOR_NONE removes it. Pre-22H2 Windows
+ * fails the call silently, exactly as it already does for the corner
+ * preference attribute below. */
+static void mixar_window_remove_dwm_border(HWND hwnd)
+{
+  COLORREF none = 0xFFFFFFFE; /* DWMWA_COLOR_NONE */
+  DwmSetWindowAttribute(hwnd, 34 /*DWMWA_BORDER_COLOR*/, &none, sizeof(none));
+}
+
 extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
@@ -3390,6 +3516,7 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
     exStyle &= ~WS_EX_APPWINDOW;
     s_chromeless_windows.insert(hwnd);
     s_resizable_chromeless_windows.insert(hwnd);
+    mixar_window_remove_dwm_border(hwnd);
     /* Install subclass to intercept WM_STYLECHANGING — prevents GHOST
      * or other code from re-adding WS_CAPTION / stripping TOOLWINDOW. */
     SetWindowSubclass(hwnd, mixar_min_size_subclass_proc, 1, 0);
@@ -3401,6 +3528,9 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
     exStyle |= WS_EX_APPWINDOW;
     s_chromeless_windows.erase(hwnd);
     s_resizable_chromeless_windows.erase(hwnd);
+    /* A window that gets its frame back must get its rectangle back too. */
+    s_corner_shapes.erase(hwnd);
+    SetWindowRgn(hwnd, NULL, TRUE);
   }
   SetWindowLongPtr(hwnd, GWL_STYLE, style);
   SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle);
@@ -3423,6 +3553,7 @@ extern "C" void Mixar_WindowSetBorderless(void *window_handle)
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   s_chromeless_windows.insert(hwnd);
   s_resizable_chromeless_windows.erase(hwnd);
+  mixar_window_remove_dwm_border(hwnd);
   SetWindowSubclass(hwnd, mixar_min_size_subclass_proc, 1, 0);
 }
 
@@ -3434,8 +3565,89 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
   /* Win11 22H2+ supports DWMWA_WINDOW_CORNER_PREFERENCE (attr 33).
    * On older Windows this call silently fails — acceptable no-op. */
   enum { DWMWCP_DEFAULT = 0, DWMWCP_DONOTROUND = 1, DWMWCP_ROUND = 2, DWMWCP_ROUNDSMALL = 3 };
-  DWORD pref = (radius > 0.0f) ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
+  /* DONOTROUND even when we do want rounding: the shape below is ours, and
+   * DWM's own preference only offers its ~8px radius, which on the pill drew a
+   * near-square outline around a capsule with a 28.5px one. */
+  DWORD pref = DWMWCP_DONOTROUND;
   DwmSetWindowAttribute(hwnd, 33 /*DWMWA_WINDOW_CORNER_PREFERENCE*/, &pref, sizeof(pref));
+
+  /* Re-asserted here because this runs after every pill/island resize, and a
+   * SWP_FRAMECHANGED from a style change can restore the default border. */
+  mixar_window_remove_dwm_border(hwnd);
+
+  /* The shape itself. Rebuilt whenever the window resizes (WM_WINDOWPOSCHANGED
+   * in mixar_min_size_subclass_proc), so a later Mixar_WindowForceSize that is
+   * not followed by another SetCornerRadius call cannot leave a stale region
+   * clipping the content. */
+  auto it = s_corner_shapes.find(hwnd);
+  if (it == s_corner_shapes.end()) {
+    s_corner_shapes[hwnd] = MixarCornerShape{radius, 0, 0};
+  }
+  else {
+    it->second.radius = radius;
+  }
+  mixar_window_apply_corner_region(hwnd, /*force=*/true);
+}
+
+extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+
+/* Does this window's pixel format carry an alpha channel?
+ *
+ * GHOST_WindowWin32 builds GHOST_ContextWGL with alphaBackground=false, so
+ * nothing ASKED for one — but `wglChoosePixelFormatARB` matches the closest
+ * hardware format, and a colour buffer of 24 bits with no alpha is not a thing
+ * modern GPUs expose; what comes back is RGBA8. This reads what was actually
+ * chosen rather than what was requested, because without alpha bits DWM
+ * composites the client area opaque no matter what the shader writes, and the
+ * caller has to fall back to shaping the window with a region instead. */
+extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return false;
+  }
+  HDC hdc = GetDC(hwnd);
+  if (!hdc) {
+    return false;
+  }
+  bool has_alpha = false;
+  const int format = GetPixelFormat(hdc);
+  if (format != 0) {
+    PIXELFORMATDESCRIPTOR pfd = {};
+    if (DescribePixelFormat(hdc, format, sizeof(pfd), &pfd) != 0) {
+      has_alpha = (pfd.cAlphaBits > 0);
+    }
+  }
+  ReleaseDC(hwnd, hdc);
+  return has_alpha;
+}
+
+/* Ask DWM to composite this window's client alpha, so a fragment drawn with
+ * alpha 0 shows what is behind the window and the anti-aliased edge of a shape
+ * drawn into it survives to the screen. This is the Win32 counterpart of the
+ * non-opaque NSWindow the Cocoa side already uses, and it is what lets the
+ * Agent pill's capsule have a smooth silhouette rather than the hard circle a
+ * window region rasterises.
+ *
+ * Enabling drops any region the window is carrying (see
+ * mixar_window_apply_corner_region); disabling puts it back. */
+extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return;
+  }
+  if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
+    return; /* Caller keeps the region fallback. */
+  }
+  if (enable) {
+    s_per_pixel_alpha_windows.insert(hwnd);
+  }
+  else {
+    s_per_pixel_alpha_windows.erase(hwnd);
+  }
+  Mixar_WindowSetBlurBehind(window_handle, enable);
+  mixar_window_apply_corner_region(hwnd, /*force=*/true);
 }
 
 extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)

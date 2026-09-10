@@ -437,10 +437,12 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 except Exception:
                     auth_token = ""
 
+                from ...core.question_ref import pending_question_ref
                 success = sse_handler.start_input_stream(
                     session_id=session.get_session_id(scene),
                     action=self.action_value,
                     auth_token=auth_token,
+                    question_ref=pending_question_ref(scene),
                 )
 
                 if success:
@@ -539,12 +541,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             on_error=lambda error: queue_sse_error(error, target_scene_name),
             on_complete=lambda: queue_sse_complete(target_scene_name),
         )
+        from ...core.question_ref import bubble_question_ref
         if handler.start_input_stream(
             session_id=session.get_session_id(scene),
             action='submit',
             answers=step["answers"],
             interrupt_id=getattr(bubble, 'interrupt_id', '') or None,
             auth_token=auth_token,
+            question_ref=bubble_question_ref(bubble),
         ):
             # Replace the last card with the answer recap (and drop the
             # buttons) so the transcript keeps what was chosen, the way the

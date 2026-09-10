@@ -100,6 +100,12 @@ def finalize_turn(scene) -> None:
         if getattr(msg, "loader_visible", False):
             msg.loader_visible = False
 
+    try:
+        from mixar.modules.agent_panel.core.cards import settle_running
+        settle_running()
+    except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
+        logger.debug("Agent panel settle failed", exc_info=True)
+
     _bump_layout_epoch(scene)
 
 
@@ -154,6 +160,7 @@ class SlotEventProcessor:
         slot_handlers = [
             ("questions", lambda: self._apply_questions_slot(bubble, event_data["questions"])),
             ("interrupt_id", lambda: self._apply_interrupt_id_slot(bubble, event_data["interrupt_id"])),
+            ("question_ref", lambda: self._apply_question_ref_slot(bubble, event_data["question_ref"])),
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
             ("interrupt_context", lambda: self._apply_interrupt_context_slot(bubble, event_data["interrupt_context"])),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
@@ -198,6 +205,14 @@ class SlotEventProcessor:
     @staticmethod
     def _apply_interrupt_id_slot(bubble: Any, interrupt_id: str) -> None:
         bubble.interrupt_id = interrupt_id or ""
+
+    @staticmethod
+    def _apply_question_ref_slot(bubble: Any, ref: Any) -> None:
+        """Harness v3 durable question identity (run/task/question ids only)."""
+        import json as _json
+        ref = ref if isinstance(ref, dict) else {}
+        keep = {k: str(ref[k])[:120] for k in ("run_id", "task_id", "question_id") if ref.get(k)}
+        bubble.question_ref = _json.dumps(keep) if keep else ""
 
     def _get_or_create_bubble(self, bubble_id: str, scene) -> Optional[Any]:
         """
@@ -464,6 +479,14 @@ class SlotEventProcessor:
         # Start animation timer if any items are in_progress
         if status_counts['IN_PROGRESS'] > 0:
             self._start_loader_timer()
+
+        # The same task list drives the Parallel Agents panel. Fail-soft: a
+        # mirror failure must never break the chat's own todo rendering.
+        try:
+            from mixar.modules.agent_panel.core.cards import mirror_todo_items
+            mirror_todo_items(bubble.todo_items)
+        except Exception:  # noqa: BLE001
+            logger.debug("Agent panel mirror failed", exc_info=True)
 
     def _apply_steps_slot(self, bubble: Any, steps_data: dict, scene) -> None:
         """
