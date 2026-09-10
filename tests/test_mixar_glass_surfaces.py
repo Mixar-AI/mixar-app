@@ -34,6 +34,8 @@ IFACE = ED / "interface"
 
 CARD_PAINT_PATH = IFACE / "interface_mixar_card_paint.hh"
 CARD_PAINT = CARD_PAINT_PATH.read_text(encoding="utf-8")
+CARD_BUTTON_PATH = IFACE / "interface_mixar_card_button.cc"
+CARD_BUTTON = CARD_BUTTON_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -134,3 +136,75 @@ class TestTheSeamIsAPaneInsteadOfAFlatFill:
     def test_the_header_pulls_the_kit_in_and_explains_the_sort(self) -> None:
         assert '#include "ED_mixar_glass.hh"' in CARD_PAINT
         assert "surface" in CARD_PAINT and "control" in CARD_PAINT
+
+
+class TestTheCardButtonsArePanes:
+    """The four profile-card action buttons, all on one pane role.
+
+    They sit ON the profile card, which is itself a pane, so the role is CHIP
+    — the row with no shadow and no specular, whose whole purpose is a chip
+    that does not double the material under it.
+    """
+
+    def _switch(self) -> str:
+        return _code(_fn_body(CARD_BUTTON, "void UI_mixar_card_button_draw("))
+
+    def test_every_variant_draws_the_pane_bed(self) -> None:
+        """One glass call per variant: Accent, Danger, Ghost hover, Card."""
+        assert self._switch().count("mixar_card_glass_round(") == 4, (
+            "a variant still draws a flat bed and keeps a hand-mixed dark that "
+            "no longer matches the family"
+        )
+
+    def test_no_raw_grey_bed_survives(self) -> None:
+        """The greys the bed used to be are what the pane replaces.
+
+        Leaving even one in place gives two buttons the same shape in two
+        different materials, visible only side by side.
+        """
+        switch = self._switch()
+        for grey in ("MX_GRAY_700", "MX_GRAY_800"):
+            assert grey not in switch, f"{grey} is still a button bed"
+
+    def test_the_accent_button_keeps_its_tint_and_stroke(self) -> None:
+        """The pane is the BED; the accent wash and rim stay the button's own.
+
+        Dropping the tint in favour of the neutral pane would silently demote
+        the primary call to action to a grey chip.
+        """
+        switch = self._switch()
+        assert "MX_ACCENT, is_hover ? 0.32f : 0.22f" in switch
+        assert "MX_ACCENT, is_hover ? 0.85f : 0.55f" in switch
+
+    def test_the_danger_button_keeps_its_tint_and_stroke(self) -> None:
+        switch = self._switch()
+        assert "MX_DANGER, is_hover ? 0.18f : 0.12f" in switch
+        assert "MX_DANGER, is_hover ? 0.55f : 0.35f" in switch
+
+    def test_the_ghost_button_stays_borderless_until_hovered(self) -> None:
+        """Its glass call is inside the hover branch, so the resting logout
+        strip keeps showing the card through it rather than a chip."""
+        ghost = CARD_BUTTON[
+            CARD_BUTTON.index("MixarCardElement::GhostButton: {") : CARD_BUTTON.index(
+                "MixarCardElement::CardButton:"
+            )
+        ]
+        assert re.search(
+            r"if \(is_hover\) \{\s*mixar_card_glass_round\(&box, rad, MIXAR_GLASS_CHIP\);",
+            _code(ghost),
+        ), "the GhostButton paints at rest"
+
+    def test_the_plain_button_keeps_its_border_and_a_hover_cue(self) -> None:
+        """Its bed carries no colour, so hover must show in the pane's alpha."""
+        switch = self._switch()
+        assert "mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, 1.0f)" in switch
+        assert "MIXAR_GLASS_CHIP, is_hover ? 1.0f : 0.85f" in switch, (
+            "the plain card button lost its only hover cue with the grey bed"
+        )
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        for call in re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(CARD_BUTTON)):
+            assert "MX_" not in call and "uchar" not in call, (
+                f"a role-taking call was given a colour: {call}"
+            )
+
