@@ -288,6 +288,29 @@ extern "C" void Mixar_WindowGetContentPixelSize(
     void *window_handle, int *r_width, int *r_height);
 extern "C" int Mixar_WindowGetMaxHeightToScreenTop(
     void *window_handle, int reserve_top);
+
+#else
+
+/* The per-pixel-alpha bed is a macOS/Windows compositing path: the state it
+ * reports (`g_pill_per_pixel_alpha`) and the function that sets it both live
+ * inside the block above, because both are written by Mixar_Window* calls that
+ * only exist on those two platforms.
+ *
+ * The ACCESSOR is not platform-specific, and must not be. It is declared
+ * unconditionally in agent_bubble_intern.hh and called unconditionally from
+ * agent_ui_draw.cc (the status pill) and from this file's header-region draw,
+ * so a build that lacks it links nowhere:
+ *
+ *   undefined reference to `blender::agent_bubble_pill_bed_is_transparent()'
+ *
+ * On Linux the answer is a constant: nothing composites this window's alpha,
+ * so the bed stays opaque and the window region is what shapes the capsule --
+ * which is exactly what the header documents `false` to mean. */
+bool agent_bubble_pill_bed_is_transparent()
+{
+  return false;
+}
+
 #endif
 
 /* Mixie chat's custom-drawn region callbacks. We reuse them
