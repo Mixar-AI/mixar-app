@@ -313,11 +313,19 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 {
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
+    cinema_release_chat_seat(C);
+    /* Director left: the aerial map's render buffers go with it (a GPU
+     * context is bound here), and its click transform must not outlive the
+     * card. Owner-guarded so another viewport's draw never frees them. */
+    view3d_director_minimap_release(region, /*free_gpu=*/true);
     return;
   }
 
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
+  cinema_unit_begin(region);
+  /* Records from a previous wide draw must not outlive a compact one. */
+  cinema_qa_begin(region);
 
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
   const int gap = std::max(4, int(6.0f * UI_SCALE_FAC));
@@ -334,13 +342,18 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
    * old compact controls are still the honest fallback. */
   if (cinema_surface_fits(region)) {
     /* No empty-state card here: it would sit on top of the two columns, and
-     * the right column's own "+ Add Camera" is the same first action. */
-    cinema_draw_stage(region);
-    cinema_draw_top_strip(block, region, state);
+     * the right column's own "+ Add Camera" is the same first action. The
+     * camera gate is the frame: fitted to the stage, no chrome around it. */
+    cinema_fit_camera_gate(C, region);
+    cinema_draw_top_strip(block, C, region, state);
     cinema_draw_left_panel(block, C, region, state);
     cinema_draw_right_panel(block, C, region, state);
   }
   else {
+    cinema_release_chat_seat(C);
+    /* Compact rail: no card, so no click target — but keep the render
+     * cached, a second viewport below the fit gate must not thrash it. */
+    view3d_director_minimap_release(region, /*free_gpu=*/false);
     view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
     if (region->winy > unit * 18) {
       draw_tool_rail(block, C, region, state, unit, gap);

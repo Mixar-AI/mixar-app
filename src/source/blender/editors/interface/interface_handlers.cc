@@ -75,6 +75,7 @@
 
 #include "buttons/interface_textbox.hh"
 #include "interface_intern.hh"
+#include "interface_mixar_section.hh" /* Mixar: UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST. */
 
 #include "RNA_access.hh"
 #include "RNA_prototypes.hh"
@@ -5923,6 +5924,21 @@ static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wm
     data->changed_wokspace_status = true;
   }
   if (data->state == BUTTON_STATE_HIGHLIGHT) {
+    /* Mixar: a tagged operator button hands a Ctrl+click or a double-click
+     * to the no-emboss Text laid over it (a My Cameras rename), exactly as
+     * #do_but_LISTROW does for a UI-list row; a plain click stays its own.
+     * See #UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL (interface_mixar_section.hh). */
+    if (UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST(but) &&
+        ((ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY) && (event->val == KM_PRESS) &&
+          (event->modifier & KM_CTRL)) ||
+         (event->type == LEFTMOUSE && event->val == KM_DBL_CLICK)))
+    {
+      Button *labelbut = but_list_row_text_activate(
+          C, but, data, event, BUTTON_ACTIVATE_TEXT_EDITING);
+      if (labelbut) {
+        return WM_UI_HANDLER_BREAK;
+      }
+    }
     if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
       button_activate_state(C, but, BUTTON_STATE_WAIT_RELEASE);
       return WM_UI_HANDLER_BREAK;

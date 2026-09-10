@@ -13,28 +13,21 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
-from .rotation_curves import repair_euler_rotation_continuity
+from .retime import note_beat_timing
+from .rotation_curves import repair_rotation_continuity, rotation_data_path
 from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
-
-
-def _rotation_data_path(camera) -> str:
-    if camera.rotation_mode == 'QUATERNION':
-        return "rotation_quaternion"
-    if camera.rotation_mode == 'AXIS_ANGLE':
-        return "rotation_axis_angle"
-    return "rotation_euler"
 
 
 def _key_camera(camera, frame: int) -> None:
     camera.keyframe_insert(data_path="location", frame=frame, group="Director")
     camera.keyframe_insert(
-        data_path=_rotation_data_path(camera),
+        data_path=rotation_data_path(camera),
         frame=frame,
         group="Director",
     )
     camera.data.keyframe_insert(data_path="lens", frame=frame, group="Director")
-    repair_euler_rotation_continuity(camera)
+    repair_rotation_continuity(camera)
 
 
 def _delete_camera_keys(camera, frame: int) -> None:
@@ -44,14 +37,14 @@ def _delete_camera_keys(camera, frame: int) -> None:
         return
     for target, data_path in (
         (camera, "location"),
-        (camera, _rotation_data_path(camera)),
+        (camera, rotation_data_path(camera)),
         (camera.data, "lens"),
     ):
         try:
             target.keyframe_delete(data_path=data_path, frame=frame)
         except (RuntimeError, TypeError):
             pass
-    repair_euler_rotation_continuity(camera)
+    repair_rotation_continuity(camera)
 
 
 _CAMERA_MOTION_PATHS = {
@@ -234,6 +227,9 @@ def capture_beat(context, shot, beat_seconds: float):
             f"{shot.name} · Keyframe {number:02d}",
         )
         _key_camera(camera, target_frame)
+        from .interpolation import apply_interpolation
+
+        apply_interpolation(shot)
         if shot.handheld:
             # The first capture creates the F-curves noise can attach to.
             from .handheld import refresh_handheld
@@ -242,6 +238,7 @@ def capture_beat(context, shot, beat_seconds: float):
         beat = shot.beats.add()
         beat.beat_id = uuid.uuid4().hex
         beat.frame = target_frame
+        note_beat_timing(shot, beat)
         beat.image = image
         shot.active_beat_index = len(shot.beats) - 1
         scene.frame_end = max(scene.frame_end, target_frame)

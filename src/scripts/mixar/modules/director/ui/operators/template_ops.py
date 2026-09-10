@@ -6,15 +6,19 @@
 
 The designed surface presents one list of named movement styles. Underneath
 they are two different kinds of thing, and this dispatcher is the only place
-that knows which is which:
+that knows which is which — but every pick has an effect the director can
+SEE at once; a template that merely arms a flag reads as broken:
 
-* ``HANDHELD`` and ``Z_FIXED`` are STATES — a flag on the shot and a flag on
-  the session. Handheld deliberately stays an F-modifier flag rather than
-  becoming a camera-move preset (jitter cannot be sparse-keyframed; see
-  ``core/handheld.py``), so this operator sets ``shot.handheld`` and never
-  routes it through ``apply_camera_move``.
-* ``DOLLY_ZOOM`` and ``CRANE`` are one-shot MOVES that key a path through the
-  existing ``core/camera_moves`` presets.
+* ``HANDHELD`` is a STATE (``shot.handheld``): noise F-modifiers on the
+  camera curves (``core/handheld.py``; jitter cannot be sparse-keyframed).
+  Modifiers need curves, so on a shot with no keyframes the pick captures
+  the anchor keyframe first and the drift is live from that moment.
+* ``Z_FIXED`` is a STATE (``state.level_horizon``) that Navigate honours —
+  and the pick also levels the camera NOW: every captured keyframe is
+  re-keyed level, and the live pose too.
+* ``DOLLY_ZOOM`` and ``CRANE`` are one-shot MOVES through the
+  ``core/camera_moves`` presets. Dolly Zoom is the real thing: the camera
+  dollies in while the lens widens so the subject holds its size.
 
 ``shot.camera_template`` records the choice so the list can highlight it
 honestly; it changes no behaviour by itself.
@@ -25,13 +29,58 @@ from bpy.types import Operator
 
 from ...constants import CAMERA_TEMPLATE_ITEMS, RESOLUTION_PRESETS
 from ...core.camera_moves import apply_camera_move
-from ...core.shot_api import active_shot
+from ...core.capture import capture_beat
+from ...core.rotation_curves import repair_rotation_continuity, rotation_data_path
+from ...core.shot_api import active_shot, refresh_manifest
+from ...core.viewport import level_camera_horizon
 
 # Templates that key a path, and the existing preset each one runs.
 _TEMPLATE_MOVES = {
-    "DOLLY_ZOOM": "DOLLY_IN",
+    "DOLLY_ZOOM": "DOLLY_ZOOM",
     "CRANE": "CRANE_UP",
 }
+
+
+def _apply_handheld(context, shot, state) -> str:
+    """Make handheld drift live now; returns the message to report."""
+    if shot.beats:
+        # The property update already re-attached the noise to the curves.
+        return "Handheld drift on this shot's keyframes"
+    # No curves yet for the noise to ride on: anchor the shot here, which
+    # creates them (capture re-runs the handheld refresh itself).
+    beat = capture_beat(context, shot, state.beat_seconds)
+    return f"Captured keyframe 1 at frame {beat.frame} with handheld drift"
+
+
+def _apply_level_horizon(context, shot) -> str:
+    """Level the horizon on every keyframe and the live pose; returns the report."""
+    camera = shot.camera
+    scene = shot.scene_ref or context.scene
+    frames = sorted({int(beat.frame) for beat in shot.beats})
+    if not frames:
+        if level_camera_horizon(camera):
+            return "Horizon leveled; Navigate keeps it level"
+        return "Camera is already level"
+    original = int(scene.frame_current)
+    leveled = 0
+    try:
+        for frame in frames:
+            scene.frame_set(frame)
+            context.view_layer.update()
+            if level_camera_horizon(camera):
+                camera.keyframe_insert(
+                    data_path=rotation_data_path(camera), frame=frame, group="Director"
+                )
+                leveled += 1
+        if leveled:
+            repair_rotation_continuity(camera)
+            refresh_manifest(scene, shot)
+    finally:
+        scene.frame_set(original)
+        context.view_layer.update()
+    if not leveled:
+        return "Every keyframe is already level"
+    return f"Leveled the horizon on {leveled} keyframe(s)"
 
 
 class MIXAR_OT_director_set_template(Operator):
@@ -65,15 +114,20 @@ class MIXAR_OT_director_set_template(Operator):
         shot.handheld = self.template == "HANDHELD"
         state.level_horizon = self.template == "Z_FIXED"
 
-        move = _TEMPLATE_MOVES.get(self.template)
-        if move is None:
+        if self.template == "NONE":
             return {'FINISHED'}
-
         if shot.camera is None:
-            self.report({'ERROR'}, "The shot has no camera to move")
+            self.report({'ERROR'}, "The shot has no camera")
             return {'CANCELLED'}
+
         try:
-            frames = apply_camera_move(context, shot, state, move)
+            if self.template == "HANDHELD":
+                self.report({'INFO'}, _apply_handheld(context, shot, state))
+                return {'FINISHED'}
+            if self.template == "Z_FIXED":
+                self.report({'INFO'}, _apply_level_horizon(context, shot))
+                return {'FINISHED'}
+            frames = apply_camera_move(context, shot, state, _TEMPLATE_MOVES[self.template])
         except Exception as exc:  # noqa: BLE001 — surfaced, never swallowed
             self.report({'ERROR'}, f"Could not apply the template: {exc}")
             return {'CANCELLED'}

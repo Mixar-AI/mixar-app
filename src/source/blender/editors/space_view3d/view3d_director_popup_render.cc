@@ -32,6 +32,8 @@
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
 
+#include "../interface/interface_mixar_profile_card.hh"
+
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -128,6 +130,7 @@ int draw_kind_toggles(bContext *C,
                                            float(items[index].value),
                                            nullptr);
     director_but_tooltip_owned(toggle, items[index].description);
+    ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option);
     if (running) {
       ui::button_flag_enable(toggle, ui::BUT_DISABLED);
     }
@@ -140,7 +143,7 @@ int draw_kind_toggles(bContext *C,
   return enabled_count;
 }
 
-ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   /* Multi-select: picking Beauty/Clay/Depth must not dismiss the popup —
@@ -154,10 +157,13 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   }
   const Scene *scene = CTX_data_scene(C);
 
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int label_h = int(UI_UNIT_Y * 0.85f);
+  /* One `gap` between sections (caption to caption); half of it between
+   * the rows inside a section. Widths are the bar's; only y moves. */
   const int gap = int(UI_UNIT_Y * 0.25f);
+  const int inner_gap = gap / 2;
   int y = 0;
 
   char shot_name[128] = "";
@@ -196,6 +202,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       row_h,
       "Place this shot's keyframe stills together on the Moodboard");
   director_overlay_disable_button(export_stills, beat_count < 1);
+  ui::UI_mixar_cinema_row_tag(export_stills, ui::MixarCinemaRowKind::Action);
   ui::button_func_set(export_stills, render_popup_close, block, nullptr);
 
   /* Rendered motion-guide videos → Moodboard. */
@@ -204,7 +211,9 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= row_h;
   const int enabled_count = draw_kind_toggles(C, block, data, running, y, width, gap);
 
-  y -= gap + row_h;
+  /* Resolution belongs to the guides section: the slider sits under the
+   * toggles at the inner gap, its summary caption directly under it. */
+  y -= inner_gap + row_h;
   ui::Button *resolution = ui::uiDefButR(block,
                                 ui::ButtonType::NumSlider,
                                 "Resolution",
@@ -221,6 +230,9 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   if (running) {
     ui::button_flag_enable(resolution, ui::BUT_DISABLED);
   }
+  /* The row-class track with the green fill to the value; drawing only,
+   * the stock drag / ctrl-click / double-click-to-type stay. */
+  ui::UI_mixar_cinema_row_tag(resolution, ui::MixarCinemaRowKind::Slider);
 
   y -= label_h;
   if (beat_count < 2) {
@@ -268,6 +280,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
         row_h,
         "Render the shot beat span and add each video to Moodboard");
     director_overlay_disable_button(render, beat_count < 2 || enabled_count == 0);
+    ui::UI_mixar_cinema_row_tag(render, ui::MixarCinemaRowKind::Action);
     ui::button_func_set(render, render_popup_close, block, nullptr);
   }
 
@@ -288,16 +301,19 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                           PointerRNA_NULL;
       const ID *image_id = static_cast<const ID *>(image_ptr.data);
       y -= label_h;
-      ui::uiDefIconTextBut(block,
-                       ui::ButtonType::Label,
-                       ICON_FILE_MOVIE,
-                       image_id ? image_id->name + 2 : "Missing video",
-                       0,
-                       y,
-                       short(width),
-                       short(label_h),
-                       nullptr,
-                       std::nullopt);
+      ui::Button *entry = ui::uiDefIconTextBut(block,
+                                               ui::ButtonType::Label,
+                                               ICON_FILE_MOVIE,
+                                               image_id ? image_id->name + 2 : "Missing video",
+                                               0,
+                                               y,
+                                               short(width),
+                                               short(label_h),
+                                               nullptr,
+                                               std::nullopt);
+      /* Caption with its film icon leading; the painter drops the icon
+       * before it clips the name. */
+      ui::UI_mixar_cinema_row_tag(entry, ui::MixarCinemaRowKind::Caption);
     }
   }
 

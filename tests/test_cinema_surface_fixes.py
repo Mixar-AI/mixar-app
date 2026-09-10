@@ -23,6 +23,7 @@ WORKFLOW = ROOT / "src/scripts/mixar/modules/workflow"
 
 HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
 PAINT = (VIEW3D / "view3d_director_cinema_paint.cc").read_text(encoding="utf-8")
+LAYOUT = (VIEW3D / "view3d_director_cinema_layout.cc").read_text(encoding="utf-8")
 LEFT = (VIEW3D / "view3d_director_cinema_left.cc").read_text(encoding="utf-8")
 RIGHT = (VIEW3D / "view3d_director_cinema_right.cc").read_text(encoding="utf-8")
 DOCK = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
@@ -34,13 +35,13 @@ CONSTANTS = (DIRECTOR / "constants.py").read_text(encoding="utf-8")
 
 
 def _define(name: str) -> float:
-    match = re.search(rf"^#define {name} ([0-9.]+)f?\s*(?:/\*.*)?$", HEADER, re.M)
+    match = re.search(rf"^#define {name} (-?[0-9.]+)f?\s*(?:/\*.*)?$", HEADER, re.M)
     assert match is not None, f"{name} is not defined in view3d_director_cinema.hh"
     return float(match.group(1))
 
 
 def _py_constant(name: str) -> float:
-    match = re.search(rf"^{name} = ([0-9.]+)$", CONSTANTS, re.M)
+    match = re.search(rf"^{name} = (-?[0-9.]+)$", CONSTANTS, re.M)
     assert match is not None, f"{name} is not defined in director/constants.py"
     return float(match.group(1))
 
@@ -49,16 +50,21 @@ def _py_constant(name: str) -> float:
 # 1. Speed meter range and direction.
 
 
-def test_speed_meter_range_mirrors_the_python_beat_bounds():
-    assert _define("CINEMA_BEAT_SECONDS_MIN") == _py_constant("MIN_BEAT_SECONDS")
-    assert _define("CINEMA_BEAT_SECONDS_MAX") == _py_constant("MAX_BEAT_SECONDS")
+def test_speed_meter_range_mirrors_the_python_speed_bounds():
+    assert _define("CINEMA_SPEED_MIN") == _py_constant("SPEED_MIN")
+    assert _define("CINEMA_SPEED_MAX") == _py_constant("SPEED_MAX")
+    # The slider rests in the middle: 0 is the timing as captured.
+    assert _define("CINEMA_SPEED_MIN") == -_define("CINEMA_SPEED_MAX")
 
 
-def test_speed_meter_fills_the_way_the_slider_travels():
-    # The slider is a ButtonType::Scroll bound straight to `beat_seconds`, so it
-    # rises rightwards; the meter it paints over must rise with it.
-    assert "(beat_seconds - CINEMA_BEAT_SECONDS_MIN) / span" in LEFT
-    assert "CINEMA_BEAT_SECONDS_MAX - CINEMA_BEAT_SECONDS_MIN" in LEFT
+def test_speed_meter_is_the_level_bar_bound_to_the_shot():
+    # The slider is a ButtonType::Scroll bound straight to `shot.speed`; the
+    # meter is the design's level bar, lit from the left as the slider
+    # travels (0 sits half-lit in the middle).
+    assert "(speed - CINEMA_SPEED_MIN) / span" in LEFT
+    assert "cinema_tick_meter(meter, TICKS, int(std::round(travel * float(TICKS))));" in LEFT
+    assert '"speed",' in LEFT and "beat_seconds" not in LEFT
+    assert "cinema_tick_meter_bipolar" not in PAINT
     # The old hardcoded, inverted window is gone.
     assert "4.0f - beat_seconds" not in LEFT
     assert "4.0f - 0.1f" not in LEFT
@@ -85,7 +91,7 @@ def test_the_resolution_operator_still_scales_the_short_side():
 
 
 def test_list_row_height_is_clamped_to_the_pitch():
-    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in PAINT
+    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in LAYOUT
     # Both lists draw through the clamp; a raw CINEMA_ROW_H row overlaps the
     # next one, and the later-created ui::Button wins the shared band.
     assert "cinema_list_row_h()" in RIGHT
@@ -93,8 +99,11 @@ def test_list_row_height_is_clamped_to_the_pitch():
     assert "const float row_h = CINEMA_ROW_H * u;" not in RIGHT
 
 
-def test_the_clamp_actually_bites_for_the_current_tokens():
-    assert _define("CINEMA_ROW_H") > _define("CINEMA_LIST_PITCH")
+def test_rows_never_exceed_the_list_pitch():
+    # One row class everywhere: the dropdown row IS the list row's height.
+    assert _define("CINEMA_ROW_H") >= _define("CINEMA_LIST_PITCH")
+    assert _define("CINEMA_SEGMENT_H") == _define("CINEMA_ROW_H")
+    assert _define("CINEMA_PHONE_H") == _define("CINEMA_ROW_H")
 
 
 # -------------------------------------------------------------------------
@@ -102,10 +111,10 @@ def test_the_clamp_actually_bites_for_the_current_tokens():
 
 
 def test_height_gate_is_derived_from_the_lowest_content():
-    assert "700.0f" not in PAINT
-    assert "CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H" in PAINT
-    assert "CINEMA_EXPORT_Y + CINEMA_EXPORT_H" in PAINT
-    assert "content_bottom - CINEMA_VIEWPORT_TOP" in PAINT
+    assert "700.0f" not in LAYOUT
+    assert "CINEMA_SPEED_CARD_Y + CINEMA_SPEED_CARD_H" in LAYOUT
+    assert "CINEMA_EXPORT_Y + CINEMA_EXPORT_H" in LAYOUT
+    assert "content_bottom - CINEMA_VIEWPORT_TOP" in LAYOUT
 
 
 def test_height_gate_leaves_the_speed_slider_and_export_inside_the_region():
@@ -114,9 +123,106 @@ def test_height_gate_leaves_the_speed_slider_and_export_inside_the_region():
         _define("CINEMA_EXPORT_Y") + _define("CINEMA_EXPORT_H"),
     )
     required = content_bottom - _define("CINEMA_VIEWPORT_TOP")
-    # The old gate was 700 design units; the surface needs 728.
-    assert required == pytest.approx(728.0)
-    assert required > 700.0
+    # The compact layout pass brought the design's foot up from 728 so a
+    # MacBook viewport with the timeline open (~680) holds it at 1x.
+    assert required == pytest.approx(655.0)
+    assert required <= 680.0
+
+
+def test_the_surface_shrinks_to_fit_before_it_gives_up():
+    # A laptop viewport (1512x982 logical, timeline expanded) is ~680 design
+    # px tall against the 728 the design needs. Before the fit rule that meant
+    # the compact rail on every MacBook; now the design draws at ~0.93x, and
+    # only below CINEMA_SCALE_MIN does the compact fallback take over.
+    assert 0.5 <= _define("CINEMA_SCALE_MIN") <= 0.8
+    fits = LAYOUT[LAYOUT.index("bool cinema_surface_fits(") :]
+    fits = fits[: fits.index("\n}\n")]
+    assert "cinema_fit_scale(region) >= CINEMA_SCALE_MIN" in fits
+    # The unit is the fit, never below the floor, and never above 1x.
+    begin = LAYOUT[LAYOUT.index("void cinema_unit_begin(") :]
+    begin = begin[: begin.index("\n}\n")]
+    assert "std::max(fit, CINEMA_SCALE_MIN)" in begin
+    scale = LAYOUT[LAYOUT.index("float cinema_fit_scale(") :]
+    scale = scale[: scale.index("\n}\n")]
+    # Never above 1x: the panels keep their size on a big screen; only the
+    # camera gate grows (view3d_director_cinema_gate.cc).
+    assert "std::clamp(fit, 0.0f, 1.0f)" in scale
+    assert "CINEMA_REF_W" not in HEADER and "CINEMA_SCALE_MAX" not in HEADER
+
+
+def test_every_draw_resolves_the_unit_from_the_viewport_region():
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert OVERLAY.index("cinema_unit_begin(region)") < OVERLAY.index(
+        "cinema_surface_fits(region)"
+    )
+    # The dock is one control row tall; its unit comes from the main region.
+    assert "cinema_unit_begin(main_region)" in TIMELINE
+    assert TIMELINE.index("cinema_unit_begin(main_region)") < TIMELINE.index(
+        "cinema_draw_dock_panel(region)"
+    )
+
+
+def test_qa_records_are_cleared_before_either_layout_draws():
+    # A compact draw after a wide one must not keep publishing the wide
+    # surface's rects: the harness would click controls that are not there.
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert OVERLAY.index("cinema_qa_begin(region)") < OVERLAY.index(
+        "if (cinema_surface_fits(region))"
+    )
+    assert TIMELINE.index("cinema_qa_begin(region)") < TIMELINE.index(
+        "cinema_draw_dock_panel(region)"
+    )
+    # The top strip publishes its rects first; no column may clear them.
+    for name in ("view3d_director_cinema_left.cc", "view3d_director_cinema_right.cc"):
+        assert "cinema_qa_begin(" not in (VIEW3D / name).read_text(encoding="utf-8"), name
+
+
+def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
+    # Stage top = column top, stage bottom = lowest content: one rect, used
+    # by the painter and by the navigation gizmo placement.
+    stage = LAYOUT[LAYOUT.index("bool cinema_stage_rect(") :]
+    stage = stage[: stage.index("\n}\n")]
+    assert "CINEMA_COLUMN_TOP" in stage and "cinema_content_bottom()" in stage
+    # No decorative frame is painted any more: the camera gate is fitted to
+    # the stage instead, once per layout change.
+    assert "cinema_draw_stage" not in LAYOUT
+    GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
+    assert "cinema_stage_rect(C, region, &stage)" in GATE
+    assert "fit_matches(*record, fit)" in GATE
+    assert "BKE_screen_view3d_zoom_from_fac(fac * scale)" in GATE
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert "cinema_fit_camera_gate(C, region);" in OVERLAY
+    GIZMO = (VIEW3D / "view3d_gizmo_navigate.cc").read_text(encoding="utf-8")
+    assert "cinema_stage_rect(C, region, &stage)" in GIZMO
+    assert "rect_adjusted.xmax = int(stage.xmax - pad)" in GIZMO
+    # The Mixar banner chip sits above the left column: the column's width
+    # from the side margin, on the strip band, in the brand gradient with
+    # the Mixar mark. It is chrome only.
+    assert "brand_chip(" in TOP
+    assert "ICON_MIXAR_ICON" in TOP
+    assert "CINEMA_COL_BRAND_TOP" in TOP
+    assert (
+        "brand_chip(cinema_design_rect(region, margin, STRIP_Y, CINEMA_PANEL_W, CINEMA_PHONE_H))"
+        in TOP
+    )
+    assert "const float margin = cinema_margin(region);" in TOP
+
+
+def test_the_banner_chip_is_inert_and_only_on_the_wide_surface():
+    chip = TOP[TOP.index("void brand_chip(") :]
+    chip = chip[: chip.index("\n}\n")]
+    # No button, no QA record, no tooltip: nothing for the harness to find.
+    for forbidden in ("cinema_op_button", "cinema_icon_button", "cinema_popup_button",
+                      "cinema_qa_record"):
+        assert forbidden not in chip, forbidden
+    # Same icon call the Agent island uses; the mark is drawn in colour.
+    assert "ui::icon_draw_ex(" in chip and "/*mono_color=*/nullptr" in chip
+    # Only the wide surface's strip paints it (the compact rail never does).
+    assert TOP.count("brand_chip(") == 2
+    assert TOP.index("void cinema_draw_top_strip(") < TOP.rindex("brand_chip(")
+    # The tokens it lays out with exist and read sensibly.
+    assert _define("CINEMA_BRAND_LOGO") < _define("CINEMA_PHONE_H")
+    assert _define("CINEMA_BRAND_MARK") < _define("CINEMA_BRAND_LOGO")
 
 
 def test_the_columns_place_their_lowest_cards_through_those_constants():
@@ -169,15 +275,19 @@ def test_frame_fields_yield_to_the_transport():
 # 7. Every painted keycap hint is a real binding.
 
 
-def test_the_navigate_hint_is_bound():
-    assert '{332.0f, {"O"}, 1, "Navigate", false}' in TOP
-    assert '"mixar.director_navigate",' in KEYMAP
+def test_the_aerial_hint_is_bound():
+    assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
+    assert '"mixar.director_aerial",' in KEYMAP
     assert "type='O'," in KEYMAP
-    assert "director_navigate" in KEYMAP.split("_OPERATOR_NAMES")[1]
+    assert "director_aerial" in KEYMAP.split("_OPERATOR_NAMES")[1]
+    # O no longer starts the walk; the walk operator stays for the gate button.
+    o_item = KEYMAP[: KEYMAP.index("type='O',")]
+    assert o_item.rstrip().endswith('"mixar.director_aerial",')
+    assert '"mixar.director_navigate",\n            type=\'O\'' not in KEYMAP
 
 
-def test_navigate_is_not_bound_globally():
-    # MIXAR_OT_director_navigate.poll has no area/region test, so the binding
+def test_aerial_is_not_bound_globally():
+    # MIXAR_OT_director_aerial.poll has no area/region test, so the binding
     # must live only in keymaps dispatched inside a 3D viewport.
     block = KEYMAP.split("_NAVIGATE_KEYMAPS = (")[1].split("\n)")[0]
     assert "User Interface" not in block
@@ -205,7 +315,7 @@ def test_camera_list_windows_around_the_active_shot():
 
 
 def test_window_start_clamps_into_range():
-    start = PAINT[PAINT.index("int cinema_list_window_start") :]
+    start = LAYOUT[LAYOUT.index("int cinema_list_window_start") :]
     assert "count <= CINEMA_LIST_MAX_ROWS" in start
     assert "std::clamp(centred, 0, count - CINEMA_LIST_MAX_ROWS)" in start
 
@@ -310,3 +420,180 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     # different reading from the lit state.
     assert "const bool pressed =" in body
     assert "UI_SELECT" in body
+
+
+def test_every_rounded_control_shares_the_row_radius():
+    """Dropdowns, segments, chips, list rows, the strip's controls and the
+    Export button all round at CINEMA_ROW_RADIUS; only cards use the panel
+    radius. The dock's 26px chips cap the radius to a pill."""
+    assert "cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);" in RIGHT
+    assert "cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);" in RIGHT
+    assert "CINEMA_PANEL_RADIUS * u, track_top" not in RIGHT
+    assert "cinema_fill(rect, CINEMA_ROW_RADIUS * u, phone_bg);" in TOP
+    assert "cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);" in TOP
+    assert TOP.count("CINEMA_ROW_RADIUS * cinema_unit()") == 2
+    assert DOCK.count("std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f)") == 2
+
+
+def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
+    # Hints align with the fitted camera border's left edge: the stage inset
+    # by the SAME pad the gate fit uses, so nothing draws above the left column.
+    assert "gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;" in TOP
+    # ... but the drawn border can be height-limited and sit inside the
+    # stage, so the live border wins when there is one.
+    assert "if (cinema_camera_gate_rect(C, region, &border)) {" in TOP
+    assert "gate_left = border.xmin / u;" in TOP
+    assert "float next_x = gate_left;" in TOP
+    assert "next_x = hint_end[index] + CINEMA_HINT_GAP;" in TOP
+    GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
+    assert "BLI_rctf_pad(&target, -CINEMA_GATE_PAD * u, -CINEMA_GATE_PAD * u);" in GATE
+    # The phone hand-off spans the right column, in the strip row.
+    assert "const rctf phone = {float(region->winx) - (margin + CINEMA_PANEL_W) * u," in TOP
+    assert "float(region->winx) - margin * u," in TOP
+    assert "CINEMA_HINT_X" not in HEADER and "CINEMA_PHONE_W" not in TOP
+
+
+def test_captions_use_the_dimmer_caption_colour():
+    assert "const float caption_col[4] = CINEMA_COL_CAPTION;" in LEFT
+    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in LEFT
+    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in RIGHT
+
+
+def test_popup_rows_paint_as_the_surface_row_class():
+    """Dropdown popups are stock block popups; every option row is tagged as
+    a CinemaRow card element so it paints as the graded chip / dim text the
+    surface uses, with tokens mirrored from the cinema header."""
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
+    state = popup[popup.index("void director_popup_state(") :]
+    state = state[: state.index("\n}\n")]
+    assert "ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option" in state
+    row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
+    assert f"ROW_RADIUS = {_define('CINEMA_ROW_RADIUS'):.1f}f" in row
+    assert "ROW_TOP[4] = {0x58, 0x58, 0x58, 255}" in row  # CINEMA_COL_ROW_TOP #585858
+    assert "ROW_BOTTOM[4] = {0x24, 0x24, 0x24, 255}" in row  # CINEMA_COL_ROW_BOTTOM #242424
+    topbar = (INTERFACE / "interface_mixar_topbar.cc").read_text(encoding="utf-8")
+    assert "case MixarCardElement::CinemaRow:" in topbar
+
+
+def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
+    """The design's chat bar under the camera frame is the Agent island's own
+    resting pill (existing behaviour kept): the gate fit reserves the pill's
+    band, hands the seat over in window pixels every draw, and every draw
+    that does not show the surface releases it. On the bubble side the
+    Cinema seat outranks the user-placed one only while it is valid."""
+    GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
+    assert "ED_agent_bubble_pill_band_px(win)" in GATE
+    # Foot CINEMA_CHAT_GAP above the timeline's top border (the region's
+    # bottom), gate kept clear above it or on the columns' foot if higher.
+    assert "const float pill_bottom = chat_gap;" in GATE
+    assert "ED_agent_bubble_set_cinema_seat(win, true, region->winrct.ymin + int(pill_bottom));" in GATE
+    # The frame's foot is free down to the chat bar; its top sits on the
+    # columns' top; it is sized to the width between the columns.
+    assert "stage.ymin = pill_top + chat_gap;" in GATE
+    assert "const float dy = target.ymax - border.ymax;" in GATE
+    # The strip's controls hang off the drawn frame's right edge.
+    assert "gate_right = border.xmax / u;" in TOP
+    assert "const float strip_right = gate_right * u;" in TOP
+    assert GATE.index("ED_agent_bubble_set_cinema_seat(win,") < GATE.index("GateFit fit;")
+    OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert OVERLAY.count("cinema_release_chat_seat(C);") == 2
+    BUBBLE = (ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc").read_text(
+        encoding="utf-8"
+    )
+    seat = BUBBLE[BUBBLE.index("static void pill_seat_on_host()") :]
+    seat = seat[: seat.index("\n}\n")]
+    # A bottom MARGIN through the centre-bottom anchor: parent offsets are
+    # measured from the host's frame top, and a content-relative y converted
+    # to one lands a title bar too high.
+    assert seat.index("pill_cinema_margin(&cinema_margin)") < seat.index("if (g_pill_user_placed)")
+    assert "Mixar_WindowAnchorAtParentCentreBottom(g_pill_ghostwin, g_host_ghostwin, cinema_margin)" in seat
+    assert "pill_cinema_offset" not in BUBBLE
+    closed = BUBBLE[BUBBLE.index("void ED_agent_bubble_windows_closed()") :]
+    closed = closed[: closed.index("\n}\n")]
+    assert "g_pill_cinema_seat_valid = false;" in closed
+
+
+def test_popups_size_to_their_bar_and_round_every_corner():
+    """A dropdown's list is a detached chip under its bar: the rows take the
+    bar's width (handed through the block button's arg), and the backdrop
+    rounds all four corners instead of squaring the ones facing the bar."""
+    popup = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
+    assert "int director_popup_width(const void *arg, const int fallback)" in popup
+    assert "ui::block_flag_enable(block, ui::BLOCK_MIXAR_ROUND_ALL);" in popup
+    assert "director_popup_width(arg, UI_UNIT_X * 12)" in popup
+    interp = (VIEW3D / "view3d_director_popup_interp.cc").read_text(encoding="utf-8")
+    render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
+    assert "director_popup_width(arg" in interp and "director_popup_width(arg" in render
+    assert "g_popup_bar_width[int(slot)]" in PAINT
+    for name, slot in (("left", "Row"), ("top", "Strip"), ("right", "Export")):
+        text = (VIEW3D / f"view3d_director_cinema_{name}.cc").read_text(encoding="utf-8")
+        assert f"CinemaPopupSlot::{slot}" in text, name
+    widgets = (INTERFACE / "interface_widgets.cc").read_text(encoding="utf-8")
+    assert "block_flag & (BLOCK_POPUP | BLOCK_MIXAR_ROUND_ALL)" in widgets
+    header = (ROOT / "src/source/blender/editors/include/UI_interface_c.hh").read_text(encoding="utf-8")
+    assert "BLOCK_MIXAR_ROUND_ALL = 1 << 28," in header
+
+
+def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
+    """The Export popup's kind toggles and action rows paint as CinemaRows.
+    A Row (enum-flag toggle) keeps its VALUE in hardmax, so the tag must not
+    write its payload there — that clobbered the bit each toggle set."""
+    render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
+    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option)" in render
+    assert render.count("ui::MixarCinemaRowKind::Action") == 2
+    row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
+    tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
+    tag = tag[: tag.index("\n}\n")]
+    assert "if (but->type != ButtonType::Row) {" in tag
+    # The painter lays the row out itself from the FULL label (Blender clips
+    # drawstr for its stock layout), dropping the icon when the cell is tight.
+    assert "but->str.empty() ? but->drawstr.c_str() : but->str.c_str()" in row
+    assert "icon_size + icon_gap + label_w <= float(BLI_rcti_size_x(&text))" in row
+
+
+def test_transport_steps_are_triangle_plus_inner_dot():
+    """The design's transport: play is a filled triangle; each step is a
+    smaller triangle pointing outward with a dot on the side facing play.
+
+    Sizes are explicit design-px tokens measured off the mock (play 16 x 15,
+    step triangle ~8.5 x 9.5, dot ~4.5, centres 36 apart, one muted grey) —
+    the hit box must never decide how big a glyph paints, which is how the
+    triangles came out twice too tall, half as wide, and near-white."""
+    glyph = DOCK[DOCK.index("void transport_glyph(") :]
+    glyph = glyph[: glyph.index("\n}\n")]
+    # Orientation: apex outward, dot on the inner (play-facing) side.
+    assert "const float outer = cx + dir * total * 0.5f;" in glyph
+    assert "cinema_triangle(outer - dir * sw, cy, dir * sw, sh, col);" in glyph
+    assert "const float dot_x0 = outer - dir * (sw + gap);" in glyph
+    assert "stop" not in glyph
+
+    def dock_const(name: str) -> float:
+        match = re.search(rf"^constexpr float {name} = (-?[0-9.]+)f;", DOCK, re.M)
+        assert match is not None, f"{name} is not a constexpr in the dock"
+        return float(match.group(1))
+
+    # Explicit glyph tokens: the play is a squat near-equilateral triangle
+    # (width ~= height), the steps two thirds its height.
+    assert dock_const("PLAY_H") == 18.0
+    assert dock_const("STEP_H") == 12.0
+    assert dock_const("DOT_D") == 5.5
+    assert dock_const("STEP_GAP") == 3.0
+    assert 0.9 <= dock_const("GLYPH_ASPECT") <= 1.0
+    # Pitch: 26 hit box + 18 gap = 44 design px between glyph centres.
+    assert dock_const("TRANSPORT_SIZE") == 26.0
+    assert dock_const("TRANSPORT_GAP") == 18.0
+    # The glyph sizes itself from the tokens, never from the slot box.
+    assert "PLAY_SCALE" not in DOCK
+    assert "BLI_rctf_size_y(&box)" not in glyph
+    assert "BLI_rctf_size_x(&box)" not in glyph
+    for token in ("PLAY_H", "STEP_H", "DOT_D", "STEP_GAP", "GLYPH_ASPECT"):
+        assert f"{token} * " in glyph, f"{token} is not what sizes the glyph"
+    # One muted grey for all three glyphs (pause included): RGB 135 / 255.
+    assert re.search(
+        r"^constexpr float TRANSPORT_COL\[4\] = \{0\.53f, 0\.53f, 0\.53f, 1\.0f\};",
+        DOCK,
+        re.M,
+    )
+    assert "const float *col = TRANSPORT_COL;" in glyph
+    assert "0.878f" not in DOCK
+    assert re.search(r"const float col\[4\] = \{", glyph) is None

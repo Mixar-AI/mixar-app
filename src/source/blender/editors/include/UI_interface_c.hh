@@ -322,6 +322,12 @@ enum {
    * and inherited by sub-menus from their parent.
    */
   BLOCK_NO_ACCELERATOR_KEYS = 1 << 27,
+  /**
+   * Mixar: round ALL corners of a block popup's backdrop, ignoring the
+   * open direction (which squares the corners facing the parent button).
+   * The Cinema Mode dropdown lists are detached chips under their bar.
+   */
+  BLOCK_MIXAR_ROUND_ALL = 1 << 28,
 };
 
 /** #PopupBlockHandle.menuretval */

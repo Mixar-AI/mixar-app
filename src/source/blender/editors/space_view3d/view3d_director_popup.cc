@@ -12,6 +12,7 @@
  * registered Director/camera properties, so no value logic is duplicated.
  */
 
+#include <algorithm>
 #include <cmath>
 
 #include "BKE_context.hh"
@@ -25,6 +26,8 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
+
+#include "../interface/interface_mixar_profile_card.hh"
 
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
@@ -61,10 +64,30 @@ ui::Block *director_popup_block_begin(bContext *C, ARegion *region, const char *
   return block;
 }
 
+/* The bounds padding block_end applies around the rows. */
+static int director_popup_pad()
+{
+  return int(0.4f * UI_UNIT_X);
+}
+
+int director_popup_width(const void *arg, const int fallback)
+{
+  if (arg == nullptr) {
+    return fallback;
+  }
+  const float bar_w = *static_cast<const float *>(arg);
+  if (bar_w <= 0.0f) {
+    return fallback;
+  }
+  return std::max(int(bar_w) - director_popup_pad() * 2, UI_UNIT_X * 6);
+}
+
 void director_popup_block_end(ui::Block *block)
 {
   ui::block_direction_set(block, ui::UI_DIR_DOWN);
-  ui::block_bounds_set_normal(block, int(0.4f * UI_UNIT_X));
+  ui::block_bounds_set_normal(block, director_popup_pad());
+  /* A detached chip under its bar: all four corners round. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_ROUND_ALL);
 }
 
 void director_popup_state(ui::Button *but, const bool active, const bool enabled)
@@ -75,6 +98,28 @@ void director_popup_state(ui::Button *but, const bool active, const bool enabled
   if (!enabled) {
     ui::button_flag_enable(but, ui::BUT_DISABLED);
   }
+  /* Paint as the Cinema surface's row class rather than a stock widget, so
+   * a list matches the block it opened from. The kind follows the button
+   * type: a NumSlider is the Slider track; a Row toggle stays an Option
+   * that lights from UI_SELECT (its value lives in `hardmax`, which the tag
+   * never writes); a Text or Menu field is left STOCK for now (a Field
+   * paints nothing idle — see MixarCinemaRowKind::Field); anything else is
+   * the option row, the graded chip when live. */
+  switch (ui::UI_mixar_button_type(but)) {
+    case ui::ButtonType::NumSlider:
+      ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Slider);
+      break;
+    case ui::ButtonType::Text:
+    case ui::ButtonType::Menu:
+      break;
+    case ui::ButtonType::Row:
+      ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Option);
+      break;
+    default:
+      ui::UI_mixar_cinema_row_tag(
+          but, active ? ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option);
+      break;
+  }
 }
 
 void director_popup_section_label(ui::Block *block,
@@ -82,17 +127,20 @@ void director_popup_section_label(ui::Block *block,
                                   const int y,
                                   const int width)
 {
-  ui::uiDefBut(block,
-           ui::ButtonType::Label,
-           text,
-           0,
-           y,
-           short(width),
-           short(UI_UNIT_Y * 0.85f),
-           nullptr,
-           0,
-           0,
-           std::nullopt);
+  ui::Button *label = ui::uiDefBut(block,
+                                   ui::ButtonType::Label,
+                                   text,
+                                   0,
+                                   y,
+                                   short(width),
+                                   short(UI_UNIT_Y * 0.85f),
+                                   nullptr,
+                                   0,
+                                   0,
+                                   std::nullopt);
+  /* Every Director popup's captions read as the surface's 12 px caption
+   * (dim, no chrome) rather than a stock label. */
+  ui::UI_mixar_cinema_row_tag(label, ui::MixarCinemaRowKind::Caption);
 }
 
 namespace {
@@ -111,10 +159,23 @@ ui::Button *popup_op_button(ui::Block *block,
       block, operator_id, icon, label, x, y, width, height, tooltip);
 }
 
+/**
+ * One cell of a segmented group: the row state (BUT_ACTIVE_DEFAULT carries
+ * "active", BUT_DISABLED "locked"), then the Segment kind on top so the
+ * cells on this baseline paint as one hover-expanding group. The cells are
+ * laid out as equal parts of the row; their hit rects never change (a block
+ * popup is not refreshable), only the painted widths do.
+ */
+void popup_segment_state(ui::Button *but, const bool active, const bool enabled)
+{
+  director_popup_state(but, active, enabled);
+  ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Segment);
+}
+
 /* -------------------------------------------------------------------- */
 /* Lens: projection type plus photographic focal-length presets. */
 
-ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -124,7 +185,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     return block;
   }
 
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int gap = int(UI_UNIT_Y * 0.3f);
   int y = 0;
@@ -153,7 +214,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                  "Switch the lens projection");
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(but), "lens_type", types[index].identifier);
-    director_popup_state(but, data.camera->type == types[index].camera_type, data.editable);
+    popup_segment_state(but, data.camera->type == types[index].camera_type, data.editable);
   }
   y -= gap;
 
@@ -228,7 +289,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 /* -------------------------------------------------------------------- */
 /* Aspect: named output formats. */
 
-ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -254,7 +315,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       {"VERTICAL", "Social media  ·  9:16", 9, 16},
       {"SQUARE", "Square  ·  1:1", 1, 1},
   };
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   int y = 0;
   for (const AspectPreset &preset : presets) {
@@ -282,7 +343,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 /* -------------------------------------------------------------------- */
 /* Moves: one-click cinematic camera moves, timing, and handheld. */
 
-ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
 {
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
@@ -307,7 +368,7 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       {"Crane", "CRANE_UP", ICON_TRIA_UP, "Up", "CRANE_DOWN", ICON_TRIA_DOWN, "Down"},
       {"Pan", "PAN_LEFT", ICON_BACK, "Left", "PAN_RIGHT", ICON_FORWARD, "Right"},
   };
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int label_h = int(UI_UNIT_Y * 0.85f);
   const int gap = int(UI_UNIT_Y * 0.25f);

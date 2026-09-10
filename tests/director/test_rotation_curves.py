@@ -98,7 +98,7 @@ def test_wraparound_is_made_continuous_and_handles_keep_their_shape(monkeypatch)
     left_offset = point.handle_left[1] - point.co[1]
     right_offset = point.handle_right[1] - point.co[1]
 
-    changed = rotation_curves.repair_euler_rotation_continuity(camera)
+    changed = rotation_curves.repair_rotation_continuity(camera)
 
     assert changed == 1
     assert math.degrees(point.co[1]) == 225.0
@@ -120,23 +120,23 @@ def test_repair_is_chronological_and_idempotent(monkeypatch):
     ]
     camera = _camera(curves)
 
-    assert rotation_curves.repair_euler_rotation_continuity(camera) == 2
+    assert rotation_curves.repair_rotation_continuity(camera) == 2
     keyed = sorted(curves[2].keyframe_points, key=lambda point: point.co[0])
     assert [round(math.degrees(point.co[1])) for point in keyed] == [90, 225, 270]
-    assert rotation_curves.repair_euler_rotation_continuity(camera) == 0
+    assert rotation_curves.repair_rotation_continuity(camera) == 0
 
 
 def test_partial_or_misaligned_curves_fail_closed(monkeypatch):
     _install_fakes(monkeypatch)
     partial = [_Curve(0, (0.0, 0.0, 0.0)), _Curve(2, (0.0, 0.0, 0.0))]
-    assert rotation_curves.repair_euler_rotation_continuity(_camera(partial)) == 0
+    assert rotation_curves.repair_rotation_continuity(_camera(partial)) == 0
 
     misaligned = [
         _Curve(0, (0.0, 0.0, 0.0)),
         _Curve(1, (0.0, 0.0, 0.0), frames=(1, 12, 21)),
         _Curve(2, (0.0, 0.0, 0.0)),
     ]
-    assert rotation_curves.repair_euler_rotation_continuity(_camera(misaligned)) == 0
+    assert rotation_curves.repair_rotation_continuity(_camera(misaligned)) == 0
     assert all(curve.update_count == 0 for curve in misaligned)
 
 
@@ -145,7 +145,7 @@ def test_non_euler_camera_is_untouched(monkeypatch):
     curves = [_Curve(axis, (0.0, 0.0, 0.0)) for axis in range(3)]
 
     assert (
-        rotation_curves.repair_euler_rotation_continuity(
+        rotation_curves.repair_rotation_continuity(
             _camera(curves, mode='QUATERNION')
         )
         == 0
@@ -182,7 +182,7 @@ def test_half_turn_branch_flip_is_repaired(monkeypatch):
     ]
     camera = _camera(curves)
 
-    assert rotation_curves.repair_euler_rotation_continuity(camera) == 1
+    assert rotation_curves.repair_rotation_continuity(camera) == 1
 
     repaired = [
         tuple(curve.keyframe_points[index].co[1] for curve in curves)
@@ -200,7 +200,7 @@ def test_half_turn_branch_flip_is_repaired(monkeypatch):
         for earlier, later in zip(repaired, repaired[1:]):
             assert abs(later[axis] - earlier[axis]) < math.pi / 2
 
-    assert rotation_curves.repair_euler_rotation_continuity(camera) == 0
+    assert rotation_curves.repair_rotation_continuity(camera) == 0
 
 
 def test_leading_flipped_key_pulls_later_rows_onto_its_branch(monkeypatch):
@@ -216,7 +216,7 @@ def test_leading_flipped_key_pulls_later_rows_onto_its_branch(monkeypatch):
     ]
     camera = _camera(curves)
 
-    assert rotation_curves.repair_euler_rotation_continuity(camera) == 1
+    assert rotation_curves.repair_rotation_continuity(camera) == 1
 
     repaired = [
         tuple(curve.keyframe_points[index].co[1] for curve in curves)

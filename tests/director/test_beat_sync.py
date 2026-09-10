@@ -66,10 +66,11 @@ def sync(monkeypatch):
         "_ensure_timer",
         lambda: setattr(calls, "timer_started", calls.timer_started + 1),
     )
-    monkeypatch.setitem(beat_sync._state, "key", None)
-    monkeypatch.setitem(beat_sync._state, "count", None)
-    monkeypatch.setitem(beat_sync._state, "prune", False)
-    monkeypatch.setitem(beat_sync._state, "adopt", False)
+    monkeypatch.setattr(
+        beat_sync, "repair_rotation_continuity", lambda camera: 0
+    )
+    for key, value in beat_sync._INITIAL_STATE.items():
+        monkeypatch.setitem(beat_sync._state, key, value)
     return calls
 
 
