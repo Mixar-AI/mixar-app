@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 """Reference-image operators for the agent island's category panes.
 
 Two small operators the island's C++ panes bind:
@@ -127,7 +130,8 @@ def _attach_to_imagegen(scene, img, filepath):
         ref_item.display_resolution = "Unknown"
     ref_item.display_path = filepath
     if hasattr(tab, "use_reference_images"):
-        tab.use_reference_images = True
+        # Uploaded/captured refs are used with board-selection mode OFF.
+        tab.use_reference_images = False
 
 
 def _attach_to_board_selected(scene, filepath):

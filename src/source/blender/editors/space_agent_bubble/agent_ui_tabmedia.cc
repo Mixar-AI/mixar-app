@@ -35,6 +35,9 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "UI_resources.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -42,7 +45,6 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabmedia.hh"
 #include "agent_ui_tabmedia_intern.hh"
-#include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -70,9 +72,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
     return;
   }
 
-  /* Chip colours live with the chip painter (media_param_chips_paint); this
-   * file only needs the dim tone for its own overflow / unavailable copy. */
-  const float col_dim[4] = AGENT_COL_TEXT_DIM;
+  /* Overflow and unavailable copy use the shared secondary text tone. */
+  const float *col_dim = ui::mixar_tokens::zen.secondary;
 
   const float font = PANE_FONT * u;
   const float font_sub = PANE_FONT_SUB * u;
@@ -132,7 +133,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
     const float track_w = BLI_rctf_size_x(&track_probe);
     const float x0 = (band.xmin + band.xmax) * 0.5f - track_w * 0.5f;
     pane_segmented_layout(x0, seg_top, seg_labels, 2, u, seg_rects);
-    pane_segmented_paint(seg_rects, seg_labels, video ? 1 : 0, 2, u);
   }
 
   /* ---- Params rows: model dropdown + catalog chips, wrap to 2 rows. ---- */
@@ -216,9 +216,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
     shown++;
   }
 
-  /* Chip art lives in the util TU (500-line rule) — this file lays out and
-   * wires; that one paints. */
-  media_param_chips_paint(chips, shown, u, font, font_sub);
   if (shown < chip_count) {
     char more[32];
     SNPRINTF(more, "+%d more", chip_count - shown);
@@ -277,7 +274,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * actually is. `service_key` is what this half submits (the mode's catalog
    * service, or image_gen/video_gen). */
   const int active_jobs = pane_active_job_count(C, service_key);
-  const bool busy = active_jobs > 0;
   /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
    * the point — so an active job is INFORMATION (the label carries the
    * count), never a lock. Only a missing prompt field or an unusable
@@ -294,12 +290,18 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Sub-tab halves. */
   for (int i = 0; i < 2; i++) {
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           int(seg_rects[i].xmin), int(seg_rects[i].ymin),
-                           short(BLI_rctf_size_x(&seg_rects[i])),
-                           short(BLI_rctf_size_y(&seg_rects[i])),
-                           i == 0 ? "Image generation" : "Video generation");
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "wm.context_set_enum",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                seg_labels[i],
+                                int(seg_rects[i].xmin),
+                                int(seg_rects[i].ymin),
+                                short(BLI_rctf_size_x(&seg_rects[i])),
+                                short(BLI_rctf_size_y(&seg_rects[i])),
+                                i == 0 ? "Image generation" : "Video generation");
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(but, i == (video ? 1 : 0));
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_media_kind");
@@ -310,75 +312,21 @@ void agent_ui_tabmedia_draw(const bContext *C,
   /* Param chips. */
   for (int i = 0; i < shown; i++) {
     const MediaParamChip &chip = chips[i];
-    const int cx = int(chip.rect.xmin);
-    const int cy = int(chip.rect.ymin);
-    const short cw = short(BLI_rctf_size_x(&chip.rect));
-    const short ch = short(BLI_rctf_size_y(&chip.rect));
     PointerRNA *owner = chip.on_wm_group ? &group_ptr : &tab_ptr;
-
-    if (chip.kind == MediaChipKind::Enum) {
-      /* `wm.context_menu_enum`, NOT an RNA menu button: a ui::ButtonType::Menu
-       * draws Blender's own down-arrow on top of the chevron the chip has
-       * already painted, so the chip showed TWO arrows. An operator button
-       * carries no chrome of its own and opens the same enum menu. */
-      char data_path[256];
-      if (chip.on_wm_group) {
-        char svc[64], mdl[64];
-        media_sanitize_key(service_key, svc, sizeof(svc));
-        media_sanitize_key(model_id, mdl, sizeof(mdl));
-        SNPRINTF(
-            data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
-      }
-      else {
-        SNPRINTF(data_path,
-                 "scene.mixie_moodboard_sidebar.%s.%s",
-                 video ? "tab_video_gen" : "tab_imagegen",
-                 chip.prop_id);
-      }
-      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
-                             blender::wm::OpCallContext::InvokeDefault, "",
-                             cx, cy, cw, ch, nullptr);
-      if (but) {
-        pane_but_tooltip_owned(but, chip.label);
-        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
-        RNA_string_set(op_ptr, "data_path", data_path);
-      }
-    }
-    else if (chip.kind == MediaChipKind::Bool) {
-      char data_path[256];
+    char data_path[256];
+    if (chip.on_wm_group) {
       char svc[64], mdl[64];
       media_sanitize_key(service_key, svc, sizeof(svc));
       media_sanitize_key(model_id, mdl, sizeof(mdl));
       SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
-      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
-                             blender::wm::OpCallContext::InvokeDefault, "",
-                             cx, cy, cw, ch, nullptr);
-      if (but) {
-        pane_but_tooltip_owned(but, chip.label);
-        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
-        RNA_string_set(op_ptr, "data_path", data_path);
-      }
     }
-    else { /* Int: left half cycles down, right half cycles up. */
-      char data_path[256];
-      char svc[64], mdl[64];
-      media_sanitize_key(service_key, svc, sizeof(svc));
-      media_sanitize_key(model_id, mdl, sizeof(mdl));
-      SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
-      const short half = short(cw / 2);
-      for (int side = 0; side < 2; side++) {
-        ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_cycle_int",
-                               blender::wm::OpCallContext::InvokeDefault, "",
-                               cx + side * half, cy, half, ch,
-                               side == 0 ? "Decrease" : "Increase");
-        if (but) {
-          PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
-          RNA_string_set(op_ptr, "data_path", data_path);
-          RNA_boolean_set(op_ptr, "reverse", side == 0);
-          RNA_boolean_set(op_ptr, "wrap", false);
-        }
-      }
+    else {
+      SNPRINTF(data_path,
+               "scene.mixie_moodboard_sidebar.%s.%s",
+               video ? "tab_video_gen" : "tab_imagegen",
+               chip.prop_id);
     }
+    media_param_chip_control(block, chip, owner, data_path, u);
   }
 
   /* Prompt field over the prompt box. */
@@ -390,6 +338,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                              short(BLI_rctf_size_x(&field)),
                              short(BLI_rctf_size_y(&field)),
                              &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
+    ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
     if (input) {
       ui::button_placeholder_set(input, "Describe your scene here...");
       ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
@@ -403,8 +352,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
   ui::block_draw(C, field_block);
 
   GPU_blend(GPU_BLEND_ALPHA);
-  pane_action_chip_paint(upload, "Upload Reference", true, false, u);
-  pane_action_chip_paint(capture, "Capture Viewport", false, false, u);
   /* Reference preview — REAL thumbnails of whatever this half will actually
    * SUBMIT (design: small previews, never a "N refs" count), the same way the
    * Agent tab previews its pending attachments.
@@ -428,7 +375,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
   }
   char gen_label[32];
   pane_queue_label(gen_label, sizeof(gen_label), active_jobs);
-  pane_generate_paint(generate, gen_label, can_generate, u);
   /* Newest operator report, above the box — the island has no status bar, so
    * without this a refusal ("No image selected in moodboard") is silent. Kit
    * helper: one definition for all three panes. */
@@ -437,20 +383,36 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Upload — per half: the image tab's own reference-collection uploader,
    * or the video flow's board-as-selected import. */
-  uiDefButO(block, ui::ButtonType::But,
-            video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
-            blender::wm::OpCallContext::InvokeDefault, "",
-            int(upload.xmin), int(upload.ymin),
-            short(BLI_rctf_size_x(&upload)), short(BLI_rctf_size_y(&upload)),
-            video ? "Import selected reference stills for the video" :
-                    "Add reference images from disk");
+  ui::Button *upload_button = uiDefIconTextButO(
+      block,
+      ui::ButtonType::But,
+      video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
+      blender::wm::OpCallContext::InvokeDefault,
+      ICON_IMAGE_DATA,
+      "Upload Reference",
+      int(upload.xmin),
+      int(upload.ymin),
+      short(BLI_rctf_size_x(&upload)),
+      short(BLI_rctf_size_y(&upload)),
+      video ? "Import selected reference stills for the video" : "Add reference images from disk");
+
+  ui::mixar_style_button(
+      upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
 
   /* Capture Viewport -> this tab's reference. */
-  uiDefButO(block, ui::ButtonType::But, "mixar.pane_capture_viewport",
-            blender::wm::OpCallContext::InvokeDefault, "",
-            int(capture.xmin), int(capture.ymin),
-            short(BLI_rctf_size_x(&capture)), short(BLI_rctf_size_y(&capture)),
-            "Screenshot the 3D viewport as a reference image");
+  ui::Button *capture_button = uiDefButO(block,
+                                         ui::ButtonType::But,
+                                         "mixar.pane_capture_viewport",
+                                         blender::wm::OpCallContext::InvokeDefault,
+                                         "Capture Viewport",
+                                         int(capture.xmin),
+                                         int(capture.ymin),
+                                         short(BLI_rctf_size_x(&capture)),
+                                         short(BLI_rctf_size_y(&capture)),
+                                         "Screenshot the 3D viewport as a reference image");
+
+  ui::mixar_style_button(
+      capture_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
 
   /* Generate goes through the SAME dispatcher Enter does
    * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
@@ -459,14 +421,22 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * made click and keypress submit DIFFERENT paid generations: the image
    * half's `depth_to_image` mode, which this pane's own dropdown exposes,
    * routes to `mixie.lookdev_generate`. */
-  if (can_generate) {
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           int(generate.xmin), int(generate.ymin),
-                           short(BLI_rctf_size_x(&generate)),
-                           short(BLI_rctf_size_y(&generate)),
-                           video ? "Generate a video" : "Generate images");
-    if (but) {
+  {
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "mixie.moodboard_prompt_generate",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                gen_label,
+                                int(generate.xmin),
+                                int(generate.ymin),
+                                short(BLI_rctf_size_x(&generate)),
+                                short(BLI_rctf_size_y(&generate)),
+                                video ? "Generate a video" : "Generate images");
+    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
+    if (but && !can_generate) {
+      ui::button_flag_enable(but, ui::BUT_DISABLED);
+    }
+    if (but && tab_ok) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(tab_ptr.type));
     }

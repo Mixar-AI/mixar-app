@@ -7,8 +7,8 @@
  * \ingroup spagentbubble
  *
  * Internals shared between the Media pane's two translation units
- * (agent_ui_tabmedia.cc draws; agent_ui_tabmedia_util.cc holds the paint
- * helpers, RNA plumbing and chip model). Split under the 500-line rule.
+ * (agent_ui_tabmedia.cc lays out; agent_ui_tabmedia_util.cc holds the native
+ * controls, RNA plumbing and chip model). Split under the 500-line rule.
  */
 
 #pragma once
@@ -22,6 +22,9 @@ namespace blender {
 struct Image;
 struct Scene;
 struct bContext;
+namespace ui {
+struct Block;
+}
 
 /* -------------------------------------------------------------------- */
 /** \name Metrics (island units) and local palette
@@ -74,10 +77,12 @@ int media_gather_param_chips(const bContext *C,
                              int *r_total);
 float media_chip_width(const MediaParamChip &chip, float u, float font, float font_sub);
 
-/** Paint \a count already-laid-out chips (enum value + chevron, ON/OFF pill,
- * -/+ stepper). Art only — the pane file lays them out and wires the buttons. */
-void media_param_chips_paint(
-    const MediaParamChip *chips, int count, float u, float font, float font_sub);
+/** Shared native controls over feature-owned RNA bindings. */
+void media_param_chip_control(ui::Block *block,
+                              const MediaParamChip &chip,
+                              PointerRNA *owner,
+                              const char *data_path,
+                              float u);
 
 /**
  * The images this half will actually SUBMIT, for the bottom row's preview.
