@@ -13,8 +13,16 @@
  * them out, sizes them and dispatches their clicks — only the pixels are
  * ours. Geometry and colour come from the design export (`UI.svg`, 1x
  * logical px): slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
- * thumb inset 2px; Cinema pill 150x27 fully rounded, #0E0E0E fill,
- * #3F3F3F hairline border, label graded #505050 -> white.
+ * thumb inset 2px; Cinema pill 150x27 fully rounded, #3F3F3F hairline
+ * border, label graded #505050 -> white.
+ *
+ * The three pills — Cinema, the viewport shading chips and the account chip —
+ * are PANES: each was a flat, hand-mixed near-black standing in for the
+ * family's neutral capsule, so each now draws the kit's `MIXAR_GLASS_PILL`
+ * material instead and keeps only its own coloured stroke and label. The
+ * slider's track and thumb stay flat, and so does the account chip's avatar
+ * disc: they are machinery and a picture, and a groove that shows the bar
+ * through it stops reading as a groove.
  */
 
 #include <algorithm>
@@ -50,7 +58,6 @@ const uchar SLIDER_THUMB[4] = {0x39, 0x39, 0x39, 255};
 const uchar SLIDER_THUMB_HOVER[4] = {0x46, 0x46, 0x46, 255};
 const uchar SLIDER_LABEL[4] = {255, 255, 255, 255};
 
-const uchar PILL_FILL[4] = {0x0E, 0x0E, 0x0E, 255};
 const uchar PILL_BORDER[4] = {0x3F, 0x3F, 0x3F, 255};
 /* Active: the whole pill goes green — Cinema Mode is a state you are IN, and
  * the fill IS the indicator (no separate switch widget). Greens are the
@@ -116,21 +123,21 @@ EasedPos g_thumb; /* Mode slider: 0 = Zen half, 1 = Engine half. */
 /** \name Painters
  * \{ */
 
-/* Zen viewport shading pills (UI.svg, second row): 130x23 rx11.5, fill
- * #050505, 1px border #676767, label #737373. The inactive pill is the same
- * chip at 49% opacity — the design distinguishes them by presence, not by a
- * sliding thumb. */
-const uchar VIEW_PILL_FILL[4] = {0x05, 0x05, 0x05, 255};
+/* Zen viewport shading pills (UI.svg, second row): 130x23 rx11.5, 1px border
+ * #676767, label #737373. The fill is the family's neutral capsule now, so the
+ * chip has no near-black of its own left to carry. The inactive pill is the
+ * same chip at 49% opacity — the design distinguishes them by presence, not by
+ * a sliding thumb, and the alpha rides the whole pane. */
 const uchar VIEW_PILL_BORDER[4] = {0x67, 0x67, 0x67, 255};
 const uchar VIEW_PILL_LABEL[4] = {0x73, 0x73, 0x73, 255};
 const uchar VIEW_PILL_LABEL_ON[4] = {0xDE, 0xDE, 0xDE, 255};
 constexpr float VIEW_PILL_DIM = 0.49f;
 
-/* Account chip (UI.svg): #1B1B1B slab with the label, capped at the right by
- * a full-height avatar disc. The design's disc is a photo; with no profile
+/* Account chip (UI.svg): slab with the label, capped at the right by a
+ * full-height avatar disc. The design's disc is a photo; with no profile
  * picture set we draw the stock person glyph on a neutral disc — the
- * placeholder every social platform uses — rather than a generated initial. */
-const uchar PROFILE_FILL[4] = {0x1B, 0x1B, 0x1B, 255};
+ * placeholder every social platform uses — rather than a generated initial.
+ * The slab's own #1B1B1B went with the pane. */
 const uchar PROFILE_LABEL[4] = {0xEC, 0xEC, 0xEC, 255};
 const uchar PROFILE_AVATAR[4] = {0x3C, 0x3C, 0x3C, 255};
 const uchar PROFILE_GLYPH[4] = {0xD2, 0xD2, 0xD2, 255};
@@ -272,7 +279,9 @@ void draw_cinema_pill(Button *but, const rcti *rect, const bool is_hover, const 
   GPU_blend(GPU_BLEND_ALPHA);
   if (lit) {
     /* Vertical ramp, lighter at the top — same read as the island's green
-     * chips, so the two surfaces look like one product. */
+     * chips, so the two surfaces look like one product. Deliberately NOT a
+     * pane: the green fill IS the state, and it is opaque, so a pane beneath
+     * it would be covered rather than seen. */
     float a[4];
     float b[4];
     mixar_card_to_float(PILL_FILL_ON_B, a);
@@ -287,16 +296,13 @@ void draw_cinema_pill(Button *but, const rcti *rect, const bool is_hover, const 
     mixar_card_outline_round(&pill, rad, PILL_BORDER_ON, (is_hover || pressed) ? 1.0f : 0.9f);
   }
   else {
-    /* The resting fill is near-black, so the multiplicative boost would be
-     * invisible here; lift it by a fixed step instead. Still nowhere near the
-     * lit green — a press must never read as "Cinema Mode is on". */
-    uchar fill[4];
-    memcpy(fill, PILL_FILL, sizeof(fill));
-    const int lift = pressed ? 26 : (is_hover ? 10 : 0);
-    for (int i = 0; i < 3; i++) {
-      fill[i] = uchar(std::min(255, int(fill[i]) + lift));
-    }
-    mixar_card_fill_round(&pill, rad, fill, (is_hover || pressed) ? 1.0f : 0.94f);
+    /* The resting pill is a pane: the design's near-black was standing in for
+     * the family's neutral capsule, and the pane carries the see-through the
+     * flat fill could not. The fixed lift that used to mark hover and press
+     * becomes the pane's own alpha — a fuller pane rather than a lighter grey
+     * — and it still sits nowhere near the lit green, so a press can never
+     * read as "Cinema Mode is on". */
+    mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, (is_hover || pressed) ? 1.0f : 0.84f);
     mixar_card_outline_round(&pill, rad, PILL_BORDER, (is_hover || pressed) ? 1.0f : 0.85f);
   }
 
@@ -327,7 +333,10 @@ void draw_viewport_pill(Button *but, const rcti *rect, const bool is_hover, cons
   const float rad = BLI_rctf_size_y(&pill) * 0.5f;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&pill, rad, VIEW_PILL_FILL, alpha);
+  /* The chip is a pane, and its dimming IS the pane's alpha: the one number
+   * that faded the flat fill now fades every layer together, so a dimmed pill
+   * does not keep a full-strength gloss and rim over a half-there bed. */
+  mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, alpha);
   mixar_card_outline_round(&pill, rad, VIEW_PILL_BORDER, alpha);
 
   uchar label[4];
@@ -348,10 +357,14 @@ void draw_profile_pill(Button *but, const rcti *rect, const bool is_hover, const
   const float rad = height * 0.5f;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&chip, rad, PROFILE_FILL, is_hover ? 1.0f : 0.92f);
+  /* The slab is a pane: the account chip floats over whatever the window shows
+   * behind the bar, so the family's neutral capsule replaces the design's flat
+   * #1B1B1B, and its hover lift is the pane's alpha. */
+  mixar_card_glass_round(&chip, rad, MIXAR_GLASS_PILL, is_hover ? 1.0f : 0.9f);
 
   /* Avatar disc caps the right end at full height, exactly as the design
-   * has it (chip 27 tall, disc r=13.5). */
+   * has it (chip 27 tall, disc r=13.5). It is a picture, not a pane, so it
+   * stays flat — glass there would show the bar through the avatar. */
   rctf disc;
   disc.xmax = chip.xmax;
   disc.xmin = disc.xmax - height;

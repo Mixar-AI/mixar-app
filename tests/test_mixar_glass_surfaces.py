@@ -38,6 +38,8 @@ CARD_BUTTON_PATH = IFACE / "interface_mixar_card_button.cc"
 CARD_BUTTON = CARD_BUTTON_PATH.read_text(encoding="utf-8")
 PROFILE_DRAW_PATH = IFACE / "interface_mixar_profile_card_draw.cc"
 PROFILE_DRAW = PROFILE_DRAW_PATH.read_text(encoding="utf-8")
+TOPBAR_PATH = IFACE / "interface_mixar_topbar.cc"
+TOPBAR = TOPBAR_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -266,4 +268,114 @@ class TestTheProfilePlanChipIsAPane:
         assert "mixar_card_fill_round(&line, 0.0f, MX_BORDER_STRONG)" in divider
         assert "mixar_card_fill_round(&track, rad, MX_BG_SUNKEN)" in usage
         assert "fill_ramp(&fill, rad, CARD_USAGE_RAMP_START, CARD_USAGE_RAMP_END)" in usage
+
+
+class TestTheTopbarPillsArePanes:
+    """The Cinema pill, the viewport shading chips and the account chip.
+
+    All three are the same neutral capsule in the topbar, so all three take the
+    PILL role and keep only their own stroke and label. The slider and the
+    avatar disc are the bar's machinery and must stay flat.
+    """
+
+    def _body(self, signature: str) -> str:
+        return _code(_fn_body(TOPBAR, signature))
+
+    def test_the_three_pills_draw_the_pane(self) -> None:
+        """One call per pill. A flat bed left behind keeps a hand-mixed
+        near-black the material table cannot reach."""
+        for signature in ("void draw_cinema_pill(", "void draw_viewport_pill(", "void draw_profile_pill("):
+            assert self._body(signature).count("mixar_card_glass_round(") == 1, (
+                f"{signature} no longer draws exactly one pane"
+            )
+
+    def test_no_hand_mixed_near_black_survives_the_conversion(self) -> None:
+        """The three fills the panes replace are gone, not merely unused.
+
+        A leftover token is the next edit's temptation, and the token itself
+        carries the stale #0E0E0E / #050505 / #1B1B1B the design no longer
+        has — the pane's capsule is the neutral.
+        """
+        code = _code(TOPBAR)
+        for token in ("PILL_FILL", "VIEW_PILL_FILL", "PROFILE_FILL"):
+            assert not re.search(rf"\b{token}\b", code), f"{token} is still a pill fill"
+
+    def test_the_resting_cinema_pill_carries_the_hover_cue(self) -> None:
+        """The fixed brightness lift went with the fill it lifted.
+
+        Without the alpha form the resting pill has no hover or press
+        feedback at all — the state changes silently.
+        """
+        body = self._body("void draw_cinema_pill(")
+        assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, (is_hover || pressed) ? 1.0f : 0.84f);" in body
+
+    def test_the_lit_cinema_pill_keeps_its_opaque_green_state(self) -> None:
+        """The green fill IS the state and is opaque, so it stays flat.
+
+        Glassing it would put a pane under an opaque ramp — invisible work —
+        and, worse, invite a later edit to fade the fill and lose the only
+        "Cinema Mode is on" indicator there is.
+        """
+        body = self._body("void draw_cinema_pill(")
+        lit = body[body.index("if (lit) {") : body.index("else {")]
+        assert "mixar_card_glass_round(" not in lit, "the lit pill was glassed"
+        assert "draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);" in lit
+        assert "mixar_card_to_float(PILL_FILL_ON_A, b);" in lit
+        assert "mixar_card_to_float(PILL_FILL_ON_B, a);" in lit
+
+    def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
+        """Dim and lit are one alpha, so it must scale every layer.
+
+        Handing it to a single colour instead would leave a lit-strength rim
+        and gloss on a half-there chip — the piping stays, the pane goes.
+        """
+        body = self._body("void draw_viewport_pill(")
+        assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, alpha);" in body
+
+    def test_each_pill_keeps_its_own_stroke(self) -> None:
+        """The pane brings the family rim; these strokes are stronger.
+
+        Dropping them would erase the difference between a resting Cinema
+        pill, an active one and a shading chip — all three would be the same
+        rim.
+        """
+        assert "mixar_card_outline_round(&pill, rad, PILL_BORDER, (is_hover || pressed) ? 1.0f : 0.85f);" in self._body(
+            "void draw_cinema_pill("
+        )
+        assert "mixar_card_outline_round(&pill, rad, PILL_BORDER_ON," in self._body(
+            "void draw_cinema_pill("
+        )
+        assert "mixar_card_outline_round(&pill, rad, VIEW_PILL_BORDER, alpha);" in self._body(
+            "void draw_viewport_pill("
+        )
+
+    def test_the_sliders_stay_flat(self) -> None:
+        """A track is a groove and a thumb is a knob.
+
+        A glassed track shows the bar through the groove and stops reading as
+        a groove; a glassed thumb stops reading as the thing that moved.
+        """
+        for signature in ("void draw_slider_left(", "void draw_slider_right("):
+            assert "mixar_card_glass_round(" not in self._body(signature), (
+                f"{signature} was glassed"
+            )
+        slider = self._body("void draw_slider_left(")
+        assert "mixar_card_fill_round(&track, rad, SLIDER_TRACK);" in slider
+        assert "mixar_card_fill_round(&thumb, rad, is_hover ? SLIDER_THUMB_HOVER : SLIDER_THUMB);" in slider
+
+    def test_the_avatar_disc_stays_flat(self) -> None:
+        """The disc is a picture, not a pane.
+
+        Glass there shows the bar through the avatar — a hole in a face.
+        """
+        body = self._body("void draw_profile_pill(")
+        disc = body[body.index("rctf disc;") : body.index("mixar_card_draw_text")]
+        assert "mixar_card_fill_round(&disc, rad, PROFILE_AVATAR);" in disc
+        assert "mixar_card_glass_round(" not in disc, "the avatar disc was glassed"
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        for call in re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(TOPBAR)):
+            assert "MX_" not in call and "uchar" not in call, (
+                f"a role-taking call was given a colour: {call}"
+            )
 
