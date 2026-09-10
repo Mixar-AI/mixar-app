@@ -102,8 +102,12 @@ def test_the_owned_tooltip_helper_actually_owns_its_string():
 
 
 def test_the_panes_use_it_where_their_labels_are_dynamic():
-    for name in ("agent_ui_tab3d_params.cc", "agent_ui_tabsplat.cc"):
+    for name in ("agent_ui_tab3d_params.cc",):
         assert "pane_but_tooltip_owned(" in (ISLAND / name).read_text(encoding="utf-8"), name
+
+    splat = (ISLAND / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
+    for kind in ("mode", "lod"):
+        assert f"mixar_button_tooltip_owned(but, {kind}_items[i].label)" in splat
 
     media = (ISLAND / "agent_ui_tabmedia_util.cc").read_text(encoding="utf-8")
     assert "mixar_button_tooltip_owned(button, chip.label)" in media

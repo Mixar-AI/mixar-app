@@ -106,39 +106,31 @@ def test_the_overlay_is_the_only_writer_of_the_latch():
 # 2. Paint and arm agree, in every pane
 # ---------------------------------------------------------------------------
 
-def test_the_splat_generate_paints_exactly_what_it_arms():
-    paint = _function_body(SPLAT_PAINT_CC, "void splat_pane_paint")
-    assert "pane_generate_paint(rects.btn_generate, gen_label, rects.prompt_ok, u);" in paint, (
-        "the painter must enable on the same prompt_ok the layout arms on"
-    )
-    assert "active_jobs > 0" not in paint, (
-        "a live job is a queue entry, not a lock — dimming on it made a "
-        "clickable button look disabled"
-    )
+def test_the_splat_generate_uses_one_native_control_for_paint_and_input():
+    body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
+    generate = body[body.index("if (rects.prompt_ok) {"):]
+    generate = generate[:generate.index("/* Prompt field")]
+    assert '"mixie.moodboard_prompt_generate"' in generate
+    assert "MixarComponent::Action" in generate
+    assert "RNA_struct_identifier(state.tab.type)" in generate
+    assert "pane_generate_paint(" not in SPLAT_PAINT_CC
+    assert "active_jobs" not in generate, "queue activity must not disable submission"
 
 
 def test_every_pane_labels_its_queue_through_the_kit():
-    for name, text in (
-        ("splat", SPLAT_PAINT_CC),
-        ("3D", TAB3D_CC),
-        ("media", MEDIA_CC),
-    ):
+    for name, text in (("splat", SPLAT_CC), ("3D", TAB3D_CC), ("media", MEDIA_CC)):
         assert "pane_queue_label(" in text, f"{name} pane hand-rolls its queue label"
-    # The kit's label reaches the button; no pane composes its own string
-    # into the paint call. (Prose in comments is not the contract.)
-    paint = _function_body(SPLAT_PAINT_CC, "void splat_pane_paint")
-    call = paint[paint.index("pane_generate_paint("):]
-    assert "gen_label" in call[: call.index(";")]
+    body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
+    call = body[body.index('"mixie.moodboard_prompt_generate"'):]
+    assert "gen_label" in call[:call.index(";")]
 
 
 def test_the_splat_arm_side_ignores_the_live_job_count():
-    # Only a missing prompt field or an unusable catalog may disarm. Pinned
-    # because this file's own comment claimed the opposite for a while.
     body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
-    generate = body[body.index("mixie.moodboard_prompt_generate") - 600:]
-    generate = generate[: generate.index("mixie.moodboard_prompt_generate") + 200]
-    assert "if (rects.prompt_ok) {" in generate
+    generate = body[body.index("if (rects.prompt_ok) {"):]
+    generate = generate[:generate.index("/* Prompt field")]
     assert "active_jobs" not in generate
+    assert "BUT_DISABLED" not in generate
 
 
 # ---------------------------------------------------------------------------

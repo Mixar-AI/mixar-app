@@ -6,9 +6,9 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Gaussian Splat tab — geometry and painting. Everything is painted; the
- * uiBlocks laid by agent_ui_tabsplat.cc are invisible hit targets over this
- * art (the queue tab's pattern). Selected-moodboard thumbnails use the raw
+ * Gaussian Splat tab — measured geometry, surfaces and reference previews.
+ * Native controls in agent_ui_tabsplat.cc own their presentation and targets.
+ * Selected-moodboard thumbnails use the raw
  * ImBuf upload idiom from mixie_chat_footer_thumbnails.cc — NOT
  * BKE_image_get_gpu_texture, whose sRGB->Linear conversion washes the
  * preview out.
@@ -34,9 +34,9 @@
 
 #include "UI_interface.hh"
 
+#include "UI_mixar_tokens.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabsplat_intern.hh"
-#include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -52,6 +52,7 @@ namespace blender {
 
 void splat_pane_rects_build(const rctf &panel,
                             const float u,
+                            const char *model_label,
                             const SplatEnumItem *mode_items,
                             const int mode_count,
                             const SplatEnumItem *lod_items,
@@ -96,8 +97,10 @@ void splat_pane_rects_build(const rctf &panel,
   }
 
   const float model_x = next_x + PANE_CHIP_GAP * u;
-  r->model_chip = {
-      model_x, model_x + SPLAT_MODEL_W * u, row_top - PANE_ROW_H * u, row_top};
+  const float model_w = std::min(pane_text_width(model_label, PANE_FONT * u) +
+                                     (2 * ui::mixar_tokens::padding + ui::mixar_tokens::icon) * u,
+                                 (strip_max_x - strip_x) / 3.0f);
+  r->model_chip = {model_x, model_x + model_w, row_top - PANE_ROW_H * u, row_top};
 
   /* Prompt box: strip bottom -> panel bottom (kit contract). The LOD track
    * may wrap the strip to a second row below, which shifts this. */
@@ -195,28 +198,13 @@ void splat_pane_rects_build(const rctf &panel,
   r->chip_upload = place(pane_action_chip_w("Upload Reference", true, u), PANE_CHIP_GAP * u);
   r->chip_capture = place(pane_action_chip_w("Capture Viewport", false, u), 18.0f * u);
 
-  /* Label + switch travel together: a switch with no label beside it says
-   * nothing, so both are dropped unless both fit. */
-  const float switch_w = SPLAT_SWITCH_W * u;
-  const float label_gap = 10.0f * u;
-  const float label_avail = row_max_x - run_x - label_gap - switch_w;
-  const float label_full = pane_text_width("Allow selected from Moodboard", PANE_FONT * u);
-  if (room && label_avail > 0.0f) {
-    const float label_x = run_x;
-    const float label_w = std::min(label_full, label_avail);
-    run_x += label_w + label_gap;
-    r->moodboard_switch = place(switch_w, 12.0f * u);
-    if (splat_rect_is_live(r->moodboard_switch)) {
-      r->mood_label_x = label_x;
-      r->mood_label_w = label_w;
-      const float inset = (PANE_ROW_H - SPLAT_SWITCH_H) * 0.5f * u;
-      r->moodboard_switch.ymin += inset;
-      r->moodboard_switch.ymax -= inset;
-    }
-  }
-  else {
-    room = false;
-  }
+  /* One shared Toggle contains its label and ON/OFF state. Reserve its
+   * measured native recipe before placing previews; never overlap Generate. */
+  const float toggle_w = pane_text_width("Use Moodboard", PANE_FONT * u) +
+                         pane_text_width("ON", PANE_FONT * u) +
+                         pane_text_width("OFF", PANE_FONT * u) +
+                         (2 * ui::mixar_tokens::padding + 52.0f) * u;
+  r->moodboard_switch = place(toggle_w, 12.0f * u);
 
   r->thumbs = place(SPLAT_THUMB_EDGE * u, 0.0f);
   if (splat_rect_is_live(r->thumbs)) {
@@ -233,110 +221,19 @@ void splat_pane_rects_build(const rctf &panel,
 void splat_pane_paint(const bContext *C,
                       const SplatTabState &state,
                       const SplatPaneRects &rects,
-                      const SplatEnumItem *mode_items,
-                      const int mode_count,
-                      const SplatEnumItem *lod_items,
-                      const int lod_count,
                       const float u)
 {
-  const float track[4] = PANE_COL_CHIP;
-  const float thumb[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  const float accent[4] = AGENT_COL_ACCENT;
-
-  const float radius = PANE_RADIUS * u;
-  const float font = PANE_FONT * u;
+  const float *dim = ui::mixar_tokens::zen.secondary;
 
   /* Prompt box (pane kit; the wash is painted by the caller, which owns the
    * true panel rect). */
   pane_prompt_box_paint(rects.prompt_box, u);
-
-  /* Mode toggle — segments sized from the catalog's own labels (see
-   * splat_pane_rects_build), thumb over the active one. */
-  pane_fill_round(&rects.mode_track, radius, track);
-  for (int i = 0; i < mode_count && i < rects.mode_count; i++) {
-    if (mode_items[i].active) {
-      rctf th = rects.mode_seg[i];
-      th.xmin += SPLAT_SEG_INSET * u;
-      th.xmax -= SPLAT_SEG_INSET * u;
-      th.ymin += SPLAT_SEG_INSET * u;
-      th.ymax -= SPLAT_SEG_INSET * u;
-      pane_fill_round(&th, radius, thumb);
-    }
-  }
-  for (int i = 0; i < mode_count && i < rects.mode_count; i++) {
-    pane_label_centre(mode_items[i].label,
-                       BLI_rctf_cent_x(&rects.mode_seg[i]),
-                       BLI_rctf_cent_y(&rects.mode_seg[i]),
-                       font,
-                       mode_items[i].active ? text : dim);
-  }
-
-  /* Model dropdown chip — the kit's, same as every pane's dropdowns. */
-  {
-    char label[144];
-    BLI_strncpy(label,
-                state.model_label[0] ? state.model_label : state.model_slug,
-                sizeof(label));
-    pane_fit_text(label, BLI_rctf_size_x(&rects.model_chip) - 50.0f * u, font);
-    pane_dropdown_chip_paint(rects.model_chip, label, u);
-  }
-
-  /* LOD segmented control — the kit's, labels from the catalog schema. */
-  if (lod_count > 0 && rects.lod_count > 0) {
-    const char *lod_labels[SPLAT_ENUM_MAX];
-    /* -1, not 0: a track clamped down to fit may have dropped the segment
-     * that is actually active, and lighting the first one would be a lie. */
-    int active_index = -1;
-    for (int i = 0; i < rects.lod_count; i++) {
-      lod_labels[i] = lod_items[i].label;
-      if (lod_items[i].active) {
-        active_index = i;
-      }
-    }
-    pane_segmented_paint(rects.lod_seg, lod_labels, active_index, rects.lod_count, u);
-  }
 
   /* Bottom row. Image-source controls exist only in image mode — the
    * moodboard drawer shows prompt-only UI in text mode. */
   if (state.image_mode) {
     const float row_cy = BLI_rctf_cent_y(&rects.btn_generate);
     const float max_x = rects.btn_generate.xmin - PANE_CHIP_GAP * u;
-
-    /* Every element of this run may have been dropped for want of room (see
-     * splat_pane_rects_build) — paint only what was actually placed. */
-    if (splat_rect_is_live(rects.chip_upload)) {
-      pane_action_chip_paint(rects.chip_upload, "Upload Reference", true, false, u);
-    }
-    if (splat_rect_is_live(rects.chip_capture)) {
-      pane_action_chip_paint(rects.chip_capture, "Capture Viewport", false, false, u);
-    }
-
-    if (rects.mood_label_w > 0.0f) {
-      char mood_label[64];
-      BLI_strncpy(mood_label, "Allow selected from Moodboard", sizeof(mood_label));
-      pane_fit_text(mood_label, rects.mood_label_w, font);
-      pane_label_left(mood_label, rects.mood_label_x, row_cy, font, text);
-    }
-
-    /* Switch. */
-    if (splat_rect_is_live(rects.moodboard_switch)) {
-      const float knob_r = BLI_rctf_size_y(&rects.moodboard_switch) * 0.5f - 2.0f * u;
-      pane_fill_round(&rects.moodboard_switch,
-                      BLI_rctf_size_y(&rects.moodboard_switch) * 0.5f,
-                      state.use_selected ? accent : track);
-      rctf knob;
-      const float kx = state.use_selected ?
-                           rects.moodboard_switch.xmax - 2.0f * u - knob_r * 2.0f :
-                           rects.moodboard_switch.xmin + 2.0f * u;
-      knob.xmin = kx;
-      knob.xmax = kx + knob_r * 2.0f;
-      knob.ymin = BLI_rctf_cent_y(&rects.moodboard_switch) - knob_r;
-      knob.ymax = BLI_rctf_cent_y(&rects.moodboard_switch) + knob_r;
-      const float knob_col[4] = {0.95f, 0.95f, 0.95f, 1.0f};
-      pane_fill_round(&knob, knob_r, knob_col);
-    }
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
      * selection while the switch is on, otherwise its own uploaded/captured
@@ -377,22 +274,6 @@ void splat_pane_paint(const bContext *C,
    * else this pane paints — the field lives INSIDE the box, so its chrome
    * cannot cover a line drawn above it. */
   pane_report_line_draw(C, rects.prompt_box, u);
-
-  /* Generate — the kit's shared button and the kit's shared label, so this
-   * pane says "Queued (N)" in the same words as 3D and Media and counts the
-   * queue the same way.
-   *
-   * Armed on `prompt_ok` ALONE, which is the rule the control layout applies
-   * (agent_ui_tabsplat.cc): a live job is a QUEUE entry, not a lock, and
-   * stacking is the point. Painting it disabled while busy was the one place
-   * the paint and the arm disagreed — the button read "Queued..." and dimmed
-   * but still submitted a paid world_labs generation on click, which is
-   * exactly the failure the "a click and a keypress can never submit
-   * different PAID generations" contract exists to prevent. The two rules
-   * must be written from the same expression; they are now both prompt_ok. */
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs);
-  pane_generate_paint(rects.btn_generate, gen_label, rects.prompt_ok, u);
 }
 
 /** \} */

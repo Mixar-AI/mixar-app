@@ -38,6 +38,9 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "UI_resources.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -45,7 +48,6 @@
 #include "agent_ui_tabsplat.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabsplat_intern.hh"
-#include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -254,7 +256,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
   if (!available) {
     /* Fail closed, like the moodboard drawer: message only, no controls —
      * a bundled client must never resurrect a disabled Marble model. */
-    const float dim[4] = AGENT_COL_TEXT_DIM;
+    const float *dim = ui::mixar_tokens::zen.secondary;
     pane_label_centre("World Labs catalog settings are unavailable",
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),
@@ -274,9 +276,10 @@ void agent_ui_tabsplat_draw(const bContext *C,
       C, &state.params, state.lod_prop, lod_items, SPLAT_ENUM_MAX);
 
   SplatPaneRects rects;
-  splat_pane_rects_build(panel, u, mode_items, mode_count, lod_items, lod_count, &rects);
+  splat_pane_rects_build(
+      panel, u, state.model_label, mode_items, mode_count, lod_items, lod_count, &rects);
 
-  splat_pane_paint(C, state, rects, mode_items, mode_count, lod_items, lod_count, u);
+  splat_pane_paint(C, state, rects, u);
 
   GPU_blend(GPU_BLEND_NONE);
 
@@ -300,11 +303,20 @@ void agent_ui_tabsplat_draw(const bContext *C,
   char data_path[256];
   for (int i = 0; i < mode_count && i < rects.mode_count; i++) {
     rect_args(rects.mode_seg[i], &bx, &by, &bw, &bh);
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, nullptr);
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "wm.context_set_enum",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                mode_items[i].label,
+                                bx,
+                                by,
+                                bw,
+                                bh,
+                                nullptr);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(but, mode_items[i].active);
     if (but) {
-      pane_but_tooltip_owned(but, mode_items[i].label);
+      ui::mixar_button_tooltip_owned(but, mode_items[i].label);
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_mode", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);
@@ -313,11 +325,20 @@ void agent_ui_tabsplat_draw(const bContext *C,
   }
   for (int i = 0; i < lod_count && i < rects.lod_count; i++) {
     rect_args(rects.lod_seg[i], &bx, &by, &bw, &bh);
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, nullptr);
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "wm.context_set_enum",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                lod_items[i].label,
+                                bx,
+                                by,
+                                bw,
+                                bh,
+                                nullptr);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(but, lod_items[i].active);
     if (but) {
-      pane_but_tooltip_owned(but, lod_items[i].label);
+      ui::mixar_button_tooltip_owned(but, lod_items[i].label);
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       SNPRINTF(data_path, "window_manager.%s.p_lod", state.group_attr);
       RNA_string_set(op_ptr, "data_path", data_path);
@@ -325,18 +346,20 @@ void agent_ui_tabsplat_draw(const bContext *C,
     }
   }
 
-  /* Model dropdown: an invisible RNA menu button over the painted chip — the
-   * enum's own items build the menu, so the choice list always tracks the
-   * catalog. */
+  /* Model choices remain supplied by the catalog enum. */
   rect_args(rects.model_chip, &bx, &by, &bw, &bh);
   {
-    /* `wm.context_menu_enum`, NOT an RNA menu button: a ui::ButtonType::Menu draws
-     * Blender's own down-arrow over the chevron the chip already painted —
-     * two arrows on one chip. The operator opens the same enum menu with no
-     * chrome of its own. */
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, "Model");
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "wm.context_menu_enum",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                state.model_label[0] ? state.model_label : state.model_slug,
+                                bx,
+                                by,
+                                bw,
+                                bh,
+                                "Model");
+    ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path",
@@ -352,26 +375,51 @@ void agent_ui_tabsplat_draw(const bContext *C,
      * use_selected_image off, same as the N-panel). */
     if (splat_rect_is_live(rects.chip_upload)) {
       rect_args(rects.chip_upload, &bx, &by, &bw, &bh);
-      uiDefButO(block, ui::ButtonType::But, "mixie.world_labs_pick_image",
-                blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                "Upload an input image for world generation");
+      ui::Button *but = uiDefIconTextButO(block,
+                                          ui::ButtonType::But,
+                                          "mixie.world_labs_pick_image",
+                                          blender::wm::OpCallContext::InvokeDefault,
+                                          ICON_IMAGE_DATA,
+                                          "Upload Reference",
+                                          bx,
+                                          by,
+                                          bw,
+                                          bh,
+                                          "Upload an input image for world generation");
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
     }
 
     /* Capture Viewport -> tab.reference_image (use_selected_image off). */
     if (splat_rect_is_live(rects.chip_capture)) {
       rect_args(rects.chip_capture, &bx, &by, &bw, &bh);
-      uiDefButO(block, ui::ButtonType::But, "mixar.pane_capture_viewport",
-                blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                "Screenshot the 3D viewport as the input image");
+      ui::Button *but = uiDefButO(block,
+                                  ui::ButtonType::But,
+                                  "mixar.pane_capture_viewport",
+                                  blender::wm::OpCallContext::InvokeDefault,
+                                  "Capture Viewport",
+                                  bx,
+                                  by,
+                                  bw,
+                                  bh,
+                                  "Screenshot the 3D viewport as the input image");
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
     }
 
     /* Moodboard-selection switch. */
     if (splat_rect_is_live(rects.moodboard_switch)) {
       rect_args(rects.moodboard_switch, &bx, &by, &bw, &bh);
-      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
-                             blender::wm::OpCallContext::InvokeDefault, "",
-                             bx, by, bw, bh,
-                             "Use the image selected on the moodboard");
+      ui::Button *but = uiDefButO(block,
+                                  ui::ButtonType::But,
+                                  "wm.context_toggle",
+                                  blender::wm::OpCallContext::InvokeDefault,
+                                  "Use Moodboard",
+                                  bx,
+                                  by,
+                                  bw,
+                                  bh,
+                                  "Use the image selected on the moodboard");
+      ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+      ui::mixar_button_lit_set(but, state.use_selected);
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr,
@@ -381,26 +429,23 @@ void agent_ui_tabsplat_draw(const bContext *C,
     }
   }
 
-  /* Generate goes through the SAME dispatcher Enter does
-   * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
-   * on the tab PropertyGroup's own RNA identifier — the string
-   * interface_handlers.cc forwards. One path, so a click and a keypress can
-   * never resolve to different paid generations. Armed only where the prompt
-   * field was actually drawn — and a button that paints disabled must not
-   * still be clickable, so `splat_pane_paint` enables it on this same
-   * `prompt_ok` and nothing else.
-   *
-   * A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
-   * the point — so an active job is INFORMATION (the label carries the
-   * count), never a lock. Only a missing prompt field or an unusable
-   * catalog can disarm it. The painter used to dim on `busy` as well, which
-   * left a Generate that read "Queued..." and looked disabled still
-   * submitting a paid world_labs job when clicked. */
+  /* Generate and Enter share the owner-based dispatcher. One native button
+   * owns both appearance and enabled state. Queue activity is informational. */
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs);
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
-    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
-                           blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                           "Generate a 3D world from the prompt or input image");
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "mixie.moodboard_prompt_generate",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                gen_label,
+                                bx,
+                                by,
+                                bw,
+                                bh,
+                                "Generate a 3D world from the prompt or input image");
+    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(state.tab.type));
@@ -413,6 +458,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     rect_args(rects.prompt_field, &bx, &by, &bw, &bh);
     ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "", bx, by, bw, bh,
                                  &state.tab, "prompt", -1, 0.0f, 0.0f, nullptr);
+    ui::mixar_style_button(input_but, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
     if (input_but) {
       ui::button_placeholder_set(input_but,
                              state.image_mode ? "Describe your scene here... (optional)" :

@@ -15,12 +15,10 @@
 #include "BLI_rect.h"
 #include "RNA_access.hh"
 
-
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
 struct Image;
-
 
 struct bContext;
 
@@ -30,12 +28,8 @@ struct bContext;
  *
  * The params row's X positions are NOT design constants any more: the mode
  * and LOD labels come from the live catalog (`p_mode` / `p_lod`), so both
- * tracks are measured and each element anchors off the one before it. Only
- * the model chip keeps a design width (its label is elided into it). */
-#define SPLAT_SEG_INSET 3
-#define SPLAT_MODEL_W 137
-#define SPLAT_SWITCH_W 46
-#define SPLAT_SWITCH_H 26
+ * tracks are measured and each element anchors off the one before it. The
+ * model chip measures its label, capped to one third of the strip. */
 #define SPLAT_THUMB_EDGE 45
 
 #define SPLAT_ENUM_MAX 6
@@ -96,8 +90,6 @@ struct SplatPaneRects {
    * pane then offers neither the field nor Generate — a paid action must
    * never submit a prompt the user cannot see or edit. */
   bool prompt_ok;
-  float mood_label_x; /* Left edge of the "Allow selected..." label run. */
-  float mood_label_w; /* Width it was granted (elided into when tight). */
   rctf chip_upload, chip_capture;
   rctf moodboard_switch;
   rctf thumbs; /* Left edge of the thumbnail run. */
@@ -110,11 +102,8 @@ inline bool splat_rect_is_live(const rctf &r)
 }
 
 bool splat_state_resolve(const bContext *C, SplatTabState *r_state);
-int splat_enum_items_get(const bContext *C,
-                         PointerRNA *ptr,
-                         PropertyRNA *prop,
-                         SplatEnumItem *r_items,
-                         int max_items);
+int splat_enum_items_get(
+    const bContext *C, PointerRNA *ptr, PropertyRNA *prop, SplatEnumItem *r_items, int max_items);
 
 /* Board-selection collection and thumbnail drawing now live in the pane kit
  * (`pane_board_selected_images` / `pane_image_thumb_draw`) — every pane
@@ -123,6 +112,7 @@ int splat_enum_items_get(const bContext *C,
 
 void splat_pane_rects_build(const rctf &panel,
                             float u,
+                            const char *model_label,
                             const SplatEnumItem *mode_items,
                             int mode_count,
                             const SplatEnumItem *lod_items,
@@ -131,10 +121,6 @@ void splat_pane_rects_build(const rctf &panel,
 void splat_pane_paint(const bContext *C,
                       const SplatTabState &state,
                       const SplatPaneRects &rects,
-                      const SplatEnumItem *mode_items,
-                      int mode_count,
-                      const SplatEnumItem *lod_items,
-                      int lod_count,
                       float u);
 /* Painter primitives live in the pane kit (agent_ui_pane_kit.hh). */
 
