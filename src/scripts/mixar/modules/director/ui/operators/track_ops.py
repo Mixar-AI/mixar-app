@@ -82,6 +82,14 @@ class MIXAR_OT_director_pick_track_target(Operator):
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
+    def cancel(self, context):
+        # The window-level modal handler can be torn down without `modal()`
+        # running again (File > New / Load Factory Settings, an agent script
+        # calling `bpy.ops.wm.read_homefile()`), and those paths do not go
+        # through the `WM_cursor_wait` bracket that incidentally restores the
+        # cursor. Without this the eyedropper cursor sticks permanently.
+        context.window.cursor_modal_restore()
+
     def modal(self, context, event):
         if event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
             context.window.cursor_modal_restore()

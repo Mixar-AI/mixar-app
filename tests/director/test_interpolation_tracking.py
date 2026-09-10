@@ -23,21 +23,34 @@ BLENDER_INTERPOLATION = (
 )
 
 
-def _point(value):
-    return SimpleNamespace(interpolation=value)
+def _point(value, frame=1.0):
+    return SimpleNamespace(interpolation=value, co=(float(frame), 0.0))
 
 
-def _fcurve(*values):
-    return SimpleNamespace(keyframe_points=[_point(v) for v in values], update=MagicMock())
+def _fcurve(data_path, *values, frames=None):
+    """A fake F-curve; each value is the interpolation of one key, in order."""
+    if frames is None:
+        frames = range(1, len(values) + 1)
+    return SimpleNamespace(
+        data_path=data_path,
+        keyframe_points=[_point(v, f) for v, f in zip(values, frames)],
+        update=MagicMock(),
+    )
 
 
-def _shot_with_curves(object_curves, data_curves, interpolation_value="LINEAR", monkeypatch=None):
+def _shot_with_curves(
+    object_curves, data_curves, *, beats=(), interpolation_value="LINEAR", monkeypatch
+):
     camera = SimpleNamespace(data=SimpleNamespace())
     curves = {id(camera): object_curves, id(camera.data): data_curves}
     monkeypatch.setattr(
         interpolation, "assigned_fcurves", lambda owner: tuple(curves.get(id(owner), ()))
     )
-    return SimpleNamespace(camera=camera, interpolation=interpolation_value)
+    return SimpleNamespace(
+        camera=camera,
+        interpolation=interpolation_value,
+        beats=[SimpleNamespace(frame=frame) for frame in beats],
+    )
 
 
 # -------------------------------------------------------------------------
@@ -51,11 +64,13 @@ def test_the_dropdown_offers_every_blender_interpolation_type_in_order():
     assert numbers == list(range(len(numbers)))
 
 
-def test_apply_interpolation_rewrites_every_camera_key_and_refreshes_curves(monkeypatch):
-    location = _fcurve("BEZIER", "BEZIER", "LINEAR")
-    rotation = _fcurve("BEZIER")
-    lens = _fcurve("BEZIER", "BEZIER")
-    shot = _shot_with_curves([location, rotation], [lens], "LINEAR", monkeypatch)
+def test_apply_interpolation_rewrites_the_shots_own_camera_keys(monkeypatch):
+    location = _fcurve("location", "BEZIER", "BEZIER", "LINEAR")
+    rotation = _fcurve("rotation_euler", "BEZIER")
+    lens = _fcurve("lens", "BEZIER", "BEZIER")
+    shot = _shot_with_curves(
+        [location, rotation], [lens], beats=(1, 2, 3), monkeypatch=monkeypatch
+    )
 
     changed = interpolation.apply_interpolation(shot)
 
@@ -65,16 +80,55 @@ def test_apply_interpolation_rewrites_every_camera_key_and_refreshes_curves(monk
         curve.update.assert_called_once()
 
 
+def test_apply_interpolation_leaves_channels_director_does_not_own_alone(monkeypatch):
+    """A DOF rack or a shift keyed on the same camera keeps its own easing —
+    Director only owns the motion paths and the lens."""
+    focus = _fcurve("dof.focus_distance", "BEZIER", "BEZIER")
+    shift = _fcurve("shift_x", "BEZIER")
+    location = _fcurve("location", "BEZIER")
+    shot = _shot_with_curves(
+        [location, focus, shift], [], beats=(1,), monkeypatch=monkeypatch
+    )
+
+    assert interpolation.apply_interpolation(shot) == 1
+    assert {p.interpolation for p in focus.keyframe_points} == {"BEZIER"}
+    assert {p.interpolation for p in shift.keyframe_points} == {"BEZIER"}
+    focus.update.assert_not_called()
+    shift.update.assert_not_called()
+
+
+def test_apply_interpolation_leaves_another_takes_keys_alone(monkeypatch):
+    """A take is a second Shot sharing the ONE camera, so its keys live on the
+    same F-curves; only the frames this shot owns may be rewritten."""
+    location = _fcurve("location", "BEZIER", "BEZIER", frames=(1.0, 9.0))
+    shot = _shot_with_curves([location], [], beats=(1,), monkeypatch=monkeypatch)
+
+    assert interpolation.apply_interpolation(shot) == 1
+    assert [p.interpolation for p in location.keyframe_points] == ["LINEAR", "BEZIER"]
+
+
+def test_the_frame_being_captured_is_in_scope_before_its_beat_exists(monkeypatch):
+    """`capture_beat` calls this after keying and BEFORE adding the beat, so
+    the frame has to be passed in explicitly or the fresh key is skipped."""
+    location = _fcurve("location", "BEZIER", frames=(7.0,))
+    shot = _shot_with_curves([location], [], beats=(), monkeypatch=monkeypatch)
+
+    assert interpolation.apply_interpolation(shot) == 0
+    assert interpolation.apply_interpolation(shot, 7) == 1
+    assert location.keyframe_points[0].interpolation == "LINEAR"
+
+
 def test_apply_interpolation_is_a_no_op_without_a_camera_or_keys(monkeypatch):
     assert interpolation.apply_interpolation(SimpleNamespace(camera=None, interpolation="LINEAR")) == 0
-    shot = _shot_with_curves([], [], "LINEAR", monkeypatch)
+    shot = _shot_with_curves([], [], beats=(), monkeypatch=monkeypatch)
     assert interpolation.apply_interpolation(shot) == 0
 
 
 def test_every_capture_reapplies_the_shots_interpolation():
     capture = (DIRECTOR / "core/capture.py").read_text(encoding="utf-8")
     key = capture.index("_key_camera(camera, target_frame)")
-    assert "apply_interpolation(shot)" in capture[key:]
+    # The beat is added after this call, so the captured frame is named.
+    assert "apply_interpolation(shot, target_frame)" in capture[key:]
 
 
 def test_the_shot_property_applies_on_change_and_the_operator_writes_the_property():
@@ -163,6 +217,19 @@ def test_the_eyedropper_ray_casts_instead_of_selecting():
     assert "return {'RUNNING_MODAL'}" in ops[ops.index("No object under the cursor"):]
     assert "{'RIGHTMOUSE', 'ESC'}" in ops
     assert ops.count("cursor_modal_restore()") >= 3
+
+
+def test_the_eyedropper_restores_the_cursor_when_the_modal_is_torn_down():
+    """`modal()` is not guaranteed another event — File > New / Load Factory
+    Settings, and agent scripts calling `bpy.ops.wm.read_homefile()`, drop the
+    window-level modal handler without going through the `WM_cursor_wait`
+    bracket that incidentally restores the cursor. `cancel()` is the one hook
+    that still runs, so the eyedropper cursor must be restored there."""
+    ops = (DIRECTOR / "ui/operators/track_ops.py").read_text(encoding="utf-8")
+    body = ops[ops.index("class MIXAR_OT_director_pick_track_target"):]
+    cancel = body[body.index("def cancel(self, context):"):]
+    cancel = cancel[: cancel.index("def modal(")]
+    assert "cursor_modal_restore()" in cancel
 
 
 def test_the_strip_chip_passes_clear_when_a_target_is_live():
