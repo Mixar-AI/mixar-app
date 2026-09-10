@@ -6,7 +6,7 @@
 Async script execution queue for main thread execution.
 
 Architecture:
-- Request queue: (request_id, script) from WebSocket thread
+- Request queue: ExecutionRequest values from the WebSocket thread
 - Timer polls request queue, executes ONE script per tick
 - Responses pushed directly to WebSocket client's outbound queue (thread-safe)
 
@@ -15,6 +15,11 @@ This approach is non-blocking and prevents UI freezes by:
 2. Timer on main thread polls and executes ONE script per tick
 3. Responses are sent directly via client.queue_response() to avoid
    cross-thread queue polling (which caused segfaults in Blender's embedded Python)
+
+The take/execute/respond sequence lives in
+``mixar.modules.common.agent_execution.pump`` and is shared with the headless
+worker pump (``headless/headless_main.py``); scene routing and history live in
+``main_thread_routing``.
 """
 
 from collections.abc import Callable
@@ -26,27 +31,30 @@ from typing import Optional
 
 import bpy
 
+from mixar.modules.common.agent_execution import pump
+from mixar.modules.common.agent_execution.request import ExecutionEnvelope, ExecutionRequest
+
 from .executor import get_executor
+from .main_thread_routing import archive_history, restore_after, route_request
 from .script_prefetch import maybe_start_prefetch
-from ..constants import (
-    SessionState,
-    TIMER_INTERVAL,
-    is_lane_scene,
-    is_non_scene_routing_session,
-)
+from ..constants import TIMER_INTERVAL
 
 logger = get_logger(__name__)
 
-# Request queue: (request_id, script, tool_name, session_id, agent_ctx, prefetch) from
-# WebSocket thread. `prefetch` is a ScriptAssetPrefetch handle (or None) —
-# heavy texture-apply scripts start downloading their assets the moment they
-# are queued, and the timer holds them (UI responsive) until the cache is warm.
+# Provenance-id resolution moved to the shared pump; kept importable here for
+# existing callers/tests.
+_resolve_agent_context_ids = pump.resolve_agent_context_ids
+
+# Request queue of ExecutionRequest values from the WebSocket thread. A
+# request's `prefetch` is a ScriptAssetPrefetch handle (or None) — heavy
+# texture-apply scripts start downloading their assets the moment they are
+# queued, and the timer holds them (UI responsive) until the cache is warm.
 _request_queue: queue.Queue = queue.Queue(maxsize=1000)
 
 # Head-of-queue request waiting for its asset prefetch. Dequeued but not yet
 # executed — strict FIFO is preserved (later scripts wait behind it). Main
 # thread only.
-_held: Optional[tuple] = None
+_held: Optional[ExecutionRequest] = None
 
 # Timer state. _timer_active is read/written from both the WebSocket thread
 # (queue_script_request) and the main thread (_process_one_request); every
@@ -71,13 +79,6 @@ _execution_gate_until: float = 0.0
 # render longer than a quick EEVEE preview into a guaranteed failed turn.
 # Removed in 3.4.4; do not bring it back for ANY job type. Full write-up and
 # the pinning tests: docs/render-job-contract.md.
-
-# The user's genuine foreground scene — the one window.scene should return to
-# after a per-scene-routed (or lane) script flips away from it. Tracked by name
-# because Scene datablocks are not safe to hold across undo/file-load. Updated
-# only when an active-scene-follow script runs (agent:/empty session), i.e. the
-# scene the user is actually looking at (see _process_one_request).
-_user_foreground_scene_name: str = ""
 
 # In-flight script marker for the blender.liveness probe. Set on the main
 # thread around ScriptExecutor.execute() and read from the WebSocket thread:
@@ -120,44 +121,14 @@ def get_inflight_script() -> Optional[dict]:
     return info
 
 
-def _resolve_agent_context_ids(
-    agent_ctx: Optional[dict], session_id: str, request_id: str
-) -> tuple[str, str]:
-    """Resolve provenance ids, retaining compatibility with older backends."""
-    if isinstance(agent_ctx, dict):
-        return (
-            agent_ctx.get("chat_session_id", session_id),
-            agent_ctx.get("turn_id", request_id),
-        )
-    return session_id, request_id
-
-
-def _resolve_user_foreground_scene():
-    """The user's real (non-lane) foreground scene to restore window.scene to.
-
-    Prefers the tracked scene captured while an active-scene-follow script ran.
-    If it was deleted, falls back to any real (non-lane) scene — NEVER a lane
-    scene. Returns None only if no real scene exists (should not happen).
-    """
-    import bpy
-    tracked = bpy.data.scenes.get(_user_foreground_scene_name) if _user_foreground_scene_name else None
-    if tracked is not None and not is_lane_scene(tracked):
-        return tracked
-    for s in bpy.data.scenes:
-        if not is_lane_scene(s):
-            return s
-    return None
-
-
-def _send_error_response(request_id: str, error: str) -> None:
+def _send_error_response(request_id: str, error: str, error_type: str = "") -> None:
     """Reply to a script request with a failure result (mirrors the stale-session
     path). No-op for notifications or when no client is connected."""
-    if request_id == "notification":
-        return
     from .jsonrpc_client import get_jsonrpc_client
-    client = get_jsonrpc_client()
-    if client and client.is_connected:
-        client.queue_response(request_id, {"success": False, "error": error})
+    result = {"success": False, "error": error}
+    if error_type:
+        result["error_type"] = error_type
+    pump.respond(get_jsonrpc_client(), ExecutionRequest(request_id, ""), result)
 
 
 def queue_script_request(
@@ -166,6 +137,7 @@ def queue_script_request(
     tool_name: str = "unknown",
     session_id: str = "",
     agent_ctx: Optional[dict] = None,
+    envelope: Optional[dict] = None,
 ) -> None:
     """
     Queue a script for execution on main thread (non-blocking).
@@ -180,6 +152,7 @@ def queue_script_request(
         tool_name: Name of the tool being executed
         session_id: Target session ID for scene routing
         agent_ctx: Explicit backend chat session and turn identifiers, if sent
+        envelope: Optional v3 task envelope (carried through; not admitted here)
     """
     global _execution_gate_until
     if _shutdown_requested:
@@ -198,11 +171,17 @@ def queue_script_request(
     # thread's watch — by the time the script reaches the front of the queue
     # its images are usually already on disk, so execution never waits on the
     # network while holding the main thread.
-    prefetch = maybe_start_prefetch(script, tool_name)
+    req = ExecutionRequest(
+        request_id=request_id,
+        script=script,
+        tool_name=tool_name,
+        session_id=session_id,
+        agent_ctx=agent_ctx,
+        prefetch=maybe_start_prefetch(script, tool_name),
+        envelope=ExecutionEnvelope.parse(envelope),
+    )
     try:
-        _request_queue.put_nowait(
-            (request_id, script, tool_name, session_id, agent_ctx, prefetch)
-        )
+        _request_queue.put_nowait(req)
     except queue.Full:
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
         return
@@ -274,6 +253,29 @@ def _stop_timer_if_idle() -> Optional[float]:
         return None
 
 
+def _reject_stale_session(req: ExecutionRequest) -> None:
+    """Drop a script queued for a session that is no longer active."""
+    logger.warning(
+        "Dropping stale script %s (id: %s) — no active agent session",
+        req.tool_name, req.request_id,
+    )
+    _send_error_response(req.request_id, "Agent session not active")
+    # The dropped script may have been the backend's remove_scene cleanup
+    # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
+    try:
+        from .lane_scene_sweep import schedule_lane_scene_sweep
+        schedule_lane_scene_sweep()
+    except Exception:
+        logger.debug("lane scene sweep scheduling skipped", exc_info=True)
+
+
+def _note_output_landed() -> None:
+    # Rejection-window tracking only — no event is emitted here (the backend
+    # covers agent tool telemetry server-side).
+    from mixar.modules.common.analytics import rejection_events
+    rejection_events.note_output_landed("agent", None)
+
+
 def _process_one_request() -> Optional[float]:
     """
     Timer callback - execute ONE queued script per tick.
@@ -282,7 +284,7 @@ def _process_one_request() -> Optional[float]:
     to avoid blocking the UI, then re-schedules if more scripts pending.
 
     Returns:
-        Interval for next call (0.20s) if more requests, None to stop timer
+        Interval for next call if more requests, None to stop timer
     """
     global _held
     if _held is None and _request_queue.empty():
@@ -300,187 +302,79 @@ def _process_one_request() -> Optional[float]:
     if time.monotonic() < _execution_gate_until:
         return TIMER_INTERVAL
 
-    if _held is None:
-        try:
-            _held = _request_queue.get_nowait()
-        except queue.Empty:
-            return _stop_timer_if_idle()
-
-    request_id, script, tool_name, session_id, agent_ctx, prefetch = _held
-    if prefetch is not None and not prefetch.ready():
+    req, _held, status = pump.take_next(_request_queue, _held)
+    if status == pump.EMPTY:
+        return _stop_timer_if_idle()
+    if status == pump.HOLDING:
         # The script's texture assets are still downloading in the
         # background. Keep holding it — this tick cost one flag check, so
         # the UI stays fully responsive — and check again shortly. FIFO is
-        # preserved: everything behind it waits too. ready() flips true on
-        # completion OR the wait cap, so a stuck download can't stall the
-        # queue forever.
+        # preserved: everything behind it waits too.
         return TIMER_INTERVAL
-    _held = None
-
-    # Safety net: reject scripts that were queued just before load_pre
-    # flushed the queue (narrow race window). If the session is no longer
-    # active, drop the script and send an error response.
-    from .session import get_session_manager
-    session = get_session_manager()
-    if not session.has_active_session():
-        logger.warning(
-            "Dropping stale script %s (id: %s) — no active agent session",
-            tool_name, request_id,
-        )
-        from .jsonrpc_client import get_jsonrpc_client
-        client = get_jsonrpc_client()
-        if client and client.is_connected and request_id != "notification":
-            client.queue_response(request_id, {"success": False, "error": "Agent session not active"})
-        # The dropped script may have been the backend's remove_scene cleanup
-        # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
-        try:
-            from .lane_scene_sweep import schedule_lane_scene_sweep
-            schedule_lane_scene_sweep()
-        except Exception:
-            logger.debug("lane scene sweep scheduling skipped", exc_info=True)
+    if status in (pump.PREFETCH_FAILED, pump.PREFETCH_EXPIRED):
+        refusal = pump.prefetch_refusal(req, status)
+        logger.warning("Refusing %s (id: %s): %s", req.tool_name, req.request_id, refusal["error"])
+        _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""))
         return _stop_timer_if_idle()
 
-    logger.info(f"Executing {tool_name} (id: {request_id})")
+    # Safety net: reject scripts that were queued just before load_pre
+    # flushed the queue (narrow race window).
+    from .session import get_session_manager
+    if not get_session_manager().has_active_session():
+        _reject_stale_session(req)
+        return _stop_timer_if_idle()
+
+    logger.info(f"Executing {req.tool_name} (id: {req.request_id})")
     # Visible to the WebSocket thread's blender.liveness probe while this
     # tick's bpy work holds the main thread (busy != frozen).
-    _set_inflight(tool_name, request_id, session_id)
+    _set_inflight(req.tool_name, req.request_id, req.session_id)
 
-    # --- Scene context routing ---
-    # A per-scene routing session (the user's main scene UUID, or an
-    # "agentlane:<parent>:<n>" lane scene) MUST resolve to a scene: switch to it,
-    # execute, restore. The constant "agent:<connection>" / empty session instead
-    # follows the user's active window scene (normal / sandbox mode).
-    # The switch + execute + restore all happen within this single timer tick —
-    # Blender does not redraw, so the user sees no visual change.
-    global _user_foreground_scene_name
-    did_switch = False
-    target_scene = None
-    non_scene_routed = is_non_scene_routing_session(session_id)
-
-    if not non_scene_routed:
-        for s in bpy.data.scenes:
-            if getattr(s, 'mixie_session_id', '') == session_id:
-                target_scene = s
-                break
-        if target_scene is None:
-            # Bug 1: a real per-scene session with no matching scene. Running it
-            # against whatever is active would clobber the user's work in the
-            # wrong scene — hard-fail instead of the old silent fallback.
-            logger.warning(
-                "No scene for session '%s' (tool %s, id %s) — rejecting script",
-                session_id, tool_name, request_id,
-            )
-            _send_error_response(request_id, f"no scene for session {session_id}")
-            # Stop via the shared, lock-guarded helper. Assigning `_timer_active`
-            # directly here binds a function-local (this function never declares
-            # `global _timer_active`), leaving the module flag stuck True while
-            # Blender unregisters the timer — so it is never re-armed and every
-            # subsequent agent script silently stalls for the rest of the session.
-            return _stop_timer_if_idle()
-    elif bpy.context.window is not None:
-        # Active-scene-follow request → this is the user's foreground scene.
-        # Remember it (unless it's a lane scene) so per-scene/lane scripts can
-        # restore window.scene back to it, not to whatever was last active.
-        active = bpy.context.window.scene
-        if active is not None and not is_lane_scene(active):
-            _user_foreground_scene_name = active.name
-
-    if target_scene and bpy.context.window and bpy.context.window.scene != target_scene:
-        did_switch = True
-        bpy.context.window.scene = target_scene
-        logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
+    target_scene, did_switch, route_error = route_request(
+        req.session_id, req.tool_name, req.request_id
+    )
+    if route_error is not None:
+        _clear_inflight()
+        _send_error_response(req.request_id, route_error)
+        # Stop via the shared, lock-guarded helper. Assigning `_timer_active`
+        # directly here binds a function-local (this function never declares
+        # `global _timer_active`), leaving the module flag stuck True while
+        # Blender unregisters the timer — so it is never re-armed and every
+        # subsequent agent script silently stalls for the rest of the session.
+        return _stop_timer_if_idle()
 
     # Record a RUNNING step row on the active agent bubble (steps block UI).
     from .steps_recorder import record_step_start, record_step_end
     chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
     if chat_scene:
-        record_step_start(chat_scene, request_id, tool_name, script)
+        record_step_start(chat_scene, req.request_id, req.tool_name, req.script)
 
     executor = get_executor()
-
     # Skip if previous script is still executing (should not normally happen
     # since the timer runs one-at-a-time, but guards against edge cases)
     if executor._execution_lock.locked():
         logger.warning(
-            "Previous script still executing, skipping request (id: %s)", request_id
+            "Previous script still executing, skipping request (id: %s)", req.request_id
         )
         result_dict = {"success": False, "error": "Previous script still executing"}
     else:
-        from mixar.modules.common.agent_execution_context import (
-            clear_agent_execution_context,
-            set_agent_execution_context,
-        )
-        try:
-            context_session_id, context_turn_id = _resolve_agent_context_ids(
-                agent_ctx, session_id, request_id
-            )
-            set_agent_execution_context(context_session_id, context_turn_id)
-            result = executor.execute(script)
-            result_dict = result.to_dict()
-            logger.debug(f"Script execution completed: success={result.success}")
-            if result_dict.get("success"):
-                # Rejection-window tracking only — no event is emitted here
-                # (the backend covers agent tool telemetry server-side).
-                try:
-                    from mixar.modules.common.analytics import rejection_events
-                    rejection_events.note_output_landed("agent", None)
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.error(f"Script execution failed: {e}")
-            result_dict = {"success": False, "error": str(e)}
-        finally:
-            clear_agent_execution_context()
+        result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+        logger.debug(f"Script execution completed: success={result_dict.get('success')}")
 
-    # --- Operation history: archive every agent script/tool execution ---
-    try:
-        from mixar.modules.operation_history.constants import HISTORY_SCRIPT_MARKER, HISTORY_TOOLS
-        from mixar.modules.operation_history.core import store as _op_store
-        from mixar.modules.operation_history.core.record import build_agent_record
-        from mixar.modules.operation_history.core.scene_key import get_scene_history_id
-        if tool_name not in HISTORY_TOOLS and HISTORY_SCRIPT_MARKER not in script:
-            _hist_scene = target_scene if target_scene is not None else (
-                bpy.context.window.scene if bpy.context.window else None)
-            _hist_sid = get_scene_history_id(_hist_scene)
-            _wm = getattr(bpy.context, "window_manager", None)
-            _iid = getattr(_wm, "mixie_instance_id", "") if _wm else ""
-            _op_store.append_operation(
-                build_agent_record(tool_name=tool_name, result_dict=result_dict,
-                                   session_id=_hist_sid, instance_id=_iid, request_id=request_id),
-                script_text=script,
-            )
-    except Exception as _op_exc:  # never break execution/response on history failure
-        logger.debug("operation_history: failed to record agent op: %s", _op_exc)
-
-    # Restore the user's real foreground scene after execution (Bug 2).
-    # Restore to the tracked user scene — NOT "whatever was active when this
-    # script started", which may itself be a throwaway lane scene. If that
-    # scene was deleted, _resolve_user_foreground_scene() falls back to any
-    # real (non-lane) scene, never a lane.
-    if did_switch and bpy.context.window:
-        restore_scene = _resolve_user_foreground_scene()
-        if restore_scene is not None and bpy.context.window.scene != restore_scene:
-            try:
-                bpy.context.window.scene = restore_scene
-            except Exception:
-                pass  # Scene may have been deleted by the script
+    archive_history(req.tool_name, req.script, result_dict, target_scene, req.request_id)
+    restore_after(did_switch)
 
     # Complete the step row with status / touched objects / output.
     if chat_scene:
-        record_step_end(chat_scene, request_id, result_dict)
+        record_step_end(chat_scene, req.request_id, result_dict)
 
     # Main-thread work for this script is done — the liveness probe reports
     # idle from here on.
     _clear_inflight()
 
-    # Send response directly via WebSocket client (thread-safe)
-    # This avoids cross-thread queue polling which caused segfaults
+    # Send response directly via WebSocket client (thread-safe). This avoids
+    # cross-thread queue polling which caused segfaults.
     from .jsonrpc_client import get_jsonrpc_client
-    client = get_jsonrpc_client()
-    if client and client.is_connected:
-        client.queue_response(request_id, result_dict)
-    else:
-        logger.warning(f"No active client, dropping response (id: {request_id})")
+    pump.respond(get_jsonrpc_client(), req, result_dict)
 
     # Continue timer if more requests pending
     if not _request_queue.empty():

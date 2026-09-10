@@ -126,6 +126,13 @@ class ConnectionManager:
             # Access instance_id to trigger generation if needed
             instance_id = session.instance_id
             logger.info(f"ConnectionManager initialized with instance_id: {instance_id[:8]}...")
+            # Harness v3: document identity / epoch handlers + the run-active
+            # WindowManager flag (main thread — initialize() runs on a timer).
+            try:
+                from mixar.modules.common.agent_execution import document as _v3doc
+                _v3doc.register()
+            except Exception as e:
+                logger.warning(f"v3 document identity registration skipped: {e}")
             return True
 
         except Exception as e:
@@ -310,6 +317,7 @@ class ConnectionManager:
             tool_name: str = "unknown",
             session_id: str = "",
             agent_ctx: Optional[dict] = None,
+            envelope: Optional[dict] = None,
         ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
             if not session.has_active_session():
@@ -320,16 +328,11 @@ class ConnectionManager:
                 return {"success": False, "error": "Agent session not active"}
 
             from .main_thread_executor import queue_script_request
-            if request_id:
-                queue_script_request(
-                    script, request_id, tool_name, session_id, agent_ctx
-                )
-                return None
-            else:
-                queue_script_request(
-                    script, "notification", tool_name, session_id, agent_ctx
-                )
-                return None
+            queue_script_request(
+                script, request_id or "notification", tool_name, session_id,
+                agent_ctx, envelope=envelope,
+            )
+            return None
 
         def on_tool_start(params: dict):
             """Handle tool start notification."""
@@ -359,6 +362,11 @@ class ConnectionManager:
             """Backend asked this (parent) instance to manage its sandbox child."""
             from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
             return handle_sandbox_control(params)
+
+        def on_execution_request(method: str, params: dict, request_id) -> None:
+            """Harness v3 agent.execution.* — main-thread work, deferred reply."""
+            from mixar.modules.common.agent_execution.handlers import handle_execution_request
+            return handle_execution_request(method, params, request_id)
 
         def on_llm_request(params: dict, request_id) -> None:
             """Relay one backend llm.request to the user's local model server.
@@ -493,6 +501,7 @@ class ConnectionManager:
             on_sandbox_control=on_sandbox_control,
             on_llm_request=on_llm_request,
             on_addon_project_request=on_addon_project_request,
+            on_execution_request=on_execution_request,
         )
 
         # Connect

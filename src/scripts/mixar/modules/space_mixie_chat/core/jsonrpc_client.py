@@ -84,6 +84,9 @@ class JSONRPCWebSocketClient:
         on_addon_project_request: Optional[
             Callable[[str, dict, Optional[str]], Optional[dict]]
         ] = None,
+        on_execution_request: Optional[
+            Callable[[str, dict, Optional[str]], Optional[dict]]
+        ] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -110,6 +113,7 @@ class JSONRPCWebSocketClient:
         self._on_sandbox_control = on_sandbox_control
         self._on_llm_request = on_llm_request
         self._on_addon_project_request = on_addon_project_request
+        self._on_execution_request = on_execution_request
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -423,6 +427,18 @@ class JSONRPCWebSocketClient:
                 # clients would silently never reply).
                 "liveness",
                 ADDON_PROJECT_CAPABILITY,
+                # blender.execute_script frames may carry params["envelope"]
+                # (harness v3 task envelope); this client parses and carries
+                # it. Task ADMISSION on it is negotiated by later capabilities.
+                "exec_envelope_v3",
+                # Harness v3 execution protocol bundle (agent.execution.*):
+                # task bindings, operation receipts (SQLite journal), native
+                # artifact append, document epoch, runtime question routing.
+                "task_binding_v1",
+                "operation_receipts_v1",
+                "native_artifacts_v1",
+                "document_epoch_v1",
+                "runtime_questions_v1",
             ],
         }
         # Anti-abuse device signal (one trial per machine); best-effort
@@ -655,6 +671,9 @@ class JSONRPCWebSocketClient:
         elif isinstance(method, str) and method.startswith(JSONRPCMethod.ADDON_PROJECT_PREFIX):
             self._handle_addon_project_request(method, params, request_id)
 
+        elif isinstance(method, str) and method.startswith(JSONRPCMethod.AGENT_EXECUTION_PREFIX):
+            self._handle_execution_request(method, params, request_id)
+
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
                 try:
@@ -692,6 +711,34 @@ class JSONRPCWebSocketClient:
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")
+
+    def _handle_execution_request(
+        self, method: str, params: dict, request_id: Optional[str]
+    ) -> None:
+        """Handle a harness v3 ``agent.execution.*`` request (parent side).
+
+        The callback schedules its bpy work on the main thread and replies
+        through ``queue_response`` (returns None). A synchronous dict is an
+        immediate refusal. A client without the handler (a headless worker)
+        answers ``capability_unavailable``.
+        """
+        result = None
+        if self._on_execution_request:
+            try:
+                result = self._on_execution_request(method, params, request_id)
+                if result is None:
+                    return
+            except Exception as exc:
+                logger.error("execution request %s failed: %s", method, exc)
+                result = {"success": False, "error": str(exc), "error_type": "handler_error"}
+        else:
+            result = {
+                "success": False,
+                "error": "execution protocol unavailable on this client",
+                "error_type": "capability_unavailable",
+            }
+        if request_id:
+            self.queue_response(request_id, result)
 
     def _handle_addon_project_request(
         self, method: str, params: dict, request_id: Optional[str]
@@ -764,12 +811,21 @@ class JSONRPCWebSocketClient:
         tool_name = params.get("tool_name", "unknown")
         session_id = params.get("session_id", "")
         agent_ctx = params.get("agent_ctx")
+        # Optional v3 task envelope (harness v3 PR 1). Passed as a keyword
+        # ONLY when present so older five-positional callbacks keep working.
+        envelope = params.get("envelope")
 
         if self._on_script_execute:
             try:
-                result = self._on_script_execute(
-                    script, request_id, tool_name, session_id, agent_ctx
-                )
+                if isinstance(envelope, dict):
+                    result = self._on_script_execute(
+                        script, request_id, tool_name, session_id, agent_ctx,
+                        envelope=envelope,
+                    )
+                else:
+                    result = self._on_script_execute(
+                        script, request_id, tool_name, session_id, agent_ctx
+                    )
                 if result is None:
                     # Async handling - response will be sent via response queue
                     return

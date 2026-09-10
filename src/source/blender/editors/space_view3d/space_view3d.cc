@@ -76,7 +76,7 @@
 #include "DEG_depsgraph.hh"
 #include "DEG_depsgraph_build.hh"
 
-#include "view3d_agent_strip.hh"
+#include "view3d_agent_panel.hh"
 #include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
 #include "view3d_navigate.hh"
@@ -231,8 +231,13 @@ static SpaceLink *view3d_create(const ScrArea * /*area*/, const Scene *scene)
   region->regiontype = RGN_TYPE_ASSET_SHELF_HEADER;
   region->alignment = RGN_ALIGN_BOTTOM | RGN_ALIGN_HIDE_WITH_PREV;
 
-  /* agent scene strip (Mixar): poll-driven, only appears while the sticky
-   * agent-scene set is non-empty. */
+  /* parallel agents panel (Mixar): poll-driven, only appears while the
+   * running (or last) turn fanned out to parallel agents. The card stack sits
+   * bottom-LEFT and grows upward, but the region is aligned BOTTOM — Blender
+   * STACKS overlapping regions that share an edge rather than letting them
+   * overlap each other, so a left-docked panel pushes the tool shelf bodily
+   * out into the viewport. RGN_TYPE_EXECUTE is in the View3D region-overlap
+   * allowlist, so the cards still float over the viewport. */
   region = BKE_area_region_new();
 
   BLI_addtail(&v3d->regionbase, region);
@@ -1489,8 +1494,10 @@ static void space_view3d_listener(const wmSpaceTypeListenerParams *params)
       break;
   }
 
-  /* Agent scene strip (Mixar): dirty tagging + refresh tick. */
-  view3d_agent_strip_space_listener(params);
+
+  /* Parallel Agents panel (Mixar): the poll-driven region needs a screen
+   * refresh to appear or close, which a redraw tag is not. */
+  view3d_agent_panel_space_listener(params);
 }
 
 static void space_view3d_refresh(const bContext *C, ScrArea *area)
@@ -1510,9 +1517,6 @@ static void space_view3d_refresh(const bContext *C, ScrArea *area)
                                U.smooth_viewtx);
   }
 
-  /* Agent scene strip (Mixar): evaluate non-active tile scenes and detect
-   * changes. Runs on the main-loop refresh phase, never during drawing. */
-  view3d_agent_strip_refresh(C, area);
 }
 
 static void view3d_id_remap_v3d_ob_centers(View3D *v3d, const bke::id::IDRemapper &mappings)
@@ -1629,12 +1633,12 @@ static void view3d_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 }
 
 /* Region-level `operatortypes` callbacks are never invoked by
- * `ED_spacetypes_init()` — the agent strip's operators piggyback on the
+ * `ED_spacetypes_init()` — the agent panel's operators piggyback on the
  * space-level registration instead. */
-static void view3d_operatortypes_with_agent_strip()
+static void view3d_operatortypes_with_agent_panel()
 {
   view3d_operatortypes();
-  view3d_agent_strip_operatortypes();
+  view3d_agent_panel_operatortypes();
 }
 
 void ED_spacetype_view3d()
@@ -1653,12 +1657,14 @@ void ED_spacetype_view3d()
   st->listener = space_view3d_listener;
   st->refresh = space_view3d_refresh;
   st->duplicate = view3d_duplicate;
-  st->operatortypes = view3d_operatortypes_with_agent_strip;
-  /* Mixar: ARegionType::keymap was removed in 5.2, so the Agent Scene
-   * Strip's default keymap items are ensured from the space keymap. */
+  st->operatortypes = view3d_operatortypes_with_agent_panel;
+  /* Mixar: ARegionType::keymap was removed in 5.2, so the Parallel Agents
+   * panel's default keymap items are ensured from the space keymap. (The
+   * bindings that actually survive a GUI keyconfig preset reload live in the
+   * addon keyconfig — see `agent_panel/ui/keymap.py`.) */
   st->keymap = [](wmKeyConfig *keyconf) {
     view3d_keymap(keyconf);
-    view3d_agent_strip_keymap(keyconf);
+    view3d_agent_panel_keymap(keyconf);
   };
   st->dropboxes = view3d_dropboxes;
   st->gizmos = view3d_widgets;
@@ -1774,14 +1780,17 @@ void ED_spacetype_view3d()
   art->regionid = RGN_TYPE_XR;
   BLI_addhead(&st->regiontypes, art);
 
-  /* regions: agent scene strip (Mixar) */
-  view3d_agent_strip_region_register(st.get());
+  /* regions: parallel agents panel (Mixar) */
+  view3d_agent_panel_region_register(st.get());
 
   /* regions: Director camera-beat timeline (Mixar) */
   view3d_director_timeline_region_register(st.get());
 
   /* QA harness: export Director timeline strip/beats as targets (Mixar). */
   view3d_director_qa_targets_register();
+
+  /* QA harness: export the parallel agent cards as targets (Mixar). */
+  view3d_agent_panel_qa_targets_register();
 
   WM_menutype_add(MEM_new<MenuType>(__func__, ed::geometry::node_group_operator_assets_menu()));
   WM_menutype_add(

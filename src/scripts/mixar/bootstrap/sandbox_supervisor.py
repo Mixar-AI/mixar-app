@@ -61,7 +61,66 @@ def _headless_main_path() -> str:
 
 
 def _parent_instance_from(connection_id: str) -> str:
-    return connection_id[:-4] if connection_id.endswith("-sbx") else connection_id
+    """Inverse of the backend's ``{parent}-sbx-{n}`` scheme (legacy ``-sbx`` too)."""
+    from mixar.modules.common.agent_execution.identity import parent_instance_from
+    return parent_instance_from(connection_id)
+
+
+def _live_children() -> dict:
+    """connection_id -> pid for children whose process is still running."""
+    return {cid: p.pid for cid, p in _children.items() if p and p.poll() is None}
+
+
+def _available_ram_bytes() -> int:
+    """Best-effort free physical RAM (0 when unknown). Never raises."""
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class _MEM(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+            st = _MEM()
+            st.dwLength = ctypes.sizeof(_MEM)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+                return int(st.ullAvailPhys)
+            return 0
+        if hasattr(os, "sysconf") and "SC_AVPHYS_PAGES" in os.sysconf_names:
+            return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
+        # macOS: parse vm_stat (free + inactive pages).
+        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=5, check=True)
+        page = 4096
+        pages = 0
+        for line in out.stdout.splitlines():
+            if "page size of" in line:
+                page = int(re.search(r"(\d+) bytes", line).group(1))
+            elif line.startswith(("Pages free", "Pages inactive")):
+                pages += int(line.split(":")[1].strip().rstrip("."))
+        return pages * page
+    except Exception:
+        return 0
+
+
+def report_resources() -> dict:
+    """Bounded host facts for worker admission (no paths, no secrets)."""
+    try:
+        from mixar.modules.local_models.core.platform_info import total_ram_bytes
+        total = int(total_ram_bytes() or 0)
+    except Exception:
+        total = 0
+    return {
+        "success": True,
+        "total_ram_mb": total // (1024 * 1024),
+        "available_ram_mb": _available_ram_bytes() // (1024 * 1024),
+        "cpu_count": os.cpu_count() or 0,
+        "workers": len(_live_children()),
+        "platform": f"{os.name}",
+    }
 
 
 def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
@@ -85,15 +144,22 @@ def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
         from mixar.modules.auth.core.auth import get_access_token
         from mixar.config.config import get_server_url
 
+        parent_iid = parent_instance_id or _parent_instance_from(connection_id)
         env = dict(os.environ)
         env.update({
             "MIXAR_SANDBOX_ACCESS_TOKEN": get_access_token() or "",
             "MIXAR_BACKEND_URL": get_server_url(),
             "MIXAR_SANDBOX_CONNECTION_ID": connection_id,
-            "MIXAR_SANDBOX_PARENT_INSTANCE_ID":
-                parent_instance_id or _parent_instance_from(connection_id),
+            "MIXAR_SANDBOX_PARENT_INSTANCE_ID": parent_iid,
             "MIXAR_SANDBOX_PARENT_PID": str(os.getpid()),
         })
+        # The PARENT owns the artifact staging area; the worker only writes
+        # into the directory it was handed (never sent upstream).
+        try:
+            from mixar.modules.common.agent_execution.paths import staging_dir
+            env["MIXAR_SANDBOX_STAGING_DIR"] = staging_dir(parent_iid)
+        except Exception as e:
+            logger.warning("no staging dir for worker %s: %s", connection_id, e)
         if idle_ttl_s:
             env["MIXAR_SANDBOX_IDLE_TTL_S"] = str(idle_ttl_s)
         argv = [
@@ -181,9 +247,18 @@ def handle_sandbox_control(params: dict) -> dict:
     if action == "shutdown":
         return shutdown_sandbox(params.get("connection_id"))
     if action == "refresh_token":
-        # The child re-reads MIXAR_SANDBOX_ACCESS_TOKEN on reconnect; live token
-        # push is a future enhancement. Best-effort ack for now.
-        return {"success": True}
+        # A running child cannot have its environment changed, so credential
+        # refresh is a RESTART with the parent's current access token. The
+        # backend must only ask this for an IDLE worker (it knows what is in
+        # flight; this process does not) — the previous acknowledge-only
+        # reply advertised a renewal that never happened.
+        cid = params.get("connection_id")
+        if not cid:
+            return {"success": False, "error": "refresh_token requires connection_id"}
+        shutdown_sandbox(cid)
+        return spawn_sandbox(cid, params.get("idle_ttl_s"), params.get("parent_instance_id"))
+    if action == "report_resources":
+        return report_resources()
     return {"success": False, "error": f"unknown sandbox_control action: {action}"}
 
 

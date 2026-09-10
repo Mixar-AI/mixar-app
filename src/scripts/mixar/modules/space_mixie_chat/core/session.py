@@ -120,6 +120,16 @@ class SessionManager:
             elif not is_active:
                 scene.mixie_chat_active_turn_mode = ''
 
+        # A new turn starts with an empty Parallel Agents panel: the previous
+        # turn's cards stay up after it ends (so its outcome is readable) and
+        # a turn that never fans out would otherwise leave them there.
+        if is_active and not was_active:
+            try:
+                from mixar.modules.agent_panel.core.cards import clear_cards
+                clear_cards()
+            except Exception:  # noqa: BLE001 — the panel never blocks a turn
+                pass
+
         # Update active scenes tracking (thread-safe)
         scene_name = scene.name
         with SessionManager._active_scenes_lock:

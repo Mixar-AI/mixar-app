@@ -51,11 +51,12 @@ def test_inflight_tracker_is_set_and_cleared_around_execute():
     assert "def get_inflight_script" in handlers
     offset = handlers.index("def _process_one_request")
     block = handlers[offset:]
-    assert "_set_inflight(tool_name, request_id, session_id)" in block
+    assert "_set_inflight(req.tool_name, req.request_id, req.session_id)" in block
     assert "_clear_inflight()" in block
-    # set happens before execute, clear before the response leaves.
-    assert block.index("_set_inflight(") < block.index("executor.execute(script)")
-    assert block.index("_clear_inflight()") < block.index("client.queue_response(request_id, result_dict)")
+    # set happens before execute, clear before the response leaves. Execution
+    # and the reply go through the shared pump helpers (harness v3 PR 1).
+    assert block.index("_set_inflight(") < block.index("pump.execute_request(req, executor")
+    assert block.rindex("_clear_inflight()") < block.index("pump.respond(get_jsonrpc_client(), req, result_dict)")
 
 
 def _load_handlers_module(monkeypatch):

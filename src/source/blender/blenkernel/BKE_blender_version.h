@@ -36,7 +36,7 @@ namespace blender {
  * Pre-versioning files (saved before this system) will read as 0.
  * Bump MIXAR_FILE_SUBVERSION when adding new versioning blocks. */
 #define MIXAR_FILE_VERSION 100
-#define MIXAR_FILE_SUBVERSION 3
+#define MIXAR_FILE_SUBVERSION 4
 
 /* Minimum Mixar version that can read files saved by this version.
  * Older Mixar builds will show a forward-compatibility warning. */
