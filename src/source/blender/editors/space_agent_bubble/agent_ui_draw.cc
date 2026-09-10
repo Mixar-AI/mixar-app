@@ -32,6 +32,7 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 
+#include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
@@ -68,9 +69,11 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
  * from #072B1B on the left to #2E5630 on the right.
  *
  * So the fill is a triangle fan with per-vertex colour, sampled at
- * t = clamp(dot(p - a, b - a) / |b - a|^2, 0, 1). The fan's edge has no
- * coverage anti-aliasing, which is why the caller draws it INSET inside the
- * card's 2-unit border — the AA'd border covers the seam.
+ * t = clamp(dot(p - a, b - a) / |b - a|^2, 0, 1). A raw fan is rasterised with
+ * no coverage anti-aliasing, so its rim carries its own half-pixel feather
+ * (see `aa` below) — on the card that seam hides under the AA'd border, but
+ * the minimised pill's capsule and logo chip have nothing over them and drew
+ * visibly stair-stepped without it.
  */
 void fill_round_gradient(const rctf *rect,
                          const float radius,
@@ -87,18 +90,31 @@ void fill_round_gradient(const rctf *rect,
     return;
   }
 
-  /* Corner arcs: 8 segments each is past the point where more is visible at
-   * this radius, and keeps the fan under 40 vertices. */
-  constexpr int ARC = 8;
-  constexpr int RIM = (ARC + 1) * 4;
+  /* Corner arcs tessellated FROM the radius rather than at a fixed count: 8
+   * segments is fine on a small chip and visibly polygonal on the minimised
+   * pill's capsule and logo chip, where the radius runs to tens of pixels. */
+  constexpr int ARC_MAX = 32;
+  constexpr int RIM_MAX = (ARC_MAX + 1) * 4;
 
   const float x0 = rect->xmin;
   const float x1 = rect->xmax;
   const float y0 = rect->ymin;
   const float y1 = rect->ymax;
   const float r = std::min(radius, std::min((x1 - x0), (y1 - y0)) * 0.5f);
+  const int arc = std::clamp(int(std::ceil(r)), 8, ARC_MAX);
 
-  float rim[RIM][2];
+  /* Half-pixel feather. The fan is rasterised without coverage AA, so its rim
+   * steps against whatever is behind it — on the minimised pill that is the
+   * opaque bed, and the capsule and its logo chip drew visibly stair-stepped
+   * (the capsule's faint rim stroke is at alpha 0.14 and covers nothing, and
+   * the idle chip carries no stroke at all). So the solid fan is pulled half a
+   * pixel INSIDE the nominal edge and a ring of quads carries the colour from
+   * there to half a pixel outside at zero alpha, putting the visual edge back
+   * exactly where it was with a one-pixel ramp across it. */
+  const float aa = (r > 0.5f) ? 0.5f : 0.0f;
+
+  float rim[RIM_MAX][2];
+  float nrm[RIM_MAX][2];
   int n = 0;
   /* Corner centres walked ANTICLOCKWISE from bottom-right, each sweeping the
    * quadrant that starts at `base`. Centre order and angle order have to agree
@@ -108,10 +124,14 @@ void fill_round_gradient(const rctf *rect,
   const float cy[4] = {y0 + r, y1 - r, y1 - r, y0 + r};
   for (int corner = 0; corner < 4; corner++) {
     const float base = float(M_PI) * -0.5f + float(corner) * float(M_PI) * 0.5f;
-    for (int i = 0; i <= ARC; i++) {
-      const float ang = base + (float(M_PI) * 0.5f) * (float(i) / float(ARC));
-      rim[n][0] = cx[corner] + std::cos(ang) * r;
-      rim[n][1] = cy[corner] + std::sin(ang) * r;
+    for (int i = 0; i <= arc; i++) {
+      const float ang = base + (float(M_PI) * 0.5f) * (float(i) / float(arc));
+      const float cs = std::cos(ang);
+      const float sn = std::sin(ang);
+      nrm[n][0] = cs;
+      nrm[n][1] = sn;
+      rim[n][0] = cx[corner] + cs * r;
+      rim[n][1] = cy[corner] + sn * r;
       n++;
     }
   }
@@ -131,6 +151,14 @@ void fill_round_gradient(const rctf *rect,
       format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
   immBindBuiltinProgram(GPU_SHADER_3D_SMOOTH_COLOR);
 
+  /* The feather only reads as a ramp under alpha blending; callers that paint
+   * an opaque bed first (the pill) would otherwise write the zero-alpha outer
+   * ring straight into the framebuffer. */
+  const GPUBlend blend_prev = GPU_blend_get();
+  if (aa > 0.0f) {
+    GPU_blend(GPU_BLEND_ALPHA);
+  }
+
   immBegin(GPU_PRIM_TRI_FAN, n + 2);
   float c[4];
   const float mid_x = (x0 + x1) * 0.5f;
@@ -141,15 +169,33 @@ void fill_round_gradient(const rctf *rect,
   for (int i = 0; i < n; i++) {
     sample(rim[i][0], rim[i][1], c);
     immAttr4fv(col, c);
-    immVertex2f(pos, rim[i][0], rim[i][1]);
+    immVertex2f(pos, rim[i][0] - nrm[i][0] * aa, rim[i][1] - nrm[i][1] * aa);
   }
   /* Close the fan back onto its first rim vertex. */
   sample(rim[0][0], rim[0][1], c);
   immAttr4fv(col, c);
-  immVertex2f(pos, rim[0][0], rim[0][1]);
+  immVertex2f(pos, rim[0][0] - nrm[0][0] * aa, rim[0][1] - nrm[0][1] * aa);
   immEnd();
 
+  if (aa > 0.0f) {
+    immBegin(GPU_PRIM_TRI_STRIP, (n + 1) * 2);
+    for (int i = 0; i <= n; i++) {
+      const int k = (i == n) ? 0 : i;
+      sample(rim[k][0], rim[k][1], c);
+      immAttr4fv(col, c);
+      immVertex2f(pos, rim[k][0] - nrm[k][0] * aa, rim[k][1] - nrm[k][1] * aa);
+      const float fade[4] = {c[0], c[1], c[2], 0.0f};
+      immAttr4fv(col, fade);
+      immVertex2f(pos, rim[k][0] + nrm[k][0] * aa, rim[k][1] + nrm[k][1] * aa);
+    }
+    immEnd();
+  }
+
   immUnbindProgram();
+
+  if (aa > 0.0f) {
+    GPU_blend(blend_prev);
+  }
 }
 
 /**
@@ -595,15 +641,26 @@ void agent_ui_draw_status_pill(const float width,
     GPU_blend(GPU_BLEND_ALPHA);
 
     if (is_working) {
-      /* Subtle breathing halo around the capsule when working. */
-      rctf halo = pill;
-      const float halo_pad = 3.0f * u;
-      halo.xmin -= halo_pad;
-      halo.ymin -= halo_pad;
-      halo.xmax += halo_pad;
-      halo.ymax += halo_pad;
-      const float halo_col[4] = {0.0f, 1.0f, 0.549f, 0.04f + 0.08f * pulse};
-      outline_round(&halo, (h * 0.5f) + halo_pad, halo_col);
+      /* Breathing glow, INSIDE the edge and under the rim.
+       *
+       * It used to be the capsule inflated by three units. The pill's window
+       * IS the capsule — that is what makes its corners transparent and its
+       * hit area exact — so every pixel of an outset halo fell outside the
+       * window and was clipped. Measured on the running app: the capsule
+       * occupies the same rows in the idle frame and in every busy frame, and
+       * the pixel immediately outside it is bare background in all of them.
+       * The draw could not produce a pixel, and ran on every frame of every
+       * turn to do it. Growing the window is not an option (its size is the
+       * seat geometry the pill is anchored and dragged by), so the glow
+       * breathes inward. */
+      rctf glow = pill;
+      const float glow_pad = 3.0f * u;
+      glow.xmin += glow_pad;
+      glow.ymin += glow_pad;
+      glow.xmax -= glow_pad;
+      glow.ymax -= glow_pad;
+      const float glow_col[4] = {0.0f, 1.0f, 0.549f, 0.05f + 0.10f * pulse};
+      outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);
 
       /* Pulsing animated green rim. */
       const float rim_work[4] = {
@@ -788,7 +845,8 @@ void agent_ui_draw_status_pill(const float width,
    * window backdrop — a flat grey that flashed against the capsule whenever a
    * stale buffer was presented. The OS-level corner mask still rounds the
    * window, so the corners never show this fill. */
-  const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+  const float bed_a = agent_bubble_pill_bed_is_transparent() ? 0.0f : 1.0f;
+  const float bed[4] = {0.02f, 0.02f, 0.02f, bed_a};
   GPU_blend(GPU_BLEND_NONE);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
@@ -973,60 +1031,6 @@ void agent_ui_draw_island(const ARegion * /*region*/,
   /* --- Chip row --- */
   draw_chip_row(layout, state);
 
-  GPU_blend(GPU_BLEND_NONE);
-}
-
-void agent_ui_draw_scribble_input_overlay(const rctf *input_rect, const float scale)
-{
-  if (!input_rect || input_rect->xmin >= input_rect->xmax || input_rect->ymin >= input_rect->ymax) {
-    return;
-  }
-
-  GPU_blend(GPU_BLEND_ALPHA);
-  const float scrim[4] = {0.05f, 0.05f, 0.06f, 0.85f};
-  const float radius = 0.0f;
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(input_rect, true, radius, scrim);
-
-  /* Moodboard dot grid pattern over the input field overlay. */
-  const float grid_step = 36.0f * scale;
-  const float dot_radius = 2.0f * scale;
-  const float dot_color[4] = {0.45f, 0.45f, 0.45f, 0.35f};
-  const int segments = 12;
-
-  const int first_col = int(floorf(input_rect->xmin / grid_step));
-  const int last_col = int(ceilf(input_rect->xmax / grid_step));
-  const int first_row = int(floorf(input_rect->ymin / grid_step));
-  const int last_row = int(ceilf(input_rect->ymax / grid_step));
-  const int dot_count = (last_col - first_col + 1) * (last_row - first_row + 1);
-
-  if (dot_count > 0) {
-    GPUVertFormat *format = immVertexFormat();
-    const uint pos = GPU_vertformat_attr_add(
-        format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-    immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-    immUniformColor4fv(dot_color);
-    immBegin(GPU_PRIM_TRIS, dot_count * segments * 3);
-    for (int r = first_row; r <= last_row; r++) {
-      const float cy = float(r) * grid_step;
-      for (int c = first_col; c <= last_col; c++) {
-        const float cx = float(c) * grid_step;
-        if (cx >= input_rect->xmin && cx <= input_rect->xmax &&
-            cy >= input_rect->ymin && cy <= input_rect->ymax)
-        {
-          for (int s = 0; s < segments; s++) {
-            const float a0 = (2.0f * float(M_PI) * float(s)) / float(segments);
-            const float a1 = (2.0f * float(M_PI) * float(s + 1)) / float(segments);
-            immVertex2f(pos, cx, cy);
-            immVertex2f(pos, cx + cosf(a0) * dot_radius, cy + sinf(a0) * dot_radius);
-            immVertex2f(pos, cx + cosf(a1) * dot_radius, cy + sinf(a1) * dot_radius);
-          }
-        }
-      }
-    }
-    immEnd();
-    immUnbindProgram();
-  }
   GPU_blend(GPU_BLEND_NONE);
 }
 

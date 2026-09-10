@@ -87,6 +87,5 @@ void agent_ui_draw_island(const ARegion *region,
                           const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
-void agent_ui_draw_scribble_input_overlay(const rctf *input_rect, float scale);
 
 }  // namespace blender
