@@ -44,6 +44,7 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
                                         const float fill_color[4],
                                         const float border_color[4],
                                         float border_width);
+void chat_ui_draw_glass_pane(const rctf *rect, float radius, float alpha);
 void chat_ui_calc_text_bounds(const char *text,
                               float max_width,
                               int font_size,
@@ -151,16 +152,25 @@ float chat_ui_draw_bubble(const ChatBubbleStyle *style,
                           float bubble_width,
                           float bubble_height,
                           float content_width,
-                          float attachments_height)
+                          float attachments_height,
+                          const bool glass)
 {
-  /* Draw background */
+  /* Draw background. `glass` is the caller's word for "this bed is the user's
+   * own card". The same helper also paints the agent's (transparent) prose and
+   * the todo / action containers, which hand it a colour on purpose — a glass
+   * bed would drop that colour for the CHAT row's tint. */
   rctf bubble_rect;
   bubble_rect.xmin = x;
   bubble_rect.xmax = x + bubble_width;
   bubble_rect.ymin = y;
   bubble_rect.ymax = y + bubble_height;
 
-  chat_ui_draw_rounded_rect(&bubble_rect, style->corner_radius, style->bg_color);
+  if (glass) {
+    chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color[3]);
+  }
+  else {
+    chat_ui_draw_rounded_rect(&bubble_rect, style->corner_radius, style->bg_color);
+  }
 
   /* Draw text inside bubble using the SAME content_width used for measurement
    * to ensure consistent text wrapping. This is critical - the wrap width during

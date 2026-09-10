@@ -51,6 +51,12 @@ SECTION_PATH = IFACE / "interface_mixar_section.cc"
 SECTION = SECTION_PATH.read_text(encoding="utf-8")
 WIDGETS_PATH = IFACE / "interface_widgets.cc"
 WIDGETS = WIDGETS_PATH.read_text(encoding="utf-8")
+CHAT = ED / "space_mixie_chat"
+CHAT_INTERN = (CHAT / "mixie_chat_intern.hh").read_text(encoding="utf-8")
+CHAT_PRIMITIVES = (CHAT / "mixie_chat_ui_primitives.cc").read_text(encoding="utf-8")
+CHAT_WIDGETS = (CHAT / "mixie_chat_ui_widgets.cc").read_text(encoding="utf-8")
+CHAT_CONTENT = (CHAT / "mixie_chat_messages_content.cc").read_text(encoding="utf-8")
+CHAT_RENDER = (CHAT / "mixie_chat_messages_render.cc").read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -119,14 +125,16 @@ PANE_CALLS = {
     "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
     "space_mixie/mixie_draw_moodboard_graph.cc": (),
     "space_mixie/mixie_draw_moodboard_node_ui.cc": (),
+    "space_mixie_chat/mixie_chat_ui_primitives.cc": ("MIXAR_GLASS_CHAT",),
+    "space_mixie_chat/mixie_chat_ui_widgets.cc": (),
+    "space_mixie_chat/mixie_chat_messages_content.cc": (),
 }
 
-# The family declares eight roles; four have a surface. The rest are the queue.
+# The family declares eight roles; three have a surface. The rest are the queue.
 UNPAINTED_ROLES = (
     "MIXAR_GLASS_CARD",
     "MIXAR_GLASS_MENU",
     "MIXAR_GLASS_ISLAND",
-    "MIXAR_GLASS_CHAT",
 )
 
 # The kit: the header that enumerates the roles, the table that gives each a
@@ -745,9 +753,9 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
     leave a surface on a hand-mixed fill that no longer matches the family, and
     both are invisible until two builds are compared by eye.
 
-    The register is a contract, not a snapshot: the Mixie chat and the agent
-    island are still to come, and each of those commits must add its file and
-    its role here, because these tests fail until it does.
+    The register is a contract, not a snapshot: the agent island is still to
+    come, and that commit must add its file and its role here, because these
+    tests fail until it does.
     """
 
     def _drawers(self) -> set[str]:
@@ -783,16 +791,136 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
             )
 
     def test_the_unpainted_roles_stay_inside_the_kit(self) -> None:
-        """Four roles are declared ahead of their surface.
+        """Three roles are declared ahead of their surface.
 
-        Until the chat and the island land, they may appear only in the header
-        that enumerates them and the table that gives each a row — a role
-        painted from anywhere else is a conversion that did not stand on its
-        own.
+        Until the island lands, they may appear only in the header that
+        enumerates them and the table that gives each a row — a role painted
+        from anywhere else is a conversion that did not stand on its own.
         """
         for role in UNPAINTED_ROLES:
             holders = {relpath for relpath, src in SOURCES.items() if role in src}
             assert holders <= KIT_FILES, (
                 f"{role} is painted outside the kit: {sorted(holders - KIT_FILES)}"
             )
+
+
+class TestTheChatMessagePillIsAPane:
+    """The user's own message (`mixie_chat_render_message_content`), and the
+    blocks that share its fill but must stay flat.
+
+    The message area is drawn through ``ui::view2d_view_ortho``, so the bubble
+    rect is View2D view-space, not region px. That rules the painter's specular
+    streak out: it is the one layer the painter clips with a region-px scissor
+    computed from ``rect.xmin``, which cannot be placed from this matrix — the
+    same trap the moodboard's token row documents. The bed, gloss, refraction
+    wash and rim all draw through the matrix fine, so only the streak is off.
+
+    CHAT is the design's own bubble role, so the wrapper hands over no colour:
+    the tint lives in the token row and each site only says how opaque its pane
+    is. The decision is computed ONCE as `glass_bed`, at the top of the content
+    renderer, because the shared bed helper also paints the agent's prose (no
+    bed at all), the todo / action containers (a deliberate colour each) and an
+    error card (its red) — a style-carried flag would ride into every one of
+    those through ``ChatBubbleStyle x = layout.style;``.
+    """
+
+    def _pane(self) -> str:
+        return _code(_fn_body(CHAT_PRIMITIVES, "void chat_ui_draw_glass_pane("))
+
+    def _bubble(self) -> str:
+        return _code(_fn_body(CHAT_WIDGETS, "float chat_ui_draw_bubble("))
+
+    def test_the_chat_pane_is_one_delegating_draw(self) -> None:
+        """A wrapper that drew its own roundbox would be a second material,
+        free to disagree with the role table."""
+        body = self._pane()
+        assert body.count("mixar_glass_draw(") == 1, "the wrapper does not draw exactly one pane"
+        for forbidden in ("draw_roundbox_4fv", "mixar_glass_tokens", "draw_roundbox_corner_set"):
+            assert forbidden not in body, f"the wrapper reaches for {forbidden}"
+
+    def test_the_chat_pane_takes_the_chat_role_and_no_other(self) -> None:
+        body = self._pane()
+        assert "style.role = ui::MIXAR_GLASS_CHAT;" in body
+        assert set(re.findall(r"\bMIXAR_GLASS_[A-Z]+\b", body)) == {"MIXAR_GLASS_CHAT"}
+
+    def test_the_chat_pane_turns_the_streak_off(self) -> None:
+        """The message area draws through the View2D matrix, so the streak's
+        region-px scissor cannot be placed; leaving it on would clip the layer
+        against the wrong rectangle."""
+        assert "style.draw_specular = false;" in self._pane()
+
+    def test_the_chat_pane_hands_over_no_colour(self) -> None:
+        """The tint is the CHAT row's; a site that passed one lets each bubble
+        pick its own material, which is the drift the role table prevents."""
+        body = self._pane()
+        assert "bg_color" not in body, "the wrapper reads a colour"
+        touched = set(re.findall(r"style\.([A-Za-z_][A-Za-z0-9_]*)", body))
+        assert touched == {"role", "radius", "alpha", "draw_specular"}, (
+            f"the wrapper touches {sorted(touched)}; only role / radius / alpha / draw_specular"
+        )
+
+    def test_the_bed_branch_is_an_argument_not_a_style_field(self) -> None:
+        """`glass` is an explicit parameter (defaulted flat), so the block
+        containers that reuse this helper are flat by construction and no
+        derived style can carry the flag into them."""
+        bubble = self._bubble()
+        assert "if (glass) {" in bubble
+        assert (
+            "chat_ui_draw_glass_pane(&bubble_rect, style->corner_radius, style->bg_color[3]);"
+            in bubble
+        )
+        assert "chat_ui_draw_rounded_rect(&bubble_rect, style->corner_radius, style->bg_color);" in bubble
+        assert "bool glass = false);" in _code(CHAT_INTERN), "the parameter is not defaulted flat"
+        assert "is_glass" not in bubble
+        assert "is_glass" not in _code(CHAT_INTERN)
+
+    def test_the_user_message_is_the_only_glass_bed(self) -> None:
+        """An error card keeps its red and the agent's prose has no bed — only
+        the user's own message is the chat's one real card."""
+        assert (
+            "const bool glass_bed = layout.is_user && !layout.is_error;" in _code(CHAT_CONTENT)
+        )
+
+    def test_every_content_bed_shares_the_one_decision(self) -> None:
+        """Both markdown beds branch on `glass_bed`, and every plain-text call
+        passes it; the ephemeral call is the agent's, so it stays flat."""
+        content = _code(CHAT_CONTENT)
+        assert content.count("if (glass_bed) {") == 2
+        assert content.count("chat_ui_draw_glass_pane(&bubble_rect,") == 2
+        calls = re.findall(r"chat_ui_draw_bubble\(&layout\.style,[^;]*;", content)
+        assert len(calls) == 4, "the four plain-text beds are not all present"
+        for call in calls:
+            assert call.rstrip().endswith("glass_bed);"), f"a bed ignores glass_bed: {call!r}"
+        assert "chat_ui_draw_ephemeral_bubble(&layout.style," in content
+
+    def test_the_content_panes_hand_over_only_the_alpha(self) -> None:
+        """`bg_color[3]` is the one thing a site says — how opaque its pane is.
+        The RGB comes from the CHAT row and is never read here."""
+        calls = re.findall(r"chat_ui_draw_glass_pane\(([^;]*)\);", _code(CHAT_CONTENT))
+        assert len(calls) == 2
+        for call in calls:
+            assert call.strip().endswith("layout.style.bg_color[3]"), (
+                f"a call site picks a colour: {call!r}"
+            )
+
+    def test_the_block_containers_stay_flat(self) -> None:
+        """The todo and action beds derive from the same style but hand over a
+        colour on purpose, so they must not be glassed."""
+        render = _code(CHAT_RENDER)
+        calls = re.findall(r"chat_ui_draw_bubble\(([^;]*)\);", render)
+        assert len(calls) == 3, "the block containers changed count"
+        for call in calls:
+            assert call.rstrip().endswith("layout.content_width"), (
+                f"a container grew an argument: {call!r}"
+            )
+
+    def test_the_deliberate_container_colours_survive(self) -> None:
+        """A blanket conversion of the shared fill would have destroyed the
+        danger red, its hover, and the teal hover wash."""
+        render = _code(CHAT_RENDER)
+        assert "float danger_color[4] = {0.8f, 0.2f, 0.2f, 0.3f};" in render
+        assert "float danger_hover[4] = {0.9f, 0.3f, 0.3f, 0.5f};" in render
+        assert "memcpy(action_style.bg_color, layout.style.hover_color," in render
+        assert "chat_ui_get_prompt_button_color(slot_todo_style.bg_color);" in render
+
 
