@@ -298,13 +298,18 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_alpha*/ 0.09f,
         /* specular_period*/ 6.0f,
     },
-    /* MIXAR_GLASS_PILL — radius clamped to half the short side, i.e. a capsule. */
+    /* MIXAR_GLASS_PILL — radius clamped to half the short side, i.e. a capsule.
+     * The tint is NEUTRAL, not the card's green: the resting capsule is the two
+     * greys of its own artboard (#2D2D2D over #131413), so the alphas carry the
+     * see-through and the hue stays grey. The rim is the pill's resting rim
+     * (white at 0.14, `grad_*`'s own stroke); the WORKING rim is green and
+     * pulses, so it is repainted at the call site where the pulse lives. */
     {
-        /* tint_top      */ {0.196f, 0.357f, 0.200f, 0.86f},
-        /* tint_bottom   */ {0.000f, 0.137f, 0.090f, 0.92f},
+        /* tint_top      */ {0.176f, 0.176f, 0.176f, 0.72f},
+        /* tint_bottom   */ {0.075f, 0.078f, 0.075f, 0.80f},
         /* glaze         */ {0.071f, 0.071f, 0.071f, 0.24f},
         /* sheen         */ {1.000f, 1.000f, 1.000f, 0.14f},
-        /* rim           */ {0.000f, 1.000f, 0.549f, 0.65f},
+        /* rim           */ {1.000f, 1.000f, 1.000f, 0.14f},
         /* refract       */ {1.000f, 1.000f, 1.000f, 0.20f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.38f},
         /* radius        */ 999.0f,

@@ -199,6 +199,24 @@ class TestTheCapsuleIsACapsule:
             "Without the clamp the pill's 999 draws a shape that is not a pill at all."
         )
 
+    def test_the_pill_row_owns_the_resting_rim(self) -> None:
+        """The white 0.14 stroke the elongated pill used to paint on itself.
+
+        The rim has to stay concentric with the pane, so it is drawn once, by
+        the kit: when the call site painted it too the two alphas stacked to
+        0.26 and the pill read noticeably brighter than its artboard. The PILL
+        row therefore keeps the stroke the call site gave up.
+        """
+        rim = re.search(r"/\*\s*rim\s*\*/\s*\{([^}]*)\}", _rows()["pill"])
+        assert rim is not None, "the pill row has no rim"
+        parts = [p.strip() for p in rim.group(1).split(",")]
+        assert parts[:3] == ["1.000f", "1.000f", "1.000f"], (
+            f"the pill's resting rim stopped being a white stroke: {parts}"
+        )
+        assert parts[3] in ("0.14f", "0.140f"), (
+            f"the resting rim's alpha drifted from the artboard's 0.14: {parts}"
+        )
+
 
 class TestTheSpecularIsDeterministicAndInDegrees:
     def test_the_streak_is_time_driven_and_never_random(self) -> None:

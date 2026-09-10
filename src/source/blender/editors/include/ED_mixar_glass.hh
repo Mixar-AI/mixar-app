@@ -67,7 +67,7 @@ enum eMixarGlassRole {
   MIXAR_GLASS_PANEL,
   /** The agent island's own backdrop, behind its card. */
   MIXAR_GLASS_ISLAND,
-  /** The status pill and its queue badge — smallest radii, brightest rim. */
+  /** The status pill and its queue badge — smallest radii, neutral tint. */
   MIXAR_GLASS_PILL,
   /** The Mixie chat's bubbles and composer. */
   MIXAR_GLASS_CHAT,
