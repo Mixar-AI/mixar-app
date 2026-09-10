@@ -44,6 +44,8 @@ CINEMA_ROW_PATH = IFACE / "interface_mixar_cinema_row.cc"
 CINEMA_ROW = CINEMA_ROW_PATH.read_text(encoding="utf-8")
 CINEMA_VALUE_PATH = IFACE / "interface_mixar_cinema_row_value.cc"
 CINEMA_VALUE = CINEMA_VALUE_PATH.read_text(encoding="utf-8")
+SECTION_PATH = IFACE / "interface_mixar_section.cc"
+SECTION = SECTION_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -467,4 +469,97 @@ class TestTheCinemaRowsArePanes:
                 assert "MX_" not in call and "uchar" not in call, (
                     f"a role-taking call was given a colour: {call}"
                 )
+
+
+class TestTheCategoryTabsArePanes:
+    """The panel-category strip: each tab bed, and the band it sits on.
+
+    A tab sits ON the strip, so the bed takes the CHIP role — no shadow and no
+    specular, because a chip may not cast its own (and the streak is the one
+    layer the painter clips with a region-px scissor, which a tab drawn from
+    the View2D's restored matrix could not place). The strip itself stays flat:
+    it is a full-bleed band flush to the region edge, so it has no silhouette
+    for a rim to trace and nothing for a shadow to fall on.
+
+    The pane must also be drawn from the same rect the hit test records: the
+    stub is rotated text, so a pane drawn from any other rect would render a
+    click target the user cannot see.
+    """
+
+    def _tabs(self) -> str:
+        return _code(_fn_body(SECTION, "void UI_panel_category_draw_all_mixar("))
+
+    def test_the_tab_beds_are_panes(self) -> None:
+        """A bed left on the theme's flat fill keeps a hand-mixed dark no
+        material-table edit can reach, and drifts the moment the family is
+        re-toned."""
+        assert self._tabs().count("mixar_card_glass_round(") == 1, (
+            "the tab bed no longer draws exactly one pane"
+        )
+        assert "mixar_card_glass_round(&tab_rect, tab_radius, MIXAR_GLASS_CHIP);" in self._tabs()
+
+    def test_a_tab_takes_the_chip_role_and_no_other(self) -> None:
+        """CARD / PANEL / ISLAND carry a shadow and a streak; a tab sits on the
+        strip and may cast neither."""
+        code = _code(SECTION)
+        for role in (
+            "MIXAR_GLASS_CARD",
+            "MIXAR_GLASS_MENU",
+            "MIXAR_GLASS_PANEL",
+            "MIXAR_GLASS_ISLAND",
+            "MIXAR_GLASS_PILL",
+            "MIXAR_GLASS_CHAT",
+            "MIXAR_GLASS_MOODBOARD",
+        ):
+            assert role not in code, f"{role} is not a tab's role"
+        assert code.count("MIXAR_GLASS_CHIP") == 1, "one pane per tab bed"
+
+    def test_the_pane_is_laid_before_the_designs_own_bed(self) -> None:
+        """The active wash and the inactive bed go OVER the pane; the other
+        order covers the very material the tab now sits in."""
+        tabs = self._tabs()
+        pane = tabs.index("mixar_card_glass_round(")
+        assert pane < tabs.index("draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg)")
+        assert pane < tabs.index("draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive)")
+
+    def test_the_active_tab_keeps_its_accent_wash_and_teal_outline(self) -> None:
+        """The pane is the BED; the accent is the state.
+
+        Dropping either for the neutral pane would leave the active tab
+        indistinguishable from its neighbours.
+        """
+        tabs = self._tabs()
+        assert "const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};" in tabs
+        assert "const float active_outline[4] = {col_accent[0], col_accent[1], col_accent[2], 0.45f};" in tabs
+        assert "draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);" in tabs
+
+    def test_the_inactive_tab_keeps_its_bed_and_whisper_of_an_outline(self) -> None:
+        """Its fill is already translucent, so it washes over the pane rather
+        than needing the call-site softening the live cinema chip does."""
+        tabs = self._tabs()
+        assert "draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive);" in tabs
+        assert "const float outline_color[4] = {1.0f, 1.0f, 1.0f, 0.04f};" in tabs
+
+    def test_the_strip_stays_flat_because_it_has_no_silhouette(self) -> None:
+        """A band flush to the region edge gets no rim and no shadow.
+
+        Glassing it would ring the region's own edge in the family rim and
+        replace the design's 12 %-teal accent line with a bright one.
+        """
+        tabs = self._tabs()
+        assert "draw_roundbox_4fv(&bg_rect, true, 0.0f, col_strip_bg);" in tabs
+        assert "mixar_card_glass_round(" not in tabs[: tabs.index("draw_roundbox_4fv(&bg_rect")], (
+            "the strip was glassed"
+        )
+
+    def test_the_tab_hit_rects_are_still_recorded(self) -> None:
+        """The strip is drawn, not made of buttons, so the click map comes from
+        the same rect the pane was laid in — and it is recorded every draw."""
+        assert "mixar_category_tab_rects().add_overwrite(region, std::move(tab_rects));" in self._tabs()
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(SECTION))
+        assert calls == ["&tab_rect, tab_radius, MIXAR_GLASS_CHIP"], (
+            f"a role-taking call was given a colour: {calls}"
+        )
 

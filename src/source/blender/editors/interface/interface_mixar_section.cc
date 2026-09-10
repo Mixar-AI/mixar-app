@@ -40,6 +40,7 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 
@@ -406,10 +407,17 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     tab_rect.ymin = float(rct->ymin);
     tab_rect.ymax = float(rct->ymax);
 
+    /* Both tab beds are panes: a tab sits ON the strip, so it takes the kit's
+     * #MIXAR_GLASS_CHIP material — no shadow and no specular, because a chip
+     * may not cast its own (and the streak is the one layer the painter clips
+     * with a region-px scissor). The strip itself stays FLAT: a band flush to
+     * the region edge has no silhouette for a rim to trace. */
+    mixar_card_glass_round(&tab_rect, tab_radius, MIXAR_GLASS_CHIP);
+
     if (is_active) {
-      /* Active tab: --mx-accent-soft fill (#00C0C7 @ ~13%) + teal outline;
-       * the teal label (drawn below) carries the accent. Design-agent spec.
-       * col_glow / col_highlight are intentionally left unused. */
+      /* Active tab: the pane, then --mx-accent-soft (#00C0C7 @ ~13%) and the
+       * teal outline over it; the teal label (drawn below) carries the accent.
+       * Design-agent spec. col_glow / col_highlight stay intentionally unused. */
       const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg);
@@ -418,7 +426,8 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
       draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);
     }
     else {
-      /* --- Inactive tab: subtle dark fill --- */
+      /* --- Inactive tab: the design's own bed washes over the pane, then its
+       * whisper of an outline against the family rim. --- */
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive);
 
