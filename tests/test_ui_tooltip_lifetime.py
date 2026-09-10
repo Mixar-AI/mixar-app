@@ -93,6 +93,8 @@ def test_the_owned_tooltip_helper_actually_owns_its_string():
     the dangling reference in a new disguise."""
     body = PANE_KIT_CC[PANE_KIT_CC.index("void pane_but_tooltip_owned") :]
     body = body[: body.index("\n}\n")]
+    assert "mixar_button_tooltip_owned(but, text)" in body
+    body = (ISLAND.parent / "interface/mixar/text.cc").read_text()
     assert "MEM_new_uninitialized" in body
     assert "memcpy" in body
     assert "button_func_tooltip_set" in body

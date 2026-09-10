@@ -39,6 +39,8 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
+#include "UI_resources.hh"
 #include "UI_interface_c.hh"
 
 #include "WM_api.hh"
@@ -48,7 +50,6 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tab3d.hh"
 #include "agent_ui_tab3d_intern.hh"
-#include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -220,12 +221,12 @@ float dropdown_chip(const bContext *C,
 
   const float w = pane_dropdown_chip_w(label, u);
   const rctf rect = {x, x + w, y_top - PANE_ROW_H * u, y_top};
-  pane_dropdown_chip_paint(rect, label, u);
 
   ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
-                         blender::wm::OpCallContext::InvokeDefault, "",
+                         blender::wm::OpCallContext::InvokeDefault, label,
                          int(rect.xmin), int(rect.ymin), short(w),
                          short(PANE_ROW_H * u), tip);
+  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
   if (but) {
     PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", data_path);
@@ -311,6 +312,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                int(field.xmin), int(field.ymin),
                                short(BLI_rctf_size_x(&field)), short(BLI_rctf_size_y(&field)),
                                &st.tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
+      ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
       if (input) {
         ui::button_placeholder_set(input, "Describe your scene here...");
         ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
@@ -343,13 +345,14 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
     rect.xmax = rect.xmin + pane_action_chip_w(label, true, u);
     rect.ymin = chip_y0;
     rect.ymax = chip_y0 + PANE_ROW_H * u;
-    pane_action_chip_paint(rect, label, true, false, u);
 
-    uiDefButO(block, ui::ButtonType::But, "mixie.image_to_3d_pick_image",
-              blender::wm::OpCallContext::InvokeDefault, "",
+
+    ui::Button *upload = uiDefIconTextButO(block, ui::ButtonType::But, "mixie.image_to_3d_pick_image",
+              blender::wm::OpCallContext::InvokeDefault, ICON_IMAGE_DATA, label,
               int(rect.xmin), int(rect.ymin),
               short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
               "Pick an input image for 3D generation");
+    ui::mixar_style_button(upload, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
      * selection while `use_selected_image` is on, otherwise its own upload. */
@@ -387,13 +390,15 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
      * the same thing: a job sitting in the unified queue. */
     char gen_label[32];
     pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs);
-    pane_generate_paint(rect, gen_label, armed, u);
-    if (armed) {
+
+    {
       ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",
-                             blender::wm::OpCallContext::InvokeDefault, "",
+                             blender::wm::OpCallContext::InvokeDefault, gen_label,
                              int(rect.xmin), int(rect.ymin),
                              short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
                              "Generate a 3D model with the selected mode and model");
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
+      if (but && !armed) { ui::button_flag_enable(but, ui::BUT_DISABLED); }
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(st.tab_ptr.type));

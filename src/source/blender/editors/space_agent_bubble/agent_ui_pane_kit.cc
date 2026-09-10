@@ -38,6 +38,7 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
 #include "UI_interface_c.hh"
 
 #include "agent_ui_icons.hh"
@@ -53,34 +54,18 @@ namespace blender {
 
 void pane_fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(rect, true, radius, col);
+  ui::mixar_fill_round(*rect, radius, col);
 }
 
 float pane_text_width(const char *text, const float size)
 {
-  const int font = BLF_default();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
+  return ui::mixar_text_width(text, size);
 }
 
 void pane_label_left(
     const char *text, const float x, const float cy, const float size, const float col[4])
 {
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = BLF_default();
-  BLF_size(font, size);
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
+  ui::mixar_label_left(text, x, cy, size, col);
 }
 
 void pane_label_centre(
@@ -97,36 +82,14 @@ void pane_label_right(
 
 void pane_fit_text(char *text, const float max_w, const float size)
 {
-  if (pane_text_width(text, size) <= max_w) {
-    return;
+  const size_t capacity = strlen(text) + 1;
+  const std::string fitted = ui::mixar_fit_text(text, max_w, size);
+  /* This compatibility API only shrinks the caller's buffer. */
+  if (fitted.size() < capacity) {
+    memcpy(text, fitted.c_str(), fitted.size() + 1);
   }
-  /* A bare chop reads as a DIFFERENT string, not a shortened one — a mesh
-   * named "ReproCone" rendered as "ReproCon" and looked like the wrong
-   * result. Fit the head to `max_w` minus the ellipsis, then append it; a
-   * budget at or below zero cannot hold even the ellipsis, so fit to max_w. */
-  static const char ELLIPSIS[] = "\xE2\x80\xA6"; /* U+2026 */
-  const size_t ellipsis_len = sizeof(ELLIPSIS) - 1;
-  const size_t orig_len = strlen(text);
-  const float budget = max_w - pane_text_width(ELLIPSIS, size);
-  const float target = (budget > 0.0f) ? budget : max_w;
-
-  size_t len = orig_len;
-  while (len > 1) {
-    len--;
-    /* Never split a UTF-8 sequence: back up over continuation bytes. */
-    while (len > 1 && ((unsigned char)(text[len]) & 0xC0) == 0x80) {
-      len--;
-    }
-    text[len] = '\0';
-    if (pane_text_width(text, size) <= target) {
-      break;
-    }
-  }
-  /* Callers pass fixed `char[]` buffers and this function only ever SHRINKS
-   * them, so the ellipsis is written only where it fits inside what came in. */
-  if (budget > 0.0f && len + ellipsis_len <= orig_len) {
-    memcpy(text + len, ELLIPSIS, ellipsis_len);
-    text[len + ellipsis_len] = '\0';
+  else {
+    text[0] = '\0';
   }
 }
 
@@ -384,26 +347,9 @@ void pane_onoff_chip_paint(const rctf &rect, const char *label, const bool on, c
 /** \name Owned tooltips
  * \{ */
 
-namespace {
-
-std::string pane_tooltip_owned_fn(bContext * /*C*/, void *argN, blender::StringRef /*tip*/)
-{
-  return std::string(static_cast<const char *>(argN));
-}
-
-}  // namespace
-
 void pane_but_tooltip_owned(ui::Button *but, const char *text)
 {
-  if (but == nullptr || text == nullptr || text[0] == '\0') {
-    return;
-  }
-  const size_t size = strlen(text) + 1;
-  char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
-  memcpy(owned, text, size);
-  /* The callback form is the only one that owns its argument; `but->tip` is a
-   * bare StringRef and would dangle. `MEM_delete_void` is the matching free func. */
-  ui::button_func_tooltip_set(but, pane_tooltip_owned_fn, owned, MEM_delete_void);
+  ui::mixar_button_tooltip_owned(but, text);
 }
 
 /** \} */

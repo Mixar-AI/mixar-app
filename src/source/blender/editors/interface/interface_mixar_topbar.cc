@@ -224,7 +224,7 @@ void draw_slider_left(Button *but, const rcti *rect, const bool is_hover)
 
   /* Payload is "this (left) half is live", so a live left half parks the
    * thumb at 0 and a live right half sends it to 1. */
-  const float target = (but->hardmax >= 0.5f) ? 0.0f : 1.0f;
+  const float target = (but->mixar_style.lit) ? 0.0f : 1.0f;
   const float pos = g_thumb.advance(target);
 
   rctf thumb;
@@ -265,7 +265,7 @@ void draw_cinema_pill(Button *but, const rcti *rect, const bool is_hover, const 
    * mouse is held down", and folding that into `lit` filled the whole pill
    * green on a mere press, indistinguishable from actually directing. The
    * press affordance is a brightness shift on whichever fill state chose. */
-  const bool lit = but->hardmax >= 0.5f;
+  const bool lit = but->mixar_style.lit;
   const bool pressed = is_active || (but->flag & UI_SELECT) != 0;
   const float boost = pressed ? 1.22f : (is_hover ? 1.12f : 1.0f);
 
@@ -316,7 +316,7 @@ void draw_viewport_pill(Button *but, const rcti *rect, const bool is_hover, cons
    * "held down", and reading it as state made an inactive shading pill jump
    * to the lit one's opacity. Press sits BETWEEN dim and lit so it is still
    * visible feedback without claiming the state. */
-  const bool lit = but->hardmax >= 0.5f;
+  const bool lit = but->mixar_style.lit;
   const bool pressed = is_active || (but->flag & UI_SELECT) != 0;
   const float alpha = lit ? 1.0f : (pressed ? 0.85f : (is_hover ? 0.75f : VIEW_PILL_DIM));
 

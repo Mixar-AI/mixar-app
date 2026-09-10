@@ -415,7 +415,7 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     body = body[: body.index("\n}\n")]
     lit = re.search(r"const bool lit = ([^;]+);", body)
     assert lit is not None
-    assert lit.group(1).strip() == "but->hardmax >= 0.5f"
+    assert lit.group(1).strip() == "but->mixar_style.lit"
     # UI_SELECT survives only as a press affordance, and it must be a
     # different reading from the lit state.
     assert "const bool pressed =" in body
@@ -544,7 +544,7 @@ def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
     tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
     tag = tag[: tag.index("\n}\n")]
-    assert "if (but->type != ButtonType::Row) {" in tag
+    assert "but->hardmin" not in tag and "but->hardmax" not in tag
     # The painter lays the row out itself from the FULL label (Blender clips
     # drawstr for its stock layout), dropping the icon when the cell is tight.
     assert "but->str.empty() ? but->drawstr.c_str() : but->str.c_str()" in row

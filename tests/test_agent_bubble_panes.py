@@ -88,8 +88,10 @@ def test_the_queue_sets_its_own_type_scale():
         return float(re.search(rf"#define {token}\s+([\d.]+)f", QUEUE_CC).group(1))
 
     kit = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
-    kit_font = float(re.search(r"#define PANE_FONT\s+(\d+)", kit).group(1))
-    kit_sub = float(re.search(r"#define PANE_FONT_SUB\s+(\d+)", kit).group(1))
+    tokens = (CPP.parent / "include/UI_mixar_tokens.hh").read_text()
+    assert "#define PANE_FONT ui::mixar_tokens::font" in kit
+    kit_font = float(re.search(r"float font = ([\d.]+)f", tokens).group(1))
+    kit_sub = float(re.search(r"float caption_font = ([\d.]+)f", tokens).group(1))
 
     assert value("QROW_FONT") > kit_font
     assert value("QROW_FONT_SUB") > kit_sub

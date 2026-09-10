@@ -45,6 +45,7 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
 #include "UI_interface_c.hh"
 
 #include "WM_api.hh"
@@ -52,7 +53,7 @@
 
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tab3d_intern.hh"
-#include "agent_ui_theme.hh"
+#include "UI_mixar_tokens.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -100,7 +101,7 @@ bool flow_place(Flow *f, const float w, rctf *r_rect)
   if (f->out_of_room) {
     return false;
   }
-  const float h = AGENT_CHIP_H * f->u;
+  const float h = PANE_ROW_H * f->u;
   /* Probe the wrap, then test the floor, and only THEN commit. Decrementing
    * `y_top` before the test consumed the row that did not fit, so the strip
    * bottom the caller reads back (`y_top - PANE_ROW_H`) sat a whole row BELOW
@@ -148,29 +149,20 @@ void draw_enum_segmented(ui::Block *block,
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float thumb[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&track, AGENT_CHIP_RADIUS * u, chip);
+  pane_fill_round(&track, PANE_RADIUS * u, chip);
 
   const int cur = RNA_property_enum_get(group_ptr, prop);
   float x = track.xmin;
   for (int i = 0; i < totitem && i < 8; i++) {
     rctf seg = {x, x + seg_w[i], track.ymin, track.ymax};
     const bool active = (items[i].value == cur);
-    if (active) {
-      pane_fill_round(&seg, AGENT_CHIP_RADIUS * u, thumb);
-    }
-    pane_label_centre(items[i].name,
-                     BLI_rctf_cent_x(&seg),
-                     BLI_rctf_cent_y(&seg),
-                     font,
-                     active ? text : dim);
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
+                           blender::wm::OpCallContext::InvokeDefault, items[i].name,
                            int(seg.xmin), int(seg.ymin),
                            short(seg_w[i]), short(BLI_rctf_size_y(&seg)),
                            nullptr);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(but, active);
     if (but) {
       pane_but_tooltip_owned(but, items[i].name);
       char path[256];
@@ -207,15 +199,11 @@ void draw_enum_dropdown(ui::Block *block,
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  pane_label_centre(label, BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font, text);
-
   ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
-                         blender::wm::OpCallContext::InvokeDefault, "",
+                         blender::wm::OpCallContext::InvokeDefault, label,
                          int(rect.xmin), int(rect.ymin),
                          short(w), short(BLI_rctf_size_y(&rect)), nullptr);
+  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
   if (but) {
     pane_but_tooltip_owned(but, name);
     char path[256];
@@ -247,31 +235,12 @@ void draw_boolean_chip(ui::Block *block,
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = PANE_COL_CHIP;
-  const float thumb[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  const float cy = BLI_rctf_cent_y(&rect);
-  pane_label_left(name, rect.xmin + pad, cy, font, text);
-
-  /* ON / OFF halves, thumb on the live value. */
-  const float toggles_x = rect.xmin + pad + name_w + 12.0f * u;
-  rctf on_rect = {toggles_x, toggles_x + on_w, rect.ymin + 4.0f * u, rect.ymax - 4.0f * u};
-  rctf off_rect = {on_rect.xmax, on_rect.xmax + off_w, on_rect.ymin, on_rect.ymax};
-  if (on) {
-    pane_fill_round(&on_rect, AGENT_CHIP_RADIUS * u, thumb);
-  }
-  else {
-    pane_fill_round(&off_rect, AGENT_CHIP_RADIUS * u, thumb);
-  }
-  pane_label_centre("ON", BLI_rctf_cent_x(&on_rect), cy, font, on ? text : dim);
-  pane_label_centre("OFF", BLI_rctf_cent_x(&off_rect), cy, font, on ? dim : text);
-
   ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
-                         blender::wm::OpCallContext::InvokeDefault, "",
+                         blender::wm::OpCallContext::InvokeDefault, name,
                          int(rect.xmin), int(rect.ymin),
                          short(w), short(BLI_rctf_size_y(&rect)), nullptr);
+  ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+  ui::mixar_button_lit_set(but, on);
   if (but) {
     pane_but_tooltip_owned(but, name);
     char path[256];
@@ -301,17 +270,18 @@ void draw_number_chip(ui::Block *slider_block,
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
+  const float *text = ui::mixar_tokens::zen.text;
+  pane_fill_round(&rect, PANE_RADIUS * u, chip);
   pane_label_left(name, rect.xmin + pad, BLI_rctf_cent_y(&rect), font, text);
 
   /* A REAL slider: Blender's own NumSlider bound to the group property —
    * exact drag/type behaviour, themed chrome inside the chip. */
   const float sx = rect.xmin + pad + name_w + 12.0f * u;
-  uiDefButR(slider_block, ui::ButtonType::NumSlider, "",
+  ui::Button *number = uiDefButR(slider_block, ui::ButtonType::NumSlider, "",
             int(sx), int(rect.ymin + 4.0f * u),
             short(slider_w), short(BLI_rctf_size_y(&rect) - 8.0f * u),
             group_ptr, RNA_property_identifier(prop), -1, 0.0f, 0.0f, nullptr);
+  ui::mixar_style_button(number, ui::MixarComponent::Number, ui::MixarVariant::Primary, u);
 }
 
 }  // namespace
@@ -399,12 +369,12 @@ float agent_ui_tab3d_params_draw(const bContext *C,
   RNA_STRUCT_END;
 
   if (elided > 0) {
-    const float dim[4] = AGENT_COL_TEXT_DIM;
+    const float *dim = ui::mixar_tokens::zen.secondary;
     char more[32];
     SNPRINTF(more, "+%d more", elided);
     const float w = pane_text_width(more, PANE_FONT_SUB * u);
     const float x = std::min(f.x, x_max - w);
-    pane_label_left(more, x, f.y_top - AGENT_CHIP_H * u * 0.5f, PANE_FONT_SUB * u, dim);
+    pane_label_left(more, x, f.y_top - PANE_ROW_H * u * 0.5f, PANE_FONT_SUB * u, dim);
   }
 
   /* Strip bottom: the lowest row this flow reached, never below the floor the

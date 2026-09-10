@@ -72,6 +72,7 @@ enum class TextAlignAnchor : int {
 /* Mixar custom section widget. */
 #  include "../../editors/interface/interface_mixar_profile_card.hh"
 #  include "../../editors/interface/interface_mixar_section.hh"
+#  include "UI_mixar.hh"
 
 namespace blender {
 
@@ -972,6 +973,21 @@ static Layout *rna_uiLayoutBox(Layout *layout)
   return &layout->box();
 }
 
+static Layout *rna_uiLayoutMixarSurface(Layout *layout, int theme)
+{
+  Layout &surface = layout->column(false);
+  surface.mixar_scope_set({ui::MixarTheme(theme), true});
+  return &surface;
+}
+
+static void rna_uiLayoutMixarStyle(Layout *layout, int component, int variant)
+{
+  const int64_t count = ui::mixar_button_count(layout);
+  if (count > 0) {
+    ui::mixar_style_last(layout, ui::MixarComponent(component), ui::MixarVariant(variant));
+  }
+}
+
 static Layout *rna_uiLayoutMixarSection(Layout *layout)
 {
   return UI_layout_mixar_section(layout);
@@ -991,6 +1007,7 @@ static void rna_uiItemR_mixar_dropdown(Layout *layout,
                                        int icon,
                                        int icon_value)
 {
+  const int64_t first = ui::mixar_button_count(layout);
   /* Delegate to the standard prop drawing so sizing/split/decorate all work. */
   rna_uiItemR(layout,
               ptr,
@@ -1013,7 +1030,7 @@ static void rna_uiItemR_mixar_dropdown(Layout *layout,
               int(TextAlignAnchor::Left)); /* align */
 
   /* Mark the just-created Menu button for custom drawing. */
-  UI_layout_mixar_mark_last_dropdown(layout);
+  ui::mixar_style_new_buttons(layout, first, ui::MixarComponent::Dropdown);
 }
 
 static PointerRNA rna_uiItemO_mixar_action(Layout *layout,
@@ -1025,6 +1042,7 @@ static PointerRNA rna_uiItemO_mixar_action(Layout *layout,
                                            bool depress,
                                            int icon_value)
 {
+  const int64_t first = ui::mixar_button_count(layout);
   PointerRNA opptr = rna_uiItemO(layout,
                                  opname,
                                  name,
@@ -1038,7 +1056,7 @@ static PointerRNA rna_uiItemO_mixar_action(Layout *layout,
                                  false); /* no_tooltip */
 
   /* Mark the just-created operator button for accent styling. */
-  UI_layout_mixar_mark_last_action(layout);
+  ui::mixar_style_new_buttons(layout, first, ui::MixarComponent::Action);
   return opptr;
 }
 
@@ -1051,6 +1069,7 @@ static void rna_uiItemR_mixar_toggle(Layout *layout,
                                      int icon,
                                      int icon_value)
 {
+  const int64_t first = ui::mixar_button_count(layout);
   rna_uiItemR(layout,
               ptr,
               propname,
@@ -1071,7 +1090,7 @@ static void rna_uiItemR_mixar_toggle(Layout *layout,
               false,     /* invert_checkbox */
               int(TextAlignAnchor::Left)); /* align */
 
-  UI_layout_mixar_mark_last_toggle(layout);
+  ui::mixar_style_new_buttons(layout, first, ui::MixarComponent::Toggle);
 }
 
 static void rna_uiItemR_mixar_input(Layout *layout,
@@ -1081,8 +1100,10 @@ static void rna_uiItemR_mixar_input(Layout *layout,
                                     const char *text_ctxt,
                                     bool translate,
                                     int icon,
-                                    int icon_value)
+                                    int icon_value,
+                                    bool multiline)
 {
+  const int64_t first = ui::mixar_button_count(layout);
   rna_uiItemR(layout,
               ptr,
               propname,
@@ -1103,7 +1124,7 @@ static void rna_uiItemR_mixar_input(Layout *layout,
               false,     /* invert_checkbox */
               int(TextAlignAnchor::Left)); /* align */
 
-  UI_layout_mixar_mark_last_input(layout);
+  ui::mixar_style_new_buttons(layout, first, ui::MixarComponent::Input, multiline);
 }
 
 /* Item values must match the `mixar_card_label` enum in
@@ -1724,6 +1745,39 @@ void RNA_api_ui_layout(StructRNA *srna)
                                   "under each other in a column and are surrounded by a box)");
 
   /* Mixar account card — the profile dropdown's whole contents. */
+  static const EnumPropertyItem mixar_theme_items[] = {
+      {0, "NATIVE", 0, "Native", "Use Blender's theme"},
+      {1, "ZEN", 0, "Zen", "Mixar Zen components"},
+      {2, "LEGACY_MIXAR", 0, "Legacy Mixar", "Compatibility appearance"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_surface", "rna_uiLayoutMixarSurface");
+  RNA_def_enum(func, "theme", mixar_theme_items, 1, "Theme", "Local appearance scope");
+  parm = RNA_def_pointer(func, "layout", "UILayout", "", "Scoped child layout");
+  RNA_def_function_return(func, parm);
+
+  static const EnumPropertyItem mixar_component_items[] = {
+      {1, "ACTION", 0, "Action", "Native operator button"},
+      {2, "DROPDOWN", 0, "Dropdown", "Native enum menu"},
+      {3, "TOGGLE", 0, "Toggle", "Boolean choice"},
+      {4, "INPUT", 0, "Input", "Native text input"},
+      {5, "NUMBER", 0, "Number", "Native numeric field"},
+      {6, "SEGMENT", 0, "Segment", "Native enum item"},
+      {7, "SURFACE", 0, "Surface", "Container"},
+      {8, "LABEL", 0, "Label", "Text"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  static const EnumPropertyItem mixar_variant_items[] = {
+      {0, "PRIMARY", 0, "Primary", "Primary action"},
+      {1, "SECONDARY", 0, "Secondary", "Secondary action"},
+      {2, "GHOST", 0, "Ghost", "Borderless action"},
+      {3, "DANGER", 0, "Danger", "Destructive action"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_style", "rna_uiLayoutMixarStyle");
+  RNA_def_enum(func, "component", mixar_component_items, 1, "Component", "Style the last item in this layout");
+  RNA_def_enum(func, "variant", mixar_variant_items, 0, "Variant", "Semantic visual variant");
+
   func = RNA_def_function(srna, "mixar_profile_card", "rna_uiLayoutMixarProfileCard");
   RNA_def_function_flag(func, FUNC_USE_CONTEXT);
   RNA_def_function_ui_description(func,
@@ -1781,6 +1835,8 @@ void RNA_api_ui_layout(StructRNA *srna)
   api_ui_item_common(func);
   parm = RNA_def_property(func, "icon_value", PROP_INT, PROP_UNSIGNED);
   RNA_def_property_ui_text(parm, "Icon Value", "Override automatic icon of the item");
+
+  RNA_def_boolean(func, "multiline", false, "Multiline", "Use native multiline editing in a tall layout row");
 
   /* Mixar profile-card text elements, reusable outside the card itself.
    * Values must match the switch in `rna_uiLayoutMixarCardLabel`. */

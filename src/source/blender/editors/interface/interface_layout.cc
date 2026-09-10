@@ -4954,6 +4954,7 @@ void LayoutOverlap::resolve_impl()
 void LayoutInternal::init_from_parent(Layout *litem, Layout *layout, int align)
 {
   litem->root_ = layout->root_;
+  litem->mixar_scope_ = layout->mixar_scope_;
   litem->align_ = align;
   /* Children of grid-flow layout shall never have "ideal big size" returned as estimated size. */
   litem->variable_size_ = layout->variable_size_ || layout->type() == ItemType::LayoutGridFlow;
@@ -5755,6 +5756,8 @@ void LayoutInternal::layout_add_but(Layout *layout, Button *but)
     layout->items_.append(bitem);
   }
   but->layout = layout;
+  but->mixar_style.theme = layout->mixar_scope_.theme;
+  but->mixar_style.explicit_theme = layout->mixar_scope_.explicit_theme;
   but->search_weight = layout->search_weight_;
 
   if (layout->context_) {

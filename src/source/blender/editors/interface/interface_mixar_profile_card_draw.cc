@@ -210,7 +210,7 @@ void draw_divider(rcti *rect)
  */
 void draw_usage_bar(Button *but, rcti *rect)
 {
-  const float factor = std::clamp(float(but->hardmax), 0.0f, 1.0f);
+  const float factor = std::clamp(but->mixar_style.progress, 0.0f, 1.0f);
 
   const float pad = float(mixar_card_text_pad());
   const float gap = 10.0f * UI_SCALE_FAC;

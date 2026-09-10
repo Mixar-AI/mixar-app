@@ -45,6 +45,7 @@
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
+#include "UI_mixar.hh"
 
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
@@ -6497,10 +6498,17 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
    * the cursor. Such a row is NOT claimed here; it falls through to the
    * stock chain, the row painter lays its chip first (below) and the stock
    * backdrop is dropped so only the text pass runs on top. */
-  const MixarCardElement mixar_element = UI_mixar_card_element_get(but);
+  const bool mixar_component = but->mixar_style.theme == MixarTheme::Zen &&
+      but->mixar_style.component != MixarComponent::None &&
+      but->mixar_style.component != MixarComponent::LegacyCard;
+  const MixarCardElement mixar_element = but->mixar_style.theme == MixarTheme::Native ?
+      MixarCardElement::None : UI_mixar_card_element_get(but);
   const bool mixar_row_editing = mixar_element == MixarCardElement::CinemaRow &&
                                  but->editstr != nullptr;
-  if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
+  if (mixar_component) {
+    wt = widget_type(WidgetStyle::Regular);
+  }
+  else if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
     wt = widget_type(WidgetStyle::MixarCard);
   }
   /* handle menus separately */
@@ -6588,7 +6596,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::But:
       case ButtonType::Decorator:
-        if (but->flag2 & UI_BUT2_MIXAR_ACTION) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Action) {
           wt = widget_type(WidgetStyle::MixarAction);
         }
 #ifdef USE_UI_TOOLBAR_HACK
@@ -6626,7 +6635,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::TextBox:
       case ButtonType::Text:
-        if (but->flag2 & UI_BUT2_MIXAR_INPUT) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Input) {
           wt = widget_type(WidgetStyle::MixarInput);
         }
         else {
@@ -6650,7 +6660,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::Checkbox:
       case ButtonType::CheckboxN:
-        if (but->flag2 & UI_BUT2_MIXAR_TOGGLE) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Toggle) {
           wt = widget_type(WidgetStyle::MixarToggle);
           if ((but->drawflag & (BUT_TEXT_LEFT | BUT_TEXT_RIGHT)) == 0) {
             but->drawflag |= BUT_TEXT_LEFT;
@@ -6681,7 +6692,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
       case ButtonType::Menu:
       case ButtonType::Block:
       case ButtonType::Popover:
-        if (but->flag2 & UI_BUT2_MIXAR_DROPDOWN) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Dropdown) {
           wt = widget_type(WidgetStyle::MixarDropdown);
         }
         else if (but->flag & BUT_NODE_LINK) {
@@ -6708,7 +6720,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::Roundbox:
       case ButtonType::ListBox:
-        if (but->flag2 & UI_BUT2_MIXAR_SECTION) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Surface) {
           wt = widget_type(WidgetStyle::MixarSection);
         }
         else {
@@ -6870,14 +6883,18 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
   const float zoom = 1.0f / but->block->aspect;
   wt->state(wt, &state, but->emboss);
-  if (wt->custom) {
+  bool native_text = true;
+  if (mixar_component) {
+    native_text = mixar_component_draw(*but, wt->wcol, *rect);
+  }
+  else if (wt->custom) {
     wt->custom(but, &wt->wcol, rect, &state, roundboxalign, zoom);
   }
   else if (wt->draw) {
     wt->draw(&wt->wcol, rect, &state, roundboxalign, zoom);
   }
 
-  if (wt->text) {
+  if (wt->text && native_text) {
     if (use_alpha_blend) {
       GPU_blend(GPU_BLEND_ALPHA);
     }

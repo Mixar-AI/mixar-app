@@ -13803,6 +13803,37 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
   Button *but = region_find_active_but(region);
 
   if (but) {
+    /* A Zen input may paint beneath an action row (the island composer).
+     * Its modal editor tests its own rectangle before normal hit testing,
+     * so commit the edit and transfer this press to the native action that
+     * actually occupies the pixels. Keep native press/release handling;
+     * never execute the operator from drawing or bypass its poll. */
+    if (event->type == LEFTMOUSE && event->val == KM_PRESS &&
+        but->mixar_style.theme == MixarTheme::Zen &&
+        but->mixar_style.component == MixarComponent::Input &&
+        ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING) &&
+        button_contains_point_px(but, region, event->xy))
+    {
+      Button *target = but_find_mouse_over(region, event);
+      if (target && target != but && target->mixar_style.theme == MixarTheme::Zen &&
+          target->mixar_style.component == MixarComponent::Action)
+      {
+#ifdef WITH_INPUT_IME
+        /* Match native click-outside commit for an in-progress composition. */
+        wmWindow *win = CTX_wm_window(C);
+        const wmIMEData *ime = win->runtime->ime_data;
+        if (ime && win->runtime->ime_data_is_composing && !ime->composite.empty() &&
+            but->type == ButtonType::Text)
+        {
+          textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                              ime->composite.size());
+        }
+#endif
+        button_activate_exit(C, but, but->active, true, false);
+        button_activate_init(C, region, target, BUTTON_ACTIVATE_OVER);
+        but = target;
+      }
+    }
     bScreen *screen = CTX_wm_screen(C);
     Button *but_other;
 

@@ -142,11 +142,13 @@ def test_truncated_text_gets_an_ellipsis():
     """A bare chop reads as a DIFFERENT string: "ReproCone" rendered as
     "ReproCon" looked like the wrong result, not a shortened name."""
     body = _function(KIT_CC, "void pane_fit_text(")
-    assert "\\xE2\\x80\\xA6" in body, "pane_fit_text does not append an ellipsis"
-    # Still UTF-8 aware — never split a multi-byte sequence.
-    assert "0xC0) == 0x80" in body
-    # And it must only ever SHRINK the caller's fixed buffer.
-    assert "orig_len" in body
+    # The compatibility buffer still only shrinks; Unicode fitting is shared.
+    assert "fitted.size() < capacity" in body
+    assert "mixar_fit_text(text, max_w, size)" in body
+    shared = (CPP.parent / "interface/mixar/text.cc").read_text()
+    assert 'const char *ellipsis = "…"' in shared
+    assert "end > 0" in shared and "0xc0) == 0x80" in shared
+    assert re.search(r'if \(budget < 0\.0f\)\s*\{\s*return "";', shared)
 
 
 def test_the_kit_documents_the_ellipsis_for_callers():

@@ -43,6 +43,7 @@
 #pragma once
 
 #include "BLI_rect.h"
+#include "UI_mixar_tokens.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -60,13 +61,13 @@ struct Button;
 /* Strip grid. */
 #define PANE_INSET_X 21      /* Panel left/right -> first/last strip element. */
 #define PANE_STRIP_TOP 25    /* Panel top -> first row top. */
-#define PANE_ROW_H 44
+#define PANE_ROW_H ui::mixar_tokens::control_height
 #define PANE_ROW_PITCH 62    /* Row top -> next row top (44 + 18 gap). */
-#define PANE_RADIUS 14
-#define PANE_CHIP_GAP 12
-#define PANE_CHIP_PAD_X 20
-#define PANE_FONT 18
-#define PANE_FONT_SUB 15
+#define PANE_RADIUS ui::mixar_tokens::radius
+#define PANE_CHIP_GAP ui::mixar_tokens::gap
+#define PANE_CHIP_PAD_X ui::mixar_tokens::padding
+#define PANE_FONT ui::mixar_tokens::font
+#define PANE_FONT_SUB ui::mixar_tokens::caption_font
 #define PANE_PILL_H 38       /* Value pill / segment thumb height. */
 #define PANE_SEG_INSET 3     /* Track edge -> thumb edge. */
 
@@ -75,7 +76,7 @@ struct Button;
 #define PANE_BOX_INSET 4     /* Panel edge -> box edge (sides + bottom). */
 #define PANE_BOX_GAP 28      /* Strip bottom -> box top. */
 #define PANE_BOX_MIN_H 40    /* Below this the box still paints, just short. */
-#define PANE_PROMPT_FONT 24
+#define PANE_PROMPT_FONT ui::mixar_tokens::prompt_font
 #define PANE_FIELD_H 56      /* The typing strip at the box TOP (its ghost
                               * text and caret are text-height; the box below
                               * is presentation, not the editable widget). */
@@ -94,21 +95,21 @@ struct Button;
 #define PANE_REF_THUMB_RADIUS 6
 
 /* Palette. */
-#define PANE_COL_WASH_TOP {0.176f, 0.176f, 0.176f, 1.0f}    /* #2D2D2D */
+#define PANE_COL_WASH_TOP {ui::mixar_tokens::zen.panel[0], ui::mixar_tokens::zen.panel[1], ui::mixar_tokens::zen.panel[2], ui::mixar_tokens::zen.panel[3]}    /* #2D2D2D */
 #define PANE_COL_WASH_BOTTOM {0.075f, 0.078f, 0.075f, 1.0f} /* #131413 */
-#define PANE_COL_CHIP {0.192f, 0.192f, 0.192f, 1.0f}        /* #313131 params chip / track */
-#define PANE_COL_PILL {0.282f, 0.282f, 0.282f, 1.0f}        /* #484848 value pill / thumb */
+#define PANE_COL_CHIP {ui::mixar_tokens::zen.control[0], ui::mixar_tokens::zen.control[1], ui::mixar_tokens::zen.control[2], ui::mixar_tokens::zen.control[3]}        /* #313131 params chip / track */
+#define PANE_COL_PILL {ui::mixar_tokens::zen.selected[0], ui::mixar_tokens::zen.selected[1], ui::mixar_tokens::zen.selected[2], ui::mixar_tokens::zen.selected[3]}        /* #484848 value pill / thumb */
 #define PANE_COL_PILL_DIM {0.235f, 0.235f, 0.235f, 1.0f}    /* #3C3C3C recessed value */
 #define PANE_COL_PILL_ON {0.278f, 0.278f, 0.278f, 1.0f}     /* #474747 ON pill */
-#define PANE_COL_ACTION {0.114f, 0.114f, 0.114f, 1.0f}      /* #1D1D1D bottom chips */
-#define PANE_COL_GENERATE {0.102f, 0.251f, 0.149f, 1.0f}    /* #1A4026 */
-#define PANE_COL_BOX {0.071f, 0.071f, 0.071f, 1.0f}         /* #121212 prompt box */
+#define PANE_COL_ACTION {ui::mixar_tokens::zen.action[0], ui::mixar_tokens::zen.action[1], ui::mixar_tokens::zen.action[2], ui::mixar_tokens::zen.action[3]}      /* #1D1D1D bottom chips */
+#define PANE_COL_GENERATE {ui::mixar_tokens::zen.primary[0], ui::mixar_tokens::zen.primary[1], ui::mixar_tokens::zen.primary[2], ui::mixar_tokens::zen.primary[3]}    /* #1A4026 */
+#define PANE_COL_BOX {ui::mixar_tokens::zen.input[0], ui::mixar_tokens::zen.input[1], ui::mixar_tokens::zen.input[2], ui::mixar_tokens::zen.input[3]}         /* #121212 prompt box */
 
 /* Report line (see "Live feedback" below). The error tone follows the queue
  * pane's muted red rather than a saturated one — this line sits inside a very
  * dark panel and a pure red vibrates against it. */
-#define PANE_COL_MSG_ERROR {0.804f, 0.361f, 0.361f, 1.0f}
-#define PANE_COL_MSG_WARN {0.898f, 0.694f, 0.298f, 1.0f}
+#define PANE_COL_MSG_ERROR {ui::mixar_tokens::zen.danger[0], ui::mixar_tokens::zen.danger[1], ui::mixar_tokens::zen.danger[2], ui::mixar_tokens::zen.danger[3]}
+#define PANE_COL_MSG_WARN {ui::mixar_tokens::zen.warning[0], ui::mixar_tokens::zen.warning[1], ui::mixar_tokens::zen.warning[2], ui::mixar_tokens::zen.warning[3]}
 #define PANE_MSG_FONT PANE_FONT_SUB
 #define PANE_MSG_TTL_S 5.0 /* Seconds a report stays on screen. */
 

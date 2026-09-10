@@ -209,11 +209,8 @@ ButtonType UI_mixar_button_type(const Button *but)
 
 bool UI_mixar_cinema_row_carries_value(const Button *but)
 {
-  /* Types whose `hardmin`/`hardmax` ARE data: a number's range, a Text's
-   * maximum length, a Toggle's off value. The tag must leave them alone, so
-   * for these the kind is the type (#UI_mixar_cinema_row_kind_get) and the
-   * card flag alone marks the row. Row is deliberately absent: it keeps its
-   * enum value in `hardmax` but its `hardmin` is free for the element. */
+  /* Kept for compatibility callers; the dedicated descriptor means even
+   * Row enum values and all numeric/text limits remain untouched. */
   return ELEM(but->type,
               ButtonType::Num,
               ButtonType::NumSlider,
@@ -240,7 +237,7 @@ MixarCinemaRowKind UI_mixar_cinema_row_kind_get(const Button *but)
       /* Lights from UI_SELECT; `hardmax` is the toggle's value, not a kind. */
       return MixarCinemaRowKind::Option;
     default:
-      return MixarCinemaRowKind(int(but->hardmax + 0.5f));
+      return but->mixar_style.cinema;
   }
 }
 
@@ -256,19 +253,15 @@ void UI_mixar_cinema_row_tag(Button *but, const MixarCinemaRowKind kind)
   if (but == nullptr) {
     return;
   }
-  UI_BUT2_MIXAR_CARD_SET(but);
-  if (UI_mixar_cinema_row_carries_value(but)) {
-    /* The value range / string length lives in hardmin/hardmax: the flag is
-     * the whole tag and the kind follows the type. */
-    return;
+  but->mixar_style.component = MixarComponent::LegacyCard;
+  if (!but->mixar_style.explicit_theme) {
+    but->mixar_style.theme = MixarTheme::LegacyMixar;
   }
-  but->hardmin = float(int(MixarCardElement::CinemaRow));
-  /* A Row (enum / flag toggle) button keeps ITS VALUE in `hardmax`; the
-   * painter reads such a row's state from UI_SELECT instead, so the payload
-   * must not touch it. Only free-standing rows carry the kind there. */
-  if (but->type != ButtonType::Row) {
-    but->hardmax = float(int(kind));
-  }
+  but->mixar_style.card = MixarCardElement::CinemaRow;
+  but->mixar_style.cinema = kind;
+  /* Value-carrying rows retain their historical recipe; the resolved kind is
+   * stored explicitly instead of stealing range/value fields. */
+  but->mixar_style.cinema = UI_mixar_cinema_row_kind_get(but);
 }
 
 void UI_mixar_cinema_row_draw(Button *but,

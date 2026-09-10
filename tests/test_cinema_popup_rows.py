@@ -184,10 +184,11 @@ def test_tag_leaves_hardmin_hardmax_alone_on_value_carrying_buttons():
     for kind in ("Num", "NumSlider", "Scroll", "Text", "Toggle", "IconToggle", "Menu"):
         assert f"ButtonType::{kind}" in carries, kind
     tag = _function(ROW, "void UI_mixar_cinema_row_tag(")
-    assert tag.index("if (UI_mixar_cinema_row_carries_value(but)) {") < tag.index("but->hardmin =")
+    assert "but->hardmin" not in tag and "but->hardmax" not in tag
     # The read side honours the same rule, so a flagged NumSlider is a row.
     lookup = _function(CARD, "MixarCardElement UI_mixar_card_element_get(")
-    assert lookup.index("UI_mixar_cinema_row_carries_value(but)") < lookup.index("int(but->hardmin)")
+    assert "but->hardmin" not in lookup and "but->hardmax" not in lookup
+    assert "but->mixar_style.card" in lookup
     kind_get = _function(ROW, "MixarCinemaRowKind UI_mixar_cinema_row_kind_get(")
     assert "case ButtonType::NumSlider:" in kind_get and "return MixarCinemaRowKind::Slider;" in kind_get
     assert "case ButtonType::Text:\n      return MixarCinemaRowKind::Field;" in kind_get

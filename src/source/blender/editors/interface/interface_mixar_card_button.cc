@@ -113,7 +113,7 @@ void UI_mixar_card_button_draw(Button *but,
   }
 
   /* --- Contents --------------------------------------------------------- */
-  const MixarCardIcon icon = MixarCardIcon(std::max(0, int(but->hardmax)));
+  const MixarCardIcon icon = but->mixar_style.icon;
   const uiFontStyle fs = mixar_card_font(1.0f, 0);
   fontstyle_set(&fs);
 

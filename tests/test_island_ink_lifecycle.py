@@ -150,7 +150,7 @@ def test_the_second_line_skips_the_ellipsis_not_three_real_bytes():
     the fitted head overshoots the bytes of the ORIGINAL it consumed. Taking
     the tail from `text + strlen(r_a)` dropped three real bytes and could
     start inside a multi-byte character."""
-    assert '"\\xE2\\x80\\xA6"' in PANE_KIT_CC, (
+    assert '"…"' in (Path(__file__).resolve().parents[1] / "src/source/blender/editors/interface/mixar/text.cc").read_text(), (
         "pane_fit_text no longer writes U+2026 — the detail column's "
         "compensation below is keyed to it"
     )
