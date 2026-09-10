@@ -6,8 +6,9 @@
  * \ingroup edinterface
  *
  * Mixar liquid glass: the painter behind `mixar_glass_draw`. Read
- * `ED_mixar_glass.hh` for what a pane is made of and why; the palette and the
- * blur are in `interface_mixar_liquid_glass.cc`.
+ * `ED_mixar_glass.hh` for what a pane is made of and why; the material table
+ * is in `interface_mixar_liquid_glass_tokens.cc` and the blur is in
+ * `interface_mixar_liquid_glass.cc`.
  *
  * A TEXTURE CANNOT FILL A ROUNDED SHAPE
  * `ui::draw_roundbox_4fv_ex` takes colours, not a texture, so a pane cannot be

@@ -73,6 +73,8 @@ enum eMixarGlassRole {
   MIXAR_GLASS_CHAT,
   /** Chips and buttons sitting on a pane: tint only, no gloss, no rim. */
   MIXAR_GLASS_CHIP,
+  /** The Mixie moodboard's nodes, media frames and floating panels. */
+  MIXAR_GLASS_MOODBOARD,
 };
 
 /**

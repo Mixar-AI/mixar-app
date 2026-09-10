@@ -31,13 +31,15 @@ ED = ROOT / "src" / "source" / "blender" / "editors"
 
 HEADER = (ED / "include" / "ED_mixar_glass.hh").read_text(encoding="utf-8")
 KIT_PATH = ED / "interface" / "interface_mixar_liquid_glass.cc"
+TOKENS_PATH = ED / "interface" / "interface_mixar_liquid_glass_tokens.cc"
 DRAW_PATH = ED / "interface" / "interface_mixar_liquid_glass_draw.cc"
 KIT = KIT_PATH.read_text(encoding="utf-8")
+TOKENS = TOKENS_PATH.read_text(encoding="utf-8")
 DRAW = DRAW_PATH.read_text(encoding="utf-8")
 CMAKE = (ED / "interface" / "CMakeLists.txt").read_text(encoding="utf-8")
 
 #: The roles, in enum order. The enum and the token table are read together.
-ROLES = ["card", "menu", "panel", "island", "pill", "chat", "chip"]
+ROLES = ["card", "menu", "panel", "island", "pill", "chat", "chip", "moodboard"]
 
 #: `MixarGlassTokens` in declaration order. The table is initialised
 #: positionally, so a reordering here silently re-tones a surface.
@@ -74,8 +76,8 @@ WINDOW_GUARD = "defined(__APPLE__) || defined(_WIN32)"
 
 def _table() -> str:
     """The token table's text, from its first row to the `static_assert`."""
-    start = KIT.index("const MixarGlassTokens g_glass_tokens[] = {")
-    return KIT[start : KIT.index("static_assert(BLI_ARRAY_SIZE", start)]
+    start = TOKENS.index("const MixarGlassTokens g_glass_tokens[] = {")
+    return TOKENS[start : TOKENS.index("static_assert(BLI_ARRAY_SIZE", start)]
 
 
 def _rows() -> dict[str, str]:
@@ -135,7 +137,7 @@ class TestEveryRoleHasItsOwnRow:
         assert list(_rows()) == ROLES, f"the table grew or reordered: {list(_rows())}"
 
     def test_the_static_assert_covers_every_role(self) -> None:
-        assert "BLI_ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_CHIP) + 1u" in KIT, (
+        assert "BLI_ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u" in TOKENS, (
             "Without the assert a new role compiles and reads past the table."
         )
 
@@ -192,7 +194,7 @@ class TestTheCapsuleIsACapsule:
             "A finite pill radius is a rounded rectangle on some pill heights and "
             "a capsule on others: the same window would change shape as it resizes."
         )
-        assert "MX_R_PILL" in KIT and "capsule" in KIT
+        assert "MX_R_PILL" in TOKENS and "capsule" in TOKENS
 
     def test_the_painter_clamps_every_radius_to_half_the_short_side(self) -> None:
         assert "std::min(width, height) * 0.5f" in DRAW, (
@@ -460,13 +462,23 @@ class TestThePublicApiIsDefinedOnce:
     def test_every_declared_symbol_has_exactly_one_definition(self) -> None:
         for name in PUBLIC_API:
             assert f"{name}(" in HEADER, f"{name} is not declared"
-            matches = re.findall(rf"^[A-Za-z_][\w:<>\* ]*\s{re.escape(name)}\(", KIT + DRAW, re.M)
+            matches = re.findall(
+                rf"^[A-Za-z_][\w:<>\* ]*\s{re.escape(name)}\(", KIT + TOKENS + DRAW, re.M
+            )
             assert len(matches) == 1, f"{name} has {len(matches)} definitions, not one"
 
-    def test_the_two_files_split_the_kit_the_house_way(self) -> None:
-        """`foo.cc` + `foo_draw.cc`, like the profile card and the minimap."""
-        assert "MixarGlassTokens mixar_glass_tokens(" in KIT
+    def test_the_kit_splits_along_the_material_seam(self) -> None:
+        """`foo.cc` + `foo_draw.cc` + `foo_tokens.cc`, like the cinema row.
+
+        The material table is prose-heavy (a row per surface, each carrying the
+        call-site colour it stands in for) and holds no GPU calls, so it is the
+        one seam that can come out whole — which is what keeps each file under
+        the repo's size limit as surfaces are added.
+        """
+        assert "MixarGlassTokens mixar_glass_tokens(" in TOKENS
+        assert "MixarGlassTokens g_glass_tokens" in TOKENS
         assert "void mixar_glass_draw(" in DRAW
+        assert "MixarGlassTokens g_glass_tokens" not in KIT
         assert "MixarGlassTokens g_glass_tokens" not in DRAW
 
 
@@ -474,16 +486,24 @@ class TestTheFilesStayWithinTheHouseLimits:
     def test_no_file_is_larger_than_the_house_limit(self) -> None:
         """`CLAUDE.md`: "No file larger than 500 lines -- split aggressively."
 
-        The kit was 710 lines as one file, which is what forced the split along
-        the `_draw` seam.
+        The kit was 710 lines as one file, which forced the split along the
+        `_draw` seam; the material table then grew it past the limit again,
+        which forced the `_tokens` seam. Every file in the family is checked,
+        so the next surface is added by growing a file that still has room.
         """
-        for path in (KIT_PATH, DRAW_PATH):
+        for path in (KIT_PATH, TOKENS_PATH, DRAW_PATH):
             count = len(path.read_text(encoding="utf-8").splitlines())
             assert count < 500, f"{path.name} is {count} lines"
 
-    def test_both_halves_are_in_the_build(self) -> None:
-        assert "  interface_mixar_liquid_glass.cc\n" in CMAKE
-        assert "  interface_mixar_liquid_glass_draw.cc\n" in CMAKE
+    def test_every_part_is_in_the_build(self) -> None:
+        for name in (
+            "interface_mixar_liquid_glass.cc",
+            "interface_mixar_liquid_glass_tokens.cc",
+            "interface_mixar_liquid_glass_draw.cc",
+        ):
+            assert f"  {name}\n" in CMAKE, f"{name} is not compiled"
         assert CMAKE.index("interface_mixar_liquid_glass.cc") < CMAKE.index(
             "interface_mixar_liquid_glass_draw.cc"
-        ) < CMAKE.index("interface_mixar_profile_card.cc")
+        ) < CMAKE.index("interface_mixar_liquid_glass_tokens.cc") < CMAKE.index(
+            "interface_mixar_profile_card.cc"
+        )

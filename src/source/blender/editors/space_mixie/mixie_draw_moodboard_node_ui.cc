@@ -77,11 +77,7 @@ static ui::Button *screen_prop_button(ui::Block *block,
 
 void moodboard_draw_floating_background(const rctf &rect)
 {
-  const float background[4] = {0.14f, 0.14f, 0.15f, 0.98f};
-  const float border[4] = {0.34f, 0.35f, 0.38f, 0.88f};
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&rect, true, 16.0f, background);
-  ui::draw_roundbox_4fv(&rect, false, 16.0f, border);
+  moodboard_draw_glass_pane(rect, 16.0f);
 }
 
 static ui::Button *add_parameter_button(ui::Block *block,

@@ -82,7 +82,7 @@ def _glass_panel_row():
         / "blender"
         / "editors"
         / "interface"
-        / "interface_mixar_liquid_glass.cc"
+        / "interface_mixar_liquid_glass_tokens.cc"
     ).read_text()
     start = kit.index("/* MIXAR_GLASS_PANEL")
     return kit[start : kit.index("/* MIXAR_GLASS_ISLAND", start)]
