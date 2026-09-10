@@ -9,16 +9,16 @@ Monkey-patches:
                                    (wireframe/solid/material/rendered + popover)
                                    when the viewport is in the Zen Mode workspace.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
-- VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
-                                   as one vertically centred group.
+- VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale / Annotate in
+                                   Zen mode, as one vertically centred group.
 
 The left T-panel used to be left alone: an even earlier build emptied it
 completely and losing tool access made Zen Mode useless for anything beyond
 viewing. The design resolves that tension instead of re-emptying it — Zen
-keeps exactly the three transform tools (the design's centre-left strip), so
-the canvas stays calm AND the viewport stays usable. Modes that have no
-transform tools at all (sculpt / paint, where the toolbar IS the brush list)
-fall through to the stock toolbar rather than rendering an empty strip.
+keeps the three transform tools plus Annotate (the design's centre-left
+strip), so the canvas stays calm AND the viewport stays usable. Modes that
+surface none of those tools (sculpt / paint, where the toolbar IS the brush
+list) fall through to the stock toolbar rather than rendering an empty strip.
 
 We patch the contents instead of hiding the regions because hiding regions
 gives Blender's collapsed-region arrow that lets the user expand them again
@@ -44,7 +44,22 @@ _original_tool_header_draw = None
 _original_tools_active_draw = None
 
 # The only tools Zen Mode surfaces, in design order (top to bottom).
-_ZEN_TOOL_IDS = ("builtin.move", "builtin.rotate", "builtin.scale")
+# `builtin.annotate` is the scribble annotate tool — the first member of the
+# stock annotate group, so `_tool_get_by_id` (which flattens groups) finds it
+# and the button behaves exactly like the stock group's active entry.
+_ZEN_TOOL_IDS = (
+    "builtin.move",
+    "builtin.rotate",
+    "builtin.scale",
+    "builtin.annotate",
+)
+
+# Tools whose presence means "this mode has a transform toolbar worth
+# filtering". Annotate is deliberately NOT in here: sculpt and the paint
+# modes carry the annotate group but no transform tools, so gating on the
+# full `_ZEN_TOOL_IDS` would replace their brush list with a lone Annotate
+# button. Those modes must keep falling through to the stock toolbar.
+_ZEN_GATE_TOOL_IDS = frozenset(("builtin.move", "builtin.rotate", "builtin.scale"))
 
 # Button height as a multiple of the widget unit. The design's strip is
 # 138 px tall for three buttons at 1x (46 px each) and the widget unit is
@@ -172,7 +187,8 @@ def _zen_tool_top_gap(context, tool_count: int) -> float:
 def _patched_tools_active_draw(self, context):
     """Replacement for VIEW3D_PT_tools_active.draw.
 
-    Zen mode: Move / Rotate / Scale only, as one vertically centred group.
+    Zen mode: Move / Rotate / Scale / Annotate only, as one vertically
+    centred group.
     Engine mode: defer to the original draw.
 
     The buttons are the stock ones — same `wm.tool_set_by_id` operator, same
@@ -197,9 +213,10 @@ def _patched_tools_active_draw(self, context):
             if item is not None:
                 items.append((idname, item))
 
-    if not items:
+    if not any(idname in _ZEN_GATE_TOOL_IDS for idname, _item in items):
         # Modes whose toolbar IS the tool set (sculpt / paint brushes) have
-        # no transform tools; an empty strip there would strand the user.
+        # no transform tools; a strip there — empty, or holding only the
+        # annotate button they do carry — would strand the user.
         if _original_tools_active_draw is not None:
             _original_tools_active_draw(self, context)
         return
