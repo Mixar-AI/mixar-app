@@ -9,7 +9,12 @@ When scribble mode is on:
      moodboard background (uniform gray dot grid of filled discs).
   2. The scribble text output window is moved over the new chat topbar, displaying
      the recognized handwriting text in a sleek pill window over the topbar.
-  3. The translucent dot grid overlay also covers the normal text input field at the bottom.
+  3. That same surface continues over the Agent island's composer, so a stroke
+     running off the transcript does not stop at the region seam.
+
+(3) is drawn by the ONE painter the chat owns rather than a copy in the island
+-- see tests/test_scribble_canvas_grid.py for why the copy had to go, and for
+the arithmetic that keeps the lattice's reserved vertex count honest.
 """
 
 from pathlib import Path
@@ -24,18 +29,30 @@ BUBBLE_CC = (BUBBLE_DIR / "space_agent_bubble.cc").read_text(encoding="utf-8")
 
 
 def test_overlay_draws_moodboard_dot_grid():
-    """ink_draw_moodboard_grid draws a uniform dot grid with segments, matching
-    the moodboard background pattern."""
-    assert "static void ink_draw_moodboard_grid(float winx, float winy, float scale, float ease)" in OVERLAY_CC
-    assert "ink_draw_moodboard_grid(float(winx), float(winy), scale, ease);" in OVERLAY_CC
+    """The lattice is a uniform grid of filled discs, matching the moodboard.
+
+    Takes a rect and an origin because the island's composer draws the same
+    lattice into a different region and must be able to anchor it to the
+    transcript's corner rather than its own.
+    """
+    assert "void mixie_chat_ink_draw_grid(" in OVERLAY_CC
+    assert "const rctf *rect," in OVERLAY_CC
+    assert "const float origin_x," in OVERLAY_CC
     assert "const float dot_color[4] = {0.45f, 0.45f, 0.45f, 0.35f * ease};" in OVERLAY_CC
     assert "immBegin(GPU_PRIM_TRIS, dot_count * segments * 3);" in OVERLAY_CC
 
 
 def test_overlay_surface_is_translucent():
-    """The base surface is translucent and dark before the dot grid is drawn."""
-    assert "chat_ui_draw_rounded_rect(&full, 0.0f, scrim);" in OVERLAY_CC
-    assert "const float scrim[4] = {0.05f, 0.05f, 0.06f, 0.82f * ease};" in OVERLAY_CC
+    """The base surface is translucent and dark before the dot grid is drawn.
+
+    Scrim and lattice are one painter (`mixie_chat_ink_draw_canvas`) so the
+    island's slice cannot mix the surface at a different alpha -- that is what
+    made the composer read as a panel ruled across the Scribble pad.
+    """
+    assert "void mixie_chat_ink_draw_canvas(" in OVERLAY_CC
+    assert "chat_ui_draw_rounded_rect(rect, 0.0f, scrim);" in OVERLAY_CC
+    assert "mixie_chat_ink_draw_canvas(&full, scale, 0.0f, 0.0f, ease);" in OVERLAY_CC
+    assert "INK_CANVAS_SCRIM" in OVERLAY_CC
 
 
 def test_scribble_text_output_window_over_topbar():
@@ -48,13 +65,21 @@ def test_scribble_text_output_window_over_topbar():
     assert "state->input_text" in DRAW_CC
 
 
-def test_overlay_covers_normal_text_input_field():
-    """In scribble mode, the translucent dot grid overlay also covers the normal
-    text input field in the bottom region, and the embossed button is suppressed."""
-    assert "/* When scribble mode is on, put the translucent dot grid overlay over the" in BUBBLE_CC
+def test_overlay_covers_the_composers_share_of_the_panel():
+    """The surface covers the composer band, not just the input line's rect.
+
+    Pinned to `layout->input` it left a strip of bare panel above and below it
+    and sat inside the transcript's own left and right edges, which drew three
+    straight lines across the pad where the surface should have been
+    continuous. Panel width, region top down to the chip row -- the chips are
+    controls and keep their own ground. The embossed field stays suppressed.
+    """
     assert "if (input_prop && !state->ink_visible)" in BUBBLE_CC
     assert "if (state->ink_visible) {" in BUBBLE_CC
-    assert "agent_bubble_rect_to_region(region, layout->input, &ibx, &iby, &ibw, &ibh);" in BUBBLE_CC
-    assert "agent_ui_draw_scribble_input_overlay(&input_rect, layout->scale);" in BUBBLE_CC
-    assert "void agent_ui_draw_scribble_input_overlay(const rctf *input_rect, const float scale)" in DRAW_CC
+    assert "agent_bubble_rect_to_region(region, layout->panel," in BUBBLE_CC
+    assert "agent_bubble_rect_to_region(region, layout->chip_upload," in BUBBLE_CC
+    assert "mixie_chat_ink_draw_canvas(&canvas, UI_SCALE_FAC, ox, oy, 1.0f);" in BUBBLE_CC
+    # The island must own no copy of the surface.
+    assert "agent_ui_draw_scribble_input" not in BUBBLE_CC
+    assert "agent_ui_draw_scribble_input" not in DRAW_CC
 

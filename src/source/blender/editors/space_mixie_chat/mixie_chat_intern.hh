@@ -594,6 +594,10 @@ void mixie_chat_rules_set_visible(bContext *C, bool visible);
  * LAST in mixie_chat_ui_handler so interactive targets keep pen taps). */
 void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
 void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
+void mixie_chat_ink_draw_canvas(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
+void mixie_chat_ink_draw_grid(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
 void mixie_chat_ink_draw_strokes(
     MixieChatRuntime *rt, float scale, float ease, float offset_x, float offset_y);
 ARegion *mixie_chat_ink_area_main_region(ScrArea *area);

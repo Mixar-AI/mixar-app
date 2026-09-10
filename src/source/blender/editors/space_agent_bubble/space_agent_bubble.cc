@@ -220,6 +220,65 @@ extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
 extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+#ifdef _WIN32
+/* Win32 only. macOS shapes the pill with a Core Animation mask over a
+ * non-opaque NSWindow, which is anti-aliased already; Windows has to ask DWM
+ * to composite the client alpha, and can only do that where the pixel format
+ * GHOST actually got carries an alpha channel. Where it does not, the window
+ * region set by Mixar_WindowSetCornerRadius remains the shape. */
+extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle);
+extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable);
+#endif
+
+/* -------------------------------------------------------------------- */
+/** \name Pill compositing
+ *
+ * The pill's window IS the capsule, and there are two ways to make it so.
+ *
+ * macOS masks the content layer to the corner radius over a non-opaque
+ * window: anti-aliased, and the only thing the platform needs told.
+ *
+ * Windows cannot mask a GL window, so Mixar_WindowSetCornerRadius shapes it
+ * with a window REGION. That works, but region coverage is binary, and a
+ * 28.5px capsule rasterised that way has the hard staircase of any un-AA'd
+ * circle. The better answer is to let DWM composite the client alpha, which
+ * needs the pixel format GHOST ended up with to carry alpha bits — nothing
+ * asked for them (GHOST_WindowWin32 builds GHOST_ContextWGL with
+ * alphaBackground=false), but a 24-bit colour buffer with no alpha is not a
+ * format modern hardware exposes, so RGBA8 is what comes back. Where the
+ * channel is there the bed is painted TRANSPARENT instead of near-black and
+ * the capsule's own anti-aliased edge is the silhouette; where it is not, the
+ * region stands and the bed stays opaque.
+ *
+ * Either way the bed covers every pixel of the region every frame. That is
+ * what it is for: the cached region buffer is freed on perceived resizes and
+ * only repainted on the next tagged redraw, and in that gap a composite
+ * blitted nothing and the pill flashed the bare backdrop.
+ * \{ */
+
+static bool g_pill_per_pixel_alpha = false;
+
+/* Called once per pill window, right after it is made borderless. */
+static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
+{
+#ifdef _WIN32
+  if (ghostwin == nullptr || !Mixar_WindowHasAlphaChannel(ghostwin)) {
+    return; /* Keep the window region as the shape. */
+  }
+  Mixar_WindowSetPerPixelAlpha(ghostwin, true);
+  g_pill_per_pixel_alpha = true;
+#else
+  (void)ghostwin;
+#endif
+}
+
+bool agent_bubble_pill_bed_is_transparent()
+{
+  return g_pill_per_pixel_alpha;
+}
+
+/** \} */
+
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
 extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle);
 extern "C" void Mixar_DispatchMainAfter(float delay_seconds,
@@ -278,6 +337,9 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
  * otherwise cover the canvas the user is writing on. */
 void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
 void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
+void mixie_chat_ink_draw_canvas(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
+ARegion *mixie_chat_ink_area_main_region(ScrArea *area);
 void mixie_chat_ink_footer_handler_register(ARegion *region);
 void mixie_chat_ink_header_handler_register(ARegion *region);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
@@ -729,16 +791,45 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   ui::block_end(C, field_block);
   ui::block_draw(C, field_block);
 
-  /* When scribble mode is on, put the translucent dot grid overlay over the
-   * normal text input field as well. */
+  /* The canvas continues over the composer, so a stroke that runs off the
+   * transcript does not stop at the region seam.
+   *
+   * It covers this region's whole share of the PANEL — full panel width, from
+   * the region's top edge down to the chip row. Pinned to the input line's own
+   * rect instead, it left a strip of bare panel above it and another below,
+   * and sat six pixels inside the transcript's left and right edges: three
+   * straight lines ruled across the Scribble pad exactly where the writing
+   * surface was supposed to be continuous. The chips below are controls, not
+   * writing surface, and keep their own ground.
+   *
+   * The lattice is anchored at the TRANSCRIPT region's origin — the same
+   * offset mixie_chat_draw_ink_strokes_for_region uses for the strokes — so
+   * the dots line up across the seam instead of restarting at this region's
+   * corner. */
   if (state->ink_visible) {
-    int ibx, iby;
-    short ibw, ibh;
-    agent_bubble_rect_to_region(region, layout->input, &ibx, &iby, &ibw, &ibh);
-    if (ibw > 0 && ibh > 0) {
-      rctf input_rect;
-      BLI_rctf_init(&input_rect, float(ibx), float(ibx + ibw), float(iby), float(iby + ibh));
-      agent_ui_draw_scribble_input_overlay(&input_rect, layout->scale);
+    int panel_x, panel_y;
+    short panel_w, panel_h;
+    agent_bubble_rect_to_region(region, layout->panel, &panel_x, &panel_y, &panel_w, &panel_h);
+    int chip_x, chip_y;
+    short chip_w, chip_h;
+    agent_bubble_rect_to_region(region, layout->chip_upload, &chip_x, &chip_y, &chip_w, &chip_h);
+
+    rctf canvas;
+    BLI_rctf_init(&canvas,
+                  float(panel_x),
+                  float(panel_x + panel_w),
+                  float(chip_y + chip_h),
+                  float(BLI_rcti_size_y(&region->winrct) + 1));
+    if (canvas.xmax > canvas.xmin && canvas.ymax > canvas.ymin) {
+      float ox = 0.0f;
+      float oy = 0.0f;
+      if (ScrArea *area = CTX_wm_area(C)) {
+        if (const ARegion *main_region = mixie_chat_ink_area_main_region(area)) {
+          ox = float(main_region->winrct.xmin - region->winrct.xmin);
+          oy = float(main_region->winrct.ymin - region->winrct.ymin);
+        }
+      }
+      mixie_chat_ink_draw_canvas(&canvas, UI_SCALE_FAC, ox, oy, 1.0f);
     }
   }
 
@@ -2174,6 +2265,7 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
       Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
       Mixar_WindowSetBorderless(win->runtime->ghostwin);
+      agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);
       Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
       Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
       Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
@@ -2537,7 +2629,8 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
    * backdrop (paint a bed over the WHOLE region first), and the capsule drawn
    * at region-local origin landed shifted down (translate so it is drawn in
    * window coordinates). */
-  const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+  const float bed_a = agent_bubble_pill_bed_is_transparent() ? 0.0f : 1.0f;
+  const float bed[4] = {0.02f, 0.02f, 0.02f, bed_a};
   rctf region_rect;
   region_rect.xmin = 0.0f;
   region_rect.xmax = float(region->winx);
@@ -2977,6 +3070,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
            * the pill's contentView fills the frame with a single
            * solid colour. */
           Mixar_WindowSetBorderless(pill_win->runtime->ghostwin);
+          agent_bubble_pill_try_per_pixel_alpha(pill_win->runtime->ghostwin);
 
           /* Pin the pill to floating level too. As a child window of
            * the bubble it'd inherit the bubble's level, but when the
