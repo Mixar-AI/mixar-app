@@ -229,7 +229,9 @@ def capture_beat(context, shot, beat_seconds: float):
         _key_camera(camera, target_frame)
         from .interpolation import apply_interpolation
 
-        apply_interpolation(shot)
+        # The beat for this key is not on `shot.beats` yet, so the frame is
+        # named explicitly; the rest of the shot's keys come from its beats.
+        apply_interpolation(shot, target_frame)
         if shot.handheld:
             # The first capture creates the F-curves noise can attach to.
             from .handheld import refresh_handheld
