@@ -324,13 +324,13 @@ namespace blender {
 /* Card gradient — top-right #325B33 to #002317, along the artboard vector
  * (1554,463) -> (1281.66,1068.71) in island-local units. The ramp runs past
  * the card's bottom edge, so only its first ~73% is ever visible; sampling
- * it over the card rect alone would make the card far too dark. */
-#define AGENT_COL_CARD_TOP {0.196f, 0.357f, 0.200f, 1.0f}
-#define AGENT_COL_CARD_BOTTOM {0.000f, 0.137f, 0.090f, 1.0f}
-#define AGENT_CARD_GRAD_X0 1287
-#define AGENT_CARD_GRAD_Y0 2
-#define AGENT_CARD_GRAD_X1 1014
-#define AGENT_CARD_GRAD_Y1 607
+ * it over the card rect alone would make the card far too dark.
+ *
+ * The card DRAWS this ramp as a glass pane now, so its two stops live in the
+ * glass kit's CARD row (`interface_mixar_liquid_glass_tokens.cc`) rather than
+ * here — the row's tint bed IS this gradient, which is why the island adds no
+ * second green wash over it. The kit shades vertically and the artboard's axis
+ * is diagonal; the card-bed comment in `agent_ui_draw.cc` records the trade. */
 
 /* Strokes and text.
  *

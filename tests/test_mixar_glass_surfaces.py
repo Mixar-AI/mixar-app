@@ -57,6 +57,11 @@ CHAT_PRIMITIVES = (CHAT / "mixie_chat_ui_primitives.cc").read_text(encoding="utf
 CHAT_WIDGETS = (CHAT / "mixie_chat_ui_widgets.cc").read_text(encoding="utf-8")
 CHAT_CONTENT = (CHAT / "mixie_chat_messages_content.cc").read_text(encoding="utf-8")
 CHAT_RENDER = (CHAT / "mixie_chat_messages_render.cc").read_text(encoding="utf-8")
+AGENT = ED / "space_agent_bubble"
+AGENT_THEME = (AGENT / "agent_ui_theme.hh").read_text(encoding="utf-8")
+AGENT_LAYOUT_HH = (AGENT / "agent_ui_layout.hh").read_text(encoding="utf-8")
+AGENT_LAYOUT = (AGENT / "agent_ui_layout.cc").read_text(encoding="utf-8")
+AGENT_DRAW = (AGENT / "agent_ui_draw.cc").read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -120,7 +125,7 @@ PANE_CALLS = {
     "interface/interface_mixar_cinema_row.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_mixar_section.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_widgets.cc": ("MIXAR_GLASS_CHIP",),
-    "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_PILL",),
+    "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_CARD", "MIXAR_GLASS_PILL"),
     "space_view3d/view3d_agent_panel_draw.cc": ("MIXAR_GLASS_PANEL",),
     "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
     "space_mixie/mixie_draw_moodboard_graph.cc": (),
@@ -130,9 +135,8 @@ PANE_CALLS = {
     "space_mixie_chat/mixie_chat_messages_content.cc": (),
 }
 
-# The family declares eight roles; three have a surface. The rest are the queue.
+# The family declares eight roles; six have a surface. The rest are the queue.
 UNPAINTED_ROLES = (
-    "MIXAR_GLASS_CARD",
     "MIXAR_GLASS_MENU",
     "MIXAR_GLASS_ISLAND",
 )
@@ -753,9 +757,9 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
     leave a surface on a hand-mixed fill that no longer matches the family, and
     both are invisible until two builds are compared by eye.
 
-    The register is a contract, not a snapshot: the agent island is still to
-    come, and that commit must add its file and its role here, because these
-    tests fail until it does.
+    The register is a contract, not a snapshot: the viewport's context menus
+    are still to come, and that commit must add its file and its role here,
+    because these tests fail until it does.
     """
 
     def _drawers(self) -> set[str]:
@@ -791,9 +795,10 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
             )
 
     def test_the_unpainted_roles_stay_inside_the_kit(self) -> None:
-        """Three roles are declared ahead of their surface.
+        """Two roles are declared ahead of their surface.
 
-        Until the island lands, they may appear only in the header that
+        Neither the viewport's context menus nor the island's own window
+        backdrop has a pane yet, so they may appear only in the header that
         enumerates them and the table that gives each a row — a role painted
         from anywhere else is a conversion that did not stand on its own.
         """
@@ -922,5 +927,120 @@ class TestTheChatMessagePillIsAPane:
         assert "float danger_hover[4] = {0.9f, 0.3f, 0.3f, 0.5f};" in render
         assert "memcpy(action_style.bg_color, layout.style.hover_color," in render
         assert "chat_ui_get_prompt_button_color(slot_todo_style.bg_color);" in render
+
+
+class TestTheIslandCardIsAPane:
+    """The island's card bed (`agent_ui_draw.cc`), and the two island slabs
+    that must stay flat.
+
+    The island draws in WINDOW-physical pixels: `agent_bubble_island_begin`
+    pushes a `-winrct` translate and every rect in `AgentIslandLayout` is in
+    that space. That is the trap the chat's View2D matrix sets, one coordinate
+    system over, and it rules the specular streak out for the same reason —
+    the streak is the one layer the painter clips with a scissor computed from
+    the pane's own region-px rect.
+
+    CARD is the design's own card role: its token row carries the artboard's
+    green ramp stop for stop, so the wrapper hands over no colour and the
+    island adds no second wash. What the role cannot carry is that the
+    artboard's axis is diagonal — the kit shades vertically. That trade is
+    deliberate and recorded at the call site.
+    """
+
+    def _island(self) -> str:
+        return _code(_fn_body(AGENT_DRAW, "void agent_ui_draw_island("))
+
+    def _card_call(self) -> list[str]:
+        calls = re.findall(r"glass_fill_round\(([^;]*)\);", _code(AGENT_DRAW))
+        card = [call for call in calls if "MIXAR_GLASS_CARD" in call]
+        assert len(card) == 1, f"the island's card bed is not one call: {card}"
+        return [arg.strip() for arg in card[0].split(",")]
+
+    def test_the_card_bed_is_the_card_role_on_the_cards_own_rect(self) -> None:
+        """The bed's whole shape in one place — rect, radius, role and the two
+        layers switched off. Any of them moving is a re-material."""
+        assert self._card_call() == [
+            "&layout->card_fill",
+            "(AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u",
+            "ui::MIXAR_GLASS_CARD",
+            "false",
+            "false",
+        ], f"the card bed changed shape: {self._card_call()}"
+
+    def test_the_pane_reuses_the_meters_inner_edge(self) -> None:
+        """`card_fill` is inset by exactly the band's `AGENT_CARD_BORDER`, so
+        the pane's radius has to come off the card's by that same amount: at
+        the full radius the corner arc crosses the band along the diagonal."""
+        layout = _code(AGENT_LAYOUT)
+        assert "AGENT_CARD_X + AGENT_CARD_BORDER" in layout
+        assert "AGENT_CARD_Y + AGENT_CARD_BORDER" in layout
+        assert "AGENT_CARD_BORDER * 2" in layout
+        assert "AGENT_CARD_BORDER" in self._card_call()[1], "the radius ignores the band"
+
+    def test_only_the_island_turns_the_streak_off(self) -> None:
+        """The wrapper keeps the streak on by default, so the pill and every
+        future in-region caller get it; only a caller drawing outside region
+        px opts out."""
+        draw = _code(AGENT_DRAW)
+        assert "const bool specular = true" in draw, "the wrapper stopped defaulting the streak on"
+        assert "style.draw_specular = specular;" in draw
+        assert draw.count("glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);") == 2
+
+    def test_the_glass_wrapper_hands_over_no_colour(self) -> None:
+        """Same contract as the chat's wrapper: role and radius, plus the two
+        layer switches — nothing that could pick a tint."""
+        body = _fn_body(AGENT_DRAW, "void glass_fill_round(")
+        touched = set(re.findall(r"style\.([A-Za-z_][A-Za-z0-9_]*)", body))
+        assert touched == {"role", "radius", "draw_shadow", "draw_specular"}, (
+            f"the wrapper touches {sorted(touched)}"
+        )
+
+    def test_the_meter_paints_its_band_and_not_the_whole_card(self) -> None:
+        """The meter used to fill the whole card rect and lean on an opaque
+        gradient painted afterwards to hide its middle. Over a translucent bed
+        that middle shows, so the ring itself is drawn as a band."""
+        body = _code(_fn_body(AGENT_DRAW, "void draw_card_border_meter("))
+        assert body.count("draw_roundbox_4fv_ex(") == 1
+        assert "nullptr, nullptr, 1.0f, band, width, radius" in body
+        assert "fill_round(rect," not in body, "the meter still floods the card"
+        assert body.count("fill_round(&seg, width * 0.5f, lit)") == 1, "the lit runs are gone"
+        assert body.index("draw_roundbox_4fv_ex(") < body.index("if (unknown) {"), (
+            "the unknown case returns before the band is drawn"
+        )
+
+    def test_the_meter_is_laid_under_the_bed(self) -> None:
+        """Draw order is what closes the abutment: the pane has to fill the
+        ring's interior to exactly its inner edge, so it comes second."""
+        island = self._island()
+        assert island.index("draw_card_border_meter(") < island.index(
+            "glass_fill_round(&layout->card_fill"
+        ), "the bed is drawn before the meter it abuts"
+
+    def test_the_cards_middle_carries_the_green_alone(self) -> None:
+        """The CARD row's tint bed IS the artboard's ramp, so a wash over it
+        would double the green — the opposite of the viewport panel, whose
+        near-black bed keeps its call-site wash. One draw touches the bed."""
+        assert self._island().count("layout->card_fill") == 1
+
+    def test_the_strip_and_the_inner_panel_stay_flat(self) -> None:
+        """The strip sits under tab pills and the panel under the category
+        panes' own opaque washes, so a pane beneath either is paid for and
+        never seen."""
+        strip = _code(_fn_body(AGENT_DRAW, "void draw_tab_strip("))
+        assert "fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);" in strip
+        island = self._island()
+        assert "fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);" in island
+        assert "glass_fill_round(&layout->panel" not in island
+        assert "glass_fill_round(&layout->strip" not in _code(AGENT_DRAW)
+
+    def test_the_dead_diagonal_axis_is_gone(self) -> None:
+        """Nothing samples the artboard's diagonal axis now that the bed is a
+        pane, so it must not survive as layout state or as tokens — an axis
+        nobody reads is exactly the drift the register exists to catch."""
+        for src in (AGENT_DRAW, AGENT_LAYOUT, AGENT_LAYOUT_HH, AGENT_THEME):
+            assert "card_grad" not in src, "the diagonal axis is still declared"
+            assert "AGENT_CARD_GRAD_" not in src
+            assert "AGENT_COL_CARD_" not in src
+        assert "fill_round_gradient(&layout->card_fill" not in _code(AGENT_DRAW)
 
 
