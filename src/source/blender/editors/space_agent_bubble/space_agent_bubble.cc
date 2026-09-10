@@ -2354,6 +2354,24 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
 
   return found_bubble;
 }
+#else /* !(defined(__APPLE__) || defined(_WIN32)) */
+
+/* No native window anchoring on this platform, so the resting pill is
+ * unreachable (the minimise/restore operators are compiled out) and there is
+ * no pill to seat under the Cinema gate: the seat is a no-op and the band it
+ * would occupy is zero. Both functions are declared unconditionally in
+ * ED_space_api.hh and called unconditionally by the cross-platform Cinema
+ * gate, so they need a definition on every platform or the link fails. */
+void ED_agent_bubble_set_cinema_seat(const wmWindow * /*host*/,
+                                     bool /*valid*/,
+                                     int /*bottom_y_px*/)
+{
+}
+
+int ED_agent_bubble_pill_band_px(const wmWindow * /*host*/)
+{
+  return 0;
+}
 #endif
 
 static bool agent_bubble_window_contains_space(const wmWindow *win)
@@ -2403,8 +2421,12 @@ void ED_agent_bubble_windows_closed()
   g_hover_await_enter = false;
   g_bubble_pad_active = false;
   g_pad_saved_valid = false;
+#if defined(__APPLE__) || defined(_WIN32)
+  /* The Cinema seat globals only exist where the seat can be set — see the
+   * platform guard on their declarations and on the seat functions. */
   g_pill_cinema_seat_valid = false;
   g_pill_cinema_host = nullptr;
+#endif
 }
 
 void ED_agent_bubble_window_freed(const void *ghostwin)
