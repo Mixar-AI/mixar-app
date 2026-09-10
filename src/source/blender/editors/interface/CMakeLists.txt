@@ -49,6 +49,8 @@ set(SRC
   interface_mixar_cinema_row_segment.cc
   interface_mixar_cinema_row_value.cc
   interface_mixar_drag_query.cc
+  interface_mixar_liquid_glass.cc
+  interface_mixar_liquid_glass_draw.cc
   interface_mixar_profile_card.cc
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
