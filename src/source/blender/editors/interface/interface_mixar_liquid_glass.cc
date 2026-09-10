@@ -214,11 +214,14 @@ void glass_blit_full(GPUOffScreen *dst, gpu::Texture *tex, const GPUBlend blend)
  * pane vocabulary (`agent_ui_pane_kit.hh`) carries an alpha ramp, a rim, a
  * sheen, a specular or a shadow, and a material cannot be assembled out of
  * opaque chips. The RGBs are those tables' colours where a pane has an opaque
- * counterpart: CARD and ISLAND take the agent surface's green ramp, MENU,
- * PANEL and CHAT the neutral dark surfaces, PILL the brand green with the
- * brightest rim in the family (it is the smallest pane, so the rim is most of
- * what identifies it), CHIP tint only, no gloss and no specular, so it can sit
- * on a pane without doubling its material.
+ * counterpart: CARD and ISLAND take the agent surface's green ramp, MENU and
+ * CHAT the neutral dark surfaces, PANEL the Parallel Agents card's own
+ * near-black bed with that card's resting border green as its rim (the card's
+ * green wash is painted at its call site: it is a horizontal ramp, and this
+ * row's bed is vertical), PILL the brand green with the brightest rim in the
+ * family (it is the smallest pane, so the rim is most of what identifies it),
+ * CHIP tint only, no gloss and no specular, so it can sit on a pane without
+ * doubling its material.
  *
  * `PILL.radius` is deliberately larger than any pill: the painter clamps a
  * radius to half the short side, which is exactly the capsule rule, so one
@@ -262,13 +265,18 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_alpha*/ 0.06f,
         /* specular_period*/ 7.0f,
     },
-    /* MIXAR_GLASS_PANEL */
+    /* MIXAR_GLASS_PANEL — the Parallel Agents card. Its own near-black, barely
+     * lifted at the top, and the card's RESTING border green: the running
+     * border is brighter and is painted at the call site, where the agent's
+     * status lives — the same split the PILL row makes with its working rim.
+     * The card's green wash is horizontal and stays at the call site too,
+     * because this row's tint bed is a vertical ramp. */
     {
-        /* tint_top      */ {0.110f, 0.110f, 0.114f, 0.55f},
-        /* tint_bottom   */ {0.071f, 0.071f, 0.075f, 0.62f},
+        /* tint_top      */ {0.055f, 0.071f, 0.063f, 0.66f},
+        /* tint_bottom   */ {0.043f, 0.055f, 0.047f, 0.78f},
         /* glaze         */ {0.071f, 0.071f, 0.071f, 0.18f},
         /* sheen         */ {1.000f, 1.000f, 1.000f, 0.06f},
-        /* rim           */ {0.294f, 0.294f, 0.294f, 0.40f},
+        /* rim           */ {0.180f, 0.478f, 0.278f, 0.55f},
         /* refract       */ {1.000f, 1.000f, 1.000f, 0.09f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.30f},
         /* radius        */ 10.0f,

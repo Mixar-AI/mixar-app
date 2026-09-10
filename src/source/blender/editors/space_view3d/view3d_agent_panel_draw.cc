@@ -33,6 +33,7 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 
+#include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -132,16 +133,43 @@ void draw_elided(const int font_id,
   BLF_draw(font_id, buf, strlen(buf));
 }
 
+/** Fill `rect` with the shared glass material for `role`.
+ *
+ * No drop shadow: these cards are painted inside a scissored column, and a
+ * shadow is clipped hard at that boundary, where it reads as a scratched line
+ * across the viewport. Panes that float free of a clip (the island, the pill)
+ * ask for one at their call sites. */
+void glass_pane(const rctf *rect,
+                const ui::eMixarGlassRole role,
+                const float radius,
+                const float alpha)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = role;
+  style.radius = radius;
+  style.alpha = alpha;
+  ui::mixar_glass_draw(pane, style);
+}
 
 void draw_card(const AgentPanelCard &card, const float alpha, const double now)
 {
   const float scale = UI_SCALE_FAC;
   const bool running = card.status == AgentCardStatus::Running;
   const rctf rect = to_rctf(card.rect);
+  const float radius = AGENT_PANEL_CARD_RADIUS * scale;
 
-  /* Horizontal gradient: `shade_dir <= 0` shades along x and the shader mixes
-   * `inner2 -> inner1` across it, so inner2 is the LEFT end. A running agent's
-   * green breathes; a settled one is still. */
+  /* The pane is the shared glass material. The PANEL row carries the card's
+   * near-black bed and the RESTING border green; the running border is
+   * brighter, so it is painted below, where the status lives — the same split
+   * the status pill makes with its working rim. */
+  glass_pane(&rect, ui::MIXAR_GLASS_PANEL, radius, alpha);
+
+  /* The agent's own green wash, the gradient the card always had — but with
+   * its dark end made transparent, so the pane's glass shows through the
+   * silhouette instead of being covered by a second opaque fill. A running
+   * agent's green breathes; a settled one is still. */
   float wash = 1.0f;
   if (running) {
     wash = 0.78f + 0.22f * (0.5f + 0.5f * float(sin(now * 2.4)));
@@ -150,19 +178,27 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
     wash = 0.45f;
   }
 
-  float dark[4], green[4], border[4];
-  with_alpha(CARD_DARK, alpha, dark);
+  float green[4];
   with_alpha(CARD_GREEN, alpha * wash, green);
-  with_alpha(running ? CARD_BORDER_RUNNING : CARD_BORDER, alpha, border);
-
+  const float clear[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  /* Inset by a pixel so the wash and the pane's own rim do not stack on the
+   * same edge — the doubling the pill already hit. */
+  rctf wash_rect = rect;
+  BLI_rctf_pad(&wash_rect, -U.pixelsize, -U.pixelsize);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(&rect,
-                          /*inner1 (right)*/ dark,
+  ui::draw_roundbox_4fv_ex(&wash_rect,
+                          /*inner1 (right)*/ clear,
                           /*inner2 (left)*/ green,
                           /*shade_dir*/ 0.0f,
-                          border,
-                          U.pixelsize,
-                          AGENT_PANEL_CARD_RADIUS * scale);
+                          nullptr,
+                          0.0f,
+                          std::max(radius - U.pixelsize, 0.0f));
+
+  if (running) {
+    float border[4];
+    with_alpha(CARD_BORDER_RUNNING, alpha, border);
+    ui::draw_roundbox_4fv_ex(&rect, nullptr, nullptr, 1.0f, border, U.pixelsize, radius);
+  }
 
   /* Avatar: the Mixar mark on its own dark disc. */
   const float avatar_r = AGENT_PANEL_AVATAR_SIZE * scale * 0.5f;
