@@ -62,16 +62,28 @@ def extract_asset_urls(script: str) -> list[str]:
     return list(dict.fromkeys(urls))
 
 
+# Prefetch states reported by ScriptAssetPrefetch.state(). The executor
+# pumps hold a PENDING script, run a READY one, and REFUSE a FAILED/EXPIRED
+# one with an explicit error instead of letting the script download on the
+# main thread (mixar/modules/common/agent_execution/pump.py).
+PENDING = "pending"
+READY = "ready"
+FAILED = "failed"
+EXPIRED = "expired"
+
+
 class ScriptAssetPrefetch:
     """Handle for one script's background asset prefetch.
 
-    ``ready()`` is cheap and main-thread-safe: true once every download has
-    finished (success or recorded failure) or the wait cap has passed.
+    ``state()`` and ``ready()`` are cheap and main-thread-safe. ``ready()``
+    (legacy) is true once every download has finished — success or recorded
+    failure — or the wait cap has passed; ``state()`` distinguishes those.
     """
 
     def __init__(self, urls: list[str]):
         self._done = threading.Event()
         self._deadline = time.monotonic() + PREFETCH_WAIT_CAP_SECONDS
+        self._errors: dict[str, str] = {}
         self.url_count = len(urls)
         thread = threading.Thread(
             target=self._run, args=(urls,), name="mixar-script-prefetch", daemon=True
@@ -80,7 +92,7 @@ class ScriptAssetPrefetch:
 
     def _run(self, urls: list[str]) -> None:
         started = time.monotonic()
-        errors: dict[str, str] = {}
+        errors = self._errors
         try:
             # Network + disk only — never bpy — so worker threads are safe.
             from mixar.modules.paint.layered_build.download import download_to_tempfile
@@ -107,6 +119,7 @@ class ScriptAssetPrefetch:
                 )
         except Exception as exc:  # noqa: BLE001 — best-effort by contract
             logger.warning("script prefetch failed (non-fatal): %s", exc)
+            errors["<prefetch>"] = f"{type(exc).__name__}: {exc}"
         finally:
             logger.debug(
                 "script prefetch finished: %d url(s) in %.2fs",
@@ -116,6 +129,17 @@ class ScriptAssetPrefetch:
 
     def ready(self) -> bool:
         return self._done.is_set() or time.monotonic() >= self._deadline
+
+    def state(self) -> str:
+        """PENDING while downloading; READY / FAILED once done; EXPIRED past the cap."""
+        if self._done.is_set():
+            return FAILED if self._errors else READY
+        if time.monotonic() >= self._deadline:
+            return EXPIRED
+        return PENDING
+
+    def failed_urls(self) -> list[str]:
+        return list(self._errors)
 
 
 def maybe_start_prefetch(script: str, tool_name: str) -> Optional[ScriptAssetPrefetch]:

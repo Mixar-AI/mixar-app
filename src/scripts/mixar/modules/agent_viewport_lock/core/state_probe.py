@@ -42,6 +42,20 @@ def is_agent_executing(scene=None) -> bool:
             scene = bpy.context.scene
         if scene is None:
             return False
+        # Harness v3: a worker-class task never touches this document, so the
+        # whole-turn input block stands down (capability-based unlock). A
+        # FOREGROUND-class task (texturing / lighting / editing existing
+        # objects) runs its scripts live on this Blender: the lock stands up
+        # for exactly as long as one is bound. Legacy turns keep the lock.
+        try:
+            from mixar.modules.common.agent_execution.document import (
+                foreground_tasks_active,
+                run_active,
+            )
+            if run_active():
+                return foreground_tasks_active() > 0
+        except Exception:
+            pass
         if (getattr(scene, "mixie_chat_active_turn_mode", "") or "") != "AGENT":
             return False
         state = getattr(scene, "mixie_chat_state", "") or ""

@@ -47,7 +47,27 @@ _MIN_TICK_SECONDS = 0.1
 
 
 def should_capture(state) -> bool:
-    return state not in _AGENT_ACTIVE
+    """Manual edits are captured whenever the agent is not driving the scene.
+
+    Harness v3: a v3 run's worker-class tasks never drive the foreground
+    except during the short typed commit, so while ``wm.mixie_v3_run_active``
+    is set the BUSY / MODIFYING states do NOT suppress capture — the user
+    keeps editing and every edit stays attributed to them. Capture pauses
+    only for the publish window (source "agent_commit") and while a
+    FOREGROUND-class task is bound, because then agent scripts ARE running
+    live on this scene and would be misattributed to the user.
+    """
+    if state not in _AGENT_ACTIVE:
+        return True
+    try:
+        from mixar.modules.common.agent_execution import document as _v3doc
+        return (
+            _v3doc.run_active()
+            and not _v3doc.commit_in_progress()
+            and _v3doc.foreground_tasks_active() == 0
+        )
+    except Exception:
+        return False
 
 
 @persistent
