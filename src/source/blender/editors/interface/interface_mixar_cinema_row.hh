@@ -64,10 +64,10 @@ uiFontStyle row_font();
 /** The caption font. */
 uiFontStyle caption_font();
 
-/** The graded chip: the surface's "live" row. */
+/** The "live" row: a glass chip with the surface's graded slate washed over it. */
 void draw_chip(const rctf &row, float radius);
 
-/** The flat hover / pressed fill. */
+/** The hover / pressed pane; `alpha` is the whole cue (0.9 hover, 1.0 press). */
 void draw_hover(const rctf &row, float radius, float alpha);
 
 /** Pixels one side of #TEXT_PAD can give back down to #TEXT_PAD_MIN. */

@@ -40,6 +40,10 @@ PROFILE_DRAW_PATH = IFACE / "interface_mixar_profile_card_draw.cc"
 PROFILE_DRAW = PROFILE_DRAW_PATH.read_text(encoding="utf-8")
 TOPBAR_PATH = IFACE / "interface_mixar_topbar.cc"
 TOPBAR = TOPBAR_PATH.read_text(encoding="utf-8")
+CINEMA_ROW_PATH = IFACE / "interface_mixar_cinema_row.cc"
+CINEMA_ROW = CINEMA_ROW_PATH.read_text(encoding="utf-8")
+CINEMA_VALUE_PATH = IFACE / "interface_mixar_cinema_row_value.cc"
+CINEMA_VALUE = CINEMA_VALUE_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -378,4 +382,89 @@ class TestTheTopbarPillsArePanes:
             assert "MX_" not in call and "uchar" not in call, (
                 f"a role-taking call was given a colour: {call}"
             )
+
+
+class TestTheCinemaRowsArePanes:
+    """The Director popups' chrome: the live row's chip and the hover fill.
+
+    Both sit ON the popup's own back, so both take the CHIP role — the row
+    with no shadow and no specular. The chip keeps the surface's graded slate
+    as a translucent wash, and the hover / press cue becomes the pane's alpha.
+    The slider's track and its green fill are controls and stay flat.
+
+    The slate's token is opaque and pinned by `test_cinema_surface_fixes`, so
+    the grading is softened at the call site, never in the mirror.
+    """
+
+    def _chip(self) -> str:
+        return _code(_fn_body(CINEMA_ROW, "void draw_chip("))
+
+    def test_the_live_chip_and_the_hover_fill_are_panes(self) -> None:
+        assert "mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP);" in self._chip()
+        hover = _code(_fn_body(CINEMA_ROW, "void draw_hover("))
+        assert "mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);" in hover
+        assert "mixar_card_fill_round(" not in hover, (
+            "the hover is still a flat grey slab, not the family material"
+        )
+
+    def test_a_row_takes_the_chip_role_and_no_other(self) -> None:
+        """CARD / PANEL / ISLAND carry a shadow and a streak; a row that sits
+        on the popup may cast neither, and the streak's scissor is region px
+        while a row is painted in the block's coordinates."""
+        code = _code(CINEMA_ROW)
+        for role in (
+            "MIXAR_GLASS_CARD",
+            "MIXAR_GLASS_MENU",
+            "MIXAR_GLASS_PANEL",
+            "MIXAR_GLASS_ISLAND",
+            "MIXAR_GLASS_PILL",
+            "MIXAR_GLASS_CHAT",
+            "MIXAR_GLASS_MOODBOARD",
+        ):
+            assert role not in code, f"{role} is not a row's role"
+        assert code.count("MIXAR_GLASS_CHIP") == 2, "one pane per chrome primitive"
+
+    def test_the_pane_is_laid_before_its_wash(self) -> None:
+        """The wash goes over the pane; the other order hides the material."""
+        chip = self._chip()
+        assert chip.index("mixar_card_glass_round(") < chip.index("draw_roundbox_4fv_ex(")
+
+    def test_the_chip_keeps_its_graded_slate_as_a_wash(self) -> None:
+        """The ramp at full strength is opaque, so it would cover the pane it
+        now sits on — and its token is pinned at 255, so it is softened here."""
+        chip = self._chip()
+        assert "mixar_card_to_float(ROW_TOP, top);" in chip
+        assert "mixar_card_to_float(ROW_BOTTOM, bottom);" in chip
+        assert "top[3] *= CHIP_WASH;" in chip and "bottom[3] *= CHIP_WASH;" in chip
+        wash = re.search(r"^constexpr float CHIP_WASH = ([0-9.]+)f;", CINEMA_ROW, re.M)
+        assert wash is not None, "the wash strength is not a named constant"
+        assert 0.0 < float(wash.group(1)) < 1.0, "CHIP_WASH is not a wash"
+
+    def test_the_wash_is_inset_so_the_rim_stays_single(self) -> None:
+        """Two 1 px edges on one border read as a doubled rim."""
+        chip = self._chip()
+        assert "rctf wash = row;" in chip
+        assert "BLI_rctf_pad(&wash, -inset, -inset);" in chip
+        assert "std::max(radius - inset, 0.0f)" in chip
+
+    def test_the_slider_track_and_the_green_fill_stay_flat(self) -> None:
+        """A groove that shows the popup through it stops reading as a groove."""
+        slider = _code(_fn_body(CINEMA_VALUE, "void draw_slider("))
+        assert "mixar_card_glass_round(" not in slider, "the slider was glassed"
+        assert "mixar_card_fill_round(&row, rad, (is_hover && !disabled) ? HOVER : TRACK, 1.0f);" in slider
+        assert "mixar_card_fill_round(&fill, fill_rad, SLIDER_ON, disabled ? 0.45f : 1.0f);" in slider
+
+    def test_no_mirrored_token_was_orphaned_by_the_conversion(self) -> None:
+        """Every token still has a painter, so a later edit cannot read one as
+        dead weight and delete a mirror the design still owns."""
+        code = _code(CINEMA_ROW + CINEMA_VALUE)
+        for token in ("ROW_TOP", "ROW_BOTTOM", "HOVER", "TRACK", "SLIDER_ON"):
+            assert re.search(rf"\b{token}\b", code), f"{token} is no longer painted"
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        for src in (CINEMA_ROW, CINEMA_VALUE):
+            for call in re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(src)):
+                assert "MX_" not in call and "uchar" not in call, (
+                    f"a role-taking call was given a colour: {call}"
+                )
 

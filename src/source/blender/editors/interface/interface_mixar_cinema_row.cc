@@ -17,6 +17,16 @@
  * Option / Active / Action painter; `_segment.cc` and `_value.cc` paint the
  * other kinds.
  *
+ * The two CHROME primitives — the live row's graded chip and the hover fill
+ * — are panes now: both sit ON the popup's own back, so both take the kit's
+ * #MIXAR_GLASS_CHIP material (the role for a shape that sits on another
+ * pane: tint, a hair of gloss, the family rim — no shadow and no specular,
+ * because a chip may not cast its own) and keep only the graded wash that
+ * makes the live row read as the live choice, with the hover / press cue
+ * moved to the pane's alpha. The slider's #TRACK and its green fill are
+ * CONTROLS and stay flat: a groove that shows the popup through it stops
+ * reading as a groove.
+ *
  * The tokens MIRROR `view3d_director_cinema.hh` (CINEMA_ROW_RADIUS,
  * CINEMA_COL_ROW_TOP/BOTTOM, CINEMA_COL_VALUE/DIM/CAPTION/SPEED_ON); a pin
  * test keeps them in step, since this translation unit cannot reach into
@@ -92,18 +102,43 @@ uiFontStyle caption_font()
   return mixar_card_font(0.9f, 0);
 }
 
+/** The live chip's graded slate is a WASH, not a slab: the ramp as designed
+ * is opaque, and an opaque fill over the pane would cover the very material
+ * the row now sits in. What is left still says "this one is the live one". */
+constexpr float CHIP_WASH = 0.6f;
+
 void draw_chip(const rctf &row, const float radius)
 {
+  /* The live row sits ON the popup's back, so it is a pane, and CHIP is the
+   * role for a shape that sits on another pane — tint, a hair of gloss, the
+   * family rim, no shadow and no specular, because a chip may not cast its
+   * own. (No specular also keeps a region-px scissor out of a row painted in
+   * block coordinates.) */
+  mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP);
+
+  /* Then the design's own graded slate over it, dark-ended to a wash. Inset
+   * by a pixel so the wash and the pane's own rim do not stack on the same
+   * edge — the doubling the status pill already hit. */
   float top[4], bottom[4];
   mixar_card_to_float(ROW_TOP, top);
   mixar_card_to_float(ROW_BOTTOM, bottom);
+  top[3] *= CHIP_WASH;
+  bottom[3] *= CHIP_WASH;
+  const float inset = 1.0f * UI_SCALE_FAC;
+  rctf wash = row;
+  BLI_rctf_pad(&wash, -inset, -inset);
   draw_roundbox_corner_set(CNR_ALL);
-  draw_roundbox_4fv_ex(&row, top, bottom, 1.0f, nullptr, 0.0f, radius);
+  draw_roundbox_4fv_ex(&wash, top, bottom, 1.0f, nullptr, 0.0f, std::max(radius - inset, 0.0f));
 }
 
 void draw_hover(const rctf &row, const float radius, const float alpha)
 {
-  mixar_card_fill_round(&row, radius, HOVER, alpha);
+  /* Hover and press are panes too, and the cue is the pane's alpha: the
+   * caller's 0.9 / 1.0 lifts every layer together, so a pressed row is a
+   * fuller pane rather than a lighter grey slab. HOVER's own grey stays the
+   * slider's hover track (`_value.cc`), where a groove must keep being a
+   * groove. */
+  mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);
 }
 
 float pad_slack()
