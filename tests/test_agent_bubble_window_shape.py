@@ -23,6 +23,11 @@ and the radius applied as the window's actual SHAPE. Both are pinned here,
 along with the two ways a window region silently goes wrong -- a resize that
 leaves a stale region clipping live content, and an entry outliving its HWND.
 
+The island asks the same question one level up: its window can be given a
+translucent background, and only then do the beds it paints per region have
+anything to reveal. That contract is pinned here too, beside the pill's,
+because it is the same question put to a different window.
+
 Source-level, because none of it is reachable from Python.
 """
 
@@ -201,3 +206,107 @@ class TestCrossPlatformContract:
         """macOS already has an anti-aliased mask; this is a Win32 workaround."""
         body = _fn_body(_read(SPACE), "static void agent_bubble_pill_try_per_pixel_alpha(")
         assert "#ifdef _WIN32" in body
+
+
+class TestIslandWindowTranslucency:
+    """The island window asks for the platform's translucent background.
+
+    Where the pill is shaped by DWM honouring its client alpha, the island is
+    one window painting several regions, so its route out is the kit's
+    ``mixar_glass_window_apply_translucency`` -- a WINDOW background request,
+    not a blur, and a defined no-op returning false off macOS/Windows. The
+    return value is the whole point of calling it rather than an ``#ifdef``:
+    it says whether the platform acted.
+
+    The beds then decide what to do with that. They keep covering every pixel
+    of every region -- the stale-buffer guarantee the pill's bed exists for is
+    the same one -- and only their ALPHA moves: zero where the platform gave
+    the window something to show through, one where it did not. So the card
+    reads as glass over the desktop on macOS and Windows, the design surfaces
+    that live inside it stay the near-black they are meant to be, and on Linux
+    nothing changes at all.
+    """
+
+    def test_the_request_goes_through_the_kit(self) -> None:
+        body = _fn_body(_read(SPACE), "static void agent_bubble_try_glass_translucency(")
+        assert "ui::mixar_glass_window_apply_translucency(ghostwin, true)" in body, (
+            "The island asks via the kit. Reaching for Mixar_WindowSetBlurBehind "
+            "directly would drag the platform guard into this file and lose the "
+            "Linux no-op the kit exists to provide."
+        )
+        assert "#if" not in body, (
+            "The header promises callers need no #ifdef of their own precisely "
+            "so this call is unconditional on every platform."
+        )
+        assert "g_bubble_glass_translucency =" in body, (
+            "The answer has to be recorded: the beds paint every frame and must "
+            "not each re-enter GHOST to ask again."
+        )
+
+    def test_the_flag_defaults_to_opaque_beds(self) -> None:
+        assert "static bool g_bubble_glass_translucency = false;" in _read(SPACE), (
+            "False is the honest default: nothing has asked yet, and on a "
+            "platform with no compositor for this window's alpha nothing ever "
+            "will -- so the beds stay opaque and the window region keeps "
+            "shaping the island."
+        )
+
+    def test_the_beds_read_the_flag_and_nothing_else(self) -> None:
+        src = _read(SPACE)
+        # One definition, one use -- the region backdrop.
+        assert src.count("agent_bubble_island_bed_is_transparent") == 2, (
+            "Only the region backdrop may key off the window's translucency. "
+            "The panel fill, the transcript's bg override and the footer are "
+            "design surfaces -- the near-black the card is drawn around -- and "
+            "letting them follow would empty the island out instead of "
+            "revealing the desktop behind it."
+        )
+
+    def test_the_bed_still_paints_every_pixel_of_its_region(self) -> None:
+        """The bed was never allowed to become "don't paint it".
+
+        Alpha 0 hides it; skipping the fill would not. The region buffer is
+        freed on perceived resizes and only repainted on the next tagged
+        redraw, and painting the whole rect every frame is what stops a
+        composite in that gap showing the bare backdrop.
+        """
+        body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
+        assert "float(BLI_rcti_size_x(&region->winrct) + 1)" in body
+        assert "float(BLI_rcti_size_y(&region->winrct) + 1)" in body
+        assert "ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);" in body
+        assert "return" not in body, (
+            "There is no skip path: whatever the alpha works out to, the bed "
+            "still reaches its fill."
+        )
+        assert "GPU_BLEND_NONE" in body, (
+            "BLEND_NONE is what writes the alpha straight through rather than "
+            "blending over stale content."
+        )
+
+    def test_the_bed_alpha_follows_the_window(self) -> None:
+        body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
+        assert "agent_bubble_island_bed_is_transparent() ? 0.0f : 1.0f" in body, (
+            "The bed is opaque unless the platform actually acted -- a "
+            "hard-coded alpha either discards the translucency or stops the "
+            "island compositing as opaque where it must."
+        )
+        assert "const float backdrop[4] = {0.0f, 0.0f, 0.0f, bed_a};" in body
+
+    def test_both_island_styling_sites_ask_for_it(self) -> None:
+        """Repair and open are separate paths; neither may be the only one.
+
+        The repair path re-styles any window the dedup reuses, the open path a
+        fresh one. Asking in only one of them leaves the other window opaque.
+        """
+        src = _read(SPACE)
+        call = "agent_bubble_try_glass_translucency(win->runtime->ghostwin);"
+        parts = src.split(call)
+        assert len(parts) == 3, (
+            f"both island styling sites must call it, found {len(parts) - 1}"
+        )
+        radius = "Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);"
+        for before in parts[:2]:
+            assert radius in before[-500:], (
+                "The request must follow the corner radius: on macOS rounding "
+                "the window is what makes it non-opaque."
+            )
