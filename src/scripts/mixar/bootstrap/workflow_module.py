@@ -35,10 +35,14 @@ from mixar.modules.workflow.ui.menus.mode_menu import (
     uninstall_mode_menu_hook,
 )
 from mixar.modules.workflow.ui.operators.ui_mode_ops import classes as ui_mode_classes
+from mixar.modules.workflow.ui.operators.zen_tool_ops import classes as zen_tool_classes
 
 logger = get_logger(__name__)
 
-_all_classes = ui_mode_classes
+# Registered eagerly rather than left to the deferred UI discovery pass: the
+# toolbar filter installed below dispatches these operators, and the very
+# first paint of a restored Zen Mode file happens before that pass runs.
+_all_classes = ui_mode_classes + zen_tool_classes
 _DEFAULT_MODELING_WORKSPACES = {PRO_DEFAULT_WORKSPACE_NAME, "Modelling"}
 _OBJECT_MODE_RETRY_LIMIT = 20
 _OBJECT_MODE_MSGBUS_OWNER = object()

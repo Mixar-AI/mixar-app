@@ -35,16 +35,13 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ...constants import BASIC_WORKSPACE_NAME
+from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
 
 _logger = get_logger(__name__)
 
 _original_header_draw = None
 _original_tool_header_draw = None
 _original_tools_active_draw = None
-
-# The only tools Zen Mode surfaces, in design order (top to bottom).
-_ZEN_TOOL_IDS = ("builtin.move", "builtin.rotate", "builtin.scale")
 
 # Button height as a multiple of the widget unit. The design's strip is
 # 138 px tall for three buttons at 1x (46 px each) and the widget unit is
@@ -175,10 +172,12 @@ def _patched_tools_active_draw(self, context):
     Zen mode: Move / Rotate / Scale only, as one vertically centred group.
     Engine mode: defer to the original draw.
 
-    The buttons are the stock ones — same `wm.tool_set_by_id` operator, same
-    tool ids and same icons pulled off the real ToolDefs — so activating a
-    tool here is byte-for-byte what the stock toolbar does, including the
-    transform gizmo and keymap each tool installs.
+    The buttons show the same tool ids and the same icons, pulled off the
+    real ToolDefs, as the stock toolbar — but they dispatch
+    `mixar.toggle_zen_transform_tool` instead of `wm.tool_set_by_id`, so the
+    strip behaves like three toggles (see `zen_tool_ops`). Whichever tool the
+    toggle activates is still activated through that stock operator, keymap,
+    gizmo and all.
     """
     if not _is_basic_workspace(context):
         if _original_tools_active_draw is not None:
@@ -189,7 +188,7 @@ def _patched_tools_active_draw(self, context):
     cls = type(self)
     items = []
     if helper is not None:
-        for idname in _ZEN_TOOL_IDS:
+        for idname in ZEN_TRANSFORM_TOOL_IDS:
             try:
                 item, _index = cls._tool_get_by_id(context, idname)
             except Exception:  # noqa: BLE001 — never raise from a draw callback
@@ -220,11 +219,11 @@ def _patched_tools_active_draw(self, context):
     col.scale_y = _ZEN_TOOL_SCALE_Y
     for idname, item in items:
         col.operator(
-            "wm.tool_set_by_id",
+            "mixar.toggle_zen_transform_tool",
             text="",
             depress=(idname == active_idname),
             icon_value=helper._icon_value_from_icon_handle(item.icon),
-        ).name = idname
+        ).tool_idname = idname
 
 
 def install_view3d_header_filter():
