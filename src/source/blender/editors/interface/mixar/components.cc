@@ -26,7 +26,8 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   const bool label = style.component == MixarComponent::Label;
   const float *background = input ? zen.input : zen.control;
   if (style.component == MixarComponent::Surface) {
-    background = zen.panel;
+    background = button.type == ButtonType::But ? (selected ? zen.selected : zen.action) :
+                                                  zen.panel;
   }
   const float *foreground = disabled ? zen.secondary : zen.text;
   if (style.component == MixarComponent::Action) {
@@ -85,6 +86,11 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
    * island controls use their already-resolved artboard font. */
   if (style.unit == 0.0f || input || style.component == MixarComponent::Number) {
     return true;
+  }
+  /* Explicit surfaces host feature-owned content. The button retains its
+   * semantic label for accessibility and QA; only its backplate is painted. */
+  if (style.component == MixarComponent::Surface) {
+    return false;
   }
   const float font_size = font * u;
   const float cy = BLI_rctf_cent_y(&rect);

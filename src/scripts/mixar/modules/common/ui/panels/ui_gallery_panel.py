@@ -20,6 +20,9 @@ def draw_gallery(layout, context):
     disabled.enabled = False
     disabled.mixar_operator("mixar.ui_gallery_action", text="Disabled action")
     surface.mixar_operator("mixar.ui_gallery_action", text="Queued (2) — still enabled")
+    card = surface.row()
+    card.operator("mixar.ui_gallery_action", text="Selectable surface", depress=fixture.enabled)
+    card.mixar_style(component="SURFACE")
     surface.mixar_toggle(fixture, "enabled")
     surface.mixar_dropdown(fixture, "choice")
     segments = surface.row(align=True)

@@ -6,13 +6,11 @@
 /** \file
  * \ingroup spagentbubble
  *
- * The island pane kit — the ONE visual vocabulary every category pane (3D,
- * Media, Gaussian Splat, Queue) draws with, so the four tabs read as the same
- * product. Every token below is measured from the Figma frames (`3d.svg`,
- * `media.svg`, `gaussian splats.svg`, `just agent.svg`; island origin at
- * artboard 267,340) and is stated once HERE — a pane that needs a chip, a
- * segmented control, an ON/OFF pill, the prompt box, or the bottom
- * Upload/Generate row calls the kit instead of painting its own.
+ * Island layout, measurement and feature-preview helpers. Generic controls
+ * use native UI_mixar components; shared primitives and token aliases below
+ * delegate to that framework. Features retain catalog bindings and previews.
+ * Island geometry was measured from the Figma frames (`3d.svg`, `media.svg`,
+ * `gaussian splats.svg`, `just agent.svg`; artboard origin 267,340).
  *
  * Where the frames disagree the majority convention wins; the choices and
  * their sources:
@@ -175,29 +173,20 @@ rctf pane_prompt_field_rect(const rctf &box, float u);
  * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
 rctf pane_generate_rect(const rctf &box, float u);
-/** Generate button: #1A4026 pill, strong label when enabled, dim otherwise. */
-void pane_generate_paint(const rctf &rect, const char *label, bool enabled, float u);
 
-/** Bottom action chip (#1D1D1D): optional leading image icon. Width helper +
- * painter share one metrics definition so hit rects can never drift. */
+/** Measured action width, including optional leading image icon. */
 float pane_action_chip_w(const char *label, bool with_icon, float u);
-void pane_action_chip_paint(const rctf &rect, const char *label, bool with_icon, bool dim, float u);
 
-/** Dropdown chip (#313131 + label + chevron). */
+/** Measured dropdown width, including its chevron. */
 float pane_dropdown_chip_w(const char *label, float u);
-void pane_dropdown_chip_paint(const rctf &rect, const char *label, float u);
 
-/** Segmented control: track #313131, active thumb #484848 inset 3. Segment
- * widths come from the MEASURED labels (catalog labels outgrow design stubs).
+/** Segment widths come from measured labels (catalog labels outgrow design stubs).
  * Returns the track rect; fills r_segs[count]. */
 rctf pane_segmented_layout(
     float x, float y_top, const char *const *labels, int count, float u, rctf *r_segs);
-void pane_segmented_paint(
-    const rctf *segs, const char *const *labels, const int active_index, int count, float u);
 
-/** ON/OFF chip: label + #474747 pill behind the live side. */
+/** Measured ON/OFF toggle width. */
 float pane_onoff_chip_w(const char *label, float u);
-void pane_onoff_chip_paint(const rctf &rect, const char *label, bool on, float u);
 
 /** \} */
 

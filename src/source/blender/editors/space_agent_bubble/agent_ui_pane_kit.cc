@@ -184,19 +184,6 @@ rctf pane_generate_rect(const rctf &box, const float u)
   return rect;
 }
 
-void pane_generate_paint(const rctf &rect, const char *label, const bool enabled, const float u)
-{
-  const float fill[4] = PANE_COL_GENERATE;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  pane_label_centre(label,
-                    BLI_rctf_cent_x(&rect),
-                    BLI_rctf_cent_y(&rect),
-                    PANE_FONT * u,
-                    enabled ? strong : dim);
-}
-
 float pane_action_chip_w(const char *label, const bool with_icon, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;
@@ -204,46 +191,11 @@ float pane_action_chip_w(const char *label, const bool with_icon, const float u)
   return pad + icon + pane_text_width(label, PANE_FONT * u) + pad;
 }
 
-void pane_action_chip_paint(
-    const rctf &rect, const char *label, const bool with_icon, const bool dim, const float u)
-{
-  const float fill[4] = PANE_COL_ACTION;
-  const float text[4] = AGENT_COL_TEXT;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  float x = rect.xmin + PANE_CHIP_PAD_X * u;
-  if (with_icon) {
-    const float edge = AGENT_CHIP_ICON * u;
-    rctf icon = {x, x + edge, cy - edge * 0.5f, cy + edge * 0.5f};
-    agent_ui_icon_draw(AGENT_ICON_IMAGE, &icon, dim ? text_dim : text, fill);
-    x += edge + AGENT_CHIP_ICON_GAP * u;
-  }
-  pane_label_left(label, x, cy, PANE_FONT * u, dim ? text_dim : text);
-}
-
 float pane_dropdown_chip_w(const char *label, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;
   const float chev = AGENT_CHIP_ICON * u * 0.8f;
   return pad + pane_text_width(label, PANE_FONT * u) + 10.0f * u + chev + pad * 0.75f;
-}
-
-void pane_dropdown_chip_paint(const rctf &rect, const char *label, const float u)
-{
-  const float fill[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  pane_label_left(label, rect.xmin + PANE_CHIP_PAD_X * u, cy, PANE_FONT * u, text);
-
-  const float chev = AGENT_CHIP_ICON * u * 0.8f;
-  rctf chev_box;
-  chev_box.xmax = rect.xmax - PANE_CHIP_PAD_X * u * 0.75f;
-  chev_box.xmin = chev_box.xmax - chev;
-  chev_box.ymin = cy - chev * 0.5f;
-  chev_box.ymax = cy + chev * 0.5f;
-  agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chev_box, text, fill);
 }
 
 rctf pane_segmented_layout(const float x,
@@ -271,75 +223,12 @@ rctf pane_segmented_layout(const float x,
   return track;
 }
 
-void pane_segmented_paint(const rctf *segs,
-                          const char *const *labels,
-                          const int active_index,
-                          const int count,
-                          const float u)
-{
-  if (count <= 0) {
-    return;
-  }
-  const float track_col[4] = PANE_COL_CHIP;
-  const float thumb_col[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-
-  rctf track = segs[0];
-  track.xmax = segs[count - 1].xmax;
-  pane_fill_round(&track, PANE_RADIUS * u, track_col);
-
-  for (int i = 0; i < count; i++) {
-    if (i == active_index) {
-      rctf thumb = segs[i];
-      thumb.xmin += PANE_SEG_INSET * u;
-      thumb.xmax -= PANE_SEG_INSET * u;
-      thumb.ymin += PANE_SEG_INSET * u;
-      thumb.ymax -= PANE_SEG_INSET * u;
-      pane_fill_round(&thumb, PANE_RADIUS * u, thumb_col);
-    }
-    pane_label_centre(labels[i],
-                      BLI_rctf_cent_x(&segs[i]),
-                      BLI_rctf_cent_y(&segs[i]),
-                      PANE_FONT * u,
-                      (i == active_index) ? text : dim);
-  }
-}
-
 float pane_onoff_chip_w(const char *label, const float u)
 {
   const float font = PANE_FONT * u;
   return PANE_CHIP_PAD_X * u + pane_text_width(label, font) + 12.0f * u +
          pane_text_width("ON", font) + 20.0f * u + pane_text_width("OFF", font) + 20.0f * u +
          PANE_CHIP_PAD_X * u * 0.75f;
-}
-
-void pane_onoff_chip_paint(const rctf &rect, const char *label, const bool on, const float u)
-{
-  const float fill[4] = PANE_COL_CHIP;
-  const float pill[4] = PANE_COL_PILL_ON;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  const float font = PANE_FONT * u;
-
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  float x = rect.xmin + PANE_CHIP_PAD_X * u;
-  pane_label_left(label, x, cy, font, text);
-  x += pane_text_width(label, font) + 12.0f * u;
-
-  const float on_w = pane_text_width("ON", font) + 20.0f * u;
-  const float off_w = pane_text_width("OFF", font) + 20.0f * u;
-  const float pill_h = PANE_PILL_H * u;
-  rctf live;
-  live.xmin = on ? x : x + on_w;
-  live.xmax = live.xmin + (on ? on_w : off_w);
-  live.ymin = cy - pill_h * 0.5f;
-  live.ymax = cy + pill_h * 0.5f;
-  pane_fill_round(&live, PANE_RADIUS * u, pill);
-
-  pane_label_centre("ON", x + on_w * 0.5f, cy, font, on ? text : dim);
-  pane_label_centre("OFF", x + on_w + off_w * 0.5f, cy, font, on ? dim : text);
 }
 
 /** \} */

@@ -37,7 +37,7 @@ if str(ROOT / "src/scripts") not in sys.path:
 
 FEEDBACK = (CPP / "agent_ui_pane_kit_feedback.cc").read_text(encoding="utf-8")
 KIT_HH = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
-QUEUE_CC = (CPP / "agent_ui_queue.cc").read_text(encoding="utf-8")
+QUEUE_CC = (CPP / "agent_ui_queue_data.cc").read_text(encoding="utf-8")
 CMAKE = (CPP / "CMakeLists.txt").read_text(encoding="utf-8")
 
 CHANNEL_PY = PY / "agent_bubble/ui/properties/pane_message_props.py"
@@ -157,7 +157,7 @@ def _active_states(code: str) -> set[str]:
 def test_the_active_state_vocabulary_is_the_queue_panes_own():
     """One vocabulary, two surfaces.
 
-    The mirror writes ``JobState``'s own names; ``agent_ui_queue.cc`` buckets
+    The mirror writes ``JobState``'s own names; ``agent_ui_queue_data.cc`` buckets
     them into running / pending / done / failed. The non-terminal set here
     must be exactly the union of its running and pending buckets — an invented
     state simply never matches and the button silently stops reporting.
@@ -174,7 +174,7 @@ def test_the_active_state_vocabulary_is_the_queue_panes_own():
     queue_code = _code(QUEUE_CC)
     for state in active:
         assert f'"{state}"' in queue_code, (
-            f"{state} is not a state agent_ui_queue.cc knows"
+            f"{state} is not a state agent_ui_queue_data.cc knows"
         )
     for terminal in ("SUCCESS", "FAILED", "CANCELLED"):
         assert terminal not in active, f"{terminal} is terminal, never active"
