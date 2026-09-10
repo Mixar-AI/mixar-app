@@ -46,6 +46,8 @@ CINEMA_VALUE_PATH = IFACE / "interface_mixar_cinema_row_value.cc"
 CINEMA_VALUE = CINEMA_VALUE_PATH.read_text(encoding="utf-8")
 SECTION_PATH = IFACE / "interface_mixar_section.cc"
 SECTION = SECTION_PATH.read_text(encoding="utf-8")
+WIDGETS_PATH = IFACE / "interface_widgets.cc"
+WIDGETS = WIDGETS_PATH.read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -560,6 +562,106 @@ class TestTheCategoryTabsArePanes:
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
         calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(SECTION))
         assert calls == ["&tab_rect, tab_radius, MIXAR_GLASS_CHIP"], (
+            f"a role-taking call was given a colour: {calls}"
+        )
+
+
+class TestTheSectionCardsArePanes:
+    """The grouped section card (`widget_mixar_section`), and the widgets beside
+    it that must stay controls.
+
+    The card is a surface, so its bed takes the CHIP role: a shape that sits ON
+    another pane — tint, a hair of gloss, the family rim, no shadow and no
+    specular. The card is painted in BLOCK coordinates, so a role with a streak
+    is ruled out twice over: the painter clips that layer with a region-px
+    scissor, which block coordinates cannot place. CHIP's bed is also the only
+    FLAT one in the table, which is exactly what the widget's ``shaded = 0``
+    exists to protect.
+
+    The design's own #141414 bed and its 1px #262626 border are the card's
+    identity, so both stay — but the bed goes back down as a WASH, because
+    #141414 as designed is opaque and would cover the material the card now
+    sits in.
+    """
+
+    def _card(self) -> str:
+        return _code(_fn_body(WIDGETS, "static void widget_mixar_section("))
+
+    def test_the_section_card_bed_is_a_pane(self) -> None:
+        """A bed left on the theme's flat fill keeps a hand-mixed black that no
+        material-table edit can reach, and drifts the moment the family is
+        re-toned."""
+        assert self._card().count("mixar_card_glass_round(") == 1, (
+            "the section card no longer draws exactly one pane"
+        )
+        assert "mixar_card_glass_round(&card, rad, MIXAR_GLASS_CHIP);" in self._card()
+
+    def test_a_section_card_takes_the_chip_role_and_no_other(self) -> None:
+        """CARD / PANEL / ISLAND carry a shadow and a streak; a card in a
+        column may cast neither."""
+        code = _code(WIDGETS)
+        for role in (
+            "MIXAR_GLASS_CARD",
+            "MIXAR_GLASS_MENU",
+            "MIXAR_GLASS_PANEL",
+            "MIXAR_GLASS_ISLAND",
+            "MIXAR_GLASS_PILL",
+            "MIXAR_GLASS_CHAT",
+            "MIXAR_GLASS_MOODBOARD",
+        ):
+            assert role not in code, f"{role} is not a section card's role"
+        assert code.count("MIXAR_GLASS_CHIP") == 1, "one pane per card bed"
+
+    def test_the_pane_is_laid_before_the_designs_own_bed(self) -> None:
+        """The washed #141414 bed goes OVER the pane; the other order covers
+        the very material the card now sits in."""
+        card = self._card()
+        pane = card.index("mixar_card_glass_round(")
+        assert pane < card.index("copy_v4_v4_uchar(wcol->inner, bed);")
+        assert pane < card.index("widgetbase_draw(&wtb, wcol);")
+
+    def test_the_card_keeps_its_own_black_bed_as_a_wash(self) -> None:
+        """#141414 at full strength is opaque, so it is laid back at a named
+        fraction — still the card's own black, over the pane."""
+        card = self._card()
+        assert "copy_v4_v4_uchar(bed, MX_BG);" in card
+        assert "bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);" in card
+        assert "copy_v4_v4_uchar(wcol->inner, bed);" in card
+        wash = re.search(r"constexpr float CARD_WASH = ([0-9.]+)f;", card)
+        assert wash is not None, "the wash strength is not a named constant"
+        assert 0.0 < float(wash.group(1)) < 1.0, "CARD_WASH is not a wash"
+
+    def test_the_card_keeps_its_own_border_and_flat_shading(self) -> None:
+        """The 1px #262626 outline is the card's own edge, and `shaded = 0`
+        keeps the widget shader from gradient-filling it into a charcoal."""
+        card = self._card()
+        assert "copy_v4_v4_uchar(wcol->outline, MX_BORDER);" in card
+        assert "wcol->shaded = 0;" in card
+        assert "round_box_edges(&wtb, roundboxalign, rect, rad);" in card
+
+    def test_the_card_still_flushes_so_its_bed_lands_on_the_pane(self) -> None:
+        """The bed is queued into the widget batch, so the flush at the end is
+        what puts it over the pane rather than behind it."""
+        card = self._card()
+        assert "widgetbase_draw_cache_flush();" in card
+        assert card.index("mixar_card_glass_round(") < card.index("widgetbase_draw_cache_flush();")
+
+    def test_the_neighbouring_widgets_stay_controls(self) -> None:
+        """A toggle track, an input field, a dropdown and an action button are
+        CONTROLS: a groove or a field that shows the sheet through it stops
+        reading as a control."""
+        for signature in (
+            "static void widget_mixar_toggle(",
+            "static void widget_mixar_input(",
+            "static void widget_mixar_dropdown(",
+            "static void widget_mixar_action_button(",
+        ):
+            body = _code(_fn_body(WIDGETS, signature))
+            assert "mixar_card_glass_round(" not in body, f"{signature} was glassed"
+
+    def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
+        calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(WIDGETS))
+        assert calls == ["&card, rad, MIXAR_GLASS_CHIP"], (
             f"a role-taking call was given a colour: {calls}"
         )
 
