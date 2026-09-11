@@ -110,6 +110,45 @@ if [[ "$PLATFORM" == "macOS" && -n "${SDKROOT:-}" && -f "$CMAKE_CACHE_FILE" ]]; 
     fi
 fi
 
+# Drop cached Python entries left behind by a different interpreter version.
+# PYTHON_VERSION is a plain CACHE STRING that FindPythonLibsUnix only ever
+# *defaults*, so a cache configured against a Blender release with an older
+# Python (5.0 -> 3.11) keeps that value after the tree moves on (5.2 -> 3.13)
+# and configure hard-fails with "At least Python 3.13 is required to build, but
+# found Python 3.11". build/ and source/ are shared across branches, so a
+# `git pull` that moves the upstream pin is enough to land in that state.
+# Matching by value rather than by a hand-written variable list: the version is
+# baked into every derived path (interpreter, headers, libpython, and the numpy
+# include dir that audaspace compiles against), and purging only the obvious
+# PYTHON_* names leaves the rest stale for the next compile to trip over.
+if [[ -f "$CMAKE_CACHE_FILE" ]]; then
+    CACHED_PYTHON_VERSION="$(
+        sed -n 's/^PYTHON_VERSION:STRING=//p' "$CMAKE_CACHE_FILE" | head -n1
+    )"
+    if [[ -n "$CACHED_PYTHON_VERSION" && "$CACHED_PYTHON_VERSION" != "$PYTHON_VERSION" ]]; then
+        STALE_PYTHON_VARS=("-UPYTHON_VERSION")
+        while read -r cache_var; do
+            [[ -n "$cache_var" ]] && STALE_PYTHON_VARS+=("-U$cache_var")
+        done < <(
+            grep -E '^[A-Za-z_0-9]+:[A-Z]+=' "$CMAKE_CACHE_FILE" \
+                | awk -v want="$PYTHON_VERSION" '
+                    {
+                        var = $0; sub(/:.*/, "", var); rest = $0; stale = 0
+                        while (match(rest, /python-?3\.[0-9]+/)) {
+                            found = substr(rest, RSTART, RLENGTH)
+                            sub(/^python-?/, "", found)
+                            if (found != want) stale = 1
+                            rest = substr(rest, RSTART + RLENGTH)
+                        }
+                        if (stale) print var
+                    }' \
+                | sort -u
+        )
+        echo "Purging ${#STALE_PYTHON_VARS[@]} CMake cache entries left on Python $CACHED_PYTHON_VERSION (this tree builds against Python $PYTHON_VERSION)"
+        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${STALE_PYTHON_VARS[@]}" >/dev/null
+    fi
+fi
+
 # Configure with CMake (all platform logic handled in settings.sh)
 echo "Configuring Mixar build - Blender: $BLENDER_BUILD_ENV, Mixar Environment: $MIXAR_ENV for $PLATFORM..."
 cmake -C "$CMAKE_DIR/mixar_overrides.cmake" \
