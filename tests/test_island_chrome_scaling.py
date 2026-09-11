@@ -84,6 +84,42 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     assert 0.60 < scale < 0.62
 
 
+def test_compact_height_is_valid_the_card_stretches():
+    """A window shorter than the artboard must still lay out.
+
+    ``region_h < AGENT_ISLAND_H * u`` rejected the shipped 272 px empty
+    island (and the 480 px chat island): chrome never drew, only the
+    prompt field remained. Height is valid down to the same chrome floor
+    the Scribble pad already uses.
+    """
+    build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
+    assert "AGENT_ISLAND_H * u" not in build
+    assert "AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "region_h < min_h - slack" in build
+
+
+def test_open_and_restore_keep_chat_height_once_there_is_a_transcript():
+    """Grow-once only fires once. Open/restore must still size to
+    DEFAULT + TRANSCRIPT when messages exist, or minimise returns a
+    conversation to the empty 272 px island.
+    """
+    body = _function_body(
+        BUBBLE_CC, "static int agent_bubble_collapsed_height_for_current_attachments("
+    )
+    assert "AGENT_BUBBLE_TRANSCRIPT_HEIGHT" in body
+    assert "mixie_chat_messages" in body
+
+
+def test_compact_card_follows_the_window_foot():
+    """Chips sit on the card foot. Flooring ``card_h`` at ``AGENT_CARD_H``
+    put that foot below a window shorter than the artboard, so Upload /
+    Scribble / Generate never appeared in the compact empty island.
+    """
+    build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
+    assert "std::max(float(AGENT_CARD_H)" not in build
+    assert "region_h / u + top_du - AGENT_CARD_Y" in build
+
+
 def _function_body(source: str, signature_start: str) -> str:
     start = source.index(signature_start)
     open_brace = source.index("{", start)

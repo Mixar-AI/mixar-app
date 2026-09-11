@@ -1690,7 +1690,18 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)
 {
-  return agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
+  int height = agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
+  /* Open and restore share this floor. Grow-once only fires once per
+   * process, so without the transcript delta here a minimised chat
+   * restored at the empty 272 px height and stayed there. */
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    if (messages && RNA_property_collection_length(&scene_ptr, messages) > 0) {
+      height += AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
+    }
+  }
+  return height;
 }
 
 /* `from_draw` marked which caller this was, back when the footer's own
