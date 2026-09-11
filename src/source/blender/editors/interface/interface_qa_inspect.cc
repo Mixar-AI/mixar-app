@@ -26,6 +26,7 @@
 #include "BKE_screen.hh"
 
 #include "RNA_access.hh"
+#include "UI_mixar.hh"
 
 #include "UI_interface_c.hh"
 
@@ -374,6 +375,12 @@ void qa_dump_region(std::string &out,
       out += "\",";
 
       const std::string &text = but->drawstr.empty() ? but->str : but->drawstr;
+      json_str(out, "mixar_component", blender::ui::mixar_component_name(but->mixar_style.component));
+      out += ',';
+      json_str(out, "mixar_theme", blender::ui::mixar_theme_name(but->mixar_style.theme));
+      out += ',';
+      json_str(out, "mixar_variant", blender::ui::mixar_variant_name(but->mixar_style.variant));
+      out += ',';
       json_str(out, "text", text);
       out += ',';
       if (!but->tip.is_empty()) {

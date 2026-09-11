@@ -7,20 +7,19 @@
  * \ingroup spagentbubble
  *
  * Shared internals of the Gaussian Splat tab, split across
- * agent_ui_tabsplat.cc (state + controls) and agent_ui_tabsplat_paint.cc
- * (geometry + painting) under the 500-line rule.
+ * agent_ui_tabsplat.cc (controls), agent_ui_tabsplat_state.cc (catalog state),
+ * and agent_ui_tabsplat_paint.cc (geometry + painting) under the 500-line rule.
  */
 
 #pragma once
+#include <string>
 #include "BLI_rect.h"
 #include "RNA_access.hh"
-
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
 struct Image;
-
 
 struct bContext;
 
@@ -30,24 +29,20 @@ struct bContext;
  *
  * The params row's X positions are NOT design constants any more: the mode
  * and LOD labels come from the live catalog (`p_mode` / `p_lod`), so both
- * tracks are measured and each element anchors off the one before it. Only
- * the model chip keeps a design width (its label is elided into it). */
-#define SPLAT_SEG_INSET 3
-#define SPLAT_MODEL_W 137
-#define SPLAT_SWITCH_W 46
-#define SPLAT_SWITCH_H 26
+ * tracks use measured widths and bounded row flow. Oversized tracks become
+ * dropdowns. The model chip is capped to one third of the available strip. */
 #define SPLAT_THUMB_EDGE 45
 
 #define SPLAT_ENUM_MAX 6
 
 /* The job identity this pane submits under — `world_labs_queue.py`'s
- * `_SERVICE_KEY` / `FEATURE_WORLD_LABS`, which are the same string. Used only
- * to count this pane's live jobs in the unified queue mirror. */
+ * `_SERVICE_KEY` / `FEATURE_WORLD_LABS`, which are the same string. Used for
+ * queue feedback and the active model's Settings popup. */
 #define SPLAT_SERVICE_KEY "world_labs"
 
 struct SplatEnumItem {
-  char ident[64];
-  char label[64];
+  std::string ident;
+  std::string label;
   bool active;
 };
 
@@ -58,7 +53,7 @@ struct SplatTabState {
   PropertyRNA *mode_prop;
   PropertyRNA *lod_prop;
   char model_slug[128];
-  char model_label[128];
+  std::string model_label;
   char group_attr[192];
   char mode_ident[32];
   bool image_mode;
@@ -86,18 +81,18 @@ struct SplatPaneRects {
   rctf mode_track;
   rctf mode_seg[SPLAT_ENUM_MAX];
   int mode_count;
+  bool mode_dropdown;
   rctf model_chip;
   rctf lod_track;
   rctf lod_seg[SPLAT_ENUM_MAX];
   int lod_count;
+  bool lod_dropdown;
   rctf prompt_box;
   rctf prompt_field;
   /* False when the box left no room above the bottom row for a field. The
    * pane then offers neither the field nor Generate — a paid action must
    * never submit a prompt the user cannot see or edit. */
   bool prompt_ok;
-  float mood_label_x; /* Left edge of the "Allow selected..." label run. */
-  float mood_label_w; /* Width it was granted (elided into when tight). */
   rctf chip_upload, chip_capture;
   rctf moodboard_switch;
   rctf thumbs; /* Left edge of the thumbnail run. */
@@ -110,11 +105,9 @@ inline bool splat_rect_is_live(const rctf &r)
 }
 
 bool splat_state_resolve(const bContext *C, SplatTabState *r_state);
-int splat_enum_items_get(const bContext *C,
-                         PointerRNA *ptr,
-                         PropertyRNA *prop,
-                         SplatEnumItem *r_items,
-                         int max_items);
+/** Return the full choice count; copy only the first max_items for segment layout. */
+int splat_enum_items_get(
+    const bContext *C, PointerRNA *ptr, PropertyRNA *prop, SplatEnumItem *r_items, int max_items);
 
 /* Board-selection collection and thumbnail drawing now live in the pane kit
  * (`pane_board_selected_images` / `pane_image_thumb_draw`) — every pane
@@ -123,6 +116,7 @@ int splat_enum_items_get(const bContext *C,
 
 void splat_pane_rects_build(const rctf &panel,
                             float u,
+                            const char *model_label,
                             const SplatEnumItem *mode_items,
                             int mode_count,
                             const SplatEnumItem *lod_items,
@@ -131,10 +125,6 @@ void splat_pane_rects_build(const rctf &panel,
 void splat_pane_paint(const bContext *C,
                       const SplatTabState &state,
                       const SplatPaneRects &rects,
-                      const SplatEnumItem *mode_items,
-                      int mode_count,
-                      const SplatEnumItem *lod_items,
-                      int lod_count,
                       float u);
 /* Painter primitives live in the pane kit (agent_ui_pane_kit.hh). */
 

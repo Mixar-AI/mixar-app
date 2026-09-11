@@ -34,10 +34,11 @@ struct rctf;
  * State is read via RNA from `scene.mixie_moodboard_sidebar.tab_world_labs`
  * (model / prompt / use_selected_image / reference_image) and the
  * generation-params WindowManager group `mixar_genparams_world_labs__<slug>`
- * (`p_mode`, `p_lod`). Every action goes through EXISTING operators:
- * `mixie.world_labs_generate`, `mixie.world_labs_pick_image`,
- * `wm.context_set_enum` (mode / lod / model) and `wm.context_toggle`
- * (use_selected_image).
+ * (`p_mode`, `p_lod`). Generate uses the shared owner-based dispatcher;
+ * reference actions retain their existing operators. Mode/LOD segments use
+ * `wm.context_set_enum`; compact choices and model use `wm.context_menu_enum`.
+ * Settings opens the shared native schema popup over these same WM values.
+ * `wm.context_toggle` owns the Use Moodboard switch.
  */
 void agent_ui_tabsplat_draw(const bContext *C,
                             ARegion *region,

@@ -26,19 +26,14 @@
 #include <cstring>
 #include <ctime>
 
-#include "MEM_guardedalloc.h"
-
-#include "BLF_api.hh"
-
 #include "BLI_rect.h"
-#include "BLI_utildefines.h"
 #include "BLI_string.h"
 #include "BLI_time.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
-#include "DNA_windowmanager_types.h"
 
 #include "GPU_state.hh"
 
@@ -47,209 +42,18 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 
-#include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_queue.hh"
-#include "agent_ui_theme.hh"
+#include "agent_ui_queue_intern.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
 namespace {
-
-/* -------------------------------------------------------------------- */
-/** \name Row model
- * \{ */
-
-constexpr int QUEUE_MAX_ROWS = 64;
-
-struct QueueRow {
-  char job_id[64];
-  char feature_key[64];
-  char title[96];
-  char status[64];
-  /* Metadata line — catalog labels + clock base, all stamped by the Python
-   * mirror sync (queue_properties.py), never derived here. */
-  char type_label[64];
-  char model_label[64];
-  double created_epoch; /* unix seconds; 0 when unknown */
-  float elapsed_done;   /* frozen duration for terminal rows; 0 otherwise */
-  /* Lifecycle buckets, mirroring the UIList's state groups. */
-  bool is_running;
-  bool is_pending;
-  bool is_done;
-  bool is_failed; /* FAILED or CANCELLED. */
-};
-
-bool state_is(const char *state, const char *name)
-{
-  return STREQ(state, name);
-}
-
-/** C++ mirror of the UIList's `_status_word` — one vocabulary, two surfaces. */
-void status_word(const char *state, const char *substate, char r_out[64])
-{
-  const char *word = "";
-  if (state_is(state, "SUCCESS")) {
-    word = "Done";
-  }
-  else if (state_is(state, "FAILED")) {
-    word = "Failed";
-  }
-  else if (state_is(state, "CANCELLED")) {
-    word = "Cancelled";
-  }
-  else if (state_is(state, "PAUSED_AUTH")) {
-    word = "Waiting for sign-in";
-  }
-  else if (state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||
-           state_is(state, "RUNNING_DOWNLOAD"))
-  {
-    word = (substate && substate[0]) ? substate : "Processing";
-  }
-  else if (state_is(state, "PENDING")) {
-    word = (substate && substate[0]) ? substate : "Queued";
-  }
-  else {
-    word = (substate && substate[0]) ? substate : "";
-  }
-  BLI_strncpy(r_out, word, 64);
-}
-
-void read_item_string(PointerRNA *item, const char *name, char *r_buf, const int buf_len)
-{
-  r_buf[0] = '\0';
-  PropertyRNA *prop = RNA_struct_find_property(item, name);
-  if (!prop || RNA_property_type(prop) != PROP_STRING) {
-    return;
-  }
-  /* Never the bare RNA_property_string_get — it is strcpy-shaped and a value
-   * longer than the buffer overflows it. The alloc form clamps to the fixed
-   * buffer and only heap-allocates past it. */
-  int len = 0;
-  char *value = RNA_property_string_get_alloc(item, prop, r_buf, buf_len, &len);
-  if (value != r_buf) {
-    BLI_strncpy(r_buf, value, size_t(buf_len));
-    MEM_delete(value);
-  }
-  r_buf[buf_len - 1] = '\0';
-}
-
-/** Whole unix seconds. The epoch is an IntProperty because a float32 cannot
- * hold one: its ULP at 1.79e9 is 128 s, which had the elapsed clock reading up
- * to a minute wrong and ticking in ~2-minute jumps. */
-int read_item_int(PointerRNA *item, const char *name)
-{
-  PropertyRNA *prop = RNA_struct_find_property(item, name);
-  if (!prop || RNA_property_type(prop) != PROP_INT) {
-    return 0;
-  }
-  return RNA_property_int_get(item, prop);
-}
-
-float read_item_float(PointerRNA *item, const char *name)
-{
-  PropertyRNA *prop = RNA_struct_find_property(item, name);
-  if (!prop || RNA_property_type(prop) != PROP_FLOAT) {
-    return 0.0f;
-  }
-  return RNA_property_float_get(item, prop);
-}
-
-/** m:ss, or h:mm:ss past the hour — mirrors labels.py format_elapsed. */
-void format_elapsed(double seconds, char r_out[32])
-{
-  if (seconds < 0.0) {
-    seconds = 0.0;
-  }
-  const int total = int(seconds);
-  const int m = total / 60;
-  const int sec = total % 60;
-  /* Parameter arrays decay to pointers, so SNPRINTF's ARRAY_SIZE can't see
-   * the bound — pass it explicitly. */
-  if (m >= 60) {
-    BLI_snprintf(r_out, 32, "%d:%02d:%02d", m / 60, m % 60, sec);
-  }
-  else {
-    BLI_snprintf(r_out, 32, "%d:%02d", m, sec);
-  }
-}
-
-/** Fill \a rows from wm.mixie_queue.items (already newest-first). */
-int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row)
-{
-  if (!wm) {
-    return 0;
-  }
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *queue_prop = RNA_struct_find_property(&wm_ptr, "mixie_queue");
-  if (!queue_prop || RNA_property_type(queue_prop) != PROP_POINTER) {
-    return 0;
-  }
-  PointerRNA queue = RNA_property_pointer_get(&wm_ptr, queue_prop);
-  PropertyRNA *items = RNA_struct_find_property(&queue, "items");
-  if (!items || RNA_property_type(items) != PROP_COLLECTION) {
-    return 0;
-  }
-
-  int count = 0;
-  int index = 0;
-  CollectionPropertyIterator iter;
-  RNA_property_collection_begin(&queue, items, &iter);
-  for (; iter.valid && count < QUEUE_MAX_ROWS; RNA_property_collection_next(&iter), index++) {
-    PointerRNA item = iter.ptr;
-    QueueRow &row = rows[count];
-
-    read_item_string(&item, "job_id", row.job_id, sizeof(row.job_id));
-    read_item_string(&item, "feature_key", row.feature_key, sizeof(row.feature_key));
-
-    char display_label[96] = "";
-    char label[96] = "";
-    read_item_string(&item, "display_label", display_label, sizeof(display_label));
-    read_item_string(&item, "label", label, sizeof(label));
-    const char *title = display_label[0] ? display_label : (label[0] ? label : "(unnamed)");
-    BLI_strncpy(row.title, title, sizeof(row.title));
-    /* Match the UIList's capitalized first letter. ASCII-only on purpose —
-     * a multi-byte first char is left alone. */
-    if (row.title[0] >= 'a' && row.title[0] <= 'z') {
-      row.title[0] = char(row.title[0] - 'a' + 'A');
-    }
-
-    char state[32] = "";
-    char substate[64] = "";
-    read_item_string(&item, "state", state, sizeof(state));
-    read_item_string(&item, "substate_text", substate, sizeof(substate));
-    status_word(state, substate, row.status);
-    read_item_string(&item, "type_label", row.type_label, sizeof(row.type_label));
-    read_item_string(&item, "model_label", row.model_label, sizeof(row.model_label));
-    row.created_epoch = double(read_item_int(&item, "created_epoch"));
-    row.elapsed_done = read_item_float(&item, "elapsed_done");
-
-    row.is_running = state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||
-                     state_is(state, "RUNNING_DOWNLOAD");
-    row.is_pending = state_is(state, "PENDING") || state_is(state, "PAUSED_AUTH");
-    row.is_done = state_is(state, "SUCCESS");
-    row.is_failed = state_is(state, "FAILED") || state_is(state, "CANCELLED");
-
-    r_index_of_row[count] = index;
-    count++;
-  }
-  RNA_property_collection_end(&iter);
-  return count;
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Paint helpers (duplicated from agent_ui_draw.cc's statics —
- * deliberately local; that file's helpers are private to its own pass).
- * \{ */
-
-/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Row metrics — all in island units, scaled by `u` at use.
@@ -261,49 +65,72 @@ int gather_rows(wmWindowManager *wm, QueueRow *rows, int *r_index_of_row)
  * around them. The queue is a dense two-line list, and at the kit's 18/15 it
  * was the one pane you had to lean in to read. The row grows with the type so
  * the two lines keep their breathing room (they are placed as fractions of
- * QROW_H); the cost is roughly one fewer row visible before paging, which is
+ * QROW_H); the cost is roughly one fewer visible row, which is
  * the right trade for a list whose whole job is to be glanceable. */
-#define QROW_H 76.0f       /* Row backplate height. */
-#define QROW_GAP 10.0f     /* Vertical gap between rows. */
-#define QROW_PAD_X 18.0f   /* Row inner horizontal padding. */
-#define QROW_RADIUS PANE_RADIUS /* Row corner radius — the kit chips'. */
-#define QROW_DOT_R 6.0f    /* Status dot radius — scaled with the type. */
-#define QROW_FONT 23.0f    /* Title size. */
-#define QROW_FONT_SUB 19.0f /* Status / metadata size. */
-#define QROW_CANCEL_W 40.0f/* Cancel cross hit width at the row's right edge. */
+#define QROW_H 76.0f            /* Row backplate height. */
+#define QROW_GAP 10.0f          /* Vertical gap between rows. */
+#define QROW_PAD_X 18.0f        /* Row inner horizontal padding. */
+#define QROW_DOT_R 6.0f         /* Status dot radius — scaled with the type. */
+#define QROW_CANCEL_W 40.0f     /* Cancel cross hit width at the row's right edge. */
 #define QPANEL_PAD PANE_INSET_X /* Panel inset — the kit strip inset. */
-#define QHEADER_H 54.0f    /* "N jobs" + Clear finished strip above the rows. */
+#define QHEADER_H 54.0f         /* "N jobs" + Clear finished strip above the rows. */
 
 /** \} */
 
 }  // namespace
 
+agent_queue::QueueLayout agent_queue::layout(const rctf &panel, float u, int total)
+{
+  QueueLayout result{};
+  const float pad = QPANEL_PAD * u;
+  result.row_height = QROW_H * u;
+  result.row_gap = QROW_GAP * u;
+  result.rows = {
+      panel.xmin + pad, panel.xmax - pad, panel.ymin + pad, panel.ymax - pad - QHEADER_H * u};
+  result.footer = result.rows;
+  result.footer.ymax = result.footer.ymin + ui::mixar_tokens::control_height * u;
+  auto capacity = [&]() {
+    return std::max(0,
+                    int((BLI_rctf_size_y(&result.rows) + result.row_gap) /
+                        (result.row_height + result.row_gap)));
+  };
+  result.capacity = capacity();
+  if (total > result.capacity) {
+    result.rows.ymin = result.footer.ymax + result.row_gap;
+    result.capacity = capacity();
+  }
+  return result;
+}
+
 void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, const float u)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
 
-  QueueRow rows[QUEUE_MAX_ROWS];
-  int mirror_index[QUEUE_MAX_ROWS];
-  const int row_count = gather_rows(wm, rows, mirror_index);
+  using namespace agent_queue;
+  const QueueLayout metrics = layout(panel, u, total_rows(wm));
+  const QueueData data = gather_rows(wm, metrics.capacity);
+  const auto &rows = data.rows;
+  const int row_count = data.total;
+  const int active_index = data.active_index;
 
   const float pad = QPANEL_PAD * u;
   const float row_h = QROW_H * u;
   const float row_gap = QROW_GAP * u;
-  const float font = QROW_FONT * u;
-  const float font_sub = QROW_FONT_SUB * u;
+  const ui::MixarTextStyle title_style = ui::mixar_text_style(ui::MixarTextRole::ListTitle, u);
+  const ui::MixarTextStyle meta_style = ui::mixar_text_style(ui::MixarTextRole::ListMeta, u);
 
   const float list_left = panel.xmin + pad;
   const float list_right = panel.xmax - pad;
   const float header_h = QHEADER_H * u;
   float y_top = panel.ymax - pad;
 
-  const float col_text[4] = AGENT_COL_TEXT;
-  const float col_dim[4] = AGENT_COL_TEXT_DIM;
-  const float col_row[4] = PANE_COL_ACTION; /* Same family as the bottom action chips. */
-  const float col_accent[4] = AGENT_COL_BORDER;   /* Running dot: the island green. */
-  const float col_done[4] = AGENT_COL_ACCENT;     /* Done dot: calmer green. */
-  const float col_pending[4] = AGENT_COL_QUEUE_COUNT;
-  const float col_failed[4] = {0.804f, 0.361f, 0.361f, 1.0f}; /* Muted red. */
+  const auto &palette = ui::mixar_tokens::zen;
+  const float *col_text = palette.text;
+  const float *col_dim = palette.secondary;
+  const float *col_accent = palette.focus;
+  const float *col_done = palette.focus;
+  const float *col_pending = palette.warning;
+  const float *col_failed = palette.danger;
 
   GPU_blend(GPU_BLEND_ALPHA);
 
@@ -311,53 +138,141 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   pane_wash_paint(panel, u);
 
   if (row_count == 0) {
-    pane_label_centre("No jobs in the queue",
-                   (panel.xmin + panel.xmax) * 0.5f,
-                   (panel.ymin + panel.ymax) * 0.5f,
-                   font,
-                   col_dim);
+    ui::mixar_label_center("No jobs in the queue",
+                          (panel.xmin + panel.xmax) * 0.5f,
+                          (panel.ymin + panel.ymax) * 0.5f,
+                          title_style,
+                          col_dim);
     GPU_blend(GPU_BLEND_NONE);
     return;
   }
 
-  /* Header strip: count on the left, Clear finished on the right (painted
-   * here; its invisible button is laid below with the rest). */
-  bool any_terminal = false;
-  int active_count = 0;
-  for (int i = 0; i < row_count; i++) {
-    any_terminal |= (rows[i].is_done || rows[i].is_failed);
-    active_count += int(rows[i].is_running || rows[i].is_pending);
-  }
+  /* Count and actions share the header strip. */
+  const bool any_terminal = data.any_terminal;
+  const int active_count = data.active;
   {
     char counts[64];
     if (active_count > 0) {
-      SNPRINTF(counts, "%d job%s · %d active", row_count, (row_count == 1) ? "" : "s",
-               active_count);
+      SNPRINTF(
+          counts, "%d job%s · %d active", row_count, (row_count == 1) ? "" : "s", active_count);
     }
     else {
       SNPRINTF(counts, "%d job%s", row_count, (row_count == 1) ? "" : "s");
     }
     const float cy = y_top - header_h * 0.5f;
-    pane_label_left(counts, list_left, cy, font_sub, col_dim);
-    if (any_terminal) {
-      pane_label_right("Clear finished", list_right, cy, font_sub, col_dim);
-    }
+    ui::mixar_label_left(counts, list_left, cy, meta_style, col_dim);
   }
-  y_top -= header_h;
 
-  /* Rows, newest first, as many as fit. */
-  const int fit = std::max(0, int((y_top - panel.ymin - pad) / (row_h + row_gap)));
-  const int shown = std::min(row_count, fit);
+  const int shown = rows.size();
+  Vector<rctf> row_rects(shown);
+  ui::Block *block = ui::block_begin(
+      C, region, "agent_island_queue", blender::ui::EmbossType::None);
+
+  /* Clear finished. */
+  if (any_terminal) {
+    const float cy = panel.ymax - pad - header_h * 0.5f;
+    const float w = pane_action_chip_w("Clear finished", false, u);
+    ui::Button *clear = uiDefButO(block,
+                                  ui::ButtonType::But,
+                                  "mixie.queue_clear_all_completed",
+                                  blender::wm::OpCallContext::InvokeDefault,
+                                  "Clear finished",
+                                  int(list_right - w),
+                                  int(cy - ui::mixar_tokens::control_height * u * 0.5f),
+                                  short(w),
+                                  short(ui::mixar_tokens::control_height * u),
+                                  "Remove all finished jobs from the queue");
+    ui::mixar_style_button(clear, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+  }
 
   for (int i = 0; i < shown; i++) {
     const QueueRow &row = rows[i];
-    rctf rect;
-    rect.xmin = list_left;
-    rect.xmax = list_right;
-    rect.ymax = y_top - float(i) * (row_h + row_gap);
-    rect.ymin = rect.ymax - row_h;
+    const float row_top = metrics.rows.ymax - float(i) * (row_h + row_gap);
+    const float row_bottom = row_top - row_h;
+    const bool cancellable = row.is_running || row.is_pending;
+    const float cancel_w = cancellable ? QROW_CANCEL_W * u : 0.0f;
+    row_rects[i] = {list_left, list_right - cancel_w, row_bottom, row_top};
 
-    pane_fill_round(&rect, QROW_RADIUS * u, col_row);
+    if (row.is_running || row.is_pending) {
+      ui::Button *but = uiDefButO(block,
+                                  ui::ButtonType::But,
+                                  "mixie.queue_cancel_job",
+                                  blender::wm::OpCallContext::InvokeDefault,
+                                  "×",
+                                  int(list_right - cancel_w),
+                                  int(row_bottom),
+                                  short(cancel_w),
+                                  short(row_h),
+                                  "Cancel this job");
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Ghost, u);
+      if (but) {
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+        RNA_string_set(op_ptr, "feature_key", row.feature_key);
+        RNA_string_set(op_ptr, "job_id", row.job_id);
+      }
+    }
+
+    /* Row select — drives the mirror's active_index, whose update callback is
+     * the queue-selection hook (frames the imported result, etc.). The rect
+     * stops short of the cancel zone so the two never overlap. */
+    ui::Button *sel = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "wm.context_set_int",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                row.title.c_str(),
+                                int(list_left),
+                                int(row_bottom),
+                                short(list_right - cancel_w - list_left),
+                                short(row_h),
+                                "Select this job");
+    ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u);
+    ui::mixar_button_lit_set(sel, rows[i].mirror_index == active_index);
+    ui::mixar_button_tooltip_owned(sel, row.title.c_str());
+    if (sel) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(sel);
+      RNA_string_set(op_ptr, "data_path", "window_manager.mixie_queue.active_index");
+      RNA_int_set(op_ptr, "value", rows[i].mirror_index);
+    }
+  }
+
+  if (data.total > shown && shown > 0) {
+    const char *labels[] = {"First", "Previous", "Next", "Last"};
+    const Navigation actions[] = {FIRST, PAGE, PAGE, LAST};
+    const float button_w = 100.0f * u;
+    const float gap = 8.0f * u;
+    for (int i = 0; i < 4; i++) {
+      const float x = metrics.footer.xmax - (4 - i) * (button_w + gap) + gap;
+      ui::Button *button = uiDefButO(block,
+                                     ui::ButtonType::But,
+                                     "mixar.queue_navigate",
+                                     wm::OpCallContext::InvokeDefault,
+                                     labels[i],
+                                     int(x),
+                                     int(metrics.footer.ymin),
+                                     short(button_w),
+                                     short(ui::mixar_tokens::control_height * u),
+                                     "Browse queue jobs");
+      ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      if (button) {
+        PointerRNA *ptr = ui::button_operator_ptr_ensure(button);
+        RNA_enum_set(ptr, "action", actions[i]);
+        RNA_float_set(ptr, "delta", i == 1 ? -1.0f : 1.0f);
+        if (i < 2 ? data.visible.first == 0 : data.visible.end() == data.total) {
+          ui::button_flag_enable(button, ui::BUT_DISABLED);
+        }
+      }
+    }
+  }
+
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+  GPU_blend(GPU_BLEND_ALPHA);
+
+  for (int i = 0; i < shown; i++) {
+    const QueueRow &row = rows[i];
+    const rctf &rect = row_rects[i];
+    const bool selected = rows[i].mirror_index == active_index;
+    const float *row_dim = selected ? palette.text : palette.secondary;
 
     const float cy = (rect.ymin + rect.ymax) * 0.5f;
     const float dot_r = QROW_DOT_R * u;
@@ -391,8 +306,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
      *   line 2:       type - model ......... status word */
     const float cy1 = rect.ymax - row_h * 0.30f;
     const float cy2 = rect.ymin + row_h * 0.26f;
-    const float right_edge = rect.xmax - QROW_PAD_X * u -
-                             ((row.is_running || row.is_pending) ? QROW_CANCEL_W * u : 0.0f);
+    const float right_edge = rect.xmax - QROW_PAD_X * u;
 
     /* Elapsed clock: ticking for live rows (the queue blink timer pumps the
      * redraws), frozen at the completion duration for terminal rows. */
@@ -406,23 +320,25 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       format_elapsed(double(row.elapsed_done), clock);
     }
     if (clock[0]) {
-      pane_label_right(clock, right_edge, cy1, font_sub, col_dim);
+      ui::mixar_label_right(clock, right_edge, cy1, meta_style, row_dim);
     }
 
     /* Title between dot and clock. */
-    char title[96];
-    BLI_strncpy(title, row.title, sizeof(title));
     const float title_x = dot_cx + dot_r + 12.0f * u;
-    const float title_max_w = right_edge - pane_text_width(clock, font_sub) - 16.0f * u - title_x;
-    pane_fit_text(title, title_max_w, font);
-    pane_label_left(title, title_x, cy1, font, col_text);
+    const float title_max_w = right_edge - ui::mixar_text_width(clock, meta_style) - 16.0f * u - title_x;
+    const std::string title = ui::mixar_fit_text(row.title.c_str(), title_max_w, title_style);
+    ui::mixar_label_left(title.c_str(), title_x, cy1, title_style, col_text);
 
     /* Metadata line: generation type - model, dim; status word right. */
     char status[64];
     BLI_strncpy(status, row.status, sizeof(status));
     const float status_max_w = (rect.xmax - rect.xmin) * 0.35f;
-    pane_fit_text(status, status_max_w, font_sub);
-    pane_label_right(status, right_edge, cy2, font_sub, row.is_failed ? col_failed : col_dim);
+    const std::string fitted_status = ui::mixar_fit_text(status, status_max_w, meta_style);
+    ui::mixar_label_right(fitted_status.c_str(),
+                          right_edge,
+                          cy2,
+                          meta_style,
+                          row.is_failed && !selected ? col_failed : row_dim);
 
     char meta[160] = "";
     if (row.type_label[0] && row.model_label[0]) {
@@ -435,78 +351,26 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       BLI_strncpy(meta, row.model_label, sizeof(meta));
     }
     if (meta[0]) {
-      const float meta_max_w = right_edge - pane_text_width(status, font_sub) - 16.0f * u - title_x;
-      pane_fit_text(meta, meta_max_w, font_sub);
-      pane_label_left(meta, title_x, cy2, font_sub, col_dim);
-    }
-
-    /* Cancel cross for rows that can still be cancelled. */
-    if (row.is_running || row.is_pending) {
-      pane_label_centre("\xC3\x97", /* U+00D7 multiplication sign. */
-                     rect.xmax - (QROW_CANCEL_W * 0.5f) * u,
-                     cy,
-                     font,
-                     col_dim);
+      const float meta_max_w = right_edge - ui::mixar_text_width(fitted_status.c_str(), meta_style) -
+                               16.0f * u - title_x;
+      const std::string fitted_meta = ui::mixar_fit_text(meta, meta_max_w, meta_style);
+      ui::mixar_label_left(fitted_meta.c_str(), title_x, cy2, meta_style, row_dim);
     }
   }
 
   if (shown < row_count) {
-    char more[32];
-    SNPRINTF(more, "+%d more", row_count - shown);
-    const float more_y = y_top - float(shown) * (row_h + row_gap) - row_gap;
-    pane_label_centre(more, (list_left + list_right) * 0.5f, more_y, font_sub, col_dim);
+    char range[64];
+    if (shown) {
+      SNPRINTF(range, "%d–%d of %d", data.visible.first + 1, data.visible.end(), data.total);
+    }
+    else {
+      BLI_strncpy(range, "Increase window height to view jobs", sizeof(range));
+    }
+    ui::mixar_label_left(
+        range, metrics.footer.xmin, BLI_rctf_cent_y(&metrics.footer), meta_style, col_dim);
   }
 
   GPU_blend(GPU_BLEND_NONE);
-
-  /* ---- Controls: one unembossed block over the painted rows. ---- */
-  ui::Block *block = ui::block_begin(C, region, "agent_island_queue", blender::ui::EmbossType::None);
-
-  /* Clear finished. */
-  if (any_terminal) {
-    const float cy = panel.ymax - pad - header_h * 0.5f;
-    const float w = pane_text_width("Clear finished", font_sub) + 16.0f * u;
-    uiDefButO(block, ui::ButtonType::But, "mixie.queue_clear_all_completed",
-              blender::wm::OpCallContext::InvokeDefault, "",
-              int(list_right - w), int(cy - header_h * 0.5f), short(w), short(header_h),
-              "Remove all finished jobs from the queue");
-  }
-
-  for (int i = 0; i < shown; i++) {
-    const QueueRow &row = rows[i];
-    const float row_top = panel.ymax - pad - header_h - float(i) * (row_h + row_gap);
-    const float row_bottom = row_top - row_h;
-    const float cancel_w = QROW_CANCEL_W * u;
-
-    if (row.is_running || row.is_pending) {
-      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.queue_cancel_job",
-                             blender::wm::OpCallContext::InvokeDefault, "",
-                             int(list_right - cancel_w), int(row_bottom),
-                             short(cancel_w), short(row_h), "Cancel this job");
-      if (but) {
-        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
-        RNA_string_set(op_ptr, "feature_key", row.feature_key);
-        RNA_string_set(op_ptr, "job_id", row.job_id);
-      }
-    }
-
-    /* Row select — drives the mirror's active_index, whose update callback is
-     * the queue-selection hook (frames the imported result, etc.). The rect
-     * stops short of the cancel zone so the two never overlap. */
-    ui::Button *sel = uiDefButO(block, ui::ButtonType::But, "wm.context_set_int",
-                           blender::wm::OpCallContext::InvokeDefault, "",
-                           int(list_left), int(row_bottom),
-                           short(list_right - cancel_w - list_left), short(row_h),
-                           "Select this job");
-    if (sel) {
-      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(sel);
-      RNA_string_set(op_ptr, "data_path", "window_manager.mixie_queue.active_index");
-      RNA_int_set(op_ptr, "value", mirror_index[i]);
-    }
-  }
-
-  ui::block_end(C, block);
-  ui::block_draw(C, block);
 }
 
 }  // namespace blender

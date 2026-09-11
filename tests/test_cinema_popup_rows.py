@@ -19,6 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VIEW3D = ROOT / "src/source/blender/editors/space_view3d"
 INTERFACE = ROOT / "src/source/blender/editors/interface"
+INCLUDE = ROOT / "src/source/blender/editors/include"
+CHROME = (INCLUDE / "UI_mixar_chrome.hh").read_text(encoding="utf-8")
 
 HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
 POPUP = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
@@ -44,9 +46,13 @@ def _color_define(name: str) -> tuple[float, ...]:
     return tuple(float(part.strip().rstrip("f")) for part in match.group(1).split(","))
 
 
-def _uchar_token(name: str) -> tuple[int, ...]:
-    match = re.search(rf"^const uchar {name}\[4\] = \{{([^}}]+)\}};", ROW, re.M)
-    assert match is not None, f"{name} is not defined in interface_mixar_cinema_row.cc"
+def _uchar_chrome(name: str) -> tuple[int, ...]:
+    match = re.search(
+        rf"^inline constexpr unsigned char {name}\[4\] = \{{([^}}]+)\}};",
+        CHROME,
+        re.M,
+    )
+    assert match is not None, f"{name} is not defined in UI_mixar_chrome.hh"
     return tuple(int(part.strip(), 0) for part in match.group(1).split(","))
 
 
@@ -56,13 +62,13 @@ def _uchar_token(name: str) -> tuple[int, ...]:
 
 def test_caption_and_slider_tokens_mirror_the_cinema_header():
     caption = _color_define("CINEMA_COL_CAPTION")
-    assert _uchar_token("CAPTION") == tuple(round(c * 255) for c in caption)
+    assert _uchar_chrome("cinema_row_caption") == tuple(round(c * 255) for c in caption)
     speed_on = _color_define("CINEMA_COL_SPEED_ON")
-    assert _uchar_token("SLIDER_ON") == tuple(round(c * 255) for c in speed_on)
-    # The tokens are DEFINED in the row TU and only declared in the kit
-    # header, so the mirror has one home.
+    assert _uchar_chrome("cinema_row_slider_on") == tuple(round(c * 255) for c in speed_on)
     assert "extern const uchar CAPTION[4];" in ROW_HH
     assert "extern const uchar SLIDER_ON[4];" in ROW_HH
+    assert "mixar_chrome::cinema_row_caption" in ROW
+    assert "mixar_chrome::cinema_row_slider_on" in ROW
     assert "const uchar CAPTION[4]" in ROW and "const uchar SLIDER_ON[4]" in ROW
 
 
@@ -99,7 +105,8 @@ def test_hovered_segment_cell_is_as_wide_as_its_label_and_others_share_the_rest(
     assert "if (group.hovered < 0 || group.count < 2) {\n    return self->rect;" in cell
     # Hit rects stay the block's; the reason is documented at the top.
     assert "can_refresh" in SEGMENT
-    assert "SEGMENT_MIN_W = 28.0f" in ROW
+    assert "SEGMENT_MIN_W = mixar_chrome::cinema_row_segment_min_w" in ROW
+    assert "cinema_row_segment_min_w = 28.0f" in CHROME
 
 
 def test_segment_cell_paints_only_itself_and_reads_active_from_the_flag():
@@ -115,7 +122,8 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     """A three-up "Beauty" is a few px too wide for the TEXT_PAD inset; it
     must take the padding back (down to TEXT_PAD_MIN) and draw whole, and
     only a label that still does not fit gets the ellipsis."""
-    assert "const float TEXT_PAD_MIN = 4.0f;" in ROW
+    assert "TEXT_PAD_MIN = mixar_chrome::cinema_row_text_pad_min" in ROW
+    assert "cinema_row_text_pad_min = 4.0f" in CHROME
     slack = _function(ROW, "float pad_slack(")
     assert "(TEXT_PAD - TEXT_PAD_MIN) * UI_SCALE_FAC" in slack
     label = _function(ROW, "void draw_label(")
@@ -184,10 +192,11 @@ def test_tag_leaves_hardmin_hardmax_alone_on_value_carrying_buttons():
     for kind in ("Num", "NumSlider", "Scroll", "Text", "Toggle", "IconToggle", "Menu"):
         assert f"ButtonType::{kind}" in carries, kind
     tag = _function(ROW, "void UI_mixar_cinema_row_tag(")
-    assert tag.index("if (UI_mixar_cinema_row_carries_value(but)) {") < tag.index("but->hardmin =")
+    assert "but->hardmin" not in tag and "but->hardmax" not in tag
     # The read side honours the same rule, so a flagged NumSlider is a row.
     lookup = _function(CARD, "MixarCardElement UI_mixar_card_element_get(")
-    assert lookup.index("UI_mixar_cinema_row_carries_value(but)") < lookup.index("int(but->hardmin)")
+    assert "but->hardmin" not in lookup and "but->hardmax" not in lookup
+    assert "but->mixar_style.card" in lookup
     kind_get = _function(ROW, "MixarCinemaRowKind UI_mixar_cinema_row_kind_get(")
     assert "case ButtonType::NumSlider:" in kind_get and "return MixarCinemaRowKind::Slider;" in kind_get
     assert "case ButtonType::Text:\n      return MixarCinemaRowKind::Field;" in kind_get

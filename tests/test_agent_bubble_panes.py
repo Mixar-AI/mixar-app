@@ -88,10 +88,13 @@ def test_the_queue_sets_its_own_type_scale():
         return float(re.search(rf"#define {token}\s+([\d.]+)f", QUEUE_CC).group(1))
 
     kit = (CPP / "agent_ui_pane_kit.hh").read_text(encoding="utf-8")
-    kit_font = float(re.search(r"#define PANE_FONT\s+(\d+)", kit).group(1))
-    kit_sub = float(re.search(r"#define PANE_FONT_SUB\s+(\d+)", kit).group(1))
-
-    assert value("QROW_FONT") > kit_font
-    assert value("QROW_FONT_SUB") > kit_sub
+    tokens = (CPP.parent / "include/UI_mixar_tokens.hh").read_text()
+    assert "#define PANE_FONT ui::mixar_tokens::font" in kit
+    assert "mixar_text_role_size(MixarTextRole::Body)" in tokens
+    assert "mixar_text_role_size(MixarTextRole::Caption)" in tokens
+    assert "mixar_text_style(ui::MixarTextRole::ListTitle, u)" in QUEUE_CC
+    assert "mixar_text_style(ui::MixarTextRole::ListMeta, u)" in QUEUE_CC
+    # Relative text sizes are compiled from the production role resolver in
+    # test_mixar_ui_text_roles; these assertions only pin consumer wiring.
     # Bigger type in a fixed-height row would crowd the two lines together.
     assert value("QROW_H") >= 72.0

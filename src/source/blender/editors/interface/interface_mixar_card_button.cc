@@ -23,6 +23,7 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
+#include "UI_mixar_chrome.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_icons.hh"
@@ -71,8 +72,16 @@ void UI_mixar_card_button_draw(Button *but,
     case MixarCardElement::AccentButton: {
       /* Reads as a filled button, not an outline: it is the one place on
        * the card asking for a decision, so it carries real weight. */
-      mixar_card_fill_round(&box, rad, MX_ACCENT, is_hover ? 0.32f : 0.22f);
-      mixar_card_outline_round(&box, rad, MX_ACCENT, is_hover ? 0.85f : 0.55f);
+      mixar_card_fill_round(&box,
+                            rad,
+                            MX_ACCENT,
+                            is_hover ? mixar_chrome::card_accent_fill_hover :
+                                       mixar_chrome::card_accent_fill);
+      mixar_card_outline_round(&box,
+                             rad,
+                             MX_ACCENT,
+                             is_hover ? mixar_chrome::card_accent_outline_hover :
+                                        mixar_chrome::card_accent_outline);
       text_col = MX_ACCENT;
       icon_col = MX_ACCENT;
       break;
@@ -83,8 +92,16 @@ void UI_mixar_card_button_draw(Button *but,
        * at full danger weight it was the loudest thing on the card and
        * pulled the eye off Buy Credits. */
       mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
-      mixar_card_fill_round(&box, rad, MX_DANGER, is_hover ? 0.18f : 0.12f);
-      mixar_card_outline_round(&box, rad, MX_DANGER, is_hover ? 0.55f : 0.35f);
+      mixar_card_fill_round(&box,
+                            rad,
+                            MX_DANGER,
+                            is_hover ? mixar_chrome::card_danger_fill_hover :
+                                       mixar_chrome::card_danger_fill);
+      mixar_card_outline_round(&box,
+                             rad,
+                             MX_DANGER,
+                             is_hover ? mixar_chrome::card_danger_outline_hover :
+                                        mixar_chrome::card_danger_outline);
       icon_col = MX_DANGER;
       break;
     }
@@ -100,21 +117,21 @@ void UI_mixar_card_button_draw(Button *but,
     case MixarCardElement::CardButton:
     default: {
       mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
-      mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, 1.0f);
+      mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline);
       break;
     }
   }
 
   if (is_active) {
     /* Blender has no press transform; approximate the dip with a wash. */
-    const float dim[4] = {0.0f, 0.0f, 0.0f, 0.15f};
+    const float dim[4] = {0.0f, 0.0f, 0.0f, mixar_chrome::card_press_wash};
     draw_roundbox_corner_set(CNR_ALL);
     draw_roundbox_4fv(&box, true, rad, dim);
   }
 
   /* --- Contents --------------------------------------------------------- */
-  const MixarCardIcon icon = MixarCardIcon(std::max(0, int(but->hardmax)));
-  const uiFontStyle fs = mixar_card_font(1.0f, 0);
+  const MixarCardIcon icon = but->mixar_style.icon;
+  const uiFontStyle fs = mixar_card_font(mixar_chrome::card_action_label_scale, 0);
   fontstyle_set(&fs);
 
   const float label_w = but->drawstr.empty() ?

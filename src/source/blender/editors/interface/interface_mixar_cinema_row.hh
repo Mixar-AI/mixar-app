@@ -10,9 +10,10 @@
  * small row primitives every kind is built from. The public entry points
  * are in `interface_mixar_profile_card.hh`.
  *
- * The tokens are DEFINED in `interface_mixar_cinema_row.cc` (a pin test
- * reads them there against `view3d_director_cinema.hh`); this header only
- * declares them so the segment and value painters can share them.
+ * The tokens are DEFINED in `interface_mixar_cinema_row.cc` as aliases of
+ * `UI_mixar_chrome.hh` (a pin test keeps those bytes in step with
+ * `view3d_director_cinema.hh`); this header only declares them so the
+ * segment and value painters can share them.
  */
 
 #pragma once

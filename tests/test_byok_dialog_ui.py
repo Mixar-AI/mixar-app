@@ -402,8 +402,8 @@ def test_rna_switches_map_every_declared_item():
 
 
 def test_card_element_enum_keeps_count_last():
-    header = (INTERFACE_DIR / "interface_mixar_profile_card.hh").read_text(encoding="utf-8")
-    enum = re.search(r"enum class MixarCardElement : int \{(.*?)\};", header, re.S).group(1)
+    header = (INTERFACE_DIR.parent / "include/UI_mixar_types.hh").read_text(encoding="utf-8")
+    enum = re.search(r"enum class MixarCardElement : uint8_t \{(.*?)\};", header, re.S).group(1)
     enumerators = re.findall(r"^\s*([A-Za-z_]+),", enum, re.M)
     assert enumerators[-1] == "Count", "Count must stay the last enumerator"
     assert "DangerText" in enumerators

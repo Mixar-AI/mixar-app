@@ -35,6 +35,8 @@
 
 #pragma once
 
+#include "UI_mixar_text.hh"
+
 #include "BLI_utildefines.h"
 
 #include "UI_interface.hh"
@@ -168,7 +170,7 @@ namespace blender {
 /** Gap between a tab's icon and its label, and the pill's inner side padding. */
 #define AGENT_TAB_ICON_GAP 8
 #define AGENT_TAB_PAD_X 13
-#define AGENT_TAB_FONT 18
+#define AGENT_TAB_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Body)
 
 /** \} */
 
@@ -199,7 +201,7 @@ namespace blender {
 #define AGENT_HDR_BTN2_CX 82
 #define AGENT_HDR_GLYPH_R 13
 
-#define AGENT_HDR_TITLE_FONT 25
+#define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
 #define AGENT_HDR_FAQ_FONT 17
 /** "FAQs" ink ends at artboard x=1554 -> 23 units of right inset. */
 #define AGENT_HDR_FAQ_INSET 23
@@ -245,7 +247,7 @@ namespace blender {
 /** Prompt text: ink box starts at artboard (312, 577) -> local (45, 237). */
 #define AGENT_PROMPT_X 45
 #define AGENT_PROMPT_Y 237
-#define AGENT_PROMPT_FONT 24
+#define AGENT_PROMPT_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Prompt)
 
 /** \} */
 
@@ -258,7 +260,7 @@ namespace blender {
 #define AGENT_CHIP_Y 502
 #define AGENT_CHIP_H 44
 #define AGENT_CHIP_RADIUS 14
-#define AGENT_CHIP_FONT 18
+#define AGENT_CHIP_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Body)
 /* Measured off the artboard's model chip: icon ink 501..518 inside a chip
  * starting at 489, label ink from 526. */
 #define AGENT_CHIP_PAD_X 12

@@ -415,7 +415,7 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     body = body[: body.index("\n}\n")]
     lit = re.search(r"const bool lit = ([^;]+);", body)
     assert lit is not None
-    assert lit.group(1).strip() == "but->hardmax >= 0.5f"
+    assert lit.group(1).strip() == "but->mixar_style.lit"
     # UI_SELECT survives only as a press affordance, and it must be a
     # different reading from the lit state.
     assert "const bool pressed =" in body
@@ -468,9 +468,15 @@ def test_popup_rows_paint_as_the_surface_row_class():
     state = state[: state.index("\n}\n")]
     assert "ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option" in state
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
-    assert f"ROW_RADIUS = {_define('CINEMA_ROW_RADIUS'):.1f}f" in row
-    assert "ROW_TOP[4] = {0x58, 0x58, 0x58, 255}" in row  # CINEMA_COL_ROW_TOP #585858
-    assert "ROW_BOTTOM[4] = {0x24, 0x24, 0x24, 255}" in row  # CINEMA_COL_ROW_BOTTOM #242424
+    chrome = (ROOT / "src/source/blender/editors/include/UI_mixar_chrome.hh").read_text(
+        encoding="utf-8"
+    )
+    assert f"cinema_row_radius = {_define('CINEMA_ROW_RADIUS'):.1f}f" in chrome
+    assert "ROW_RADIUS = mixar_chrome::cinema_row_radius" in row
+    assert "mixar_chrome::cinema_row_top" in row
+    assert "mixar_chrome::cinema_row_bottom" in row
+    assert "cinema_row_top[4] = {0x58, 0x58, 0x58, 255}" in chrome
+    assert "cinema_row_bottom[4] = {0x24, 0x24, 0x24, 255}" in chrome
     topbar = (INTERFACE / "interface_mixar_topbar.cc").read_text(encoding="utf-8")
     assert "case MixarCardElement::CinemaRow:" in topbar
 
@@ -544,7 +550,7 @@ def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
     tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
     tag = tag[: tag.index("\n}\n")]
-    assert "if (but->type != ButtonType::Row) {" in tag
+    assert "but->hardmin" not in tag and "but->hardmax" not in tag
     # The painter lays the row out itself from the FULL label (Blender clips
     # drawstr for its stock layout), dropping the icon when the cell is tight.
     assert "but->str.empty() ? but->drawstr.c_str() : but->str.c_str()" in row

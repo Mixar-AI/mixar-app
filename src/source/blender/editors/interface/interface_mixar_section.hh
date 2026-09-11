@@ -22,34 +22,7 @@ namespace blender::ui {
 struct Layout;
 
 /* -------------------------------------------------------------------- */
-/* Custom flag2 bits — checked in interface_widgets.cc widget dispatch.  */
-
-/** Marks a Roundbox button as a Mixar section (styled box container). */
-#define UI_BUT2_MIXAR_SECTION (1 << 2)
-/** Marks a Menu button as a Mixar dropdown (styled enum selector). */
-#define UI_BUT2_MIXAR_DROPDOWN (1 << 3)
-/** Marks a But (operator) button as a Mixar action button (accent CTA). */
-#define UI_BUT2_MIXAR_ACTION (1 << 4)
-/** Marks a Checkbox button as a Mixar toggle switch (pill-shaped). */
-#define UI_BUT2_MIXAR_TOGGLE (1 << 5)
-/** Marks a Text button as a Mixar styled input (visible border + focus glow). */
-#define UI_BUT2_MIXAR_INPUT (1 << 6)
-/**
- * Marks any button as an element of the Mixar account card; the element
- * kind lives in `Button::hardmin` (see #MixarCardElement).
- *
- * NOTE: `Button::flag2` is a signed `char`, and this is bit 7 — its sign
- * bit, and the last one free (upstream owns 0-1, Mixar 2-6). Always set
- * and test it through #UI_BUT2_MIXAR_CARD_SET / #UI_BUT2_MIXAR_CARD_TEST
- * so the value round-trips through `uchar` instead of relying on
- * implementation-defined narrowing. If a further bit is ever needed,
- * widen the field rather than adding another sign-bit special case.
- */
-#define UI_BUT2_MIXAR_CARD (1 << 7)
-
-#define UI_BUT2_MIXAR_CARD_SET(but) \
-  ((but)->flag2 = char(uchar((but)->flag2) | uchar(UI_BUT2_MIXAR_CARD)))
-#define UI_BUT2_MIXAR_CARD_TEST(but) ((uchar((but)->flag2) & uchar(UI_BUT2_MIXAR_CARD)) != 0)
+/* Appearance lives in Button::mixar_style. Native flag2 bits are untouched. */
 
 /**
  * Marks an operator `But` whose double-click or Ctrl+click hands off to the
@@ -83,7 +56,7 @@ Layout *UI_layout_mixar_section(Layout *layout);
 
 /**
  * Mark the most recently created Menu/Block/Popover button in the layout's
- * block with #UI_BUT2_MIXAR_DROPDOWN so it renders with custom styling.
+ * block with a Dropdown descriptor so it renders with custom styling.
  *
  * Call this immediately after layout->prop() for an enum property.
  */
@@ -91,19 +64,19 @@ void UI_layout_mixar_mark_last_dropdown(Layout *layout);
 
 /**
  * Mark the most recently created But (operator) button with
- * #UI_BUT2_MIXAR_ACTION so it renders as an accent action button.
+ * an Action descriptor so it renders as an accent action button.
  */
 void UI_layout_mixar_mark_last_action(Layout *layout);
 
 /**
  * Mark the most recently created Checkbox button with
- * #UI_BUT2_MIXAR_TOGGLE so it renders as a pill-shaped toggle switch.
+ * a Toggle descriptor so it renders as a pill-shaped toggle switch.
  */
 void UI_layout_mixar_mark_last_toggle(Layout *layout);
 
 /**
  * Mark the most recently created Text button with
- * #UI_BUT2_MIXAR_INPUT so it renders with visible border and focus glow.
+ * an Input descriptor so it renders with visible border and focus glow.
  */
 void UI_layout_mixar_mark_last_input(Layout *layout);
 

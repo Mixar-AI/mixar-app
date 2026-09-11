@@ -501,7 +501,7 @@ class TestCardSizingContract:
         """`UI_mixar_card_element_get` range-checks the tag it reads back.
         Bounding on a real kind means the next kind appended to the enum
         reads as None and draws as a blank row."""
-        header = CARD_HH.read_text(encoding="utf-8")
+        header = (CARD_HH.parent.parent / "include/UI_mixar_types.hh").read_text(encoding="utf-8")
         kinds = header[header.index("enum class MixarCardElement"):]
         kinds = kinds[: kinds.index("};")]
         assert kinds.rstrip().rstrip(",").endswith("Count"), (

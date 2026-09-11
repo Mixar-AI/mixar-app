@@ -93,6 +93,8 @@ def test_the_owned_tooltip_helper_actually_owns_its_string():
     the dangling reference in a new disguise."""
     body = PANE_KIT_CC[PANE_KIT_CC.index("void pane_but_tooltip_owned") :]
     body = body[: body.index("\n}\n")]
+    assert "mixar_button_tooltip_owned(but, text)" in body
+    body = (ISLAND.parent / "interface/mixar/text.cc").read_text()
     assert "MEM_new_uninitialized" in body
     assert "memcpy" in body
     assert "button_func_tooltip_set" in body
@@ -100,8 +102,16 @@ def test_the_owned_tooltip_helper_actually_owns_its_string():
 
 
 def test_the_panes_use_it_where_their_labels_are_dynamic():
-    for name in ("agent_ui_tab3d_params.cc", "agent_ui_tabsplat.cc", "agent_ui_tabmedia.cc"):
+    for name in ("agent_ui_tab3d_params.cc",):
         assert "pane_but_tooltip_owned(" in (ISLAND / name).read_text(encoding="utf-8"), name
+
+    splat = (ISLAND / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
+    for kind in ("mode", "lod"):
+        assert f"mixar_button_tooltip_owned(but, {kind}_items[i].label.c_str())" in splat
+
+    media = (ISLAND / "agent_ui_tabmedia_util.cc").read_text(encoding="utf-8")
+    assert "mixar_button_tooltip_owned(button, tip.c_str())" in media
+    assert "chip.label +" in media
 
 
 def test_the_qa_dump_is_not_filtered_on_block_active():

@@ -60,6 +60,8 @@ from ..constants import (
     UNBOUNDED_FLOAT_MIN,
     UNBOUNDED_INT_MAX,
     UNBOUNDED_INT_MIN,
+    VISIBLE_IF_ATTR,
+    VISIBLE_IF_MAXLEN,
     WM_ATTR_PREFIX,
 )
 
@@ -202,6 +204,18 @@ def _build_group(service_key: str, model_slug: str, parameters: dict):
             continue
         annotations[attr] = prop
         schema[param_name] = {"spec": spec, "attr": attr, "value_map": value_map}
+
+    from bpy.props import StringProperty
+
+    from .visible_if import encode_visible_if_table
+
+    annotations[VISIBLE_IF_ATTR] = StringProperty(
+        name="",
+        description="Catalog visible_if keyed by RNA attribute",
+        default=encode_visible_if_table(schema),
+        maxlen=VISIBLE_IF_MAXLEN,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
 
     cls = type(
         f"MIXAR_PG_genparams_{_sanitize(service_key)}__{_sanitize(model_slug)}",
@@ -391,6 +405,8 @@ def is_param_visible(
         return False
     condition = spec.get("visible_if")
     if condition:
+        if not isinstance(condition, dict):
+            return False
         for other_name, expected in condition.items():
             other_entry = schema.get(other_name)
             if other_entry is None:

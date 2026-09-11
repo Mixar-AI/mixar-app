@@ -17,10 +17,10 @@
  * Option / Active / Action painter; `_segment.cc` and `_value.cc` paint the
  * other kinds.
  *
- * The tokens MIRROR `view3d_director_cinema.hh` (CINEMA_ROW_RADIUS,
- * CINEMA_COL_ROW_TOP/BOTTOM, CINEMA_COL_VALUE/DIM/CAPTION/SPEED_ON); a pin
- * test keeps them in step, since this translation unit cannot reach into
- * space_view3d.
+ * Geometry and colours live in `UI_mixar_chrome.hh` and still MIRROR
+ * `view3d_director_cinema.hh` (CINEMA_ROW_RADIUS, CINEMA_COL_ROW_TOP/BOTTOM,
+ * CINEMA_COL_VALUE/DIM/CAPTION/SPEED_ON); a pin test keeps them in step,
+ * since this translation unit cannot reach into space_view3d.
  */
 
 #include <algorithm>
@@ -35,6 +35,7 @@
 
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
+#include "UI_mixar_chrome.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
@@ -47,27 +48,54 @@ namespace blender::ui {
 
 namespace mixar_cinema_row {
 
-/* Design px @1x — see view3d_director_cinema.hh. */
-const float ROW_RADIUS = 14.0f;
-const float TEXT_PAD = 12.0f;
-const float TEXT_PAD_MIN = 4.0f;
-const float SEGMENT_MIN_W = 28.0f;
+/* Design px @1x — named in UI_mixar_chrome.hh, mirrored from cinema.hh. */
+const float ROW_RADIUS = mixar_chrome::cinema_row_radius;
+const float TEXT_PAD = mixar_chrome::cinema_row_text_pad;
+const float TEXT_PAD_MIN = mixar_chrome::cinema_row_text_pad_min;
+const float SEGMENT_MIN_W = mixar_chrome::cinema_row_segment_min_w;
 
-const uchar ROW_TOP[4] = {0x58, 0x58, 0x58, 255};    /* CINEMA_COL_ROW_TOP */
-const uchar ROW_BOTTOM[4] = {0x24, 0x24, 0x24, 255}; /* CINEMA_COL_ROW_BOTTOM */
-const uchar HOVER[4] = {0x2E, 0x2E, 0x2E, 255};
-const uchar TRACK[4] = {0x26, 0x26, 0x26, 255};      /* a step under HOVER: never the lit chip */
-const uchar TEXT_ON[4] = {255, 255, 255, 255};       /* CINEMA_COL_VALUE */
-const uchar TEXT_OFF[4] = {0xB4, 0xB4, 0xB4, 255};   /* readable on the popup back */
-const uchar TEXT_DISABLED[4] = {0x63, 0x63, 0x63, 255}; /* CINEMA_COL_DIM */
-const uchar CAPTION[4] = {102, 102, 102, 217};       /* CINEMA_COL_CAPTION 0.40/0.85 */
-const uchar SLIDER_ON[4] = {42, 121, 73, 255};       /* CINEMA_COL_SPEED_ON #2A7949 */
+const uchar ROW_TOP[4] = {mixar_chrome::cinema_row_top[0],
+                          mixar_chrome::cinema_row_top[1],
+                          mixar_chrome::cinema_row_top[2],
+                          mixar_chrome::cinema_row_top[3]};
+const uchar ROW_BOTTOM[4] = {mixar_chrome::cinema_row_bottom[0],
+                             mixar_chrome::cinema_row_bottom[1],
+                             mixar_chrome::cinema_row_bottom[2],
+                             mixar_chrome::cinema_row_bottom[3]};
+const uchar HOVER[4] = {mixar_chrome::cinema_row_hover[0],
+                        mixar_chrome::cinema_row_hover[1],
+                        mixar_chrome::cinema_row_hover[2],
+                        mixar_chrome::cinema_row_hover[3]};
+const uchar TRACK[4] = {mixar_chrome::cinema_row_track[0],
+                        mixar_chrome::cinema_row_track[1],
+                        mixar_chrome::cinema_row_track[2],
+                        mixar_chrome::cinema_row_track[3]};
+const uchar TEXT_ON[4] = {mixar_chrome::cinema_row_text_on[0],
+                          mixar_chrome::cinema_row_text_on[1],
+                          mixar_chrome::cinema_row_text_on[2],
+                          mixar_chrome::cinema_row_text_on[3]};
+const uchar TEXT_OFF[4] = {mixar_chrome::cinema_row_text_off[0],
+                           mixar_chrome::cinema_row_text_off[1],
+                           mixar_chrome::cinema_row_text_off[2],
+                           mixar_chrome::cinema_row_text_off[3]};
+const uchar TEXT_DISABLED[4] = {mixar_chrome::cinema_row_text_disabled[0],
+                                mixar_chrome::cinema_row_text_disabled[1],
+                                mixar_chrome::cinema_row_text_disabled[2],
+                                mixar_chrome::cinema_row_text_disabled[3]};
+const uchar CAPTION[4] = {mixar_chrome::cinema_row_caption[0],
+                          mixar_chrome::cinema_row_caption[1],
+                          mixar_chrome::cinema_row_caption[2],
+                          mixar_chrome::cinema_row_caption[3]};
+const uchar SLIDER_ON[4] = {mixar_chrome::cinema_row_slider_on[0],
+                            mixar_chrome::cinema_row_slider_on[1],
+                            mixar_chrome::cinema_row_slider_on[2],
+                            mixar_chrome::cinema_row_slider_on[3]};
 
 rctf row_rect(const rcti *rect)
 {
   rctf row;
   mixar_card_rect_to_rctf(rect, &row);
-  const float inset = 1.0f * UI_SCALE_FAC;
+  const float inset = mixar_chrome::cinema_row_inset * UI_SCALE_FAC;
   BLI_rctf_pad(&row, -inset, -inset);
   return row;
 }
@@ -84,12 +112,12 @@ const char *row_label(const Button *but)
 
 uiFontStyle row_font()
 {
-  return mixar_card_font(0.95f, 0);
+  return mixar_card_font(mixar_chrome::label_scale, 0);
 }
 
 uiFontStyle caption_font()
 {
-  return mixar_card_font(0.9f, 0);
+  return mixar_card_font(mixar_chrome::caption_scale, 0);
 }
 
 void draw_chip(const rctf &row, const float radius)
@@ -153,7 +181,7 @@ bool draw_leading_icon(
   /* The stock 16px glyph, vertically centred, then the label after it —
    * unless the cell cannot hold both, when the label wins. */
   const float icon_size = ICON_DEFAULT_HEIGHT * UI_SCALE_FAC;
-  const float icon_gap = 6.0f * UI_SCALE_FAC;
+  const float icon_gap = mixar_chrome::cinema_row_icon_gap * UI_SCALE_FAC;
   if (icon_size + icon_gap + label_w <= float(BLI_rcti_size_x(&text))) {
     const float icon_y = float(rect->ymin) + (float(BLI_rcti_size_y(rect)) - icon_size) * 0.5f;
     icon_draw_alpha(float(text.xmin), icon_y, but->icon, alpha);
@@ -209,11 +237,8 @@ ButtonType UI_mixar_button_type(const Button *but)
 
 bool UI_mixar_cinema_row_carries_value(const Button *but)
 {
-  /* Types whose `hardmin`/`hardmax` ARE data: a number's range, a Text's
-   * maximum length, a Toggle's off value. The tag must leave them alone, so
-   * for these the kind is the type (#UI_mixar_cinema_row_kind_get) and the
-   * card flag alone marks the row. Row is deliberately absent: it keeps its
-   * enum value in `hardmax` but its `hardmin` is free for the element. */
+  /* Kept for compatibility callers; the dedicated descriptor means even
+   * Row enum values and all numeric/text limits remain untouched. */
   return ELEM(but->type,
               ButtonType::Num,
               ButtonType::NumSlider,
@@ -240,7 +265,7 @@ MixarCinemaRowKind UI_mixar_cinema_row_kind_get(const Button *but)
       /* Lights from UI_SELECT; `hardmax` is the toggle's value, not a kind. */
       return MixarCinemaRowKind::Option;
     default:
-      return MixarCinemaRowKind(int(but->hardmax + 0.5f));
+      return but->mixar_style.cinema;
   }
 }
 
@@ -256,19 +281,15 @@ void UI_mixar_cinema_row_tag(Button *but, const MixarCinemaRowKind kind)
   if (but == nullptr) {
     return;
   }
-  UI_BUT2_MIXAR_CARD_SET(but);
-  if (UI_mixar_cinema_row_carries_value(but)) {
-    /* The value range / string length lives in hardmin/hardmax: the flag is
-     * the whole tag and the kind follows the type. */
-    return;
+  but->mixar_style.component = MixarComponent::LegacyCard;
+  if (!but->mixar_style.explicit_theme) {
+    but->mixar_style.theme = MixarTheme::LegacyMixar;
   }
-  but->hardmin = float(int(MixarCardElement::CinemaRow));
-  /* A Row (enum / flag toggle) button keeps ITS VALUE in `hardmax`; the
-   * painter reads such a row's state from UI_SELECT instead, so the payload
-   * must not touch it. Only free-standing rows carry the kind there. */
-  if (but->type != ButtonType::Row) {
-    but->hardmax = float(int(kind));
-  }
+  but->mixar_style.card = MixarCardElement::CinemaRow;
+  but->mixar_style.cinema = kind;
+  /* Value-carrying rows retain their historical recipe; the resolved kind is
+   * stored explicitly instead of stealing range/value fields. */
+  but->mixar_style.cinema = UI_mixar_cinema_row_kind_get(but);
 }
 
 void UI_mixar_cinema_row_draw(Button *but,
