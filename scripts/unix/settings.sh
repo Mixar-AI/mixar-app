@@ -70,6 +70,27 @@ export SOURCE_DIR="${ROOT_DIR}/source"
 export SRC_DIR="${ROOT_DIR}/src"
 export CMAKE_DIR="${ROOT_DIR}/cmake"
 
+# upstream/ is a submodule pinned per branch, and its working tree does NOT
+# follow HEAD on its own. The post-checkout/post-merge hooks re-pin it, but
+# they cannot cover every route: githooks(5) skips post-merge when a merge
+# stops on conflicts, and neither hook exists in a clone that never ran
+# `make init`. Building the wrong Blender fails far from the cause - a 5.0
+# tree under a 5.2 branch dies in find_package(fmt), and a cache left on the
+# old Python dies with "At least Python 3.13 is required ... found 3.11" -
+# so check it on every build, whichever tree we ended up pointing at.
+# Warn rather than fail: MIXAR_UPSTREAM_DIR is a deliberate override, and a
+# read-only source tree is never damaged by being at the wrong revision.
+_warn_if_upstream_unpinned() {
+    local label="$1" upstream_dir="$2" pinned actual
+    pinned="$(git -C "$ROOT_DIR" rev-parse HEAD:upstream 2>/dev/null || true)"
+    actual="$(git -C "$upstream_dir" rev-parse HEAD 2>/dev/null || true)"
+    [ -n "$pinned" ] && [ -n "$actual" ] && [ "$pinned" != "$actual" ] || return 0
+    echo "WARNING: $label upstream is at ${actual:0:12} but this branch pins ${pinned:0:12}." >&2
+    echo "         source/ will be assembled from the WRONG Blender release." >&2
+    echo "         Fix: git -C \"$upstream_dir\" checkout -f --detach $pinned" >&2
+    echo "         then, if BLENDER_VERSION changed, ./scripts/unix/build_clean.sh" >&2
+}
+
 # Upstream Blender tree (multi-GB, gitignored — populated once per machine).
 # Linked git worktrees don't carry ignored files, so a worktree checkout has
 # no upstream/ of its own. Resolution order:
@@ -81,22 +102,14 @@ if [ -n "${MIXAR_UPSTREAM_DIR:-}" ]; then
     export UPSTREAM_DIR="$MIXAR_UPSTREAM_DIR"
 elif [ -f "${ROOT_DIR}/upstream/CMakeLists.txt" ]; then
     export UPSTREAM_DIR="${ROOT_DIR}/upstream"
+    _warn_if_upstream_unpinned "this checkout's" "$UPSTREAM_DIR"
 else
     _git_common_dir="$(git -C "$ROOT_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
     _main_checkout_root="${_git_common_dir%/.git}"
     if [ -n "$_git_common_dir" ] && [ -f "${_main_checkout_root}/upstream/CMakeLists.txt" ]; then
         export UPSTREAM_DIR="${_main_checkout_root}/upstream"
         echo "Worktree checkout: sharing upstream from main checkout: $UPSTREAM_DIR" >&2
-        # upstream is a submodule pinned per branch — warn (don't fail) when
-        # the shared tree isn't at the commit THIS branch pins, so a silent
-        # wrong-revision build can't sneak past.
-        _pinned="$(git -C "$ROOT_DIR" rev-parse HEAD:upstream 2>/dev/null || true)"
-        _actual="$(git -C "$UPSTREAM_DIR" rev-parse HEAD 2>/dev/null || true)"
-        if [ -n "$_pinned" ] && [ -n "$_actual" ] && [ "$_pinned" != "$_actual" ]; then
-            echo "WARNING: shared upstream is at ${_actual:0:12} but this branch pins ${_pinned:0:12}." >&2
-            echo "         Update it (git -C \"$UPSTREAM_DIR\" checkout $_pinned) or set MIXAR_UPSTREAM_DIR." >&2
-        fi
-        unset _pinned _actual
+        _warn_if_upstream_unpinned "shared" "$UPSTREAM_DIR"
     else
         # No usable upstream anywhere — keep the default path so the
         # overlay's error message points at the expected location.
