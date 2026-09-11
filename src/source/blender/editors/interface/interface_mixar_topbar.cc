@@ -13,10 +13,14 @@
  * them out, sizes them and dispatches their clicks — only the pixels are
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
- * thumb inset 2px; Cinema pill 150x27 fully rounded, #0E0E0E fill,
- * #3F3F3F hairline border, label graded #505050 -> white). Geometry stays
- * on the layout. Compact is the chrome host; these widgets keep the
- * UI.svg sizes rather than Compact's 32-unit control height.
+ * thumb inset 2px; Cinema pill 150x27 fully rounded, #3F3F3F hairline
+ * border, label graded #505050 -> white). Geometry stays on the layout.
+ * Compact is the chrome host; these widgets keep the UI.svg sizes rather
+ * than Compact's 32-unit control height.
+ *
+ * Cinema, viewport shading, and account chips are panes (`MIXAR_GLASS_PILL`);
+ * the slider track/thumb and the account avatar disc stay flat — grooves and
+ * pictures must not show the bar through them.
  */
 
 #include <algorithm>
@@ -247,16 +251,9 @@ void draw_cinema_pill(Button *but, const rcti *rect, const bool is_hover, const 
     mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border_on, (is_hover || pressed) ? 1.0f : 0.9f);
   }
   else {
-    /* The resting fill is near-black, so the multiplicative boost would be
-     * invisible here; lift it by a fixed step instead. Still nowhere near the
-     * lit green — a press must never read as "Cinema Mode is on". */
-    uchar fill[4];
-    memcpy(fill, mixar_chrome::cinema_pill_fill, sizeof(fill));
-    const int lift = pressed ? 26 : (is_hover ? 10 : 0);
-    for (int i = 0; i < 3; i++) {
-      fill[i] = uchar(std::min(255, int(fill[i]) + lift));
-    }
-    mixar_card_fill_round(&pill, rad, fill, (is_hover || pressed) ? 1.0f : 0.94f);
+    /* Resting pill is a pane: hover/press lift is the pane alpha, still
+     * nowhere near the lit green so a press cannot read as "Cinema Mode is on". */
+    mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, (is_hover || pressed) ? 1.0f : 0.84f);
     mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border, (is_hover || pressed) ? 1.0f : 0.85f);
   }
 
@@ -287,7 +284,8 @@ void draw_viewport_pill(Button *but, const rcti *rect, const bool is_hover, cons
   const float rad = BLI_rctf_size_y(&pill) * 0.5f;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&pill, rad, mixar_chrome::viewport_pill_fill, alpha);
+  /* Dim/lit is the pane alpha so gloss and rim fade with the bed. */
+  mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, alpha);
   mixar_card_outline_round(&pill, rad, mixar_chrome::viewport_pill_border, alpha);
 
   uchar label[4];
@@ -308,7 +306,8 @@ void draw_profile_pill(Button *but, const rcti *rect, const bool is_hover, const
   const float rad = height * 0.5f;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&chip, rad, mixar_chrome::profile_fill, is_hover ? 1.0f : 0.92f);
+  /* Account slab floats over the bar — family's pill pane; hover is alpha. */
+  mixar_card_glass_round(&chip, rad, MIXAR_GLASS_PILL, is_hover ? 1.0f : 0.9f);
 
   /* Avatar disc caps the right end at full height, exactly as the design
    * has it (chip 27 tall, disc r=13.5). */

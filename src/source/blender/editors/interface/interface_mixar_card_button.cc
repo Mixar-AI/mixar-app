@@ -71,7 +71,10 @@ void UI_mixar_card_button_draw(Button *but,
   switch (element) {
     case MixarCardElement::AccentButton: {
       /* Reads as a filled button, not an outline: it is the one place on
-       * the card asking for a decision, so it carries real weight. */
+       * the card asking for a decision, so it carries real weight. The bed is
+       * the family's chip pane and the accent tint rides on top of it, so the
+       * button joins the glass without giving up its colour. */
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
       mixar_card_fill_round(&box,
                             rad,
                             MX_ACCENT,
@@ -90,8 +93,9 @@ void UI_mixar_card_button_draw(Button *but,
       /* Reporting a bug is not an error state. Tinted enough to be
        * legible as the destructive-ish corner of the grid, and no more —
        * at full danger weight it was the loudest thing on the card and
-       * pulled the eye off Buy Credits. */
-      mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
+       * pulled the eye off Buy Credits. The neutral bed is the chip pane;
+       * the danger tint and stroke keep the colour. */
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
       mixar_card_fill_round(&box,
                             rad,
                             MX_DANGER,
@@ -108,7 +112,7 @@ void UI_mixar_card_button_draw(Button *but,
     case MixarCardElement::GhostButton: {
       /* Borderless until touched, so the logout strip stays quiet. */
       if (is_hover) {
-        mixar_card_fill_round(&box, rad, MX_GRAY_800);
+        mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
       }
       text_col = MX_FG_2;
       icon_col = MX_FG_4;
@@ -116,7 +120,10 @@ void UI_mixar_card_button_draw(Button *but,
     }
     case MixarCardElement::CardButton:
     default: {
-      mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
+      /* The bed has no colour of its own, so its hover cue is the pane's own
+       * alpha: a lift the role table does not carry, because the resting
+       * state is the material and the hover is this button's. */
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, is_hover ? 1.0f : 0.85f);
       mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline);
       break;
     }

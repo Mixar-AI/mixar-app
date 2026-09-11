@@ -10,7 +10,8 @@ serves as the user's primary interface to Mixie. When Mixie is actively working
 remain static and dim.
 
 Instead, it renders a living, animated representation of work:
-  1. Subtle breathing halo and animated green rim along the capsule perimeter.
+  1. Subtle breathing glow inset inside the capsule edge and an animated green
+     rim along the capsule perimeter.
   2. Pulsing gradient and glowing rim on the Mixar logo chip.
   3. Pulsating green activity indicator dot with an expanding/fading ripple halo.
   4. Animated status text with cycling trailing dots ("Working.", "Working..",
@@ -60,18 +61,24 @@ def test_working_state_derives_continuous_pulse():
     assert "pulse = is_working ?" in elongated
 
 
-def test_working_state_draws_animated_halo_and_rim():
-    """When working, the capsule draws an animated breathing outer halo and
-    pulsing green rim, while the idle state preserves the resting faint rim."""
+def test_working_state_draws_animated_glow_and_rim():
+    """When working, the capsule draws an animated breathing glow inside its
+    own edge and a pulsing green rim.
+
+    The idle branch paints no rim of its own: the liquid-glass pane that fills
+    the capsule already draws the resting stroke, and painting it here a second
+    time stacked the two alphas. The glow is INSET rather than an outset halo,
+    because the pill's window IS the capsule and an outset shape is clipped.
+    """
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
     assert "if (is_working)" in elongated
-    assert "outline_round(&halo," in elongated
+    assert "outline_round(&glow," in elongated
     assert "rim_work" in elongated
     assert "outline_round(&pill, h * 0.5f, rim_work);" in elongated
-    # Idle branch still renders the resting stroke
-    assert "outline_round(&pill, h * 0.5f, rim);" in elongated
+    # The resting rim lives in the glass kit's PILL row, not at the call site.
+    assert "outline_round(&pill, h * 0.5f, rim);" not in elongated
 
 
 def test_working_state_pulses_logo_chip():
@@ -91,8 +98,8 @@ def test_logo_pill_matches_border_radii_with_minimized_bubble():
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
-    # Outer pill is a capsule with half-height radius
-    assert "fill_round_gradient(&pill, h * 0.5f," in elongated
+    # Outer pill is a capsule with half-height radius, painted as liquid glass
+    assert "glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);" in elongated
     # Inner pill behind logo matches with half-height radius
     assert "chip_r = (chip.ymax - chip.ymin) * 0.5f" in elongated
     assert "fill_round_gradient(&chip, chip_r," in elongated

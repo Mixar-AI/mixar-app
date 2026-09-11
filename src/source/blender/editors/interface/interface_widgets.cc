@@ -42,6 +42,7 @@
 
 #include "buttons/interface_textbox.hh"
 #include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
@@ -5729,15 +5730,35 @@ static void widget_mixar_section(Button *but,
   /* --mx-r-md: 8px flat card. */
   const float rad = MX_R_MD * UI_SCALE_FAC;
 
-  /* Flat grouped card: #141414 fill (matches the panel/prompt black), 1px
-   * #262626 border. No drop shadow, no accent stripe. Force shaded=0 — the
-   * box widget's default top/bottom shade gradient would otherwise lighten
-   * the fill into an uneven charcoal instead of a flat black. */
+  /* A grouped card is a surface, so it is a pane now: the kit's CHIP material
+   * where the flat fill sat, with the design's own #141414 bed washed over it
+   * and its 1px #262626 border on top. CHIP is the role for a shape that sits
+   * ON another pane — tint, a hair of gloss, the family rim — and it is the
+   * only role whose bed is FLAT top-to-bottom (the property `shaded = 0` below
+   * exists to protect) and one of the two dark roles with no specular, which
+   * matters because a widget is painted in BLOCK coordinates where the
+   * streak's region-px scissor could not be placed. The pane is laid BEFORE
+   * the bed, which is queued into the widget batch and flushed at the end. */
+  rctf card;
+  BLI_rctf_rcti_copy(&card, rect);
+  mixar_card_glass_round(&card, rad, MIXAR_GLASS_CHIP);
+
+  /* The design's own near-black bed is a WASH, not a slab: #141414 as
+   * designed is opaque and would cover the very material the card now sits
+   * in, so only a fraction of it is laid back down — still the card's own
+   * black, over the pane's rim and gloss. Force shaded=0 — the box widget's
+   * default top/bottom shade gradient would otherwise lighten the fill into
+   * an uneven charcoal instead of a flat black. */
+  constexpr float CARD_WASH = 0.6f;
+  uchar bed[4];
+  copy_v4_v4_uchar(bed, MX_BG);
+  bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);
+
   uchar old_inner[4], old_outline[4];
   const char old_shaded = wcol->shaded;
   copy_v4_v4_uchar(old_inner, wcol->inner);
   copy_v4_v4_uchar(old_outline, wcol->outline);
-  copy_v4_v4_uchar(wcol->inner, MX_BG);
+  copy_v4_v4_uchar(wcol->inner, bed);
   copy_v4_v4_uchar(wcol->outline, MX_BORDER);
   wcol->shaded = 0;
 
@@ -5750,7 +5771,7 @@ static void widget_mixar_section(Button *but,
   copy_v4_v4_uchar(wcol->outline, old_outline);
   wcol->shaded = old_shaded;
 
-  /* Flush draw cache so contents render on top. */
+  /* Flush draw cache so the card's own bed renders on top of the pane. */
   GPU_blend(GPU_BLEND_ALPHA);
   widgetbase_draw_cache_flush();
   GPU_blend(GPU_BLEND_NONE);

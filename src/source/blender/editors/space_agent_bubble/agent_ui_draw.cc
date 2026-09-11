@@ -32,6 +32,8 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
@@ -60,20 +62,53 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
 }
 
 /**
+ * One liquid-glass pane, in the caller's pixel space.
+ *
+ * `radius` is always explicit px: the panes here are capsules and cards whose
+ * radius comes from the layout or the window, not from the role. The role
+ * supplies the palette and the metrics.
+ *
+ * The drop shadow is OFF unless asked for, and the reason is the pill: its
+ * window IS its capsule, so a shadow grown outward from the pane would be
+ * clipped by the window at best and leave a hard edge where the clip falls at
+ * worst — `tests/test_agent_bubble_pill_paint.py` pins that nothing the pill
+ * paints may fall outside it. Only a pane with room around it inside its own
+ * window passes `true`.
+ *
+ * The specular streak is ON unless asked otherwise. It is the one layer the
+ * painter clips with a scissor built from the pane's own region-px rect, so a
+ * caller drawing in WINDOW px — the island pushes a `-winrct` translate — must
+ * pass `false` or the highlight lands a region-origin away from the pane.
+ */
+void glass_fill_round(const rctf *rect,
+                      const ui::eMixarGlassRole role,
+                      const float radius,
+                      const bool shadow = false,
+                      const bool specular = true)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = role;
+  style.radius = radius;
+  style.draw_shadow = shadow;
+  style.draw_specular = specular;
+  ui::mixar_glass_draw(pane, style);
+}
+
+/**
  * Rounded rect filled with a two-stop ramp along an ARBITRARY axis.
  *
- * `ui::draw_roundbox_4fv_ex` can only shade vertically, and the card's ramp is
- * diagonal — it runs from the card's top-right down and to the left, past the
- * bottom edge. Shading it vertically loses the horizontal falloff entirely,
- * which is most of the effect: at the card's top edge the artboard travels
- * from #072B1B on the left to #2E5630 on the right.
+ * `ui::draw_roundbox_4fv_ex` can only shade vertically. The minimised pill's
+ * logo chip ramps diagonally — its axis runs from the chip's top-right down and
+ * to the left — and shading that vertically loses the horizontal falloff
+ * entirely, which is most of the effect.
  *
  * So the fill is a triangle fan with per-vertex colour, sampled at
  * t = clamp(dot(p - a, b - a) / |b - a|^2, 0, 1). A raw fan is rasterised with
  * no coverage anti-aliasing, so its rim carries its own half-pixel feather
- * (see `aa` below) — on the card that seam hides under the AA'd border, but
- * the minimised pill's capsule and logo chip have nothing over them and drew
- * visibly stair-stepped without it.
+ * (see `aa` below) — the chip has nothing drawn over its edge, and without the
+ * feather it drew visibly stair-stepped.
  */
 void fill_round_gradient(const rctf *rect,
                          const float radius,
@@ -220,8 +255,17 @@ void draw_card_border_meter(const rctf *rect,
                             const float spent[4],
                             const float remaining)
 {
-  if (remaining < 0.0f || remaining >= 1.0f) {
-    fill_round(rect, radius, lit);
+  /* The BAND only. This used to fill the whole card rect in both branches and
+   * rely on an opaque gradient painted afterwards to hide the interior; the
+   * card's bed is a translucent pane now, so a whole-rect fill shows straight
+   * through it and the card's middle reads as a flat wash. The ring form also
+   * paints the corner arcs, which the four straight runs below never did. */
+  const bool unknown = (remaining < 0.0f || remaining >= 1.0f);
+  const float *band = unknown ? lit : spent;
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv_ex(rect, nullptr, nullptr, 1.0f, band, width, radius);
+
+  if (unknown) {
     return;
   }
 
@@ -232,8 +276,6 @@ void draw_card_border_meter(const rctf *rect,
   const float h = BLI_rctf_size_y(rect);
   const float total = (w + h) * 2.0f;
   const float lit_len = total * remaining;
-
-  fill_round(rect, radius, spent);
 
   /* Each run is (start distance along the perimeter, length, rect builder). */
   struct Run {
@@ -632,12 +674,13 @@ void agent_ui_draw_status_pill(const float width,
     pill.xmax = w;
     pill.ymin = 0.0f;
     pill.ymax = h;
-    const float grad_top[4] = {0.176f, 0.176f, 0.176f, 1.0f};    /* #2D2D2D */
-    const float grad_bottom[4] = {0.075f, 0.078f, 0.075f, 1.0f}; /* #131413 */
-    GPU_blend(GPU_BLEND_NONE);
-    const float pill_grad_a[2] = {w * 0.985f, h};
-    const float pill_grad_b[2] = {w * 0.947f, 0.0f};
-    fill_round_gradient(&pill, h * 0.5f, grad_top, grad_bottom, pill_grad_a, pill_grad_b);
+    /* The capsule IS liquid glass. The PILL row carries the artboard's own two
+     * greys (#2D2D2D over #131413) at partial alpha, so on a window that
+     * composites client alpha the desktop shows through the capsule and the
+     * glass is real rather than painted on; on one that does not (Linux keeps
+     * the opaque bed and the window region as the shape) the tint lands on
+     * that bed and the capsule keeps the flat artboard grey. */
+    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
     GPU_blend(GPU_BLEND_ALPHA);
 
     if (is_working) {
@@ -671,9 +714,10 @@ void agent_ui_draw_status_pill(const float width,
       outline_round(&pill, h * 0.5f, rim_work);
     }
     else {
-      /* Faint rim, brightest toward the top-right like the export's stroke. */
-      const float rim[4] = {1.0f, 1.0f, 1.0f, 0.14f};
-      outline_round(&pill, h * 0.5f, rim);
+      /* No resting rim here: the PILL row's own rim IS this stroke (white at
+       * 0.14, the export's top-right-brightest edge), drawn by the glass pane
+       * above. Painting it a second time here doubled its alpha to 0.26. The
+       * WORKING rim is different — it pulses and is green — so it stays. */
     }
 
     /* Pill behind the logo, right-inset 10.5 units, 85x68. */
@@ -815,7 +859,6 @@ void agent_ui_draw_status_pill(const float width,
     return;
   }
 
-  const float surface[4] = AGENT_COL_SURFACE;
   const float accent[4] = AGENT_COL_ACCENT;
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};
   const float text_dim[4] = AGENT_COL_TEXT_DIM;
@@ -852,7 +895,10 @@ void agent_ui_draw_status_pill(const float width,
   ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
 
   GPU_blend(GPU_BLEND_ALPHA);
-  fill_round(&pill, h * 0.5f, surface);
+  /* The capsule is the same liquid glass the elongated pill uses (see above);
+   * it sits on the bed rather than a gradient because the classic pill has no
+   * chip to carry the green. */
+  glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
   label_left(state->status_text,
              w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
@@ -874,8 +920,6 @@ void agent_ui_draw_island(const ARegion * /*region*/,
 
   const float surface[4] = AGENT_COL_SURFACE;
   const float border[4] = AGENT_COL_BORDER;
-  const float card_top[4] = AGENT_COL_CARD_TOP;
-  const float card_bottom[4] = AGENT_COL_CARD_BOTTOM;
   const float accent[4] = AGENT_COL_ACCENT;
   const float glyph[4] = AGENT_COL_GLYPH;
   const float text[4] = AGENT_COL_TEXT;
@@ -907,12 +951,36 @@ void agent_ui_draw_island(const ARegion * /*region*/,
                            border_spent,
                            state->credits_remaining);
   }
-  fill_round_gradient(&layout->card_fill,
-                      AGENT_CARD_RADIUS * u,
-                      card_top,
-                      card_bottom,
-                      layout->card_grad_a,
-                      layout->card_grad_b);
+  /* The card's bed. The artboard paints it as a green ramp, and that ramp is
+   * what the glass kit's CARD role carries — the row's tint stops are the
+   * artboard's own two colours. Two of the kit's layers are switched off here.
+   *
+   * The specular streak, because it is clipped with a region-px scissor built
+   * from the pane's rect while the island draws in WINDOW px under the
+   * `-winrct` translate `agent_bubble_island_begin` pushes — the streak would
+   * land a region-origin away from the pane it belongs to.
+   *
+   * The drop shadow, because the card spans the island's full width: an
+   * outward shadow has no room on either side and would be clipped into a hard
+   * edge along the card's own sides.
+   *
+   * The radius is the metered border's INNER edge rather than the card's own.
+   * The pane is drawn on `card_fill`, which the layout insets by exactly the
+   * band's `AGENT_CARD_BORDER`, so taking the border off the radius too makes
+   * the pane's corner concentric with the band's instead of crossing it.
+   *
+   * The one thing the kit cannot carry is that the artboard's ramp is
+   * DIAGONAL — it runs along (1554,463) -> (1281.66,1068.71) in island units,
+   * from the top-right down past the card's bottom edge, so the card's own top
+   * edge varies from #072B1B on the left to #2E5630 on the right. The kit
+   * shades vertically. This is the tradeoff the viewport panel took first (see
+   * the PANEL row and `view3d_director_cinema_paint.cc`), and at card scale the
+   * difference is a level of quantisation the eye does not separate. */
+  glass_fill_round(&layout->card_fill,
+                   ui::MIXAR_GLASS_CARD,
+                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
+                   /*shadow=*/false,
+                   /*specular=*/false);
 
   /* Card header row is tab-scoped: the chat's discs / session title / FAQs
    * belong to the Agent tab; other tabs title the card after themselves. */

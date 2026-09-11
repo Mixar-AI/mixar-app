@@ -17,6 +17,12 @@
  * Option / Active / Action painter; `_segment.cc` and `_value.cc` paint the
  * other kinds.
  *
+ * The live row's graded chip and the hover fill are panes: both sit ON the
+ * popup's own back, so both take #MIXAR_GLASS_CHIP (tint, a hair of gloss,
+ * the family rim — no shadow/specular) and keep only the graded wash that
+ * marks the live choice; hover/press rides the pane alpha. Slider track and
+ * fill stay flat — a groove that shows through stops reading as a groove.
+ *
  * Geometry and colours live in `UI_mixar_chrome.hh` and still MIRROR
  * `view3d_director_cinema.hh` (CINEMA_ROW_RADIUS, CINEMA_COL_ROW_TOP/BOTTOM,
  * CINEMA_COL_VALUE/DIM/CAPTION/SPEED_ON); a pin test keeps them in step,
@@ -120,18 +126,30 @@ uiFontStyle caption_font()
   return mixar_card_font(mixar_chrome::caption_scale, 0);
 }
 
+/** The live chip's graded slate is a wash: an opaque ramp would cover the
+ * pane the row now sits in. */
+constexpr float CHIP_WASH = 0.6f;
+
 void draw_chip(const rctf &row, const float radius)
 {
+  mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP);
+
   float top[4], bottom[4];
   mixar_card_to_float(ROW_TOP, top);
   mixar_card_to_float(ROW_BOTTOM, bottom);
+  top[3] *= CHIP_WASH;
+  bottom[3] *= CHIP_WASH;
+  const float inset = 1.0f * UI_SCALE_FAC;
+  rctf wash = row;
+  BLI_rctf_pad(&wash, -inset, -inset);
   draw_roundbox_corner_set(CNR_ALL);
-  draw_roundbox_4fv_ex(&row, top, bottom, 1.0f, nullptr, 0.0f, radius);
+  draw_roundbox_4fv_ex(&wash, top, bottom, 1.0f, nullptr, 0.0f, std::max(radius - inset, 0.0f));
 }
 
 void draw_hover(const rctf &row, const float radius, const float alpha)
 {
-  mixar_card_fill_round(&row, radius, HOVER, alpha);
+  /* Hover/press cue is the pane's alpha; HOVER grey stays on the slider track. */
+  mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);
 }
 
 float pad_slack()

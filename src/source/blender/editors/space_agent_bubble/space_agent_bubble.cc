@@ -65,6 +65,8 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_layout.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
@@ -312,6 +314,46 @@ bool agent_bubble_pill_bed_is_transparent()
 }
 
 #endif
+
+/* Window-level translucency for the ISLAND window.
+ *
+ * The pill asks DWM to composite its client alpha (above); the island cannot,
+ * because its card is painted by this file's region renderers rather than by
+ * one shaped window. What the island CAN do is ask the platform to give the
+ * WINDOW a translucent background, and the glass kit owns that request:
+ *
+ *   ui::mixar_glass_window_apply_translucency(ghostwin, true)
+ *
+ * on macOS and Windows it forwards to Mixar_WindowSetBlurBehind — a tinted
+ * see-through background, NOT a blur, as the header documents on both
+ * backends — and anywhere else it is a defined no-op returning false. That
+ * return value is why it is called instead of an #ifdef: it reports whether
+ * the platform acted, and only when it did is there anything behind the
+ * window for the region beds to reveal.
+ *
+ * `g_bubble_glass_translucency` records that answer so the beds — painted
+ * every frame on the hot path, which must not each re-enter GHOST — can read
+ * it. It deliberately sits OUTSIDE the platform block above: the kit call it
+ * caches is portable, and false is the honest answer on a platform that has
+ * nothing to composite the window's alpha. */
+static bool g_bubble_glass_translucency = false;
+
+/* Called once per island window, right after it takes its corner radius --
+ * after, because on macOS rounding the window is what makes it non-opaque,
+ * and the request above is what lets the beds lean on that. */
+static void agent_bubble_try_glass_translucency(void *ghostwin)
+{
+  if (ghostwin == nullptr) {
+    return;
+  }
+  g_bubble_glass_translucency = ui::mixar_glass_window_apply_translucency(ghostwin, true);
+}
+
+/** May the beds write alpha 0? Only if the platform acted on the request. */
+static bool agent_bubble_island_bed_is_transparent()
+{
+  return g_bubble_glass_translucency;
+}
 
 /* Mixie chat's custom-drawn region callbacks. We reuse them
  * verbatim for the agent bubble's TOOLS (footer) and WINDOW (main /
@@ -908,7 +950,16 @@ static float agent_bubble_pad_ratio(const wmWindow *win)
   return float(AGENT_BUBBLE_DEFAULT_WIDTH) / float(logical_w);
 }
 
-/** Opaque backdrop for ONE region — never a framebuffer-wide clear. */
+/** Backdrop for ONE region — never a framebuffer-wide clear.
+ *
+ * The bed covers every pixel of the region every frame; where the platform
+ * gave the island window a translucent background the alpha goes to zero
+ * instead of one, because an opaque bed would leave that transparency with
+ * nothing to reveal and the glass card would read as paint on black. Painting
+ * transparent pixels rather than skipping the fill is what keeps the stale
+ * region-buffer guarantee: a composite landing in the gap between a resize and
+ * the next tagged redraw still shows a bed, not the bare backdrop. BLEND_NONE
+ * is what writes the alpha straight through. */
 static void agent_bubble_fill_region_backdrop(const ARegion *region)
 {
   rctf r;
@@ -916,7 +967,8 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymin = 0.0f;
   r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
-  const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  const float bed_a = agent_bubble_island_bed_is_transparent() ? 0.0f : 1.0f;
+  const float backdrop[4] = {0.0f, 0.0f, 0.0f, bed_a};
   GPU_blend(GPU_BLEND_NONE);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);
@@ -2331,6 +2383,7 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
       Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
       Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
       Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+      agent_bubble_try_glass_translucency(win->runtime->ghostwin);
       const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
       bubble_force_size_and_refresh(
           C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
@@ -3006,6 +3059,9 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * settled — corner-rounding sets opaque=NO + clearColor which
      * doesn't play nicely with subsequent style-mask changes. */
     Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+    /* Order matters on macOS: rounding is what makes the window non-opaque,
+     * and this asks the platform to give that opacity up. */
+    agent_bubble_try_glass_translucency(win->runtime->ghostwin);
 
     /* Force the actual NSWindow size to our requested dimensions.
      * Without this, WM_window_open's std::max-with-{200,150} clamping
