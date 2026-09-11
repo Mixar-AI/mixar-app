@@ -543,3 +543,12 @@ fallback, not the default. Full write-up: `docs/seamless-updates.md`.
 ## Repo Docs Map
 
 `README.md` — public build-from-source guide and licensing. `CONTRIBUTING.md` — contribution status, development rules, and the **branch naming table** (use the most specific prefix: `feature/`, `bugfix/`, `chore/`, `refactor/`, `task/`, …). `AGENTS.md` — mirror of this guide; keep shared facts in sync. `docs/enterprise-network.md` — IT-facing contract: domains/ports, TLS inspection, proxy settings, `NET-*` support codes. `TESTING_GUIDE.md` — one-off manual test plan for the chat streaming fix (not general testing docs). `docs/seamless-updates.md` — the self-update flow, why Windows staging lives in `%ProgramData%`, and the manual cases CI can't cover. `docs/render-job-contract.md` — why the agent's final render never blocks scripts or the UI, the thread rules that do hold, and the splat path's separate Lock Interface requirement.
+
+## Release workflow environments
+
+`.github/workflows/release.yml` defaults to production for both manual and
+reusable calls. Manual UAT builds require `environment=uat`, `backend_url`,
+and `frontend_url`; they produce signed UAT-named installers under
+`S3_ENV_BUILDS_PREFIX` (default `env-builds/`) and skip SHA-only build
+checkpoints to avoid mixing production and UAT artifacts. The release
+orchestrator continues to use production defaults.
