@@ -15,7 +15,7 @@ Three things had to hold for that to be more than a window move:
 * the island's unit is width-derived, so a narrower window would have shrunk
   every label and chip — the pad keeps the DEFAULT-width unit and re-flows
   the card, panel and composer to its own width instead;
-* the pill was detected by WIDTH (< 874 px), so a narrow island would have
+* the pill was detected by WIDTH (< default island width), so a narrow island would have
   drawn as the pill capsule — detection is by window identity now;
 * the per-frame constraint sync and the grow-once latch would have fought
   the pad's size — both stand down while it is up.

@@ -7,15 +7,11 @@
 Rects are sized in the island unit ``u = window_native_pixel_x / AGENT_ISLAND_W``
 (`agent_ui_layout.cc`), which is self-calibrating: the window IS the island. Text
 was sized with ``AGENT_DU(v) = v / 1.5 * UI_SCALE_FAC``, which does not depend on
-the window width at all. The two are numerically equal ONLY at the default width,
-and `bubble_set_min_content_size` constrains the MINIMUM width only — the user can
-widen the bubble freely. Widening it therefore grew every pill, chip and card while
-the labels inside them stayed at their original pixel size, and `draw_chip_row`,
-which mixed both systems in one function, drifted its icon off-centre and started
-its label at the wrong x.
-
-That the two agree at the default width is also the correctness check for the fix:
-a correct conversion changes nothing at the default size.
+the window width at all. The two are numerically equal only at the 1.5x export
+width (874). The shipped default is a compact cut of that artboard, and
+`bubble_set_min_content_size` constrains the MINIMUM width only — the user can
+widen the bubble freely. Widening it therefore grows every pill, chip, card and
+label together.
 """
 
 import re
@@ -61,19 +57,67 @@ def test_the_island_unit_is_still_derived_from_the_window():
     assert "r_layout->scale = u;" in LAYOUT_CC
 
 
-def test_the_two_unit_systems_agree_at_the_default_width():
-    """The conversion is a no-op at the default size — which is why it is safe.
+def test_the_default_window_is_a_compact_cut_of_the_artboard():
+    """The island unit is ``window_w / AGENT_ISLAND_W`` at every size.
 
-    ``u = AGENT_BUBBLE_DEFAULT_WIDTH * s / AGENT_ISLAND_W`` and
-    ``AGENT_DU(1) = s / AGENT_DESIGN_DIVISOR`` for the same interface scale
-    ``s``. If a redesign ever moves the default width or the island width
-    apart from the 1.5x export factor, this test is the warning that the
-    conversion has stopped being appearance-neutral.
+    The 1.5x export would open at 874 logical px and dominate the viewport.
+    The shipped default is a compact cut: wide enough that body type stays
+    near 11 pt, short enough that the empty composer and the first
+    conversation do not cover the 3D view. Widening the window still grows
+    every pill, chip and label together.
     """
     island_w = _define(THEME_HH, "AGENT_ISLAND_W")
-    divisor = _define(THEME_HH, "AGENT_DESIGN_DIVISOR")
     default_w = _define(BUBBLE_CC, "AGENT_BUBBLE_DEFAULT_WIDTH")
-    assert abs((default_w / island_w) - (1.0 / divisor)) < 0.002
+    default_h = _define(BUBBLE_CC, "AGENT_BUBBLE_DEFAULT_HEIGHT")
+    transcript_h = _define(BUBBLE_CC, "AGENT_BUBBLE_TRANSCRIPT_HEIGHT")
+    expanded_h = _define(BUBBLE_CC, "AGENT_BUBBLE_EXPANDED_HEIGHT")
+    pill_w = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_WIDTH_LARGE")
+    pill_h = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_HEIGHT_LARGE")
+    assert default_w == 800
+    assert default_h == 272
+    assert default_h + transcript_h == 480
+    assert expanded_h == 560
+    assert pill_w == 304
+    assert pill_h == 44
+    assert pill_w / pill_h > 4.0
+    scale = default_w / island_w
+    assert 0.60 < scale < 0.62
+
+
+def test_compact_height_is_valid_the_card_stretches():
+    """A window shorter than the artboard must still lay out.
+
+    ``region_h < AGENT_ISLAND_H * u`` rejected the shipped 272 px empty
+    island (and the 480 px chat island): chrome never drew, only the
+    prompt field remained. Height is valid down to the same chrome floor
+    the Scribble pad already uses.
+    """
+    build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
+    assert "AGENT_ISLAND_H * u" not in build
+    assert "AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "region_h < min_h - slack" in build
+
+
+def test_open_and_restore_keep_chat_height_once_there_is_a_transcript():
+    """Grow-once only fires once. Open/restore must still size to
+    DEFAULT + TRANSCRIPT when messages exist, or minimise returns a
+    conversation to the empty 272 px island.
+    """
+    body = _function_body(
+        BUBBLE_CC, "static int agent_bubble_collapsed_height_for_current_attachments("
+    )
+    assert "AGENT_BUBBLE_TRANSCRIPT_HEIGHT" in body
+    assert "mixie_chat_messages" in body
+
+
+def test_compact_card_follows_the_window_foot():
+    """Chips sit on the card foot. Flooring ``card_h`` at ``AGENT_CARD_H``
+    put that foot below a window shorter than the artboard, so Upload /
+    Scribble / Generate never appeared in the compact empty island.
+    """
+    build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
+    assert "std::max(float(AGENT_CARD_H)" not in build
+    assert "region_h / u + top_du - AGENT_CARD_Y" in build
 
 
 def _function_body(source: str, signature_start: str) -> str:

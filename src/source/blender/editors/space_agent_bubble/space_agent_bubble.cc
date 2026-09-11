@@ -96,26 +96,23 @@ namespace blender {
  * fits a 1-line composer + the action row comfortably; the wrapper's
  * internal scroll handles overflow when the input grows. */
 #define AGENT_BUBBLE_FOOTER_HEIGHT 90
-/* Island chrome slabs, logical px at the default 874-wide window (island
- * units x 874/1310). Re-synced to the live width each frame by the composer
+/* Island chrome slabs, logical px at the default 800-wide window (island
+ * units x 800/1310). Re-synced to the live width each frame by the composer
  * region's layout callback. */
-#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 100
-#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 96
-/* The bubble window IS the island: 1310 x 569 artboard units at the 1.5x
- * export divisor (see agent_ui_theme.hh). Sizing the window to the design
- * means island-local (0,0) is the region's top-left and nothing has to
- * centre itself. */
-#define AGENT_BUBBLE_DEFAULT_WIDTH 874
-/* Default content height: footer (~90 px) + header (~18 px) + body for
- * chat history. 350 px gives ~240 px of scroll area — a compact bubble
- * the user can grow via drag/expand. This is also the OS resize floor
- * (AGENT_BUBBLE_MIN_HEIGHT below). */
-#define AGENT_BUBBLE_DEFAULT_HEIGHT 348
-/* The island's height in UNSCALED units — 569 artboard units / the 1.5x export
- * factor. Region sizey is unscaled: Blender multiplies it by UI_SCALE_FAC when
- * it lays the area out, so passing an already-scaled value (AGENT_DU(...))
- * double-scales and the region comes back twice the window's height. */
-#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 348
+#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 91
+#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 90
+/* Compact cut of the 1310-unit artboard (see agent_ui_theme.hh). The painters
+ * still scale with window width; 800 keeps body type near 11 pt so the
+ * island reads as a floating card instead of a second editor. */
+#define AGENT_BUBBLE_DEFAULT_WIDTH 800
+/* Empty-state height: chrome plus a short whole-panel prompt. Shorter than
+ * the artboard so the island does not cover the viewport before a
+ * conversation exists. Also the OS resize floor (AGENT_BUBBLE_MIN_HEIGHT). */
+#define AGENT_BUBBLE_DEFAULT_HEIGHT 272
+/* Matches the empty-state window. Region sizey is unscaled: Blender
+ * multiplies it by UI_SCALE_FAC, so an already-scaled AGENT_DU(...) value
+ * would double-scale and the region would come back twice the window. */
+#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 272
 /* The island's three slabs, unscaled. Top = pill + tab strip + card header,
  * bottom = input line + chip row; the transcript takes what is left. */
 /* Slab heights are artboard UNITS; the layout converts them with the same
@@ -124,22 +121,21 @@ namespace blender {
  * unscaled pixels made every slab half the height its content needed. */
 #define AGENT_BUBBLE_SLAB_TOP_UNITS 149
 #define AGENT_BUBBLE_SLAB_BOTTOM_UNITS 133
-#define AGENT_BUBBLE_SLAB_TOP_PX 99
-#define AGENT_BUBBLE_SLAB_BOTTOM_PX 96
+#define AGENT_BUBBLE_SLAB_TOP_PX 91
+#define AGENT_BUBBLE_SLAB_BOTTOM_PX 81
 /* Blender enforces a minimum height on the main (WINDOW) region. If the two
  * slabs claim the whole window it does not shrink to zero — it OVERLAPS them,
  * and the overlap both repaints the slab's pixels every frame (the blink) and
  * covers the top of the input field (the missing text). So the empty-state
  * slab takes everything EXCEPT that reserve. */
 #define AGENT_BUBBLE_WINDOW_MIN_PX 52
-/* Compact = island only, exactly the artboard. The window grows to this once
- * a conversation exists, so the transcript has somewhere to live without a
- * permanently tall slab floating over the viewport. */
-#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 340
+/* Extra height applied once a conversation exists, so the transcript has
+ * room without a permanently tall slab over the viewport. */
+#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 208
 #define AGENT_BUBBLE_MIN_WIDTH AGENT_BUBBLE_DEFAULT_WIDTH
 #define AGENT_BUBBLE_MIN_HEIGHT AGENT_BUBBLE_DEFAULT_HEIGHT
-#define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 100
-#define AGENT_BUBBLE_EXPANDED_HEIGHT 700
+#define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 80
+#define AGENT_BUBBLE_EXPANDED_HEIGHT 560
 #define AGENT_BUBBLE_BODY_MIN_HEIGHT 120
 #define AGENT_BUBBLE_AUTOGROW_SLACK 12
 #ifdef _WIN32
@@ -149,9 +145,9 @@ namespace blender {
 #endif
 #define AGENT_BUBBLE_AUTOGROW_TOP_RESERVE 46
 
-/* Visual corner-rounding for the bubble window — soft floating
- * popup silhouette per the Figma. */
-#define AGENT_BUBBLE_CORNER_RADIUS 12.0f
+/* Window radius tracks the card (~20 px at the compact width) so the
+ * island's rounded corners are not clipped square by a tighter frame. */
+#define AGENT_BUBBLE_CORNER_RADIUS 20.0f
 
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
  * GHOST_SystemWin32.cc (Windows). Declared here as extern "C" so we
@@ -1694,7 +1690,18 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)
 {
-  return agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
+  int height = agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
+  /* Open and restore share this floor. Grow-once only fires once per
+   * process, so without the transcript delta here a minimised chat
+   * restored at the empty 272 px height and stayed there. */
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    if (messages && RNA_property_collection_length(&scene_ptr, messages) > 0) {
+      height += AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
+    }
+  }
+  return height;
 }
 
 /* `from_draw` marked which caller this was, back when the footer's own
@@ -2003,10 +2010,10 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  *     is a child window above the bubble's top-left and only shows
  *     the live status; it should be a quiet status indicator, not
  *     compete with the chat for attention.
- *   * LARGE (160×44, radius 22) — when the bubble is MINIMISED. The
+ *   * LARGE (304×44, radius 22) — when the bubble is MINIMISED. The
  *     pill is the only thing the user sees, anchored at the host's
  *     centre-bottom; it doubles as the click target to restore the
- *     bubble, so it needs a substantial size + readable text.
+ *     bubble, so it needs a readable preview without becoming a bar.
  *
  * The pill is created at SMALL size on first open, then resized
  * via Mixar_WindowForceSize + Mixar_WindowSetCornerRadius on every
@@ -2017,12 +2024,13 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 
-/* Elongated resting pill (Frame 1533210248.svg, 643x85 rx31.5 at the 1.5x
- * export): last-prompt preview + logo chip. This is the minimised bubble's
- * whole identity — a click expands it into the island, a drag moves it. */
-#define AGENT_BUBBLE_PILL_WIDTH_LARGE 429
-#define AGENT_BUBBLE_PILL_HEIGHT_LARGE 57
-#define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 28.5f
+/* Elongated resting pill: last-prompt preview + logo chip. Compact cut of
+ * the 643x85 export so the minimised bubble stays a quiet dock, not a
+ * second toolbar. Aspect stays above 4 so the elongated painter runs.
+ * Radius is half the height — a true capsule. */
+#define AGENT_BUBBLE_PILL_WIDTH_LARGE 304
+#define AGENT_BUBBLE_PILL_HEIGHT_LARGE 44
+#define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 22.0f
 
 /* Duration (seconds) of the minimise glide animation — pill slides
  * + grows from above-bubble to centre-bottom while the bubble
@@ -3951,7 +3959,7 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
   }
 #else
   /* Do NOT resize the pill here: ForceSize grows the frame from its current
-   * origin, so the still-visible pill flashed as a 429pt slab hanging off to
+   * origin, so the still-visible pill flashed as a wide slab hanging off to
    * the left before the anchor dropped it into the seat. It fades out at its
    * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to

@@ -112,7 +112,6 @@ void agent_ui_layout_build(const int window_w,
    * to be in winrct space too. */
   const float u = float(window_w) / float(AGENT_ISLAND_W);
   const float want_w = AGENT_ISLAND_W * u;
-  const float want_h = AGENT_ISLAND_H * u;
 
   /* The pad lays out across its own (narrower) width with the unit above. */
   const float region_w = pad ? float(pad_real_w) : float(window_w);
@@ -130,26 +129,25 @@ void agent_ui_layout_build(const int window_w,
    * the pad has no strip and starts just above its card. */
   const float top_du = pad ? float(AGENT_CARD_Y - AGENT_PAD_TOP_INSET) : float(AGENT_ISLAND_TOP);
 
-  /* The bubble window is sized to the island, so this only bites during the
-   * transient frames of a resize — and while it does, drawing nothing beats
-   * drawing a card with its chip row overlapping its own header. */
   /* A pixel of slack. The window is sized from an integer count of unscaled
-   * points, so rounding can leave it a fraction under the island's exact
-   * scaled height — and an exact comparison then rejects the whole island and
-   * paints nothing, which reads as a dead black window. */
+   * points, so rounding can leave it a fraction under the chrome floor —
+   * an exact comparison then rejects the whole island and paints nothing. */
   const float slack = 2.0f;
+  /* Chrome floor: card header + one input line + chips + foot. The card
+   * stretches with the window, so a compact default shorter than the
+   * 521-unit artboard is valid — requiring AGENT_ISLAND_H painted the
+   * island black and hid every tab/chip. Same floor as the Scribble pad. */
+  const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                       AGENT_CARD_PAD_BOTTOM) *
+                      u;
   if (pad) {
-    /* A pad is valid down to the narrowest width its composer row fits, and
-     * tall enough to hold the card header plus one input line. */
-    const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
-                         AGENT_CARD_PAD_BOTTOM) *
-                        u;
+    /* A pad is valid down to the narrowest width its composer row fits. */
     if (island_w < float(AGENT_PAD_MIN_W_UNITS) || region_h < min_h - slack) {
       r_layout->valid = false;
       return;
     }
   }
-  else if (region_w < want_w - slack || region_h < want_h - slack) {
+  else if (region_w < want_w - slack || region_h < min_h - slack) {
     r_layout->valid = false;
     return;
   }
@@ -222,9 +220,11 @@ void agent_ui_layout_build(const int window_w,
   /* --- Card ---
    * Top pinned to the artboard's grid, foot pinned to the window's bottom, so
    * a taller window grows the conversation rather than detaching the composer
-   * from the card. At the compact height this is identical to the artboard.
+   * from the card. A shorter window (the compact empty island) must shrink
+   * the same way — flooring at AGENT_CARD_H kept the chip row 448 artboard
+   * units down and painted it below a 272 px window.
    * (The pad's top is its own inset, so its card runs the whole window.) */
-  const float card_h = std::max(float(AGENT_CARD_H), region_h / u + top_du - AGENT_CARD_Y);
+  const float card_h = std::max(0.0f, region_h / u + top_du - AGENT_CARD_Y);
   r_layout->card = f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, card_h);
   r_layout->card_fill = f.box(AGENT_CARD_X + AGENT_CARD_BORDER,
                               AGENT_CARD_Y + AGENT_CARD_BORDER,
