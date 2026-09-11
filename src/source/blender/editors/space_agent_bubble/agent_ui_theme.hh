@@ -328,11 +328,11 @@ namespace blender {
  * the card's bottom edge, so only its first ~73% is ever visible; sampling
  * it over the card rect alone would make the card far too dark.
  *
- * The card DRAWS this ramp as a glass pane now, so its two stops live in the
- * glass kit's CARD row (`interface_mixar_liquid_glass_tokens.cc`) rather than
- * here — the row's tint bed IS this gradient, which is why the island adds no
- * second green wash over it. The kit shades vertically and the artboard's axis
- * is diagonal; the card-bed comment in `agent_ui_draw.cc` records the trade. */
+ * The card DRAWS as the glass kit's CARD row now — dark glass, not this
+ * saturated ramp (that tint read as a plastic header). The neon meter is
+ * the card's green. The island adds no second wash over the pane. The kit
+ * shades vertically and the artboard's axis is diagonal; the card-bed
+ * comment in `agent_ui_draw.cc` records the trade. */
 
 /* Strokes and text.
  *

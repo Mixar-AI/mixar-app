@@ -5242,6 +5242,37 @@ static void widget_textbut(uiWidgetColors *wcol,
   widgetbase_draw(&wtb, wcol);
 }
 
+/* Mixar: Text chrome used to ignore button_color_set (only widget_box
+ * honoured but->col). The island's empty-state field is a full-region
+ * Text button — without this, its theme inner is an opaque slab over
+ * the frost. */
+static void widget_textbut_custom(Button *but,
+                                  uiWidgetColors *wcol,
+                                  rcti *rect,
+                                  const WidgetStateInfo *state,
+                                  int roundboxalign,
+                                  const float zoom)
+{
+  /* The island's empty-state field is a full-region Text button. Its
+   * theme inner is opaque `#121212` and dest-over cannot lower dest A=1,
+   * so frost never reaches the compositor. Skip chrome on a tall field
+   * (the panel) and on an explicit wash; placeholder and typed text
+   * still draw via wt->text. Emboss stays so clicks work. */
+  if (rect != nullptr && BLI_rcti_size_y(rect) > 120) {
+    return;
+  }
+  if (but != nullptr && but->col[3]) {
+    if (but->col[3] < 128) {
+      return;
+    }
+    wcol->inner[0] = but->col[0];
+    wcol->inner[1] = but->col[1];
+    wcol->inner[2] = but->col[2];
+    wcol->inner[3] = but->col[3];
+  }
+  widget_textbut(wcol, rect, state, roundboxalign, zoom);
+}
+
 static void widget_menuiconbut(uiWidgetColors *wcol,
                                rcti *rect,
                                const WidgetStateInfo * /*state*/,
@@ -6253,7 +6284,7 @@ static WidgetType *widget_type(WidgetStyle type)
     /* strings */
     case WidgetStyle::Name:
       wt.wcol_theme = &btheme->tui.wcol_text;
-      wt.draw = widget_textbut;
+      wt.custom = widget_textbut_custom;
       break;
 
     case WidgetStyle::NameLink:

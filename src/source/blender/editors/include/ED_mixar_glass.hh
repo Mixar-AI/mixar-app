@@ -10,12 +10,12 @@
  * agent panel's cards, the Mixar profile cards, menus and popovers, and the
  * Mixie chat.
  *
- * A pane is a tinted silhouette with a soft top gloss, a travelling specular
- * streak, a bright-to-dark diagonal wash inside a 1px rim, and a lifted drop
- * shadow. Where the caller can hand in a blurred backdrop the pane sits on it
- * and reads as genuinely glassy; where it cannot, the same pane draws over its
- * own tint and still reads as glass, because the shape, the rim and the gloss
- * are what carry the material and the backdrop only supplies the transparency.
+ * A pane is a tinted silhouette with a soft top gloss and a 1px rim. Where
+ * the caller can hand in a blurred backdrop the pane also gets a refraction
+ * wash and a travelling specular streak — lighting that needs a frosted bed
+ * to catch it. Where it cannot (every Mixar surface today), those two layers
+ * stay off and the shape, the rim and the gloss carry the material, so a
+ * tinted pane is not dirtied by a diagonal bevel and a sweeping bar.
  *
  * WHY THE BACKDROP IS A CALLER-SUPPLIED TEXTURE
  * The kit can blur a texture, but it cannot capture one. This overlay has no
@@ -186,9 +186,22 @@ void mixar_glass_draw(const rcti &rect,
  * in this checkout, which has no definition of the underlying call — it is a
  * no-op returning false, so callers need no `#ifdef` of their own.
  *
- * This is window-level translucency, NOT a blur: `Mixar_WindowSetBlurBehind`
- * carries a tinted see-through background on both backends and documents "no
- * blur" on both. A pane over such a window still needs the kit's own tint.
+ * This is window-level compositing. On macOS `Mixar_WindowSetBlurBehind`
+ * installs AppKit frost as a sibling behind GHOST's Metal view (never as
+ * its parent) and lets this window's `CAMetalLayer` composite alpha. The
+ * Metal present blit must keep the framebuffer's alpha — forcing it to 1
+ * makes the drawable an opaque slab over that sibling. An EDR
+ * `RGBA16Float` layer is still composited opaque, so the installer
+ * switches that window's `CAMetalLayer` to `BGRA8Unorm` and GHOST
+ * rebuilds the present pipeline to match, premultiplying RGB so
+ * WindowServer does not treat A=0 as an opaque slab. The flip is
+ * re-applied on present while the window is non-opaque. The draw
+ * overlay stays `RGBA16Float`. Island region beds clear then REPLACE
+ * a wash (`GPU_BLEND_NONE`); dest-over cannot lower dest A=1 and an
+ * A=0 fragment does not land on Metal. On Windows it
+ * is DWM per-pixel alpha. A pane over such a window still needs the kit's
+ * own tint; the painter keeps refraction and the streak off when no GPU
+ * backdrop is handed in.
  *
  * \return true if the platform acted on the request.
  */

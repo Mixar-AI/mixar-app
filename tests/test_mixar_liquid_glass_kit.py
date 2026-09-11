@@ -270,6 +270,59 @@ class TestTheSpecularIsClippedToTheRegion:
         assert "GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);" in DRAW
 
 
+class TestTheSheenDoesNotFloodACapsule:
+    def test_the_sheen_band_is_the_token_height_not_the_radius(self) -> None:
+        """A capsule's radius is half its short side.
+
+        Using that as a floor made the gloss cover the top half of every pill
+        and turned the island card's sheen into a coloured header bar — the
+        look that read as plastic, not glass.
+        """
+        assert "std::min(t.sheen_height, float(height) * 0.28f)" in DRAW
+        assert "std::max(t.sheen_height, radius)" not in DRAW
+
+
+class TestLightingLayersNeedABed:
+    def test_refraction_and_the_streak_wait_for_a_backdrop(self) -> None:
+        """Those layers are lighting. Without a frosted bed they dirty the tint.
+
+        No Mixar surface hands the kit a backdrop today, so leaving them on
+        painted a diagonal bevel and a travelling bar on every pane.
+        """
+        assert "if (backdrop.valid() && t.refract[3] > 0.0f)" in DRAW
+        assert "backdrop.valid() && style.draw_specular" in DRAW
+
+
+class TestCardAndIslandAreDarkGlass:
+    def test_card_tint_is_not_the_artboard_green_ramp(self) -> None:
+        """The saturated artboard ramp as a pane tint read as a plastic header.
+
+        Brand green lives on the island meter. These numbers are the material.
+        """
+        row = _rows()["card"]
+        assert "{0.090f, 0.120f, 0.100f, 0.16f}" in row
+        assert "{0.040f, 0.055f, 0.048f, 0.24f}" in row
+        assert "0.196f" not in row
+        assert "0.357f" not in row
+
+    def test_island_tint_is_the_same_dark_family(self) -> None:
+        row = _rows()["island"]
+        assert "{0.086f, 0.110f, 0.094f, 0.16f}" in row
+        assert "{0.035f, 0.047f, 0.040f, 0.24f}" in row
+
+    def test_card_and_island_tints_are_washes_not_slabs(self) -> None:
+        """Alphas above ~0.3 read as paint over frost, not as glass."""
+        for name in ("card", "island", "pill"):
+            row = _rows()[name]
+            top = re.search(r"/\*\s*tint_top\s*\*/\s*\{([^}]*)\}", row)
+            bottom = re.search(r"/\*\s*tint_bottom\s*\*/\s*\{([^}]*)\}", row)
+            assert top and bottom, name
+            top_a = float(top.group(1).split(",")[-1].strip().rstrip("f"))
+            bottom_a = float(bottom.group(1).split(",")[-1].strip().rstrip("f"))
+            assert top_a <= 0.22, f"{name} tint_top alpha {top_a} is a slab"
+            assert bottom_a <= 0.30, f"{name} tint_bottom alpha {bottom_a} is a slab"
+
+
 class TestTheBlurIsARealCascade:
     def test_the_chain_halves_and_then_walks_back_up(self) -> None:
         """Down alone is a grid of 2x2 blocks; the walk back is what smooths it.

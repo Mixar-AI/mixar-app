@@ -957,11 +957,13 @@ class TestTheIslandCardIsAPane:
     the streak is the one layer the painter clips with a scissor computed from
     the pane's own region-px rect.
 
-    CARD is the design's own card role: its token row carries the artboard's
-    green ramp stop for stop, so the wrapper hands over no colour and the
-    island adds no second wash. What the role cannot carry is that the
-    artboard's axis is diagonal — the kit shades vertically. That trade is
-    deliberate and recorded at the call site.
+    CARD is the design's own card role: its token row is dark glass with a
+    whisper of green, so the wrapper hands over no colour and the island
+    adds no second wash. The neon meter is the card's green — putting the
+    artboard's saturated ramp on the pane tint read as a plastic header.
+    What the role cannot carry is that the artboard's axis is diagonal —
+    the kit shades vertically. That trade is deliberate and recorded at
+    the call site.
     """
 
     def _island(self) -> str:
@@ -1034,9 +1036,9 @@ class TestTheIslandCardIsAPane:
         ), "the bed is drawn before the meter it abuts"
 
     def test_the_cards_middle_carries_the_green_alone(self) -> None:
-        """The CARD row's tint bed IS the artboard's ramp, so a wash over it
-        would double the green — the opposite of the viewport panel, whose
-        near-black bed keeps its call-site wash. One draw touches the bed."""
+        """The CARD row IS the bed, so a wash over it would double the
+        material — the opposite of the viewport panel, whose near-black
+        bed keeps its call-site wash. One draw touches the bed."""
         assert self._island().count("layout->card_fill") == 1
 
     def test_the_strip_and_the_inner_panel_stay_flat(self) -> None:
@@ -1045,8 +1047,10 @@ class TestTheIslandCardIsAPane:
         never seen."""
         strip = _code(_fn_body(AGENT_DRAW, "void draw_tab_strip("))
         assert "fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);" in strip
+        assert "if (!agent_bubble_island_bed_is_transparent())" in strip
         island = self._island()
         assert "fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);" in island
+        assert "if (!agent_bubble_island_bed_is_transparent())" in island
         assert "glass_fill_round(&layout->panel" not in island
         assert "glass_fill_round(&layout->strip" not in _code(AGENT_DRAW)
 

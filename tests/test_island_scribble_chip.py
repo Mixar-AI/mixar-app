@@ -158,7 +158,7 @@ def test_hover_collapse_stands_down_while_scribble_is_armed():
 def test_empty_state_paints_the_ink_canvas_instead_of_the_field():
     """With no transcript the WINDOW region IS the whole-panel prompt field,
     an embossed uiBut whose chrome would cover the handwriting canvas."""
-    start = BUBBLE_CC.index("const float panel_bg[4] = AGENT_COL_SURFACE;")
+    start = BUBBLE_CC.index("agent_bubble_island_panel_color(panel_bg);")
     body = BUBBLE_CC[start : BUBBLE_CC.index("/* Side frame:", start)]
     ink = body.index("else if (ink_canvas_open)")
     field = body.index('"agent_island_field_panel"')

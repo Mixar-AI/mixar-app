@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "BLI_rect.h"
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -23,11 +25,20 @@ struct wmWindowManager;
 /** \name Header Region (status pill)
  * \{ */
 
-/* True when DWM composites this build's pill window alpha, so the bed outside
- * the capsule is painted transparent and the capsule's own anti-aliased edge is
- * the silhouette. False keeps the opaque bed and the window region that shapes
- * it (see the "Pill compositing" section in space_agent_bubble.cc). */
+/* True when the pill window may REPLACE a frost wash instead of an
+ * opaque bed. Always on macOS/Windows (those windows are asked to be
+ * translucent). False on Linux, where nothing composites the alpha.
+ * See the "Pill compositing" section in space_agent_bubble.cc. */
 bool agent_bubble_pill_bed_is_transparent();
+
+/* REPLACE a dark-glass wash (`GPU_BLEND_NONE`). Dest-over cannot lower
+ * dest A=1, and an A=0 fragment is a no-op on Metal. */
+void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4]);
+
+/* True when region beds may REPLACE a frost wash instead of an opaque
+ * `#121212` slab. Always on macOS/Windows (those windows are asked to be
+ * translucent). False on Linux, where the latch never flips. */
+bool agent_bubble_island_bed_is_transparent();
 
 void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region);

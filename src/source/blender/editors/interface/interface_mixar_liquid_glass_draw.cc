@@ -25,6 +25,12 @@
  * layer reads its own tokens, so a role can switch a layer off by zeroing an
  * alpha (`CHIP` carries no shadow and no specular) without special cases here.
  *
+ * Refraction and the travelling streak are lighting: they only read as glass
+ * when there is a frosted bed to catch them. No caller in this overlay can
+ * capture a backdrop today, so those two layers stay off unless one is handed
+ * in — otherwise they dirtied every tinted pane (a diagonal wash and a
+ * sweeping bar on painted colour, which is what read as "the glass is weird").
+ *
  * The blend mode and the matrix are saved and restored around the whole
  * painter, so a caller may draw a pane mid-pass, and the blend mode alone
  * around the blur's inner passes is handled in the chain.
@@ -215,11 +221,16 @@ void mixar_glass_draw(const rcti &rect,
     }
   }
 
-  /* Layer 4 — the top gloss. Two bands: a wide one reaching the radius, and a
-   * narrower, brighter one inside it, which is what makes the light read as
-   * catching a curved surface rather than a flat gradient. */
+  /* Layer 4 — the top gloss. Two bands: a wide catch-light and a narrower,
+   * brighter one inside it, which is what makes the light read as catching a
+   * curved surface rather than a flat gradient.
+   *
+   * The band is the token height, capped to a fraction of the pane — never
+   * the corner radius. A capsule's radius is half its short side, so using
+   * that as a floor flooded the top half of every pill and turned the island
+   * card's sheen into a coloured header bar. */
   if (t.sheen[3] > 0.0f) {
-    const float band = std::max(t.sheen_height, radius);
+    const float band = std::min(t.sheen_height, float(height) * 0.28f);
     rctf gloss = box;
     gloss.ymin = std::max(box.ymin, box.ymax - band);
     const float sheen_lit[4] = {t.sheen[0], t.sheen[1], t.sheen[2], t.sheen[3] * alpha};
@@ -238,8 +249,10 @@ void mixar_glass_draw(const rcti &rect,
         &inner, inner_lit, sheen_clear, 1.0f, nullptr, 0.0f, std::max(radius - pad, 0.0f));
   }
 
-  /* Layer 5 — the refraction wash, over the bed's band and inside the rim. */
-  if (t.refract[3] > 0.0f) {
+  /* Layer 5 — the refraction wash, only over a frosted bed. On a tinted
+   * silhouette with nothing behind it this is just a diagonal gradient, and
+   * that is the cheap bevel the panes were reading as. */
+  if (backdrop.valid() && t.refract[3] > 0.0f) {
     rctf inside = box;
     inside.xmin += inset;
     inside.ymin += inset;
@@ -254,8 +267,9 @@ void mixar_glass_draw(const rcti &rect,
    * is not a rectangle. */
   const float inner_w = float(width) - inset * 2.0f;
   const float inner_h = float(height) - inset * 2.0f;
-  if (style.draw_specular && t.specular_alpha > 0.0f && t.specular_width > 0.0f &&
-      t.specular_period > 0.0f && inner_w > 0.0f && inner_h > 0.0f)
+  if (backdrop.valid() && style.draw_specular && t.specular_alpha > 0.0f &&
+      t.specular_width > 0.0f && t.specular_period > 0.0f && inner_w > 0.0f &&
+      inner_h > 0.0f)
   {
     const float travel = inner_w + t.specular_width;
     const float phase = float(

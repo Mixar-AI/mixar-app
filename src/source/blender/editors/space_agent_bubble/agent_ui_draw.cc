@@ -431,7 +431,9 @@ void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *sta
   const float strong[4] = AGENT_COL_TEXT_STRONG;
   const float text_dim[4] = AGENT_COL_TEXT_DIM;
 
-  fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
+  if (!agent_bubble_island_bed_is_transparent()) {
+    fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
+  }
 
   /* Text is sized in the ISLAND unit, not AGENT_DU(): the two agree only at
    * the default window width, and the window widens freely (the bubble
@@ -674,13 +676,16 @@ void agent_ui_draw_status_pill(const float width,
     pill.xmax = w;
     pill.ymin = 0.0f;
     pill.ymax = h;
-    /* The capsule IS liquid glass. The PILL row carries the artboard's own two
-     * greys (#2D2D2D over #131413) at partial alpha, so on a window that
-     * composites client alpha the desktop shows through the capsule and the
-     * glass is real rather than painted on; on one that does not (Linux keeps
-     * the opaque bed and the window region as the shape) the tint lands on
-     * that bed and the capsule keeps the flat artboard grey. */
-    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
+    /* The capsule IS liquid glass. On a frost window the kit dest-overs
+     * onto dest A=1 and the resting pill reads as a slab — REPLACE the
+     * PILL wash instead. Linux keeps the painted pane on an opaque bed. */
+    if (agent_bubble_pill_bed_is_transparent()) {
+      const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+      agent_bubble_replace_frost_wash(&pill, wash);
+    }
+    else {
+      glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
+    }
     GPU_blend(GPU_BLEND_ALPHA);
 
     if (is_working) {
@@ -883,22 +888,22 @@ void agent_ui_draw_status_pill(const float width,
   dot.ymin = h * 0.5f - dot_r;
   dot.ymax = h * 0.5f + dot_r;
 
-  /* Paint the WHOLE rect opaquely before the capsule. The pill window's
-   * buffers otherwise carry transparent pixels that composite as the bare
-   * window backdrop — a flat grey that flashed against the capsule whenever a
-   * stale buffer was presented. The OS-level corner mask still rounds the
-   * window, so the corners never show this fill. */
-  const float bed_a = agent_bubble_pill_bed_is_transparent() ? 0.0f : 1.0f;
-  const float bed[4] = {0.02f, 0.02f, 0.02f, bed_a};
-  GPU_blend(GPU_BLEND_NONE);
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
-
+  /* Paint the WHOLE rect before the capsule. The pill window's buffers
+   * otherwise carry leftover pixels that flash the bare backdrop. Frost
+   * REPLACES a wash; dest-over / A=0 left the small status chip a slab. */
+  if (agent_bubble_pill_bed_is_transparent()) {
+    const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+    agent_bubble_replace_frost_wash(&pill, wash);
+  }
+  else {
+    const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
+    GPU_blend(GPU_BLEND_ALPHA);
+    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
+  }
   GPU_blend(GPU_BLEND_ALPHA);
-  /* The capsule is the same liquid glass the elongated pill uses (see above);
-   * it sits on the bed rather than a gradient because the classic pill has no
-   * chip to carry the green. */
-  glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
   label_left(state->status_text,
              w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
@@ -951,9 +956,10 @@ void agent_ui_draw_island(const ARegion * /*region*/,
                            border_spent,
                            state->credits_remaining);
   }
-  /* The card's bed. The artboard paints it as a green ramp, and that ramp is
-   * what the glass kit's CARD role carries — the row's tint stops are the
-   * artboard's own two colours. Two of the kit's layers are switched off here.
+  /* The card's bed. The CARD row is dark glass with a whisper of green —
+   * the artboard's saturated ramp as a pane tint read as a plastic header,
+   * and the neon meter already is the card's green. Two of the kit's layers
+   * are switched off here.
    *
    * The specular streak, because it is clipped with a region-px scissor built
    * from the pane's rect while the island draws in WINDOW px under the
@@ -976,11 +982,17 @@ void agent_ui_draw_island(const ARegion * /*region*/,
    * shades vertically. This is the tradeoff the viewport panel took first (see
    * the PANEL row and `view3d_director_cinema_paint.cc`), and at card scale the
    * difference is a level of quantisation the eye does not separate. */
-  glass_fill_round(&layout->card_fill,
-                   ui::MIXAR_GLASS_CARD,
-                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
-                   /*shadow=*/false,
-                   /*specular=*/false);
+  /* On a frost window the region bed already REPLACED a 0.20 wash.
+   * The CARD widget paints dest-over and cannot lower dest A=1 — a second
+   * silhouette there is what kept the card a solid slab. Chrome and the
+   * neon meter still draw. */
+  if (!agent_bubble_island_bed_is_transparent()) {
+    glass_fill_round(&layout->card_fill,
+                     ui::MIXAR_GLASS_CARD,
+                     (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
+                     /*shadow=*/false,
+                     /*specular=*/false);
+  }
 
   /* Card header row is tab-scoped: the chat's discs / session title / FAQs
    * belong to the Agent tab; other tabs title the card after themselves. */
@@ -1089,7 +1101,11 @@ void agent_ui_draw_island(const ARegion * /*region*/,
   }
 
   /* --- Inner panel --- */
-  fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);
+  /* Opaque #121212 here is what made frost read as a solid slab: empty
+   * TOOLS paints the full island, and dest-over cannot lower dest A=1. */
+  if (!agent_bubble_island_bed_is_transparent()) {
+    fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);
+  }
 
   /* Neither the prompt nor its placeholder is painted here — both belong to
    * the text button the bottom slab lays over the input line, which draws on

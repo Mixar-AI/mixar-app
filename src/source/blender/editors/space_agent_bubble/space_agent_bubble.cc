@@ -53,6 +53,8 @@
 #include "DNA_userdef_types.h"
 
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
+#include "GPU_immediate_util.hh"
 #include "GPU_matrix.hh"
 #include "UI_view2d.hh"
 #include "BLI_string.h"
@@ -269,6 +271,11 @@ static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
   }
   Mixar_WindowSetPerPixelAlpha(ghostwin, true);
   g_pill_per_pixel_alpha = true;
+#elif defined(__APPLE__)
+  if (ghostwin == nullptr) {
+    return;
+  }
+  g_pill_per_pixel_alpha = ui::mixar_glass_window_apply_translucency(ghostwin, true);
 #else
   (void)ghostwin;
 #endif
@@ -276,7 +283,10 @@ static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
 
 bool agent_bubble_pill_bed_is_transparent()
 {
-  return g_pill_per_pixel_alpha;
+  /* Same latch trap as the island: the request can run before the
+   * Metal view exists and leave this false, which paints the opaque
+   * bed and hides Regular frost. macOS/Windows always ask. */
+  return true;
 }
 
 /** \} */
@@ -324,18 +334,19 @@ bool agent_bubble_pill_bed_is_transparent()
  *
  *   ui::mixar_glass_window_apply_translucency(ghostwin, true)
  *
- * on macOS and Windows it forwards to Mixar_WindowSetBlurBehind — a tinted
- * see-through background, NOT a blur, as the header documents on both
- * backends — and anywhere else it is a defined no-op returning false. That
+ * on macOS and Windows it forwards to Mixar_WindowSetBlurBehind — per-pixel
+ * alpha, and on macOS a theme-frame sibling frost view — and anywhere else
+ * it is a defined no-op returning false. That
  * return value is why it is called instead of an #ifdef: it reports whether
  * the platform acted, and only when it did is there anything behind the
  * window for the region beds to reveal.
  *
- * `g_bubble_glass_translucency` records that answer so the beds — painted
- * every frame on the hot path, which must not each re-enter GHOST — can read
- * it. It deliberately sits OUTSIDE the platform block above: the kit call it
- * caches is portable, and false is the honest answer on a platform that has
- * nothing to composite the window's alpha. */
+ * `g_bubble_glass_translucency` records that answer so the beds and the
+ * card's inner panel — painted every frame on the hot path, which must not
+ * each re-enter GHOST — can read it. It deliberately sits OUTSIDE the
+ * platform block above: the kit call it caches is portable, and false is
+ * the honest answer on a platform that has nothing to composite the
+ * window's alpha. */
 static bool g_bubble_glass_translucency = false;
 
 /* Called once per island window, right after it takes its corner radius --
@@ -349,10 +360,44 @@ static void agent_bubble_try_glass_translucency(void *ghostwin)
   g_bubble_glass_translucency = ui::mixar_glass_window_apply_translucency(ghostwin, true);
 }
 
-/** May the beds write alpha 0? Only if the platform acted on the request. */
-static bool agent_bubble_island_bed_is_transparent()
+/** May the beds and the inner panel write a frost wash?
+ *
+ * On macOS/Windows the island is always asked to be translucent; the latch
+ * can stay false if that request ran before `ghostwin` existed, and an
+ * opaque `#121212` panel fill is then what hid the frost. Linux keeps the
+ * latch (it never flips). */
+bool agent_bubble_island_bed_is_transparent()
 {
+#if defined(__APPLE__) || defined(_WIN32)
+  return true;
+#else
   return g_bubble_glass_translucency;
+#endif
+}
+
+void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
+{
+  GPU_color_mask(true, true, true, true);
+  GPU_blend(GPU_BLEND_NONE);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(rgba);
+  immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax);
+  immUnbindProgram();
+}
+
+/* The WINDOW region's panel colour. Opaque #121212 when the window cannot
+ * show through; alpha 0 when it can, so AppKit frost (or DWM alpha) is not
+ * buried under a second near-black slab. BLEND_NONE still covers the rect. */
+static void agent_bubble_island_panel_color(float r_rgba[4])
+{
+  const float surface[4] = AGENT_COL_SURFACE;
+  r_rgba[0] = surface[0];
+  r_rgba[1] = surface[1];
+  r_rgba[2] = surface[2];
+  r_rgba[3] = agent_bubble_island_bed_is_transparent() ? 0.0f : surface[3];
 }
 
 /* Mixie chat's custom-drawn region callbacks. We reuse them
@@ -952,14 +997,13 @@ static float agent_bubble_pad_ratio(const wmWindow *win)
 
 /** Backdrop for ONE region — never a framebuffer-wide clear.
  *
- * The bed covers every pixel of the region every frame; where the platform
- * gave the island window a translucent background the alpha goes to zero
- * instead of one, because an opaque bed would leave that transparency with
- * nothing to reveal and the glass card would read as paint on black. Painting
- * transparent pixels rather than skipping the fill is what keeps the stale
- * region-buffer guarantee: a composite landing in the gap between a resize and
- * the next tagged redraw still shows a bed, not the bare backdrop. BLEND_NONE
- * is what writes the alpha straight through. */
+ * The bed covers every pixel of the region every frame. On a translucent
+ * window the write is a REPLACE (BLEND_NONE) of a dark-glass wash: dest-over
+ * cannot lower dest A=1, Metal clear has been observed to leave alpha at 1,
+ * and an A=0 fragment is a no-op on that backend. The wash alpha is what
+ * WindowServer composites over the frost sibling. The opaque path still
+ * fills the rect so a composite in the resize gap cannot show a bare
+ * backdrop. */
 static void agent_bubble_fill_region_backdrop(const ARegion *region)
 {
   rctf r;
@@ -967,8 +1011,23 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymin = 0.0f;
   r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
-  const float bed_a = agent_bubble_island_bed_is_transparent() ? 0.0f : 1.0f;
-  const float backdrop[4] = {0.0f, 0.0f, 0.0f, bed_a};
+  if (agent_bubble_island_bed_is_transparent()) {
+    GPU_color_mask(true, true, true, true);
+    /* Metal has been observed to ignore a clear of A=0; A=0.20 lands.
+     * IMM REPLACE follows so a leftover #121212 A=1 cannot survive. */
+    GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f);
+    GPU_blend(GPU_BLEND_NONE);
+    GPUVertFormat *format = immVertexFormat();
+    const uint pos = GPU_vertformat_attr_add(
+        format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+    immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+    /* CARD tint_bottom; alpha must be > 0 so the fragment lands. */
+    immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f);
+    immRectf(pos, r.xmin, r.ymin, r.xmax, r.ymax);
+    immUnbindProgram();
+    return;
+  }
+  const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
   GPU_blend(GPU_BLEND_NONE);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);
@@ -1234,7 +1293,8 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
    * region unmodified. With no conversation the region is only the min-height
    * sliver above the whole-panel input field — paint bare panel fill, no chat
    * (the ghost text is the design's empty state, not the greeting). */
-  const float panel_bg[4] = AGENT_COL_SURFACE;
+  float panel_bg[4];
+  agent_bubble_island_panel_color(panel_bg);
   bool draw_chat = false;
   if (const Scene *scene = CTX_data_scene(C)) {
     PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
@@ -1284,6 +1344,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
      * open") never fired again. With visibility false the call draws nothing
      * — it resets the runtime and drops the idle timer, which is the point. */
     mixie_chat_draw_ink_overlay(C, region);
+    agent_bubble_fill_region_backdrop(region);
 
     rctf r;
     r.xmin = 0.0f;
@@ -1292,8 +1353,11 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
     GPU_blend(GPU_BLEND_NONE);
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    const float fill[4] = AGENT_COL_SURFACE;
-    ui::draw_roundbox_4fv(&r, true, 0.0f, fill);
+    float fill[4];
+    agent_bubble_island_panel_color(fill);
+    if (fill[3] > 0.0f) {
+      ui::draw_roundbox_4fv(&r, true, 0.0f, fill);
+    }
 
     Scene *scene_mut = CTX_data_scene(C);
     if (scene_mut) {
@@ -1325,6 +1389,13 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
           ui::button_placeholder_set(input_but, "Describe your scene here...");
           ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
           ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
+          /* Emboss is required for clicks, but its default inner is opaque
+           * #121212. When frost is showing, recolour the chrome as a wash
+           * (but->col[3] == 0 means "no override", so this cannot be 0). */
+          if (agent_bubble_island_bed_is_transparent()) {
+            const uchar wash[4] = {18, 22, 20, 48};
+            ui::button_color_set(input_but, wash);
+          }
         }
         ui::block_end(C, field_block);
         ui::block_draw(C, field_block);
@@ -1370,6 +1441,12 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   ScrArea *area = CTX_wm_area(C);
   if (!win || !area || agent_bubble_window_is_pill(C)) {
     return;
+  }
+  /* Frost/Metal-alpha can run before CocoaMetalView is in the theme frame.
+   * Chrome sync is later, every layout, and is what actually flips the
+   * layer so the card body is not an opaque EDR plane. */
+  if (win->runtime != nullptr && win->runtime->ghostwin != nullptr) {
+    agent_bubble_try_glass_translucency(win->runtime->ghostwin);
   }
   const float scale = UI_SCALE_FAC > 0.0f ? UI_SCALE_FAC : 1.0f;
   /* Same unit rule as agent_ui_layout_build, including the Scribble pad's
@@ -1913,6 +1990,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #if defined(__APPLE__) || defined(_WIN32)
   Mixar_WindowForceSize(g_pill_ghostwin, width, height);
   Mixar_WindowSetCornerRadius(g_pill_ghostwin, radius);
+  /* ForceSize is when the Metal view is in the theme frame; the first
+   * frost request often ran before that and left an EDR slab. */
+  agent_bubble_pill_try_per_pixel_alpha(g_pill_ghostwin);
 #else
   (void)width;
   (void)height;
@@ -2792,6 +2872,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
     int os_h = 0;
 #if defined(__APPLE__) || defined(_WIN32)
     Mixar_WindowGetContentPixelSize(win->runtime->ghostwin, &os_w, &os_h);
+    agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);
 #endif
     if (os_w > 0 && os_h > 0) {
       pill_w = float(os_w);
@@ -2806,16 +2887,23 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
    * backdrop (paint a bed over the WHOLE region first), and the capsule drawn
    * at region-local origin landed shifted down (translate so it is drawn in
    * window coordinates). */
-  const float bed_a = agent_bubble_pill_bed_is_transparent() ? 0.0f : 1.0f;
-  const float bed[4] = {0.02f, 0.02f, 0.02f, bed_a};
   rctf region_rect;
   region_rect.xmin = 0.0f;
   region_rect.xmax = float(region->winx);
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
-  GPU_blend(GPU_BLEND_NONE);
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
+  /* PILL tint_bottom at the island's wash alpha. A=0 is a Metal no-op
+   * and dest-over cannot lower dest A=1 — both left the capsule a slab. */
+  const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+  const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+  if (agent_bubble_pill_bed_is_transparent()) {
+    agent_bubble_replace_frost_wash(&region_rect, wash);
+  }
+  else {
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
+  }
 
   AgentIslandState state;
   agent_ui_state_gather(C, &state);

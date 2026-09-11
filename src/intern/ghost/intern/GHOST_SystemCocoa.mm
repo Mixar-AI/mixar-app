@@ -16,6 +16,7 @@
 #include "GHOST_EventWheel.hh"
 #include "GHOST_TimerManager.hh"
 #include "GHOST_TimerTask.hh"
+#include "GHOST_MixarGlassCocoa.hh"
 #include "GHOST_WindowCocoa.hh"
 #include "GHOST_WindowManager.hh"
 
@@ -1949,6 +1950,7 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
       win.opaque = YES;
       win.backgroundColor = [NSColor windowBackgroundColor];
     }
+    Mixar_CocoaGlassSyncRadius(win, float(clamped));
   }
 }
 
@@ -1965,18 +1967,10 @@ extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
   }
 
   @autoreleasepool {
-    if (enable) {
-      /* Tell the compositor this window has per-pixel alpha.
-       * Wherever the GPU clear colour has alpha < 1, the window
-       * becomes semi-transparent (see-through).  No blur / vibrancy —
-       * just a tinted translucent background. */
-      win.opaque = NO;
-      win.backgroundColor = [NSColor clearColor];
-    }
-    else {
-      win.opaque = YES;
-      win.backgroundColor = [NSColor windowBackgroundColor];
-    }
+    /* Sibling frost in the theme frame + this window's Metal alpha. See
+     * GHOST_MixarGlassCocoa.mm — do not parent a frost view under the
+     * GPU surface or swap contentView from here. */
+    Mixar_CocoaGlassSetEnabled(win, enable);
   }
 }
 

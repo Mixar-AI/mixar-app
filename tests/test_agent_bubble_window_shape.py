@@ -38,6 +38,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WIN32 = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemWin32.cc"
 COCOA = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemCocoa.mm"
+COCOA_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassCocoa.mm"
 EDITOR = ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
 PILL_DRAW = EDITOR / "agent_ui_draw.cc"
 SPACE = EDITOR / "space_agent_bubble.cc"
@@ -201,11 +202,34 @@ class TestCrossPlatformContract:
             assert "agent_bubble_pill_bed_is_transparent()" in body, fn
             assert "GPU_BLEND_NONE" in body, fn
             assert "0.02f" in body, fn
+            assert "agent_bubble_replace_frost_wash" in body, fn
+            assert "0.075f, 0.078f, 0.075f, 0.20f" in body, fn
 
     def test_alpha_is_only_reached_for_on_windows(self) -> None:
-        """macOS already has an anti-aliased mask; this is a Win32 workaround."""
+        """Win32 asks DWM; macOS asks the glass kit (sibling frost + Metal alpha)."""
         body = _fn_body(_read(SPACE), "static void agent_bubble_pill_try_per_pixel_alpha(")
         assert "#ifdef _WIN32" in body
+        assert "mixar_glass_window_apply_translucency" in body
+
+    def test_the_pill_bed_does_not_wait_on_the_latch(self) -> None:
+        """Same trap as the island: a false latch paints the opaque bed."""
+        body = _fn_body(_read(SPACE), "bool agent_bubble_pill_bed_is_transparent(")
+        assert "return true;" in body
+        assert "g_pill_per_pixel_alpha" not in body
+
+    def test_frost_skips_the_dest_over_pill_capsule(self) -> None:
+        """glass_fill_round dest-overs; on frost that is the slab."""
+        body = _fn_body(_read(PILL_DRAW), "void agent_ui_draw_status_pill(")
+        assert "if (agent_bubble_pill_bed_is_transparent())" in body
+        assert "agent_bubble_replace_frost_wash(&pill, wash);" in body
+        assert "glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);" in body
+
+    def test_the_pill_retries_frost_after_the_view_exists(self) -> None:
+        """First SetBlurBehind can run before CocoaMetalView is attached."""
+        header = _fn_body(_read(SPACE), "void agent_bubble_header_region_draw(")
+        assert "agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);" in header
+        size = _fn_body(_read(SPACE), "static void pill_set_size(")
+        assert "agent_bubble_pill_try_per_pixel_alpha(g_pill_ghostwin);" in size
 
 
 class TestIslandWindowTranslucency:
@@ -213,18 +237,19 @@ class TestIslandWindowTranslucency:
 
     Where the pill is shaped by DWM honouring its client alpha, the island is
     one window painting several regions, so its route out is the kit's
-    ``mixar_glass_window_apply_translucency`` -- a WINDOW background request,
-    not a blur, and a defined no-op returning false off macOS/Windows. The
-    return value is the whole point of calling it rather than an ``#ifdef``:
-    it says whether the platform acted.
+    ``mixar_glass_window_apply_translucency`` -- a WINDOW background request
+    (per-pixel alpha, plus a theme-frame sibling frost on macOS) and a
+    defined no-op returning false off macOS/Windows. The return value is the
+    whole point of calling it rather than an ``#ifdef``: it says whether the
+    platform acted.
 
     The beds then decide what to do with that. They keep covering every pixel
     of every region -- the stale-buffer guarantee the pill's bed exists for is
     the same one -- and only their ALPHA moves: zero where the platform gave
-    the window something to show through, one where it did not. So the card
-    reads as glass over the desktop on macOS and Windows, the design surfaces
-    that live inside it stay the near-black they are meant to be, and on Linux
-    nothing changes at all.
+    the window something to show through, one where it did not. The WINDOW
+    region's panel fill and the chat bg-override follow the same flag: an
+    opaque ``#121212`` slab there hid the frost even when the bed was clear.
+    On Linux nothing changes at all.
     """
 
     def test_the_request_goes_through_the_kit(self) -> None:
@@ -251,46 +276,48 @@ class TestIslandWindowTranslucency:
             "shaping the island."
         )
 
-    def test_the_beds_read_the_flag_and_nothing_else(self) -> None:
+    def test_macos_windows_beds_do_not_wait_on_the_latch(self) -> None:
+        """Shaped corners proved the window is already non-opaque while the
+        latch stayed false and the inner panel kept painting ``#121212``.
+        """
+        body = _fn_body(_read(SPACE), "bool agent_bubble_island_bed_is_transparent(")
+        assert "#if defined(__APPLE__) || defined(_WIN32)" in body
+        assert "return true;" in body
+        assert "return g_bubble_glass_translucency;" in body
+
+    def test_the_beds_and_the_panel_read_the_flag(self) -> None:
         src = _read(SPACE)
-        # One definition, one use -- the region backdrop.
-        assert src.count("agent_bubble_island_bed_is_transparent") == 2, (
-            "Only the region backdrop may key off the window's translucency. "
-            "The panel fill, the transcript's bg override and the footer are "
-            "design surfaces -- the near-black the card is drawn around -- and "
-            "letting them follow would empty the island out instead of "
-            "revealing the desktop behind it."
+        assert "agent_bubble_island_panel_color" in src
+        helper = _fn_body(src, "static void agent_bubble_island_panel_color(")
+        assert "agent_bubble_island_bed_is_transparent() ? 0.0f : surface[3]" in helper
+        assert src.count("agent_bubble_island_panel_color(") >= 3, (
+            "chat bg-override, empty-state fill and the helper itself"
         )
 
     def test_the_bed_still_paints_every_pixel_of_its_region(self) -> None:
         """The bed was never allowed to become "don't paint it".
 
-        Alpha 0 hides it; skipping the fill would not. The region buffer is
-        freed on perceived resizes and only repainted on the next tagged
-        redraw, and painting the whole rect every frame is what stops a
-        composite in that gap showing the bare backdrop.
+        A dest-over wash cannot lower dest A=1, and an A=0 fragment is a
+        no-op on Metal, so the translucent path REPLACES a dark-glass wash.
+        The opaque path still fills the rect. Either way every pixel is
+        written each frame so a composite in the resize gap cannot show
+        the bare backdrop.
         """
         body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
-        assert "float(BLI_rcti_size_x(&region->winrct) + 1)" in body
-        assert "float(BLI_rcti_size_y(&region->winrct) + 1)" in body
+        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f)" in body
+        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in body
+        assert "immRectf(pos, r.xmin, r.ymin, r.xmax, r.ymax)" in body
+        assert "GPU_BLEND_NONE" in body
         assert "ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);" in body
-        assert "return" not in body, (
-            "There is no skip path: whatever the alpha works out to, the bed "
-            "still reaches its fill."
-        )
         assert "GPU_BLEND_NONE" in body, (
-            "BLEND_NONE is what writes the alpha straight through rather than "
-            "blending over stale content."
+            "BLEND_NONE is what writes the bed's alpha straight through."
         )
 
     def test_the_bed_alpha_follows_the_window(self) -> None:
         body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
-        assert "agent_bubble_island_bed_is_transparent() ? 0.0f : 1.0f" in body, (
-            "The bed is opaque unless the platform actually acted -- a "
-            "hard-coded alpha either discards the translucency or stops the "
-            "island compositing as opaque where it must."
-        )
-        assert "const float backdrop[4] = {0.0f, 0.0f, 0.0f, bed_a};" in body
+        assert "agent_bubble_island_bed_is_transparent()" in body
+        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in body
+        assert "const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};" in body
 
     def test_both_island_styling_sites_ask_for_it(self) -> None:
         """Repair and open are separate paths; neither may be the only one.
@@ -300,13 +327,106 @@ class TestIslandWindowTranslucency:
         """
         src = _read(SPACE)
         call = "agent_bubble_try_glass_translucency(win->runtime->ghostwin);"
-        parts = src.split(call)
-        assert len(parts) == 3, (
-            f"both island styling sites must call it, found {len(parts) - 1}"
-        )
         radius = "Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);"
-        for before in parts[:2]:
-            assert radius in before[-500:], (
-                "The request must follow the corner radius: on macOS rounding "
-                "the window is what makes it non-opaque."
+        styled = 0
+        pos = 0
+        while True:
+            i = src.find(call, pos)
+            if i < 0:
+                break
+            if radius in src[max(0, i - 500) : i]:
+                styled += 1
+            pos = i + 1
+        assert styled == 2, (
+            f"both island styling sites must call it after the corner radius, found {styled}"
+        )
+        assert src.count(call) >= 3, (
+            "chrome sync must retry the request after the Metal view exists"
+        )
+
+    def test_macos_frost_is_a_theme_frame_sibling_not_a_metal_parent(self) -> None:
+        """AppKit frost belongs behind CocoaMetalView, never under it.
+
+        Parenting a frost view under GHOST's Metal surface, or swapping
+        ``contentView``, tears the GPU context. The installer adds the
+        glass as ``NSWindowBelow`` the host and only marks that window's
+        ``CAMetalLayer`` non-opaque.
+        """
+        cocoa = _read(COCOA)
+        body = cocoa[
+            cocoa.index("extern \"C\" void Mixar_WindowSetBlurBehind(") : cocoa.index(
+                "extern \"C\" void Mixar_WindowSetChromeless("
             )
+        ]
+        assert "Mixar_CocoaGlassSetEnabled(win, enable)" in body
+        assert "setContentView" not in body
+        assert "NSView.tag" not in body
+
+        glass = _read(COCOA_GLASS)
+        assert "NSWindowBelow relativeTo:host" in glass
+        assert "mixar_give_glass_a_lens" in glass
+        assert "MixarGlassLensView" in glass
+        assert "setContentView:" in glass
+        assert "setContentView:host" not in glass
+        assert "[win setContentView" not in glass
+        assert "NSView.tag" not in glass and "view.tag" not in glass
+        assert "metal.opaque = NO" in glass
+        assert "mixar_allow_metal_alpha(win.contentView)" in glass
+        assert "Mixar_CocoaGlassAllowMetalAlpha" in glass
+        assert "mixar_metal_layer_of" in glass
+        assert "wantsExtendedDynamicRangeContent = NO" in glass
+        assert "framebufferOnly = NO" in glass
+        assert "MTLPixelFormatBGRA8Unorm" in glass
+        assert "host.alphaValue = 0.78" not in glass
+        assert "CocoaMetalView (MixarTranslucency)" in glass
+        assert "return (win == nil) ? YES : win.opaque;" in glass
+        assert "NSClassFromString(@\"NSGlassEffectView\")" in glass
+        assert "NSVisualEffectView" in glass
+        assert 'setStyle:", 0)' in glass, "Regular style — Clear is a hole"
+        assert "NSVisualEffectMaterialUnderWindowBackground" in glass
+        assert "NSVisualEffectMaterialHUDWindow" not in glass
+        assert "colorWithWhite:0.07" not in glass
+
+    def test_metal_present_keeps_framebuffer_alpha(self) -> None:
+        """GHOST's present blit used to force alpha 1.0 on every pixel.
+
+        That made the drawable an opaque slab over the frost sibling no
+        matter what the GPU wrote. The overlay keeps the sampled alpha.
+        """
+        mtl = _read(ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_ContextMTL.mm")
+        assert "out_tex.a = 1.0" not in mtl
+        assert "out_tex.rgb = min(out_tex.rgb, 16384.0) * out_tex.a" in mtl
+        assert "return out_tex;" in mtl
+        assert "mixar_new_present_pipeline" in mtl
+        assert "metal_layer_.pixelFormat" in mtl
+        assert "Mixar_CocoaGlassAllowMetalAlpha(metal_view_)" in mtl
+        assert "METAL_FRAMEBUFFERPIXEL_FORMAT_EDR" in mtl
+
+    def test_frost_skips_the_opaque_panel_slab(self) -> None:
+        """Empty TOOLS paints the full island. The inner-panel fill was
+        opaque ``AGENT_COL_SURFACE``, so frost never reached the compositor.
+        """
+        draw = _read(PILL_DRAW)
+        island = _fn_body(draw, "void agent_ui_draw_island(")
+        assert "if (!agent_bubble_island_bed_is_transparent())" in island
+        assert "fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);" in island
+        assert "glass_fill_round(&layout->card_fill," in island
+
+    def test_empty_field_text_chrome_honours_wash(self) -> None:
+        """The empty-state prompt is a full-region Text button.
+
+        widget_box honoured button_color_set; widget_textbut did not, so the
+        theme inner stayed an opaque slab over the frost. Name-style chrome
+        now reads but->col the same way.
+        """
+        widgets = _read(
+            ROOT / "src" / "source" / "blender" / "editors" / "interface"
+            / "interface_widgets.cc"
+        )
+        assert "widget_textbut_custom" in widgets
+        assert "wt.custom = widget_textbut_custom" in widgets
+        space = _read(SPACE)
+        assert "const uchar wash[4] = {18, 22, 20, 48}" in space
+        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in space
+        assert "if (but->col[3] < 128)" in widgets
+        assert "BLI_rcti_size_y(rect) > 120" in widgets

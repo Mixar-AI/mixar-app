@@ -49,7 +49,9 @@ namespace {
  * pane vocabulary (`agent_ui_pane_kit.hh`) carries an alpha ramp, a rim, a
  * sheen, a specular or a shadow, and a material cannot be assembled out of
  * opaque chips. The RGBs are those tables' colours where a pane has an opaque
- * counterpart: CARD and ISLAND take the agent surface's green ramp, MENU, CHAT
+ * counterpart: CARD and ISLAND take the agent surface's near-black with a
+ * whisper of green (the artboard's saturated green ramp as a *glass tint*
+ * read as a plastic header; the neon meter is the card's green), MENU, CHAT
  * and MOODBOARD the neutral dark surfaces, PANEL the Parallel Agents card's
  * own near-black bed with that card's resting border green as its rim (the
  * card's green wash is painted at its call site: it is a horizontal ramp, and
@@ -64,20 +66,23 @@ namespace {
  * `MX_R_PILL`).
  */
 const MixarGlassTokens g_glass_tokens[] = {
-    /* MIXAR_GLASS_CARD */
+    /* MIXAR_GLASS_CARD — dark glass, not the artboard's saturated green ramp.
+     * That ramp as a pane tint plus the sheen read as a plastic header; the
+     * island's neon meter is already the green. A whisper of green in the
+     * bed keeps it in the family without flooding the card. */
     {
-        /* tint_top      */ {0.196f, 0.357f, 0.200f, 0.72f},
-        /* tint_bottom   */ {0.000f, 0.137f, 0.090f, 0.88f},
-        /* glaze         */ {0.071f, 0.071f, 0.071f, 0.30f},
-        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.10f},
-        /* rim           */ {0.294f, 0.596f, 0.376f, 0.55f},
-        /* refract       */ {1.000f, 1.000f, 1.000f, 0.16f},
+        /* tint_top      */ {0.090f, 0.120f, 0.100f, 0.16f},
+        /* tint_bottom   */ {0.040f, 0.055f, 0.048f, 0.24f},
+        /* glaze         */ {0.071f, 0.071f, 0.071f, 0.22f},
+        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.07f},
+        /* rim           */ {0.294f, 0.596f, 0.376f, 0.22f},
+        /* refract       */ {1.000f, 1.000f, 1.000f, 0.10f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.40f},
         /* radius        */ 12.0f,
         /* rim_width     */ 1.0f,
         /* blur_radius   */ 18.0f,
         /* shadow_width  */ 8.0f,
-        /* sheen_height  */ 20.0f,
+        /* sheen_height  */ 12.0f,
         /* specular_width*/ 26.0f,
         /* specular_alpha*/ 0.10f,
         /* specular_period*/ 6.0f,
@@ -123,20 +128,21 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_alpha*/ 0.06f,
         /* specular_period*/ 8.0f,
     },
-    /* MIXAR_GLASS_ISLAND */
+    /* MIXAR_GLASS_ISLAND — same dark glass as CARD; this row is the window
+     * backdrop when a surface paints the island's own chrome, not the card. */
     {
-        /* tint_top      */ {0.196f, 0.357f, 0.200f, 0.78f},
-        /* tint_bottom   */ {0.000f, 0.137f, 0.090f, 0.90f},
-        /* glaze         */ {0.071f, 0.071f, 0.071f, 0.28f},
-        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.09f},
-        /* rim           */ {0.294f, 0.596f, 0.376f, 0.50f},
-        /* refract       */ {1.000f, 1.000f, 1.000f, 0.14f},
+        /* tint_top      */ {0.086f, 0.110f, 0.094f, 0.16f},
+        /* tint_bottom   */ {0.035f, 0.047f, 0.040f, 0.24f},
+        /* glaze         */ {0.071f, 0.071f, 0.071f, 0.20f},
+        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.06f},
+        /* rim           */ {0.294f, 0.596f, 0.376f, 0.18f},
+        /* refract       */ {1.000f, 1.000f, 1.000f, 0.08f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.42f},
         /* radius        */ 14.0f,
         /* rim_width     */ 1.0f,
         /* blur_radius   */ 16.0f,
         /* shadow_width  */ 10.0f,
-        /* sheen_height  */ 22.0f,
+        /* sheen_height  */ 12.0f,
         /* specular_width*/ 28.0f,
         /* specular_alpha*/ 0.09f,
         /* specular_period*/ 6.0f,
@@ -148,8 +154,8 @@ const MixarGlassTokens g_glass_tokens[] = {
      * (white at 0.14, `grad_*`'s own stroke); the WORKING rim is green and
      * pulses, so it is repainted at the call site where the pulse lives. */
     {
-        /* tint_top      */ {0.176f, 0.176f, 0.176f, 0.72f},
-        /* tint_bottom   */ {0.075f, 0.078f, 0.075f, 0.80f},
+        /* tint_top      */ {0.176f, 0.176f, 0.176f, 0.16f},
+        /* tint_bottom   */ {0.075f, 0.078f, 0.075f, 0.24f},
         /* glaze         */ {0.071f, 0.071f, 0.071f, 0.24f},
         /* sheen         */ {1.000f, 1.000f, 1.000f, 0.14f},
         /* rim           */ {1.000f, 1.000f, 1.000f, 0.14f},
