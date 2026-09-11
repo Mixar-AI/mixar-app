@@ -55,8 +55,8 @@ namespace {
  * card's green wash is painted at its call site: it is a horizontal ramp, and
  * this row's bed is vertical), PILL the brand green with the brightest rim in
  * the family (it is the smallest pane, so the rim is most of what identifies
- * it), CHIP tint only, no gloss and no specular, so it can sit on a pane
- * without doubling its material.
+ * it), CHIP tint + rim + a whisper of gloss (no shadow, no specular), so it
+ * can sit on a pane without casting its own material.
  *
  * `PILL.radius` is deliberately larger than any pill: the painter clamps a
  * radius to half the short side, which is exactly the capsule rule, so one

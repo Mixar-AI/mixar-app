@@ -263,16 +263,23 @@ class TestTheCardButtonsArePanes:
         """The pane is the BED; the accent wash and rim stay the button's own.
 
         Dropping the tint in favour of the neutral pane would silently demote
-        the primary call to action to a grey chip.
+        the primary call to action to a grey chip. Alphas live in
+        `UI_mixar_chrome.hh` so the card and every other accent surface stay in step.
         """
         switch = self._switch()
-        assert "MX_ACCENT, is_hover ? 0.32f : 0.22f" in switch
-        assert "MX_ACCENT, is_hover ? 0.85f : 0.55f" in switch
+        assert "MX_ACCENT," in switch
+        assert "mixar_chrome::card_accent_fill_hover" in switch
+        assert "mixar_chrome::card_accent_fill" in switch
+        assert "mixar_chrome::card_accent_outline_hover" in switch
+        assert "mixar_chrome::card_accent_outline" in switch
 
     def test_the_danger_button_keeps_its_tint_and_stroke(self) -> None:
         switch = self._switch()
-        assert "MX_DANGER, is_hover ? 0.18f : 0.12f" in switch
-        assert "MX_DANGER, is_hover ? 0.55f : 0.35f" in switch
+        assert "MX_DANGER," in switch
+        assert "mixar_chrome::card_danger_fill_hover" in switch
+        assert "mixar_chrome::card_danger_fill" in switch
+        assert "mixar_chrome::card_danger_outline_hover" in switch
+        assert "mixar_chrome::card_danger_outline" in switch
 
     def test_the_ghost_button_stays_borderless_until_hovered(self) -> None:
         """Its glass call is inside the hover branch, so the resting logout
@@ -290,7 +297,7 @@ class TestTheCardButtonsArePanes:
     def test_the_plain_button_keeps_its_border_and_a_hover_cue(self) -> None:
         """Its bed carries no colour, so hover must show in the pane's alpha."""
         switch = self._switch()
-        assert "mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, 1.0f)" in switch
+        assert "mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline)" in switch
         assert "MIXAR_GLASS_CHIP, is_hover ? 1.0f : 0.85f" in switch, (
             "the plain card button lost its only hover cue with the grey bed"
         )
@@ -409,8 +416,8 @@ class TestTheTopbarPillsArePanes:
         lit = body[body.index("if (lit) {") : body.index("else {")]
         assert "mixar_card_glass_round(" not in lit, "the lit pill was glassed"
         assert "draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);" in lit
-        assert "mixar_card_to_float(PILL_FILL_ON_A, b);" in lit
-        assert "mixar_card_to_float(PILL_FILL_ON_B, a);" in lit
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_a, b);" in lit
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_b, a);" in lit
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.
@@ -426,15 +433,15 @@ class TestTheTopbarPillsArePanes:
 
         Dropping them would erase the difference between a resting Cinema
         pill, an active one and a shading chip — all three would be the same
-        rim.
+        rim. Colours live in `UI_mixar_chrome.hh`.
         """
-        assert "mixar_card_outline_round(&pill, rad, PILL_BORDER, (is_hover || pressed) ? 1.0f : 0.85f);" in self._body(
+        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border, (is_hover || pressed) ? 1.0f : 0.85f);" in self._body(
             "void draw_cinema_pill("
         )
-        assert "mixar_card_outline_round(&pill, rad, PILL_BORDER_ON," in self._body(
+        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border_on," in self._body(
             "void draw_cinema_pill("
         )
-        assert "mixar_card_outline_round(&pill, rad, VIEW_PILL_BORDER, alpha);" in self._body(
+        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::viewport_pill_border, alpha);" in self._body(
             "void draw_viewport_pill("
         )
 
@@ -449,8 +456,8 @@ class TestTheTopbarPillsArePanes:
                 f"{signature} was glassed"
             )
         slider = self._body("void draw_slider_left(")
-        assert "mixar_card_fill_round(&track, rad, SLIDER_TRACK);" in slider
-        assert "mixar_card_fill_round(&thumb, rad, is_hover ? SLIDER_THUMB_HOVER : SLIDER_THUMB);" in slider
+        assert "mixar_card_fill_round(&track, rad, mixar_chrome::slider_track);" in slider
+        assert "mixar_card_fill_round(&thumb, rad, is_hover ? mixar_chrome::slider_thumb_hover : mixar_chrome::slider_thumb);" in slider
 
     def test_the_avatar_disc_stays_flat(self) -> None:
         """The disc is a picture, not a pane.
@@ -459,7 +466,7 @@ class TestTheTopbarPillsArePanes:
         """
         body = self._body("void draw_profile_pill(")
         disc = body[body.index("rctf disc;") : body.index("mixar_card_draw_text")]
-        assert "mixar_card_fill_round(&disc, rad, PROFILE_AVATAR);" in disc
+        assert "mixar_card_fill_round(&disc, rad, mixar_chrome::profile_avatar);" in disc
         assert "mixar_card_glass_round(" not in disc, "the avatar disc was glassed"
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:

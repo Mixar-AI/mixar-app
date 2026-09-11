@@ -71,7 +71,8 @@ enum eMixarGlassRole {
   MIXAR_GLASS_PILL,
   /** The Mixie chat's bubbles and composer. */
   MIXAR_GLASS_CHAT,
-  /** Chips and buttons sitting on a pane: tint only, no gloss, no rim. */
+  /** Chips and buttons sitting on a pane: tint, rim, whisper of gloss;
+   * no shadow and no specular (must not cast over the host pane). */
   MIXAR_GLASS_CHIP,
   /** The Mixie moodboard's nodes, media frames and floating panels. */
   MIXAR_GLASS_MOODBOARD,
