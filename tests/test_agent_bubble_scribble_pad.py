@@ -125,7 +125,7 @@ def test_pill_detection_is_by_window_identity():
     # The width heuristic survives only as the no-pill fallback, and nowhere
     # else decides pill-ness by width any more.
     assert BUBBLE_CC.count("WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH") == 1
-    begin = _body(BUBBLE_CC, "static bool agent_bubble_island_begin(")
+    begin = _body(BUBBLE_CC, "bool agent_bubble_island_layout_get(")
     assert "agent_bubble_window_is_pill(C)" in begin
 
 
@@ -138,7 +138,7 @@ def test_pad_unit_is_the_default_width_unit():
     ratio = _body(BUBBLE_CC, "static float agent_bubble_pad_ratio(const wmWindow *win)")
     assert "float(AGENT_BUBBLE_DEFAULT_WIDTH) / float(logical_w)" in ratio
     assert "Mixar_WindowGetContentSize(" in ratio
-    begin = _body(BUBBLE_CC, "static bool agent_bubble_island_begin(")
+    begin = _body(BUBBLE_CC, "bool agent_bubble_island_layout_get(")
     assert "agent_bubble_pad_ratio(win)" in begin
     assert "/*pad_real_w=*/(pad_ratio > 0.0f) ? px_w : 0" in begin
     chrome = _body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(const bContext *C)")

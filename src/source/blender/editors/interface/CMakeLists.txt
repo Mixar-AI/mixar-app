@@ -43,6 +43,9 @@ set(SRC
   interface_icons.cc
   interface_icons_event.cc
   interface_layout.cc
+  mixar/style.cc
+  mixar/text.cc
+  mixar/components.cc
   interface_mixar_card_button.cc
   interface_mixar_card_icons.cc
   interface_mixar_cinema_row.cc
@@ -189,6 +192,7 @@ if(WITH_GTESTS)
   )
   set(TEST_SRC
     interface_ops_test.cc
+    mixar/style_test.cc
   )
 
   set(TEST_LIB

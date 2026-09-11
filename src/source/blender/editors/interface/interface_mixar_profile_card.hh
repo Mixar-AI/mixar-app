@@ -15,7 +15,7 @@
  *
  * Elements are built through the ordinary #Layout API so Blender
  * computes sizes and the popover auto-fits, then tagged with
- * #UI_BUT2_MIXAR_CARD so widget dispatch routes them to
+ * dedicated button style metadata so widget dispatch routes them to
  * #UI_mixar_profile_card_draw_element instead of the stock widget. That
  * keeps layout correctness (which absolute placement inside a popover
  * would lose) while still giving full control of the drawing.
@@ -29,6 +29,7 @@
 #include <cstdint>
 
 #include "BLI_sys_types.h"
+#include "UI_mixar_types.hh"
 namespace blender {
 struct bContext;
 struct rcti;
@@ -46,59 +47,7 @@ enum class ButtonType : int8_t;
  * What a card element draws as. Stored on the button by the builder and
  * read back by the draw function; see #UI_mixar_card_element_get.
  */
-enum class MixarCardElement : int {
-  None = 0,
-  /** "Welcome, Rahul !" — oversized, full-contrast. */
-  Heading,
-  /** "(rahul@mixar.app)" — small, dim. */
-  Muted,
-  /** "Your Usage" — small, one tier brighter than #Muted so the section
-   * reads as a heading rather than as more metadata. */
-  SectionLabel,
-  /** "4300 of 5000 left" — small, muted, right-aligned. */
-  MetaRight,
-  /** "PRO Plan" — small bordered chip. */
-  Pill,
-  /** Full-width quota bar with the percentage inside the fill. */
-  UsageBar,
-  /** "Buy Credits" — accent-outlined compact button. */
-  AccentButton,
-  /** Dashboard / AI Provider Settings / Docs — outlined icon buttons. */
-  CardButton,
-  /** "Report a Bug" — danger-tinted variant of CardButton. */
-  DangerButton,
-  /** "Logout" — borderless full-width strip. */
-  GhostButton,
-  /** Horizontal rule between card sections. */
-  Divider,
-  /** Danger-tinted body text — inline error copy in card-styled dialogs. */
-  DangerText,
-  /** Topbar mode slider, left half (Zen). Paints the WHOLE two-up track and
-   * the animated thumb, then its own label — the right half paints only its
-   * label, so the thumb can never cover the left one (buttons draw in
-   * creation order). Payload carries the target: 0 = left active, 1 = right. */
-  ModeSliderLeft,
-  /** Topbar mode slider, right half (Engine): label only. */
-  ModeSliderRight,
-  /** Topbar "Cinema Mode" pill: dark fill, hairline border, gradient label.
-   * Payload is 1.0 while the mode is active. */
-  CinemaPill,
-  /** Zen viewport shading pill ("Solid" / "Rendered"): the design's dark
-   * chip at full opacity when live, 49% when not. Payload is 1.0 for the
-   * live one. */
-  ViewportPill,
-  /** Topbar account chip: dark slab, label left, full-height avatar disc at
-   * the right end carrying the stock person glyph. */
-  ProfilePill,
-  /** Cinema Mode popup row (aspect / lens / output / interpolation lists):
-   * the surface's graded row chip when live (payload 1.0), plain dim text
-   * otherwise, so a dropdown's list matches the value blocks it opens from.
-   * Painted in `interface_mixar_cinema_row.cc`. */
-  CinemaRow,
-  /** Sentinel — keep last. #UI_mixar_card_element_get range-checks against
-   * it, so a kind appended after it would silently read back as None. */
-  Count,
-};
+
 
 /**
  * Build the account card into \a layout.
@@ -143,36 +92,14 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
 bool UI_mixar_card_element_is_button(MixarCardElement element);
 
 /** How a Cinema Mode popup row paints (the CinemaRow payload). */
-enum class MixarCinemaRowKind : int {
-  /** An option; a Row (toggle) button lights itself from UI_SELECT. */
-  Option = 0,
-  /** The current choice: the graded chip. */
-  Active = 1,
-  /** An action ("Export 2 Keyframes"): white label, hover fill, no chip. */
-  Action = 2,
-  /** One cell of a segmented group (the lens popup's Perspective /
-   * Orthographic / Panoramic): consecutive Segment buttons on one baseline
-   * form a group; the hovered cell widens to show its whole label. */
-  Segment = 3,
-  /** A section caption ("Keyframes", "Render Guides", the shot heading):
-   * dim caption text, no chrome. */
-  Caption = 4,
-  /** A NumSlider: the row-class track with a green fill to the value,
-   * label left, value right. */
-  Slider = 5,
-  /** A Text field laid over text the surface painted itself (My Cameras
-   * rename): paints NOTHING while idle; while being edited the chip is
-   * painted and the stock text-edit drawing runs on top. */
-  Field = 6,
-};
+
 
 /**
  * Tag \a but (created straight on a Block, not through a Layout) as a
  * Cinema Mode popup row of \a kind.
  *
- * On a button whose `hardmin`/`hardmax` are data (see
- * #UI_mixar_cinema_row_carries_value) only the card flag is set and the
- * kind follows the button type; \a kind is ignored there.
+ * Value-carrying controls retain their type-derived recipe. All presentation
+ * lives in MixarButtonStyle; numeric ranges and enum values are untouched.
  */
 void UI_mixar_cinema_row_tag(Button *but, MixarCinemaRowKind kind);
 
@@ -194,15 +121,14 @@ ButtonType UI_mixar_button_type(const Button *but);
 /**
  * Whether \a but's `hardmin`/`hardmax` hold its value range or string
  * length (Num / NumSlider / Scroll / Text / Toggle / IconToggle / Menu),
- * so the CinemaRow tag must not write them. #UI_mixar_card_element_get
- * reads such a flagged button as a CinemaRow without looking at `hardmin`.
+ * for compatibility callers. Styling never writes value fields on ANY type.
  */
 bool UI_mixar_cinema_row_carries_value(const Button *but);
 
 /**
  * The kind a tagged CinemaRow paints as: derived from the button type for
  * value-carrying buttons (NumSlider -> Slider, Text -> Field, toggles ->
- * Option), otherwise the payload in `hardmax`.
+ * Option), otherwise the dedicated Cinema metadata.
  */
 MixarCinemaRowKind UI_mixar_cinema_row_kind_get(const Button *but);
 

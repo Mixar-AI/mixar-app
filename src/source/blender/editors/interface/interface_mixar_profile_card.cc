@@ -8,7 +8,7 @@
  * Mixar account card — layout construction.
  *
  * Builds the profile dropdown's contents through the ordinary #Layout
- * API and tags each item with #UI_BUT2_MIXAR_CARD so widget dispatch
+ * API and tags each item with dedicated style metadata so widget dispatch
  * routes it to the card's own drawing (see
  * `interface_mixar_profile_card_draw.cc`).
  *
@@ -40,12 +40,14 @@
 
 #include "UI_interface_c.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar_chrome.hh"
 #include "UI_resources.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_icons.hh"
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
+#include "UI_mixar.hh"
 #include "interface_mixar_section.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
@@ -86,12 +88,12 @@ constexpr bool CARD_SHOW_CREDIT_FIGURES = false;
  * height (and the roundbox clamp takes it to h/2), which draws every
  * action as a lozenge. At #ROW_ACTION the same radius is roughly a
  * quarter of the height and reads as the intended rounded rect. */
-constexpr float ROW_HEADING = 1.6f;
+constexpr float ROW_HEADING = mixar_chrome::card_row_heading;
 constexpr float ROW_USAGE_BAR = 1.5f;
-constexpr float ROW_CTA = 1.7f;
-constexpr float ROW_ACTION = 1.9f;
-constexpr float ROW_LOGOUT = 1.7f;
-constexpr float ROW_DIVIDER = 0.6f;
+constexpr float ROW_CTA = mixar_chrome::card_row_cta;
+constexpr float ROW_ACTION = mixar_chrome::card_row_action;
+constexpr float ROW_LOGOUT = mixar_chrome::card_row_cta;
+constexpr float ROW_DIVIDER = mixar_chrome::card_row_divider;
 
 /* -------------------------------------------------------------------- */
 /* Measuring                                                             */
@@ -136,16 +138,7 @@ void mark_last(Layout *layout, const MixarCardElement element, const float paylo
     return;
   }
   Button *but = block->buttons_ptrs.last().get();
-  UI_BUT2_MIXAR_CARD_SET(but);
-  /* `hardmin`/`hardmax` are inert on the label and operator buttons used
-   * here — neither carries a data pointer or RNA property, so
-   * `ui_but_value_get()` returns before reading them, and the
-   * `hardmin <= hardmax` assertion in `ui_but_update_ex()` is scoped to
-   * Num/Scroll/NumSlider. */
-  but->hardmin = float(int(element));
-  /* For buttons the payload is the #MixarCardIcon; for the quota bar it
-   * is the fill fraction. */
-  but->hardmax = payload;
+  mixar_style_card(but, element, payload);
 }
 
 /* -------------------------------------------------------------------- */
@@ -470,16 +463,9 @@ void add_logout(Layout *layout)
 
 MixarCardElement UI_mixar_card_element_get(const Button *but)
 {
-  if (but == nullptr || !UI_BUT2_MIXAR_CARD_TEST(but)) {
-    return MixarCardElement::None;
-  }
-  /* A flagged value button keeps its RANGE in hardmin; only a Cinema row tags one. */
-  if (UI_mixar_cinema_row_carries_value(but)) {
-    return MixarCardElement::CinemaRow;
-  }
-  const int value = int(but->hardmin);
-  const bool known = value > int(MixarCardElement::None) && value < int(MixarCardElement::Count);
-  return known ? MixarCardElement(value) : MixarCardElement::None;
+  return but && but->mixar_style.component == MixarComponent::LegacyCard &&
+             but->mixar_style.card < MixarCardElement::Count ?
+             but->mixar_style.card : MixarCardElement::None;
 }
 
 void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
@@ -487,6 +473,9 @@ void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
   const AccountInfo info = read_account(C);
 
   Layout &card = layout->column(false);
+  MixarScope scope = card.mixar_scope();
+  scope.density = mixar_chrome::density;
+  card.mixar_scope_set(scope);
 
   add_header(&card, info);
   card.separator(0.6f);

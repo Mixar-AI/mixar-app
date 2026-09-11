@@ -18,6 +18,7 @@ namespace blender {
 
 struct ARegion;
 struct bContext;
+struct wmOperatorType;
 struct rctf;
 
 /**
@@ -37,6 +38,8 @@ struct rctf;
  * `mixie.queue_cancel_job`; a "Clear finished" action appears when any
  * terminal rows exist, bound to `mixie.queue_clear_all_completed`.
  */
+void MIXAR_OT_queue_navigate(wmOperatorType *ot);
+
 void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, float u);
 
 }  // namespace blender

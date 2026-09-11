@@ -136,6 +136,7 @@ Backend runs a LangGraph orchestrator (Claude Sonnet 4.6 primary, Gemini 3.1 Pro
 
 ## Cross-cutting Patterns & Gotchas
 
+- **Shared native Mixar UI**: `UI_mixar{,_types,_tokens}.hh` and `editors/interface/mixar/` own presentation independently of native values. Python surface scopes and C++ buttons share components; the 3D island is the first consumer. Blender owns events, RNA and editing; legacy card/Cinema wrappers preserve their appearance.
 - **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks. A draw or layout callback must never resize an OS window or re-run `ED_screen_refresh` (see the agent_bubble doc).
 - **Singleton + daemon threads** for persistent connections (ConnectionManager WebSocket). Background threads must not touch `bpy`; marshal to the main thread via timers. `on_connected` runs on the WebSocket thread.
 - **atexit cleanups must not touch `bpy` data** (pinned by `tests/test_shutdown_hooks_atexit.py`): `BPY_python_end` runs *after* `BKE_blender_free()` in `WM_exit_ex`, so an RNA/ID-property write or `draw_handler_remove` there is a use-after-free. `shutdown_hooks._run_all_cleanups` forwards `app_exit` so UI-side cleanup is skipped on that path; thread/process/socket teardown is what atexit is for.

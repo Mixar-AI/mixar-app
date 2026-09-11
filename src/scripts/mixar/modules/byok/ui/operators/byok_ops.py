@@ -27,6 +27,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 
 from ...core import byok_client, model_suggestions
 from . import byok_dialog_ui
@@ -120,7 +121,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # invoke_props_dialog (not invoke_popup) so the dialog redraws
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
-        return wm.invoke_props_dialog(self, width=640)
+        return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
 
     def execute(self, context):
         # No-op: Save / Remove are their own operators, invoked from draw().

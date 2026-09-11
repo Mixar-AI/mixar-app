@@ -234,7 +234,7 @@ def test_island_voice_chip():
     assert "if (state->voice_available) {" in DRAW_CC
     assert "AGENT_ICON_MIC" in DRAW_CC
     # Without the operator the chips after Voice close the gap.
-    begin = BUBBLE_CC[BUBBLE_CC.index("static bool agent_bubble_island_begin(") :]
+    begin = BUBBLE_CC[BUBBLE_CC.index("bool agent_bubble_island_layout_get(") :]
     begin = begin[: begin.index("\n}\n")]
     assert "if (!r_state->voice_available)" in begin
     assert "thumbs_after = layout->chip_voice;" in BUBBLE_CC

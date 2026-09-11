@@ -22,23 +22,12 @@
 #pragma once
 
 #include "BLI_sys_types.h"
+#include "UI_mixar_types.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
 
-/** Card glyphs. Values are persisted in `Button::hardmax`, so append only. */
-enum class MixarCardIcon : int {
-  None = 0,
-  /** 2x2 tiles — Dashboard. */
-  Grid,
-  /** Two tracks with offset knobs — provider/settings. */
-  Sliders,
-  /** Page outline with text rules — documentation. */
-  Document,
-  /** Ringed exclamation — report a problem. */
-  Alert,
-  /** Diagonal cross — sign out. */
-  Cross,
-};
+/* Card glyph identity is stored in the button's runtime style descriptor. */
+
 
 /**
  * Draw \a icon centred on (\a cx, \a cy) inside a \a size x \a size box.

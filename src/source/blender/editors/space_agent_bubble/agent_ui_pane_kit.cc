@@ -38,7 +38,10 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_layout.hh"
 #include "UI_interface_c.hh"
+#include "WM_types.hh"
 
 #include "agent_ui_icons.hh"
 #include "agent_ui_pane_kit.hh"
@@ -53,34 +56,18 @@ namespace blender {
 
 void pane_fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(rect, true, radius, col);
+  ui::mixar_fill_round(*rect, radius, col);
 }
 
 float pane_text_width(const char *text, const float size)
 {
-  const int font = BLF_default();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
+  return ui::mixar_text_width(text, size);
 }
 
 void pane_label_left(
     const char *text, const float x, const float cy, const float size, const float col[4])
 {
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = BLF_default();
-  BLF_size(font, size);
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
+  ui::mixar_label_left(text, x, cy, size, col);
 }
 
 void pane_label_centre(
@@ -97,36 +84,14 @@ void pane_label_right(
 
 void pane_fit_text(char *text, const float max_w, const float size)
 {
-  if (pane_text_width(text, size) <= max_w) {
-    return;
+  const size_t capacity = strlen(text) + 1;
+  const std::string fitted = ui::mixar_fit_text(text, max_w, size);
+  /* This compatibility API only shrinks the caller's buffer. */
+  if (fitted.size() < capacity) {
+    memcpy(text, fitted.c_str(), fitted.size() + 1);
   }
-  /* A bare chop reads as a DIFFERENT string, not a shortened one — a mesh
-   * named "ReproCone" rendered as "ReproCon" and looked like the wrong
-   * result. Fit the head to `max_w` minus the ellipsis, then append it; a
-   * budget at or below zero cannot hold even the ellipsis, so fit to max_w. */
-  static const char ELLIPSIS[] = "\xE2\x80\xA6"; /* U+2026 */
-  const size_t ellipsis_len = sizeof(ELLIPSIS) - 1;
-  const size_t orig_len = strlen(text);
-  const float budget = max_w - pane_text_width(ELLIPSIS, size);
-  const float target = (budget > 0.0f) ? budget : max_w;
-
-  size_t len = orig_len;
-  while (len > 1) {
-    len--;
-    /* Never split a UTF-8 sequence: back up over continuation bytes. */
-    while (len > 1 && ((unsigned char)(text[len]) & 0xC0) == 0x80) {
-      len--;
-    }
-    text[len] = '\0';
-    if (pane_text_width(text, size) <= target) {
-      break;
-    }
-  }
-  /* Callers pass fixed `char[]` buffers and this function only ever SHRINKS
-   * them, so the ellipsis is written only where it fits inside what came in. */
-  if (budget > 0.0f && len + ellipsis_len <= orig_len) {
-    memcpy(text + len, ELLIPSIS, ellipsis_len);
-    text[len + ellipsis_len] = '\0';
+  else {
+    text[0] = '\0';
   }
 }
 
@@ -167,27 +132,35 @@ rctf pane_prompt_box_rect(const rctf &panel, const float strip_bottom_y, const f
   return box;
 }
 
+static ui::MixarComposerMetrics composer_metrics(const float u)
+{
+  return {PANE_ROW_H * u, PANE_BOTTOM_UP * u, PANE_FIELD_ACTION_GAP * u, PANE_BOX_MIN_H * u};
+}
+
+static ui::MixarComposerLayout composer_layout(const rctf &box, const float u)
+{
+  return ui::mixar_composer_layout(box.ymin, box.ymax, composer_metrics(u));
+}
+
 float pane_params_floor(const rctf &panel, const float u)
 {
-  /* Mirrors pane_prompt_box_rect's own bottom clamp, or the floor promises a
-   * box the box rect cannot deliver. */
+  /* Reserve both editable text and actions before assigning space to params. */
   const float box_bottom = std::max(panel.ymin + PANE_BOX_INSET * u, 2.0f);
-  return box_bottom + (PANE_BOX_MIN_H + PANE_BOX_GAP) * u;
+  return box_bottom + composer_metrics(u).minimum_height() + PANE_BOX_GAP * u;
 }
 
 bool pane_prompt_fits(const rctf &box, const float u)
 {
-  return BLI_rctf_size_y(&box) >= PANE_BOX_MIN_H * u;
+  return composer_layout(box, u).editable;
 }
 
 rctf pane_prompt_field_rect(const rctf &box, const float u)
 {
-  /* The field IS the whole box — the design's prompt area. Blender's
-   * multiline text path (Text + ui::BUT_TEXTEDIT_UPDATE + tall rect) renders
-   * top-left with a text-height caret, so no strip-sizing is needed; a
-   * top-strip variant was tried and read as "just a thin bar". */
-  UNUSED_VARS(u);
-  return box;
+  const auto layout = composer_layout(box, u);
+  rctf field = box;
+  field.ymin = layout.field_bottom;
+  field.ymax = layout.field_top;
+  return field;
 }
 
 void pane_prompt_box_paint(const rctf &box, const float u)
@@ -201,37 +174,33 @@ void pane_prompt_box_paint(const rctf &box, const float u)
 
 float pane_bottom_row_ymin(const rctf &box, const float u)
 {
-  const float y = box.ymin + PANE_BOTTOM_UP * u;
-  /* Clamp INSIDE the box: unclamped, a short box pushed the PANE_ROW_H row up
-   * through its top, so Upload and Generate floated over the params strip —
-   * and because the OPS block wins overlapping clicks, the params beneath
-   * them became unreachable. */
-  const float y_top_limit = box.ymax - PANE_ROW_H * u;
-  return std::max(box.ymin, std::min(y, y_top_limit));
+  return composer_layout(box, u).action_bottom;
 }
 
 rctf pane_generate_rect(const rctf &box, const float u)
 {
+  const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
   rect.xmin = rect.xmax - PANE_GENERATE_W * u;
-  rect.ymin = pane_bottom_row_ymin(box, u);
-  /* A box shorter than one row still cannot spill over its own top edge. */
-  rect.ymax = std::min(rect.ymin + PANE_ROW_H * u, box.ymax);
+  rect.ymin = layout.action_bottom;
+  rect.ymax = layout.action_top;
   return rect;
 }
 
-void pane_generate_paint(const rctf &rect, const char *label, const bool enabled, const float u)
+void pane_settings_button(ui::Block *block, const float right, const float top,
+                          const float u, const char *service, const char *model)
 {
-  const float fill[4] = PANE_COL_GENERATE;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  pane_label_centre(label,
-                    BLI_rctf_cent_x(&rect),
-                    BLI_rctf_cent_y(&rect),
-                    PANE_FONT * u,
-                    enabled ? strong : dim);
+  ui::Button *button = uiDefButO(block, ui::ButtonType::But, "mixar.pane_generation_settings",
+      wm::OpCallContext::InvokeDefault, "Settings", int(right - PANE_SETTINGS_W * u),
+      int(top - PANE_ROW_H * u), short(PANE_SETTINGS_W * u), short(PANE_ROW_H * u),
+      "Edit all settings, including parameters that do not fit in the strip");
+  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+  if (button) {
+    PointerRNA *props = ui::button_operator_ptr_ensure(button);
+    RNA_string_set(props, "service_key", service);
+    RNA_string_set(props, "model_slug", model);
+  }
 }
 
 float pane_action_chip_w(const char *label, const bool with_icon, const float u)
@@ -241,46 +210,11 @@ float pane_action_chip_w(const char *label, const bool with_icon, const float u)
   return pad + icon + pane_text_width(label, PANE_FONT * u) + pad;
 }
 
-void pane_action_chip_paint(
-    const rctf &rect, const char *label, const bool with_icon, const bool dim, const float u)
-{
-  const float fill[4] = PANE_COL_ACTION;
-  const float text[4] = AGENT_COL_TEXT;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  float x = rect.xmin + PANE_CHIP_PAD_X * u;
-  if (with_icon) {
-    const float edge = AGENT_CHIP_ICON * u;
-    rctf icon = {x, x + edge, cy - edge * 0.5f, cy + edge * 0.5f};
-    agent_ui_icon_draw(AGENT_ICON_IMAGE, &icon, dim ? text_dim : text, fill);
-    x += edge + AGENT_CHIP_ICON_GAP * u;
-  }
-  pane_label_left(label, x, cy, PANE_FONT * u, dim ? text_dim : text);
-}
-
 float pane_dropdown_chip_w(const char *label, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;
   const float chev = AGENT_CHIP_ICON * u * 0.8f;
   return pad + pane_text_width(label, PANE_FONT * u) + 10.0f * u + chev + pad * 0.75f;
-}
-
-void pane_dropdown_chip_paint(const rctf &rect, const char *label, const float u)
-{
-  const float fill[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  pane_label_left(label, rect.xmin + PANE_CHIP_PAD_X * u, cy, PANE_FONT * u, text);
-
-  const float chev = AGENT_CHIP_ICON * u * 0.8f;
-  rctf chev_box;
-  chev_box.xmax = rect.xmax - PANE_CHIP_PAD_X * u * 0.75f;
-  chev_box.xmin = chev_box.xmax - chev;
-  chev_box.ymin = cy - chev * 0.5f;
-  chev_box.ymax = cy + chev * 0.5f;
-  agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chev_box, text, fill);
 }
 
 rctf pane_segmented_layout(const float x,
@@ -308,41 +242,6 @@ rctf pane_segmented_layout(const float x,
   return track;
 }
 
-void pane_segmented_paint(const rctf *segs,
-                          const char *const *labels,
-                          const int active_index,
-                          const int count,
-                          const float u)
-{
-  if (count <= 0) {
-    return;
-  }
-  const float track_col[4] = PANE_COL_CHIP;
-  const float thumb_col[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-
-  rctf track = segs[0];
-  track.xmax = segs[count - 1].xmax;
-  pane_fill_round(&track, PANE_RADIUS * u, track_col);
-
-  for (int i = 0; i < count; i++) {
-    if (i == active_index) {
-      rctf thumb = segs[i];
-      thumb.xmin += PANE_SEG_INSET * u;
-      thumb.xmax -= PANE_SEG_INSET * u;
-      thumb.ymin += PANE_SEG_INSET * u;
-      thumb.ymax -= PANE_SEG_INSET * u;
-      pane_fill_round(&thumb, PANE_RADIUS * u, thumb_col);
-    }
-    pane_label_centre(labels[i],
-                      BLI_rctf_cent_x(&segs[i]),
-                      BLI_rctf_cent_y(&segs[i]),
-                      PANE_FONT * u,
-                      (i == active_index) ? text : dim);
-  }
-}
-
 float pane_onoff_chip_w(const char *label, const float u)
 {
   const float font = PANE_FONT * u;
@@ -351,59 +250,14 @@ float pane_onoff_chip_w(const char *label, const float u)
          PANE_CHIP_PAD_X * u * 0.75f;
 }
 
-void pane_onoff_chip_paint(const rctf &rect, const char *label, const bool on, const float u)
-{
-  const float fill[4] = PANE_COL_CHIP;
-  const float pill[4] = PANE_COL_PILL_ON;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  const float font = PANE_FONT * u;
-
-  pane_fill_round(&rect, PANE_RADIUS * u, fill);
-  const float cy = BLI_rctf_cent_y(&rect);
-  float x = rect.xmin + PANE_CHIP_PAD_X * u;
-  pane_label_left(label, x, cy, font, text);
-  x += pane_text_width(label, font) + 12.0f * u;
-
-  const float on_w = pane_text_width("ON", font) + 20.0f * u;
-  const float off_w = pane_text_width("OFF", font) + 20.0f * u;
-  const float pill_h = PANE_PILL_H * u;
-  rctf live;
-  live.xmin = on ? x : x + on_w;
-  live.xmax = live.xmin + (on ? on_w : off_w);
-  live.ymin = cy - pill_h * 0.5f;
-  live.ymax = cy + pill_h * 0.5f;
-  pane_fill_round(&live, PANE_RADIUS * u, pill);
-
-  pane_label_centre("ON", x + on_w * 0.5f, cy, font, on ? text : dim);
-  pane_label_centre("OFF", x + on_w + off_w * 0.5f, cy, font, on ? dim : text);
-}
-
 /** \} */
 /* -------------------------------------------------------------------- */
 /** \name Owned tooltips
  * \{ */
 
-namespace {
-
-std::string pane_tooltip_owned_fn(bContext * /*C*/, void *argN, blender::StringRef /*tip*/)
-{
-  return std::string(static_cast<const char *>(argN));
-}
-
-}  // namespace
-
 void pane_but_tooltip_owned(ui::Button *but, const char *text)
 {
-  if (but == nullptr || text == nullptr || text[0] == '\0') {
-    return;
-  }
-  const size_t size = strlen(text) + 1;
-  char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
-  memcpy(owned, text, size);
-  /* The callback form is the only one that owns its argument; `but->tip` is a
-   * bare StringRef and would dangle. `MEM_delete_void` is the matching free func. */
-  ui::button_func_tooltip_set(but, pane_tooltip_owned_fn, owned, MEM_delete_void);
+  ui::mixar_button_tooltip_owned(but, text);
 }
 
 /** \} */

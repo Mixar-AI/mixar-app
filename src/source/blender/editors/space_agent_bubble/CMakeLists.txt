@@ -28,14 +28,18 @@ set(SRC
   agent_ui_pane_kit.cc
   agent_ui_pane_kit_feedback.cc
   agent_ui_pane_kit_thumbs.cc
+  agent_ui_queue_navigation.cc
+  agent_ui_queue_data.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc
   agent_ui_tabsplat_paint.cc
+  agent_ui_tabsplat_state.cc
   agent_ui_tabmedia.cc
   agent_ui_tabmedia_util.cc
   agent_ui_state.cc
   agent_ui_tab3d.cc
   agent_ui_tab3d_params.cc
+  agent_ui_visible_if.cc
 
   agent_bubble_intern.hh
   agent_ui_draw.hh
@@ -44,6 +48,7 @@ set(SRC
   agent_ui_icons.hh
   agent_ui_layout.hh
   agent_ui_pane_kit.hh
+  agent_ui_queue_intern.hh
   agent_ui_queue.hh
   agent_ui_tabsplat.hh
   agent_ui_tabsplat_intern.hh
@@ -51,6 +56,7 @@ set(SRC
   agent_ui_tabmedia_intern.hh
   agent_ui_tab3d.hh
   agent_ui_tab3d_intern.hh
+  agent_ui_visible_if.hh
   agent_ui_theme.hh
 )
 

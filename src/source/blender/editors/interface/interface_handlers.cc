@@ -13803,6 +13803,35 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
   Button *but = region_find_active_but(region);
 
   if (but) {
+    /* Commit an edited Zen input and transfer the press to the native Zen
+     * action under the pointer, whether beside or overlapping the input.
+     * Otherwise the modal editor can consume the first Generate click.
+     * Keep native press/release handling and operator polling. */
+    if (event->type == LEFTMOUSE && event->val == KM_PRESS &&
+        but->mixar_style.theme == MixarTheme::Zen &&
+        but->mixar_style.component == MixarComponent::Input &&
+        ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+    {
+      Button *target = but_find_mouse_over(region, event);
+      if (target && target != but && target->mixar_style.theme == MixarTheme::Zen &&
+          target->mixar_style.component == MixarComponent::Action)
+      {
+#ifdef WITH_INPUT_IME
+        /* Match native click-outside commit for an in-progress composition. */
+        wmWindow *win = CTX_wm_window(C);
+        const wmIMEData *ime = win->runtime->ime_data;
+        if (ime && win->runtime->ime_data_is_composing && !ime->composite.empty() &&
+            but->type == ButtonType::Text)
+        {
+          textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                              ime->composite.size());
+        }
+#endif
+        button_activate_exit(C, but, but->active, true, false);
+        button_activate_init(C, region, target, BUTTON_ACTIVATE_OVER);
+        but = target;
+      }
+    }
     bScreen *screen = CTX_wm_screen(C);
     Button *but_other;
 

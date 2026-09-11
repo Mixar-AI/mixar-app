@@ -27,6 +27,11 @@
 namespace blender {
 
 struct ARegion;
+struct bContext;
+struct AgentIslandState;
+struct AgentIslandLayout;
+/** Resolve current host geometry without GPU state or window mutations. */
+bool agent_bubble_island_layout_get(const bContext *C, AgentIslandState *state, AgentIslandLayout *layout);
 
 /** A tab in the strip. Order is the artboard's, left to right. */
 enum AgentTabId {
