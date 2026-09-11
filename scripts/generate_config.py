@@ -99,11 +99,15 @@ def generate_config(version_file: str) -> dict:
             "auto_download": _env_bool("MIXAR_UPDATE_AUTO_DOWNLOAD", True),
         },
         # Enterprise network settings (empty = auto). Environment variables
-        # MIXAR_PROXY_URL / MIXAR_CA_BUNDLE / MIXAR_NO_PROXY take precedence.
-        # See docs/enterprise-network.md.
+        # MIXAR_PROXY_URL / MIXAR_CA_BUNDLE / MIXAR_EXTRA_CA_CERTS / MIXAR_NO_PROXY
+        # take precedence. ca_bundle REPLACES the trusted roots; extra_ca_certs
+        # ADDS files or folders of certificates on top (the per-user and
+        # machine-wide certs folders are always scanned). See
+        # docs/enterprise-network.md.
         "network": {
             "proxy_url": "",
             "ca_bundle": "",
+            "extra_ca_certs": "",
             "no_proxy": "",
         },
     }

@@ -34,7 +34,7 @@ def test_truststore_is_a_bundled_dependency_and_verified_by_builds():
 
 def test_generated_config_exposes_network_keys():
     source = _read("scripts", "generate_config.py")
-    for key in ('"network"', '"proxy_url"', '"ca_bundle"', '"no_proxy"'):
+    for key in ('"network"', '"proxy_url"', '"ca_bundle"', '"extra_ca_certs"', '"no_proxy"'):
         assert key in source
 
 
