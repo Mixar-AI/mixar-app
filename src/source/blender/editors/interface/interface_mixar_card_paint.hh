@@ -160,6 +160,11 @@ inline void mixar_card_outline_round(const rctf *rect,
  * No outline: the kit draws the family's rim. A surface that needs a coloured
  * stroke keeps its own `mixar_card_outline_round` call after this one.
  *
+ * Specular is always off here. Widget painters hand block coordinates, and the
+ * streak's scissor is region-px — a streak placed from this seam lands wrong.
+ * Region-space callers (island, chat, moodboard, viewport panel) go through
+ * `mixar_glass_draw` / their own wrappers and can keep the streak.
+ *
  * The kit takes region-px `rcti` and the design system works in `rctf`; the
  * conversion is exact for the integer rects the layout hands out.
  */
@@ -174,6 +179,7 @@ inline void mixar_card_glass_round(const rctf *rect,
   style.role = role;
   style.radius = rad;
   style.alpha = alpha;
+  style.draw_specular = false;
   mixar_glass_draw(pane, style);
 }
 }  // namespace blender::ui

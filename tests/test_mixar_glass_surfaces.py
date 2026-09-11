@@ -216,6 +216,16 @@ class TestTheSeamIsAPaneInsteadOfAFlatFill:
         assert "style.alpha = alpha;" in body
         assert "c[3]" not in body, "the seam scales a colour instead of the pane"
 
+    def test_the_seam_disables_specular_for_block_coordinates(self) -> None:
+        """Widget painters hand block px; the streak scissor is region-px.
+
+        Leaving the style default (`draw_specular = true`) would place the
+        travelling highlight a region-origin away from every topbar pill,
+        cinema chip and section card that crosses this seam.
+        """
+        body = _code(_fn_body(CARD_PAINT, "inline void mixar_card_glass_round("))
+        assert "style.draw_specular = false;" in body
+
     def test_the_flat_helpers_survive_untouched_for_controls(self) -> None:
         """The seam is additive: controls keep drawing flat shapes.
 
