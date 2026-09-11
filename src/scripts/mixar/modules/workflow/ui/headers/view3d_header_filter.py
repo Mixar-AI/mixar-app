@@ -5,9 +5,11 @@
 """3D viewport header & tool-panel filter for the dual-mode UI system.
 
 Monkey-patches:
-- VIEW3D_HT_header.draw         → renders only the shading-mode buttons
-                                   (wireframe/solid/material/rendered + popover)
-                                   when the viewport is in the Zen Mode workspace.
+- VIEW3D_HT_header.draw         → Mixar Solid/Rendered pills in Zen Mode
+                                   AND on the Texturing / Texture Paint
+                                   workspaces, so those surfaces match
+                                   Zen / Cinema chrome instead of the
+                                   stock Blender editor strip.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -28,14 +30,19 @@ Mode check uses context.workspace.name, not the global ui_mode preference.
 This is workspace-driven so the right rendering happens regardless of which
 window is active or whether a workspace switch is mid-flight, and so the
 "AI Mode" workspace tab in Engine mode renders as a regular Pro workspace
-(filter does NOT apply there — only the dedicated Zen Mode workspace).
+(the Zen-only tool strip does NOT apply there). The Mixar viewport header
+pills also apply on the Texturing / Texture Paint workspace tabs.
 """
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
+from ...constants import (
+    BASIC_WORKSPACE_NAME,
+    TEXTURING_WORKSPACE_NAMES,
+    ZEN_TRANSFORM_TOOL_IDS,
+)
 from ..operators import zen_tool_toggle
 
 _logger = get_logger(__name__)
@@ -61,6 +68,23 @@ def _is_basic_workspace(context) -> bool:
     return ws is not None and ws.name == BASIC_WORKSPACE_NAME
 
 
+def _is_texturing_workspace(context) -> bool:
+    """True if this window is on Mixar's texture-painting workspace."""
+    ws = getattr(context, "workspace", None)
+    return ws is not None and ws.name in TEXTURING_WORKSPACE_NAMES
+
+
+def _uses_mixar_viewport_header(context) -> bool:
+    """Zen and Texturing share the Mixar Solid/Rendered header pills.
+
+    The tool-header empty-strip and the Move/Rotate/Scale toolbar stay
+    Zen-only: Texturing still needs stock paint/brush chrome in those
+    regions. Cinema Mode keeps its own C++ overlays and does not pass
+    through here.
+    """
+    return _is_basic_workspace(context) or _is_texturing_workspace(context)
+
+
 _SHADING_PILL_UNITS = 6.5
 """Shading pill width in UI units — the design's ~130 px at 1x."""
 
@@ -68,11 +92,11 @@ _SHADING_PILL_UNITS = 6.5
 def _patched_header_draw(self, context):
     """Replacement for VIEW3D_HT_header.draw.
 
-    Zen mode: the viewport-type chooser + two shading pills (Solid /
-    Rendered), styled natively per the design.
-    Engine mode: defer to the original draw.
+    Zen and Texturing: the viewport-type chooser + two shading pills
+    (Solid / Rendered), styled natively per the design.
+    Other Engine workspaces: defer to the original draw.
     """
-    if not _is_basic_workspace(context):
+    if not _uses_mixar_viewport_header(context):
         if _original_header_draw is not None:
             _original_header_draw(self, context)
         return
@@ -84,6 +108,7 @@ def _patched_header_draw(self, context):
     shading = view.shading
 
     # Tiny editor-type chooser (the icon at the very left of the header).
+    # Texturing's custom spaces are omitted from that menu; View3D stays.
     layout.row(align=True).template_header()
 
     layout.separator_spacer()
@@ -91,9 +116,9 @@ def _patched_header_draw(self, context):
     # Two shading pills — Solid and Rendered — per the design (UI.svg): the
     # live one at full opacity, the other at 49%. The stock four-way strip
     # (wireframe / solid / material / rendered) and the shading popover are
-    # deliberately gone: Zen offers the two modes people actually switch
-    # between while making something, and the rest stays reachable from
-    # Engine mode.
+    # deliberately gone: Zen and Texturing offer the two modes people actually
+    # switch between while making something, and the rest stays reachable from
+    # Engine mode's other workspace tabs.
     row = layout.row(align=True)
     for value, label in (('SOLID', "Solid"), ('RENDERED', "Rendered")):
         cell = row.row(align=True)
