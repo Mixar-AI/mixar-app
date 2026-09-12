@@ -109,7 +109,7 @@ def test_hover_pump_imports_constants_rather_than_restating_them():
 
 def test_hover_pump_register_is_a_no_op_off_the_allowlist():
     """Behavioural check against the mocked bpy: unsupported platform, no
-    timer; supported platform, one timer."""
+    timer; supported platform, separate hover-policy and animation timers."""
     sys.modules.setdefault("bpy.utils.previews", MagicMock(name="bpy.utils.previews"))
     from mixar.modules.testing.mock_bpy import install_bpy_mock
 
@@ -137,9 +137,11 @@ def test_hover_pump_register_is_a_no_op_off_the_allowlist():
 
     module.BUBBLE_WINDOW_CONTROLS_SUPPORTED = True
     module.register()
-    assert registered == [module._hover_tick]
+    assert registered == [module._hover_tick, module._animation_tick]
+    assert module._TICK_SECONDS == 0.1
+    assert module._FRAME_SECONDS == 1.0 / 60.0
     module.register()
-    assert len(registered) == 1, "register() must stay idempotent"
+    assert len(registered) == 2, "register() must stay idempotent"
     module.unregister()
     assert registered == []
 

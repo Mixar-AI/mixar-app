@@ -18,6 +18,7 @@ set(INC_SYS
 set(SRC
   space_agent_bubble.cc
   agent_ui_draw.cc
+  agent_ui_controls_paint.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_detail.cc
@@ -25,6 +26,7 @@ set(SRC
   agent_ui_generations_read.cc
   agent_ui_icons.cc
   agent_ui_layout.cc
+  agent_ui_motion.cc
   agent_ui_pane_kit.cc
   agent_ui_pane_kit_feedback.cc
   agent_ui_pane_kit_thumbs.cc
@@ -48,6 +50,7 @@ set(SRC
   agent_ui_generations_intern.hh
   agent_ui_icons.hh
   agent_ui_layout.hh
+  agent_ui_motion.hh
   agent_ui_pane_kit.hh
   agent_ui_pill_cat.hh
   agent_ui_cat_style.hh

@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include "BLI_rect.h"
 #include "BLI_map.hh"
-#include <string>
+#include "BLI_rect.h"
 #include "BLI_vector.hh"
+#include "UI_mixar_motion.hh"
+#include <string>
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -52,9 +53,9 @@ struct wmWindowManager;
  * through `agent_panel_read_string` (RNA_property_string_get is unbounded).
  * \{ */
 
-#define AGENT_PANEL_TASK_ID_BUF 80  /* AGENT_TASK_ID_MAXLEN 64 */
-#define AGENT_PANEL_NAME_BUF 112    /* AGENT_NAME_MAXLEN 96 */
-#define AGENT_PANEL_TASK_BUF 288    /* AGENT_TASK_MAXLEN 256 */
+#define AGENT_PANEL_TASK_ID_BUF 80 /* AGENT_TASK_ID_MAXLEN 64 */
+#define AGENT_PANEL_NAME_BUF 112   /* AGENT_NAME_MAXLEN 96 */
+#define AGENT_PANEL_TASK_BUF 288   /* AGENT_TASK_MAXLEN 256 */
 
 /** \} */
 
@@ -114,19 +115,19 @@ struct wmWindowManager;
  * never compared, only given matching durations. If this half outlasts the
  * Python one the card vanishes mid-slide. */
 #define AGENT_PANEL_DONE_DWELL_SECONDS 1.2
-#define AGENT_PANEL_EXIT_SECONDS 0.35
+#define AGENT_PANEL_EXIT_SECONDS ui::mixar_motion::exit_seconds
 
 /** Seconds the slide-in takes, and the per-card stagger within it. Slow
  * enough to read as an arrival rather than a pop — the cards appear at the
  * moment a turn fans out, which is exactly when the user is looking. */
-#define AGENT_PANEL_REVEAL_SECONDS 0.55
-#define AGENT_PANEL_STAGGER_SECONDS 0.12
+#define AGENT_PANEL_REVEAL_SECONDS ui::mixar_motion::enter_seconds
+#define AGENT_PANEL_STAGGER_SECONDS ui::mixar_motion::stagger_seconds
 
 /** Animation tick while the panel is settling. Runs at display cadence, not
  * at a lazy poll rate: this timer is the ONLY thing that repaints an
  * animating panel (see `agent_panel_region_listener`), so its interval IS the
  * animation's frame rate. It exists only while something is moving. */
-#define AGENT_PANEL_TICK_INTERVAL (1.0 / 60.0)
+#define AGENT_PANEL_TICK_INTERVAL ui::mixar_motion::frame_seconds
 
 /** One wheel notch, in unscaled UI units. */
 #define AGENT_PANEL_SCROLL_STEP 36
@@ -178,6 +179,11 @@ struct AgentPanelCard {
    * is when the client learned the agent started, and so what the user saw. */
   double seen_running_at = 0.0;
 
+  /** Per-task arrival and visual pose survive collection rebuilds and reorders. */
+  double reveal_started_at = 0.0;
+  ui::MixarMotionValue slide;
+  ui::MixarMotionValue row;
+
   /** True while the eye has this card showing its full task instead of the
    * short agent name. Pure view state: carried across syncs by `task_id`,
    * never mirrored back to Python. */
@@ -204,10 +210,6 @@ struct AgentPanelRuntime {
 
   /** The "more agents" chevron's rect, empty while the stack fits. */
   rcti chevron_rect = {};
-
-  /** Slide-in progress, 0 (off-screen left) to 1 (docked). Restarted when a
-   * NEW fan-out arrives — see `view3d_agent_panel_cards_sync`. */
-  double reveal_started_at = 0.0;
 
   /** `wm.mixar_agent_cards_generation` as of the last sync. Python bumps it
    * for every new fan-out; a change resets the scroll and replays the
@@ -289,8 +291,7 @@ AgentPanelHit view3d_agent_panel_hit_test(AgentPanelRuntime *runtime,
 /** Slide-out progress of a finished card, 0 (still docked) to 1 (gone). */
 float view3d_agent_panel_exit_progress(const AgentPanelCard &card);
 
-/** Reveal progress, 0..1, of the whole panel (`card_index` < 0) or of one
- * staggered card. */
+/** Reveal progress, 0..1, for one task's staggered arrival. */
 float view3d_agent_panel_reveal(const AgentPanelRuntime *runtime, int card_index);
 
 /** True while the panel still needs per-frame updates (sliding in, or an

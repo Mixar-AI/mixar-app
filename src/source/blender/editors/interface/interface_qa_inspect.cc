@@ -381,6 +381,10 @@ void qa_dump_region(std::string &out,
       out += ',';
       json_str(out, "mixar_variant", blender::ui::mixar_variant_name(but->mixar_style.variant));
       out += ',';
+      const auto motion = blender::ui::mixar_button_motion(*but);
+      out += "\"mixar_motion\":{\"hover\":" + std::to_string(motion.hover) +
+             ",\"press\":" + std::to_string(motion.press) +
+             ",\"selected\":" + std::to_string(motion.selected) + "},";
       json_str(out, "text", text);
       out += ',';
       if (!but->tip.is_empty()) {
@@ -427,7 +431,10 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
   std::string out;
   out.reserve(1 << 16);
 
-  out += "{\"windows\":[";
+  const auto motion_stats = blender::ui::mixar_motion_stats();
+  out += "{\"motion\":{\"pending_regions\":" + std::to_string(motion_stats.pending_regions) +
+         ",\"ticks\":" + std::to_string(motion_stats.ticks) +
+         ",\"redraws\":" + std::to_string(motion_stats.redraws) + "},\"windows\":[";
   bool first_win = true;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;

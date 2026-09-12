@@ -1462,16 +1462,25 @@ extern "C" void Mixar_WindowFloatIn(void *window_handle, int rise_pt, float dura
     NSView *content = win.contentView;
     CALayer *layer = content.layer;
     if (layer != nil) {
+      /* A reversal starts at the on-screen pose, before replacing its animation. */
+      const CFTimeInterval now = [layer convertTime:CACurrentMediaTime() fromLayer:nil];
+      CAAnimation *previous = [layer animationForKey:@"mixar_float"];
+      CALayer *presentation = (CALayer *)layer.presentationLayer;
+      const bool reversing = previous != nil && presentation != nil &&
+                             now < previous.beginTime + previous.duration;
+      const CGFloat from = reversing ? presentation.transform.m42 : -(CGFloat)rise_pt;
       [layer removeAnimationForKey:@"mixar_float"];
       CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
-      slide.fromValue = @(-(CGFloat)rise_pt);
+      slide.fromValue = @(from);
       slide.toValue = @(0.0);
+      slide.beginTime = now;
       slide.duration = (CFTimeInterval)duration;
       slide.timingFunction = mixar_ease_out_quint();
       [layer addAnimation:slide forKey:@"mixar_float"];
       layer.transform = CATransform3DIdentity;
     }
-    [win setAlphaValue:0.0];
+    /* Restore initialized alpha only for a fully hidden window. Keep the live
+     * alpha when a collapse is reversed instead of flashing invisible. */
     [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:(CGFloat)duration * 0.7];
     [[NSAnimationContext currentContext] setTimingFunction:mixar_ease_out_quint()];
@@ -1497,10 +1506,13 @@ extern "C" void Mixar_WindowFloatOut(void *window_handle, int sink_pt, float dur
     NSView *content = win.contentView;
     CALayer *layer = content.layer;
     if (layer != nil) {
+      CALayer *presentation = (CALayer *)layer.presentationLayer;
+      const CGFloat from = presentation != nil ? presentation.transform.m42 : 0.0;
       [layer removeAnimationForKey:@"mixar_float"];
       CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
-      slide.fromValue = @(0.0);
+      slide.fromValue = @(from);
       slide.toValue = @(-(CGFloat)sink_pt);
+      slide.beginTime = [layer convertTime:CACurrentMediaTime() fromLayer:nil];
       slide.duration = (CFTimeInterval)duration;
       slide.timingFunction = mixar_ease_out_quint();
       /* Hold the end pose until the orderOut lands — otherwise the content

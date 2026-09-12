@@ -66,7 +66,7 @@ uiFontStyle row_font();
 uiFontStyle caption_font();
 
 /** The graded chip: the surface's "live" row. */
-void draw_chip(const rctf &row, float radius);
+void draw_chip(const rctf &row, float radius, float alpha = 1.0f);
 
 /** The flat hover / pressed fill. */
 void draw_hover(const rctf &row, float radius, float alpha);
@@ -95,7 +95,8 @@ void draw_label(const uiFontStyle &fs,
  * past it — unless icon plus label cannot fit, when the label wins and the
  * icon is dropped. Returns whether the icon was drawn.
  */
-bool draw_leading_icon(const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
+bool draw_leading_icon(
+    const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
 
 /* Kind painters. */
 

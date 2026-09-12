@@ -26,6 +26,8 @@
 
 #include "UI_interface.hh"
 #include "UI_mixar_types.hh"
+#include "UI_mixar_motion.hh"
+#include "mixar/motion_storage.hh"
 #include "UI_interface_layout.hh"
 #include "UI_resources.hh"
 struct IconTextOverlay;
@@ -203,6 +205,8 @@ struct Button : NonMovable {
 
   /* Mixar: value-type presentation, independent of native control data. */
   MixarButtonStyle mixar_style;
+  /** Allocated only for styled controls. Moved across native button rebuilds. */
+  MixarMotionStorage mixar_motion;
 
   TextDirection text_direction = TextDirection::Default;
 

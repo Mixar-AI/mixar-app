@@ -82,9 +82,13 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state);
 void agent_ui_draw_status_pill(float width, float height, const AgentIslandState *state);
 
 /** Paint the island. `GPU_blend` is set and restored internally. */
-void agent_ui_draw_island(const ARegion *region,
+void agent_ui_draw_island(ARegion *region,
                           const AgentIslandLayout *layout,
                           const AgentIslandState *state);
+
+/** Fixed-geometry chrome, with region-owned native interaction feedback. */
+void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
+void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
 

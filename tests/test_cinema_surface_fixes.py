@@ -30,6 +30,7 @@ DOCK = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
 TOP = (VIEW3D / "view3d_director_cinema_top.cc").read_text(encoding="utf-8")
 TIMELINE = (VIEW3D / "view3d_director_timeline.cc").read_text(encoding="utf-8")
 TOPBAR = (INTERFACE / "interface_mixar_topbar.cc").read_text(encoding="utf-8")
+MOTION = (INTERFACE / "mixar/motion.cc").read_text(encoding="utf-8")
 KEYMAP = (DIRECTOR / "ui/keymap.py").read_text(encoding="utf-8")
 CONSTANTS = (DIRECTOR / "constants.py").read_text(encoding="utf-8")
 
@@ -413,13 +414,22 @@ def test_the_pad_is_drawn_through_the_clamp():
 def test_topbar_state_is_read_from_the_payload_only(painter):
     body = TOPBAR[TOPBAR.index(f"void {painter}") :]
     body = body[: body.index("\n}\n")]
-    lit = re.search(r"const bool lit = ([^;]+);", body)
-    assert lit is not None
-    assert lit.group(1).strip() == "but->mixar_style.lit"
-    # UI_SELECT survives only as a press affordance, and it must be a
-    # different reading from the lit state.
-    assert "const bool pressed =" in body
-    assert "UI_SELECT" in body
+    assert "mixar_button_motion(*but)" in body
+    assert "motion.selected" in body and "motion.press" in body
+    assert "UI_SELECT" not in body
+    # The shared sampler preserves the old contract: a held operator supplies
+    # press feedback, while its selection comes from the explicit payload.
+    sampler = " ".join(MOTION.split())
+    assert "native_selection = (button.flag & UI_SELECT_DRAW) || (toggle && (button.flag & UI_SELECT))" in sampler
+    toggle_types = re.search(r"const bool toggle = ELEM\(button.type,(.*?)\);", sampler)
+    assert toggle_types is not None
+    for toggle in ("Toggle", "ToggleN", "IconToggle", "IconToggleN", "Checkbox", "CheckboxN", "Row", "ListRow"):
+        assert f"ButtonType::{toggle}" in toggle_types.group(1)
+    for action in ("But", "Menu", "Block", "Popover"):
+        assert f"ButtonType::{action}," not in toggle_types.group(1)
+    assert "selected = style.lit || native_selection || cinema_selection" in sampler
+    assert "pressed = !toggle && (button.flag & UI_SELECT)" in sampler
+    assert "ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)" in sampler
 
 
 def test_every_rounded_control_shares_the_row_radius():

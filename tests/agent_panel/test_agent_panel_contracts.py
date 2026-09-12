@@ -50,10 +50,18 @@ CMAKE = SPACE_VIEW3D / "CMakeLists.txt"
 
 
 def _defines_float(text):
-    return {
+    values = {
         m.group(1): float(m.group(2))
         for m in re.finditer(r"^#define\s+(AGENT_PANEL_\w+)\s+([\d.]+)", text, re.M)
     }
+    motion = (SPACE_VIEW3D.parent / "include/UI_mixar_motion.hh").read_text()
+    tokens = {
+        m.group(1): float(eval(m.group(2), {"__builtins__": {}}, {}))
+        for m in re.finditer(r"constexpr double (\w+) = ([\d. /]+);", motion)
+    }
+    for name, token in re.findall(r"#define (AGENT_PANEL_\w+) ui::mixar_motion::(\w+)", text):
+        values[name] = tokens[token]
+    return values
 
 
 def _defines(text):
@@ -124,7 +132,7 @@ class TestOneLayoutOwner:
     def test_the_reveal_animation_is_applied_in_the_layout_pass(self):
         text = CARDS.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
-        assert "view3d_agent_panel_reveal" in layout, (
+        assert "card.slide.sample" in layout, (
             "a card animating in must be clickable where it is drawn"
         )
 
@@ -282,10 +290,7 @@ class TestAnimationFrameRate:
         )
 
     def test_the_tick_runs_at_display_cadence(self):
-        text = HEADER.read_text()
-        m = re.search(r"#define AGENT_PANEL_TICK_INTERVAL \(([^)]+)\)", text)
-        assert m, "tick interval must be defined"
-        assert eval(m.group(1)) <= 1.0 / 50.0, (
+        assert _defines_float(HEADER.read_text())["AGENT_PANEL_TICK_INTERVAL"] <= 1.0 / 50.0, (
             "the tick interval is the animation's frame rate, not a poll rate"
         )
 
@@ -351,12 +356,12 @@ class TestFinishedCardsLeave:
         fn = fn[: fn.index("\nfloat ")]
         assert "card.dismissing" in fn
 
-    def test_the_entrance_is_slow_enough_to_read(self):
-        """The cards arrive exactly when a turn fans out, which is when the
-        user is looking — a fast slide reads as a pop."""
+    def test_arrivals_share_zen_timing_with_a_bounded_stagger(self):
+        """Offscreen tasks must not extend how long the visible fan-out settles."""
         defines = _defines_float(HEADER.read_text())
-        assert defines["AGENT_PANEL_REVEAL_SECONDS"] >= 0.5
-        assert defines["AGENT_PANEL_STAGGER_SECONDS"] >= 0.1
+        assert defines["AGENT_PANEL_REVEAL_SECONDS"] == 0.26
+        assert defines["AGENT_PANEL_STAGGER_SECONDS"] == 0.05
+        assert "std::min(arrivals++, AGENT_PANEL_VISIBLE_CARDS - 1)" in SYNC.read_text()
 
     def test_python_schedules_the_removal_and_rechecks_on_fire(self):
         cards_py = (

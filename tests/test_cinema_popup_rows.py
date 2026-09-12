@@ -26,6 +26,7 @@ HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
 POPUP = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
 RENDER = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
 ROW = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
+MOTION = (INTERFACE / "mixar/motion.cc").read_text(encoding="utf-8")
 ROW_HH = (INTERFACE / "interface_mixar_cinema_row.hh").read_text(encoding="utf-8")
 SEGMENT = (INTERFACE / "interface_mixar_cinema_row_segment.cc").read_text(encoding="utf-8")
 VALUE = (INTERFACE / "interface_mixar_cinema_row_value.cc").read_text(encoding="utf-8")
@@ -75,7 +76,9 @@ def test_caption_and_slider_tokens_mirror_the_cinema_header():
 def test_the_slider_track_is_never_the_lit_chip():
     slider = _function(VALUE, "void draw_slider(")
     assert "draw_chip(" not in slider
-    assert "(is_hover && !disabled) ? HOVER : TRACK" in slider
+    assert "mixar_button_motion(*but)" in slider
+    assert "float(TRACK[i]) + (float(HOVER[i]) - TRACK[i]) * emphasis" in slider
+    assert "motion.selected" not in slider
     assert "mixar_card_fill_round(&fill, fill_rad, SLIDER_ON" in slider
 
 
@@ -98,7 +101,7 @@ def test_segment_group_is_the_segment_buttons_on_one_baseline():
 
 def test_hovered_segment_cell_is_as_wide_as_its_label_and_others_share_the_rest():
     cell = _function(SEGMENT, "rctf cell_rect(")
-    assert "fontstyle_string_width(&fs, row_label(hot)) + 2.0f * TEXT_PAD * UI_SCALE_FAC" in cell
+    assert "fontstyle_string_width(&fs, row_label(hot)) + 2.0f * TEXT_PAD * UI_SCALE_FAC" in " ".join(cell.split())
     assert "std::clamp(need, own, std::max(own, total - others_min))" in cell
     assert "const float rest_w = (total - hot_w) / float(group.count - 1);" in cell
     # Idle: every cell is its own hit rect.
@@ -111,7 +114,9 @@ def test_hovered_segment_cell_is_as_wide_as_its_label_and_others_share_the_rest(
 
 def test_segment_cell_paints_only_itself_and_reads_active_from_the_flag():
     draw = _function(SEGMENT, "void draw_segment(")
-    assert "const bool lit = (but->flag & BUT_ACTIVE_DEFAULT) != 0;" in draw
+    assert "mixar_button_motion(*but)" in draw
+    assert "draw_chip(row, rad, motion.selected)" in draw
+    assert "style.cinema == MixarCinemaRowKind::Segment && (button.flag & BUT_ACTIVE_DEFAULT)" in " ".join(MOTION.split())
     assert "draw_label(fs, &text, row_label(but), col, UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack());" in draw
     # Labels shorten with an ellipsis instead of losing glyphs.
     label = _function(ROW, "void draw_label(")
