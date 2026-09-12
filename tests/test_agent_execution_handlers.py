@@ -52,7 +52,8 @@ def _drive(method, params, request_id="req-1"):
 def test_all_five_methods_reply_on_same_request_id(env):
     act = _drive(JSONRPCMethod.AGENT_EXECUTION_PREFIX + "activate",
                  {"run_id": "r1", "session_id": "s1", "turn_epoch": 1}, "a1")
-    assert act == [("a1", act[0][1])] and act[0][1]["ack"] is True
+    assert len(act) == 1 and act[0][0] == "a1"
+    assert act[0][1]["ack"] is True and act[0][1]["run_id"] == "r1" and act[0][1]["turn_epoch"] == 1
     bind = _drive("agent.execution.bind_task",
                   {"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
                    "attempt": 1, "fence_token": 1, "worker_connection_id": "w"}, "b1")
@@ -62,7 +63,8 @@ def test_all_five_methods_reply_on_same_request_id(env):
     commit = _drive("agent.execution.commit", {"run_id": "r1", "turn_epoch": 1, "task_id": "t1",
                                                "fence_token": 1, "operation_id": "o",
                                                "payload_hash": "h", "collection_name": "c",
-                                               "artifact_id": "bad"}, "c1")
+                                               "artifact_id": "bad",
+                                               "content_hash": "0" * 64}, "c1")
     assert commit[0][0] == "c1" and commit[0][1]["error_type"] == "artifact_missing"
     rev = _drive("agent.execution.revoke", {"run_id": "r1", "turn_epoch": 1}, "r1")
     assert rev[0] == ("r1", {"success": True, "known": True, "foreground_tasks": 0})

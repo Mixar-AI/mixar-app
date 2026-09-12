@@ -102,6 +102,11 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(document, "document_identity", lambda scene=None, bpy=None: dict(IDENTITY))
     bindings.activate({"run_id": "r1", "session_id": "s1", "turn_epoch": 1}, journal=j,
                       identity_fn=lambda: IDENTITY)
+    bindings.bind_task(
+        {"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
+         "attempt": 1, "fence_token": 0, "worker_connection_id": "p-sbx-0"},
+        journal=j,
+    )
     aid = str(uuid.uuid4())
     data = b"BLENDER" + os.urandom(64)
     with open(os.path.join(paths.staging_dir("inst"), f"{aid}.blend"), "wb") as f:
@@ -191,6 +196,59 @@ def test_mid_publish_failure_is_unknown_not_replayed(env):
 def test_invalid_params(env):
     assert commit.append_collection(_params(env, op="replace"), bpy_module=env.bpy, journal=env.journal)["error_type"] == "invalid_params"
     assert commit.append_collection({"run_id": "r1"}, bpy_module=env.bpy, journal=env.journal)["error_type"] == "invalid_params"
+
+
+def test_missing_client_instance_id_refuses_with_a_typed_error(env):
+    """With no instance id there is no staging root to name; the refusal must
+    stay inside the typed error path instead of escaping as a ValueError."""
+    env.bpy.context.window_manager.mixie_instance_id = ""
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["success"] is False and out["error_type"] == "invalid_params"
+    assert env.bpy.loads == [] and env.journal.op_get("op-1") is None
+
+
+def test_missing_content_hash_is_invalid_params(env):
+    out = commit.append_collection(_params(env, content_hash=""), bpy_module=env.bpy, journal=env.journal)
+    assert out["error_type"] == "invalid_params" and env.bpy.loads == []
+    absent = commit.append_collection(_params(env, artifact_id=""), bpy_module=env.bpy, journal=env.journal)
+    assert absent["error_type"] == "invalid_params"
+
+
+def test_superseded_op_is_not_replayed(env):
+    from mixar.modules.common.agent_execution.journal import SUPERSEDED
+    env.journal.op_prepare(
+        "op-1", run_id="r1", task_id="t1", generation=0, fence=0,
+        payload_hash="ph-1", document_id="doc", document_epoch=1, artifact_id=env.aid,
+    )
+    env.journal.op_set_state("op-1", SUPERSEDED)
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["success"] is False and out["error_type"] == "unknown"
+    assert out["state"] == SUPERSEDED and env.bpy.loads == []
+    assert env.journal.op_get("op-1")["state"] == SUPERSEDED
+
+
+def test_stale_document_refuses_publish(env, monkeypatch):
+    monkeypatch.setattr(
+        document, "document_identity",
+        lambda scene=None, bpy=None: {
+            "document_id": "other-doc", "document_epoch": 1, "scene_id": "sc", "scene_name": "Scene",
+        },
+    )
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["error_type"] == "stale_document" and env.bpy.loads == []
+    assert env.journal.op_get("op-1") is None
+
+
+def test_in_process_running_stays_deferred(env):
+    from mixar.modules.common.agent_execution.journal import RUNNING
+    env.journal.op_prepare(
+        "op-1", run_id="r1", task_id="t1", generation=0, fence=0,
+        payload_hash="ph-1", document_id="doc", document_epoch=1, artifact_id=env.aid,
+    )
+    env.journal.op_set_state("op-1", RUNNING)
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["error_type"] == "deferred" and out["state"] == RUNNING
+    assert env.bpy.loads == []
 
 
 # --- placement (scene-from-reference) ---------------------------------------

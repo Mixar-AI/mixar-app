@@ -308,6 +308,35 @@ def test_failure_restores_beats_keys_and_scene(quiet, monkeypatch):
     assert scene.frame_current == 30
 
 
+def test_failure_restores_the_preview_range_toggle(monkeypatch):
+    shot = _shot((1, 25, 49), speed=1.0)
+    scene = _scene(frame_end=49)
+    scene.use_preview_range = False
+    monkeypatch.setattr(
+        timeline,
+        "_assigned_fcurves",
+        lambda animated_id: tuple(getattr(animated_id, "curves", ())),
+    )
+
+    def _scope(inner_scene, _shot):
+        # The real helper switches the preview range on to loop the shot's
+        # own beats.
+        inner_scene.use_preview_range = True
+
+    def _boom(_scene, _shot):
+        raise RuntimeError("manifest")
+
+    monkeypatch.setattr(retime, "scope_preview_range", _scope)
+    monkeypatch.setattr(retime, "refresh_manifest", _boom)
+
+    with pytest.raises(RuntimeError):
+        retime.apply_shot_speed(scene, shot)
+
+    assert scene.use_preview_range is False, (
+        "a failed retime must leave the user's preview-range toggle as it was"
+    )
+
+
 # -------------------------------------------------------------------------
 # Recording time_base outside the speed update.
 

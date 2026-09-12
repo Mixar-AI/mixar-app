@@ -180,6 +180,7 @@ def apply_shot_speed(scene, shot) -> int:
         int(scene.frame_end),
         int(scene.frame_preview_start),
         int(scene.frame_preview_end),
+        bool(scene.use_preview_range),
     )
     manifest_json = shot.manifest_json
 

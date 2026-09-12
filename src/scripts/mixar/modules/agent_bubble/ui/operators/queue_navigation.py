@@ -17,10 +17,12 @@ def register():
     if kc is None:
         return
     km = kc.keymaps.new(name="Agent Bubble Queue", space_type='AGENT_BUBBLE', region_type='WINDOW')
+    # Trackpad two-finger scroll arrives as MOUSEPAN — the WM re-delivers the
+    # gesture as a mouse pan, and Blender has no separate event type to bind.
     for key, value, action, delta in (
         ('WHEELUPMOUSE', 'PRESS', 'STEP', -1),
         ('WHEELDOWNMOUSE', 'PRESS', 'STEP', 1),
-        ('TRACKPADPAN', 'ANY', 'STEP', 1),
+        ('MOUSEPAN', 'ANY', 'STEP', 1),
         ('PAGE_UP', 'PRESS', 'PAGE', -1),
         ('PAGE_DOWN', 'PRESS', 'PAGE', 1),
         ('HOME', 'PRESS', 'FIRST', 1),

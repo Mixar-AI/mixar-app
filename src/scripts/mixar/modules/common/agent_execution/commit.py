@@ -124,6 +124,8 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
         return _err("invalid_params", f"unsupported op {params.get('op')!r}")
     if not (run_id and task_id and operation_id and payload_hash and collection_name):
         return _err("invalid_params", "commit requires run_id, task_id, operation_id, payload_hash, collection_name")
+    if not (artifact_id and content_hash):
+        return _err("invalid_params", "commit requires artifact_id and content_hash")
     # Placement is validated up front: a bad value must never half-apply.
     try:
         placement = parse_placement(params.get("placement"))
@@ -146,19 +148,38 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
             return _err("deferred", "operation is in progress", state=RUNNING)
         if existing["state"] == UNKNOWN:
             return _err("unknown", "operation outcome is unknown; inspect before retrying", state=UNKNOWN)
+        if existing["state"] != PREPARED:
+            return _err(
+                "unknown",
+                f"operation is {existing['state']}; will not replay",
+                state=existing["state"],
+            )
+
+    identity = document.document_identity(bpy=bpy)
+    binding = bindings.for_run(run_id)
+    if binding is not None and (existing is None or existing["state"] == PREPARED):
+        live_doc = identity.get("document_id")
+        if binding.document_id and live_doc and live_doc != binding.document_id:
+            return _err("stale_document", "document changed since this run activated")
+        live_epoch = bindings._int(identity.get("document_epoch"))
+        if live_epoch != binding.document_epoch:
+            return _err("stale_epoch", "document epoch changed since this run activated")
 
     # 3. artifact
     try:
-        path = resolve(_instance_id(bpy), artifact_id, content_hash or None)
+        path = resolve(_instance_id(bpy), artifact_id, content_hash)
     except ArtifactError as exc:
         return _err(exc.error_type, str(exc))
+    except ValueError as exc:
+        # An unusable instance id makes the staging root unnameable; keep it in
+        # the typed error path instead of leaking a bare ValueError.
+        return _err("invalid_params", f"cannot resolve the artifact: {exc}")
 
     # 4. safe point
     busy = _foreground_busy(bpy)
     if busy:
         return _err("deferred", busy)
 
-    identity = document.document_identity(bpy=bpy)
     journal.op_prepare(
         operation_id, run_id=run_id, task_id=task_id, generation=generation, fence=fence,
         payload_hash=payload_hash, document_id=identity["document_id"],

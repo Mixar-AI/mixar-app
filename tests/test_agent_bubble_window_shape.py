@@ -83,11 +83,15 @@ class TestWin32WindowIsShaped:
         body = _fn_body(win32, "static void mixar_window_apply_corner_region(")
         assert "CreateRoundRectRgn" in body
         assert "SetWindowRgn" in body
-        # SetWindowRgn takes ownership; deleting the region after handing it over
-        # is a use-after-free that Windows reports as nothing at all.
-        assert "DeleteObject" not in body, (
-            "SetWindowRgn takes ownership of the HRGN -- it must not be deleted."
+        # SetWindowRgn takes ownership only when it succeeds; deleting the region
+        # after handing it over is a use-after-free that Windows reports as
+        # nothing at all. The delete is therefore allowed only on the failure
+        # path, where ownership never transferred and the HRGN is still ours.
+        assert "if (!SetWindowRgn(hwnd, rgn, TRUE)) {" in body, (
+            "a failed SetWindowRgn leaves the HRGN owned by us -- it must be "
+            "deleted, not leaked."
         )
+        assert "DeleteObject(rgn)" in body
 
     def test_dwm_rounding_is_declined_in_favour_of_our_own(self, win32: str) -> None:
         body = _fn_body(win32, 'extern "C" void Mixar_WindowSetCornerRadius(')

@@ -68,10 +68,11 @@ def register():
     kmi.properties.delta = -1
     addon_keymaps.append((km, kmi))
 
-    # Trackpad two-finger scroll arrives as TRACKPADPAN (MOUSEPAN), never as a
-    # wheel event — without this binding the panel is unscrollable on a laptop
+    # Trackpad two-finger scroll arrives as MOUSEPAN — the WM re-delivers the
+    # trackpad gesture as a mouse pan, and Blender has no separate trackpad-pan
+    # event type to bind. Without this the panel is unscrollable on a laptop
     # and the gesture falls through to the viewport instead.
-    kmi = km.keymap_items.new('view3d.agent_panel_scroll', type='TRACKPADPAN', value='ANY')
+    kmi = km.keymap_items.new('view3d.agent_panel_scroll', type='MOUSEPAN', value='ANY')
     addon_keymaps.append((km, kmi))
 
     logger.debug("Registered Agent Panel keymap (%d items)", len(addon_keymaps))

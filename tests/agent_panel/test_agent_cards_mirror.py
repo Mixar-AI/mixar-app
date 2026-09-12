@@ -50,6 +50,7 @@ class FakeCard:
         self.status = 'PENDING'
         self.started_at = 0.0
         self.ended_at = 0.0
+        self.dismissing = False
 
 
 class FakeCollection:
@@ -82,6 +83,7 @@ class FakeWM:
     def __init__(self):
         self.mixar_agent_cards = FakeCollection()
         self.mixar_agent_cards_active = 0
+        self.mixar_agent_cards_generation = 0
         self.windows = []
 
 
@@ -91,6 +93,18 @@ def wm(monkeypatch):
     monkeypatch.setattr(cards_mod, "_window_manager", lambda: fake)
     monkeypatch.setattr(cards_mod, "_tag_panel_redraw", lambda: None)
     return fake
+
+
+@pytest.fixture(autouse=True)
+def _isolate_dismissal_memory():
+    """Empty the module-global dismissal memory around every test.
+
+    ``dismiss_card`` records into a global that outlives a single test; a
+    leftover id would silently filter another test's todo list.
+    """
+    cards_mod._dismissed_task_ids.clear()
+    yield
+    cards_mod._dismissed_task_ids.clear()
 
 
 def _todo(n, status='IN_PROGRESS', prefix="Build part"):
@@ -194,6 +208,67 @@ class TestSettleOnTurnEnd:
         assert [(c.status, c.ended_at) for c in wm.mixar_agent_cards] == before
 
 
+class TestDismissalMemory:
+    def test_a_dismissed_card_does_not_come_back_when_the_list_is_restreamed(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        assert cards_mod.dismiss_card("1") is True
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2"]
+
+        # The backend keeps streaming the failed task; re-delivering the same
+        # list must not re-add the card the user clicked away.
+        assert cards_mod.mirror_todo_items(_todo(3, status='FAILED')) == 2
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2"]
+
+    def test_a_dismissed_card_does_not_come_back_across_a_membership_rebuild(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        cards_mod.dismiss_card("1")
+
+        # A new sibling lands, forcing the rebuild that used to re-add every
+        # task in the streamed list — including the dismissed one.
+        assert cards_mod.mirror_todo_items(_todo(4, status='FAILED')) == 3
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2", "3"]
+        assert wm.mixar_agent_cards_active == 3
+
+    def test_closing_the_panel_forgets_dismissals(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        cards_mod.dismiss_card("1")
+        cards_mod.clear_cards()
+
+        # Dismissal is a view decision for one fan-out, not a permanent mute:
+        # a later turn shows every task again.
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "1", "2"]
+
+
+class TestFanOutGeneration:
+    def test_a_disjoint_turn_bumps_generation(self, wm):
+        cards_mod.mirror_todo_items(_todo(2, status='FAILED'))
+        gen = wm.mixar_agent_cards_generation
+        next_turn = [
+            {"id": "a", "text": "New task A.", "status": "IN_PROGRESS"},
+            {"id": "b", "text": "New task B.", "status": "IN_PROGRESS"},
+        ]
+        cards_mod.mirror_todo_items(next_turn)
+        assert wm.mixar_agent_cards_generation == gen + 1
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["a", "b"]
+
+    def test_adding_a_sibling_does_not_bump_generation(self, wm):
+        cards_mod.mirror_todo_items(_todo(2))
+        gen = wm.mixar_agent_cards_generation
+        cards_mod.mirror_todo_items(_todo(3))
+        assert wm.mixar_agent_cards_generation == gen
+
+    def test_a_membership_rebuild_keeps_an_in_flight_dismissal(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        assert cards_mod.begin_dismiss("1") is True
+        assert wm.mixar_agent_cards[1].dismissing is True
+        cards_mod.mirror_todo_items(_todo(4, status='FAILED'))
+        by_id = {c.task_id: c for c in wm.mixar_agent_cards}
+        assert by_id["1"].dismissing is True
+        assert by_id["0"].dismissing is False
+        assert by_id["3"].dismissing is False
+
+
 class TestAgentNaming:
     def test_a_short_task_is_its_own_name(self):
         assert cards_mod.derive_agent_name("Build the back window.") == "Build the back window"
@@ -203,8 +278,7 @@ class TestAgentNaming:
             "Build exactly one editable asset from Blender primitives: back window left"
         )
         assert name.endswith("…")
-        assert " " not in name[-2:-1] or True  # no trailing space before the ellipsis
-        assert not name[:-1].endswith(" ")
+        assert not name[:-1].endswith(" ")  # no trailing space before the ellipsis
         assert len(name) <= 36
 
     def test_an_empty_task_still_names_the_agent(self):
