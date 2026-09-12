@@ -21,6 +21,7 @@ set(SRC
   drawobject.cc
   space_view3d.cc
   view3d_agent_panel_cards.cc
+  view3d_agent_panel_sync.cc
   view3d_agent_panel_draw.cc
   view3d_agent_panel_glyphs.cc
   view3d_agent_panel_ops.cc
