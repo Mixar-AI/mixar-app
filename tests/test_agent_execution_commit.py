@@ -239,6 +239,18 @@ def test_stale_document_refuses_publish(env, monkeypatch):
     assert env.journal.op_get("op-1") is None
 
 
+def test_activation_retry_and_commit_agree_after_undo(env, monkeypatch):
+    monkeypatch.setattr(document, "document_identity",
+                        lambda **_: dict(IDENTITY, document_epoch=2))
+    activation = bindings.activate(
+        {"run_id": "r1", "session_id": "s1", "turn_epoch": 1}, journal=env.journal,
+    )
+    publish = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert activation["success"] is False and publish["success"] is False
+    assert activation["error_type"] == publish["error_type"] == "stale_epoch"
+    assert env.bpy.loads == [] and env.journal.op_get("op-1") is None
+
+
 def test_in_process_running_stays_deferred(env):
     from mixar.modules.common.agent_execution.journal import RUNNING
     env.journal.op_prepare(

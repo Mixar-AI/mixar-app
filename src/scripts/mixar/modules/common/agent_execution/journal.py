@@ -24,9 +24,11 @@ from typing import Iterable, Optional
 
 from mixar.config.logging_config import get_logger
 
+from .journal_owner import JournalOwner
+
 logger = get_logger(__name__)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Operation states (see the v3 plan): a script failure is NOT
 # failed_no_effect unless a typed handler proved it.
@@ -83,29 +85,42 @@ class Journal:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=FULL")
-        self._migrate()
-        self._abandon_crashed_ops()
+        self._owner = None
+        try:
+            self._owner = JournalOwner(path)
+            self._migrate()
+            self._abandon_crashed_ops()
+        except BaseException:
+            self.close()
+            raise
 
     # --- schema ---------------------------------------------------------
     def _migrate(self) -> None:
-        version = self._conn.execute("PRAGMA user_version").fetchone()[0]
-        if version < 1:
-            with self._tx():
+        # Inspect the version under the write lock: two Mixar instances can
+        # open (and migrate) the same per-user journal at once.
+        with self._tx():
+            version = self._conn.execute("PRAGMA user_version").fetchone()[0]
+            if version < 1:
                 for stmt in _SCHEMA:
                     self._conn.execute(stmt)
+            if version < 2:
+                self._conn.execute("ALTER TABLE ops ADD COLUMN owner_id TEXT")
+            if version < SCHEMA_VERSION:
                 self._conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
     def _abandon_crashed_ops(self) -> None:
-        """A leftover ``RUNNING`` row cannot still be in flight: this journal
-        is main-thread-only and a new connection means a new process (or a
-        test reopen). Replay as ``UNKNOWN`` so a retry never sits on
-        ``deferred`` forever after a crash between RUNNING and APPLIED.
-        """
+        """Recover only publishers whose lifetime lock has been released."""
         with self._tx():
-            self._conn.execute(
-                "UPDATE ops SET state=?, updated_at=? WHERE state=?",
-                (UNKNOWN, time.time(), RUNNING),
-            )
+            owners = self._conn.execute(
+                "SELECT DISTINCT owner_id FROM ops WHERE state=? AND owner_id IS NOT NULL",
+                (RUNNING,),
+            ).fetchall()
+            for row in owners:
+                if self._owner.abandoned(row["owner_id"]):
+                    self._conn.execute(
+                        "UPDATE ops SET state=?, updated_at=? WHERE state=? AND owner_id=?",
+                        (UNKNOWN, time.time(), RUNNING, row["owner_id"]),
+                    )
 
     def _tx(self):
         """BEGIN IMMEDIATE ... COMMIT/ROLLBACK context manager."""
@@ -130,6 +145,8 @@ class Journal:
             self._conn.close()
         except Exception:
             pass
+        if self._owner is not None:
+            self._owner.close()
 
     # --- runs -------------------------------------------------------------
     def run_epoch(self, session_id: str) -> int:
@@ -222,6 +239,13 @@ class Journal:
 
     def op_set_state(self, operation_id: str, state: str, receipt: Optional[dict] = None) -> dict:
         with self._tx():
+            if state == RUNNING:
+                # Claim publication atomically with entering RUNNING, after
+                # acquiring the owner lock and before any foreground effect.
+                self._conn.execute(
+                    "UPDATE ops SET owner_id=? WHERE operation_id=?",
+                    (self._owner.id, operation_id),
+                )
             if receipt is None:
                 self._conn.execute(
                     "UPDATE ops SET state=?, updated_at=? WHERE operation_id=?",

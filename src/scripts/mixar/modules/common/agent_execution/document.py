@@ -197,8 +197,8 @@ def _on_redo_post(*_):
 
 def register() -> None:
     global _registered
-    if _registered:
-        return
+    # Reconcile the live lists even after initial setup: an add-on reload or
+    # external handler cleanup can remove one while this module stays loaded.
     bpy = _bpy()
     try:
         from bpy.props import BoolProperty
@@ -216,6 +216,10 @@ def register() -> None:
                      ("redo_post", _on_redo_post)):
         try:
             lst = getattr(handlers, name)
+            # Mark the existing function in place, keeping import-time bpy
+            # access out of this shared module. Blender otherwise drops all
+            # three callbacks before dispatching load_post for a new file.
+            handlers.persistent(fn)
             if fn not in lst:
                 lst.append(fn)
         except Exception:

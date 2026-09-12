@@ -164,8 +164,9 @@ def mirror_todo_items(todo_items: Iterable[Any]) -> int:
             rec for rec in records if rec["task_id"] not in _dismissed_task_ids
         ]
     if len(records) < MIN_CARDS_FOR_PANEL:
-        # Not a fan-out. Clear rather than leave a stale single card up.
-        return clear_cards()
+        # Hiding a short list is not a new turn. Keep dismissal memory so
+        # subsequent full snapshots cannot bring the dismissed cards back.
+        return clear_cards(reset_dismissals=False)
 
     now = time.monotonic()
     cards = wm.mixar_agent_cards
@@ -284,12 +285,13 @@ def _stamp_clocks(card: Any, status: str, now: float) -> None:
         card.started_at = now if status == 'RUNNING' else 0.0
 
 
-def clear_cards() -> int:
-    """Close the panel. Returns 0 so callers can ``return clear_cards()``."""
+def clear_cards(*, reset_dismissals: bool = True) -> int:
+    """Close the panel; forget dismissals only on an explicit clear/new turn."""
+    if reset_dismissals:
+        _dismissed_task_ids.clear()
     wm = _window_manager()
     if wm is None:
         return 0
-    _dismissed_task_ids.clear()
     if len(wm.mixar_agent_cards) == 0 and wm.mixar_agent_cards_active == 0:
         return 0
     wm.mixar_agent_cards.clear()

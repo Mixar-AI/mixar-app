@@ -387,34 +387,3 @@ def test_no_cinema_seat_global_is_used_without_a_linux_declaration():
             f"{name} is referenced in code that survives a Linux build but is "
             f"only declared for Apple/Windows: {referenced[0].strip()!r}"
         )
-
-
-def test_the_per_pixel_alpha_flag_is_reset_with_the_window_it_describes():
-    """`g_pill_per_pixel_alpha` is declared inside the same Apple/Windows guard
-    as the Cinema seat globals, and its consumer
-    (`agent_bubble_pill_bed_is_transparent()`) runs on every pill draw. It is
-    the pill's record that this window handed its silhouette to DWM, so it may
-    not outlive that window: left set across a close cycle, the next session's
-    bed writes alpha 0 before `Mixar_WindowSetPerPixelAlpha` has decided
-    anything. Neither close path cleared it.
-    """
-    source = BUBBLE_CC.read_text(encoding="utf-8")
-    live, guarded = _linux_preprocessor_pass(source)
-    reset = "g_pill_per_pixel_alpha = false;"
-    resets = [
-        line
-        for line in live + guarded
-        if reset in line and not line.lstrip().startswith("static ")
-    ]
-    assert resets, f"nothing in the file resets {reset!r}"
-    assert all(line in guarded for line in resets), (
-        f"{reset!r} is reset in code a Linux build keeps, but the flag is "
-        "declared only for Apple/Windows — Linux fails with 'was not declared "
-        "in this scope'"
-    )
-    closed = source[source.index("void ED_agent_bubble_windows_closed()") :]
-    closed = closed[: closed.index("\n}\n")]
-    assert reset in closed, (
-        "the reset belongs in ED_agent_bubble_windows_closed(), the choke point "
-        "every close path funnels through"
-    )

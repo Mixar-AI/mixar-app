@@ -89,6 +89,9 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
                     "error": f"run {run_id!r} has been revoked",
                     "error_type": "stale_epoch"}
         identity = identity_fn()
+        refused = check_document_current(prior, identity)
+        if refused is not None:
+            return {"success": False, "error_type": refused[0], "error": refused[1]}
         return _ack(prior, identity)
     if epoch <= known:
         return {"success": False, "error": f"turn_epoch {epoch} is not newer than {known}",
@@ -111,6 +114,16 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
     document.set_run_active(True)
     logger.info("v3 run %s activated (session %s epoch %s)", run_id[:8], session_id[:8], epoch)
     return _ack(binding, identity)
+
+
+def check_document_current(binding: RunBinding, identity: dict):
+    """One document fence for activation retries and foreground commits."""
+    live_doc = identity.get("document_id")
+    if binding.document_id and live_doc and live_doc != binding.document_id:
+        return "stale_document", "document changed since this run activated"
+    if _int(identity.get("document_epoch")) != binding.document_epoch:
+        return "stale_epoch", "document epoch changed since this run activated"
+    return None
 
 
 def _ack(binding: RunBinding, identity: dict) -> dict:

@@ -158,12 +158,9 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
     identity = document.document_identity(bpy=bpy)
     binding = bindings.for_run(run_id)
     if binding is not None and (existing is None or existing["state"] == PREPARED):
-        live_doc = identity.get("document_id")
-        if binding.document_id and live_doc and live_doc != binding.document_id:
-            return _err("stale_document", "document changed since this run activated")
-        live_epoch = bindings._int(identity.get("document_epoch"))
-        if live_epoch != binding.document_epoch:
-            return _err("stale_epoch", "document epoch changed since this run activated")
+        refused = bindings.check_document_current(binding, identity)
+        if refused is not None:
+            return _err(refused[0], refused[1])
 
     # 3. artifact
     try:

@@ -123,6 +123,32 @@ def test_invalid_activate_params(journal):
     assert bad["error_type"] == "unsupported_protocol"
 
 
+@pytest.mark.parametrize("changed,error_type", [
+    ({"document_id": "other-doc"}, "stale_document"),
+    ({"document_epoch": 4}, "stale_epoch"),
+])
+def test_duplicate_activate_refuses_a_changed_document(journal, changed, error_type):
+    _activate(journal, "r1", 1)
+    prior = bindings.for_run("r1")
+    live = dict(IDENTITY, **changed)
+    retry = bindings.activate(
+        {"run_id": "r1", "session_id": "s1", "turn_epoch": 1},
+        journal=journal, identity_fn=lambda: live,
+    )
+    assert retry["success"] is False and retry["error_type"] == error_type
+    assert "ack" not in retry
+    assert bindings.for_run("r1") is prior
+    assert prior.document_id == IDENTITY["document_id"]
+    assert prior.document_epoch == IDENTITY["document_epoch"]
+    # Recovery requires a new turn; a retry cannot silently rebind old work.
+    fresh = bindings.activate(
+        {"run_id": "r2", "session_id": "s1", "turn_epoch": 2},
+        journal=journal, identity_fn=lambda: live,
+    )
+    assert fresh["success"] and fresh["document_epoch"] == live["document_epoch"]
+    assert fresh["document_id"] == live["document_id"]
+
+
 def test_first_turn_epoch_zero_activates(journal):
     """Epoch 0 is a real epoch: the first accepted run must not be refused
     merely because no run was accepted before it."""
