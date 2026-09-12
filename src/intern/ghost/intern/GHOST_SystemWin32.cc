@@ -12,6 +12,7 @@
 
 #include "GHOST_EventDragnDrop.hh"
 #include "GHOST_EventTrackpad.hh"
+#include "GHOST_MixarGlassWin32.hh"
 #include "GHOST_SystemWin32.hh"
 
 #ifndef _WIN32_IE
@@ -3232,23 +3233,14 @@ struct MixarCornerShape {
 };
 static std::unordered_map<HWND, MixarCornerShape> s_corner_shapes;
 
-/* Windows whose client alpha DWM composites (Mixar_WindowSetPerPixelAlpha).
- * These need no window region — and must not have one, because a region is
- * binary coverage and would clip away exactly the anti-aliased edge that
- * per-pixel alpha exists to produce. */
-static std::unordered_set<HWND> s_per_pixel_alpha_windows;
-
 /* (Re)build the window region for `hwnd` from its stored radius. Cheap to call
  * on every WM_WINDOWPOSCHANGED: it returns immediately unless the window size
  * actually changed since the region was last built. */
 static void mixar_window_apply_corner_region(HWND hwnd, bool force)
 {
-  if (s_per_pixel_alpha_windows.count(hwnd)) {
-    /* The alpha channel is the shape. A region here would re-introduce the
-     * staircase it replaces. */
-    SetWindowRgn(hwnd, NULL, TRUE);
-    return;
-  }
+  /* Native Acrylic extends underneath the entire client. Keep its rounded
+   * window region even when GPU alpha is available, or frost and the wash
+   * outside the painted pill make a rectangular halo. */
   auto it = s_corner_shapes.find(hwnd);
   if (it == s_corner_shapes.end()) {
     return;
@@ -3403,7 +3395,6 @@ static LRESULT CALLBACK mixar_min_size_subclass_proc(
   else if (uMsg == WM_NCDESTROY) {
     s_min_sizes.erase(hwnd);
     s_corner_shapes.erase(hwnd);
-    s_per_pixel_alpha_windows.erase(hwnd);
     s_drag_states.erase(hwnd);
     s_chromeless_windows.erase(hwnd);
     s_resizable_chromeless_windows.erase(hwnd);
@@ -3589,7 +3580,7 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
   mixar_window_apply_corner_region(hwnd, /*force=*/true);
 }
 
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 
 /* Does this window's pixel format carry an alpha channel?
  *
@@ -3629,8 +3620,8 @@ extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle)
  * Agent pill's capsule have a smooth silhouette rather than the hard circle a
  * window region rasterises.
  *
- * Enabling drops any region the window is carrying (see
- * mixar_window_apply_corner_region); disabling puts it back. */
+ * Keep the rounded region: Acrylic covers the whole client underneath GPU
+ * pixels, so alpha alone cannot clip native frost to the capsule. */
 extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
@@ -3640,44 +3631,21 @@ extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
   if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
     return; /* Caller keeps the region fallback. */
   }
-  if (enable) {
-    s_per_pixel_alpha_windows.insert(hwnd);
-  }
-  else {
-    s_per_pixel_alpha_windows.erase(hwnd);
-  }
   Mixar_WindowSetBlurBehind(window_handle, enable);
   mixar_window_apply_corner_region(hwnd, /*force=*/true);
 }
 
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
-  if (!hwnd) return;
-
-  /* Extend the DWM frame into the entire client area so the DWM
-   * compositor respects per-pixel alpha from the GPU clear colour.
-   * Wherever we render with alpha < 1, the window becomes
-   * semi-transparent (see-through to the desktop / windows behind).
-   * No blur effect — just transparency. */
-  MARGINS margins = {-1, -1, -1, -1};
-  if (!enable) {
-    margins = {0, 0, 0, 0};
+  if (!hwnd) {
+    return false;
   }
-  DwmExtendFrameIntoClientArea(hwnd, &margins);
-
-  /* DwmEnableBlurBehindWindow with a 1×1 region tells the DWM "this
-   * window participates in per-pixel alpha compositing" without
-   * adding any visible blur.  The 1×1 region is a well-known trick:
-   * fEnable=TRUE triggers the DWM to look at alpha, and the tiny
-   * region means the actual Gaussian blur is negligible. */
-  HRGN rgn = CreateRectRgn(0, 0, 1, 1);
-  DWM_BLURBEHIND bb = {};
-  bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-  bb.fEnable = enable ? TRUE : FALSE;
-  bb.hRgnBlur = rgn;
-  DwmEnableBlurBehindWindow(hwnd, &bb);
-  DeleteObject(rgn);
+  if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
+    Mixar_Win32GlassSetEnabled(hwnd, false);
+    return false;
+  }
+  return Mixar_Win32GlassSetEnabled(hwnd, enable);
 }
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle)

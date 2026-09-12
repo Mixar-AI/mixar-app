@@ -172,7 +172,8 @@ void draw_pill(Button *but, rcti *rect)
 
   GPU_blend(GPU_BLEND_ALPHA);
   const float rad = height * mixar_chrome::card_pill_radius;
-  mixar_card_fill_round(&chip, rad, MX_GRAY_800);
+  /* Plan chip sits on the card pane — CHIP role, with its own stronger stroke. */
+  mixar_card_glass_round(&chip, rad, MIXAR_GLASS_CHIP);
   mixar_card_outline_round(&chip, rad, MX_BORDER_STRONG, 1.0f);
   GPU_blend(GPU_BLEND_NONE);
 

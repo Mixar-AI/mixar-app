@@ -35,6 +35,8 @@
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
@@ -59,6 +61,18 @@ void cinema_panel(const rctf &rect,
    * ramps are slightly diagonal; at panel scale the difference is under a
    * level of quantisation and a vertical ramp needs no custom geometry. */
   ui::draw_roundbox_4fv_ex(&rect, top, bottom, 1.0f, nullptr, 0.0f, radius);
+}
+
+void cinema_glass_panel(const rctf &rect, const float radius)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, &rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_CARD;
+  style.radius = radius;
+  style.draw_shadow = false;
+  style.draw_specular = false;
+  ui::mixar_glass_draw(pane, style);
 }
 
 void cinema_fill(const rctf &rect, const float radius, const float color[4])

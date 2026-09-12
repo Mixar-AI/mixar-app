@@ -177,8 +177,6 @@ void cinema_draw_right_panel(ui::Block *block,
                              const DirectorViewState &state)
 {
   const float u = cinema_unit();
-  const float card_top[4] = CINEMA_COL_CARD_TOP;
-  const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
   const float label_col[4] = CINEMA_COL_CAPTION;
   const float value_col[4] = CINEMA_COL_VALUE;
   const float dim_col[4] = CINEMA_COL_DIM;
@@ -187,7 +185,7 @@ void cinema_draw_right_panel(ui::Block *block,
   /* -------- Cameras -------- */
   const rctf cameras = design_rect_right(
       region, COLUMN_X, CINEMA_COLUMN_TOP, CINEMA_PANEL_W, CINEMA_CAMERAS_H);
-  cinema_panel(cameras, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
+  cinema_glass_panel(cameras, CINEMA_PANEL_RADIUS * u);
   cinema_text_left("My Cameras",
                    cameras.xmin + 13.0f * u,
                    cameras.ymax - 22.0f * u,

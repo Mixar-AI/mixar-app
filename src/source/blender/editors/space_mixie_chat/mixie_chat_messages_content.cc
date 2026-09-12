@@ -37,6 +37,12 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                         int text_len,
                                         const char *display_text)
 {
+  /* The user's own message is the chat's one real card, so its bed is a glass
+   * pane (§ MIXAR_GLASS_CHAT). Everything else that shares this fill stays
+   * flat: the agent's prose has no bed at all, the block containers hand over a
+   * colour on purpose, and an error card keeps its red. */
+  const bool glass_bed = layout.is_user && !layout.is_error;
+
   if (layout.is_slot_based && text_len == 0) {
     /* Get content text - read fresh from RNA property since it may have been updated */
     char *slot_content = nullptr;
@@ -67,8 +73,14 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
         bubble_rect.ymin = layout.y_pos;
         bubble_rect.ymax = layout.y_pos + layout.bubble_height;
-        chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
-                                  layout.style.bg_color);
+        if (glass_bed) {
+          chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
+                                  layout.style.bg_color[3]);
+        }
+        else {
+          chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
+                                    layout.style.bg_color);
+        }
 
         /* Neutral structural rail for the agent's prose blocks — quiet ground;
          * the single live accent belongs to the streaming blocks only. */
@@ -88,7 +100,8 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         /* Fallback: plain text bubble */
         chat_ui_draw_bubble(&layout.style, slot_content, layout.bubble_x,
                             layout.y_pos, layout.bubble_width,
-                            layout.bubble_height, layout.content_width);
+                            layout.bubble_height, layout.content_width,
+                            0.0f, glass_bed);
       }
 
       if (slot_meta_d) {
@@ -151,7 +164,8 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                chat_anim_frame(CHAT_ANIM_SPINNER, spin_idx), loader_text);
       chat_ui_draw_bubble(&layout.style, loader_buf, layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
-                          layout.bubble_height, layout.content_width);
+                          layout.bubble_height, layout.content_width,
+                          0.0f, glass_bed);
     } else if (layout.has_todo || layout.has_actions || layout.has_steps ||
                layout.has_thinking) {
       /* Block-only message - no main bubble, the blocks render below */
@@ -159,7 +173,8 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       /* Fallback: empty bubble */
       chat_ui_draw_bubble(&layout.style, "", layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
-                          layout.bubble_height, layout.content_width);
+                          layout.bubble_height, layout.content_width,
+                          0.0f, glass_bed);
     }
 
     /* Free slot content if allocated */
@@ -186,7 +201,13 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
       bubble_rect.ymin = layout.y_pos;
       bubble_rect.ymax = layout.y_pos + layout.bubble_height;
-      chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);
+      if (glass_bed) {
+        chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
+                                layout.style.bg_color[3]);
+      }
+      else {
+        chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);
+      }
 
       /* Teal left accent bar for the agent's content / Plan block (this is the
        * path agent markdown actually takes — text mirrors content, so text_len
@@ -210,7 +231,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       chat_ui_draw_bubble(&layout.style, display_text, layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
                           layout.bubble_height, layout.content_width,
-                          layout.attachments_height);
+                          layout.attachments_height, glass_bed);
     }
 
     if (meta_buf) {

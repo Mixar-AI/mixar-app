@@ -67,11 +67,6 @@ void UI_mixar_card_button_draw(Button *but,
   const auto hover_alpha = [&](const float rest, const float hovered) {
     return rest + (hovered - rest) * motion.hover;
   };
-  uchar card_fill[4];
-  for (int i = 0; i < 4; i++) {
-    card_fill[i] = uchar(float(MX_GRAY_800[i]) +
-                         (float(MX_GRAY_700[i]) - MX_GRAY_800[i]) * motion.hover);
-  }
 
   GPU_blend(GPU_BLEND_ALPHA);
 
@@ -82,6 +77,7 @@ void UI_mixar_card_button_draw(Button *but,
     case MixarCardElement::AccentButton: {
       /* Reads as a filled button, not an outline: it is the one place on
        * the card asking for a decision, so it carries real weight. */
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
       mixar_card_fill_round(
           &box,
           rad,
@@ -101,7 +97,7 @@ void UI_mixar_card_button_draw(Button *but,
        * legible as the destructive-ish corner of the grid, and no more —
        * at full danger weight it was the loudest thing on the card and
        * pulled the eye off Buy Credits. */
-      mixar_card_fill_round(&box, rad, card_fill);
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
       mixar_card_fill_round(
           &box,
           rad,
@@ -118,7 +114,7 @@ void UI_mixar_card_button_draw(Button *but,
     case MixarCardElement::GhostButton: {
       /* Borderless until touched, so the logout strip stays quiet. */
       if (motion.hover > 0.0f) {
-        mixar_card_fill_round(&box, rad, MX_GRAY_800, motion.hover);
+        mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, motion.hover);
       }
       text_col = MX_FG_2;
       icon_col = MX_FG_4;
@@ -126,7 +122,7 @@ void UI_mixar_card_button_draw(Button *but,
     }
     case MixarCardElement::CardButton:
     default: {
-      mixar_card_fill_round(&box, rad, card_fill);
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, hover_alpha(0.85f, 1.0f));
       mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline);
       break;
     }

@@ -433,7 +433,7 @@ wmWindow *wm_window_copy_test(bContext *C,
 static void wm_close_agent_bubble_windows(bContext *C,
                                            wmWindowManager *wm,
                                            wmWindow *skip_win);
-static bool wm_window_contains_agent_bubble_space(wmWindow *win);
+static bool wm_window_contains_agent_bubble_space(const wmWindow *win);
 
 /**
  * The window the quit flow (confirmation popup, delayed-exit handler) should
@@ -551,7 +551,7 @@ static rctf *stored_window_bounds(eSpace_Type space_type)
   return nullptr;
 }
 
-static bool wm_window_contains_agent_bubble_space(wmWindow *win)
+static bool wm_window_contains_agent_bubble_space(const wmWindow *win)
 {
   bScreen *screen = WM_window_get_active_screen(win);
   if (screen == nullptr) {
@@ -1019,6 +1019,12 @@ static void wm_window_decoration_style_set_from_theme(const wmWindow *win, const
 void WM_window_decoration_style_apply(const wmWindow *win, const bScreen *screen)
 {
   BLI_assert(WM_capabilities_flag() & WM_CAPABILITY_WINDOW_DECORATION_STYLES);
+  /* These chromeless windows own their native material. On Cocoa, applying
+   * the title-bar theme also replaces the clear NSWindow background with an
+   * opaque colour, hiding the glass after activation or a theme refresh. */
+  if (wm_window_contains_agent_bubble_space(win)) {
+    return;
+  }
   wm_window_decoration_style_set_from_theme(win, screen);
 
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
