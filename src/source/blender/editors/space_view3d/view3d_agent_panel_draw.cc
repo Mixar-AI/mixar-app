@@ -44,8 +44,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
-#include "view3d_agent_panel.hh"
 #include "../space_agent_bubble/agent_ui_pill_cat.hh"
+#include "view3d_agent_panel.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -127,7 +127,6 @@ void draw_elided(const int font_id,
   BLF_draw(font_id, buf, strlen(buf));
 }
 
-
 void draw_card(const AgentPanelCard &card, const float alpha, const double now)
 {
   const float scale = UI_SCALE_FAC;
@@ -152,12 +151,12 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
 
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv_ex(&rect,
-                          /*inner1 (right)*/ dark,
-                          /*inner2 (left)*/ green,
-                          /*shade_dir*/ 0.0f,
-                          border,
-                          U.pixelsize,
-                          AGENT_PANEL_CARD_RADIUS * scale);
+                           /*inner1 (right)*/ dark,
+                           /*inner2 (left)*/ green,
+                           /*shade_dir*/ 0.0f,
+                           border,
+                           U.pixelsize,
+                           AGENT_PANEL_CARD_RADIUS * scale);
 
   /* The same silhouette as the island, with per-task identity and phase. */
   const rctf cat = to_rctf(card.cat_rect);
@@ -296,10 +295,8 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
      * `0, 0, winx, winy`) — offsetting by `winrct` puts the box outside that
      * framebuffer and clips every card away, with nothing drawn and no error. */
     GPU_scissor_get(scissor_prev);
-    GPU_scissor(column.xmin,
-                column.ymin,
-                BLI_rcti_size_x(&column) + 1,
-                BLI_rcti_size_y(&column) + 1);
+    GPU_scissor(
+        column.xmin, column.ymin, BLI_rcti_size_x(&column) + 1, BLI_rcti_size_y(&column) + 1);
   }
 
   const double now = BLI_time_now_seconds();
@@ -313,8 +310,7 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     }
     /* A finished card fades as it leaves, so it does not simply blink out at
      * the column edge. */
-    const float alpha = view3d_agent_panel_reveal(runtime, i) *
-                        (1.0f - view3d_agent_panel_exit_progress(card));
+    const float alpha = 1.0f - card.slide.value;
     draw_card(card, alpha, now);
   }
 

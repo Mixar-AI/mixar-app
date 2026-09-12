@@ -28,6 +28,7 @@
 
 #include "../interface/interface_qa_inspect.hh"
 
+#include "agent_ui_cat_activity.hh"
 #include "agent_ui_cat_style.hh"
 #include "agent_ui_pill_cat.hh"
 #include "agent_ui_pill_cat_pose.hh"
@@ -38,15 +39,24 @@ namespace {
 
 rcti g_last_cat_rect = {};
 bool g_last_cat_valid = false;
+MixieCatActivity g_last_activity = MixieCatActivity::Idle;
 
 /** Geometry owns its pixel-sized coverage fringe. Widget roundbox shaders
  * assume pixel-space coordinates and cannot be used under the mascot scale. */
-void polygon(const float (*points)[2], int count, float pixel, const float color[4])
+void polygon(const float (*points)[2],
+             int count,
+             float pixel,
+             const float color[4],
+             const float *anchor = nullptr)
 {
   float center[2] = {};
   for (int i = 0; i < count; i++) {
     center[0] += points[i][0] / count;
     center[1] += points[i][1] / count;
+  }
+  if (anchor) {
+    center[0] = anchor[0];
+    center[1] = anchor[1];
   }
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
@@ -81,16 +91,25 @@ void polygon(const float (*points)[2], int count, float pixel, const float color
   immUnbindProgram();
 }
 
-void ellipse(float x, float y, float rx, float ry, float pixel, const float color[4])
+void ellipse(
+    float x, float y, float rx, float ry, float pixel, const float color[4], float smile = 0.0f)
 {
   constexpr int count = 40;
   float points[count][2];
+  const auto bend = [smile](float px, float py) {
+    const float u = px / 0.086f;
+    return (1.0f - smile) * py + smile * (0.075f * (1.0f - u * u) + 0.22f * py);
+  };
   for (int i = 0; i < count; i++) {
     const float angle = float(i) * 6.283185307f / count;
     points[i][0] = x + rx * std::cos(angle);
     points[i][1] = y + ry * std::sin(angle);
+    /* Bend the whole eye (including its details) into an upward crescent.
+     * Applying the same map keeps pupils inside the iris during the morph. */
+    points[i][1] = bend(points[i][0], points[i][1]);
   }
-  polygon(points, count, pixel, color);
+  const float center[2] = {x, bend(x, y)};
+  polygon(points, count, pixel, color, center);
 }
 
 /** Rounded triangular ears, with the same coverage fringe as the face. */
@@ -122,7 +141,7 @@ void ear(float side, float height, float twitch, float pixel, const float color[
 void draw_eyes(const MixieCatPose &pose, const MixieCatStyle &style, float pixel, float alpha)
 {
   const float eye[4] = {style.eyes[0], style.eyes[1], style.eyes[2], alpha};
-  const float ink[4] = {0.002f, 0.006f, 0.004f, alpha};
+  const float ink[4] = {0.002f, 0.006f, 0.004f, alpha * (1.0f - pose.smile)};
   const float shine[4] = {0.94f, 0.98f, 0.95f, alpha};
   for (float side : {-1.0f, 1.0f}) {
     const float x = side * 0.128f + pose.look_x * 0.018f;
@@ -131,10 +150,11 @@ void draw_eyes(const MixieCatPose &pose, const MixieCatStyle &style, float pixel
      * That keeps every detail inside the eye through a blink. */
     GPU_matrix_push();
     GPU_matrix_translate_2f(x, 0.012f + pose.look_y * 0.012f);
-    const float lid = 1.0f - 0.10f * std::max(0.0f, side * pose.look_x);
-    GPU_matrix_scale_2f(pose.eye_scale, openness * pose.eye_scale * lid);
-    ellipse(0.0f, 0.0f, 0.086f, 0.112f, pixel, eye);
-    const float rx = 0.037f * pose.pupil_scale;
+    const float lid = (side < 0 ? pose.lid_l : pose.lid_r) *
+                      (1.0f - 0.10f * std::max(0.0f, side * pose.look_x));
+    GPU_matrix_scale_2f(pose.eye_scale * pose.eye_width, openness * pose.eye_scale * lid);
+    ellipse(0.0f, 0.0f, 0.086f, 0.112f, pixel, eye, pose.smile);
+    const float rx = 0.037f * pose.pupil_scale * pose.pupil_width;
     const float ry = 0.040f * pose.pupil_scale;
     float px = 0.012f + pose.look_x * 0.042f;
     float py = 0.044f + pose.look_y * 0.050f;
@@ -145,39 +165,52 @@ void draw_eyes(const MixieCatPose &pose, const MixieCatStyle &style, float pixel
     const float fit = 0.94f / std::max(0.94f, distance);
     px *= fit;
     py *= fit;
-    ellipse(px, py, rx, ry, pixel, ink);
-    const float catchlight[4] = {
-        shine[0], shine[1], shine[2], shine[3] * mixie_cat_smooth01((openness - 0.12f) / 0.28f)};
-    ellipse(px + 0.016f, py + 0.010f, 0.019f, 0.019f, pixel, catchlight);
+    ellipse(px, py, rx, ry, pixel, ink, pose.smile);
+    const float catchlight[4] = {shine[0],
+                                 shine[1],
+                                 shine[2],
+                                 shine[3] * (1.0f - pose.smile) *
+                                     mixie_cat_smooth01((openness - 0.12f) / 0.28f)};
+    ellipse(px + 0.016f, py + 0.010f, 0.019f, 0.019f, pixel, catchlight, pose.smile);
     GPU_matrix_pop();
   }
 }
 
 }  // namespace
 
-void agent_ui_draw_cat(
-    const rctf &chip, const double now, const bool working, const int variation, const float alpha)
+static void draw_cat_pose(const rctf &chip,
+                          const MixieCatPose &pose,
+                          const int variation,
+                          const float alpha)
 {
   const float s = std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f;
   if (s < 6.0f || alpha <= 0.0f) {
     return;
   }
-  const MixieCatPose pose = mixie_cat_eval_pose(now, working);
   const MixieCatStyle &style = mixie_cat_style(variation);
   const float ink[4] = {0.002f, 0.006f, 0.004f, std::clamp(alpha, 0.0f, 1.0f)};
 
   GPU_matrix_push();
-  GPU_matrix_translate_2f(BLI_rctf_cent_x(&chip), BLI_rctf_cent_y(&chip) - s * 0.025f);
+  GPU_matrix_translate_2f(BLI_rctf_cent_x(&chip),
+                          BLI_rctf_cent_y(&chip) + s * (pose.bounce - 0.025f));
   GPU_matrix_rotate_2d(style.tilt + pose.tilt);
   GPU_matrix_scale_2f(s * pose.breathe, s * pose.breathe);
-  ear(-1.0f, style.ear_left, pose.ear_l * 0.002f, 0.7f / s, ink);
-  ear(1.0f, style.ear_right, pose.ear_r * 0.002f, 0.7f / s, ink);
+  ear(-1.0f, style.ear_left * pose.ear_height_l, pose.ear_l * 0.002f, 0.7f / s, ink);
+  ear(1.0f, style.ear_right * pose.ear_height_r, pose.ear_r * 0.002f, 0.7f / s, ink);
   ellipse(0.0f, -0.025f, 0.326f * style.cheek_width, 0.263f, 0.7f / s, ink);
   draw_eyes(pose, style, 0.7f / s, ink[3]);
   GPU_matrix_pop();
 }
 
-void agent_ui_draw_pill_cat(const rctf *chip, const double now, const bool working)
+void agent_ui_draw_cat(
+    const rctf &chip, const double now, const bool working, const int variation, const float alpha)
+{
+  draw_cat_pose(chip, mixie_cat_eval_pose(now, working), variation, alpha);
+}
+
+void agent_ui_draw_pill_cat(const rctf *chip,
+                            const MixieCatPose &pose,
+                            const MixieCatActivity activity)
 {
   g_last_cat_valid = false;
   if (chip == nullptr || BLI_rctf_size_x(chip) < 8.0f || BLI_rctf_size_y(chip) < 8.0f) {
@@ -188,7 +221,8 @@ void agent_ui_draw_pill_cat(const rctf *chip, const double now, const bool worki
                      int(std::floor(chip->ymin)),
                      int(std::ceil(chip->ymax))};
   g_last_cat_valid = true;
-  agent_ui_draw_cat(*chip, now, working, 0, 1.0f);
+  g_last_activity = activity;
+  draw_cat_pose(*chip, pose, 0, 1.0f);
 }
 
 bool agent_ui_pill_cat_last_rect(rcti *r_rect)
@@ -246,7 +280,7 @@ void pill_cat_qa_targets(const wmWindow * /*win*/,
   MixarQATarget t;
   t.surface = "pill_cat";
   t.text = "Mixie";
-  t.value = "mascot";
+  t.value = mixie_cat_activity_name(g_last_activity);
   t.rect_win = mapped;
   r_targets.push_back(std::move(t));
 }

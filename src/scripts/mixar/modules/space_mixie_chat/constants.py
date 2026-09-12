@@ -534,3 +534,6 @@ STREAMING_BATCH_LIMIT = 8
 # Prefix for temporary placeholder bubble IDs (optimistic UI loading indicator).
 # Used in chat_ops.py (creation) and slot_processor.py (cleanup).
 TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
+
+# Let a synchronous tool or final response remain readable between draw frames.
+CAT_ACTIVITY_HOLD_SECONDS = 0.9

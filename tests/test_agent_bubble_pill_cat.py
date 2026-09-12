@@ -92,7 +92,7 @@ def test_painter_calls_the_shipped_sampler():
 
 def test_elongated_pill_draws_the_cat_not_the_mixar_mark():
     elongated = _elongated()
-    assert "agent_ui_draw_pill_cat(&chip, now, is_working)" in elongated
+    assert "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity)" in elongated
     assert "ICON_MIXAR_ICON" not in elongated
 
 

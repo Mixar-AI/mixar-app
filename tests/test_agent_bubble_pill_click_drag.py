@@ -80,13 +80,13 @@ def test_hover_tick_still_collapses_the_open_island():
     assert "Mixar_WindowContainsScreenCursor(g_bubble_ghostwin" in body
 
 
-def test_hover_tick_keeps_the_working_pill_animated():
-    """The tick's remaining job while minimised: pump the pill redraw so
-    Mixie's cat (and the working glow) run while the main draw loop idles."""
+def test_hover_tick_only_watches_mascot_availability():
+    """Hover policy may re-arm the native scheduler, but never draws frames."""
     body = _hover_tick()
     start = body.index("if (g_bubble_minimised)")
     minimised_branch = body[start : start + 400]
-    assert "agent_bubble_pill_tag_redraw" in minimised_branch
+    assert "tag_redraw" not in minimised_branch
+    assert "agent_ui_cat_scheduler_sync" in body
 
 
 # ---------------------------------------------------------------------------

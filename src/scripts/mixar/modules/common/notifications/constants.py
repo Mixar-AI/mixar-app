@@ -86,7 +86,8 @@ PRESS_FLASH_DURATION = 0.12
 TOASTS_VISIBLE_WM_PROP = "mixar_toasts_visible"
 
 # -- Animation --------------------------------------------------------------
-FADE_DURATION_MS = 300
+FADE_DURATION_MS = 200
+ANIMATION_INTERVAL = 1.0 / 60.0
 TIMER_INTERVAL = 0.2
 
 # -- REST -------------------------------------------------------------------
