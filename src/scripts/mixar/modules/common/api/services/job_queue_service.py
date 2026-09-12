@@ -163,13 +163,23 @@ class JobQueueService(BaseService):
         on_success: Optional[Callable[[APIResponse], None]] = None,
         on_error: Optional[Callable[[Exception], None]] = None,
         on_complete: Optional[Callable[[AsyncResponse], None]] = None,
+        purpose: str = "",
     ) -> str:
-        """Stream one generation input to an ownership-scoped backend key."""
+        """Stream one generation input to an ownership-scoped backend key.
+
+        ``purpose`` selects the backend's validation + key prefix for the file
+        (``video_upscale`` for a Video Upscale SOURCE clip); empty keeps the
+        backend default (Seedance reference material), so every existing
+        caller is unchanged.
+        """
         _require_auth()
         if media_kind not in {"image", "video"}:
             raise ValueError(f"Unsupported media kind: {media_kind!r}")
+        path = f"uploads/{media_kind}"
+        if purpose:
+            path = f"{path}?purpose={quote(str(purpose), safe='')}"
         return self.post_async(
-            f"uploads/{media_kind}",
+            path,
             data_factory=body_factory,
             headers={
                 "Content-Type": content_type or "application/octet-stream",

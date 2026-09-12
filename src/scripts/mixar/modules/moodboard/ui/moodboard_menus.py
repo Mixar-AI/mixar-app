@@ -213,7 +213,9 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                 layout.operator("mixie.moodboard_copy_image", text="Copy", icon='COPYDOWN')
                 layout.separator()
 
-                can_continue = action_node.action_type in {'IMAGE_GEN', 'VIDEO_GEN'}
+                can_continue = action_node.action_type in {
+                    'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE',
+                }
                 if can_continue:
                     layout.label(text="Continue With")
                 if action_node.action_type == 'IMAGE_GEN':
@@ -238,6 +240,14 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                         "Generate Video",
                         'FILE_MOVIE',
                         action_node.node_id,
+                    )
+                # Only a node whose OUTPUT is a movie can feed the upscaler.
+                if action_node.action_type in {'VIDEO_GEN', 'VIDEO_UPSCALE'} and (
+                    _capability_available("video_upscale")
+                ):
+                    _connected_action(
+                        layout, 'VIDEO_UPSCALE', "Upscale Video",
+                        'FULLSCREEN_ENTER', action_node.node_id,
                     )
                 layout.separator()
 
@@ -267,6 +277,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             if _capability_available("video_gen"):
                 _connected_action(
                     layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'
+                )
+            if selected_images > selected_stills and _capability_available("video_upscale"):
+                _connected_action(
+                    layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER'
                 )
             # Multi Lasso Mask launches the lasso tool on the one selected
             # still; each SAM3-refined loop spawns a connected mask-detail node.
@@ -463,6 +477,12 @@ class MIXIE_MT_moodboard_output_menu(Menu):
         if source_type in {'IMAGE', 'VIDEO'} and _capability_available("video_gen"):
             _connected_action(
                 layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id, drop
+            )
+            added = True
+        if source_type == 'VIDEO' and _capability_available("video_upscale"):
+            _connected_action(
+                layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
+                source_id, drop,
             )
             added = True
         # A 3D mesh output continues into the mesh -> mesh features, matching the

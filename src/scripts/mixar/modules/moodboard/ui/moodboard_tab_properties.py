@@ -30,6 +30,7 @@ from .moodboard_catalog_tab_props import (  # noqa: F401
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabVideoUpscaleProps,
     MixieMoodboardTabWorldLabsProps,
 )
 # Scene Gen Experimental disabled — PropertyGroups intentionally not imported/registered.
@@ -580,6 +581,12 @@ class MixieMoodboardSidebarProperties(PropertyGroup):
         type=MixieMoodboardTabVideoGenProps,
         name="Video Gen Tab",
         description="Properties for Seedance video generation",
+    )
+
+    tab_video_upscale: PointerProperty(
+        type=MixieMoodboardTabVideoUpscaleProps,
+        name="Video Upscale Tab",
+        description="Properties for FLUX video upscaling",
     )
 
     tab_world_labs: PointerProperty(

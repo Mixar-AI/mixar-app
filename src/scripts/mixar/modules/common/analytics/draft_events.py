@@ -68,6 +68,7 @@ _CAPABILITY_BY_PANEL = {
     "Mesh Segmentation": "mesh_segmentation",
     "Auto Rig": "animate",
     "Video Gen": "video_gen",
+    "Video Upscale": "video_upscale",
 }
 
 _KNOWN_CAPABILITIES = tuple(sorted(set(_CAPABILITY_BY_PANEL.values())))
@@ -308,6 +309,21 @@ def _snapshot_video_gen(sidebar, _scene) -> dict | None:
     return props
 
 
+def _snapshot_video_upscale(sidebar, _scene) -> dict | None:
+    tab = getattr(sidebar, "tab_video_upscale", None)
+    if tab is None:
+        return None
+    prompt = getattr(tab, "prompt", "") or ""
+    if not prompt:
+        return None
+    props = _common("video_upscale", prompt)
+    props.update({
+        "mode": str(getattr(tab, "mode", "") or ""),
+        "model": str(getattr(tab, "model", "") or ""),
+    })
+    return props
+
+
 _SNAPSHOTTERS = {
     "image_gen": _snapshot_image_gen,
     "model_gen": _snapshot_model_gen,
@@ -316,6 +332,7 @@ _SNAPSHOTTERS = {
     "mesh_segmentation": _snapshot_mesh_segmentation,
     "pbr_generation": _snapshot_pbr_generation,
     "video_gen": _snapshot_video_gen,
+    "video_upscale": _snapshot_video_upscale,
     # retopology / ai_render / uv_unwrapping / animate hold only catalog
     # mode+model enums (no user-entered content), so their drafts are
     # always "default" and never produce an abandonment snapshot.

@@ -330,6 +330,22 @@ def _get_video_gen_model_items(self, context):
     )
 
 
+def _get_video_upscale_mode_items(self, context):
+    """Video Upscale tab services; catalog-only with a loading-safe fallback."""
+    return _capability_mode_items(
+        "video_upscale",
+        [("video_upscale", "FLUX Video Upscale", "Upscale a video to 1080p, 2K or 4K")],
+    )
+
+
+def _get_video_upscale_model_items(self, context):
+    """Enabled video upscale models supplied by the generation catalog."""
+    return _capability_model_items(
+        "video_upscale", self,
+        [("flux-video-upscale", "FLUX Video Upscale", "Black Forest Labs video upscaler")],
+    )
+
+
 def _get_world_labs_model_items(self, context):
     """Enabled World Labs models from the catalog, with no live-slug fallback.
 

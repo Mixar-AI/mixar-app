@@ -105,7 +105,10 @@ def _selected_media(scene, action_type: str):
     ]
     if action_type in {'IMAGE_GEN', 'MODEL_3D'}:
         selected = [item for item in selected if is_still_item(item)]
-    if action_type == 'MODEL_3D':
+    if action_type == 'VIDEO_UPSCALE':
+        # One movie in: the node has a single video socket.
+        selected = [item for item in selected if not is_still_item(item)]
+    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE'}:
         return selected[:1]
     return selected
 
@@ -388,6 +391,7 @@ _ACCEPTED_SOURCE_TYPES = {
     'IMAGE_GEN': {'IMAGE'},
     'MODEL_3D': {'IMAGE'},
     'VIDEO_GEN': {'IMAGE', 'VIDEO'},
+    'VIDEO_UPSCALE': {'VIDEO'},
     'PBR_GEN': {'MESH'},
     'RETOPOLOGY': {'MESH'},
     'MESH_SEGMENT': {'MESH'},
@@ -444,6 +448,8 @@ def create_connected_action(
     if not sources and not allow_empty:
         if mesh_feature:
             raise ValueError("Connect this from a 3D mesh node")
+        if action_type == 'VIDEO_UPSCALE':
+            raise ValueError("Upscale Video needs one selected video")
         if action_type != 'IMAGE_GEN':
             raise ValueError(
                 "Generate to 3D needs one selected image"

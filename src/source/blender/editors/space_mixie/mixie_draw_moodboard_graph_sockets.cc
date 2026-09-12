@@ -57,9 +57,9 @@ const float *moodboard_socket_type_color(const char *accepted_types)
 /* Output kind per ACTION_TYPES index. ORDER-PINNED to
  * ``moodboard_graph_properties.py``'s ACTION_TYPES and the output map in
  * ``node_schema.py`` (IMAGE_GEN, VIDEO_GEN, MODEL_3D, MASK_DETAIL, PBR_GEN,
- * RETOPOLOGY, MESH_SEGMENT, AUTO_RIG) — see
+ * RETOPOLOGY, MESH_SEGMENT, AUTO_RIG, VIDEO_UPSCALE) — see
  * tests/moodboard/test_node_ui_polish.py. */
-static const char ACTION_OUTPUT_KINDS[] = {'I', 'V', 'M', 'I', 'M', 'M', 'M', 'M'};
+static const char ACTION_OUTPUT_KINDS[] = {'I', 'V', 'M', 'I', 'M', 'M', 'M', 'M', 'V'};
 
 const float *moodboard_action_output_color(const int action_type)
 {

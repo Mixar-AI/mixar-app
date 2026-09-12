@@ -49,6 +49,9 @@ ACTION_TYPES = (
     ('RETOPOLOGY', "Retopology", "Retopologize the connected 3D mesh"),
     ('MESH_SEGMENT', "Mesh Segmentation", "Segment the connected 3D mesh into parts"),
     ('AUTO_RIG', "Auto Rig", "Auto-rig the connected 3D mesh"),
+    # APPEND ONLY: the enum persists as an index and the C++ ACTION_OUTPUT_KINDS
+    # table in mixie_draw_moodboard_graph_sockets.cc is order-pinned to it.
+    ('VIDEO_UPSCALE', "Upscale Video", "Upscale the connected video to 1080p, 2K or 4K"),
 )
 
 # Action node types whose input is a 3D mesh (from a connected mesh node) and
@@ -81,6 +84,8 @@ def capability_for_action(action_type: str) -> str:
         return "image_gen"
     if action_type == 'VIDEO_GEN':
         return "video_gen"
+    if action_type == 'VIDEO_UPSCALE':
+        return "video_upscale"
     if action_type in _MESH_FEATURE_CAPABILITY:
         return _MESH_FEATURE_CAPABILITY[action_type]
     return "model_gen"

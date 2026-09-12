@@ -72,6 +72,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabVideoUpscaleProps,
     MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
@@ -108,6 +109,7 @@ classes = (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabVideoUpscaleProps,
     MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
@@ -286,6 +288,15 @@ def register():
         ),
     )
     _safe_scene_prop(
+        'mixie_video_upscale_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether video upscaling is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
+    _safe_scene_prop(
         'mixie_lookdev_is_generating',
         BoolProperty(
             name="Is Generating",
@@ -362,7 +373,8 @@ def register():
     )
 
     # Generation progress floats (session-only)
-    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'video_upscale', 'lookdev', 'lookdev360',
+                    'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate',
                     'pbr_gen', 'tripo_segment', 'smart_segment'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
@@ -395,6 +407,7 @@ def unregister():
         'mixie_lookdev_is_generating',
         'mixie_imagegen_is_generating',
         'mixie_video_gen_is_generating',
+        'mixie_video_upscale_is_generating',
         'mixie_scene_recon_error',
         'mixie_scene_recon_is_generating',
         'mixie_segment_to_3d_is_generating',
@@ -425,7 +438,8 @@ def unregister():
 
     # WindowManager properties
     wm_attrs = []
-    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'video_upscale', 'lookdev', 'lookdev360',
+                    'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate', 'pbr_gen'):
         wm_attrs.append(f'mixie_{prefix}_generate_progress')
     for attr in wm_attrs:
