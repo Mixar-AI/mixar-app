@@ -28,6 +28,7 @@
 
 #include "../interface/interface_qa_inspect.hh"
 
+#include "agent_ui_cat_activity.hh"
 #include "agent_ui_cat_style.hh"
 #include "agent_ui_pill_cat.hh"
 #include "agent_ui_pill_cat_pose.hh"
@@ -38,6 +39,7 @@ namespace {
 
 rcti g_last_cat_rect = {};
 bool g_last_cat_valid = false;
+MixieCatActivity g_last_activity = MixieCatActivity::Idle;
 
 /** Geometry owns its pixel-sized coverage fringe. Widget roundbox shaders
  * assume pixel-space coordinates and cannot be used under the mascot scale. */
@@ -155,19 +157,21 @@ void draw_eyes(const MixieCatPose &pose, const MixieCatStyle &style, float pixel
 
 }  // namespace
 
-void agent_ui_draw_cat(
-    const rctf &chip, const double now, const bool working, const int variation, const float alpha)
+static void draw_cat_pose(const rctf &chip,
+                          const MixieCatPose &pose,
+                          const int variation,
+                          const float alpha)
 {
   const float s = std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f;
   if (s < 6.0f || alpha <= 0.0f) {
     return;
   }
-  const MixieCatPose pose = mixie_cat_eval_pose(now, working);
   const MixieCatStyle &style = mixie_cat_style(variation);
   const float ink[4] = {0.002f, 0.006f, 0.004f, std::clamp(alpha, 0.0f, 1.0f)};
 
   GPU_matrix_push();
-  GPU_matrix_translate_2f(BLI_rctf_cent_x(&chip), BLI_rctf_cent_y(&chip) - s * 0.025f);
+  GPU_matrix_translate_2f(BLI_rctf_cent_x(&chip),
+                          BLI_rctf_cent_y(&chip) + s * (pose.bounce - 0.025f));
   GPU_matrix_rotate_2d(style.tilt + pose.tilt);
   GPU_matrix_scale_2f(s * pose.breathe, s * pose.breathe);
   ear(-1.0f, style.ear_left, pose.ear_l * 0.002f, 0.7f / s, ink);
@@ -177,7 +181,15 @@ void agent_ui_draw_cat(
   GPU_matrix_pop();
 }
 
-void agent_ui_draw_pill_cat(const rctf *chip, const double now, const bool working)
+void agent_ui_draw_cat(
+    const rctf &chip, const double now, const bool working, const int variation, const float alpha)
+{
+  draw_cat_pose(chip, mixie_cat_eval_pose(now, working), variation, alpha);
+}
+
+void agent_ui_draw_pill_cat(const rctf *chip,
+                            const MixieCatPose &pose,
+                            const MixieCatActivity activity)
 {
   g_last_cat_valid = false;
   if (chip == nullptr || BLI_rctf_size_x(chip) < 8.0f || BLI_rctf_size_y(chip) < 8.0f) {
@@ -188,7 +200,8 @@ void agent_ui_draw_pill_cat(const rctf *chip, const double now, const bool worki
                      int(std::floor(chip->ymin)),
                      int(std::ceil(chip->ymax))};
   g_last_cat_valid = true;
-  agent_ui_draw_cat(*chip, now, working, 0, 1.0f);
+  g_last_activity = activity;
+  draw_cat_pose(*chip, pose, 0, 1.0f);
 }
 
 bool agent_ui_pill_cat_last_rect(rcti *r_rect)
@@ -246,7 +259,7 @@ void pill_cat_qa_targets(const wmWindow * /*win*/,
   MixarQATarget t;
   t.surface = "pill_cat";
   t.text = "Mixie";
-  t.value = "mascot";
+  t.value = mixie_cat_activity_name(g_last_activity);
   t.rect_win = mapped;
   r_targets.push_back(std::move(t));
 }

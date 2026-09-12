@@ -4,6 +4,7 @@
 #pragma once
 
 #include "BLI_rect.h"
+#include "agent_ui_cat_activity.hh"
 
 namespace blender {
 struct ARegion;
@@ -45,5 +46,9 @@ void agent_ui_motion_color(const float base[4],
                            AgentIslandFeedback feedback,
                            float result[4]);
 void agent_ui_motion_region_free(ARegion *region);
+MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
+                                        MixieCatActivity activity,
+                                        double now,
+                                        const void *scene);
 void *agent_ui_motion_region_duplicate(void *regiondata);
 }  // namespace blender

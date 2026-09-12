@@ -2785,7 +2785,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   agent_ui_state_gather(C, &state);
   GPU_matrix_push();
   GPU_matrix_translate_2f(float(-region->winrct.xmin), float(-region->winrct.ymin));
-  agent_ui_draw_status_pill(pill_w, pill_h, &state);
+  agent_ui_draw_status_pill(region, pill_w, pill_h, &state);
   GPU_matrix_pop();
 
   /* Elongated resting pill always carries Mixie's cat (idle blink/breathe),

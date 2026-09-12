@@ -47,7 +47,7 @@ def test_minimized_pill_checks_working_state():
     elongated_body = body[elongated:]
 
     assert "is_working" in elongated_body
-    assert "state->status_busy || (state->queue_count > 0)" in elongated_body
+    assert "mixie_cat_is_working(state->cat_activity)" in elongated_body
 
 
 def test_working_state_derives_continuous_pulse():
@@ -180,4 +180,3 @@ def test_uniform_spacing_around_input_bubble_and_buttons():
     assert "#define AGENT_INPUT_GAP 16" in THEME_HH
     assert "#define AGENT_TRANSCRIPT_GAP 16" in THEME_HH
     assert "#define AGENT_SEG_X 16" in THEME_HH
-

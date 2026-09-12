@@ -24,8 +24,26 @@ struct ControlMotion {
 };
 struct AgentIslandMotion {
   std::array<ControlMotion, int(AgentIslandControl::Count)> controls;
+  MixieCatMotion cat;
+  const void *cat_scene = nullptr;
 };
 }  // namespace
+
+MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
+                                        const MixieCatActivity activity,
+                                        const double now,
+                                        const void *scene)
+{
+  if (!region->regiondata) {
+    region->regiondata = MEM_new<AgentIslandMotion>("Agent island motion");
+  }
+  auto &motion = *static_cast<AgentIslandMotion *>(region->regiondata);
+  if (motion.cat_scene != scene) {
+    motion.cat = {};
+    motion.cat_scene = scene;
+  }
+  return motion.cat.sample(now, activity);
+}
 
 void agent_ui_motion_begin(ARegion *region)
 {

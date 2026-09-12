@@ -54,6 +54,7 @@ set(SRC
   agent_ui_pane_kit.hh
   agent_ui_pill_cat.hh
   agent_ui_cat_style.hh
+  agent_ui_cat_activity.hh
   agent_ui_pill_cat_pose.hh
   agent_ui_queue_intern.hh
   agent_ui_queue.hh
