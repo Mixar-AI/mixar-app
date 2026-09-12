@@ -209,6 +209,28 @@ class TestSettleOnTurnEnd:
 
 
 class TestDismissalMemory:
+    @pytest.mark.parametrize("count,dismissed", [(2, ("0",)), (2, ("0", "1")), (3, ("0", "1"))])
+    def test_hidden_panel_keeps_dismissals_across_repeated_snapshots(self, wm, count, dismissed):
+        items = _todo(count, status='FAILED')
+        cards_mod.mirror_todo_items(items)
+        for task_id in dismissed:
+            assert cards_mod.dismiss_card(task_id)
+
+        for _ in range(3):
+            assert cards_mod.mirror_todo_items(items) == 0
+            assert len(wm.mixar_agent_cards) == 0
+            assert cards_mod._dismissed_task_ids == set(dismissed)
+
+        cards_mod.clear_cards()  # next turn, even though the panel is already empty
+        assert cards_mod.mirror_todo_items(items) == count
+
+    def test_a_short_snapshot_keeps_dismissals_when_the_fan_out_grows_again(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
+        cards_mod.dismiss_card("1")
+        cards_mod.mirror_todo_items(_todo(1, status='FAILED'))
+        assert cards_mod.mirror_todo_items(_todo(3, status='FAILED')) == 2
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2"]
+
     def test_a_dismissed_card_does_not_come_back_when_the_list_is_restreamed(self, wm):
         cards_mod.mirror_todo_items(_todo(3, status='FAILED'))
         assert cards_mod.dismiss_card("1") is True
