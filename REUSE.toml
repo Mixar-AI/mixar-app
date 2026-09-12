@@ -121,6 +121,13 @@ precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
+# Native composer interaction QA screenshots and verdicts.
+[[annotations]]
+path = "docs/development/evidence/mixie-open-type-send/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
 # QA frames and verdicts for the shared Zen motion system.
 [[annotations]]
 path = "docs/development/evidence/zen-motion/**"

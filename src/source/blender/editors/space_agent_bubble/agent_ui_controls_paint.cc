@@ -291,7 +291,7 @@ void agent_ui_draw_chip_row(ARegion *region,
         state->voice_listening ? "Listening" : "Voice", icon.xmax + icon_gap, cy, size, text);
   }
 
-  /* Generate. */
+  /* Send. */
   float generate_fill[4];
   agent_ui_motion_color(
       generate,
@@ -299,7 +299,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->status_busy ? "Stop" : "Generate",
+  label_centre(state->status_busy ? "Stop" : "Send",
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,

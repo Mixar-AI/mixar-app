@@ -816,6 +816,11 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
 
   ui::block_end(C, field_block);
   ui::block_draw(C, field_block);
+  if (input_prop) {
+    /* The field exists this frame; consume a restore focus request now
+     * rather than waiting on the 0.1s hover pump. */
+    agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
+  }
 
   /* The canvas continues over the composer, so a stroke that runs off the
    * transcript does not stop at the region seam.
@@ -1279,6 +1284,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         }
         ui::block_end(C, field_block);
         ui::block_draw(C, field_block);
+        agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
       }
     }
   }
@@ -2959,6 +2965,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
                                       /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
     }
     g_bubble_minimised = false;
+    Mixar_WindowMakeKey(g_bubble_ghostwin);
+    agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
     return OPERATOR_FINISHED;
   }
 #endif
@@ -3774,6 +3782,7 @@ static bool agent_bubble_scribble_active(const bContext *C)
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
+  agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
   /* Scribble pad: arm -> the open island becomes the writing pad on the
    * host's right third; disarm -> it goes back. Edge-detected here because
    * this tick is the one C++ poll of the mode that every arm/disarm path
@@ -3825,6 +3834,13 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   }
   if (g_hover_await_enter) {
     /* Opened programmatically and never visited — see the latch's note. */
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+
+  /* Pointer travel must not take away a draft while the keyboard still
+   * belongs to this window. Clicking the viewport hands collapse back. */
+  if (agent_bubble_composer_has_focused_draft(C, g_bubble_ghostwin)) {
     g_hover_outside_ticks = 0;
     return OPERATOR_FINISHED;
   }
@@ -4128,6 +4144,10 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   }
 
   g_bubble_minimised = false;
+  /* The pill owns the click, but the island must own subsequent typing.
+   * Win32 OrderFront deliberately shows without activation. */
+  Mixar_WindowMakeKey(g_bubble_ghostwin);
+  agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
