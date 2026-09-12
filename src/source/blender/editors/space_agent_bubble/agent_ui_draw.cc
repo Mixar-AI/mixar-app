@@ -383,7 +383,8 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
    * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
     const float u = h / 85.0f; /* design pill is 85 artboard units tall */
-    const bool is_working = mixie_cat_is_working(state->cat_activity);
+    const bool is_working = mixie_cat_is_working(state->cat_activity) &&
+                            (state->status_busy || state->queue_count > 0);
     const double now = BLI_time_now_seconds();
     const float pulse = is_working ?
                             (0.5f + 0.5f * float(std::sin(now * 3.2))) :
@@ -520,9 +521,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       }
       dots[dot_count] = '\0';
 
-      const char *base_status = (state->queue_count > 0 && !state->status_busy) ?
-                                    "Generating" :
-                                    "Working";
+      const char *base_status = mixie_cat_activity_name(state->cat_activity);
       char label[160];
       if (state->last_prompt[0] != '\0') {
         SNPRINTF(label, "%s%s · %s", base_status, dots, preview);

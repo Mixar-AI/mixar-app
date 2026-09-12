@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(os.environ['QA_HARNESS'])/'scenarios'))
 from lib import run_scenario
 from compact_agent_bubble_e2e import _hover_off, _hover_on
 from zen_motion_capture import contact_sheet, preview
+from cat_activity_evidence import compare_faces
 
 
 def _record(output, activity):
@@ -27,6 +28,10 @@ def _record(output, activity):
     from pathlib import Path
     import bpy
     import qa_driver as drv
+    from mixar.modules.space_mixie_chat.core.slot_processor import get_slot_processor
+    from mixar.modules.space_mixie_chat.core.steps_recorder import record_step_start, record_step_end
+    from mixar.modules.space_mixie_chat.core.session import get_session_manager
+    from mixar.modules.space_mixie_chat.constants import SessionState
 
     out = Path(output)
     out.mkdir(parents=True, exist_ok=True)
@@ -36,23 +41,25 @@ def _record(output, activity):
     scene.mixie_chat_state = 'IDLE'
     scene.mixie_chat_is_busy = False
     wm.mixie_chat_voice_listening = False
-    agent.thinking_active = False
-    agent.content = ''
-    agent.step_items.clear()
+    processor = get_slot_processor()
+    def event(**slots):
+        processor.apply_event(dict(bubble_id='qa-cat-agent', **slots), scene)
+    for step in agent.step_items:
+        if step.status == 'RUNNING':
+            record_step_end(scene, step.item_id, {'success': True})
+    event(ephemeral={'clear': True}, content={'clear': True})
     for index in reversed(range(len(wm.mixie_queue.items))):
         if wm.mixie_queue.items[index].job_id == 'qa-cat-generation':
             wm.mixie_queue.items.remove(index)
     if activity in ('Thinking', 'Reading', 'Working', 'Responding'):
-        scene.mixie_chat_state = 'BUSY'
-        scene.mixie_chat_is_busy = True
-        agent.thinking_active = activity == 'Thinking'
+        get_session_manager().set_state(scene, SessionState.BUSY)
+        if activity == 'Thinking':
+            event(ephemeral={'set': 'Consider the composition and materials'})
         if activity in ('Reading', 'Working'):
-            step = agent.step_items.add()
-            step.kind = 'READ' if activity == 'Reading' else 'COMMAND'
-            step.status = 'RUNNING'
-            step.label = 'Read scene' if activity == 'Reading' else 'Build scene'
+            record_step_start(scene, 'qa-cat-'+activity,
+                'read_scene' if activity == 'Reading' else 'execute_script')
         if activity == 'Responding':
-            agent.content = 'The scene is ready.'
+            event(content={'set': 'The scene is ready.'})
     elif activity == 'Waiting for you':
         scene.mixie_chat_state = 'AWAITING_INPUT'
         scene.mixie_chat_is_busy = True
@@ -72,14 +79,14 @@ def _record(output, activity):
         step = agent.step_items.add()
         step.kind = 'COMMAND'
         step.status = 'RUNNING'
-    yield .05
+    yield .35
     target = drv.find_one(surface='pill_cat')
     win = target['_win']
     bounds = target['rect']
     x0,y0,x1,y1 = bounds
     frames=[]
     began=time.monotonic()
-    while time.monotonic()-began < 2.0:
+    while time.monotonic()-began < 3.0:
         current = drv.find_one(surface='pill_cat')
         path=out/f'frame-{len(frames):03}.png'
         with bpy.context.temp_override(window=win):
@@ -91,6 +98,60 @@ def _record(output, activity):
     with bpy.context.temp_override(window=win):
         assert win.mixar_qa_capture_frame(filepath=str(out/'pill.png'))
     return frames
+
+
+def _producer_reactions():
+    """Exercise sub-frame tools and response+completion with actual producers."""
+    import bpy
+    import qa_driver as drv
+    from mixar.modules.space_mixie_chat.core.slot_processor import get_slot_processor, finalize_turn
+    from mixar.modules.space_mixie_chat.core.steps_recorder import record_step_start, record_step_end
+    from mixar.modules.space_mixie_chat.core.session import get_session_manager
+    from mixar.modules.space_mixie_chat.constants import SessionState
+    scene = drv.main_window().scene
+    session = get_session_manager()
+    processor = get_slot_processor()
+    agent = next(m for m in scene.mixie_chat_messages if m.bubble_id == 'qa-cat-agent')
+    def event(**slots):
+        processor.apply_event(dict(bubble_id='qa-cat-agent', **slots), scene)
+    checks = []
+    for kind, tool in [('Reading', 'read_scene'), ('Working', 'execute_script')]:
+        session.set_state(scene, SessionState.BUSY)
+        event(ephemeral={'set': 'Considering the next step'}, content={'clear': True})
+        # Crucially, NO yield between start and end: just like the executor.
+        record_step_start(scene, 'qa-cat-fast', tool)
+        record_step_end(scene, 'qa-cat-fast', {'success': True})
+        assert agent.step_items[-1].status == 'DONE'
+        yield .20
+        assert drv.find_one(surface='pill_cat')['value'] == kind
+        yield .35
+        assert drv.find_one(surface='pill_cat')['value'] == kind
+        yield .50
+        assert drv.find_one(surface='pill_cat')['value'] == 'Thinking'
+        checks.append(kind + ' survives same-callback completion and expires')
+    record_step_start(scene, 'qa-cat-interrupt', 'execute_script')
+    record_step_end(scene, 'qa-cat-interrupt', {'success': True})
+    event(ephemeral={'set': 'Now reconsidering'})
+    yield .10
+    assert drv.find_one(surface='pill_cat')['value'] == 'Thinking'
+    checks.append('new reasoning replaces tool reaction immediately')
+    event(ephemeral={'clear': True}, content={'set': 'Your scene is ready.'})
+    session.set_state(scene, SessionState.IDLE)
+    finalize_turn(scene)
+    yield .20
+    assert not scene.mixie_chat_is_busy
+    assert drv.find_one(surface='pill_cat')['value'] == 'Responding'
+    yield .85
+    assert drv.find_one(surface='pill_cat')['value'] == 'Idle'
+    checks.append('same-callback response completion smiles briefly then rests')
+    session.set_state(scene, SessionState.BUSY)
+    event(content={'set': 'Another answer'})
+    session.set_state(scene, SessionState.AWAITING_INPUT)
+    yield .10
+    assert drv.find_one(surface='pill_cat')['value'] == 'Waiting for you'
+    checks.append('waiting overrides response reaction')
+    session.set_state(scene, SessionState.IDLE)
+    return checks
 
 
 def capture(qa, out, activity):
@@ -131,7 +192,8 @@ bpy.ops.mixar.bubble_minimise()
     try:
         qa.wait("bool(drv.find(surface='pill_cat'))",timeout=10)
         qa.eval('def settle():\n    yield .4\n    return True\nresult=settle()')
-        results={}
+        results={'producer_reactions': qa.step('producer_reactions', qa.eval,
+            inspect.getsource(_producer_reactions)+'\nresult=_producer_reactions()')}
         for activity in ('Idle','Thinking','Reading','Working','Generating','Responding',
                          'Waiting for you','Listening','Connecting','Offline','Idle'):
             name=activity.lower().replace(' ','-')
@@ -141,6 +203,7 @@ bpy.ops.mixar.bubble_minimise()
         # Real pill click must still open the island; native rectangle comes from QA.
         qa.step('cat_click_opens_island',qa.click,surface='pill_cat')
         qa.wait("bool(drv.find(area_type='AGENT_BUBBLE',text='Agent chat'))",timeout=10)
+        results['face_comparison'] = compare_faces(out)
         results['paid_requests']=0
         (out/'verdict.json').write_text(json.dumps(results,indent=2)+'\n')
         return results

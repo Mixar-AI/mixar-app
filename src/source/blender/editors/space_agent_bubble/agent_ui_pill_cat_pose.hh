@@ -32,6 +32,13 @@ struct MixieCatPose {
   float ear_r;
   float eye_scale;
   float pupil_scale;
+  /* Neutral defaults preserve the six parallel-card faces. The main cat can
+   * change its silhouette of the eyes, not just move small pupils around. */
+  float eye_width = 1.0f;
+  float lid_l = 1.0f, lid_r = 1.0f;
+  float pupil_width = 1.0f;
+  float smile = 0.0f;
+  float ear_height_l = 1.0f, ear_height_r = 1.0f;
 };
 
 constexpr double MIXIE_BLINK_PERIOD = 3.55;

@@ -117,8 +117,7 @@ def test_working_state_draws_activity_dot_and_animated_dots():
     assert "dots[i] = '.'" in elongated
 
     # Status label formulation
-    assert "Generating" in elongated
-    assert "Working" in elongated
+    assert "mixie_cat_activity_name(state->cat_activity)" in elongated
     assert "work_col" in elongated
 
 

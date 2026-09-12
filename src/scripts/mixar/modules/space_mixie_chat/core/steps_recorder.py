@@ -59,6 +59,8 @@ def record_step_start(scene, request_id: str, tool_name: str, script: str = "") 
         if bubble is None:
             logger.debug("[STEPS] No agent bubble for %s, skipping row", tool_name)
             return
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         begin_step_on_bubble(bubble, request_id, tool_name, script)
         # A new tool step starting means the agent has moved on from its current
         # reasoning — collapse the live thinking panel to "Thought for Ns" so it
@@ -77,7 +79,9 @@ def record_step_end(scene, request_id: str, result: dict) -> None:
         bubble = _find_bubble_with_step(scene, request_id)
         if bubble is None:
             return
-        finish_step_on_bubble(bubble, request_id, result or {})
+        if finish_step_on_bubble(bubble, request_id, result or {}):
+            from .cat_activity import note_step_completed
+            note_step_completed(scene, bubble, request_id)
         bump_layout_epoch(scene)
         redraw_chat_areas()
     except Exception:

@@ -25,6 +25,7 @@ struct MixieCatSignals {
   bool offline = false, connecting = false;
   bool thinking = false, reading = false, working = false, responding = false;
   bool generating = false;
+  bool finishing = false;
 };
 
 inline bool mixie_cat_is_working(const MixieCatActivity activity)
@@ -56,6 +57,8 @@ inline MixieCatActivity mixie_cat_activity(const MixieCatSignals &s)
       return MixieCatActivity::Responding;
     return s.generating ? MixieCatActivity::Generating : MixieCatActivity::Thinking;
   }
+  if (s.finishing)
+    return MixieCatActivity::Responding;
   return s.generating ? MixieCatActivity::Generating : MixieCatActivity::Idle;
 }
 
@@ -85,8 +88,19 @@ inline const char *mixie_cat_activity_name(const MixieCatActivity activity)
   }
 }
 
-/** All motion stays inside the chip. The main cat has stronger gestures than
- * small parallel avatars, whose existing idle/working sampler stays intact. */
+/** A gesture has anticipation, a readable hold and an eased return. */
+inline float mixie_cat_gesture(double now, double period, float start, float span)
+{
+  const float phase = float(now / period - std::floor(now / period));
+  const float t = (phase - start) / span;
+  if (t < 0.0f || t > 1.0f) {
+    return 0.0f;
+  }
+  return t < 0.4f ? mixie_cat_smooth01(t / 0.4f) : 1.0f - mixie_cat_smooth01((t - 0.4f) / 0.6f);
+}
+
+/** Distinct eye silhouettes stay legible at the actual 44px pill height.
+ * Motion phrases have pauses; parallel avatars keep their quieter sampler. */
 inline MixieCatPose mixie_cat_activity_pose(const double now, const MixieCatActivity activity)
 {
   MixieCatPose p = mixie_cat_eval_pose(now, false);
@@ -94,86 +108,107 @@ inline MixieCatPose mixie_cat_activity_pose(const double now, const MixieCatActi
   float open = 1.0f;
   double blink_time = now;
   switch (activity) {
-    case MixieCatActivity::Thinking:
-      p.look_x = 0.78f * wave(1.8);
-      p.look_y = 0.48f + 0.12f * wave(2.5);
-      p.tilt = 8.0f * wave(1.8);
-      p.ear_l = -8.0f;
-      p.ear_r = 5.0f + 3.0f * wave(2.5);
-      p.pupil_scale = 0.88f;
-      open = 0.86f;
-      break;
-    case MixieCatActivity::Reading: {
-      const float phase = float(now / 1.65 - std::floor(now / 1.65));
-      const float scan = phase < 0.8f ? mixie_cat_smooth01(phase / 0.8f) :
-                                        1.0f - mixie_cat_smooth01((phase - 0.8f) / 0.2f);
-      p.look_x = -0.82f + 1.64f * scan;
-      p.look_y = -0.30f;
-      p.tilt = p.look_x * 3.5f;
-      p.pupil_scale = 0.82f;
-      open = 0.82f;
+    case MixieCatActivity::Thinking: {
+      const float glance = mixie_cat_gesture(now, 3.6, 0.35f, 0.50f);
+      p.look_x = -0.65f + 1.3f * glance;
+      p.look_y = 0.65f;
+      p.tilt = -27.0f + 9.0f * glance;
+      p.lid_l = 0.48f;
+      p.lid_r = 1.08f;
+      p.ear_height_l = 0.82f;
+      p.ear_height_r = 1.10f;
+      p.pupil_scale = 0.78f;
       break;
     }
-    case MixieCatActivity::Working:
-      p.look_x = 0.68f * wave(3.8);
-      p.look_y = -0.36f + 0.12f * wave(5.0);
-      p.tilt = 5.0f * wave(3.8);
-      p.bounce = 0.013f * wave(5.0);
-      p.ear_l = -6.0f + 4.0f * wave(3.8);
-      p.ear_r = 6.0f + 4.0f * wave(3.8);
+    case MixieCatActivity::Reading: {
+      const float phase = float(now / 1.9 - std::floor(now / 1.9));
+      const float scan = mixie_cat_smooth01((phase - 0.12f) / 0.16f) +
+                         mixie_cat_smooth01((phase - 0.44f) / 0.16f) -
+                         2.0f * mixie_cat_smooth01((phase - 0.82f) / 0.16f);
+      p.look_x = -0.85f + 0.85f * scan;
+      p.look_y = -0.45f;
+      p.tilt = -12.0f;
+      p.bounce = -0.018f * mixie_cat_gesture(now, 1.9, 0.78f, 0.20f);
+      p.eye_width = 1.20f;
       p.pupil_scale = 0.80f;
-      open = 0.72f;
+      p.pupil_width = 0.65f;
+      open = 0.60f;
       break;
+    }
+    case MixieCatActivity::Working: {
+      const float nod = mixie_cat_gesture(now, 1.6, 0.08f, 0.24f) +
+                        mixie_cat_gesture(now, 1.6, 0.40f, 0.24f);
+      p.look_x = 0.0f;
+      p.look_y = -0.55f;
+      p.tilt = -12.0f + 5.0f * nod;
+      p.bounce = -0.040f * nod;
+      p.eye_width = 1.10f;
+      p.ear_height_l = p.ear_height_r = 0.86f;
+      p.pupil_scale = 0.72f;
+      open = 0.36f;
+      break;
+    }
     case MixieCatActivity::Generating:
-      p.look_x = 0.68f * wave(2.3);
-      p.look_y = 0.48f * float(std::cos(now * 2.3));
-      p.tilt = 6.5f * wave(2.3);
-      p.bounce = 0.018f * wave(3.3);
-      p.eye_scale = 1.08f;
-      p.pupil_scale = 1.02f + 0.12f * wave(2.3);
+      p.look_x = 0.85f * wave(2.3);
+      p.look_y = 0.65f * float(std::cos(now * 2.3));
+      p.tilt = -12.0f + 12.0f * wave(2.3);
+      p.bounce = 0.025f * wave(2.3);
+      p.breathe = 1.0f + 0.025f * wave(2.3);
+      p.eye_scale = 1.20f;
+      p.pupil_scale = 0.85f;
+      p.pupil_width = 0.55f;
       break;
-    case MixieCatActivity::Responding:
-      p.look_x = 0.18f * wave(1.9);
-      p.look_y = 0.18f + 0.16f * wave(4.2);
-      p.bounce = 0.010f * wave(4.2);
-      p.tilt = 3.0f * wave(1.9);
-      p.eye_scale = 1.08f;
+    case MixieCatActivity::Responding: {
+      const float nod = mixie_cat_gesture(now, 2.1, 0.06f, 0.22f) +
+                        mixie_cat_gesture(now, 2.1, 0.35f, 0.22f);
+      p.look_x = 0.0f;
+      p.look_y = 0.0f;
+      p.bounce = 0.030f * nod;
+      p.tilt = -8.0f + 8.0f * nod;
+      p.eye_width = 1.12f;
+      p.smile = 0.85f + 0.15f * nod;
       break;
+    }
     case MixieCatActivity::Listening:
-      p.look_x = 0.22f * wave(1.5);
-      p.look_y = 0.22f;
-      p.tilt = 4.0f + 3.0f * wave(1.5);
-      p.eye_scale = 1.14f;
-      p.pupil_scale = 1.16f;
-      p.ear_l = -14.0f;
-      p.ear_r = -14.0f;
+      p.look_x = 0.0f;
+      p.look_y = 0.05f;
+      p.tilt = -12.0f;
+      p.eye_scale = 1.22f;
+      p.pupil_scale = 1.35f;
+      p.ear_height_l = p.ear_height_r = 1.15f;
+      p.bounce = -0.012f * mixie_cat_gesture(now, 3.8, 0.5f, 0.18f);
       blink_time *= 0.7;
       break;
     case MixieCatActivity::Waiting:
-      p.look_x = 0.08f * wave(1.0);
-      p.look_y = 0.14f;
-      p.tilt = 10.0f + 2.0f * wave(1.2);
+      p.look_x = 0.0f;
+      p.look_y = 0.10f;
+      p.tilt = 14.0f;
       p.eye_scale = 1.10f;
-      p.pupil_scale = 1.13f;
-      p.ear_l = -9.0f;
-      p.ear_r = 10.0f;
+      p.lid_l = 1.05f;
+      p.lid_r = 0.70f;
+      p.pupil_scale = 1.22f;
+      p.ear_height_r = 0.80f;
       blink_time *= 0.7;
       break;
     case MixieCatActivity::Offline:
-      p.look_x = 0.10f * wave(0.7);
+      p.look_x = 0.0f;
       p.look_y = -0.28f;
-      p.tilt = -4.0f;
-      p.ear_l = 16.0f;
-      p.ear_r = 16.0f;
-      open = 0.58f;
+      p.tilt = -12.0f;
+      p.ear_height_l = p.ear_height_r = 0.65f;
+      p.eye_width = 1.05f;
+      open = 0.22f;
       blink_time *= 0.6;
       break;
-    case MixieCatActivity::Connecting:
-      p.look_x = 0.85f * wave(1.7);
-      p.look_y = 0.30f;
-      p.tilt = 7.0f * wave(1.7);
-      p.eye_scale = 1.06f;
+    case MixieCatActivity::Connecting: {
+      const float glance = mixie_cat_gesture(now, 2.4, 0.15f, 0.70f);
+      p.look_x = -0.85f + 1.70f * glance;
+      p.look_y = 0.0f;
+      p.tilt = -12.0f + p.look_x * 14.0f;
+      p.eye_scale = 1.05f;
+      p.lid_l = 0.80f;
+      p.lid_r = 0.80f;
       break;
+    }
     case MixieCatActivity::Idle:
       return p;
   }
@@ -193,7 +228,14 @@ inline MixieCatPose mixie_cat_blend(const MixieCatPose &a, const MixieCatPose &b
           lerp(a.ear_l, b.ear_l),
           lerp(a.ear_r, b.ear_r),
           lerp(a.eye_scale, b.eye_scale),
-          lerp(a.pupil_scale, b.pupil_scale)};
+          lerp(a.pupil_scale, b.pupil_scale),
+          lerp(a.eye_width, b.eye_width),
+          lerp(a.lid_l, b.lid_l),
+          lerp(a.lid_r, b.lid_r),
+          lerp(a.pupil_width, b.pupil_width),
+          lerp(a.smile, b.smile),
+          lerp(a.ear_height_l, b.ear_height_l),
+          lerp(a.ear_height_r, b.ear_height_r)};
 }
 
 /** Region-owned, frame-independent expression changes. Reversing a transition

@@ -25,6 +25,8 @@
  */
 
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -319,6 +321,30 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
   }
   cat.listening = r_state->voice_listening;
+  if (scene) {
+    PointerRNA ptr = RNA_id_pointer_create(&scene->id);
+    char activity[32], until[64];
+    read_string_prop(&ptr, "mixie_chat_cat_activity", activity, sizeof(activity));
+    read_string_prop(&ptr, "mixie_chat_cat_activity_until", until, sizeof(until));
+    /* Python tool execution can start AND finish before the next draw. The
+     * producer keeps a 900ms presentation pulse without changing job status.
+     * String RNA preserves subsecond precision; native float RNA does not at
+     * Unix timestamps. Bound both ends so clock corrections cannot stick it. */
+    const double now = std::chrono::duration<double>(
+                           std::chrono::system_clock::now().time_since_epoch()).count();
+    const double remaining = std::strtod(until, nullptr) - now;
+    if (remaining > 0.0 && remaining <= 0.91) {
+      if (cat.busy) {
+        cat.reading |= STREQ(activity, "READING");
+        cat.working |= STREQ(activity, "WORKING");
+        if (STREQ(activity, "RESPONDING")) {
+          cat.thinking = cat.reading = cat.working = false;
+          cat.responding = true;
+        }
+      }
+      cat.finishing = STREQ(activity, "RESPONDING");
+    }
+  }
   r_state->cat_activity = mixie_cat_activity(cat);
   if (scene) {
     /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but
