@@ -230,13 +230,6 @@ void agent_ui_layout_build(const int window_w,
                               AGENT_CARD_Y + AGENT_CARD_BORDER,
                               card_w - AGENT_CARD_BORDER * 2,
                               card_h - AGENT_CARD_BORDER * 2);
-  /* The diagonal ramp's axis is measured on the artboard card; scale its x
-   * endpoints with the card so the pad keeps the same falloff. */
-  const float grad_kx = card_w / float(AGENT_CARD_W);
-  r_layout->card_grad_a[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X0 * grad_kx);
-  r_layout->card_grad_a[1] = f.y(AGENT_CARD_Y + AGENT_CARD_GRAD_Y0);
-  r_layout->card_grad_b[0] = f.x(AGENT_CARD_X + AGENT_CARD_GRAD_X1 * grad_kx);
-  r_layout->card_grad_b[1] = f.y(AGENT_CARD_Y + AGENT_CARD_GRAD_Y1);
 
   r_layout->card_header = f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, AGENT_CARD_HEADER_H);
 

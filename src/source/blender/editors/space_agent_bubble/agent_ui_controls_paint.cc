@@ -7,6 +7,7 @@
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
 
+#include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
@@ -73,7 +74,9 @@ void agent_ui_draw_tab_strip(ARegion *region,
   const float strong[4] = AGENT_COL_TEXT_STRONG;
   const float text_dim[4] = AGENT_COL_TEXT_DIM;
 
-  fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
+  if (!agent_bubble_island_bed_is_transparent()) {
+    fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
+  }
 
   /* Text is sized in the ISLAND unit, not AGENT_DU(): the two agree only at
    * the default window width, and the window widens freely (the bubble

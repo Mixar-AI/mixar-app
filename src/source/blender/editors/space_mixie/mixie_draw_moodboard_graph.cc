@@ -92,11 +92,15 @@ void mixie_draw_moodboard_links(const bContext *C,
 
 static void draw_card_background(const rctf &rect, const bool selected)
 {
-  const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
-  const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&rect, true, 22.0f, background);
-  ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
+  moodboard_draw_glass_pane(rect, 22.0f);
+  /* The running glow below is the "generating" accent; the SELECTED rim is the
+   * only other brightening, and both stay here because only the call site
+   * knows a node's state. The resting bed and rim live in the token row. */
+  if (selected) {
+    const float border[4] = {0.38f, 0.39f, 0.42f, 0.92f};
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
+  }
 }
 
 static void draw_running_glow(const rctf &rect)

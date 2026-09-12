@@ -13,10 +13,14 @@
  * them out, sizes them and dispatches their clicks — only the pixels are
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
- * thumb inset 2px; Cinema pill 150x27 fully rounded, #0E0E0E fill,
- * #3F3F3F hairline border, label graded #505050 -> white). Geometry stays
- * on the layout. Compact is the chrome host; these widgets keep the
- * UI.svg sizes rather than Compact's 32-unit control height.
+ * thumb inset 2px; Cinema pill 150x27 fully rounded, #3F3F3F hairline
+ * border, label graded #505050 -> white). Geometry stays on the layout.
+ * Compact is the chrome host; these widgets keep the UI.svg sizes rather
+ * than Compact's 32-unit control height.
+ *
+ * Cinema, viewport shading, and account chips are panes (`MIXAR_GLASS_PILL`);
+ * the slider track/thumb and the account avatar disc stay flat — grooves and
+ * pictures must not show the bar through them.
  */
 
 #include <algorithm>
@@ -193,19 +197,18 @@ void draw_cinema_pill(Button *but, const rcti *rect)
   const MixarInteraction motion = mixar_button_motion(*but);
   const float emphasis = motion.hover + (1.0f - motion.hover) * motion.press;
   const float boost = 1.0f + 0.12f * motion.hover + (0.22f - 0.12f * motion.hover) * motion.press;
-  const float lift = 10.0f * motion.hover + (26.0f - 10.0f * motion.hover) * motion.press;
-  float top[4], bottom[4], resting[4];
+  float top[4], bottom[4];
   mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_b, top);
   mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_a, bottom);
-  mixar_card_to_float(mixar_chrome::cinema_pill_fill, resting);
   for (int i = 0; i < 3; i++) {
-    resting[i] = std::min(1.0f, resting[i] + lift / 255.0f);
-    top[i] = resting[i] + (std::min(1.0f, top[i] * boost) - resting[i]) * motion.selected;
-    bottom[i] = resting[i] + (std::min(1.0f, bottom[i] * boost) - resting[i]) * motion.selected;
+    top[i] = std::min(1.0f, top[i] * boost);
+    bottom[i] = std::min(1.0f, bottom[i] * boost);
   }
-  top[3] = bottom[3] = 0.94f + 0.06f * std::max(emphasis, motion.selected);
+  /* Only semantic selection reveals the green wash, over the glass bed. */
+  top[3] = bottom[3] = motion.selected;
 
   GPU_blend(GPU_BLEND_ALPHA);
+  mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);
   draw_roundbox_corner_set(CNR_ALL);
   draw_roundbox_4fv_ex(&pill, top, bottom, 1.0f, nullptr, 0.0f, rad);
   uchar border[4];
@@ -242,7 +245,8 @@ void draw_viewport_pill(Button *but, const rcti *rect)
   const float rad = BLI_rctf_size_y(&pill) * 0.5f;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&pill, rad, mixar_chrome::viewport_pill_fill, alpha);
+  /* Dim/lit is the pane alpha so gloss and rim fade with the bed. */
+  mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, alpha);
   mixar_card_outline_round(&pill, rad, mixar_chrome::viewport_pill_border, alpha);
 
   uchar label[4];
@@ -267,10 +271,8 @@ void draw_profile_pill(Button *but, const rcti *rect)
 
   GPU_blend(GPU_BLEND_ALPHA);
   const MixarInteraction motion = mixar_button_motion(*but);
-  mixar_card_fill_round(&chip,
-                        rad,
-                        mixar_chrome::profile_fill,
-                        0.92f + 0.08f * std::max(motion.hover, motion.press));
+  mixar_card_glass_round(
+      &chip, rad, MIXAR_GLASS_PILL, 0.9f + 0.1f * std::max(motion.hover, motion.press));
 
   /* Avatar disc caps the right end at full height, exactly as the design
    * has it (chip 27 tall, disc r=13.5). */

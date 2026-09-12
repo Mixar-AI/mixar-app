@@ -36,7 +36,6 @@ namespace blender {
 
 namespace {
 
-constexpr float PANEL_COLOR[4] = {0.055f, 0.058f, 0.066f, 0.94f};
 constexpr float PANEL_BORDER[4] = {0.28f, 0.29f, 0.33f, 0.8f};
 constexpr float TEXT_MUTED[4] = {0.70f, 0.71f, 0.75f, 1.0f};
 
@@ -264,8 +263,8 @@ void draw_context_actions(ui::Block *block,
 
 void director_overlay_panel_draw(const rctf &rect, const float radius)
 {
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(&rect, PANEL_COLOR, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, radius);
+  cinema_glass_panel(rect, radius);
+  cinema_outline(rect, radius, PANEL_BORDER, UI_SCALE_FAC);
 }
 
 ui::Button *director_overlay_operator_button(ui::Block *block,

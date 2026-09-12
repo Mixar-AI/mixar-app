@@ -171,6 +171,12 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
                                         const float border_color[4],
                                         float border_width);
 
+/* Paint `rect` as a MIXAR_GLASS_CHAT pane — the glass bed for a chat message.
+ * Called from the View2D matrix (the message area draws through
+ * ui::view2d_view_ortho), so the painter's specular is switched off here; see
+ * the definition. `alpha` fades the whole pane. */
+void chat_ui_draw_glass_pane(const rctf *rect, float radius, float alpha);
+
 /* Thin colored vertical accent bar at the left edge of a block (Plan / steps /
  * thinking), so the three section types are differentiated while staying flat.
  * Drawn in the block's existing left padding — no layout change. */
@@ -299,7 +305,9 @@ void chat_ui_get_toggle_label_color(float out_color[4]);
 /** \name UI Widgets (mixie_chat_ui_widgets.cc)
  * \{ */
 
-/* Chat bubble */
+/* Chat bubble. `glass` draws the bed as a MIXAR_GLASS_CHAT pane instead of the
+ * flat `bg_color` fill — the user's own message only, never the block
+ * containers that derive from its style. */
 float chat_ui_calc_bubble_height(const ChatBubbleStyle *style,
                                  const char *text,
                                  float max_width,
@@ -311,7 +319,8 @@ float chat_ui_draw_bubble(const ChatBubbleStyle *style,
                           float bubble_width,
                           float bubble_height,
                           float content_width,
-                          float attachments_height = 0.0f);
+                          float attachments_height = 0.0f,
+                          bool glass = false);
 
 /* Ephemeral bubble with FIFO line limiting (mixie_chat_thinking.cc) */
 /* Current loader status string, or `fallback` when the loader has no valid

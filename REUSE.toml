@@ -134,3 +134,10 @@ path = "docs/development/evidence/zen-motion/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Native macOS glass compositor screenshots and replay verdicts.
+[[annotations]]
+path = "docs/development/evidence/macos-glass/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"

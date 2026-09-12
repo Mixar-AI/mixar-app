@@ -23,6 +23,11 @@ and the radius applied as the window's actual SHAPE. Both are pinned here,
 along with the two ways a window region silently goes wrong -- a resize that
 leaves a stale region clipping live content, and an entry outliving its HWND.
 
+The island asks the same question one level up: its window can be given a
+translucent background, and only then do the beds it paints per region have
+anything to reveal. That contract is pinned here too, beside the pill's,
+because it is the same question put to a different window.
+
 Source-level, because none of it is reachable from Python.
 """
 
@@ -32,10 +37,14 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN32 = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemWin32.cc"
+WIN32_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassWin32.cc"
+GHOST_CMAKE = ROOT / "src" / "intern" / "ghost" / "CMakeLists.txt"
 COCOA = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemCocoa.mm"
+COCOA_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassCocoa.mm"
 EDITOR = ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
 PILL_DRAW = EDITOR / "agent_ui_draw.cc"
 SPACE = EDITOR / "space_agent_bubble.cc"
+GLASS = EDITOR / "agent_bubble_glass.cc"
 
 
 def _read(path: Path) -> str:
@@ -151,14 +160,11 @@ class TestWin32PerPixelAlpha:
             "-- the black box, back again, with no region to fall back on."
         )
 
-    def test_region_stands_down_for_alpha_windows(self, win32: str) -> None:
+    def test_native_frost_keeps_the_window_shape(self, win32: str) -> None:
         body = _fn_body(win32, "static void mixar_window_apply_corner_region(")
         head = body[: body.index("s_corner_shapes.find")]
-        assert "s_per_pixel_alpha_windows" in head and "SetWindowRgn(hwnd, NULL" in head, (
-            "The region must be cleared BEFORE any shape is applied: region "
-            "coverage would clip away exactly the anti-aliased edge that "
-            "per-pixel alpha exists to produce."
-        )
+        assert "SetWindowRgn(hwnd, NULL" not in head
+        assert "s_per_pixel_alpha_windows" not in win32
 
     def test_the_two_are_mutually_exclusive_by_construction(self, win32: str) -> None:
         enable = _fn_body(win32, 'extern "C" void Mixar_WindowSetPerPixelAlpha(')
@@ -166,6 +172,41 @@ class TestWin32PerPixelAlpha:
             "Toggling alpha has to re-run the shape decision, or a region set "
             "earlier in the window's life keeps clipping."
         )
+
+
+class TestWin32LiquidGlass:
+    """Per-pixel alpha is not frost. The 1×1 blur region only opted DWM
+    into looking at alpha; the material has to be Acrylic (or a full-window
+    blur on older builds) and DWM has to honour the GPU's wash.
+    """
+
+    def test_blur_behind_installs_win32_glass(self, win32: str) -> None:
+        body = _fn_body(
+            win32, 'extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
+        )
+        assert "Mixar_Win32GlassSetEnabled" in body
+        assert "CreateRectRgn(0, 0, 1, 1)" not in body, (
+            "A 1×1 blur region is the old alpha-only trick — not glass."
+        )
+
+    def test_acrylic_is_the_material_not_mica(self) -> None:
+        glass = _read(WIN32_GLASS)
+        assert "Mixar_Win32GlassSetEnabled" in glass
+        assert "kDwmwaSystemBackdropType = 38" in glass
+        assert "kDwmsbtTransientWindow = 3" in glass
+        assert "kDwmsbtNone = 1" in glass
+        assert "kDwmwaRedirectionBitmapAlpha = 39" in glass
+        assert "kDwmwaUseImmersiveDarkMode = 20" in glass
+        assert "DwmExtendFrameIntoClientArea" in glass
+        assert "DWM_BB_ENABLE" in glass
+        assert "DWM_BLURBEHIND bb = {};" in glass
+        assert "FAILED(material)" in glass
+        assert "mixar_disable_glass(hwnd);" in glass
+        assert "CreateRectRgn(0, 0, 1, 1)" not in glass
+        assert "DWMSBT_MAINWINDOW" not in glass
+        cmake = _read(GHOST_CMAKE)
+        assert "intern/GHOST_MixarGlassWin32.cc" in cmake
+        assert "intern/GHOST_MixarGlassWin32.hh" in cmake
 
 
 class TestCrossPlatformContract:
@@ -196,8 +237,206 @@ class TestCrossPlatformContract:
             assert "agent_bubble_pill_bed_is_transparent()" in body, fn
             assert "GPU_BLEND_NONE" in body, fn
             assert "0.02f" in body, fn
+            assert "agent_bubble_replace_frost_wash" in body, fn
+            assert "AGENT_COL_GLASS_WASH" in body, fn
 
-    def test_alpha_is_only_reached_for_on_windows(self) -> None:
-        """macOS already has an anti-aliased mask; this is a Win32 workaround."""
-        body = _fn_body(_read(SPACE), "static void agent_bubble_pill_try_per_pixel_alpha(")
-        assert "#ifdef _WIN32" in body
+    def test_the_pill_bed_requires_confirmed_frost(self) -> None:
+        body = _fn_body(_read(GLASS), "bool agent_bubble_pill_bed_is_transparent(")
+        assert "return pill_glass.transparent;" in body
+        assert "return true;" not in body
+
+    def test_frost_skips_the_dest_over_pill_capsule(self) -> None:
+        """glass_fill_round dest-overs; on frost that is the slab."""
+        body = _fn_body(_read(PILL_DRAW), "void agent_ui_draw_status_pill(")
+        assert "if (agent_bubble_pill_bed_is_transparent())" in body
+        assert "agent_bubble_replace_frost_wash(&pill, wash);" in body
+        assert "glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);" in body
+
+    def test_native_setup_runs_after_creation_outside_paint(self) -> None:
+        header = _fn_body(_read(SPACE), "void agent_bubble_header_region_draw(")
+        layout = _fn_body(_read(SPACE), "static void agent_bubble_sync_chrome_sizes(const bContext *C)\n{")
+        for body in (header, layout):
+            assert "glass_request" not in body
+            assert "try_per_pixel_alpha" not in body
+            assert "try_glass_translucency" not in body
+        listener = _fn_body(_read(GLASS), "void agent_bubble_glass_region_listener(")
+        assert "NC_WINDOW" in listener
+        assert "mixar_glass_window_apply_translucency(window, true)" in listener
+        assert "art->listener = agent_bubble_glass_region_listener;" in _read(SPACE)
+        footer = _fn_body(_read(SPACE), "static void agent_bubble_footer_region_listener(")
+        assert "agent_bubble_glass_region_listener(params);" in footer
+
+
+
+class TestIslandWindowTranslucency:
+    """The island window asks for the platform's translucent background.
+
+    Where the pill is shaped by DWM honouring its client alpha, the island is
+    one window painting several regions, so its route out is the kit's
+    ``mixar_glass_window_apply_translucency`` -- a WINDOW background request
+    (per-pixel alpha, plus a native content-view frost on macOS and Desktop
+    Acrylic on Windows) and a defined no-op returning false off
+    macOS/Windows. The return value is the whole point of calling it rather
+    than an ``#ifdef``: it says whether the platform acted.
+
+    The beds then decide what to do with that. They keep covering every pixel
+    of every region -- the stale-buffer guarantee the pill's bed exists for is
+    the same one -- and only their ALPHA moves: zero where the platform gave
+    the window something to show through, one where it did not. The WINDOW
+    region's panel fill and the chat bg-override follow the same flag: an
+    opaque ``#121212`` slab there hid the frost even when the bed was clear.
+    On Linux nothing changes at all.
+    """
+
+    def test_the_request_goes_through_the_kit(self) -> None:
+        body = _fn_body(_read(GLASS), "void agent_bubble_glass_region_listener(")
+        assert "ui::mixar_glass_window_apply_translucency(window, true)" in body
+        assert "#if" not in body, "the kit owns the Linux opaque fallback"
+        assert "island_glass.apply(ghostwin, apply)" in body
+
+    def test_the_flag_defaults_to_opaque_beds(self) -> None:
+        assert "bool transparent = false;" in _read(EDITOR / "agent_bubble_glass.hh")
+
+    def test_island_beds_require_confirmed_frost(self) -> None:
+        body = _fn_body(_read(GLASS), "bool agent_bubble_island_bed_is_transparent(")
+        assert "return true;" not in body
+        assert "return island_glass.transparent;" in body
+
+    def test_the_beds_and_the_panel_read_the_flag(self) -> None:
+        src = _read(SPACE)
+        assert "agent_bubble_island_panel_color" in src
+        helper = _fn_body(src, "static void agent_bubble_island_panel_color(")
+        assert "if (agent_bubble_island_bed_is_transparent())" in helper
+        assert "AGENT_COL_GLASS_WASH" in helper
+        assert "r_rgba[0] = wash[0] * wash[3]" in helper
+        assert "r_rgba[3] = wash[3]" in helper
+        assert src.count("agent_bubble_island_panel_color(") >= 3, (
+            "chat bg-override, empty-state fill and the helper itself"
+        )
+
+    def test_the_bed_still_paints_every_pixel_of_its_region(self) -> None:
+        """The bed was never allowed to become "don't paint it".
+
+        A dest-over wash cannot lower dest A=1, and an A=0 fragment is a
+        no-op on Metal, so the translucent path REPLACES a dark-glass wash.
+        The opaque path still fills the rect. Either way every pixel is
+        written each frame so a composite in the resize gap cannot show
+        the bare backdrop.
+        """
+        body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in body
+        wash = _fn_body(_read(SPACE), "void agent_bubble_replace_frost_wash(")
+        assert "rgba[0] * rgba[3]" in wash
+        assert "immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax)" in wash
+        assert "GPU_BLEND_NONE" in body
+        assert "ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);" in body
+        assert "GPU_BLEND_NONE" in body, (
+            "BLEND_NONE is what writes the bed's alpha straight through."
+        )
+
+    def test_the_bed_alpha_follows_the_window(self) -> None:
+        body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
+        assert "agent_bubble_island_bed_is_transparent()" in body
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in body
+        assert "const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};" in body
+
+    def test_both_island_styling_sites_ask_for_it(self) -> None:
+        """Repair and open are separate paths; neither may be the only one.
+
+        The repair path re-styles any window the dedup reuses, the open path a
+        fresh one. Asking in only one of them leaves the other window opaque.
+        """
+        src = _read(SPACE)
+        call = "agent_bubble_glass_request(C, win->runtime->ghostwin, false);"
+        radius = "Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);"
+        styled = 0
+        pos = 0
+        while True:
+            i = src.find(call, pos)
+            if i < 0:
+                break
+            if radius in src[max(0, i - 500) : i]:
+                styled += 1
+            pos = i + 1
+        assert styled == 2, (
+            f"both island styling sites must call it after the corner radius, found {styled}"
+        )
+        assert src.count(call) == 2, "only creation and repair queue native setup"
+
+    def test_macos_glass_embeds_the_retained_metal_view(self) -> None:
+        """The real GPU view is the glass content, preserving its GHOST context."""
+        glass = _read(COCOA_GLASS)
+        assert "Mixar_CocoaGlassSetEnabled(win, enable)" in _read(COCOA)
+        assert "kMixarMetalHostKey, host, OBJC_ASSOCIATION_RETAIN_NONATOMIC" in glass
+        assert "win.contentView = glass;" in glass
+        assert "objc_msgSend)(glass, setter, host)" in glass
+        assert "[glass addSubview:host]" in glass  # pre-Tahoe fallback
+        assert "win.contentView = host;" in glass  # disable restores GHOST's view
+        assert "[win makeFirstResponder:responder]" in glass
+        assert "MixarGlassLensView" not in glass
+        assert "NSWindowBelow relativeTo:host" not in glass
+        assert "metal.opaque = NO" in glass
+        assert "mixar_allow_metal_alpha(mixar_metal_host(win))" in glass
+        assert "wantsExtendedDynamicRangeContent = NO" in glass
+        assert "MTLPixelFormatBGRA8Unorm" in glass
+        assert "return (win == nil) ? YES : win.opaque;" in glass
+        assert 'NSClassFromString(@"NSGlassEffectView")' in glass
+        assert "NSVisualEffectBlendingModeBehindWindow" in glass
+
+    def test_titlebar_theme_cannot_opaque_the_island_on_activation(self) -> None:
+        wm = (ROOT / "src/source/blender/windowmanager/intern/wm_window.cc").read_text()
+        body = wm[wm.index("void WM_window_decoration_style_apply("):]
+        body = body[:body.index("\n}")]
+        assert "if (wm_window_contains_agent_bubble_space(win)) {\n    return;" in body
+        assert body.index("return;") < body.index("applyWindowDecorationStyle()")
+
+    def test_metal_present_keeps_framebuffer_alpha(self) -> None:
+        """GHOST's present blit used to force alpha 1.0 on every pixel.
+
+        That made the drawable an opaque slab over the frost sibling no
+        matter what the GPU wrote. The overlay keeps the sampled alpha.
+        """
+        mtl = _read(ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_ContextMTL.mm")
+        assert "if (!MIXAR_TRANSLUCENT)" in mtl
+        assert "out_tex.rgb = min(out_tex.rgb, 16384.0);" in mtl
+        assert "* out_tex.a" not in mtl
+        assert "return out_tex;" in mtl
+        assert "mixar_new_present_pipeline" in mtl
+        assert "metal_layer_.pixelFormat" in mtl
+        assert "Mixar_CocoaGlassAllowMetalAlpha(metal_view_)" in mtl
+        assert "METAL_FRAMEBUFFERPIXEL_FORMAT_EDR" in mtl
+
+    def test_frost_skips_the_opaque_panel_slab(self) -> None:
+        """Empty TOOLS paints the full island. The inner-panel fill was
+        opaque ``AGENT_COL_SURFACE``, so frost never reached the compositor.
+        """
+        draw = _read(PILL_DRAW)
+        island = _fn_body(draw, "void agent_ui_draw_island(")
+        assert "if (!agent_bubble_island_bed_is_transparent())" in island
+        assert "fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);" in island
+        assert "glass_fill_round(&layout->card_fill," in island
+
+    def test_empty_field_text_chrome_honours_wash(self) -> None:
+        """The empty-state prompt is a full-region Text button.
+
+        widget_box honoured button_color_set; widget_textbut did not, so the
+        theme inner stayed an opaque slab over the frost. Name-style chrome
+        now reads but->col the same way.
+        """
+        widgets = _read(
+            ROOT / "src" / "source" / "blender" / "editors" / "interface"
+            / "interface_widgets.cc"
+        )
+        assert "widget_textbut_custom" in widgets
+        assert "wt.custom = widget_textbut_custom" in widgets
+        space = _read(SPACE)
+        assert "const uchar wash[4] = {18, 22, 20, 48}" in space
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in space
+        assert "if (but->col[3] < 128)" in widgets
+        assert "BLI_rcti_size_y(rect) > 120" in widgets
+
+    def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
+        theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")
+        assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}" in theme
+        assert _read(SPACE).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 3
+        assert _read(PILL_DRAW).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 2

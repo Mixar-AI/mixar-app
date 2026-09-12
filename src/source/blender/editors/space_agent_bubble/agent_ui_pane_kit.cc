@@ -43,6 +43,7 @@
 #include "UI_interface_c.hh"
 #include "WM_types.hh"
 
+#include "agent_bubble_intern.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_theme.hh"
@@ -103,8 +104,13 @@ void pane_fit_text(char *text, const float max_w, const float size)
 
 void pane_wash_paint(const rctf &panel, const float u)
 {
-  const float top[4] = PANE_COL_WASH_TOP;
-  const float bottom[4] = PANE_COL_WASH_BOTTOM;
+  /* Frost windows already carry the region bed's REPLACE wash. A second
+   * dest-over silhouette would only raise dest A toward 1. */
+  if (agent_bubble_island_bed_is_transparent()) {
+    return;
+  }
+  float top[4] = PANE_COL_WASH_TOP;
+  float bottom[4] = PANE_COL_WASH_BOTTOM;
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   /* Vertical stand-in for the frames' near-vertical gradient; the diagonal
    * component is imperceptible at this delta. */

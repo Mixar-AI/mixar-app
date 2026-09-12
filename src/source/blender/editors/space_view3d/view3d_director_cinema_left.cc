@@ -241,14 +241,12 @@ void cinema_draw_left_panel(ui::Block *block,
   /* Records are cleared once per draw by the overlay, before the top strip
    * (which publishes the eyedropper and interpolation rects) — not here. */
   const float u = cinema_unit();
-  const float card_top[4] = CINEMA_COL_CARD_TOP;
-  const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
   const float label_col[4] = CINEMA_COL_CAPTION;
   const bool editable = state.has_camera && !state.locked;
 
   /* Card 1 — output settings: three captioned rows at CINEMA_ROW_PITCH. */
   const rctf card1 = cinema_design_rect(region, cinema_margin(region), 208.0f, CINEMA_PANEL_W, 220.0f);
-  cinema_panel(card1, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
+  cinema_glass_panel(card1, CINEMA_PANEL_RADIUS * u);
 
   char label[128];
   aspect_label(C, label, sizeof(label));
@@ -283,7 +281,7 @@ void cinema_draw_left_panel(ui::Block *block,
 
   /* Card 2 — template styles. */
   const rctf card2 = cinema_design_rect(region, cinema_margin(region), 439.0f, CINEMA_PANEL_W, 220.0f);
-  cinema_panel(card2, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
+  cinema_glass_panel(card2, CINEMA_PANEL_RADIUS * u);
   cinema_text_left("Template Style",
                    card2.xmin + 13.0f * u,
                    card2.ymax - 22.0f * u,
@@ -336,7 +334,7 @@ void cinema_draw_left_panel(ui::Block *block,
   /* Card 3 — speed: retimes the shot. */
   const rctf card3 = cinema_design_rect(
       region, cinema_margin(region), CINEMA_SPEED_CARD_Y, CINEMA_PANEL_W, CINEMA_SPEED_CARD_H);
-  cinema_panel(card3, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
+  cinema_glass_panel(card3, CINEMA_PANEL_RADIUS * u);
   cinema_text_left("Speed",
                    card3.xmin + 13.0f * u,
                    card3.ymax - 20.0f * u,

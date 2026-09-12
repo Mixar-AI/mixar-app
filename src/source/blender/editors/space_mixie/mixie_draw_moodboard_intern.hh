@@ -124,6 +124,14 @@ void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float
 /** Draw the shared neutral node frame behind imported image/movie content. */
 void mixie_draw_moodboard_media_frame(float x, float y, float w, float h, bool selected);
 
+/** Paint `rect` as a liquid-glass moodboard pane (MIXAR_GLASS_MOODBOARD). Shared
+ * by the media frame, the graph node cards and the floating node toolbar, so
+ * the three surfaces read as one material. The active accents (the selected
+ * rim, the running glow) stay at the call sites — only the resting bed and rim
+ * live here. No drop shadow: these panes sit on a grid and inside the node
+ * clip, where a shadow would be clipped into a line. */
+void moodboard_draw_glass_pane(const rctf &rect, float radius);
+
 /** Draw moodboard images */
 void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
 
