@@ -1308,6 +1308,14 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
+  /* Mixar Zen moodboard drawer: View3D `TOOL_PROPS` is a fixed-width overlay,
+   * not a user-resized strip. The overlapping transparent-region edge azone
+   * (`pad_in` ≈ 8 UI units / v2d aspect) covers the grip's leading half, so a
+   * centre press starts a sash drag instead of `view3d.moodboard_drawer_grip`. */
+  if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOL_PROPS) {
+    return false;
+  }
+
   if (is_hidden && (U.app_flag & USER_APP_HIDE_REGION_TOGGLE)) {
     return false;
   }

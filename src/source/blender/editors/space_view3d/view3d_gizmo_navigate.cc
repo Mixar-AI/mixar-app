@@ -288,6 +288,15 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
    * instead of the region corner, where they would lie across the right
    * column's My Cameras card. */
   rcti rect_adjusted = *ED_region_visible_rect(region);
+  /* The moodboard is a sliding overlay, not a reserved viewport sidebar.
+   * Keep navigation anchored to the viewport when the drawer is tucked away. */
+  if (const ARegion *drawer = BKE_area_find_region_type(CTX_wm_area(C), RGN_TYPE_TOOL_PROPS)) {
+    if (drawer->overlap &&
+        rect_adjusted.xmax == drawer->winrct.xmin - region->winrct.xmin)
+    {
+      rect_adjusted.xmax = drawer->winrct.xmax - region->winrct.xmin;
+    }
+  }
   rctf stage;
   if (cinema_stage_rect(C, region, &stage)) {
     /* Clear of the frame's rounded corner, as in the design. */

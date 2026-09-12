@@ -10,6 +10,7 @@
 #include "DNA_space_types.h"
 
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 
 #include "ED_screen.hh"
 
@@ -21,6 +22,7 @@
 #include "WM_types.hh"
 
 #include "mixie_intern.hh"
+#include "mixie_moodboard_ops_common.hh"
 
 #include <string>
 #include <vector>
@@ -33,14 +35,16 @@ namespace blender {
 
 static bool moodboard_image_drop_poll(bContext *C, wmDrag *drag, const wmEvent * /*event*/)
 {
-  /* Only accept drops in moodboard mode */
-  ScrArea *area = CTX_wm_area(C);
-  if (!area || area->spacetype != SPACE_MIXIE) {
-    return false;
-  }
-
-  SpaceMixie *smixie = static_cast<SpaceMixie *>(area->spacedata.first);
-  if (!smixie || smixie->mode != MIXIE_MODE_MOODBOARD) {
+  const ScrArea *area = CTX_wm_area(C);
+  const ARegion *region = CTX_wm_region(C);
+  const WorkSpace *workspace = CTX_wm_workspace(C);
+  /* A reference dropped into Zen's viewport reveals the board, including
+   * when the drawer is closed or still sliding. Other workspaces keep their
+   * native image/background drops. */
+  const bool zen_reference = area && area->spacetype == SPACE_VIEW3D && region &&
+                             ELEM(region->regiontype, RGN_TYPE_WINDOW, RGN_TYPE_TOOL_PROPS) &&
+                             workspace && STREQ(workspace->id.name + 2, "Zen Mode");
+  if (!zen_reference && !ed::mixie::moodboard_poll(C)) {
     return false;
   }
 
@@ -71,10 +75,11 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
 {
   /* Clear stale properties from any previous drop so only the current
    * drop's data is present when the operator executes. */
-  RNA_string_set(drop->ptr, "filepath", "");
-  RNA_string_set(drop->ptr, "image_name", "");
-  RNA_string_set(drop->ptr, "multi_filepaths", "");
+  RNA_struct_property_unset(drop->ptr, "filepath");
+  RNA_struct_property_unset(drop->ptr, "image_name");
+  RNA_struct_property_unset(drop->ptr, "multi_filepaths");
   RNA_boolean_set(drop->ptr, "from_drop", false);
+  RNA_boolean_set(drop->ptr, "center_on_drop", false);
 
   /* Get View2D coordinates at drop position */
   ARegion *region = CTX_wm_region(C);
@@ -82,6 +87,15 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
     return;
   }
 
+  ScrArea *area = CTX_wm_area(C);
+  const bool reveal = area->spacetype == SPACE_VIEW3D &&
+                      !ed::mixie::moodboard_zen_drawer_active(C);
+  if (area->spacetype == SPACE_VIEW3D) {
+    region = BKE_area_find_region_type(area, RGN_TYPE_TOOL_PROPS);
+    if (!region) {
+      return;
+    }
+  }
   View2D *v2d = &region->v2d;
   wmWindow *win = CTX_wm_window(C);
 
@@ -98,6 +112,13 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
   /* Convert region coordinates to View2D canvas coordinates */
   float pos_x, pos_y;
   ui::view2d_region_to_view(v2d, mval[0], mval[1], &pos_x, &pos_y);
+  if (reveal) {
+    /* The cursor is in the viewport, not on the canvas. Land in the drawer's
+     * current view, even if the user previously panned far from the origin. */
+    pos_x = BLI_rctf_cent_x(&v2d->cur);
+    pos_y = BLI_rctf_cent_y(&v2d->cur);
+    RNA_boolean_set(drop->ptr, "center_on_drop", true);
+  }
 
   /* Set drop position in operator properties */
   RNA_float_set(drop->ptr, "position_x", pos_x);

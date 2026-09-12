@@ -28,7 +28,10 @@ def test_native_drop_accepts_movies_and_validates_the_first_frame():
     assert "WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE)" in dragdrop
     assert "imb_ext_movie" in drop
     assert "BKE_image_acquire_ibuf" in drop
-    assert "image->source == IMA_SRC_MOVIE" in drop
+    assert '"Cannot decode media preview: %s"' in drop
+    # Both stills and movies decode before boarding; only stills are packed.
+    assert "if (image->source != IMA_SRC_MOVIE)" in drop
+    assert "BKE_image_packfiles" in drop
 
 
 def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
