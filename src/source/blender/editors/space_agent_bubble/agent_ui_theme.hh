@@ -311,6 +311,7 @@ namespace blender {
  * \{ */
 
 /* Surfaces */
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f} /* shared native pill/chat bed */
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */
 #define AGENT_COL_CHIP_ACTIVE {0.196f, 0.196f, 0.196f, 1.0f}  /* #323232 segment thumb */
@@ -323,16 +324,8 @@ namespace blender {
 #define AGENT_COL_ACCENT {0.169f, 0.486f, 0.294f, 1.0f}       /* #2B7C4B dot, badge, hdr btn */
 #define AGENT_COL_GENERATE {0.102f, 0.251f, 0.149f, 1.0f}     /* #1A4026 generate button */
 
-/* Card gradient — top-right #325B33 to #002317, along the artboard vector
- * (1554,463) -> (1281.66,1068.71) in island-local units. The ramp runs past
- * the card's bottom edge, so only its first ~73% is ever visible; sampling
- * it over the card rect alone would make the card far too dark.
- *
- * The card DRAWS as the glass kit's CARD row now — dark glass, not this
- * saturated ramp (that tint read as a plastic header). The neon meter is
- * the card's green. The island adds no second wash over the pane. The kit
- * shades vertically and the artboard's axis is diagonal; the card-bed
- * comment in `agent_ui_draw.cc` records the trade. */
+/* The expanded chat and resting capsule share the glass kit's neutral PILL
+ * material. The credit meter takes its white rim; only controls carry green. */
 
 /* Strokes and text.
  *

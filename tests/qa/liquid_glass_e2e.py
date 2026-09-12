@@ -36,6 +36,69 @@ def _settle_animation(qa):
     qa.wait("__import__('time').monotonic() >= bpy.app.driver_namespace['glass_snapshot_after']", timeout=2)
 
 
+def _snap_chat(qa, path):
+    return qa.cmd('snap', path=str(path),
+                  target={'area_type': 'AGENT_BUBBLE', 'text': 'Agent chat'}, margin=2000)
+
+
+def _chat_variants(qa, out):
+    qa.eval("result = str(bpy.ops.mixar.bubble_toggle_expand())")
+    try:
+        _settle_animation(qa)
+        _snap_chat(qa, out / 'maximized.png')
+        maximized = _native(qa, out / 'maximized')
+    finally:
+        qa.eval("result = str(bpy.ops.mixar.bubble_toggle_expand())")
+
+    old_ink = qa.eval("result = bpy.context.window_manager.mixie_chat_ink_visible\n"
+                      "bpy.context.window_manager.mixie_chat_ink_visible = True")
+    try:
+        qa.click(area_type='AGENT_BUBBLE', text='Agent chat')
+        _settle_animation(qa)
+        _snap_chat(qa, out / 'scribble.png')
+        scribble = _native(qa, out / 'scribble')
+    finally:
+        qa.eval(f"bpy.context.window_manager.mixie_chat_ink_visible = {old_ink!r}")
+
+    # A local message exercises the transcript clear without sending a request.
+    # Refuse a non-isolated session and remove only our own fixture in finally.
+    qa.eval("scene = drv.main_window().scene\n"
+            "assert len(scene.mixie_chat_messages) == 0, 'Use an isolated QA app'\n"
+            "msg = scene.mixie_chat_messages.add()\n"
+            "msg.bubble_id = 'qa-glass-material'\n"
+            "msg.sender = 'AGENT'\nmsg.message_type = 'AGENT'\n"
+            "msg.content = 'QA: the conversation uses the same glass.'\n"
+            "for w in bpy.context.window_manager.windows:\n"
+            "    for a in w.screen.areas: a.tag_redraw()")
+    try:
+        qa.click(area_type='AGENT_BUBBLE', text='Agent chat')
+        _settle_animation(qa)
+        _snap_chat(qa, out / 'transcript.png')
+        transcript = _native(qa, out / 'transcript')
+    finally:
+        qa.eval("messages = drv.main_window().scene.mixie_chat_messages\n"
+                "for i in range(len(messages) - 1, -1, -1):\n"
+                "    if messages[i].bubble_id == 'qa-glass-material': messages.remove(i)")
+    return {'maximized': maximized, 'transcript': transcript, 'scribble': scribble}
+
+
+def _compare_beds(out, native_available):
+    if not native_available:
+        return {'checked': False, 'reason': 'Requires confirmed native compositor captures'}
+    from PIL import Image
+
+    colors = {}
+    for name in ('island', 'maximized', 'transcript', 'pill'):
+        with Image.open(out / f'{name}.png') as img:
+            count, rgb = max(img.convert('RGB').getcolors(img.width * img.height))
+            assert count > img.width * img.height * 0.2, f'{name}: no uniform material bed'
+            colors[name] = rgb
+    reference = colors['pill']
+    for name, rgb in colors.items():
+        assert max(abs(a - b) for a, b in zip(rgb, reference)) <= 1, (name, rgb, reference)
+    return {'checked': True, 'rgb': colors}
+
+
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/mixar-glass-validation')).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -59,6 +122,7 @@ def run(qa):
                 target={'area_type': 'AGENT_BUBBLE', 'text': 'Agent chat'}, margin=2000)
         qa.step('snap_main', qa.snap, str(out / 'main.png'))
         expanded = qa.step('request_native_expanded', _native, qa, out / 'expanded')
+        variants = qa.step('maximized_and_transcript', _chat_variants, qa, out)
         qa.step('minimise_island', qa.eval, "result = str(bpy.ops.mixar.bubble_minimise())")
         qa.step('pill_animation_settled', _settle_animation, qa)
         qa.step('resting_cat_target', qa.wait, "bool(drv.find(surface='pill_cat'))", timeout=5)
@@ -69,7 +133,11 @@ def run(qa):
                 "for a in w.screen.areas))\n"
                 f"result = qa_vision._capture(pill, {str(out / 'pill.png')!r})")
         resting = qa.step('request_native_resting', _native, qa, out / 'resting')
+        native_available = all(capture['available'] for capture in
+                               (expanded, resting, *variants.values()))
+        parity = qa.step('chat_matches_pill_bed', _compare_beds, out, native_available)
         return {'pixels': pixels, 'native_expanded': expanded, 'native_resting': resting,
+                'native_variants': variants, 'material_parity': parity,
                 'status': qa.status(), 'paid_requests': 0, 'artifacts': str(out)}
     finally:
         if had_hover:

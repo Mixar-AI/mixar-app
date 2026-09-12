@@ -237,7 +237,7 @@ class TestCrossPlatformContract:
             assert "GPU_BLEND_NONE" in body, fn
             assert "0.02f" in body, fn
             assert "agent_bubble_replace_frost_wash" in body, fn
-            assert "0.075f, 0.078f, 0.075f, 0.20f" in body, fn
+            assert "AGENT_COL_GLASS_WASH" in body, fn
 
     def test_alpha_is_only_reached_for_on_windows(self) -> None:
         """Win32 asks DWM; macOS asks the glass kit (sibling frost + Metal alpha)."""
@@ -318,7 +318,10 @@ class TestIslandWindowTranslucency:
         src = _read(SPACE)
         assert "agent_bubble_island_panel_color" in src
         helper = _fn_body(src, "static void agent_bubble_island_panel_color(")
-        assert "agent_bubble_island_bed_is_transparent() ? 0.0f : surface[3]" in helper
+        assert "if (agent_bubble_island_bed_is_transparent())" in helper
+        assert "AGENT_COL_GLASS_WASH" in helper
+        assert "r_rgba[0] = wash[0] * wash[3]" in helper
+        assert "r_rgba[3] = wash[3]" in helper
         assert src.count("agent_bubble_island_panel_color(") >= 3, (
             "chat bg-override, empty-state fill and the helper itself"
         )
@@ -461,3 +464,9 @@ class TestIslandWindowTranslucency:
         assert "agent_bubble_replace_frost_wash(&r, wash);" in space
         assert "if (but->col[3] < 128)" in widgets
         assert "BLI_rcti_size_y(rect) > 120" in widgets
+
+    def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
+        theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")
+        assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}" in theme
+        assert _read(SPACE).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 3
+        assert _read(PILL_DRAW).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 2

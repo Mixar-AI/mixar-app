@@ -127,7 +127,7 @@ PANE_CALLS = {
     "interface/interface_mixar_cinema_row.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_mixar_section.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_widgets.cc": ("MIXAR_GLASS_CHIP",),
-    "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_CARD", "MIXAR_GLASS_PILL"),
+    "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_PILL",),
     "space_view3d/view3d_agent_panel_draw.cc": ("MIXAR_GLASS_PANEL",),
     "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
     "space_mixie/mixie_draw_moodboard_graph.cc": (),
@@ -940,13 +940,8 @@ class TestTheIslandCardIsAPane:
     that space. Every material layer uses the same transform and silhouette.
     The island and pill disable animated specular by default.
 
-    CARD is the design's own card role: its token row is dark glass with a
-    whisper of green, so the wrapper hands over no colour and the island
-    adds no second wash. The neon meter is the card's green — putting the
-    artboard's saturated ramp on the pane tint read as a plastic header.
-    What the role cannot carry is that the artboard's axis is diagonal —
-    the kit shades vertically. That trade is deliberate and recorded at
-    the call site.
+    The expanded chat uses PILL's neutral material. Its credit meter renders
+    the same white rim, so the pane suppresses its own duplicate rim.
     """
 
     def _island(self) -> str:
@@ -954,20 +949,21 @@ class TestTheIslandCardIsAPane:
 
     def _card_call(self) -> list[str]:
         calls = re.findall(r"glass_fill_round\(([^;]*)\);", _code(AGENT_DRAW))
-        card = [call for call in calls if "MIXAR_GLASS_CARD" in call]
+        card = [call for call in calls if "&layout->card_fill" in call]
         assert len(card) == 1, f"the island's card bed is not one call: {card}"
         return [arg.strip() for arg in card[0].split(",")]
 
-    def test_the_card_bed_is_the_card_role_on_the_cards_own_rect(self) -> None:
+    def test_the_card_bed_uses_the_pill_material_on_its_own_rect(self) -> None:
         """The bed's whole shape in one place — rect, role, radius and the two
         layers switched off. Any of them moving is a re-material."""
         assert self._card_call() == [
             "&layout->card_fill",
-            "ui::MIXAR_GLASS_CARD",
+            "ui::MIXAR_GLASS_PILL",
             "(AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u",
             "false",
             "false",
             "!agent_bubble_island_bed_is_transparent()",
+            "false",
         ], f"the card bed changed shape: {self._card_call()}"
 
     def test_the_pane_reuses_the_meters_inner_edge(self) -> None:
@@ -992,7 +988,7 @@ class TestTheIslandCardIsAPane:
         layer switches — nothing that could pick a tint."""
         body = _fn_body(AGENT_DRAW, "void glass_fill_round(")
         touched = set(re.findall(r"style\.([A-Za-z_][A-Za-z0-9_]*)", body))
-        assert touched == {"role", "radius", "draw_shadow", "draw_specular", "draw_tint"}, (
+        assert touched == {"role", "radius", "draw_shadow", "draw_specular", "draw_tint", "draw_rim"}, (
             f"the wrapper touches {sorted(touched)}"
         )
 
@@ -1017,10 +1013,8 @@ class TestTheIslandCardIsAPane:
             "glass_fill_round(&layout->card_fill"
         ), "the bed is drawn before the meter it abuts"
 
-    def test_the_cards_middle_carries_the_green_alone(self) -> None:
-        """The CARD row IS the bed, so a wash over it would double the
-        material — the opposite of the viewport panel, whose near-black
-        bed keeps its call-site wash. One draw touches the bed."""
+    def test_the_cards_middle_has_one_material(self) -> None:
+        """Only one material draw touches the card bed."""
         assert self._island().count("layout->card_fill") == 1
 
     def test_the_strip_and_the_inner_panel_stay_flat(self) -> None:
@@ -1094,4 +1088,3 @@ class TestZenChromeUsesTheFamily:
         assert "mixar_zen_header_clear(C, region)" in area
         cmake = (IFACE / "CMakeLists.txt").read_text(encoding="utf-8")
         assert "interface_mixar_zen_chrome.cc" in cmake
-

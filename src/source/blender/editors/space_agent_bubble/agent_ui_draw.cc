@@ -83,7 +83,8 @@ void glass_fill_round(const rctf *rect,
                       const float radius,
                       const bool shadow = false,
                       const bool specular = false,
-                      const bool tint = true)
+                      const bool tint = true,
+                      const bool rim = true)
 {
   rcti pane;
   BLI_rcti_rctf_copy(&pane, rect);
@@ -93,6 +94,7 @@ void glass_fill_round(const rctf *rect,
   style.draw_shadow = shadow;
   style.draw_specular = specular;
   style.draw_tint = tint;
+  style.draw_rim = rim;
   ui::mixar_glass_draw(pane, style);
 }
 
@@ -237,7 +239,7 @@ void fill_round_gradient(const rctf *rect,
  * The card's border, drawn as a credits meter.
  *
  * A full bright ring means a full allowance; as credits are spent the lit part
- * retreats and the spent part is drawn in a dim green, so the border reads as a
+ * retreats and the spent part is drawn at a lower opacity, so the border reads as a
  * percentage strip running around the card rather than as decoration.
  *
  * The ring starts at the top-left corner and runs CLOCKWISE. That start point
@@ -679,7 +681,7 @@ void agent_ui_draw_status_pill(const float width,
     pill.ymax = h;
     /* Native frost owns the bed; both paths share the rounded light and rim. */
     if (agent_bubble_pill_bed_is_transparent()) {
-      const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+      const float wash[4] = AGENT_COL_GLASS_WASH;
       agent_bubble_replace_frost_wash(&pill, wash);
       glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
     }
@@ -885,7 +887,7 @@ void agent_ui_draw_status_pill(const float width,
    * otherwise carry leftover pixels that flash the bare backdrop. Frost
    * replaces a premultiplied wash; the shared shader adds its finishing layers. */
   if (agent_bubble_pill_bed_is_transparent()) {
-    const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+    const float wash[4] = AGENT_COL_GLASS_WASH;
     agent_bubble_replace_frost_wash(&pill, wash);
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
   }
@@ -918,7 +920,8 @@ void agent_ui_draw_island(const ARegion * /*region*/,
   const float u = layout->scale;
 
   const float surface[4] = AGENT_COL_SURFACE;
-  const float border[4] = AGENT_COL_BORDER;
+  const ui::MixarGlassTokens glass = ui::mixar_glass_tokens(ui::MIXAR_GLASS_PILL);
+  const float *border = glass.rim;
   const float accent[4] = AGENT_COL_ACCENT;
   const float glyph[4] = AGENT_COL_GLYPH;
   const float text[4] = AGENT_COL_TEXT;
@@ -939,25 +942,25 @@ void agent_ui_draw_island(const ARegion * /*region*/,
 
   /* --- Card --- */
   {
-    /* Spent portion: the same hue at a fraction of its value, so the ring reads
-     * as one strip that has been used up rather than two different borders. */
-    const float border_spent[4] = {border[0] * 0.16f, border[1] * 0.16f,
-                                   border[2] * 0.16f, 1.0f};
+    /* Preserve the credit indication in the pill's quiet white rim. Lower the
+     * spent alpha rather than putting an opaque dark ring over native frost. */
+    const float border_spent[4] = {border[0], border[1], border[2], border[3] * 0.25f};
     draw_card_border_meter(&layout->card,
                            AGENT_CARD_RADIUS * u,
-                           AGENT_CARD_BORDER * u,
+                           glass.rim_width,
                            border,
                            border_spent,
                            state->credits_remaining);
   }
-  /* The native window owns the bed. Its sheen still comes from the same kit
-   * as embedded cards, so macOS and Windows share the finishing layers. */
+  /* Expanding changes the shape, not the material. The credit meter already
+   * draws PILL's rim, so keep only its sheen here to avoid a doubled edge. */
   glass_fill_round(&layout->card_fill,
-                   ui::MIXAR_GLASS_CARD,
+                   ui::MIXAR_GLASS_PILL,
                    (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
                    /*shadow=*/false,
                    /*specular=*/false,
-                   /*tint=*/!agent_bubble_island_bed_is_transparent());
+                   /*tint=*/!agent_bubble_island_bed_is_transparent(),
+                   /*rim=*/false);
 
   /* Card header row is tab-scoped: the chat's discs / session title / FAQs
    * belong to the Agent tab; other tabs title the card after themselves. */

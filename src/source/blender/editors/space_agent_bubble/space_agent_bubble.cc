@@ -341,14 +341,23 @@ void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
   GPU_blend(blend_prev);
 }
 
-/* Native frost supplies the panel bed; otherwise keep the opaque surface. */
+/* Framebuffer clears and replacement fills need the same premultiplied bed as
+ * the pill. Zero alpha with nonzero RGB brightens the transcript on Metal. */
 static void agent_bubble_island_panel_color(float r_rgba[4])
 {
+  if (agent_bubble_island_bed_is_transparent()) {
+    const float wash[4] = AGENT_COL_GLASS_WASH;
+    r_rgba[0] = wash[0] * wash[3];
+    r_rgba[1] = wash[1] * wash[3];
+    r_rgba[2] = wash[2] * wash[3];
+    r_rgba[3] = wash[3];
+    return;
+  }
   const float surface[4] = AGENT_COL_SURFACE;
   r_rgba[0] = surface[0];
   r_rgba[1] = surface[1];
   r_rgba[2] = surface[2];
-  r_rgba[3] = agent_bubble_island_bed_is_transparent() ? 0.0f : surface[3];
+  r_rgba[3] = surface[3];
 }
 
 /* Mixie chat's custom-drawn region callbacks. We reuse them
@@ -963,7 +972,7 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   if (agent_bubble_island_bed_is_transparent()) {
     /* A replacement bed, unlike alpha blending, must premultiply itself. */
-    const float wash[4] = {0.040f, 0.055f, 0.048f, 0.20f};
+    const float wash[4] = AGENT_COL_GLASS_WASH;
     agent_bubble_replace_frost_wash(&r, wash);
     return;
   }
@@ -1264,7 +1273,14 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
     GPU_blend(GPU_BLEND_NONE);
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&r, true, 0.0f, panel_bg);
+    if (agent_bubble_island_bed_is_transparent()) {
+      /* Roundboxes enable alpha blending internally; the native bed must
+       * replace its pixels, just as it does for the empty prompt. */
+      agent_bubble_fill_region_backdrop(region);
+    }
+    else {
+      ui::draw_roundbox_4fv(&r, true, 0.0f, panel_bg);
+    }
     mixie_chat_draw_ink_overlay(C, region);
   }
   else {
@@ -1295,7 +1311,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
     float fill[4];
     agent_bubble_island_panel_color(fill);
-    if (fill[3] > 0.0f) {
+    if (!agent_bubble_island_bed_is_transparent()) {
       ui::draw_roundbox_4fv(&r, true, 0.0f, fill);
     }
 
@@ -2844,7 +2860,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
   /* Replace the complete region with the premultiplied native-frost wash. */
-  const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
+  const float wash[4] = AGENT_COL_GLASS_WASH;
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {
     agent_bubble_replace_frost_wash(&region_rect, wash);

@@ -68,7 +68,7 @@ namespace {
 const MixarGlassTokens g_glass_tokens[] = {
     /* MIXAR_GLASS_CARD — dark glass, not the artboard's saturated green ramp.
      * That ramp as a pane tint plus the sheen read as a plastic header; the
-     * island's neon meter is already the green. A whisper of green in the
+     * controls already carry the green. A whisper of green in the
      * bed keeps it in the family without flooding the card. */
     {
         /* tint_top      */ {0.090f, 0.120f, 0.100f, 0.16f},
