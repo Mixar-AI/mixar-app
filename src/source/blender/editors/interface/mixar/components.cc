@@ -8,6 +8,7 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar.hh"
+#include "UI_mixar_motion.hh"
 #include "UI_mixar_tokens.hh"
 #include <algorithm>
 
@@ -18,16 +19,32 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   const auto &style = button.mixar_style;
   const float u = style.unit > 0.0f ? style.unit : UI_SCALE_FAC * 0.65f;
   const bool disabled = (button.flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
-  const bool selected = style.lit || (button.flag & (UI_SELECT | UI_SELECT_DRAW));
-  const bool hovered = !disabled && (button.flag & UI_HOVER);
+  const MixarInteraction motion = mixar_button_motion(button);
+  const bool selected = style.lit || (button.type != ButtonType::But &&
+                                      (button.flag & (UI_SELECT | UI_SELECT_DRAW)));
   const bool editing = button.editstr != nullptr;
   rctf rect = {float(bounds.xmin), float(bounds.xmax), float(bounds.ymin), float(bounds.ymax)};
   const bool input = style.component == MixarComponent::Input;
   const bool label = style.component == MixarComponent::Label;
+  /* Custom surfaces draw their content first; a Ghost surface adds only native
+   * interaction feedback over that same hit rectangle. No opaque backplate or
+   * second label can hide the feature's text, icons, or exact value display. */
+  if (style.component == MixarComponent::Surface && style.variant == MixarVariant::Ghost &&
+      style.unit > 0.0f)
+  {
+    const float hover[4] = {1.0f, 1.0f, 1.0f, 0.055f * motion.hover};
+    const float press[4] = {0.0f, 0.0f, 0.0f, 0.08f * motion.press};
+    if (hover[3] > 0.0f) {
+      mixar_fill_round(rect, radius * u, hover);
+    }
+    if (press[3] > 0.0f) {
+      mixar_fill_round(rect, radius * u, press);
+    }
+    return button.icon != ICON_NONE;
+  }
   const float *background = input ? zen.input : zen.control;
   if (style.component == MixarComponent::Surface) {
-    background = button.type == ButtonType::But ? (selected ? zen.selected : zen.action) :
-                                                  zen.panel;
+    background = button.type == ButtonType::But ? zen.action : zen.panel;
   }
   const float *foreground = disabled ? zen.secondary : zen.text;
   if (style.component == MixarComponent::Action) {
@@ -50,14 +67,21 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   if (style.component == MixarComponent::Segment ||
       (style.component == MixarComponent::Toggle && style.unit == 0.0f))
   {
-    background = selected ? zen.selected : zen.control;
+    background = zen.control;
     foreground = disabled || !selected ? zen.secondary : zen.text;
   }
   float fill[4];
   copy_v4_v4(fill, background);
-  if (hovered && !input) {
+  if (style.component == MixarComponent::Segment ||
+      (style.component == MixarComponent::Toggle && style.unit == 0.0f) ||
+      (style.component == MixarComponent::Surface && button.type == ButtonType::But))
+  {
+    interp_v4_v4v4(fill, background, zen.selected, motion.selected);
+  }
+  if (!input) {
     for (int i = 0; i < 3; i++) {
-      fill[i] = std::min(fill[i] + 0.035f, 1.0f);
+      fill[i] = std::clamp(
+          (fill[i] + 0.035f * motion.hover) * (1.0f - 0.10f * motion.press), 0.0f, 1.0f);
     }
   }
   if (!label) {
@@ -101,8 +125,12 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     const float start = right + padding * u * 0.5f - on_w - off_w;
     rctf on = {start, start + on_w, rect.ymin + 4 * u, rect.ymax - 4 * u};
     rctf off = {on.xmax, on.xmax + off_w, on.ymin, on.ymax};
-    mixar_fill_round(selected ? on : off, radius * u, zen.selected);
-    mixar_label_left("ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : zen.secondary);
+    rctf thumb = off;
+    thumb.xmin = off.xmin + (on.xmin - off.xmin) * motion.selected;
+    thumb.xmax = off.xmax + (on.xmax - off.xmax) * motion.selected;
+    mixar_fill_round(thumb, radius * u, zen.selected);
+    mixar_label_left(
+        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : zen.secondary);
     mixar_label_left(
         "OFF", off.xmin + 10 * u, cy, text_style, selected ? zen.secondary : foreground);
     right = start - gap * u;

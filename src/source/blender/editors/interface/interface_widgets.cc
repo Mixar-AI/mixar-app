@@ -5482,13 +5482,14 @@ static void widget_optionbut(uiWidgetColors *wcol,
  * surface read the same MX_* values instead of re-declaring them. */
 
 /* Mixar pill-shaped toggle switch. */
-static void widget_mixar_toggle(uiWidgetColors *wcol,
+static void widget_mixar_toggle(Button *but,
+                                uiWidgetColors *wcol,
                                 rcti *rect,
                                 const WidgetStateInfo *state,
                                 int /*roundboxalign*/,
                                 const float /*zoom*/)
 {
-  const bool is_checked = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
   const bool text_before_widget = (state->but_drawflag & BUT_TEXT_RIGHT);
 
   /* --- Compute toggle track rect (pill shape) ----------------------------- */
@@ -5519,13 +5520,13 @@ static void widget_mixar_toggle(uiWidgetColors *wcol,
   trackf.ymax = float(track.ymax);
 
   float track_col[4];
-  if (is_checked) {
-    /* ON: #00C0C7 cyan (no lime/parrot green anywhere). */
-    rgba_uchar_to_float(track_col, MX_TOGGLE_ON);
+  for (int channel = 0; channel < 4; channel++) {
+    track_col[channel] = (float(MX_GRAY_700[channel]) +
+                          (float(MX_TOGGLE_ON[channel]) - float(MX_GRAY_700[channel])) *
+                              motion.selected) / 255.0f;
   }
-  else {
-    /* OFF: neutral gray-700 track. */
-    rgba_uchar_to_float(track_col, MX_GRAY_700);
+  for (int channel = 0; channel < 3; channel++) {
+    track_col[channel] = std::min(1.0f, track_col[channel] + 0.035f * motion.hover);
   }
 
   GPU_blend(GPU_BLEND_ALPHA);
@@ -5541,13 +5542,9 @@ static void widget_mixar_toggle(uiWidgetColors *wcol,
   const float knob_rad = (float(track_h) * 0.5f) - knob_padding;
   const float knob_y = (trackf.ymin + trackf.ymax) * 0.5f;
 
-  float knob_x;
-  if (is_checked) {
-    knob_x = trackf.xmax - knob_rad - knob_padding;
-  }
-  else {
-    knob_x = trackf.xmin + knob_rad + knob_padding;
-  }
+  const float knob_left = trackf.xmin + knob_rad + knob_padding;
+  const float knob_right = trackf.xmax - knob_rad - knob_padding;
+  const float knob_x = knob_left + (knob_right - knob_left) * motion.selected;
 
   rctf knob_rect;
   knob_rect.xmin = knob_x - knob_rad;
@@ -5758,7 +5755,8 @@ static void widget_mixar_section(Button *but,
 
 /* -- Mixar Dropdown Widget ----------------------------------------------- */
 
-static void widget_mixar_dropdown(uiWidgetColors *wcol,
+static void widget_mixar_dropdown(Button *but,
+                                  uiWidgetColors *wcol,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
                                   int roundboxalign,
@@ -5771,8 +5769,7 @@ static void widget_mixar_dropdown(uiWidgetColors *wcol,
   const float rad = MX_R_SM * UI_SCALE_FAC;
   const float height = float(BLI_rcti_size_y(rect));
 
-  const bool is_hover = (state->but_flag & UI_HOVER) != 0;
-  const bool is_active = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
 
   /* --- Save & set colors ------------------------------------------------ */
   uchar old_inner[4], old_outline[4], old_item[4];
@@ -5783,15 +5780,9 @@ static void widget_mixar_dropdown(uiWidgetColors *wcol,
   /* #1f1f1f fill / #2e2e2e border — identical to the input recipe. Subtle
    * lift on hover / dim on press; state only, no accent chrome. */
   copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
-  if (is_active) {
-    wcol->inner[0] = uchar(int(wcol->inner[0]) * 85 / 100);
-    wcol->inner[1] = uchar(int(wcol->inner[1]) * 85 / 100);
-    wcol->inner[2] = uchar(int(wcol->inner[2]) * 85 / 100);
-  }
-  else if (is_hover) {
-    wcol->inner[0] = uchar(std::min(int(wcol->inner[0]) * 115 / 100, 255));
-    wcol->inner[1] = uchar(std::min(int(wcol->inner[1]) * 115 / 100, 255));
-    wcol->inner[2] = uchar(std::min(int(wcol->inner[2]) * 115 / 100, 255));
+  for (int channel = 0; channel < 3; channel++) {
+    const float boost = (1.0f + 0.15f * motion.hover) * (1.0f - 0.15f * motion.press);
+    wcol->inner[channel] = uchar(std::min(float(wcol->inner[channel]) * boost, 255.0f));
   }
   copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
 
@@ -5902,15 +5893,14 @@ static void mixar_draw_gradient_hbar(const rctf *rect, float rad)
   GPU_blend(GPU_BLEND_NONE);
 }
 
-static void widget_mixar_action_button(Button * /*but*/,
+static void widget_mixar_action_button(Button *but,
                                        uiWidgetColors *wcol,
                                        rcti *rect,
                                        const WidgetStateInfo *state,
                                        int /*roundboxalign*/,
                                        const float /*zoom*/)
 {
-  const bool is_hover = (state->but_flag & UI_HOVER) != 0;
-  const bool is_active = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
 
   /* --mx-r-md: 8px. */
   const float rad = MX_R_MD * UI_SCALE_FAC;
@@ -5947,22 +5937,14 @@ static void widget_mixar_action_button(Button * /*but*/,
     GPU_blend(GPU_BLEND_NONE);
   }
 
-  /* Hover/press: Blender has no CSS brightness/transform, so approximate
-   * `filter: brightness(1.08)` (hover) and the press dim with a translucent
-   * overlay. No motion — the platform can't lift/drop the button. */
-  if (is_hover || is_active) {
-    float ov_col[4];
-    if (is_active) {
-      ov_col[0] = ov_col[1] = ov_col[2] = 0.0f;
-      ov_col[3] = 0.12f;
-    }
-    else {
-      ov_col[0] = ov_col[1] = ov_col[2] = 1.0f;
-      ov_col[3] = 0.08f;
-    }
+  /* Interpolate overlays independently so a release also has a soft landing. */
+  if (motion.hover > 0.0f || motion.press > 0.0f) {
+    const float hover_col[4] = {1.0f, 1.0f, 1.0f, 0.08f * motion.hover};
+    const float press_col[4] = {0.0f, 0.0f, 0.0f, 0.12f * motion.press};
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
-    draw_roundbox_4fv(&rectf, true, rad, ov_col);
+    draw_roundbox_4fv(&rectf, true, rad, hover_col);
+    draw_roundbox_4fv(&rectf, true, rad, press_col);
     GPU_blend(GPU_BLEND_NONE);
   }
 
@@ -6322,7 +6304,7 @@ static WidgetType *widget_type(WidgetStyle type)
 
     case WidgetStyle::MixarDropdown:
       wt.wcol_theme = &btheme->tui.wcol_menu;
-      wt.draw = widget_mixar_dropdown;
+      wt.custom = widget_mixar_dropdown;
       break;
 
     case WidgetStyle::MixarAction:
@@ -6332,7 +6314,7 @@ static WidgetType *widget_type(WidgetStyle type)
 
     case WidgetStyle::MixarToggle:
       wt.wcol_theme = &btheme->tui.wcol_option;
-      wt.draw = widget_mixar_toggle;
+      wt.custom = widget_mixar_toggle;
       break;
 
     case WidgetStyle::MixarInput:

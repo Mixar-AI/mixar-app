@@ -15,16 +15,17 @@
 #include "BLI_rect.h"
 
 namespace blender {
+struct MixieCatPose;
+enum class MixieCatActivity;
 
 /**
  * Paint Mixie inside \a chip. Every vertex stays inside that rect: the
  * pill window IS the capsule, and paint past it is clipped with no signal
  * (see `test_agent_bubble_pill_paint.py`).
  *
- * \a now is wall-clock seconds (`BLI_time_now_seconds`); \a working selects
- * the squint rest-openness over the idle-open blink/glance cycle.
+ * The region-owned activity controller supplies a smoothly blended pose.
  */
-void agent_ui_draw_pill_cat(const rctf *chip, double now, bool working);
+void agent_ui_draw_pill_cat(const rctf *chip, const MixieCatPose &pose, MixieCatActivity activity);
 
 /** Shared painter; does not modify the pill's QA geometry. Alpha follows card
  * transitions. */

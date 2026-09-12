@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
 DRAW_CC = (CPP / "agent_ui_draw.cc").read_text(encoding="utf-8")
+CONTROLS_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
 THEME_HH = (CPP / "agent_ui_theme.hh").read_text(encoding="utf-8")
 BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
@@ -44,7 +45,7 @@ def test_the_island_painter_no_longer_sizes_anything_with_agent_du():
     window sizing constants, for one) — it is its use inside this painter that
     was the bug.
     """
-    assert "AGENT_DU(" not in _strip_comments(DRAW_CC), (
+    assert "AGENT_DU(" not in _strip_comments(DRAW_CC + CONTROLS_CC), (
         "an AGENT_DU() call came back into the island painter: it is fixed to "
         "UI_SCALE_FAC and does not track the window's width"
     )
@@ -137,7 +138,7 @@ def _function_body(source: str, signature_start: str) -> str:
 def test_chip_row_metrics_all_share_one_unit():
     """The chip row is where mixing the two systems was visible as geometry,
     not just as type size: pad and icon box in one unit, radius in another."""
-    body = _function_body(DRAW_CC, "void draw_chip_row(")
+    body = _function_body(CONTROLS_CC, "void agent_ui_draw_chip_row(")
     for token in (
         "AGENT_CHIP_FONT",
         "AGENT_CHIP_RADIUS",
@@ -151,7 +152,7 @@ def test_chip_row_metrics_all_share_one_unit():
 def test_tab_strip_and_card_header_text_scale_with_the_island():
     """The labels the bug was reported against: tab strip, queue count, NEW
     badge, card title and FAQs."""
-    strip = _function_body(DRAW_CC, "void draw_tab_strip(")
+    strip = _function_body(CONTROLS_CC, "void agent_ui_draw_tab_strip(")
     assert "AGENT_TAB_FONT * u" in strip
     assert strip.count("AGENT_NEW_BADGE_FONT * u") == 2, (
         "the queue count chip and the NEW badge both draw at this size"

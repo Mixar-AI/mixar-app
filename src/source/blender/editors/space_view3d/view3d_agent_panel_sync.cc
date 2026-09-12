@@ -23,6 +23,7 @@
 #include "RNA_access.hh"
 
 #include "view3d_agent_panel.hh"
+#include <algorithm>
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -71,8 +72,10 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
    * counting from when it was first seen running rather than restarting. */
   blender::Map<std::string, double> seen_running;
   blender::Map<std::string, double> seen_exit;
+  blender::Map<std::string, AgentPanelCard> previous_cards;
   blender::Set<std::string> expanded;
   for (const AgentPanelCard &card : runtime->cards) {
+    previous_cards.add_overwrite(std::string(card.task_id), card);
     if (card.expanded) {
       expanded.add(std::string(card.task_id));
     }
@@ -103,8 +106,10 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
   }
   if (generation != runtime->generation) {
     runtime->cat_identities.clear();
+    previous_cards.clear();
   }
 
+  int arrivals = 0;
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&wm_ptr, cards_prop, &iter);
   while (iter.valid) {
@@ -147,6 +152,19 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
     card.cat_ordinal = runtime->cat_identities.lookup_or_add(std::string(card.task_id),
                                                              int(runtime->cat_identities.size()));
 
+    if (const AgentPanelCard *previous = previous_cards.lookup_ptr(std::string(card.task_id))) {
+      card.reveal_started_at = previous->reveal_started_at;
+      card.slide = previous->slide;
+      card.row = previous->row;
+    }
+    else {
+      /* Late arrivals animate individually; offscreen tasks never extend the visible stagger. */
+      card.reveal_started_at = now + std::min(arrivals++, AGENT_PANEL_VISIBLE_CARDS - 1) *
+                                         AGENT_PANEL_STAGGER_SECONDS;
+      card.slide.settle(1.0f);
+      card.row.settle(float(runtime->cards.size()));
+    }
+
     runtime->cards.append(card);
     RNA_property_collection_next(&iter);
   }
@@ -159,7 +177,6 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
   if (generation != runtime->generation) {
     runtime->generation = generation;
     if (!runtime->cards.is_empty()) {
-      runtime->reveal_started_at = now;
       runtime->scroll = 0.0f;
     }
   }

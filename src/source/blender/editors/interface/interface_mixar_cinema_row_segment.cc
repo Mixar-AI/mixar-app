@@ -34,6 +34,7 @@
 #include "BLI_utildefines.h"
 
 #include "UI_interface_c.hh"
+#include "UI_mixar_motion.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
@@ -60,7 +61,8 @@ struct SegmentGroup {
 
 bool same_baseline(const Button &a, const Button &b)
 {
-  return std::fabs(a.rect.ymin - b.rect.ymin) < 0.5f && std::fabs(a.rect.ymax - b.rect.ymax) < 0.5f;
+  return std::fabs(a.rect.ymin - b.rect.ymin) < 0.5f &&
+         std::fabs(a.rect.ymax - b.rect.ymax) < 0.5f;
 }
 
 bool is_segment(const Button &but)
@@ -112,7 +114,10 @@ void group_collect(Button *but, SegmentGroup *group)
  * rest share the remainder equally, laid out in order from the group's left
  * edge — which is exactly what keeps the hovered cell over its hit rect.
  */
-rctf cell_rect(const SegmentGroup &group, const uiFontStyle &fs, const int index, const float px_per_unit)
+rctf cell_rect(const SegmentGroup &group,
+               const uiFontStyle &fs,
+               const int index,
+               const float px_per_unit)
 {
   const Button *self = group.members[index];
   if (group.hovered < 0 || group.count < 2) {
@@ -122,7 +127,8 @@ rctf cell_rect(const SegmentGroup &group, const uiFontStyle &fs, const int index
   const float total = BLI_rctf_size_x(&group.bounds);
   const float own = BLI_rctf_size_x(&hot->rect);
   /* Label width is measured in pixels; the block may be scaled. */
-  const float need = (fontstyle_string_width(&fs, row_label(hot)) + 2.0f * TEXT_PAD * UI_SCALE_FAC) /
+  const float need = (fontstyle_string_width(&fs, row_label(hot)) +
+                      2.0f * TEXT_PAD * UI_SCALE_FAC) /
                      px_per_unit;
   const float others_min = SEGMENT_MIN_W * UI_SCALE_FAC / px_per_unit * float(group.count - 1);
   const float hot_w = std::clamp(need, own, std::max(own, total - others_min));
@@ -164,30 +170,30 @@ void draw_segment(Button *but, const rcti *rect)
     cell.ymax = float(rect->ymax);
   }
 
-  /* The live cell carries BUT_ACTIVE_DEFAULT (set by `director_popup_state`
-   * for the active row); the kind payload is Segment, so "active" travels
-   * on the flag. */
-  const bool lit = (but->flag & BUT_ACTIVE_DEFAULT) != 0;
-  const bool disabled = (but->flag & BUT_DISABLED) != 0;
-  const bool hovered = group.self >= 0 && group.hovered == group.self;
-  const bool pressed = (but->flag & UI_SELECT) != 0;
-
+  /* The shared sampler keeps BUT_ACTIVE_DEFAULT selection separate from
+   * operator press. Existing label-reveal geometry and hit cells stay native. */
+  const MixarInteraction motion = mixar_button_motion(*but);
+  const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   rctf row = cell;
   const float inset = 1.0f * UI_SCALE_FAC;
   BLI_rctf_pad(&row, -inset, -inset);
   const float rad = row_radius(row);
-  if (lit) {
-    draw_chip(row, rad);
-  }
-  else if ((hovered || pressed) && !disabled) {
-    draw_hover(row, rad, pressed ? 1.0f : 0.9f);
+  const float hover = 0.9f * motion.hover + (1.0f - 0.9f * motion.hover) * motion.press;
+  draw_hover(row, rad, hover * (1.0f - motion.selected));
+  if (motion.selected > 0.0f) {
+    draw_chip(row, rad, motion.selected);
   }
 
   rcti text;
   BLI_rcti_rctf_copy(&text, &cell);
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
-  const uchar *col = disabled ? TEXT_DISABLED : (lit ? TEXT_ON : TEXT_OFF);
+  uchar col[4];
+  for (int i = 0; i < 4; i++) {
+    col[i] = disabled ?
+                 TEXT_DISABLED[i] :
+                 uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * motion.selected);
+  }
   draw_label(fs, &text, row_label(but), col, UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack());
 }
 

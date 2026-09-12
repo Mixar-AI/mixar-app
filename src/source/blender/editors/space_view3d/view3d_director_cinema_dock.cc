@@ -205,18 +205,7 @@ void tool_icon(ui::Block *block,
                const char *tooltip,
                const bool enabled)
 {
-  ui::block_emboss_set(block, blender::ui::EmbossType::None);
-  ui::Button *but = uiDefIconButO(block,
-                             ui::ButtonType::But,
-                             operator_id,
-                             blender::wm::OpCallContext::InvokeRegionWin,
-                             icon,
-                             int(rect.xmin),
-                             int(rect.ymin),
-                             int(BLI_rctf_size_x(&rect)),
-                             int(BLI_rctf_size_y(&rect)),
-                             tooltip);
-  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::Button *but = cinema_icon_button(block, operator_id, icon, rect, tooltip);
   director_overlay_disable_button(but, !enabled);
 }
 

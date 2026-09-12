@@ -173,7 +173,7 @@ def test_layout_pad_mode_drops_the_strip_and_reflows_to_the_pad_width():
 
 def test_painter_and_header_controls_skip_the_strip_on_the_pad():
     island = _body(DRAW_CC, "void agent_ui_draw_island(")
-    assert "if (!layout->pad) {\n    draw_tab_strip(layout, state);" in island
+    assert "if (!layout->pad) {\n    agent_ui_draw_tab_strip(region, layout, state);" in island
     header = _body(BUBBLE_CC, "static void agent_bubble_island_controls_header(")
     loop = header.index("for (const auto &tb : tab_buttons)")
     assert "if (layout->pad)" in header[loop : loop + 200]

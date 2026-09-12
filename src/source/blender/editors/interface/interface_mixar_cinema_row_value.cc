@@ -29,6 +29,7 @@
 
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
+#include "UI_mixar_motion.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
@@ -86,18 +87,25 @@ void draw_caption(Button *but, const rcti *rect)
   const float label_w = fontstyle_string_width(&fs, label);
   /* Same rule as the option row: icon then label, icon dropped if tight. */
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, 0.55f);
-  draw_label(fs, &text, label, CAPTION, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
+  draw_label(
+      fs, &text, label, CAPTION, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
 }
 
-void draw_slider(Button *but, const rcti *rect, const bool is_hover)
+void draw_slider(Button *but, const rcti *rect, const bool /*is_hover*/)
 {
-  const bool disabled = (but->flag & BUT_DISABLED) != 0;
+  const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const rctf row = row_rect(rect);
   const float rad = row_radius(row);
 
   /* Track: the popup hover fill, a step darker at rest. Never the lit chip —
    * that ramp means "the active choice". */
-  mixar_card_fill_round(&row, rad, (is_hover && !disabled) ? HOVER : TRACK, 1.0f);
+  const MixarInteraction motion = mixar_button_motion(*but);
+  const float emphasis = std::max(motion.hover, motion.press);
+  uchar track[4];
+  for (int i = 0; i < 4; i++) {
+    track[i] = uchar(float(TRACK[i]) + (float(HOVER[i]) - TRACK[i]) * emphasis);
+  }
+  mixar_card_fill_round(&row, rad, track, 1.0f);
 
   /* Fill from the left to the value's place in the SOFT range (what the
    * drag travels). */

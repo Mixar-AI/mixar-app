@@ -22,8 +22,8 @@
 
 #include "BLI_listbase.h"
 #include "BLI_map.hh"
-#include "BLI_set.hh"
 #include "BLI_rect.h"
+#include "BLI_set.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
 
@@ -31,8 +31,8 @@
 #include "BKE_screen.hh"
 
 #include "DNA_screen_types.h"
-#include "DNA_view2d_types.h"
 #include "DNA_space_types.h"
+#include "DNA_view2d_types.h"
 #include "DNA_windowmanager_types.h"
 
 #include "ED_screen.hh"
@@ -53,13 +53,6 @@ namespace blender {
 /** \name Animation
  * \{ */
 
-/** Ease-out cubic: fast entry, soft landing. */
-static float agent_panel_ease_out(const float t)
-{
-  const float inv = 1.0f - std::clamp(t, 0.0f, 1.0f);
-  return 1.0f - inv * inv * inv;
-}
-
 float view3d_agent_panel_exit_progress(const AgentPanelCard &card)
 {
   if (card.seen_exit_at == 0.0) {
@@ -75,20 +68,19 @@ float view3d_agent_panel_exit_progress(const AgentPanelCard &card)
   if (elapsed <= 0.0) {
     return 0.0f;
   }
-  return agent_panel_ease_out(float(elapsed / AGENT_PANEL_EXIT_SECONDS));
+  return ui::mixar_motion::ease_out(float(elapsed / AGENT_PANEL_EXIT_SECONDS));
 }
 
 float view3d_agent_panel_reveal(const AgentPanelRuntime *runtime, const int card_index)
 {
-  if (runtime->reveal_started_at == 0.0) {
+  if (card_index < 0 || card_index >= runtime->cards.size()) {
     return 1.0f;
   }
-  const double delay = (card_index > 0) ? double(card_index) * AGENT_PANEL_STAGGER_SECONDS : 0.0;
-  const double elapsed = BLI_time_now_seconds() - runtime->reveal_started_at - delay;
+  const double elapsed = BLI_time_now_seconds() - runtime->cards[card_index].reveal_started_at;
   if (elapsed <= 0.0) {
     return 0.0f;
   }
-  return agent_panel_ease_out(float(elapsed / AGENT_PANEL_REVEAL_SECONDS));
+  return ui::mixar_motion::ease_out(float(elapsed / AGENT_PANEL_REVEAL_SECONDS));
 }
 
 bool view3d_agent_panel_is_animating(const AgentPanelRuntime *runtime)
@@ -96,11 +88,14 @@ bool view3d_agent_panel_is_animating(const AgentPanelRuntime *runtime)
   if (runtime->cards.is_empty()) {
     return false;
   }
-  /* Still sliding in? The last card carries the largest stagger. */
-  if (view3d_agent_panel_reveal(runtime, int(runtime->cards.size()) - 1) < 1.0f) {
-    return true;
-  }
+  const double now = BLI_time_now_seconds();
   for (const AgentPanelCard &card : runtime->cards) {
+    if (now < card.reveal_started_at + AGENT_PANEL_REVEAL_SECONDS || card.slide.active(now) ||
+        card.row.active(now) || card.slide.value != card.slide.target ||
+        card.row.value != card.row.target)
+    {
+      return true;
+    }
     /* A running agent's elapsed clock has to keep ticking. */
     if (card.status == AgentCardStatus::Running) {
       return true;
@@ -189,25 +184,32 @@ void view3d_agent_panel_layout_cards(const ARegion *region, AgentPanelRuntime *r
   /* The clipped window the column scrolls behind. A left-docked region is as
    * tall as the whole area, so this — not `region->winy` — is what "visible"
    * means for a card. */
-  BLI_rcti_init(&runtime->column_rect,
-                left,
-                left + card_w - 1,
-                stack_bottom,
-                stack_bottom + visible_h - 1);
+  BLI_rcti_init(
+      &runtime->column_rect, left, left + card_w - 1, stack_bottom, stack_bottom + visible_h - 1);
 
   /* Card 0 is the top of the reading order and starts at the TOP of the
    * visible band, so an unscrolled stack shows the FIRST three agents and the
    * chevron's downward arrow means what it says: more of them are below. */
   const int column_top = stack_bottom + visible_h;
+  const double now = BLI_time_now_seconds();
   for (int i = 0; i < n; i++) {
     /* Both the slide-in and a finished card's slide-out travel the same way:
      * off the LEFT edge of the region. */
-    const float reveal = view3d_agent_panel_reveal(runtime, i);
-    const float exit = view3d_agent_panel_exit_progress(runtime->cards[i]);
-    const float offscreen = std::clamp((1.0f - reveal) + exit, 0.0f, 1.0f);
+    AgentPanelCard &card = runtime->cards[i];
+    const bool leaving = card.seen_exit_at != 0.0 &&
+                         (card.dismissing || card.status == AgentCardStatus::Done) &&
+                         now >= card.seen_exit_at +
+                                    (card.dismissing ? 0.0 : AGENT_PANEL_DONE_DWELL_SECONDS);
+    if (now >= card.reveal_started_at) {
+      card.slide.sample(leaving ? 1.0f : 0.0f,
+                        now,
+                        leaving ? AGENT_PANEL_EXIT_SECONDS : AGENT_PANEL_REVEAL_SECONDS);
+    }
+    const float offscreen = card.slide.value;
     const int slide = int(roundf(offscreen * float(left + card_w)));
 
-    const int card_bottom = column_top - (i + 1) * stride + gap +
+    const float row = card.row.sample(float(i), now, ui::mixar_motion::selection_seconds);
+    const int card_bottom = column_top - int(roundf((row + 1.0f) * stride)) + gap +
                             int(roundf(runtime->scroll));
     rcti *rect = &runtime->cards[i].rect;
     rect->xmin = left - slide;

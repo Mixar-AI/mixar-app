@@ -36,6 +36,7 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar_chrome.hh"
+#include "UI_mixar_motion.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
@@ -120,11 +121,13 @@ uiFontStyle caption_font()
   return mixar_card_font(mixar_chrome::caption_scale, 0);
 }
 
-void draw_chip(const rctf &row, const float radius)
+void draw_chip(const rctf &row, const float radius, const float alpha)
 {
   float top[4], bottom[4];
   mixar_card_to_float(ROW_TOP, top);
   mixar_card_to_float(ROW_BOTTOM, bottom);
+  top[3] *= alpha;
+  bottom[3] *= alpha;
   draw_roundbox_corner_set(CNR_ALL);
   draw_roundbox_4fv_ex(&row, top, bottom, 1.0f, nullptr, 0.0f, radius);
 }
@@ -194,28 +197,25 @@ bool draw_leading_icon(
 void draw_option(Button *but,
                  const rcti *rect,
                  const MixarCinemaRowKind kind,
-                 const bool is_hover,
-                 const bool is_active)
+                 const bool /*is_hover*/,
+                 const bool /*is_active*/)
 {
-  /* A Row / Toggle button carries its state in UI_SELECT; for operator rows
-   * UI_SELECT is only "held down". */
-  const bool is_toggle = ELEM(but->type, ButtonType::Row, ButtonType::Toggle, ButtonType::IconToggle);
-  const bool lit = kind == MixarCinemaRowKind::Active ||
-                   (is_toggle && (but->flag & UI_SELECT) != 0);
-  const bool disabled = (but->flag & BUT_DISABLED) != 0;
-  const bool pressed = is_active || (!is_toggle && (but->flag & UI_SELECT) != 0);
-
+  const MixarInteraction motion = mixar_button_motion(*but);
+  const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const rctf row = row_rect(rect);
   const float rad = row_radius(row);
-  if (lit) {
-    draw_chip(row, rad);
-  }
-  else if ((is_hover || pressed) && !disabled) {
-    draw_hover(row, rad, pressed ? 1.0f : 0.9f);
+  const float hover = 0.9f * motion.hover + (1.0f - 0.9f * motion.hover) * motion.press;
+  draw_hover(row, rad, hover * (1.0f - motion.selected));
+  if (motion.selected > 0.0f) {
+    draw_chip(row, rad, motion.selected);
   }
 
-  const uchar *col = disabled ? TEXT_DISABLED :
-                                (lit || kind == MixarCinemaRowKind::Action ? TEXT_ON : TEXT_OFF);
+  const float selected = kind == MixarCinemaRowKind::Action ? 1.0f : motion.selected;
+  uchar col[4];
+  for (int i = 0; i < 4; i++) {
+    col[i] = disabled ? TEXT_DISABLED[i] :
+                        uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * selected);
+  }
   rcti text = *rect;
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
@@ -223,7 +223,8 @@ void draw_option(Button *but,
   const char *label = row_label(but);
   const float label_w = fontstyle_string_width(&fs, label);
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, disabled ? 0.4f : 0.9f);
-  draw_label(fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
+  draw_label(
+      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
 }
 
 }  // namespace mixar_cinema_row

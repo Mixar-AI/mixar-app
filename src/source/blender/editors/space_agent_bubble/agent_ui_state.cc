@@ -25,6 +25,8 @@
  */
 
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -42,6 +44,7 @@
 #include "WM_api.hh"
 
 #include "agent_ui_draw.hh"
+#include "agent_ui_cat_activity.hh"
 #include "agent_ui_layout.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -187,6 +190,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
 
   Scene *scene = CTX_data_scene(C);
   wmWindowManager *wm = CTX_wm_manager(C);
+  MixieCatSignals cat;
+  r_state->cat_scene = scene;
 
   if (wm) {
     /* Which content the card shows — wm.mixar_bubble_tab, a WindowManager
@@ -222,6 +227,11 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                            enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
+    cat.busy = r_state->status_busy;
+    cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
+                  enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
+    cat.offline = enum_is(&scene_ptr, "mixie_chat_state", "OFFLINE");
+    cat.connecting = enum_is(&scene_ptr, "mixie_chat_state", "CONNECTING");
 
     read_string_prop(&scene_ptr, "mixie_chat_input", r_state->input_text, sizeof(r_state->input_text));
     r_state->prompt_empty = (r_state->input_text[0] == '\0');
@@ -238,8 +248,31 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
       for (; iter.valid; RNA_property_collection_next(&iter)) {
         PointerRNA item = iter.ptr;
         if (!enum_is(&item, "sender", "USER")) {
+          if (!cat.busy) {
+            continue;
+          }
+          /* Only live activity after the most recent user prompt. Old steps
+           * and completed reasoning must not animate a later idle turn. */
+          cat.thinking |= read_bool_prop(&item, "thinking_active");
+          PropertyRNA *content = RNA_struct_find_property(&item, "content");
+          cat.responding |= content && RNA_property_string_length(&item, content) > 0;
+          PropertyRNA *steps = RNA_struct_find_property(&item, "step_items");
+          if (steps) {
+            CollectionPropertyIterator step;
+            RNA_property_collection_begin(&item, steps, &step);
+            for (; step.valid; RNA_property_collection_next(&step)) {
+              if (enum_is(&step.ptr, "status", "RUNNING")) {
+                const bool reading = enum_is(&step.ptr, "kind", "READ") ||
+                                     enum_is(&step.ptr, "kind", "SEARCH");
+                cat.reading |= reading;
+                cat.working |= !reading;
+              }
+            }
+            RNA_property_collection_end(&step);
+          }
           continue;
         }
+        cat.thinking = cat.reading = cat.working = cat.responding = false;
         PropertyRNA *text_prop = RNA_struct_find_property(&item, "text");
         if (!text_prop || RNA_property_type(text_prop) != PROP_STRING) {
           continue;
@@ -264,6 +297,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   }
 
   r_state->queue_count = read_queue_count(wm);
+  cat.generating = r_state->queue_count > 0;
 
   /* Scribble — read-only off the Python-registered properties, exactly what
    * the chat/bubble headers read (space_mixie_chat/ui/header.py). The chip is
@@ -286,6 +320,32 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
   }
+  cat.listening = r_state->voice_listening;
+  if (scene) {
+    PointerRNA ptr = RNA_id_pointer_create(&scene->id);
+    char activity[32], until[64];
+    read_string_prop(&ptr, "mixie_chat_cat_activity", activity, sizeof(activity));
+    read_string_prop(&ptr, "mixie_chat_cat_activity_until", until, sizeof(until));
+    /* Python tool execution can start AND finish before the next draw. The
+     * producer keeps a 900ms presentation pulse without changing job status.
+     * String RNA preserves subsecond precision; native float RNA does not at
+     * Unix timestamps. Bound both ends so clock corrections cannot stick it. */
+    const double now = std::chrono::duration<double>(
+                           std::chrono::system_clock::now().time_since_epoch()).count();
+    const double remaining = std::strtod(until, nullptr) - now;
+    if (remaining > 0.0 && remaining <= 0.91) {
+      if (cat.busy) {
+        cat.reading |= STREQ(activity, "READING");
+        cat.working |= STREQ(activity, "WORKING");
+        if (STREQ(activity, "RESPONDING")) {
+          cat.thinking = cat.reading = cat.working = false;
+          cat.responding = true;
+        }
+      }
+      cat.finishing = STREQ(activity, "RESPONDING");
+    }
+  }
+  r_state->cat_activity = mixie_cat_activity(cat);
   if (scene) {
     /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but
      * no longer ride with the next message, so they are not counted. */

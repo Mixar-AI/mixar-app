@@ -17,6 +17,7 @@ namespace blender {
 struct ARegion;
 struct AgentIslandLayout;
 struct bContext;
+enum class MixieCatActivity;
 
 /**
  * Everything the island shows, gathered by the caller before drawing.
@@ -28,6 +29,8 @@ struct bContext;
 struct AgentIslandState {
   char status_text[64];     /* Status pill label, from the state enum's UI name. */
   bool status_busy;         /* Lights the pill's dot. */
+  MixieCatActivity cat_activity;
+  const void *cat_scene;    /* Reset transient expression when the scene changes. */
 
   char title[128];
   /* Last USER message, for the minimised pill's preview line. Empty when the
@@ -79,12 +82,16 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state);
  * window cannot do that — it composites alpha as opaque, so an in-island pill
  * band showed up as a black bar above the tab strip.
  */
-void agent_ui_draw_status_pill(float width, float height, const AgentIslandState *state);
+void agent_ui_draw_status_pill(ARegion *region, float width, float height, const AgentIslandState *state);
 
 /** Paint the island. `GPU_blend` is set and restored internally. */
-void agent_ui_draw_island(const ARegion *region,
+void agent_ui_draw_island(ARegion *region,
                           const AgentIslandLayout *layout,
                           const AgentIslandState *state);
+
+/** Fixed-geometry chrome, with region-owned native interaction feedback. */
+void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
+void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
 

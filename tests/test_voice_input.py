@@ -46,7 +46,7 @@ BUBBLE_HEADER_PY = (ROOT / "src/scripts/mixar/modules/agent_bubble/ui/header.py"
 ICONS_HH = (BUBBLE / "agent_ui_icons.hh").read_text(encoding="utf-8")
 LAYOUT_HH = (BUBBLE / "agent_ui_layout.hh").read_text(encoding="utf-8")
 LAYOUT_CC = (BUBBLE / "agent_ui_layout.cc").read_text(encoding="utf-8")
-DRAW_CC = (BUBBLE / "agent_ui_draw.cc").read_text(encoding="utf-8")
+DRAW_CC = (BUBBLE / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 DRAW_HH = (BUBBLE / "agent_ui_draw.hh").read_text(encoding="utf-8")
 STATE_CC = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
 BUBBLE_CC = (BUBBLE / "space_agent_bubble.cc").read_text(encoding="utf-8")

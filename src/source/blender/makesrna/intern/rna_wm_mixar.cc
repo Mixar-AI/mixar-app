@@ -51,11 +51,18 @@
 #include "BLI_listbase.h"
 
 #ifdef RNA_RUNTIME
+#  include <algorithm>
 #  include <cstring>
 #  include <string>
 
 #  include "BKE_global.hh"
+#  include "BKE_image.hh"
+#  include "BKE_image_format.hh"
 #  include "BKE_report.hh"
+#  include "DNA_scene_types.h"
+#  include "IMB_imbuf.hh"
+#  include "IMB_imbuf_types.hh"
+#  include "WM_api.hh"
 
 #  include "../../editors/interface/interface_qa_inspect.hh"
 #else
@@ -101,8 +108,7 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 }
 
 /* Defined in windowmanager/intern/wm_event_system.cc (Mixar overlay). */
-void Mixar_qa_simulate_file_drop(
-    bContext *C, wmWindow *win, int x, int y, const char *filepath);
+void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, const char *filepath);
 
 static void rna_Window_mixar_qa_drop_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath, int x, int y)
@@ -112,6 +118,49 @@ static void rna_Window_mixar_qa_drop_file(
     return;
   }
   Mixar_qa_simulate_file_drop(C, win, x, y, filepath);
+}
+
+/** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
+ * WM_redraw_windows to clear menus, which destroys the hover being measured. */
+static bool rna_Window_mixar_qa_capture_frame(wmWindow *win,
+                                              bContext *C,
+                                              ReportList *reports,
+                                              const char *filepath,
+                                              int x,
+                                              int y,
+                                              int width,
+                                              int height)
+{
+  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
+    BKE_report(reports, RPT_ERROR, "QA frame capture requires --enable-event-simulate");
+    return false;
+  }
+  int size[2];
+  /* Front-buffer reads can rotate through stale swap-chain images. Recompose
+   * cached region buffers without WM_redraw_windows or layout/event updates. */
+  uint8_t *pixels = WM_window_pixels_read_from_offscreen(C, win, size);
+  if (!pixels) {
+    BKE_report(reports, RPT_ERROR, "Unable to read QA window frame");
+    return false;
+  }
+  ImBuf *buffer = IMB_allocImBuf(size[0], size[1], ImBufFlags::Zero);
+  buffer->color_mode = ImColorMode::RGB;
+  buffer->assign_byte_data(pixels);
+  if (width > 0 && height > 0) {
+    x = std::clamp(x, 0, size[0] - 1);
+    y = std::clamp(y, 0, size[1] - 1);
+    IMB_crop(
+        buffer, int2(x, y), int2(std::min(width, size[0] - x), std::min(height, size[1] - y)));
+  }
+  ImageFormatData format;
+  BKE_image_format_init(&format);
+  format.imtype = R_IMF_IMTYPE_PNG;
+  const bool saved = BKE_imbuf_write(buffer, filepath, &format);
+  IMB_freeImBuf(buffer);
+  if (!saved) {
+    BKE_report(reports, RPT_ERROR, "Unable to save QA window frame");
+  }
+  return saved;
 }
 
 #else /* RNA_RUNTIME */
@@ -174,6 +223,21 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
    * also registered in rna_wm.cc, so its generated wrappers land in
    * rna_wm_gen.cc where the helpers above are visible via the same include
    * injection that serves ``Window.global_areas``. */
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_qa_capture_frame", "rna_Window_mixar_qa_capture_frame");
+    RNA_def_function_flag(func, FUNC_USE_CONTEXT | FUNC_USE_REPORTS);
+    RNA_def_function_ui_description(
+        func,
+        "Save a cached UI frame without clearing hover or menus (QA event-simulation mode only)");
+    PropertyRNA *parm = RNA_def_string_file_path(func, "filepath", nullptr, 1024, "", "PNG path");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    for (const char *name : {"x", "y", "width", "height"}) {
+      RNA_def_int(func, name, 0, 0, INT_MAX, "", "Optional crop in window pixels", 0, INT_MAX);
+    }
+    parm = RNA_def_boolean(func, "success", false, "", "Frame saved");
+    RNA_def_function_return(func, parm);
+  }
   StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (srna_wm != nullptr) {
     prop = RNA_def_property(srna_wm, "mixar_qa_ui_dump", PROP_STRING, PROP_NONE);
