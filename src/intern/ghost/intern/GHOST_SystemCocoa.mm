@@ -853,6 +853,34 @@ extern "C" bool Mixar_WindowIsVisible(void *window_handle)
   }
 }
 
+extern "C" bool Mixar_WindowCanAnimate(void *window_handle)
+{
+  /* The caller must first resolve this handle from a live wmWindow. Animation
+   * eligibility is stricter than visibility used by the normal draw loop. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    if ([NSApp isHidden]) {
+      return false;
+    }
+    /* Modal suppression leaves the dock ordered in with zero alpha. Check
+     * parent windows too: an owned dock can retain its own visible flag while
+     * the host is miniaturized. Focus alone must not stop a visible mascot. */
+    for (NSWindow *current = win; current != nil; current = [current parentWindow]) {
+      if (![current isVisible] || [current isMiniaturized] || [current alphaValue] <= 0.01) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
 
 /* Show an NSWindow that was previously orderOut-ed and make it key.
  * Startup/modal code that must not affect focus uses

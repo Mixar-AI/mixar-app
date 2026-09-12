@@ -8,8 +8,8 @@
 The resting state of the chat is the elongated pill. Moving the cursor off the
 open island collapses it back to the pill; the pill itself opens on CLICK, not
 on hover (``bubble_header_drag_op.py``'s pill gesture), so this pump only ever
-takes the island away. While the pill is showing it also keeps Mixie's cat
-animating. All policy (hit-testing in native screen space, grace
+takes the island away. Native one-shot scheduling animates the cat; this
+slow heartbeat only re-arms it after an OS visibility change. All policy (hit-testing in native screen space, grace
 ticks, cooldowns, the open-popup guard) lives in the C++ operator
 ``mixar.bubble_hover_tick`` — this module only provides the heartbeat, because
 ``bpy.app.timers`` is the one sanctioned way to poll from Python without
@@ -37,7 +37,6 @@ from mixar.modules.agent_bubble.constants import BUBBLE_WINDOW_CONTROLS_SUPPORTE
 _logger = get_logger(__name__)
 
 _TICK_SECONDS = 0.1
-_FRAME_SECONDS = 1.0 / 60.0
 
 # A failing tick fails every tick — 10 tracebacks a second is not a log, it is
 # an outage. Report the first one in full and stay quiet afterwards.
@@ -59,27 +58,14 @@ def _hover_tick():
     return _TICK_SECONDS
 
 
-def _animation_tick():
-    """Display cadence for the visible mascot; hover policy keeps its own clock."""
-    op = getattr(bpy.ops.mixar, "bubble_animation_tick", None)
-    if op is not None and op.poll():
-        op()
-        return _FRAME_SECONDS
-    return _TICK_SECONDS
-
-
 def register():
     if not BUBBLE_WINDOW_CONTROLS_SUPPORTED:
         _logger.debug("Agent bubble hover pump not started on %s", sys.platform)
         return
     if not bpy.app.timers.is_registered(_hover_tick):
         bpy.app.timers.register(_hover_tick, first_interval=2.0, persistent=True)
-    if not bpy.app.timers.is_registered(_animation_tick):
-        bpy.app.timers.register(_animation_tick, first_interval=2.0, persistent=True)
 
 
 def unregister():
     if bpy.app.timers.is_registered(_hover_tick):
         bpy.app.timers.unregister(_hover_tick)
-    if bpy.app.timers.is_registered(_animation_tick):
-        bpy.app.timers.unregister(_animation_tick)

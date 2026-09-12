@@ -46,9 +46,8 @@ void agent_ui_motion_color(const float base[4],
                            AgentIslandFeedback feedback,
                            float result[4]);
 void agent_ui_motion_region_free(ARegion *region);
-MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
-                                        MixieCatActivity activity,
-                                        double now,
-                                        const void *scene);
+MixieCatPose agent_ui_cat_motion_sample(
+    ARegion *region, MixieCatActivity activity, double now, const void *scene, float chip_pixels);
+double agent_ui_cat_motion_next_frame(const ARegion *region);
 void *agent_ui_motion_region_duplicate(void *regiondata);
 }  // namespace blender

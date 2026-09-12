@@ -15,9 +15,8 @@ Instead, it renders a living, animated representation of work:
   3. Pulsating green activity indicator dot with an expanding/fading ripple halo.
   4. Animated status text with cycling trailing dots ("Working.", "Working..",
      "Working...", "Working") and task prompt context.
-  5. Continuous redraw triggers (ED_region_tag_redraw during pill draw and
-     agent_bubble_pill_tag_redraw on hover pump ticks) to ensure the animation
-     runs fluidly without stalling or wasting cycles when idle.
+  5. Native one-shot scheduling predicts useful mascot frames. Neither the
+     draw callback nor the hover policy duplicates its redraw requests.
 """
 
 from pathlib import Path
@@ -121,31 +120,22 @@ def test_working_state_draws_activity_dot_and_animated_dots():
     assert "work_col" in elongated
 
 
-def test_pill_header_region_tags_continuous_redraw_when_working():
-    """In space_agent_bubble.cc, the pill header region tags redraw when
-    the elongated cat is showing, or Mixie is busy / has queue jobs."""
+def test_pill_draw_schedules_one_native_frame_without_self_redraw():
     draw_start = BUBBLE_CC.index("void agent_bubble_header_region_draw")
     draw_end = BUBBLE_CC.index("agent_bubble_header_region_draw_overlay", draw_start)
     draw_body = BUBBLE_CC[draw_start:draw_end]
+    assert "agent_ui_cat_schedule(win, region, g_host_ghostwin, agent_ui_cat_motion_next_frame(region))" in draw_body
+    assert "ED_region_tag_redraw(region)" not in draw_body
+    assert "agent_ui_cat_scheduler_forget(region)" in draw_body
 
-    assert "pill_w > pill_h * 4.0f || state.status_busy || state.queue_count > 0" in draw_body
-    assert "ED_region_tag_redraw(region);" in draw_body
 
-
-def test_hover_tick_pumps_pill_redraw_when_minimised_and_working():
-    """The hover tick watchdog tags the minimized pill so Mixie's cat (and
-    the working glow) keep moving even if the main draw loop goes idle."""
-    assert "static void agent_bubble_pill_tag_redraw(wmWindowManager *wm)" in BUBBLE_CC
-
+def test_hover_tick_only_rearms_after_visibility_changes():
     tick_start = BUBBLE_CC.index("mixar_bubble_hover_tick_exec")
     tick_end = BUBBLE_CC.index("void MIXAR_OT_bubble_hover_tick", tick_start)
     tick_body = BUBBLE_CC[tick_start:tick_end]
-
-    min_start = tick_body.index("if (g_bubble_minimised)")
-    min_body = tick_body[min_start : min_start + 400]
-
-    assert "agent_bubble_pill_tag_redraw" in min_body
-    assert "state.status_busy" not in min_body
+    assert "agent_ui_cat_scheduler_sync" in tick_body
+    assert "tag_redraw" not in tick_body
+    assert "agent_bubble_pill_tag_redraw" not in BUBBLE_CC
 
 
 def test_agent_ui_state_flags_busy_on_session_states():

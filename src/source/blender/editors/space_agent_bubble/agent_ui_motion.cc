@@ -13,6 +13,8 @@
 #include "UI_mixar_custom_motion.hh"
 #include "UI_mixar_motion.hh"
 
+#include "agent_ui_cat_cadence.hh"
+#include "agent_ui_cat_scheduler.hh"
 #include "agent_ui_motion.hh"
 
 namespace blender {
@@ -26,13 +28,15 @@ struct AgentIslandMotion {
   std::array<ControlMotion, int(AgentIslandControl::Count)> controls;
   MixieCatMotion cat;
   const void *cat_scene = nullptr;
+  double cat_next_frame = MIXIE_CAT_FRAME_SECONDS;
 };
 }  // namespace
 
 MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
                                         const MixieCatActivity activity,
                                         const double now,
-                                        const void *scene)
+                                        const void *scene,
+                                        const float chip_pixels)
 {
   if (!region->regiondata) {
     region->regiondata = MEM_new<AgentIslandMotion>("Agent island motion");
@@ -42,7 +46,16 @@ MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
     motion.cat = {};
     motion.cat_scene = scene;
   }
-  return motion.cat.sample(now, activity);
+  const MixieCatPose pose = motion.cat.sample(now, activity);
+  motion.cat_next_frame = mixie_cat_next_frame(motion.cat, now, chip_pixels);
+  return pose;
+}
+
+double agent_ui_cat_motion_next_frame(const ARegion *region)
+{
+  return region->regiondata ?
+             static_cast<const AgentIslandMotion *>(region->regiondata)->cat_next_frame :
+             MIXIE_CAT_FRAME_SECONDS;
 }
 
 void agent_ui_motion_begin(ARegion *region)
@@ -121,6 +134,7 @@ void agent_ui_motion_color(const float base[4],
 
 void agent_ui_motion_region_free(ARegion *region)
 {
+  agent_ui_cat_scheduler_forget(region);
   if (region->regiondata) {
     MEM_delete(static_cast<AgentIslandMotion *>(region->regiondata));
   }
