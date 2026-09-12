@@ -2,231 +2,199 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""In-app clipboard for moodboard images, videos and text boxes.
+"""The moodboard clipboard: one copy, pasteable here or in another Mixar.
 
-Holds a snapshot of the selected moodboard items so Copy (Ctrl/Cmd+C) and Paste
-(Ctrl/Cmd+V) duplicate them *within* the moodboard reliably, without a lossy
-round-trip through the system clipboard. "Selected" resolves through inference
-nodes as well (`media_utils.selected_exportable_media`), so copying a finished
-Generate card copies the image or video it produced -- that result is owned by
-its node and is never `selected` itself.  Image pastes reuse the source image
-datablock (like Duplicate) rather than re-encoding pixels; text boxes copy their
-content and styling.  The copied items' relative layout is preserved on paste.
+Copy (Ctrl/Cmd+C) takes ONE snapshot of the selection -- images, movies, text
+boxes, inference nodes and the links between them (``clipboard_snapshot``) --
+and does two things with it:
 
-The system clipboard is still used as a best-effort export target on copy and as
-a fallback source on paste (for images copied from other applications) — that
-logic lives in the operators; this module owns only the in-app snapshot.
+1. keeps it in this process (``_SESSION``), so a paste back into this file
+   shares the image datablocks like Duplicate does, and
+2. writes it to the shared on-disk copy buffer (``moodboard_copybuffer``: a
+   partial ``.blend`` with the images plus a JSON manifest), which is how a
+   SECOND running Mixar can paste the very same thing -- the mechanism
+   Blender's own viewport copy/paste uses.
+
+Paste (Ctrl/Cmd+V) decides which of the two to read (``clipboard_source``):
+the manifest on disk names the process that wrote it, so a copy made by THIS
+process pastes from the session and one made by another Mixar is appended from
+the buffer -- whichever copy is newest wins, across every open instance. The
+best-effort export of the first copied still to the OS clipboard is unchanged
+(so a picture still pastes into other applications); movies stay lossless in
+the buffer, since an OS image clipboard would reduce a clip to one frame.
 """
 
-import bpy
+from __future__ import annotations
+
+import time
 
 from mixar.config.logging_config import get_logger
-from .media_utils import selected_exportable_media
-from .moodboard_utils import (
-    get_moodboard_image_display_size,
-    get_moodboard_viewport_center,
-    find_free_moodboard_position,
-    ensure_moodboard_region_visible,
-)
+from . import clipboard_snapshot, moodboard_copybuffer, node_duplicate
+from .media_utils import is_video_item, selected_exportable_media
 
 logger = get_logger(__name__)
 
-# Module-level clipboard: list of dicts describing copied items.  Each carries a
-# "kind" of "image" or "textbox" plus its position and type-specific fields.
-_CLIPBOARD: list[dict] = []
-
-# Fields copied verbatim from a source item to its paste (position handled
-# separately so the group's relative layout is preserved).
-_IMAGE_FIELDS = (
-    "scale",
-    "rotation",
-    "flip_horizontal",
-    "flip_vertical",
-    "generation_prompt",
-    "component_role",
-    "component_source_item_id",
-    "component_source_segment_id",
-    "component_name",
-)
-_TEXTBOX_FIELDS = (
-    "text",
-    "font_size",
-    "width",
-    "height",
-    "rotation",
-    "text_color",
-    "background_color",
-)
+# This process's last copy. ``payload`` is the snapshot, ``buffer_id`` the
+# manifest it was written to (None when the write failed), ``copied_at`` a
+# wall-clock stamp comparable with the manifest's ``written_at``.
+_SESSION: dict = {"payload": None, "buffer_id": None, "copied_at": 0.0, "system_image_size": None}
 
 
-def _plain(value):
-    """Convert Blender vector props to plain tuples; leave scalars as-is."""
-    if value is None or isinstance(value, str):
-        return value
-    if hasattr(value, "__len__"):
-        return tuple(value)
-    return value
+def _first_copied_still(scene):
+    for item in selected_exportable_media(scene):
+        if not is_video_item(item):
+            return item.image
+    return None
 
 
-def _image_entry_valid(entry: dict) -> bool:
-    """True if an image entry's datablock still exists in this file."""
-    img = entry.get("image")
-    if img is None:
-        return False
+def _export_still_to_system_clipboard(image, scene):
+    """Best-effort OS clipboard export. Returns the exported (w, h) or None."""
+    if image is None:
+        return None
     try:
-        return img.name in bpy.data.images
-    except ReferenceError:
-        return False
+        from .system_clipboard import copy_blender_image_to_system_clipboard
+
+        copy_blender_image_to_system_clipboard(image, scene)
+        return (int(image.size[0]), int(image.size[1]))
+    except Exception as exc:
+        logger.debug("System clipboard copy skipped: %s", exc)
+        return None
 
 
-def _entry_valid(entry: dict) -> bool:
-    if entry.get("kind") == "image":
-        return _image_entry_valid(entry)
-    return entry.get("kind") == "textbox"
+def copy_selected(scene, *, export_to_system: bool = True) -> int:
+    """Snapshot the selection into the session AND the on-disk buffer.
 
-
-def _entry_size(entry: dict) -> tuple[float, float]:
-    """Display (width, height) an entry occupies on the canvas."""
-    if entry["kind"] == "image":
-        return get_moodboard_image_display_size(entry["image"], entry.get("scale", 1.0))
-    return (entry.get("width", 0.0), entry.get("height", 0.0))
-
-
-def copy_selected(scene) -> int:
-    """Snapshot all selected moodboard images and text boxes into the clipboard.
-
-    Returns the number of items captured.  A zero result leaves any previous
+    Returns the number of items captured. A zero result leaves any previous
     clipboard contents untouched.
     """
-    snapshot: list[dict] = []
+    payload = clipboard_snapshot.build_snapshot(scene)
+    count = clipboard_snapshot.item_count(payload)
+    if count == 0:
+        return 0
 
-    # `selected_exportable_media` is the one definition of "the media this
-    # selection means": directly selected items, PLUS the result owned by a
-    # selected inference node. A generated image or video is never `selected`
-    # itself -- its node carries the selection -- so without this, Ctrl+C on a
-    # finished Generate card had nothing to copy. The entry it produces carries
-    # no `embedded_node_id` (it is not in `_IMAGE_FIELDS`), so the paste is a
-    # free-standing board item rather than a second card claiming that result.
-    for item in selected_exportable_media(scene):
-        entry = {
-            "kind": "image",
-            "image": item.image,
-            "position_x": item.position_x,
-            "position_y": item.position_y,
-        }
-        for field in _IMAGE_FIELDS:
-            entry[field] = _plain(getattr(item, field, None))
-        snapshot.append(entry)
+    system_size = None
+    if export_to_system:
+        system_size = _export_still_to_system_clipboard(_first_copied_still(scene), scene)
 
-    textboxes = getattr(scene, "mixie_moodboard_textboxes", None)
-    if textboxes:
-        for tb in textboxes:
-            if tb.selected:
-                entry = {
-                    "kind": "textbox",
-                    "position_x": tb.position_x,
-                    "position_y": tb.position_y,
-                }
-                for field in _TEXTBOX_FIELDS:
-                    entry[field] = _plain(getattr(tb, field, None))
-                snapshot.append(entry)
+    _SESSION["payload"] = payload
+    _SESSION["copied_at"] = time.time()
+    _SESSION["system_image_size"] = system_size
+    try:
+        _SESSION["buffer_id"] = moodboard_copybuffer.write_buffer(
+            payload,
+            clipboard_snapshot.referenced_image_names(payload),
+            system_image_size=system_size,
+        )
+    except Exception:
+        # The in-process clipboard still works; only cross-instance paste is lost.
+        logger.warning("Moodboard copy buffer write failed", exc_info=True)
+        _SESSION["buffer_id"] = None
+    return count
 
-    if snapshot:
-        _CLIPBOARD.clear()
-        _CLIPBOARD.extend(snapshot)
-    return len(snapshot)
+
+def _session_valid() -> bool:
+    payload = _SESSION.get("payload")
+    if not payload:
+        return False
+    # Text boxes and nodes need no datablock; media does. A snapshot whose
+    # every image has since been deleted has nothing left to paste.
+    names = clipboard_snapshot.referenced_image_names(payload)
+    if not names:
+        return True
+    if payload.get("textboxes") or payload.get("nodes"):
+        return True
+    return any(node_duplicate.default_image_resolver(name) is not None for name in names)
+
+
+def clipboard_source():
+    """Where the next paste reads from: ``"session"``, ``"buffer"`` or None.
+
+    The session wins when it produced the current manifest (or when the buffer
+    write failed and nobody wrote a newer one since); a manifest another
+    process wrote more recently wins over it.
+    """
+    manifest = moodboard_copybuffer.read_manifest()
+    session_ok = _session_valid()
+    if manifest is None:
+        return "session" if session_ok else None
+    if session_ok:
+        if moodboard_copybuffer.is_own(manifest):
+            return "session"
+        if float(manifest.get("written_at") or 0.0) <= float(_SESSION.get("copied_at") or 0.0):
+            return "session"
+    return "buffer"
 
 
 def has_clipboard() -> bool:
-    """True if the in-app clipboard holds at least one still-valid item."""
-    return any(_entry_valid(entry) for entry in _CLIPBOARD)
+    """True if a paste would produce something."""
+    return clipboard_source() is not None
+
+
+def clipboard_exported_size():
+    """(w, h) of the still the current clipboard source put on the OS
+    clipboard, or None when it exported none (video/text/node-only copies, or
+    an export that failed). The paste operator compares this against what the
+    OS clipboard holds NOW: a different picture there means the user copied
+    something newer in another application, and that wins."""
+    source = clipboard_source()
+    if source == "session":
+        size = _SESSION.get("system_image_size")
+    elif source == "buffer":
+        manifest = moodboard_copybuffer.read_manifest() or {}
+        size = manifest.get("system_image_size")
+    else:
+        size = None
+    if not size:
+        return None
+    try:
+        return (int(size[0]), int(size[1]))
+    except (IndexError, TypeError, ValueError):
+        return None
 
 
 def paste_clipboard(scene, anchor: tuple[float, float] | None = None) -> int:
-    """Recreate the clipboard items as new moodboard images / text boxes.
+    """Recreate the clipboard contents on *scene*. Returns the count pasted.
 
-    Preserves the copied items' relative layout: the whole group is translated
-    as one block so its centre sits on *anchor* (canvas coords, e.g. the mouse
-    cursor) — or on the nearest free slot near the viewport centre when *anchor*
-    is ``None``.  A cursor anchor is placed exactly (overlap is the user's
-    responsibility); the auto path snaps to free space.  Existing items are
-    deselected and the pasted ones selected.  Returns the count pasted.
+    Relative layout is preserved: the group is centred on *anchor* (canvas
+    coords, e.g. the cursor) or dropped in the nearest free slot near the
+    viewport centre. Existing items are deselected and the pasted ones
+    selected.
     """
-    entries = [entry for entry in _CLIPBOARD if _entry_valid(entry)]
-    if not entries:
-        return 0
+    source = clipboard_source()
+    if source == "session":
+        return clipboard_snapshot.materialize_snapshot(
+            scene, _SESSION["payload"], node_duplicate.default_image_resolver, anchor=anchor,
+        )
+    if source == "buffer":
+        manifest = moodboard_copybuffer.read_manifest()
+        if manifest is None:
+            return 0
+        appended = _buffer_images(manifest)
+        return clipboard_snapshot.materialize_snapshot(
+            scene, manifest["payload"], appended.get, anchor=anchor,
+        )
+    return 0
 
-    # Bounding box of the copied group in its original coordinates.
-    lefts, bottoms, rights, tops = [], [], [], []
-    for entry in entries:
-        w, h = _entry_size(entry)
-        x, y = entry["position_x"], entry["position_y"]
-        lefts.append(x)
-        bottoms.append(y)
-        rights.append(x + w)
-        tops.append(y + h)
-    left, bottom = min(lefts), min(bottoms)
-    group_w = max(rights) - left
-    group_h = max(tops) - bottom
 
-    if anchor is not None:
-        # Cursor paste: centre the group exactly on the cursor, overlap or not.
-        target_x = anchor[0] - group_w / 2.0
-        target_y = anchor[1] - group_h / 2.0
-    else:
-        cx, cy = get_moodboard_viewport_center()
-        target_x, target_y = find_free_moodboard_position(group_w, group_h, cx, cy, scene=scene)
-    offset_x = target_x - left
-    offset_y = target_y - bottom
+# Datablocks appended from a foreign buffer, keyed by its id: pasting the same
+# copy twice shares them (as a second in-process paste would) instead of
+# appending ``chair.png.001``, ``.002`` ... on every Ctrl+V.
+_IMPORTED: dict = {"buffer_id": None, "images": {}}
 
-    images = scene.mixie_moodboard_images
-    textboxes = scene.mixie_moodboard_textboxes
 
-    for item in images:
-        if item.selected:
-            item.selected = False
-    for tb in textboxes:
-        if tb.selected:
-            tb.selected = False
-    # Inference nodes lose the selection too. A paste selects exactly what it
-    # created, and the copy may well have come from a selected node's result --
-    # leaving that node selected would make the next copy pick up both it and
-    # the item just pasted. Lazily imported: `node_graph` reaches into the UI
-    # package for its catalog helpers, which core must not do at import time.
+def _still_alive(image) -> bool:
     try:
-        from .node_graph import deselect_graph_nodes
+        return node_duplicate.default_image_resolver(image.name) is image
+    except (AttributeError, ReferenceError):
+        return False
 
-        deselect_graph_nodes(scene)
-    except Exception:
-        logger.debug("Node deselect skipped during paste", exc_info=True)
 
-    pasted = 0
-    for entry in entries:
-        if entry["kind"] == "image":
-            item = images.add()
-            item.image = entry["image"]
-            for field in _IMAGE_FIELDS:
-                value = entry.get(field)
-                if value is not None:
-                    setattr(item, field, value)
-            item.position_x = entry["position_x"] + offset_x
-            item.position_y = entry["position_y"] + offset_y
-            item.group_index = -1  # pasted copies are ungrouped
-            item.z_order = len(images) + len(textboxes) - 1
-            item.selected = True
-        else:
-            tb = textboxes.add()
-            for field in _TEXTBOX_FIELDS:
-                value = entry.get(field)
-                if value is not None:
-                    setattr(tb, field, value)
-            tb.position_x = entry["position_x"] + offset_x
-            tb.position_y = entry["position_y"] + offset_y
-            tb.z_order = len(images) + len(textboxes) - 1
-            tb.selected = True
-        pasted += 1
-
-    # Reveal the whole pasted group if it landed outside the visible area.
-    ensure_moodboard_region_visible(target_x, target_y, group_w, group_h)
-
-    return pasted
+def _buffer_images(manifest: dict) -> dict:
+    buffer_id = manifest.get("buffer_id")
+    cached = _IMPORTED["images"]
+    if _IMPORTED["buffer_id"] == buffer_id and cached and all(_still_alive(img) for img in cached.values()):
+        return cached
+    images = moodboard_copybuffer.import_buffer_images(manifest)
+    _IMPORTED["buffer_id"] = buffer_id
+    _IMPORTED["images"] = images
+    return images

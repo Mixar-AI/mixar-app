@@ -1,0 +1,395 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""The ONE snapshot the moodboard clipboard copies and pastes.
+
+Everything the canvas selection means -- reference images, movies, text boxes,
+inference nodes and the links between them -- is captured into ONE payload of
+plain, JSON-serialisable dicts. Images are referenced by DATABLOCK NAME, never
+by pointer, and re-bound at paste time through an ``image_resolver``:
+
+* pasting inside this process resolves names in ``bpy.data.images`` and SHARES
+  the datablock, exactly as Duplicate does;
+* pasting into another running Mixar resolves them against the datablocks the
+  copy buffer just appended from its ``.blend`` (``moodboard_copybuffer``),
+  which is what makes the payload portable across processes at all.
+
+Node rules are those of ``node_duplicate`` (configuration + finished result
+travel, the queue claim does not; MASK_DETAIL never copies). Link rules match a
+node editor's: a link whose ends are BOTH in the copied set is recreated between
+the copies -- and that includes a link from a copied reference image into a
+copied node, so a whole graph pastes as a whole graph; a link INTO a copied node
+from a source outside the set is kept by id (it still resolves in the same
+scene, and ``reconcile_node_links`` drops it anywhere it does not); a link OUT
+of the set is dropped.
+
+This module holds no state and touches ``bpy`` only through the injected
+resolver and ``moodboard_utils``, so it is exercised directly against a fake
+scene in ``tests/moodboard/test_clipboard_snapshot.py``.
+"""
+
+from __future__ import annotations
+
+from mixar.config.logging_config import get_logger
+from . import node_duplicate
+from .media_utils import selected_exportable_media
+from .node_graph import add_link, deselect_graph_nodes, new_node_id, reconcile_node_links
+from .moodboard_utils import (
+    ensure_moodboard_region_visible,
+    find_free_moodboard_position,
+    get_moodboard_image_display_size,
+    get_moodboard_viewport_center,
+    stamp_moodboard_item_added,
+)
+
+logger = get_logger(__name__)
+
+SNAPSHOT_VERSION = 1
+
+# Fields copied verbatim from a board image to its paste. ``embedded_node_id``
+# is deliberately absent: whether a pasted entry is owned by a node is decided
+# by the paste (a result travelling INSIDE a copied node gets the copy's id; one
+# whose node was not copied lands as a free-standing item). ``moodboard_item_id``
+# is absent too -- a paste is a new item and mints its own provenance identity.
+IMAGE_FIELDS = (
+    "scale",
+    "rotation",
+    "flip_horizontal",
+    "flip_vertical",
+    "generation_prompt",
+    "component_role",
+    "component_source_item_id",
+    "component_source_segment_id",
+    "component_name",
+    "show_annotations",
+)
+TEXTBOX_FIELDS = (
+    "text",
+    "font_size",
+    "width",
+    "height",
+    "rotation",
+    "text_color",
+    "background_color",
+    "bold",
+    "italic",
+    "align",
+)
+
+
+def _plain(value):
+    """Blender vector props become lists so the payload survives ``json``."""
+    if value is None or isinstance(value, (str, bytes, int, float, bool)):
+        return value
+    if hasattr(value, "__len__"):
+        return [_plain(v) for v in value]
+    return value
+
+
+def _serialize_annotations(item) -> list:
+    strokes = []
+    for stroke in getattr(item, "annotations", ()) or ():
+        strokes.append({
+            "color": _plain(getattr(stroke, "color", None)),
+            "width": float(getattr(stroke, "width", 1.0)),
+            "points": [
+                [float(point.x), float(point.y)]
+                for point in getattr(stroke, "points", ()) or ()
+            ],
+        })
+    return strokes
+
+
+def _serialize_media(item) -> dict:
+    entry = {
+        "node_id": str(getattr(item, "node_id", "") or ""),
+        "image_name": item.image.name,
+        "position_x": float(item.position_x),
+        "position_y": float(item.position_y),
+        "annotations": _serialize_annotations(item),
+    }
+    for field in IMAGE_FIELDS:
+        entry[field] = _plain(getattr(item, field, None))
+    return entry
+
+
+def _serialize_textbox(tb) -> dict:
+    entry = {
+        "position_x": float(tb.position_x),
+        "position_y": float(tb.position_y),
+    }
+    for field in TEXTBOX_FIELDS:
+        entry[field] = _plain(getattr(tb, field, None))
+    return entry
+
+
+def _serialize_links(scene, node_ids: set, copied_ids: set) -> list:
+    """Links worth recreating -- see the module docstring for the rules."""
+    links = []
+    for link in getattr(scene, "mixie_moodboard_links", ()):
+        to_id = link.to_node_id
+        from_id = link.from_node_id
+        if to_id not in copied_ids:
+            continue  # outgoing or unrelated
+        internal = from_id in copied_ids
+        if not internal and to_id not in node_ids:
+            # A loose output image whose producer was not copied: a link to
+            # the original producer would claim the paste was generated by it.
+            continue
+        links.append({
+            "from_node_id": from_id,
+            "from_socket": link.from_socket,
+            "to_node_id": to_id,
+            "to_socket": link.to_socket,
+            "input_order": int(link.input_order),
+            "internal": internal,
+        })
+    return links
+
+
+def build_snapshot(scene) -> dict:
+    """Snapshot the selection. Empty collections when nothing is selected."""
+    nodes = node_duplicate.selected_action_nodes(scene)
+    node_ids = {node.node_id for node in nodes}
+
+    # A result owned by a COPIED node travels inside that node's ``result`` so
+    # the pasted card gets an entry of its own; every other exportable item --
+    # directly selected media, and the result of a selected but uncopyable
+    # (MASK_DETAIL) node -- pastes as a free-standing board item.
+    media = [
+        item for item in selected_exportable_media(scene)
+        if not (item.embedded_node_id and item.embedded_node_id in node_ids)
+    ]
+    textboxes = [
+        tb for tb in getattr(scene, "mixie_moodboard_textboxes", ()) or ()
+        if tb.selected
+    ]
+    media_ids = {item.node_id for item in media if item.node_id}
+
+    return {
+        "version": SNAPSHOT_VERSION,
+        "media": [_serialize_media(item) for item in media],
+        "textboxes": [_serialize_textbox(tb) for tb in textboxes],
+        "nodes": [node_duplicate.serialize_node(scene, node) for node in nodes],
+        "links": _serialize_links(scene, node_ids, node_ids | media_ids),
+    }
+
+
+def item_count(payload: dict | None) -> int:
+    payload = payload or {}
+    return sum(len(payload.get(key) or ()) for key in ("media", "textboxes", "nodes"))
+
+
+def referenced_image_names(payload: dict | None) -> list:
+    """Every datablock name the payload needs, in first-seen order."""
+    names: list[str] = []
+
+    def add(name):
+        if name and name not in names:
+            names.append(name)
+
+    payload = payload or {}
+    for entry in payload.get("media") or ():
+        add(entry.get("image_name"))
+    for node in payload.get("nodes") or ():
+        result = node.get("result") or {}
+        add(result.get("preview_image_name"))
+        for media in result.get("media") or ():
+            add(media.get("image_name"))
+    return names
+
+
+# --------------------------------------------------------------------------- #
+# Paste
+# --------------------------------------------------------------------------- #
+
+
+def _resolved_media(payload: dict, resolve) -> list:
+    """(entry, image) pairs whose datablock resolves; the rest are skipped."""
+    pairs = []
+    for entry in payload.get("media") or ():
+        image = resolve(entry.get("image_name"))
+        if image is None:
+            logger.debug("Clipboard image %r no longer resolves; skipped", entry.get("image_name"))
+            continue
+        pairs.append((entry, image))
+    return pairs
+
+
+def _bounds(media_pairs, textboxes, nodes):
+    """(left, bottom, width, height) of everything about to be pasted."""
+    lefts, bottoms, rights, tops = [], [], [], []
+    for entry, image in media_pairs:
+        w, h = get_moodboard_image_display_size(image, float(entry.get("scale") or 1.0))
+        lefts.append(entry["position_x"])
+        bottoms.append(entry["position_y"])
+        rights.append(entry["position_x"] + w)
+        tops.append(entry["position_y"] + h)
+    for entry in textboxes:
+        lefts.append(entry["position_x"])
+        bottoms.append(entry["position_y"])
+        rights.append(entry["position_x"] + float(entry.get("width") or 0.0))
+        tops.append(entry["position_y"] + float(entry.get("height") or 0.0))
+    for node in nodes:
+        fields = node.get("fields") or {}
+        lefts.append(node["position_x"])
+        bottoms.append(node["position_y"])
+        rights.append(node["position_x"] + float(fields.get("width") or 0.0))
+        tops.append(node["position_y"] + float(fields.get("height") or 0.0))
+    if not lefts:
+        return None
+    left, bottom = min(lefts), min(bottoms)
+    return left, bottom, max(rights) - left, max(tops) - bottom
+
+
+def _placement_delta(scene, bounds, anchor):
+    """Translate the whole group as ONE block: centred on the cursor when an
+    anchor is given (overlap is the user's call), else the nearest free slot
+    near the viewport centre."""
+    left, bottom, width, height = bounds
+    if anchor is not None:
+        target_x = float(anchor[0]) - width / 2.0
+        target_y = float(anchor[1]) - height / 2.0
+    else:
+        cx, cy = get_moodboard_viewport_center()
+        target_x, target_y = find_free_moodboard_position(width, height, cx, cy, scene=scene)
+    return (target_x - left, target_y - bottom), (target_x, target_y, width, height)
+
+
+def _deselect_everything(scene) -> None:
+    for item in getattr(scene, "mixie_moodboard_images", ()):
+        item.selected = False
+    for tb in getattr(scene, "mixie_moodboard_textboxes", ()) or ():
+        tb.selected = False
+    # The node the copy came from must not stay selected beside the paste, or
+    # the next Ctrl+C would pick up both.
+    deselect_graph_nodes(scene)
+
+
+def _apply_fields(target, entry: dict, fields) -> None:
+    for field in fields:
+        value = entry.get(field)
+        if value is None:
+            continue
+        try:
+            setattr(target, field, value)
+        except (TypeError, ValueError):
+            pass
+
+
+def _materialize_media(scene, entry: dict, image, delta, z_order: int):
+    images = scene.mixie_moodboard_images
+    item = images.add()
+    item.image = image
+    _apply_fields(item, entry, IMAGE_FIELDS)
+    for stroke_data in entry.get("annotations") or ():
+        try:
+            stroke = item.annotations.add()
+            if stroke_data.get("color") is not None:
+                stroke.color = stroke_data["color"]
+            stroke.width = float(stroke_data.get("width") or 1.0)
+            for x, y in stroke_data.get("points") or ():
+                point = stroke.points.add()
+                point.x, point.y = float(x), float(y)
+        except (AttributeError, TypeError, ValueError):
+            pass
+    item.position_x = entry["position_x"] + delta[0]
+    item.position_y = entry["position_y"] + delta[1]
+    item.group_index = -1  # pasted copies are ungrouped
+    item.z_order = z_order
+    item.selected = True
+    # A fresh graph identity: the copy must never answer to the original's id,
+    # and links from the payload are remapped onto this one.
+    item.node_id = new_node_id()
+    stamp_moodboard_item_added(item)
+    return item
+
+
+def _materialize_textbox(scene, entry: dict, delta, z_order: int):
+    tb = scene.mixie_moodboard_textboxes.add()
+    _apply_fields(tb, entry, TEXTBOX_FIELDS)
+    tb.position_x = entry["position_x"] + delta[0]
+    tb.position_y = entry["position_y"] + delta[1]
+    tb.z_order = z_order
+    tb.selected = True
+    return tb
+
+
+def _recreate_links(scene, payload: dict, id_map: dict, created_nodes: list) -> None:
+    node_ids = {node.node_id for node in created_nodes}
+    for link_data in payload.get("links") or ():
+        to_id = id_map.get(link_data["to_node_id"])
+        if not to_id:
+            continue
+        if link_data.get("internal"):
+            from_id = id_map.get(link_data["from_node_id"])
+        else:
+            from_id = link_data["from_node_id"]
+        if not from_id:
+            continue
+        add_link(
+            scene,
+            from_id,
+            to_id,
+            from_socket=link_data.get("from_socket") or "output",
+            to_socket=link_data.get("to_socket") or "",
+            input_order=int(link_data.get("input_order") or 0),
+        )
+    # Validate every link into a pasted node against its real sockets and the
+    # catalog limits; an external source that does not resolve here (another
+    # scene, another process) is dropped by this pass.
+    for node in created_nodes:
+        if node.node_id in node_ids:
+            reconcile_node_links(scene, node)
+
+
+def materialize_snapshot(scene, payload: dict | None, image_resolver, anchor=None) -> int:
+    """Re-create a snapshot on *scene*. Returns the number of items pasted.
+
+    ``image_resolver(name)`` returns the Image datablock to bind for a recorded
+    name, or ``None`` -- a media entry whose image is gone is skipped, a node
+    whose result is gone pastes as a DRAFT (``node_duplicate``). Relative
+    layout is preserved: one translation moves the whole group.
+    """
+    payload = payload or {}
+    if int(payload.get("version") or 0) != SNAPSHOT_VERSION:
+        logger.warning("Ignoring moodboard clipboard payload of version %r", payload.get("version"))
+        return 0
+    resolve = image_resolver or node_duplicate.default_image_resolver
+    media_pairs = _resolved_media(payload, resolve)
+    textboxes = list(payload.get("textboxes") or ())
+    nodes = list(payload.get("nodes") or ())
+    bounds = _bounds(media_pairs, textboxes, nodes)
+    if bounds is None:
+        return 0
+    delta, placed = _placement_delta(scene, bounds, anchor)
+
+    _deselect_everything(scene)
+
+    id_map: dict = {}
+    created_nodes = []
+    for data in nodes:
+        node = node_duplicate.materialize_node(scene, data, delta, resolve)
+        id_map[data["node_id"]] = node.node_id
+        created_nodes.append(node)
+
+    images = scene.mixie_moodboard_images
+    textbox_collection = scene.mixie_moodboard_textboxes
+    pasted = len(created_nodes)
+    for entry, image in media_pairs:
+        z_order = len(images) + len(textbox_collection)
+        item = _materialize_media(scene, entry, image, delta, z_order)
+        if entry.get("node_id"):
+            id_map[entry["node_id"]] = item.node_id
+        pasted += 1
+    for entry in textboxes:
+        _materialize_textbox(scene, entry, delta, len(images) + len(textbox_collection))
+        pasted += 1
+
+    _recreate_links(scene, payload, id_map, created_nodes)
+    if created_nodes:
+        scene.mixie_moodboard_active_node_id = created_nodes[-1].node_id
+
+    ensure_moodboard_region_visible(*placed)
+    return pasted

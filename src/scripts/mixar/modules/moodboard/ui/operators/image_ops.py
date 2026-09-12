@@ -204,14 +204,47 @@ class MIXIE_OT_moodboard_add_existing_image(Operator):
         return {'FINISHED'}
 
 
+def _grab_external_clipboard():
+    """What the OS clipboard holds: a PIL image, a list of file paths, or None.
+
+    Returns ``(content, error)``; ``error`` is a user-facing message when the
+    clipboard could not be read at all (Pillow missing, platform failure).
+    """
+    try:
+        from PIL import ImageGrab
+    except ImportError:
+        return None, "Pillow is required for clipboard paste. Install it with: pip install Pillow"
+    try:
+        return ImageGrab.grabclipboard(), None
+    except Exception as e:
+        return None, f"Failed to read clipboard: {e}"
+
+
+def _is_our_export(content, exported_size) -> bool:
+    """Whether the OS clipboard still holds the still our own copy put there.
+
+    The export is a best-effort PNG of the first copied still; every platform
+    hands it back at the same pixel size, so a size match reads as "ours" and
+    anything else (another picture, a copied file list) as something the user
+    copied more recently in another application -- which then wins.
+    """
+    if exported_size is None:
+        return False
+    size = getattr(content, "size", None)
+    try:
+        return size is not None and (int(size[0]), int(size[1])) == tuple(exported_size)
+    except (IndexError, TypeError, ValueError):
+        return False
+
+
 class MIXIE_OT_moodboard_paste_image(Operator):
-    """Paste an image from the clipboard and add it to the moodboard"""
+    """Paste the copied moodboard items, or an image from the system clipboard"""
 
     bl_idname = "mixie.moodboard_paste_image"
-    bl_label = "Paste Image from Clipboard"
+    bl_label = "Paste"
     bl_description = (
-        f"Paste an image from the clipboard into the moodboard "
-        f"({format_shortcut('V')})"
+        f"Paste what was copied on a moodboard -- in this or another Mixar "
+        f"instance -- or an image from the system clipboard ({format_shortcut('V')})"
     )
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -240,34 +273,46 @@ class MIXIE_OT_moodboard_paste_image(Operator):
         scene = context.scene
         anchor = (self.cursor_x, self.cursor_y) if self.use_cursor else None
 
-        # Primary path: paste from the reliable in-app clipboard (images and text
-        # boxes copied from the moodboard) — a lossless duplicate, no round-trip.
-        from ...core.moodboard_clipboard import has_clipboard, paste_clipboard
+        # Primary path: the moodboard clipboard -- this process's last copy,
+        # or the on-disk buffer another Mixar instance wrote more recently
+        # (images, movies, text boxes, nodes and links; lossless). The one
+        # thing that outranks it is a picture the user copied in ANOTHER
+        # application since: the copy put its first still on the OS clipboard
+        # and recorded that still's size, so a different picture there is
+        # newer than our copy and wins. With nothing recorded (a copy of a
+        # movie, text or nodes; a failed export) the moodboard clipboard wins,
+        # as Blender's own copy buffer always does.
+        from ...core.moodboard_clipboard import (
+            clipboard_exported_size,
+            has_clipboard,
+            paste_clipboard,
+        )
+        clip_img = None
+        clipboard_read = False
         if has_clipboard():
-            pasted = paste_clipboard(scene, anchor=anchor)
-            if pasted:
-                for area in context.screen.areas:
-                    if area.type == 'MIXIE':
-                        area.tag_redraw()
-                self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
-                return {'FINISHED'}
+            exported = clipboard_exported_size()
+            external_is_newer = False
+            if exported is not None:
+                clip_img, error = _grab_external_clipboard()
+                clipboard_read = error is None
+                external_is_newer = clip_img is not None and not _is_our_export(clip_img, exported)
+            if not external_is_newer:
+                pasted = paste_clipboard(scene, anchor=anchor)
+                if pasted:
+                    for area in context.screen.areas:
+                        if area.type == 'MIXIE':
+                            area.tag_redraw()
+                    self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
+                    return {'FINISHED'}
+                clip_img = None
+                clipboard_read = False
 
-        # Fallback: grab an external image from the system clipboard via Pillow.
-        try:
-            from PIL import ImageGrab
-        except ImportError:
-            self.report(
-                {'ERROR'},
-                "Pillow is required for clipboard paste. "
-                "Install it with: pip install Pillow"
-            )
-            return {'CANCELLED'}
-
-        try:
-            clip_img = ImageGrab.grabclipboard()
-        except Exception as e:
-            self.report({'ERROR'}, f"Failed to read clipboard: {e}")
-            return {'CANCELLED'}
+        # Fallback: an external image from the system clipboard via Pillow.
+        if not clipboard_read:
+            clip_img, error = _grab_external_clipboard()
+            if error:
+                self.report({'ERROR'}, error)
+                return {'CANCELLED'}
 
         if clip_img is None:
             self.report({'WARNING'}, "No image found in clipboard")

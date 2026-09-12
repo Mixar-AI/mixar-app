@@ -207,6 +207,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     text="Duplicate Nodes (Shift D)",
                     icon='DUPLICATE',
                 )
+                # Copies the whole selection (nodes, links, media) to the
+                # clipboard AND the shared copy buffer, so it also pastes in
+                # another Mixar instance.
+                layout.operator("mixie.moodboard_copy_image", text="Copy", icon='COPYDOWN')
                 layout.separator()
 
                 can_continue = action_node.action_type in {'IMAGE_GEN', 'VIDEO_GEN'}
@@ -361,6 +365,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         row = layout.row()
         row.enabled = total_items_selected > 0
         row.operator("mixie.moodboard_duplicate", text="Duplicate", icon='DUPLICATE')
+
+        row = layout.row()
+        row.enabled = total_items_selected > 0
+        row.operator("mixie.moodboard_copy_image", text="Copy", icon='COPYDOWN')
 
         layout.separator()
 

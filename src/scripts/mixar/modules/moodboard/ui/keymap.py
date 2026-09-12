@@ -110,11 +110,12 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Cmd/Ctrl+C and +V have ONE meaning on this canvas: they copy and
-        # paste MEDIA. With an inference node selected the copy resolves
-        # through the node to the image or video it generated, so a result can
-        # be pasted back as an ordinary board item -- or into another
-        # application. Nodes themselves duplicate with Shift+D.
+        # Cmd/Ctrl+C and +V copy and paste the SELECTION as one snapshot --
+        # media, text boxes, inference nodes and their links -- through the
+        # one moodboard clipboard, which also writes the shared on-disk copy
+        # buffer so the paste works in another running Mixar. ONE operator
+        # per key: separate media and node clipboards behind the same binding
+        # are exactly what this replaced.
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
             type='C',

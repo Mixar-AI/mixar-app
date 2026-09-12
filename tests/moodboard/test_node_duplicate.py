@@ -8,8 +8,9 @@ Exercised against a hand-rolled fake scene rather than the bpy mock: the
 snapshot's whole job is to move field values and re-map link endpoints, and a
 MagicMock scene would accept every assignment and assert nothing.
 
-There is no node clipboard -- Ctrl/Cmd+C and +V belong to the board's media --
-so a duplicate is a snapshot taken and re-materialised in one breath.
+This module keeps no clipboard of its own -- a duplicate is a snapshot taken and
+re-materialised in one breath; the board's ONE clipboard (`clipboard_snapshot`)
+borrows the same serializers, see `test_clipboard_snapshot.py`.
 """
 
 from pathlib import Path
@@ -506,16 +507,17 @@ def test_a_snapshot_is_independent_of_the_original_nodes():
 
 
 # --------------------------------------------------------------------------- #
-# There is no node clipboard
+# ONE clipboard: nodes ride the same copy as media
 # --------------------------------------------------------------------------- #
 
 
-def test_ctrl_c_and_ctrl_v_belong_to_media_alone():
-    """Node copy/paste used to share Ctrl+C / Ctrl+V with the board's media and
-    resolve by poll(), which made one binding mean two things depending on what
-    happened to be selected -- and needed the image copy to reach over and clear
-    the node clipboard so the LAST copy won. Both are gone: the keys copy and
-    paste media, and duplicating a node is Shift+D."""
+def test_ctrl_c_and_ctrl_v_are_one_operator_over_one_snapshot():
+    """Node copy/paste used to be SEPARATE operators sharing Ctrl+C / Ctrl+V
+    with the board's media and resolving by poll(), which made one binding mean
+    two things depending on what happened to be selected -- and needed the
+    image copy to reach over and clear the node clipboard so the LAST copy won.
+    Nodes are copied again now, but through the ONE media operator and the ONE
+    snapshot (`clipboard_snapshot`), so there is nothing to keep in step."""
     keymap = (MOODBOARD / "ui/keymap.py").read_text(encoding="utf-8")
     menus = (MOODBOARD / "ui/moodboard_menus.py").read_text(encoding="utf-8")
     clipboard_ops = (MOODBOARD / "ui/operators/clipboard_ops.py").read_text(
@@ -530,15 +532,20 @@ def test_ctrl_c_and_ctrl_v_belong_to_media_alone():
         assert "moodboard_paste_nodes" not in source
     assert "mixie.moodboard_copy_image" in keymap
     assert "mixie.moodboard_paste_image" in keymap
-    # Nothing left to keep in step with, so the reach-over is gone too.
+    # The copy operator has no clipboard of its own: it only calls the shared
+    # copy_selected, and its poll admits a node selection.
     assert "node_clipboard" not in clipboard_ops
-    assert "node_duplicate" not in clipboard_ops
+    assert "copy_selected(context.scene)" in clipboard_ops
+    assert "selected_action_nodes(scene)" in clipboard_ops
 
-    # The module keeps no clipboard state of its own either.
+    # node_duplicate keeps no clipboard state of its own either: it lends its
+    # serializers to the snapshot and stays a pure snapshot-and-rematerialise.
     core = (MOODBOARD / "core/node_duplicate.py").read_text(encoding="utf-8")
     assert "_CLIPBOARD" not in core
     assert "def clear(" not in core
     assert "def has_content(" not in core
+    assert "materialize_node = _materialize" in core
+    assert "serialize_node = _serialize_node" in core
 
 
 def test_the_duplicate_menu_entry_spells_out_its_shortcut():
@@ -554,31 +561,31 @@ def test_the_duplicate_menu_entry_spells_out_its_shortcut():
 
 def test_copying_resolves_through_a_selected_node_to_its_result():
     """A generated image or video is owned by its node and is never `selected`
-    itself, so a copy keyed on `item.selected` had nothing to copy when the user
-    had a finished card selected. The in-app clipboard resolves the selection
-    the same way Export does."""
-    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text(
-        encoding="utf-8"
-    )
+    itself. The snapshot resolves the selection the way Export does, so the
+    result of a selected-but-uncopyable node (MASK_DETAIL) still pastes as a
+    loose item, while the result of a COPIED node travels inside that node --
+    never twice. The OS-clipboard export and the copy poll resolve the same
+    way, or Ctrl+C on a node would be greyed out, or copy in-app but not to
+    the system."""
+    snapshot = (MOODBOARD / "core/clipboard_snapshot.py").read_text(encoding="utf-8")
+    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text(encoding="utf-8")
     clipboard_ops = (MOODBOARD / "ui/operators/clipboard_ops.py").read_text(
         encoding="utf-8"
     )
 
+    assert "for item in selected_exportable_media(scene)" in snapshot
+    assert "item.embedded_node_id in node_ids" in snapshot
     assert "selected_exportable_media" in clipboard
-    assert "for item in selected_exportable_media(scene):" in clipboard
-    # The poll and the OS-clipboard still both resolve the same way, or Ctrl+C
-    # on a node would be greyed out, or copy in-app but not to the system.
-    assert clipboard_ops.count("selected_exportable_media") >= 2
-    # A pasted result is a free-standing board item: `embedded_node_id` is not
-    # among the fields a copy carries, so it cannot claim the node's result.
-    assert '"embedded_node_id"' not in clipboard.split("_IMAGE_FIELDS = (")[1].split(")")[0]
+    assert "selected_exportable_media(scene)" in clipboard_ops
+    # A pasted loose item never claims a node's result: `embedded_node_id` is
+    # not among the fields a copy carries.
+    assert '"embedded_node_id"' not in snapshot.split("IMAGE_FIELDS = (")[1].split(")")[0]
 
 
 def test_pasting_deselects_the_node_the_copy_came_from():
     """Otherwise the node stays selected beside the item just pasted, and the
     next Ctrl+C copies both -- the result twice over."""
-    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text(
-        encoding="utf-8"
-    )
-    paste = clipboard.split("def paste_clipboard(")[1]
-    assert "deselect_graph_nodes(scene)" in paste
+    snapshot = (MOODBOARD / "core/clipboard_snapshot.py").read_text(encoding="utf-8")
+    paste = snapshot.split("def materialize_snapshot(")[1]
+    assert "_deselect_everything(scene)" in paste
+    assert "deselect_graph_nodes(scene)" in snapshot.split("def _deselect_everything(")[1]
