@@ -1955,22 +1955,22 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
 }
 
 
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
 {
   if (window_handle == nullptr) {
-    return;
+    return false;
   }
   GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
   NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
   if (win == nil) {
-    return;
+    return false;
   }
 
   @autoreleasepool {
     /* Sibling frost in the theme frame + this window's Metal alpha. See
      * GHOST_MixarGlassCocoa.mm — do not parent a frost view under the
      * GPU surface or swap contentView from here. */
-    Mixar_CocoaGlassSetEnabled(win, enable);
+    return Mixar_CocoaGlassSetEnabled(win, enable);
   }
 }
 

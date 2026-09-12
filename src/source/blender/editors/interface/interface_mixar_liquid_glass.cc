@@ -11,34 +11,9 @@
  * `interface_mixar_liquid_glass_tokens.cc`; the painter is
  * `interface_mixar_liquid_glass_draw.cc`.
  *
- * Two implementation decisions worth knowing before reading the code:
- *
- * THE BLUR IS A DOWNSAMPLE, NOT A KERNEL
- * There is no way to author a fragment shader in this overlay (the whole `gpu`
- * module is upstream and absent here), so a real separable Gaussian is out of
- * reach. What IS reachable is bilinear resampling and an offscreen, and a
- * bilinear *downsample* is already a box average: sampling a texture at half
- * resolution is exactly a 2x2 box filter. So the chain resamples the source
- * into `levels[0]`, halves down to `levels[n]`, and then walks back up so the
- * result is smooth rather than a grid of 2x2 blocks. Each halving doubles the
- * effective kernel, which is why the level count follows the requested radius
- * rather than being fixed.
- *
- * EVERY PASS REPLACES, NOTHING BLENDS
- * `GPU_SHADER_3D_IMAGE` exposes no colour uniform (see `draw_gpu_texture_quad`
- * in `space_mixie/mixie_draw_moodboard_images.cc`, which binds a texture and
- * sets only `pos`/`texCoord`), so a blurred level cannot be weighted as it is
- * written. Additive or per-level alpha compositing during the cascade is
- * therefore impossible: a level drawn with `GPU_BLEND_ALPHA` over an
- * opaque-alpha destination can only lower the destination's alpha, which is
- * the opposite of what a blur wants. Every pass is `GPU_BLEND_NONE` and
- * overwrites its target wholesale, which is exactly what a blur is — each
- * level is a complete replacement for the one above it. (The painter does use
- * the colour-carrying variant `GPU_SHADER_3D_IMAGE_COLOR` where a textured
- * quad needs weighting; the cascade deliberately does not, because a cascade
- * stage that faded toward its input would be a blend, not a blur.) Blending is
- * used only for painted layers, which are `draw_roundbox_*` primitives with
- * real per-vertex colour.
+ * A bounded bilinear down/up cascade reuses offscreens between redraws.
+ * Preserve framebuffer state even when allocation fails: creating an offscreen
+ * binds and clears a framebuffer too. Each pass owns one balanced push/pop.
  */
 
 #include <algorithm>
@@ -62,7 +37,7 @@
 /** Defined per platform in `intern/ghost` (Cocoa and Win32). Declared here
  * because this unit must not depend on a bubble header, and with C linkage to
  * match every other declaration of it in the tree. */
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 #endif
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -80,7 +55,7 @@ namespace {
 constexpr int GLASS_BLUR_LEVELS = 4;
 /** Below this the pane is smaller than the kernel; the tint alone is clearer. */
 constexpr int GLASS_BLUR_MIN_PX = 4;
-/** Ceiling on the first level's width. Levels 1..n are cheap (each is a
+/** Ceiling on both first-level dimensions. Levels 1..n are cheap (each is a
  * quarter of the one above), but level 0 is a straight copy at source
  * resolution, so it is capped to keep that copy bounded. */
 constexpr int GLASS_BLUR_MAX_BASE = 1024;
@@ -162,20 +137,22 @@ void glass_blit_full(GPUOffScreen *dst, gpu::Texture *tex, const GPUBlend blend)
     return;
   }
 
-  GPU_offscreen_bind(dst, /*read_buffer*/ true);
+  GPU_offscreen_bind(dst, /*save*/ true);
+  GPU_viewport(0, 0, w, h);
+  GPU_scissor(0, 0, w, h);
   GPU_matrix_push_projection();
   GPU_matrix_push();
   GPU_matrix_ortho_set(0.0f, float(w), 0.0f, float(h), -1.0f, 1.0f);
   GPU_matrix_identity_set();
   GPU_blend(blend);
-  GPU_texture_filter_mode(tex, true);
-
-  GPU_texture_bind(tex, 0);
+  GPUSamplerState sampler = GPUSamplerState::default_sampler();
+  sampler.filtering = GPU_SAMPLER_FILTERING_LINEAR;
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
   const uint texcoord = GPU_vertformat_attr_add(
       format, "texCoord", gpu::VertAttrType::SFLOAT_32_32);
   immBindBuiltinProgram(GPU_SHADER_3D_IMAGE);
+  immBindTextureSampler("image", tex, sampler);
   immBegin(GPU_PRIM_TRI_FAN, 4);
   immAttr2f(texcoord, 0.0f, 0.0f);
   immVertex2f(pos, 0.0f, 0.0f);
@@ -191,6 +168,7 @@ void glass_blit_full(GPUOffScreen *dst, gpu::Texture *tex, const GPUBlend blend)
 
   GPU_matrix_pop();
   GPU_matrix_pop_projection();
+  GPU_offscreen_unbind(dst, /*restore*/ true);
 }
 
 /** \} */
@@ -210,7 +188,7 @@ MixarGlassBackdrop mixar_glass_backdrop_prepare(const MixarGlassSource &source,
   }
   const int rect_w = BLI_rcti_size_x(&source.rect);
   const int rect_h = BLI_rcti_size_y(&source.rect);
-  if (blur_radius <= 0.0f || rect_w < GLASS_BLUR_MIN_PX || rect_h < GLASS_BLUR_MIN_PX) {
+  if (!std::isfinite(blur_radius) || blur_radius <= 0.0f || rect_w < GLASS_BLUR_MIN_PX || rect_h < GLASS_BLUR_MIN_PX) {
     return empty;
   }
 
@@ -220,21 +198,37 @@ MixarGlassBackdrop mixar_glass_backdrop_prepare(const MixarGlassSource &source,
   const int levels = std::clamp(1 + int(std::log2(std::max(blur_radius, 1.0f))),
                                 2,
                                 GLASS_BLUR_LEVELS);
-  const int base_w = std::min(rect_w, GLASS_BLUR_MAX_BASE);
-  const int base_h = std::max(1, int(float(rect_h) * float(base_w) / float(rect_w)));
+  const float scale = std::min(1.0f, float(GLASS_BLUR_MAX_BASE) /
+                                       float(std::max(rect_w, rect_h)));
+  const int base_w = std::max(1, int(rect_w * scale));
+  const int base_h = std::max(1, int(rect_h * scale));
 
-  if (!glass_chain_ensure(base_w, base_h, levels)) {
-    return empty;
-  }
-
-  /* The cascade is a full GPU pass inside someone else's region draw, so every
-   * piece of state the pass touches is saved and handed back. */
   gpu::FrameBuffer *fb_prev = GPU_framebuffer_active_get();
-  int viewport_prev[4];
+  int viewport_prev[4], scissor_prev[4];
   GPU_viewport_size_get_i(viewport_prev);
-  int scissor_prev[4];
   GPU_scissor_get(scissor_prev);
   const GPUBlend blend_prev = GPU_blend_get();
+  const GPUDepthTest depth_prev = GPU_depth_test_get();
+  const bool depth_mask_prev = GPU_depth_mask_get();
+  const auto restore = [&]() {
+    if (fb_prev != nullptr) {
+      GPU_framebuffer_bind(fb_prev);
+    }
+    else {
+      GPU_framebuffer_restore();
+    }
+    GPU_viewport(viewport_prev[0], viewport_prev[1], viewport_prev[2], viewport_prev[3]);
+    GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
+    GPU_blend(blend_prev);
+    GPU_depth_test(depth_prev);
+    GPU_depth_mask(depth_mask_prev);
+  };
+  if (!glass_chain_ensure(base_w, base_h, levels)) {
+    restore();
+    return empty;
+  }
+  GPU_depth_test(GPU_DEPTH_NONE);
+  GPU_depth_mask(false);
 
   glass_blit_full(g_chain.levels[0], source.texture, GPU_BLEND_NONE);
   for (int i = 1; i < g_chain.level_count; i++) {
@@ -250,13 +244,7 @@ MixarGlassBackdrop mixar_glass_backdrop_prepare(const MixarGlassSource &source,
         g_chain.levels[i - 1], GPU_offscreen_color_texture(g_chain.levels[i]), GPU_BLEND_NONE);
   }
 
-  GPU_offscreen_unbind(g_chain.levels[0], /*read_buffer*/ true);
-  if (fb_prev != nullptr) {
-    GPU_framebuffer_bind(fb_prev);
-  }
-  GPU_viewport(viewport_prev[0], viewport_prev[1], viewport_prev[2], viewport_prev[3]);
-  GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
-  GPU_blend(blend_prev);
+  restore();
 
   return {GPU_offscreen_color_texture(g_chain.levels[0]), source.rect};
 }
@@ -267,8 +255,7 @@ bool mixar_glass_window_apply_translucency(void *ghostwin, const bool enable)
   if (ghostwin == nullptr) {
     return false;
   }
-  Mixar_WindowSetBlurBehind(ghostwin, enable);
-  return true;
+  return Mixar_WindowSetBlurBehind(ghostwin, enable);
 #else
   /* No definition of the underlying call exists on this platform, so calling
    * it would be an undefined reference at link time. A window that cannot be
@@ -279,9 +266,12 @@ bool mixar_glass_window_apply_translucency(void *ghostwin, const bool enable)
 #endif
 }
 
+void mixar_glass_shader_free();
+
 void mixar_glass_free()
 {
   glass_chain_release();
+  mixar_glass_shader_free();
 }
 
 /** \} */

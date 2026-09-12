@@ -25,19 +25,14 @@ struct wmWindowManager;
 /** \name Header Region (status pill)
  * \{ */
 
-/* True when the pill window may REPLACE a frost wash instead of an
- * opaque bed. Always on macOS/Windows (those windows are asked to be
- * translucent). False on Linux, where nothing composites the alpha.
- * See the "Pill compositing" section in space_agent_bubble.cc. */
+/* True only after native frost and framebuffer alpha are both available.
+ * Unsupported systems retain opaque beds. */
 bool agent_bubble_pill_bed_is_transparent();
 
-/* REPLACE a dark-glass wash (`GPU_BLEND_NONE`). Dest-over cannot lower
- * dest A=1, and an A=0 fragment is a no-op on Metal. */
+/* Replace a straight RGBA wash with premultiplied framebuffer pixels. */
 void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4]);
 
-/* True when region beds may REPLACE a frost wash instead of an opaque
- * `#121212` slab. Always on macOS/Windows (those windows are asked to be
- * translucent). False on Linux, where the latch never flips. */
+/* Same capability decision for the expanded island's region beds. */
 bool agent_bubble_island_bed_is_transparent();
 
 void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);

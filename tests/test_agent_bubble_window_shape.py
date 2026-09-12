@@ -159,14 +159,11 @@ class TestWin32PerPixelAlpha:
             "-- the black box, back again, with no region to fall back on."
         )
 
-    def test_region_stands_down_for_alpha_windows(self, win32: str) -> None:
+    def test_native_frost_keeps_the_window_shape(self, win32: str) -> None:
         body = _fn_body(win32, "static void mixar_window_apply_corner_region(")
         head = body[: body.index("s_corner_shapes.find")]
-        assert "s_per_pixel_alpha_windows" in head and "SetWindowRgn(hwnd, NULL" in head, (
-            "The region must be cleared BEFORE any shape is applied: region "
-            "coverage would clip away exactly the anti-aliased edge that "
-            "per-pixel alpha exists to produce."
-        )
+        assert "SetWindowRgn(hwnd, NULL" not in head
+        assert "s_per_pixel_alpha_windows" not in win32
 
     def test_the_two_are_mutually_exclusive_by_construction(self, win32: str) -> None:
         enable = _fn_body(win32, 'extern "C" void Mixar_WindowSetPerPixelAlpha(')
@@ -184,7 +181,7 @@ class TestWin32LiquidGlass:
 
     def test_blur_behind_installs_win32_glass(self, win32: str) -> None:
         body = _fn_body(
-            win32, 'extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
+            win32, 'extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
         )
         assert "Mixar_Win32GlassSetEnabled" in body
         assert "CreateRectRgn(0, 0, 1, 1)" not in body, (
@@ -201,7 +198,9 @@ class TestWin32LiquidGlass:
         assert "kDwmwaUseImmersiveDarkMode = 20" in glass
         assert "DwmExtendFrameIntoClientArea" in glass
         assert "DWM_BB_ENABLE" in glass
-        assert "bb.hRgnBlur = nullptr" in glass
+        assert "DWM_BLURBEHIND bb = {};" in glass
+        assert "FAILED(material)" in glass
+        assert "mixar_disable_glass(hwnd);" in glass
         assert "CreateRectRgn(0, 0, 1, 1)" not in glass
         assert "DWMSBT_MAINWINDOW" not in glass
         cmake = _read(GHOST_CMAKE)
@@ -246,11 +245,10 @@ class TestCrossPlatformContract:
         assert "#ifdef _WIN32" in body
         assert "mixar_glass_window_apply_translucency" in body
 
-    def test_the_pill_bed_does_not_wait_on_the_latch(self) -> None:
-        """Same trap as the island: a false latch paints the opaque bed."""
+    def test_the_pill_bed_requires_confirmed_frost(self) -> None:
         body = _fn_body(_read(SPACE), "bool agent_bubble_pill_bed_is_transparent(")
-        assert "return true;" in body
-        assert "g_pill_per_pixel_alpha" not in body
+        assert "return g_pill_per_pixel_alpha;" in body
+        assert "return true;" not in body
 
     def test_frost_skips_the_dest_over_pill_capsule(self) -> None:
         """glass_fill_round dest-overs; on frost that is the slab."""
@@ -311,13 +309,9 @@ class TestIslandWindowTranslucency:
             "shaping the island."
         )
 
-    def test_macos_windows_beds_do_not_wait_on_the_latch(self) -> None:
-        """Shaped corners proved the window is already non-opaque while the
-        latch stayed false and the inner panel kept painting ``#121212``.
-        """
+    def test_island_beds_require_confirmed_frost(self) -> None:
         body = _fn_body(_read(SPACE), "bool agent_bubble_island_bed_is_transparent(")
-        assert "#if defined(__APPLE__) || defined(_WIN32)" in body
-        assert "return true;" in body
+        assert "return true;" not in body
         assert "return g_bubble_glass_translucency;" in body
 
     def test_the_beds_and_the_panel_read_the_flag(self) -> None:
@@ -339,9 +333,10 @@ class TestIslandWindowTranslucency:
         the bare backdrop.
         """
         body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
-        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f)" in body
-        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in body
-        assert "immRectf(pos, r.xmin, r.ymin, r.xmax, r.ymax)" in body
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in body
+        wash = _fn_body(_read(SPACE), "void agent_bubble_replace_frost_wash(")
+        assert "rgba[0] * rgba[3]" in wash
+        assert "immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax)" in wash
         assert "GPU_BLEND_NONE" in body
         assert "ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);" in body
         assert "GPU_BLEND_NONE" in body, (
@@ -351,7 +346,7 @@ class TestIslandWindowTranslucency:
     def test_the_bed_alpha_follows_the_window(self) -> None:
         body = _fn_body(_read(SPACE), "static void agent_bubble_fill_region_backdrop(")
         assert "agent_bubble_island_bed_is_transparent()" in body
-        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in body
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in body
         assert "const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};" in body
 
     def test_both_island_styling_sites_ask_for_it(self) -> None:
@@ -389,7 +384,7 @@ class TestIslandWindowTranslucency:
         """
         cocoa = _read(COCOA)
         body = cocoa[
-            cocoa.index("extern \"C\" void Mixar_WindowSetBlurBehind(") : cocoa.index(
+            cocoa.index("extern \"C\" bool Mixar_WindowSetBlurBehind(") : cocoa.index(
                 "extern \"C\" void Mixar_WindowSetChromeless("
             )
         ]
@@ -429,8 +424,9 @@ class TestIslandWindowTranslucency:
         matter what the GPU wrote. The overlay keeps the sampled alpha.
         """
         mtl = _read(ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_ContextMTL.mm")
-        assert "out_tex.a = 1.0" not in mtl
-        assert "out_tex.rgb = min(out_tex.rgb, 16384.0) * out_tex.a" in mtl
+        assert "if (!MIXAR_TRANSLUCENT)" in mtl
+        assert "out_tex.rgb = min(out_tex.rgb, 16384.0);" in mtl
+        assert "* out_tex.a" not in mtl
         assert "return out_tex;" in mtl
         assert "mixar_new_present_pipeline" in mtl
         assert "metal_layer_.pixelFormat" in mtl
@@ -462,6 +458,6 @@ class TestIslandWindowTranslucency:
         assert "wt.custom = widget_textbut_custom" in widgets
         space = _read(SPACE)
         assert "const uchar wash[4] = {18, 22, 20, 48}" in space
-        assert "immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f)" in space
+        assert "agent_bubble_replace_frost_wash(&r, wash);" in space
         assert "if (but->col[3] < 128)" in widgets
         assert "BLI_rcti_size_y(rect) > 120" in widgets

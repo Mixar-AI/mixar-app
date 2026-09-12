@@ -14,6 +14,6 @@
 
 #ifdef _WIN32
 
-void Mixar_Win32GlassSetEnabled(void *hwnd, bool enable);
+bool Mixar_Win32GlassSetEnabled(void *hwnd, bool enable);
 
 #endif

@@ -10,24 +10,11 @@
  * agent panel's cards, the Mixar profile cards, menus and popovers, and the
  * Mixie chat.
  *
- * A pane is a tinted silhouette with a soft top gloss and a 1px rim. Where
- * the caller can hand in a blurred backdrop the pane also gets a refraction
- * wash and a travelling specular streak — lighting that needs a frosted bed
- * to catch it. Where it cannot (every Mixar surface today), those two layers
- * stay off and the shape, the rim and the gloss carry the material, so a
- * tinted pane is not dirtied by a diagonal bevel and a sweeping bar.
- *
- * WHY THE BACKDROP IS A CALLER-SUPPLIED TEXTURE
- * The kit can blur a texture, but it cannot capture one. This overlay has no
- * framebuffer-readback path at all (`GPU_framebuffer_blit`,
- * `GPU_texture_copy` and `GPU_framebuffer_read_color` do not exist anywhere in
- * the tree), so nothing can sample what has already been drawn under an
- * arbitrary rect. The one backdrop that IS reachable is a re-render of the 3D
- * viewport into an offscreen, which only the viewport agent panel can do —
- * and it is the panel that owns that offscreen, so it is the panel that hands
- * the texture in. Every other surface passes an empty #MixarGlassSource and
- * gets the tinted pane. The kit never invents a backdrop it cannot get, and
- * `MixarGlassSource{}` is an ordinary, expected input rather than a failure.
+ * A pane uses one antialiased rounded mask for its tint, top light and rim.
+ * An optional caller-owned backdrop adds blurred content and subtle edge
+ * refraction. Without that source the kit draws a quiet tinted surface.
+ * Embedded GLSL is compiled through Blender's backend-neutral preprocessor.
+ * OS frost is separate and applies only to the island and pill windows.
  *
  * WHY THE ROLES ARE ENUMERATED
  * The surfaces differ only in palette and in how hard the blur runs, so they
@@ -111,6 +98,8 @@ struct MixarGlassTokens {
   float specular_alpha;
   /** Seconds for the specular streak to cross the pane once. */
   float specular_period;
+  /** Minimum tint opacity over unblurred content, for readable text. */
+  float fallback_alpha;
 };
 
 /** Tokens for `role`, metrics already scaled by `UI_SCALE_FAC`. */
@@ -167,7 +156,10 @@ struct MixarGlassStyle {
   float alpha = 1.0f;
   /** Panes on a viewport need one; panes on another pane do not. */
   bool draw_shadow = false;
-  bool draw_specular = true;
+  bool draw_specular = false;
+  /** Native frost already supplies the tinted bed; keep the shared light and rim. */
+  bool draw_tint = true;
+  bool draw_rim = true;
 };
 
 /**
@@ -186,25 +178,17 @@ void mixar_glass_draw(const rcti &rect,
  * in this checkout, which has no definition of the underlying call — it is a
  * no-op returning false, so callers need no `#ifdef` of their own.
  *
- * This is window-level compositing. On macOS `Mixar_WindowSetBlurBehind`
- * installs AppKit frost as a sibling behind GHOST's Metal view (never as
- * its parent) and lets this window's `CAMetalLayer` composite alpha. The
- * Metal present blit must keep the framebuffer's alpha — forcing it to 1
- * makes the drawable an opaque slab over that sibling. An EDR
- * `RGBA16Float` layer is still composited opaque, so the installer
- * switches that window's `CAMetalLayer` to `BGRA8Unorm` and GHOST
- * rebuilds the present pipeline to match, premultiplying RGB so
- * WindowServer does not treat A=0 as an opaque slab. The flip is
- * re-applied on present while the window is non-opaque. The draw
- * overlay stays `RGBA16Float`. Island region beds clear then REPLACE
- * a wash (`GPU_BLEND_NONE`); dest-over cannot lower dest A=1 and an
- * A=0 fragment does not land on Metal. On Windows `Mixar_WindowSetBlurBehind`
- * installs Desktop Acrylic (Win11) plus a full-window DWM blur-behind, and
- * asks DWM to honour the redirection bitmap's alpha. A pane over such a
- * window still needs the kit's own tint; the painter keeps refraction and
- * the streak off when no GPU backdrop is handed in.
+ * AppKit frost is a sibling behind the Metal view; only this window switches
+ * to a non-opaque BGRA8 CAMetalLayer. Blender's UI blend already produces
+ * premultiplied framebuffer pixels, which present copies without multiplying
+ * alpha again. Replacement beds must premultiply their own RGB.
+ * Windows uses Desktop Acrylic when DWM accepts it (Windows 11 22621+).
+ * Failure, missing framebuffer alpha or high contrast keeps an opaque bed.
+ * DwmEnableBlurBehindWindow is an alpha path, not a Windows 10 blur fallback.
+ * Keep the rounded HWND region to clip native frost as well as GPU content.
+ * Requests are retried after delayed native-view creation.
  *
- * \return true if the platform acted on the request.
+ * \return true only when native frost and alpha composition are available.
  */
 bool mixar_glass_window_apply_translucency(void *ghostwin, bool enable);
 

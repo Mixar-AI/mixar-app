@@ -173,7 +173,7 @@ def test_the_token_row_asks_for_no_specular():
             f"{field} is {match.group(1)}: the moodboard cannot place the "
             f"streak's region-px scissor, so the row must disable it"
         )
-    assert "NO specular" in row, (
+    assert "No moving specular" in row, (
         "the reason must travel with the zeroed row, not only with this test"
     )
 

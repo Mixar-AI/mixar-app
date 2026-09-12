@@ -74,16 +74,20 @@ static id<MTLRenderPipelineState> mixar_new_present_pipeline(id<MTLDevice> devic
 
       fragment float4 fragment_shader(Vertex v [[stage_in]],
                       texture2d<float> t [[texture(0)]]) {
-        /* Keep sampled alpha and premultiply. WindowServer composites
-         * CAMetalLayer as premultiplied; RGB with A=0 is treated as an
-         * opaque slab. Opaque windows already carry A=1, so this is a
-         * no-op there. */
+        /* UI blending already writes premultiplied RGB. Multiplying again
+         * darkens text AA and differs from DWM's premultiplied composition.
+         * Only the dedicated translucent window presents framebuffer alpha. */
         float4 out_tex = t.sample(s, v.texCoord);
-        out_tex.rgb = min(out_tex.rgb, 16384.0) * out_tex.a;
+        out_tex.rgb = min(out_tex.rgb, 16384.0);
+        if (!MIXAR_TRANSLUCENT) {
+          out_tex.a = 1.0;
+        }
         return out_tex;
       }
     )msl";
 
+  source = [NSString stringWithFormat:@"#define MIXAR_TRANSLUCENT %d\n%@",
+                                      format == MTLPixelFormatBGRA8Unorm, source];
   MTLCompileOptions *options = [[[MTLCompileOptions alloc] init] autorelease];
   options.languageVersion = MTLLanguageVersion1_1;
   NSError *error = nil;
@@ -426,7 +430,7 @@ void GHOST_ContextMTL::metalUpdateFramebuffer()
       attachment.texture = default_framebuffer_metal_texture_[current_swapchain_index].texture;
       attachment.loadAction = MTLLoadActionClear;
       attachment.clearColor = MTLClearColorMake(
-          0.294, 0.294, 0.294, metal_layer_.opaque ? 1.000 : 0.000);
+          0.0, 0.0, 0.0, metal_layer_.opaque ? 1.000 : 0.000);
       attachment.storeAction = MTLStoreActionStore;
     }
     {

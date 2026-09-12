@@ -6717,8 +6717,11 @@ void update_text_styles()
   style->tooltip.character_weight = weight;
 }
 
+void mixar_glass_free();
+
 void exit()
 {
+  mixar_glass_free();
   resources_free();
   button_clipboard_free();
 }

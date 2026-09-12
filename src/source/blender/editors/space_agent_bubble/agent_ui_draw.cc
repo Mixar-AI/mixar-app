@@ -75,16 +75,15 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
  * paints may fall outside it. Only a pane with room around it inside its own
  * window passes `true`.
  *
- * The specular streak is ON unless asked otherwise. It is the one layer the
- * painter clips with a scissor built from the pane's own region-px rect, so a
- * caller drawing in WINDOW px — the island pushes a `-winrct` translate — must
- * pass `false` or the highlight lands a region-origin away from the pane.
+ * Native frost passes tint=false: the common sheen and rim finish the pane
+ * without stacking another coloured bed on top of AppKit or Acrylic.
  */
 void glass_fill_round(const rctf *rect,
                       const ui::eMixarGlassRole role,
                       const float radius,
                       const bool shadow = false,
-                      const bool specular = true)
+                      const bool specular = false,
+                      const bool tint = true)
 {
   rcti pane;
   BLI_rcti_rctf_copy(&pane, rect);
@@ -93,6 +92,7 @@ void glass_fill_round(const rctf *rect,
   style.radius = radius;
   style.draw_shadow = shadow;
   style.draw_specular = specular;
+  style.draw_tint = tint;
   ui::mixar_glass_draw(pane, style);
 }
 
@@ -676,12 +676,11 @@ void agent_ui_draw_status_pill(const float width,
     pill.xmax = w;
     pill.ymin = 0.0f;
     pill.ymax = h;
-    /* The capsule IS liquid glass. On a frost window the kit dest-overs
-     * onto dest A=1 and the resting pill reads as a slab — REPLACE the
-     * PILL wash instead. Linux keeps the painted pane on an opaque bed. */
+    /* Native frost owns the bed; both paths share the rounded light and rim. */
     if (agent_bubble_pill_bed_is_transparent()) {
       const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
       agent_bubble_replace_frost_wash(&pill, wash);
+      glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
     }
     else {
       glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
@@ -890,10 +889,11 @@ void agent_ui_draw_status_pill(const float width,
 
   /* Paint the WHOLE rect before the capsule. The pill window's buffers
    * otherwise carry leftover pixels that flash the bare backdrop. Frost
-   * REPLACES a wash; dest-over / A=0 left the small status chip a slab. */
+   * replaces a premultiplied wash; the shared shader adds its finishing layers. */
   if (agent_bubble_pill_bed_is_transparent()) {
     const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
     agent_bubble_replace_frost_wash(&pill, wash);
+    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
   }
   else {
     const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
@@ -956,43 +956,14 @@ void agent_ui_draw_island(const ARegion * /*region*/,
                            border_spent,
                            state->credits_remaining);
   }
-  /* The card's bed. The CARD row is dark glass with a whisper of green —
-   * the artboard's saturated ramp as a pane tint read as a plastic header,
-   * and the neon meter already is the card's green. Two of the kit's layers
-   * are switched off here.
-   *
-   * The specular streak, because it is clipped with a region-px scissor built
-   * from the pane's rect while the island draws in WINDOW px under the
-   * `-winrct` translate `agent_bubble_island_begin` pushes — the streak would
-   * land a region-origin away from the pane it belongs to.
-   *
-   * The drop shadow, because the card spans the island's full width: an
-   * outward shadow has no room on either side and would be clipped into a hard
-   * edge along the card's own sides.
-   *
-   * The radius is the metered border's INNER edge rather than the card's own.
-   * The pane is drawn on `card_fill`, which the layout insets by exactly the
-   * band's `AGENT_CARD_BORDER`, so taking the border off the radius too makes
-   * the pane's corner concentric with the band's instead of crossing it.
-   *
-   * The one thing the kit cannot carry is that the artboard's ramp is
-   * DIAGONAL — it runs along (1554,463) -> (1281.66,1068.71) in island units,
-   * from the top-right down past the card's bottom edge, so the card's own top
-   * edge varies from #072B1B on the left to #2E5630 on the right. The kit
-   * shades vertically. This is the tradeoff the viewport panel took first (see
-   * the PANEL row and `view3d_director_cinema_paint.cc`), and at card scale the
-   * difference is a level of quantisation the eye does not separate. */
-  /* On a frost window the region bed already REPLACED a 0.20 wash.
-   * The CARD widget paints dest-over and cannot lower dest A=1 — a second
-   * silhouette there is what kept the card a solid slab. Chrome and the
-   * neon meter still draw. */
-  if (!agent_bubble_island_bed_is_transparent()) {
-    glass_fill_round(&layout->card_fill,
-                     ui::MIXAR_GLASS_CARD,
-                     (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
-                     /*shadow=*/false,
-                     /*specular=*/false);
-  }
+  /* The native window owns the bed. Its sheen still comes from the same kit
+   * as embedded cards, so macOS and Windows share the finishing layers. */
+  glass_fill_round(&layout->card_fill,
+                   ui::MIXAR_GLASS_CARD,
+                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
+                   /*shadow=*/false,
+                   /*specular=*/false,
+                   /*tint=*/!agent_bubble_island_bed_is_transparent());
 
   /* Card header row is tab-scoped: the chat's discs / session title / FAQs
    * belong to the Agent tab; other tabs title the card after themselves. */

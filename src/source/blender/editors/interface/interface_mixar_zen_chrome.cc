@@ -53,14 +53,16 @@ bool mixar_zen_header_clear(const bContext *C, const ARegion *region)
   }
 
   ED_region_pixelspace(region);
-  /* Same REPLACE wash the island beds use: dest-over cannot lower dest A=1. */
-  GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f);
+  /* The main window has no native backdrop. Its header is an opaque bed;
+   * alpha here exposes uninitialised region buffers, not viewport frost. */
+  GPU_clear_color(0.040f, 0.055f, 0.048f, 1.0f);
   const rcti pane{0, region->winx, 0, region->winy};
   MixarGlassStyle style;
   style.role = MIXAR_GLASS_ISLAND;
   style.radius = 0.0f;
   style.draw_shadow = false;
   style.draw_specular = false;
+  style.draw_rim = false;
   mixar_glass_draw(pane, style);
   return true;
 }

@@ -223,7 +223,7 @@ extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
 extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 #ifdef _WIN32
 /* Win32 only. macOS shapes the pill with a Core Animation mask over a
  * non-opaque NSWindow, which is anti-aliased already; Windows has to ask DWM
@@ -237,27 +237,10 @@ extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable);
 /* -------------------------------------------------------------------- */
 /** \name Pill compositing
  *
- * The pill's window IS the capsule, and there are two ways to make it so.
- *
- * macOS masks the content layer to the corner radius over a non-opaque
- * window: anti-aliased, and the only thing the platform needs told.
- *
- * Windows cannot mask a GL window, so Mixar_WindowSetCornerRadius shapes it
- * with a window REGION. That works, but region coverage is binary, and a
- * 28.5px capsule rasterised that way has the hard staircase of any un-AA'd
- * circle. The better answer is to let DWM composite the client alpha, which
- * needs the pixel format GHOST ended up with to carry alpha bits — nothing
- * asked for them (GHOST_WindowWin32 builds GHOST_ContextWGL with
- * alphaBackground=false), but a 24-bit colour buffer with no alpha is not a
- * format modern hardware exposes, so RGBA8 is what comes back. Where the
- * channel is there the bed is painted TRANSPARENT instead of near-black and
- * the capsule's own anti-aliased edge is the silhouette; where it is not, the
- * region stands and the bed stays opaque.
- *
- * Either way the bed covers every pixel of the region every frame. That is
- * what it is for: the cached region buffer is freed on perceived resizes and
- * only repainted on the next tagged redraw, and in that gap a composite
- * blitted nothing and the pill flashed the bare backdrop.
+ * Native frost and GPU alpha must both be available before beds become
+ * translucent. macOS clips with its layer mask; Windows retains its rounded
+ * HWND region to clip native Acrylic as well as the GPU wash.
+ * Every region pixel is replaced each frame so resized caches cannot flash.
  * \{ */
 
 static bool g_pill_per_pixel_alpha = false;
@@ -265,12 +248,12 @@ static bool g_pill_per_pixel_alpha = false;
 /* Called once per pill window, right after it is made borderless. */
 static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
 {
+  g_pill_per_pixel_alpha = false;
 #ifdef _WIN32
   if (ghostwin == nullptr || !Mixar_WindowHasAlphaChannel(ghostwin)) {
     return; /* Keep the window region as the shape. */
   }
-  Mixar_WindowSetPerPixelAlpha(ghostwin, true);
-  g_pill_per_pixel_alpha = true;
+  g_pill_per_pixel_alpha = ui::mixar_glass_window_apply_translucency(ghostwin, true);
 #elif defined(__APPLE__)
   if (ghostwin == nullptr) {
     return;
@@ -283,10 +266,7 @@ static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
 
 bool agent_bubble_pill_bed_is_transparent()
 {
-  /* Same latch trap as the island: the request can run before the
-   * Metal view exists and leave this false, which paints the opaque
-   * bed and hides Regular frost. macOS/Windows always ask. */
-  return true;
+  return g_pill_per_pixel_alpha;
 }
 
 /** \} */
@@ -325,28 +305,8 @@ bool agent_bubble_pill_bed_is_transparent()
 
 #endif
 
-/* Window-level translucency for the ISLAND window.
- *
- * The pill asks DWM to composite its client alpha (above); the island cannot,
- * because its card is painted by this file's region renderers rather than by
- * one shaped window. What the island CAN do is ask the platform to give the
- * WINDOW a translucent background, and the glass kit owns that request:
- *
- *   ui::mixar_glass_window_apply_translucency(ghostwin, true)
- *
- * on macOS and Windows it forwards to Mixar_WindowSetBlurBehind — per-pixel
- * alpha, and on macOS a theme-frame sibling frost view — and anywhere else
- * it is a defined no-op returning false. That
- * return value is why it is called instead of an #ifdef: it reports whether
- * the platform acted, and only when it did is there anything behind the
- * window for the region beds to reveal.
- *
- * `g_bubble_glass_translucency` records that answer so the beds and the
- * card's inner panel — painted every frame on the hot path, which must not
- * each re-enter GHOST — can read it. It deliberately sits OUTSIDE the
- * platform block above: the kit call it caches is portable, and false is
- * the honest answer on a platform that has nothing to composite the
- * window's alpha. */
+/* Cache the native request result for the region painters. Retried after
+ * the native view exists; unsupported systems keep opaque beds. */
 static bool g_bubble_glass_translucency = false;
 
 /* Called once per island window, right after it takes its corner radius --
@@ -354,43 +314,37 @@ static bool g_bubble_glass_translucency = false;
  * and the request above is what lets the beds lean on that. */
 static void agent_bubble_try_glass_translucency(void *ghostwin)
 {
+  g_bubble_glass_translucency = false;
   if (ghostwin == nullptr) {
     return;
   }
   g_bubble_glass_translucency = ui::mixar_glass_window_apply_translucency(ghostwin, true);
 }
 
-/** May the beds and the inner panel write a frost wash?
- *
- * On macOS/Windows the island is always asked to be translucent; the latch
- * can stay false if that request ran before `ghostwin` existed, and an
- * opaque `#121212` panel fill is then what hid the frost. Linux keeps the
- * latch (it never flips). */
+/** Native frost is optional; a failed request keeps a readable opaque bed.
+ * Window creation and size sync retry requests after delayed native setup. */
 bool agent_bubble_island_bed_is_transparent()
 {
-#if defined(__APPLE__) || defined(_WIN32)
-  return true;
-#else
   return g_bubble_glass_translucency;
-#endif
 }
 
 void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
 {
+  const GPUBlend blend_prev = GPU_blend_get();
   GPU_color_mask(true, true, true, true);
   GPU_blend(GPU_BLEND_NONE);
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(
       format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4fv(rgba);
+  const float premul[4] = {rgba[0] * rgba[3], rgba[1] * rgba[3], rgba[2] * rgba[3], rgba[3]};
+  immUniformColor4fv(premul);
   immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax);
   immUnbindProgram();
+  GPU_blend(blend_prev);
 }
 
-/* The WINDOW region's panel colour. Opaque #121212 when the window cannot
- * show through; alpha 0 when it can, so AppKit frost (or DWM alpha) is not
- * buried under a second near-black slab. BLEND_NONE still covers the rect. */
+/* Native frost supplies the panel bed; otherwise keep the opaque surface. */
 static void agent_bubble_island_panel_color(float r_rgba[4])
 {
   const float surface[4] = AGENT_COL_SURFACE;
@@ -998,10 +952,9 @@ static float agent_bubble_pad_ratio(const wmWindow *win)
 /** Backdrop for ONE region — never a framebuffer-wide clear.
  *
  * The bed covers every pixel of the region every frame. On a translucent
- * window the write is a REPLACE (BLEND_NONE) of a dark-glass wash: dest-over
- * cannot lower dest A=1, Metal clear has been observed to leave alpha at 1,
- * and an A=0 fragment is a no-op on that backend. The wash alpha is what
- * WindowServer composites over the frost sibling. The opaque path still
+ * window the write replaces the previous pixels with a premultiplied wash;
+ * ordinary alpha blending cannot lower a previous opaque destination alpha.
+ * The native compositor places the wash over its frost. The opaque path still
  * fills the rect so a composite in the resize gap cannot show a bare
  * backdrop. */
 static void agent_bubble_fill_region_backdrop(const ARegion *region)
@@ -1012,19 +965,9 @@ static void agent_bubble_fill_region_backdrop(const ARegion *region)
   r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
   r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
   if (agent_bubble_island_bed_is_transparent()) {
-    GPU_color_mask(true, true, true, true);
-    /* Metal has been observed to ignore a clear of A=0; A=0.20 lands.
-     * IMM REPLACE follows so a leftover #121212 A=1 cannot survive. */
-    GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f);
-    GPU_blend(GPU_BLEND_NONE);
-    GPUVertFormat *format = immVertexFormat();
-    const uint pos = GPU_vertformat_attr_add(
-        format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-    immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-    /* CARD tint_bottom; alpha must be > 0 so the fragment lands. */
-    immUniformColor4f(0.040f, 0.055f, 0.048f, 0.20f);
-    immRectf(pos, r.xmin, r.ymin, r.xmax, r.ymax);
-    immUnbindProgram();
+    /* A replacement bed, unlike alpha blending, must premultiply itself. */
+    const float wash[4] = {0.040f, 0.055f, 0.048f, 0.20f};
+    agent_bubble_replace_frost_wash(&r, wash);
     return;
   }
   const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -2892,8 +2835,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   region_rect.xmax = float(region->winx);
   region_rect.ymin = 0.0f;
   region_rect.ymax = float(region->winy);
-  /* PILL tint_bottom at the island's wash alpha. A=0 is a Metal no-op
-   * and dest-over cannot lower dest A=1 — both left the capsule a slab. */
+  /* Replace the complete region with the premultiplied native-frost wash. */
   const float wash[4] = {0.075f, 0.078f, 0.075f, 0.20f};
   const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
   if (agent_bubble_pill_bed_is_transparent()) {

@@ -17,7 +17,7 @@
 @class NSWindow;
 @class NSView;
 
-void Mixar_CocoaGlassSetEnabled(NSWindow *win, bool enable);
+bool Mixar_CocoaGlassSetEnabled(NSWindow *win, bool enable);
 void Mixar_CocoaGlassSyncRadius(NSWindow *win, float radius);
 /** Flip this view's CAMetalLayer so WindowServer honours per-pixel alpha. */
 void Mixar_CocoaGlassAllowMetalAlpha(NSView *host);

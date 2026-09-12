@@ -217,13 +217,8 @@ class TestTheSeamIsAPaneInsteadOfAFlatFill:
         assert "style.alpha = alpha;" in body
         assert "c[3]" not in body, "the seam scales a colour instead of the pane"
 
-    def test_the_seam_disables_specular_for_block_coordinates(self) -> None:
-        """Widget painters hand block px; the streak scissor is region-px.
-
-        Leaving the style default (`draw_specular = true`) would place the
-        travelling highlight a region-origin away from every topbar pill,
-        cinema chip and section card that crosses this seam.
-        """
+    def test_the_seam_disables_specular_for_controls(self) -> None:
+        """Controls keep a quiet material without a moving highlight."""
         body = _code(_fn_body(CARD_PAINT, "inline void mixar_card_glass_round("))
         assert "style.draw_specular = false;" in body
 
@@ -511,9 +506,7 @@ class TestTheCinemaRowsArePanes:
         )
 
     def test_a_row_takes_the_chip_role_and_no_other(self) -> None:
-        """CARD / PANEL / ISLAND carry a shadow and a streak; a row that sits
-        on the popup may cast neither, and the streak's scissor is region px
-        while a row is painted in the block's coordinates."""
+        """Rows use CHIP's quiet material without a separate shadow."""
         code = _code(CINEMA_ROW)
         for role in (
             "MIXAR_GLASS_CARD",
@@ -576,9 +569,7 @@ class TestTheCategoryTabsArePanes:
     """The panel-category strip: each tab bed, and the band it sits on.
 
     A tab sits ON the strip, so the bed takes the CHIP role — no shadow and no
-    specular, because a chip may not cast its own (and the streak is the one
-    layer the painter clips with a region-px scissor, which a tab drawn from
-    the View2D's restored matrix could not place). The strip itself stays flat:
+    specular, keeping the control quiet. The strip itself stays flat:
     it is a full-bleed band flush to the region edge, so it has no silhouette
     for a rim to trace and nothing for a shadow to fall on.
 
@@ -671,9 +662,7 @@ class TestTheSectionCardsArePanes:
 
     The card is a surface, so its bed takes the CHIP role: a shape that sits ON
     another pane — tint, a hair of gloss, the family rim, no shadow and no
-    specular. The card is painted in BLOCK coordinates, so a role with a streak
-    is ruled out twice over: the painter clips that layer with a region-px
-    scissor, which block coordinates cannot place. CHIP's bed is also the only
+    specular. CHIP's bed is also the only
     FLAT one in the table, which is exactly what the widget's ``shaded = 0``
     exists to protect.
 
@@ -831,12 +820,9 @@ class TestTheChatMessagePillIsAPane:
     """The user's own message (`mixie_chat_render_message_content`), and the
     blocks that share its fill but must stay flat.
 
-    The message area is drawn through ``ui::view2d_view_ortho``, so the bubble
-    rect is View2D view-space, not region px. That rules the painter's specular
-    streak out: it is the one layer the painter clips with a region-px scissor
-    computed from ``rect.xmin``, which cannot be placed from this matrix — the
-    same trap the moodboard's token row documents. The bed, gloss, refraction
-    wash and rim all draw through the matrix fine, so only the streak is off.
+    The message area draws through ``ui::view2d_view_ortho``. All material
+    layers share that transform and rounded mask. Messages disable animated
+    specular so the material does not compete with reading.
 
     CHAT is the design's own bubble role, so the wrapper hands over no colour:
     the tint lives in the token row and each site only says how opaque its pane
@@ -867,9 +853,7 @@ class TestTheChatMessagePillIsAPane:
         assert set(re.findall(r"\bMIXAR_GLASS_[A-Z]+\b", body)) == {"MIXAR_GLASS_CHAT"}
 
     def test_the_chat_pane_turns_the_streak_off(self) -> None:
-        """The message area draws through the View2D matrix, so the streak's
-        region-px scissor cannot be placed; leaving it on would clip the layer
-        against the wrong rectangle."""
+        """Messages keep their material still while the user reads."""
         assert "style.draw_specular = false;" in self._pane()
 
     def test_the_chat_pane_hands_over_no_colour(self) -> None:
@@ -953,10 +937,8 @@ class TestTheIslandCardIsAPane:
 
     The island draws in WINDOW-physical pixels: `agent_bubble_island_begin`
     pushes a `-winrct` translate and every rect in `AgentIslandLayout` is in
-    that space. That is the trap the chat's View2D matrix sets, one coordinate
-    system over, and it rules the specular streak out for the same reason —
-    the streak is the one layer the painter clips with a scissor computed from
-    the pane's own region-px rect.
+    that space. Every material layer uses the same transform and silhouette.
+    The island and pill disable animated specular by default.
 
     CARD is the design's own card role: its token row is dark glass with a
     whisper of green, so the wrapper hands over no colour and the island
@@ -985,6 +967,7 @@ class TestTheIslandCardIsAPane:
             "(AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u",
             "false",
             "false",
+            "!agent_bubble_island_bed_is_transparent()",
         ], f"the card bed changed shape: {self._card_call()}"
 
     def test_the_pane_reuses_the_meters_inner_edge(self) -> None:
@@ -997,12 +980,10 @@ class TestTheIslandCardIsAPane:
         assert "AGENT_CARD_BORDER * 2" in layout
         assert "AGENT_CARD_BORDER" in self._card_call()[2], "the radius ignores the band"
 
-    def test_only_the_island_turns_the_streak_off(self) -> None:
-        """The wrapper keeps the streak on by default, so the pill and every
-        future in-region caller get it; only a caller drawing outside region
-        px opts out."""
+    def test_the_island_and_pill_default_to_a_still_material(self) -> None:
+        """The shared wrapper requires an explicit opt-in for a moving streak."""
         draw = _code(AGENT_DRAW)
-        assert "const bool specular = true" in draw, "the wrapper stopped defaulting the streak on"
+        assert "const bool specular = false" in draw, "the wrapper enabled the streak by default"
         assert "style.draw_specular = specular;" in draw
         assert draw.count("glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);") == 2
 
@@ -1011,7 +992,7 @@ class TestTheIslandCardIsAPane:
         layer switches — nothing that could pick a tint."""
         body = _fn_body(AGENT_DRAW, "void glass_fill_round(")
         touched = set(re.findall(r"style\.([A-Za-z_][A-Za-z0-9_]*)", body))
-        assert touched == {"role", "radius", "draw_shadow", "draw_specular"}, (
+        assert touched == {"role", "radius", "draw_shadow", "draw_specular", "draw_tint"}, (
             f"the wrapper touches {sorted(touched)}"
         )
 
@@ -1107,11 +1088,10 @@ class TestZenChromeUsesTheFamily:
         chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
         assert 'STREQ(workspace->id.name + 2, "Zen Mode")' in chrome
         assert "style.role = MIXAR_GLASS_ISLAND;" in chrome
-        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f)" in chrome
+        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 1.0f)" in chrome
         assert "mixar_glass_draw(pane, style);" in chrome
         area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
         assert "mixar_zen_header_clear(C, region)" in area
         cmake = (IFACE / "CMakeLists.txt").read_text(encoding="utf-8")
         assert "interface_mixar_zen_chrome.cc" in cmake
-
 

@@ -119,8 +119,6 @@ void mixar_style_glass(NSView *glass, const CGFloat radius)
    * Metal pixels carry alpha. No tintColor — a dark tint is another slab. */
   mixar_msg_set_llong(glass, "setStyle:", 0);
   mixar_give_glass_a_lens(glass);
-  /* Private lensing: no-op on the visual-effect fallback. */
-  mixar_msg_set_llong(glass, "set_contentLensing:", 1);
 }
 
 NSView *mixar_make_glass(const NSRect frame)
@@ -170,6 +168,9 @@ void mixar_allow_metal_alpha(NSView *host)
   if (metal == nil) {
     return;
   }
+  if (!metal.opaque && metal.pixelFormat == MTLPixelFormatBGRA8Unorm) {
+    return;
+  }
   metal.opaque = NO;
   /* RGBA16Float + EDR is composited as an opaque slab even with alpha in
    * the drawable and even if the view's alphaValue is lowered. Island and
@@ -180,7 +181,6 @@ void mixar_allow_metal_alpha(NSView *host)
   metal.framebufferOnly = NO;
   metal.pixelFormat = MTLPixelFormatBGRA8Unorm;
   mixar_set_layer_colorspace(metal, kCGColorSpaceSRGB);
-  metal.drawableSize = metal.drawableSize;
   host.alphaValue = 1.0;
 }
 
@@ -238,10 +238,10 @@ void Mixar_CocoaGlassAllowMetalAlpha(NSView *host)
   mixar_allow_metal_alpha(host);
 }
 
-void Mixar_CocoaGlassSetEnabled(NSWindow *win, const bool enable)
+bool Mixar_CocoaGlassSetEnabled(NSWindow *win, const bool enable)
 {
   if (win == nil) {
-    return;
+    return false;
   }
   @autoreleasepool {
     if (enable) {
@@ -260,6 +260,8 @@ void Mixar_CocoaGlassSetEnabled(NSWindow *win, const bool enable)
       win.opaque = YES;
       win.backgroundColor = [NSColor windowBackgroundColor];
     }
+    return !enable || (mixar_glass_get(win) != nil &&
+                       mixar_metal_layer_of(win.contentView) != nil);
   }
 }
 
@@ -279,6 +281,7 @@ void Mixar_CocoaGlassSyncRadius(NSWindow *win, const float radius)
     }
     if (glass != nil) {
       const CGFloat clamped = (radius < 0.0f) ? 0.0 : CGFloat(radius);
+      glass.frame = win.contentView.frame;
       mixar_style_glass(glass, clamped);
     }
     if (!win.opaque && win.contentView != nil) {

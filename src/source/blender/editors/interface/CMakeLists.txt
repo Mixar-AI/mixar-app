@@ -10,6 +10,7 @@ set(INC
   ../../animrig
   ../../makesrna
   ../../python
+  ../../gpu/intern
   ../../../../intern/ghost
   # RNA_prototypes.hh
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
@@ -52,6 +53,7 @@ set(SRC
   interface_mixar_cinema_row_segment.cc
   interface_mixar_cinema_row_value.cc
   interface_mixar_drag_query.cc
+  interface_mixar_glass_shader.hh
   interface_mixar_liquid_glass.cc
   interface_mixar_liquid_glass_draw.cc
   interface_mixar_liquid_glass_tokens.cc

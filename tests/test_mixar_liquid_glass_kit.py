@@ -2,25 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The glass kit's contracts, pinned at source level.
+"""Material tokens and native/GPU integration contracts.
 
-The kit is GPU C++, and in this overlay there is no `gpu` module to build
-against and no compiler to build with, so none of it can be exercised. Each
-contract below is a failure that would be INVISIBLE at runtime, which is why
-none of them can be left to a test that runs the code:
-
-* a token row that zero-fills its alpha draws NOTHING, and the report is
-  "the button is missing", not a colour bug;
-* a layer that forgets to multiply by ``style.alpha`` stays on screen in a pane
-  the app believes it has faded out -- visibly "stuck" long after dismissal;
-* a ``Mixar_WindowSetBlurBehind`` call outside the Apple/Windows guard is an
-  undefined reference on Linux, and the link error, not a pixel, is the signal;
-* a pane drawn with the plain image shader cannot weight its sample, so the
-  reveal animation pops the backdrop in instead of fading it;
-* a cascade stage that blurs nothing and a chain that frees nothing both look
-  exactly like a working pane at one frame.
-
-Run with the repo venv: ``python -m pytest -q`` from the repository root.
+Actual shader pixels are checked by tests/qa/liquid_glass_e2e.py in the app.
+These standalone tests pin API wiring, bounded resources and palette data.
 """
 
 import re
@@ -59,6 +44,7 @@ STRUCT_FIELDS = [
     "specular_width",
     "specular_alpha",
     "specular_period",
+    "fallback_alpha",
 ]
 COLOUR_FIELDS = STRUCT_FIELDS[:7]
 
@@ -220,79 +206,6 @@ class TestTheCapsuleIsACapsule:
         )
 
 
-class TestTheSpecularIsDeterministicAndInDegrees:
-    def test_the_streak_is_time_driven_and_never_random(self) -> None:
-        """Two panes side by side must sweep together, and a still must repeat.
-
-        A random phase would desynchronise a card and its pill -- the pair reads
-        as one surface -- and make every screenshot different.
-        """
-        assert not re.search(r"\b(?:std::)?(?:rand|srand|random)\s*\(", _code(KIT + DRAW)), (
-            "The specular streak is time-driven; a random source would break "
-            "side-by-side panes and reproducibility."
-        )
-        assert "BLI_rng" not in _code(KIT + DRAW)
-        assert "std::fmod(BLI_time_now_seconds() / double(t.specular_period), 1.0)" in DRAW
-
-    def test_the_tilt_is_passed_as_degrees_because_the_api_wants_degrees(self) -> None:
-        """`GPU_matrix_rotate_2d` takes DEGREES, whatever the constant is called.
-
-        Its call sites convert before calling it (`wm_operators.cc` wraps its own
-        radians in `RAD2DEGF`), so a constant documented in radians and passed
-        through would lean the streak by 0.4 instead of 22 degrees -- which looks
-        like no lean at all, not like a bug.
-        """
-        tilt = re.search(r"constexpr float ([A-Z_]+_DEG) = ([0-9.]+)f;", DRAW)
-        assert tilt is not None, "the tilt constant is not named as degrees"
-        assert float(tilt.group(2)) > 1.0, (
-            "A sub-degree value passed to a degrees API reads as no lean; a lean "
-            "expressed in radians is the bug this pins."
-        )
-        assert "DEGREES" in DRAW
-        assert "GPU_matrix_rotate_2d(GLASS_SPECULAR_TILT_DEG)" in DRAW
-        assert "RAD2DEG" not in _code(DRAW) and "DEG2RAD" not in _code(DRAW), (
-            "A conversion here would double-convert: the API already takes degrees."
-        )
-
-
-class TestTheSpecularIsClippedToTheRegion:
-    def test_the_scissor_origin_is_never_negative(self) -> None:
-        """A pane may hang off the region; a negative scissor origin is invalid.
-
-        The card straddles the viewport's edge mid-drag, which is exactly when
-        the streak is drawn.
-        """
-        assert "std::max(rect.xmin + int(inset), 0)" in DRAW
-        assert "std::max(rect.ymin + int(inset), 0)" in DRAW
-
-    def test_the_scissor_is_restored_after_the_streak(self) -> None:
-        assert "GPU_scissor_get(scissor_prev);" in DRAW
-        assert "GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);" in DRAW
-
-
-class TestTheSheenDoesNotFloodACapsule:
-    def test_the_sheen_band_is_the_token_height_not_the_radius(self) -> None:
-        """A capsule's radius is half its short side.
-
-        Using that as a floor made the gloss cover the top half of every pill
-        and turned the island card's sheen into a coloured header bar — the
-        look that read as plastic, not glass.
-        """
-        assert "std::min(t.sheen_height, float(height) * 0.28f)" in DRAW
-        assert "std::max(t.sheen_height, radius)" not in DRAW
-
-
-class TestLightingLayersNeedABed:
-    def test_refraction_and_the_streak_wait_for_a_backdrop(self) -> None:
-        """Those layers are lighting. Without a frosted bed they dirty the tint.
-
-        No Mixar surface hands the kit a backdrop today, so leaving them on
-        painted a diagonal bevel and a travelling bar on every pane.
-        """
-        assert "if (backdrop.valid() && t.refract[3] > 0.0f)" in DRAW
-        assert "backdrop.valid() && style.draw_specular" in DRAW
-
-
 class TestCardAndIslandAreDarkGlass:
     def test_card_tint_is_not_the_artboard_green_ramp(self) -> None:
         """The saturated artboard ramp as a pane tint read as a plastic header.
@@ -398,62 +311,29 @@ class TestTheBackdropIsNeverInvented:
         assert "if (backdrop.valid()) {" in DRAW
 
 
-class TestThePaneFadesAsOneWhole:
-    def test_every_layer_is_multiplied_by_the_pane_alpha(self) -> None:
-        """`alpha` is the reveal: a layer that ignores it stays on screen.
+class TestOneRoundedMaterial:
+    def test_the_material_uses_one_mask_and_fades_as_a_whole(self):
+        shader = (ED / "interface/interface_mixar_glass_shader.hh").read_text()
+        assert "material * (coverage * metrics.w)" in shader
+        assert "GPU_BLEND_ALPHA_PREMULT" in DRAW
+        assert "GPU_scissor(" not in DRAW
+        assert "bool draw_specular = false;" in HEADER
 
-        That is the "stuck pill" report -- a pane the app has dismissed but the
-        screen still shows.
-        """
-        for scaled in (
-            "t.tint_top[3] * alpha",
-            "t.tint_bottom[3] * alpha",
-            "t.glaze[3] * alpha",
-            "t.sheen[3] * alpha",
-            "t.rim[3] * alpha",
-            "t.shadow[3] * alpha",
-            "t.specular_alpha * alpha",
-        ):
-            assert scaled in DRAW, f"{scaled} is missing, so that layer never fades"
+    def test_blur_passes_balance_framebuffer_state(self):
+        assert "GPU_offscreen_bind(dst, /*save*/ true)" in KIT
+        assert "GPU_offscreen_unbind(dst, /*restore*/ true)" in KIT
+        assert KIT.count("GPU_offscreen_bind(") == KIT.count("GPU_offscreen_unbind(") == 1
+        prepare = KIT[KIT.index("MixarGlassBackdrop mixar_glass_backdrop_prepare("):]
+        assert prepare.index("GPU_framebuffer_active_get()") < prepare.index("glass_chain_ensure(")
+        assert "std::max(rect_w, rect_h)" in prepare
+        assert "GPU_scissor(0, 0, w, h)" in KIT
 
-    def test_the_refraction_and_the_bed_are_faded_too(self) -> None:
-        assert "glass_draw_refraction(&inside, t.refract, alpha);" in DRAW
-        assert "glass_draw_texture_window(backdrop.texture, &bed, &backdrop.rect, alpha);" in DRAW
-
-    def test_the_bed_uses_the_colour_carrying_shader_so_it_can_fade(self) -> None:
-        """`GPU_SHADER_3D_IMAGE` has no colour uniform: the sample cannot be weighted.
-
-        A bed drawn with it can only appear at full strength, so the backdrop
-        pops in at the end of the reveal instead of fading with the tint. The
-        colour variant carries the uniform (`wm_operators.cc` binds it the same
-        way), so the bed fades with everything else.
-        """
-        assert "immBindBuiltinProgram(GPU_SHADER_3D_IMAGE_COLOR);" in DRAW
-        assert "immUniformColor3fvAlpha(white, alpha);" in DRAW
-        assert "immBindTexture(\"image\", tex);" in DRAW
-        assert "GPU_SHADER_3D_IMAGE)" not in DRAW, (
-            "The replace-only shader belongs in the cascade; on the bed it would "
-            "make the backdrop un-fadeable."
-        )
-
-    def test_the_header_documents_alpha_as_applying_to_every_layer(self) -> None:
-        assert "every layer" in HEADER
-
-
-class TestTheBedStaysInsideTheSilhouette:
-    def test_the_bed_is_inset_past_the_rounded_corner(self) -> None:
-        """A rounded corner departs from its square by at most 0.293 * radius.
-
-        The bed is a rectangle and the pane is not, so an inset smaller than
-        that would push the bed's corners outside the shape it sits in -- which
-        cannot be seen, because the pane's own tint is already under it and the
-        corner that leaks is a few pixels of someone else's backdrop.
-        """
-        assert "std::min(radius * 0.5f, std::min(float(width), float(height)) * 0.25f)" in DRAW
-
-    def test_the_texture_is_bound_to_the_inset_bed_not_the_silhouette(self) -> None:
-        assert "glass_draw_texture_window(backdrop.texture, &bed," in DRAW
-        assert "draw_roundbox_4fv_ex(&box, tint_top, tint_bottom, 1.0f, nullptr, 0.0f, radius);" in DRAW
+    def test_gpu_resources_are_released_on_interface_shutdown(self):
+        interface = (ED / "interface/interface.cc").read_text()
+        shutdown = interface[interface.index("void exit()") :]
+        assert shutdown.index("mixar_glass_free();") < shutdown.index("resources_free();")
+        assert "mixar_glass_shader_free();" in KIT
+        assert "GPU_shader_free(shader);" in DRAW
 
 
 class TestTheWindowRequestIsPlatformSafe:
@@ -469,7 +349,7 @@ class TestTheWindowRequestIsPlatformSafe:
 
     def test_the_kit_does_not_redefine_the_ghost_symbol(self) -> None:
         assert re.search(
-            r'extern "C" void Mixar_WindowSetBlurBehind\(void \*window_handle, bool enable\);', KIT
+            r'extern "C" bool Mixar_WindowSetBlurBehind\(void \*window_handle, bool enable\);', KIT
         ), "It must be declared with C linkage, or the guarded call links against nothing."
 
     def test_the_other_platforms_report_that_nothing_was_done(self) -> None:

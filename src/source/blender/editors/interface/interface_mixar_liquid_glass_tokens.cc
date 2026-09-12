@@ -86,6 +86,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 26.0f,
         /* specular_alpha*/ 0.10f,
         /* specular_period*/ 6.0f,
+        /* fallback_alpha */ 0.82f,
     },
     /* MIXAR_GLASS_MENU */
     {
@@ -104,6 +105,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 18.0f,
         /* specular_alpha*/ 0.06f,
         /* specular_period*/ 7.0f,
+        /* fallback_alpha */ 0.94f,
     },
     /* MIXAR_GLASS_PANEL — the Parallel Agents card. Its own near-black, barely
      * lifted at the top, and the card's RESTING border green: the running
@@ -127,6 +129,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 22.0f,
         /* specular_alpha*/ 0.06f,
         /* specular_period*/ 8.0f,
+        /* fallback_alpha */ 0.82f,
     },
     /* MIXAR_GLASS_ISLAND — same dark glass as CARD; this row is the window
      * backdrop when a surface paints the island's own chrome, not the card. */
@@ -146,6 +149,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 28.0f,
         /* specular_alpha*/ 0.09f,
         /* specular_period*/ 6.0f,
+        /* fallback_alpha */ 0.82f,
     },
     /* MIXAR_GLASS_PILL — radius clamped to half the short side, i.e. a capsule.
      * The tint is NEUTRAL, not the card's green: the resting capsule is the two
@@ -169,6 +173,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 14.0f,
         /* specular_alpha*/ 0.12f,
         /* specular_period*/ 5.0f,
+        /* fallback_alpha */ 0.74f,
     },
     /* MIXAR_GLASS_CHAT */
     {
@@ -187,6 +192,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 20.0f,
         /* specular_alpha*/ 0.07f,
         /* specular_period*/ 7.0f,
+        /* fallback_alpha */ 0.88f,
     },
     /* MIXAR_GLASS_CHIP — tint, rim and a whisper of gloss; no shadow, no
      * specular, because a chip sits ON a pane and may not cast its own. */
@@ -206,6 +212,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 0.0f,
         /* specular_alpha*/ 0.00f,
         /* specular_period*/ 0.0f,
+        /* fallback_alpha */ 0.90f,
     },
     /* MIXAR_GLASS_MOODBOARD — everything the Mixie moodboard floats over its
      * own canvas: inference nodes, asset cards, the media frame behind an
@@ -213,11 +220,8 @@ const MixarGlassTokens g_glass_tokens[] = {
      * own card grey (the panel and the node card had drifted to two slightly
      * different darks; they share this one now), and the rim is their RESTING
      * border — a SELECTED node brightens it to 0.92 and only the call site
-     * knows which nodes are selected. NO specular: the streak is the one layer
-     * the painter clips with a region-px scissor, and the moodboard draws its
-     * cards through the View2D matrix, so the clip could not be placed; the
-     * bed, gloss, refraction wash and rim all draw through that matrix
-     * correctly. */
+     * knows which nodes are selected. No moving specular: graph navigation
+     * already supplies motion, and its material should remain quiet. */
     {
         /* tint_top      */ {0.105f, 0.105f, 0.110f, 0.86f},
         /* tint_bottom   */ {0.078f, 0.078f, 0.082f, 0.92f},
@@ -234,6 +238,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 0.0f,
         /* specular_alpha*/ 0.00f,
         /* specular_period*/ 0.0f,
+        /* fallback_alpha */ 0.92f,
     },
 };
 
