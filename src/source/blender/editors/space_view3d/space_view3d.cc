@@ -79,6 +79,7 @@
 #include "view3d_agent_panel.hh"
 #include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
+#include "view3d_moodboard_drawer.hh"
 #include "view3d_navigate.hh"
 
 namespace blender {
@@ -256,6 +257,17 @@ static SpaceLink *view3d_create(const ScrArea * /*area*/, const Scene *scene)
   region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
   region->flag = RGN_FLAG_TEMP_REGIONDATA;
 
+  /* Sliding moodboard drawer (Mixar): Zen Mode hosts the whole moodboard
+   * canvas on the right edge, slid in and out by a grip. TOOL_PROPS is in the
+   * View3D region-overlap allowlist, so the drawer floats over the viewport
+   * instead of shrinking it. It polls in only while Zen Mode is active. */
+  region = BKE_area_region_new();
+
+  BLI_addtail(&v3d->regionbase, region);
+  region->regiontype = RGN_TYPE_TOOL_PROPS;
+  region->alignment = RGN_ALIGN_RIGHT;
+  region->flag = RGN_FLAG_TEMP_REGIONDATA;
+
   /* tool shelf */
   region = BKE_area_region_new();
 
@@ -313,10 +325,12 @@ static void view3d_free(SpaceLink *sl)
 }
 
 /* spacetype; init callback */
-static void view3d_init(wmWindowManager * /*wm*/, ScrArea *area)
+static void view3d_init(wmWindowManager *wm, ScrArea *area)
 {
   /* Startup files and user workspaces may predate the Director region. */
   view3d_director_timeline_region_ensure(area);
+  /* Likewise the moodboard drawer. */
+  view3d_moodboard_drawer_region_ensure(wm, area);
 }
 
 static void view3d_exit(wmWindowManager * /*wm*/, ScrArea *area)
@@ -496,6 +510,10 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
 
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(lb));
+  /* Dropbox handlers prepend: register Mixie last so Zen reference media
+   * reach the board before Blender's image-Empty/background handlers. */
+  lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
+  WM_event_add_dropbox_handler(&region->runtime->handlers, lb);
 }
 
 static void view3d_main_region_exit(wmWindowManager *wm, ARegion *region)
@@ -1669,6 +1687,9 @@ void ED_spacetype_view3d()
   st->keymap = [](wmKeyConfig *keyconf) {
     view3d_keymap(keyconf);
     view3d_agent_panel_keymap(keyconf);
+    /* Mixar: the moodboard drawer's grip, bound on the drawer region's own
+     * keymap so it never competes with `view3d.select`. */
+    view3d_moodboard_drawer_keymap(keyconf);
   };
   st->dropboxes = view3d_dropboxes;
   st->gizmos = view3d_widgets;
@@ -1795,6 +1816,12 @@ void ED_spacetype_view3d()
 
   /* QA harness: export the parallel agent cards as targets (Mixar). */
   view3d_agent_panel_qa_targets_register();
+
+  /* Mixar: the Zen Mode sliding moodboard drawer — region, operators,
+   * keymap and QA targets. */
+  view3d_moodboard_drawer_region_register(st.get());
+  view3d_moodboard_drawer_operatortypes();
+  view3d_moodboard_drawer_qa_targets_register();
 
   WM_menutype_add(MEM_new<MenuType>(__func__, ed::geometry::node_group_operator_assets_menu()));
   WM_menutype_add(

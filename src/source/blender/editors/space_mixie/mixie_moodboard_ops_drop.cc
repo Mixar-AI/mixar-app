@@ -9,6 +9,7 @@
  */
 
 #include "mixie_moodboard_ops_common.hh"
+#include "BLI_math_vector_types.hh"
 
 namespace blender::ed::mixie {
 
@@ -31,10 +32,9 @@ static Image *moodboard_media_load(Main *bmain, const char *filepath, ReportList
     return nullptr;
   }
 
-  /* BKE_image_load creates a movie datablock from the extension before it
-   * decodes a frame. Decode frame one now so invalid/audio-only files are
-   * rejected and the moodboard immediately has real preview dimensions. */
-  if (image->source == IMA_SRC_MOVIE) {
+  /* Loading allocates a datablock before decoding. Reject corrupt stills as
+   * well as invalid/audio-only movies before adding an empty board card. */
+  {
     ImageUser iuser{};
     BKE_imageuser_default(&iuser);
     iuser.frames = 0;
@@ -45,10 +45,14 @@ static Image *moodboard_media_load(Main *bmain, const char *filepath, ReportList
     const bool valid = ibuf && ibuf->x > 0 && ibuf->y > 0;
     BKE_image_release_ibuf(image, ibuf, lock);
     if (!valid) {
-      BKE_reportf(reports, RPT_WARNING, "Cannot decode video preview: %s", filepath);
+      BKE_reportf(reports, RPT_WARNING, "Cannot decode media preview: %s", filepath);
       BKE_id_free(bmain, image);
       return nullptr;
     }
+  }
+
+  if (image->source != IMA_SRC_MOVIE) {
+    BKE_image_packfiles(reports, image, BKE_main_blendfile_path(bmain));
   }
 
   return image;
@@ -65,6 +69,7 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
   bool from_drop = RNA_boolean_get(op->ptr, "from_drop");
   float pos_x = RNA_float_get(op->ptr, "position_x");
   float pos_y = RNA_float_get(op->ptr, "position_y");
+  const bool center_on_drop = RNA_boolean_get(op->ptr, "center_on_drop");
 
   std::vector<Image *> media_to_process;
 
@@ -134,6 +139,8 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
 
   int added_count = 0;
   float offset_step = 30.0f; // Offset for stacked images
+  rctf added_bounds;
+  BLI_rctf_init_minmax(&added_bounds);
 
   for (size_t i = 0; i < media_to_process.size(); i++) {
     Image *image = media_to_process[i];
@@ -163,6 +170,18 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
       // Apply offset for multiple images
       float current_x = pos_x + (i * offset_step);
       float current_y = pos_y - (i * offset_step);
+      int width, height;
+      BKE_image_get_size(image, nullptr, &width, &height);
+      const float display_width = MOODBOARD_IMAGE_BASE_SIZE;
+      const float display_height = width > 0 ? display_width * float(height) / float(width) :
+                                              display_width;
+      if (center_on_drop) {
+        current_x = pos_x - display_width * 0.5f;
+        current_y = pos_y - display_height * 0.5f - i * (display_height + offset_step);
+      }
+      BLI_rctf_do_minmax_v(&added_bounds, float2(current_x, current_y));
+      BLI_rctf_do_minmax_v(
+          &added_bounds, float2(current_x + display_width, current_y + display_height));
 
       RNA_property_float_set(&item_ptr, pos_x_prop, current_x);
       RNA_property_float_set(&item_ptr, pos_y_prop, current_y);
@@ -178,6 +197,30 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
 
   if (added_count == 0) {
     return OPERATOR_CANCELLED;
+  }
+
+  const ScrArea *area = CTX_wm_area(C);
+  const WorkSpace *workspace = CTX_wm_workspace(C);
+  if (from_drop && area && area->spacetype == SPACE_VIEW3D && workspace &&
+      STREQ(workspace->id.name + 2, "Zen Mode"))
+  {
+    /* Successful drops reveal the drawer. Never toggle: another reference
+     * arriving while open must keep it open. The drawer clock eases to 1. */
+    PointerRNA wm_ptr = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
+    if (PropertyRNA *target = RNA_struct_find_property(&wm_ptr, "mixar_moodboard_drawer_target")) {
+      RNA_property_int_set(&wm_ptr, target, 1);
+    }
+  }
+
+  if (from_drop) {
+    PointerRNA frame = WM_operator_properties_create("MIXIE_OT_moodboard_ensure_visible");
+    RNA_float_set(&frame, "x", added_bounds.xmin);
+    RNA_float_set(&frame, "y", added_bounds.ymin);
+    RNA_float_set(&frame, "width", BLI_rctf_size_x(&added_bounds));
+    RNA_float_set(&frame, "height", BLI_rctf_size_y(&added_bounds));
+    WM_operator_name_call(
+        C, "MIXIE_OT_moodboard_ensure_visible", wm::OpCallContext::ExecDefault, &frame, nullptr);
+    WM_operator_properties_free(&frame);
   }
 
   /* Trigger redraw */
@@ -246,6 +289,14 @@ void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot)
   RNA_def_float(ot->srna, "position_x", 0.0f, -FLT_MAX, FLT_MAX, "Position X", "X position on the moodboard canvas", -10000.0f, 10000.0f);
   RNA_def_float(ot->srna, "position_y", 0.0f, -FLT_MAX, FLT_MAX, "Position Y", "Y position on the moodboard canvas", -10000.0f, 10000.0f);
   RNA_def_boolean(ot->srna, "from_drop", false, "From Drop", "Whether this was invoked from a drag-drop operation");
+  RNA_def_boolean(ot->srna, "center_on_drop", false, "Center", "Center viewport references in the drawer");
+  /* Drop payloads are one-shot; REGISTER's last-used values must not leak a
+   * previous filepath into a later Image-ID drop or scripted import. */
+  for (const char *name : {"filepath", "image_name", "multi_filepaths", "position_x",
+                           "position_y", "from_drop", "center_on_drop"})
+  {
+    RNA_def_property_flag(RNA_struct_type_find_property(ot->srna, name), PROP_SKIP_SAVE);
+  }
 }
 
 /** \} */

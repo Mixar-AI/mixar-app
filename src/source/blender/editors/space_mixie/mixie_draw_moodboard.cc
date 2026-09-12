@@ -22,6 +22,7 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_canvas.hh"
 
 #include "UI_interface_c.hh"
 
@@ -93,7 +94,9 @@ bool is_rect_in_view(View2D *v2d, float x, float y, float w, float h)
 /** \name View2D Setup for Moodboard
  * \{ */
 
-void mixie_moodboard_region_set_view2d(ARegion *region)
+/* File-local: the drawer's cross-module entry point is
+ * `mixie_moodboard_canvas_draw()`, which rebuilds the view itself. */
+static void mixie_moodboard_region_set_view2d(ARegion *region)
 {
   View2D *v2d = &region->v2d;
 
@@ -342,6 +345,17 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Draw View2D scrollers */
   ui::view2d_scrollers_draw(v2d, nullptr);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Public host bridge
+ * \{ */
+
+void mixie_moodboard_canvas_draw(const bContext *C, ARegion *region)
+{
+  mixie_draw_moodboard_mode(C, region);
 }
 
 /** \} */

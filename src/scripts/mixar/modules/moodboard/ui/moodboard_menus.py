@@ -356,6 +356,7 @@ class MIXIE_MT_moodboard_output_menu(Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.operator_context = 'INVOKE_DEFAULT'
         scene = context.scene
         try:
             from mixar.modules.moodboard.core.node_graph import node_output_type

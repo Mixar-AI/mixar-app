@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
 from mixar.modules.moodboard.core.media_utils import is_still_item
 
@@ -32,7 +33,7 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        if not context.space_data or context.space_data.type != 'MIXIE':
+        if not is_moodboard_context(context):
             return False
         # Require at least one image selected
         scene = context.scene
@@ -168,7 +169,7 @@ class MIXIE_OT_scene_recon_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         sidebar = context.scene.mixie_moodboard_sidebar
@@ -278,7 +279,7 @@ class MIXIE_OT_scene_recon_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         bpy.ops.mixie.scene_recon_generate()

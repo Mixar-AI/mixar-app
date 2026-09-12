@@ -14,6 +14,7 @@ from bpy.types import Operator
 from bpy.props import BoolProperty
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
 
 
@@ -41,7 +42,7 @@ class MIXIE_OT_imagegen_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         self.use_selected_images = True
@@ -160,7 +161,7 @@ class MIXIE_OT_imagegen_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         prompt = context.scene.mixie_imagegen_prompt.strip()

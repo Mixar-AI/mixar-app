@@ -432,7 +432,7 @@ static wmOperatorStatus graph_context_invoke(bContext *C,
   PointerRNA props = WM_operator_properties_create_ptr(menu_type);
   RNA_string_set(&props, "name", "MIXIE_MT_moodboard_context_menu");
   const wmOperatorStatus status = WM_operator_name_call_ptr(
-      C, menu_type, blender::wm::OpCallContext::InvokeRegionWin, &props, event);
+      C, menu_type, blender::wm::OpCallContext::InvokeDefault, &props, event);
   WM_operator_properties_free(&props);
   return status;
 }
