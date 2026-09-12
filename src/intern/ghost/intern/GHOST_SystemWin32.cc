@@ -12,6 +12,7 @@
 
 #include "GHOST_EventDragnDrop.hh"
 #include "GHOST_EventTrackpad.hh"
+#include "GHOST_MixarGlassWin32.hh"
 #include "GHOST_SystemWin32.hh"
 
 #ifndef _WIN32_IE
@@ -3653,31 +3654,12 @@ extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
 extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
-  if (!hwnd) return;
-
-  /* Extend the DWM frame into the entire client area so the DWM
-   * compositor respects per-pixel alpha from the GPU clear colour.
-   * Wherever we render with alpha < 1, the window becomes
-   * semi-transparent (see-through to the desktop / windows behind).
-   * No blur effect — just transparency. */
-  MARGINS margins = {-1, -1, -1, -1};
-  if (!enable) {
-    margins = {0, 0, 0, 0};
+  if (!hwnd) {
+    return;
   }
-  DwmExtendFrameIntoClientArea(hwnd, &margins);
-
-  /* DwmEnableBlurBehindWindow with a 1×1 region tells the DWM "this
-   * window participates in per-pixel alpha compositing" without
-   * adding any visible blur.  The 1×1 region is a well-known trick:
-   * fEnable=TRUE triggers the DWM to look at alpha, and the tiny
-   * region means the actual Gaussian blur is negligible. */
-  HRGN rgn = CreateRectRgn(0, 0, 1, 1);
-  DWM_BLURBEHIND bb = {};
-  bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-  bb.fEnable = enable ? TRUE : FALSE;
-  bb.hRgnBlur = rgn;
-  DwmEnableBlurBehindWindow(hwnd, &bb);
-  DeleteObject(rgn);
+  /* Desktop Acrylic + full-window frost. The 1×1 blur region used to
+   * opt into alpha without a material — that is not liquid glass. */
+  Mixar_Win32GlassSetEnabled(hwnd, enable);
 }
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle)

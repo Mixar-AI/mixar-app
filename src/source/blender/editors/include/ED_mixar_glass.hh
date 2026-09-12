@@ -65,7 +65,7 @@ enum eMixarGlassRole {
   MIXAR_GLASS_MENU,
   /** The viewport agent panel's column and its cards. */
   MIXAR_GLASS_PANEL,
-  /** The agent island's own backdrop, behind its card. */
+  /** The agent island's own backdrop, and Zen topbar / View3D headers. */
   MIXAR_GLASS_ISLAND,
   /** The status pill and its queue badge — smallest radii, neutral tint. */
   MIXAR_GLASS_PILL,
@@ -198,10 +198,11 @@ void mixar_glass_draw(const rcti &rect,
  * re-applied on present while the window is non-opaque. The draw
  * overlay stays `RGBA16Float`. Island region beds clear then REPLACE
  * a wash (`GPU_BLEND_NONE`); dest-over cannot lower dest A=1 and an
- * A=0 fragment does not land on Metal. On Windows it
- * is DWM per-pixel alpha. A pane over such a window still needs the kit's
- * own tint; the painter keeps refraction and the streak off when no GPU
- * backdrop is handed in.
+ * A=0 fragment does not land on Metal. On Windows `Mixar_WindowSetBlurBehind`
+ * installs Desktop Acrylic (Win11) plus a full-window DWM blur-behind, and
+ * asks DWM to honour the redirection bitmap's alpha. A pane over such a
+ * window still needs the kit's own tint; the painter keeps refraction and
+ * the streak off when no GPU backdrop is handed in.
  *
  * \return true if the platform acted on the request.
  */

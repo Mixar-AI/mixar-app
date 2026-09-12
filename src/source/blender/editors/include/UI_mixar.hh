@@ -10,7 +10,10 @@
 #include "UI_mixar_types.hh"
 #include <cstdint>
 #include <string>
+struct bContext;
+
 namespace blender {
+struct ARegion;
 struct uiWidgetColors;
 }
 
@@ -64,4 +67,12 @@ inline void mixar_label_center(
 }
 void mixar_button_tooltip_owned(Button *button, const char *text);
 void mixar_button_lit_set(Button *button, bool lit);
+/** True when the context workspace is Mixar's dedicated Zen Mode tab. */
+bool mixar_workspace_is_zen(const bContext *C);
+/**
+ * Paint the Zen topbar / View3D header as the family's ISLAND pane instead
+ * of the theme header slab. Returns true when the caller must skip
+ * `ED_region_clear` — dest-over cannot lower an opaque theme clear.
+ */
+bool mixar_zen_header_clear(const bContext *C, const ARegion *region);
 }  // namespace blender::ui

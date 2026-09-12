@@ -132,8 +132,8 @@ struct DirectorViewState;
 #define CINEMA_FONT_TITLE 15.0f /* Dock "Duration". */
 
 /* Palette. */
-#define CINEMA_COL_CARD_TOP {0.133f, 0.137f, 0.137f, 0.96f}    /* #222323 */
-#define CINEMA_COL_CARD_BOTTOM {0.043f, 0.043f, 0.043f, 0.96f} /* #0B0B0B */
+#define CINEMA_COL_CARD_TOP {0.133f, 0.137f, 0.137f, 0.96f}    /* #222323 — tracks, not card beds */
+#define CINEMA_COL_CARD_BOTTOM {0.043f, 0.043f, 0.043f, 0.96f} /* #0B0B0B — tracks, not card beds */
 #define CINEMA_COL_ROW_TOP {0.345f, 0.345f, 0.345f, 1.0f}      /* #585858 */
 #define CINEMA_COL_ROW_BOTTOM {0.141f, 0.141f, 0.141f, 1.0f}   /* #242424 */
 #define CINEMA_COL_LABEL {0.502f, 0.502f, 0.502f, 1.0f}        /* #808080 */
@@ -226,8 +226,11 @@ int cinema_list_window_start(int count, int active);
  */
 rctf cinema_design_rect(const ARegion *region, float x, float y, float w, float h);
 
-/** Vertically graded rounded panel. */
+/** Vertically graded rounded panel — rows, tracks and chips stay flat. */
 void cinema_panel(const rctf &rect, float radius, const float top[4], const float bottom[4]);
+
+/** Floating card / dock bed: the shared CARD pane, same on macOS and Windows. */
+void cinema_glass_panel(const rctf &rect, float radius);
 
 /** Flat rounded fill. */
 void cinema_fill(const rctf &rect, float radius, const float color[4]);

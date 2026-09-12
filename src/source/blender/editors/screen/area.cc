@@ -58,6 +58,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
 
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
@@ -4018,8 +4019,11 @@ static void region_draw_blocks_in_view2d(const bContext *C, const ARegion *regio
 
 void ED_region_header_draw(const bContext *C, ARegion *region)
 {
-  /* clear */
-  ED_region_clear(C, region, region_background_color_id(C, region));
+  /* Zen chrome is the family's ISLAND pane. An opaque theme clear would
+   * bury it; dest-over cannot lower dest A=1. */
+  if (!ui::mixar_zen_header_clear(C, region)) {
+    ED_region_clear(C, region, region_background_color_id(C, region));
+  }
 
   if (GPU_type_matches_ex(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OPENSOURCE, GPU_BACKEND_OPENGL))
   {
@@ -4038,8 +4042,11 @@ void ED_region_header_draw_with_button_sections(const bContext *C,
   const ThemeColorID bgcolorid = region_background_color_id(C, region);
 
   /* Clear and draw button sections background when using region overlap. Otherwise clear using the
-   * background color like normal. */
-  if (region->overlap) {
+   * background color like normal. Zen chrome is the ISLAND pane. */
+  if (ui::mixar_zen_header_clear(C, region)) {
+    /* Glass already replaced the theme slab. */
+  }
+  else if (region->overlap) {
     region_clear_fully_transparent(C);
     ui::region_button_sections_draw(region, bgcolorid, align);
   }

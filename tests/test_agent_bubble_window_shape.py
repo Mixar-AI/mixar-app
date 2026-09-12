@@ -37,6 +37,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN32 = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemWin32.cc"
+WIN32_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassWin32.cc"
+GHOST_CMAKE = ROOT / "src" / "intern" / "ghost" / "CMakeLists.txt"
 COCOA = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemCocoa.mm"
 COCOA_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassCocoa.mm"
 EDITOR = ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
@@ -174,6 +176,39 @@ class TestWin32PerPixelAlpha:
         )
 
 
+class TestWin32LiquidGlass:
+    """Per-pixel alpha is not frost. The 1×1 blur region only opted DWM
+    into looking at alpha; the material has to be Acrylic (or a full-window
+    blur on older builds) and DWM has to honour the GPU's wash.
+    """
+
+    def test_blur_behind_installs_win32_glass(self, win32: str) -> None:
+        body = _fn_body(
+            win32, 'extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
+        )
+        assert "Mixar_Win32GlassSetEnabled" in body
+        assert "CreateRectRgn(0, 0, 1, 1)" not in body, (
+            "A 1×1 blur region is the old alpha-only trick — not glass."
+        )
+
+    def test_acrylic_is_the_material_not_mica(self) -> None:
+        glass = _read(WIN32_GLASS)
+        assert "Mixar_Win32GlassSetEnabled" in glass
+        assert "kDwmwaSystemBackdropType = 38" in glass
+        assert "kDwmsbtTransientWindow = 3" in glass
+        assert "kDwmsbtNone = 1" in glass
+        assert "kDwmwaRedirectionBitmapAlpha = 39" in glass
+        assert "kDwmwaUseImmersiveDarkMode = 20" in glass
+        assert "DwmExtendFrameIntoClientArea" in glass
+        assert "DWM_BB_ENABLE" in glass
+        assert "bb.hRgnBlur = nullptr" in glass
+        assert "CreateRectRgn(0, 0, 1, 1)" not in glass
+        assert "DWMSBT_MAINWINDOW" not in glass
+        cmake = _read(GHOST_CMAKE)
+        assert "intern/GHOST_MixarGlassWin32.cc" in cmake
+        assert "intern/GHOST_MixarGlassWin32.hh" in cmake
+
+
 class TestCrossPlatformContract:
     """The same call means the same thing on both platforms."""
 
@@ -238,10 +273,10 @@ class TestIslandWindowTranslucency:
     Where the pill is shaped by DWM honouring its client alpha, the island is
     one window painting several regions, so its route out is the kit's
     ``mixar_glass_window_apply_translucency`` -- a WINDOW background request
-    (per-pixel alpha, plus a theme-frame sibling frost on macOS) and a
-    defined no-op returning false off macOS/Windows. The return value is the
-    whole point of calling it rather than an ``#ifdef``: it says whether the
-    platform acted.
+    (per-pixel alpha, plus a theme-frame sibling frost on macOS and Desktop
+    Acrylic on Windows) and a defined no-op returning false off
+    macOS/Windows. The return value is the whole point of calling it rather
+    than an ``#ifdef``: it says whether the platform acted.
 
     The beds then decide what to do with that. They keep covering every pixel
     of every region -- the stale-buffer guarantee the pill's bed exists for is

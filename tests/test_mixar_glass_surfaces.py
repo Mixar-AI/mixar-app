@@ -120,6 +120,8 @@ PANE_ENTRY_POINTS = (
 PANE_CALLS = {
     "interface/interface_mixar_liquid_glass_draw.cc": (),
     "interface/interface_mixar_topbar.cc": ("MIXAR_GLASS_PILL",),
+    "interface/interface_mixar_zen_chrome.cc": ("MIXAR_GLASS_ISLAND",),
+    "space_view3d/view3d_director_cinema_paint.cc": ("MIXAR_GLASS_CARD",),
     "interface/interface_mixar_card_button.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_mixar_profile_card_draw.cc": ("MIXAR_GLASS_CHIP",),
     "interface/interface_mixar_cinema_row.cc": ("MIXAR_GLASS_CHIP",),
@@ -135,10 +137,9 @@ PANE_CALLS = {
     "space_mixie_chat/mixie_chat_messages_content.cc": (),
 }
 
-# The family declares eight roles; six have a surface. The rest are the queue.
+# The family declares eight roles; seven have a surface. MENU is the queue.
 UNPAINTED_ROLES = (
     "MIXAR_GLASS_MENU",
-    "MIXAR_GLASS_ISLAND",
 )
 
 # The kit: the header that enumerates the roles, the table that gives each a
@@ -812,12 +813,12 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
             )
 
     def test_the_unpainted_roles_stay_inside_the_kit(self) -> None:
-        """Two roles are declared ahead of their surface.
+        """MENU is declared ahead of its surface.
 
-        Neither the viewport's context menus nor the island's own window
-        backdrop has a pane yet, so they may appear only in the header that
-        enumerates them and the table that gives each a row — a role painted
-        from anywhere else is a conversion that did not stand on its own.
+        Viewport context menus have no pane yet, so that role may appear
+        only in the header that enumerates it and the table that gives it a
+        row — a role painted from anywhere else is a conversion that did
+        not stand on its own.
         """
         for role in UNPAINTED_ROLES:
             holders = {relpath for relpath, src in SOURCES.items() if role in src}
@@ -1063,5 +1064,54 @@ class TestTheIslandCardIsAPane:
             assert "AGENT_CARD_GRAD_" not in src
             assert "AGENT_COL_CARD_" not in src
         assert "fill_round_gradient(&layout->card_fill" not in _code(AGENT_DRAW)
+
+
+class TestZenChromeUsesTheFamily:
+    """Zen mode chrome is the same kit on macOS and Windows.
+
+    The island/pill frost through GHOST. Cinema cards float over the
+    viewport, and the Zen topbar / View3D header used to be theme slabs.
+    Both now take a family pane so the workspace reads as one material.
+    Rows, tracks and chips stay flat — a pane there is a groove that
+    vanished.
+    """
+
+    def test_cinema_cards_are_the_card_pane(self) -> None:
+        paint = (ED / "space_view3d" / "view3d_director_cinema_paint.cc").read_text(
+            encoding="utf-8"
+        )
+        body = _fn_body(paint, "void cinema_glass_panel(")
+        assert "style.role = ui::MIXAR_GLASS_CARD;" in body
+        assert "mixar_glass_draw(pane, style);" in body
+        assert "style.draw_specular = false;" in body
+        left = (ED / "space_view3d" / "view3d_director_cinema_left.cc").read_text(
+            encoding="utf-8"
+        )
+        right = (ED / "space_view3d" / "view3d_director_cinema_right.cc").read_text(
+            encoding="utf-8"
+        )
+        dock = (ED / "space_view3d" / "view3d_director_cinema_dock.cc").read_text(
+            encoding="utf-8"
+        )
+        minimap = (ED / "space_view3d" / "view3d_director_minimap_draw.cc").read_text(
+            encoding="utf-8"
+        )
+        assert left.count("cinema_glass_panel(card") == 3
+        assert "cinema_glass_panel(cameras," in right
+        assert "cinema_glass_panel(panel," in dock
+        assert "cinema_glass_panel(card," in minimap
+        assert "cinema_panel(row," in left
+        assert "cinema_panel(track," in right
+
+    def test_zen_header_is_the_island_pane(self) -> None:
+        chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
+        assert 'STREQ(workspace->id.name + 2, "Zen Mode")' in chrome
+        assert "style.role = MIXAR_GLASS_ISLAND;" in chrome
+        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 0.20f)" in chrome
+        assert "mixar_glass_draw(pane, style);" in chrome
+        area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
+        assert "mixar_zen_header_clear(C, region)" in area
+        cmake = (IFACE / "CMakeLists.txt").read_text(encoding="utf-8")
+        assert "interface_mixar_zen_chrome.cc" in cmake
 
 

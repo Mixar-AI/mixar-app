@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Mixar overlay of upstream intern/ghost/CMakeLists.txt (pin v5.2.0). Mixar
-# additions are the Cocoa helpers in the APPLE source list and the
-# GHOST_ContextMTL.mm overlay (present blit keeps framebuffer alpha).
-# Re-diff against upstream after every pin bump.
+# additions are the Cocoa / Win32 glass helpers and the GHOST_ContextMTL.mm
+# overlay (present blit keeps framebuffer alpha). Re-diff against upstream
+# after every pin bump.
 
 set(INC
   PUBLIC .
@@ -444,12 +444,14 @@ elseif(WIN32)
     intern/GHOST_ContextD3D.cc
     intern/GHOST_DropTargetWin32.cc
     intern/GHOST_SystemWin32.cc
+    intern/GHOST_MixarGlassWin32.cc
     intern/GHOST_TrackpadWin32.cc
     intern/GHOST_WindowWin32.cc
     intern/GHOST_Wintab.cc
 
     intern/GHOST_ContextD3D.hh
     intern/GHOST_DropTargetWin32.hh
+    intern/GHOST_MixarGlassWin32.hh
     intern/GHOST_SystemWin32.hh
     intern/GHOST_TaskbarWin32.hh
     intern/GHOST_TrackpadWin32.hh

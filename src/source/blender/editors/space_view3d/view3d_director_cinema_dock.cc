@@ -337,14 +337,12 @@ float cinema_dock_control_height()
 void cinema_draw_dock_panel(const ARegion *region)
 {
   const float u = cinema_unit();
-  const float top[4] = {0.110f, 0.110f, 0.110f, 1.0f};
-  const float bottom[4] = {0.070f, 0.070f, 0.070f, 1.0f};
-  const float line[4] = {0.180f, 0.180f, 0.180f, 1.0f};
+  const float line[4] = {0.180f, 0.180f, 0.180f, 0.22f};
   rctf panel = {float(region->winx) * 0.0f + 8.0f * u,
                 float(region->winx) - 8.0f * u,
                 6.0f * u,
                 float(region->winy) - 6.0f * u};
-  cinema_panel(panel, CINEMA_PANEL_RADIUS * u, top, bottom);
+  cinema_glass_panel(panel, CINEMA_PANEL_RADIUS * u);
   cinema_outline(panel, CINEMA_PANEL_RADIUS * u, line, u);
 }
 
