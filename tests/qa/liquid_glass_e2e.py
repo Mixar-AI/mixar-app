@@ -61,6 +61,7 @@ def run(qa):
         expanded = qa.step('request_native_expanded', _native, qa, out / 'expanded')
         qa.step('minimise_island', qa.eval, "result = str(bpy.ops.mixar.bubble_minimise())")
         qa.step('pill_animation_settled', _settle_animation, qa)
+        qa.step('resting_cat_target', qa.wait, "bool(drv.find(surface='pill_cat'))", timeout=5)
         qa.step('snap_pill', qa.eval,
                 "import qa_vision\n"
                 "pill = next(w for w in bpy.context.window_manager.windows "

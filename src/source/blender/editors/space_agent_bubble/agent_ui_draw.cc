@@ -30,7 +30,6 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
-#include "UI_interface_icons.hh"
 
 #include "ED_mixar_glass.hh"
 
@@ -38,6 +37,7 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_pill_cat.hh"
 #include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -657,12 +657,13 @@ void agent_ui_draw_status_pill(const float width,
   }
 
   /* ELONGATED resting pill (aspect says which window shape this is): the
-   * minimised bubble's whole identity — dim last-prompt preview + the Mixar
-   * logo on a green gradient chip (Frame 1533210248.svg). When working
-   * (busy or active queue jobs), it shows a glowing green pulse animation,
-   * animated activity dot, and moving progress dots on the status label.
-   * Clicking it expands the island; dragging it moves it (the pill
-   * gesture in agent_bubble/ui/operators/bubble_header_drag_op.py). */
+   * minimised bubble's whole identity — dim last-prompt preview + Mixie the
+   * cat on a green gradient chip (Frame 1533210248.svg, mascot in
+   * agent_ui_pill_cat.cc). When working (busy or active queue jobs), it
+   * shows a glowing green pulse animation, animated activity dot, and
+   * moving progress dots on the status label. Clicking it expands the
+   * island; dragging it moves it (the pill gesture in
+   * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
     const float u = h / 85.0f; /* design pill is 85 artboard units tall */
     const bool is_working = state->status_busy || (state->queue_count > 0);
@@ -754,16 +755,7 @@ void agent_ui_draw_status_pill(const float width,
       outline_round(&chip, chip_r, chip_rim);
     }
 
-    const float icon_edge = 45.0f * u;
-    ui::icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
-                    BLI_rctf_cent_y(&chip) - icon_edge * 0.5f,
-                    ICON_MIXAR_ICON,
-                    /*aspect=*/16.0f / icon_edge, /* icons draw at 16/aspect px */
-                    /*alpha=*/1.0f,
-                    /*desaturate=*/0.0f,
-                    /*mono_color=*/nullptr,
-                    /*mono_border=*/false,
-                    /*text_overlay=*/nullptr);
+    agent_ui_draw_pill_cat(&chip, now, is_working);
 
     /* Preview line: newest user prompt, dim, ellipsised into the space left
      * of the chip. */
@@ -862,6 +854,8 @@ void agent_ui_draw_status_pill(const float width,
     GPU_blend(GPU_BLEND_NONE);
     return;
   }
+
+  agent_ui_pill_cat_clear();
 
   const float accent[4] = AGENT_COL_ACCENT;
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};

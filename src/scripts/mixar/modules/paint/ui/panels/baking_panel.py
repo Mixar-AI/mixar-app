@@ -17,12 +17,16 @@ from ...core.node.get_nodes import get_layer_source
 
 
 class BAKING_HT_header(Header):
-    """Header for the Baking space (hosts the space-switch dropdown)."""
+    """Title bar for the Baking space.
+
+    No ``template_header()``: the space is hidden from the Editor Type
+    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
+    """
     bl_space_type = 'BAKING'
 
     def draw(self, context):
         layout = self.layout
-        layout.template_header()
+        layout.label(text="Baking")
 
 
 def is_baked_to_layer_type(layer, mp):

@@ -74,7 +74,9 @@ def test_working_state_draws_animated_glow_and_rim():
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
     assert "if (is_working)" in elongated
-    assert "outline_round(&glow," in elongated
+    assert "outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);" in elongated
+    assert "glow.xmin += glow_pad;" in elongated
+    assert "glow.xmax -= glow_pad;" in elongated
     assert "rim_work" in elongated
     assert "outline_round(&pill, h * 0.5f, rim_work);" in elongated
     # The resting rim lives in the glass kit's PILL row, not at the call site.
@@ -129,18 +131,18 @@ def test_working_state_draws_activity_dot_and_animated_dots():
 
 def test_pill_header_region_tags_continuous_redraw_when_working():
     """In space_agent_bubble.cc, the pill header region tags redraw when
-    Mixie is busy or has queue jobs, keeping animation fluid."""
+    the elongated cat is showing, or Mixie is busy / has queue jobs."""
     draw_start = BUBBLE_CC.index("void agent_bubble_header_region_draw")
     draw_end = BUBBLE_CC.index("agent_bubble_header_region_draw_overlay", draw_start)
     draw_body = BUBBLE_CC[draw_start:draw_end]
 
-    assert "if (state.status_busy || state.queue_count > 0)" in draw_body
+    assert "pill_w > pill_h * 4.0f || state.status_busy || state.queue_count > 0" in draw_body
     assert "ED_region_tag_redraw(region);" in draw_body
 
 
 def test_hover_tick_pumps_pill_redraw_when_minimised_and_working():
-    """The hover tick watchdog ensures the minimized pill window is tagged
-    for redraw while working even if the main draw loop goes idle."""
+    """The hover tick watchdog tags the minimized pill so Mixie's cat (and
+    the working glow) keep moving even if the main draw loop goes idle."""
     assert "static void agent_bubble_pill_tag_redraw(wmWindowManager *wm)" in BUBBLE_CC
 
     tick_start = BUBBLE_CC.index("mixar_bubble_hover_tick_exec")
@@ -151,7 +153,7 @@ def test_hover_tick_pumps_pill_redraw_when_minimised_and_working():
     min_body = tick_body[min_start : min_start + 400]
 
     assert "agent_bubble_pill_tag_redraw" in min_body
-    assert "state.status_busy || state.queue_count > 0" in min_body
+    assert "state.status_busy" not in min_body
 
 
 def test_agent_ui_state_flags_busy_on_session_states():

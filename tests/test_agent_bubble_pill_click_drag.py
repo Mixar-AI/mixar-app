@@ -81,8 +81,8 @@ def test_hover_tick_still_collapses_the_open_island():
 
 
 def test_hover_tick_keeps_the_working_pill_animated():
-    """The tick's remaining job while minimised: pump the pill redraw so the
-    working animation runs while the main draw loop idles."""
+    """The tick's remaining job while minimised: pump the pill redraw so
+    Mixie's cat (and the working glow) run while the main draw loop idles."""
     body = _hover_tick()
     start = body.index("if (g_bubble_minimised)")
     minimised_branch = body[start : start + 400]
