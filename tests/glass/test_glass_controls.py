@@ -153,7 +153,7 @@ class TestTheCardButtonsArePanes:
             )
         ]
         assert re.search(
-            r"if \(is_hover\) \{\s*mixar_card_glass_round\(&box, rad, MIXAR_GLASS_CHIP\);",
+            r"if \(motion.hover > 0.0f\) \{\s*mixar_card_glass_round\(&box, rad, MIXAR_GLASS_CHIP, motion.hover\);",
             _code(ghost),
         ), "the GhostButton paints at rest"
 
@@ -161,7 +161,7 @@ class TestTheCardButtonsArePanes:
         """Its bed carries no colour, so hover must show in the pane's alpha."""
         switch = self._switch()
         assert "mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline)" in switch
-        assert "MIXAR_GLASS_CHIP, is_hover ? 1.0f : 0.85f" in switch, (
+        assert "MIXAR_GLASS_CHIP, hover_alpha(0.85f, 1.0f)" in switch, (
             "the plain card button lost its only hover cue with the grey bed"
         )
 

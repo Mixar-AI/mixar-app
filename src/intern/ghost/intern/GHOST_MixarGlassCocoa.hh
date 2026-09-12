@@ -6,8 +6,7 @@
  * \ingroup GHOST
  *
  * Mixar: GHOST-owned macOS glass behind a GPU window. See
- * `GHOST_MixarGlassCocoa.mm` for why the frost is a sibling of the Metal
- * view and never its parent.
+ * `GHOST_MixarGlassCocoa.mm` for the retained Metal content-view lifecycle.
  */
 
 #pragma once

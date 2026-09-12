@@ -854,6 +854,34 @@ extern "C" bool Mixar_WindowIsVisible(void *window_handle)
   }
 }
 
+extern "C" bool Mixar_WindowCanAnimate(void *window_handle)
+{
+  /* The caller must first resolve this handle from a live wmWindow. Animation
+   * eligibility is stricter than visibility used by the normal draw loop. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowCocoa *cocoa_window = static_cast<GHOST_WindowCocoa *>(window_handle);
+  NSWindow *win = (NSWindow *)cocoa_window->getViewWindow();
+  if (win == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    if ([NSApp isHidden]) {
+      return false;
+    }
+    /* Modal suppression leaves the dock ordered in with zero alpha. Check
+     * parent windows too: an owned dock can retain its own visible flag while
+     * the host is miniaturized. Focus alone must not stop a visible mascot. */
+    for (NSWindow *current = win; current != nil; current = [current parentWindow]) {
+      if (![current isVisible] || [current isMiniaturized] || [current alphaValue] <= 0.01) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
 
 /* Show an NSWindow that was previously orderOut-ed and make it key.
  * Startup/modal code that must not affect focus uses
@@ -1463,16 +1491,25 @@ extern "C" void Mixar_WindowFloatIn(void *window_handle, int rise_pt, float dura
     NSView *content = win.contentView;
     CALayer *layer = content.layer;
     if (layer != nil) {
+      /* A reversal starts at the on-screen pose, before replacing its animation. */
+      const CFTimeInterval now = [layer convertTime:CACurrentMediaTime() fromLayer:nil];
+      CAAnimation *previous = [layer animationForKey:@"mixar_float"];
+      CALayer *presentation = (CALayer *)layer.presentationLayer;
+      const bool reversing = previous != nil && presentation != nil &&
+                             now < previous.beginTime + previous.duration;
+      const CGFloat from = reversing ? presentation.transform.m42 : -(CGFloat)rise_pt;
       [layer removeAnimationForKey:@"mixar_float"];
       CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
-      slide.fromValue = @(-(CGFloat)rise_pt);
+      slide.fromValue = @(from);
       slide.toValue = @(0.0);
+      slide.beginTime = now;
       slide.duration = (CFTimeInterval)duration;
       slide.timingFunction = mixar_ease_out_quint();
       [layer addAnimation:slide forKey:@"mixar_float"];
       layer.transform = CATransform3DIdentity;
     }
-    [win setAlphaValue:0.0];
+    /* Restore initialized alpha only for a fully hidden window. Keep the live
+     * alpha when a collapse is reversed instead of flashing invisible. */
     [NSAnimationContext beginGrouping];
     [[NSAnimationContext currentContext] setDuration:(CGFloat)duration * 0.7];
     [[NSAnimationContext currentContext] setTimingFunction:mixar_ease_out_quint()];
@@ -1498,10 +1535,13 @@ extern "C" void Mixar_WindowFloatOut(void *window_handle, int sink_pt, float dur
     NSView *content = win.contentView;
     CALayer *layer = content.layer;
     if (layer != nil) {
+      CALayer *presentation = (CALayer *)layer.presentationLayer;
+      const CGFloat from = presentation != nil ? presentation.transform.m42 : 0.0;
       [layer removeAnimationForKey:@"mixar_float"];
       CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"transform.translation.y"];
-      slide.fromValue = @(0.0);
+      slide.fromValue = @(from);
       slide.toValue = @(-(CGFloat)sink_pt);
+      slide.beginTime = [layer convertTime:CACurrentMediaTime() fromLayer:nil];
       slide.duration = (CFTimeInterval)duration;
       slide.timingFunction = mixar_ease_out_quint();
       /* Hold the end pose until the orderOut lands — otherwise the content
@@ -1967,7 +2007,7 @@ extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
   }
 
   @autoreleasepool {
-    /* Sibling frost in the theme frame + this window's Metal alpha. See
+    /* Native glass container + this window's Metal alpha. See
      * GHOST_MixarGlassCocoa.mm — do not parent a frost view under the
      * GPU surface or swap contentView from here. */
     return Mixar_CocoaGlassSetEnabled(win, enable);

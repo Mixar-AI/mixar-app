@@ -152,22 +152,29 @@ def get_moodboard_viewport_center() -> tuple[float, float]:
     Return the canvas coordinates at the centre of the currently visible
     moodboard viewport.
 
-    Iterates over all windows/screens looking for a MIXIE area that has a
-    WINDOW region with a view2d.  Converts the pixel centre of that region to
-    canvas (view) coordinates and returns them.
+    Iterates over all windows/screens looking for a MIXIE WINDOW region or the
+    Zen VIEW_3D drawer (`TOOL_PROPS`) once it is open. Converts the pixel
+    centre of that region to canvas (view) coordinates and returns them.
 
     Falls back to (0.0, 0.0) when no suitable region can be found (e.g. when
     called from a background thread before any MIXIE area has been opened).
     """
     try:
-        for window in bpy.context.window_manager.windows:
+        wm = bpy.context.window_manager
+        drawer_live = float(getattr(wm, "mixar_moodboard_drawer_amount", 0.0)) >= 0.98
+        for window in wm.windows:
             for area in window.screen.areas:
-                if area.type != 'MIXIE':
+                want = None
+                if area.type == "MIXIE":
+                    want = "WINDOW"
+                elif drawer_live and area.type == "VIEW_3D":
+                    want = "TOOL_PROPS"
+                if want is None:
                     continue
                 for region in area.regions:
-                    if region.type != 'WINDOW':
+                    if region.type != want or region.width <= 1:
                         continue
-                    if not hasattr(region, 'view2d'):
+                    if not hasattr(region, "view2d"):
                         continue
                     view2d = region.view2d
                     cx = region.width / 2.0

@@ -10,9 +10,8 @@
 #include "UI_mixar_types.hh"
 #include <cstdint>
 #include <string>
-struct bContext;
-
 namespace blender {
+struct bContext;
 struct ARegion;
 struct uiWidgetColors;
 }

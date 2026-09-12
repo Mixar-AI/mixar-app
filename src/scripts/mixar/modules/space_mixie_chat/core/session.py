@@ -91,6 +91,10 @@ class SessionManager:
         old_str = scene.mixie_chat_state
         new_str = state.value.upper()
 
+        if old_str != new_str or state != SessionState.BUSY:
+            from .cat_activity import reset_for_state
+            reset_for_state(scene, new_str)
+
         if old_str == new_str:
             return
 
@@ -193,6 +197,8 @@ class SessionManager:
             logger.warning("No scene for start_session")
             return ""
 
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if not scene.mixie_session_id:
             scene.mixie_session_id = str(uuid.uuid4())
             logger.debug(f"NEW SESSION [{scene.name}]: session_id={scene.mixie_session_id[:8]}")
@@ -249,6 +255,8 @@ class SessionManager:
         Args:
             scene: bpy.types.Scene instance
         """
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if scene and hasattr(scene, 'mixie_session_id'):
             scene.mixie_session_id = ""
         logger.info("SESSION ID CLEARED: next message will create new session")
@@ -260,6 +268,8 @@ class SessionManager:
         Args:
             scene: bpy.types.Scene instance
         """
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if scene and hasattr(scene, 'mixie_session_id'):
             scene.mixie_session_id = ""
         SessionManager.set_state(scene, SessionState.IDLE)

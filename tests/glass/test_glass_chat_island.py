@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from .surface_contracts import (
+    AGENT_CONTROLS,
     AGENT_DRAW,
     AGENT_LAYOUT,
     AGENT_LAYOUT_HH,
@@ -224,7 +225,7 @@ class TestTheIslandCardIsAPane:
         """The strip sits under tab pills and the panel under the category
         panes' own opaque washes, so a pane beneath either is paid for and
         never seen."""
-        strip = _code(_fn_body(AGENT_DRAW, "void draw_tab_strip("))
+        strip = _code(_fn_body(AGENT_CONTROLS, "void agent_ui_draw_tab_strip("))
         assert "fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);" in strip
         assert "if (!agent_bubble_island_bed_is_transparent())" in strip
         island = self._island()

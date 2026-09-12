@@ -45,8 +45,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
-#include "view3d_agent_panel.hh"
 #include "../space_agent_bubble/agent_ui_pill_cat.hh"
+#include "view3d_agent_panel.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -332,10 +332,8 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
      * `0, 0, winx, winy`) — offsetting by `winrct` puts the box outside that
      * framebuffer and clips every card away, with nothing drawn and no error. */
     GPU_scissor_get(scissor_prev);
-    GPU_scissor(column.xmin,
-                column.ymin,
-                BLI_rcti_size_x(&column) + 1,
-                BLI_rcti_size_y(&column) + 1);
+    GPU_scissor(
+        column.xmin, column.ymin, BLI_rcti_size_x(&column) + 1, BLI_rcti_size_y(&column) + 1);
   }
 
   const double now = BLI_time_now_seconds();
@@ -349,8 +347,7 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     }
     /* A finished card fades as it leaves, so it does not simply blink out at
      * the column edge. */
-    const float alpha = view3d_agent_panel_reveal(runtime, i) *
-                        (1.0f - view3d_agent_panel_exit_progress(card));
+    const float alpha = 1.0f - card.slide.value;
     draw_card(card, alpha, now);
   }
 

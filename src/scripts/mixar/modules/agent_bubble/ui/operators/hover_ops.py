@@ -8,8 +8,8 @@
 The resting state of the chat is the elongated pill. Moving the cursor off the
 open island collapses it back to the pill; the pill itself opens on CLICK, not
 on hover (``bubble_header_drag_op.py``'s pill gesture), so this pump only ever
-takes the island away. While the pill is showing it also keeps Mixie's cat
-animating. All policy (hit-testing in native screen space, grace
+takes the island away. Native one-shot scheduling animates the cat; this
+slow heartbeat only re-arms it after an OS visibility change. All policy (hit-testing in native screen space, grace
 ticks, cooldowns, the open-popup guard) lives in the C++ operator
 ``mixar.bubble_hover_tick`` — this module only provides the heartbeat, because
 ``bpy.app.timers`` is the one sanctioned way to poll from Python without

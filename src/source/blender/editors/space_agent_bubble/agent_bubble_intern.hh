@@ -38,6 +38,11 @@ bool agent_bubble_island_bed_is_transparent();
 void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region);
 
+void agent_bubble_composer_focus_request(bContext *C, void *ghost_window);
+void agent_bubble_composer_focus_tick(bContext *C, void *ghost_window, bool minimised);
+void agent_bubble_composer_focus_if_pending(bContext *C);
+bool agent_bubble_composer_has_focused_draft(const bContext *C, void *ghost_window);
+
 /** \} */
 
 /* Main + footer regions reuse mixie chat's custom-drawn callbacks

@@ -274,7 +274,7 @@ class TestIslandWindowTranslucency:
     Where the pill is shaped by DWM honouring its client alpha, the island is
     one window painting several regions, so its route out is the kit's
     ``mixar_glass_window_apply_translucency`` -- a WINDOW background request
-    (per-pixel alpha, plus a theme-frame sibling frost on macOS and Desktop
+    (per-pixel alpha, plus a native content-view frost on macOS and Desktop
     Acrylic on Windows) and a defined no-op returning false off
     macOS/Windows. The return value is the whole point of calling it rather
     than an ``#ifdef``: it says whether the platform acted.
@@ -363,48 +363,32 @@ class TestIslandWindowTranslucency:
         )
         assert src.count(call) == 2, "only creation and repair queue native setup"
 
-    def test_macos_frost_is_a_theme_frame_sibling_not_a_metal_parent(self) -> None:
-        """AppKit frost belongs behind CocoaMetalView, never under it.
-
-        Parenting a frost view under GHOST's Metal surface, or swapping
-        ``contentView``, tears the GPU context. The installer adds the
-        glass as ``NSWindowBelow`` the host and only marks that window's
-        ``CAMetalLayer`` non-opaque.
-        """
-        cocoa = _read(COCOA)
-        body = cocoa[
-            cocoa.index("extern \"C\" bool Mixar_WindowSetBlurBehind(") : cocoa.index(
-                "extern \"C\" void Mixar_WindowSetChromeless("
-            )
-        ]
-        assert "Mixar_CocoaGlassSetEnabled(win, enable)" in body
-        assert "setContentView" not in body
-        assert "NSView.tag" not in body
-
+    def test_macos_glass_embeds_the_retained_metal_view(self) -> None:
+        """The real GPU view is the glass content, preserving its GHOST context."""
         glass = _read(COCOA_GLASS)
-        assert "NSWindowBelow relativeTo:host" in glass
-        assert "mixar_give_glass_a_lens" in glass
-        assert "MixarGlassLensView" in glass
-        assert "setContentView:" in glass
-        assert "setContentView:host" not in glass
-        assert "[win setContentView" not in glass
-        assert "NSView.tag" not in glass and "view.tag" not in glass
+        assert "Mixar_CocoaGlassSetEnabled(win, enable)" in _read(COCOA)
+        assert "kMixarMetalHostKey, host, OBJC_ASSOCIATION_RETAIN_NONATOMIC" in glass
+        assert "win.contentView = glass;" in glass
+        assert "objc_msgSend)(glass, setter, host)" in glass
+        assert "[glass addSubview:host]" in glass  # pre-Tahoe fallback
+        assert "win.contentView = host;" in glass  # disable restores GHOST's view
+        assert "[win makeFirstResponder:responder]" in glass
+        assert "MixarGlassLensView" not in glass
+        assert "NSWindowBelow relativeTo:host" not in glass
         assert "metal.opaque = NO" in glass
-        assert "mixar_allow_metal_alpha(win.contentView)" in glass
-        assert "Mixar_CocoaGlassAllowMetalAlpha" in glass
-        assert "mixar_metal_layer_of" in glass
+        assert "mixar_allow_metal_alpha(mixar_metal_host(win))" in glass
         assert "wantsExtendedDynamicRangeContent = NO" in glass
-        assert "framebufferOnly = NO" in glass
         assert "MTLPixelFormatBGRA8Unorm" in glass
-        assert "host.alphaValue = 0.78" not in glass
-        assert "CocoaMetalView (MixarTranslucency)" in glass
         assert "return (win == nil) ? YES : win.opaque;" in glass
-        assert "NSClassFromString(@\"NSGlassEffectView\")" in glass
-        assert "NSVisualEffectView" in glass
-        assert 'setStyle:", 0)' in glass, "Regular style — Clear is a hole"
-        assert "NSVisualEffectMaterialUnderWindowBackground" in glass
-        assert "NSVisualEffectMaterialHUDWindow" not in glass
-        assert "colorWithWhite:0.07" not in glass
+        assert 'NSClassFromString(@"NSGlassEffectView")' in glass
+        assert "NSVisualEffectBlendingModeBehindWindow" in glass
+
+    def test_titlebar_theme_cannot_opaque_the_island_on_activation(self) -> None:
+        wm = (ROOT / "src/source/blender/windowmanager/intern/wm_window.cc").read_text()
+        body = wm[wm.index("void WM_window_decoration_style_apply("):]
+        body = body[:body.index("\n}")]
+        assert "if (wm_window_contains_agent_bubble_space(win)) {\n    return;" in body
+        assert body.index("return;") < body.index("applyWindowDecorationStyle()")
 
     def test_metal_present_keeps_framebuffer_alpha(self) -> None:
         """GHOST's present blit used to force alpha 1.0 on every pixel.

@@ -11,6 +11,7 @@
 #include "mixie_moodboard_ops_common.hh"
 
 #include "DNA_windowmanager_types.h"
+#include "DNA_workspace_types.h"
 
 namespace blender::ed::mixie {
 
@@ -143,6 +144,18 @@ static bool ensure_rect_visible_in_region(ARegion *region,
   v2d->cur.ymin = std::min(v2d->cur.ymin, ty_min);
   v2d->cur.ymax = std::max(v2d->cur.ymax, ty_max);
 
+  /* The canvas derives vertical span from horizontal zoom on every draw.
+   * Enlarge both axes to that aspect now, otherwise a tall reference (or a
+   * batch) is cropped again as soon as the drawer paints. */
+  const float aspect = float(std::max(int(region->winx), 1)) /
+                       float(std::max(int(region->winy), 1));
+  const float half_width = 0.5f * std::max(BLI_rctf_size_x(&v2d->cur),
+                                          BLI_rctf_size_y(&v2d->cur) * aspect);
+  const float cx = BLI_rctf_cent_x(&v2d->cur);
+  const float cy = BLI_rctf_cent_y(&v2d->cur);
+  BLI_rctf_init(&v2d->cur, cx - half_width, cx + half_width,
+                cy - half_width / aspect, cy + half_width / aspect);
+
   ui::view2d_curRect_validate(v2d);
   ED_region_tag_redraw(region);
   return true;
@@ -169,24 +182,41 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
     return OPERATOR_CANCELLED;
   }
 
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *drawer_amount_prop = RNA_struct_find_property(&wm_ptr,
+                                                            "mixar_moodboard_drawer_amount");
+  const float drawer_amount = drawer_amount_prop != nullptr ?
+                                  RNA_property_float_get(&wm_ptr, drawer_amount_prop) :
+                                  0.0f;
+  PropertyRNA *drawer_target_prop = RNA_struct_find_property(&wm_ptr, "mixar_moodboard_drawer_target");
+  const bool drawer_live = drawer_amount >= MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT ||
+                           (drawer_target_prop && RNA_property_int_get(&wm_ptr, drawer_target_prop));
+
   for (wmWindow *win = static_cast<wmWindow *>(wm->windows.first); win; win = win->next) {
     bScreen *screen = WM_window_get_active_screen(win);
     if (!screen) {
       continue;
     }
+    const WorkSpace *workspace = WM_window_get_active_workspace(win);
+    const bool zen = workspace != nullptr && STREQ(workspace->id.name + 2, "Zen Mode");
     for (ScrArea *area = static_cast<ScrArea *>(screen->areabase.first); area; area = area->next)
     {
-      if (area->spacetype != SPACE_MIXIE) {
+      const bool mixie_canvas = area->spacetype == SPACE_MIXIE;
+      const bool drawer_canvas = zen && drawer_live && area->spacetype == SPACE_VIEW3D;
+      if (!mixie_canvas && !drawer_canvas) {
         continue;
       }
-      SpaceMixie *smixie = static_cast<SpaceMixie *>(area->spacedata.first);
-      if (!smixie || smixie->mode != MIXIE_MODE_MOODBOARD) {
-        continue;
+      if (mixie_canvas) {
+        SpaceMixie *smixie = static_cast<SpaceMixie *>(area->spacedata.first);
+        if (!smixie || smixie->mode != MIXIE_MODE_MOODBOARD) {
+          continue;
+        }
       }
+      const int want_region = mixie_canvas ? RGN_TYPE_WINDOW : RGN_TYPE_TOOL_PROPS;
       for (ARegion *region = static_cast<ARegion *>(area->regionbase.first); region;
            region = region->next)
       {
-        if (region->regiontype != RGN_TYPE_WINDOW) {
+        if (region->regiontype != want_region) {
           continue;
         }
         if (ensure_rect_visible_in_region(region, tx_min, tx_max, ty_min, ty_max)) {

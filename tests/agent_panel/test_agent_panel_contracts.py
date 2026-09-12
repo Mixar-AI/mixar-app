@@ -47,13 +47,19 @@ QA = SPACE_VIEW3D / "view3d_agent_panel_qa.cc"
 SPACE = SPACE_VIEW3D / "space_view3d.cc"
 CMAKE = SPACE_VIEW3D / "CMakeLists.txt"
 
-
 def _defines_float(text):
-    return {
+    values = {
         m.group(1): float(m.group(2))
         for m in re.finditer(r"^#define\s+(AGENT_PANEL_\w+)\s+([\d.]+)", text, re.M)
     }
-
+    motion = (SPACE_VIEW3D.parent / "include/UI_mixar_motion.hh").read_text()
+    tokens = {
+        m.group(1): float(eval(m.group(2), {"__builtins__": {}}, {}))
+        for m in re.finditer(r"constexpr double (\w+) = ([\d. /]+);", motion)
+    }
+    for name, token in re.findall(r"#define (AGENT_PANEL_\w+) ui::mixar_motion::(\w+)", text):
+        values[name] = tokens[token]
+    return values
 
 def _defines(text):
     return {
@@ -61,13 +67,11 @@ def _defines(text):
         for m in re.finditer(r"^#define\s+(AGENT_PANEL_\w+)\s+(\d+)", text, re.M)
     }
 
-
 def _fn_body(text, signature):
     """`signature`'s body, up to the next top-level function."""
     start = text.index(signature)
     end = text.find("\nvoid ", start + len(signature))
     return text[start : end if end != -1 else len(text)]
-
 
 class TestStringBudgets:
     """Every C++ buffer is strictly larger than the maxlen it mirrors."""
@@ -108,7 +112,6 @@ class TestStringBudgets:
             "read through agent_panel_read_string, which uses the _alloc form"
         )
 
-
 class TestOneLayoutOwner:
     """Draw, hit test and QA targets read the rects; only layout writes them."""
 
@@ -130,7 +133,7 @@ class TestOneLayoutOwner:
     def test_the_reveal_animation_is_applied_in_the_layout_pass(self):
         text = CARDS.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
-        assert "view3d_agent_panel_reveal" in layout, (
+        assert "card.slide.sample" in layout, (
             "a card animating in must be clickable where it is drawn"
         )
 
@@ -140,7 +143,6 @@ class TestOneLayoutOwner:
         assert "layout_cards" not in text, (
             "the operator must not lay out — the next draw does, and re-clamps"
         )
-
 
 class TestColumnClip:
     """`region->winy` is the whole area height on a right dock, so "visible"
@@ -196,7 +198,6 @@ class TestColumnClip:
         )
         assert text.count("GPU_scissor(") >= 2, "the previous scissor must be restored"
 
-
 class TestRevealReplaysEveryTurn:
     def test_the_restart_is_keyed_on_pythons_generation_counter(self):
         """`cards_sync` runs only from draw, and draw does not run while the
@@ -227,7 +228,6 @@ class TestRevealReplaysEveryTurn:
         clear = clear[: clear.index("\ndef ")]
         assert "_bump_generation" in clear
 
-
 class TestPollDrivenVisibility:
     def test_a_space_listener_turns_notifiers_into_a_refresh(self):
         """Region polls re-run only on a screen refresh, which a redraw tag is
@@ -249,7 +249,6 @@ class TestPollDrivenVisibility:
         init = init[: init.index("\nvoid ")]
         assert "ED_region_tag_redraw(region)" in init
 
-
 class TestTickTimer:
     def test_the_timer_stops_once_the_panel_settles(self):
         """Cards persist after a turn ends; an ungated timer would keep
@@ -259,7 +258,6 @@ class TestTickTimer:
         assert "view3d_agent_panel_tick_timer_ensure(C, runtime);" in draw_fn
         assert "view3d_agent_panel_tick_timer_remove(CTX_wm_manager(C), runtime);" in draw_fn
         assert "view3d_agent_panel_is_animating(runtime)" in draw_fn
-
 
 class TestAnimationFrameRate:
     """The tick interval IS the animation's frame rate, so both halves of that
@@ -288,13 +286,9 @@ class TestAnimationFrameRate:
         )
 
     def test_the_tick_runs_at_display_cadence(self):
-        text = HEADER.read_text()
-        m = re.search(r"#define AGENT_PANEL_TICK_INTERVAL \(([^)]+)\)", text)
-        assert m, "tick interval must be defined"
-        assert eval(m.group(1)) <= 1.0 / 50.0, (
+        assert _defines_float(HEADER.read_text())["AGENT_PANEL_TICK_INTERVAL"] <= 1.0 / 50.0, (
             "the tick interval is the animation's frame rate, not a poll rate"
         )
-
 
 class TestFinishedCardsLeave:
     """A completed agent has nothing left to say; its card slides out."""
@@ -357,12 +351,12 @@ class TestFinishedCardsLeave:
         fn = fn[: fn.index("\nfloat ")]
         assert "card.dismissing" in fn
 
-    def test_the_entrance_is_slow_enough_to_read(self):
-        """The cards arrive exactly when a turn fans out, which is when the
-        user is looking — a fast slide reads as a pop."""
+    def test_arrivals_share_zen_timing_with_a_bounded_stagger(self):
+        """Offscreen tasks must not extend how long the visible fan-out settles."""
         defines = _defines_float(HEADER.read_text())
-        assert defines["AGENT_PANEL_REVEAL_SECONDS"] >= 0.5
-        assert defines["AGENT_PANEL_STAGGER_SECONDS"] >= 0.1
+        assert defines["AGENT_PANEL_REVEAL_SECONDS"] == 0.26
+        assert defines["AGENT_PANEL_STAGGER_SECONDS"] == 0.05
+        assert "std::min(arrivals++, AGENT_PANEL_VISIBLE_CARDS - 1)" in SYNC.read_text()
 
     def test_python_schedules_the_removal_and_rechecks_on_fire(self):
         cards_py = (
@@ -376,7 +370,6 @@ class TestFinishedCardsLeave:
         assert "card.dismissing or card.status == 'DONE'" in fn, (
             "a task that goes DONE and is then re-run keeps its card"
         )
-
 
 class TestTrackpadScrolls:
     def test_the_scroll_binds_trackpad_pan_as_well_as_the_wheel(self):
@@ -397,7 +390,6 @@ class TestTrackpadScrolls:
             "the addon keyconfig is the copy that survives a preset reload"
         )
 
-
 class TestDrawSafety:
     def test_the_draw_pass_never_resizes_the_region(self):
         """A draw pass has the framebuffer bound and is iterating
@@ -411,7 +403,6 @@ class TestDrawSafety:
         assert "region->overlap" in text and "GPU_clear_color" in text, (
             "the cards float over the viewport; an opaque clear would black it out"
         )
-
 
 class TestWiring:
     def test_the_region_docks_bottom_not_left(self):
@@ -474,7 +465,6 @@ class TestWiring:
         assert not list(SPACE_VIEW3D.glob("view3d_agent_strip*"))
         assert "agent_strip" not in SPACE.read_text()
         assert "agent_strip" not in CMAKE.read_text()
-
 
 class TestKeymapSurvivesPresetReload:
     def test_the_bindings_exist_in_the_addon_keyconfig(self):

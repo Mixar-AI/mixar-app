@@ -49,21 +49,15 @@ class TestTheTopbarPillsArePanes:
         feedback at all — the state changes silently.
         """
         body = self._body("void draw_cinema_pill(")
-        assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, (is_hover || pressed) ? 1.0f : 0.84f);" in body
+        assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);" in body
 
     def test_the_lit_cinema_pill_keeps_its_opaque_green_state(self) -> None:
-        """The green fill IS the state and is opaque, so it stays flat.
-
-        Glassing it would put a pane under an opaque ramp — invisible work —
-        and, worse, invite a later edit to fade the fill and lose the only
-        "Cinema Mode is on" indicator there is.
-        """
+        """Selection animates the green ramp to opaque; hover cannot select it."""
         body = self._body("void draw_cinema_pill(")
-        lit = body[body.index("if (lit) {") : body.index("else {")]
-        assert "mixar_card_glass_round(" not in lit, "the lit pill was glassed"
-        assert "draw_roundbox_4fv_ex(&pill, a, b, 1.0f, nullptr, 0.0f, rad);" in lit
-        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_a, b);" in lit
-        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_b, a);" in lit
+        assert "top[3] = bottom[3] = motion.selected;" in body
+        assert "draw_roundbox_4fv_ex(&pill, top, bottom, 1.0f, nullptr, 0.0f, rad);" in body
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_a, bottom);" in body
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_b, top);" in body
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.
@@ -81,12 +75,10 @@ class TestTheTopbarPillsArePanes:
         pill, an active one and a shading chip — all three would be the same
         rim. Colours live in `UI_mixar_chrome.hh`.
         """
-        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border, (is_hover || pressed) ? 1.0f : 0.85f);" in self._body(
-            "void draw_cinema_pill("
-        )
-        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::cinema_pill_border_on," in self._body(
-            "void draw_cinema_pill("
-        )
+        cinema = self._body("void draw_cinema_pill(")
+        assert re.search(r"blend_color\(mixar_chrome::cinema_pill_border,\s*"
+                         r"mixar_chrome::cinema_pill_border_on,\s*motion.selected,\s*border\)", cinema)
+        assert "mixar_card_outline_round(&pill, rad, border," in cinema
         assert "mixar_card_outline_round(&pill, rad, mixar_chrome::viewport_pill_border, alpha);" in self._body(
             "void draw_viewport_pill("
         )
@@ -103,7 +95,7 @@ class TestTheTopbarPillsArePanes:
             )
         slider = self._body("void draw_slider_left(")
         assert "mixar_card_fill_round(&track, rad, mixar_chrome::slider_track);" in slider
-        assert "mixar_card_fill_round(&thumb, rad, is_hover ? mixar_chrome::slider_thumb_hover : mixar_chrome::slider_thumb);" in slider
+        assert "mixar_card_fill_round(&thumb, rad, fill);" in slider
 
     def test_the_avatar_disc_stays_flat(self) -> None:
         """The disc is a picture, not a pane.
@@ -138,7 +130,7 @@ class TestTheCinemaRowsArePanes:
         return _code(_fn_body(CINEMA_ROW, "void draw_chip("))
 
     def test_the_live_chip_and_the_hover_fill_are_panes(self) -> None:
-        assert "mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP);" in self._chip()
+        assert "mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);" in self._chip()
         hover = _code(_fn_body(CINEMA_ROW, "void draw_hover("))
         assert "mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);" in hover
         assert "mixar_card_fill_round(" not in hover, (
@@ -171,7 +163,7 @@ class TestTheCinemaRowsArePanes:
         chip = self._chip()
         assert "mixar_card_to_float(ROW_TOP, top);" in chip
         assert "mixar_card_to_float(ROW_BOTTOM, bottom);" in chip
-        assert "top[3] *= CHIP_WASH;" in chip and "bottom[3] *= CHIP_WASH;" in chip
+        assert "top[3] *= CHIP_WASH * alpha;" in chip and "bottom[3] *= CHIP_WASH * alpha;" in chip
         wash = re.search(r"^constexpr float CHIP_WASH = ([0-9.]+)f;", CINEMA_ROW, re.M)
         assert wash is not None, "the wash strength is not a named constant"
         assert 0.0 < float(wash.group(1)) < 1.0, "CHIP_WASH is not a wash"
@@ -187,7 +179,7 @@ class TestTheCinemaRowsArePanes:
         """A groove that shows the popup through it stops reading as a groove."""
         slider = _code(_fn_body(CINEMA_VALUE, "void draw_slider("))
         assert "mixar_card_glass_round(" not in slider, "the slider was glassed"
-        assert "mixar_card_fill_round(&row, rad, (is_hover && !disabled) ? HOVER : TRACK, 1.0f);" in slider
+        assert "mixar_card_fill_round(&row, rad, track, 1.0f);" in slider
         assert "mixar_card_fill_round(&fill, fill_rad, SLIDER_ON, disabled ? 0.45f : 1.0f);" in slider
 
     def test_no_mirrored_token_was_orphaned_by_the_conversion(self) -> None:

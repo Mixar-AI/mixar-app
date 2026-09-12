@@ -66,7 +66,7 @@ uiFontStyle row_font();
 uiFontStyle caption_font();
 
 /** The "live" row: a glass chip with the surface's graded slate washed over it. */
-void draw_chip(const rctf &row, float radius);
+void draw_chip(const rctf &row, float radius, float alpha = 1.0f);
 
 /** The hover / pressed pane; `alpha` is the whole cue (0.9 hover, 1.0 press). */
 void draw_hover(const rctf &row, float radius, float alpha);
@@ -95,7 +95,8 @@ void draw_label(const uiFontStyle &fs,
  * past it — unless icon plus label cannot fit, when the label wins and the
  * icon is dropped. Returns whether the icon was drawn.
  */
-bool draw_leading_icon(const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
+bool draw_leading_icon(
+    const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
 
 /* Kind painters. */
 

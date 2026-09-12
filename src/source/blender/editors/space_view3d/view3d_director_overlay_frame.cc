@@ -28,6 +28,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
@@ -162,6 +163,7 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                               short(lens_w),
                               short(button_h),
                               "Choose the lens type and focal length");
+  ui::mixar_style_button(lens, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(lens, state.locked);
 
   /* Precise stays hidden until its role is clear; Navigate is a plain text
@@ -176,6 +178,8 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                               short(navigate_w),
                               short(button_h),
                               "Navigate with WASD and mouse");
+  ui::mixar_style_button(navigate, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
+  ui::mixar_button_lit_set(navigate, state.navigate_mode);
   if (state.navigate_mode) {
     ui::button_flag_enable(navigate, ui::BUT_ACTIVE_DEFAULT);
   }
@@ -190,6 +194,7 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                                 short(aspect_w),
                                 short(button_h),
                                 "Choose the shot output aspect ratio");
+  ui::mixar_style_button(aspect, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(aspect, state.locked);
 
   const float dot_size = std::max(7.0f, 8.0f * UI_SCALE_FAC);

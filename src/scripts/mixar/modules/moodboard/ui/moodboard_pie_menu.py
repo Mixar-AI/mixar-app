@@ -14,6 +14,7 @@ from bpy.types import Menu, Operator
 
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 
 
 class MIXIE_MT_moodboard_pie_menu(Menu):
@@ -24,6 +25,9 @@ class MIXIE_MT_moodboard_pie_menu(Menu):
     def draw(self, context):
         layout = self.layout
         pie = layout.menu_pie()
+        # Menus default to INVOKE_REGION_WIN, which replaces the drawer with
+        # View3D's WINDOW region and makes all moodboard popup polls fail.
+        pie.operator_context = 'INVOKE_DEFAULT'
 
         # Pie menu positions (in order):
         # 4(W), 6(E), 2(S), 8(N), 7(NW), 9(NE), 1(SW), 3(SE)
@@ -63,7 +67,7 @@ class MIXIE_OT_moodboard_pie_menu_call(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         bpy.ops.wm.call_menu_pie(name="MIXIE_MT_moodboard_pie_menu")

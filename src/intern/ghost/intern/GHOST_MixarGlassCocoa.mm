@@ -7,15 +7,10 @@
  *
  * Native frost behind Mixar's island / pill windows.
  *
- * AppKit's glass (`NSGlassEffectView` on macOS 26, `NSVisualEffectView`
- * earlier) has to sit BEHIND the GPU view as a sibling in the theme frame.
- * Parenting it under CocoaMetalView or wrapping `contentView` tears
- * GHOST's Metal context. This file never does those. The host is tracked
- * with an associated object, not a view identifier.
- *
- * Transparent GPU pixels only composite over that sibling when THIS window's
- * `CAMetalLayer` is non-opaque. The flag is flipped on the island/pill layer
- * alone, never walked across the process.
+ * AppKit owns the effect's view hierarchy: CocoaMetalView is the glass
+ * contentView, while GHOST retains the same Metal view/context throughout.
+ * NSVisualEffectView provides behind-window frost on older macOS versions.
+ * Only this window's Metal layer presents alpha; other windows keep HDR.
  */
 
 #import <AppKit/AppKit.h>
@@ -28,18 +23,8 @@
 #include "GHOST_MixarGlassCocoa.hh"
 
 /* GHOST's CocoaMetalView hard-codes isOpaque=YES. AppKit then skips the
- * frost sibling and WindowServer may treat the presented drawable as a
+ * native backdrop and WindowServer may treat the presented drawable as a
  * solid plane. Follow the window: island/pill set opaque=NO. */
-@interface MixarGlassLensView : NSView
-@end
-
-@implementation MixarGlassLensView
-- (BOOL)isOpaque
-{
-  return NO;
-}
-@end
-
 @interface CocoaMetalView : NSView
 @end
 
@@ -54,6 +39,13 @@
 namespace {
 
 const void *kMixarGlassKey = &kMixarGlassKey;
+const void *kMixarMetalHostKey = &kMixarMetalHostKey;
+
+NSView *mixar_metal_host(NSWindow *win)
+{
+  NSView *host = objc_getAssociatedObject(win, kMixarMetalHostKey);
+  return host != nil ? host : win.contentView;
+}
 
 NSView *mixar_glass_get(NSWindow *win)
 {
@@ -81,28 +73,6 @@ void mixar_msg_set_llong(id obj, const char *name, const long long value)
   }
 }
 
-void mixar_give_glass_a_lens(NSView *glass)
-{
-  /* NSGlassEffectView frosts its contentView. An empty glass sibling is
-   * a hole — Clear especially. The lens is a new NSView owned by the
-   * glass, never the window contentView and never CocoaMetalView. */
-  const SEL setter = sel_registerName("setContentView:");
-  const SEL getter = sel_registerName("contentView");
-  if (![glass respondsToSelector:setter]) {
-    return;
-  }
-  if ([glass respondsToSelector:getter]) {
-    const id existing = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(glass, getter);
-    if (existing != nil) {
-      return;
-    }
-  }
-  MixarGlassLensView *lens = [[MixarGlassLensView alloc] initWithFrame:glass.bounds];
-  lens.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-  reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(glass, setter, lens);
-  [lens release];
-}
-
 void mixar_style_glass(NSView *glass, const CGFloat radius)
 {
   glass.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -115,10 +85,8 @@ void mixar_style_glass(NSView *glass, const CGFloat radius)
     glass.layer.masksToBounds = (radius > 0.0);
   }
 
-  /* Regular is the liquid-glass material. Clear is an empty hole once
-   * Metal pixels carry alpha. No tintColor — a dark tint is another slab. */
+  /* Regular keeps the floating controls legible over a changing scene. */
   mixar_msg_set_llong(glass, "setStyle:", 0);
-  mixar_give_glass_a_lens(glass);
 }
 
 NSView *mixar_make_glass(const NSRect frame)
@@ -175,7 +143,7 @@ void mixar_allow_metal_alpha(NSView *host)
   /* RGBA16Float + EDR is composited as an opaque slab even with alpha in
    * the drawable and even if the view's alphaValue is lowered. Island and
    * pill do not need HDR: switch this layer to BGRA8 so WindowServer
-   * honours per-pixel alpha over the frost sibling. GHOST rebuilds the
+   * honours per-pixel alpha over the native glass. GHOST rebuilds the
    * present pipeline to match the new format on the next swap. */
   metal.wantsExtendedDynamicRangeContent = NO;
   metal.framebufferOnly = NO;
@@ -197,38 +165,60 @@ void mixar_restore_metal_opaque(NSView *host)
   host.alphaValue = 1.0;
 }
 
-void mixar_install_glass(NSWindow *win)
+bool mixar_install_glass(NSWindow *win)
 {
+  if (mixar_glass_get(win) != nil) {
+    return true;
+  }
   NSView *host = win.contentView;
-  if (host == nil || mixar_glass_get(win) != nil) {
-    return;
+  if (host == nil || mixar_metal_layer_of(host) == nil) {
+    return false;
   }
-  /* Theme-frame sibling. No superview means the window is not in the
-   * hierarchy yet — wrapping contentView would detach the Metal view. */
-  NSView *container = host.superview;
-  if (container == nil) {
-    return;
-  }
-
-  const CGFloat radius = (host.layer != nil) ? host.layer.cornerRadius : 0.0;
+  const CGFloat radius = host.layer.cornerRadius;
   NSView *glass = mixar_make_glass(host.frame);
+  if (glass == nil) {
+    return false;
+  }
   mixar_style_glass(glass, radius);
-  [container addSubview:glass positioned:NSWindowBelow relativeTo:host];
+  /* Retain the original GPU view across NSWindow's content replacement.
+   * GHOST's metal_view_ and drawing context continue to point to this view. */
+  objc_setAssociatedObject(win, kMixarMetalHostKey, host, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  NSResponder *responder = [win.firstResponder retain];
+  win.contentView = glass;
+  host.frame = glass.bounds;
+  host.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  const SEL setter = sel_registerName("setContentView:");
+  if ([glass respondsToSelector:setter]) {
+    reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(glass, setter, host);
+  }
+  else {
+    [glass addSubview:host];
+  }
   mixar_glass_set(win, glass);
+  [glass layoutSubtreeIfNeeded];
+  [win makeFirstResponder:responder];
+  [responder release];
   [glass release];
   mixar_allow_metal_alpha(host);
+  return true;
 }
 
 void mixar_remove_glass(NSWindow *win)
 {
   NSView *glass = mixar_glass_get(win);
+  NSView *host = mixar_metal_host(win);
   if (glass != nil) {
-    [glass removeFromSuperview];
+    NSResponder *responder = [win.firstResponder retain];
+    const NSRect bounds = glass.bounds;
+    /* Both associated objects stay alive until NSWindow owns the host again. */
+    win.contentView = host;
+    host.frame = bounds;
+    [win makeFirstResponder:responder];
+    [responder release];
     mixar_glass_set(win, nil);
+    objc_setAssociatedObject(win, kMixarMetalHostKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
   }
-  if (win.contentView != nil) {
-    mixar_restore_metal_opaque(win.contentView);
-  }
+  mixar_restore_metal_opaque(host);
 }
 
 }  // namespace
@@ -245,15 +235,12 @@ bool Mixar_CocoaGlassSetEnabled(NSWindow *win, const bool enable)
   }
   @autoreleasepool {
     if (enable) {
+      if (!mixar_install_glass(win)) {
+        return false;
+      }
       win.opaque = NO;
       win.backgroundColor = [NSColor clearColor];
-      mixar_install_glass(win);
-      /* Frost needs a superview; Metal alpha does not. The island's
-       * corners are already punched by the window mask — without this
-       * the CAMetalLayer stays opaque and the card interior is a slab. */
-      if (win.contentView != nil) {
-        mixar_allow_metal_alpha(win.contentView);
-      }
+      mixar_allow_metal_alpha(mixar_metal_host(win));
     }
     else {
       mixar_remove_glass(win);
@@ -261,7 +248,7 @@ bool Mixar_CocoaGlassSetEnabled(NSWindow *win, const bool enable)
       win.backgroundColor = [NSColor windowBackgroundColor];
     }
     return !enable || (mixar_glass_get(win) != nil &&
-                       mixar_metal_layer_of(win.contentView) != nil);
+                       mixar_metal_layer_of(mixar_metal_host(win)) != nil);
   }
 }
 
@@ -272,20 +259,16 @@ void Mixar_CocoaGlassSyncRadius(NSWindow *win, const float radius)
   }
   @autoreleasepool {
     NSView *glass = mixar_glass_get(win);
-    /* First SetBlurBehind can run before the Metal view is in the theme
-     * frame. Rounding the window is a later call, and by then the host
-     * has a superview — install then rather than leaving frost missing. */
-    if (glass == nil && !win.opaque) {
-      mixar_install_glass(win);
-      glass = mixar_glass_get(win);
-    }
     if (glass != nil) {
       const CGFloat clamped = (radius < 0.0f) ? 0.0 : CGFloat(radius);
-      glass.frame = win.contentView.frame;
+
       mixar_style_glass(glass, clamped);
+      NSView *host = mixar_metal_host(win);
+      host.layer.cornerRadius = clamped;
+      host.layer.masksToBounds = (clamped > 0.0);
     }
     if (!win.opaque && win.contentView != nil) {
-      mixar_allow_metal_alpha(win.contentView);
+      mixar_allow_metal_alpha(mixar_metal_host(win));
     }
   }
 }

@@ -18,6 +18,7 @@
  */
 
 #include <climits>
+#include <cstdint>
 #include <cmath>
 #include <cstring>
 
@@ -74,6 +75,8 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_motion.hh"
+#include "agent_ui_cat_scheduler.hh"
 #include "agent_ui_pill_cat.hh"
 #include "agent_ui_queue.hh"
 #include "agent_ui_tab3d.hh"
@@ -359,6 +362,9 @@ static void *g_pill_ghostwin = nullptr;
  * conversation? Reset when the bubble window closes. */
 static bool g_bubble_grown_for_chat = false;
 static bool g_bubble_minimised = false;
+/* Delayed AppKit completions may outlive a restore or a newer collapse. */
+static uintptr_t g_bubble_motion_generation = 0;
+static bool g_bubble_minimise_pending = false;
 static bool g_bubble_expanded = false;
 /* Set by every restore; cleared the first time the cursor is actually over
  * the island. Until then the hover pump will NOT collapse.
@@ -768,6 +774,11 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
 
   ui::block_end(C, field_block);
   ui::block_draw(C, field_block);
+  if (input_prop) {
+    /* The field exists this frame; consume a restore focus request now
+     * rather than waiting on the 0.1s hover pump. */
+    agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
+  }
 
   /* The canvas continues over the composer, so a stroke that runs off the
    * transcript does not stop at the region seam.
@@ -1263,6 +1274,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         }
         ui::block_end(C, field_block);
         ui::block_draw(C, field_block);
+        agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
       }
     }
   }
@@ -2449,6 +2461,9 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
 void ED_agent_bubble_windows_closed()
 {
   agent_bubble_glass_reset();
+  agent_ui_cat_scheduler_forget();
+  ++g_bubble_motion_generation;
+  g_bubble_minimise_pending = false;
   g_bubble_grown_for_chat = false;
   g_bubble_ghostwin = nullptr;
   g_pill_ghostwin = nullptr;
@@ -2467,6 +2482,10 @@ void ED_agent_bubble_windows_closed()
 
 void ED_agent_bubble_window_freed(const void *ghostwin)
 {
+  agent_ui_cat_scheduler_window_freed(ghostwin);
+  if (ghostwin == g_host_ghostwin || ghostwin == g_bubble_ghostwin) {
+    agent_ui_cat_scheduler_forget();
+  }
   if (ghostwin == nullptr) {
     return;
   }
@@ -2478,6 +2497,8 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
    * host windows directly. Any cached pointer equal to the dying GHOST
    * window is about to dangle; clear exactly those. */
   if (ghostwin == g_bubble_ghostwin) {
+    ++g_bubble_motion_generation;
+    g_bubble_minimise_pending = false;
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
@@ -2780,14 +2801,14 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   agent_ui_state_gather(C, &state);
   GPU_matrix_push();
   GPU_matrix_translate_2f(float(-region->winrct.xmin), float(-region->winrct.ymin));
-  agent_ui_draw_status_pill(pill_w, pill_h, &state);
+  agent_ui_draw_status_pill(region, pill_w, pill_h, &state);
   GPU_matrix_pop();
 
-  /* Elongated resting pill always carries Mixie's cat (idle blink/breathe),
-   * so it keeps redrawing even when Mixie is idle. The compact status pill
-   * above an open island only pulses while a turn or queue job is live. */
-  if (pill_w > pill_h * 4.0f || state.status_busy || state.queue_count > 0) {
-    ED_region_tag_redraw(region);
+  if (pill_w > pill_h * 4.0f) {
+    agent_ui_cat_schedule(win, region, g_host_ghostwin, agent_ui_cat_motion_next_frame(region));
+  }
+  else {
+    agent_ui_cat_scheduler_forget(region);
   }
 
   return;
@@ -2948,6 +2969,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
                                       /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
     }
     g_bubble_minimised = false;
+    Mixar_WindowMakeKey(g_bubble_ghostwin);
+    agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
     return OPERATOR_FINISHED;
   }
 #endif
@@ -3486,31 +3509,6 @@ static void agent_bubble_force_redraw(bContext *C)
   }
 }
 
-/**
- * Tag the pill window for redraw while minimised.
- */
-static void agent_bubble_pill_tag_redraw(wmWindowManager *wm)
-{
-  if (g_pill_ghostwin == nullptr || wm == nullptr) {
-    return;
-  }
-  for (wmWindow &w_iter : wm->windows) {
-    wmWindow *w = &w_iter;
-    if (w->runtime->ghostwin != g_pill_ghostwin) {
-      continue;
-    }
-    bScreen *screen = WM_window_get_active_screen(w);
-    if (screen == nullptr) {
-      break;
-    }
-    ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
-    if (area != nullptr) {
-      ED_area_tag_redraw(area);
-    }
-    break;
-  }
-}
-
 static wmOperatorStatus mixar_bubble_sync_attachment_size_exec(bContext *C, wmOperator *op)
 {
 #if defined(__APPLE__) || defined(_WIN32)
@@ -3700,8 +3698,14 @@ void MIXAR_OT_bubble_window_end_drag(wmOperatorType *ot)
  * pointers directly. Defined as a plain C function (not a lambda
  * with capture) because Mixar_DispatchMainAfter takes a function
  * pointer. */
-static void minimise_anim_finish(void * /*user_data*/)
+static void minimise_anim_finish(void *user_data)
 {
+  if (reinterpret_cast<uintptr_t>(user_data) != g_bubble_motion_generation ||
+      !g_bubble_minimised)
+  {
+    return;
+  }
+  g_bubble_minimise_pending = false;
   if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
 #ifdef _WIN32
     Mixar_WindowSetCornerRadius(g_pill_ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
@@ -3787,6 +3791,7 @@ static bool agent_bubble_scribble_active(const bContext *C)
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
+  agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
   /* Scribble pad: arm -> the open island becomes the writing pad on the
    * host's right third; disarm -> it goes back. Edge-detected here because
    * this tick is the one C++ poll of the mode that every arm/disarm path
@@ -3803,17 +3808,17 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
     }
   }
 
+  agent_ui_cat_scheduler_sync(CTX_wm_manager(C), g_pill_ghostwin, g_bubble_minimised);
   const double now = BLI_time_now_seconds();
   if (now < g_hover_cooldown_until) {
     return OPERATOR_FINISHED;
   }
 
   /* Minimised: nothing to hover-test — the pill opens on click, never on
-   * hover (see the section comment). The tick keeps Mixie's cat (and the
-   * working glow) animating while the main draw loop is idle. */
+   * hover (see the section comment). Mascot frames have their own native
+   * scheduler; hover policy must never tag another redraw. */
   if (g_bubble_minimised) {
     g_hover_outside_ticks = 0;
-    agent_bubble_pill_tag_redraw(CTX_wm_manager(C));
     return OPERATOR_FINISHED;
   }
 
@@ -3838,6 +3843,13 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   }
   if (g_hover_await_enter) {
     /* Opened programmatically and never visited — see the latch's note. */
+    g_hover_outside_ticks = 0;
+    return OPERATOR_FINISHED;
+  }
+
+  /* Pointer travel must not take away a draft while the keyboard still
+   * belongs to this window. Clicking the viewport hands collapse back. */
+  if (agent_bubble_composer_has_focused_draft(C, g_bubble_ghostwin)) {
     g_hover_outside_ticks = 0;
     return OPERATOR_FINISHED;
   }
@@ -3948,6 +3960,9 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
   if (g_bubble_ghostwin == nullptr || g_bubble_minimised) {
     return OPERATOR_CANCELLED;
   }
+  g_bubble_minimised = true;
+  g_bubble_minimise_pending = true;
+  const uintptr_t generation = ++g_bubble_motion_generation;
   /* A padded island that minimises leaves the pad: the restore path sizes
    * and seats the island itself, and the tick re-applies the pad if Scribble
    * is still armed when it comes back. */
@@ -3985,7 +4000,7 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * so just hide the bubble and finish synchronously. The pill was
    * already re-parented to host above, so minimise_anim_finish
    * just hides the bubble and resets alpha. */
-  minimise_anim_finish(nullptr);
+  minimise_anim_finish(reinterpret_cast<void *>(generation));
 #else
   /* macOS: the bubble sinks + fades (FLIP layer animation); the pill
    * CROSSFADES to its resting seat — a long frame glide runs on AppKit's
@@ -3999,7 +4014,7 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
       g_bubble_ghostwin, AGENT_BUBBLE_FLOAT_RISE_PT, AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
   Mixar_DispatchMainAfter(AGENT_BUBBLE_MINIMISE_ANIM_DURATION,
                           minimise_anim_finish,
-                          /*user_data=*/nullptr);
+                          reinterpret_cast<void *>(generation));
 #endif
 
   g_bubble_minimised = true;
@@ -4031,6 +4046,9 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   if (g_bubble_ghostwin == nullptr || !g_bubble_minimised) {
     return OPERATOR_FINISHED;
   }
+  [[maybe_unused]] const bool reversing = g_bubble_minimise_pending;
+  ++g_bubble_motion_generation;
+  g_bubble_minimise_pending = false;
 
   /* Hold the island open until hover has actually been offered it — see
    * `g_hover_await_enter`. Arming this for EVERY restore is deliberate: a
@@ -4074,7 +4092,9 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
    * left it at, mirroring the minimise animation (the pill's glide up to its
    * above-bubble seat is animated below). Alpha is set to 0 first so a
    * restore after a non-animated hide doesn't pop. */
-  Mixar_WindowSetAlpha(g_bubble_ghostwin, 0.0f);
+  if (!reversing) {
+    Mixar_WindowSetAlpha(g_bubble_ghostwin, 0.0f);
+  }
 #else
   Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
 #endif
@@ -4133,6 +4153,10 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   }
 
   g_bubble_minimised = false;
+  /* The pill owns the click, but the island must own subsequent typing.
+   * Win32 OrderFront deliberately shows without activation. */
+  Mixar_WindowMakeKey(g_bubble_ghostwin);
+  agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -4426,6 +4450,8 @@ void ED_spacetype_agent_bubble()
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
   art->init = agent_bubble_header_region_init;
   art->draw = agent_bubble_header_region_draw;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
   art->draw_overlay = agent_bubble_header_region_draw_overlay;
   art->listener = agent_bubble_glass_region_listener;
   BLI_addhead(&st->regiontypes, art);
@@ -4456,6 +4482,8 @@ void ED_spacetype_agent_bubble()
   art->init = agent_bubble_composer_region_init;
   art->layout = agent_bubble_composer_region_layout;
   art->draw = agent_bubble_composer_region_draw;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
   /* develop's deferred-resize listener. The footer it was written for is
    * gone; TOOLS is the region that replaced it, and the listener only acts on
    * a resize the footer sizing path requested. */

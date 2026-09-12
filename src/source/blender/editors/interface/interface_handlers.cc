@@ -4160,6 +4160,50 @@ static Scene *ui_but_mixie_mention_scene(const Button *but)
 }
 
 /**
+ * Opening the island focuses the composer so the next keystroke types.
+ * The editor is a window-level modal, so wheel/trackpad would otherwise
+ * die in the field instead of scrolling the transcript. Forward only
+ * events OVER the transcript: a long draft keeps its own native scroll.
+ * Drive the same View2D operators the WINDOW region keymap uses.
+ */
+static bool mixie_chat_composer_scroll_transcript(bContext *C, const wmEvent *event)
+{
+  ScrArea *area = CTX_wm_area(C);
+  if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+    return false;
+  }
+  ARegion *transcript = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+  if (!transcript || transcript == CTX_wm_region(C) ||
+      !BLI_rcti_isect_pt_v(&transcript->winrct, event->xy))
+  {
+    return false;
+  }
+  ARegion *prev = CTX_wm_region(C);
+  CTX_wm_region_set(C, transcript);
+  wmOperatorStatus status = OPERATOR_CANCELLED;
+  if (ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE)) {
+    status = WM_operator_name_call(C,
+                                   (event->type == WHEELUPMOUSE) ? "VIEW2D_OT_scroll_up" :
+                                                                   "VIEW2D_OT_scroll_down",
+                                   blender::wm::OpCallContext::ExecDefault,
+                                   nullptr,
+                                   event);
+  }
+  else if (event->type == MOUSEPAN) {
+    if (wmOperatorType *ot = WM_operatortype_find("VIEW2D_OT_pan", false)) {
+      PointerRNA props = WM_operator_properties_create_ptr(ot);
+      RNA_int_set(&props, "deltax", event->prev_xy[0] - event->xy[0]);
+      RNA_int_set(&props, "deltay", event->prev_xy[1] - event->xy[1]);
+      status = WM_operator_name_call_ptr(
+          C, ot, blender::wm::OpCallContext::ExecDefault, &props, event);
+      WM_operator_properties_free(&props);
+    }
+  }
+  CTX_wm_region_set(C, prev);
+  return bool(status & OPERATOR_FINISHED);
+}
+
+/**
  * Accept the active mention suggestion: select the whole "@token" around the
  * cursor and type the replacement over it (reuses the UTF8/maxlen-safe
  * selection-overwrite path of #textedit_insert_buf). The caller's normal
@@ -4547,6 +4591,12 @@ static int do_but_textedit(
   ButtonTextBox *textbox = but->type == ButtonType::TextBox ? static_cast<ButtonTextBox *>(but) :
                                                               nullptr;
   int prev_pos = but->pos;
+  if (ui_but_mixie_mention_scene(but) &&
+      ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) &&
+      mixie_chat_composer_scroll_transcript(C, event))
+  {
+    return WM_UI_HANDLER_BREAK;
+  }
   switch (event->type) {
     case MOUSEMOVE:
     case MOUSEPAN:
@@ -5105,7 +5155,9 @@ static int do_but_textedit(
                 break;
               }
             }
-            /* Plain Enter in chat context: insert submit marker and trigger submit. */
+            /* The RNA callback recognizes a trailing submit marker. Editing
+             * a word in the middle must still submit the entire draft. */
+            textedit_move(but, text_edit, STRCUR_DIR_NEXT, false, STRCUR_JUMP_ALL, true);
             textedit_insert_buf(but, data->text_edit, "\x1F", 1);
             apply_but(C, block, but, data, true);
             button_activate_state(C, but, BUTTON_STATE_EXIT);
@@ -13803,6 +13855,44 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
   Button *but = region_find_active_but(region);
 
   if (but) {
+    /* The Agent composer and its actions can live in DIFFERENT regions
+     * (empty-state WINDOW / TOOLS). Commit before allowing this same press
+     * through to the native action handler. Otherwise the first Send,
+     * attachment or tab click merely exits modal text editing. */
+    ScrArea *area = CTX_wm_area(C);
+    if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
+        event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
+        ui_but_mixie_mention_scene(but) &&
+        ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+    {
+      for (ARegion &action_region : area->regionbase) {
+        if (!BLI_rcti_isect_pt_v(&action_region.winrct, event->xy)) {
+          continue;
+        }
+        Button *target = but_find_mouse_over(&action_region, event);
+        if (target && target != but && target->optype) {
+#ifdef WITH_INPUT_IME
+          wmWindow *win = CTX_wm_window(C);
+          const wmIMEData *ime = win->runtime->ime_data;
+          if (ime && win->runtime->ime_data_is_composing && !ime->composite.empty()) {
+            textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                                ime->composite.size());
+          }
+#endif
+          /* Do not queue a mousemove: the press is transferred below, and a
+           * follow-up move can clear UI_SELECT on WAIT_RELEASE. */
+          button_activate_exit(C, but, but->active, false, false);
+          /* The modal editor consumed the approach MOUSEMOVE, so merely
+           * returning CONTINUE leaves the action without a hover state.
+           * Transfer to its region and handle this press exactly once. */
+          region = &action_region;
+          CTX_wm_region_set(C, region);
+          handle_button_activate(C, region, target, BUTTON_ACTIVATE_OVER);
+          but = target;
+          break;
+        }
+      }
+    }
     /* Commit an edited Zen input and transfer the press to the native Zen
      * action under the pointer, whether beside or overlapping the input.
      * Otherwise the modal editor can consume the first Generate click.
@@ -14304,7 +14394,8 @@ void refresh_for_srna_unregister(Main *bmain, StructRNA *srna_to_unreg)
 bool textbutton_activate_rna(const bContext *C,
                              ARegion *region,
                              const void *rna_poin_data,
-                             const char *rna_prop_id)
+                             const char *rna_prop_id,
+                             const bool force)
 {
   Block *block_text = nullptr;
   Button *but_text = nullptr;
@@ -14331,7 +14422,20 @@ bool textbutton_activate_rna(const bContext *C,
 
     /* Temporary context override for activating the button. */
     CTX_wm_region_set(const_cast<bContext *>(C), region);
-    button_active_only(C, region, block_text, but_text);
+    if (force) {
+      /* Explicit focus requests may reactivate an existing field. The
+       * popup initializer below deliberately refuses that after a redraw. */
+      Button *active = region_find_active_but(region);
+      if (active != but_text || !button_is_editing(active)) {
+        if (active) {
+          button_activate_exit(const_cast<bContext *>(C), active, active->active, false, false);
+        }
+        button_activate_event(const_cast<bContext *>(C), region, but_text);
+      }
+    }
+    else {
+      button_active_only(C, region, block_text, but_text);
+    }
     CTX_wm_region_set(const_cast<bContext *>(C), region_ctx);
     return true;
   }

@@ -40,7 +40,7 @@ AGENT_NAME_TARGET_CHARS = 34
 #: Python half the card vanishes mid-slide. Pinned by
 #: `tests/agent_panel/test_agent_panel_contracts.py`.
 DONE_CARD_DWELL_S = 1.2
-DONE_CARD_EXIT_S = 0.35
+DONE_CARD_EXIT_S = 0.20
 
 #: A card that FAILED never slides out on its own — a failure is the one thing
 #: on this surface the user may still need to act on.

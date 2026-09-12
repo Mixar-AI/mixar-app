@@ -47,6 +47,8 @@ set(SRC
   mixar/style.cc
   mixar/text.cc
   mixar/components.cc
+  mixar/custom_motion.cc
+  mixar/motion.cc
   interface_mixar_card_button.cc
   interface_mixar_card_icons.cc
   interface_mixar_cinema_row.cc

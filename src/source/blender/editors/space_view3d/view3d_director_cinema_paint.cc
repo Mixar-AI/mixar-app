@@ -39,6 +39,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director_cinema.hh"
@@ -332,8 +333,8 @@ ui::Button *cinema_op_button(ui::Block *block,
                         const rctf &rect,
                         const char *tooltip)
 {
-  /* Emboss::None and no label: the panel already painted this control, so the
-   * button contributes hit-testing and dispatch only. */
+  /* The panel already painted the control. The native button owns input and
+   * a transparent, bounded feedback overlay over precisely those pixels. */
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
   ui::Button *but = uiDefIconButO(block,
                              ui::ButtonType::But,
@@ -346,6 +347,7 @@ ui::Button *cinema_op_button(ui::Block *block,
                              int(BLI_rctf_size_y(&rect)),
                              tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 
@@ -369,6 +371,7 @@ ui::Button *cinema_icon_button(ui::Block *block,
                                   int(BLI_rctf_size_y(&rect)),
                                   tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 
@@ -397,6 +400,7 @@ ui::Button *cinema_popup_button(ui::Block *block,
                                       short(BLI_rctf_size_y(&rect)),
                                       tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 

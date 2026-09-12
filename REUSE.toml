@@ -120,3 +120,24 @@ path = "docs/development/evidence/agent-cats/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Native composer interaction QA screenshots and verdicts.
+[[annotations]]
+path = "docs/development/evidence/mixie-open-type-send/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# QA frames and verdicts for the shared Zen motion system.
+[[annotations]]
+path = "docs/development/evidence/zen-motion/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Native macOS glass compositor screenshots and replay verdicts.
+[[annotations]]
+path = "docs/development/evidence/macos-glass/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"

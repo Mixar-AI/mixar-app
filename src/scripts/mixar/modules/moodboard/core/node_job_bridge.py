@@ -8,6 +8,7 @@ import bpy
 
 from mixar.modules.common.job_queue.core.job import JobState, RUNNING_STATES
 from .node_graph import action_node_by_id
+from .canvas_context import redraw_moodboard_canvases
 
 
 _STATE_MAP = {
@@ -28,10 +29,7 @@ _PULSE_INTERVAL_S = 1.0 / 15.0
 
 def _redraw_mixie_areas() -> None:
     try:
-        for window in bpy.context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == 'MIXIE':
-                    area.tag_redraw()
+        redraw_moodboard_canvases()
     except Exception:
         pass
 

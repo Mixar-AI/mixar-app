@@ -22,6 +22,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
+#include "UI_mixar.hh"
 
 namespace blender::ed::mixie {
 
@@ -60,7 +61,7 @@ static ui::Button *screen_prop_button(ui::Block *block,
   if (!RNA_struct_find_property(ptr, property)) {
     return nullptr;
   }
-  return ui::uiDefButR(block,
+  ui::Button *button = ui::uiDefButR(block,
                    type,
                    label,
                    x,
@@ -73,6 +74,12 @@ static ui::Button *screen_prop_button(ui::Block *block,
                    minimum,
                    maximum,
                    nullptr);
+  const ui::MixarComponent component = type == ui::ButtonType::Menu ? ui::MixarComponent::Dropdown :
+      type == ui::ButtonType::Checkbox ? ui::MixarComponent::Toggle :
+      ELEM(type, ui::ButtonType::Num, ui::ButtonType::NumSlider) ? ui::MixarComponent::Number :
+      ui::MixarComponent::Input;
+  ui::mixar_style_button(button, component);
+  return button;
 }
 
 void moodboard_draw_floating_background(const rctf &rect)
@@ -309,6 +316,7 @@ static void add_action_toolbar(ui::Block *block,
                              field_width,
                              row_h,
                              nullptr);
+    ui::mixar_style_button(rerun, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
     RNA_string_set(ui::button_operator_ptr_ensure(rerun), "node_id", reset_node_id);
     RNA_boolean_set(ui::button_operator_ptr_ensure(rerun), "edit_before_run", true);
     y -= row_h + gap;
@@ -323,6 +331,7 @@ static void add_action_toolbar(ui::Block *block,
                            field_width,
                            row_h,
                            nullptr);
+  ui::mixar_style_button(reset, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
   RNA_string_set(ui::button_operator_ptr_ensure(reset), "node_id", reset_node_id);
   disable_while_submitted(reset, generation_running);
 
@@ -343,6 +352,7 @@ static void add_action_toolbar(ui::Block *block,
                               cancel_w,
                               cancel_h,
                               nullptr);
+    ui::mixar_style_button(cancel, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
     RNA_string_set(ui::button_operator_ptr_ensure(cancel), "node_id", reset_node_id);
   }
   else if (!has_result || state == 0) {
@@ -392,6 +402,7 @@ static void add_action_toolbar(ui::Block *block,
                                 generate_w,
                                 generate_h,
                                 nullptr);
+    ui::mixar_style_button(generate, ui::MixarComponent::Action, ui::MixarVariant::Primary);
     RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
   }
 }

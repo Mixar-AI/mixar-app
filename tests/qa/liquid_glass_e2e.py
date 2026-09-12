@@ -26,6 +26,14 @@ def _native(qa, out):
     helper = ROOT / 'tests/qa/liquid_glass_native.py'
     result = qa.eval(f"ns = {{}}\nexec(compile(open({str(helper)!r}).read(), {str(helper)!r}, 'exec'), ns)\n"
                      f"result = ns['capture']({str(out)!r})")
+    for window in result.get('windows', []):
+        if 'material' not in window:
+            continue
+        state = window['material']
+        assert state['container'] in ('NSGlassEffectView', 'NSVisualEffectView'), state
+        assert state['host'] == 'CocoaMetalView' and state['host_window_matches'], state
+        assert not state['window_opaque'] and state['background_alpha'] == 0, state
+        assert not state['metal_opaque'] and state['pixel_format'] == 80, state
     if os.environ.get('MIXAR_QA_REQUIRE_NATIVE') == '1':
         assert result['available'], f"Native compositor capture unavailable: {result}"
     return result

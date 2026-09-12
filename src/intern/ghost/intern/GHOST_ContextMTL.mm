@@ -10,7 +10,7 @@
  *
  * Mixar overlay of upstream intern/ghost/intern/GHOST_ContextMTL.mm
  * (pin v5.2.0). The present blit keeps the sampled framebuffer alpha so a
- * non-opaque CAMetalLayer can composite over the theme-frame frost sibling.
+ * non-opaque CAMetalLayer can composite over the native glass content container.
  * Re-diff against upstream after every pin bump.
  */
 

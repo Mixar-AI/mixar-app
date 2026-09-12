@@ -15,7 +15,12 @@ from typing import Optional
 
 import bpy
 
-from .constants import TIMER_INTERVAL, TOASTS_VISIBLE_WM_PROP
+from .constants import (
+    ANIMATION_INTERVAL,
+    FADE_DURATION_MS,
+    TIMER_INTERVAL,
+    TOASTS_VISIBLE_WM_PROP,
+)
 
 _timer_lock = threading.Lock()
 _timer_active = False
@@ -61,10 +66,15 @@ def _toast_tick() -> Optional[float]:
 
     if remaining > 0:
         visible = store.get_visible()
-        # If all remaining toasts are sticky, use a slower tick rate
-        all_sticky = all(item.is_sticky for item in visible)
+        # Wake at the next fade boundary, then paint every frame only while
+        # fading. Expiry polling must not quantize a short dissolve to 1–2 frames.
+        fades_in = [item.remaining_ms - FADE_DURATION_MS
+                    for item in visible if not item.is_sticky]
         _tag_redraw_view3d()
-        return TIMER_INTERVAL * 5 if all_sticky else TIMER_INTERVAL
+        if not fades_in:
+            return TIMER_INTERVAL * 5
+        until_fade = min(fades_in) / 1000.0
+        return max(ANIMATION_INTERVAL, min(TIMER_INTERVAL, until_fade))
 
     # No more toasts — stop the timer and remove the draw handler
     with _timer_lock:

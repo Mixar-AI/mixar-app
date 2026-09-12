@@ -25,6 +25,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
@@ -276,8 +277,9 @@ ui::Button *director_overlay_operator_button(ui::Block *block,
                                         const int height,
                                         const char *tooltip)
 {
+  ui::Button *button;
   if (label && label[0]) {
-    return ui::uiDefIconTextButO(block,
+    button = ui::uiDefIconTextButO(block,
                              ui::ButtonType::But,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
@@ -289,7 +291,8 @@ ui::Button *director_overlay_operator_button(ui::Block *block,
                              height,
                              tooltip);
   }
-  return ui::uiDefIconButO(block,
+  else {
+    button = ui::uiDefIconButO(block,
                        ui::ButtonType::But,
                        operator_id,
                        blender::wm::OpCallContext::InvokeRegionWin,
@@ -299,6 +302,9 @@ ui::Button *director_overlay_operator_button(ui::Block *block,
                        width,
                        height,
                        tooltip);
+  }
+  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
+  return button;
 }
 
 void director_overlay_disable_button(ui::Button *button, const bool disabled)

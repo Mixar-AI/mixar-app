@@ -3775,6 +3775,32 @@ extern "C" bool Mixar_WindowIsVisible(void *window_handle)
   return ::IsWindowVisible(hwnd) != FALSE;
 }
 
+extern "C" bool Mixar_WindowCanAnimate(void *window_handle)
+{
+  /* The caller must first resolve this handle from a live wmWindow. Preserve
+   * the normal draw loop's visibility contract; only animation uses this. */
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return false;
+  }
+  /* Owned popups can retain WS_VISIBLE while their host is minimized. Do not
+   * use activation or keyboard focus: the dock also animates beside the host. */
+  for (HWND current = hwnd; current != nullptr; current = GetWindow(current, GW_OWNER)) {
+    if (!IsWindow(current) || !IsWindowVisible(current) || IsIconic(current)) {
+      return false;
+    }
+    BYTE alpha = 255;
+    DWORD flags = 0;
+    if ((GetWindowLongPtr(current, GWL_EXSTYLE) & WS_EX_LAYERED) &&
+        GetLayeredWindowAttributes(current, nullptr, &alpha, &flags) &&
+        (flags & LWA_ALPHA) && alpha <= 2)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 extern "C" void Mixar_WindowOrderFront(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);

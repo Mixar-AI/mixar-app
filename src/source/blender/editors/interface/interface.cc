@@ -1985,6 +1985,10 @@ void block_update_from_old(const bContext *C, Block *block)
     return;
   }
 
+  /* Executed operators have already transferred/cleared their native identity.
+   * Keep presentation independent of that ownership handoff. */
+  MixarMotionRebuild motion(*block);
+
   if (block->oldblock->butstore.is_empty() == false) {
     butstore_update(block);
   }
@@ -2003,6 +2007,7 @@ void block_update_from_old(const bContext *C, Block *block)
       }
     }
   }
+  motion.apply(*block);
   for (Button &but : block->oldblock->buttons()) {
     but_free(C, &but);
   }
@@ -2339,6 +2344,7 @@ void block_draw(const bContext *C, Block *block)
     /* XXX: figure out why invalid coordinates happen when closing render window */
     /* and material preview is redrawn in main window (temp fix for bug #23848) */
     if (rect.xmin < rect.xmax && rect.ymin < rect.ymax) {
+      mixar_button_motion_update(but, region);
       draw_button(C, region, &style, &but, &rect);
     }
   }

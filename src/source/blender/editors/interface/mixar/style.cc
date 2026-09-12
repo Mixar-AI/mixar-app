@@ -33,7 +33,8 @@ static bool supports(const Button &button, const MixarComponent component)
     case MixarComponent::Segment:
       return ELEM(button.type, ButtonType::Row, ButtonType::But);
     case MixarComponent::Surface:
-      return ELEM(button.type, ButtonType::Roundbox, ButtonType::But);
+      return ELEM(button.type, ButtonType::Roundbox, ButtonType::But, ButtonType::Menu,
+                  ButtonType::Block, ButtonType::Popover);
     case MixarComponent::Label:
       return button.type == ButtonType::Label;
     default:

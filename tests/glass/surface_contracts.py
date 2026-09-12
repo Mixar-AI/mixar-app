@@ -60,6 +60,7 @@ AGENT = ED / "space_agent_bubble"
 AGENT_THEME = (AGENT / "agent_ui_theme.hh").read_text(encoding="utf-8")
 AGENT_LAYOUT_HH = (AGENT / "agent_ui_layout.hh").read_text(encoding="utf-8")
 AGENT_LAYOUT = (AGENT / "agent_ui_layout.cc").read_text(encoding="utf-8")
+AGENT_CONTROLS = (AGENT / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 AGENT_DRAW = (AGENT / "agent_ui_draw.cc").read_text(encoding="utf-8")
 
 
