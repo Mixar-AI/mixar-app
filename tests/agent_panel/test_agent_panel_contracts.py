@@ -41,6 +41,7 @@ PY_PROPS = (
 
 HEADER = SPACE_VIEW3D / "view3d_agent_panel.hh"
 CARDS = SPACE_VIEW3D / "view3d_agent_panel_cards.cc"
+SYNC = SPACE_VIEW3D / "view3d_agent_panel_sync.cc"
 DRAW = SPACE_VIEW3D / "view3d_agent_panel_draw.cc"
 OPS = SPACE_VIEW3D / "view3d_agent_panel_ops.cc"
 QA = SPACE_VIEW3D / "view3d_agent_panel_qa.cc"
@@ -95,7 +96,7 @@ class TestStringBudgets:
 
     def test_every_string_read_is_bounded(self):
         """`RNA_property_string_get` is strcpy-shaped — never call it raw."""
-        text = CARDS.read_text()
+        text = SYNC.read_text()
         assert "agent_panel_read_string" in text
         assert not re.search(r"\bRNA_property_string_get\s*\(", text), (
             "read through agent_panel_read_string, which uses the _alloc form"
@@ -198,7 +199,7 @@ class TestRevealReplaysEveryTurn:
         comparison can see a new fan-out from here: the first animates once
         per session, the second leaves a re-run of the same turn's task list
         stuck at the previous scroll position."""
-        text = CARDS.read_text()
+        text = SYNC.read_text()
         sync = text[text.index("void view3d_agent_panel_cards_sync") :]
         assert "mixar_agent_cards_generation" in sync
         assert "runtime->scroll = 0.0f" in sync and "reveal_started_at" in sync
@@ -456,7 +457,7 @@ class TestWiring:
 
     def test_every_source_file_is_built(self):
         cmake = CMAKE.read_text()
-        for path in (CARDS, DRAW, OPS, QA):
+        for path in (CARDS, SYNC, DRAW, OPS, QA):
             assert path.name in cmake, f"{path.name} missing from CMakeLists.txt"
         assert HEADER.name in cmake
 

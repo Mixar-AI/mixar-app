@@ -69,6 +69,7 @@
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_pill_cat.hh"
 #include "agent_ui_queue.hh"
 #include "agent_ui_tab3d.hh"
 #include "agent_ui_tabsplat.hh"
@@ -2024,10 +2025,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 
-/* Elongated resting pill: last-prompt preview + logo chip. Compact cut of
- * the 643x85 export so the minimised bubble stays a quiet dock, not a
- * second toolbar. Aspect stays above 4 so the elongated painter runs.
- * Radius is half the height — a true capsule. */
+/* Elongated resting pill: last-prompt preview + Mixie the cat on its chip.
+ * Compact cut of the 643x85 export; aspect stays above 4 so the elongated
+ * painter runs. Radius is half the height — a true capsule. */
 #define AGENT_BUBBLE_PILL_WIDTH_LARGE 304
 #define AGENT_BUBBLE_PILL_HEIGHT_LARGE 44
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 22.0f
@@ -2779,7 +2779,10 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   agent_ui_draw_status_pill(pill_w, pill_h, &state);
   GPU_matrix_pop();
 
-  if (state.status_busy || state.queue_count > 0) {
+  /* Elongated resting pill always carries Mixie's cat (idle blink/breathe),
+   * so it keeps redrawing even when Mixie is idle. The compact status pill
+   * above an open island only pulses while a turn or queue job is live. */
+  if (pill_w > pill_h * 4.0f || state.status_busy || state.queue_count > 0) {
     ED_region_tag_redraw(region);
   }
 
@@ -3797,16 +3800,11 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   }
 
   /* Minimised: nothing to hover-test — the pill opens on click, never on
-   * hover (see the section comment). The tick only keeps the pill's working
-   * animation alive while the main draw loop is idle. */
+   * hover (see the section comment). The tick keeps Mixie's cat (and the
+   * working glow) animating while the main draw loop is idle. */
   if (g_bubble_minimised) {
     g_hover_outside_ticks = 0;
-
-    AgentIslandState state;
-    agent_ui_state_gather(C, &state);
-    if (state.status_busy || state.queue_count > 0) {
-      agent_bubble_pill_tag_redraw(CTX_wm_manager(C));
-    }
+    agent_bubble_pill_tag_redraw(CTX_wm_manager(C));
     return OPERATOR_FINISHED;
   }
 
@@ -4455,6 +4453,8 @@ void ED_spacetype_agent_bubble()
   BLI_addhead(&st->regiontypes, art);
 
   BKE_spacetype_register(std::move(st));
+
+  agent_ui_pill_cat_qa_register();
 }
 
 /** \} */

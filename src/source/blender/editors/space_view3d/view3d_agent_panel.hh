@@ -25,6 +25,8 @@
 #pragma once
 
 #include "BLI_rect.h"
+#include "BLI_map.hh"
+#include <string>
 #include "BLI_vector.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -83,9 +85,9 @@ struct wmWindowManager;
 /** Corner radius of a card pill. */
 #define AGENT_PANEL_CARD_RADIUS 12
 
-/** Avatar disc: diameter, and its inset from the card's left edge. */
-#define AGENT_PANEL_AVATAR_SIZE 26
-#define AGENT_PANEL_AVATAR_INSET 7
+/** Cat canvas: size, and its inset from the card's left edge. */
+#define AGENT_PANEL_AVATAR_SIZE 34
+#define AGENT_PANEL_AVATAR_INSET 4
 
 /** Right-hand glyph buttons: box size, gap between them, inset from the
  * card's right edge. */
@@ -149,6 +151,10 @@ struct AgentPanelCard {
 
   AgentCardStatus status = AgentCardStatus::Pending;
 
+  /** Stable within a fan-out, independent of display order and status. */
+  int cat_ordinal = 0;
+  rcti cat_rect = {};
+
   /** Python-clock readings. Only ever used as the DIFFERENCE `ended - started`:
    * `time.monotonic()` and `BLI_time_now_seconds()` need not share an epoch, so
    * comparing one against the other would print nonsense. A duration inside one
@@ -189,6 +195,8 @@ struct AgentPanelCard {
 
 struct AgentPanelRuntime {
   blender::Vector<AgentPanelCard> cards;
+  /** Retain identities even when a task temporarily leaves the mirror. Reset each generation. */
+  blender::Map<std::string, int> cat_identities;
 
   /** Scroll offset in region pixels, clamped to [0, scroll_max]. */
   float scroll = 0.0f;
@@ -224,7 +232,7 @@ struct AgentPanelRuntime {
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name view3d_agent_panel_cards.cc
+/** \name view3d_agent_panel_cards.cc / view3d_agent_panel_sync.cc
  * \{ */
 
 /** Register the panel's `RGN_TYPE_EXECUTE` region type on the View3D space. */
@@ -315,15 +323,6 @@ void view3d_agent_panel_glyph_eye(const rcti &box, float scale, const float colo
 void view3d_agent_panel_glyph_cross(const rcti &box, float scale, const float color[4]);
 void view3d_agent_panel_glyph_check(const rcti &box, float scale, const float color[4]);
 void view3d_agent_panel_glyph_chevrons_down(const rcti &box, float scale, const float color[4]);
-
-/** The Mixar mark on a card's avatar disc. Falls back to the brand gradient
- * when the bundled logo can't be loaded. */
-void view3d_agent_panel_draw_mark(
-    float cx, float cy, float radius, const float tint_a[4], const float tint_b[4]);
-
-/** Release the cached logo image. Called from the region exit callback, so
- * the bundled PNG is not held for the life of the process. */
-void view3d_agent_panel_mark_free();
 
 /** \} */
 

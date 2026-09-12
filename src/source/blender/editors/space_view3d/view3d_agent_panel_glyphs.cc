@@ -6,35 +6,24 @@
  * \ingroup spview3d
  *
  * Parallel Agents panel glyphs: the thin-stroke marks a card draws — eye,
- * cross, check, the "more agents" double chevron — and the Mixar mark that
- * sits on each card's avatar disc.
+ * cross, check and the "more agents" double chevron.
  *
  * Drawn from AA lines and discs rather than `ICON_*`: Blender's stock icon set
  * is weighted for toolbars and out-shouts these labels at card scale (the same
  * finding the profile card records). Split out of the draw pass to keep both
  * files inside the 500-line rule.
- *
- * The mark is the bundled `mixar_logo.png`, loaded once and cached for the
- * process. Loading is best-effort: without it the disc keeps its brand
- * gradient, which is what the mark is drawn from anyway.
  */
 
 #include <algorithm>
 #include <cmath>
 
 #include "BLI_math_base.h"
-#include "BLI_path_utils.hh"
 #include "BLI_rect.h"
 
-#include "BKE_appdir.hh"
 
-#include "IMB_imbuf.hh"
-#include "IMB_imbuf_types.hh"
 
-#include "BIF_glutil.hh"
 
 #include "GPU_immediate.hh"
-#include "GPU_immediate_util.hh"
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
@@ -149,81 +138,5 @@ void view3d_agent_panel_glyph_chevrons_down(const rcti &box, const float scale, 
   }
 }
 
-
-/* -------------------------------------------------------------------- */
-/** \name The Mixar Mark
- * \{ */
-
-/** Process-global cache of the bundled logo. `nullptr` after a failed load,
- * with `tried` set so the draw pass never re-attempts it every frame. */
-static ImBuf *g_mark_ibuf = nullptr;
-static bool g_mark_tried = false;
-
-static ImBuf *mark_ibuf_ensure()
-{
-  if (g_mark_tried) {
-    return g_mark_ibuf;
-  }
-  g_mark_tried = true;
-
-  const std::optional<std::string> datafiles = BKE_appdir_folder_id(BLENDER_DATAFILES, nullptr);
-  if (!datafiles.has_value()) {
-    return nullptr;
-  }
-  char path[FILE_MAX];
-  BLI_path_join(path, sizeof(path), datafiles->c_str(), "mixar_logo.png");
-  g_mark_ibuf = IMB_load_image_from_filepath(path, ImBufFlags::ByteData);
-  return g_mark_ibuf;
-}
-
-void view3d_agent_panel_mark_free()
-{
-  if (g_mark_ibuf != nullptr) {
-    IMB_freeImBuf(g_mark_ibuf);
-    g_mark_ibuf = nullptr;
-  }
-  g_mark_tried = false;
-}
-
-void view3d_agent_panel_draw_mark(const float cx,
-                                  const float cy,
-                                  const float radius,
-                                  const float tint_a[4],
-                                  const float tint_b[4])
-{
-  ImBuf *ibuf = mark_ibuf_ensure();
-  if (ibuf != nullptr && ibuf->byte_data() == nullptr && ibuf->float_data() != nullptr) {
-    /* Some readers hand back a float image; the draw path below wants bytes. */
-    IMB_byte_from_float(ibuf);
-  }
-  if (ibuf == nullptr || ibuf->byte_data() == nullptr || ibuf->x <= 0 || ibuf->y <= 0) {
-    /* No bundled mark: the disc keeps the brand gradient the mark is drawn
-     * from, which still reads as Mixar rather than as a missing asset. */
-    view3d_agent_panel_draw_disc(cx, cy, radius, tint_a);
-    view3d_agent_panel_draw_disc(cx, cy - radius * 0.35f, radius * 0.55f, tint_b);
-    return;
-  }
-
-  /* The bundled logo is the mark above a wordmark; take the square top so the
-   * disc carries the knot alone. */
-  const int side = std::min(ibuf->x, ibuf->y);
-  const float draw = radius * 2.0f;
-  const float zoom = draw / float(side);
-
-  /* 5.2: the `immDrawPixelsTex*` family is gone; `ED_draw_imbuf` is the
-   * direct replacement and takes the zoom this needs. Null colour-management
-   * settings fall back to the defaults, which is right for a UI glyph. */
-  GPU_blend(GPU_BLEND_ALPHA);
-  ED_draw_imbuf(ibuf,
-                cx - radius,
-                cy - radius,
-                /*use_filter*/ true,
-                /*view_settings*/ nullptr,
-                /*display_settings*/ nullptr,
-                zoom,
-                zoom);
-}
-
-/** \} */
 
 }  // namespace blender

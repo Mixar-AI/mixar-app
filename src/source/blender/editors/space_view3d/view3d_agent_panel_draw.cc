@@ -45,6 +45,7 @@
 #include "WM_types.hh"
 
 #include "view3d_agent_panel.hh"
+#include "../space_agent_bubble/agent_ui_pill_cat.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -58,13 +59,7 @@ constexpr float CARD_DARK[4] = {0.043f, 0.055f, 0.047f, 0.94f};
 constexpr float CARD_BORDER[4] = {0.180f, 0.478f, 0.278f, 0.55f};
 constexpr float CARD_BORDER_RUNNING[4] = {0.220f, 0.760f, 0.400f, 0.75f};
 
-constexpr float AVATAR_DISC[4] = {0.035f, 0.055f, 0.043f, 1.0f};
-/* The Mixar mark's own gradient (see `avatar_icon.py`: #00C0C7 -> #85C449). */
-constexpr float MARK_START[4] = {0.000f, 0.753f, 0.780f, 1.0f};
-constexpr float MARK_END[4] = {0.522f, 0.769f, 0.286f, 1.0f};
-
 constexpr float TEXT_NAME[4] = {0.94f, 0.96f, 0.94f, 1.0f};
-constexpr float TEXT_MUTED[4] = {0.62f, 0.68f, 0.64f, 1.0f};
 constexpr float GLYPH[4] = {0.80f, 0.86f, 0.82f, 1.0f};
 constexpr float GLYPH_DONE[4] = {0.36f, 0.86f, 0.50f, 1.0f};
 constexpr float GLYPH_FAILED[4] = {0.90f, 0.42f, 0.38f, 1.0f};
@@ -164,16 +159,11 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
                           U.pixelsize,
                           AGENT_PANEL_CARD_RADIUS * scale);
 
-  /* Avatar: the Mixar mark on its own dark disc. */
-  const float avatar_r = AGENT_PANEL_AVATAR_SIZE * scale * 0.5f;
-  const float avatar_cx = rect.xmin + AGENT_PANEL_AVATAR_INSET * scale + avatar_r;
-  const float avatar_cy = (rect.ymin + rect.ymax) * 0.5f;
-  float disc[4], mark_a[4], mark_b[4];
-  with_alpha(AVATAR_DISC, alpha, disc);
-  with_alpha(MARK_START, alpha, mark_a);
-  with_alpha(MARK_END, alpha, mark_b);
-  view3d_agent_panel_draw_disc(avatar_cx, avatar_cy, avatar_r, disc);
-  view3d_agent_panel_draw_mark(avatar_cx, avatar_cy, avatar_r * 0.72f, mark_a, mark_b);
+  /* The same silhouette as the island, with per-task identity and phase. */
+  const rctf cat = to_rctf(card.cat_rect);
+  const double cat_time = running ? now + double(card.cat_ordinal) * 1.137 : 1.0;
+  agent_ui_draw_cat(cat, cat_time, running, card.cat_ordinal, alpha);
+  const float avatar_cy = BLI_rctf_cent_y(&cat);
 
   /* Name, then the elapsed clock right after it in muted type. */
   const int font_id = BLF_default();
@@ -181,7 +171,7 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   const float line_h = BLF_height_max(font_id);
   const float baseline = avatar_cy - line_h * 0.34f;
 
-  const float text_x = avatar_cx + avatar_r + 9.0f * scale;
+  const float text_x = cat.xmax + 7.0f * scale;
   const float text_right = float(card.eye_rect.xmin) - 8.0f * scale;
 
   BLF_size(font_id, 12.0f * scale);
@@ -264,7 +254,6 @@ void view3d_agent_panel_region_exit(wmWindowManager *wm, ARegion *region)
    * temporary hide. */
   AgentPanelRuntime *runtime = static_cast<AgentPanelRuntime *>(region->regiondata);
   view3d_agent_panel_tick_timer_remove(wm, runtime);
-  view3d_agent_panel_mark_free();
 }
 
 /** \} */

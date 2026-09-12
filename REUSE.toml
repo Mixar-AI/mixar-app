@@ -113,3 +113,10 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "KIRI Engine contributors"
 SPDX-License-Identifier = "Apache-2.0"
+
+# QA captures of the animated cat UI and its verification results.
+[[annotations]]
+path = "docs/development/evidence/agent-cats/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"
