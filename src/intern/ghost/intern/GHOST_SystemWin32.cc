@@ -3299,8 +3299,11 @@ static void mixar_window_apply_corner_region(HWND hwnd, bool force)
   if (rgn == NULL) {
     return;
   }
-  /* SetWindowRgn takes ownership of the region — it must not be deleted. */
-  SetWindowRgn(hwnd, rgn, TRUE);
+  /* Ownership transfers only when the call succeeds; on failure the region is
+   * still ours and must be freed rather than leaked. */
+  if (!SetWindowRgn(hwnd, rgn, TRUE)) {
+    DeleteObject(rgn);
+  }
 }
 
 static int mixar_resize_border_px(HWND hwnd)

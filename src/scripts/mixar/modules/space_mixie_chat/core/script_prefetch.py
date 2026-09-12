@@ -12,9 +12,12 @@ timer simply holds the script (UI fully responsive, one cheap flag check per
 tick) until the cache is warm. Execution then pays only image decode + node
 build, not the network.
 
-The prefetch is best-effort by construction: on failure, timeout, or a URL we
-didn't extract, the script's own in-build download path (with its retry and
-fail-fast negative cache) takes over exactly as before.
+The prefetch is best-effort in that it never blocks the UI, but it is not
+silent about failure: a prefetch that fails, or that passes the wait cap, has
+the script REFUSED with an explicit error rather than falling through to a
+main-thread download — that fallback is the UI freeze the prefetch exists to
+prevent. Only a script we start no prefetch for (an unknown tool, or one with
+no extractable image URL) keeps the old in-build download path.
 """
 
 from __future__ import annotations
@@ -32,9 +35,9 @@ logger = get_logger(__name__)
 # apply tools appear; anything not listed keeps today's behavior exactly.
 PREFETCH_TOOLS = frozenset({"create_layered_material"})
 
-# Never hold a script longer than this waiting for its assets — after the cap
-# it executes anyway and the in-script downloads finish the job (partial cache
-# hits make even that shorter). Well under the backend's 240s tool timeout.
+# Never hold a script longer than this waiting for its assets — past the cap
+# the prefetch is EXPIRED and the script is refused, so the UI still never
+# pays for a main-thread download. Well under the backend's 240s tool timeout.
 PREFETCH_WAIT_CAP_SECONDS = 90.0
 
 # Global cap on concurrent asset downloads across ALL queued scripts. A
@@ -113,8 +116,8 @@ class ScriptAssetPrefetch:
                 w.join()
             if errors:
                 logger.warning(
-                    "script prefetch: %d/%d assets failed (script will retry "
-                    "in-build against the negative cache): %s",
+                    "script prefetch: %d/%d assets failed (the script will be "
+                    "refused): %s",
                     len(errors), len(urls), "; ".join(list(errors)[:3]),
                 )
         except Exception as exc:  # noqa: BLE001 — best-effort by contract

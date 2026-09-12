@@ -66,7 +66,7 @@ def _int(value, default=0) -> int:
         return default
 
 
-def activate(params: dict, journal=None, identity_fn=document.document_identity) -> dict:
+def activate(params: dict, journal=None, identity_fn=None) -> dict:
     run_id = params.get("run_id")
     session_id = params.get("session_id")
     epoch = _int(params.get("turn_epoch"), -1)
@@ -77,10 +77,17 @@ def activate(params: dict, journal=None, identity_fn=document.document_identity)
         return {"success": False, "error": "unsupported protocol_version",
                 "error_type": "unsupported_protocol"}
     journal = journal or get_journal()
+    identity_fn = identity_fn or document.document_identity
     prior = _by_session.get(session_id)
     known = max(prior.turn_epoch if prior else -1, journal.run_epoch(session_id))
     if prior is not None and prior.run_id == run_id and prior.turn_epoch == epoch:
-        # Duplicate activate for the same run (transport retry): same answer.
+        # Duplicate activate for the same run (transport retry): same answer,
+        # unless that run was revoked — an ACK here would tell the backend
+        # the client is healthy while every later commit is refused.
+        if prior.revoked or journal.run_revoked(run_id):
+            return {"success": False,
+                    "error": f"run {run_id!r} has been revoked",
+                    "error_type": "stale_epoch"}
         identity = identity_fn()
         return _ack(prior, identity)
     if epoch <= known:
@@ -144,9 +151,11 @@ def revoke(params: dict, journal=None) -> dict:
     binding = _by_run.get(run_id) if run_id else None
     journal = journal or get_journal()
     if binding is None:
-        # Unknown here but maybe known to the journal (restart): still refuse later commits.
+        # Unknown here but maybe known to the journal (restart): still refuse
+        # later commits and supersede any op the lost run left open.
         if run_id:
             journal.revoke_run(run_id)
+            journal.supersede_run(run_id)
             document.clear_foreground_tasks(run_id)
         return {"success": True, "known": False,
                 "foreground_tasks": document.foreground_tasks_active()}
@@ -217,6 +226,11 @@ def check_commit_allowed(run_id: str, turn_epoch, task_id: str, fence, journal=N
     for (tid, _gen), info in binding.tasks.items():
         if tid == task_id and (bound is None or info["fence"] > bound["fence"]):
             bound = info
-    if bound is not None and fence < bound["fence"]:
+    if bound is None:
+        rec = journal.get_latest_binding(run_id, task_id)
+        if rec is None:
+            return "stale_fence", f"task {task_id} is not bound"
+        bound = {"fence": rec["fence"]}
+    if fence < bound["fence"]:
         return "stale_fence", f"fence {fence} older than bound {bound['fence']}"
     return None

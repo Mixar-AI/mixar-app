@@ -84,6 +84,7 @@ class Journal:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=FULL")
         self._migrate()
+        self._abandon_crashed_ops()
 
     # --- schema ---------------------------------------------------------
     def _migrate(self) -> None:
@@ -93,6 +94,18 @@ class Journal:
                 for stmt in _SCHEMA:
                     self._conn.execute(stmt)
                 self._conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+
+    def _abandon_crashed_ops(self) -> None:
+        """A leftover ``RUNNING`` row cannot still be in flight: this journal
+        is main-thread-only and a new connection means a new process (or a
+        test reopen). Replay as ``UNKNOWN`` so a retry never sits on
+        ``deferred`` forever after a crash between RUNNING and APPLIED.
+        """
+        with self._tx():
+            self._conn.execute(
+                "UPDATE ops SET state=?, updated_at=? WHERE state=?",
+                (UNKNOWN, time.time(), RUNNING),
+            )
 
     def _tx(self):
         """BEGIN IMMEDIATE ... COMMIT/ROLLBACK context manager."""
@@ -120,11 +133,16 @@ class Journal:
 
     # --- runs -------------------------------------------------------------
     def run_epoch(self, session_id: str) -> int:
-        """Highest turn epoch this client ever accepted for the session."""
+        """Highest turn epoch this client ever accepted for the session.
+
+        ``-1`` when the session has no accepted run yet, matching the
+        "no prior run" sentinel :func:`bindings.activate` starts from: epoch
+        0 is a real epoch, so 0 must not double as "never activated".
+        """
         row = self._conn.execute(
             "SELECT MAX(turn_epoch) AS e FROM runs WHERE session_id=?", (session_id,)
         ).fetchone()
-        return int(row["e"]) if row and row["e"] is not None else 0
+        return int(row["e"]) if row and row["e"] is not None else -1
 
     def record_run(self, session_id: str, run_id: str, turn_epoch: int) -> None:
         with self._tx():
@@ -132,7 +150,7 @@ class Journal:
                 "INSERT INTO runs(run_id, session_id, turn_epoch, revoked, updated_at) "
                 "VALUES(?,?,?,0,?) ON CONFLICT(run_id) DO UPDATE SET "
                 "session_id=excluded.session_id, turn_epoch=excluded.turn_epoch, "
-                "updated_at=excluded.updated_at",
+                "revoked=0, updated_at=excluded.updated_at",
                 (run_id, session_id, int(turn_epoch), time.time()),
             )
 
@@ -167,6 +185,15 @@ class Journal:
         row = self._conn.execute(
             "SELECT * FROM bindings WHERE run_id=? AND task_id=? AND generation=?",
             (run_id, task_id, int(generation)),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_latest_binding(self, run_id: str, task_id: str) -> Optional[dict]:
+        """Highest-fence binding for the task, any generation (restart path)."""
+        row = self._conn.execute(
+            "SELECT * FROM bindings WHERE run_id=? AND task_id=? "
+            "ORDER BY fence DESC, generation DESC LIMIT 1",
+            (run_id, task_id),
         ).fetchone()
         return dict(row) if row else None
 

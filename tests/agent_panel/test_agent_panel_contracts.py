@@ -386,9 +386,13 @@ class TestTrackpadScrolls:
             ROOT / "src" / "scripts" / "mixar" / "modules" / "agent_panel"
             / "ui" / "keymap.py"
         ).read_text()
-        assert "TRACKPADPAN" in keymap, (
+        assert "type='MOUSEPAN'" in keymap, (
             "the addon keyconfig is the copy that survives a preset reload"
         )
+        # TRACKPADPAN is not a Blender keymap event type: setting it makes
+        # KeyMapItem.type raise TypeError, so register() dies before the
+        # keyconfig is populated and the trackpad binding never lands.
+        assert "TRACKPADPAN" not in keymap
 
 class TestDrawSafety:
     def test_the_draw_pass_never_resizes_the_region(self):

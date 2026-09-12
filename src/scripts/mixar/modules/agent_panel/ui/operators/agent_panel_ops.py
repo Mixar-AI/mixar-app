@@ -12,7 +12,6 @@ has exactly one owner).
 
 from __future__ import annotations
 
-import bpy
 from bpy.props import StringProperty
 from bpy.types import Operator
 

@@ -56,6 +56,7 @@ def _restore_shift(
     for fcurve in curves:
         fcurve.update()
     scene.frame_end = scene_state[1]
+    scene.use_preview_range = scene_state[4]
     scene.frame_preview_start = scene_state[2]
     scene.frame_preview_end = scene_state[3]
     shot.manifest_json = manifest_json
@@ -210,6 +211,7 @@ def shift_camera_beats(
         int(scene.frame_end),
         int(scene.frame_preview_start),
         int(scene.frame_preview_end),
+        bool(scene.use_preview_range),
     )
     manifest_json = shot.manifest_json
     old_first = min(beat_frames)

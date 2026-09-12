@@ -72,6 +72,8 @@ def test_journal_epoch_survives_memory_reset(journal):
 
 def test_newer_run_revokes_prior_and_commit_checks(journal):
     _activate(journal, "r1", 1)
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
+                        "attempt": 1, "fence_token": 0}, journal=journal)
     assert bindings.check_commit_allowed("r1", 1, "t1", 0, journal) is None
     _activate(journal, "r2", 2)
     assert bindings.check_commit_allowed("r1", 1, "t1", 0, journal)[0] == "stale_epoch"
@@ -84,6 +86,10 @@ def test_revoke_run_and_task(journal, monkeypatch):
     flags = []
     monkeypatch.setattr(document, "set_run_active", lambda f: flags.append(f))
     _activate(journal, "r1", 1)
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
+                        "attempt": 1, "fence_token": 0}, journal=journal)
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 1, "task_id": "t9", "generation": 0,
+                        "attempt": 1, "fence_token": 0}, journal=journal)
     assert bindings.revoke({"run_id": "r1", "turn_epoch": 1, "task_id": "t9"}, journal=journal)["success"]
     assert bindings.check_commit_allowed("r1", 1, "t9", 0, journal)[0] == "stale_fence"
     assert bindings.check_commit_allowed("r1", 1, "t1", 0, journal) is None
@@ -115,6 +121,40 @@ def test_invalid_activate_params(journal):
     assert bindings.activate({"run_id": "r"}, journal=journal)["error_type"] == "invalid_params"
     bad = _activate(journal, "r1", 1, protocol_version="v2")
     assert bad["error_type"] == "unsupported_protocol"
+
+
+def test_first_turn_epoch_zero_activates(journal):
+    """Epoch 0 is a real epoch: the first accepted run must not be refused
+    merely because no run was accepted before it."""
+    first = _activate(journal, "r1", 0)
+    assert first["success"] and first["turn_epoch"] == 0
+    assert _activate(journal, "r1", 0)["success"]          # transport retry
+    assert _activate(journal, "r2", 0)["error_type"] == "stale_epoch"
+    assert _activate(journal, "r2", 1)["success"]
+
+
+def test_reactivated_run_id_clears_the_prior_revocation(journal):
+    """A run re-accepted at a newer epoch stays committable after its earlier
+    revocation; activate acks an ack that every commit would then refuse."""
+    _activate(journal, "r1", 1)
+    assert bindings.revoke({"run_id": "r1", "turn_epoch": 1}, journal=journal)["known"]
+    assert bindings.check_commit_allowed("r1", 1, "t1", 0, journal)[0] == "stale_epoch"
+    again = _activate(journal, "r1", 2)
+    assert again["success"] and again["ack"] is True
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 2, "task_id": "t1", "generation": 0,
+                        "attempt": 1, "fence_token": 0}, journal=journal)
+    assert bindings.check_commit_allowed("r1", 2, "t1", 0, journal) is None
+
+
+def test_revoke_unknown_run_supersedes_its_open_ops(journal):
+    """After a restart the run is not in memory but its journal row is: a
+    revoke must refuse later commits AND close the ops it left open."""
+    journal.op_prepare("op-x", run_id="ghost", task_id="t1", generation=0, fence=0,
+                       payload_hash="h", document_id="d", document_epoch=0, artifact_id=None)
+    assert journal.op_get("op-x")["state"] == "prepared"
+    assert bindings.revoke({"run_id": "ghost"}, journal=journal)["known"] is False
+    assert journal.run_revoked("ghost")
+    assert journal.op_get("op-x")["state"] == "superseded"
 
 
 # --- FOREGROUND execution class (lock + capture stand up per task) ------------
@@ -170,3 +210,29 @@ def test_new_run_and_whole_run_revoke_reset_counter(journal):
     assert whole["known"] and whole["foreground_tasks"] == 0
     # Unknown run revoke (after a restart) reports the live counter too.
     assert bindings.revoke({"run_id": "ghost"}, journal=journal)["foreground_tasks"] == 0
+
+
+def test_unbound_task_cannot_commit(journal):
+    _activate(journal, "r1", 1)
+    refused = bindings.check_commit_allowed("r1", 1, "t1", 0, journal)
+    assert refused is not None and refused[0] == "stale_fence"
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
+                        "attempt": 1, "fence_token": 4}, journal=journal)
+    assert bindings.check_commit_allowed("r1", 1, "t1", 4, journal) is None
+
+
+def test_restart_consults_the_journal_binding(journal):
+    _activate(journal, "r1", 1)
+    bindings.bind_task({"run_id": "r1", "turn_epoch": 1, "task_id": "t1", "generation": 0,
+                        "attempt": 1, "fence_token": 7}, journal=journal)
+    binding = bindings.for_run("r1")
+    binding.tasks.clear()  # memory lost; journal still has the row
+    assert bindings.check_commit_allowed("r1", 1, "t1", 7, journal) is None
+    assert bindings.check_commit_allowed("r1", 1, "t1", 3, journal)[0] == "stale_fence"
+
+
+def test_duplicate_activate_of_a_revoked_run_is_refused(journal):
+    _activate(journal, "r1", 1)
+    assert bindings.revoke({"run_id": "r1", "turn_epoch": 1}, journal=journal)["known"]
+    again = _activate(journal, "r1", 1)
+    assert again["success"] is False and again["error_type"] == "stale_epoch"

@@ -2477,6 +2477,13 @@ void ED_agent_bubble_windows_closed()
    * platform guard on their declarations and on the seat functions. */
   g_pill_cinema_seat_valid = false;
   g_pill_cinema_host = nullptr;
+  /* Same guard, same reason: only Apple/Windows can composite the pill's
+   * alpha, so the flag recording whether this process's pill window handed
+   * its silhouette to DWM is declared with the seat globals. It describes one
+   * window's pixel format, so it must not outlive that window: a close cycle
+   * that left it set would make the next pill's bed write alpha 0 before its
+   * own `Mixar_WindowSetPerPixelAlpha` decision had run. */
+  g_pill_per_pixel_alpha = false;
 #endif
 }
 

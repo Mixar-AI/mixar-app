@@ -23,9 +23,11 @@ OPS = (DIRECTOR / "ui/operators/grid_ops.py").read_text(encoding="utf-8")
 TOP = (VIEW3D / "view3d_director_cinema_top.cc").read_text(encoding="utf-8")
 
 
-def _space(floor=True, x=True, y=True):
+def _space(floor=True, x=True, y=True, ortho=True):
     return SimpleNamespace(
-        overlay=SimpleNamespace(show_floor=floor, show_axis_x=x, show_axis_y=y)
+        overlay=SimpleNamespace(
+            show_floor=floor, show_axis_x=x, show_axis_y=y, show_ortho_grid=ortho,
+        )
     )
 
 
@@ -43,13 +45,40 @@ def test_grid_shown_reads_the_floor_flag():
 def test_toggle_grid_hides_floor_and_both_axes_together_and_returns_the_new_state():
     space = _space(True, True, True)
     assert viewport.toggle_grid(space) is False
-    assert (space.overlay.show_floor, space.overlay.show_axis_x, space.overlay.show_axis_y) == (
-        False, False, False,
-    )
+    assert (
+        space.overlay.show_floor,
+        space.overlay.show_axis_x,
+        space.overlay.show_axis_y,
+        space.overlay.show_ortho_grid,
+    ) == (False, False, False, False)
     assert viewport.toggle_grid(space) is True
-    assert (space.overlay.show_floor, space.overlay.show_axis_x, space.overlay.show_axis_y) == (
-        True, True, True,
+    assert (
+        space.overlay.show_floor,
+        space.overlay.show_axis_x,
+        space.overlay.show_axis_y,
+        space.overlay.show_ortho_grid,
+    ) == (True, True, True, True)
+
+
+def test_toggle_grid_flips_the_fixed_plane_ortho_grid_too():
+    # V3D_SHOW_ORTHO_GRID (RNA show_ortho_grid) is the flag the overlay engine
+    # draws the fixed-plane grid from in Top/Right/Front views; without it a
+    # toggle moves the chip and the axis lines but the grid plane stays put.
+    space = _space(floor=True, x=True, y=True, ortho=True)
+    assert viewport.toggle_grid(space) is False
+    assert space.overlay.show_ortho_grid is False
+    assert viewport.toggle_grid(space) is True
+    assert space.overlay.show_ortho_grid is True
+
+
+def test_toggle_grid_tolerates_views_without_the_ortho_grid_flag():
+    # The property guard keeps partial overlay RNA working: an absent flag is
+    # skipped rather than raising out of the operator.
+    space = SimpleNamespace(
+        overlay=SimpleNamespace(show_floor=True, show_axis_x=True, show_axis_y=True)
     )
+    assert viewport.toggle_grid(space) is False
+    assert space.overlay.show_floor is False
 
 
 def test_toggle_grid_resyncs_axes_that_drifted_from_the_floor():
@@ -57,9 +86,12 @@ def test_toggle_grid_resyncs_axes_that_drifted_from_the_floor():
     # settle on one answer, never leave the axes disagreeing with the chip.
     space = _space(floor=False, x=True, y=False)
     assert viewport.toggle_grid(space) is True
-    assert (space.overlay.show_floor, space.overlay.show_axis_x, space.overlay.show_axis_y) == (
-        True, True, True,
-    )
+    assert (
+        space.overlay.show_floor,
+        space.overlay.show_axis_x,
+        space.overlay.show_axis_y,
+        space.overlay.show_ortho_grid,
+    ) == (True, True, True, True)
 
 
 def test_toggle_grid_without_an_overlay_is_a_no_op():

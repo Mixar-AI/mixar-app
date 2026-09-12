@@ -73,9 +73,10 @@ def test_working_state_draws_animated_glow_and_rim():
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
     assert "if (is_working)" in elongated
-    assert "outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);" in elongated
+    # Breathing glow, drawn inward from the pill's own bounds.
     assert "glow.xmin += glow_pad;" in elongated
     assert "glow.xmax -= glow_pad;" in elongated
+    assert "outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);" in elongated
     assert "rim_work" in elongated
     assert "outline_round(&pill, h * 0.5f, rim_work);" in elongated
     # The resting rim lives in the glass kit's PILL row, not at the call site.
