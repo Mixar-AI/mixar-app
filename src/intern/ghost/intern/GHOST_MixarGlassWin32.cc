@@ -24,6 +24,10 @@ namespace {
  * HRESULTs, rather than OS-version guesses, decide whether frost is usable. */
 constexpr DWORD kDwmwaUseImmersiveDarkMode = 20;
 constexpr DWORD kDwmwaSystemBackdropType = 38;
+/* DWMWA_REDIRECTIONBITMAP_ALPHA, supported since Windows 11 build 26100.
+ * Older SDKs end the enum at 39 (DWMWA_LAST); older runtimes reject this
+ * request. Keep the numeric value so release builds need no newer SDK.
+ * https://learn.microsoft.com/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute */
 constexpr DWORD kDwmwaRedirectionBitmapAlpha = 39;
 constexpr DWORD kDwmsbtNone = 1;
 constexpr DWORD kDwmsbtTransientWindow = 3;

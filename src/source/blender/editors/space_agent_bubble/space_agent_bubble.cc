@@ -69,6 +69,7 @@
 
 #include "ED_mixar_glass.hh"
 
+#include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
@@ -220,54 +221,6 @@ extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
 extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
-extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
-#ifdef _WIN32
-/* Win32 only. macOS shapes the pill with a Core Animation mask over a
- * non-opaque NSWindow, which is anti-aliased already; Windows has to ask DWM
- * to composite the client alpha, and can only do that where the pixel format
- * GHOST actually got carries an alpha channel. Where it does not, the window
- * region set by Mixar_WindowSetCornerRadius remains the shape. */
-extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle);
-extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable);
-#endif
-
-/* -------------------------------------------------------------------- */
-/** \name Pill compositing
- *
- * Native frost and GPU alpha must both be available before beds become
- * translucent. macOS clips with its layer mask; Windows retains its rounded
- * HWND region to clip native Acrylic as well as the GPU wash.
- * Every region pixel is replaced each frame so resized caches cannot flash.
- * \{ */
-
-static bool g_pill_per_pixel_alpha = false;
-
-/* Called once per pill window, right after it is made borderless. */
-static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
-{
-  g_pill_per_pixel_alpha = false;
-#ifdef _WIN32
-  if (ghostwin == nullptr || !Mixar_WindowHasAlphaChannel(ghostwin)) {
-    return; /* Keep the window region as the shape. */
-  }
-  g_pill_per_pixel_alpha = ui::mixar_glass_window_apply_translucency(ghostwin, true);
-#elif defined(__APPLE__)
-  if (ghostwin == nullptr) {
-    return;
-  }
-  g_pill_per_pixel_alpha = ui::mixar_glass_window_apply_translucency(ghostwin, true);
-#else
-  (void)ghostwin;
-#endif
-}
-
-bool agent_bubble_pill_bed_is_transparent()
-{
-  return g_pill_per_pixel_alpha;
-}
-
-/** \} */
-
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
 extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle);
 extern "C" void Mixar_DispatchMainAfter(float delay_seconds,
@@ -278,52 +231,7 @@ extern "C" void Mixar_WindowGetContentPixelSize(
 extern "C" int Mixar_WindowGetMaxHeightToScreenTop(
     void *window_handle, int reserve_top);
 
-#else
-
-/* The per-pixel-alpha bed is a macOS/Windows compositing path: the state it
- * reports (`g_pill_per_pixel_alpha`) and the function that sets it both live
- * inside the block above, because both are written by Mixar_Window* calls that
- * only exist on those two platforms.
- *
- * The ACCESSOR is not platform-specific, and must not be. It is declared
- * unconditionally in agent_bubble_intern.hh and called unconditionally from
- * agent_ui_draw.cc (the status pill) and from this file's header-region draw,
- * so a build that lacks it links nowhere:
- *
- *   undefined reference to `blender::agent_bubble_pill_bed_is_transparent()'
- *
- * On Linux the answer is a constant: nothing composites this window's alpha,
- * so the bed stays opaque and the window region is what shapes the capsule --
- * which is exactly what the header documents `false` to mean. */
-bool agent_bubble_pill_bed_is_transparent()
-{
-  return false;
-}
-
 #endif
-
-/* Cache the native request result for the region painters. Retried after
- * the native view exists; unsupported systems keep opaque beds. */
-static bool g_bubble_glass_translucency = false;
-
-/* Called once per island window, right after it takes its corner radius --
- * after, because on macOS rounding the window is what makes it non-opaque,
- * and the request above is what lets the beds lean on that. */
-static void agent_bubble_try_glass_translucency(void *ghostwin)
-{
-  g_bubble_glass_translucency = false;
-  if (ghostwin == nullptr) {
-    return;
-  }
-  g_bubble_glass_translucency = ui::mixar_glass_window_apply_translucency(ghostwin, true);
-}
-
-/** Native frost is optional; a failed request keeps a readable opaque bed.
- * Window creation and size sync retry requests after delayed native setup. */
-bool agent_bubble_island_bed_is_transparent()
-{
-  return g_bubble_glass_translucency;
-}
 
 void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
 {
@@ -1398,12 +1306,6 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   if (!win || !area || agent_bubble_window_is_pill(C)) {
     return;
   }
-  /* Frost/Metal-alpha can run before CocoaMetalView is in the theme frame.
-   * Chrome sync is later, every layout, and is what actually flips the
-   * layer so the card body is not an opaque EDR plane. */
-  if (win->runtime != nullptr && win->runtime->ghostwin != nullptr) {
-    agent_bubble_try_glass_translucency(win->runtime->ghostwin);
-  }
   const float scale = UI_SCALE_FAC > 0.0f ? UI_SCALE_FAC : 1.0f;
   /* Same unit rule as agent_ui_layout_build, including the Scribble pad's
    * default-width unit — a slab sized from the pad's own width would leave
@@ -1736,6 +1638,7 @@ static void agent_bubble_request_resize(const bContext *C, int target_height, in
  * the island's TOOLS region, which replaced the footer it was written for. */
 static void agent_bubble_footer_region_listener(const wmRegionListenerParams *params)
 {
+  agent_bubble_glass_region_listener(params);
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_pending_resize_height <= 0) {
     return;
@@ -1957,9 +1860,8 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #if defined(__APPLE__) || defined(_WIN32)
   Mixar_WindowForceSize(g_pill_ghostwin, width, height);
   Mixar_WindowSetCornerRadius(g_pill_ghostwin, radius);
-  /* ForceSize is when the Metal view is in the theme frame; the first
-   * frost request often ran before that and left an EDR slab. */
-  agent_bubble_pill_try_per_pixel_alpha(g_pill_ghostwin);
+  /* Queue setup if this window has not reached the event-loop listener yet. */
+  agent_bubble_glass_request(C, g_pill_ghostwin, true);
 #else
   (void)width;
   (void)height;
@@ -2430,7 +2332,8 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
       Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
       Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
       Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
-      agent_bubble_try_glass_translucency(win->runtime->ghostwin);
+      agent_bubble_glass_reset(win->runtime->ghostwin);
+      agent_bubble_glass_request(C, win->runtime->ghostwin, false);
       const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
       bubble_force_size_and_refresh(
           C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
@@ -2465,7 +2368,8 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
       Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
       Mixar_WindowSetBorderless(win->runtime->ghostwin);
-      agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);
+      agent_bubble_glass_reset(win->runtime->ghostwin);
+      agent_bubble_glass_request(C, win->runtime->ghostwin, true);
       Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
       Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
       Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
@@ -2544,6 +2448,7 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
  */
 void ED_agent_bubble_windows_closed()
 {
+  agent_bubble_glass_reset();
   g_bubble_grown_for_chat = false;
   g_bubble_ghostwin = nullptr;
   g_pill_ghostwin = nullptr;
@@ -2565,6 +2470,7 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
   if (ghostwin == nullptr) {
     return;
   }
+  agent_bubble_glass_reset(ghostwin);
   /* Match by GHOST pointer, not by space type: this runs from
    * wm_window_free() for EVERY window, including teardown paths that never
    * pass through wm_window_close() — replacing the window-manager on file
@@ -2839,7 +2745,6 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
     int os_h = 0;
 #if defined(__APPLE__) || defined(_WIN32)
     Mixar_WindowGetContentPixelSize(win->runtime->ghostwin, &os_w, &os_h);
-    agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);
 #endif
     if (os_w > 0 && os_h > 0) {
       pill_w = float(os_w);
@@ -3118,7 +3023,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
     /* Order matters on macOS: rounding is what makes the window non-opaque,
      * and this asks the platform to give that opacity up. */
-    agent_bubble_try_glass_translucency(win->runtime->ghostwin);
+    agent_bubble_glass_reset(win->runtime->ghostwin);
+    agent_bubble_glass_request(C, win->runtime->ghostwin, false);
 
     /* Force the actual NSWindow size to our requested dimensions.
      * Without this, WM_window_open's std::max-with-{200,150} clamping
@@ -3307,7 +3213,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
            * the pill's contentView fills the frame with a single
            * solid colour. */
           Mixar_WindowSetBorderless(pill_win->runtime->ghostwin);
-          agent_bubble_pill_try_per_pixel_alpha(pill_win->runtime->ghostwin);
+          agent_bubble_glass_reset(pill_win->runtime->ghostwin);
+          agent_bubble_glass_request(C, pill_win->runtime->ghostwin, true);
 
           /* Pin the pill to floating level too. As a child window of
            * the bubble it'd inherit the bubble's level, but when the
@@ -4520,6 +4427,7 @@ void ED_spacetype_agent_bubble()
   art->init = agent_bubble_header_region_init;
   art->draw = agent_bubble_header_region_draw;
   art->draw_overlay = agent_bubble_header_region_draw_overlay;
+  art->listener = agent_bubble_glass_region_listener;
   BLI_addhead(&st->regiontypes, art);
 
   /* Footer region — REUSES MIXIE CHAT'S CUSTOM-DRAWN FOOTER.

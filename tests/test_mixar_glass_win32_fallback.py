@@ -49,6 +49,7 @@ HRESULT DwmIsCompositionEnabled(BOOL *);
 #include <cassert>
 #include "dwmapi.h"
 static bool contrast, composition, material_supported, alpha_supported, legacy_supported, frame_supported;
+static DWORD build;
 static bool alpha, legacy, extended;
 static DWORD material;
 static int calls;
@@ -65,10 +66,12 @@ HRESULT DwmSetWindowAttribute(HWND, DWORD attr, const void *value, DWORD)
     if (v == 3 && !material_supported) return -1;
     material = v;
   }
-  if (attr == 39) {
+  if (attr == 39) { // DWMWA_REDIRECTIONBITMAP_ALPHA since build 26100.
+    if (build < 26100) return -1; // Older SDKs called this slot DWMWA_LAST.
     if (v && !alpha_supported) return -1;
     alpha = v;
   }
+  if (attr != 20 && attr != 38 && attr != 39) return -1;
   return 0;
 }
 HRESULT DwmExtendFrameIntoClientArea(HWND, const MARGINS *m)
@@ -92,6 +95,7 @@ static void reset()
   composition = material_supported = alpha_supported = legacy_supported = frame_supported = true;
   contrast = alpha = legacy = extended = false;
   material = 1;
+  build = 26100;
   calls = 0;
 }
 static void opaque() { assert(!alpha && !legacy && !extended && material == 1); }
@@ -104,12 +108,16 @@ int main()
   assert(alpha && legacy && extended && material == 3);
   assert(Mixar_Win32GlassSetEnabled(window, false)); opaque();
   // Windows 10: legacy alpha succeeds but provides NO material.
-  reset(); material_supported = false;
+  reset(); build = 19045; material_supported = false;
   assert(!Mixar_Win32GlassSetEnabled(window, true)); opaque();
-  // Windows 11 before attribute 39: use the existing DWM alpha path.
-  reset(); alpha_supported = false;
+  // Windows 11 22621: Acrylic exists, but attribute 39 is rejected.
+  reset(); build = 22621;
   assert(Mixar_Win32GlassSetEnabled(window, true)); assert(legacy && material == 3);
-  // A window with no usable alpha path must never expose the desktop.
+  assert(!alpha);
+  // Windows 11 26100: the documented attribute is sufficient for alpha.
+  reset(); legacy_supported = false;
+  assert(Mixar_Win32GlassSetEnabled(window, true)); assert(alpha && !legacy && material == 3);
+  // Inject failures of both alpha APIs; this is fault coverage, not an OS version.
   reset(); alpha_supported = legacy_supported = false;
   assert(!Mixar_Win32GlassSetEnabled(window, true)); opaque();
   reset(); frame_supported = false;

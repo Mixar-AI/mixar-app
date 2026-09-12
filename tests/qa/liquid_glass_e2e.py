@@ -41,6 +41,24 @@ def _snap_chat(qa, path):
                   target={'area_type': 'AGENT_BUBBLE', 'text': 'Agent chat'}, margin=2000)
 
 
+def _recreate_windows(qa, out):
+    """Exercise native cache teardown/recreation only in an isolated QA app."""
+    qa.eval("import os\nassert os.environ.get('MIXAR_QA') == '1'\n"
+            "assert len(drv.main_window().scene.mixie_chat_messages) == 0\n"
+            "with bpy.context.temp_override(window=drv.main_window()):\n"
+            "    assert bpy.ops.mixar.agent_bubble_purge_windows() == {'FINISHED'}\n"
+            "assert not any(a.type == 'AGENT_BUBBLE' "
+            "for w in bpy.context.window_manager.windows for a in w.screen.areas)")
+    qa.eval("with bpy.context.temp_override(window=drv.main_window()):\n"
+            "    assert bpy.ops.mixar.agent_bubble_show_window() == {'FINISHED'}")
+    qa.wait("len([w for w in bpy.context.window_manager.windows "
+            "if any(a.type == 'AGENT_BUBBLE' for a in w.screen.areas)]) == 2", timeout=10)
+    qa.click(area_type='AGENT_BUBBLE', text='Agent chat')
+    _settle_animation(qa)
+    _snap_chat(qa, out / 'recreated.png')
+    return _native(qa, out / 'recreated')
+
+
 def _chat_variants(qa, out):
     qa.eval("result = str(bpy.ops.mixar.bubble_toggle_expand())")
     try:
@@ -88,7 +106,7 @@ def _compare_beds(out, native_available):
     from PIL import Image
 
     colors = {}
-    for name in ('island', 'maximized', 'transcript', 'pill'):
+    for name in ('island', 'recreated', 'maximized', 'transcript', 'pill'):
         with Image.open(out / f'{name}.png') as img:
             count, rgb = max(img.convert('RGB').getcolors(img.width * img.height))
             assert count > img.width * img.height * 0.2, f'{name}: no uniform material bed'
@@ -122,6 +140,7 @@ def run(qa):
                 target={'area_type': 'AGENT_BUBBLE', 'text': 'Agent chat'}, margin=2000)
         qa.step('snap_main', qa.snap, str(out / 'main.png'))
         expanded = qa.step('request_native_expanded', _native, qa, out / 'expanded')
+        recreated = qa.step('recreate_native_windows', _recreate_windows, qa, out)
         variants = qa.step('maximized_and_transcript', _chat_variants, qa, out)
         qa.step('minimise_island', qa.eval, "result = str(bpy.ops.mixar.bubble_minimise())")
         qa.step('pill_animation_settled', _settle_animation, qa)
@@ -134,9 +153,10 @@ def run(qa):
                 f"result = qa_vision._capture(pill, {str(out / 'pill.png')!r})")
         resting = qa.step('request_native_resting', _native, qa, out / 'resting')
         native_available = all(capture['available'] for capture in
-                               (expanded, resting, *variants.values()))
+                               (expanded, recreated, resting, *variants.values()))
         parity = qa.step('chat_matches_pill_bed', _compare_beds, out, native_available)
         return {'pixels': pixels, 'native_expanded': expanded, 'native_resting': resting,
+                'native_recreated': recreated,
                 'native_variants': variants, 'material_parity': parity,
                 'status': qa.status(), 'paid_requests': 0, 'artifacts': str(out)}
     finally:

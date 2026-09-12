@@ -44,6 +44,7 @@ COCOA_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassCo
 EDITOR = ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
 PILL_DRAW = EDITOR / "agent_ui_draw.cc"
 SPACE = EDITOR / "space_agent_bubble.cc"
+GLASS = EDITOR / "agent_bubble_glass.cc"
 
 
 def _read(path: Path) -> str:
@@ -239,15 +240,9 @@ class TestCrossPlatformContract:
             assert "agent_bubble_replace_frost_wash" in body, fn
             assert "AGENT_COL_GLASS_WASH" in body, fn
 
-    def test_alpha_is_only_reached_for_on_windows(self) -> None:
-        """Win32 asks DWM; macOS asks the glass kit (sibling frost + Metal alpha)."""
-        body = _fn_body(_read(SPACE), "static void agent_bubble_pill_try_per_pixel_alpha(")
-        assert "#ifdef _WIN32" in body
-        assert "mixar_glass_window_apply_translucency" in body
-
     def test_the_pill_bed_requires_confirmed_frost(self) -> None:
-        body = _fn_body(_read(SPACE), "bool agent_bubble_pill_bed_is_transparent(")
-        assert "return g_pill_per_pixel_alpha;" in body
+        body = _fn_body(_read(GLASS), "bool agent_bubble_pill_bed_is_transparent(")
+        assert "return pill_glass.transparent;" in body
         assert "return true;" not in body
 
     def test_frost_skips_the_dest_over_pill_capsule(self) -> None:
@@ -257,12 +252,20 @@ class TestCrossPlatformContract:
         assert "agent_bubble_replace_frost_wash(&pill, wash);" in body
         assert "glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);" in body
 
-    def test_the_pill_retries_frost_after_the_view_exists(self) -> None:
-        """First SetBlurBehind can run before CocoaMetalView is attached."""
+    def test_native_setup_runs_after_creation_outside_paint(self) -> None:
         header = _fn_body(_read(SPACE), "void agent_bubble_header_region_draw(")
-        assert "agent_bubble_pill_try_per_pixel_alpha(win->runtime->ghostwin);" in header
-        size = _fn_body(_read(SPACE), "static void pill_set_size(")
-        assert "agent_bubble_pill_try_per_pixel_alpha(g_pill_ghostwin);" in size
+        layout = _fn_body(_read(SPACE), "static void agent_bubble_sync_chrome_sizes(const bContext *C)\n{")
+        for body in (header, layout):
+            assert "glass_request" not in body
+            assert "try_per_pixel_alpha" not in body
+            assert "try_glass_translucency" not in body
+        listener = _fn_body(_read(GLASS), "void agent_bubble_glass_region_listener(")
+        assert "NC_WINDOW" in listener
+        assert "mixar_glass_window_apply_translucency(window, true)" in listener
+        assert "art->listener = agent_bubble_glass_region_listener;" in _read(SPACE)
+        footer = _fn_body(_read(SPACE), "static void agent_bubble_footer_region_listener(")
+        assert "agent_bubble_glass_region_listener(params);" in footer
+
 
 
 class TestIslandWindowTranslucency:
@@ -286,33 +289,18 @@ class TestIslandWindowTranslucency:
     """
 
     def test_the_request_goes_through_the_kit(self) -> None:
-        body = _fn_body(_read(SPACE), "static void agent_bubble_try_glass_translucency(")
-        assert "ui::mixar_glass_window_apply_translucency(ghostwin, true)" in body, (
-            "The island asks via the kit. Reaching for Mixar_WindowSetBlurBehind "
-            "directly would drag the platform guard into this file and lose the "
-            "Linux no-op the kit exists to provide."
-        )
-        assert "#if" not in body, (
-            "The header promises callers need no #ifdef of their own precisely "
-            "so this call is unconditional on every platform."
-        )
-        assert "g_bubble_glass_translucency =" in body, (
-            "The answer has to be recorded: the beds paint every frame and must "
-            "not each re-enter GHOST to ask again."
-        )
+        body = _fn_body(_read(GLASS), "void agent_bubble_glass_region_listener(")
+        assert "ui::mixar_glass_window_apply_translucency(window, true)" in body
+        assert "#if" not in body, "the kit owns the Linux opaque fallback"
+        assert "island_glass.apply(ghostwin, apply)" in body
 
     def test_the_flag_defaults_to_opaque_beds(self) -> None:
-        assert "static bool g_bubble_glass_translucency = false;" in _read(SPACE), (
-            "False is the honest default: nothing has asked yet, and on a "
-            "platform with no compositor for this window's alpha nothing ever "
-            "will -- so the beds stay opaque and the window region keeps "
-            "shaping the island."
-        )
+        assert "bool transparent = false;" in _read(EDITOR / "agent_bubble_glass.hh")
 
     def test_island_beds_require_confirmed_frost(self) -> None:
-        body = _fn_body(_read(SPACE), "bool agent_bubble_island_bed_is_transparent(")
+        body = _fn_body(_read(GLASS), "bool agent_bubble_island_bed_is_transparent(")
         assert "return true;" not in body
-        assert "return g_bubble_glass_translucency;" in body
+        assert "return island_glass.transparent;" in body
 
     def test_the_beds_and_the_panel_read_the_flag(self) -> None:
         src = _read(SPACE)
@@ -359,7 +347,7 @@ class TestIslandWindowTranslucency:
         fresh one. Asking in only one of them leaves the other window opaque.
         """
         src = _read(SPACE)
-        call = "agent_bubble_try_glass_translucency(win->runtime->ghostwin);"
+        call = "agent_bubble_glass_request(C, win->runtime->ghostwin, false);"
         radius = "Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);"
         styled = 0
         pos = 0
@@ -373,9 +361,7 @@ class TestIslandWindowTranslucency:
         assert styled == 2, (
             f"both island styling sites must call it after the corner radius, found {styled}"
         )
-        assert src.count(call) >= 3, (
-            "chrome sync must retry the request after the Metal view exists"
-        )
+        assert src.count(call) == 2, "only creation and repair queue native setup"
 
     def test_macos_frost_is_a_theme_frame_sibling_not_a_metal_parent(self) -> None:
         """AppKit frost belongs behind CocoaMetalView, never under it.
