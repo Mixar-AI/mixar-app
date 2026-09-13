@@ -5,11 +5,11 @@
 """3D viewport header & tool-panel filter for the dual-mode UI system.
 
 Monkey-patches:
-- VIEW3D_HT_header.draw         → Mixar Solid/Rendered pills in Zen Mode
+- VIEW3D_HT_header.draw         → stock Wireframe / Solid / Material
+                                   Preview / Rendered strip plus the
+                                   shading options popover in Zen Mode
                                    AND on the Texturing / Texture Paint
-                                   workspaces, so those surfaces match
-                                   Zen / Cinema chrome instead of the
-                                   stock Blender editor strip.
+                                   workspaces.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -31,7 +31,7 @@ This is workspace-driven so the right rendering happens regardless of which
 window is active or whether a workspace switch is mid-flight, and so the
 "AI Mode" workspace tab in Engine mode renders as a regular Pro workspace
 (the Zen-only tool strip does NOT apply there). The Mixar viewport header
-pills also apply on the Texturing / Texture Paint workspace tabs.
+also applies on the Texturing / Texture Paint workspace tabs.
 """
 
 import bpy
@@ -75,7 +75,7 @@ def _is_texturing_workspace(context) -> bool:
 
 
 def _uses_mixar_viewport_header(context) -> bool:
-    """Zen and Texturing share the Mixar Solid/Rendered header pills.
+    """Zen and Texturing share the Mixar viewport header.
 
     The tool-header empty-strip and the Move/Rotate/Scale toolbar stay
     Zen-only: Texturing still needs stock paint/brush chrome in those
@@ -85,16 +85,13 @@ def _uses_mixar_viewport_header(context) -> bool:
     return _is_basic_workspace(context) or _is_texturing_workspace(context)
 
 
-_SHADING_PILL_UNITS = 6.5
-"""Shading pill width in UI units — the design's ~130 px at 1x."""
-
-
 def _patched_header_draw(self, context):
     """Replacement for VIEW3D_HT_header.draw.
 
-    Zen and Texturing: the viewport-type chooser + two shading pills
-    (Solid / Rendered), styled natively per the design.
-    Other Engine workspaces: defer to the original draw.
+    Zen and Texturing: the viewport-type chooser plus the stock four-way
+    shading strip (Wireframe / Solid / Material Preview / Rendered) and
+    the shading options popover. Other Engine workspaces: defer to the
+    original draw.
     """
     if not _uses_mixar_viewport_header(context):
         if _original_header_draw is not None:
@@ -113,29 +110,14 @@ def _patched_header_draw(self, context):
 
     layout.separator_spacer()
 
-    # Two shading pills — Solid and Rendered — per the design (UI.svg): the
-    # live one at full opacity, the other at 49%. The stock four-way strip
-    # (wireframe / solid / material / rendered) and the shading popover are
-    # deliberately gone: Zen and Texturing offer the two modes people actually
-    # switch between while making something, and the rest stays reachable from
-    # Engine mode's other workspace tabs.
+    # Stock four-way strip + VIEW3D_PT_shading: lighting, color, cavity,
+    # render pass, compositor, and Material Preview studio lights all
+    # live in that popover. expand=True draws every RNA shading type
+    # (Wireframe / Solid / Material Preview / Rendered) as icon buttons.
     row = layout.row(align=True)
-    for value, label in (('SOLID', "Solid"), ('RENDERED', "Rendered")):
-        cell = row.row(align=True)
-        cell.ui_units_x = _SHADING_PILL_UNITS
-        # `wm.context_set_enum`, NOT `prop_enum`: an enum-item button keeps
-        # the value it applies in `hardmax`, which is the very field the
-        # Mixar style tag writes its payload into — tagging one silently
-        # rewrote the shading value it set (the viewport ended up with an
-        # out-of-range enum that read back as ""). Operator buttons carry no
-        # RNA data, so the tag is inert on them.
-        props = cell.operator("wm.context_set_enum", text=label)
-        props.data_path = "space_data.shading.type"
-        props.value = value
-        if hasattr(cell, "mixar_topbar_element"):
-            cell.mixar_topbar_element(
-                kind='VIEWPORT_PILL', active=(shading.type == value)
-            )
+    row.prop(shading, "type", text="", expand=True)
+    sub = row.row(align=True)
+    sub.popover(panel="VIEW3D_PT_shading", text="")
 
 
 def _patched_tool_header_draw(self, context):

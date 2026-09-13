@@ -27,6 +27,9 @@ HEADER_FILTER = (
     SCRIPTS / "mixar" / "modules" / "workflow" / "ui" / "headers" /
     "view3d_header_filter.py"
 )
+WORKSPACE_LOADER = (
+    SCRIPTS / "mixar" / "modules" / "workflow" / "core" / "workspace_loader.py"
+)
 
 TEXTURING_SPACES = (
     "SPACE_MIXAR_LAYERS",
@@ -117,11 +120,13 @@ def test_texturing_workspace_names_match_the_analytics_allowlist():
     assert TEXTURING_WORKSPACE_NAMES <= analytics.WORKSPACE_NAME_ALLOWLIST
 
 
-def test_texturing_viewport_header_uses_zen_pills():
-    """The 3D header on Texturing matches Zen's Mixar Solid/Rendered pills.
+def test_texturing_viewport_header_uses_zen_shading_strip():
+    """The 3D header on Texturing matches Zen's stock shading strip.
 
     Paint/brush chrome stays on the stock tool-header and toolbar — those
-    patches remain Zen-only.
+    patches remain Zen-only. The two Mixar Solid/Rendered pills are gone:
+    expand=True draws every RNA shading type, and VIEW3D_PT_shading is
+    the Material Preview / lighting / color popover.
     """
     src = _read(HEADER_FILTER)
     header = src.split("def _patched_header_draw", 1)[1].split(
@@ -135,7 +140,9 @@ def test_texturing_viewport_header_uses_zen_pills():
     )[0]
 
     assert "_uses_mixar_viewport_header(context)" in header
-    assert "VIEWPORT_PILL" in header
+    assert 'prop(shading, "type", text="", expand=True)' in header
+    assert 'popover(panel="VIEW3D_PT_shading", text="")' in header
+    assert "VIEWPORT_PILL" not in header
     assert "_is_basic_workspace(context)" in tool_header
     assert "_uses_mixar_viewport_header" not in tool_header
     assert "_is_basic_workspace(context)" in toolbar
@@ -158,3 +165,11 @@ def test_mixar_viewport_header_covers_zen_and_texturing():
     assert HEADER._uses_mixar_viewport_header(missing) is False
     assert HEADER._is_basic_workspace(texturing) is False
     assert HEADER._is_texturing_workspace(zen) is False
+
+
+def test_zen_workspace_load_does_not_coerce_shading_type():
+    """Wireframe and Material Preview must survive entering Zen Mode."""
+    chrome = _read(WORKSPACE_LOADER).split(
+        "def configure_basic_workspace_chrome", 1
+    )[1].split("def apply_ui_mode", 1)[0]
+    assert "shading.type" not in chrome
