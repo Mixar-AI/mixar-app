@@ -191,6 +191,15 @@ def test_previous_tool_idname_reads_the_remembered_slot(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+def test_the_strip_is_a_zen_surface_so_the_buttons_glass():
+    """`widget_roundbut_exec` glasses ToolbarItem beds only when the button
+    inherited MixarTheme::Zen. Without the surface the strip stays the
+    theme slab. `align=True` is what unifies the three cells onto one pane."""
+    strip = _strip_body()
+    assert 'layout.mixar_surface(theme="ZEN")' in strip
+    assert "col = surface.column(align=True)" in strip
+
+
 def test_the_strip_dispatches_the_stock_tool_operator():
     """REGRESSION GUARD. `but_is_tool` matches the button's operator against
     `WM_OT_tool_set_by_id` by pointer; any other operator makes the three

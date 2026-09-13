@@ -292,7 +292,10 @@ def _patched_tools_active_draw(self, context):
     if gap > 0.0:
         layout.separator(factor=gap)
 
-    col = layout.column(align=True)
+    surface = layout.mixar_surface(theme="ZEN")
+    # align=True is load-bearing: it sets `alignnr` so C++ paints one glass
+    # pane for the column instead of three separate pills.
+    col = surface.column(align=True)
     col.scale_y = _ZEN_TOOL_SCALE_Y
     fallback_idname = _fallback_tool_idname()
     resolves = _tool_resolves(cls, context)

@@ -44,8 +44,9 @@ class TestTheSectionCardsArePanes:
 
     def test_a_section_card_takes_the_chip_role_and_no_other(self) -> None:
         """CARD / PANEL / ISLAND carry a shadow and a streak; a card in a
-        column may cast neither."""
-        code = _code(WIDGETS)
+        column may cast neither. The Zen toolbar's PILL pane lives in the
+        same file and is not this card."""
+        code = self._card()
         for role in (
             "MIXAR_GLASS_CARD",
             "MIXAR_GLASS_MENU",
@@ -107,9 +108,27 @@ class TestTheSectionCardsArePanes:
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
         calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(WIDGETS))
-        assert calls == ["&card, rad, MIXAR_GLASS_CHIP"], (
-            f"a role-taking call was given a colour: {calls}"
-        )
+        assert calls == [
+            "&card, rad, MIXAR_GLASS_CHIP",
+        ], f"a role-taking call was given a colour: {calls}"
+
+    def test_zen_toolbar_tools_are_one_pill_pane(self) -> None:
+        """Move / Rotate / Scale stay `ToolbarItem` so `but_is_tool` still
+        picks icon size. The aligned column is ONE PILL pane — the same
+        0.20 wash and tint-off sheen/rim as the minimised chat capsule.
+        Selected/hover is a cell wash that uses the group's outer corners."""
+        body = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
+        assert "but->alignnr" in body
+        assert "BLI_rctf_union(&uni, &other.rect)" in body
+        assert "mixar_glass_tokens(MIXAR_GLASS_PILL)" in body
+        assert "0.20f" in body
+        assert "style.draw_tint = false" in body
+        assert "mixar_glass_draw(pane_i, style)" in body
+        assert "MIXAR_GLASS_CHIP" not in body
+        assert "draw_roundbox_corner_set(roundboxalign)" in body
+        exec_body = _code(_fn_body(WIDGETS, "static void widget_roundbut_exec("))
+        assert "widget_zen_tool_glass(but, rect, state, roundboxalign)" in exec_body
+        assert "wtb.draw_inner = false;" in exec_body
 
 
 class TestEverySurfaceThatReachesThePainterIsOnTheRegister:

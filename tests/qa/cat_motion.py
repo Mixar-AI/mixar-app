@@ -65,7 +65,7 @@ def _features(path):
         for index, rgb in enumerate(image.getdata()):
             high, low = max(rgb), min(rgb)
             point = (index % image.width, index // image.width)
-            # Bright saturated iris pixels exclude the card's breathing green wash.
+            # Bright saturated iris pixels exclude the card's glass bed.
             if high > 170 and high - low > 70:
                 colored.append(point)
             elif low > 170 and high - low < 35:

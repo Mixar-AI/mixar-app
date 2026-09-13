@@ -6,8 +6,8 @@
  * \ingroup spview3d
  *
  * Painting for the Zen Mode sliding moodboard drawer: the panel chrome, the
- * moodboard canvas at its current slide offset, and the grip on its leading
- * edge.
+ * moodboard canvas at its current slide offset, and the labeled tab on its
+ * leading edge.
  *
  * Geometry comes from `view3d_moodboard_drawer.hh` and is not re-derived here;
  * nothing here resizes or re-adds a region either, since a draw pass has this
@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "BLI_math_base.h"
 #include "BLI_rect.h"
 
 #include "BKE_context.hh"
@@ -29,6 +30,7 @@
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
+#include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -48,14 +50,14 @@ namespace blender {
 
 namespace {
 
-/* Match the editor's opaque black canvas, framed as a Mixar overlay. */
+/* Match the editor's opaque black canvas, framed as a Mixar overlay.
+ * The rim is the moodboard glass row's resting stroke, not brand green. */
 constexpr float DRAWER_FILL[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 constexpr float DRAWER_FILL_EDGE[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-constexpr float DRAWER_BORDER[4] = {0.180f, 0.478f, 0.278f, 0.55f};
+constexpr float DRAWER_BORDER[4] = {0.380f, 0.390f, 0.420f, 0.58f};
 
-constexpr float GRIP_FILL[4] = {0.086f, 0.106f, 0.098f, 0.96f};
-constexpr float GRIP_BORDER[4] = {0.220f, 0.760f, 0.400f, 0.70f};
-constexpr float GRIP_DOT[4] = {0.62f, 0.68f, 0.64f, 0.92f};
+constexpr float TAB_LABEL[4] = {0.94f, 0.96f, 0.94f, 1.0f};
+constexpr float EMPTY_HINT[4] = {0.55f, 0.56f, 0.58f, 1.0f};
 
 void clear_tab_gutter(const int width, const int height)
 {
@@ -70,6 +72,17 @@ void clear_tab_gutter(const int width, const int height)
   immRectf(pos, 0.0f, 0.0f, float(width), float(height));
   immUnbindProgram();
   GPU_blend(GPU_BLEND_ALPHA);
+}
+
+void draw_centered_line(const int font,
+                        const char *text,
+                        const float cx,
+                        const float y,
+                        const float color[4])
+{
+  BLF_color4fv(font, color);
+  BLF_position(font, cx - 0.5f * BLF_width(font, text, strlen(text)), y, 0.0f);
+  BLF_draw(font, text, strlen(text));
 }
 
 void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
@@ -87,56 +100,64 @@ void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
       return;
     }
   }
+
+  /* Empty-canvas LEFTMOUSE still deselects and starts box-select (or
+   * passes through to Mixie). Add is drop, the Open Image/Video menu,
+   * paste, or Cmd/Ctrl+I — never a click on this hint. Do not paint a
+   * plus or "click anywhere" copy; both read as a control that is not
+   * there. */
+  const float cx = float(offset) + 0.5f * float(region->winx - offset);
+  const float cy = 0.5f * float(region->winy);
   const int font = BLF_default();
   BLF_size(font, 13.0f * UI_SCALE_FAC);
-  const char *label = "Drop references here";
-  const float color[4] = {0.62f, 0.68f, 0.64f, 1.0f};
-  BLF_color4fv(font, color);
-  BLF_position(font,
-               offset + 0.5f * (region->winx - BLF_width(font, label, strlen(label))),
-               0.5f * region->winy,
-               0.0f);
-  BLF_draw(font, label, strlen(label));
+  draw_centered_line(font, "Drop references here", cx, cy, EMPTY_HINT);
 }
 
-/** Paint the edge grip with its right edge at `x_right`, in region-local
- * pixels. Three dots rather than a glyph: the affordance should read as
- * something to pull, not as a button to press. */
+/** Paint the labeled Moodboard tab with its flat inner edge at `x_right`. */
 void draw_grip(const float x_right, const float y_centre)
 {
   const float scale = UI_SCALE_FAC;
   const float grip_w = VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH * scale;
   const float grip_h = VIEW3D_MOODBOARD_DRAWER_GRIP_HEIGHT * scale;
   const float x_left = x_right - grip_w;
+  const float radius = grip_w * 0.5f;
 
-  rctf bar;
-  bar.xmin = x_left;
-  bar.xmax = x_right;
-  bar.ymin = y_centre - grip_h * 0.5f;
-  bar.ymax = y_centre + grip_h * 0.5f;
+  rcti pane;
+  pane.xmin = int(std::floor(x_left));
+  pane.xmax = int(std::ceil(x_right + radius));
+  pane.ymin = int(std::floor(y_centre - grip_h * 0.5f));
+  pane.ymax = int(std::ceil(y_centre + grip_h * 0.5f));
 
-  ui::draw_roundbox_corner_set(ui::CNR_TOP_LEFT | ui::CNR_BOTTOM_LEFT);
-  ui::draw_roundbox_4fv_ex(&bar,
-                           GRIP_FILL,
-                           GRIP_FILL,
-                           /*shade_dir*/ 0.0f,
-                           GRIP_BORDER,
-                           U.pixelsize,
-                           grip_w * 0.5f);
-
-  const float dot_r = 2.0f * scale;
-  const float dot_gap = 9.0f * scale;
-  const float centre_x = 0.5f * (x_left + x_right);
-  for (int i = -1; i <= 1; i++) {
-    const float dot_y = y_centre + float(i) * dot_gap;
-    rctf dot;
-    dot.xmin = centre_x - dot_r;
-    dot.xmax = centre_x + dot_r;
-    dot.ymin = dot_y - dot_r;
-    dot.ymax = dot_y + dot_r;
-    ui::draw_roundbox_4fv_ex(
-        &dot, GRIP_DOT, GRIP_DOT, 0.0f, GRIP_DOT, U.pixelsize, dot_r);
+  int scissor_prev[4];
+  GPU_scissor_get(scissor_prev);
+  const int clip_w = int(std::ceil(x_right)) - pane.xmin;
+  if (clip_w > 0 && BLI_rcti_size_y(&pane) > 0) {
+    GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
+    ui::MixarGlassStyle style;
+    style.role = ui::MIXAR_GLASS_PANEL;
+    style.radius = radius;
+    style.draw_shadow = false;
+    style.draw_specular = false;
+    ui::mixar_glass_draw(pane, style);
   }
+  GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
+
+  const int font = BLF_default();
+  BLF_size(font, 12.0f * scale);
+  const char *label = "Moodboard";
+  const size_t label_len = strlen(label);
+  const float text_w = BLF_width(font, label, label_len);
+  const float text_h = BLF_height_max(font);
+  BLF_color4fv(font, TAB_LABEL);
+  BLF_enable(font, BLF_ROTATION);
+  BLF_rotation(font, float(M_PI_2));
+  BLF_position(font,
+               0.5f * (x_left + x_right) + text_h * 0.32f,
+               y_centre - text_w * 0.5f,
+               0.0f);
+  BLF_draw(font, label, label_len);
+  BLF_rotation(font, 0.0f);
+  BLF_disable(font, BLF_ROTATION);
 }
 
 }  // namespace

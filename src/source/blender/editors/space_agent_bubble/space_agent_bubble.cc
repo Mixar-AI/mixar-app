@@ -105,23 +105,22 @@ namespace blender {
  * fits a 1-line composer + the action row comfortably; the wrapper's
  * internal scroll handles overflow when the input grows. */
 #define AGENT_BUBBLE_FOOTER_HEIGHT 90
-/* Island chrome slabs, logical px at the default 800-wide window (island
- * units x 800/1310). Re-synced to the live width each frame by the composer
+/* Island chrome slabs, logical px at the default 560-wide window (island
+ * units x 560/1310). Re-synced to the live width each frame by the composer
  * region's layout callback. */
-#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 91
-#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 90
-/* Compact cut of the 1310-unit artboard (see agent_ui_theme.hh). The painters
- * still scale with window width; 800 keeps body type near 11 pt so the
- * island reads as a floating card instead of a second editor. */
-#define AGENT_BUBBLE_DEFAULT_WIDTH 800
+#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 64
+#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 63
+/* 0.7 of the previous compact cut (800x272 empty, 800x480 with chat).
+ * Painters still scale with window width. */
+#define AGENT_BUBBLE_DEFAULT_WIDTH 560
 /* Empty-state height: chrome plus a short whole-panel prompt. Shorter than
  * the artboard so the island does not cover the viewport before a
  * conversation exists. Also the OS resize floor (AGENT_BUBBLE_MIN_HEIGHT). */
-#define AGENT_BUBBLE_DEFAULT_HEIGHT 272
+#define AGENT_BUBBLE_DEFAULT_HEIGHT 190
 /* Matches the empty-state window. Region sizey is unscaled: Blender
  * multiplies it by UI_SCALE_FAC, so an already-scaled AGENT_DU(...) value
  * would double-scale and the region would come back twice the window. */
-#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 272
+#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 190
 /* The island's three slabs, unscaled. Top = pill + tab strip + card header,
  * bottom = input line + chip row; the transcript takes what is left. */
 /* Slab heights are artboard UNITS; the layout converts them with the same
@@ -130,8 +129,8 @@ namespace blender {
  * unscaled pixels made every slab half the height its content needed. */
 #define AGENT_BUBBLE_SLAB_TOP_UNITS 149
 #define AGENT_BUBBLE_SLAB_BOTTOM_UNITS 133
-#define AGENT_BUBBLE_SLAB_TOP_PX 91
-#define AGENT_BUBBLE_SLAB_BOTTOM_PX 81
+#define AGENT_BUBBLE_SLAB_TOP_PX 64
+#define AGENT_BUBBLE_SLAB_BOTTOM_PX 57
 /* Blender enforces a minimum height on the main (WINDOW) region. If the two
  * slabs claim the whole window it does not shrink to zero — it OVERLAPS them,
  * and the overlap both repaints the slab's pixels every frame (the blink) and
@@ -140,11 +139,11 @@ namespace blender {
 #define AGENT_BUBBLE_WINDOW_MIN_PX 52
 /* Extra height applied once a conversation exists, so the transcript has
  * room without a permanently tall slab over the viewport. */
-#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 208
+#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 146
 #define AGENT_BUBBLE_MIN_WIDTH AGENT_BUBBLE_DEFAULT_WIDTH
 #define AGENT_BUBBLE_MIN_HEIGHT AGENT_BUBBLE_DEFAULT_HEIGHT
 #define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 80
-#define AGENT_BUBBLE_EXPANDED_HEIGHT 560
+#define AGENT_BUBBLE_EXPANDED_HEIGHT 392
 #define AGENT_BUBBLE_BODY_MIN_HEIGHT 120
 #define AGENT_BUBBLE_AUTOGROW_SLACK 12
 #ifdef _WIN32
@@ -154,9 +153,9 @@ namespace blender {
 #endif
 #define AGENT_BUBBLE_AUTOGROW_TOP_RESERVE 46
 
-/* Window radius tracks the card (~20 px at the compact width) so the
+/* Window radius tracks the card (~14 px at the 0.7 compact width) so the
  * island's rounded corners are not clipped square by a tighter frame. */
-#define AGENT_BUBBLE_CORNER_RADIUS 20.0f
+#define AGENT_BUBBLE_CORNER_RADIUS 14.0f
 
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
  * GHOST_SystemWin32.cc (Windows). Declared here as extern "C" so we
@@ -1697,7 +1696,7 @@ static int agent_bubble_collapsed_height_for_current_attachments(const bContext 
   int height = agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
   /* Open and restore share this floor. Grow-once only fires once per
    * process, so without the transcript delta here a minimised chat
-   * restored at the empty 272 px height and stayed there. */
+   * restored at the empty 190 px height and stayed there. */
   if (const Scene *scene = CTX_data_scene(C)) {
     PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
