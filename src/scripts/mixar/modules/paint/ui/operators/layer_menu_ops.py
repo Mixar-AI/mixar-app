@@ -126,11 +126,12 @@ class LAYERS_OT_SelectedLayersMenu(Operator):
 
             iso_row = single_col.row(align=True)
             iso_row.scale_y = 1.2
-            iso_row.operator(
+            op_iso = iso_row.operator(
                 "layers.toggle_layer_preview",
                 text="Isolate Layer",
                 icon='RESTRICT_VIEW_OFF',
             )
+            op_iso.layer_index = layer.mixar_layer_idx
 
             single_col.separator(factor=0.2)
 
