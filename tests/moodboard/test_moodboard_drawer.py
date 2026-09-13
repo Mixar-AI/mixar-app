@@ -84,6 +84,15 @@ def test_visual_hit_is_only_the_grip_and_painted_slice():
     assert "view3d_moodboard_drawer_contains_xy" in overlap
 
 
+def test_floating_header_does_not_hide_the_drawer():
+    """Hidden non-overlap regions cannot reset the drawer onto the header."""
+    area = _read(AREA)
+    layout = _fn(_strip_comments(area), "static void region_rect_recursive(")
+    assert "mixar_floating_headers_clip(region, overlap_remainder)" in layout
+    fix = _fn(_strip_comments(area), "static void region_overlap_fix(")
+    assert "mixar_floating_header_may_share_corner" not in fix
+
+
 def test_view3d_tool_props_has_no_edge_azone():
     """The overlapping sash covered the open grip's leading half."""
     body = _fn(_strip_comments(_read(AREA)), "static bool region_azone_edge_poll(")

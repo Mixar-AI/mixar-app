@@ -5,11 +5,11 @@
 """3D viewport header & tool-panel filter for the dual-mode UI system.
 
 Monkey-patches:
-- VIEW3D_HT_header.draw         → stock Wireframe / Solid / Material
-                                   Preview / Rendered strip plus the
-                                   shading options popover in Zen Mode
-                                   AND on the Texturing / Texture Paint
-                                   workspaces.
+- VIEW3D_HT_header.draw         → floating liquid-glass Wireframe /
+                                   Solid / Material Preview / Rendered
+                                   strip plus the shading popover in
+                                   Zen Mode AND on the Texturing /
+                                   Texture Paint workspaces.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -88,10 +88,10 @@ def _uses_mixar_viewport_header(context) -> bool:
 def _patched_header_draw(self, context):
     """Replacement for VIEW3D_HT_header.draw.
 
-    Zen and Texturing: the viewport-type chooser plus the stock four-way
-    shading strip (Wireframe / Solid / Material Preview / Rendered) and
-    the shading options popover. Other Engine workspaces: defer to the
-    original draw.
+    Zen and Texturing: a floating Move/Rotate/Scale-style liquid-glass
+    strip of Wireframe / Solid / Material Preview / Rendered plus the
+    shading options popover. The header region itself has no bar. Other
+    Engine workspaces: defer to the original draw.
     """
     if not _uses_mixar_viewport_header(context):
         if _original_header_draw is not None:
@@ -104,27 +104,28 @@ def _patched_header_draw(self, context):
         return
     shading = view.shading
 
-    # Tiny editor-type chooser (the icon at the very left of the header).
-    # Texturing's custom spaces are omitted from that menu; View3D stays.
-    layout.row(align=True).template_header()
-
+    # No editor-type chooser and no full-width header chrome: the header
+    # overlaps the viewport and clears transparent, so this cluster is a
+    # floating group. Spacer parks it on the right.
     layout.separator_spacer()
 
-    # Stock four-way strip + VIEW3D_PT_shading: lighting, color, cavity,
-    # render pass, compositor, and Material Preview studio lights all
-    # live in that popover. expand=True draws every RNA shading type
-    # (Wireframe / Solid / Material Preview / Rendered) as icon buttons.
-    row = layout.row(align=True)
+    # Keep native RNA enum buttons: available modes depend on the render
+    # engine (Workbench has no Material Preview). The Zen painter supplies
+    # one glass pane without replacing RNA selection, tooltips or dispatch.
+    # The popover stays outside the aligned group.
+    cluster = layout.row(align=False)
+    surface = cluster.mixar_surface(theme="ZEN")
+    row = surface.row(align=True)
     row.prop(shading, "type", text="", expand=True)
-    sub = row.row(align=True)
-    sub.popover(panel="VIEW3D_PT_shading", text="")
+    cluster.separator(factor=0.4)
+    cluster.popover(panel="VIEW3D_PT_shading", text="")
 
 
 def _patched_tool_header_draw(self, context):
     """Replacement for VIEW3D_HT_tool_header.draw.
 
-    Zen mode: render nothing (the tool header strip stays as an empty bar but
-    has no controls).
+    Zen mode: render nothing. The region overlaps and clears transparent,
+    so an empty tool-header must not paint button-section chrome.
     Engine mode: defer to the original draw.
     """
     if not _is_basic_workspace(context):

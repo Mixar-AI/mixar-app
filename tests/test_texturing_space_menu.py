@@ -121,12 +121,12 @@ def test_texturing_workspace_names_match_the_analytics_allowlist():
 
 
 def test_texturing_viewport_header_uses_zen_shading_strip():
-    """The 3D header on Texturing matches Zen's stock shading strip.
+    """The 3D header on Texturing matches Zen's glass shading strip.
 
     Paint/brush chrome stays on the stock tool-header and toolbar — those
-    patches remain Zen-only. The two Mixar Solid/Rendered pills are gone:
-    expand=True draws every RNA shading type, and VIEW3D_PT_shading is
-    the Material Preview / lighting / color popover.
+    patches remain Zen-only. The four shading icons sit on a Zen aligned
+    row so they share the Move/Rotate/Scale PILL pane; VIEW3D_PT_shading
+    stays outside that group.
     """
     src = _read(HEADER_FILTER)
     header = src.split("def _patched_header_draw", 1)[1].split(
@@ -140,7 +140,12 @@ def test_texturing_viewport_header_uses_zen_shading_strip():
     )[0]
 
     assert "_uses_mixar_viewport_header(context)" in header
-    assert 'prop(shading, "type", text="", expand=True)' in header
+    assert "template_header" not in header
+    assert 'cluster.mixar_surface(theme="ZEN")' in header
+    # RNA owns engine filtering, enum descriptions and native selection.
+    assert 'row.prop(shading, "type", text="", expand=True)' in header
+    assert '"wm.context_set_enum"' not in header
+    assert "_ZEN_SHADING_TYPES" not in src
     assert 'popover(panel="VIEW3D_PT_shading", text="")' in header
     assert "VIEWPORT_PILL" not in header
     assert "_is_basic_workspace(context)" in tool_header

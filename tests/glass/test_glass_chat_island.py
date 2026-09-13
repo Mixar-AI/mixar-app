@@ -288,7 +288,29 @@ class TestZenChromeUsesTheFamily:
         assert "style.role = MIXAR_GLASS_ISLAND;" in chrome
         assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 1.0f)" in chrome
         assert "mixar_glass_draw(pane, style);" in chrome
+        assert "area->spacetype != SPACE_TOPBAR" in chrome
         area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
         assert "mixar_zen_header_clear(C, region)" in area
+        assert "mixar_zen_floating_header_clear(C, region)" in area
         cmake = (IFACE / "CMakeLists.txt").read_text(encoding="utf-8")
         assert "interface_mixar_zen_chrome.cc" in cmake
+
+    def test_zen_view3d_header_floats_without_a_bar(self) -> None:
+        """The View3D header overlaps and clears transparent.
+
+        A full-width ISLAND bed or theme slab would keep the bar the
+        glass groups are meant to replace. Empty header space already
+        passes events through on overlapping headers.
+        """
+        chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
+        assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f)" in chrome
+        assert "RGN_TYPE_HEADER" in chrome
+        assert "RGN_TYPE_TOOL_HEADER && mixar_workspace_is_zen(C)" in chrome
+        assert "mixar_area_floats_viewport_chrome" in chrome
+        area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
+        assert "mixar_area_floats_viewport_chrome(area)" in area
+        assert "region->overlap = true;" in area
+        assert (
+            "region->overlap && is_header && ui::mixar_area_floats_viewport_chrome(area)"
+            in area
+        )

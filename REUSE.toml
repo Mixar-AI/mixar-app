@@ -141,3 +141,10 @@ path = "docs/development/evidence/macos-glass/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Floating viewport chrome regression screenshots and replay verdicts.
+[[annotations]]
+path = "docs/development/evidence/floating-viewport-chrome/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"

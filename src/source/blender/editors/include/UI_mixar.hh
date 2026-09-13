@@ -13,6 +13,7 @@
 namespace blender {
 struct bContext;
 struct ARegion;
+struct ScrArea;
 struct uiWidgetColors;
 }
 
@@ -69,9 +70,18 @@ void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);
 /**
- * Paint the Zen topbar / View3D header as the family's ISLAND pane instead
- * of the theme header slab. Returns true when the caller must skip
+ * Zen and Texturing View3D headers overlap the viewport so their glass
+ * strips float instead of sitting on a full-width bar.
+ */
+bool mixar_workspace_floats_viewport_chrome(const bContext *C);
+bool mixar_area_floats_viewport_chrome(const ScrArea *area);
+/**
+ * Paint the Zen topbar as the family's ISLAND pane instead of the theme
+ * header slab. View3D headers are not claimed — they clear transparent
+ * and float their button groups. Returns true when the caller must skip
  * `ED_region_clear` — dest-over cannot lower an opaque theme clear.
  */
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region);
+/** Transparent View3D header/tool-header clear for floating glass groups. */
+bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region);
 }  // namespace blender::ui
