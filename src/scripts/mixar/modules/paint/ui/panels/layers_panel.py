@@ -241,6 +241,18 @@ class MIXAR_LAYERS_PT_main(Panel):
             main_col.label(text="No Mixar material found", icon='INFO')
             return
 
+        # Layer / mask preview controls (Ucupaint layer_preview_mode)
+        preview_box = main_col.box()
+        preview_row = preview_box.row(align=True)
+        if mp.layer_preview_mode:
+            preview_row.alert = True
+        preview_row.prop(mp, "layer_preview_mode", text="Isolate Layer", icon='RESTRICT_VIEW_OFF')
+        if mp.layer_preview_mode:
+            type_row = preview_box.row(align=True)
+            type_row.prop(mp, "layer_preview_mode_type", expand=True)
+
+        main_col.separator(factor=0.4)
+
         # ========== NESTED LAYER LIST (Substance 3D Painter style with masks) ==========
         # Create a box for the layer list
         list_box = main_col.box()

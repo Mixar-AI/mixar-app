@@ -266,6 +266,22 @@ def draw_layer_row(context, layout, mp, layer, layer_idx, channel_idx, material_
     vis_icon = 'HIDE_OFF' if layer.enable else 'HIDE_ON'
     row.prop(layer, "enable", text="", icon=vis_icon, emboss=False)
 
+    # 2b. Solo / isolate this layer in the viewport (Ucupaint layer preview)
+    solo_on = bool(
+        getattr(mp, "layer_preview_mode", False)
+        and mp.active_layer_index == layer_idx
+    )
+    solo = row.row(align=True)
+    solo.active = True
+    op = solo.operator(
+        "layers.toggle_layer_preview",
+        text="",
+        icon='RESTRICT_VIEW_OFF' if solo_on else 'RESTRICT_VIEW_ON',
+        depress=solo_on,
+        emboss=False,
+    )
+    op.layer_index = layer_idx
+
     # 3. Layer thumbnail or type icon
     thumbnail_id = 0
     # if layer.type == 'IMAGE':

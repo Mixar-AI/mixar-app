@@ -175,6 +175,13 @@ class MASKS_MT_VertexColorMasksMenu(Menu):
         op = layout.operator("wm.m_new_layer_mask", text="Color ID", icon='COLOR')
         op.type = 'COLOR_ID'
 
+        layout.separator()
+        layout.operator(
+            "layers.color_id_to_mask",
+            text="Color ID from Brush",
+            icon='EYEDROPPER',
+        )
+
 
 # Submenu: Procedural Masks
 class MASKS_MT_ProceduralMasksMenu(Menu):

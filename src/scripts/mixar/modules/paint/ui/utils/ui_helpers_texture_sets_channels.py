@@ -64,6 +64,17 @@ def draw_channels_section(context, layout):
         if mp.preview_mode:
             preview_row.alert = True
         preview_row.prop(mp, 'preview_mode', text='Preview Mode', icon='HIDE_OFF')
+        isolate = col.row(align=True)
+        isolate.scale_y = 1.1
+        for i, channel in enumerate(mp.channels):
+            op = isolate.operator(
+                "layers.isolate_channel",
+                text=channel.name,
+                depress=bool(mp.preview_mode and mp.active_channel_index == i),
+            )
+            op.channel_index = i
+        if hasattr(mp, 'enable_backface_always_up'):
+            col.prop(mp, 'enable_backface_always_up', text='Backface Always Up')
         col.separator(factor=0.5)
 
     # Channel list with buttons

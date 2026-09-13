@@ -49,8 +49,8 @@ def draw_top_toolbar(context, layout):
     toolbar.separator(factor=0.3)
 
     # === 4. PATTERNS (procedural textures menu) ===
-    # toolbar.menu("LAYERS_MT_procedural_layer_menu", text="", icon='TEXTURE')
-    # toolbar.separator(factor=0.3)
+    toolbar.menu("LAYERS_MT_procedural_layer_menu", text="", icon='TEXTURE')
+    toolbar.separator(factor=0.3)
 
     # === 5. MASK (add mask to active layer) ===
     mask_row = toolbar.row(align=True)
@@ -59,7 +59,7 @@ def draw_top_toolbar(context, layout):
     toolbar.separator(factor=0.3)
 
     # === 6. FOLDER (layer group) ===
-    # toolbar.operator("layers.add_layer_group", text="", icon='FILE_FOLDER')
+    toolbar.operator("layers.add_layer_group", text="", icon='FILE_FOLDER')
 
     # Separator between creation and edit operations
     toolbar.separator(factor=2.0)
@@ -74,6 +74,22 @@ def draw_top_toolbar(context, layout):
     paste_row = toolbar.row(align=True)
     paste_row.operator("wm.m_paste_layer", text="", icon='PASTEDOWN')
     # Paste enabled based on poll (clipboard content)
+    toolbar.separator(factor=0.3)
+
+    # === 8b. ISOLATE / MERGE / INVERT (ArmorPaint + Ucupaint) ===
+    isolate_row = toolbar.row(align=True)
+    isolate_row.operator("layers.toggle_layer_preview", text="", icon='RESTRICT_VIEW_OFF')
+    isolate_row.enabled = has_layers
+    toolbar.separator(factor=0.3)
+
+    merge_row = toolbar.row(align=True)
+    merge_row.operator("wm.m_merge_layer", text="", icon='AUTOMERGE_ON').direction = 'DOWN'
+    merge_row.enabled = has_layers
+    toolbar.separator(factor=0.3)
+
+    invert_row = toolbar.row(align=True)
+    invert_row.operator("layers.invert_active_layer_image", text="", icon='IMAGE_ALPHA')
+    invert_row.enabled = has_layers
     toolbar.separator(factor=0.3)
 
     # === 9. DELETE ===

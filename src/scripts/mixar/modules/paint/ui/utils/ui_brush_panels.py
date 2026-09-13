@@ -349,6 +349,11 @@ def draw_brush_tool_subtab(context, layout, brush, settings):
     row.prop(brush, "use_pressure_strength", text="", icon='STYLUS_PRESSURE')
     row.prop(ups, "use_unified_strength", text="", icon='BRUSHES_ALL')
 
+    if hasattr(brush, "hardness"):
+        split = col.split(factor=0.35)
+        split.label(text="Hardness")
+        split.prop(brush, "hardness", text="", slider=True)
+
     layout.separator(factor=0.8)
 
     # ==================== STROKE SECTION ====================
@@ -468,6 +473,69 @@ def draw_brush_tool_subtab(context, layout, brush, settings):
         subsplit = subcol.split(factor=0.28)
         subsplit.label(text="Factor")
         subsplit.prop(brush, "smooth_stroke_factor", text="", slider=True)
+
+    _draw_surface_projection_section(layout, settings)
+    _draw_stencil_section(layout, settings)
+    _draw_clone_section(layout, settings)
+
+
+def _prop_if_present(layout, data, attr, **kwargs):
+    """Draw a property only when the RNA attribute exists."""
+    if data is not None and hasattr(data, attr):
+        layout.prop(data, attr, **kwargs)
+        return True
+    return False
+
+
+def _draw_surface_projection_section(layout, settings):
+    """ArmorPaint-style surface rejection: occlude, backfaces, angle, bleed."""
+    layout.separator(factor=0.8)
+    box = layout.box()
+    col = box.column(align=False)
+    col.label(text="Surface", icon='MOD_NORMALEDIT')
+    col.separator(factor=0.5)
+    col.use_property_split = True
+    col.use_property_decorate = False
+    _prop_if_present(col, settings, "use_occlude", text="Occlude")
+    _prop_if_present(col, settings, "use_backface_culling", text="Backface Culling")
+    if _prop_if_present(col, settings, "use_normal_falloff", text="Normal Falloff"):
+        if getattr(settings, "use_normal_falloff", False):
+            _prop_if_present(col, settings, "normal_angle", text="Angle")
+    _prop_if_present(col, settings, "seam_bleed", text="Bleed")
+    _prop_if_present(col, settings, "dither", text="Dither")
+
+
+def _draw_stencil_section(layout, settings):
+    """ArmorPaint stencil: paint through a viewport overlay image."""
+    if not hasattr(settings, "stencil_image") and not hasattr(settings, "use_stencil_layer"):
+        return
+    layout.separator(factor=0.8)
+    box = layout.box()
+    col = box.column(align=False)
+    col.label(text="Stencil", icon='MOD_MASK')
+    col.separator(factor=0.5)
+    col.use_property_split = True
+    col.use_property_decorate = False
+    _prop_if_present(col, settings, "use_stencil_layer", text="Use Stencil")
+    if hasattr(settings, "stencil_image"):
+        col.template_ID(settings, "stencil_image", open="image.open")
+    _prop_if_present(col, settings, "invert_stencil", text="Invert")
+
+
+def _draw_clone_section(layout, settings):
+    """ArmorPaint clone source: sample from another image or clone layer."""
+    if not hasattr(settings, "clone_image") and not hasattr(settings, "use_clone_layer"):
+        return
+    layout.separator(factor=0.8)
+    box = layout.box()
+    col = box.column(align=False)
+    col.label(text="Clone", icon='GHOST_ENABLED')
+    col.separator(factor=0.5)
+    col.use_property_split = True
+    col.use_property_decorate = False
+    _prop_if_present(col, settings, "use_clone_layer", text="Clone Layer")
+    if hasattr(settings, "clone_image"):
+        col.template_ID(settings, "clone_image", open="image.open")
 
 
 def draw_brush_alpha_subtab(context, layout, brush, settings):

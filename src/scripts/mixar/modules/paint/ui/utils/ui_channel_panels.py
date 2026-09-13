@@ -42,6 +42,21 @@ def _update_brush_luminance(context):
     wm.mixar_ui.brush_luminance = max(0.0, min(1.0, luminance))
 
 
+def _draw_channel_isolate_row(layout, mp):
+    """ArmorPaint-style viewport channel isolation toggles."""
+    if not mp.channels:
+        return
+    row = layout.row(align=True)
+    row.scale_y = 1.15
+    for i, channel in enumerate(mp.channels):
+        op = row.operator(
+            "layers.isolate_channel",
+            text=channel.name,
+            depress=bool(mp.preview_mode and mp.active_channel_index == i),
+        )
+        op.channel_index = i
+
+
 def draw_channels_tab(context, layout, mixar_ui, mp, layer):
     """Draw the CHANNELS tab content using layer type handlers.
 
@@ -62,6 +77,12 @@ def draw_channels_tab(context, layout, mixar_ui, mp, layer):
     ch_header.scale_y = 1.2
     ch_header.label(text="Channels", icon='NODE_TEXTURE')
     ch_header.menu("CHANNELS_MT_add_channel_menu", text="", icon='ADD')
+
+    layout.separator(factor=0.3)
+
+    _draw_channel_isolate_row(layout, mp)
+    if hasattr(mp, "enable_backface_always_up"):
+        layout.prop(mp, "enable_backface_always_up", text="Backface Always Up")
 
     layout.separator(factor=0.3)
 

@@ -221,6 +221,12 @@ def draw_full_brush_properties(context, layout, layer):
         col.prop(brush, "stroke_method")
         if brush.stroke_method != 'DOTS':
             col.prop(brush, "spacing", slider=True)
+        col.prop(brush, "use_smooth_stroke", text="Stabilize Stroke")
+        if brush.use_smooth_stroke:
+            col.prop(brush, "smooth_stroke_radius", text="Lazy Radius", slider=True)
+            col.prop(brush, "smooth_stroke_factor", text="Lazy Factor", slider=True)
+        if hasattr(brush, "jitter"):
+            col.prop(brush, "jitter", slider=True)
 
     layout.separator()
 
@@ -271,3 +277,19 @@ def draw_full_brush_properties(context, layout, layer):
     col.separator()
     col.prop(settings, "use_occlude")
     col.prop(settings, "use_backface_culling", text="Backface Culling")
+    if hasattr(settings, "use_normal_falloff"):
+        col.prop(settings, "use_normal_falloff", text="Normal Falloff")
+        if settings.use_normal_falloff and hasattr(settings, "normal_angle"):
+            col.prop(settings, "normal_angle", text="Angle")
+    if hasattr(settings, "use_stencil_layer"):
+        col.separator()
+        col.prop(settings, "use_stencil_layer", text="Use Stencil")
+        if hasattr(settings, "stencil_image"):
+            col.template_ID(settings, "stencil_image", open="image.open")
+        if hasattr(settings, "invert_stencil"):
+            col.prop(settings, "invert_stencil", text="Invert Stencil")
+    if hasattr(settings, "use_clone_layer"):
+        col.separator()
+        col.prop(settings, "use_clone_layer", text="Clone Layer")
+        if hasattr(settings, "clone_image"):
+            col.template_ID(settings, "clone_image", open="image.open")

@@ -38,20 +38,23 @@ class LAYERS_MT_NewLayerMenu(Menu):
         )
 
         # VCOL layer (Vertex Color Layer)
-        # TODO: Implement VCOL layer operator
-        # layout.operator(
-        #     "layers.add_vcol_layer",
-        #     text="Vertex Color Layer",
-        #     icon='VPAINT_HLT'
-        # )
+        op = layout.operator(
+            "layers.add_advanced_layer",
+            text="Vertex Color Layer",
+            icon='VPAINT_HLT',
+        )
+        op.layer_type = 'VCOL'
 
         # GROUP layer (Layer Group)
-        # TODO: Implement GROUP layer operator
-        # layout.operator(
-        #     "layers.add_group_layer",
-        #     text="Layer Group",
-        #     icon='FILE_FOLDER'
-        # )
+        layout.operator(
+            "layers.add_layer_group",
+            text="Layer Group",
+            icon='FILE_FOLDER',
+        )
+
+        layout.separator()
+
+        layout.menu("LAYERS_MT_procedural_layer_menu", text="Procedural Pattern", icon='TEXTURE')
 
         layout.separator()
 
@@ -95,6 +98,23 @@ class LAYERS_MT_LayerContextMenu(Menu):
             # Layer operations
             layout.label(text="Layer Operations:", icon='NODE')
             layout.operator("layers.remove_active_layer", text="Remove Layer")
+
+            layout.separator()
+            layout.operator(
+                "layers.toggle_layer_preview",
+                text="Isolate Layer",
+                icon='RESTRICT_VIEW_OFF',
+            )
+            layout.operator(
+                "wm.m_merge_layer",
+                text="Merge Down",
+                icon='AUTOMERGE_ON',
+            ).direction = 'DOWN'
+            layout.operator(
+                "layers.invert_active_layer_image",
+                text="Invert Image",
+                icon='IMAGE_ALPHA',
+            )
 
 
 class LAYERS_MT_BakeMenu(Menu):

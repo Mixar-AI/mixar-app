@@ -122,6 +122,36 @@ class LAYERS_OT_SelectedLayersMenu(Operator):
             op_copy.layer_idx = self.layer_index
             op_copy.all_layers = False
 
+            single_col.separator(factor=0.2)
+
+            iso_row = single_col.row(align=True)
+            iso_row.scale_y = 1.2
+            iso_row.operator(
+                "layers.toggle_layer_preview",
+                text="Isolate Layer",
+                icon='RESTRICT_VIEW_OFF',
+            )
+
+            single_col.separator(factor=0.2)
+
+            merge_row = single_col.row(align=True)
+            merge_row.scale_y = 1.2
+            merge_row.operator(
+                "wm.m_merge_layer",
+                text="Merge Down",
+                icon='AUTOMERGE_ON',
+            ).direction = 'DOWN'
+
+            single_col.separator(factor=0.2)
+
+            inv_row = single_col.row(align=True)
+            inv_row.scale_y = 1.2
+            inv_row.operator(
+                "layers.invert_active_layer_image",
+                text="Invert Image",
+                icon='IMAGE_ALPHA',
+            )
+
             single_col.separator(factor=0.4)
             single_col.separator(factor=0.2)
 

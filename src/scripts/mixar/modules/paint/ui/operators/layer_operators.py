@@ -11,6 +11,10 @@ from .layer_selection_ops import (
     LAYERS_OT_SelectLayer,
     LAYERS_OT_ToggleAllSelection,
     LAYERS_OT_ClearSelection,
+    LAYERS_OT_ToggleLayerPreview,
+    LAYERS_OT_IsolateChannel,
+    LAYERS_OT_InvertActiveLayerImage,
+    LAYERS_OT_ColorIdToMask,
 )
 
 from .layer_add_ops import (
