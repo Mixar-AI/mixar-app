@@ -368,10 +368,25 @@ class LAYERS_OT_InvertActiveLayerImage(Operator):
         if hasattr(image, "yia") and image.yia.is_image_atlas:
             self.report({"ERROR"}, "Cannot invert image atlas")
             return {"CANCELLED"}
-        override = bpy.context.copy()
-        override["edit_image"] = image
-        with bpy.context.temp_override(**override):
-            bpy.ops.image.invert(invert_r=True, invert_g=True, invert_b=True)
+        try:
+            # Prefer the same edit_image override path as wm.m_invert_image.
+            override = bpy.context.copy()
+            override["edit_image"] = image
+            with bpy.context.temp_override(**override):
+                bpy.ops.image.invert(invert_r=True, invert_g=True, invert_b=True)
+        except RuntimeError:
+            # Fallback when no image editor context is available: invert pixels.
+            try:
+                pixels = list(image.pixels)
+                for i in range(0, len(pixels), 4):
+                    pixels[i] = 1.0 - pixels[i]
+                    pixels[i + 1] = 1.0 - pixels[i + 1]
+                    pixels[i + 2] = 1.0 - pixels[i + 2]
+                image.pixels = pixels
+                image.update()
+            except Exception as exc:
+                self.report({"ERROR"}, f"Could not invert image: {exc}")
+                return {"CANCELLED"}
         request_ui_refresh()
         return {"FINISHED"}
 

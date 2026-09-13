@@ -79,3 +79,17 @@ def test_layer_list_and_panel_expose_solo_and_preview_type():
     assert "layers.toggle_layer_preview" in uilist
     assert "layer_preview_mode_type" in panel
     assert "layers.color_id_to_mask" in masks
+
+
+def test_channel_isolate_wraps_long_lists():
+    channels = _read("ui/utils/ui_channel_panels.py")
+    texture_sets = _read("ui/utils/ui_helpers_texture_sets_channels.py")
+    assert "cols_per_row = 4" in channels
+    assert "cols_per_row = 4" in texture_sets
+
+
+def test_invert_has_pixel_fallback():
+    ops = _read("ui/operators/layer_selection_ops.py")
+    assert "image.invert" in ops
+    assert "image.pixels" in ops
+    assert "Could not invert image" in ops

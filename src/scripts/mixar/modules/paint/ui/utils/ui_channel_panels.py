@@ -43,12 +43,18 @@ def _update_brush_luminance(context):
 
 
 def _draw_channel_isolate_row(layout, mp):
-    """ArmorPaint-style viewport channel isolation toggles."""
+    """ArmorPaint-style viewport channel isolation toggles.
+
+    Wraps into rows of four so a long PBR channel list does not overflow.
+    """
     if not mp.channels:
         return
-    row = layout.row(align=True)
-    row.scale_y = 1.15
+    cols_per_row = 4
+    row = None
     for i, channel in enumerate(mp.channels):
+        if i % cols_per_row == 0:
+            row = layout.row(align=True)
+            row.scale_y = 1.15
         op = row.operator(
             "layers.isolate_channel",
             text=channel.name,

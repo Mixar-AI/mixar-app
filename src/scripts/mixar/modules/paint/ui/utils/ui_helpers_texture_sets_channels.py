@@ -64,9 +64,13 @@ def draw_channels_section(context, layout):
         if mp.preview_mode:
             preview_row.alert = True
         preview_row.prop(mp, 'preview_mode', text='Preview Mode', icon='HIDE_OFF')
-        isolate = col.row(align=True)
-        isolate.scale_y = 1.1
+        # Wrap isolate toggles so long channel lists stay readable.
+        cols_per_row = 4
+        isolate = None
         for i, channel in enumerate(mp.channels):
+            if i % cols_per_row == 0:
+                isolate = col.row(align=True)
+                isolate.scale_y = 1.1
             op = isolate.operator(
                 "layers.isolate_channel",
                 text=channel.name,
