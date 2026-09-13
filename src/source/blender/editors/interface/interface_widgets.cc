@@ -47,6 +47,7 @@
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 #include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
@@ -1356,6 +1357,8 @@ static int but_draw_menu_icon(const Button *but)
 
 /* icons have been standardized... and this call draws in untransformed coordinates */
 
+static bool zen_glass_cell(const Button *but);
+
 static void widget_draw_icon(
     const Button *but, BIFIconID icon, float alpha, const rcti *rect, const uchar mono_color[4])
 {
@@ -1472,7 +1475,7 @@ static void widget_draw_icon(
     else if (but->flag & (UI_HOVER | UI_SELECT | UI_SELECT_DRAW)) {
       icon_draw_ex(xs, ys, icon, aspect, alpha, 0.0f, color, outline, &but->icon_overlay_text);
     }
-    else if (!((but->icon != ICON_NONE) && but_is_tool(but))) {
+    else if (!((but->icon != ICON_NONE) && (but_is_tool(but) || zen_glass_cell(but)))) {
       if (has_theme) {
         alpha *= 0.8f;
       }
@@ -6066,12 +6069,31 @@ static bool zen_toolbar_tool(const Button *but)
   return but != nullptr && but_is_tool(but) && but->mixar_style.theme == MixarTheme::Zen;
 }
 
+/** One PILL pane: the toolbar trio, or the header's icon-only shading strip. */
+static bool zen_glass_cell(const Button *but)
+{
+  if (zen_toolbar_tool(but)) {
+    return true;
+  }
+  if (but == nullptr || but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0) {
+    return false;
+  }
+  if (but->mixar_style.component != MixarComponent::None) {
+    return false;
+  }
+  return but->type == ButtonType::Row && but->icon != ICON_NONE && but->drawstr.empty();
+}
+
 /**
  * Move / Rotate / Scale share one PILL pane — the same material as the
  * minimised chat capsule. `column(align=True)` sets `alignnr` and
  * `roundboxalign`; a per-cell fully-rounded pane split them into three
- * pills. The first button in the group paints the union; the others only
- * wash their own cell with the group's outer corners.
+ * pills. The first button in the group paints the union; selected is a
+ * circular chip inset in the cell so the active shading icon reads on
+ * the dark PILL. Unselected shading icons desaturate like toolbar tools.
+ *
+ * The Zen header shading strip uses the same painter on a horizontal
+ * `row(align=True)` of native RNA enum buttons.
  *
  * Native frost is a window effect the toolbar cannot request, so the bed
  * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost
@@ -6081,7 +6103,7 @@ static bool zen_toolbar_tool(const Button *but)
 static void widget_zen_tool_glass(Button *but,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
-                                  const int roundboxalign)
+                                  const int /*roundboxalign*/)
 {
   rctf pane;
   BLI_rctf_rcti_copy(&pane, rect);
@@ -6091,7 +6113,7 @@ static void widget_zen_tool_glass(Button *but,
     rctf uni = but->rect;
     int first_index = but->block->but_index(but);
     for (Button &other : but->block->buttons()) {
-      if (!zen_toolbar_tool(&other) || other.alignnr != but->alignnr) {
+      if (!zen_glass_cell(&other) || other.alignnr != but->alignnr) {
         continue;
       }
       BLI_rctf_union(&uni, &other.rect);
@@ -6126,17 +6148,25 @@ static void widget_zen_tool_glass(Button *but,
     mixar_glass_draw(pane_i, style);
   }
 
-  const bool selected = (state->but_flag & UI_SELECT) != 0;
+  const bool selected = (state->but_flag & (UI_SELECT | UI_SELECT_DRAW)) != 0 ||
+                        but->mixar_style.lit;
   const bool hover = (state->but_flag & UI_HOVER) != 0;
   if (selected || hover) {
     rctf cell;
     BLI_rctf_rcti_copy(&cell, rect);
-    BLI_rctf_pad(&cell, -U.pixelsize, -U.pixelsize);
-    const float wash[4] = {1.0f, 1.0f, 1.0f, selected ? 0.10f : 0.06f};
-    const float cell_rad = (roundboxalign == CNR_NONE) ? 0.0f :
-                                                       0.5f * BLI_rctf_size_x(&cell);
+    BLI_rctf_pad(&cell, -2.0f * UI_SCALE_FAC, -2.0f * UI_SCALE_FAC);
+    const float cell_rad = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
+    float wash[4];
+    if (selected) {
+      copy_v4_v4(wash, mixar_tokens::zen.selected);
+      wash[3] = 0.88f;
+    }
+    else {
+      wash[0] = wash[1] = wash[2] = 1.0f;
+      wash[3] = 0.08f;
+    }
     GPU_blend(GPU_BLEND_ALPHA);
-    draw_roundbox_corner_set(roundboxalign);
+    draw_roundbox_corner_set(CNR_ALL);
     draw_roundbox_4fv(&cell, true, cell_rad, wash);
     GPU_blend(GPU_BLEND_NONE);
   }
@@ -6148,6 +6178,19 @@ static void widget_zen_tool_glass(Button *but,
     rule.xmin += inset;
     rule.xmax -= inset;
     rule.ymax = rule.ymin + U.pixelsize;
+    const float rule_col[4] = {1.0f, 1.0f, 1.0f, 0.10f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_NONE);
+    draw_roundbox_4fv(&rule, true, 0.0f, rule_col);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+  if (but->drawflag & BUT_ALIGN_RIGHT) {
+    rctf rule;
+    BLI_rctf_rcti_copy(&rule, rect);
+    const float inset = 6.0f * UI_SCALE_FAC;
+    rule.ymin += inset;
+    rule.ymax -= inset;
+    rule.xmin = rule.xmax - U.pixelsize;
     const float rule_col[4] = {1.0f, 1.0f, 1.0f, 0.10f};
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_NONE);
@@ -6195,7 +6238,7 @@ static void widget_roundbut_exec(Button *but,
       copy_v4_v4_uchar(wcol->text_sel, foreground_col);
     }
   }
-  if (!overlay && zen_toolbar_tool(but)) {
+  if (!overlay && zen_glass_cell(but)) {
     widget_zen_tool_glass(but, rect, state, roundboxalign);
     wtb.draw_inner = false;
     wtb.draw_outline = false;
@@ -7023,6 +7066,10 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
   bool native_text = true;
   if (mixar_component) {
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
+  }
+  else if (but->type == ButtonType::Row && zen_glass_cell(but)) {
+    /* Keep Radio state/text and RNA editing; replace only the background. */
+    widget_zen_tool_glass(but, rect, &state, roundboxalign);
   }
   else if (wt->custom) {
     wt->custom(but, &wt->wcol, rect, &state, roundboxalign, zoom);

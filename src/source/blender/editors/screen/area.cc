@@ -1471,6 +1471,30 @@ static bool region_is_hidden(const ARegion *region)
   return false;
 }
 
+/* Non-overlapping regions (even hidden ones) reset overlap_remainder below.
+ * Keep previously allocated floating headers reserved for subsequent overlay
+ * regions: tool headers must stack, and sidebars/drawers must begin below them.
+ * The non-overlap remainder is untouched, so the viewport still fills the area. */
+static void mixar_floating_headers_clip(const ARegion *region, rcti *overlap_remainder)
+{
+  for (const ARegion *previous = region->prev; previous; previous = previous->prev) {
+    if (!previous->overlap ||
+        !ELEM(previous->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) ||
+        region_is_hidden(previous) ||
+        (previous->flag & (RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)))
+    {
+      continue;
+    }
+    const int alignment = RGN_ALIGN_ENUM_FROM_MASK(previous->alignment);
+    if (alignment == RGN_ALIGN_TOP) {
+      overlap_remainder->ymax = std::min(overlap_remainder->ymax, previous->winrct.ymin - 1);
+    }
+    else if (alignment == RGN_ALIGN_BOTTOM) {
+      overlap_remainder->ymin = std::max(overlap_remainder->ymin, previous->winrct.ymax + 1);
+    }
+  }
+}
+
 /* region should be overlapping */
 /* function checks if some overlapping region was defined before - on same place */
 static void region_overlap_fix(ScrArea *area, ARegion *region)
@@ -1638,6 +1662,17 @@ static void region_rect_recursive(
 
   /* set here, assuming userpref switching forces to call this again */
   region->overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
+  /* Zen/Texturing View3D headers must overlap even when the theme header
+   * is opaque — otherwise the reserved strip stays a bar. Empty header
+   * space already passes events through (`ED_region_contains_xy`). */
+  if (!region->overlap && ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) &&
+      ui::mixar_area_floats_viewport_chrome(area))
+  {
+    region->overlap = true;
+  }
+  if (region->overlap && ui::mixar_area_floats_viewport_chrome(area)) {
+    mixar_floating_headers_clip(region, overlap_remainder);
+  }
 
   /* clear state flags first */
   region->flag &= ~(RGN_FLAG_TOO_SMALL | RGN_FLAG_SIZE_CLAMP_X | RGN_FLAG_SIZE_CLAMP_Y);
@@ -3561,6 +3596,11 @@ void ED_region_draw_overflow_indication(const ScrArea *area,
 
   const bool is_overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
   const bool is_header = ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER);
+  /* Forced-overlap Zen/Texturing headers clear transparent. An overflow
+   * fade would still paint opaque TH_BACK across the strip. */
+  if (region->overlap && is_header && ui::mixar_area_floats_viewport_chrome(area)) {
+    return;
+  }
   const bool narrow = region->v2d.scroll & (V2D_SCROLL_VERTICAL | V2D_SCROLL_HORIZONTAL);
   const float gradient_width = (narrow ? 4.0f : 16.0f) * UI_SCALE_FAC;
   const float transition = 20.0f * UI_SCALE_FAC;
@@ -3671,7 +3711,15 @@ void ED_region_panels_draw(const bContext *C, ARegion *region)
   const float aspect = BLI_rctf_size_y(&region->v2d.cur) /
                        (BLI_rcti_size_y(&region->v2d.mask) + 1);
 
-  if (region->alignment != RGN_ALIGN_FLOAT) {
+  const ScrArea *area = CTX_wm_area(C);
+  const bool zen_floating_tools = region->overlap && region->regiontype == RGN_TYPE_TOOLS &&
+                                  area != nullptr && area->spacetype == SPACE_VIEW3D &&
+                                  ui::mixar_workspace_is_zen(C);
+  if (zen_floating_tools) {
+    ED_region_pixelspace(region);
+    GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
+  }
+  else if (region->alignment != RGN_ALIGN_FLOAT) {
     ED_region_clear(C,
                     region,
                     (region->runtime->type->regionid == RGN_TYPE_PREVIEW) ? TH_PREVIEW_BACK :
@@ -3702,7 +3750,6 @@ void ED_region_panels_draw(const bContext *C, ARegion *region)
 
   /* Set in layout. */
   if (region->runtime->category) {
-    ScrArea *area = CTX_wm_area(C);
     if (area && area->spacetype == SPACE_MIXIE) {
       ui::UI_panel_category_draw_all_mixar(region, region->runtime->category);
     }
@@ -4027,9 +4074,12 @@ static void region_draw_blocks_in_view2d(const bContext *C, const ARegion *regio
 
 void ED_region_header_draw(const bContext *C, ARegion *region)
 {
-  /* Zen chrome is the family's ISLAND pane. An opaque theme clear would
-   * bury it; dest-over cannot lower dest A=1. */
-  if (!ui::mixar_zen_header_clear(C, region)) {
+  /* Zen chrome is the family's ISLAND pane on the topbar. View3D headers
+   * in Zen/Texturing clear transparent so glass groups float. An opaque
+   * theme clear would bury either; dest-over cannot lower dest A=1. */
+  if (!ui::mixar_zen_floating_header_clear(C, region) &&
+      !ui::mixar_zen_header_clear(C, region))
+  {
     ED_region_clear(C, region, region_background_color_id(C, region));
   }
 
@@ -4050,8 +4100,12 @@ void ED_region_header_draw_with_button_sections(const bContext *C,
   const ThemeColorID bgcolorid = region_background_color_id(C, region);
 
   /* Clear and draw button sections background when using region overlap. Otherwise clear using the
-   * background color like normal. Zen chrome is the ISLAND pane. */
-  if (ui::mixar_zen_header_clear(C, region)) {
+   * background color like normal. Zen topbar is the ISLAND pane; floating
+   * View3D headers stay transparent so only the glass groups read. */
+  if (ui::mixar_zen_floating_header_clear(C, region)) {
+    /* Viewport shows through; button groups paint their own PILL panes. */
+  }
+  else if (ui::mixar_zen_header_clear(C, region)) {
     /* Glass already replaced the theme slab. */
   }
   else if (region->overlap) {

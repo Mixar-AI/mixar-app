@@ -116,7 +116,8 @@ class TestTheSectionCardsArePanes:
         """Move / Rotate / Scale stay `ToolbarItem` so `but_is_tool` still
         picks icon size. The aligned column is ONE PILL pane — the same
         0.20 wash and tint-off sheen/rim as the minimised chat capsule.
-        Selected/hover is a cell wash that uses the group's outer corners."""
+        Selected is a circular zen.selected chip so the active cell
+        reads on the dark PILL; a 10% outer-corner wash disappeared."""
         body = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
         assert "but->alignnr" in body
         assert "BLI_rctf_union(&uni, &other.rect)" in body
@@ -125,10 +126,33 @@ class TestTheSectionCardsArePanes:
         assert "style.draw_tint = false" in body
         assert "mixar_glass_draw(pane_i, style)" in body
         assert "MIXAR_GLASS_CHIP" not in body
-        assert "draw_roundbox_corner_set(roundboxalign)" in body
+        assert "mixar_tokens::zen.selected" in body
+        assert "0.88f" in body
+        assert "draw_roundbox_corner_set(CNR_ALL)" in body
+        icons = _code(_fn_body(WIDGETS, "static void widget_draw_icon("))
+        assert "zen_glass_cell(but)" in icons
         exec_body = _code(_fn_body(WIDGETS, "static void widget_roundbut_exec("))
         assert "widget_zen_tool_glass(but, rect, state, roundboxalign)" in exec_body
+        assert "zen_glass_cell(but)" in exec_body
         assert "wtb.draw_inner = false;" in exec_body
+
+    def test_zen_glass_covers_header_shading_icons(self) -> None:
+        """The header strip retains native RNA enum buttons.
+
+        `but_is_tool` would miss them and leave the four shading icons on
+        the stock radio/exec slab. Membership still refuses Mixar
+        Action/Segment buttons so a Zen aligned row of those stays theirs.
+        """
+        body = _code(_fn_body(WIDGETS, "static bool zen_glass_cell(const Button *but)\n{"))
+        assert "zen_toolbar_tool(but)" in body
+        assert "ButtonType::Row" in body
+        assert "drawstr.empty()" in body
+        assert "MixarComponent::None" in body
+        union = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
+        assert "zen_glass_cell(&other)" in union
+        assert "BUT_ALIGN_RIGHT" in union
+        assert "but->type == ButtonType::Row && zen_glass_cell(but)" in WIDGETS
+        assert "widget_zen_tool_glass(but, rect, &state, roundboxalign)" in WIDGETS
 
 
 class TestEverySurfaceThatReachesThePainterIsOnTheRegister:

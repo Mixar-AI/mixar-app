@@ -28,7 +28,7 @@ PRO_DEFAULT_WORKSPACE_NAME = "Layout"
 
 # Engine-mode workspace tabs that host Mixar's layered texture-painting
 # layout. Their custom editor spaces are hidden from the Editor Type
-# menu; the 3D viewport header uses the same stock four-way shading
+# menu; the 3D viewport header uses the same glass four-way shading
 # strip (plus the shading popover) as Zen Mode. Names match the
 # analytics allowlist.
 TEXTURING_WORKSPACE_NAMES = frozenset({"Texturing", "Texture Paint"})
