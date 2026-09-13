@@ -6061,6 +6061,101 @@ static void widget_roundbut(uiWidgetColors *wcol, rcti *rect, int /*state*/ int 
 }
 #endif
 
+static bool zen_toolbar_tool(const Button *but)
+{
+  return but != nullptr && but_is_tool(but) && but->mixar_style.theme == MixarTheme::Zen;
+}
+
+/**
+ * Move / Rotate / Scale share one PILL pane — the same material as the
+ * minimised chat capsule. `column(align=True)` sets `alignnr` and
+ * `roundboxalign`; a per-cell fully-rounded pane split them into three
+ * pills. The first button in the group paints the union; the others only
+ * wash their own cell with the group's outer corners.
+ *
+ * Native frost is a window effect the toolbar cannot request, so the bed
+ * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost
+ * path uses, then the shared sheen and rim with `draw_tint=false`. The
+ * kit's fallback floor would otherwise raise that bed to 0.74.
+ */
+static void widget_zen_tool_glass(Button *but,
+                                  rcti *rect,
+                                  const WidgetStateInfo *state,
+                                  const int roundboxalign)
+{
+  rctf pane;
+  BLI_rctf_rcti_copy(&pane, rect);
+  bool paint_bed = true;
+
+  if (but->block != nullptr && but->alignnr != 0) {
+    rctf uni = but->rect;
+    int first_index = but->block->but_index(but);
+    for (Button &other : but->block->buttons()) {
+      if (!zen_toolbar_tool(&other) || other.alignnr != but->alignnr) {
+        continue;
+      }
+      BLI_rctf_union(&uni, &other.rect);
+      first_index = std::min(first_index, but->block->but_index(&other));
+    }
+    paint_bed = (but->block->but_index(but) == first_index);
+    if (paint_bed) {
+      pane.xmin = uni.xmin + (float(rect->xmin) - but->rect.xmin);
+      pane.ymin = uni.ymin + (float(rect->ymin) - but->rect.ymin);
+      pane.xmax = uni.xmax + (float(rect->xmax) - but->rect.xmax);
+      pane.ymax = uni.ymax + (float(rect->ymax) - but->rect.ymax);
+    }
+  }
+
+  if (paint_bed) {
+    const float glass_rad = 0.5f * std::min(BLI_rctf_size_x(&pane), BLI_rctf_size_y(&pane));
+    const MixarGlassTokens tokens = mixar_glass_tokens(MIXAR_GLASS_PILL);
+    const float wash[4] = {
+        tokens.tint_bottom[0], tokens.tint_bottom[1], tokens.tint_bottom[2], 0.20f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&pane, true, glass_rad, wash);
+    GPU_blend(GPU_BLEND_NONE);
+    rcti pane_i;
+    BLI_rcti_rctf_copy(&pane_i, &pane);
+    MixarGlassStyle style;
+    style.role = MIXAR_GLASS_PILL;
+    style.radius = glass_rad;
+    style.draw_shadow = false;
+    style.draw_specular = false;
+    style.draw_tint = false;
+    mixar_glass_draw(pane_i, style);
+  }
+
+  const bool selected = (state->but_flag & UI_SELECT) != 0;
+  const bool hover = (state->but_flag & UI_HOVER) != 0;
+  if (selected || hover) {
+    rctf cell;
+    BLI_rctf_rcti_copy(&cell, rect);
+    BLI_rctf_pad(&cell, -U.pixelsize, -U.pixelsize);
+    const float wash[4] = {1.0f, 1.0f, 1.0f, selected ? 0.10f : 0.06f};
+    const float cell_rad = (roundboxalign == CNR_NONE) ? 0.0f :
+                                                       0.5f * BLI_rctf_size_x(&cell);
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(roundboxalign);
+    draw_roundbox_4fv(&cell, true, cell_rad, wash);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+
+  if (but->drawflag & BUT_ALIGN_DOWN) {
+    rctf rule;
+    BLI_rctf_rcti_copy(&rule, rect);
+    const float inset = 6.0f * UI_SCALE_FAC;
+    rule.xmin += inset;
+    rule.xmax -= inset;
+    rule.ymax = rule.ymin + U.pixelsize;
+    const float rule_col[4] = {1.0f, 1.0f, 1.0f, 0.10f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_NONE);
+    draw_roundbox_4fv(&rule, true, 0.0f, rule_col);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+}
+
 static void widget_roundbut_exec(Button *but,
                                  uiWidgetColors *wcol,
                                  rcti *rect,
@@ -6080,8 +6175,10 @@ static void widget_roundbut_exec(Button *but,
 
   wtb.draw_emboss = draw_emboss(but);
 
+  bool overlay = false;
   if (const ButtonPush *push_but = dynamic_cast<ButtonPush *>(but)) {
-    if (push_but->draw_as_overlay) {
+    overlay = push_but->draw_as_overlay;
+    if (overlay) {
       /* Enforce a full circle. */
       rad = BLI_rcti_size_y(rect) * 0.5f;
       roundboxalign = CNR_ALL;
@@ -6097,6 +6194,12 @@ static void widget_roundbut_exec(Button *but,
       copy_v4_v4_uchar(wcol->text, foreground_col);
       copy_v4_v4_uchar(wcol->text_sel, foreground_col);
     }
+  }
+  if (!overlay && zen_toolbar_tool(but)) {
+    widget_zen_tool_glass(but, rect, state, roundboxalign);
+    wtb.draw_inner = false;
+    wtb.draw_outline = false;
+    wtb.draw_emboss = false;
   }
 
   /* half rounded */

@@ -5,8 +5,8 @@
 /** \file
  * \ingroup spview3d
  *
- * Parallel Agents panel painting: one dark rounded card per agent, carrying a
- * status dot, the agent's name, its task and an elapsed clock.
+ * Parallel Agents panel painting: one liquid-glass card per agent, carrying a
+ * cat avatar, the agent's name, its task and an outcome glyph.
  *
  * Pure painting — the rects come from `view3d_agent_panel_layout_cards`, which
  * has already applied the scroll offset and the slide-in animation. Nothing
@@ -16,7 +16,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -53,23 +52,15 @@ namespace blender {
 
 namespace {
 
-/* The reference design's language: a pill whose green washes in from the left
- * behind the avatar and falls away to near-black under the controls. */
-constexpr float CARD_GREEN[4] = {0.106f, 0.478f, 0.243f, 0.96f};
-constexpr float CARD_DARK[4] = {0.043f, 0.055f, 0.047f, 0.94f};
-constexpr float CARD_BORDER[4] = {0.180f, 0.478f, 0.278f, 0.55f};
-constexpr float CARD_BORDER_RUNNING[4] = {0.220f, 0.760f, 0.400f, 0.75f};
-
 constexpr float TEXT_NAME[4] = {0.94f, 0.96f, 0.94f, 1.0f};
 constexpr float GLYPH[4] = {0.80f, 0.86f, 0.82f, 1.0f};
 constexpr float GLYPH_DONE[4] = {0.36f, 0.86f, 0.50f, 1.0f};
 constexpr float GLYPH_FAILED[4] = {0.90f, 0.42f, 0.38f, 1.0f};
 
-/* The reference design carries no status text on a card: the outcome is the
- * right-hand glyph (a dismiss cross while the agent works, a check or a red
- * cross once it settles) and the pill's own green wash. The elapsed clock the
- * mirror keeps (`started_at`/`ended_at`/`seen_running_at`) is deliberately not
- * drawn here — it stays available for a surface that has room for it. */
+/* The card carries no status text: the outcome is the right-hand glyph (a
+ * dismiss cross while the agent works, a check or a red cross once it
+ * settles). The elapsed clock the mirror keeps (`started_at`/`ended_at`/
+ * `seen_running_at`) is deliberately not drawn here. */
 
 void with_alpha(const float src[4], const float alpha, float r_out[4])
 {
@@ -155,45 +146,10 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   const rctf rect = to_rctf(card.rect);
   const float radius = AGENT_PANEL_CARD_RADIUS * scale;
 
-  /* The pane is the shared glass material. The PANEL row carries the card's
-   * near-black bed and the RESTING border green; the running border is
-   * brighter, so it is painted below, where the status lives — the same split
-   * the status pill makes with its working rim. */
+  /* The pane is the shared glass material. PANEL owns the near-black bed and
+   * a neutral rim; running/pending status lives on the cat and the outcome
+   * glyph, not on a second coloured stroke. */
   glass_pane(&rect, ui::MIXAR_GLASS_PANEL, radius, alpha);
-
-  /* The agent's own green wash, the gradient the card always had — but with
-   * its dark end made transparent, so the pane's glass shows through the
-   * silhouette instead of being covered by a second opaque fill. A running
-   * agent's green breathes; a settled one is still. */
-  float wash = 1.0f;
-  if (running) {
-    wash = 0.78f + 0.22f * (0.5f + 0.5f * float(sin(now * 2.4)));
-  }
-  else if (card.status == AgentCardStatus::Pending) {
-    wash = 0.45f;
-  }
-
-  float green[4];
-  with_alpha(CARD_GREEN, alpha * wash, green);
-  const float clear[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-  /* Inset by a pixel so the wash and the pane's own rim do not stack on the
-   * same edge — the doubling the pill already hit. */
-  rctf wash_rect = rect;
-  BLI_rctf_pad(&wash_rect, -U.pixelsize, -U.pixelsize);
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(&wash_rect,
-                          /*inner1 (right)*/ clear,
-                          /*inner2 (left)*/ green,
-                          /*shade_dir*/ 0.0f,
-                          nullptr,
-                          0.0f,
-                          std::max(radius - U.pixelsize, 0.0f));
-
-  if (running) {
-    float border[4];
-    with_alpha(CARD_BORDER_RUNNING, alpha, border);
-    ui::draw_roundbox_4fv_ex(&rect, nullptr, nullptr, 1.0f, border, U.pixelsize, radius);
-  }
 
   /* The same silhouette as the island, with per-task identity and phase. */
   const rctf cat = to_rctf(card.cat_rect);
@@ -255,14 +211,9 @@ void draw_chevron(const rcti &box, const float alpha)
   }
   const float scale = UI_SCALE_FAC;
   const rctf rect = to_rctf(box);
-  float body[4], border[4], glyph[4];
-  with_alpha(CARD_DARK, alpha, body);
-  with_alpha(CARD_BORDER, alpha, border);
+  glass_pane(&rect, ui::MIXAR_GLASS_PANEL, BLI_rctf_size_y(&rect) * 0.5f, alpha);
+  float glyph[4];
   with_alpha(GLYPH, alpha, glyph);
-
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(
-      &rect, body, nullptr, 1.0f, border, U.pixelsize, BLI_rctf_size_y(&rect) * 0.5f);
   view3d_agent_panel_glyph_chevrons_down(box, scale, glyph);
 }
 

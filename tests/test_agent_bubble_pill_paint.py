@@ -64,14 +64,13 @@ class TestNothingIsPaintedOutsideTheWindow:
             f"{outward}"
         )
 
-    def test_the_working_glow_is_inset(self, pill_body: str) -> None:
-        glow = pill_body[pill_body.index("if (is_working) {") :]
-        glow = glow[: glow.index("Pulsing animated green rim")]
-        assert "glow.xmin += glow_pad;" in glow and "glow.xmax -= glow_pad;" in glow
-        assert "(h * 0.5f) - glow_pad" in glow, (
-            "The radius has to shrink with the rect or the inset capsule's "
-            "ends stop being semicircles."
-        )
+    def test_the_capsule_has_no_working_glow_or_green_rim(self, pill_body: str) -> None:
+        """A second outline on the capsule stacked a green highlight on the
+        PILL glass rim. Working state is the chip pulse and the activity dot."""
+        elongated = pill_body[pill_body.index("if (w > h * 4.0f)") :]
+        assert "glow_pad" not in elongated
+        assert "rim_work" not in elongated
+        assert "outline_round(&pill," not in elongated
 
     def test_the_radius_never_exceeds_half_the_short_side(self, pill_body: str) -> None:
         """A capsule's radius is half its height; more than that is not a shape.

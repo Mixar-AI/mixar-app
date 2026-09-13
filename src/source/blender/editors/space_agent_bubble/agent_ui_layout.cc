@@ -222,7 +222,7 @@ void agent_ui_layout_build(const int window_w,
    * a taller window grows the conversation rather than detaching the composer
    * from the card. A shorter window (the compact empty island) must shrink
    * the same way — flooring at AGENT_CARD_H kept the chip row 448 artboard
-   * units down and painted it below a 272 px window.
+   * units down and painted it below a 190 px window.
    * (The pad's top is its own inset, so its card runs the whole window.) */
   const float card_h = std::max(0.0f, region_h / u + top_du - AGENT_CARD_Y);
   r_layout->card = f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, card_h);

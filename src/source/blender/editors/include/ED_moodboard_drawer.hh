@@ -41,9 +41,9 @@ struct MoodboardDrawerRuntime {
 #define VIEW3D_MOODBOARD_DRAWER_WIDTH 340
 /** Pulls smaller than this settle closed; all larger widths stay put. */
 #define VIEW3D_MOODBOARD_DRAWER_MIN_WIDTH 120
-/** Clickable/drawn width of the edge grip. */
-#define VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH 18.0f
-/** Vertical extent of the grip, centred in the area. */
+/** Clickable/drawn width of the labeled Moodboard tab. */
+#define VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH 22.0f
+/** Vertical extent of the Moodboard tab, centred in the area. */
 #define VIEW3D_MOODBOARD_DRAWER_GRIP_HEIGHT 144.0f
 /** Corner radius of the panel chrome. */
 #define VIEW3D_MOODBOARD_DRAWER_RADIUS 14.0f

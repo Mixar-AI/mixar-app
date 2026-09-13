@@ -421,8 +421,8 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
    * minimised bubble's whole identity — dim last-prompt preview + Mixie the
    * cat on a green gradient chip (Frame 1533210248.svg, mascot in
    * agent_ui_pill_cat.cc). When working (busy or active queue jobs), it
-   * shows a glowing green pulse animation, animated activity dot, and
-   * moving progress dots on the status label. Clicking it expands the
+   * shows an animated activity dot and moving progress dots on the status
+   * label. Clicking it expands the
    * island; dragging it moves it (the pill gesture in
    * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
@@ -450,42 +450,11 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     }
     GPU_blend(GPU_BLEND_ALPHA);
 
-    if (is_working) {
-      /* Breathing glow, INSIDE the edge and under the rim.
-       *
-       * It used to be the capsule inflated by three units. The pill's window
-       * IS the capsule — that is what makes its corners transparent and its
-       * hit area exact — so every pixel of an outset halo fell outside the
-       * window and was clipped. Measured on the running app: the capsule
-       * occupies the same rows in the idle frame and in every busy frame, and
-       * the pixel immediately outside it is bare background in all of them.
-       * The draw could not produce a pixel, and ran on every frame of every
-       * turn to do it. Growing the window is not an option (its size is the
-       * seat geometry the pill is anchored and dragged by), so the glow
-       * breathes inward. */
-      rctf glow = pill;
-      const float glow_pad = 3.0f * u;
-      glow.xmin += glow_pad;
-      glow.ymin += glow_pad;
-      glow.xmax -= glow_pad;
-      glow.ymax -= glow_pad;
-      const float glow_col[4] = {0.0f, 1.0f, 0.549f, 0.05f + 0.10f * pulse};
-      outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);
-
-      /* Pulsing animated green rim. */
-      const float rim_work[4] = {
-          0.10f * (1.0f - pulse),
-          1.0f,
-          0.549f * pulse + 0.294f * (1.0f - pulse),
-          0.30f + 0.35f * pulse};
-      outline_round(&pill, h * 0.5f, rim_work);
-    }
-    else {
-      /* No resting rim here: the PILL row's own rim IS this stroke (white at
-       * 0.14, the export's top-right-brightest edge), drawn by the glass pane
-       * above. Painting it a second time here doubled its alpha to 0.26. The
-       * WORKING rim is different — it pulses and is green — so it stays. */
-    }
+    /* No extra rim here: the PILL row's own rim IS this stroke (white at
+     * 0.14, the export's top-right-brightest edge), drawn by the glass pane
+     * above. A second working outline used to stack a green highlight on
+     * the capsule; working state now lives on the logo chip and the
+     * activity dot. */
 
     /* Pill behind the logo, right-inset 10.5 units, 85x68. */
     rctf chip;
@@ -510,12 +479,6 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     const float chip_grad_a[2] = {chip.xmax - 7.0f * u, chip.ymax - 14.0f * u};
     const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
     fill_round_gradient(&chip, chip_r, chip_a, chip_b, chip_grad_a, chip_grad_b);
-
-    if (is_working) {
-      /* Animated glowing rim around the chip. */
-      const float chip_rim[4] = {0.0f, 1.0f, 0.549f, 0.25f + 0.35f * pulse};
-      outline_round(&chip, chip_r, chip_rim);
-    }
 
     const MixieCatPose cat_pose = agent_ui_cat_motion_sample(
         region, state->cat_activity, now, state->cat_scene,

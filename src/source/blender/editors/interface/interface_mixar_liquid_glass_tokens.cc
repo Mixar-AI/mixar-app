@@ -53,12 +53,11 @@ namespace {
  * whisper of green (the artboard's saturated green ramp as a *glass tint*
  * read as a plastic header; the neon meter is the card's green), MENU, CHAT
  * and MOODBOARD the neutral dark surfaces, PANEL the Parallel Agents card's
- * own near-black bed with that card's resting border green as its rim (the
- * card's green wash is painted at its call site: it is a horizontal ramp, and
- * this row's bed is vertical), PILL the brand green with the brightest rim in
- * the family (it is the smallest pane, so the rim is most of what identifies
- * it), CHIP tint + rim + a whisper of gloss (no shadow, no specular), so it
- * can sit on a pane without casting its own material.
+ * own near-black bed with a neutral glass rim, PILL the resting capsule with
+ * the brightest rim in the family (it is the smallest pane, so the rim is
+ * most of what identifies it), CHIP tint + rim + a whisper of gloss (no
+ * shadow, no specular), so it can sit on a pane without casting its own
+ * material.
  *
  * `PILL.radius` is deliberately larger than any pill: the painter clamps a
  * radius to half the short side, which is exactly the capsule rule, so one
@@ -107,18 +106,15 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_period*/ 7.0f,
         /* fallback_alpha */ 0.94f,
     },
-    /* MIXAR_GLASS_PANEL — the Parallel Agents card. Its own near-black, barely
-     * lifted at the top, and the card's RESTING border green: the running
-     * border is brighter and is painted at the call site, where the agent's
-     * status lives — the same split the PILL row makes with its working rim.
-     * The card's green wash is horizontal and stays at the call site too,
-     * because this row's tint bed is a vertical ramp. */
+    /* MIXAR_GLASS_PANEL — the Parallel Agents card. Near-black, barely lifted
+     * at the top, and a neutral glass rim. Status no longer lives in the
+     * border, so running and resting cards share this material. */
     {
-        /* tint_top      */ {0.055f, 0.071f, 0.063f, 0.66f},
-        /* tint_bottom   */ {0.043f, 0.055f, 0.047f, 0.78f},
+        /* tint_top      */ {0.055f, 0.055f, 0.060f, 0.66f},
+        /* tint_bottom   */ {0.043f, 0.043f, 0.047f, 0.78f},
         /* glaze         */ {0.071f, 0.071f, 0.071f, 0.18f},
         /* sheen         */ {1.000f, 1.000f, 1.000f, 0.06f},
-        /* rim           */ {0.180f, 0.478f, 0.278f, 0.55f},
+        /* rim           */ {1.000f, 1.000f, 1.000f, 0.18f},
         /* refract       */ {1.000f, 1.000f, 1.000f, 0.09f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.30f},
         /* radius        */ 10.0f,
@@ -155,8 +151,8 @@ const MixarGlassTokens g_glass_tokens[] = {
      * The tint is NEUTRAL, not the card's green: the resting capsule is the two
      * greys of its own artboard (#2D2D2D over #131413), so the alphas carry the
      * see-through and the hue stays grey. The rim is the pill's resting rim
-     * (white at 0.14, `grad_*`'s own stroke); the WORKING rim is green and
-     * pulses, so it is repainted at the call site where the pulse lives. */
+     * (white at 0.14, `grad_*`'s own stroke). Working activity is the logo
+     * chip and the status dot, not a second rim on the capsule. */
     {
         /* tint_top      */ {0.176f, 0.176f, 0.176f, 0.16f},
         /* tint_bottom   */ {0.075f, 0.078f, 0.075f, 0.24f},

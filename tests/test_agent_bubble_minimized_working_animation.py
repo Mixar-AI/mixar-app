@@ -10,9 +10,8 @@ serves as the user's primary interface to Mixie. When Mixie is actively working
 remain static and dim.
 
 Instead, it renders a living, animated representation of work:
-  1. Subtle breathing glow inset inside the capsule edge and an animated green
-     rim along the capsule perimeter.
-  2. Pulsing gradient and glowing rim on the Mixar logo chip.
+  1. The capsule stays the shared PILL glass — no second green rim.
+  2. Pulsing gradient on the Mixar logo chip.
   3. Pulsating green activity indicator dot with an expanding/fading ripple halo.
   4. Animated status text with cycling trailing dots ("Working.", "Working..",
      "Working...", "Working") and task prompt context.
@@ -60,37 +59,31 @@ def test_working_state_derives_continuous_pulse():
     assert "pulse = is_working ?" in elongated
 
 
-def test_working_state_draws_animated_glow_and_rim():
-    """When working, the capsule draws an animated breathing glow inside its
-    own edge and a pulsing green rim.
-
-    The idle branch paints no rim of its own: the liquid-glass pane that fills
-    the capsule already draws the resting stroke, and painting it here a second
-    time stacked the two alphas. The glow is INSET rather than an outset halo,
-    because the pill's window IS the capsule and an outset shape is clipped.
+def test_working_state_does_not_paint_a_green_capsule_highlight():
+    """The capsule is already the PILL glass pane. A second working outline
+    stacked a green highlight on the rim; working state now lives on the
+    logo chip and the activity dot instead.
     """
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
     assert "if (is_working)" in elongated
-    # Breathing glow, drawn inward from the pill's own bounds.
-    assert "glow.xmin += glow_pad;" in elongated
-    assert "glow.xmax -= glow_pad;" in elongated
-    assert "outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);" in elongated
-    assert "rim_work" in elongated
-    assert "outline_round(&pill, h * 0.5f, rim_work);" in elongated
+    assert "glow_pad" not in elongated
+    assert "rim_work" not in elongated
+    assert "chip_rim" not in elongated
+    assert "outline_round(&pill," not in elongated
     # The resting rim lives in the glass kit's PILL row, not at the call site.
     assert "outline_round(&pill, h * 0.5f, rim);" not in elongated
 
 
 def test_working_state_pulses_logo_chip():
-    """The right-hand logo chip pulses its green gradient and draws an animated
-    glowing rim when working."""
+    """The right-hand logo chip pulses its green gradient when working."""
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
-    assert "chip_rim" in elongated
-    assert "outline_round(&chip, chip_r, chip_rim);" in elongated
+    assert "is_working ? 0.25f * pulse" in elongated
+    assert "fill_round_gradient(&chip, chip_r," in elongated
+    assert "chip_rim" not in elongated
 
 
 def test_logo_pill_matches_border_radii_with_minimized_bubble():

@@ -8,7 +8,7 @@ Rects are sized in the island unit ``u = window_native_pixel_x / AGENT_ISLAND_W`
 (`agent_ui_layout.cc`), which is self-calibrating: the window IS the island. Text
 was sized with ``AGENT_DU(v) = v / 1.5 * UI_SCALE_FAC``, which does not depend on
 the window width at all. The two are numerically equal only at the 1.5x export
-width (874). The shipped default is a compact cut of that artboard, and
+width (874). The shipped default is 0.7 of the previous compact cut, and
 `bubble_set_min_content_size` constrains the MINIMUM width only — the user can
 widen the bubble freely. Widening it therefore grows every pill, chip, card and
 label together.
@@ -62,10 +62,10 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     """The island unit is ``window_w / AGENT_ISLAND_W`` at every size.
 
     The 1.5x export would open at 874 logical px and dominate the viewport.
-    The shipped default is a compact cut: wide enough that body type stays
-    near 11 pt, short enough that the empty composer and the first
-    conversation do not cover the 3D view. Widening the window still grows
-    every pill, chip and label together.
+    The shipped default is 0.7 of the previous compact cut, short enough
+    that the empty composer and the first conversation do not cover the
+    3D view. Widening the window still grows every pill, chip and label
+    together.
     """
     island_w = _define(THEME_HH, "AGENT_ISLAND_W")
     default_w = _define(BUBBLE_CC, "AGENT_BUBBLE_DEFAULT_WIDTH")
@@ -74,22 +74,22 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     expanded_h = _define(BUBBLE_CC, "AGENT_BUBBLE_EXPANDED_HEIGHT")
     pill_w = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_WIDTH_LARGE")
     pill_h = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_HEIGHT_LARGE")
-    assert default_w == 800
-    assert default_h == 272
-    assert default_h + transcript_h == 480
-    assert expanded_h == 560
+    assert default_w == 560
+    assert default_h == 190
+    assert default_h + transcript_h == 336
+    assert expanded_h == 392
     assert pill_w == 304
     assert pill_h == 44
     assert pill_w / pill_h > 4.0
     scale = default_w / island_w
-    assert 0.60 < scale < 0.62
+    assert 0.42 < scale < 0.44
 
 
 def test_compact_height_is_valid_the_card_stretches():
     """A window shorter than the artboard must still lay out.
 
-    ``region_h < AGENT_ISLAND_H * u`` rejected the shipped 272 px empty
-    island (and the 480 px chat island): chrome never drew, only the
+    ``region_h < AGENT_ISLAND_H * u`` rejected the shipped 190 px empty
+    island (and the 336 px chat island): chrome never drew, only the
     prompt field remained. Height is valid down to the same chrome floor
     the Scribble pad already uses.
     """
@@ -102,7 +102,7 @@ def test_compact_height_is_valid_the_card_stretches():
 def test_open_and_restore_keep_chat_height_once_there_is_a_transcript():
     """Grow-once only fires once. Open/restore must still size to
     DEFAULT + TRANSCRIPT when messages exist, or minimise returns a
-    conversation to the empty 272 px island.
+    conversation to the empty 190 px island.
     """
     body = _function_body(
         BUBBLE_CC, "static int agent_bubble_collapsed_height_for_current_attachments("
