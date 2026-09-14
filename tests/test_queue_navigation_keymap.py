@@ -4,9 +4,11 @@
 
 """The Queue tab's addon keyconfig must bind the same pan event C handles.
 
-A trackpad two-finger scroll arrives as MOUSEPAN. Binding any other pan
-type raises TypeError mid-register(), so wheel/page/home items never land
-and the gesture falls through to transcript scrolling.
+A trackpad two-finger scroll arrives as the C event MOUSEPAN, whose
+KeyMapItem.type identifier in Blender 5.2 is 'TRACKPADPAN' (5.0 called it
+'MOUSEPAN'). Binding an identifier the enum does not know raises TypeError
+mid-register(), so wheel/page/home items never land and the gesture falls
+through to transcript scrolling.
 """
 
 from pathlib import Path
@@ -22,9 +24,11 @@ CC_NAV = (
 )
 
 
-def test_queue_addon_keymap_binds_mousepan_not_a_trackpad_alias():
+def test_queue_addon_keymap_binds_the_52_trackpad_pan_identifier():
     keymap = PY_KEYMAP.read_text(encoding="utf-8")
     native = CC_NAV.read_text(encoding="utf-8")
     assert "event->type == MOUSEPAN" in native
-    assert "'MOUSEPAN'" in keymap
-    assert "TRACKPADPAN" not in keymap
+    assert "'TRACKPADPAN'" in keymap
+    assert "'MOUSEPAN'" not in keymap, (
+        "5.2 removed MOUSEPAN from the Python event enum; binding it raises"
+    )
