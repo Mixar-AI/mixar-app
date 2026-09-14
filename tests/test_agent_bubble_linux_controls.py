@@ -334,6 +334,8 @@ def _linux_if_taken(directive):
         return True
     if directive.startswith("if defined(__APPLE__) || defined(_WIN32)"):
         return False
+    if directive.startswith("ifdef __linux__"):
+        return True
     if directive.startswith("ifdef __APPLE__"):
         return False
     if directive.startswith("ifdef _WIN32"):
@@ -483,6 +485,78 @@ def test_x11_chromeless_remanages_and_is_idempotent():
     assert guard.index("return;") < guard.index("XUnmapWindow("), (
         "the re-manage must sit behind the idempotence guard"
     )
+
+
+def _decl_line(source):
+    return next(
+        line for line in source.splitlines()
+        if line.startswith('extern "C" void Mixar_WindowSetDockWindowType')
+    )
+
+
+def _linux_only_lines(source):
+    """Lines a Linux build keeps that an Apple/Win32 build would not see.
+
+    Reuses the same directive table as the Linux pass, so a new guard form
+    aborts here too rather than being silently misclassified.
+    """
+    out, stack = [], []
+    for line in source.splitlines():
+        directive = _directive(line)
+        if directive.startswith(("if", "ifdef", "ifndef")):
+            stack.append(directive.startswith("ifdef __linux__"))
+            continue
+        if directive.startswith("endif"):
+            if stack:
+                stack.pop()
+            continue
+        if directive.startswith(("else", "elif")):
+            if stack:
+                stack[-1] = False
+            continue
+        if any(stack):
+            out.append(line)
+    return out
+
+
+def test_pill_gets_a_dock_window_type_and_the_island_does_not():
+    """openbox honours the EWMH type where it ignores _MOTIF_WM_HINTS.
+
+    The pill is titled "Agent Bubble Status", so it cannot match the sandbox's
+    <application title="Agent Bubble"> rule, and a withdraw/remap with
+    decorations=0 still came back framed. _NET_WM_WINDOW_TYPE_DOCK is what
+    actually removes it.
+
+    It must stay on the pill alone: openbox clears OB_CLIENT_FUNC_MOVE for
+    dock windows, so marking the island would kill the _NET_WM_MOVERESIZE
+    header drag this branch exists to add.
+    """
+    source = (
+        ROOT / "src" / "source" / "blender" / "editors" / "space_agent_bubble"
+        / "space_agent_bubble.cc"
+    ).read_text(encoding="utf-8")
+
+    calls = [
+        line for line in source.splitlines()
+        if "Mixar_WindowSetDockWindowType(" in line and "extern" not in line
+    ]
+    assert len(calls) == 1, f"dock type must be set exactly once, got {calls}"
+    assert "pill_win" in calls[0], f"dock type must go on the pill, not {calls[0].strip()!r}"
+
+    # and only on Linux, so macOS/Windows never reference the symbol
+    linux_only = _linux_only_lines(source)
+    for snippet in (calls[0], _decl_line(source)):
+        assert snippet in linux_only, (
+            f"{snippet.strip()!r} must sit inside a #ifdef __linux__ guard, "
+            "so macOS and Windows never reference the symbol"
+        )
+
+    x11 = _x11_source()
+    assert 'Mixar_WindowSetDockWindowType(void *window_handle, bool dock)' in x11
+    body = x11.split("void Mixar_WindowSetDockWindowType(", 1)[1].split("\nextern ", 1)[0]
+    assert "_NET_WM_WINDOW_TYPE_DOCK" in body
+    assert "XUnmapWindow(" in body and "XMapWindow(" in body, "needs the re-manage"
+    assert "already" in body, "must be idempotent"
 
 
 def test_x11_chrome_and_reads_use_the_right_gate():

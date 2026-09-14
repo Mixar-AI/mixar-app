@@ -195,6 +195,11 @@ extern "C" void Mixar_WindowPositionAboveParent(void *child_handle,
                                                 int offset_y);
 extern "C" bool Mixar_WindowHasChildWindow(void *parent_handle);
 extern "C" void Mixar_WindowSetBorderless(void *window_handle);
+#ifdef __linux__
+/* X11 only — see the pill creation site for why the pill needs an EWMH
+ * window type and the island must not get one. */
+extern "C" void Mixar_WindowSetDockWindowType(void *window_handle, bool dock);
+#endif
 extern "C" void Mixar_WindowSetFloatingLevel(void *window_handle);
 extern "C" void Mixar_WindowSetHidesOnDeactivate(void *window_handle, bool hides);
 extern "C" void Mixar_WindowBindToParentSpace(void *window_handle);
@@ -3173,6 +3178,22 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
            * the pill's contentView fills the frame with a single
            * solid colour. */
           Mixar_WindowSetBorderless(pill_win->runtime->ghostwin);
+#ifdef __linux__
+          /* X11: _MOTIF_WM_HINTS is not enough here. openbox reads it only
+           * when it takes a window under management, and even a withdraw /
+           * remap cycle with decorations=0 still came back framed — the
+           * sandbox's own xprop workaround documents the same thing and
+           * falls back to an <application title="Agent Bubble"> rule, which
+           * this window cannot match because it is titled "Agent Bubble
+           * Status". What openbox does honour per-window is the EWMH type.
+           *
+           * DOCK for the PILL ONLY. openbox drops OB_CLIENT_FUNC_MOVE for
+           * dock windows, so the same call on the island would kill the
+           * _NET_WM_MOVERESIZE header drag this branch exists to add. The
+           * pill is a resting indicator that is clicked, not dragged, and
+           * clicks still reach it as a dock. */
+          Mixar_WindowSetDockWindowType(pill_win->runtime->ghostwin, true);
+#endif
           agent_bubble_pill_try_per_pixel_alpha(pill_win->runtime->ghostwin);
 
           /* Pin the pill to floating level too. As a child window of

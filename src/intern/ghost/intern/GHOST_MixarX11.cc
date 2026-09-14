@@ -262,6 +262,73 @@ extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle)
   mixar_x11_dock_suppress_if_needed(window_handle);
 }
 
+/* EWMH window type. openbox honours this per-window where it ignores
+ * _MOTIF_WM_HINTS, so it is what actually removes the pill's frame. Applied
+ * ONLY to the pill (see the call site): openbox clears OB_CLIENT_FUNC_MOVE
+ * for dock windows, and the island must stay draggable via
+ * _NET_WM_MOVERESIZE. The re-manage is needed for the same reason as in
+ * Mixar_WindowSetChromeless, and is likewise skipped when the type already
+ * matches so repeat shows do not flicker. */
+extern "C" void Mixar_WindowSetDockWindowType(void *window_handle, bool dock)
+{
+  Display *display;
+  Window window;
+  if (!mixar_x11_resolve_chrome(window_handle, &display, &window)) {
+    return;
+  }
+  Atom type = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+  Atom want = XInternAtom(
+      display, dock ? "_NET_WM_WINDOW_TYPE_DOCK" : "_NET_WM_WINDOW_TYPE_NORMAL", False);
+  if (type == None || want == None) {
+    return;
+  }
+
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0, bytes_after = 0;
+  unsigned char *data = nullptr;
+  bool already = false;
+  if (XGetWindowProperty(display,
+                         window,
+                         type,
+                         0,
+                         1,
+                         False,
+                         XA_ATOM,
+                         &actual_type,
+                         &actual_format,
+                         &nitems,
+                         &bytes_after,
+                         &data) == Success)
+  {
+    if (data != nullptr) {
+      if (actual_format == 32 && nitems >= 1) {
+        already = (*reinterpret_cast<const Atom *>(data) == want);
+      }
+      XFree(data);
+    }
+  }
+  if (already) {
+    return;
+  }
+
+  XChangeProperty(display,
+                  window,
+                  type,
+                  XA_ATOM,
+                  32,
+                  PropModeReplace,
+                  reinterpret_cast<unsigned char *>(&want),
+                  1);
+  if (mixar_x11_is_viewable(display, window)) {
+    XUnmapWindow(display, window);
+    XFlush(display);
+    XMapWindow(display, window);
+    XRaiseWindow(display, window);
+  }
+  XFlush(display);
+}
+
 extern "C" void Mixar_FloatingDocksSuppressForModal()
 {
   s_x11_dock_suppress_depth++;
