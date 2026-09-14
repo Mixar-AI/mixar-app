@@ -6256,11 +6256,12 @@ static int do_but_TEX(
             mixie_pen_arm(but, event);
           }
           button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
-          if (event->type == LEFTMOUSE && but->type == ButtonType::TextBox) {
-            /* Text-box buttons allows to scroll its content even when they are not in text-edit
-             * state, let the user to place the text cursor under the mouse and to immediately
-             * start selecting text without requiring to activate the text-box with an extra click.
-             */
+          if (event->type == LEFTMOUSE &&
+              (but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but) != nullptr))
+          {
+            /* Text boxes and the Mixie composer place the caret and begin
+             * selecting on the activating press. Requiring another click
+             * loses the user's first drag after the composer loses focus. */
             textedit_set_cursor_pos(but, data->region, float2(event->xy));
             but->selsta = but->selend = data->text_edit.sel_pos_init = but->pos;
             button_activate_state(C, but, BUTTON_STATE_TEXT_SELECTING);

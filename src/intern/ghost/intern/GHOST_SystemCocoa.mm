@@ -2042,15 +2042,14 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
        * NSWindowStyleMaskResizable enables native edge/corner resize
        * (matching the Windows WM_NCHITTEST approach).
        *
-       * Side effect: the entire window surface is now the content
-       * view, so OS-level window-drag from the title bar zone is
-       * gone. We compensate with movableByWindowBackground = YES
-       * so the user can still drag the window from any non-widget area. */
+       * Blender's header gesture explicitly calls performWindowDragWithEvent.
+       * Disable automatic background dragging: Cocoa cannot distinguish our
+       * GPU-drawn text fields from empty window background. */
       win.titleVisibility = NSWindowTitleHidden;
       win.titlebarAppearsTransparent = YES;
       [win setStyleMask:([win styleMask] | NSWindowStyleMaskFullSizeContentView |
                                            NSWindowStyleMaskResizable)];
-      win.movableByWindowBackground = YES;
+      win.movableByWindowBackground = NO;
 
       /* Hide the traffic-light buttons AFTER setStyleMask — macOS
        * can reset button visibility when the mask changes. */

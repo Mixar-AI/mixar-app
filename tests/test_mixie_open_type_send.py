@@ -159,3 +159,13 @@ def test_the_qa_probe_only_replaces_the_transport_boundary():
     assert "enter_from_middle_of_draft" in E2E
     assert "shift_enter_adds_newline" in E2E
     assert "failed_send_preserves_draft" in E2E
+
+
+def test_composer_first_press_begins_selection_without_extra_click():
+    handlers = (ROOT / "src/source/blender/editors/interface/interface_handlers.cc").read_text()
+    start = handlers.index("static int do_but_TEX(")
+    end = handlers.index("static int do_but_TEXTBOX(", start)
+    body = handlers[start:end]
+    gate = body.index("but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but)")
+    assert "textedit_set_cursor_pos" in body[gate:]
+    assert "BUTTON_STATE_TEXT_SELECTING" in body[gate:]

@@ -3550,6 +3550,14 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
     return OPERATOR_CANCELLED;
   }
 
+  /* Content owns text selection, scrolling and asset gestures. A press
+   * passed through by a region handler must never turn into a window move.
+   * The resting pill also uses HEADER, so its click/drag gesture is retained. */
+  const ARegion *region = CTX_wm_region(C);
+  if (region == nullptr || region->regiontype != RGN_TYPE_HEADER) {
+    return OPERATOR_CANCELLED;
+  }
+
   /* Stand down when the button under the cursor is waiting to start its own
    * drag — a My Generations asset tile. Blender answers a press over a
    * draggable button with WM_UI_HANDLER_CONTINUE (`ui_do_but_EXIT`) so a

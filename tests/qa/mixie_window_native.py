@@ -35,8 +35,10 @@ def windows():
         title = send(send(win, 'title'), 'UTF8String', ct.c_char_p)
         limit = send(win, 'contentMaxSize', Size)
         rect = send(win, 'frame', Rect)
-        result.append({'height': rect.size.height, 'is_island': title == b'Agent Bubble' and rect.size.height > 100, 'title': title.decode() if title else '',
+        result.append({'x': rect.origin.width, 'y': rect.origin.height,
+                       'width': rect.size.width, 'height': rect.size.height, 'is_island': title == b'Agent Bubble' and rect.size.height > 100, 'title': title.decode() if title else '',
                        'visible': send(win, 'isVisible', ct.c_bool),
+                       'background_draggable': send(win, 'isMovableByWindowBackground', ct.c_bool),
                        'key': send(win, 'isKeyWindow', ct.c_bool),
                        'max_height': limit.height})
     return result

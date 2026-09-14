@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Drag any grey area of the Agent Bubble to move the whole window.
+"""Drag the Agent Bubble header to move the whole window.
 
 On macOS, hands off to AppKit's native performWindowDragWithEvent:
 On Windows, uses a modal operator: begin_drag stores the initial
@@ -13,7 +13,7 @@ up on LEFTMOUSE RELEASE.
 
 Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
-  * invoke(): pass through if the click landed in the TOOLS region.
+  * invoke(): only the HEADER can move the island; content owns its gestures.
   * begin_drag refuses (and invoke passes through) when the press is
     already owned by a uiBut waiting to start its own drag, e.g. a My
     Generations asset tile — window handlers run after every region
@@ -88,9 +88,9 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
-        # Pass through clicks on the TOOLS region (input/buttons).
+        # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region
-        if region is None or region.type == 'TOOLS':
+        if region is None or region.type != 'HEADER':
             return {'PASS_THROUGH'}
 
         try:
