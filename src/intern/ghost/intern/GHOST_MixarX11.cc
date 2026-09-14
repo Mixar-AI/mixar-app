@@ -386,7 +386,7 @@ extern "C" bool Mixar_WindowIsVisible(void *window_handle)
   }
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_any(window_handle, &display, &window)) {
     return true;
   }
   XWindowAttributes attr;

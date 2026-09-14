@@ -32,12 +32,15 @@ enum MixarX11TrackMode {
  * AGENT_BUBBLE_PILL_GAP in space_agent_bubble.cc (Win32 hardcodes 6). */
 static constexpr int MIXAR_X11_PILL_GAP = 6;
 
-/* Required for chat-island move (``_NET_WM_MOVERESIZE``) and minimise
- * (unmap / map). Earlier sandboxes on NVIDIA + Xvfb segfaulted on some
- * Motif / transient-for write paths; those stacks should be re-checked
- * after READY if a regression appears. Wayland still no-ops via
- * ``dynamic_cast`` in the resolve helpers below. */
-static constexpr bool MIXAR_X11_ALLOW_MUTATE = true;
+/* Light mutations: chat-island move (``_NET_WM_MOVERESIZE`` ClientMessage)
+ * and minimise/restore (map / unmap). These are what Linux users need. */
+static constexpr bool MIXAR_X11_ALLOW_MOVE_MINIMISE = true;
+
+/* Heavy mutations (MWM decorations, WM_TRANSIENT_FOR, XMoveResizeWindow)
+ * segfaulted Mixar after READY on NVIDIA L4 + Xvfb. Keep off; spawn still
+ * relies on the sandbox xprop undecorate path. Flip only after that stack
+ * is re-validated. Wayland no-ops via ``dynamic_cast`` below. */
+static constexpr bool MIXAR_X11_ALLOW_HEAVY_MUTATE = false;
 
 inline GHOST_SystemX11 *mixar_x11_system()
 {
@@ -58,11 +61,8 @@ inline GHOST_WindowX11 *mixar_x11_window(void *window_handle)
   return dynamic_cast<GHOST_WindowX11 *>(static_cast<GHOST_IWindow *>(window_handle));
 }
 
-inline bool mixar_x11_resolve(void *window_handle, Display **r_display, Window *r_window)
+inline bool mixar_x11_resolve_any(void *window_handle, Display **r_display, Window *r_window)
 {
-  if (!MIXAR_X11_ALLOW_MUTATE) {
-    return false;
-  }
   GHOST_SystemX11 *system = mixar_x11_system();
   GHOST_WindowX11 *window = mixar_x11_window(window_handle);
   if (system == nullptr || window == nullptr) {
@@ -76,6 +76,24 @@ inline bool mixar_x11_resolve(void *window_handle, Display **r_display, Window *
   *r_display = display;
   *r_window = xwindow;
   return true;
+}
+
+inline bool mixar_x11_resolve(void *window_handle, Display **r_display, Window *r_window)
+{
+  if (!MIXAR_X11_ALLOW_HEAVY_MUTATE) {
+    return false;
+  }
+  return mixar_x11_resolve_any(window_handle, r_display, r_window);
+}
+
+inline bool mixar_x11_resolve_move_minimise(void *window_handle,
+                                            Display **r_display,
+                                            Window *r_window)
+{
+  if (!MIXAR_X11_ALLOW_MOVE_MINIMISE) {
+    return false;
+  }
+  return mixar_x11_resolve_any(window_handle, r_display, r_window);
 }
 
 /* Root-relative geometry. XGetGeometry is parent-relative; reparenting

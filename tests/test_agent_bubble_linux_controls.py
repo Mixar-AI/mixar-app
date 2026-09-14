@@ -423,13 +423,15 @@ def test_no_cinema_seat_global_is_used_without_a_linux_declaration():
         )
 
 
-def test_x11_window_mutations_are_enabled():
-    """Move/minimise need real X11 writes (``_NET_WM_MOVERESIZE``, map/unmap).
+def test_x11_move_minimise_mutations_are_enabled():
+    """Move/minimise need light X11 writes; heavy Motif/transient stay off.
 
-    Call sites are already ungated for ``__linux__``; the resolve gate must
-    allow mutations or the traffic lights and header drag stay no-ops.
+    Call sites are ungated for ``__linux__``. ``mixar_x11_resolve_move_minimise``
+    must allow map/unmap and ``_NET_WM_MOVERESIZE``; heavy ``XMoveResize`` /
+    Motif paths stay gated to avoid the NVIDIA+Xvfb READY segfault.
     """
     header = (
         ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarX11.hh"
     ).read_text(encoding="utf-8")
-    assert "static constexpr bool MIXAR_X11_ALLOW_MUTATE = true;" in header
+    assert "static constexpr bool MIXAR_X11_ALLOW_MOVE_MINIMISE = true;" in header
+    assert "static constexpr bool MIXAR_X11_ALLOW_HEAVY_MUTATE = false;" in header

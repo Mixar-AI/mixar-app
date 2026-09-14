@@ -47,7 +47,7 @@ extern "C" void Mixar_WindowOrderFront(void *window_handle)
   }
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_move_minimise(window_handle, &display, &window)) {
     return;
   }
   XMapRaised(display, window);
@@ -61,7 +61,7 @@ extern "C" void Mixar_WindowOrderFrontNoActivate(void *window_handle)
   }
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_move_minimise(window_handle, &display, &window)) {
     return;
   }
   /* Map and raise without XSetInputFocus. The WM may still steal focus. */
@@ -74,7 +74,7 @@ extern "C" void Mixar_WindowOrderOut(void *window_handle)
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_move_minimise(window_handle, &display, &window)) {
     return;
   }
   XUnmapWindow(display, window);
@@ -85,7 +85,7 @@ extern "C" void Mixar_WindowMakeKey(void *window_handle)
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_move_minimise(window_handle, &display, &window)) {
     return;
   }
   XRaiseWindow(display, window);
@@ -209,7 +209,7 @@ extern "C" void Mixar_WindowBeginDrag(void *window_handle)
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_move_minimise(window_handle, &display, &window)) {
     return;
   }
   Atom moveresize = XInternAtom(display, "_NET_WM_MOVERESIZE", False);
