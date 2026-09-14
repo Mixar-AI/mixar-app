@@ -54,6 +54,8 @@ from mixar.modules.scribble_mark.core.freeze_session import (
     resolve as resolve_context,
 )
 
+from mixar.modules.scribble_mark.core import pending
+
 logger = get_logger(__name__)
 
 #: Module-level guard. Modal operators do not survive a .blend load, but this
@@ -80,6 +82,7 @@ def reset_running_guard():
     global _running, _live_session
     _running = False
     _live_session = None
+    pending.clear()
 
 
 class MIXAR_OT_scribble_mark_draw(Operator):
@@ -163,12 +166,14 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self._timer = None
                 context.window_manager.mixar_mark_armed = False
                 overlay.remove()
+                self._session.restore_drawer(context)
                 self._session.release_if_unused()
                 self._session = None
                 self.report({"ERROR"}, "Could not start the mark overlay")
                 return {"CANCELLED"}
         _running = True
         _live_session = self._session
+        pending.bind(self)
         overlay.tag_redraw()
         return {"RUNNING_MODAL"}
 
@@ -273,7 +278,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
-        if event.type == "MOUSEMOVE" and self._current is not None:
+        if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"} and self._current is not None:
             self._extend_stroke(point)
             return {"RUNNING_MODAL"}
 
@@ -469,10 +474,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     def _finish(self, context):
         global _running, _live_session
-        # A freeze that committed no mark owns a still and a camera nothing
-        # references. Left behind, every arm/disarm cycle adds both to the
-        # .blend.
+        # Restore the drawer even when committed marks retain this freeze.
         if self._session is not None:
+            self._session.restore_drawer(context)
             self._session.release_if_unused()
         if self._timer is not None:
             try:
@@ -489,6 +493,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         scribble_mode.close_ink(context.window_manager)
         _running = False
         _live_session = None
+        pending.clear()
 
 
 classes = (MIXAR_OT_scribble_mark_draw,)

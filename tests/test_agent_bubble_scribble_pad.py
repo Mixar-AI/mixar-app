@@ -199,6 +199,38 @@ def test_content_size_and_place_helpers_exist_on_both_platforms():
 # ---------------------------------------------------------------------------
 
 
+def test_window_drag_stands_down_while_scribble_owns_the_pad():
+    """A press on the writing surface must not start a native window move.
+
+    ``mixar.bubble_header_drag`` is a WINDOW-level LEFTMOUSE. Ink that does
+    not BREAK (HEADER seam, overlay not latched, select_text PASS_THROUGH
+    on empty canvas) used to reach ``Mixar_WindowBeginDrag`` and AppKit
+    swallowed the stroke. Same poll the pad already uses.
+    """
+    begin = _body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_window_begin_drag_exec")
+    assert "agent_bubble_scribble_active(C)" in begin
+    assert begin.index("agent_bubble_scribble_active(C)") < begin.index(
+        "Mixar_WindowBeginDrag("
+    )
+    drag_op = (
+        ROOT / "src/scripts/mixar/modules/agent_bubble/ui/operators/bubble_header_drag_op.py"
+    ).read_text(encoding="utf-8")
+    invoke = drag_op[drag_op.index("def invoke(") : drag_op.index("def modal(")]
+    assert "mixie_chat_ink_visible" in invoke
+    assert "mixar_mark_armed" in invoke
+    assert "PASS_THROUGH" in invoke
+
+
+def test_translucent_metal_view_cannot_move_the_window():
+    """Non-opaque CocoaMetalView + movableByWindowBackground made the GPU
+    canvas itself a drag handle — the pad slid under every stroke."""
+    glass = (
+        ROOT / "src/intern/ghost/intern/GHOST_MixarGlassCocoa.mm"
+    ).read_text(encoding="utf-8")
+    assert "- (BOOL)mouseDownCanMoveWindow" in glass
+    assert "return NO;" in glass[glass.index("mouseDownCanMoveWindow") :]
+
+
 def test_restore_resizes_before_snapping_to_the_host():
     """The centre-bottom snap centres the bubble's CURRENT width. A bubble
     minimised out of the pad (504 wide) was centred at that width and then

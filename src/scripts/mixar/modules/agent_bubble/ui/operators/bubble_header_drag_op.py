@@ -13,11 +13,15 @@ up on LEFTMOUSE RELEASE.
 
 Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
-  * invoke(): pass through if the click landed in the TOOLS region.
+  * invoke(): pass through if the click landed in the TOOLS region, or
+    while Scribble is armed (``mixie_chat_ink_visible`` /
+    ``mixar_mark_armed``) so handwriting on the writing PAD cannot start
+    a native window drag.
   * begin_drag refuses (and invoke passes through) when the press is
     already owned by a uiBut waiting to start its own drag, e.g. a My
     Generations asset tile — window handlers run after every region
     handler, so without that check the window move wins the gesture.
+    It also refuses for the same Scribble flags.
 
 The PILL window (the island's status pill, and the elongated resting pill
 while the island is minimised) is one press with two meanings, decided by
@@ -91,6 +95,14 @@ class MIXAR_OT_bubble_header_drag(Operator):
         # Pass through clicks on the TOOLS region (input/buttons).
         region = context.region
         if region is None or region.type == 'TOOLS':
+            return {'PASS_THROUGH'}
+
+        # Handwriting / viewport marks own LEFTMOUSE. Falling through here
+        # starts a native window drag and the pad slides under the stroke.
+        wm = context.window_manager
+        if getattr(wm, "mixie_chat_ink_visible", False) or getattr(
+            wm, "mixar_mark_armed", False
+        ):
             return {'PASS_THROUGH'}
 
         try:

@@ -153,6 +153,15 @@ class MIXIE_CHAT_OT_send_message(Operator):
         message_text = scene.mixie_chat_input.strip()
         pending_attachments = scene.mixie_chat_pending_attachments
 
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                chat_bridge.flush_for_send(context)
+                if not message_text:
+                    message_text = chat_bridge.default_message(scene, context.window_manager)
+            except Exception:  # Optional ink must never discard the user's words.
+                logger.debug("Could not flush viewport ink for send", exc_info=True)
+
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}

@@ -24,7 +24,13 @@
 
 /* GHOST's CocoaMetalView hard-codes isOpaque=YES. AppKit then skips the
  * native backdrop and WindowServer may treat the presented drawable as a
- * solid plane. Follow the window: island/pill set opaque=NO. */
+ * solid plane. Follow the window: island/pill set opaque=NO.
+ *
+ * A non-opaque view defaults mouseDownCanMoveWindow to YES. Combined with
+ * Mixar_WindowSetChromeless's movableByWindowBackground, a press-drag on
+ * the GPU canvas (the Scribble handwriting pad) starts an AppKit window
+ * move and the ink coordinates slide with it. Window moves stay on
+ * Mixar_WindowBeginDrag (the island's explicit grey-area / pill operator). */
 @interface CocoaMetalView : NSView
 @end
 
@@ -33,6 +39,11 @@
 {
   NSWindow *win = self.window;
   return (win == nil) ? YES : win.opaque;
+}
+
+- (BOOL)mouseDownCanMoveWindow
+{
+  return NO;
 }
 @end
 
