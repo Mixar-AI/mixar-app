@@ -22,7 +22,7 @@ ED = ROOT / "src/source/blender/editors"
 INTERN = SPACE_MIXIE / "mixie_draw_moodboard_intern.hh"
 MEDIA = SPACE_MIXIE / "mixie_draw_moodboard.cc"
 GRAPH = SPACE_MIXIE / "mixie_draw_moodboard_graph.cc"
-NODE_UI = SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc"
+NODE_UI = SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc"
 KIT = ED / "interface" / "interface_mixar_liquid_glass_tokens.cc"
 GLASS_HEADER = ED / "include" / "ED_mixar_glass.hh"
 

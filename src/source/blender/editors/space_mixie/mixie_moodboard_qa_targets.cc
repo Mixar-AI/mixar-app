@@ -125,7 +125,7 @@ void moodboard_qa_targets(const wmWindow *win,
                                   BLI_rctf_cent_y(&canvas_rect),
                                   &hx,
                                   &hy);
-      const int radius = int(MOODBOARD_GRAPH_SOCKET_RADIUS + 5.0f);
+      const int radius = int(blender::ed::mixie::moodboard_socket_hit_radius_px(hv2d, true));
       MixarQATarget h;
       h.surface = "moodboard_output";
       h.text = node_id;
@@ -151,7 +151,7 @@ void moodboard_qa_targets(const wmWindow *win,
       }
       float rx, ry;
       blender::ui::view2d_view_to_region_fl(v2d, cx, cy, &rx, &ry);
-      const int radius = int(MOODBOARD_GRAPH_SOCKET_RADIUS + 5.0f);
+      const int radius = int(blender::ed::mixie::moodboard_socket_hit_radius_px(v2d));
 
       PointerRNA socket;
       RNA_property_collection_lookup_int(&node, sockets, i, &socket);
