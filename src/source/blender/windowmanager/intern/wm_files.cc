@@ -32,7 +32,7 @@
 
 #include <fmt/format.h>
 
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 extern "C" void Mixar_FloatingDocksSuppressForModal();
 extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #endif
@@ -5269,14 +5269,14 @@ static const char *close_file_dialog_name = "file_close_popup";
 
 static void wm_mixar_floating_docks_suppress_for_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
   Mixar_FloatingDocksSuppressForModal();
 #endif
 }
 
 static void wm_mixar_floating_docks_restore_after_modal()
 {
-#if defined(__APPLE__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
   Mixar_FloatingDocksRestoreAfterModal();
   /* wm_draw_update skips natively-hidden windows entirely (see the
    * Mixar_WindowIsVisible check in wm_draw.cc), so a dock's content is

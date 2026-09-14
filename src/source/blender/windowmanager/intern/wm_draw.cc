@@ -81,13 +81,14 @@ namespace blender {
 #  include "BKE_subsurf.hh"
 #endif
 
-#if defined(WIN32) || defined(__APPLE__)
+#if defined(WIN32) || defined(__APPLE__) || defined(__linux__)
 /* Mixar GHOST overlay helper — implemented in GHOST_SystemWin32.cc /
- * GHOST_SystemCocoa.mm. True when the native window is currently shown;
- * false for windows hidden via ShowWindow(SW_HIDE) / orderOut: (minimised
- * Agent Bubble, modal-suppressed floating docks) and for dead handles.
- * Declared extern "C" here to avoid a GHOST header just for this — same
- * pattern as space_agent_bubble.cc. */
+ * GHOST_SystemCocoa.mm / GHOST_MixarX11.cc. True when the native window
+ * is currently shown; false for windows hidden via ShowWindow(SW_HIDE) /
+ * orderOut: / XUnmapWindow (minimised Agent Bubble, modal-suppressed
+ * floating docks) and for dead handles. Declared extern "C" here to
+ * avoid a GHOST header just for this — same pattern as
+ * space_agent_bubble.cc. */
 extern "C" bool Mixar_WindowIsVisible(void *window_handle);
 #endif
 
@@ -1694,7 +1695,7 @@ void wm_draw_update(bContext *C)
     }
 #endif
 
-#if defined(WIN32) || defined(__APPLE__)
+#if defined(WIN32) || defined(__APPLE__) || defined(__linux__)
     /* Mixar: never draw or present a window that is natively hidden.
      *
      * The Agent Bubble overlay windows are hidden with ShowWindow(SW_HIDE) /

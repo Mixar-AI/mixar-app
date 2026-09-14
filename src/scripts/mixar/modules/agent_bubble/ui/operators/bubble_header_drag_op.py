@@ -4,7 +4,9 @@
 
 """Drag any grey area of the Agent Bubble to move the whole window.
 
-On macOS, hands off to AppKit's native performWindowDragWithEvent:
+On macOS, hands off to AppKit's native performWindowDragWithEvent.
+On Linux/X11, begin_drag sends ``_NET_WM_MOVERESIZE`` and the WM owns
+the gesture (same non-modal hand-off as macOS).
 On Windows, uses a modal operator: begin_drag stores the initial
 cursor + window position, update_drag repositions on each
 MOUSEMOVE using GetCursorPos (screen coords — immune to the
@@ -111,7 +113,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
-        # macOS: AppKit handles tracking natively after begin_drag.
+        # macOS / Linux: OS or WM owns tracking after begin_drag.
         return {'FINISHED'}
 
     def modal(self, context, event):
@@ -181,7 +183,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
         if _IS_WINDOWS:
             # The shared drag branch of modal() drives update/end from here.
             return {'RUNNING_MODAL'}
-        # macOS: AppKit's window-server drag owns the gesture from here and
+        # macOS / Linux: window-server or WM owns the gesture from here and
         # hands this modal no further events — same hand-off as the island.
         return {'FINISHED'}
 

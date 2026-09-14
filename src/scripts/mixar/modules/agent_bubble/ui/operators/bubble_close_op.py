@@ -32,11 +32,12 @@ from mixar.modules.common.analytics.constants import EVENT_BUBBLE_EXPAND
 from mixar.modules.common.analytics.bubble_events import capture_bubble_state
 
 
-# Every operator here drives a native window-state operator that only exists
-# on macOS and Windows (see BUBBLE_WINDOW_CONTROLS_SUPPORTED). Elsewhere the
-# native side returns CANCELLED without touching a window, so these gate
-# themselves rather than running their side effects around a call that will
-# not do anything:
+# Every operator here drives a native window-state operator whose body is
+# only compiled where a GHOST Mixar_Window* backend exists — macOS, Windows
+# and Linux/X11 (see BUBBLE_WINDOW_CONTROLS_SUPPORTED). Elsewhere the native
+# side returns CANCELLED without touching a window, so these gate themselves
+# rather than running their side effects around a call that will not do
+# anything:
 #
 #   * mixar.bubble_close records the user-dismissal that mutes the
 #     workspace-change autoshow. Setting it when nothing minimised is how ESC

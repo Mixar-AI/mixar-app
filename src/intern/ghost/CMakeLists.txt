@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Mixar overlay of upstream intern/ghost/CMakeLists.txt (pin v5.2.0). Mixar
-# additions are the Cocoa / Win32 glass helpers and the GHOST_ContextMTL.mm
-# overlay (present blit keeps framebuffer alpha). Re-diff against upstream
-# after every pin bump.
+# additions are the Cocoa speech/vision helpers and the X11 Mixar_Window*
+# backend; re-diff against upstream after every pin bump.
 
 set(INC
   PUBLIC .
@@ -161,10 +160,8 @@ elseif(APPLE AND NOT WITH_GHOST_X11)
     # Mixar: runtime-loaded Speech / Vision helpers (no framework link flags).
     intern/GHOST_MixarSpeechCocoa.mm
     intern/GHOST_MixarVisionCocoa.mm
-    intern/GHOST_MixarGlassCocoa.mm
     intern/GHOST_WindowCocoa.mm
 
-    intern/GHOST_MixarGlassCocoa.hh
     intern/GHOST_SystemCocoa.hh
     intern/GHOST_WindowCocoa.hh
     intern/GHOST_WindowViewCocoa.hh
@@ -193,7 +190,14 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
       intern/GHOST_SystemX11.cc
       intern/GHOST_WindowX11.cc
 
+      # Mixar: X11 backend for the agent bubble's window helpers. Kept in its
+      # own file so GHOST_SystemX11.cc stays byte-identical to upstream.
+      intern/GHOST_MixarX11.cc
+      intern/GHOST_MixarX11_parent.cc
+      intern/GHOST_MixarX11_move.cc
+
       intern/GHOST_IconX11.hh
+      intern/GHOST_MixarX11.hh
       intern/GHOST_SystemX11.hh
       intern/GHOST_WindowX11.hh
     )
@@ -444,14 +448,12 @@ elseif(WIN32)
     intern/GHOST_ContextD3D.cc
     intern/GHOST_DropTargetWin32.cc
     intern/GHOST_SystemWin32.cc
-    intern/GHOST_MixarGlassWin32.cc
     intern/GHOST_TrackpadWin32.cc
     intern/GHOST_WindowWin32.cc
     intern/GHOST_Wintab.cc
 
     intern/GHOST_ContextD3D.hh
     intern/GHOST_DropTargetWin32.hh
-    intern/GHOST_MixarGlassWin32.hh
     intern/GHOST_SystemWin32.hh
     intern/GHOST_TaskbarWin32.hh
     intern/GHOST_TrackpadWin32.hh

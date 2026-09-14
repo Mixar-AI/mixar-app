@@ -2,24 +2,26 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The Agent Bubble must not offer window controls it cannot honour.
+"""The Agent Bubble must only offer window controls it can honour.
 
 Minimise, restore and expand are native operators whose bodies are compiled
-only for macOS and Windows — the ``Mixar_Window*`` GHOST helpers they call
-exist in ``GHOST_SystemCocoa.mm`` and ``GHOST_SystemWin32.cc`` and nowhere
-else. On Linux the three ``exec`` functions in ``space_agent_bubble.cc`` are
-``return OPERATOR_CANCELLED``; every call site sits inside the same ``#if``,
-and the APIs the cross-platform Cinema gate consumes get Linux definitions,
-so the build compiles and links cleanly with no warning.
+where a GHOST ``Mixar_Window*`` backend exists: macOS
+(``GHOST_SystemCocoa.mm``), Windows (``GHOST_SystemWin32.cc``) and Linux/X11
+(``GHOST_MixarX11.cc``). Everywhere else the three ``exec`` functions in
+``space_agent_bubble.cc`` are ``return OPERATOR_CANCELLED``, and because
+every call site sits inside the same three-platform ``#if`` the build links
+cleanly with no warning.
 
-The buttons were still drawn, enabled, and dispatching. Clicking one produced
-no window change, no error, no toast and no log line, which reads as frozen
-UI. Worse, the surrounding Python ran its side effects anyway: ESC recorded
-the user-dismissal that mutes the autoshow, and Ctrl/Cmd+Shift+B reported
-FINISHED and logged a "maximized" event for a window that never moved.
+Where the native side is a stub, nothing may be offered and nothing may be
+recorded: a drawn-but-dead button reads as frozen UI, and the surrounding
+Python used to run its side effects anyway (ESC recorded the user-dismissal
+that mutes the autoshow; Ctrl/Cmd+Shift+B reported FINISHED and logged a
+"maximized" event for a window that never moved).
 
-What is pinned here is the honesty of the surface, not the platform list:
-where the native side is a stub, nothing is offered and nothing is recorded.
+The platform list lives in ``constants.BUBBLE_WINDOW_CONTROLS_SUPPORTED``
+and is an allowlist — a future platform without a GHOST backend inherits
+no dead buttons. Tests that monkeypatch the gate still cover both True
+and False so a stubbed platform stays honest.
 """
 
 import sys
@@ -268,9 +270,9 @@ def test_the_platform_gate_is_an_allowlist():
     src = (
         SCRIPTS / "mixar" / "modules" / "agent_bubble" / "constants.py"
     ).read_text(encoding="utf-8")
-    assert 'sys.platform in {"darwin", "win32"}' in src
+    assert 'sys.platform in {"darwin", "win32", "linux"}' in src
     assert CONST.BUBBLE_WINDOW_CONTROLS_SUPPORTED == (
-        sys.platform in {"darwin", "win32"}
+        sys.platform in {"darwin", "win32", "linux"}
     )
 
 
@@ -315,15 +317,39 @@ def _directive(line):
     return stripped[1:].strip()
 
 
+def _linux_if_taken(directive):
+    """True when a Linux preprocessor would take this `#if` / `#ifdef`.
+
+    Longer prefixes first so a three-platform allowlist is not classified
+    as the older Apple/Win32-only form it starts with. Any other
+    conditional form aborts rather than silently guessing.
+    """
+    if directive.startswith(
+        "if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)"
+    ):
+        return True
+    if directive.startswith("if defined(_WIN32) || defined(__linux__)"):
+        return True
+    if directive.startswith("if defined(__APPLE__) || defined(__linux__)"):
+        return True
+    if directive.startswith("if defined(__APPLE__) || defined(_WIN32)"):
+        return False
+    if directive.startswith("ifdef __APPLE__"):
+        return False
+    if directive.startswith("ifdef _WIN32"):
+        return False
+    raise AssertionError(f"unexpected platform conditional: {directive!r}")
+
+
 def _linux_preprocessor_pass(source):
     """Split `space_agent_bubble.cc` into what a Linux build keeps and what
     the platform guards drop.
 
-    Every conditional in the file is stated as one of
-    ``#if defined(__APPLE__) || defined(_WIN32)``, ``#ifdef __APPLE__`` or
-    ``#ifdef _WIN32`` — all false on Linux — so the plain
-    ``#if``/``#else``/``#endif`` nesting is an exact answer here. Any other
-    conditional form aborts rather than silently guessing.
+    Known forms: the three-platform Mixar_Window* allowlist (taken), the
+    Win32-or-Linux drag/parent/sync path (taken), the Apple-or-Linux
+    SetMaxContentSize path (taken), leftover Apple/Win32-only Mixar
+    guards (dropped), ``#ifdef __APPLE__`` (dropped — CoreAnimation /
+    NSWindow) and ``#ifdef _WIN32`` (dropped — DWM alpha, Win32 extras).
     """
     live = []
     guarded = []
@@ -332,18 +358,12 @@ def _linux_preprocessor_pass(source):
     for line in source.splitlines():
         directive = _directive(line)
         if directive.startswith(("if ", "ifdef ", "ifndef ")):
-            assert directive.startswith(
-                (
-                    "if defined(__APPLE__) || defined(_WIN32)",
-                    "ifdef __APPLE__",
-                    "ifdef _WIN32",
-                )
-            ), f"unexpected platform conditional: {directive!r}"
-            stack.append((active, False))
-            active = False
+            taken = _linux_if_taken(directive)
+            stack.append((active, taken))
+            active = active and taken
         elif directive.startswith("else"):
-            parent, _taken = stack[-1]
-            active = parent
+            parent, taken = stack[-1]
+            active = parent and not taken
             stack[-1] = (parent, True)
         elif directive.startswith("endif"):
             active, _taken = stack.pop()
@@ -355,12 +375,13 @@ def _linux_preprocessor_pass(source):
 
 
 def test_the_cinema_seat_functions_have_a_linux_definition():
-    """Regression (Linux link error): the Cinema seat functions were defined
-    only inside the Apple/Windows guard. The compile errors hid it — a link
-    only runs once every translation unit compiles — but the gate calls them
-    from a file with no platform conditionals, so Linux failed on undefined
-    references as soon as the two "was not declared in this scope" errors
-    were fixed."""
+    """The Cinema seat functions must survive a Linux build.
+
+    ``ED_space_api.hh`` declares both unconditionally and
+    ``view3d_director_cinema_gate.cc`` calls both. After Option B the
+    real Mixar_Window* implementations compile on Linux (the X11
+    helpers they call exist); a leftover Apple/Windows-only definition
+    plus no Linux body would fail the link."""
     live, guarded = _linux_preprocessor_pass(BUBBLE_CC.read_text(encoding="utf-8"))
     # Without a platform guard in the file this test would be vacuous.
     assert guarded, "no platform-guarded lines to contrast against"
@@ -369,6 +390,19 @@ def test_the_cinema_seat_functions_have_a_linux_definition():
             f"{signature!r} has no definition that survives a Linux build; "
             "the cross-platform Cinema gate calls it, so Linux fails to link"
         )
+
+
+def test_linux_compiles_the_real_window_state_operator_bodies():
+    """Option B: minimise / restore / expand must not be the
+    ``return OPERATOR_CANCELLED`` stubs on Linux. The real bodies call
+    Mixar_Window* (X11 implements those); a leftover two-platform guard
+    would hide the traffic lights behind a live Python poll()."""
+    live, _guarded = _linux_preprocessor_pass(BUBBLE_CC.read_text(encoding="utf-8"))
+    live_text = "\n".join(live)
+    assert "Mixar_WindowSetHidesOnDeactivate" in live_text
+    assert "minimise_anim_finish" in live_text
+    assert "g_bubble_minimised = true" in live_text
+    assert "g_bubble_expanded = !g_bubble_expanded" in live_text
 
 
 def test_no_cinema_seat_global_is_used_without_a_linux_declaration():
@@ -387,3 +421,15 @@ def test_no_cinema_seat_global_is_used_without_a_linux_declaration():
             f"{name} is referenced in code that survives a Linux build but is "
             f"only declared for Apple/Windows: {referenced[0].strip()!r}"
         )
+
+
+def test_x11_window_mutations_are_enabled():
+    """Move/minimise need real X11 writes (``_NET_WM_MOVERESIZE``, map/unmap).
+
+    Call sites are already ungated for ``__linux__``; the resolve gate must
+    allow mutations or the traffic lights and header drag stay no-ops.
+    """
+    header = (
+        ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarX11.hh"
+    ).read_text(encoding="utf-8")
+    assert "static constexpr bool MIXAR_X11_ALLOW_MUTATE = true;" in header
