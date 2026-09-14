@@ -281,11 +281,6 @@ static void agent_bubble_pill_try_per_pixel_alpha(void *ghostwin)
 #endif
 }
 
-bool agent_bubble_pill_bed_is_transparent()
-{
-  return g_pill_per_pixel_alpha;
-}
-
 /** \} */
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
@@ -297,17 +292,6 @@ extern "C" void Mixar_WindowGetContentPixelSize(
     void *window_handle, int *r_width, int *r_height);
 extern "C" int Mixar_WindowGetMaxHeightToScreenTop(
     void *window_handle, int reserve_top);
-
-#else
-
-/* Fallback for a platform with no Mixar_Window* backend. The ACCESSOR is
- * declared unconditionally in agent_bubble_intern.hh and called from
- * agent_ui_draw.cc, so a build that lacks it links nowhere. Nothing
- * composites this window's alpha here, so the bed stays opaque. */
-bool agent_bubble_pill_bed_is_transparent()
-{
-  return false;
-}
 
 #endif
 
