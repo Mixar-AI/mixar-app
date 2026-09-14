@@ -109,6 +109,13 @@ extern "C" void Mixar_WindowPositionAboveParent(void *child_handle,
   {
     return;
   }
+  /* Drain pending requests before measuring. The caller resizes the pill
+   * (Mixar_WindowForceSize) immediately before anchoring it, and a
+   * reparenting WM applies that asynchronously — measuring too early
+   * returned the PRE-resize height and put the pill a full pill-height too
+   * high, off the top of the screen instead of just above the island. */
+  XSync(display, False);
+
   int px, py, pw, ph, cx, cy, cw, ch;
   if (!mixar_x11_frame(display, parent, &px, &py, &pw, &ph) ||
       !mixar_x11_frame(display, child, &cx, &cy, &cw, &ch))

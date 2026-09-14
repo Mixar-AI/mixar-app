@@ -577,6 +577,24 @@ def test_x11_alpha_zero_hides_by_unmapping():
     assert body.index("XUnmapWindow(") < body.index(opacity_lookup)
 
 
+def test_x11_position_above_parent_syncs_before_measuring():
+    """The anchor must not measure a size the server has not applied yet.
+
+    space_agent_bubble.cc calls Mixar_WindowForceSize on the pill and then
+    Mixar_WindowPositionAboveParent. Measuring before the resize lands uses the
+    pre-resize height, which put the pill a full pill-height too high — off the
+    top of the screen rather than just above the island.
+    """
+    move = (
+        ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarX11_move.cc"
+    ).read_text(encoding="utf-8")
+    body = move.split("void Mixar_WindowPositionAboveParent(", 1)[1].split("\nextern ", 1)[0]
+    assert "XSync(" in body, "must drain pending requests before measuring"
+    assert body.index("XSync(") < body.index("mixar_x11_frame("), (
+        "the sync has to happen before the measurement, not after"
+    )
+
+
 def test_x11_chrome_and_reads_use_the_right_gate():
     """Decoration/size writes take the chrome gate; pure reads take none.
 
