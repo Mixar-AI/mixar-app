@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
+#include "GHOST_MixarCocoaModifiers.hh"
 #include "GHOST_SystemCocoa.hh"
 
 #import <QuartzCore/QuartzCore.h> /* CAMediaTimingFunction for the bubble animations. */
@@ -2041,15 +2042,14 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
        * NSWindowStyleMaskResizable enables native edge/corner resize
        * (matching the Windows WM_NCHITTEST approach).
        *
-       * Side effect: the entire window surface is now the content
-       * view, so OS-level window-drag from the title bar zone is
-       * gone. We compensate with movableByWindowBackground = YES
-       * so the user can still drag the window from any non-widget area. */
+       * Blender's header gesture explicitly calls performWindowDragWithEvent.
+       * Disable automatic background dragging: Cocoa cannot distinguish our
+       * GPU-drawn text fields from empty window background. */
       win.titleVisibility = NSWindowTitleHidden;
       win.titlebarAppearsTransparent = YES;
       [win setStyleMask:([win styleMask] | NSWindowStyleMaskFullSizeContentView |
                                            NSWindowStyleMaskResizable)];
-      win.movableByWindowBackground = YES;
+      win.movableByWindowBackground = NO;
 
       /* Hide the traffic-light buttons AFTER setStyleMask — macOS
        * can reset button visibility when the mask changes. */
@@ -3412,6 +3412,36 @@ bool GHOST_SystemCocoa::handleTabletEvent(void *eventPtr)
   }
 }
 
+/* A system screenshot overlay can consume modifier releases without changing
+ * the application's key window. Reconcile from the event snapshot before its
+ * gesture reaches WM; a focus-only reset cannot cover that path. */
+static bool mixar_cocoa_sync_modifiers(GHOST_SystemCocoa &system,
+                                      GHOST_IWindow *target,
+                                      GHOST_IWindow *active,
+                                      uint32_t &cached,
+                                      NSEvent *event)
+{
+  const uint32_t current = uint32_t(event.modifierFlags);
+  const uint32_t masks[] = {NSEventModifierFlagShift, NSEventModifierFlagControl,
+                            NSEventModifierFlagOption, NSEventModifierFlagCommand};
+  const GHOST_TKey keys[] = {GHOST_kKeyLeftShift, GHOST_kKeyLeftControl,
+                            GHOST_kKeyLeftAlt, GHOST_kKeyLeftOS};
+  const bool changed = mixar_cocoa_modifier_changes(
+      cached, current, masks, [&](const int index, const bool pressed) {
+        const GHOST_TEventType type = pressed ? GHOST_kEventKeyDown : GHOST_kEventKeyUp;
+        system.pushEvent(std::make_unique<GHOST_EventKey>(
+            event.timestamp * 1000, type, target, keys[index], false));
+        /* A gesture can target the viewport while chat still owns the
+         * keyboard. Release the stale state on both without stealing focus. */
+        if (active && active != target) {
+          system.pushEvent(std::make_unique<GHOST_EventKey>(
+              event.timestamp * 1000, type, active, keys[index], false));
+        }
+      });
+  cached = current;
+  return changed;
+}
+
 GHOST_TSuccess GHOST_SystemCocoa::handleMouseEvent(void *eventPtr)
 {
   NSEvent *event = (NSEvent *)eventPtr;
@@ -3427,6 +3457,12 @@ GHOST_TSuccess GHOST_SystemCocoa::handleMouseEvent(void *eventPtr)
       // printf("\nW failure for event 0x%x", event.type);
       return GHOST_kFailure;
     }
+  }
+
+  if (mixar_cocoa_sync_modifiers(
+          *this, window, window_manager_->getActiveWindow(), modifier_mask_, event))
+  {
+    ignore_momentum_scroll_ = true;
   }
 
   switch (event.type) {
@@ -3737,6 +3773,9 @@ GHOST_TSuccess GHOST_SystemCocoa::handleKeyEvent(void *eventPtr)
     return GHOST_kFailure;
   }
 
+  mixar_cocoa_sync_modifiers(
+      *this, window, window_manager_->getActiveWindow(), modifier_mask_, event);
+
   switch (event.type) {
     case NSEventTypeKeyDown:
     case NSEventTypeKeyUp: {
@@ -3814,47 +3853,6 @@ GHOST_TSuccess GHOST_SystemCocoa::handleKeyEvent(void *eventPtr)
       break;
     }
     case NSEventTypeFlagsChanged: {
-      const unsigned int modifiers = event.modifierFlags;
-
-      if ((modifiers & NSEventModifierFlagShift) != (modifier_mask_ & NSEventModifierFlagShift)) {
-        pushEvent(std::make_unique<GHOST_EventKey>(
-            event.timestamp * 1000,
-            (modifiers & NSEventModifierFlagShift) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-            window,
-            GHOST_kKeyLeftShift,
-            false));
-      }
-      if ((modifiers & NSEventModifierFlagControl) !=
-          (modifier_mask_ & NSEventModifierFlagControl))
-      {
-        pushEvent(std::make_unique<GHOST_EventKey>(
-            event.timestamp * 1000,
-            (modifiers & NSEventModifierFlagControl) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-            window,
-            GHOST_kKeyLeftControl,
-            false));
-      }
-      if ((modifiers & NSEventModifierFlagOption) != (modifier_mask_ & NSEventModifierFlagOption))
-      {
-        pushEvent(std::make_unique<GHOST_EventKey>(
-            event.timestamp * 1000,
-            (modifiers & NSEventModifierFlagOption) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-            window,
-            GHOST_kKeyLeftAlt,
-            false));
-      }
-      if ((modifiers & NSEventModifierFlagCommand) !=
-          (modifier_mask_ & NSEventModifierFlagCommand))
-      {
-        pushEvent(std::make_unique<GHOST_EventKey>(
-            event.timestamp * 1000,
-            (modifiers & NSEventModifierFlagCommand) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-            window,
-            GHOST_kKeyLeftOS,
-            false));
-      }
-
-      modifier_mask_ = modifiers;
       ignore_momentum_scroll_ = true;
       break;
     }

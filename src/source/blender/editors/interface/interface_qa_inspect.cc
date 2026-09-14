@@ -35,6 +35,7 @@
 #include "WM_types.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_multiline_qa.hh"
 #include "interface_mixar_section.hh"
 #include "interface_qa_inspect.hh"
 
@@ -420,6 +421,7 @@ void qa_dump_region(std::string &out,
       if (but->flag & blender::ui::UI_SELECT) {
         out += ",\"sel\":true";
       }
+      out += blender::ui::mixar_text_edit_qa_json(*but, *region);
       out += '}';
     }
   }

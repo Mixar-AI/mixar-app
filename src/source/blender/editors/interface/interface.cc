@@ -1125,6 +1125,10 @@ static bool but_update_from_old_block(Block *block,
 
   BLI_assert(!matched_old_buttons.contains(oldbut));
 
+  if (oldbut->type == ButtonType::Text) {
+    static_cast<ButtonText *>(but)->multiline = static_cast<ButtonText *>(oldbut)->multiline;
+  }
+
   if (oldbut->type == ButtonType::TextBox) {
     ButtonTextBox *textbox = static_cast<ButtonTextBox *>(but);
     ButtonTextBox *old_textbox = static_cast<ButtonTextBox *>(oldbut);

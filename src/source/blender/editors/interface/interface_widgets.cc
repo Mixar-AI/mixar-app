@@ -2090,29 +2090,6 @@ static bool ui_but_is_multiline_text(const Button *but)
 }
 
 /**
- * Per-button scroll offset for multi-line text input.
- * We track whether we are currently editing rather than keying by button
- * pointer, since Blender recreates button objects every frame.
- * The offset resets only when text editing ends (editstr becomes null).
- */
-/* Non-static so interface_handlers.cc can read/write scroll state */
-const Button *g_multiline_scroll_but = nullptr;
-int g_multiline_scroll_offset = 0;
-static bool g_multiline_was_editing = false;
-static int g_multiline_prev_cursor_pos = -1;
-
-/**
- * Get the number of visible lines for a multi-line text button.
- */
-static int ui_multiline_visible_lines(const Button *but, int line_height)
-{
-  if (line_height <= 0) {
-    return 3;
-  }
-  return max_ii(int(BLI_rctf_size_y(&but->rect)) / line_height, 1);
-}
-
-/**
  * Draw text, selection, and cursor for a multi-line text input button.
  * This replaces widget_draw_text() for buttons where ui_but_is_multiline_text() is true.
  */
@@ -2123,11 +2100,10 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 {
   using namespace blender;
 
-  /* Match standard UI text size — one consistent size across the app
-   * (design system). Was 1.2x, which read oversized in the sidebar prompt. */
+  /* Preserve the native widget font. Hit testing reads this exact style. */
   uiFontStyle chat_fstyle = *fstyle;
-  chat_fstyle.points = fstyle->points * 1.0f;
   fontstyle_set(&chat_fstyle);
+  MixarMultilineState &state = static_cast<ButtonText *>(but)->multiline;
 
   const int fontid = chat_fstyle.uifont_id;
   const char *drawstr = but->editstr ? but->editstr : but->drawstr.c_str();
@@ -2210,53 +2186,17 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   const int top_inset = int(4.0f * U.pixelsize);
   rect->ymax -= top_inset;
 
-  /* Wrap text into visual lines */
-  Vector<StringRef> lines = BLF_string_wrap(
-      fontid,
-      drawstr,
-      rect_width,
-      BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
+  state.font = chat_fstyle;
+  state.text_rect = *rect;
+  state.wrap_width = rect_width;
+  state.line_height = line_height;
+  state.visible_lines = max_ii(BLI_rcti_size_y(rect) / line_height, 1);
+  state.valid = true;
 
-  /* BLF_string_wrap clips mid-string \n via its newline path, but a trailing \n
-   * goes through the "end of string" path with clip_bytes=0, so it stays in the
-   * last line. Strip it here so cursor/width calculations don't treat \n as a
-   * space glyph (BLF maps \n to a space since charcode 0x0A < 32). */
-  for (int64_t i = 0; i < lines.size(); i++) {
-    if (lines[i].size() > 0 && lines[i][lines[i].size() - 1] == '\n') {
-      lines[i] = StringRef(lines[i].data(), lines[i].size() - 1);
-    }
-  }
-
-  /* If text ends with \n, add a virtual empty line so the cursor can appear on the next line */
+  Vector<int> line_byte_offsets;
+  Vector<StringRef> lines = mixar_multiline_wrap(fontid, drawstr, rect_width, line_byte_offsets);
   const int drawstr_len = int(strlen(drawstr));
-  if (drawstr_len > 0 && drawstr[drawstr_len - 1] == '\n') {
-    lines.append(StringRef(drawstr + drawstr_len, int64_t(0)));
-  }
-
-  /* Ensure at least one line exists (for empty text during editing, so cursor renders) */
-  if (lines.is_empty()) {
-    lines.append(StringRef(drawstr, int64_t(0)));
-  }
-
   const int num_lines = int(lines.size());
-
-  /* Calculate byte offsets for each line start (relative to drawstr).
-   * Use pointer arithmetic for non-empty lines since BLF_string_wrap clips \n bytes
-   * from the output but the StringRefs still point into the original string. */
-  blender::Vector<int> line_byte_offsets;
-  line_byte_offsets.reserve(num_lines);
-  for (int i = 0; i < num_lines; i++) {
-    if (lines[i].size() > 0) {
-      line_byte_offsets.append(int(lines[i].data() - drawstr));
-    }
-    else if (i > 0) {
-      /* Empty line (from \n\n or trailing \n): previous line end + 1 for the \n */
-      line_byte_offsets.append(line_byte_offsets[i - 1] + int(lines[i - 1].size()) + 1);
-    }
-    else {
-      line_byte_offsets.append(0);
-    }
-  }
 
   /* Find which line contains the cursor */
   int cursor_line = num_lines - 1;
@@ -2272,35 +2212,32 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
   }
 
   /* Calculate scroll offset to keep cursor visible */
-  const int visible_lines = ui_multiline_visible_lines(but, line_height);
-
-  /* Track the current button for interface_handlers.cc scroll events */
-  g_multiline_scroll_but = but;
+  const int visible_lines = state.visible_lines;
 
   const bool is_editing = (but->editstr != nullptr);
 
   /* Reset scroll offset when editing stops (was editing → not editing) */
-  if (!is_editing && g_multiline_was_editing) {
-    g_multiline_scroll_offset = 0;
-    g_multiline_prev_cursor_pos = -1;
+  if (!is_editing && state.was_editing) {
+    state.scroll_offset = 0;
+    state.previous_cursor = -1;
   }
-  g_multiline_was_editing = is_editing;
+  state.was_editing = is_editing;
 
   if (is_editing && cursor_pos >= 0) {
     /* Only auto-scroll when the cursor actually moves — otherwise manual
      * scroll (wheel / touchpad) gets overridden every frame. */
-    const bool cursor_moved = (cursor_pos != g_multiline_prev_cursor_pos);
-    g_multiline_prev_cursor_pos = cursor_pos;
+    const bool cursor_moved = (cursor_pos != state.previous_cursor);
+    state.previous_cursor = cursor_pos;
     if (cursor_moved) {
-      if (cursor_line < g_multiline_scroll_offset) {
-        g_multiline_scroll_offset = cursor_line;
+      if (cursor_line < state.scroll_offset) {
+        state.scroll_offset = cursor_line;
       }
-      else if (cursor_line >= g_multiline_scroll_offset + visible_lines) {
-        g_multiline_scroll_offset = cursor_line - visible_lines + 1;
+      else if (cursor_line >= state.scroll_offset + visible_lines) {
+        state.scroll_offset = cursor_line - visible_lines + 1;
       }
     }
   }
-  g_multiline_scroll_offset = std::clamp(g_multiline_scroll_offset, 0, max_ii(num_lines - visible_lines, 0));
+  state.scroll_offset = std::clamp(state.scroll_offset, 0, max_ii(num_lines - visible_lines, 0));
 
   /* Draw selection if editing and selection exists */
   if (but->editstr && but->pos >= 0 && (but->selend - but->selsta) != 0) {
@@ -2314,8 +2251,8 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
     const int sel_start = min_ii(but->selsta, but->selend);
     const int sel_end = max_ii(but->selsta, but->selend);
 
-    for (int i = g_multiline_scroll_offset;
-         i < min_ii(g_multiline_scroll_offset + visible_lines, num_lines);
+    for (int i = state.scroll_offset;
+         i < min_ii(state.scroll_offset + visible_lines, num_lines);
          i++)
     {
       const int line_start = line_byte_offsets[i];
@@ -2337,7 +2274,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                     0.0f;
       const float sel_x_end = BLF_width(fontid, drawstr + line_start, local_sel_end);
 
-      const int visual_line = i - g_multiline_scroll_offset;
+      const int visual_line = i - state.scroll_offset;
       const float line_top = rect->ymax - visual_line * line_height;
       const float line_bottom = line_top - line_height;
 
@@ -2362,7 +2299,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                                    local_pos,
                                                    max_ii(1, int(U.pixelsize * 2)));
 
-    const int visual_cursor_line = cursor_line - g_multiline_scroll_offset;
+    const int visual_cursor_line = cursor_line - state.scroll_offset;
     if (visual_cursor_line >= 0 && visual_cursor_line < visible_lines) {
       const float cursor_top = rect->ymax - visual_cursor_line * line_height;
       const float cursor_bottom = cursor_top - line_height;
@@ -2402,8 +2339,8 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
     const int comp_start = but->pos;
     const int comp_end = but->pos + ime_composite_len;
 
-    for (int i = g_multiline_scroll_offset;
-         i < min_ii(g_multiline_scroll_offset + visible_lines, num_lines);
+    for (int i = state.scroll_offset;
+         i < min_ii(state.scroll_offset + visible_lines, num_lines);
          i++)
     {
       const int line_start = line_byte_offsets[i];
@@ -2422,7 +2359,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                    0.0f;
       const float ul_x_end = BLF_width(fontid, drawstr + line_start, local_end);
 
-      const int visual_line = i - g_multiline_scroll_offset;
+      const int visual_line = i - state.scroll_offset;
       const float line_bottom = rect->ymax - (visual_line + 1) * line_height;
 
       draw_text_underline(rect->xmin + int(ul_x_start),
@@ -2435,11 +2372,11 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 #endif
 
   /* Draw text line by line */
-  for (int i = g_multiline_scroll_offset;
-       i < min_ii(g_multiline_scroll_offset + visible_lines, num_lines);
+  for (int i = state.scroll_offset;
+       i < min_ii(state.scroll_offset + visible_lines, num_lines);
        i++)
   {
-    const int visual_line = i - g_multiline_scroll_offset;
+    const int visual_line = i - state.scroll_offset;
     const float line_top = rect->ymax - visual_line * line_height;
 
     rcti line_rect = *rect;
@@ -2493,7 +2430,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
     const float thumb_height = max_ff(thumb_ratio * track_height, 8.0f * U.pixelsize);
     const float scroll_range = track_height - thumb_height;
     const float max_scroll = float(max_ii(num_lines - visible_lines, 1));
-    const float thumb_offset = (float(g_multiline_scroll_offset) / max_scroll) * scroll_range;
+    const float thumb_offset = (float(state.scroll_offset) / max_scroll) * scroll_range;
     const float thumb_top = float(rect->ymax) - thumb_offset;
     const float thumb_bottom = thumb_top - thumb_height;
 

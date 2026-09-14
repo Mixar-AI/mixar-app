@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Drag any grey area of the Agent Bubble to move the whole window.
+"""Drag the Agent Bubble header to move the whole window.
 
 On macOS, hands off to AppKit's native performWindowDragWithEvent:
 On Windows, uses a modal operator: begin_drag stores the initial
@@ -13,10 +13,9 @@ up on LEFTMOUSE RELEASE.
 
 Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
-  * invoke(): pass through if the click landed in the TOOLS region, or
-    while Scribble is armed (``mixie_chat_ink_visible`` /
-    ``mixar_mark_armed``) so handwriting on the writing PAD cannot start
-    a native window drag.
+  * invoke(): only the HEADER can move the island; content owns its gestures.
+    While Scribble is armed (``mixie_chat_ink_visible`` / ``mixar_mark_armed``),
+    the header also passes through so handwriting cannot start a window drag.
   * begin_drag refuses (and invoke passes through) when the press is
     already owned by a uiBut waiting to start its own drag, e.g. a My
     Generations asset tile — window handlers run after every region
@@ -30,7 +29,7 @@ how the press ENDS rather than acted on at PRESS time:
   * released without travelling ``PILL_DRAG_THRESHOLD_PX`` — a CLICK: the
     minimised pill restores the island (``mixar.bubble_restore_user``), the
     status pill above an open island minimises it. The pill does not open
-    on hover; the hover pump only ever collapses (see hover_ops.py).
+    on hover; outside mouse presses dismiss the island.
   * travelled past the threshold — a DRAG: ``mixar.bubble_window_begin_drag``
     moves the pill window (AppKit takes the gesture over on macOS; the modal
     drives ``update_drag``/``end_drag`` on Windows). The C++ side refuses the
@@ -92,9 +91,9 @@ class MIXAR_OT_bubble_header_drag(Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
-        # Pass through clicks on the TOOLS region (input/buttons).
+        # Pass through clicks outside the HEADER (text, scrolling and content).
         region = context.region
-        if region is None or region.type == 'TOOLS':
+        if region is None or region.type != 'HEADER':
             return {'PASS_THROUGH'}
 
         # Handwriting / viewport marks own LEFTMOUSE. Falling through here

@@ -64,28 +64,21 @@ def test_hover_tick_never_restores_the_minimised_pill():
     """The minimised branch of the tick must not call restore, and must not
     even hit-test the pill — there is nothing hover can do with it."""
     body = _hover_tick()
-    start = body.index("if (g_bubble_minimised)")
-    end = body.index("if (g_bubble_ghostwin == nullptr)", start)
-    minimised_branch = body[start:end]
-    assert '"MIXAR_OT_bubble_restore"' not in minimised_branch
-    assert "Mixar_WindowContainsScreenCursor" not in minimised_branch
+    assert "Mixar_WindowContainsScreenCursor" not in body
     # Restore is nowhere in the tick at all.
     assert '"MIXAR_OT_bubble_restore"' not in body
 
 
-def test_hover_tick_still_collapses_the_open_island():
-    """Only the OPEN trigger changed; the collapse-on-leave is untouched."""
+def test_hover_tick_never_collapses_the_open_island():
     body = _hover_tick()
-    assert '"MIXAR_OT_bubble_minimise"' in body
-    assert "Mixar_WindowContainsScreenCursor(g_bubble_ghostwin" in body
+    assert '"MIXAR_OT_bubble_minimise"' not in body
+
 
 
 def test_hover_tick_only_watches_mascot_availability():
     """Hover policy may re-arm the native scheduler, but never draws frames."""
     body = _hover_tick()
-    start = body.index("if (g_bubble_minimised)")
-    minimised_branch = body[start : start + 400]
-    assert "tag_redraw" not in minimised_branch
+    assert "tag_redraw" not in body
     assert "agent_ui_cat_scheduler_sync" in body
 
 
@@ -249,3 +242,48 @@ def test_win32_offset_anchor_is_relative_offset_tracking():
     end_drag = WIN32_CC[WIN32_CC.index('extern "C" void Mixar_WindowEndDrag(') :]
     end_drag = end_drag[: end_drag.index("\n}\n")]
     assert "MIXAR_TRACK_RELATIVE_OFFSET" in end_drag
+
+
+def test_island_content_press_cannot_start_window_drag():
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    # Execute the real method without importing bpy's mocked Operator base.
+    cls = _operator_class()
+    method = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "invoke")
+    tree = ast.Module(body=[method], type_ignores=[])
+    begin = Mock(return_value={'FINISHED'})
+    namespace = {
+        '_is_pill_window': lambda area: False,
+        '_IS_WINDOWS': False,
+        'bpy': SimpleNamespace(ops=SimpleNamespace(mixar=SimpleNamespace(bubble_window_begin_drag=begin))),
+    }
+    exec(compile(tree, str(DRAG_OP), 'exec'), namespace)
+    for region in (None, SimpleNamespace(type='WINDOW'), SimpleNamespace(type='TOOLS')):
+        context = SimpleNamespace(area=object(), region=region)
+        assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
+    begin.assert_not_called()
+    context = SimpleNamespace(
+        area=object(), region=SimpleNamespace(type='HEADER'), window_manager=SimpleNamespace()
+    )
+    assert namespace['invoke'](object(), context, object()) == {'FINISHED'}
+    begin.assert_called_once()
+    begin.reset_mock()
+    for flag in ('mixie_chat_ink_visible', 'mixar_mark_armed'):
+        context.window_manager = SimpleNamespace(**{flag: True})
+        assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
+    begin.assert_not_called()
+
+
+def test_native_begin_drag_also_refuses_content():
+    body = _cc_function("static wmOperatorStatus mixar_bubble_window_begin_drag_exec")
+    guard = body.index("region->regiontype != RGN_TYPE_HEADER")
+    assert body.index("return OPERATOR_CANCELLED", guard) < body.index("Mixar_WindowBeginDrag")
+
+
+def test_cocoa_never_automatically_drags_the_chat_background():
+    start = COCOA_MM.index('extern "C" void Mixar_WindowSetChromeless(')
+    end = COCOA_MM.index('\n}\n', start)
+    body = COCOA_MM[start:end]
+    assert "win.movableByWindowBackground = YES" not in body
+    assert "win.movableByWindowBackground = NO" in body
