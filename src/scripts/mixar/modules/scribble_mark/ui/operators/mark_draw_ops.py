@@ -54,6 +54,8 @@ from mixar.modules.scribble_mark.core.freeze_session import (
     resolve as resolve_context,
 )
 
+from mixar.modules.scribble_mark.core import pending
+
 logger = get_logger(__name__)
 
 #: Module-level guard. Modal operators do not survive a .blend load, but this
@@ -80,6 +82,7 @@ def reset_running_guard():
     global _running, _live_session
     _running = False
     _live_session = None
+    pending.clear()
 
 
 class MIXAR_OT_scribble_mark_draw(Operator):
@@ -169,6 +172,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 return {"CANCELLED"}
         _running = True
         _live_session = self._session
+        pending.bind(self)
         overlay.tag_redraw()
         return {"RUNNING_MODAL"}
 
@@ -489,6 +493,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         scribble_mode.close_ink(context.window_manager)
         _running = False
         _live_session = None
+        pending.clear()
 
 
 classes = (MIXAR_OT_scribble_mark_draw,)

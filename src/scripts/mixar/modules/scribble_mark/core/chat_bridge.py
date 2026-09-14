@@ -35,6 +35,25 @@ from . import payload as payload_mod
 logger = get_logger(__name__)
 
 
+def flush_for_send(context):
+    """Resolve the final stroke now, without waiting for another modal timer."""
+    from . import pending
+
+    pending.flush(context)
+
+
+def default_message(scene, wm):
+    """Allow ink-only sends without inventing an edit for an ambiguous pointer."""
+    context = mark_store.build_context(
+        scene, drafts_only=True, intent_override=mark_store.intent_override(wm),
+    )
+    if not context:
+        return ""
+    if context.get("intent") == "sketch" and context.get("sketch"):
+        return "Build what I drew in this sketch."
+    return "Use these marks as context; ask me what to change if it is unclear."
+
+
 def prepare_for_send(scene):
     """``(mark_context, notes)`` for this turn, or ``(None, [])``.
 
