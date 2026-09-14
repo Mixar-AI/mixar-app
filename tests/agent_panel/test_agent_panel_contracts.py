@@ -373,9 +373,11 @@ class TestFinishedCardsLeave:
 
 class TestTrackpadScrolls:
     def test_the_scroll_binds_trackpad_pan_as_well_as_the_wheel(self):
-        """A trackpad two-finger scroll arrives as MOUSEPAN, never as a wheel
-        event — with only the wheel bound the panel is unscrollable on a
-        laptop and the gesture falls through to the viewport."""
+        """A trackpad two-finger scroll arrives as the C event MOUSEPAN,
+        never as a wheel event — with only the wheel bound the panel is
+        unscrollable on a laptop and the gesture falls through to the
+        viewport. Blender 5.2 names that event 'TRACKPADPAN' in the Python
+        KeyMapItem.type enum."""
         ops = OPS.read_text()
         assert "pan_params.type = MOUSEPAN;" in ops
         assert "event->type != MOUSEPAN" in ops
@@ -386,13 +388,14 @@ class TestTrackpadScrolls:
             ROOT / "src" / "scripts" / "mixar" / "modules" / "agent_panel"
             / "ui" / "keymap.py"
         ).read_text()
-        assert "type='MOUSEPAN'" in keymap, (
+        assert "type='TRACKPADPAN'" in keymap, (
             "the addon keyconfig is the copy that survives a preset reload"
         )
-        # TRACKPADPAN is not a Blender keymap event type: setting it makes
-        # KeyMapItem.type raise TypeError, so register() dies before the
-        # keyconfig is populated and the trackpad binding never lands.
-        assert "TRACKPADPAN" not in keymap
+        # 'MOUSEPAN' is no longer a Blender 5.2 keymap event identifier:
+        # setting it makes KeyMapItem.type raise TypeError, so register()
+        # dies before the keyconfig is populated and the trackpad binding
+        # (plus every wheel item after it) never lands.
+        assert "type='MOUSEPAN'" not in keymap
 
 class TestDrawSafety:
     def test_the_draw_pass_never_resizes_the_region(self):
