@@ -14,6 +14,8 @@
 
 #ifdef WITH_GHOST_X11
 
+#  include <cstdlib>
+
 #  include <X11/Xlib.h>
 
 #  include "GHOST_ISystem.hh"
@@ -36,10 +38,30 @@ static constexpr int MIXAR_X11_PILL_GAP = 6;
  * and minimise/restore (map / unmap). These are what Linux users need. */
 static constexpr bool MIXAR_X11_ALLOW_MOVE_MINIMISE = true;
 
-/* Heavy mutations (MWM decorations, WM_TRANSIENT_FOR, XMoveResizeWindow)
- * segfaulted Mixar after READY on NVIDIA L4 + Xvfb. Keep off; spawn still
- * relies on the sandbox xprop undecorate path. Flip only after that stack
- * is re-validated. Wayland no-ops via ``dynamic_cast`` below. */
+/* Chrome writes: _MOTIF_WM_HINTS decorations, XResizeWindow, and the
+ * WM size hints that make the WM honour that size. The pill window needs
+ * both — without them it keeps the WM title bar and never shrinks out of
+ * the chat island's way, which is what a Linux user actually sees.
+ *
+ * Separated from the heavy gate below deliberately. What segfaulted after
+ * READY on NVIDIA L4 + Xvfb were the reparenting paths (WM_TRANSIENT_FOR)
+ * and XMoveResizeWindow, which moves a live GL drawable; a property write
+ * and a pure XResizeWindow are neither. MIXAR_X11_CHROME=0 in the
+ * environment turns these back off without a rebuild, so a stack that does
+ * regress can be bisected in place rather than recompiled. */
+inline bool mixar_x11_chrome_enabled()
+{
+  static const bool enabled = []() {
+    const char *env = getenv("MIXAR_X11_CHROME");
+    return (env == nullptr) || (env[0] != '0');
+  }();
+  return enabled;
+}
+
+/* Heavy mutations (WM_TRANSIENT_FOR reparenting, XMoveResizeWindow)
+ * segfaulted Mixar after READY on NVIDIA L4 + Xvfb. Keep off. Flip only
+ * after that stack is re-validated. Wayland no-ops via ``dynamic_cast``
+ * below. */
 static constexpr bool MIXAR_X11_ALLOW_HEAVY_MUTATE = false;
 
 inline GHOST_SystemX11 *mixar_x11_system()
@@ -81,6 +103,14 @@ inline bool mixar_x11_resolve_any(void *window_handle, Display **r_display, Wind
 inline bool mixar_x11_resolve(void *window_handle, Display **r_display, Window *r_window)
 {
   if (!MIXAR_X11_ALLOW_HEAVY_MUTATE) {
+    return false;
+  }
+  return mixar_x11_resolve_any(window_handle, r_display, r_window);
+}
+
+inline bool mixar_x11_resolve_chrome(void *window_handle, Display **r_display, Window *r_window)
+{
+  if (!mixar_x11_chrome_enabled()) {
     return false;
   }
   return mixar_x11_resolve_any(window_handle, r_display, r_window);

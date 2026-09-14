@@ -128,7 +128,7 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_chrome(window_handle, &display, &window)) {
     return;
   }
 
@@ -267,7 +267,7 @@ extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window) || width <= 0 || height <= 0) {
+  if (!mixar_x11_resolve_chrome(window_handle, &display, &window) || width <= 0 || height <= 0) {
     return;
   }
   const int phys_w = std::max(1, mixar_x11_to_phys(window_handle, width));
@@ -284,7 +284,7 @@ static void mixar_x11_set_size_hint(void *window_handle, bool is_min, int width,
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_chrome(window_handle, &display, &window)) {
     return;
   }
   const int phys_w = mixar_x11_to_phys(window_handle, width);
@@ -328,7 +328,7 @@ extern "C" void Mixar_WindowGetContentPixelSize(void *window_handle, int *r_widt
   }
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_any(window_handle, &display, &window)) {
     return;
   }
   int x, y, width, height;
@@ -362,7 +362,7 @@ extern "C" int Mixar_WindowGetMaxHeightToScreenTop(void *window_handle, int rese
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
+  if (!mixar_x11_resolve_any(window_handle, &display, &window)) {
     return 0;
   }
   int x, y, width, height;

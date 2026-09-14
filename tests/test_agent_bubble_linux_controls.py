@@ -423,15 +423,69 @@ def test_no_cinema_seat_global_is_used_without_a_linux_declaration():
         )
 
 
-def test_x11_move_minimise_mutations_are_enabled():
-    """Move/minimise need light X11 writes; heavy Motif/transient stay off.
-
-    Call sites are ungated for ``__linux__``. ``mixar_x11_resolve_move_minimise``
-    must allow map/unmap and ``_NET_WM_MOVERESIZE``; heavy ``XMoveResize`` /
-    Motif paths stay gated to avoid the NVIDIA+Xvfb READY segfault.
-    """
-    header = (
+def _x11_header():
+    return (
         ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarX11.hh"
     ).read_text(encoding="utf-8")
+
+
+def _x11_source():
+    return (
+        ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarX11.cc"
+    ).read_text(encoding="utf-8")
+
+
+def test_x11_move_minimise_mutations_are_enabled():
+    """Move/minimise need light X11 writes; reparenting stays off.
+
+    Call sites are ungated for ``__linux__``. ``mixar_x11_resolve_move_minimise``
+    must allow map/unmap and ``_NET_WM_MOVERESIZE``; ``WM_TRANSIENT_FOR`` /
+    ``XMoveResizeWindow`` stay gated to avoid the NVIDIA+Xvfb READY segfault.
+    """
+    header = _x11_header()
     assert "static constexpr bool MIXAR_X11_ALLOW_MOVE_MINIMISE = true;" in header
     assert "static constexpr bool MIXAR_X11_ALLOW_HEAVY_MUTATE = false;" in header
+
+
+def test_x11_chrome_writes_are_enabled_by_default():
+    """The pill must be able to undecorate and resize itself on Linux.
+
+    Without these the WM keeps a title bar on "Agent Bubble Status" and the
+    window never shrinks to pill size, so it sits over the chat island. The
+    sandbox's openbox fallback does not cover it either: that rule matches
+    the title "Agent Bubble" exactly, and the pill is a different window.
+
+    MIXAR_X11_CHROME=0 must remain an escape hatch, so the gate is a runtime
+    read rather than a constant.
+    """
+    header = _x11_header()
+    assert "inline bool mixar_x11_chrome_enabled()" in header
+    assert 'getenv("MIXAR_X11_CHROME")' in header
+    assert "inline bool mixar_x11_resolve_chrome(" in header
+
+
+def test_x11_chrome_and_reads_use_the_right_gate():
+    """Decoration/size writes take the chrome gate; pure reads take none.
+
+    ``Mixar_WindowGetContentPixelSize`` and ``Mixar_WindowGetMaxHeightToScreenTop``
+    are XGetGeometry reads. They were behind the mutation gate, so on Linux they
+    reported 0 and the pill fell back to the region rect.
+    """
+    source = _x11_source()
+
+    def gate_of(signature):
+        body = source.split(signature, 1)[1]
+        return body.split("mixar_x11_resolve", 1)[1].split("(", 1)[0]
+
+    for signature in (
+        "void Mixar_WindowSetChromeless(",
+        "void Mixar_WindowForceSize(",
+        "static void mixar_x11_set_size_hint(",
+    ):
+        assert gate_of(signature) == "_chrome", signature
+
+    for signature in (
+        "void Mixar_WindowGetContentPixelSize(",
+        "int Mixar_WindowGetMaxHeightToScreenTop(",
+    ):
+        assert gate_of(signature) == "_any", signature
