@@ -13,6 +13,7 @@ like getattr(x, '__sub'+'classes__') bypass static analysis.
 """
 
 import ast
+import re
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
@@ -38,7 +39,26 @@ _BLOCKED_DUNDER_ATTRS = frozenset({
     '__closure__',       # Closure cells → reach objects captured by a function
     '__self__',          # Bound method's instance → reach a wrapped object
     '__func__',          # Bound method's underlying function (→ __globals__ chain)
+    # Raw attribute slots. object.__getattribute__(cls, '__subclasses__') is the
+    # C-level lookup the wrapped getattr never sees, and `object` is an allowed
+    # builtin — without these the whole denylist above is one hop from useless.
+    '__getattribute__',  # Raw attribute lookup → every blocked name above
+    '__getattr__',       # Same, on any object that defines the hook
+    '__setattr__',       # Raw attribute write (bypasses the wrapped setattr)
+    '__delattr__',       # Raw attribute delete
+    '__reduce__',        # Pickle protocol → callable + args to rebuild objects
+    '__reduce_ex__',     # Same
+    '__subclasshook__',  # Bound to the class → another handle on the hierarchy
 })
+
+# Format strings do attribute access in C: '{0.__class__}'.format(x) never
+# produces an Attribute node and never calls the wrapped getattr. The rendered
+# result is only a repr (string.Formatter, which returns the real object, is not
+# exposed — see sandbox_modules.RestrictedString), but a repr of __globals__
+# still leaks process state, so a blocked dunder inside a replacement field is a
+# violation wherever the literal is written.
+_FORMAT_FIELD_RE = re.compile(r"\{([^{}]*)\}")
+_FORMAT_ATTR_RE = re.compile(r"\.\s*(__\w+__)")
 
 
 class _SandboxASTValidator(ast.NodeVisitor):
@@ -46,6 +66,7 @@ class _SandboxASTValidator(ast.NodeVisitor):
 
     Visits all AST nodes and collects violations for:
     - Attribute access to blocked dunder names
+    - Blocked dunder names inside format-string replacement fields
     """
 
     def __init__(self):
@@ -57,6 +78,17 @@ class _SandboxASTValidator(ast.NodeVisitor):
                 f"Line {node.lineno}: access to '{node.attr}' is blocked "
                 f"(sandbox restriction)"
             )
+        self.generic_visit(node)
+
+    def visit_Constant(self, node: ast.Constant) -> None:
+        if isinstance(node.value, str):
+            for field in _FORMAT_FIELD_RE.findall(node.value):
+                for attr in _FORMAT_ATTR_RE.findall(field):
+                    if attr in _BLOCKED_DUNDER_ATTRS:
+                        self.violations.append(
+                            f"Line {node.lineno}: format string reaches "
+                            f"'{attr}' (sandbox restriction)"
+                        )
         self.generic_visit(node)
 
 
