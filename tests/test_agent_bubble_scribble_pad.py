@@ -61,9 +61,8 @@ def test_hover_tick_applies_and_restores_the_pad_on_scribble_edges():
     edge = body.index("agent_bubble_scribble_active(C);")
     assert "agent_bubble_pad_apply(C);" in body
     assert "agent_bubble_pad_restore(C);" in body
-    # Before the cooldown gate: a pad must not wait on a minimise settling.
-    assert edge < body.index("if (now < g_hover_cooldown_until)")
-    assert body.index("agent_bubble_pad_apply(C);") < body.index("if (now < g_hover_cooldown_until)")
+    assert edge < body.index("agent_ui_cat_scheduler_sync")
+    assert "g_hover_cooldown_until" not in body
 
 
 def test_pad_apply_takes_the_hosts_right_third_and_forces_the_agent_tab():

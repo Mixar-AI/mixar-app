@@ -359,23 +359,15 @@ static void *g_bubble_ghostwin = nullptr;
 static void *g_pill_ghostwin = nullptr;
 /* One-shot: has this bubble already been grown to make room for a
  * conversation? Reset when the bubble window closes. */
+#if defined(__APPLE__) || defined(_WIN32)
+static void agent_bubble_request_resize(const bContext *C, int target_height, int height_floor);
+#endif
 static bool g_bubble_grown_for_chat = false;
 static bool g_bubble_minimised = false;
 /* Delayed AppKit completions may outlive a restore or a newer collapse. */
 static uintptr_t g_bubble_motion_generation = 0;
 static bool g_bubble_minimise_pending = false;
 static bool g_bubble_expanded = false;
-/* Set by every restore; cleared the first time the cursor is actually over
- * the island. Until then the hover pump will NOT collapse.
- *
- * A restore can happen with the pointer nowhere near the island — the queue
- * toast's "View Queue" opens it on the Queue tab while the cursor is still
- * on the toast, halfway across the screen. The pump saw "outside" on its
- * very next tick and shut it again instantly, so the button looked broken.
- * Hover can only take the island away once hover has been offered it.
- * Declared with the other window statics because the teardown paths clear
- * it long before the hover section is reached. */
-static bool g_hover_await_enter = false;
 static bool g_bubble_had_pending_attachments = false;
 static int g_bubble_last_min_height = 0;
 
@@ -1078,11 +1070,10 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
   if (has_conversation && !g_bubble_grown_for_chat && !g_bubble_pad_active) {
     g_bubble_grown_for_chat = true;
 #if defined(__APPLE__) || defined(_WIN32)
-    bubble_force_size_and_refresh(const_cast<bContext *>(C),
-                                  win->runtime->ghostwin,
-                                  AGENT_BUBBLE_DEFAULT_WIDTH,
-                                  AGENT_BUBBLE_DEFAULT_HEIGHT +
-                                      AGENT_BUBBLE_TRANSCRIPT_HEIGHT);
+    const int floor = AGENT_BUBBLE_DEFAULT_HEIGHT + AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
+    if (win->sizey < floor) {
+      agent_bubble_request_resize(C, floor, floor);
+    }
 #endif
   }
 
@@ -1463,14 +1454,8 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
   }
   g_bubble_last_min_height = min_height;
   Mixar_WindowSetMinContentSize(ghostwin, AGENT_BUBBLE_MIN_WIDTH, min_height);
-#ifdef __APPLE__
-  /* Cap the maximum height so the bubble can't grow taller than the
-   * expanded size.  Width is unconstrained (like Windows) so the user
-   * can widen the bubble freely. */
-  const int max_h = (min_height > AGENT_BUBBLE_EXPANDED_HEIGHT) ? min_height
-                                                                 : AGENT_BUBBLE_EXPANDED_HEIGHT;
-  Mixar_WindowSetMaxContentSize(ghostwin, 0, max_h);
-#endif
+  /* Native screen bounds constrain resizing; the preset is not a maximum. */
+  Mixar_WindowSetMaxContentSize(ghostwin, 0, 0);
 }
 
 /* A resize the footer's draw/layout callback asked for, applied later by
@@ -1668,7 +1653,8 @@ static void agent_bubble_footer_region_listener(const wmRegionListenerParams *pa
     return;
   }
   bubble_apply_window_size(
-      nullptr, nullptr, win, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
+      nullptr, nullptr, win, win->runtime->ghostwin, win->sizex,
+      std::max(target_height, int(win->sizey)));
   bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
 #else
   (void)params;
@@ -2468,7 +2454,6 @@ void ED_agent_bubble_windows_closed()
   g_pill_ghostwin = nullptr;
   g_bubble_minimised = false;
   g_bubble_expanded = false;
-  g_hover_await_enter = false;
   g_bubble_pad_active = false;
   g_pad_saved_valid = false;
 #if defined(__APPLE__) || defined(_WIN32)
@@ -2501,7 +2486,6 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
-    g_hover_await_enter = false;
     g_bubble_pad_active = false;
     g_pad_saved_valid = false;
   }
@@ -3432,6 +3416,8 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
 
 #if defined(__APPLE__) || defined(_WIN32)
   bubble_force_size_and_refresh(C, win->runtime->ghostwin, width, height);
+  bubble_set_min_content_size(win->runtime->ghostwin,
+                              agent_bubble_collapsed_height_for_current_attachments(C));
 #  ifdef __APPLE__
   Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
@@ -3747,24 +3733,11 @@ static void minimise_anim_finish(void *user_data)
 #endif
 
 /* -------------------------------------------------------------------- */
-/** \name Hover collapse (Higgsfield-style)
+/** \name Island heartbeat and outside-click dismissal
  *
- * A Python timer (agent_bubble/ui/operators/hover_ops.py) calls
- * mixar.bubble_hover_tick a few times a second. Expanded + cursor outside
- * the bubble for a few consecutive ticks -> minimise. All hit-testing is
- * native screen-space (Mixar_WindowContainsScreenCursor), so no
- * GHOST/Blender coordinate conversion is involved.
- *
- * The minimised pill does NOT open on hover. It opens on CLICK
- * (mixar.bubble_header_drag's pill gesture -> mixar.bubble_restore_user):
- * a hover-open fired whenever the cursor crossed the pill on its way
- * somewhere else, and made the pill impossible to drag — the press that
- * should start the drag landed on an island that was already unfolding.
+ * The heartbeat maintains focus, Scribble and mascot scheduling. Pointer
+ * movement never dismisses the island; WM delivers actual button presses.
  * \{ */
-
-static int g_hover_outside_ticks = 0;
-static double g_hover_cooldown_until = 0.0;
-
 
 /** Either half of Scribble is up: the viewport freeze (`wm.mixar_mark_armed`)
  *  or the chat ink canvas (`wm.mixie_chat_ink_visible`). Both are
@@ -3785,6 +3758,19 @@ static bool agent_bubble_scribble_active(const bContext *C)
     }
   }
   return false;
+}
+
+void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (!g_bubble_minimised && g_bubble_ghostwin &&
+      agent_bubble_should_dismiss(C, event, g_bubble_ghostwin, g_pill_ghostwin) &&
+      !agent_bubble_scribble_active(C))
+  {
+    WM_operator_name_call(C, "MIXAR_OT_bubble_minimise",
+                          blender::wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
+#endif
 }
 
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
@@ -3808,115 +3794,7 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
   }
 
   agent_ui_cat_scheduler_sync(CTX_wm_manager(C), g_pill_ghostwin, g_bubble_minimised);
-  const double now = BLI_time_now_seconds();
-  if (now < g_hover_cooldown_until) {
-    return OPERATOR_FINISHED;
-  }
 
-  /* Minimised: nothing to hover-test — the pill opens on click, never on
-   * hover (see the section comment). Mascot frames have their own native
-   * scheduler; hover policy must never tag another redraw. */
-  if (g_bubble_minimised) {
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-
-  if (g_bubble_ghostwin == nullptr) {
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-
-  /* Expanded: collapse after the cursor has been outside the bubble (and the
-   * pill, which floats above it) for a stretch of consecutive ticks. The
-   * 32pt margin keeps a small grace ring so skimming the edge doesn't
-   * flicker. */
-  const bool inside =
-      Mixar_WindowContainsScreenCursor(g_bubble_ghostwin, /*margin_pt=*/32) ||
-      (g_pill_ghostwin != nullptr &&
-       Mixar_WindowContainsScreenCursor(g_pill_ghostwin, /*margin_pt=*/16));
-  if (inside) {
-    /* Hover has now been offered the island, so it may take it away again. */
-    g_hover_await_enter = false;
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-  if (g_hover_await_enter) {
-    /* Opened programmatically and never visited — see the latch's note. */
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-
-  /* Pointer travel must not take away a draft while the keyboard still
-   * belongs to this window. Clicking the viewport hands collapse back. */
-  if (agent_bubble_composer_has_focused_draft(C, g_bubble_ghostwin)) {
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-
-  /* Never collapse while Scribble is armed. Marking the scene means drawing
-   * on the 3D viewport — by definition outside the island — and the freeze,
-   * the mark count and the reading chip all live on the composer. Minimising
-   * mid-gesture would pull the surface the user is reading out from under
-   * them; disarming (Esc, the chip, the send) hands the collapse back. */
-  if (agent_bubble_scribble_active(C)) {
-    g_hover_outside_ticks = 0;
-    return OPERATOR_FINISHED;
-  }
-
-  /* Never collapse while the user is inside something the bubble opened.
-   *
-   * Two shapes of that, and BOTH must be checked. A dropdown/menu/tooltip is
-   * a region on the bubble window's own screen. A file browser, the render
-   * window or a props dialog is a whole separate TEMP window — and the cursor
-   * being over it is exactly the "outside the bubble" the collapse tests for,
-   * so without this the picker the user just opened minimises the bubble and
-   * is torn down with it, which is the one state the chat cannot be driven
-   * out of. Temp windows are rare and short-lived, so a blanket refusal costs
-   * nothing; a hover-collapse the moment one closes is still one tick away. */
-  for (wmWindow &win_ref : CTX_wm_manager(C)->windows) {
-    wmWindow *win = &win_ref;
-    /* The island's OWN windows are temp screens (that is how they stay out of
-     * the .blend), so they must be excluded before anything asks about
-     * temp-ness — a blanket check froze the collapse permanently and the
-     * hover UX simply stopped working. */
-    const bool is_island = (win->runtime->ghostwin == g_bubble_ghostwin ||
-                            win->runtime->ghostwin == g_pill_ghostwin);
-    if (!is_island && WM_window_is_temp_screen(win)) {
-      g_hover_outside_ticks = 0;
-      return OPERATOR_FINISHED;
-    }
-    const bScreen *screen = WM_window_get_active_screen(win);
-    if (screen == nullptr) {
-      continue;
-    }
-    /* `screen->temp` only covers the file browser's default WINDOW display
-     * type. Under USER_TEMP_SPACE_DISPLAY_FULLSCREEN it is a MAXIMIZED area
-     * stacked on a screen that is not temp at all — hence `area->full`, which
-     * is what separates that overlay from a File Browser the user keeps
-     * docked in their own layout (that one must not freeze the collapse). */
-    for (const ScrArea &area_ref : screen->areabase) {
-      const ScrArea *area = &area_ref;
-      if (area->spacetype == SPACE_FILE && area->full != nullptr) {
-        g_hover_outside_ticks = 0;
-        return OPERATOR_FINISHED;
-      }
-    }
-    if (win->runtime->ghostwin == g_bubble_ghostwin && !BLI_listbase_is_empty(&screen->regionbase)) {
-      g_hover_outside_ticks = 0;
-      return OPERATOR_FINISHED;
-    }
-  }
-
-  g_hover_outside_ticks++;
-  if (g_hover_outside_ticks >= 2) { /* ~0.2s at the timer's 0.1s tick. */
-    g_hover_outside_ticks = 0;
-    g_hover_cooldown_until = now + 0.35;
-    WM_operator_name_call(C,
-                          "MIXAR_OT_bubble_minimise",
-                          blender::wm::OpCallContext::ExecDefault,
-                          nullptr,
-                          nullptr);
-  }
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -3924,7 +3802,7 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
 }
 
 /**
- * Nothing to hover-test until the island has a window of its own.
+ * Nothing to maintain until the island has a window of its own.
  *
  * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
  * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
@@ -3943,9 +3821,9 @@ static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
 
 void MIXAR_OT_bubble_hover_tick(wmOperatorType *ot)
 {
-  ot->name = "Hover Tick";
+  ot->name = "Island Tick";
   ot->idname = "MIXAR_OT_bubble_hover_tick";
-  ot->description = "Hover Tick";
+  ot->description = "Maintain island focus, Scribble and animation";
   ot->exec = mixar_bubble_hover_tick_exec;
   ot->poll = mixar_bubble_hover_tick_poll;
   ot->flag = OPTYPE_INTERNAL;
@@ -3958,6 +3836,9 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_ghostwin == nullptr || g_bubble_minimised) {
     return OPERATOR_CANCELLED;
+  }
+  if (g_bubble_pad_active) {
+    agent_bubble_pad_restore(C);
   }
   g_bubble_minimised = true;
   g_bubble_minimise_pending = true;
@@ -4049,23 +3930,18 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   ++g_bubble_motion_generation;
   g_bubble_minimise_pending = false;
 
-  /* Hold the island open until hover has actually been offered it — see
-   * `g_hover_await_enter`. Arming this for EVERY restore is deliberate: a
-   * hover-driven restore clears it on its very next tick (the cursor is over
-   * the pill, which counts as inside), so only the restores that happen away
-   * from the pointer are affected. */
-  g_hover_await_enter = true;
-
   /* Reset attachment state so the auto-resize fires again on restore
    * if images are already attached (e.g. user attached, minimised, restored). */
   g_bubble_had_pending_attachments = false;
   g_bubble_last_min_height = 0;
 
+  int width = AGENT_BUBBLE_DEFAULT_WIDTH, height = 0;
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
   bubble_force_size_and_refresh(
       C,
       g_bubble_ghostwin,
-      AGENT_BUBBLE_DEFAULT_WIDTH,
-      agent_bubble_collapsed_height_for_current_attachments(C));
+      std::max(width, AGENT_BUBBLE_MIN_WIDTH),
+      std::max(height, agent_bubble_collapsed_height_for_current_attachments(C)));
   bubble_set_min_content_size(
       g_bubble_ghostwin, agent_bubble_collapsed_height_for_current_attachments(C));
 

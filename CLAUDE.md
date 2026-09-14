@@ -108,7 +108,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 | **paint** (largest) | Layer-based texture painting: node trees, modifiers, baking, procedural materials/MatGen, decals, UDIM, vertex colors, asset export; agent-facing layer-stack tools in `paint/core/agent_tools` |
 | **addon_project** | Blender-local production add-on workspace driven by the versioned `addon_project_v1` RPC |
 | **space_mixie_chat** | Agent chat: WebSocket JSON-RPC + SSE streaming, reconnect-resume, sandboxed script execution, `llm.request` local-LLM relay, project/global rules, @-mention autocomplete, feedback stars, export lane, batched choice wizard, message copy, paste, attachments, voice |
-| **agent_bubble** | The Agent island: floating always-on-top chat window with tabs (Agent, 3D, Media, Gaussian Splat, My Generations, Queue), elongated pill resting state, hover collapse; shares ConnectionManager/message store with space_mixie_chat |
+| **agent_bubble** | The Agent island: floating always-on-top chat window with tabs (Agent, 3D, Media, Gaussian Splat, My Generations, Queue), elongated pill resting state, outside-click collapse; shares ConnectionManager/message store with space_mixie_chat |
 | **scribble_mark** | The viewport half of Scribble plus the coordinator that makes Scribble ONE mode (`core/scribble_mode.py`) |
 | **agent_viewport_lock** | "Agent working" halo + input-block modal, keyed to the mode the *running* turn started in (`mixie_chat_active_turn_mode`); toasts pass through |
 | **agent_panel** | Bottom-docked View3D cards for parallel tasks with distinct animated cat avatars: WindowManager mirror, shared draw/hit/QA geometry, animated entrance and dismissal, wheel/trackpad scrolling; replaces agent_scene_strip |

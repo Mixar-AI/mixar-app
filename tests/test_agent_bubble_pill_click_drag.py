@@ -64,28 +64,21 @@ def test_hover_tick_never_restores_the_minimised_pill():
     """The minimised branch of the tick must not call restore, and must not
     even hit-test the pill — there is nothing hover can do with it."""
     body = _hover_tick()
-    start = body.index("if (g_bubble_minimised)")
-    end = body.index("if (g_bubble_ghostwin == nullptr)", start)
-    minimised_branch = body[start:end]
-    assert '"MIXAR_OT_bubble_restore"' not in minimised_branch
-    assert "Mixar_WindowContainsScreenCursor" not in minimised_branch
+    assert "Mixar_WindowContainsScreenCursor" not in body
     # Restore is nowhere in the tick at all.
     assert '"MIXAR_OT_bubble_restore"' not in body
 
 
-def test_hover_tick_still_collapses_the_open_island():
-    """Only the OPEN trigger changed; the collapse-on-leave is untouched."""
+def test_hover_tick_never_collapses_the_open_island():
     body = _hover_tick()
-    assert '"MIXAR_OT_bubble_minimise"' in body
-    assert "Mixar_WindowContainsScreenCursor(g_bubble_ghostwin" in body
+    assert '"MIXAR_OT_bubble_minimise"' not in body
+
 
 
 def test_hover_tick_only_watches_mascot_availability():
     """Hover policy may re-arm the native scheduler, but never draws frames."""
     body = _hover_tick()
-    start = body.index("if (g_bubble_minimised)")
-    minimised_branch = body[start : start + 400]
-    assert "tag_redraw" not in minimised_branch
+    assert "tag_redraw" not in body
     assert "agent_ui_cat_scheduler_sync" in body
 
 

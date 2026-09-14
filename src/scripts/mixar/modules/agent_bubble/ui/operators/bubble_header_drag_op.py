@@ -26,7 +26,7 @@ how the press ENDS rather than acted on at PRESS time:
   * released without travelling ``PILL_DRAG_THRESHOLD_PX`` — a CLICK: the
     minimised pill restores the island (``mixar.bubble_restore_user``), the
     status pill above an open island minimises it. The pill does not open
-    on hover; the hover pump only ever collapses (see hover_ops.py).
+    on hover; outside mouse presses dismiss the island.
   * travelled past the threshold — a DRAG: ``mixar.bubble_window_begin_drag``
     moves the pill window (AppKit takes the gesture over on macOS; the modal
     drives ``update_drag``/``end_drag`` on Windows). The C++ side refuses the

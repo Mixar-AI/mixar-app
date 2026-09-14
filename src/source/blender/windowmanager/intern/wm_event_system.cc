@@ -62,6 +62,7 @@
 #include "ED_markers.hh"
 #include "ED_render.hh"
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 #include "ED_undo.hh"
 #include "ED_util.hh"
 #include "ED_view3d.hh"
@@ -4351,6 +4352,8 @@ void wm_event_do_handlers(bContext *C)
       /* We let modal handlers get active area/region, also wm_paintcursor_test needs it. */
       CTX_wm_area_set(C, area_event_inside(C, event->xy));
       CTX_wm_region_set(C, region_event_inside(C, event->xy));
+
+      ED_agent_bubble_handle_event(C, event);
 
       /* MVC demands to not draw in event handlers...
        * but we need to leave it for GPU selecting etc. */
