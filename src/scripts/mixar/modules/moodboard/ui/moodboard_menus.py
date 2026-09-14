@@ -106,7 +106,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         scene = context.scene
 
         # Check selection state
-        selected_images, selected_textboxes, selected_groups = (
+        selected_images, selected_textboxes, selected_frames = (
             get_selected_moodboard_items(scene)
         )
         total_items_selected = selected_images + selected_textboxes
@@ -310,18 +310,34 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                 )
             layout.separator()
 
-        # Check if any selected images belong to a group
-        has_grouped_selection = any(
-            img.selected and img.group_index >= 0
-            for img in scene.mixie_moodboard_images
-        )
-
-        # Group operations - show contextually
-        if selected_groups > 0 or has_grouped_selection:
-            layout.operator("mixie.ungroup", text="Ungroup", icon='UGLYPACKAGE')
+        # Frames. A selected frame gets its whole More menu here (the same one
+        # its floating button opens, so the two can never drift); otherwise the
+        # only frame action that makes sense is making one.
+        if selected_frames == 1:
+            layout.menu("MIXIE_MT_moodboard_frame", icon='GROUP')
             layout.separator()
-        elif total_items_selected >= 2:
-            layout.operator("mixie.create_group", text="Group", icon='GROUP')
+        elif selected_frames > 1:
+            layout.operator(
+                "mixie.moodboard_ungroup", text="Ungroup Frames", icon='UGLYPACKAGE'
+            )
+            layout.separator()
+        else:
+            # Always offered, not just with 2+ selected: a frame with its own
+            # rect can be created EMPTY and dropped into afterwards, which is
+            # most of the reason it is a real object rather than a bounding box.
+            layout.operator(
+                "mixie.moodboard_create_frame",
+                text="Frame Selection" if total_items_selected else "Add Frame",
+                icon='GROUP',
+            )
+            if any(
+                getattr(item, "frame_id", "")
+                for item in scene.mixie_moodboard_images
+                if item.selected
+            ):
+                layout.operator(
+                    "mixie.moodboard_ungroup", text="Ungroup", icon='UGLYPACKAGE'
+                )
             layout.separator()
 
         # Add content — canvas-level actions, shown only when no image is
@@ -440,7 +456,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
 
         # Delete (only enabled when something is selected)
         row = layout.row()
-        row.enabled = (total_items_selected + selected_groups + selected_links) > 0
+        row.enabled = (total_items_selected + selected_frames + selected_links) > 0
         row.operator("mixie.moodboard_delete", text="Delete", icon='TRASH')
 
 

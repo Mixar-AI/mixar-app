@@ -237,124 +237,14 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
                                           float *r_width,
                                           float *r_height)
 {
-  /* Check selected GROUP handles first (highest priority) */
-  PropertyRNA *groups_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_groups");
+  /* Frames are NOT handled here. A frame has its own rect, its own border
+   * and its own resize grip, all owned by MIXIE_OT_moodboard_frame_select --
+   * which sits ahead of this operator in the keymap and passes through when
+   * the press missed a frame. The block that used to stand here rebuilt the
+   * bounding box of a group's images (re-acquiring every ImBuf) on every
+   * hit-test just to place eight handles around a rectangle that was not a
+   * real object. */
   PropertyRNA *img_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
-
-  if (groups_prop && img_prop) {
-    int group_count = RNA_property_collection_length(scene_ptr, groups_prop);
-    int image_count = RNA_property_collection_length(scene_ptr, img_prop);
-
-    for (int g = 0; g < group_count; g++) {
-      PointerRNA group_ptr;
-      RNA_property_collection_lookup_int(scene_ptr, groups_prop, g, &group_ptr);
-
-      /* Only check selected groups */
-      PropertyRNA *sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-      if (!sel_prop || !RNA_property_boolean_get(&group_ptr, sel_prop)) {
-        continue;
-      }
-
-      /* Calculate group bounding box */
-      float min_x = FLT_MAX, min_y = FLT_MAX;
-      float max_x = -FLT_MAX, max_y = -FLT_MAX;
-      bool has_valid_bounds = false;
-
-      for (int j = 0; j < image_count; j++) {
-        PointerRNA item_ptr;
-        RNA_property_collection_lookup_int(scene_ptr, img_prop, j, &item_ptr);
-
-        PropertyRNA *grp_idx_prop = RNA_struct_find_property(&item_ptr, "group_index");
-        int group_index = grp_idx_prop ? RNA_property_int_get(&item_ptr, grp_idx_prop) : -1;
-
-        if (group_index != g) {
-          continue;
-        }
-
-        PropertyRNA *image_prop = RNA_struct_find_property(&item_ptr, "image");
-        PropertyRNA *px_prop = RNA_struct_find_property(&item_ptr, "position_x");
-        PropertyRNA *py_prop = RNA_struct_find_property(&item_ptr, "position_y");
-        PropertyRNA *scale_prop = RNA_struct_find_property(&item_ptr, "scale");
-
-        if (!image_prop || !px_prop || !py_prop || !scale_prop) {
-          continue;
-        }
-
-        PointerRNA image_ptr = RNA_property_pointer_get(&item_ptr, image_prop);
-        if (!image_ptr.data) {
-          continue;
-        }
-
-        Image *image = static_cast<Image *>(image_ptr.data);
-        float pos_x = RNA_property_float_get(&item_ptr, px_prop);
-        float pos_y = RNA_property_float_get(&item_ptr, py_prop);
-        float scale = RNA_property_float_get(&item_ptr, scale_prop);
-
-        void *lock;
-        ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-        float iw = MOODBOARD_IMAGE_BASE_SIZE * scale;
-        float ih = iw;
-        if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-          ih = (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale;
-        }
-        BKE_image_release_ibuf(image, ibuf, lock);
-
-        min_x = std::min(min_x, pos_x);
-        min_y = std::min(min_y, pos_y);
-        max_x = std::max(max_x, pos_x + iw);
-        max_y = std::max(max_y, pos_y + ih);
-        has_valid_bounds = true;
-      }
-
-      if (!has_valid_bounds) {
-        continue;
-      }
-
-      /* Add padding (same as drawing code) */
-      float padding = 10.0f;
-      min_x -= padding;
-      min_y -= padding;
-      max_x += padding;
-      max_y += padding;
-
-      float width = max_x - min_x;
-      float height = max_y - min_y;
-
-      /* Check all 8 handle positions on group bounding box */
-      float handle_positions[8][2] = {
-          {min_x, min_y},                    /* 0: Bottom-left */
-          {min_x + width / 2, min_y},        /* 1: Bottom-center */
-          {max_x, min_y},                    /* 2: Bottom-right */
-          {max_x, min_y + height / 2},       /* 3: Right-center */
-          {max_x, max_y},                    /* 4: Top-right */
-          {min_x + width / 2, max_y},        /* 5: Top-center */
-          {min_x, max_y},                    /* 6: Top-left */
-          {min_x, min_y + height / 2}        /* 7: Left-center */
-      };
-
-      for (int h = 0; h < 8; h++) {
-        float dx = mouse_x - handle_positions[h][0];
-        float dy = mouse_y - handle_positions[h][1];
-        if (dx * dx + dy * dy < handle_tolerance * handle_tolerance) {
-          if (r_element_index)
-            *r_element_index = g;
-          if (r_element_type)
-            *r_element_type = MOODBOARD_ELEMENT_GROUP;
-          if (r_pos_x)
-            *r_pos_x = min_x;
-          if (r_pos_y)
-            *r_pos_y = min_y;
-          if (r_scale)
-            *r_scale = 1.0f;
-          if (r_width)
-            *r_width = width;
-          if (r_height)
-            *r_height = height;
-          return h;
-        }
-      }
-    }
-  }
 
   /* Check selected images (iterate in reverse for z-order) */
   if (img_prop) {
@@ -417,38 +307,27 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
                            &local_mx,
                            &local_my);
 
-      /* Check all 8 handle positions (in unrotated local space) */
-      float handle_positions[8][2] = {
-          {pos_x, pos_y},                           /* 0: Bottom-left */
-          {pos_x + img_width / 2, pos_y},           /* 1: Bottom-center */
-          {pos_x + img_width, pos_y},               /* 2: Bottom-right */
-          {pos_x + img_width, pos_y + img_height / 2}, /* 3: Right-center */
-          {pos_x + img_width, pos_y + img_height},  /* 4: Top-right */
-          {pos_x + img_width / 2, pos_y + img_height}, /* 5: Top-center */
-          {pos_x, pos_y + img_height},              /* 6: Top-left */
-          {pos_x, pos_y + img_height / 2}           /* 7: Left-center */
-      };
-
-      for (int h = 0; h < 8; h++) {
-        float dx = local_mx - handle_positions[h][0];
-        float dy = local_my - handle_positions[h][1];
-        if (dx * dx + dy * dy < handle_tolerance * handle_tolerance) {
-          if (r_element_index)
-            *r_element_index = i;
-          if (r_element_type)
-            *r_element_type = MOODBOARD_ELEMENT_IMAGE;
-          if (r_pos_x)
-            *r_pos_x = pos_x;
-          if (r_pos_y)
-            *r_pos_y = pos_y;
-          if (r_scale)
-            *r_scale = scale;
-          if (r_width)
-            *r_width = img_width;
-          if (r_height)
-            *r_height = img_height;
-          return h;
-        }
+      /* The four corners, in unrotated local space, from the ONE definition
+       * the draw pass and the card hit-test also read. */
+      const rctf bounds = {pos_x, pos_x + img_width, pos_y, pos_y + img_height};
+      const int handle = moodboard_resize_handle_at(
+          bounds, local_mx, local_my, handle_tolerance);
+      if (handle != -1) {
+        if (r_element_index)
+          *r_element_index = i;
+        if (r_element_type)
+          *r_element_type = MOODBOARD_ELEMENT_IMAGE;
+        if (r_pos_x)
+          *r_pos_x = pos_x;
+        if (r_pos_y)
+          *r_pos_y = pos_y;
+        if (r_scale)
+          *r_scale = scale;
+        if (r_width)
+          *r_width = img_width;
+        if (r_height)
+          *r_height = img_height;
+        return handle;
       }
     }
   }
@@ -495,38 +374,26 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
                            &local_mx,
                            &local_my);
 
-      /* Check all 8 handle positions (in unrotated local space) */
-      float handle_positions[8][2] = {
-          {pos_x, pos_y},
-          {pos_x + width / 2, pos_y},
-          {pos_x + width, pos_y},
-          {pos_x + width, pos_y + height / 2},
-          {pos_x + width, pos_y + height},
-          {pos_x + width / 2, pos_y + height},
-          {pos_x, pos_y + height},
-          {pos_x, pos_y + height / 2}
-      };
-
-      for (int h = 0; h < 8; h++) {
-        float dx = local_mx - handle_positions[h][0];
-        float dy = local_my - handle_positions[h][1];
-        if (dx * dx + dy * dy < handle_tolerance * handle_tolerance) {
-          if (r_element_index)
-            *r_element_index = i;
-          if (r_element_type)
-            *r_element_type = MOODBOARD_ELEMENT_TEXTBOX;
-          if (r_pos_x)
-            *r_pos_x = pos_x;
-          if (r_pos_y)
-            *r_pos_y = pos_y;
-          if (r_scale)
-            *r_scale = 1.0f;
-          if (r_width)
-            *r_width = width;
-          if (r_height)
-            *r_height = height;
-          return h;
-        }
+      /* Same four corners as every other resizable thing on the canvas. */
+      const rctf bounds = {pos_x, pos_x + width, pos_y, pos_y + height};
+      const int handle = moodboard_resize_handle_at(
+          bounds, local_mx, local_my, handle_tolerance);
+      if (handle != -1) {
+        if (r_element_index)
+          *r_element_index = i;
+        if (r_element_type)
+          *r_element_type = MOODBOARD_ELEMENT_TEXTBOX;
+        if (r_pos_x)
+          *r_pos_x = pos_x;
+        if (r_pos_y)
+          *r_pos_y = pos_y;
+        if (r_scale)
+          *r_scale = 1.0f;
+        if (r_width)
+          *r_width = width;
+        if (r_height)
+          *r_height = height;
+        return handle;
       }
     }
   }
@@ -564,22 +431,12 @@ void moodboard_deselect_all(PointerRNA *scene_ptr)
     }
   }
 
-  /* Deselect all groups */
-  PropertyRNA *groups_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_groups");
-  if (groups_prop) {
-    int group_count = RNA_property_collection_length(scene_ptr, groups_prop);
-    for (int i = 0; i < group_count; i++) {
-      PointerRNA group_ptr;
-      RNA_property_collection_lookup_int(scene_ptr, groups_prop, i, &group_ptr);
-      PropertyRNA *sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-      if (sel_prop && RNA_property_boolean_get(&group_ptr, sel_prop)) {
-        RNA_property_boolean_set(&group_ptr, sel_prop, false);
-      }
-    }
-  }
-
-  /* Graph nodes and links share the canvas selection model with media. */
-  for (const char *collection_name : {"mixie_moodboard_action_nodes",
+  /* Frames, graph nodes and links all share the canvas selection model with
+   * media. Frames MUST be in here: a selected frame carries its members
+   * through a drag, so one left selected behind a click on a picture would
+   * move a whole set the user did not grab. */
+  for (const char *collection_name : {"mixie_moodboard_frames",
+                                      "mixie_moodboard_action_nodes",
                                       "mixie_moodboard_asset_nodes",
                                       "mixie_moodboard_links"})
   {

@@ -221,11 +221,16 @@ class MIXIE_OT_moodboard_rename_node(Operator):
         node = self._node(context)
         if node is None:
             # F2 lands here for whatever is selected. With no node it is a
-            # reference image or movie the user means, and that rename is the
-            # C++ in-place field (mixie_moodboard_ops_rename_media.cc), which
-            # resolves the one selected reference itself and reports when
-            # there is not exactly one.
+            # FRAME or a reference image/movie the user means, and both of
+            # those renames are C++ in-place fields that resolve the one
+            # selected thing themselves and report when there is not exactly
+            # one. Frames go first: a frame is selected by its own border, so
+            # a selected frame is an unambiguous F2 target, while a reference
+            # inside it is not selected at the same time.
             if not self.node_id:
+                frames = getattr(context.scene, "mixie_moodboard_frames", ())
+                if sum(1 for frame in frames if frame.selected) == 1:
+                    return bpy.ops.mixie.moodboard_rename_frame()
                 return bpy.ops.mixie.moodboard_rename_media()
             self.report({'WARNING'}, "Select an inference node")
             return {'CANCELLED'}

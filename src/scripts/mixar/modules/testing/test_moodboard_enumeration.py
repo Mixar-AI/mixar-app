@@ -53,7 +53,7 @@ def _make_moodboard_item(
     generation_prompt="",
     created_at_iso="",
     z_order=0,
-    group_index=-1,
+    frame_id="",
 ):
     """Build a mock MixieMoodboardImage PropertyGroup item."""
     item = MagicMock()
@@ -68,7 +68,7 @@ def _make_moodboard_item(
     item.flip_horizontal = False
     item.flip_vertical = False
     item.z_order = z_order
-    item.group_index = group_index
+    item.frame_id = frame_id
     item.segments = []
     return item
 

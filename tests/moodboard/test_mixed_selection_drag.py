@@ -54,9 +54,11 @@ def test_both_drag_operators_move_through_the_shared_capture():
     # Esc puts the whole set back, not just the card that was grabbed.
     assert "moodboard_drag_set_restore(&scene_ptr, data->drag)" in graph
 
-    # The media drag carries the cards. It keeps its own image/text-box arrays
-    # because those also drive resizing, which cards do not share.
-    assert "MOODBOARD_DRAG_NODES, &move_data->node_drag)" in media
+    # The media drag carries the cards AND any selected frame. It keeps its own
+    # image/text-box arrays because those also drive resizing, which cards do
+    # not share.
+    assert "MOODBOARD_DRAG_NODES | MOODBOARD_DRAG_FRAMES" in media
+    assert "&move_data->node_drag)" in media
     assert "moodboard_drag_set_apply(&scene_ptr, move_data->node_drag" in media
     assert "moodboard_drag_set_restore(&scene_ptr, move_data->node_drag)" in media
 
@@ -89,9 +91,11 @@ def test_a_plain_click_replaces_the_whole_board_selection():
     media = _read("mixie_moodboard_ops_select.cc")
     assert "static void moodboard_replace_selection(PointerRNA *scene_ptr)" in media
     # Every full-replace path goes through it; none clears media alone.
+    # The group-promotion handlers are gone with the grouping model: a click on
+    # an item selects THAT ITEM, so every remaining full-replace path is an
+    # item path.
     for handler in (
-        "handle_double_click_ungrouped_image",
-        "handle_click_select_group",
+        "handle_double_click_unselected_item",
         "handle_click_select_image",
     ):
         body = media.split(handler + "(MoodboardSelectionContext &ctx)\n{")[1].split(

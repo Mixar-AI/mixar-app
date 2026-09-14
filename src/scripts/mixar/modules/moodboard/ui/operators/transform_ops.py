@@ -17,22 +17,13 @@ from ...core.image_lifecycle import release_all_moodboard_images
 from ...core.moodboard_utils import stamp_moodboard_item_added
 
 
-def get_selected_group_indices(scene):
-    """Get indices of all selected groups."""
-    selected_group_indices = set()
-    for i, group in enumerate(scene.mixie_moodboard_groups):
-        if group.selected:
-            selected_group_indices.add(i)
-    return selected_group_indices
-
-
-def get_group_indices_from_selected_items(scene):
-    """Get group indices of selected images (for group cohesion)."""
-    group_indices = set()
-    for img in scene.mixie_moodboard_images:
-        if img.selected and img.group_index >= 0:
-            group_indices.add(img.group_index)
-    return group_indices
+def get_selected_frame_ids(scene):
+    """Ids of every selected frame."""
+    return {
+        frame.frame_id
+        for frame in getattr(scene, 'mixie_moodboard_frames', ())
+        if frame.selected and frame.frame_id
+    }
 
 
 def get_all_items_to_transform(scene):
@@ -42,32 +33,28 @@ def get_all_items_to_transform(scene):
     Returns tuple of (image_indices, textbox_indices) that should be transformed.
     This includes:
     - Directly selected images and textboxes
-    - Images from selected groups
-    - All images in a group if any image in that group is selected (group cohesion)
+    - Every member of a SELECTED frame
+
+    Deliberately NOT the reverse: selecting one picture inside a frame does not
+    drag its neighbours along. That "group cohesion" rule is exactly the
+    inverted selection model the frame rewrite removed -- clicking a member
+    selects the member, and the frame is selected by its own border.
     """
     image_indices = set()
     textbox_indices = set()
 
-    # Get selected group indices
-    selected_group_indices = get_selected_group_indices(scene)
+    selected_frame_ids = get_selected_frame_ids(scene)
 
-    # Get group indices from selected images (group cohesion)
-    cohesion_group_indices = get_group_indices_from_selected_items(scene)
-
-    # Combine all group indices that need to be transformed
-    all_group_indices = selected_group_indices | cohesion_group_indices
-
-    # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected:
-            image_indices.add(i)
-        elif img.group_index in all_group_indices:
-            # Image belongs to a group being transformed
+        if img.selected or (
+            selected_frame_ids and getattr(img, 'frame_id', '') in selected_frame_ids
+        ):
             image_indices.add(i)
 
-    # Collect textboxes (only directly selected for now, as textboxes don't have groups)
     for i, tb in enumerate(scene.mixie_moodboard_textboxes):
-        if tb.selected:
+        if tb.selected or (
+            selected_frame_ids and getattr(tb, 'frame_id', '') in selected_frame_ids
+        ):
             textbox_indices.add(i)
 
     return image_indices, textbox_indices
