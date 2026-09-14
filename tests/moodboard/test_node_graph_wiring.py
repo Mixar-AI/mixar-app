@@ -46,6 +46,8 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     canvas = _read(SPACE_MIXIE / "mixie_draw_moodboard.cc")
     renderer = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     controls = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    settings = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
+    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
 
     assert "mixie_draw_moodboard_graph.cc" in cmake
     assert "mixie_draw_moodboard_node_ui.cc" in cmake
@@ -59,22 +61,23 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert '"prompt",' in controls
     # Mode/Model draw the Python-cached human labels (dynamic enums can't
     # self-display); the static word is only the empty-label fallback.
-    assert 'model_label[0] ? model_label : "Model"' in controls
-    assert 'mode_label[0] ? mode_label : "Mode"' in controls
-    assert "BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in controls
+    assert 'model_label[0] ? model_label : "Model"' in settings
+    assert 'mode_label[0] ? mode_label : "Mode"' in settings
+    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in layout
+    assert "moodboard_node_controls_rect(C, v2d, node, &controls)" in controls
     # The draft hint draws exactly when the floating controls do not, so both
     # sides must share the same on-screen size thresholds.
-    assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in renderer
+    assert "moodboard_node_controls_rect(C, v2d, &node, &controls_rect)" in renderer
     assert "draw_draft_hint" in renderer
     assert "draw_state_hint" in renderer
     assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
     assert "generation_running" in controls
-    assert 'RNA_boolean_get(&iter.ptr, "visible")' in controls
+    assert 'RNA_boolean_get(&iter.ptr, "visible")' in settings
     # Numeric parameters are plain manual number fields: the catalog's wide
     # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
     assert 'STREQ(widget, "slider")' not in controls
-    assert "button_type = ui::ButtonType::Num;" in controls
-    assert 'RNA_struct_find_property(node, "parameters")' in controls
+    assert "button_type = ui::ButtonType::Num;" in settings
+    assert 'RNA_struct_find_property(node, "parameters")' in settings
     assert "uiDefButO" in controls
     assert '"MIXIE_OT_moodboard_run_action_node"' in controls
     assert controls.index("view2d_view_restore(C)") < controls.index(

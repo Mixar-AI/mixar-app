@@ -8,6 +8,7 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "BKE_icons.hh"
 #include "BKE_preview_image.hh"
@@ -42,122 +43,11 @@ bool moodboard_view_rect_to_region(View2D *v2d,
       v2d, view_rect.xmax, view_rect.ymax, &r_region_rect->xmax, &r_region_rect->ymax);
   return r_region_rect->xmax > 0 && r_region_rect->xmin < region->winx &&
          r_region_rect->ymax > 0 && r_region_rect->ymin < region->winy &&
-         r_region_rect->xmax > r_region_rect->xmin &&
-         r_region_rect->ymax > r_region_rect->ymin;
+         r_region_rect->xmax > r_region_rect->xmin && r_region_rect->ymax > r_region_rect->ymin;
 }
 
-static ui::Button *screen_prop_button(ui::Block *block,
-                                 PointerRNA *ptr,
-                                 const char *property,
-                                 const char *label,
-                                 const ui::ButtonType type,
-                                 const int x,
-                                 const int y,
-                                 const int width,
-                                 const int height,
-                                 const float minimum = 0.0f,
-                                 const float maximum = 0.0f)
-{
-  if (!RNA_struct_find_property(ptr, property)) {
-    return nullptr;
-  }
-  ui::Button *button = ui::uiDefButR(block,
-                   type,
-                   label,
-                   x,
-                   y,
-                   short(width),
-                   short(height),
-                   ptr,
-                   property,
-                   -1,
-                   minimum,
-                   maximum,
-                   nullptr);
-  const ui::MixarComponent component = type == ui::ButtonType::Menu ? ui::MixarComponent::Dropdown :
-      type == ui::ButtonType::Checkbox ? ui::MixarComponent::Toggle :
-      ELEM(type, ui::ButtonType::Num, ui::ButtonType::NumSlider) ? ui::MixarComponent::Number :
-      ui::MixarComponent::Input;
-  ui::mixar_style_button(button, component);
-  return button;
-}
-
-void moodboard_draw_floating_background(const rctf &rect)
-{
-  moodboard_draw_glass_pane(rect, 16.0f);
-}
-
-static ui::Button *add_parameter_button(ui::Block *block,
-                                   PointerRNA *parameter,
-                                   const int x,
-                                   const int y,
-                                   const int width,
-                                   const int height)
-{
-  char label[MIXIE_GRAPH_LABEL_BUF];
-  mixie_rna_string_get_clamped(parameter, "label", label, sizeof(label));
-  const int parameter_type = RNA_enum_get(parameter, "parameter_type");
-  const char *value_property = "value_string";
-  ui::ButtonType button_type = ui::ButtonType::Text;
-  float minimum = 0.0f;
-  float maximum = 0.0f;
-  if (parameter_type == 1 || parameter_type == 2) {
-    value_property = parameter_type == 1 ? "value_integer" : "value_float";
-    minimum = RNA_float_get(parameter, "minimum");
-    maximum = RNA_float_get(parameter, "maximum");
-    /* Plain manual number field (click to type, drag to nudge), clamped to the
-     * catalog range. NOT a slider even when the catalog marks widget="slider":
-     * a slider's drag range comes from the shared value_integer/value_float RNA
-     * property (which has no per-param range, so ~±INT_MAX), while the catalog
-     * min/max only clamp on release — the slider dragged to huge values and
-     * snapped back. A correct slider needs a per-param property range (as the
-     * N-panel engine builds); the node deliberately uses Num until then. */
-    button_type = ui::ButtonType::Num;
-  }
-  else if (parameter_type == 3) {
-    value_property = "value_boolean";
-    button_type = ui::ButtonType::Checkbox;
-  }
-  else if (parameter_type == 4) {
-    value_property = "value_enum";
-    button_type = ui::ButtonType::Menu;
-  }
-  /* Show the VALUE, not the param name. The enum can't self-display (it stores
-   * a fragile index; a null label blanks the menu), so the current choice's
-   * human label is cached in ``value_label`` (moodboard_graph_properties) and
-   * shown here, falling back to the param name only if it isn't populated yet.
-   * Numeric/text fields draw the bare value with an empty label. Checkboxes
-   * keep their label — a lone tick is meaningless. */
-  char value_label[MIXIE_GRAPH_LABEL_BUF];
-  const char *display_label = label;
-  if (button_type == ui::ButtonType::Menu) {
-    mixie_rna_string_get_clamped(parameter, "value_label", value_label, sizeof(value_label));
-    display_label = value_label[0] ? value_label : label;
-  }
-  else if (ELEM(button_type, ui::ButtonType::Num, ui::ButtonType::NumSlider, ui::ButtonType::Text)) {
-    display_label = "";
-  }
-  return screen_prop_button(block,
-                            parameter,
-                            value_property,
-                            display_label,
-                            button_type,
-                            x,
-                            y,
-                            width,
-                            height,
-                            minimum,
-                            maximum);
-}
-
-static void disable_while_submitted(ui::Button *button, const bool submitted)
-{
-  if (button && submitted) {
-    ui::button_disable(button, "Settings are locked while this generation is running");
-  }
-}
-
-static void add_action_toolbar(ui::Block *block,
+static void add_action_toolbar(const bContext *C,
+                               ui::Block *block,
                                View2D *v2d,
                                ARegion *region,
                                PointerRNA *node,
@@ -185,178 +75,64 @@ static void add_action_toolbar(ui::Block *block,
     }
   }
 
-  if (!RNA_boolean_get(node, "selected")) {
+  rcti controls;
+  if (!moodboard_node_controls_rect(C, v2d, node, &controls)) {
     return;
   }
-  /* The toolbar is intentionally screen-sized, like Flora's contextual
-   * strip. Hide it before it becomes visually larger than its zoomed tile. */
-  if (BLI_rcti_size_x(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_X ||
-      BLI_rcti_size_y(&node_region) < MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y)
-  {
-    return;
-  }
-
   PointerRNA preview_ptr = RNA_pointer_get(node, "preview_image");
   const bool has_result = preview_ptr.data || object_ptr.data;
   const int state = RNA_enum_get(node, "state");
   const bool generation_running = ELEM(state, 1, 2);
-  PropertyRNA *parameters = RNA_struct_find_property(node, "parameters");
-  int parameter_count = 0;
-  if (parameters) {
-    CollectionPropertyIterator count_iter{};
-    RNA_property_collection_begin(node, parameters, &count_iter);
-    while (count_iter.valid) {
-      parameter_count += RNA_boolean_get(&count_iter.ptr, "visible") ? 1 : 0;
-      RNA_property_collection_next(&count_iter);
-    }
-    RNA_property_collection_end(&count_iter);
-  }
-  const bool show_mode = RNA_boolean_get(node, "show_mode");
-  const int control_count = 1 + (show_mode ? 1 : 0) + parameter_count;
-  /* A finished/failed/cancelled node that shows its result hides the tile's
-   * prompt + Generate, so the panel carries the way back into the flow. */
-  const bool show_rerun = has_result && ELEM(state, 3, 4, 5);
-
-  /* Vertical control panel to the LEFT of the node. Each control occupies its
-   * own full-width row so long labels ("Aspect Ratio", model names) stay
-   * legible — the previous single horizontal strip forced every control to
-   * panel_width / control_count and clipped the text once a handful of
-   * parameters were present. A Reset row at the bottom restores catalog
-   * defaults. All metrics scale with the UI factor: labels render at
-   * UI_SCALE_FAC, so fixed pixel rows clipped every label on high-DPI. */
-  const float ui_scale = UI_SCALE_FAC;
-  const int inset = int(14 * ui_scale);
-  const int row_h = int(32 * ui_scale);
-  const int gap = int(6 * ui_scale);
-  const int reset_gap = int(12 * ui_scale);
-  const int panel_width = int(244 * ui_scale);
-  const int field_width = panel_width - inset * 2;
-  const int panel_height = inset * 2 + control_count * row_h + (control_count - 1) * gap +
-                           (show_rerun ? row_h + gap : 0) + reset_gap + row_h;
-
-  /* Always dock the panel to the LEFT of the node — never flip sides. A
-   * side-dependent fallback made image and video nodes disagree on where their
-   * controls appeared; clamping (rather than flipping) keeps it reachable when
-   * the node is panned against the left edge. */
-  const int panel_x = std::clamp(node_region.xmin - 12 - panel_width,
-                                 8,
-                                 std::max(8, region->winx - panel_width - 8));
-  const int panel_y = std::clamp(
-      node_region.ymax - panel_height, 8, std::max(8, region->winy - panel_height - 8));
-  rctf panel_rect = {float(panel_x),
-                     float(panel_x + panel_width),
-                     float(panel_y),
-                     float(panel_y + panel_height)};
-  moodboard_draw_floating_background(panel_rect);
-
-  const int content_x = panel_x + inset;
-  /* Rows are laid out top-down; y tracks the bottom edge of the next control. */
-  int y = panel_y + panel_height - inset - row_h;
-  /* The Mode/Model menus show the SELECTED service/model name from the cached
-   * labels (the dynamic enums can't self-display); fall back to the static word
-   * only until the catalog populates them. */
-  if (show_mode) {
-    char mode_label[MIXIE_GRAPH_LABEL_BUF];
-    mixie_rna_string_get_clamped(node, "service_label", mode_label, sizeof(mode_label));
-    ui::Button *mode = screen_prop_button(block,
-                                     node,
-                                     "service_key",
-                                     mode_label[0] ? mode_label : "Mode",
-                                     ui::ButtonType::Menu,
-                                     content_x,
-                                     y,
-                                     field_width,
-                                     row_h);
-    disable_while_submitted(mode, generation_running);
-    y -= row_h + gap;
-  }
-  char model_label[MIXIE_GRAPH_LABEL_BUF];
-  mixie_rna_string_get_clamped(node, "model_label", model_label, sizeof(model_label));
-  ui::Button *model = screen_prop_button(block,
-                                    node,
-                                    "model",
-                                    model_label[0] ? model_label : "Model",
-                                    ui::ButtonType::Menu,
-                                    content_x,
-                                    y,
-                                    field_width,
-                                    row_h);
-  disable_while_submitted(model, generation_running);
-  y -= row_h + gap;
-
-  if (parameters) {
-    CollectionPropertyIterator iter{};
-    RNA_property_collection_begin(node, parameters, &iter);
-    while (iter.valid) {
-      if (RNA_boolean_get(&iter.ptr, "visible")) {
-        ui::Button *parameter = add_parameter_button(
-            block, &iter.ptr, content_x, y, field_width, row_h);
-        disable_while_submitted(parameter, generation_running);
-        y -= row_h + gap;
-      }
-      RNA_property_collection_next(&iter);
-    }
-    RNA_property_collection_end(&iter);
-  }
-
-  y -= reset_gap - gap;
+  rcti panel;
+  const bool expanded = moodboard_node_settings_rect(C, node, node_region, &panel);
   char reset_node_id[MIXIE_GRAPH_ID_BUF];
   mixie_rna_string_get_clamped(node, "node_id", reset_node_id, sizeof(reset_node_id));
-  if (show_rerun) {
-    /* Same action as the context menu's "Edit & Run Again": back to DRAFT with
-     * the prompt editable — discoverable from the node itself, not only from
-     * a right-click. */
-    ui::Button *rerun = ui::uiDefButO(block,
-                             ui::ButtonType::But,
-                             "MIXIE_OT_moodboard_run_action_node",
-                             blender::wm::OpCallContext::ExecDefault,
-                             "Edit & Run Again",
-                             content_x,
-                             y,
-                             field_width,
-                             row_h,
-                             nullptr);
-    ui::mixar_style_button(rerun, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
-    RNA_string_set(ui::button_operator_ptr_ensure(rerun), "node_id", reset_node_id);
-    RNA_boolean_set(ui::button_operator_ptr_ensure(rerun), "edit_before_run", true);
-    y -= row_h + gap;
+  if (expanded) {
+    moodboard_draw_node_settings(block, node, panel);
   }
-  ui::Button *reset = ui::uiDefButO(block,
-                           ui::ButtonType::But,
-                           "MIXIE_OT_moodboard_reset_node_params",
-                           blender::wm::OpCallContext::ExecDefault,
-                           "Reset",
-                           content_x,
-                           y,
-                           field_width,
-                           row_h,
-                           nullptr);
-  ui::mixar_style_button(reset, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
-  RNA_string_set(ui::button_operator_ptr_ensure(reset), "node_id", reset_node_id);
-  disable_while_submitted(reset, generation_running);
-
+  else {
+    const int margin = int(8 * UI_SCALE_FAC);
+    const int height = int(28 * UI_SCALE_FAC);
+    ui::Button *settings = ui::uiDefButO(block,
+                                         ui::ButtonType::But,
+                                         "MIXIE_OT_moodboard_node_settings",
+                                         blender::wm::OpCallContext::InvokeDefault,
+                                         "Settings",
+                                         controls.xmin + margin,
+                                         controls.ymax - margin - height,
+                                         BLI_rcti_size_x(&controls) - 2 * margin,
+                                         height,
+                                         nullptr);
+    ui::mixar_style_button(
+        settings, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
+    RNA_string_set(ui::button_operator_ptr_ensure(settings), "node_id", reset_node_id);
+    controls.ymax -= height + margin;
+  }
+  /* Tile controls use the visible intersection, never an off-canvas edge. */
+  node_region = controls;
   if (generation_running) {
     /* The tile already carries the Queued/Generating hint and the glow; the
      * prompt and Generate would draw disabled straight over that text. The
      * one action that makes sense mid-flight is stopping it. */
-    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
+    const int prompt_margin = int(8 * UI_SCALE_FAC);
     const int cancel_h = int(36 * UI_SCALE_FAC);
     const int cancel_w = int(118 * UI_SCALE_FAC);
     ui::Button *cancel = ui::uiDefButO(block,
-                              ui::ButtonType::But,
-                              "MIXIE_OT_moodboard_cancel_action_node",
-                              blender::wm::OpCallContext::ExecDefault,
-                              "Cancel",
-                              node_region.xmax - prompt_margin - cancel_w,
-                              node_region.ymin + prompt_margin,
-                              cancel_w,
-                              cancel_h,
-                              nullptr);
-    ui::mixar_style_button(cancel, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
+                                       ui::ButtonType::But,
+                                       "MIXIE_OT_moodboard_cancel_action_node",
+                                       blender::wm::OpCallContext::ExecDefault,
+                                       "Cancel",
+                                       node_region.xmax - prompt_margin - cancel_w,
+                                       node_region.ymin + prompt_margin,
+                                       cancel_w,
+                                       cancel_h,
+                                       nullptr);
+    ui::mixar_style_button(
+        cancel, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
     RNA_string_set(ui::button_operator_ptr_ensure(cancel), "node_id", reset_node_id);
   }
   else if (!has_result || state == 0) {
-    const int prompt_margin = std::max(14, BLI_rcti_size_x(&node_region) / 24);
+    const int prompt_margin = int(8 * UI_SCALE_FAC);
     /* UI-factor sized like the left panel: the label renders at UI_SCALE_FAC,
      * so a fixed 118px clipped "Generate" to "Gener..." at high UI scale. */
     const int generate_h = int(36 * UI_SCALE_FAC);
@@ -372,20 +148,22 @@ static void add_action_toolbar(ui::Block *block,
      * below is still drawn. */
     if (RNA_boolean_get(node, "show_prompt")) {
       const int prompt_top = node_region.ymax - prompt_margin;
-      const int prompt_bottom = node_region.ymin + prompt_margin + generate_h + 12;
-      const int prompt_height = std::max(46, prompt_top - prompt_bottom);
+      const int prompt_bottom = node_region.ymin + prompt_margin + generate_h +
+                                int(6 * UI_SCALE_FAC);
+      const int prompt_height = prompt_top - prompt_bottom;
       const int prompt_y = prompt_top - prompt_height;
-      ui::Button *prompt = screen_prop_button(block,
-                                         node,
-                                         "prompt",
-                                         "",
-                                         ui::ButtonType::Text,
-                                         node_region.xmin + prompt_margin,
-                                         prompt_y,
-                                         BLI_rcti_size_x(&node_region) - prompt_margin * 2,
-                                         prompt_height);
+      ui::Button *prompt = moodboard_screen_prop_button(block,
+                                                        node,
+                                                        "prompt",
+                                                        "",
+                                                        ui::ButtonType::Text,
+                                                        node_region.xmin + prompt_margin,
+                                                        prompt_y,
+                                                        BLI_rcti_size_x(&node_region) -
+                                                            prompt_margin * 2,
+                                                        prompt_height);
       if (prompt) {
-        ui::button_placeholder_set(prompt, "Describe what you want to create...");
+        ui::button_placeholder_set(prompt, "Describe your idea…");
         ui::button_flag_enable(prompt, ui::BUT_TEXTEDIT_UPDATE);
       }
     }
@@ -393,15 +171,15 @@ static void add_action_toolbar(ui::Block *block,
     char node_id[MIXIE_GRAPH_ID_BUF];
     mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
     ui::Button *generate = ui::uiDefButO(block,
-                                ui::ButtonType::But,
-                                "MIXIE_OT_moodboard_run_action_node",
-                                blender::wm::OpCallContext::ExecDefault,
-                                "Generate",
-                                node_region.xmax - prompt_margin - generate_w,
-                                node_region.ymin + prompt_margin,
-                                generate_w,
-                                generate_h,
-                                nullptr);
+                                         ui::ButtonType::But,
+                                         "MIXIE_OT_moodboard_run_action_node",
+                                         blender::wm::OpCallContext::ExecDefault,
+                                         "Generate",
+                                         node_region.xmax - prompt_margin - generate_w,
+                                         node_region.ymin + prompt_margin,
+                                         generate_w,
+                                         generate_h,
+                                         nullptr);
     ui::mixar_style_button(generate, ui::MixarComponent::Action, ui::MixarVariant::Primary);
     RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
   }
@@ -429,22 +207,23 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, actions, &iter);
   while (iter.valid) {
-    add_action_toolbar(block, v2d, region, &iter.ptr, object_previews);
+    add_action_toolbar(C, block, v2d, region, &iter.ptr, object_previews);
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
-  mixie_draw_moodboard_selected_media_labels(block, v2d, region, &scene_ptr, cache);
+  mixie_draw_moodboard_selected_media_labels(C, block, v2d, region, &scene_ptr, cache);
 
   ui::block_end(C, block);
-  ui::block_draw(C, block);
   for (const ObjectPreviewDraw &preview : object_previews) {
     PreviewImage *preview_image = BKE_previewimg_id_ensure(&preview.object->id);
     const int icon_id = BKE_icon_preview_ensure(&preview.object->id, preview_image);
     const int size = std::max(
         16, std::min(BLI_rcti_size_x(&preview.rect), BLI_rcti_size_y(&preview.rect)));
-    ui::icon_draw_preview(
-        preview.rect.xmin, preview.rect.ymin, icon_id, 1.0f, 1.0f, size);
+    ui::icon_draw_preview(preview.rect.xmin, preview.rect.ymin, icon_id, 1.0f, 1.0f, size);
   }
+  /* Compact Settings and retry controls occupy the tile itself. Keep native
+   * controls above mesh thumbnails, just as they are above image previews. */
+  ui::block_draw(C, block);
   ui::view2d_view_ortho(v2d);
 }
 

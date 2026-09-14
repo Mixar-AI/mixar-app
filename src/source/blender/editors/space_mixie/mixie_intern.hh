@@ -93,9 +93,8 @@ using wmWindowManager = blender::wmWindowManager;
 #define MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y 220
 /** Inset of a node card's media preview from the card edge. */
 #define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
-/* Socket radii/offset are CANVAS units (they zoom with the graph); hit-tests
- * must convert through the view scale, never compare these against pixels
- * (see region_socket_hit). */
+/* Socket centers/offset remain in canvas units. Draw and hit radii are bounded
+ * in UI pixels through the shared helpers, including the QA target provider. */
 #define MOODBOARD_GRAPH_SOCKET_RADIUS 12.0f
 #define MOODBOARD_GRAPH_OUTPUT_RADIUS 15.0f
 #define MOODBOARD_GRAPH_SOCKET_OFFSET 14.0f
@@ -111,6 +110,10 @@ using wmWindowManager = blender::wmWindowManager;
 #define SAM3D_DELETE_X_MARGIN 4
 
 namespace blender::ed::mixie {
+
+float moodboard_socket_radius_px(const View2D *v2d, bool output = false);
+float moodboard_socket_hit_radius_px(const View2D *v2d, bool output = false);
+float moodboard_graph_input_radius_px(PointerRNA *node, int socket_index, const View2D *v2d);
 
 /* -------------------------------------------------------------------- */
 /** \name Mode Drawing Functions
