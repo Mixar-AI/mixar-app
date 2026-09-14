@@ -121,12 +121,13 @@ def run(qa):
     evidence['completion'] = result
     evidence['main_loop_ticks'] = ticks
     require(settings(qa) == original, 'Preview settings not restored')
-    # A later viewport edit must invalidate an already completed image.
+    # A later viewport edit marks completed pixels as older progress.
     script(qa, "import bpy\nbpy.data.objects['Preview_QA_Sphere'].location.x += .1")
     later = request(qa, key, 'POLL')
-    require(later['status'] == 'stale' and 'image_url' not in later, 'Old image survived an edit')
+    require(later['status'] == 'done' and later['scene_advanced'] and bool(later.get('image_url')), 'Progress image was discarded or treated as current')
+    later.pop('image_url', None)
     evidence['after_completion_edit'] = later
-    # An actual sandbox edit during the native job is allowed, but its image is stale.
+    # An actual sandbox edit during the native job retains an older progress image.
     key = uuid.uuid4().hex
     require(request(qa, key, 'START')['status'] == 'running', 'Second lifecycle failed')
     require(qa.eval("result=bpy.app.is_job_running('RENDER')"), 'Render ended before edit test')
@@ -135,8 +136,9 @@ def run(qa):
                "bpy.context.scene.cycles.samples = 48")
     evidence['edit_during_render_seconds'] = time.monotonic() - start
     stale, _ = await_result(qa, key)
-    require(stale['status'] == 'stale' and 'image_url' not in stale, f'Edit not detected: {stale}')
+    require(stale['status'] == 'done' and stale['scene_advanced'] and bool(stale.get('image_url')), f'Edit not detected: {stale}')
     require(settings(qa) == [1200, 900, 80, 48], 'User setting was overwritten during restore')
+    stale.pop('image_url', None)
     evidence['during_render_edit'] = stale
     # The native status-bar Stop control cancels the background job.
     key = uuid.uuid4().hex

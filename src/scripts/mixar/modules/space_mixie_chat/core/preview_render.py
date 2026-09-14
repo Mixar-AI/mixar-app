@@ -57,7 +57,7 @@ def _finish(key, completed, lost=False):
     try:
         bpy.context.view_layer.update()
         stale = _revision != job['revision']
-        if completed and not stale:
+        if completed:
             image = bpy.data.images.get('Render Result')
             if image is None or not image.has_data:
                 raise RuntimeError('missing_pixels')
@@ -73,9 +73,7 @@ def _finish(key, completed, lost=False):
                     pixels = handle.read(4000001)
             if len(pixels) > 4000000:
                 raise RuntimeError('image_too_large')
-            result.update(status='done', image_url='data:image/png;base64,' + base64.b64encode(pixels).decode('ascii'))
-        elif completed:
-            result.update(status='stale', error='scene_changed_during_render')
+            result.update(status='done', scene_advanced=stale, image_url='data:image/png;base64,' + base64.b64encode(pixels).decode('ascii'))
     except Exception:
         # Errors can embed local temp paths. Only fixed codes leave this module.
         result.update(status='failed', error='preview_image_unavailable')
@@ -139,8 +137,8 @@ def poll(key):
     if value.get('status') == 'done':
         bpy.context.view_layer.update()
         if value['scene_revision'] != _revision:
-            value.update(status='stale', error='scene_changed_after_render')
-            value.pop('image_url', None)
+            value.update(scene_advanced=True)
+        value['scene_revision'] = _revision
     return value
 
 

@@ -60,16 +60,22 @@ def test_render_callback_only_schedules_main_loop_work(preview):
 
 
 @pytest.mark.parametrize('completed', [True, False])
-def test_stale_or_cancelled_never_reads_pixels_and_preserves_user_setting(preview, completed):
+def test_progress_pixels_survive_edits_but_cancelled_pixels_do_not(preview, completed):
     key = 'a' * 32
     preview.start(preview.bpy.context, key)
     preview._changed(None, SimpleNamespace(mode='VIEWPORT', updates=[object()]))
     preview.bpy.context.scene.cycles.samples = 48
+    preview.bpy.data.images.get.return_value = SimpleNamespace(has_data=True, save_render=lambda path, scene: Path(path).write_bytes(b'pixels'))
     preview._finish(key, completed)
     result = preview.poll(key)
-    assert result['status'] == ('stale' if completed else 'cancelled')
-    assert 'image_url' not in result
-    preview.bpy.data.images.get.assert_not_called()
+    assert result['status'] == ('done' if completed else 'cancelled')
+    if completed:
+        assert result['scene_advanced'] and result['image_url']
+        preview._changed(None, SimpleNamespace(mode='VIEWPORT', updates=[object()]))
+        assert preview.poll(key)['image_url'] == result['image_url']
+    else:
+        assert 'image_url' not in result
+        preview.bpy.data.images.get.assert_not_called()
     scene = preview.bpy.context.scene
     assert (scene.render.resolution_x, scene.render.resolution_y,
             scene.render.resolution_percentage, scene.cycles.samples) == (1200, 900, 80, 48)
