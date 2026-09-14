@@ -41,6 +41,13 @@ static bool focus_composer(bContext *C, void *ghost_window)
     if (win.scene == nullptr) {
       return true;
     }
+    /* A cleared/first conversation moves the composer between regions. Old
+     * uiBlocks can survive until the next layout, especially when reopening
+     * at the same user-resized dimensions. Never focus the outgoing field. */
+    PointerRNA scene_ptr = RNA_id_pointer_create(&win.scene->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    const bool has_messages = messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
+    const int composer_region = has_messages ? RGN_TYPE_TOOLS : RGN_TYPE_WINDOW;
     bContext *bubble_context = CTX_copy(C);
     CTX_wm_window_set(bubble_context, &win);
     bScreen *screen = CTX_wm_screen(bubble_context);
@@ -51,7 +58,7 @@ static bool focus_composer(bContext *C, void *ghost_window)
       }
       CTX_wm_area_set(bubble_context, &area);
       for (ARegion &region : area.regionbase) {
-        if (region.regiontype == RGN_TYPE_WINDOW || region.regiontype == RGN_TYPE_TOOLS) {
+        if (region.regiontype == composer_region) {
           focused = ui::textbutton_activate_rna(
               bubble_context, &region, win.scene, "mixie_chat_input", true);
           if (focused) {

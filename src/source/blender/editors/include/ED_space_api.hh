@@ -14,6 +14,10 @@ namespace blender {
 struct ARegion;
 struct ARegionType;
 struct bContext;
+struct wmEvent;
+
+/* Observe an outside press without consuming the destination window event. */
+void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event);
 
 /* Only called once on startup. storage is global in BKE kernel listbase. */
 void ED_spacetypes_init();

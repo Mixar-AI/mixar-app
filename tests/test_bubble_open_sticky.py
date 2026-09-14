@@ -1,65 +1,38 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-2.0-or-later
 
-"""A programmatic restore must survive the hover pump.
-
-The island collapses when the cursor leaves it. But a restore can happen with
-the pointer nowhere near it — the queue toast's "View Queue" opens the Queue
-tab while the cursor is still on the toast, halfway across the screen. The
-pump saw "outside" on its very next tick and shut it again instantly, so the
-button looked broken.
-
-`g_hover_await_enter` holds the island open until hover has actually been
-offered it: set on every restore, cleared the first time the cursor is inside.
-A hover-driven restore clears it immediately (the cursor is over the pill,
-which counts as inside), so only restores away from the pointer are affected.
-"""
-
+"""Opening away from the pointer stays open until a subsequent outside press."""
 from pathlib import Path
 
-CC = (
-    Path(__file__).resolve().parents[1]
-    / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
-).read_text(encoding="utf-8")
+ROOT = Path(__file__).resolve().parents[1]
+CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
+CC = (CPP / "space_agent_bubble.cc").read_text()
+POLICY = (CPP / "agent_bubble_interaction.cc").read_text()
 
 
-def _hover_tick() -> str:
-    start = CC.index("mixar_bubble_hover_tick_exec")
-    return CC[start : CC.index("void MIXAR_OT_bubble_hover_tick", start)]
+def test_timer_cannot_dismiss_or_open():
+    tick = CC.split("static wmOperatorStatus mixar_bubble_hover_tick_exec")[1]
+    tick = tick.split("void MIXAR_OT_bubble_hover_tick")[0]
+    assert '"MIXAR_OT_bubble_minimise"' not in tick
+    assert '"MIXAR_OT_bubble_restore"' not in tick
+    assert "Mixar_WindowContainsScreenCursor" not in tick
 
 
-def _restore() -> str:
-    start = CC.index("mixar_bubble_restore_exec(bContext")
-    return CC[start : start + 1600]
+def test_dismissal_requires_an_outside_button_press():
+    assert "event->val != KM_PRESS" in POLICY
+    assert "ELEM(event->type, LEFTMOUSE, MIDDLEMOUSE, RIGHTMOUSE)" in POLICY
+    assert "ELEM(target->runtime->ghostwin, bubble, pill)" in POLICY
+    wm = (ROOT / "src/source/blender/windowmanager/intern/wm_event_system.cc").read_text()
+    assert "ED_agent_bubble_handle_event(C, event);" in wm
 
 
-def test_restore_arms_the_latch():
-    assert "g_hover_await_enter = true;" in _restore()
+def test_native_height_is_not_capped_at_the_preset():
+    constraints = CC.split("static void bubble_set_min_content_size")[1].split("/* A resize")[0]
+    assert "Mixar_WindowSetMaxContentSize(ghostwin, 0, 0);" in constraints
+    assert "AGENT_BUBBLE_EXPANDED_HEIGHT" not in constraints
 
 
-def test_the_latch_blocks_the_collapse_but_not_the_collapse_after_a_visit():
-    body = _hover_tick()
-    inside = body.index("if (inside) {")
-    latch = body.index("if (g_hover_await_enter) {")
-    minimise = body.index('"MIXAR_OT_bubble_minimise"')
-    # Cleared on entry, checked before the collapse, and the collapse is last.
-    assert inside < latch < minimise
-    assert "g_hover_await_enter = false;" in body[inside:latch]
-
-
-def test_the_latch_is_declared_before_every_use():
-    decl = CC.index("static bool g_hover_await_enter")
-    # The teardown paths clear it far above the hover section.
-    assert decl < CC.index("void ED_agent_bubble_windows_closed")
-    assert decl < CC.index("mixar_bubble_hover_tick_exec")
-
-
-def test_teardown_clears_it_on_both_paths():
-    """The sibling flag `g_bubble_grown_for_chat` is reset on the close path
-    but NOT the freed path, and that asymmetry is a live bug. Do not repeat
-    it: file load frees the bubble through `_window_freed` only."""
-    closed = CC[CC.index("void ED_agent_bubble_windows_closed") :][:400]
-    freed = CC[CC.index("void ED_agent_bubble_window_freed") :][:900]
-    assert "g_hover_await_enter = false;" in closed
-    assert "g_hover_await_enter = false;" in freed
+def test_reopening_keeps_user_size_and_respects_the_composer_floor():
+    restore = CC.split("static wmOperatorStatus mixar_bubble_restore_exec")[1]
+    assert "Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height)" in restore
+    assert "std::max(height, agent_bubble_collapsed_height_for_current_attachments(C))" in restore

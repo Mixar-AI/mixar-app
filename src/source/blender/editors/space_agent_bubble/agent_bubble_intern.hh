@@ -19,6 +19,8 @@ namespace blender {
 struct ARegion;
 struct bContext;
 struct wmOperatorType;
+struct wmEvent;
+bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble, void *pill);
 struct wmWindowManager;
 
 /* -------------------------------------------------------------------- */

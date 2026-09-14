@@ -28,6 +28,7 @@
 #include "UI_mixar_types.hh"
 #include "UI_mixar_motion.hh"
 #include "mixar/motion_storage.hh"
+#include "interface_mixar_multiline.hh"
 #include "UI_interface_layout.hh"
 #include "UI_resources.hh"
 struct IconTextOverlay;
@@ -388,6 +389,7 @@ struct TextWrapCache {
 
 /** Derived struct for #ButtonType::Text */
 struct ButtonText : public Button {
+  MixarMultilineState multiline;
   std::function<void(bContext &, StringRefNull)> rename_func = nullptr;
   char *rename_orig = nullptr;
   /**

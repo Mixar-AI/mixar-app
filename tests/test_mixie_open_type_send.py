@@ -82,13 +82,17 @@ def test_forced_text_activation_survives_a_rebuild():
     assert "button_active_only(" not in force.split("else {")[0]
 
 
-def test_hover_tick_retries_focus_and_keeps_a_focused_draft():
+def test_hover_tick_retries_focus_without_dismissing_drafts():
     tick = _function_body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_hover_tick_exec")
-    assert tick.index("agent_bubble_composer_focus_tick(") < tick.index(
-        "agent_bubble_composer_has_focused_draft("
-    )
-    draft = tick.index("agent_bubble_composer_has_focused_draft(")
-    assert draft < tick.index('"MIXAR_OT_bubble_minimise"')
+    assert "agent_bubble_composer_focus_tick(" in tick
+    assert '"MIXAR_OT_bubble_minimise"' not in tick
+
+
+def test_focus_ignores_the_old_composer_region_after_history_changes():
+    body = _function_body(COMPOSER_CC, "static bool focus_composer(")
+    assert '"mixie_chat_messages"' in body
+    assert "has_messages ? RGN_TYPE_TOOLS : RGN_TYPE_WINDOW" in body
+    assert "region.regiontype == composer_region" in body
 
 
 def test_enter_submits_the_whole_draft_from_any_caret():
@@ -155,3 +159,13 @@ def test_the_qa_probe_only_replaces_the_transport_boundary():
     assert "enter_from_middle_of_draft" in E2E
     assert "shift_enter_adds_newline" in E2E
     assert "failed_send_preserves_draft" in E2E
+
+
+def test_composer_first_press_begins_selection_without_extra_click():
+    handlers = (ROOT / "src/source/blender/editors/interface/interface_handlers.cc").read_text()
+    start = handlers.index("static int do_but_TEX(")
+    end = handlers.index("static int do_but_TEXTBOX(", start)
+    body = handlers[start:end]
+    gate = body.index("but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but)")
+    assert "textedit_set_cursor_pos" in body[gate:]
+    assert "BUTTON_STATE_TEXT_SELECTING" in body[gate:]
