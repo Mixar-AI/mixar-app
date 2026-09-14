@@ -53,6 +53,8 @@
 #include "DNA_userdef_types.h"
 
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
+#include "GPU_immediate_util.hh"
 #include "GPU_matrix.hh"
 #include "UI_view2d.hh"
 #include "BLI_string.h"
@@ -308,6 +310,22 @@ bool agent_bubble_pill_bed_is_transparent()
 }
 
 #endif
+
+void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
+{
+  const GPUBlend blend_prev = GPU_blend_get();
+  GPU_color_mask(true, true, true, true);
+  GPU_blend(GPU_BLEND_NONE);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  const float premul[4] = {rgba[0] * rgba[3], rgba[1] * rgba[3], rgba[2] * rgba[3], rgba[3]};
+  immUniformColor4fv(premul);
+  immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax);
+  immUnbindProgram();
+  GPU_blend(blend_prev);
+}
 
 /* Mixie chat's custom-drawn region callbacks. We reuse them
  * verbatim for the agent bubble's TOOLS (footer) and WINDOW (main /
