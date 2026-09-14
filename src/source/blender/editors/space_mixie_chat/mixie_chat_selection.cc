@@ -373,6 +373,11 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
     if (mixie_chat_pos_in_message_bubble(C, region, event->mval)) {
       return OPERATOR_FINISHED;
     }
+    /* Canvas is up: a miss must not PASS_THROUGH to the Agent Bubble's
+     * WINDOW-level LEFTMOUSE (mixar.bubble_header_drag). */
+    if (mixie_chat_ensure_runtime(smixie)->ink_overlay_active) {
+      return OPERATOR_FINISHED;
+    }
     /* Clicked outside any message — pass the event through so handlers
      * registered after this keymap (View2D scrollbar interaction in
      * particular) still get a chance at the click: plain OPERATOR_CANCELLED

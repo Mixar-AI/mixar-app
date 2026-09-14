@@ -59,6 +59,11 @@ def test_chat_ui_handler_stands_down_before_any_dispatch():
     guard = "if (!mixie_chat_dispatch_is_live(C)) {"
     assert guard in body, "the chat UI handler has no stand-down gate"
 
+    # Ink is the one exception: it is modal over the WINDOW even on a
+    # non-Agent tab (the writing PAD). It must run BEFORE the gate or a
+    # press leaks to mixar.bubble_header_drag.
+    assert body.index("mixie_chat_ink_handle_event") < body.index(guard)
+
     first_dispatch = min(
         body.index(marker)
         for marker in (

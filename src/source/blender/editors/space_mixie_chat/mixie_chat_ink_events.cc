@@ -478,11 +478,18 @@ int mixie_chat_ink_header_ui_handler(bContext *C, const wmEvent *event, void * /
     }
   }
   else if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
-    if (event->mval[0] > int(115.0f * UI_SCALE_FAC) &&
-        event->mval[0] < region->winx - int(85.0f * UI_SCALE_FAC))
-    {
+    /* Docked Mixie Chat keeps the button band (left title / right close)
+     * for the header chips. The island HEADER is itself a slice of the
+     * writing PAD — a CONTINUE there becomes mixar.bubble_header_drag. */
+    const bool island_pad = area->spacetype == SPACE_AGENT_BUBBLE;
+    const bool in_write_band = event->mval[0] > int(115.0f * UI_SCALE_FAC) &&
+                               event->mval[0] < region->winx - int(85.0f * UI_SCALE_FAC);
+    if (island_pad || in_write_band) {
       if (mixie_chat_ink_stroke_begin(rt, mx, my, event->tablet.pressure)) {
         ED_area_tag_redraw(area);
+        return WM_UI_HANDLER_BREAK;
+      }
+      if (island_pad) {
         return WM_UI_HANDLER_BREAK;
       }
     }

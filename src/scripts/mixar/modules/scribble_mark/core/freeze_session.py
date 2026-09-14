@@ -34,6 +34,7 @@ from __future__ import annotations
 from mixar.config.logging_config import get_logger
 
 from . import freeze, marks as mark_store, overlay, view_bake
+from .drawer_guard import DrawerGuard
 
 logger = get_logger(__name__)
 
@@ -42,6 +43,7 @@ class FreezeSession:
     """The live freeze. Mutated in place by the modal operator."""
 
     def __init__(self):
+        self._drawer = DrawerGuard()
         self.frame_name = ""
         self.view_name = ""
         self.view_data = None
@@ -54,11 +56,21 @@ class FreezeSession:
 
     def take(self, context, window, area, region):
         """Capture the still and bake the camera. Returns the frame name."""
+        if not self._drawer.suspend(context, window, area, region):
+            return None
+        try:
+            return self._take_frame(context, window, area, region)
+        except Exception:
+            self.restore_drawer(context)
+            raise
+
+    def _take_frame(self, context, window, area, region):
         serial = mark_store.next_serial(context.scene)
         frame = freeze.capture_region_still(
             context, window, area, region, freeze.frame_name(serial)
         )
         if frame is None:
+            self.restore_drawer(context)
             return None
 
         # Release the outgoing freeze only when nothing committed still needs
@@ -79,6 +91,9 @@ class FreezeSession:
         context.scene.mixar_mark_frame_name = frame
         overlay.reset_ink()
         return frame
+
+    def restore_drawer(self, context):
+        self._drawer.restore(context)
 
     def matches(self, region):
         """Whether *region* is still the size this freeze was taken at."""

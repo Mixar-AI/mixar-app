@@ -3540,6 +3540,28 @@ void MIXAR_OT_bubble_sync_attachment_size(wmOperatorType *ot)
  * delta-based implementation laggy.
  * \{ */
 
+/** Either half of Scribble is up: the viewport freeze (`wm.mixar_mark_armed`)
+ *  or the chat ink canvas (`wm.mixie_chat_ink_visible`). Both are
+ *  Python-registered WindowManager bools; absent reads as off. Defined
+ *  here so begin-drag can refuse a writing-pad press. */
+static bool agent_bubble_scribble_active(const bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  for (const char *name : {"mixar_mark_armed", "mixie_chat_ink_visible"}) {
+    PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, name);
+    if (prop && RNA_property_type(prop) == PROP_BOOLEAN &&
+        RNA_property_boolean_get(&wm_ptr, prop))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
@@ -3556,6 +3578,16 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
    * every following mouse-move, so the tile's asset drag never begins and the
    * window moves instead. */
   if (UI_mixar_region_active_but_is_draggable(CTX_wm_region(C))) {
+    return OPERATOR_CANCELLED;
+  }
+
+  /* The writing PAD is the island WINDOW (and header/composer seams). A
+   * LEFTMOUSE that the ink handler did not BREAK — overlay not latched
+   * yet, a HEADER press outside the docked-chat button band, select_text
+   * PASS_THROUGH on empty canvas — reaches this WINDOW-level binding and
+   * AppKit's performWindowDragWithEvent: swallows the moves handwriting
+   * needs. Stand down for the whole Scribble mode, same poll the pad uses. */
+  if (agent_bubble_scribble_active(C)) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3741,28 +3773,6 @@ static void minimise_anim_finish(void * /*user_data*/)
 
 static int g_hover_outside_ticks = 0;
 static double g_hover_cooldown_until = 0.0;
-
-
-/** Either half of Scribble is up: the viewport freeze (`wm.mixar_mark_armed`)
- *  or the chat ink canvas (`wm.mixie_chat_ink_visible`). Both are
- *  Python-registered WindowManager bools; absent reads as off. */
-static bool agent_bubble_scribble_active(const bContext *C)
-{
-  wmWindowManager *wm = CTX_wm_manager(C);
-  if (!wm) {
-    return false;
-  }
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  for (const char *name : {"mixar_mark_armed", "mixie_chat_ink_visible"}) {
-    PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, name);
-    if (prop && RNA_property_type(prop) == PROP_BOOLEAN &&
-        RNA_property_boolean_get(&wm_ptr, prop))
-    {
-      return true;
-    }
-  }
-  return false;
-}
 
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {

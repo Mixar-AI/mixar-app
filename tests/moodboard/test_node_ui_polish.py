@@ -62,11 +62,12 @@ def test_sockets_draw_type_color_occupancy_and_labels():
     # unknown future type degrades to neutral rather than misreporting.
     assert "moodboard_socket_type_color(" in draw
     assert '"accepted_types"' in draw
-    assert "SOCKET_COLOR_NEUTRAL" in painters
-    # Empty sockets read hollow, connected ones filled, required ones louder.
+    assert "socket_style::type_color" in painters
+    # Empty sockets read hollow, connected ones have a pip, required rims are stronger.
     assert "occupied_inputs.contains" in draw
     assert 'RNA_boolean_get(&socket, "required")' in draw
-    assert "imm_draw_circle_wire_2d" in painters
+    assert "if (connected)" in painters
+    assert "required ? 1.8f : 1.25f" in painters
     # Selected nodes name their sockets.
     assert "moodboard_draw_socket_label" in draw
 
@@ -79,19 +80,18 @@ def test_socket_occupancy_comes_from_the_shared_cache():
     assert "cache->occupied_inputs.add" in geometry
 
 
-def test_socket_hit_radius_follows_the_view_scale():
-    """The drawn socket zooms (canvas units); a fixed pixel hit radius left a
-    zoomed-in socket's rim unclickable."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
-    hit = geometry.split("static bool region_socket_hit(")[1].split("\n}")[0]
-    # Blender 5.2: the C API wrapper was renamed to the ui:: namespace.
-    assert "ui::view2d_scale_get_x" in hit
-    assert "MOODBOARD_GRAPH_SOCKET_RADIUS * scale" in hit
+def test_socket_hit_and_qa_use_the_painters_shared_size_contract():
+    hit_source = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
+    hit = hit_source.split("static bool region_socket_hit(")[1].split("\n}")[0]
+    assert "moodboard_socket_hit_radius_px(v2d, output)" in hit
+    qa = _read(SPACE_MIXIE / "mixie_moodboard_qa_targets.cc")
+    assert "moodboard_socket_hit_radius_px(hv2d, true)" in qa
+    assert "moodboard_socket_hit_radius_px(v2d)" in qa
 
 
 def test_media_without_a_graph_id_exposes_no_output():
     """A hit on id-less media would mint a link with an empty from_node_id."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
     media_loop = geometry.split("bool moodboard_find_output_socket_under_mouse(")[1]
     assert "RNA_property_string_length(&item, id_prop) == 0" in media_loop
 
@@ -118,7 +118,7 @@ def test_failed_hint_yields_to_the_visible_retry_controls():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     assert "ELEM(state, 4, 5) && controls_visible" in draw
     # One definition of controls-visible, shared with the toolbar's gate.
-    assert draw.count("MOODBOARD_GRAPH_CONTROLS_MIN_PX_X") == 1
+    assert "moodboard_node_controls_rect(C, v2d, &node, &controls_rect)" in draw
 
 
 def test_failed_nodes_show_their_error_message():
@@ -128,8 +128,15 @@ def test_failed_nodes_show_their_error_message():
     assert "MIXIE_GRAPH_ERROR_BUF" in draw
 
 
-def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
+def test_mesh_previews_stay_below_compact_settings_and_retry_controls():
+    """Mesh result thumbnails must not paint over in-tile Settings or prompts."""
     node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    controls = node_ui.split("void mixie_draw_moodboard_graph_controls(")[1]
+    assert controls.index("ui::icon_draw_preview(") < controls.index("ui::block_draw(C, block)")
+
+
+def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
     assert "show_rerun" in node_ui
     assert '"Edit & Run Again"' in node_ui
     # Blender 5.2: operator properties are set through
@@ -142,9 +149,10 @@ def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
 
 def test_node_panel_metrics_scale_with_the_ui_factor():
     """Labels render at UI_SCALE_FAC; fixed pixel rows clipped them on high-DPI."""
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
+    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
     assert "const int row_h = int(32 * ui_scale)" in node_ui
-    assert "const int panel_width = int(244 * ui_scale)" in node_ui
+    assert "const int width = int(244 * scale)" in layout
 
 
 # --------------------------------------------------------------------------- #

@@ -21,10 +21,13 @@ SPACE_MIXIE = ROOT / "src/source/blender/editors/space_mixie"
 # carry their own already-audited buffer pairings.
 GRAPH_SOURCES = (
     "mixie_moodboard_graph_geometry.cc",
+    "mixie_moodboard_graph_hit.cc",
     "mixie_draw_moodboard_graph.cc",
     "mixie_draw_moodboard_graph_sockets.cc",
     "mixie_draw_moodboard_media_labels.cc",
     "mixie_draw_moodboard_node_ui.cc",
+    "mixie_draw_moodboard_node_settings.cc",
+    "mixie_moodboard_node_layout.cc",
     "mixie_moodboard_ops_graph.cc",
     "mixie_moodboard_ops_graph_link.cc",
 )
@@ -149,7 +152,8 @@ def test_link_endpoints_and_hit_testing_share_one_pass_cache():
     draw_mode = _read(SPACE_MIXIE / "mixie_draw_moodboard.cc")
 
     assert "void moodboard_graph_cache_build(" in geometry
-    assert "moodboard_graph_cache_build(scene_ptr, &cache)" in geometry
+    hit = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
+    assert "moodboard_graph_cache_build(scene_ptr, &cache)" in hit
     assert "moodboard_graph_cache_build(&scene_ptr, &graph_cache)" in draw_mode
     assert "mixie_draw_moodboard_links(C, v2d, &graph_cache)" in draw_mode
     assert "mixie_draw_moodboard_graph_nodes(C, v2d, &graph_cache)" in draw_mode
