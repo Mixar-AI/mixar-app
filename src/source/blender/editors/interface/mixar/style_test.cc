@@ -14,7 +14,7 @@ TEST(MixarStyle, NativeDefaults)
   Button button;
   EXPECT_EQ(button.mixar_style.theme, MixarTheme::Native);
   EXPECT_EQ(button.mixar_style.component, MixarComponent::None);
-  EXPECT_EQ(sizeof(MixarButtonStyle), 16);
+  EXPECT_EQ(sizeof(MixarButtonStyle), 20);
 }
 
 TEST(MixarStyle, EnumValuesAreNeverPresentation)

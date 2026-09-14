@@ -23,9 +23,10 @@ struct rctf;
 
 enum AgentIcon {
   /* Tab strip. `generations.svg` draws marks for Agent, Gaussian Splat and
-   * My Generations only; 3D and Media borrow the cube and picture glyphs
+   * My Generations only; 3D and Media use the cube and folded-page glyphs
    * below so no tab reads as the odd one out. */
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
+  AGENT_ICON_MEDIA,     /* Folded page — Media. */
   AGENT_ICON_THUMB,     /* Thumbs-up — My Generations. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */
 
@@ -34,7 +35,7 @@ enum AgentIcon {
   AGENT_ICON_PLUS,
 
   /* Chip row, and the two tabs the design leaves unmarked. */
-  AGENT_ICON_IMAGE, /* Framed picture — Upload Reference, and the Media tab. */
+  AGENT_ICON_IMAGE, /* Framed picture — Upload Reference. */
   AGENT_ICON_STAR,
   AGENT_ICON_CHEVRON_DOWN,
   AGENT_ICON_SORT, /* Down + up arrow pair — the generations sort chip. */
@@ -45,6 +46,8 @@ enum AgentIcon {
 
   AGENT_ICON_COUNT,
 };
+
+void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4]);
 
 /**
  * Draw \a icon centred in \a box.

@@ -303,12 +303,7 @@ def test_the_report_line_elides_with_the_kits_utf8_aware_fitter():
     )
 
 
-def test_the_report_line_scales_with_the_island_unit():
-    """`u`, never AGENT_DU: AGENT_DU is island-width independent, so a label
-    sized with it changes size relative to everything around it the moment the
-    bubble is resized."""
+def test_the_report_line_uses_fixed_typography():
+    """Report text follows UI scale and DPI independently of window resizing."""
     code = _code(FEEDBACK)
-    assert "AGENT_DU" not in code
-    assert re.search(r"PANE_MSG_FONT \* u", code), (
-        "the report line's font is not in island units"
-    )
+    assert "PANE_MSG_FONT * agent_ui_text_unit()" in code

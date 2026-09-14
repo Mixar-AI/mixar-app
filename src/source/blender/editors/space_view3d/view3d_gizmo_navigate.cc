@@ -296,6 +296,17 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
     {
       rect_adjusted.xmax = drawer->winrct.xmax - region->winrct.xmin;
     }
+    /* The N-panel leaves a Moodboard-tab gutter at the right edge. That gap
+     * means the generic edge-touching visible-rect test can miss the sidebar;
+     * navigation must still sit to its left, clear of the category tabs. */
+    const ARegion *sidebar = BKE_area_find_region_type(CTX_wm_area(C), RGN_TYPE_UI);
+    if (sidebar && sidebar->overlap && sidebar->winx > 1 &&
+        !(sidebar->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)) &&
+        RGN_ALIGN_ENUM_FROM_MASK(sidebar->alignment) == RGN_ALIGN_RIGHT)
+    {
+      rect_adjusted.xmax = std::min(rect_adjusted.xmax,
+                                    sidebar->winrct.xmin - region->winrct.xmin);
+    }
   }
   rctf stage;
   if (cinema_stage_rect(C, region, &stage)) {

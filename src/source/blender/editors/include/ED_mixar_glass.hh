@@ -63,6 +63,8 @@ enum eMixarGlassRole {
   MIXAR_GLASS_CHIP,
   /** The Mixie moodboard's nodes, media frames and floating panels. */
   MIXAR_GLASS_MOODBOARD,
+  /** Green reveal tab on the Zen viewport's moodboard drawer. */
+  MIXAR_GLASS_MOODBOARD_TAB,
 };
 
 /**

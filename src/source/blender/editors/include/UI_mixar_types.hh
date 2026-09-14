@@ -149,8 +149,11 @@ struct MixarButtonStyle {
   /** Zero uses native UI metrics. Positive values are already resolved island
    * units. */
   float unit = 0.0f;
+  /** Optional typography unit, independent of responsive control geometry.
+   * Zero keeps the component's geometry unit. Native editable text is unchanged. */
+  float text_unit = 0.0f;
 };
 static_assert(std::is_trivially_copyable_v<MixarButtonStyle>);
-static_assert(sizeof(MixarButtonStyle) == 16);
+static_assert(sizeof(MixarButtonStyle) == 20);
 
 }  // namespace blender::ui

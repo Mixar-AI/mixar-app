@@ -72,6 +72,7 @@
 
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
+#include "agent_bubble_size.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
@@ -110,17 +111,17 @@ namespace blender {
  * region's layout callback. */
 #define AGENT_BUBBLE_TOP_CHROME_HEIGHT 64
 #define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 63
-/* 0.7 of the previous compact cut (800x272 empty, 800x480 with chat).
- * Painters still scale with window width. */
-#define AGENT_BUBBLE_DEFAULT_WIDTH 560
+/* Open defaults are 10% larger than the previous 616x209 / 616x370 cut.
+ * Logical OS units keep the same physical footprint across backing scales. */
+#define AGENT_BUBBLE_DEFAULT_WIDTH 678
 /* Empty-state height: chrome plus a short whole-panel prompt. Shorter than
  * the artboard so the island does not cover the viewport before a
- * conversation exists. Also the OS resize floor (AGENT_BUBBLE_MIN_HEIGHT). */
-#define AGENT_BUBBLE_DEFAULT_HEIGHT 190
+ * conversation exists. Manual resizing retains the earlier, smaller floor. */
+#define AGENT_BUBBLE_DEFAULT_HEIGHT 230
 /* Matches the empty-state window. Region sizey is unscaled: Blender
  * multiplies it by UI_SCALE_FAC, so an already-scaled AGENT_DU(...) value
  * would double-scale and the region would come back twice the window. */
-#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 190
+#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 230
 /* The island's three slabs, unscaled. Top = pill + tab strip + card header,
  * bottom = input line + chip row; the transcript takes what is left. */
 /* Slab heights are artboard UNITS; the layout converts them with the same
@@ -139,11 +140,11 @@ namespace blender {
 #define AGENT_BUBBLE_WINDOW_MIN_PX 52
 /* Extra height applied once a conversation exists, so the transcript has
  * room without a permanently tall slab over the viewport. */
-#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 146
-#define AGENT_BUBBLE_MIN_WIDTH AGENT_BUBBLE_DEFAULT_WIDTH
-#define AGENT_BUBBLE_MIN_HEIGHT AGENT_BUBBLE_DEFAULT_HEIGHT
+#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 177
+#define AGENT_BUBBLE_MIN_WIDTH 560
+#define AGENT_BUBBLE_MIN_HEIGHT 190
 #define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 80
-#define AGENT_BUBBLE_EXPANDED_HEIGHT 392
+#define AGENT_BUBBLE_EXPANDED_HEIGHT 432
 #define AGENT_BUBBLE_BODY_MIN_HEIGHT 120
 #define AGENT_BUBBLE_AUTOGROW_SLACK 12
 #ifdef _WIN32
@@ -390,6 +391,12 @@ static void *g_host_ghostwin = nullptr;
 static bool g_pill_user_placed = false;
 static int g_pill_user_offset_x = 0;
 static int g_pill_user_offset_y = 0;
+/* Expanded geometry in host-relative logical points. Both forms share the
+ * bottom-center seat; moving the host between collapse and restore is safe. */
+static bool g_bubble_seat_valid = false;
+static int g_bubble_seat_x = 0, g_bubble_seat_y = 0;
+static int g_bubble_seat_width = 0, g_bubble_seat_height = 0;
+
 
 /* Scribble PAD. While Scribble is armed the island is re-seated as a tall,
  * narrow writing pad on the host window's right third, so the 3D viewport
@@ -1426,6 +1433,15 @@ static int agent_bubble_height_floor_for_attachments(const int attachment_count)
 }
 
 #if defined(__APPLE__) || defined(_WIN32)
+static AgentBubbleSize bubble_fit_to_host(int width, int height)
+{
+  AgentBubbleSize host{};
+  if (g_host_ghostwin) {
+    Mixar_WindowGetContentSize(g_host_ghostwin, &host.width, &host.height);
+  }
+  return agent_bubble_fit_size({width, height}, host);
+}
+
 static void bubble_set_min_content_size(void *ghostwin, const int min_height)
 {
   if (ghostwin == nullptr) {
@@ -1453,7 +1469,8 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
     return;
   }
   g_bubble_last_min_height = min_height;
-  Mixar_WindowSetMinContentSize(ghostwin, AGENT_BUBBLE_MIN_WIDTH, min_height);
+  const AgentBubbleSize minimum = bubble_fit_to_host(AGENT_BUBBLE_MIN_WIDTH, min_height);
+  Mixar_WindowSetMinContentSize(ghostwin, minimum.width, minimum.height);
   /* Native screen bounds constrain resizing; the preset is not a maximum. */
   Mixar_WindowSetMaxContentSize(ghostwin, 0, 0);
 }
@@ -1568,6 +1585,11 @@ static void bubble_apply_window_size(
     return;
   }
 
+  if (ghostwin == g_bubble_ghostwin && !g_bubble_pad_active) {
+    const AgentBubbleSize fitted = bubble_fit_to_host(width, height);
+    width = fitted.width;
+    height = fitted.height;
+  }
   Mixar_WindowForceSize(ghostwin, width, height);
   /* Force-size cleared the OS min/max constraints — invalidate the
    * cache so the next bubble_set_min_content_size re-applies them. */
@@ -2105,6 +2127,13 @@ static void pill_seat_on_host()
         g_pill_ghostwin, g_host_ghostwin, g_pill_user_offset_x, g_pill_user_offset_y);
     return;
   }
+  if (g_bubble_seat_valid) {
+    Mixar_WindowAnchorAtParentOffset(
+        g_pill_ghostwin, g_host_ghostwin,
+        g_bubble_seat_x + (g_bubble_seat_width - AGENT_BUBBLE_PILL_WIDTH_LARGE) / 2,
+        g_bubble_seat_y + g_bubble_seat_height - AGENT_BUBBLE_PILL_HEIGHT_LARGE);
+    return;
+  }
   Mixar_WindowAnchorAtParentCentreBottom(
       g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
 }
@@ -2152,6 +2181,30 @@ static void pill_remember_user_seat()
   if (Mixar_WindowGetParentOffset(g_pill_ghostwin, g_host_ghostwin, &ox, &oy)) {
     g_pill_user_offset_x = ox;
     g_pill_user_offset_y = oy;
+  }
+}
+
+static void bubble_restore_seat(int width, int height)
+{
+  if (!g_host_ghostwin || !g_bubble_ghostwin) {
+    return;
+  }
+  if (g_pill_user_placed) {
+    pill_remember_user_seat();
+    Mixar_WindowAnchorAtParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin,
+        g_pill_user_offset_x + (AGENT_BUBBLE_PILL_WIDTH_LARGE - width) / 2,
+        g_pill_user_offset_y + AGENT_BUBBLE_PILL_HEIGHT_LARGE - height);
+  }
+  else if (g_bubble_seat_valid) {
+    Mixar_WindowAnchorAtParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin,
+        g_bubble_seat_x + (g_bubble_seat_width - width) / 2,
+        g_bubble_seat_y + g_bubble_seat_height - height);
+  }
+  else {
+    Mixar_WindowSnapToCentreBottomOfWindow(
+        g_bubble_ghostwin, g_host_ghostwin, AGENT_BUBBLE_BOTTOM_MARGIN);
   }
 }
 
@@ -2459,6 +2512,7 @@ void ED_agent_bubble_windows_closed()
 #if defined(__APPLE__) || defined(_WIN32)
   /* The Cinema seat globals only exist where the seat can be set — see the
    * platform guard on their declarations and on the seat functions. */
+  g_bubble_seat_valid = false;
   g_pill_cinema_seat_valid = false;
   g_pill_cinema_host = nullptr;
 #endif
@@ -2483,6 +2537,7 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
   if (ghostwin == g_bubble_ghostwin) {
     ++g_bubble_motion_generation;
     g_bubble_minimise_pending = false;
+    g_bubble_seat_valid = false;
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
@@ -2916,45 +2971,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
       return OPERATOR_FINISHED;
     }
 
-    const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
-    bubble_force_size_and_refresh(
-        C, g_bubble_ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-    bubble_set_min_content_size(g_bubble_ghostwin, collapsed_height);
-    /* Size first, then snap — see mixar_bubble_restore_exec. */
-    if (g_host_ghostwin != nullptr) {
-      Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin,
-                                             g_host_ghostwin,
-                                             AGENT_BUBBLE_BOTTOM_MARGIN);
-    }
-    /* Re-arm hidesOnDeactivate AND re-attach to host BEFORE showing
-     * (mirrors restore_exec) — avoids Win32 Alt+Tab race. */
-    Mixar_WindowSetHidesOnDeactivate(g_bubble_ghostwin, true);
-    if (g_host_ghostwin != nullptr) {
-#ifdef _WIN32
-      Mixar_WindowSetParentTracked(g_bubble_ghostwin, g_host_ghostwin);
-#else
-      Mixar_WindowSetParentPlain(g_bubble_ghostwin, g_host_ghostwin);
-#endif
-    }
-    Mixar_WindowOrderFront(g_bubble_ghostwin);
-    /* Re-parent pill directly from host → bubble (no detach step)
-     * so it's never an unowned visible window. */
-    if (g_pill_ghostwin != nullptr) {
-      pill_remember_user_seat();
-      pill_set_size(C,
-                    AGENT_BUBBLE_PILL_WIDTH,
-                    AGENT_BUBBLE_PILL_HEIGHT,
-                    AGENT_BUBBLE_PILL_CORNER_RADIUS);
-      Mixar_WindowSetParent(g_pill_ghostwin, g_bubble_ghostwin);
-      Mixar_WindowPositionAboveParent(g_pill_ghostwin,
-                                      g_bubble_ghostwin,
-                                      /*offset_x=*/0,
-                                      /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
-    }
-    g_bubble_minimised = false;
-    Mixar_WindowMakeKey(g_bubble_ghostwin);
-    agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
-    return OPERATOR_FINISHED;
+    return WM_operator_name_call(C, "MIXAR_OT_bubble_restore",
+                                 wm::OpCallContext::ExecDefault, nullptr, nullptr);
   }
 #endif
 
@@ -3795,6 +3813,24 @@ void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
 static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
+  if (g_bubble_ghostwin && !g_bubble_minimised && !g_bubble_pad_active) {
+    int width = 0, height = 0;
+    if (Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height)) {
+      const AgentBubbleSize fitted = bubble_fit_to_host(width, height);
+      if (fitted.width != width || fitted.height != height) {
+        bubble_force_size_and_refresh(C, g_bubble_ghostwin, fitted.width, fitted.height);
+        int host_w = 0, host_h = 0, x = 0, y = 0;
+        if (Mixar_WindowGetContentSize(g_host_ghostwin, &host_w, &host_h) &&
+            Mixar_WindowGetParentOffset(g_bubble_ghostwin, g_host_ghostwin, &x, &y))
+        {
+          Mixar_WindowPlaceInParent(
+              g_bubble_ghostwin, g_host_ghostwin,
+              std::clamp(x, 24, std::max(24, host_w - fitted.width - 24)),
+              std::clamp(y, 64, std::max(64, host_h - fitted.height - 48)));
+        }
+      }
+    }
+  }
   agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
   /* Scribble pad: arm -> the open island becomes the writing pad on the
    * host's right third; disarm -> it goes back. Edge-detected here because
@@ -3858,6 +3894,13 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
   }
   if (g_bubble_pad_active) {
     agent_bubble_pad_restore(C);
+  }
+  if (g_host_ghostwin) {
+    g_bubble_seat_valid = Mixar_WindowGetParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin, &g_bubble_seat_x, &g_bubble_seat_y) &&
+        Mixar_WindowGetContentSize(
+            g_bubble_ghostwin, &g_bubble_seat_width, &g_bubble_seat_height);
+    g_pill_user_placed = false;
   }
   g_bubble_minimised = true;
   g_bubble_minimise_pending = true;
@@ -3964,23 +4007,8 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   bubble_set_min_content_size(
       g_bubble_ghostwin, agent_bubble_collapsed_height_for_current_attachments(C));
 
-  /* Snap the bubble to the host's centre-bottom BEFORE bringing it
-   * forward. orderFront alone restores the bubble at its old frame
-   * origin — fine when the host hasn't moved, but if the user
-   * dragged Mixar to another monitor between minimise and restore,
-   * the bubble pops back on the original monitor while the pill is
-   * sitting on the new one. Snapping first makes the bubble appear
-   * wherever the host currently lives.
-   *
-   * AFTER the resize above, deliberately: the snap centres the bubble's
-   * CURRENT width, and a bubble minimised out of the Scribble pad (or any
-   * other non-default size) was centred at that width and then widened
-   * from its left edge — landing well off-centre. */
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin,
-                                           g_host_ghostwin,
-                                           AGENT_BUBBLE_BOTTOM_MARGIN);
-  }
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
+  bubble_restore_seat(width, height);
 #ifdef __APPLE__
   /* Animated expand: the bubble fades IN from the alpha the minimise fade
    * left it at, mirroring the minimise animation (the pill's glide up to its

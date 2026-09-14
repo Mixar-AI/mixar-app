@@ -14,6 +14,8 @@
  * preview out.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstring>
 
@@ -159,9 +161,9 @@ void splat_pane_rects_build(const rctf &panel,
 
   /* One shared Toggle contains its label and ON/OFF state. Reserve its
    * measured native recipe before placing previews; never overlap Generate. */
-  const float toggle_w = pane_text_width("Use Moodboard", PANE_FONT * u) +
-                         pane_text_width("ON", PANE_FONT * u) +
-                         pane_text_width("OFF", PANE_FONT * u) +
+  const float toggle_w = pane_text_width("Use Moodboard", PANE_FONT * agent_ui_text_unit()) +
+                         pane_text_width("ON", PANE_FONT * agent_ui_text_unit()) +
+                         pane_text_width("OFF", PANE_FONT * agent_ui_text_unit()) +
                          (2 * ui::mixar_tokens::padding + 52.0f) * u;
   r->moodboard_switch = place(toggle_w, 12.0f * u);
 
@@ -211,11 +213,8 @@ void splat_pane_paint(const bContext *C,
       const float end_x = pane_ref_thumbs_paint(
           images, count, rects.thumbs.xmin, rects.thumbs.ymin, thumb_h, max_x, u);
       if (count == 0) {
-        /* `PANE_FONT_SUB * u`, never AGENT_DU: AGENT_DU is window-width
-         * independent while `u` scales with the island, so an AGENT_DU hint
-         * was the one label in the pane that changed size relative to
-         * everything around it as soon as the bubble was resized. */
-        const float hint_font = PANE_FONT_SUB * u;
+        /* Use the same fixed text unit for fitting and drawing the hint. */
+        const float hint_font = PANE_FONT_SUB * agent_ui_text_unit();
         const char *hint = state.use_selected ? "none selected" : "no image added";
         if (end_x + pane_text_width(hint, hint_font) <= max_x) {
           pane_label_left(hint, end_x, row_cy, hint_font, dim);

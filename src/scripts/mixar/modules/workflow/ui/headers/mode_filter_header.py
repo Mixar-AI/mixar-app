@@ -42,94 +42,13 @@ _SLIDER_HALF_UNITS = 5.5
 painter derives the full track by mirroring the left half's rect."""
 
 
-def _separator_factor_for_px(context, px: float) -> float:
-    """`separator(factor=...)` that measures \a px pixels wide.
-
-    `uiLayout::separator` spends `int(6 * UI_SCALE_FAC * factor)` px in a
-    non-menu block, and `system.ui_scale` is RNA for `U.scale_factor` (the
-    same DPI-inclusive number `UI_SCALE_FAC` reads), so this inverts
-    Blender's own arithmetic rather than assuming a unit size.
-
-    A real separator button rather than an empty sized row: an empty
-    sub-layout carries no button and never reaches the row layout, so its
-    `ui_units_x` was silently dropped and the slider stayed centred in the
-    left region.
-    """
-    scale = float(getattr(context.preferences.system, "ui_scale", 1.0)) or 1.0
-    return px / (6.0 * scale)
-
-
-_MENU_STRIP_UNITS = 16.0
-"""Room the File/Edit/Render/Window/Help strip and its separator take, in UI
-units. An estimate is enough: the pad only has to stop SHORT of the region
-edge, and the flex spacers absorb whatever it leaves."""
-
-_PAD_SAFETY_UNITS = 1.0
-"""Slack kept free so the flex spacers still have something to spend.
-`ui_update_flexible_spacing` bails out entirely once the content is wider than
-the region — content then packs left and the tail (the slider) is clipped off
-the end, which is exactly what a pad the full width of the right region caused
-at ~1280 px, at UI scale 1.25, or with a long account email widening the
-profile chip."""
-
-
-def _centring_pad_px(context, right_px: float) -> float:
-    """The centring pad, clamped to what the LEFT region can actually spend."""
-    region = getattr(context, "region", None)
-    width = float(getattr(region, "width", 0) or 0)
-    if width <= 0.0:
-        return 0.0
-    scale = float(getattr(context.preferences.system, "ui_scale", 1.0)) or 1.0
-    # UI_UNIT_X is 20 logical px; `ui_scale` is the same DPI-inclusive factor
-    # UI_SCALE_FAC reads.
-    unit_px = 20.0 * scale
-    reserved = (
-        _MENU_STRIP_UNITS + _SLIDER_HALF_UNITS * 2.0 + _PAD_SAFETY_UNITS
-    ) * unit_px
-    return max(0.0, min(float(right_px), width - reserved))
-
-
-def _right_region_width(context) -> int:
-    """Width of the topbar's RIGHT region (scene/view-layer + profile)."""
-    area = getattr(context, "area", None)
-    if area is None:
-        return 0
-    for region in area.regions:
-        if region.alignment == 'RIGHT':
-            return region.width
-    return 0
-
-
 def _draw_mode_slider(layout, context) -> None:
-    """Zen/Engine segmented slider, centred in the window.
-
-    Centring: the slider lives in the topbar's LEFT region, so two flex
-    spacers alone would centre it in that region — visibly left of the
-    window centre, because the RIGHT region takes the remaining width. A
-    fixed pad of exactly the right region's width, placed before the
-    slider and between the flex spacers, moves the centre from L/2 to
-    (L+R)/2 — the true window centre.
-    """
+    """Native layout centers the final slider rectangles in the full window."""
     workspace = getattr(context, "workspace", None)
     is_zen = workspace is not None and workspace.name == BASIC_WORKSPACE_NAME
     mode_slider_anim.note_mode(is_zen)
 
     layout.separator_spacer()
-
-    # The pad is only affordable in Zen. In Engine the workspace tabs leave
-    # ~50 px of slack in the left region, so demanding the right region's
-    # width pushed the slider clean off the end and it vanished. There the
-    # flex spacers alone centre it in whatever room is left — visibly right
-    # of the tabs, a little left of true centre, but always present.
-    #
-    # The pad is also CLAMPED to the room the left region has left after the
-    # menus and the slider itself. Unclamped it could exceed the region and
-    # push the slider off the end — perfect centring is worth nothing if the
-    # control it centres is clipped away.
-    if is_zen:
-        pad_px = _centring_pad_px(context, _right_region_width(context))
-        if pad_px > 0.0:
-            layout.separator(factor=_separator_factor_for_px(context, pad_px))
 
     # Tag each half IMMEDIATELY after creating it: the tag applies to the
     # BLOCK's most recent button, not to the sub-layout it is called on, so
@@ -182,6 +101,7 @@ def _patched_draw_left(self, context):
         _draw_mode_slider(layout, context)
         return
 
+    layout.menu("MIXAR_MT_engine_workspaces", text="", icon='WORKSPACE')
     layout.template_ID_tabs(
         window, "workspace",
         new="workspace.add",
@@ -202,7 +122,13 @@ def _patched_draw_right(self, context):
     workspace = getattr(context, "workspace", None)
     if workspace is not None and workspace.name == BASIC_WORKSPACE_NAME:
         return
-    if _original_draw_right is not None:
+    # Two full datablock selectors plus Cinema/profile can consume more than
+    # half the header. On narrower or scaled displays keep both selectors in
+    # one native popover, leaving the mode switch's center lane available.
+    scale = max(float(context.preferences.system.ui_scale), 0.01)
+    if context.area.width / scale < 1640 and hasattr(bpy.types, "MIXAR_PT_scene_controls"):
+        self.layout.popover(panel="MIXAR_PT_scene_controls", text="", icon='SCENE_DATA')
+    elif _original_draw_right is not None:
         _original_draw_right(self, context)
 
 

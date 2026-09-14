@@ -8,6 +8,7 @@
  */
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -38,6 +39,7 @@
 
 #include "ED_asset_shelf.hh"
 #include "ED_buttons.hh"
+#include "ED_moodboard_drawer.hh"
 #include "ED_screen.hh"
 #include "ED_screen_types.hh"
 #include "ED_space_api.hh"
@@ -1499,11 +1501,19 @@ static void mixar_floating_headers_clip(const ARegion *region, rcti *overlap_rem
 /* function checks if some overlapping region was defined before - on same place */
 static void region_overlap_fix(ScrArea *area, ARegion *region)
 {
+  /* Its transparent gutter and painted slice have their own visual hit test.
+   * Stacking the drawer beside the N-panel detaches its closed grip from the edge. */
+  if (view3d_moodboard_drawer_is_overlay(area, region)) {
+    return;
+  }
   /* find overlapping previous region on same place */
   ARegion *region_iter;
   int align1 = 0;
   const int align = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
+      continue;
+    }
     if (region_is_hidden(region_iter)) {
       continue;
     }
@@ -1555,6 +1565,9 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
   /* At this point, 'region' is in its final position and still open.
    * Make a final check it does not overlap any previous 'other side' region. */
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
+      continue;
+    }
     if (region_is_hidden(region_iter)) {
       continue;
     }
@@ -1826,6 +1839,24 @@ static void region_rect_recursive(
   }
   else if (ELEM(alignment, RGN_ALIGN_LEFT, RGN_ALIGN_RIGHT)) {
     rcti *winrct = (region->overlap) ? overlap_remainder : remainder;
+    /* Leave a lane for the edge-anchored Moodboard tab so it cannot cover the
+     * N-panel's category tabs. The viewport and drawer retain the full width. */
+    if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_UI &&
+        region->overlap && alignment == RGN_ALIGN_RIGHT)
+    {
+      const ARegion *drawer = BKE_area_find_region_type(area, RGN_TYPE_TOOL_PROPS);
+      if (drawer && !(drawer->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED))) {
+        winrct->xmax -= int(std::ceil(VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH * UI_SCALE_FAC));
+      }
+    }
+    /* Allocate the drawer against the viewport, independent of sidebars, and
+     * leave their allocation unchanged. Floating headers still bound its height. */
+    rcti drawer_remainder;
+    if (view3d_moodboard_drawer_is_overlay(area, region)) {
+      drawer_remainder = *remainder;
+      mixar_floating_headers_clip(region, &drawer_remainder);
+      winrct = &drawer_remainder;
+    }
     const int width = BLI_rcti_size_x(winrct) + 1;
     if (prefsizex == 0) {
       region->flag |= RGN_FLAG_TOO_SMALL;

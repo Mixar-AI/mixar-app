@@ -14,6 +14,8 @@
  * that touches `Image`/`ImBuf`, so those includes stay on this side.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 
 #include "BKE_context.hh"
@@ -166,8 +168,8 @@ float pane_ref_thumbs_paint(Image *const *images,
   if (shown < count) {
     char more[24];
     SNPRINTF(more, "+%d", count - shown);
-    pane_label_left(more, tx + 2.0f * u, row_ymin + row_h * 0.5f, PANE_FONT_SUB * u, dim);
-    tx += pane_text_width(more, PANE_FONT_SUB * u) + gap;
+    pane_label_left(more, tx + 2.0f * u, row_ymin + row_h * 0.5f, PANE_FONT_SUB * agent_ui_text_unit(), dim);
+    tx += pane_text_width(more, PANE_FONT_SUB * agent_ui_text_unit()) + gap;
   }
   return tx;
 }

@@ -14,6 +14,8 @@
  * the pixel it targets was drawn.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -729,7 +731,7 @@ void agent_ui_draw_island(ARegion *region,
         }
       }
 
-      const float font_size = 18.0f * u;
+      const float font_size = 18.0f * agent_ui_text_unit();
       const float text_w = text_width(disp, font_size);
       const float pad_x = 18.0f * u;
       const float win_w = std::clamp(text_w + pad_x * 2.0f, 220.0f * u, max_w);
@@ -768,13 +770,13 @@ void agent_ui_draw_island(ARegion *region,
       label_centre(state->title,
                    layout->hdr_title_cx,
                    layout->hdr_title_y,
-                   AGENT_HDR_TITLE_FONT * u,
+                   AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
                    strong);
     }
     label_right("FAQs",
                 layout->hdr_faq.xmax,
                 BLI_rctf_cent_y(&layout->hdr_faq),
-                AGENT_HDR_FAQ_FONT * u,
+                AGENT_HDR_FAQ_FONT * agent_ui_text_unit(),
                 strong);
   }
   else {
@@ -797,7 +799,7 @@ void agent_ui_draw_island(ARegion *region,
     label_centre(tab_title,
                  layout->hdr_title_cx,
                  layout->hdr_title_y,
-                 AGENT_HDR_TITLE_FONT * u,
+                 AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
                  strong);
   }
 
