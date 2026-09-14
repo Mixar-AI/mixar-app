@@ -559,6 +559,24 @@ def test_pill_gets_a_dock_window_type_and_the_island_does_not():
     assert "already" in body, "must be idempotent"
 
 
+def test_x11_alpha_zero_hides_by_unmapping():
+    """alpha 0 means "hide", and X11 has no compositor to honour opacity.
+
+    space_agent_bubble.cc puts the pill away with Mixar_WindowSetAlpha(0) while
+    the island is expanded. _NET_WM_WINDOW_OPACITY only hides under a
+    compositing manager, and Xvfb + openbox has none, so an opacity-only
+    implementation left the pill sitting on top of the chat. Map state is what
+    X11 always honours.
+    """
+    body = _x11_source().split("void Mixar_WindowSetAlpha(", 1)[1].split("\nextern ", 1)[0]
+    assert "XUnmapWindow(" in body, "alpha 0 must unmap"
+    assert "XMapWindow(" in body, "a non-zero alpha must map it back"
+    # the unmap must come before any opacity handling, so a missing atom
+    # cannot swallow the hide
+    opacity_lookup = 'XInternAtom(display, "_NET_WM_WINDOW_OPACITY"'
+    assert body.index("XUnmapWindow(") < body.index(opacity_lookup)
+
+
 def test_x11_chrome_and_reads_use_the_right_gate():
     """Decoration/size writes take the chrome gate; pure reads take none.
 

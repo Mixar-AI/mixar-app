@@ -535,14 +535,37 @@ extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha)
 {
   Display *display;
   Window window;
-  if (!mixar_x11_resolve(window_handle, &display, &window)) {
-    return;
-  }
-  Atom opacity = XInternAtom(display, "_NET_WM_WINDOW_OPACITY", False);
-  if (opacity == None) {
+  if (!mixar_x11_resolve_chrome(window_handle, &display, &window)) {
     return;
   }
   const float clamped = std::min(1.0f, std::max(0.0f, alpha));
+
+  /* Callers use alpha 0 to HIDE a window — that is how the pill is put away
+   * while the island is expanded (space_agent_bubble.cc). _NET_WM_WINDOW_OPACITY
+   * only does that under a compositing manager, and there is none under Xvfb +
+   * openbox, so an opacity-only implementation left the pill fully visible on
+   * top of the chat. Map state is what X11 always honours, so drive that and
+   * set the opacity too for the compositors that do read it.
+   *
+   * Map/unmap is the pair minimise/restore already uses. Mixar_WindowIsVisible
+   * reports map state, so a hidden window correctly stops being drawn. */
+  if (clamped <= 0.0f) {
+    if (mixar_x11_is_viewable(display, window)) {
+      XUnmapWindow(display, window);
+      XFlush(display);
+    }
+    return;
+  }
+  if (!mixar_x11_is_viewable(display, window)) {
+    XMapWindow(display, window);
+    XRaiseWindow(display, window);
+  }
+
+  Atom opacity = XInternAtom(display, "_NET_WM_WINDOW_OPACITY", False);
+  if (opacity == None) {
+    XFlush(display);
+    return;
+  }
   if (clamped >= 1.0f) {
     XDeleteProperty(display, window, opacity);
   }

@@ -100,8 +100,12 @@ extern "C" void Mixar_WindowPositionAboveParent(void *child_handle,
 {
   Display *display;
   Window child, parent;
-  if (!mixar_x11_resolve(child_handle, &display, &child) ||
-      !mixar_x11_resolve(parent_handle, &display, &parent))
+  /* Chrome gate, not the heavy one: this only ever calls XMoveWindow. What
+   * destroyed the GL context on this stack was XMoveResizeWindow, which
+   * resizes a live drawable — a pure move does not. Without this the pill
+   * never reaches its anchor and sits wherever the WM first placed it. */
+  if (!mixar_x11_resolve_chrome(child_handle, &display, &child) ||
+      !mixar_x11_resolve_chrome(parent_handle, &display, &parent))
   {
     return;
   }
