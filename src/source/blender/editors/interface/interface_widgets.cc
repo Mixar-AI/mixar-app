@@ -42,9 +42,12 @@
 
 #include "buttons/interface_textbox.hh"
 #include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 
 #include "GPU_batch.hh"
 #include "GPU_batch_presets.hh"
@@ -1354,6 +1357,8 @@ static int but_draw_menu_icon(const Button *but)
 
 /* icons have been standardized... and this call draws in untransformed coordinates */
 
+static bool zen_glass_cell(const Button *but);
+
 static void widget_draw_icon(
     const Button *but, BIFIconID icon, float alpha, const rcti *rect, const uchar mono_color[4])
 {
@@ -1470,7 +1475,7 @@ static void widget_draw_icon(
     else if (but->flag & (UI_HOVER | UI_SELECT | UI_SELECT_DRAW)) {
       icon_draw_ex(xs, ys, icon, aspect, alpha, 0.0f, color, outline, &but->icon_overlay_text);
     }
-    else if (!((but->icon != ICON_NONE) && but_is_tool(but))) {
+    else if (!((but->icon != ICON_NONE) && (but_is_tool(but) || zen_glass_cell(but)))) {
       if (has_theme) {
         alpha *= 0.8f;
       }
@@ -5240,6 +5245,37 @@ static void widget_textbut(uiWidgetColors *wcol,
   widgetbase_draw(&wtb, wcol);
 }
 
+/* Mixar: Text chrome used to ignore button_color_set (only widget_box
+ * honoured but->col). The island's empty-state field is a full-region
+ * Text button — without this, its theme inner is an opaque slab over
+ * the frost. */
+static void widget_textbut_custom(Button *but,
+                                  uiWidgetColors *wcol,
+                                  rcti *rect,
+                                  const WidgetStateInfo *state,
+                                  int roundboxalign,
+                                  const float zoom)
+{
+  /* The island's empty-state field is a full-region Text button. Its
+   * theme inner is opaque `#121212` and dest-over cannot lower dest A=1,
+   * so frost never reaches the compositor. Skip chrome on a tall field
+   * (the panel) and on an explicit wash; placeholder and typed text
+   * still draw via wt->text. Emboss stays so clicks work. */
+  if (rect != nullptr && BLI_rcti_size_y(rect) > 120) {
+    return;
+  }
+  if (but != nullptr && but->col[3]) {
+    if (but->col[3] < 128) {
+      return;
+    }
+    wcol->inner[0] = but->col[0];
+    wcol->inner[1] = but->col[1];
+    wcol->inner[2] = but->col[2];
+    wcol->inner[3] = but->col[3];
+  }
+  widget_textbut(wcol, rect, state, roundboxalign, zoom);
+}
+
 static void widget_menuiconbut(uiWidgetColors *wcol,
                                rcti *rect,
                                const WidgetStateInfo * /*state*/,
@@ -5481,13 +5517,14 @@ static void widget_optionbut(uiWidgetColors *wcol,
  * surface read the same MX_* values instead of re-declaring them. */
 
 /* Mixar pill-shaped toggle switch. */
-static void widget_mixar_toggle(uiWidgetColors *wcol,
+static void widget_mixar_toggle(Button *but,
+                                uiWidgetColors *wcol,
                                 rcti *rect,
                                 const WidgetStateInfo *state,
                                 int /*roundboxalign*/,
                                 const float /*zoom*/)
 {
-  const bool is_checked = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
   const bool text_before_widget = (state->but_drawflag & BUT_TEXT_RIGHT);
 
   /* --- Compute toggle track rect (pill shape) ----------------------------- */
@@ -5518,13 +5555,13 @@ static void widget_mixar_toggle(uiWidgetColors *wcol,
   trackf.ymax = float(track.ymax);
 
   float track_col[4];
-  if (is_checked) {
-    /* ON: #00C0C7 cyan (no lime/parrot green anywhere). */
-    rgba_uchar_to_float(track_col, MX_TOGGLE_ON);
+  for (int channel = 0; channel < 4; channel++) {
+    track_col[channel] = (float(MX_GRAY_700[channel]) +
+                          (float(MX_TOGGLE_ON[channel]) - float(MX_GRAY_700[channel])) *
+                              motion.selected) / 255.0f;
   }
-  else {
-    /* OFF: neutral gray-700 track. */
-    rgba_uchar_to_float(track_col, MX_GRAY_700);
+  for (int channel = 0; channel < 3; channel++) {
+    track_col[channel] = std::min(1.0f, track_col[channel] + 0.035f * motion.hover);
   }
 
   GPU_blend(GPU_BLEND_ALPHA);
@@ -5540,13 +5577,9 @@ static void widget_mixar_toggle(uiWidgetColors *wcol,
   const float knob_rad = (float(track_h) * 0.5f) - knob_padding;
   const float knob_y = (trackf.ymin + trackf.ymax) * 0.5f;
 
-  float knob_x;
-  if (is_checked) {
-    knob_x = trackf.xmax - knob_rad - knob_padding;
-  }
-  else {
-    knob_x = trackf.xmin + knob_rad + knob_padding;
-  }
+  const float knob_left = trackf.xmin + knob_rad + knob_padding;
+  const float knob_right = trackf.xmax - knob_rad - knob_padding;
+  const float knob_x = knob_left + (knob_right - knob_left) * motion.selected;
 
   rctf knob_rect;
   knob_rect.xmin = knob_x - knob_rad;
@@ -5728,15 +5761,35 @@ static void widget_mixar_section(Button *but,
   /* --mx-r-md: 8px flat card. */
   const float rad = MX_R_MD * UI_SCALE_FAC;
 
-  /* Flat grouped card: #141414 fill (matches the panel/prompt black), 1px
-   * #262626 border. No drop shadow, no accent stripe. Force shaded=0 — the
-   * box widget's default top/bottom shade gradient would otherwise lighten
-   * the fill into an uneven charcoal instead of a flat black. */
+  /* A grouped card is a surface, so it is a pane now: the kit's CHIP material
+   * where the flat fill sat, with the design's own #141414 bed washed over it
+   * and its 1px #262626 border on top. CHIP is the role for a shape that sits
+   * ON another pane — tint, a hair of gloss, the family rim — and it is the
+   * only role whose bed is FLAT top-to-bottom (the property `shaded = 0` below
+   * exists to protect) and one of the two dark roles with no specular, which
+   * matters because a widget is painted in BLOCK coordinates where the
+   * streak's region-px scissor could not be placed. The pane is laid BEFORE
+   * the bed, which is queued into the widget batch and flushed at the end. */
+  rctf card;
+  BLI_rctf_rcti_copy(&card, rect);
+  mixar_card_glass_round(&card, rad, MIXAR_GLASS_CHIP);
+
+  /* The design's own near-black bed is a WASH, not a slab: #141414 as
+   * designed is opaque and would cover the very material the card now sits
+   * in, so only a fraction of it is laid back down — still the card's own
+   * black, over the pane's rim and gloss. Force shaded=0 — the box widget's
+   * default top/bottom shade gradient would otherwise lighten the fill into
+   * an uneven charcoal instead of a flat black. */
+  constexpr float CARD_WASH = 0.6f;
+  uchar bed[4];
+  copy_v4_v4_uchar(bed, MX_BG);
+  bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);
+
   uchar old_inner[4], old_outline[4];
   const char old_shaded = wcol->shaded;
   copy_v4_v4_uchar(old_inner, wcol->inner);
   copy_v4_v4_uchar(old_outline, wcol->outline);
-  copy_v4_v4_uchar(wcol->inner, MX_BG);
+  copy_v4_v4_uchar(wcol->inner, bed);
   copy_v4_v4_uchar(wcol->outline, MX_BORDER);
   wcol->shaded = 0;
 
@@ -5749,7 +5802,7 @@ static void widget_mixar_section(Button *but,
   copy_v4_v4_uchar(wcol->outline, old_outline);
   wcol->shaded = old_shaded;
 
-  /* Flush draw cache so contents render on top. */
+  /* Flush draw cache so the card's own bed renders on top of the pane. */
   GPU_blend(GPU_BLEND_ALPHA);
   widgetbase_draw_cache_flush();
   GPU_blend(GPU_BLEND_NONE);
@@ -5757,7 +5810,8 @@ static void widget_mixar_section(Button *but,
 
 /* -- Mixar Dropdown Widget ----------------------------------------------- */
 
-static void widget_mixar_dropdown(uiWidgetColors *wcol,
+static void widget_mixar_dropdown(Button *but,
+                                  uiWidgetColors *wcol,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
                                   int roundboxalign,
@@ -5770,8 +5824,7 @@ static void widget_mixar_dropdown(uiWidgetColors *wcol,
   const float rad = MX_R_SM * UI_SCALE_FAC;
   const float height = float(BLI_rcti_size_y(rect));
 
-  const bool is_hover = (state->but_flag & UI_HOVER) != 0;
-  const bool is_active = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
 
   /* --- Save & set colors ------------------------------------------------ */
   uchar old_inner[4], old_outline[4], old_item[4];
@@ -5782,15 +5835,9 @@ static void widget_mixar_dropdown(uiWidgetColors *wcol,
   /* #1f1f1f fill / #2e2e2e border — identical to the input recipe. Subtle
    * lift on hover / dim on press; state only, no accent chrome. */
   copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
-  if (is_active) {
-    wcol->inner[0] = uchar(int(wcol->inner[0]) * 85 / 100);
-    wcol->inner[1] = uchar(int(wcol->inner[1]) * 85 / 100);
-    wcol->inner[2] = uchar(int(wcol->inner[2]) * 85 / 100);
-  }
-  else if (is_hover) {
-    wcol->inner[0] = uchar(std::min(int(wcol->inner[0]) * 115 / 100, 255));
-    wcol->inner[1] = uchar(std::min(int(wcol->inner[1]) * 115 / 100, 255));
-    wcol->inner[2] = uchar(std::min(int(wcol->inner[2]) * 115 / 100, 255));
+  for (int channel = 0; channel < 3; channel++) {
+    const float boost = (1.0f + 0.15f * motion.hover) * (1.0f - 0.15f * motion.press);
+    wcol->inner[channel] = uchar(std::min(float(wcol->inner[channel]) * boost, 255.0f));
   }
   copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
 
@@ -5901,15 +5948,14 @@ static void mixar_draw_gradient_hbar(const rctf *rect, float rad)
   GPU_blend(GPU_BLEND_NONE);
 }
 
-static void widget_mixar_action_button(Button * /*but*/,
+static void widget_mixar_action_button(Button *but,
                                        uiWidgetColors *wcol,
                                        rcti *rect,
                                        const WidgetStateInfo *state,
                                        int /*roundboxalign*/,
                                        const float /*zoom*/)
 {
-  const bool is_hover = (state->but_flag & UI_HOVER) != 0;
-  const bool is_active = (state->but_flag & UI_SELECT) != 0;
+  const MixarInteraction motion = mixar_button_motion(*but);
 
   /* --mx-r-md: 8px. */
   const float rad = MX_R_MD * UI_SCALE_FAC;
@@ -5946,22 +5992,14 @@ static void widget_mixar_action_button(Button * /*but*/,
     GPU_blend(GPU_BLEND_NONE);
   }
 
-  /* Hover/press: Blender has no CSS brightness/transform, so approximate
-   * `filter: brightness(1.08)` (hover) and the press dim with a translucent
-   * overlay. No motion — the platform can't lift/drop the button. */
-  if (is_hover || is_active) {
-    float ov_col[4];
-    if (is_active) {
-      ov_col[0] = ov_col[1] = ov_col[2] = 0.0f;
-      ov_col[3] = 0.12f;
-    }
-    else {
-      ov_col[0] = ov_col[1] = ov_col[2] = 1.0f;
-      ov_col[3] = 0.08f;
-    }
+  /* Interpolate overlays independently so a release also has a soft landing. */
+  if (motion.hover > 0.0f || motion.press > 0.0f) {
+    const float hover_col[4] = {1.0f, 1.0f, 1.0f, 0.08f * motion.hover};
+    const float press_col[4] = {0.0f, 0.0f, 0.0f, 0.12f * motion.press};
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
-    draw_roundbox_4fv(&rectf, true, rad, ov_col);
+    draw_roundbox_4fv(&rectf, true, rad, hover_col);
+    draw_roundbox_4fv(&rectf, true, rad, press_col);
     GPU_blend(GPU_BLEND_NONE);
   }
 
@@ -6026,6 +6064,141 @@ static void widget_roundbut(uiWidgetColors *wcol, rcti *rect, int /*state*/ int 
 }
 #endif
 
+static bool zen_toolbar_tool(const Button *but)
+{
+  return but != nullptr && but_is_tool(but) && but->mixar_style.theme == MixarTheme::Zen;
+}
+
+/** One PILL pane: the toolbar trio, or the header's icon-only shading strip. */
+static bool zen_glass_cell(const Button *but)
+{
+  if (zen_toolbar_tool(but)) {
+    return true;
+  }
+  if (but == nullptr || but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0) {
+    return false;
+  }
+  if (but->mixar_style.component != MixarComponent::None) {
+    return false;
+  }
+  return but->type == ButtonType::Row && but->icon != ICON_NONE && but->drawstr.empty();
+}
+
+/**
+ * Move / Rotate / Scale share one PILL pane — the same material as the
+ * minimised chat capsule. `column(align=True)` sets `alignnr` and
+ * `roundboxalign`; a per-cell fully-rounded pane split them into three
+ * pills. The first button in the group paints the union; selected is a
+ * circular chip inset in the cell so the active shading icon reads on
+ * the dark PILL. Unselected shading icons desaturate like toolbar tools.
+ *
+ * The Zen header shading strip uses the same painter on a horizontal
+ * `row(align=True)` of native RNA enum buttons.
+ *
+ * Native frost is a window effect the toolbar cannot request, so the bed
+ * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost
+ * path uses, then the shared sheen and rim with `draw_tint=false`. The
+ * kit's fallback floor would otherwise raise that bed to 0.74.
+ */
+static void widget_zen_tool_glass(Button *but,
+                                  rcti *rect,
+                                  const WidgetStateInfo *state,
+                                  const int /*roundboxalign*/)
+{
+  rctf pane;
+  BLI_rctf_rcti_copy(&pane, rect);
+  bool paint_bed = true;
+
+  if (but->block != nullptr && but->alignnr != 0) {
+    rctf uni = but->rect;
+    int first_index = but->block->but_index(but);
+    for (Button &other : but->block->buttons()) {
+      if (!zen_glass_cell(&other) || other.alignnr != but->alignnr) {
+        continue;
+      }
+      BLI_rctf_union(&uni, &other.rect);
+      first_index = std::min(first_index, but->block->but_index(&other));
+    }
+    paint_bed = (but->block->but_index(but) == first_index);
+    if (paint_bed) {
+      pane.xmin = uni.xmin + (float(rect->xmin) - but->rect.xmin);
+      pane.ymin = uni.ymin + (float(rect->ymin) - but->rect.ymin);
+      pane.xmax = uni.xmax + (float(rect->xmax) - but->rect.xmax);
+      pane.ymax = uni.ymax + (float(rect->ymax) - but->rect.ymax);
+    }
+  }
+
+  if (paint_bed) {
+    const float glass_rad = 0.5f * std::min(BLI_rctf_size_x(&pane), BLI_rctf_size_y(&pane));
+    const MixarGlassTokens tokens = mixar_glass_tokens(MIXAR_GLASS_PILL);
+    const float wash[4] = {
+        tokens.tint_bottom[0], tokens.tint_bottom[1], tokens.tint_bottom[2], 0.20f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&pane, true, glass_rad, wash);
+    GPU_blend(GPU_BLEND_NONE);
+    rcti pane_i;
+    BLI_rcti_rctf_copy(&pane_i, &pane);
+    MixarGlassStyle style;
+    style.role = MIXAR_GLASS_PILL;
+    style.radius = glass_rad;
+    style.draw_shadow = false;
+    style.draw_specular = false;
+    style.draw_tint = false;
+    mixar_glass_draw(pane_i, style);
+  }
+
+  const bool selected = (state->but_flag & (UI_SELECT | UI_SELECT_DRAW)) != 0 ||
+                        but->mixar_style.lit;
+  const bool hover = (state->but_flag & UI_HOVER) != 0;
+  if (selected || hover) {
+    rctf cell;
+    BLI_rctf_rcti_copy(&cell, rect);
+    BLI_rctf_pad(&cell, -2.0f * UI_SCALE_FAC, -2.0f * UI_SCALE_FAC);
+    const float cell_rad = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
+    float wash[4];
+    if (selected) {
+      copy_v4_v4(wash, mixar_tokens::zen.selected);
+      wash[3] = 0.88f;
+    }
+    else {
+      wash[0] = wash[1] = wash[2] = 1.0f;
+      wash[3] = 0.08f;
+    }
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&cell, true, cell_rad, wash);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+
+  if (but->drawflag & BUT_ALIGN_DOWN) {
+    rctf rule;
+    BLI_rctf_rcti_copy(&rule, rect);
+    const float inset = 6.0f * UI_SCALE_FAC;
+    rule.xmin += inset;
+    rule.xmax -= inset;
+    rule.ymax = rule.ymin + U.pixelsize;
+    const float rule_col[4] = {1.0f, 1.0f, 1.0f, 0.10f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_NONE);
+    draw_roundbox_4fv(&rule, true, 0.0f, rule_col);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+  if (but->drawflag & BUT_ALIGN_RIGHT) {
+    rctf rule;
+    BLI_rctf_rcti_copy(&rule, rect);
+    const float inset = 6.0f * UI_SCALE_FAC;
+    rule.ymin += inset;
+    rule.ymax -= inset;
+    rule.xmin = rule.xmax - U.pixelsize;
+    const float rule_col[4] = {1.0f, 1.0f, 1.0f, 0.10f};
+    GPU_blend(GPU_BLEND_ALPHA);
+    draw_roundbox_corner_set(CNR_NONE);
+    draw_roundbox_4fv(&rule, true, 0.0f, rule_col);
+    GPU_blend(GPU_BLEND_NONE);
+  }
+}
+
 static void widget_roundbut_exec(Button *but,
                                  uiWidgetColors *wcol,
                                  rcti *rect,
@@ -6045,8 +6218,10 @@ static void widget_roundbut_exec(Button *but,
 
   wtb.draw_emboss = draw_emboss(but);
 
+  bool overlay = false;
   if (const ButtonPush *push_but = dynamic_cast<ButtonPush *>(but)) {
-    if (push_but->draw_as_overlay) {
+    overlay = push_but->draw_as_overlay;
+    if (overlay) {
       /* Enforce a full circle. */
       rad = BLI_rcti_size_y(rect) * 0.5f;
       roundboxalign = CNR_ALL;
@@ -6062,6 +6237,12 @@ static void widget_roundbut_exec(Button *but,
       copy_v4_v4_uchar(wcol->text, foreground_col);
       copy_v4_v4_uchar(wcol->text_sel, foreground_col);
     }
+  }
+  if (!overlay && zen_glass_cell(but)) {
+    widget_zen_tool_glass(but, rect, state, roundboxalign);
+    wtb.draw_inner = false;
+    wtb.draw_outline = false;
+    wtb.draw_emboss = false;
   }
 
   /* half rounded */
@@ -6231,7 +6412,7 @@ static WidgetType *widget_type(WidgetStyle type)
     /* strings */
     case WidgetStyle::Name:
       wt.wcol_theme = &btheme->tui.wcol_text;
-      wt.draw = widget_textbut;
+      wt.custom = widget_textbut_custom;
       break;
 
     case WidgetStyle::NameLink:
@@ -6321,7 +6502,7 @@ static WidgetType *widget_type(WidgetStyle type)
 
     case WidgetStyle::MixarDropdown:
       wt.wcol_theme = &btheme->tui.wcol_menu;
-      wt.draw = widget_mixar_dropdown;
+      wt.custom = widget_mixar_dropdown;
       break;
 
     case WidgetStyle::MixarAction:
@@ -6331,7 +6512,7 @@ static WidgetType *widget_type(WidgetStyle type)
 
     case WidgetStyle::MixarToggle:
       wt.wcol_theme = &btheme->tui.wcol_option;
-      wt.draw = widget_mixar_toggle;
+      wt.custom = widget_mixar_toggle;
       break;
 
     case WidgetStyle::MixarInput:
@@ -6497,10 +6678,17 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
    * the cursor. Such a row is NOT claimed here; it falls through to the
    * stock chain, the row painter lays its chip first (below) and the stock
    * backdrop is dropped so only the text pass runs on top. */
-  const MixarCardElement mixar_element = UI_mixar_card_element_get(but);
+  const bool mixar_component = but->mixar_style.theme == MixarTheme::Zen &&
+      but->mixar_style.component != MixarComponent::None &&
+      but->mixar_style.component != MixarComponent::LegacyCard;
+  const MixarCardElement mixar_element = but->mixar_style.theme == MixarTheme::Native ?
+      MixarCardElement::None : UI_mixar_card_element_get(but);
   const bool mixar_row_editing = mixar_element == MixarCardElement::CinemaRow &&
                                  but->editstr != nullptr;
-  if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
+  if (mixar_component) {
+    wt = widget_type(WidgetStyle::Regular);
+  }
+  else if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
     wt = widget_type(WidgetStyle::MixarCard);
   }
   /* handle menus separately */
@@ -6588,7 +6776,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::But:
       case ButtonType::Decorator:
-        if (but->flag2 & UI_BUT2_MIXAR_ACTION) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Action) {
           wt = widget_type(WidgetStyle::MixarAction);
         }
 #ifdef USE_UI_TOOLBAR_HACK
@@ -6626,7 +6815,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::TextBox:
       case ButtonType::Text:
-        if (but->flag2 & UI_BUT2_MIXAR_INPUT) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Input) {
           wt = widget_type(WidgetStyle::MixarInput);
         }
         else {
@@ -6650,7 +6840,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::Checkbox:
       case ButtonType::CheckboxN:
-        if (but->flag2 & UI_BUT2_MIXAR_TOGGLE) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Toggle) {
           wt = widget_type(WidgetStyle::MixarToggle);
           if ((but->drawflag & (BUT_TEXT_LEFT | BUT_TEXT_RIGHT)) == 0) {
             but->drawflag |= BUT_TEXT_LEFT;
@@ -6681,7 +6872,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
       case ButtonType::Menu:
       case ButtonType::Block:
       case ButtonType::Popover:
-        if (but->flag2 & UI_BUT2_MIXAR_DROPDOWN) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Dropdown) {
           wt = widget_type(WidgetStyle::MixarDropdown);
         }
         else if (but->flag & BUT_NODE_LINK) {
@@ -6708,7 +6900,8 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
       case ButtonType::Roundbox:
       case ButtonType::ListBox:
-        if (but->flag2 & UI_BUT2_MIXAR_SECTION) {
+        if (but->mixar_style.theme != MixarTheme::Native &&
+            but->mixar_style.component == MixarComponent::Surface) {
           wt = widget_type(WidgetStyle::MixarSection);
         }
         else {
@@ -6870,14 +7063,22 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
   const float zoom = 1.0f / but->block->aspect;
   wt->state(wt, &state, but->emboss);
-  if (wt->custom) {
+  bool native_text = true;
+  if (mixar_component) {
+    native_text = mixar_component_draw(*but, wt->wcol, *rect);
+  }
+  else if (but->type == ButtonType::Row && zen_glass_cell(but)) {
+    /* Keep Radio state/text and RNA editing; replace only the background. */
+    widget_zen_tool_glass(but, rect, &state, roundboxalign);
+  }
+  else if (wt->custom) {
     wt->custom(but, &wt->wcol, rect, &state, roundboxalign, zoom);
   }
   else if (wt->draw) {
     wt->draw(&wt->wcol, rect, &state, roundboxalign, zoom);
   }
 
-  if (wt->text) {
+  if (wt->text && native_text) {
     if (use_alpha_blend) {
       GPU_blend(GPU_BLEND_ALPHA);
     }

@@ -47,11 +47,11 @@ def test_parent_instance_from_handles_indexed_ids():
 
 def test_refresh_token_restarts_instead_of_acking(monkeypatch):
     calls = []
-    monkeypatch.setattr(sup, "shutdown_sandbox", lambda cid=None: calls.append(("shutdown", cid)) or {"success": True})
+    monkeypatch.setattr(sup, "shutdown_sandbox", lambda cid=None, wait=False: calls.append(("shutdown", cid, wait)) or {"success": True})
     monkeypatch.setattr(sup, "spawn_sandbox", lambda cid, ttl=None, parent=None: calls.append(("spawn", cid, parent)) or {"success": True, "pid": 99})
     out = sup.handle_sandbox_control({"action": "refresh_token", "connection_id": "p-sbx-0", "parent_instance_id": "p"})
     assert out == {"success": True, "pid": 99}
-    assert calls == [("shutdown", "p-sbx-0"), ("spawn", "p-sbx-0", "p")]
+    assert calls == [("shutdown", "p-sbx-0", True), ("spawn", "p-sbx-0", "p")]
     assert sup.handle_sandbox_control({"action": "refresh_token"})["success"] is False
 
 
@@ -76,3 +76,46 @@ def test_unknown_action_and_spawn_idempotent(monkeypatch):
     live = FakeProc(4242)
     monkeypatch.setattr(sup, "_children", {"p-sbx-0": live})
     assert sup.spawn_sandbox("p-sbx-0") == {"success": True, "pid": 4242}
+
+
+def test_spawn_fails_closed_without_staging_dir(monkeypatch):
+    monkeypatch.setattr(sup, "_children", {})
+    monkeypatch.setattr(sup, "_child_logs", {})
+    import mixar.modules.common.agent_execution.paths as paths
+    monkeypatch.setattr(paths, "staging_dir", lambda *_a, **_k: (_ for _ in ()).throw(OSError("denied")))
+    monkeypatch.setattr("mixar.modules.auth.core.auth.get_access_token", lambda: "tok")
+    monkeypatch.setattr("mixar.config.config.get_server_url", lambda: "http://example")
+    out = sup.spawn_sandbox("p-sbx-0", parent_instance_id="p")
+    assert out["success"] is False and out["pid"] is None
+    assert "staging" in out["error"].lower()
+    assert "p-sbx-0" not in sup._children
+
+
+def test_refresh_token_waits_for_the_old_child(monkeypatch):
+    events = []
+
+    class SlowProc(FakeProc):
+        def terminate(self):
+            events.append("terminate")
+            super().terminate()
+
+        def wait(self, timeout=None):
+            events.append("wait")
+            return super().wait(timeout)
+
+    children = {"p-sbx-0": SlowProc(7)}
+    monkeypatch.setattr(sup, "_children", children)
+    monkeypatch.setattr(sup, "_child_logs", {})
+    spawned_after = []
+
+    def fake_spawn(cid, ttl=None, parent=None):
+        spawned_after.append(list(events))
+        return {"success": True, "pid": 99}
+
+    monkeypatch.setattr(sup, "spawn_sandbox", fake_spawn)
+    out = sup.handle_sandbox_control(
+        {"action": "refresh_token", "connection_id": "p-sbx-0", "parent_instance_id": "p"}
+    )
+    assert out == {"success": True, "pid": 99}
+    assert events[:2] == ["terminate", "wait"]
+    assert spawned_after and spawned_after[0] == ["terminate", "wait"]

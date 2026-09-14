@@ -40,8 +40,10 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
+#include "UI_mixar.hh"
 
 #include "UI_interface_layout.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -57,7 +59,7 @@ Layout *UI_layout_mixar_section(Layout *layout)
   for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
     Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::Roundbox) {
-      but->flag2 |= UI_BUT2_MIXAR_SECTION;
+      mixar_style_button(but, MixarComponent::Surface);
       break;
     }
   }
@@ -73,7 +75,7 @@ void UI_layout_mixar_mark_last_dropdown(Layout *layout)
   for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
     Button *but = block->buttons_ptrs[i].get();
     if (ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)) {
-      but->flag2 |= UI_BUT2_MIXAR_DROPDOWN;
+      mixar_style_button(but, MixarComponent::Dropdown);
       break;
     }
   }
@@ -86,7 +88,7 @@ void UI_layout_mixar_mark_last_action(Layout *layout)
   for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
     Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::But) {
-      but->flag2 |= UI_BUT2_MIXAR_ACTION;
+      mixar_style_button(but, MixarComponent::Action);
       break;
     }
   }
@@ -99,7 +101,7 @@ void UI_layout_mixar_mark_last_toggle(Layout *layout)
   for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
     Button *but = block->buttons_ptrs[i].get();
     if (ELEM(but->type, ButtonType::Checkbox, ButtonType::CheckboxN)) {
-      but->flag2 |= UI_BUT2_MIXAR_TOGGLE;
+      mixar_style_button(but, MixarComponent::Toggle);
       break;
     }
   }
@@ -112,7 +114,7 @@ void UI_layout_mixar_mark_last_input(Layout *layout)
   for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
     Button *but = block->buttons_ptrs[i].get();
     if (but->type == ButtonType::Text) {
-      but->flag2 |= UI_BUT2_MIXAR_INPUT;
+      mixar_style_button(but, MixarComponent::Input);
       break;
     }
   }
@@ -136,18 +138,7 @@ void UI_layout_mixar_card_tag_last(Layout *layout,
     return;
   }
   Button *but = block->buttons_ptrs[block->buttons_ptrs.size() - 1].get();
-  UI_BUT2_MIXAR_CARD_SET(but);
-  /* `hardmin`/`hardmax` are inert on the label and operator buttons
-   * tagged here — neither carries a data pointer or RNA property (see
-   * the rationale on `mark_last` in `interface_mixar_profile_card.cc`).
-   *
-   * NEVER tag an RNA-backed button: an enum-item button (`prop_enum`,
-   * ui::ButtonType::Row) keeps the value it applies in `hardmax`, so tagging one
-   * overwrites that value and the click writes garbage — the Zen shading
-   * pills hit exactly this and set the viewport to an out-of-range enum.
-   * Use an operator button (`wm.context_set_enum` and friends) instead. */
-  but->hardmin = float(int(element));
-  but->hardmax = payload;
+  mixar_style_card(but, element, payload);
 }
 
 void UI_layout_mixar_card_style_last_button(Layout *layout,
@@ -165,9 +156,7 @@ void UI_layout_mixar_card_style_last_button(Layout *layout,
     if (but->type != ButtonType::But) {
       continue;
     }
-    UI_BUT2_MIXAR_CARD_SET(but);
-    but->hardmin = float(int(element));
-    but->hardmax = 0.0f; /* MixarCardIcon::None — the painter centres the label. */
+    mixar_style_card(but, element, 0.0f);
     /* Set *or clear*: `template_popup_confirm` hands its cancel button
      * the active-default flag when nothing else holds it yet, so a
      * dialog styling that button afterwards must be able to take the
@@ -406,10 +395,17 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     tab_rect.ymin = float(rct->ymin);
     tab_rect.ymax = float(rct->ymax);
 
+    /* Both tab beds are panes: a tab sits ON the strip, so it takes the kit's
+     * #MIXAR_GLASS_CHIP material — no shadow and no specular, because a chip
+     * may not cast its own (and the streak is the one layer the painter clips
+     * with a region-px scissor). The strip itself stays FLAT: a band flush to
+     * the region edge has no silhouette for a rim to trace. */
+    mixar_card_glass_round(&tab_rect, tab_radius, MIXAR_GLASS_CHIP);
+
     if (is_active) {
-      /* Active tab: --mx-accent-soft fill (#00C0C7 @ ~13%) + teal outline;
-       * the teal label (drawn below) carries the accent. Design-agent spec.
-       * col_glow / col_highlight are intentionally left unused. */
+      /* Active tab: the pane, then --mx-accent-soft (#00C0C7 @ ~13%) and the
+       * teal outline over it; the teal label (drawn below) carries the accent.
+       * Design-agent spec. col_glow / col_highlight stay intentionally unused. */
       const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg);
@@ -418,7 +414,8 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
       draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);
     }
     else {
-      /* --- Inactive tab: subtle dark fill --- */
+      /* --- Inactive tab: the design's own bed washes over the pane, then its
+       * whisper of an outline against the family rim. --- */
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive);
 

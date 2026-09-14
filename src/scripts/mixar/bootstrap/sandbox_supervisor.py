@@ -159,7 +159,8 @@ def spawn_sandbox(connection_id: str, idle_ttl_s: float | None = None,
             from mixar.modules.common.agent_execution.paths import staging_dir
             env["MIXAR_SANDBOX_STAGING_DIR"] = staging_dir(parent_iid)
         except Exception as e:
-            logger.warning("no staging dir for worker %s: %s", connection_id, e)
+            logger.error("no staging dir for worker %s: %s", connection_id, e)
+            return {"success": False, "error": f"staging dir: {e}", "pid": None}
         if idle_ttl_s:
             env["MIXAR_SANDBOX_IDLE_TTL_S"] = str(idle_ttl_s)
         argv = [
@@ -213,8 +214,14 @@ def _reap_child(proc, cid: str) -> None:
         pass
 
 
-def shutdown_sandbox(connection_id: str | None = None) -> dict:
-    """Terminate one sandbox child (or all if connection_id is None)."""
+def shutdown_sandbox(connection_id: str | None = None, *, wait: bool = False) -> dict:
+    """Terminate one sandbox child (or all if connection_id is None).
+
+    ``wait=True`` reaps on this thread so a restart cannot spawn a second
+    child for the same id while the old one is still dying. The UI/atexit
+    path keeps the daemon reap so shutdown never blocks the main thread.
+    """
+    to_reap: list[tuple] = []
     with _lock:
         ids = [connection_id] if connection_id else list(_children.keys())
         for cid in ids:
@@ -224,16 +231,21 @@ def shutdown_sandbox(connection_id: str | None = None) -> dict:
                     proc.terminate()
                 except Exception:
                     pass
-                threading.Thread(
-                    target=_reap_child, args=(proc, cid), daemon=True
-                ).start()
+                to_reap.append((proc, cid))
             logf = _child_logs.pop(cid, None)
             if logf:
                 try:
                     logf.close()
                 except Exception:
                     pass
-        return {"success": True}
+    for proc, cid in to_reap:
+        if wait:
+            _reap_child(proc, cid)
+        else:
+            threading.Thread(
+                target=_reap_child, args=(proc, cid), daemon=True
+            ).start()
+    return {"success": True}
 
 
 def handle_sandbox_control(params: dict) -> dict:
@@ -255,7 +267,7 @@ def handle_sandbox_control(params: dict) -> dict:
         cid = params.get("connection_id")
         if not cid:
             return {"success": False, "error": "refresh_token requires connection_id"}
-        shutdown_sandbox(cid)
+        shutdown_sandbox(cid, wait=True)
         return spawn_sandbox(cid, params.get("idle_ttl_s"), params.get("parent_instance_id"))
     if action == "report_resources":
         return report_resources()

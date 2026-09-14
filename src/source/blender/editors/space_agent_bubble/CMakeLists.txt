@@ -17,7 +17,10 @@ set(INC_SYS
 
 set(SRC
   space_agent_bubble.cc
+  agent_bubble_glass.cc
+  agent_bubble_composer.cc
   agent_ui_draw.cc
+  agent_ui_controls_paint.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_detail.cc
@@ -25,25 +28,42 @@ set(SRC
   agent_ui_generations_read.cc
   agent_ui_icons.cc
   agent_ui_layout.cc
+  agent_ui_motion.cc
+  agent_ui_cat_scheduler.cc
   agent_ui_pane_kit.cc
   agent_ui_pane_kit_feedback.cc
   agent_ui_pane_kit_thumbs.cc
+  agent_ui_pill_cat.cc
+  agent_ui_queue_navigation.cc
+  agent_ui_queue_data.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc
   agent_ui_tabsplat_paint.cc
+  agent_ui_tabsplat_state.cc
   agent_ui_tabmedia.cc
   agent_ui_tabmedia_util.cc
   agent_ui_state.cc
   agent_ui_tab3d.cc
   agent_ui_tab3d_params.cc
+  agent_ui_visible_if.cc
 
   agent_bubble_intern.hh
+  agent_bubble_glass.hh
   agent_ui_draw.hh
   agent_ui_generations.hh
   agent_ui_generations_intern.hh
   agent_ui_icons.hh
   agent_ui_layout.hh
+  agent_ui_motion.hh
   agent_ui_pane_kit.hh
+  agent_ui_pill_cat.hh
+  agent_ui_cat_style.hh
+  agent_ui_cat_activity.hh
+  agent_ui_cat_cadence.hh
+  agent_ui_cat_scheduler.hh
+  ../include/ED_agent_bubble_motion.hh
+  agent_ui_pill_cat_pose.hh
+  agent_ui_queue_intern.hh
   agent_ui_queue.hh
   agent_ui_tabsplat.hh
   agent_ui_tabsplat_intern.hh
@@ -51,6 +71,7 @@ set(SRC
   agent_ui_tabmedia_intern.hh
   agent_ui_tab3d.hh
   agent_ui_tab3d_intern.hh
+  agent_ui_visible_if.hh
   agent_ui_theme.hh
 )
 

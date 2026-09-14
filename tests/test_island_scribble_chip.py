@@ -16,7 +16,7 @@ from pathlib import Path
 
 CPP = Path(__file__).resolve().parents[1] / "src/source/blender/editors/space_agent_bubble"
 BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
-DRAW_CC = (CPP / "agent_ui_draw.cc").read_text(encoding="utf-8")
+DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 STATE_CC = (CPP / "agent_ui_state.cc").read_text(encoding="utf-8")
 LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
@@ -109,9 +109,10 @@ def test_state_struct_carries_the_scribble_fields():
 # ---------------------------------------------------------------------------
 
 def test_chip_row_paints_scribble_in_the_island_unit():
-    body = _function_body(DRAW_CC, "void draw_chip_row(")
+    body = _function_body(DRAW_CC, "void agent_ui_draw_chip_row(")
     assert "AGENT_ICON_PEN" in body
-    assert "state->scribble_armed ? accent : chip" in body
+    assert "AgentIslandControl::Scribble" in body
+    assert "layout->chip_scribble, state->scribble_armed" in body
     assert '"Scribble · %d"' in body
     assert "AGENT_ICON_CROSS" in body
     assert "AGENT_ICON_CHEVRON_DOWN" in body
@@ -158,7 +159,7 @@ def test_hover_collapse_stands_down_while_scribble_is_armed():
 def test_empty_state_paints_the_ink_canvas_instead_of_the_field():
     """With no transcript the WINDOW region IS the whole-panel prompt field,
     an embossed uiBut whose chrome would cover the handwriting canvas."""
-    start = BUBBLE_CC.index("const float panel_bg[4] = AGENT_COL_SURFACE;")
+    start = BUBBLE_CC.index("agent_bubble_island_panel_color(panel_bg);")
     body = BUBBLE_CC[start : BUBBLE_CC.index("/* Side frame:", start)]
     ink = body.index("else if (ink_canvas_open)")
     field = body.index('"agent_island_field_panel"')

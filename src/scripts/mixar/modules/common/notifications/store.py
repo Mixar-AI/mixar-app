@@ -85,7 +85,9 @@ class NotificationItem:
             return 1.0
         if remaining <= 0:
             return 0.0
-        return remaining / FADE_DURATION_MS
+        # Ease-out departure: most opacity falls early and the final frames
+        # settle softly, matching the native Zen surface exits.
+        return (remaining / FADE_DURATION_MS) ** 3
 
 
 class NotificationStore:

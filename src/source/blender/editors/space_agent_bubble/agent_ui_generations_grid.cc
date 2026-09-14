@@ -26,6 +26,8 @@
  * worse than no drag. Their action lives in the detail column instead.
  */
 
+#include "UI_mixar_layout.hh"
+
 #include <algorithm>
 #include <cstring>
 
@@ -93,7 +95,7 @@ GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
   m.pitch_y = m.tile + GEN_ROW_EXTRA * u;
 
   m.per_page = m.rows * GEN_COLS;
-  m.pages = std::max(1, (data.count + m.per_page - 1) / m.per_page);
+  m.pages = ui::mixar_page_count(data.count, m.per_page);
   m.page = std::clamp(data.page, 0, m.pages - 1);
   return m;
 }
@@ -192,8 +194,9 @@ void agent_ui_generations_grid(const bContext *C,
   const float font_cap = GEN_CAP_FONT * u;
 
   /* ---- Tiles ---- */
-  const int first = grid.page * grid.per_page;
-  const int last = std::min(data.count, first + grid.per_page);
+  const auto visible = ui::mixar_page_range(data.count, grid.per_page, grid.page);
+  const int first = visible.first;
+  const int last = visible.end();
 
   if (data.count == 0) {
     const char *empty = data.loading ? "Loading assets…" :

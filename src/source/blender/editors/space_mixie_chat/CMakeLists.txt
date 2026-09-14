@@ -58,6 +58,7 @@ set(SRC
   mixie_chat_ui_theme.cc
   mixie_chat_voice.cc
   mixie_chat_ui_widgets.cc
+  mixie_chat_ui_attachments.cc
   space_mixie_chat.cc
 
   mixie_chat_footer_constants.hh

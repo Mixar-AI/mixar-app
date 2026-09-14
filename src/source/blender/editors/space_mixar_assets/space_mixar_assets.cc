@@ -40,7 +40,7 @@ static SpaceLink *mixar_assets_create(const ScrArea * /*area*/, const Scene * /*
   SpaceMixarAssets *sassets = MEM_new<SpaceMixarAssets>("initmixarassets");
   sassets->spacetype = SPACE_MIXAR_ASSETS;
 
-  /* Header (hosts the editor-type switch dropdown) */
+  /* Header (title chrome; the space is hidden from the Editor Type menu) */
   ARegion *region = BKE_area_region_new();
   BLI_addtail(&sassets->regionbase, region);
   region->regiontype = RGN_TYPE_HEADER;
@@ -86,7 +86,7 @@ static void mixar_assets_main_region_listener(const wmRegionListenerParams *para
 }
 
 /* Header region uses the standard header draw so Python `Header` classes
- * (and the editor-type switch dropdown) are rendered. */
+ * render title chrome. The space is omitted from the Editor Type menu. */
 static void mixar_assets_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
   ED_region_header_init(region);

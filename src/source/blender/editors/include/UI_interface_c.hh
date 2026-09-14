@@ -2096,10 +2096,12 @@ void button_tooltip_refresh(bContext *C, Button *but);
  */
 void button_tooltip_timer_remove(bContext *C, Button *but);
 
+/** Set force for a user-requested focus change on an existing field, after layout has settled. */
 bool textbutton_activate_rna(const bContext *C,
                              ARegion *region,
                              const void *rna_poin_data,
-                             const char *rna_prop_id);
+                             const char *rna_prop_id,
+                             bool force = false);
 bool textbutton_activate_but(const bContext *C, Button *actbut);
 
 /**

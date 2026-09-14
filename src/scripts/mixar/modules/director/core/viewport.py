@@ -139,10 +139,13 @@ def enter_director_surface(context):
     return target
 
 
-# The floor grid and the X/Y axis lines are one thing to a director:
-# "gridlines". The floor flag is the truth the chip reads (and what the
-# C++ strip paints from, via View3D.gridflag & V3D_SHOW_FLOOR).
-_GRID_FLAGS = ("show_floor", "show_axis_x", "show_axis_y")
+# The viewport grid is one thing to a director: the persp/User floor plane,
+# the fixed-plane ortho grid, and the X/Y axis lines. The floor flag is the
+# truth the chip reads (and what the C++ strip paints from, via
+# View3D.gridflag & V3D_SHOW_FLOOR); the ortho flag (V3D_SHOW_ORTHO_GRID) is
+# the separate plane the overlay's fixed-plane branch draws in Top/Right/Front
+# views, so toggling without it leaves the grid on screen there.
+_GRID_FLAGS = ("show_floor", "show_axis_x", "show_axis_y", "show_ortho_grid")
 
 
 def grid_shown(space) -> bool:

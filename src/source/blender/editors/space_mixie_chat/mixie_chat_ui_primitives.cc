@@ -25,6 +25,8 @@
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "mixie_chat_ui_types.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -202,6 +204,25 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
 
   /* Draw fill (inner rect) */
   chat_ui_draw_rounded_rect(rect, radius, fill_color);
+}
+
+/* The glass counterpart of #chat_ui_draw_rounded_rect: the same bed geometry,
+ * but tinted by the MIXAR_GLASS_CHAT token row. `alpha` fades the whole pane —
+ * `bg_color`'s RGB is deliberately not read, so a call site cannot pick its own
+ * tint. The message area is drawn through the View2D matrix (see
+ * mixie_chat_render_messages), so the painter's specular streak — the one layer
+ * it clips with a region-px scissor — cannot be placed from here and is off;
+ * the bed, gloss, refraction wash and rim all draw through that matrix fine. */
+void chat_ui_draw_glass_pane(const rctf *rect, const float radius, const float alpha)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_CHAT;
+  style.radius = radius;
+  style.alpha = alpha;
+  style.draw_specular = false;
+  ui::mixar_glass_draw(pane, style);
 }
 
 void chat_ui_draw_accent_bar(float x,

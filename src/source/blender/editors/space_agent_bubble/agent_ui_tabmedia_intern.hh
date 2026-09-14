@@ -7,13 +7,14 @@
  * \ingroup spagentbubble
  *
  * Internals shared between the Media pane's two translation units
- * (agent_ui_tabmedia.cc draws; agent_ui_tabmedia_util.cc holds the paint
- * helpers, RNA plumbing and chip model). Split under the 500-line rule.
+ * (agent_ui_tabmedia.cc lays out; agent_ui_tabmedia_util.cc holds the native
+ * controls, RNA plumbing and chip model). Split under the 500-line rule.
  */
 
 #pragma once
 
 #include "BLI_rect.h"
+#include <string>
 #include "RNA_access.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -22,6 +23,9 @@ namespace blender {
 struct Image;
 struct Scene;
 struct bContext;
+namespace ui {
+struct Block;
+}
 
 /* -------------------------------------------------------------------- */
 /** \name Metrics (island units) and local palette
@@ -55,8 +59,8 @@ enum class MediaChipKind { Enum, Bool, Int };
 struct MediaParamChip {
   MediaChipKind kind;
   char prop_id[64];   /* RNA identifier on its owner ("model", "p_style"). */
-  char label[64];     /* Property display name. */
-  char value[64];     /* Current value text (enum label / int). */
+  std::string label; /* Full property display name, fitted only at paint. */
+  std::string value; /* Full current enum label / integer text. */
   bool bool_value;
   /* true = the catalog group on WindowManager (data_path targets it);
    * false = the tab group on Scene. */
@@ -65,8 +69,8 @@ struct MediaParamChip {
 };
 
 /** All `p_*` params of the catalog group into chips (enums/bools/ints;
- * floats/strings skipped — the N-panel stays the full-fidelity surface).
- * `visible_if` lives only in the Python schema and is not evaluated here. */
+ * floats/strings skipped — Settings stays the full-fidelity surface).
+ * Hidden `visible_if` params are omitted from the strip and overflow count. */
 int media_gather_param_chips(const bContext *C,
                              PointerRNA *group,
                              MediaParamChip *chips,
@@ -74,10 +78,12 @@ int media_gather_param_chips(const bContext *C,
                              int *r_total);
 float media_chip_width(const MediaParamChip &chip, float u, float font, float font_sub);
 
-/** Paint \a count already-laid-out chips (enum value + chevron, ON/OFF pill,
- * -/+ stepper). Art only — the pane file lays them out and wires the buttons. */
-void media_param_chips_paint(
-    const MediaParamChip *chips, int count, float u, float font, float font_sub);
+/** Shared native controls over feature-owned RNA bindings. */
+void media_param_chip_control(ui::Block *block,
+                              const MediaParamChip &chip,
+                              PointerRNA *owner,
+                              const char *data_path,
+                              float u);
 
 /**
  * The images this half will actually SUBMIT, for the bottom row's preview.

@@ -80,6 +80,8 @@ def network_diagnostics() -> dict:
         "trust": trust.mode if trust else "unconfigured",
         "ca_bundle": trust.bundle_path if trust and trust.bundle_path else "",
         "trust_error": trust.error if trust and trust.error else "",
+        "extra_ca_certs": trust.extra_cert_count if trust else 0,
+        "extra_ca_errors": "; ".join(trust.extra_cert_errors) if trust and trust.extra_cert_errors else "",
         "proxy": proxy.url if proxy and proxy.url else "none",
         "proxy_source": proxy.source if proxy else "unconfigured",
         "proxy_error": proxy.error if proxy and proxy.error else "",

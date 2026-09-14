@@ -53,7 +53,7 @@ DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
-DRAW_CC = (CPP / "agent_ui_draw.cc").read_text(encoding="utf-8")
+DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 SPACE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 CMAKE = (CPP / "CMakeLists.txt").read_text(encoding="utf-8")
 
@@ -298,7 +298,7 @@ def test_the_icon_sentinel_stays_last():
 def test_an_unmarked_tab_centres_its_label():
     """Left-aligning at the icon offset hangs the word off an empty pill."""
     assert "g_tabs[i].icon == AGENT_ICON_COUNT" in DRAW_CC
-    assert "label_centre(g_tabs[i].label, BLI_rctf_cent_x(&tab.pill)" in DRAW_CC
+    assert re.search(r"label_centre\(\s*g_tabs\[i\].label, BLI_rctf_cent_x\(&tab.pill\)", DRAW_CC)
 
 
 # ---------------------------------------------------------------------------

@@ -190,12 +190,14 @@ void cinema_draw_minimap(ui::Block *block,
                          const rctf &card)
 {
   const float u = cinema_unit();
-  const float card_top[4] = CINEMA_COL_CARD_TOP;
-  const float card_bottom[4] = CINEMA_COL_CARD_BOTTOM;
+  /* Corner fans cover the rectangular blit. RGB matches CARD tint; A=1 so
+   * they fully hide the square corners the glass pane already rounded. */
+  const float card_top[4] = {0.090f, 0.120f, 0.100f, 1.0f};
+  const float card_bottom[4] = {0.040f, 0.055f, 0.048f, 1.0f};
   Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   view3d_director_minimap_garbage_flush();
-  cinema_panel(card, CINEMA_PANEL_RADIUS * u, card_top, card_bottom);
+  cinema_glass_panel(card, CINEMA_PANEL_RADIUS * u);
 
   /* The map fills the card under its rounded corners. */
   rctf inner = card;

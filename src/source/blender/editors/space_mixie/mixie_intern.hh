@@ -60,6 +60,11 @@ using wmWindowManager = blender::wmWindowManager;
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
 #define MOODBOARD_DRAG_THRESHOLD_PX 5.0f
+/* Slide amount at which the Zen VIEW_3D drawer hosts a live Mixie canvas.
+ * The draw pass shifts `v2d.cur` then restores it, so hit-test matches paint
+ * only once the offset is essentially gone. Keep in lockstep with
+ * `VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT`. */
+#define MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT 0.98f
 
 /* Moodboard Grid Constants */
 #define MOODBOARD_GRID_SPACING 50.0f

@@ -160,10 +160,12 @@ _MESSAGES = {
     FAILURE_TLS_VERIFY: (
         "Certificate verification failed. Your network may be inspecting HTTPS traffic.",
         "A TLS-inspecting proxy or firewall is presenting a certificate Mixar does not "
-        "trust. Mixar trusts the OS certificate store; make sure the organization's "
-        "root CA is installed there, or point MIXAR_CA_BUNDLE (or network.ca_bundle in "
-        "mixar.json) at a PEM bundle containing it. Alternatively exempt {host} from "
-        "TLS inspection.",
+        "trust. Copy the organization's root CA file (.crt, .cer or .pem) into "
+        "{certs_dir} and restart Mixar, or install it in the OS certificate store. "
+        "MIXAR_EXTRA_CA_CERTS (or network.extra_ca_certs in mixar.json) adds "
+        "certificates from another location; MIXAR_CA_BUNDLE (or network.ca_bundle) "
+        "replaces the trusted roots with one PEM bundle. Alternatively exempt {host} "
+        "from TLS inspection.",
     ),
     FAILURE_TLS_HANDSHAKE: (
         "Secure connection could not be established.",
@@ -276,6 +278,16 @@ def _configured_proxy(environ=None) -> str:
     return ""
 
 
+def _certs_dir_label() -> str:
+    """The per-user certificate drop folder, or a generic label outside Blender."""
+    try:
+        from .trust import user_certs_dir
+
+        return user_certs_dir() or "the Mixar certs folder"
+    except Exception:
+        return "the Mixar certs folder"
+
+
 def classify_network_error(
     exc: BaseException,
     url: str | None = None,
@@ -296,7 +308,7 @@ def classify_network_error(
 
     message, hint = _MESSAGES[kind]
     message = message.format(short=_short(exc))
-    hint = hint.format(host=host)
+    hint = hint.format(host=host, certs_dir=_certs_dir_label())
     if proxy and kind not in (FAILURE_PROXY, FAILURE_UNKNOWN):
         from .proxy import redact_proxy_url
 

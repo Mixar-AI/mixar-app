@@ -21,12 +21,16 @@ from ..utils.ui_channel_panels import draw_channels_tab
 
 
 class MIXAR_PROPERTIES_HT_header(Header):
-    """Header for the Mixar Properties space (hosts the space-switch dropdown)."""
+    """Title bar for the Mixar Properties space.
+
+    No ``template_header()``: the space is hidden from the Editor Type
+    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
+    """
     bl_space_type = 'MIXAR_PROPERTIES'
 
     def draw(self, context):
         layout = self.layout
-        layout.template_header()
+        layout.label(text="Properties")
 
 
 class MIXAR_PROPERTIES_PT_main(Panel):

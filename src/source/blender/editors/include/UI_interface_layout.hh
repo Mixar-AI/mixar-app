@@ -15,6 +15,7 @@
 #include "BLI_vector.hh"
 
 #include "UI_interface_types.hh"
+#include "UI_mixar_types.hh"
 
 namespace blender {
 
@@ -144,9 +145,13 @@ struct Layout : public Item, NonCopyable, NonMovable {
   float units_[2] = {0.0f, 0.0f};
   /** Is copied to uiButs created in this layout. */
   float search_weight_ = 0.0f;
+  MixarScope mixar_scope_;
 
  public:
   Layout(ItemType type, LayoutRoot *root);
+
+  MixarScope mixar_scope() const { return mixar_scope_; }
+  void mixar_scope_set(MixarScope scope) { mixar_scope_ = scope; }
 
   [[nodiscard]] bool active() const;
   /**

@@ -6,6 +6,7 @@
 set(INC
   ../asset
   ../include
+  ../space_mixie
   ../../makesrna
   ../../modifiers
   ../../../../intern/mantaflow/extern
@@ -21,6 +22,7 @@ set(SRC
   drawobject.cc
   space_view3d.cc
   view3d_agent_panel_cards.cc
+  view3d_agent_panel_sync.cc
   view3d_agent_panel_draw.cc
   view3d_agent_panel_glyphs.cc
   view3d_agent_panel_ops.cc
@@ -69,6 +71,10 @@ set(SRC
   view3d_gizmo_tool_generic.cc
   view3d_header.cc
   view3d_iterators.cc
+  view3d_moodboard_drawer.cc
+  view3d_moodboard_drawer_draw.cc
+  view3d_moodboard_drawer_ops.cc
+  view3d_moodboard_drawer_resize.cc
   view3d_navigate.cc
   view3d_navigate_fly.cc
   view3d_navigate_smoothview.cc
@@ -102,6 +108,7 @@ set(SRC
   view3d_director_cinema.hh
   view3d_director_minimap.hh
   view3d_intern.hh
+  view3d_moodboard_drawer.hh
   view3d_navigate.hh
 )
 
@@ -120,6 +127,7 @@ set(LIB
   bf_editor_curves
   bf_editor_lattice
   bf_editor_mesh
+  PRIVATE bf_editor_space_mixie
   PRIVATE bf::functions
   PRIVATE bf::gpu
   PRIVATE bf::imbuf

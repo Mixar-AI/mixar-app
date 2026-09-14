@@ -5,9 +5,11 @@
 """3D viewport header & tool-panel filter for the dual-mode UI system.
 
 Monkey-patches:
-- VIEW3D_HT_header.draw         → renders only the shading-mode buttons
-                                   (wireframe/solid/material/rendered + popover)
-                                   when the viewport is in the Zen Mode workspace.
+- VIEW3D_HT_header.draw         → floating liquid-glass Wireframe /
+                                   Solid / Material Preview / Rendered
+                                   strip plus the shading popover in
+                                   Zen Mode AND on the Texturing /
+                                   Texture Paint workspaces.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -28,14 +30,20 @@ Mode check uses context.workspace.name, not the global ui_mode preference.
 This is workspace-driven so the right rendering happens regardless of which
 window is active or whether a workspace switch is mid-flight, and so the
 "AI Mode" workspace tab in Engine mode renders as a regular Pro workspace
-(filter does NOT apply there — only the dedicated Zen Mode workspace).
+(the Zen-only tool strip does NOT apply there). The Mixar viewport header
+also applies on the Texturing / Texture Paint workspace tabs.
 """
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ...constants import BASIC_WORKSPACE_NAME
+from ...constants import (
+    BASIC_WORKSPACE_NAME,
+    TEXTURING_WORKSPACE_NAMES,
+    ZEN_TRANSFORM_TOOL_IDS,
+)
+from ..operators import zen_tool_toggle
 
 _logger = get_logger(__name__)
 
@@ -43,13 +51,15 @@ _original_header_draw = None
 _original_tool_header_draw = None
 _original_tools_active_draw = None
 
-# The only tools Zen Mode surfaces, in design order (top to bottom).
-_ZEN_TOOL_IDS = ("builtin.move", "builtin.rotate", "builtin.scale")
-
 # Button height as a multiple of the widget unit. The design's strip is
 # 138 px tall for three buttons at 1x (46 px each) and the widget unit is
 # 20 px there, so 2.3 reproduces it. Blender's stock toolbar uses 1.75.
 _ZEN_TOOL_SCALE_Y = 2.3
+
+_DEFAULT_FALLBACK_TOOL = "builtin.select"
+"""Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
+`"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
+not been registered yet — the attribute is read live when it is."""
 
 
 def _is_basic_workspace(context) -> bool:
@@ -58,18 +68,32 @@ def _is_basic_workspace(context) -> bool:
     return ws is not None and ws.name == BASIC_WORKSPACE_NAME
 
 
-_SHADING_PILL_UNITS = 6.5
-"""Shading pill width in UI units — the design's ~130 px at 1x."""
+def _is_texturing_workspace(context) -> bool:
+    """True if this window is on Mixar's texture-painting workspace."""
+    ws = getattr(context, "workspace", None)
+    return ws is not None and ws.name in TEXTURING_WORKSPACE_NAMES
+
+
+def _uses_mixar_viewport_header(context) -> bool:
+    """Zen and Texturing share the Mixar viewport header.
+
+    The tool-header empty-strip and the Move/Rotate/Scale toolbar stay
+    Zen-only: Texturing still needs stock paint/brush chrome in those
+    regions. Cinema Mode keeps its own C++ overlays and does not pass
+    through here.
+    """
+    return _is_basic_workspace(context) or _is_texturing_workspace(context)
 
 
 def _patched_header_draw(self, context):
     """Replacement for VIEW3D_HT_header.draw.
 
-    Zen mode: the viewport-type chooser + two shading pills (Solid /
-    Rendered), styled natively per the design.
-    Engine mode: defer to the original draw.
+    Zen and Texturing: a floating Move/Rotate/Scale-style liquid-glass
+    strip of Wireframe / Solid / Material Preview / Rendered plus the
+    shading options popover. The header region itself has no bar. Other
+    Engine workspaces: defer to the original draw.
     """
-    if not _is_basic_workspace(context):
+    if not _uses_mixar_viewport_header(context):
         if _original_header_draw is not None:
             _original_header_draw(self, context)
         return
@@ -80,41 +104,28 @@ def _patched_header_draw(self, context):
         return
     shading = view.shading
 
-    # Tiny editor-type chooser (the icon at the very left of the header).
-    layout.row(align=True).template_header()
-
+    # No editor-type chooser and no full-width header chrome: the header
+    # overlaps the viewport and clears transparent, so this cluster is a
+    # floating group. Spacer parks it on the right.
     layout.separator_spacer()
 
-    # Two shading pills — Solid and Rendered — per the design (UI.svg): the
-    # live one at full opacity, the other at 49%. The stock four-way strip
-    # (wireframe / solid / material / rendered) and the shading popover are
-    # deliberately gone: Zen offers the two modes people actually switch
-    # between while making something, and the rest stays reachable from
-    # Engine mode.
-    row = layout.row(align=True)
-    for value, label in (('SOLID', "Solid"), ('RENDERED', "Rendered")):
-        cell = row.row(align=True)
-        cell.ui_units_x = _SHADING_PILL_UNITS
-        # `wm.context_set_enum`, NOT `prop_enum`: an enum-item button keeps
-        # the value it applies in `hardmax`, which is the very field the
-        # Mixar style tag writes its payload into — tagging one silently
-        # rewrote the shading value it set (the viewport ended up with an
-        # out-of-range enum that read back as ""). Operator buttons carry no
-        # RNA data, so the tag is inert on them.
-        props = cell.operator("wm.context_set_enum", text=label)
-        props.data_path = "space_data.shading.type"
-        props.value = value
-        if hasattr(cell, "mixar_topbar_element"):
-            cell.mixar_topbar_element(
-                kind='VIEWPORT_PILL', active=(shading.type == value)
-            )
+    # Keep native RNA enum buttons: available modes depend on the render
+    # engine (Workbench has no Material Preview). The Zen painter supplies
+    # one glass pane without replacing RNA selection, tooltips or dispatch.
+    # The popover stays outside the aligned group.
+    cluster = layout.row(align=False)
+    surface = cluster.mixar_surface(theme="ZEN")
+    row = surface.row(align=True)
+    row.prop(shading, "type", text="", expand=True)
+    cluster.separator(factor=0.4)
+    cluster.popover(panel="VIEW3D_PT_shading", text="")
 
 
 def _patched_tool_header_draw(self, context):
     """Replacement for VIEW3D_HT_tool_header.draw.
 
-    Zen mode: render nothing (the tool header strip stays as an empty bar but
-    has no controls).
+    Zen mode: render nothing. The region overlaps and clears transparent,
+    so an empty tool-header must not paint button-section chrome.
     Engine mode: defer to the original draw.
     """
     if not _is_basic_workspace(context):
@@ -136,6 +147,50 @@ def _tool_helper():
     except Exception:  # noqa: BLE001 — never raise from a draw callback
         return None
     return ToolSelectPanelHelper
+
+
+def _active_tool_idname(helper, context):
+    """idname of the viewport's active tool, or None when unreadable.
+
+    `tool_active_from_context` dereferences `context.space_data` internally,
+    hence the guard — this runs inside a draw callback, which must never
+    raise.
+    """
+    if helper is None:
+        return None
+    try:
+        return getattr(helper.tool_active_from_context(context), "idname", None)
+    except Exception:  # noqa: BLE001 — never raise from a draw callback
+        return None
+
+
+def _fallback_tool_idname():
+    """The viewport toolbar's own fallback tool idname.
+
+    Read off the registered panel so a change to
+    ``VIEW3D_PT_tools_active.tool_fallback_id`` is picked up rather than
+    duplicated here.
+    """
+    panel = getattr(bpy.types, "VIEW3D_PT_tools_active", None)
+    return getattr(panel, "tool_fallback_id", None) or _DEFAULT_FALLBACK_TOOL
+
+
+def _tool_resolves(panel_cls, context):
+    """Predicate: does an idname still resolve to a tool in this context?
+
+    Used to reject a remembered tool that no longer exists in the current
+    mode (a brush idname after leaving paint mode): activating it would
+    return ``{'CANCELLED'}`` and leave the strip's exit looking dead.
+    """
+
+    def _resolves(idname):
+        try:
+            item, _index = panel_cls._tool_get_by_id(context, idname)
+        except Exception:  # noqa: BLE001 — never raise from a draw callback
+            return False
+        return item is not None
+
+    return _resolves
 
 
 def _zen_tool_top_gap(context, tool_count: int) -> float:
@@ -175,21 +230,32 @@ def _patched_tools_active_draw(self, context):
     Zen mode: Move / Rotate / Scale only, as one vertically centred group.
     Engine mode: defer to the original draw.
 
-    The buttons are the stock ones — same `wm.tool_set_by_id` operator, same
-    tool ids and same icons pulled off the real ToolDefs — so activating a
-    tool here is byte-for-byte what the stock toolbar does, including the
-    transform gizmo and keymap each tool installs.
+    The buttons stay stock ``wm.tool_set_by_id`` buttons — same tool ids, same
+    icons off the real ToolDefs, same operator — because that is the only way
+    Blender draws them as toolbar tools: ``but_is_tool`` matches the button's
+    operator against ``WM_OT_tool_set_by_id`` by pointer, and that one test
+    picks the toolbar widget style, the toolbar icon size, the icon
+    desaturation and Mixar's toolbar SVG scaling. What makes the strip behave
+    like three toggles is the ``name`` each button carries: a click on the
+    already-active one is handed the tool to step back to instead of its own
+    (see `zen_tool_toggle`).
     """
+    helper = _tool_helper()
+    cls = type(self)
+    active_idname = _active_tool_idname(helper, context)
+    # Where the strip's "off" should return to. Noted on every draw, in every
+    # workspace, so a tool picked in Engine Mode (or from a keymap) is already
+    # the way out by the time Zen Mode comes up.
+    zen_tool_toggle.note_active_tool(active_idname)
+
     if not _is_basic_workspace(context):
         if _original_tools_active_draw is not None:
             _original_tools_active_draw(self, context)
         return
 
-    helper = _tool_helper()
-    cls = type(self)
     items = []
     if helper is not None:
-        for idname in _ZEN_TOOL_IDS:
+        for idname in ZEN_TRANSFORM_TOOL_IDS:
             try:
                 item, _index = cls._tool_get_by_id(context, idname)
             except Exception:  # noqa: BLE001 — never raise from a draw callback
@@ -204,27 +270,27 @@ def _patched_tools_active_draw(self, context):
             _original_tools_active_draw(self, context)
         return
 
-    try:
-        # Dereferences context.space_data internally — guarded because this
-        # runs inside a draw callback.
-        active_idname = getattr(helper.tool_active_from_context(context), "idname", None)
-    except Exception:  # noqa: BLE001
-        active_idname = None
-
     layout = self.layout
     gap = _zen_tool_top_gap(context, len(items))
     if gap > 0.0:
         layout.separator(factor=gap)
 
-    col = layout.column(align=True)
+    surface = layout.mixar_surface(theme="ZEN")
+    # align=True is load-bearing: it sets `alignnr` so C++ paints one glass
+    # pane for the column instead of three separate pills.
+    col = surface.column(align=True)
     col.scale_y = _ZEN_TOOL_SCALE_Y
+    fallback_idname = _fallback_tool_idname()
+    resolves = _tool_resolves(cls, context)
     for idname, item in items:
         col.operator(
             "wm.tool_set_by_id",
             text="",
             depress=(idname == active_idname),
             icon_value=helper._icon_value_from_icon_handle(item.icon),
-        ).name = idname
+        ).name = zen_tool_toggle.toggle_target(
+            idname, active_idname, fallback_idname, resolves
+        )
 
 
 def install_view3d_header_filter():

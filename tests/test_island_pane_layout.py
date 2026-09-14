@@ -63,21 +63,12 @@ def test_every_pane_clamps_its_strip_against_the_params_floor():
         )
 
 
-def test_flow_place_tests_the_floor_before_it_consumes_the_row():
-    """The off-by-one behind the vanishing prompt field.
-
-    `flow_place` wrapped by decrementing `f->y_top` and only THEN tested the
-    floor, so the row that did not fit was consumed anyway — and the strip
-    bottom the caller reads back (`y_top - PANE_ROW_H`) sat a whole row below
-    the floor it had just been given.
-    """
-    body = _function(TAB3D_PARAMS, "bool flow_place(")
-    floor_test = body.index("y_top - h < f->y_floor")
-    committed = [m.start() for m in re.finditer(r"f->y_top\s*=", body)]
-    assert committed, "flow_place never commits a row"
-    assert all(pos > floor_test for pos in committed), (
-        "flow_place mutates f->y_top before testing the floor"
-    )
+def test_generation_strips_use_the_bounded_shared_flow():
+    # Actual bounds, failed-wrap stability and oversize are compiled/executed
+    # in test_mixar_ui_ranges, rather than inferred from source ordering.
+    assert "ui::MixarFlow" in TAB3D_PARAMS
+    assert "ui::MixarFlow" in MEDIA
+    assert "f->place(width, placed)" in TAB3D_PARAMS
 
 
 def test_the_params_strip_never_returns_a_bottom_below_its_floor():
@@ -89,10 +80,20 @@ def test_the_params_strip_never_returns_a_bottom_below_its_floor():
     )
 
 
-def test_params_that_do_not_fit_are_reported_not_silently_dropped():
-    """A schema that outgrows the strip elides inside it, with a count."""
-    body = _function(TAB3D_PARAMS, "float agent_ui_tab3d_params_draw(")
-    assert "elided" in body and "more" in body
+def test_hidden_parameters_remain_reachable_through_settings():
+    for source in (TAB3D, MEDIA):
+        assert "pane_settings_button(" in source
+    assert "PANE_SETTINGS_W" in TAB3D
+    assert "PANE_SETTINGS_W" in MEDIA
+    assert "PANE_SETTINGS_W" in SPLAT_PAINT
+    assert "pane_schema_param_visible(" in TAB3D_PARAMS
+    media_util = (CPP / "agent_ui_tabmedia_util.cc").read_text(encoding="utf-8")
+    splat = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
+    assert "pane_schema_param_visible(" in media_util
+    assert "pane_schema_param_visible(" in splat
+    operator = (ROOT / "src/scripts/mixar/modules/agent_bubble/ui/operators/pane_settings_ops.py").read_text()
+    assert "draw_service_params(surface, self.service_key, self.model_slug)" in operator
+    assert "has_params(self.service_key, self.model_slug)" in operator
 
 
 def test_generate_is_armed_only_where_the_prompt_field_exists():
@@ -119,19 +120,20 @@ def test_the_splat_field_never_falls_back_over_its_own_chip_row():
 # Bottom row
 
 
-def test_the_bottom_row_is_clamped_inside_its_box():
-    """At a short box the 44u row was placed at `ymin + 16u` and stuck out
-    through the box TOP, floating Upload and Generate over the params strip —
-    and because the OPS block wins overlapping clicks, the params underneath
-    became unreachable."""
-    body = _function(KIT_CC, "float pane_bottom_row_ymin(")
-    assert "box.ymax" in body, "pane_bottom_row_ymin does not clamp against the box top"
-    assert "std::min" in body or "std::max" in body
+def test_bottom_row_and_generate_use_shared_composer_geometry():
+    """The compiled geometry tests exercise short/empty/scaled composer bounds."""
+    bottom = _function(KIT_CC, "float pane_bottom_row_ymin(")
+    generate = _function(KIT_CC, "rctf pane_generate_rect(")
+    assert "composer_layout(box, u).action_bottom" in bottom
+    assert "layout.action_bottom" in generate and "layout.action_top" in generate
 
 
-def test_the_generate_rect_cannot_spill_over_the_box_top():
-    body = _function(KIT_CC, "rctf pane_generate_rect(")
-    assert "std::min" in body and "box.ymax" in body
+def test_all_generation_fields_use_the_shared_reservation():
+    for name, source in PANE_SOURCES.items():
+        assert "pane_prompt_field_rect(" in source, name
+        assert "pane_prompt_fits(" in source, name
+    field = _function(KIT_CC, "rctf pane_prompt_field_rect(")
+    assert "layout.field_bottom" in field and "layout.field_top" in field
 
 
 # -------------------------------------------------------------------------
@@ -142,11 +144,13 @@ def test_truncated_text_gets_an_ellipsis():
     """A bare chop reads as a DIFFERENT string: "ReproCone" rendered as
     "ReproCon" looked like the wrong result, not a shortened name."""
     body = _function(KIT_CC, "void pane_fit_text(")
-    assert "\\xE2\\x80\\xA6" in body, "pane_fit_text does not append an ellipsis"
-    # Still UTF-8 aware — never split a multi-byte sequence.
-    assert "0xC0) == 0x80" in body
-    # And it must only ever SHRINK the caller's fixed buffer.
-    assert "orig_len" in body
+    # The compatibility buffer still only shrinks; Unicode fitting is shared.
+    assert "fitted.size() < capacity" in body
+    assert "mixar_fit_text(text, max_w, size)" in body
+    shared = (CPP.parent / "interface/mixar/text.cc").read_text()
+    assert 'const char *ellipsis = "…"' in shared
+    assert "end > 0" in shared and "0xc0) == 0x80" in shared
+    assert re.search(r'if \(budget < 0\.0f\)\s*\{\s*return "";', shared)
 
 
 def test_the_kit_documents_the_ellipsis_for_callers():
@@ -163,9 +167,9 @@ def test_the_splat_mode_toggle_is_measured_not_design_width():
     spilled into the model chip. The LOD track next to it already learned
     this; the mode toggle now shares the measurement."""
     body = _function(SPLAT_PAINT, "void splat_pane_rects_build(")
-    assert "pane_segmented_layout(\n        strip_x" in body or re.search(
-        r"pane_segmented_layout\([^;]*r->mode_seg", body, re.S
-    ), "the splat mode toggle is not laid out from measured labels"
+    assert "pane_segmented_layout(" in body
+    assert "ui::MixarFlow" in body
+    assert "choice(mode_items, mode_count" in body
     intern = (CPP / "agent_ui_tabsplat_intern.hh").read_text(encoding="utf-8")
     for dead in ("SPLAT_MODE_W", "SPLAT_MODE_SPLIT", "SPLAT_MODEL_X", "SPLAT_LOD_X"):
         assert dead not in intern, f"{dead} is a fixed x/width for a catalog label"

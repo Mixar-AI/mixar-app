@@ -21,7 +21,9 @@
  *
  * Widgets flow left-to-right and wrap by the design's row pitch, stopping at
  * the prompt box — schema `order` decided the PropertyGroup's declaration
- * order, so priority params land first.
+ * order, so priority params land first. Catalog `visible_if` is evaluated
+ * from the group's `mixar_visible_if` table; hidden params never consume
+ * strip space. Settings remains the full schema surface.
  */
 
 #include <algorithm>
@@ -45,6 +47,8 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_layout.hh"
 #include "UI_interface_c.hh"
 
 #include "WM_api.hh"
@@ -52,7 +56,7 @@
 
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tab3d_intern.hh"
-#include "agent_ui_theme.hh"
+#include "UI_mixar_tokens.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -84,46 +88,22 @@ void prettify(const char *identifier, char r_out[64])
   r_out[j] = '\0';
 }
 
-struct Flow {
-  float x;
-  float y_top; /* Top edge of the current row. */
-  float x0;
-  float x_max;
-  float y_floor;
+struct Flow : ui::MixarFlow {
   float u;
-  bool out_of_room;
+  const bContext *context;
 };
 
-/** Advance the flow by \a w; wrap to the next row when it does not fit. */
-bool flow_place(Flow *f, const float w, rctf *r_rect)
+bool flow_place(Flow *f, const float width, rctf *rect)
 {
-  if (f->out_of_room) {
+  ui::MixarFlowRect placed;
+  if (!f->place(width, placed)) {
     return false;
   }
-  const float h = AGENT_CHIP_H * f->u;
-  /* Probe the wrap, then test the floor, and only THEN commit. Decrementing
-   * `y_top` before the test consumed the row that did not fit, so the strip
-   * bottom the caller reads back (`y_top - PANE_ROW_H`) sat a whole row BELOW
-   * the floor — the prompt box under it collapsed past PANE_BOX_MIN_H and its
-   * text field was never created, while Generate stayed armed. */
-  float x = f->x;
-  float y_top = f->y_top;
-  if (x + w > f->x_max && x > f->x0) {
-    x = f->x0;
-    y_top -= PANE_ROW_PITCH * f->u;
-  }
-  if (y_top - h < f->y_floor) {
-    f->out_of_room = true;
-    return false;
-  }
-  r_rect->xmin = x;
-  r_rect->xmax = x + w;
-  r_rect->ymax = y_top;
-  r_rect->ymin = y_top - h;
-  f->x = x + w + PANE_CHIP_GAP * f->u;
-  f->y_top = y_top;
+  *rect = {placed.xmin, placed.xmax, placed.ymin, placed.ymax};
   return true;
 }
+
+void draw_enum_dropdown(ui::Block *, PointerRNA *, PropertyRNA *, const char *, Flow *);
 
 void draw_enum_segmented(ui::Block *block,
                          PointerRNA *group_ptr,
@@ -143,34 +123,29 @@ void draw_enum_segmented(ui::Block *block,
     seg_w[i] = pane_text_width(items[i].name, font) + pad;
     total += seg_w[i];
   }
+  if (total > f->x_max - f->x0) {
+    draw_enum_dropdown(block, group_ptr, prop, group_path, f);
+    return;
+  }
   rctf track;
   if (!flow_place(f, total, &track)) {
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float thumb[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&track, AGENT_CHIP_RADIUS * u, chip);
+  pane_fill_round(&track, PANE_RADIUS * u, chip);
 
   const int cur = RNA_property_enum_get(group_ptr, prop);
   float x = track.xmin;
   for (int i = 0; i < totitem && i < 8; i++) {
     rctf seg = {x, x + seg_w[i], track.ymin, track.ymax};
     const bool active = (items[i].value == cur);
-    if (active) {
-      pane_fill_round(&seg, AGENT_CHIP_RADIUS * u, thumb);
-    }
-    pane_label_centre(items[i].name,
-                     BLI_rctf_cent_x(&seg),
-                     BLI_rctf_cent_y(&seg),
-                     font,
-                     active ? text : dim);
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
-                           blender::wm::OpCallContext::InvokeDefault, "",
+                           blender::wm::OpCallContext::InvokeDefault, items[i].name,
                            int(seg.xmin), int(seg.ymin),
                            short(seg_w[i]), short(BLI_rctf_size_y(&seg)),
                            nullptr);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(but, active);
     if (but) {
       pane_but_tooltip_owned(but, items[i].name);
       char path[256];
@@ -190,34 +165,26 @@ void draw_enum_dropdown(ui::Block *block,
                         Flow *f)
 {
   const float u = f->u;
-  const float font = PANE_FONT * u;
 
   char name[64];
   prettify(RNA_property_identifier(prop), name);
   const int cur = RNA_property_enum_get(group_ptr, prop);
   const char *cur_label = nullptr;
-  RNA_property_enum_name_gettexted(nullptr, group_ptr, prop, cur, &cur_label);
+  RNA_property_enum_name_gettexted(const_cast<bContext *>(f->context), group_ptr, prop, cur, &cur_label);
 
-  char label[128];
-  SNPRINTF(label, "%s: %s", name, cur_label ? cur_label : "—");
-  pane_fit_text(label, 300.0f * u, font);
-
-  const float w = PANE_CHIP_PAD_X * u * 2.0f + pane_text_width(label, font);
+  const std::string label = std::string(name) + ": " + (cur_label ? cur_label : "—");
+  const float w = std::min(pane_dropdown_chip_w(label.c_str(), u), 360.0f * u);
   rctf rect;
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  pane_label_centre(label, BLI_rctf_cent_x(&rect), BLI_rctf_cent_y(&rect), font, text);
-
   ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
-                         blender::wm::OpCallContext::InvokeDefault, "",
+                         blender::wm::OpCallContext::InvokeDefault, label.c_str(),
                          int(rect.xmin), int(rect.ymin),
-                         short(w), short(BLI_rctf_size_y(&rect)), nullptr);
+                         short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)), nullptr);
+  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
   if (but) {
-    pane_but_tooltip_owned(but, name);
+    pane_but_tooltip_owned(but, label.c_str());
     char path[256];
     SNPRINTF(path, "%s.%s", group_path, RNA_property_identifier(prop));
     PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -247,31 +214,12 @@ void draw_boolean_chip(ui::Block *block,
   if (!flow_place(f, w, &rect)) {
     return;
   }
-  const float chip[4] = PANE_COL_CHIP;
-  const float thumb[4] = PANE_COL_PILL;
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  const float cy = BLI_rctf_cent_y(&rect);
-  pane_label_left(name, rect.xmin + pad, cy, font, text);
-
-  /* ON / OFF halves, thumb on the live value. */
-  const float toggles_x = rect.xmin + pad + name_w + 12.0f * u;
-  rctf on_rect = {toggles_x, toggles_x + on_w, rect.ymin + 4.0f * u, rect.ymax - 4.0f * u};
-  rctf off_rect = {on_rect.xmax, on_rect.xmax + off_w, on_rect.ymin, on_rect.ymax};
-  if (on) {
-    pane_fill_round(&on_rect, AGENT_CHIP_RADIUS * u, thumb);
-  }
-  else {
-    pane_fill_round(&off_rect, AGENT_CHIP_RADIUS * u, thumb);
-  }
-  pane_label_centre("ON", BLI_rctf_cent_x(&on_rect), cy, font, on ? text : dim);
-  pane_label_centre("OFF", BLI_rctf_cent_x(&off_rect), cy, font, on ? dim : text);
-
   ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle",
-                         blender::wm::OpCallContext::InvokeDefault, "",
+                         blender::wm::OpCallContext::InvokeDefault, name,
                          int(rect.xmin), int(rect.ymin),
-                         short(w), short(BLI_rctf_size_y(&rect)), nullptr);
+                         short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)), nullptr);
+  ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+  ui::mixar_button_lit_set(but, on);
   if (but) {
     pane_but_tooltip_owned(but, name);
     char path[256];
@@ -301,17 +249,20 @@ void draw_number_chip(ui::Block *slider_block,
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float text[4] = AGENT_COL_TEXT;
-  pane_fill_round(&rect, AGENT_CHIP_RADIUS * u, chip);
-  pane_label_left(name, rect.xmin + pad, BLI_rctf_cent_y(&rect), font, text);
+  const float *text = ui::mixar_tokens::zen.text;
+  pane_fill_round(&rect, PANE_RADIUS * u, chip);
+  const float fitted_name_w = std::max(0.0f, BLI_rctf_size_x(&rect) - slider_w - pad * 1.5f - 12.0f * u);
+  const std::string fitted = ui::mixar_fit_text(name, fitted_name_w + 2.0f, font);
+  pane_label_left(fitted.c_str(), rect.xmin + pad, BLI_rctf_cent_y(&rect), font, text);
 
   /* A REAL slider: Blender's own NumSlider bound to the group property —
    * exact drag/type behaviour, themed chrome inside the chip. */
-  const float sx = rect.xmin + pad + name_w + 12.0f * u;
-  uiDefButR(slider_block, ui::ButtonType::NumSlider, "",
+  const float sx = rect.xmin + pad + std::min(name_w, fitted_name_w) + 12.0f * u;
+  ui::Button *number = uiDefButR(slider_block, ui::ButtonType::NumSlider, "",
             int(sx), int(rect.ymin + 4.0f * u),
             short(slider_w), short(BLI_rctf_size_y(&rect) - 8.0f * u),
             group_ptr, RNA_property_identifier(prop), -1, 0.0f, 0.0f, nullptr);
+  ui::mixar_style_button(number, ui::MixarComponent::Number, ui::MixarVariant::Primary, u);
 }
 
 }  // namespace
@@ -338,16 +289,21 @@ float agent_ui_tab3d_params_draw(const bContext *C,
   f.x_max = x_max;
   f.y_floor = y_floor;
   f.u = u;
+  f.context = C;
+  f.row_height = PANE_ROW_H * u;
+  f.row_pitch = PANE_ROW_PITCH * u;
+  f.gap = PANE_CHIP_GAP * u;
 
-  /* Params ELIDE inside their own strip — they never grow it past the floor
-   * that reserves the prompt box. Whatever did not fit is counted and
-   * reported, so a schema is never silently half-shown. */
-  int elided = 0;
+  /* Keep the summary above the composer floor. All remaining schema
+   * parameters stay reachable through the native Settings popup. */
 
   RNA_STRUCT_BEGIN (group_ptr, prop) {
     const char *identifier = RNA_property_identifier(prop);
     if (!STRPREFIX(identifier, "p_")) {
-      continue; /* rna_type / name — not schema params. */
+      continue; /* rna_type / name / visible_if metadata — not schema params. */
+    }
+    if (!pane_schema_param_visible(group_ptr, identifier)) {
+      continue;
     }
     const PropertyType prop_type = RNA_property_type(prop);
     if (prop_type != PROP_ENUM && prop_type != PROP_BOOLEAN && prop_type != PROP_INT &&
@@ -356,8 +312,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
       continue; /* No chip vocabulary — see the default case below. */
     }
     if (f.out_of_room) {
-      elided++;
-      continue;
+      break;
     }
     switch (prop_type) {
       case PROP_ENUM: {
@@ -388,24 +343,11 @@ float agent_ui_tab3d_params_draw(const bContext *C,
         break;
       default:
         /* Strings and pointers have no chip vocabulary in the design —
-         * the moodboard N-panel remains the surface for those. */
+         * the Settings popup remains the surface for those. */
         break;
-    }
-    /* A widget whose own flow_place hit the floor drew nothing. */
-    if (f.out_of_room) {
-      elided++;
     }
   }
   RNA_STRUCT_END;
-
-  if (elided > 0) {
-    const float dim[4] = AGENT_COL_TEXT_DIM;
-    char more[32];
-    SNPRINTF(more, "+%d more", elided);
-    const float w = pane_text_width(more, PANE_FONT_SUB * u);
-    const float x = std::min(f.x, x_max - w);
-    pane_label_left(more, x, f.y_top - AGENT_CHIP_H * u * 0.5f, PANE_FONT_SUB * u, dim);
-  }
 
   /* Strip bottom: the lowest row this flow reached, never below the floor the
    * caller reserved for the prompt box (the kit's prompt-visibility

@@ -33,11 +33,13 @@ SUPPORT_CODES = {
 # Environment variables win over mixar.json so MDM / login scripts can set
 # them fleet-wide without editing the install.
 ENV_CA_BUNDLE = "MIXAR_CA_BUNDLE"
+ENV_EXTRA_CA_CERTS = "MIXAR_EXTRA_CA_CERTS"
 ENV_PROXY_URL = "MIXAR_PROXY_URL"
 ENV_NO_PROXY = "MIXAR_NO_PROXY"
 
 CONFIG_SECTION = "network"
 CONFIG_CA_BUNDLE = "ca_bundle"
+CONFIG_EXTRA_CA_CERTS = "extra_ca_certs"
 CONFIG_PROXY_URL = "proxy_url"
 CONFIG_NO_PROXY = "no_proxy"
 
@@ -63,6 +65,20 @@ UNSUPPORTED_PROXY_SCHEMES = ("socks4", "socks4a", "socks5", "socks5h")
 # The SSO callback server and local model relays live on loopback; a proxy
 # must never be asked to reach them.
 LOOPBACK_NO_PROXY = ("localhost", "127.0.0.1", "::1")
+
+# --- Additional CA certificates (additive, on top of whatever roots apply) ---
+# Every file with one of these extensions found in a certs folder is loaded;
+# PEM and DER encodings are both accepted, whatever the extension says.
+CERT_FILE_EXTENSIONS = (".pem", ".crt", ".cer", ".der")
+# Per-user drop folder, relative to Blender's user CONFIG resource (the same
+# parent as the ``mixar.json`` overlay): ``<user config>/mixar/certs``.
+USER_CERTS_SUBDIR = "mixar"
+USER_CERTS_DIRNAME = "certs"
+# Machine-wide drop folders an MDM profile or login script can populate
+# without touching any user account. Windows resolves ``%ProgramData%``.
+MACHINE_CERTS_DIRS_DARWIN = ("/Library/Application Support/Mixar/certs",)
+MACHINE_CERTS_DIRS_WINDOWS_SUBPATH = ("Mixar", "certs")
+MACHINE_CERTS_DIRS_LINUX = ("/etc/mixar/certs",)
 
 # --- Trust modes (reported in logs and diagnostics) ---------------------------
 TRUST_MODE_OS = "os-trust-store"

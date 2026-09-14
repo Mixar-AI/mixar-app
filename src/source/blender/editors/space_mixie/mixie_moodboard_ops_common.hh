@@ -26,6 +26,8 @@
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
+#include "DNA_windowmanager_types.h"
+#include "DNA_workspace_types.h"
 
 #include "BKE_context.hh"
 #include "BKE_image.hh"
@@ -189,8 +191,38 @@ struct MoodboardMoveData {
  * \{ */
 
 /**
+ * True when the context region is the Zen Mode View3D drawer hosting the
+ * Mixie canvas at a settled-open slide. Kept here so mixie never includes
+ * the view3d drawer header (view3d already depends on mixie).
+ */
+inline bool moodboard_zen_drawer_active(const bContext *C)
+{
+  const ScrArea *area = CTX_wm_area(C);
+  const ARegion *region = CTX_wm_region(C);
+  if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
+    return false;
+  }
+  if (region == nullptr || region->regiontype != RGN_TYPE_TOOL_PROPS) {
+    return false;
+  }
+  const WorkSpace *workspace = CTX_wm_workspace(C);
+  if (workspace == nullptr || !STREQ(workspace->id.name + 2, "Zen Mode")) {
+    return false;
+  }
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return false;
+  }
+  PointerRNA ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&ptr, "mixar_moodboard_drawer_amount");
+  return prop != nullptr &&
+         RNA_property_float_get(&ptr, prop) >= MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT;
+}
+
+/**
  * Standard poll function for moodboard operators.
- * Returns true if we're in the Mixie space in moodboard mode.
+ * True in the Mixie moodboard space, or on the Zen View3D drawer once it
+ * is open enough that paint and hit-test share an unshifted `v2d`.
  */
 inline bool moodboard_poll(bContext *C)
 {
@@ -199,7 +231,7 @@ inline bool moodboard_poll(bContext *C)
     SpaceMixie *smixie = reinterpret_cast<SpaceMixie *>(sl);
     return smixie->mode == MIXIE_MODE_MOODBOARD;
   }
-  return false;
+  return moodboard_zen_drawer_active(C);
 }
 
 /** \} */

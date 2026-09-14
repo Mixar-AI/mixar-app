@@ -67,13 +67,26 @@ def test_bindings_and_runs(journal):
     b = journal.get_binding("r1", "t1", 0)
     assert b["worker_connection_id"] == "p-sbx-1" and b["fence"] == 6
     assert journal.get_binding("r1", "t2", 0) is None
-    assert journal.run_epoch("s1") == 0
+    # No accepted run yet is -1, not 0: epoch 0 is a real epoch.
+    assert journal.run_epoch("s1") == -1
     journal.record_run("s1", "r1", 3)
     journal.record_run("s1", "r2", 4)
     assert journal.run_epoch("s1") == 4
     assert not journal.run_revoked("r2")
     journal.revoke_run("r2")
     assert journal.run_revoked("r2")
+
+
+def test_record_run_clears_a_prior_revocation(journal):
+    """Re-activating the same run id at a newer epoch must not inherit the
+    old revoke, or every later commit for it is refused while the activate
+    itself was acknowledged."""
+    journal.record_run("s1", "r1", 4)
+    journal.revoke_run("r1")
+    assert journal.run_revoked("r1")
+    journal.record_run("s1", "r1", 5)
+    assert not journal.run_revoked("r1")
+    assert journal.run_epoch("s1") == 5
 
 
 def test_supersede_run_only_touches_open_ops(journal):
@@ -102,3 +115,25 @@ def test_singleton_set_and_get(tmp_path, monkeypatch):
     j = jmod.get_journal()
     assert j.path.startswith(str(tmp_path))
     jmod.set_journal(None)
+
+
+def test_reopen_abandons_a_crashed_running_op(tmp_path):
+    """RUNNING that survives a process death must not stay deferred."""
+    path = str(tmp_path / "j.sqlite")
+    j = Journal(path)
+    _prepare(j)
+    j.op_set_state("op-1", jmod.RUNNING)
+    assert j.op_get("op-1")["state"] == jmod.RUNNING
+    j.close()
+    j2 = Journal(path)
+    assert j2.op_get("op-1")["state"] == jmod.UNKNOWN
+    j2.close()
+
+
+def test_get_latest_binding_picks_the_highest_fence(journal):
+    journal.record_binding("r1", "t1", 0, "p-sbx-0", 3)
+    journal.record_binding("r1", "t1", 1, "p-sbx-1", 9)
+    journal.record_binding("r1", "t1", 2, "p-sbx-2", 4)
+    rec = journal.get_latest_binding("r1", "t1")
+    assert rec["fence"] == 9 and rec["generation"] == 1
+    assert journal.get_latest_binding("r1", "missing") is None

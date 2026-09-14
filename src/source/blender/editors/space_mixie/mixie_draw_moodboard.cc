@@ -22,6 +22,9 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_canvas.hh"
+
+#include "ED_mixar_glass.hh"
 
 #include "UI_interface_c.hh"
 
@@ -93,7 +96,9 @@ bool is_rect_in_view(View2D *v2d, float x, float y, float w, float h)
 /** \name View2D Setup for Moodboard
  * \{ */
 
-void mixie_moodboard_region_set_view2d(ARegion *region)
+/* File-local: the drawer's cross-module entry point is
+ * `mixie_moodboard_canvas_draw()`, which rebuilds the view itself. */
+static void mixie_moodboard_region_set_view2d(ARegion *region)
 {
   View2D *v2d = &region->v2d;
 
@@ -219,16 +224,29 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 /** \name Selection Overlay Drawing
  * \{ */
 
+void moodboard_draw_glass_pane(const rctf &rect, const float radius)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, &rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_MOODBOARD;
+  style.radius = radius;
+  ui::mixar_glass_draw(pane, style);
+}
+
 void mixie_draw_moodboard_media_frame(
     const float x, const float y, const float w, const float h, const bool selected)
 {
   const float padding = MOODBOARD_MEDIA_FRAME_PADDING;
   const rctf frame = {x - padding, x + w + padding, y - padding, y + h + padding};
-  const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
-  const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&frame, true, MOODBOARD_MEDIA_FRAME_RADIUS, background);
-  ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+  moodboard_draw_glass_pane(frame, MOODBOARD_MEDIA_FRAME_RADIUS);
+  /* Only the SELECTED frame brightens its rim; the RESTING one is the token
+   * row's, so both the media frame and the node card share one resting look. */
+  if (selected) {
+    const float border[4] = {0.38f, 0.39f, 0.42f, 0.92f};
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+  }
 }
 
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h)
@@ -342,6 +360,17 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Draw View2D scrollers */
   ui::view2d_scrollers_draw(v2d, nullptr);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Public host bridge
+ * \{ */
+
+void mixie_moodboard_canvas_draw(const bContext *C, ARegion *region)
+{
+  mixie_draw_moodboard_mode(C, region);
 }
 
 /** \} */

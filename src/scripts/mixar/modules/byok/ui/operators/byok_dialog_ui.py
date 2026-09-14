@@ -25,14 +25,21 @@ State machine lives on WindowManager (see ui/properties/byok_props.py);
 operators and async flow live in byok_ops.py. This module only draws.
 """
 
+from mixar.modules.common.ui.constants import (
+    CARD_ROW_CTA,
+    CARD_ROW_DIVIDER,
+    CARD_ROW_FIELD,
+    CARD_ROW_HEADING,
+)
+
 from ...core import model_suggestions
 
-# Row heights (uiLayout.scale_y), mirroring the profile card's rhythm
-# (`ROW_*` in interface_mixar_profile_card.cc).
-HEADER_SCALE_Y = 1.6
-FIELD_SCALE_Y = 1.45
-ACTION_SCALE_Y = 1.7
-DIVIDER_SCALE_Y = 0.6
+# Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
+# Footer actions use the CTA recipe (1.7), not the profile 2x2 grid (1.9).
+HEADER_SCALE_Y = CARD_ROW_HEADING
+FIELD_SCALE_Y = CARD_ROW_FIELD
+ACTION_SCALE_Y = CARD_ROW_CTA
+DIVIDER_SCALE_Y = CARD_ROW_DIVIDER
 
 # Word-wrap width for inline error text (Blender labels don't wrap).
 ERROR_WRAP_CHARS = 72

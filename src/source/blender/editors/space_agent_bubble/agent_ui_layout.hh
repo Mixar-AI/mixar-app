@@ -27,6 +27,11 @@
 namespace blender {
 
 struct ARegion;
+struct bContext;
+struct AgentIslandState;
+struct AgentIslandLayout;
+/** Resolve current host geometry without GPU state or window mutations. */
+bool agent_bubble_island_layout_get(const bContext *C, AgentIslandState *state, AgentIslandLayout *layout);
 
 /** A tab in the strip. Order is the artboard's, left to right. */
 enum AgentTabId {
@@ -71,14 +76,8 @@ struct AgentIslandLayout {
   rctf queue_count;
   rctf new_badge;
 
-  /* Gradient axis endpoints in region pixels. The artboard's ramp runs well
-   * past the card's bottom edge, so sampling it over the card rect alone
-   * would darken the card badly — carry the real axis instead. */
-  float card_grad_a[2];
-  float card_grad_b[2];
-
   rctf card;         /* Outer border rect. */
-  rctf card_fill;    /* Inset by the border width. */
+  rctf card_fill;    /* Inset by the border width — the card bed's own rect. */
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;

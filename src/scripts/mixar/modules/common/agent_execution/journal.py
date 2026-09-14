@@ -24,9 +24,11 @@ from typing import Iterable, Optional
 
 from mixar.config.logging_config import get_logger
 
+from .journal_owner import JournalOwner
+
 logger = get_logger(__name__)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Operation states (see the v3 plan): a script failure is NOT
 # failed_no_effect unless a typed handler proved it.
@@ -83,16 +85,42 @@ class Journal:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=FULL")
-        self._migrate()
+        self._owner = None
+        try:
+            self._owner = JournalOwner(path)
+            self._migrate()
+            self._abandon_crashed_ops()
+        except BaseException:
+            self.close()
+            raise
 
     # --- schema ---------------------------------------------------------
     def _migrate(self) -> None:
-        version = self._conn.execute("PRAGMA user_version").fetchone()[0]
-        if version < 1:
-            with self._tx():
+        # Inspect the version under the write lock: two Mixar instances can
+        # open (and migrate) the same per-user journal at once.
+        with self._tx():
+            version = self._conn.execute("PRAGMA user_version").fetchone()[0]
+            if version < 1:
                 for stmt in _SCHEMA:
                     self._conn.execute(stmt)
+            if version < 2:
+                self._conn.execute("ALTER TABLE ops ADD COLUMN owner_id TEXT")
+            if version < SCHEMA_VERSION:
                 self._conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+
+    def _abandon_crashed_ops(self) -> None:
+        """Recover only publishers whose lifetime lock has been released."""
+        with self._tx():
+            owners = self._conn.execute(
+                "SELECT DISTINCT owner_id FROM ops WHERE state=? AND owner_id IS NOT NULL",
+                (RUNNING,),
+            ).fetchall()
+            for row in owners:
+                if self._owner.abandoned(row["owner_id"]):
+                    self._conn.execute(
+                        "UPDATE ops SET state=?, updated_at=? WHERE state=? AND owner_id=?",
+                        (UNKNOWN, time.time(), RUNNING, row["owner_id"]),
+                    )
 
     def _tx(self):
         """BEGIN IMMEDIATE ... COMMIT/ROLLBACK context manager."""
@@ -117,14 +145,21 @@ class Journal:
             self._conn.close()
         except Exception:
             pass
+        if self._owner is not None:
+            self._owner.close()
 
     # --- runs -------------------------------------------------------------
     def run_epoch(self, session_id: str) -> int:
-        """Highest turn epoch this client ever accepted for the session."""
+        """Highest turn epoch this client ever accepted for the session.
+
+        ``-1`` when the session has no accepted run yet, matching the
+        "no prior run" sentinel :func:`bindings.activate` starts from: epoch
+        0 is a real epoch, so 0 must not double as "never activated".
+        """
         row = self._conn.execute(
             "SELECT MAX(turn_epoch) AS e FROM runs WHERE session_id=?", (session_id,)
         ).fetchone()
-        return int(row["e"]) if row and row["e"] is not None else 0
+        return int(row["e"]) if row and row["e"] is not None else -1
 
     def record_run(self, session_id: str, run_id: str, turn_epoch: int) -> None:
         with self._tx():
@@ -132,7 +167,7 @@ class Journal:
                 "INSERT INTO runs(run_id, session_id, turn_epoch, revoked, updated_at) "
                 "VALUES(?,?,?,0,?) ON CONFLICT(run_id) DO UPDATE SET "
                 "session_id=excluded.session_id, turn_epoch=excluded.turn_epoch, "
-                "updated_at=excluded.updated_at",
+                "revoked=0, updated_at=excluded.updated_at",
                 (run_id, session_id, int(turn_epoch), time.time()),
             )
 
@@ -170,6 +205,15 @@ class Journal:
         ).fetchone()
         return dict(row) if row else None
 
+    def get_latest_binding(self, run_id: str, task_id: str) -> Optional[dict]:
+        """Highest-fence binding for the task, any generation (restart path)."""
+        row = self._conn.execute(
+            "SELECT * FROM bindings WHERE run_id=? AND task_id=? "
+            "ORDER BY fence DESC, generation DESC LIMIT 1",
+            (run_id, task_id),
+        ).fetchone()
+        return dict(row) if row else None
+
     # --- operations -----------------------------------------------------------
     def op_get(self, operation_id: str) -> Optional[dict]:
         row = self._conn.execute("SELECT * FROM ops WHERE operation_id=?", (operation_id,)).fetchone()
@@ -195,6 +239,13 @@ class Journal:
 
     def op_set_state(self, operation_id: str, state: str, receipt: Optional[dict] = None) -> dict:
         with self._tx():
+            if state == RUNNING:
+                # Claim publication atomically with entering RUNNING, after
+                # acquiring the owner lock and before any foreground effect.
+                self._conn.execute(
+                    "UPDATE ops SET owner_id=? WHERE operation_id=?",
+                    (self._owner.id, operation_id),
+                )
             if receipt is None:
                 self._conn.execute(
                     "UPDATE ops SET state=?, updated_at=? WHERE operation_id=?",

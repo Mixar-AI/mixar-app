@@ -408,19 +408,15 @@ def deselect_all_moodboard_origin_attachments(scene) -> int:
 # UI redraw — tag only, never resize the bubble
 # ----------------------------------------------------------------- #
 def _redraw_moodboard_areas() -> None:
-    """Tag MIXIE moodboard areas for redraw. Used when we mutate
+    """Tag both moodboard hosts for redraw. Used when we mutate
     moodboard selection from a chat-side path (X-button on a pill,
     send completion) — without this, the moodboard's GPU-drawn
     selection rectangles keep showing the now-deselected image as
     selected until some other event (mouse move, typing into the
     composer, etc.) triggers a draw cycle."""
     try:
-        for window in bpy.context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == 'MIXIE':
-                    area.tag_redraw()
-                    for region in area.regions:
-                        region.tag_redraw()
+        from .canvas_context import redraw_moodboard_canvases
+        redraw_moodboard_canvases()
     except Exception as e:  # noqa: BLE001
         _logger.debug("moodboard redraw failed: %s", e, exc_info=True)
 

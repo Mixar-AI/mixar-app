@@ -47,7 +47,7 @@ static SpaceLink *baking_create(const ScrArea * /*area*/, const Scene * /*scene*
   SpaceBaking *sbaking = MEM_new<SpaceBaking>("initbaking");
   sbaking->spacetype = SPACE_BAKING;
 
-  /* Header (hosts the editor-type switch dropdown) */
+  /* Header (title chrome; the space is hidden from the Editor Type menu) */
   ARegion *region = BKE_area_region_new();
   BLI_addtail(&sbaking->regionbase, region);
   region->regiontype = RGN_TYPE_HEADER;
@@ -94,7 +94,7 @@ static void baking_main_region_listener(const wmRegionListenerParams *params)
 }
 
 /* Header region uses the standard header draw so Python `Header` classes
- * (and the editor-type switch dropdown) are rendered. */
+ * render title chrome. The space is omitted from the Editor Type menu. */
 static void baking_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
   ED_region_header_init(region);

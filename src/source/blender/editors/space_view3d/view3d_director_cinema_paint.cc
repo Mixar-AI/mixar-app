@@ -35,8 +35,11 @@
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director_cinema.hh"
@@ -58,6 +61,18 @@ void cinema_panel(const rctf &rect,
    * ramps are slightly diagonal; at panel scale the difference is under a
    * level of quantisation and a vertical ramp needs no custom geometry. */
   ui::draw_roundbox_4fv_ex(&rect, top, bottom, 1.0f, nullptr, 0.0f, radius);
+}
+
+void cinema_glass_panel(const rctf &rect, const float radius)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, &rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_CARD;
+  style.radius = radius;
+  style.draw_shadow = false;
+  style.draw_specular = false;
+  ui::mixar_glass_draw(pane, style);
 }
 
 void cinema_fill(const rctf &rect, const float radius, const float color[4])
@@ -318,8 +333,8 @@ ui::Button *cinema_op_button(ui::Block *block,
                         const rctf &rect,
                         const char *tooltip)
 {
-  /* Emboss::None and no label: the panel already painted this control, so the
-   * button contributes hit-testing and dispatch only. */
+  /* The panel already painted the control. The native button owns input and
+   * a transparent, bounded feedback overlay over precisely those pixels. */
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
   ui::Button *but = uiDefIconButO(block,
                              ui::ButtonType::But,
@@ -332,6 +347,7 @@ ui::Button *cinema_op_button(ui::Block *block,
                              int(BLI_rctf_size_y(&rect)),
                              tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 
@@ -355,6 +371,7 @@ ui::Button *cinema_icon_button(ui::Block *block,
                                   int(BLI_rctf_size_y(&rect)),
                                   tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 
@@ -383,6 +400,7 @@ ui::Button *cinema_popup_button(ui::Block *block,
                                       short(BLI_rctf_size_y(&rect)),
                                       tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
   return but;
 }
 

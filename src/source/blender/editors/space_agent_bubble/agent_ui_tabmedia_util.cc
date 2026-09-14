@@ -6,10 +6,11 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Media pane internals — paint helpers, RNA plumbing, and the catalog param
+ * Media pane internals — native controls, RNA plumbing, and the catalog param
  * chip model. See agent_ui_tabmedia.cc for the pane itself.
  */
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -26,21 +27,19 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "WM_types.hh"
+
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_tabmedia_intern.hh"
-#include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
-
-
 /* -------------------------------------------------------------------- */
-/** \name Paint helpers (duplicated from agent_ui_queue.cc's statics —
- * deliberately local, same reasoning).
+/** \name Media bindings and shared native controls
  * \{ */
-
-/* Painter primitives come from the pane kit (agent_ui_pane_kit.cc). */
 
 void media_sanitize_key(const char *in, char *out, const int out_len)
 {
@@ -120,9 +119,9 @@ bool media_ident_is_placeholder(const char *ident)
 
 /** All `p_*` params of the catalog group into chips. Order follows RNA
  * definition order, which follows the schema dict — the same order the
- * moodboard's draw_service_params shows. `visible_if` conditions live only
- * in the Python schema and are not evaluated here (documented limitation:
- * a conditionally-hidden param stays visible in this pane). */
+ * moodboard's draw_service_params shows. `visible_if` is evaluated from the
+ * group's `mixar_visible_if` table so hidden params never occupy a chip
+ * slot or the overflow count. */
 int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChip *chips, const int max_chips, int *r_total)
 {
   int count = 0;
@@ -130,6 +129,9 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
   RNA_STRUCT_BEGIN (group, prop) {
     const char *ident = RNA_property_identifier(prop);
     if (!STRPREFIX(ident, "p_")) {
+      continue;
+    }
+    if (!pane_schema_param_visible(group, ident)) {
       continue;
     }
     (*r_total)++;
@@ -140,7 +142,7 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
     chip = {};
     chip.on_wm_group = true;
     BLI_strncpy(chip.prop_id, ident, sizeof(chip.prop_id));
-    BLI_strncpy(chip.label, RNA_property_ui_name(prop), sizeof(chip.label));
+    chip.label = RNA_property_ui_name(prop);
 
     const PropertyType type = RNA_property_type(prop);
     if (type == PROP_ENUM) {
@@ -148,7 +150,7 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
       const int value = RNA_property_enum_get(group, prop);
       const char *label = nullptr;
       if (RNA_property_enum_name_gettexted(const_cast<bContext *>(C), group, prop, value, &label) && label) {
-        BLI_strncpy(chip.value, label, sizeof(chip.value));
+        chip.value = label;
       }
     }
     else if (type == PROP_BOOLEAN) {
@@ -157,10 +159,10 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
     }
     else if (type == PROP_INT) {
       chip.kind = MediaChipKind::Int;
-      SNPRINTF(chip.value, "%d", RNA_property_int_get(group, prop));
+      chip.value = std::to_string(RNA_property_int_get(group, prop));
     }
     else {
-      /* Floats/strings don't fit a chip strip; the moodboard N-panel remains
+      /* Floats/strings don't fit a chip strip; the Settings popup remains
        * the full-fidelity surface for those (documented in the spec). */
       (*r_total)--;
       continue;
@@ -177,73 +179,98 @@ float media_chip_width(const MediaParamChip &chip, const float u, const float fo
   switch (chip.kind) {
     case MediaChipKind::Enum:
       /* label  value ▾ */
-      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
-             pane_text_width(chip.value, font) + 22.0f * u;
+      return pad * 2.0f + pane_text_width(chip.label.c_str(), font_sub) + 10.0f * u +
+             pane_text_width(chip.value.c_str(), font) +
+             (2 * ui::mixar_tokens::padding + ui::mixar_tokens::icon) * u;
     case MediaChipKind::Bool:
       /* label [ON OFF] */
-      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
-             pane_text_width("ON", font_sub) + pane_text_width("OFF", font_sub) + 44.0f * u;
+      return pad * 2.0f + pane_text_width(chip.label.c_str(), font) + 12.0f * u +
+             pane_text_width("ON", font) + pane_text_width("OFF", font) + 44.0f * u;
     case MediaChipKind::Int:
-      /* label - value + */
-      return pad * 2.0f + pane_text_width(chip.label, font_sub) + 10.0f * u +
-             pane_text_width(chip.value, font) + 64.0f * u;
+      /* Caption + native numeric field, with room for drag arrows and typing.
+       */
+      return pad * 2.0f + pane_text_width(chip.label.c_str(), font_sub) + 10.0f * u +
+             pane_text_width(chip.value.c_str(), font) + 64.0f * u;
   }
   return 0.0f;
 }
 
-void media_param_chips_paint(const MediaParamChip *chips,
-                             const int count,
-                             const float u,
-                             const float font,
-                             const float font_sub)
+void media_param_chip_control(ui::Block *block,
+                              const MediaParamChip &chip,
+                              PointerRNA *owner,
+                              const char *data_path,
+                              const float u)
 {
-  const float col_param[4] = PANE_COL_CHIP;
-  const float col_value[4] = PANE_COL_PILL_DIM;
-  const float col_value_on[4] = PANE_COL_PILL;
-  const float col_text[4] = AGENT_COL_TEXT;
-  const float col_strong[4] = AGENT_COL_TEXT_STRONG;
-  const float col_dim[4] = AGENT_COL_TEXT_DIM;
-
-  for (int i = 0; i < count; i++) {
-    const MediaParamChip &chip = chips[i];
-    const float cy = BLI_rctf_cent_y(&chip.rect);
-    pane_fill_round(&chip.rect, PANE_RADIUS * u, col_param);
-    const float pad = PANE_CHIP_PAD_X * u;
-    float tx = chip.rect.xmin + pad;
-    pane_label_left(chip.label, tx, cy, font_sub, col_dim);
-    tx += pane_text_width(chip.label, font_sub) + 10.0f * u;
-
+  using namespace ui::mixar_tokens;
+  const ui::MixarTextStyle body_style = ui::mixar_text_style(ui::MixarTextRole::Body, u);
+  const ui::MixarTextStyle caption_style = ui::mixar_text_style(ui::MixarTextRole::Caption, u);
+  rctf control = chip.rect;
+  ui::Button *button = nullptr;
+  if (chip.kind == MediaChipKind::Bool) {
+    button = uiDefButO(block,
+                       ui::ButtonType::But,
+                       "wm.context_toggle",
+                       wm::OpCallContext::InvokeDefault,
+                       chip.label.c_str(),
+                       int(control.xmin),
+                       int(control.ymin),
+                       short(BLI_rctf_size_x(&control)),
+                       short(BLI_rctf_size_y(&control)),
+                       nullptr);
+    ui::mixar_style_button(button, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+    ui::mixar_button_lit_set(button, chip.bool_value);
+  }
+  else {
+    /* Caption and value are a composite: the caption is decorative, while
+     * the value has one native rectangle for paint, editing and QA. */
+    ui::mixar_fill_round(chip.rect, radius * u, zen.control);
+    const float value_min = (chip.kind == MediaChipKind::Int ? 64.0f : 100.0f) * u;
+    const float value_width = std::max(value_min, std::min(
+        ui::mixar_text_width(chip.value.c_str(), body_style) + (2 * padding + icon) * u,
+        BLI_rctf_size_x(&control) * 0.6f));
+    const float caption_width = std::min(
+        ui::mixar_text_width(chip.label.c_str(), caption_style),
+        std::max(0.0f, BLI_rctf_size_x(&control) - (padding + 10) * u - value_width));
+    const std::string caption = ui::mixar_fit_text(chip.label.c_str(), caption_width, caption_style);
+    ui::mixar_label_left(caption.c_str(), control.xmin + padding * u,
+                        BLI_rctf_cent_y(&control), caption_style, zen.secondary);
+    control.xmin += padding * u + caption_width + 10 * u;
     if (chip.kind == MediaChipKind::Enum) {
-      pane_label_left(chip.value, tx, cy, font, col_text);
-      /* Down chevron. */
-      pane_label_left("\xE2\x96\xBE", chip.rect.xmax - pad - 10.0f * u, cy, font_sub, col_text);
+      button = uiDefButO(block,
+                         ui::ButtonType::But,
+                         "wm.context_menu_enum",
+                         wm::OpCallContext::InvokeDefault,
+                         chip.value.c_str(),
+                         int(control.xmin),
+                         int(control.ymin),
+                         short(BLI_rctf_size_x(&control)),
+                         short(BLI_rctf_size_y(&control)),
+                         nullptr);
+      ui::mixar_style_button(button, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
     }
-    else if (chip.kind == MediaChipKind::Bool) {
-      rctf pill;
-      pill.xmin = tx;
-      pill.xmax = chip.rect.xmax - pad + 4.0f * u;
-      pill.ymin = cy - (PANE_PILL_H * 0.5f) * u;
-      pill.ymax = cy + (PANE_PILL_H * 0.5f) * u;
-      pane_fill_round(&pill, PANE_RADIUS * u, chip.bool_value ? col_value_on : col_value);
-      const float on_w = pane_text_width("ON", font_sub);
-      const float off_w = pane_text_width("OFF", font_sub);
-      const float span = BLI_rctf_size_x(&pill);
-      pane_label_left("ON",
-                      pill.xmin + span * 0.25f - on_w * 0.5f,
-                      cy,
-                      font_sub,
-                      chip.bool_value ? col_strong : col_dim);
-      pane_label_left("OFF",
-                      pill.xmin + span * 0.75f - off_w * 0.5f,
-                      cy,
-                      font_sub,
-                      chip.bool_value ? col_dim : col_strong);
+    else {
+      button = uiDefButR(block,
+                         ui::ButtonType::Num,
+                         "",
+                         int(control.xmin),
+                         int(control.ymin + 4 * u),
+                         short(BLI_rctf_size_x(&control) - 4 * u),
+                         short(BLI_rctf_size_y(&control) - 8 * u),
+                         owner,
+                         chip.prop_id,
+                         -1,
+                         0.0f,
+                         0.0f,
+                         nullptr);
+      ui::mixar_style_button(button, ui::MixarComponent::Number, ui::MixarVariant::Primary, u);
     }
-    else { /* Int */
-      pane_label_left("\xE2\x88\x92", tx + 4.0f * u, cy, font, col_dim);
-      pane_label_centre(
-          chip.value, (tx + chip.rect.xmax - pad) * 0.5f, cy, font, col_text);
-      pane_label_left("+", chip.rect.xmax - pad - 8.0f * u, cy, font, col_dim);
+  }
+  if (button) {
+    const std::string tip = chip.label + (chip.value.empty() ? "" : ": " + chip.value);
+    ui::mixar_button_tooltip_owned(button, tip.c_str());
+    if (chip.kind != MediaChipKind::Int) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(button);
+      RNA_string_set(op_ptr, "data_path", data_path);
     }
   }
 }

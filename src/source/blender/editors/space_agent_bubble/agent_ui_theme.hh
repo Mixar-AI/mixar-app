@@ -35,6 +35,8 @@
 
 #pragma once
 
+#include "UI_mixar_text.hh"
+
 #include "BLI_utildefines.h"
 
 #include "UI_interface.hh"
@@ -168,7 +170,7 @@ namespace blender {
 /** Gap between a tab's icon and its label, and the pill's inner side padding. */
 #define AGENT_TAB_ICON_GAP 8
 #define AGENT_TAB_PAD_X 13
-#define AGENT_TAB_FONT 18
+#define AGENT_TAB_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Body)
 
 /** \} */
 
@@ -199,7 +201,7 @@ namespace blender {
 #define AGENT_HDR_BTN2_CX 82
 #define AGENT_HDR_GLYPH_R 13
 
-#define AGENT_HDR_TITLE_FONT 25
+#define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
 #define AGENT_HDR_FAQ_FONT 17
 /** "FAQs" ink ends at artboard x=1554 -> 23 units of right inset. */
 #define AGENT_HDR_FAQ_INSET 23
@@ -245,7 +247,7 @@ namespace blender {
 /** Prompt text: ink box starts at artboard (312, 577) -> local (45, 237). */
 #define AGENT_PROMPT_X 45
 #define AGENT_PROMPT_Y 237
-#define AGENT_PROMPT_FONT 24
+#define AGENT_PROMPT_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Prompt)
 
 /** \} */
 
@@ -258,7 +260,7 @@ namespace blender {
 #define AGENT_CHIP_Y 502
 #define AGENT_CHIP_H 44
 #define AGENT_CHIP_RADIUS 14
-#define AGENT_CHIP_FONT 18
+#define AGENT_CHIP_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Body)
 /* Measured off the artboard's model chip: icon ink 501..518 inside a chip
  * starting at 489, label ink from 526. */
 #define AGENT_CHIP_PAD_X 12
@@ -309,6 +311,7 @@ namespace blender {
  * \{ */
 
 /* Surfaces */
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f} /* shared native pill/chat bed */
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */
 #define AGENT_COL_CHIP_ACTIVE {0.196f, 0.196f, 0.196f, 1.0f}  /* #323232 segment thumb */
@@ -321,16 +324,8 @@ namespace blender {
 #define AGENT_COL_ACCENT {0.169f, 0.486f, 0.294f, 1.0f}       /* #2B7C4B dot, badge, hdr btn */
 #define AGENT_COL_GENERATE {0.102f, 0.251f, 0.149f, 1.0f}     /* #1A4026 generate button */
 
-/* Card gradient — top-right #325B33 to #002317, along the artboard vector
- * (1554,463) -> (1281.66,1068.71) in island-local units. The ramp runs past
- * the card's bottom edge, so only its first ~73% is ever visible; sampling
- * it over the card rect alone would make the card far too dark. */
-#define AGENT_COL_CARD_TOP {0.196f, 0.357f, 0.200f, 1.0f}
-#define AGENT_COL_CARD_BOTTOM {0.000f, 0.137f, 0.090f, 1.0f}
-#define AGENT_CARD_GRAD_X0 1287
-#define AGENT_CARD_GRAD_Y0 2
-#define AGENT_CARD_GRAD_X1 1014
-#define AGENT_CARD_GRAD_Y1 607
+/* The expanded chat and resting capsule share the glass kit's neutral PILL
+ * material. The credit meter takes its white rim; only controls carry green. */
 
 /* Strokes and text.
  *

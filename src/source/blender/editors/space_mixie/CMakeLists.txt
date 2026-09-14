@@ -45,6 +45,7 @@ set(SRC
 
   mixie_draw_moodboard_intern.hh
   mixie_intern.hh
+  mixie_moodboard_canvas.hh
   mixie_moodboard_ops_common.hh
 )
 

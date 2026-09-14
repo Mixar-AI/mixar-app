@@ -25,6 +25,8 @@
 
 #include "RNA_access.hh"
 
+#include "ED_moodboard_drawer.hh"
+
 #include "UI_view2d.hh"
 
 #include "WM_api.hh"
@@ -61,8 +63,26 @@ void moodboard_qa_targets(const wmWindow *win,
                           const ARegion *region,
                           std::vector<MixarQATarget> &r_targets)
 {
-  if (area->spacetype != SPACE_MIXIE || region->regiontype != RGN_TYPE_WINDOW) {
+  const bool mixie_canvas = area->spacetype == SPACE_MIXIE &&
+                            region->regiontype == RGN_TYPE_WINDOW;
+  const bool drawer_canvas = area->spacetype == SPACE_VIEW3D &&
+                             region->regiontype == RGN_TYPE_TOOL_PROPS;
+  if (!mixie_canvas && !drawer_canvas) {
     return;
+  }
+  const size_t first_target = r_targets.size();
+  /* The drawer draw pass shifts `v2d.cur` then restores it. Export canvas
+   * targets only once that offset is gone, or the harness would click
+   * translated cards that the live hit-test does not see. `regiondata` is
+   * `MoodboardDrawerRuntime`; amount is the first member. */
+  if (drawer_canvas) {
+    if (region->regiondata == nullptr) {
+      return;
+    }
+    const float amount = *static_cast<const float *>(region->regiondata);
+    if (amount < MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT) {
+      return;
+    }
   }
   Scene *scene = WM_window_get_active_scene(win);
   if (scene == nullptr) {
@@ -151,6 +171,22 @@ void moodboard_qa_targets(const wmWindow *win,
       r_targets.push_back(std::move(t));
     }
   }
+
+  if (drawer_canvas) {
+    rcti panel;
+    if (view3d_moodboard_drawer_panel_rect_for(
+            area, region, view3d_moodboard_drawer_runtime_amount(region), &panel))
+    {
+      /* The tab gutter shows the viewport, so no canvas target may claim it. */
+      r_targets.erase(
+          std::remove_if(r_targets.begin() + first_target,
+                         r_targets.end(),
+                         [&panel](MixarQATarget &target) {
+                           return !BLI_rcti_isect(&target.rect_win, &panel, &target.rect_win);
+                         }),
+          r_targets.end());
+    }
+  }
 }
 
 }  // namespace
@@ -158,6 +194,7 @@ void moodboard_qa_targets(const wmWindow *win,
 void mixie_moodboard_qa_targets_register()
 {
   Mixar_qa_register_target_provider(SPACE_MIXIE, moodboard_qa_targets);
+  Mixar_qa_register_target_provider(SPACE_VIEW3D, moodboard_qa_targets);
 }
 
 }  // namespace blender

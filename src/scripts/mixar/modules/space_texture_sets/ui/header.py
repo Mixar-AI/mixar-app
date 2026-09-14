@@ -10,12 +10,16 @@ from bpy.types import Header
 
 
 class TEXTURE_SETS_HT_header(Header):
-    """Header for the Texture Sets space."""
+    """Title bar for the Texture Sets space.
+
+    No ``template_header()``: the space is hidden from the Editor Type
+    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
+    """
     bl_space_type = 'TEXTURE_SETS'
 
     def draw(self, context):
         layout = self.layout
-        layout.template_header()
+        layout.label(text="Texture Sets")
 
         layout.separator_spacer()
 

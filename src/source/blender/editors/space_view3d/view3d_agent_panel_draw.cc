@@ -5,8 +5,8 @@
 /** \file
  * \ingroup spview3d
  *
- * Parallel Agents panel painting: one dark rounded card per agent, carrying a
- * status dot, the agent's name, its task and an elapsed clock.
+ * Parallel Agents panel painting: one liquid-glass card per agent, carrying a
+ * cat avatar, the agent's name, its task and an outcome glyph.
  *
  * Pure painting — the rects come from `view3d_agent_panel_layout_cards`, which
  * has already applied the scroll offset and the slide-in animation. Nothing
@@ -16,7 +16,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -33,6 +32,7 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 
+#include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -44,6 +44,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "../space_agent_bubble/agent_ui_pill_cat.hh"
 #include "view3d_agent_panel.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -51,29 +52,15 @@ namespace blender {
 
 namespace {
 
-/* The reference design's language: a pill whose green washes in from the left
- * behind the avatar and falls away to near-black under the controls. */
-constexpr float CARD_GREEN[4] = {0.106f, 0.478f, 0.243f, 0.96f};
-constexpr float CARD_DARK[4] = {0.043f, 0.055f, 0.047f, 0.94f};
-constexpr float CARD_BORDER[4] = {0.180f, 0.478f, 0.278f, 0.55f};
-constexpr float CARD_BORDER_RUNNING[4] = {0.220f, 0.760f, 0.400f, 0.75f};
-
-constexpr float AVATAR_DISC[4] = {0.035f, 0.055f, 0.043f, 1.0f};
-/* The Mixar mark's own gradient (see `avatar_icon.py`: #00C0C7 -> #85C449). */
-constexpr float MARK_START[4] = {0.000f, 0.753f, 0.780f, 1.0f};
-constexpr float MARK_END[4] = {0.522f, 0.769f, 0.286f, 1.0f};
-
 constexpr float TEXT_NAME[4] = {0.94f, 0.96f, 0.94f, 1.0f};
-constexpr float TEXT_MUTED[4] = {0.62f, 0.68f, 0.64f, 1.0f};
 constexpr float GLYPH[4] = {0.80f, 0.86f, 0.82f, 1.0f};
 constexpr float GLYPH_DONE[4] = {0.36f, 0.86f, 0.50f, 1.0f};
 constexpr float GLYPH_FAILED[4] = {0.90f, 0.42f, 0.38f, 1.0f};
 
-/* The reference design carries no status text on a card: the outcome is the
- * right-hand glyph (a dismiss cross while the agent works, a check or a red
- * cross once it settles) and the pill's own green wash. The elapsed clock the
- * mirror keeps (`started_at`/`ended_at`/`seen_running_at`) is deliberately not
- * drawn here — it stays available for a surface that has room for it. */
+/* The card carries no status text: the outcome is the right-hand glyph (a
+ * dismiss cross while the agent works, a check or a red cross once it
+ * settles). The elapsed clock the mirror keeps (`started_at`/`ended_at`/
+ * `seen_running_at`) is deliberately not drawn here. */
 
 void with_alpha(const float src[4], const float alpha, float r_out[4])
 {
@@ -132,48 +119,43 @@ void draw_elided(const int font_id,
   BLF_draw(font_id, buf, strlen(buf));
 }
 
+/** Fill `rect` with the shared glass material for `role`.
+ *
+ * No drop shadow: these cards are painted inside a scissored column, and a
+ * shadow is clipped hard at that boundary, where it reads as a scratched line
+ * across the viewport. Panes that float free of a clip (the island, the pill)
+ * ask for one at their call sites. */
+void glass_pane(const rctf *rect,
+                const ui::eMixarGlassRole role,
+                const float radius,
+                const float alpha)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = role;
+  style.radius = radius;
+  style.alpha = alpha;
+  ui::mixar_glass_draw(pane, style);
+}
 
 void draw_card(const AgentPanelCard &card, const float alpha, const double now)
 {
   const float scale = UI_SCALE_FAC;
   const bool running = card.status == AgentCardStatus::Running;
   const rctf rect = to_rctf(card.rect);
+  const float radius = AGENT_PANEL_CARD_RADIUS * scale;
 
-  /* Horizontal gradient: `shade_dir <= 0` shades along x and the shader mixes
-   * `inner2 -> inner1` across it, so inner2 is the LEFT end. A running agent's
-   * green breathes; a settled one is still. */
-  float wash = 1.0f;
-  if (running) {
-    wash = 0.78f + 0.22f * (0.5f + 0.5f * float(sin(now * 2.4)));
-  }
-  else if (card.status == AgentCardStatus::Pending) {
-    wash = 0.45f;
-  }
+  /* The pane is the shared glass material. PANEL owns the near-black bed and
+   * a neutral rim; running/pending status lives on the cat and the outcome
+   * glyph, not on a second coloured stroke. */
+  glass_pane(&rect, ui::MIXAR_GLASS_PANEL, radius, alpha);
 
-  float dark[4], green[4], border[4];
-  with_alpha(CARD_DARK, alpha, dark);
-  with_alpha(CARD_GREEN, alpha * wash, green);
-  with_alpha(running ? CARD_BORDER_RUNNING : CARD_BORDER, alpha, border);
-
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(&rect,
-                          /*inner1 (right)*/ dark,
-                          /*inner2 (left)*/ green,
-                          /*shade_dir*/ 0.0f,
-                          border,
-                          U.pixelsize,
-                          AGENT_PANEL_CARD_RADIUS * scale);
-
-  /* Avatar: the Mixar mark on its own dark disc. */
-  const float avatar_r = AGENT_PANEL_AVATAR_SIZE * scale * 0.5f;
-  const float avatar_cx = rect.xmin + AGENT_PANEL_AVATAR_INSET * scale + avatar_r;
-  const float avatar_cy = (rect.ymin + rect.ymax) * 0.5f;
-  float disc[4], mark_a[4], mark_b[4];
-  with_alpha(AVATAR_DISC, alpha, disc);
-  with_alpha(MARK_START, alpha, mark_a);
-  with_alpha(MARK_END, alpha, mark_b);
-  view3d_agent_panel_draw_disc(avatar_cx, avatar_cy, avatar_r, disc);
-  view3d_agent_panel_draw_mark(avatar_cx, avatar_cy, avatar_r * 0.72f, mark_a, mark_b);
+  /* The same silhouette as the island, with per-task identity and phase. */
+  const rctf cat = to_rctf(card.cat_rect);
+  const double cat_time = running ? now + double(card.cat_ordinal) * 1.137 : 1.0;
+  agent_ui_draw_cat(cat, cat_time, running, card.cat_ordinal, alpha);
+  const float avatar_cy = BLI_rctf_cent_y(&cat);
 
   /* Name, then the elapsed clock right after it in muted type. */
   const int font_id = BLF_default();
@@ -181,7 +163,7 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   const float line_h = BLF_height_max(font_id);
   const float baseline = avatar_cy - line_h * 0.34f;
 
-  const float text_x = avatar_cx + avatar_r + 9.0f * scale;
+  const float text_x = cat.xmax + 7.0f * scale;
   const float text_right = float(card.eye_rect.xmin) - 8.0f * scale;
 
   BLF_size(font_id, 12.0f * scale);
@@ -229,14 +211,9 @@ void draw_chevron(const rcti &box, const float alpha)
   }
   const float scale = UI_SCALE_FAC;
   const rctf rect = to_rctf(box);
-  float body[4], border[4], glyph[4];
-  with_alpha(CARD_DARK, alpha, body);
-  with_alpha(CARD_BORDER, alpha, border);
+  glass_pane(&rect, ui::MIXAR_GLASS_PANEL, BLI_rctf_size_y(&rect) * 0.5f, alpha);
+  float glyph[4];
   with_alpha(GLYPH, alpha, glyph);
-
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(
-      &rect, body, nullptr, 1.0f, border, U.pixelsize, BLI_rctf_size_y(&rect) * 0.5f);
   view3d_agent_panel_glyph_chevrons_down(box, scale, glyph);
 }
 
@@ -264,7 +241,6 @@ void view3d_agent_panel_region_exit(wmWindowManager *wm, ARegion *region)
    * temporary hide. */
   AgentPanelRuntime *runtime = static_cast<AgentPanelRuntime *>(region->regiondata);
   view3d_agent_panel_tick_timer_remove(wm, runtime);
-  view3d_agent_panel_mark_free();
 }
 
 /** \} */
@@ -307,10 +283,8 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
      * `0, 0, winx, winy`) — offsetting by `winrct` puts the box outside that
      * framebuffer and clips every card away, with nothing drawn and no error. */
     GPU_scissor_get(scissor_prev);
-    GPU_scissor(column.xmin,
-                column.ymin,
-                BLI_rcti_size_x(&column) + 1,
-                BLI_rcti_size_y(&column) + 1);
+    GPU_scissor(
+        column.xmin, column.ymin, BLI_rcti_size_x(&column) + 1, BLI_rcti_size_y(&column) + 1);
   }
 
   const double now = BLI_time_now_seconds();
@@ -324,8 +298,7 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     }
     /* A finished card fades as it leaves, so it does not simply blink out at
      * the column edge. */
-    const float alpha = view3d_agent_panel_reveal(runtime, i) *
-                        (1.0f - view3d_agent_panel_exit_progress(card));
+    const float alpha = 1.0f - card.slide.value;
     draw_card(card, alpha, now);
   }
 

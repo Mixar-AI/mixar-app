@@ -10,9 +10,10 @@
  * small row primitives every kind is built from. The public entry points
  * are in `interface_mixar_profile_card.hh`.
  *
- * The tokens are DEFINED in `interface_mixar_cinema_row.cc` (a pin test
- * reads them there against `view3d_director_cinema.hh`); this header only
- * declares them so the segment and value painters can share them.
+ * The tokens are DEFINED in `interface_mixar_cinema_row.cc` as aliases of
+ * `UI_mixar_chrome.hh` (a pin test keeps those bytes in step with
+ * `view3d_director_cinema.hh`); this header only declares them so the
+ * segment and value painters can share them.
  */
 
 #pragma once
@@ -64,10 +65,10 @@ uiFontStyle row_font();
 /** The caption font. */
 uiFontStyle caption_font();
 
-/** The graded chip: the surface's "live" row. */
-void draw_chip(const rctf &row, float radius);
+/** The "live" row: a glass chip with the surface's graded slate washed over it. */
+void draw_chip(const rctf &row, float radius, float alpha = 1.0f);
 
-/** The flat hover / pressed fill. */
+/** The hover / pressed pane; `alpha` is the whole cue (0.9 hover, 1.0 press). */
 void draw_hover(const rctf &row, float radius, float alpha);
 
 /** Pixels one side of #TEXT_PAD can give back down to #TEXT_PAD_MIN. */
@@ -94,7 +95,8 @@ void draw_label(const uiFontStyle &fs,
  * past it — unless icon plus label cannot fit, when the label wins and the
  * icon is dropped. Returns whether the icon was drawn.
  */
-bool draw_leading_icon(const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
+bool draw_leading_icon(
+    const Button *but, const rcti *rect, rcti &text, float label_w, float alpha);
 
 /* Kind painters. */
 

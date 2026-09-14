@@ -64,14 +64,13 @@ class TestNothingIsPaintedOutsideTheWindow:
             f"{outward}"
         )
 
-    def test_the_working_glow_is_inset(self, pill_body: str) -> None:
-        glow = pill_body[pill_body.index("if (is_working) {") :]
-        glow = glow[: glow.index("Pulsing animated green rim")]
-        assert "glow.xmin += glow_pad;" in glow and "glow.xmax -= glow_pad;" in glow
-        assert "(h * 0.5f) - glow_pad" in glow, (
-            "The radius has to shrink with the rect or the inset capsule's "
-            "ends stop being semicircles."
-        )
+    def test_the_capsule_has_no_working_glow_or_green_rim(self, pill_body: str) -> None:
+        """A second outline on the capsule stacked a green highlight on the
+        PILL glass rim. Working state is the chip pulse and the activity dot."""
+        elongated = pill_body[pill_body.index("if (w > h * 4.0f)") :]
+        assert "glow_pad" not in elongated
+        assert "rim_work" not in elongated
+        assert "outline_round(&pill," not in elongated
 
     def test_the_radius_never_exceeds_half_the_short_side(self, pill_body: str) -> None:
         """A capsule's radius is half its height; more than that is not a shape.
@@ -82,3 +81,64 @@ class TestNothingIsPaintedOutsideTheWindow:
         for radius in re.findall(r"outline_round\(&\w+,\s*([^,]+),", pill_body):
             radius = radius.strip()
             assert "+ glow_pad" not in radius and "+ halo_pad" not in radius, radius
+
+
+@pytest.fixture(scope="module")
+def pill_src() -> str:
+    return PILL_DRAW.read_text(encoding="utf-8")
+
+
+class TestTheCapsuleIsLiquidGlass:
+    """Both pill variants paint the capsule with the shared glass kit.
+
+    The pill is the one surface whose window IS its shape, so it is the one
+    place a pane can be genuinely see-through: on a window that composites
+    client alpha the desktop shows through the capsule and the kit's tint lands
+    on it (``Mixar_WindowSetPerPixelAlpha``), while the PILL row carries the
+    artboard's own greys so the resting pill stays the same flat grey where the
+    compositor does not cooperate. The opaque ``AGENT_COL_SURFACE`` capsule and
+    the diagonal gradient it replaced are both gone -- a regression to either
+    would silently drop the transparency, which no pixel test here could see.
+    """
+
+    def test_every_capsule_fill_goes_through_the_kit(self, pill_body: str) -> None:
+        calls = re.findall(
+            r"glass_fill_round\(\s*&pill\s*,\s*ui::MIXAR_GLASS_PILL\s*,\s*h \* 0\.5f\s*\)",
+            pill_body,
+        )
+        assert len(calls) == 2, (
+            "Both pill variants -- elongated and classic -- must paint the "
+            "capsule as glass, and only through the kit: "
+            f"{len(calls)} call(s) found"
+        )
+
+    def test_the_opaque_capsule_fills_are_gone(self, pill_body: str) -> None:
+        assert "fill_round(&pill, h * 0.5f, surface)" not in pill_body, (
+            "The classic pill's opaque AGENT_COL_SURFACE capsule is back; the "
+            "glass pane must own the fill."
+        )
+        assert "fill_round_gradient(&pill, h * 0.5f," not in pill_body, (
+            "The elongated pill's diagonal gradient is back over the glass."
+        )
+
+    def test_the_capsule_pane_never_asks_for_a_shadow(self, pill_body: str) -> None:
+        """The pill rect is the whole window: a shadow has nowhere to fall.
+
+        Grown outward it is clipped by the window at best, and leaves the
+        hard edge where the clip falls at worst -- the reason
+        `test_no_rect_derived_from_the_pill_grows_outward` exists at all.
+        """
+        for call in re.findall(r"glass_fill_round\([^)]*\)", pill_body):
+            assert "true" not in call and "shadow" not in call, (
+                "A capsule pane asked for a drop shadow it cannot show: " + call
+            )
+
+    def test_the_helper_defaults_to_no_shadow(self, pill_src: str) -> None:
+        helper = _fn_body(pill_src, "void glass_fill_round(")
+        assert "const bool shadow = false" in helper, (
+            "The shared helper's shadow must default off, so a caller that "
+            "forgets the argument cannot grow a pane past its window."
+        )
+
+    def test_the_kit_is_included(self, pill_src: str) -> None:
+        assert '#include "ED_mixar_glass.hh"' in pill_src

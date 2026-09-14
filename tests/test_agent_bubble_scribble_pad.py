@@ -15,7 +15,7 @@ Three things had to hold for that to be more than a window move:
 * the island's unit is width-derived, so a narrower window would have shrunk
   every label and chip — the pad keeps the DEFAULT-width unit and re-flows
   the card, panel and composer to its own width instead;
-* the pill was detected by WIDTH (< 874 px), so a narrow island would have
+* the pill was detected by WIDTH (< default island width), so a narrow island would have
   drawn as the pill capsule — detection is by window identity now;
 * the per-frame constraint sync and the grow-once latch would have fought
   the pad's size — both stand down while it is up.
@@ -125,7 +125,7 @@ def test_pill_detection_is_by_window_identity():
     # The width heuristic survives only as the no-pill fallback, and nowhere
     # else decides pill-ness by width any more.
     assert BUBBLE_CC.count("WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH") == 1
-    begin = _body(BUBBLE_CC, "static bool agent_bubble_island_begin(")
+    begin = _body(BUBBLE_CC, "bool agent_bubble_island_layout_get(")
     assert "agent_bubble_window_is_pill(C)" in begin
 
 
@@ -138,7 +138,7 @@ def test_pad_unit_is_the_default_width_unit():
     ratio = _body(BUBBLE_CC, "static float agent_bubble_pad_ratio(const wmWindow *win)")
     assert "float(AGENT_BUBBLE_DEFAULT_WIDTH) / float(logical_w)" in ratio
     assert "Mixar_WindowGetContentSize(" in ratio
-    begin = _body(BUBBLE_CC, "static bool agent_bubble_island_begin(")
+    begin = _body(BUBBLE_CC, "bool agent_bubble_island_layout_get(")
     assert "agent_bubble_pad_ratio(win)" in begin
     assert "/*pad_real_w=*/(pad_ratio > 0.0f) ? px_w : 0" in begin
     chrome = _body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(const bContext *C)")
@@ -173,7 +173,7 @@ def test_layout_pad_mode_drops_the_strip_and_reflows_to_the_pad_width():
 
 def test_painter_and_header_controls_skip_the_strip_on_the_pad():
     island = _body(DRAW_CC, "void agent_ui_draw_island(")
-    assert "if (!layout->pad) {\n    draw_tab_strip(layout, state);" in island
+    assert "if (!layout->pad) {\n    agent_ui_draw_tab_strip(region, layout, state);" in island
     header = _body(BUBBLE_CC, "static void agent_bubble_island_controls_header(")
     loop = header.index("for (const auto &tb : tab_buttons)")
     assert "if (layout->pad)" in header[loop : loop + 200]

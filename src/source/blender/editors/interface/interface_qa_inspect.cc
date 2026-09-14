@@ -22,10 +22,12 @@
 
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_agent_bubble_motion.hh"
 
 #include "BKE_screen.hh"
 
 #include "RNA_access.hh"
+#include "UI_mixar.hh"
 
 #include "UI_interface_c.hh"
 
@@ -374,6 +376,16 @@ void qa_dump_region(std::string &out,
       out += "\",";
 
       const std::string &text = but->drawstr.empty() ? but->str : but->drawstr;
+      json_str(out, "mixar_component", blender::ui::mixar_component_name(but->mixar_style.component));
+      out += ',';
+      json_str(out, "mixar_theme", blender::ui::mixar_theme_name(but->mixar_style.theme));
+      out += ',';
+      json_str(out, "mixar_variant", blender::ui::mixar_variant_name(but->mixar_style.variant));
+      out += ',';
+      const auto motion = blender::ui::mixar_button_motion(*but);
+      out += "\"mixar_motion\":{\"hover\":" + std::to_string(motion.hover) +
+             ",\"press\":" + std::to_string(motion.press) +
+             ",\"selected\":" + std::to_string(motion.selected) + "},";
       json_str(out, "text", text);
       out += ',';
       if (!but->tip.is_empty()) {
@@ -420,7 +432,17 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
   std::string out;
   out.reserve(1 << 16);
 
-  out += "{\"windows\":[";
+  const auto motion_stats = blender::ui::mixar_motion_stats();
+  const auto cat_stats = ED_agent_bubble_motion_stats();
+  out += "{\"motion\":{\"pending_regions\":" + std::to_string(motion_stats.pending_regions) +
+         ",\"ticks\":" + std::to_string(motion_stats.ticks) +
+         ",\"redraws\":" + std::to_string(motion_stats.redraws) + "},\"mascot\":{\"ticks\":" +
+         std::to_string(cat_stats.ticks) + ",\"redraws\":" + std::to_string(cat_stats.redraws) +
+         ",\"fast_frames\":" + std::to_string(cat_stats.fast_frames) +
+         ",\"quiet_frames\":" + std::to_string(cat_stats.quiet_frames) +
+         ",\"scheduled\":" + (cat_stats.scheduled ? "true" : "false") +
+         ",\"awaiting_draw\":" + (cat_stats.awaiting_draw ? "true" : "false") +
+         ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) + "},\"windows\":[";
   bool first_win = true;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;

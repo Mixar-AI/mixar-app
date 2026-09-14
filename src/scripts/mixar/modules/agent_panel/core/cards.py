@@ -54,6 +54,13 @@ _STATUS_FROM_TODO = {
 
 _TERMINAL = frozenset({'DONE', 'FAILED'})
 
+#: Task ids the user clicked away during the current fan-out. ``dismiss_card``
+#: removes the row from the mirror, but the backend keeps streaming the same
+#: task list, so a later membership rebuild would re-add the card the user just
+#: dismissed. Scoped to the fan-out: ``clear_cards`` resets it, so an id is
+#: never silently hidden in a later turn (synthetic ``idx:N`` ids recur).
+_dismissed_task_ids: set[str] = set()
+
 
 def derive_agent_name(task_label: str) -> str:
     """A short display name for the agent that owns ``task_label``.
@@ -149,23 +156,36 @@ def mirror_todo_items(todo_items: Iterable[Any]) -> int:
         return 0
 
     records = _normalize(todo_items)
+    if _dismissed_task_ids:
+        # The backend streams the whole task list, including the ones the user
+        # dismissed; drop them before the membership diff so a rebuild cannot
+        # resurrect a card that was clicked away.
+        records = [
+            rec for rec in records if rec["task_id"] not in _dismissed_task_ids
+        ]
     if len(records) < MIN_CARDS_FOR_PANEL:
-        # Not a fan-out. Clear rather than leave a stale single card up.
-        return clear_cards()
+        # Hiding a short list is not a new turn. Keep dismissal memory so
+        # subsequent full snapshots cannot bring the dismissed cards back.
+        return clear_cards(reset_dismissals=False)
 
     now = time.monotonic()
     cards = wm.mixar_agent_cards
-    if len(cards) == 0:
-        _bump_generation(wm)
     ids_now = [card.task_id for card in cards]
     ids_next = [rec["task_id"] for rec in records]
+    # Empty collection: first fan-out. Disjoint ids: a later turn's tasks
+    # arrived while FAILED cards from the previous turn were still up —
+    # C++ only resets scroll / entrance animation when generation changes.
+    if not ids_now or set(ids_now).isdisjoint(ids_next):
+        _bump_generation(wm)
 
     if ids_now != ids_next:
-        # Membership changed — rebuild, carrying the clocks of surviving cards.
+        # Membership changed — rebuild, carrying clocks and in-flight
+        # dismissals of surviving cards.
         timings = {
             card.task_id: (card.started_at, card.ended_at) for card in cards
         }
         done_before = {card.task_id: card.status == 'DONE' for card in cards}
+        dismissing = {card.task_id: bool(card.dismissing) for card in cards}
         cards.clear()
         for rec in records:
             card = cards.add()
@@ -177,8 +197,9 @@ def mirror_todo_items(todo_items: Iterable[Any]) -> int:
             was_done = done_before.get(rec["task_id"], False)
             card.started_at = started
             card.ended_at = ended
+            card.dismissing = dismissing.get(rec["task_id"], False)
             _stamp_clocks(card, rec["status"], now)
-            if rec["status"] == 'DONE' and not was_done:
+            if rec["status"] == 'DONE' and not was_done and not card.dismissing:
                 _schedule_exit(card.task_id)
     else:
         for card, rec in zip(cards, records):
@@ -264,8 +285,10 @@ def _stamp_clocks(card: Any, status: str, now: float) -> None:
         card.started_at = now if status == 'RUNNING' else 0.0
 
 
-def clear_cards() -> int:
-    """Close the panel. Returns 0 so callers can ``return clear_cards()``."""
+def clear_cards(*, reset_dismissals: bool = True) -> int:
+    """Close the panel; forget dismissals only on an explicit clear/new turn."""
+    if reset_dismissals:
+        _dismissed_task_ids.clear()
     wm = _window_manager()
     if wm is None:
         return 0
@@ -338,6 +361,7 @@ def dismiss_card(task_id: str) -> bool:
     if len(kept) == len(cards):
         return False
 
+    _dismissed_task_ids.add(task_id)
     cards.clear()
     for rec in kept:
         card = cards.add()

@@ -30,12 +30,15 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
-#include "UI_interface_icons.hh"
+
+#include "ED_mixar_glass.hh"
 
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
+#include "agent_ui_motion.hh"
+#include "agent_ui_pill_cat.hh"
 #include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -60,20 +63,55 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
 }
 
 /**
+ * One liquid-glass pane, in the caller's pixel space.
+ *
+ * `radius` is always explicit px: the panes here are capsules and cards whose
+ * radius comes from the layout or the window, not from the role. The role
+ * supplies the palette and the metrics.
+ *
+ * The drop shadow is OFF unless asked for, and the reason is the pill: its
+ * window IS its capsule, so a shadow grown outward from the pane would be
+ * clipped by the window at best and leave a hard edge where the clip falls at
+ * worst — `tests/test_agent_bubble_pill_paint.py` pins that nothing the pill
+ * paints may fall outside it. Only a pane with room around it inside its own
+ * window passes `true`.
+ *
+ * Native frost passes tint=false: the common sheen and rim finish the pane
+ * without stacking another coloured bed on top of AppKit or Acrylic.
+ */
+void glass_fill_round(const rctf *rect,
+                      const ui::eMixarGlassRole role,
+                      const float radius,
+                      const bool shadow = false,
+                      const bool specular = false,
+                      const bool tint = true,
+                      const bool rim = true)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = role;
+  style.radius = radius;
+  style.draw_shadow = shadow;
+  style.draw_specular = specular;
+  style.draw_tint = tint;
+  style.draw_rim = rim;
+  ui::mixar_glass_draw(pane, style);
+}
+
+/**
  * Rounded rect filled with a two-stop ramp along an ARBITRARY axis.
  *
- * `ui::draw_roundbox_4fv_ex` can only shade vertically, and the card's ramp is
- * diagonal — it runs from the card's top-right down and to the left, past the
- * bottom edge. Shading it vertically loses the horizontal falloff entirely,
- * which is most of the effect: at the card's top edge the artboard travels
- * from #072B1B on the left to #2E5630 on the right.
+ * `ui::draw_roundbox_4fv_ex` can only shade vertically. The minimised pill's
+ * logo chip ramps diagonally — its axis runs from the chip's top-right down and
+ * to the left — and shading that vertically loses the horizontal falloff
+ * entirely, which is most of the effect.
  *
  * So the fill is a triangle fan with per-vertex colour, sampled at
  * t = clamp(dot(p - a, b - a) / |b - a|^2, 0, 1). A raw fan is rasterised with
  * no coverage anti-aliasing, so its rim carries its own half-pixel feather
- * (see `aa` below) — on the card that seam hides under the AA'd border, but
- * the minimised pill's capsule and logo chip have nothing over them and drew
- * visibly stair-stepped without it.
+ * (see `aa` below) — the chip has nothing drawn over its edge, and without the
+ * feather it drew visibly stair-stepped.
  */
 void fill_round_gradient(const rctf *rect,
                          const float radius,
@@ -202,7 +240,7 @@ void fill_round_gradient(const rctf *rect,
  * The card's border, drawn as a credits meter.
  *
  * A full bright ring means a full allowance; as credits are spent the lit part
- * retreats and the spent part is drawn in a dim green, so the border reads as a
+ * retreats and the spent part is drawn at a lower opacity, so the border reads as a
  * percentage strip running around the card rather than as decoration.
  *
  * The ring starts at the top-left corner and runs CLOCKWISE. That start point
@@ -220,8 +258,17 @@ void draw_card_border_meter(const rctf *rect,
                             const float spent[4],
                             const float remaining)
 {
-  if (remaining < 0.0f || remaining >= 1.0f) {
-    fill_round(rect, radius, lit);
+  /* The BAND only. This used to fill the whole card rect in both branches and
+   * rely on an opaque gradient painted afterwards to hide the interior; the
+   * card's bed is a translucent pane now, so a whole-rect fill shows straight
+   * through it and the card's middle reads as a flat wash. The ring form also
+   * paints the corner arcs, which the four straight runs below never did. */
+  const bool unknown = (remaining < 0.0f || remaining >= 1.0f);
+  const float *band = unknown ? lit : spent;
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv_ex(rect, nullptr, nullptr, 1.0f, band, width, radius);
+
+  if (unknown) {
     return;
   }
 
@@ -232,8 +279,6 @@ void draw_card_border_meter(const rctf *rect,
   const float h = BLI_rctf_size_y(rect);
   const float total = (w + h) * 2.0f;
   const float lit_len = total * remaining;
-
-  fill_round(rect, radius, spent);
 
   /* Each run is (start distance along the perimeter, length, rect builder). */
   struct Run {
@@ -352,253 +397,13 @@ void label_right(const char *text, const float x, const float cy, const float si
 
 /** \} */
 
-/* -------------------------------------------------------------------- */
-/** \name Tab strip
- * \{ */
-
-struct TabSpec {
-  const char *label;
-  /** #AGENT_ICON_COUNT means the tab carries NO mark. */
-  AgentIcon icon;
-};
-
-/* `generations.svg` marks Agent, Gaussian Splat and My Generations only. 3D
- * and Media take the island's own cube and picture glyphs so the strip does
- * not read as two tabs that failed to load — both pills have room for the
- * 24-unit slot plus their label without widening. Queue keeps its count chip
- * in that slot and centres its label when the queue is empty. */
-const TabSpec g_tabs[AGENT_TAB_COUNT] = {
-    {"Agent", AGENT_ICON_AGENT},
-    {"3D", AGENT_ICON_MESH},
-    {"Media", AGENT_ICON_IMAGE},
-    {"Gaussian Splat", AGENT_ICON_SPLAT},
-    {"My Generations", AGENT_ICON_THUMB},
-    {"Queue", AGENT_ICON_COUNT},
-};
-
-void draw_tab_strip(const AgentIslandLayout *layout, const AgentIslandState *state)
-{
-  const float u = layout->scale;
-  const float surface[4] = AGENT_COL_SURFACE;
-  const float outline[4] = AGENT_COL_OUTLINE;
-  const float active_fill[4] = AGENT_COL_TAB_ACTIVE;
-  const float queue_fill[4] = AGENT_COL_QUEUE;
-  const float queue_count[4] = AGENT_COL_QUEUE_COUNT;
-  const float accent[4] = AGENT_COL_ACCENT;
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
-
-  fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
-
-  /* Text is sized in the ISLAND unit, not AGENT_DU(): the two agree only at
-   * the default window width, and the window widens freely (the bubble
-   * constrains its MINIMUM size only). Sizing glyphs off UI_SCALE_FAC while
-   * every rect grows with `u` left labels stranded at their original pixel
-   * size inside grown pills. */
-  const float label_size = AGENT_TAB_FONT * u;
-
-  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
-    const AgentTabLayout &tab = layout->tabs[i];
-    const float cy = BLI_rctf_cent_y(&tab.pill);
-
-    if (i == AGENT_TAB_QUEUE) {
-      /* The Queue pill is the one filled-and-outlined tab in the strip; it
-       * reads as a control rather than a tab, which is what it is. */
-      fill_round(&tab.pill, AGENT_TAB_RADIUS * u, queue_fill);
-      outline_round(&tab.pill, AGENT_TAB_RADIUS * u, outline);
-    }
-    else if (tab.active) {
-      fill_round(&tab.pill, (AGENT_TAB_RADIUS + 0.5f) * u, active_fill);
-    }
-    else {
-      outline_round(&tab.pill, AGENT_TAB_RADIUS * u, outline);
-    }
-
-    /* Active tab and the Queue pill are pure white in the artboard; every
-     * other tab label is #757575. */
-    const float *label_col = (tab.active || i == AGENT_TAB_QUEUE) ? strong : text_dim;
-
-    if (i == AGENT_TAB_QUEUE) {
-      /* Count chip stands in for the icon slot. */
-      if (state->queue_count > 0) {
-        char count[8];
-        if (state->queue_count > 9) {
-          BLI_strncpy(count, "9+", sizeof(count));
-        }
-        else {
-          BLI_snprintf(count, sizeof(count), "%d+", state->queue_count);
-        }
-        fill_round(&layout->queue_count, AGENT_QUEUE_COUNT_RADIUS * u, queue_count);
-        label_centre(count,
-                     BLI_rctf_cent_x(&layout->queue_count),
-                     BLI_rctf_cent_y(&layout->queue_count),
-                     AGENT_NEW_BADGE_FONT * u,
-                     text);
-      }
-    }
-    else if (g_tabs[i].icon != AGENT_ICON_COUNT) {
-      /* Backdrop is this pill's own fill — the active pill is #183E25, the
-       * rest sit directly on the strip. */
-      const float *pill_bg = tab.active ? active_fill : surface;
-      agent_ui_icon_draw(g_tabs[i].icon, &tab.icon, label_col, pill_bg);
-    }
-
-    /* A tab with nothing in its icon slot centres its label; leaving it at
-     * the icon offset would hang the word off to the right of an empty pill.
-     * The Queue pill does the same once its count chip is gone. */
-    const bool centred = (g_tabs[i].icon == AGENT_ICON_COUNT) &&
-                         (i != AGENT_TAB_QUEUE || state->queue_count <= 0);
-    if (centred) {
-      label_centre(g_tabs[i].label, BLI_rctf_cent_x(&tab.pill), cy, label_size,
-                   label_col);
-    }
-    else {
-      label_left(g_tabs[i].label, tab.label_x, cy, label_size, label_col);
-    }
-
-    if (i == AGENT_TAB_SPLAT && state->splat_is_new) {
-      fill_round(&layout->new_badge, AGENT_NEW_BADGE_RADIUS * u, accent);
-      label_centre("NEW",
-                   BLI_rctf_cent_x(&layout->new_badge),
-                   BLI_rctf_cent_y(&layout->new_badge),
-                   AGENT_NEW_BADGE_FONT * u,
-                   strong);
-    }
-  }
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Chip row
- * \{ */
-
-void draw_chip_row(const AgentIslandLayout *layout, const AgentIslandState *state)
-{
-  const float u = layout->scale;
-  const float chip[4] = AGENT_COL_CHIP;
-  const float generate[4] = AGENT_COL_GENERATE;
-  const float text[4] = AGENT_COL_TEXT;
-
-  /* Every metric here is in the island unit. Mixing `* u` (radius) with
-   * AGENT_DU() (pad/gap/icon) drifted the icon off-centre and started the
-   * label at the wrong x as soon as the window left its default width. */
-  const float size = AGENT_CHIP_FONT * u;
-  const float radius = AGENT_CHIP_RADIUS * u;
-  const float pad = AGENT_CHIP_PAD_X * u;
-  const float icon_gap = AGENT_CHIP_ICON_GAP * u;
-  const float icon_edge = AGENT_CHIP_ICON * u;
-
-  /* Composer chips belong to the Agent tab; other tabs fill the card with
-   * their own content (Queue rows, later panes). */
-  if (layout->tabs[AGENT_TAB_AGENT].active == false) {
-    return;
-  }
-
-  /* Upload Reference. The artboard truncates this to "Upload Refe…" inside a
-   * 150-unit chip; the ellipsis is the design, not an accident of the export,
-   * so the chip keeps its width and the label keeps its truncation. */
-  fill_round(&layout->chip_upload, radius, chip);
-  {
-    rctf icon = layout->chip_upload;
-    icon.xmin += pad;
-    icon.xmax = icon.xmin + icon_edge;
-    const float cy = BLI_rctf_cent_y(&layout->chip_upload);
-    icon.ymin = cy - icon_edge * 0.5f;
-    icon.ymax = cy + icon_edge * 0.5f;
-    agent_ui_icon_draw(AGENT_ICON_IMAGE, &icon, text, chip);
-    label_left("Upload Reference", icon.xmax + icon_gap, cy, size, text);
-  }
-
-  /* Scribble. Lit in the accent while either half is up (the viewport freeze
-   * or the chat ink canvas) — the same "pressed" the headers show — and
-   * carrying the count of draft marks that will ride with the next message.
-   * The reading chip and the clear X exist only while marks are queued: a
-   * drawing silently read as nine placement targets is a mode the user could
-   * neither see nor correct, so the reading is on the surface, and queued
-   * marks need a way out that does not re-enter the freeze. */
-  if (state->scribble_available) {
-    const float accent[4] = AGENT_COL_ACCENT;
-    const float *scribble_fill = state->scribble_armed ? accent : chip;
-    fill_round(&layout->chip_scribble, radius, scribble_fill);
-    {
-      rctf icon = layout->chip_scribble;
-      icon.xmin += pad;
-      icon.xmax = icon.xmin + icon_edge;
-      const float cy = BLI_rctf_cent_y(&layout->chip_scribble);
-      icon.ymin = cy - icon_edge * 0.5f;
-      icon.ymax = cy + icon_edge * 0.5f;
-      agent_ui_icon_draw(AGENT_ICON_PEN, &icon, text, scribble_fill);
-      char label[32];
-      if (state->mark_count > 0) {
-        SNPRINTF(label, "Scribble · %d", state->mark_count);
-      }
-      else {
-        BLI_strncpy(label, "Scribble", sizeof(label));
-      }
-      label_left(label, icon.xmax + icon_gap, cy, size, text);
-    }
-
-    if (state->mark_count > 0) {
-      fill_round(&layout->chip_reading, radius, chip);
-      const float cy = BLI_rctf_cent_y(&layout->chip_reading);
-      const char *reading = state->mark_intent[0] ? state->mark_intent : "Auto";
-      label_left(reading, layout->chip_reading.xmin + pad, cy, size, text);
-      rctf chevron = layout->chip_reading;
-      chevron.xmax -= pad;
-      chevron.xmin = chevron.xmax - icon_edge * 0.7f;
-      chevron.ymin = cy - icon_edge * 0.35f;
-      chevron.ymax = cy + icon_edge * 0.35f;
-      agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chevron, text, chip);
-
-      if (!state->scribble_armed) {
-        fill_round(&layout->chip_clear, radius, chip);
-        rctf cross = layout->chip_clear;
-        const float ccx = BLI_rctf_cent_x(&cross);
-        cross.xmin = ccx - icon_edge * 0.5f;
-        cross.xmax = ccx + icon_edge * 0.5f;
-        cross.ymin = cy - icon_edge * 0.5f;
-        cross.ymax = cy + icon_edge * 0.5f;
-        agent_ui_icon_draw(AGENT_ICON_CROSS, &cross, text, chip);
-      }
-    }
-  }
-
-  /* Voice, right of Scribble: lit in the accent while a dictation session is
-   * up. Only drawn when the toggle exists (see AgentIslandState). */
-  if (state->voice_available) {
-    const float accent[4] = AGENT_COL_ACCENT;
-    const float *voice_fill = state->voice_listening ? accent : chip;
-    fill_round(&layout->chip_voice, radius, voice_fill);
-    rctf icon = layout->chip_voice;
-    icon.xmin += pad;
-    icon.xmax = icon.xmin + icon_edge;
-    const float cy = BLI_rctf_cent_y(&layout->chip_voice);
-    icon.ymin = cy - icon_edge * 0.5f;
-    icon.ymax = cy + icon_edge * 0.5f;
-    agent_ui_icon_draw(AGENT_ICON_MIC, &icon, text, voice_fill);
-    label_left(state->voice_listening ? "Listening" : "Voice", icon.xmax + icon_gap, cy, size, text);
-  }
-
-  /* Generate. */
-  fill_round(&layout->btn_generate, radius, generate);
-  label_centre(state->status_busy ? "Stop" : "Generate",
-               BLI_rctf_cent_x(&layout->btn_generate),
-               BLI_rctf_cent_y(&layout->btn_generate),
-               size,
-               text);
-}
-
-/** \} */
-
 }  // namespace
 
 /* -------------------------------------------------------------------- */
 /** \name Island
  * \{ */
 
-void agent_ui_draw_status_pill(const float width,
+void agent_ui_draw_status_pill(ARegion *region, const float width,
                                const float height,
                                const AgentIslandState *state)
 {
@@ -613,15 +418,17 @@ void agent_ui_draw_status_pill(const float width,
   }
 
   /* ELONGATED resting pill (aspect says which window shape this is): the
-   * minimised bubble's whole identity — dim last-prompt preview + the Mixar
-   * logo on a green gradient chip (Frame 1533210248.svg). When working
-   * (busy or active queue jobs), it shows a glowing green pulse animation,
-   * animated activity dot, and moving progress dots on the status label.
-   * Clicking it expands the island; dragging it moves it (the pill
-   * gesture in agent_bubble/ui/operators/bubble_header_drag_op.py). */
+   * minimised bubble's whole identity — dim last-prompt preview + Mixie the
+   * cat on a green gradient chip (Frame 1533210248.svg, mascot in
+   * agent_ui_pill_cat.cc). When working (busy or active queue jobs), it
+   * shows an animated activity dot and moving progress dots on the status
+   * label. Clicking it expands the
+   * island; dragging it moves it (the pill gesture in
+   * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
     const float u = h / 85.0f; /* design pill is 85 artboard units tall */
-    const bool is_working = state->status_busy || (state->queue_count > 0);
+    const bool is_working = mixie_cat_is_working(state->cat_activity) &&
+                            (state->status_busy || state->queue_count > 0);
     const double now = BLI_time_now_seconds();
     const float pulse = is_working ?
                             (0.5f + 0.5f * float(std::sin(now * 3.2))) :
@@ -632,49 +439,22 @@ void agent_ui_draw_status_pill(const float width,
     pill.xmax = w;
     pill.ymin = 0.0f;
     pill.ymax = h;
-    const float grad_top[4] = {0.176f, 0.176f, 0.176f, 1.0f};    /* #2D2D2D */
-    const float grad_bottom[4] = {0.075f, 0.078f, 0.075f, 1.0f}; /* #131413 */
-    GPU_blend(GPU_BLEND_NONE);
-    const float pill_grad_a[2] = {w * 0.985f, h};
-    const float pill_grad_b[2] = {w * 0.947f, 0.0f};
-    fill_round_gradient(&pill, h * 0.5f, grad_top, grad_bottom, pill_grad_a, pill_grad_b);
-    GPU_blend(GPU_BLEND_ALPHA);
-
-    if (is_working) {
-      /* Breathing glow, INSIDE the edge and under the rim.
-       *
-       * It used to be the capsule inflated by three units. The pill's window
-       * IS the capsule — that is what makes its corners transparent and its
-       * hit area exact — so every pixel of an outset halo fell outside the
-       * window and was clipped. Measured on the running app: the capsule
-       * occupies the same rows in the idle frame and in every busy frame, and
-       * the pixel immediately outside it is bare background in all of them.
-       * The draw could not produce a pixel, and ran on every frame of every
-       * turn to do it. Growing the window is not an option (its size is the
-       * seat geometry the pill is anchored and dragged by), so the glow
-       * breathes inward. */
-      rctf glow = pill;
-      const float glow_pad = 3.0f * u;
-      glow.xmin += glow_pad;
-      glow.ymin += glow_pad;
-      glow.xmax -= glow_pad;
-      glow.ymax -= glow_pad;
-      const float glow_col[4] = {0.0f, 1.0f, 0.549f, 0.05f + 0.10f * pulse};
-      outline_round(&glow, (h * 0.5f) - glow_pad, glow_col);
-
-      /* Pulsing animated green rim. */
-      const float rim_work[4] = {
-          0.10f * (1.0f - pulse),
-          1.0f,
-          0.549f * pulse + 0.294f * (1.0f - pulse),
-          0.30f + 0.35f * pulse};
-      outline_round(&pill, h * 0.5f, rim_work);
+    /* Native frost owns the bed; both paths share the rounded light and rim. */
+    if (agent_bubble_pill_bed_is_transparent()) {
+      const float wash[4] = AGENT_COL_GLASS_WASH;
+      agent_bubble_replace_frost_wash(&pill, wash);
+      glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
     }
     else {
-      /* Faint rim, brightest toward the top-right like the export's stroke. */
-      const float rim[4] = {1.0f, 1.0f, 1.0f, 0.14f};
-      outline_round(&pill, h * 0.5f, rim);
+      glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
     }
+    GPU_blend(GPU_BLEND_ALPHA);
+
+    /* No extra rim here: the PILL row's own rim IS this stroke (white at
+     * 0.14, the export's top-right-brightest edge), drawn by the glass pane
+     * above. A second working outline used to stack a green highlight on
+     * the capsule; working state now lives on the logo chip and the
+     * activity dot. */
 
     /* Pill behind the logo, right-inset 10.5 units, 85x68. */
     rctf chip;
@@ -700,22 +480,10 @@ void agent_ui_draw_status_pill(const float width,
     const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
     fill_round_gradient(&chip, chip_r, chip_a, chip_b, chip_grad_a, chip_grad_b);
 
-    if (is_working) {
-      /* Animated glowing rim around the chip. */
-      const float chip_rim[4] = {0.0f, 1.0f, 0.549f, 0.25f + 0.35f * pulse};
-      outline_round(&chip, chip_r, chip_rim);
-    }
-
-    const float icon_edge = 45.0f * u;
-    ui::icon_draw_ex(BLI_rctf_cent_x(&chip) - icon_edge * 0.5f,
-                    BLI_rctf_cent_y(&chip) - icon_edge * 0.5f,
-                    ICON_MIXAR_ICON,
-                    /*aspect=*/16.0f / icon_edge, /* icons draw at 16/aspect px */
-                    /*alpha=*/1.0f,
-                    /*desaturate=*/0.0f,
-                    /*mono_color=*/nullptr,
-                    /*mono_border=*/false,
-                    /*text_overlay=*/nullptr);
+    const MixieCatPose cat_pose = agent_ui_cat_motion_sample(
+        region, state->cat_activity, now, state->cat_scene,
+        std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f);
+    agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity);
 
     /* Preview line: newest user prompt, dim, ellipsised into the space left
      * of the chip. */
@@ -765,9 +533,7 @@ void agent_ui_draw_status_pill(const float width,
       }
       dots[dot_count] = '\0';
 
-      const char *base_status = (state->queue_count > 0 && !state->status_busy) ?
-                                    "Generating" :
-                                    "Working";
+      const char *base_status = mixie_cat_activity_name(state->cat_activity);
       char label[160];
       if (state->last_prompt[0] != '\0') {
         SNPRINTF(label, "%s%s · %s", base_status, dots, preview);
@@ -815,7 +581,8 @@ void agent_ui_draw_status_pill(const float width,
     return;
   }
 
-  const float surface[4] = AGENT_COL_SURFACE;
+  agent_ui_pill_cat_clear();
+
   const float accent[4] = AGENT_COL_ACCENT;
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};
   const float text_dim[4] = AGENT_COL_TEXT_DIM;
@@ -840,19 +607,23 @@ void agent_ui_draw_status_pill(const float width,
   dot.ymin = h * 0.5f - dot_r;
   dot.ymax = h * 0.5f + dot_r;
 
-  /* Paint the WHOLE rect opaquely before the capsule. The pill window's
-   * buffers otherwise carry transparent pixels that composite as the bare
-   * window backdrop — a flat grey that flashed against the capsule whenever a
-   * stale buffer was presented. The OS-level corner mask still rounds the
-   * window, so the corners never show this fill. */
-  const float bed_a = agent_bubble_pill_bed_is_transparent() ? 0.0f : 1.0f;
-  const float bed[4] = {0.02f, 0.02f, 0.02f, bed_a};
-  GPU_blend(GPU_BLEND_NONE);
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
-
+  /* Paint the WHOLE rect before the capsule. The pill window's buffers
+   * otherwise carry leftover pixels that flash the bare backdrop. Frost
+   * replaces a premultiplied wash; the shared shader adds its finishing layers. */
+  if (agent_bubble_pill_bed_is_transparent()) {
+    const float wash[4] = AGENT_COL_GLASS_WASH;
+    agent_bubble_replace_frost_wash(&pill, wash);
+    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
+  }
+  else {
+    const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&pill, true, 0.0f, bed);
+    GPU_blend(GPU_BLEND_ALPHA);
+    glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
+  }
   GPU_blend(GPU_BLEND_ALPHA);
-  fill_round(&pill, h * 0.5f, surface);
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
   label_left(state->status_text,
              w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
@@ -862,20 +633,21 @@ void agent_ui_draw_status_pill(const float width,
   GPU_blend(GPU_BLEND_NONE);
 }
 
-void agent_ui_draw_island(const ARegion * /*region*/,
+void agent_ui_draw_island(ARegion *region,
                           const AgentIslandLayout *layout,
                           const AgentIslandState *state)
 {
+  agent_ui_motion_begin(region);
   if (!layout->valid) {
+    agent_ui_motion_end(region);
     return;
   }
 
   const float u = layout->scale;
 
   const float surface[4] = AGENT_COL_SURFACE;
-  const float border[4] = AGENT_COL_BORDER;
-  const float card_top[4] = AGENT_COL_CARD_TOP;
-  const float card_bottom[4] = AGENT_COL_CARD_BOTTOM;
+  const ui::MixarGlassTokens glass = ui::mixar_glass_tokens(ui::MIXAR_GLASS_PILL);
+  const float *border = glass.rim;
   const float accent[4] = AGENT_COL_ACCENT;
   const float glyph[4] = AGENT_COL_GLYPH;
   const float text[4] = AGENT_COL_TEXT;
@@ -891,43 +663,52 @@ void agent_ui_draw_island(const ARegion * /*region*/,
 
   /* --- Tab strip --- (none on the Scribble pad; its rects are empty) */
   if (!layout->pad) {
-    draw_tab_strip(layout, state);
+    agent_ui_draw_tab_strip(region, layout, state);
   }
 
   /* --- Card --- */
   {
-    /* Spent portion: the same hue at a fraction of its value, so the ring reads
-     * as one strip that has been used up rather than two different borders. */
-    const float border_spent[4] = {border[0] * 0.16f, border[1] * 0.16f,
-                                   border[2] * 0.16f, 1.0f};
+    /* Preserve the credit indication in the pill's quiet white rim. Lower the
+     * spent alpha rather than putting an opaque dark ring over native frost. */
+    const float border_spent[4] = {border[0], border[1], border[2], border[3] * 0.25f};
     draw_card_border_meter(&layout->card,
                            AGENT_CARD_RADIUS * u,
-                           AGENT_CARD_BORDER * u,
+                           glass.rim_width,
                            border,
                            border_spent,
                            state->credits_remaining);
   }
-  fill_round_gradient(&layout->card_fill,
-                      AGENT_CARD_RADIUS * u,
-                      card_top,
-                      card_bottom,
-                      layout->card_grad_a,
-                      layout->card_grad_b);
+  /* Expanding changes the shape, not the material. The credit meter already
+   * draws PILL's rim, so keep only its sheen here to avoid a doubled edge. */
+  glass_fill_round(&layout->card_fill,
+                   ui::MIXAR_GLASS_PILL,
+                   (AGENT_CARD_RADIUS - AGENT_CARD_BORDER) * u,
+                   /*shadow=*/false,
+                   /*specular=*/false,
+                   /*tint=*/!agent_bubble_island_bed_is_transparent(),
+                   /*rim=*/false);
 
   /* Card header row is tab-scoped: the chat's discs / session title / FAQs
    * belong to the Agent tab; other tabs title the card after themselves. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
+    float history_fill[4], new_chat_fill[4];
+    agent_ui_motion_color(accent, accent,
+                          agent_ui_motion_sample(region, AgentIslandControl::History, layout->hdr_history),
+                          history_fill);
+    agent_ui_motion_color(accent, accent,
+                          agent_ui_motion_sample(region, AgentIslandControl::NewChat, layout->hdr_new_chat),
+                          new_chat_fill);
     fill_round(&layout->hdr_history,
                BLI_rctf_size_x(&layout->hdr_history) * 0.5f,
-               accent);
-    agent_ui_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, accent);
+               history_fill);
+    agent_ui_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, history_fill);
 
     fill_round(&layout->hdr_new_chat,
                BLI_rctf_size_x(&layout->hdr_new_chat) * 0.5f,
-               accent);
-    agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, accent);
+               new_chat_fill);
+    agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
     if (state->ink_visible) {
       /* Scribble text output window over the new chat topbar */
@@ -1021,7 +802,11 @@ void agent_ui_draw_island(const ARegion * /*region*/,
   }
 
   /* --- Inner panel --- */
-  fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);
+  /* Opaque #121212 here is what made frost read as a solid slab: empty
+   * TOOLS paints the full island, and dest-over cannot lower dest A=1. */
+  if (!agent_bubble_island_bed_is_transparent()) {
+    fill_round(&layout->panel, AGENT_PANEL_RADIUS * u, surface);
+  }
 
   /* Neither the prompt nor its placeholder is painted here — both belong to
    * the text button the bottom slab lays over the input line, which draws on
@@ -1029,7 +814,8 @@ void agent_ui_draw_island(const ARegion * /*region*/,
    * well is what put TWO ghost texts in the card. */
 
   /* --- Chip row --- */
-  draw_chip_row(layout, state);
+  agent_ui_draw_chip_row(region, layout, state);
+  agent_ui_motion_end(region);
 
   GPU_blend(GPU_BLEND_NONE);
 }

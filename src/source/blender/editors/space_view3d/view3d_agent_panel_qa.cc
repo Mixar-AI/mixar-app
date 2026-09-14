@@ -23,6 +23,7 @@
 #include "../interface/interface_qa_inspect.hh"
 
 #include "view3d_agent_panel.hh"
+#include "../space_agent_bubble/agent_ui_cat_style.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -70,6 +71,11 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
      * the layout pass wrote and the click handler hit-tests, so a metric
      * change moves the targets with the pixels. */
     push(card.rect, "agent_panel_card", card.expanded ? card.task : card.name, i);
+    rcti cat_visible;
+    if (BLI_rcti_isect(&card.cat_rect, &runtime->column_rect, &cat_visible)) {
+      push(cat_visible, "agent_panel_cat", card.task_id, i);
+      r_targets.back().value = mixie_cat_style(card.cat_ordinal).name;
+    }
     push(card.eye_rect, "agent_panel_eye", "eye", i);
     push(card.action_rect, "agent_panel_dismiss", "dismiss", i);
   }

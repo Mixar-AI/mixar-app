@@ -19,13 +19,11 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
 from mixar.modules.moodboard.core.media_utils import is_still_item
 
-
-# =============================================================================
 # MESH SEGMENT POPUP
-# =============================================================================
 
 class MIXIE_OT_mesh_segment_popup(Operator):
     """Open Mesh Segment popup dialog"""
@@ -40,7 +38,7 @@ class MIXIE_OT_mesh_segment_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         # Store original values to restore on cancel
@@ -86,9 +84,7 @@ class MIXIE_OT_mesh_segment_popup(Operator):
         return {'FINISHED'}
 
 
-# =============================================================================
 # LOOKDEV POPUP
-# =============================================================================
 
 class MIXIE_OT_lookdev_popup(Operator):
     """Open Lookdev popup dialog"""
@@ -103,7 +99,7 @@ class MIXIE_OT_lookdev_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         # Store original values to restore on cancel
@@ -154,9 +150,7 @@ class MIXIE_OT_lookdev_popup(Operator):
         return {'FINISHED'}
 
 
-# =============================================================================
 # LOOKDEV360 POPUP
-# =============================================================================
 
 class MIXIE_OT_lookdev360_popup(Operator):
     """Open Lookdev360 popup dialog"""
@@ -171,7 +165,7 @@ class MIXIE_OT_lookdev360_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         # Store original values to restore on cancel
@@ -274,9 +268,7 @@ class MIXIE_OT_lookdev360_popup(Operator):
         return {'FINISHED'}
 
 
-# =============================================================================
 # IMAGE TO 3D POPUP
-# =============================================================================
 
 class MIXIE_OT_image_to_3d_popup(Operator):
     """Open Image to 3D popup dialog"""
@@ -291,7 +283,7 @@ class MIXIE_OT_image_to_3d_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         # Store original values to restore on cancel
@@ -378,9 +370,7 @@ class MIXIE_OT_image_to_3d_popup(Operator):
         return {'FINISHED'}
 
 
-# =============================================================================
 # WRAPPER OPERATORS (close popup after starting generation)
-# =============================================================================
 
 class MIXIE_OT_mesh_segment_submit_and_close(Operator):
     """Submit mesh segment job and close the popup"""
@@ -423,7 +413,7 @@ class MIXIE_OT_lookdev_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         prompt = context.scene.mixie_lookdev_prompt.strip()
@@ -453,7 +443,7 @@ class MIXIE_OT_lookdev360_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         prompt = context.scene.mixie_lookdev360_prompt.strip()
@@ -483,7 +473,7 @@ class MIXIE_OT_image_to_3d_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         # Call the image_to_3d generate operator

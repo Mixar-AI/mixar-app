@@ -318,6 +318,8 @@ class SlotEventProcessor:
 
         self._reparse_content_markdown(bubble, is_append=("append" in content_data))
         if scene is not None:
+            from .cat_activity import note_content
+            note_content(scene, content_data)
             _bump_layout_epoch(scene)
 
     def _reparse_content_markdown(self, bubble: Any, is_append: bool) -> None:
@@ -384,6 +386,8 @@ class SlotEventProcessor:
         from .thinking_lifecycle import apply_ephemeral_to_bubble
 
         finalized = apply_ephemeral_to_bubble(bubble, ephemeral_data, time.time())
+        from .cat_activity import note_ephemeral
+        note_ephemeral(scene, ephemeral_data)
         if finalized:
             # The dropdown is a new block — force a C++ layout rebuild.
             _bump_layout_epoch(scene)
