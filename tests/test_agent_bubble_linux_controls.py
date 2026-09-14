@@ -464,6 +464,27 @@ def test_x11_chrome_writes_are_enabled_by_default():
     assert "inline bool mixar_x11_resolve_chrome(" in header
 
 
+def test_x11_chromeless_remanages_and_is_idempotent():
+    """Dropping the title bar after map needs a withdraw/remap cycle.
+
+    openbox reads _MOTIF_WM_HINTS when it takes a window under management and
+    does not re-read it on a property change, so the pill — created and mapped
+    by WM_window_open, then asked to be borderless — keeps its frame without
+    this. The cycle must be guarded on the current value, because
+    Mixar_WindowSetChromeless runs on every bubble/pill show and remapping
+    each time would flicker.
+    """
+    source = _x11_source()
+    body = source.split("void Mixar_WindowSetChromeless(", 1)[1].split("\nextern ", 1)[0]
+    assert "mixar_x11_current_decorations(" in body, "no idempotence guard"
+    assert "XUnmapWindow(" in body and "XMapWindow(" in body, "no re-manage cycle"
+    assert "XRaiseWindow(" in body, "re-managed window returns to the bottom"
+    guard = body.split("mixar_x11_current_decorations(", 1)[1]
+    assert guard.index("return;") < guard.index("XUnmapWindow("), (
+        "the re-manage must sit behind the idempotence guard"
+    )
+
+
 def test_x11_chrome_and_reads_use_the_right_gate():
     """Decoration/size writes take the chrome gate; pure reads take none.
 

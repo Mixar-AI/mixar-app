@@ -124,6 +124,45 @@ bool mixar_x11_dock_suppress_if_needed(void *window_handle)
   return true;
 }
 
+/* Current _MOTIF_WM_HINTS decorations field, or -1 when the property is
+ * absent or unreadable. Used to keep Mixar_WindowSetChromeless idempotent:
+ * it is called on every bubble/pill show, and the re-manage cycle below
+ * must not run more than once per actual change. */
+static long mixar_x11_current_decorations(Display *display, Window window, Atom motif)
+{
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long nitems = 0, bytes_after = 0;
+  unsigned char *data = nullptr;
+  if (XGetWindowProperty(display,
+                         window,
+                         motif,
+                         0,
+                         sizeof(MixarMwmHints) / sizeof(long),
+                         False,
+                         AnyPropertyType,
+                         &actual_type,
+                         &actual_format,
+                         &nitems,
+                         &bytes_after,
+                         &data) != Success)
+  {
+    return -1;
+  }
+  long decorations = -1;
+  if (data != nullptr) {
+    if (actual_format == 32 && nitems >= 3) {
+      const long *fields = reinterpret_cast<const long *>(data);
+      /* Only meaningful when the decorations bit is actually set. */
+      if (fields[0] & MWM_HINTS_DECORATIONS) {
+        decorations = fields[2];
+      }
+    }
+    XFree(data);
+  }
+  return decorations;
+}
+
 extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
 {
   Display *display;
@@ -132,19 +171,48 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
     return;
   }
 
+  Atom motif = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+  if (motif == None) {
+    return;
+  }
+
+  const long want = chromeless ? 0 : 1;
+  if (mixar_x11_current_decorations(display, window, motif) == want) {
+    /* Already in the requested state — skip the write AND the re-manage,
+     * so repeat calls do not flicker the window. */
+    mixar_x11_set_state(display, window, "_NET_WM_STATE_SKIP_TASKBAR", chromeless);
+    mixar_x11_set_state(display, window, "_NET_WM_STATE_SKIP_PAGER", chromeless);
+    XFlush(display);
+    return;
+  }
+
   MixarMwmHints hints = {};
   hints.flags = MWM_HINTS_DECORATIONS;
-  hints.decorations = chromeless ? 0 : 1;
-  Atom motif = XInternAtom(display, "_MOTIF_WM_HINTS", False);
-  if (motif != None) {
-    XChangeProperty(display,
-                    window,
-                    motif,
-                    motif,
-                    32,
-                    PropModeReplace,
-                    reinterpret_cast<unsigned char *>(&hints),
-                    sizeof(MixarMwmHints) / sizeof(long));
+  hints.decorations = (unsigned long)want;
+  XChangeProperty(display,
+                  window,
+                  motif,
+                  motif,
+                  32,
+                  PropModeReplace,
+                  reinterpret_cast<unsigned char *>(&hints),
+                  sizeof(MixarMwmHints) / sizeof(long));
+
+  /* openbox (and most reparenting WMs) read _MOTIF_WM_HINTS when they take
+   * a window under management and do not re-read it on a property change,
+   * so a mapped window keeps the frame it was given. Withdrawing and
+   * remapping forces a re-manage, which is the only portable way to drop
+   * the title bar after map. The pill needs exactly this: it is created and
+   * mapped by WM_window_open, and only then asks to be borderless.
+   *
+   * Unmap/map is the same pair minimise/restore already uses, and is not one
+   * of the paths that segfaulted this stack. Raise afterwards because a
+   * re-managed window returns at the bottom of the stack. */
+  if (mixar_x11_is_viewable(display, window)) {
+    XUnmapWindow(display, window);
+    XFlush(display);
+    XMapWindow(display, window);
+    XRaiseWindow(display, window);
   }
 
   mixar_x11_set_state(display, window, "_NET_WM_STATE_SKIP_TASKBAR", chromeless);
