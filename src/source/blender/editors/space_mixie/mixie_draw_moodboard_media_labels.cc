@@ -11,18 +11,28 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 
 namespace blender::ed::mixie {
 
-void mixie_draw_moodboard_selected_media_labels(ui::Block *block,
+void mixie_draw_moodboard_selected_media_labels(const bContext *C,
+                                                ui::Block *block,
                                                 View2D *v2d,
                                                 ARegion *region,
                                                 PointerRNA *scene_ptr,
                                                 const MoodboardGraphCache *cache)
 {
+  /* The drawer region includes a transparent tab gutter. Clamp to its painted
+   * canvas, shared with node controls, so media labels cannot hide under the
+   * grip or claim space in the viewport behind it. */
+  const rcti canvas = moodboard_visible_canvas_rect(C);
+  const int available_width = BLI_rcti_size_x(&canvas);
+  if (available_width < 180 || BLI_rcti_size_y(&canvas) < 44) {
+    return;
+  }
   PropertyRNA *images = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
   if (!images) {
     return;
@@ -71,15 +81,19 @@ void mixie_draw_moodboard_selected_media_labels(ui::Block *block,
     }
     rcti media_region;
     if (moodboard_view_rect_to_region(v2d, region, media_rect, &media_region)) {
-      if (BLI_rcti_size_x(&media_region) < 180 || BLI_rcti_size_y(&media_region) < 120) {
+      rcti visible_media;
+      if (!BLI_rcti_isect(&media_region, &canvas, &visible_media) ||
+          BLI_rcti_size_x(&visible_media) < 180 || BLI_rcti_size_y(&visible_media) < 120)
+      {
         RNA_property_collection_next(&iter);
         continue;
       }
-      const int bar_width = std::clamp(BLI_rcti_size_x(&media_region), 180, 420);
-      const int bar_x = std::clamp(BLI_rcti_cent_x(&media_region) - bar_width / 2,
-                                   8,
-                                   std::max(8, region->winx - bar_width - 8));
-      const int bar_y = std::clamp(media_region.ymax + 10, 8, std::max(8, region->winy - 54));
+      const int bar_width = std::clamp(
+          BLI_rcti_size_x(&visible_media), 180, std::min(420, available_width));
+      const int bar_x = std::clamp(BLI_rcti_cent_x(&visible_media) - bar_width / 2,
+                                   canvas.xmin,
+                                   canvas.xmax - bar_width);
+      const int bar_y = std::clamp(media_region.ymax + 10, canvas.ymin, canvas.ymax - 44);
       rctf bar_rect = {float(bar_x), float(bar_x + bar_width), float(bar_y), float(bar_y + 44)};
       moodboard_draw_floating_background(bar_rect);
       ui::uiDefBut(block,

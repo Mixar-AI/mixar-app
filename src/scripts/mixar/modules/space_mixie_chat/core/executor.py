@@ -40,7 +40,6 @@ class SandboxViolationError(RuntimeError):
 # Restricted module wrappers (see sandbox_modules.py for implementation)
 from .sandbox_modules import (
     RESTRICTED_BASE64,
-    RESTRICTED_STRING,
     RESTRICTED_TEMPFILE,
     RESTRICTED_URLLIB,
     restricted_open,
@@ -359,26 +358,11 @@ class ScriptExecutor:
             import math
             import re
             import random
+            import runpy
             import colorsys
             import datetime
             import collections
             import hashlib
-            # Pure-Python stdlib helpers: no process, file or network access,
-            # and no API that resolves an attribute from a caller-supplied name
-            # (that would walk past the wrapped getattr). Deliberately NOT here:
-            #   operator -- attrgetter/methodcaller take the name as a string
-            #   runpy    -- run_module("os") returns the real os namespace
-            #   string   -- proxied below; Formatter().get_field() is the same
-            #               attrgetter hole and returns the object, not a repr
-            import itertools
-            import functools
-            import statistics
-            import heapq
-            import bisect
-            import copy
-            import textwrap
-            import fractions
-            import decimal
             import bmesh
             import mathutils
             import bpy_extras
@@ -394,6 +378,7 @@ class ScriptExecutor:
                 "json": json,
                 "math": math,
                 "random": random,
+                "runpy": runpy,
                 "colorsys": colorsys,
                 "re": re,
                 "datetime": datetime,
@@ -402,15 +387,6 @@ class ScriptExecutor:
                 "time": time,
                 "numpy": numpy,
                 "struct": struct,
-                "itertools": itertools,
-                "functools": functools,
-                "statistics": statistics,
-                "heapq": heapq,
-                "bisect": bisect,
-                "copy": copy,
-                "textwrap": textwrap,
-                "fractions": fractions,
-                "decimal": decimal,
                 # Blender modules
                 "bmesh": bmesh,
                 "mathutils": mathutils,
@@ -419,7 +395,6 @@ class ScriptExecutor:
                 # Restricted modules -- only safe subsets exposed
                 # (see sandbox_modules.py for implementation)
                 "base64": RESTRICTED_BASE64,
-                "string": RESTRICTED_STRING,
                 "tempfile": RESTRICTED_TEMPFILE,
                 "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,

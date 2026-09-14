@@ -16,9 +16,6 @@ Blocked capabilities:
   imports them is rejected by the restricted __import__ in executor.py.
 - tempfile: NamedTemporaryFile, mkdtemp, and all creation functions
 - base64: only b64encode and b64decode are allowed
-- string: everything except Formatter -- string.Formatter().get_field()
-  resolves "0.__class__.__base__.__subclasses__" against the REAL getattr and
-  hands back the object, walking straight past the dunder guard
 - open(): write mode restricted to temp directory only
 """
 
@@ -54,33 +51,6 @@ class RestrictedBase64:
         raise AttributeError(
             f"base64.{name} is not available in the sandbox. "
             f"Allowed: b64encode, b64decode"
-        )
-
-
-class RestrictedString:
-    """Restricted string module: constants + Template, but no Formatter.
-
-    string.Formatter().get_field("0.__class__.__base__.__subclasses__", [x], {})
-    performs the attribute walk in C with the real getattr and returns the
-    OBJECT, not a rendered string -- a complete bypass of the sandbox's dunder
-    guard. Nothing else in the module resolves attributes by name.
-    """
-
-    _ALLOWED = (
-        "Template", "capwords", "ascii_letters", "ascii_lowercase",
-        "ascii_uppercase", "digits", "hexdigits", "octdigits", "printable",
-        "punctuation", "whitespace",
-    )
-
-    def __init__(self):
-        import string as _string
-        for _name in self._ALLOWED:
-            setattr(self, _name, getattr(_string, _name))
-
-    def __getattr__(self, name):
-        raise AttributeError(
-            f"string.{name} is not available in the sandbox. "
-            f"Allowed: {', '.join(self._ALLOWED)}"
         )
 
 
@@ -244,5 +214,4 @@ class RestrictedUrllib:
 # Singleton instances (created once at module load)
 RESTRICTED_TEMPFILE = RestrictedTempfile()
 RESTRICTED_BASE64 = RestrictedBase64()
-RESTRICTED_STRING = RestrictedString()
 RESTRICTED_URLLIB = RestrictedUrllib()

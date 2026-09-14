@@ -164,9 +164,12 @@ const float *moodboard_action_output_color(int action_type);
 const float *moodboard_media_output_color(const Image *image);
 const float *moodboard_mesh_output_color();
 void moodboard_draw_socket(
-    float x, float y, const float color[3], bool connected, bool required);
-void moodboard_draw_output_handle(float x, float y, const float color[3]);
-void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
+    View2D *v2d, float x, float y, const float color[3], bool connected, bool required, float radius_px);
+void moodboard_draw_output_handle(View2D *v2d, float x, float y, const float color[3]);
+void moodboard_draw_socket_label(
+    View2D *v2d, PointerRNA *socket, float socket_x, float socket_y, float radius_px);
+/** Canvas-space width from the same font used by the socket label painter. */
+float moodboard_socket_label_width(View2D *v2d, const char *label);
 
 /* Shared by the node-UI toolbar and the selected-media label bar
  * (mixie_draw_moodboard_node_ui.cc / mixie_draw_moodboard_media_labels.cc). */
@@ -175,7 +178,8 @@ bool moodboard_view_rect_to_region(View2D *v2d,
                                    const rctf &view_rect,
                                    rcti *r_region_rect);
 void moodboard_draw_floating_background(const rctf &rect);
-void mixie_draw_moodboard_selected_media_labels(ui::Block *block,
+void mixie_draw_moodboard_selected_media_labels(const bContext *C,
+                                                ui::Block *block,
                                                 View2D *v2d,
                                                 ARegion *region,
                                                 PointerRNA *scene_ptr,
