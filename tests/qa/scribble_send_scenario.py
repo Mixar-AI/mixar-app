@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Real UI regression: an ink-only sketch includes its uncommitted last stroke.
+"""Real UI regression: visible ink, exclusive input, and a complete sketch send.
 
 Run against an ISOLATED QA app launched by mixar-qa-harness/run_qa_app.sh:
   QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4781 \
@@ -9,7 +9,8 @@ Run against an ISOLATED QA app launched by mixar-qa-harness/run_qa_app.sh:
 
 No model credits: intercept start_stream after the real Send operator packs
 the request. Auth headers and image bytes never enter the captured artifact.
-Loads this checkout's changed Python modules into the QA app (no C++ changes).
+Loads checkout Python by default. SCRIBBLE_QA_INSTALLED=1 tests the built app
+without replacing its modules. No C++ changes.
 The screenshots still require visual review. This does not test model quality.
 """
 
@@ -37,9 +38,13 @@ assert not bpy.context.scene.mixie_chat_messages, 'Requires a fresh QA scene'
 assert not bpy.context.scene.mixar_marks, 'Requires a fresh QA scene'
 root = Path(SOURCE_ROOT)
 core = importlib.import_module('mixar.modules.scribble_mark.core')
-core.__path__.insert(0, str(root / 'scribble_mark/core'))
-for tail in ['scribble_mark.core.chat_bridge', 'scribble_mark.ui.operators.mark_draw_ops',
+if not USE_INSTALLED:
+    core.__path__.insert(0, str(root / 'scribble_mark/core'))
+for tail in ['scribble_mark.core.freeze_session', 'scribble_mark.core.chat_bridge',
+             'scribble_mark.ui.operators.mark_draw_ops',
              'space_mixie_chat.ui.operators.chat_ops']:
+    if USE_INSTALLED:
+        continue
     module = importlib.import_module('mixar.modules.' + tail)
     for cls in getattr(module, 'classes', ()):
         bpy.utils.unregister_class(cls)
@@ -60,7 +65,8 @@ def capture(**kwargs):
     return True
 chat.create_sse_handler = lambda **kwargs: SimpleNamespace(start_stream=capture)
 result = True
-'''.replace('SOURCE_ROOT', repr(str(ROOT / 'src/scripts/mixar/modules'))))
+'''.replace('SOURCE_ROOT', repr(str(ROOT / 'src/scripts/mixar/modules')))
+       .replace('USE_INSTALLED', repr(os.environ.get('SCRIBBLE_QA_INSTALLED') == '1')))
 
 
 def viewport(qa):
@@ -72,11 +78,25 @@ result={'window':win.as_pointer(), 'x':region.x,'y':region.y,'w':region.width,'h
 ''')
 
 
-def draw(qa, vp, start, end):
+def draw(qa, vp, start, end, button='LEFTMOUSE'):
     def point(uv):
         return {'window': vp['window'], 'x': vp['x'] + int(uv[0] * vp['w']),
                 'y': vp['y'] + int(uv[1] * vp['h'])}
-    return qa.cmd('drag', **{'from': point(start), 'to': point(end), 'steps': 12})
+    return qa.cmd('drag', **{'from': point(start), 'to': point(end), 'steps': 12, 'button': button})
+
+
+def drawer_state(qa):
+    return qa.eval("""
+w = drv.main_window()
+a = next(a for a in w.screen.areas if a.type == 'VIEW_3D')
+r = next(r for r in a.regions if r.type == 'TOOL_PROPS')
+wm = bpy.context.window_manager
+result = {'amount': wm.mixar_moodboard_drawer_amount,
+          'target': wm.mixar_moodboard_drawer_target,
+          'width': wm.mixar_moodboard_drawer_width,
+          'origin': r.view2d.region_to_view(100, 100),
+          'extent': r.view2d.region_to_view(200, 200)}
+""")
 
 
 def run(qa):
@@ -84,10 +104,32 @@ def run(qa):
     setup_source(qa)
     try:
         qa.step('open_chat', qa.eval, "result=str(bpy.ops.mixar.bubble_restore())")
+        qa.step('open_moodboard', qa.click, surface='moodboard_drawer_grip')
+        qa.wait('bpy.context.window_manager.mixar_moodboard_drawer_amount == 1', timeout=8)
+        drawer = drawer_state(qa)
         qa.cmd('snap', path=str(OUT / 'before.png'))
+        qa.step('arm_then_escape', qa.click, op='MIXAR_OT_scribble_toggle')
+        qa.wait('bpy.context.window_manager.mixar_mark_armed and '
+                'bpy.context.window_manager.mixar_moodboard_drawer_amount == 0', timeout=8)
+        qa.cmd('press', key='ESC', window=viewport(qa)['window'])
+        qa.wait('not bpy.context.window_manager.mixar_mark_armed', timeout=8)
+        assert drawer_state(qa) == drawer, 'Esc must restore the original moodboard view'
         qa.step('arm_scribble', qa.click, op='MIXAR_OT_scribble_toggle')
         qa.wait('bpy.context.window_manager.mixar_mark_armed', timeout=8)
         vp = viewport(qa)
+        assert drawer_state(qa)['amount'] == 0, 'The drawing surface must be unobstructed'
+        frozen = qa.eval('''
+a = next(a for a in drv.main_window().screen.areas if a.type == 'VIEW_3D')
+v = a.spaces.active.region_3d
+result = [list(v.view_rotation), list(v.view_location), v.view_distance]
+''')
+        qa.step('pan_is_blocked', draw, qa, vp, (.86, .6), (.92, .5), 'MIDDLEMOUSE')
+        after_pan = qa.eval('''
+a = next(a for a in drv.main_window().screen.areas if a.type == 'VIEW_3D')
+v = a.spaces.active.region_3d
+result = [list(v.view_rotation), list(v.view_location), v.view_distance]
+''')
+        assert after_pan == frozen, 'A Scribble drag must not navigate the view'
         qa.step('first_stroke', draw, qa, vp, (.35, .4), (.55, .62))
         qa.wait('len(bpy.context.scene.mixar_marks)==1', timeout=10)
         qa.step('choose_sketch', qa.cmd, 'choose',
@@ -98,7 +140,7 @@ from mixar.modules.scribble_mark.ui.operators import mark_draw_ops
 bpy.app.driver_namespace['scribble_qa_idle'] = mark_draw_ops.MARK_COMMIT_IDLE_S
 mark_draw_ops.MARK_COMMIT_IDLE_S = 300.0
 ''')
-        qa.step('pending_final_stroke', draw, qa, vp, (.30, .42), (.46, .60))
+        qa.step('pending_final_stroke', draw, qa, vp, (.86, .42), (.94, .60))
         before = qa.eval('''
 from mixar.modules.scribble_mark.core import pending
 result={'stored':len(bpy.context.scene.mixar_marks),'pending':len(pending._operator._strokes),
@@ -122,10 +164,13 @@ result={'stored':len(bpy.context.scene.mixar_marks),'pending':len(pending._opera
         assert all(n.startswith('mixar_mark_frame') for n in payload['attachment_names'])
         states = qa.eval('result=[m.state for m in bpy.context.scene.mixar_marks]')
         assert states == ['SENT', 'SENT'], states
+        assert drawer_state(qa) == drawer, 'Send must restore the unchanged moodboard view'
+        qa.cmd('snap', path=str(OUT / 'restored.png'), area='VIEW_3D')
         qa.cmd('snap', path=str(OUT / 'sent.png'), target={'op': 'MIXIE_CHAT_OT_abort_session'}, margin=3000)
         (OUT / 'request.json').write_text(json.dumps(payload, indent=2))
         return {'passed': True, 'marks': 2, 'strokes': 2, 'images': 2,
-                'empty_composer': True, 'disarmed': True, 'remote_send': False}
+                'empty_composer': True, 'disarmed': True, 'remote_send': False,
+                'moodboard_restored_after_escape_and_send': True}
     finally:
         qa.eval('''
 from mixar.modules.space_mixie_chat.ui.operators import chat_ops

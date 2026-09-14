@@ -166,6 +166,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self._timer = None
                 context.window_manager.mixar_mark_armed = False
                 overlay.remove()
+                self._session.restore_drawer(context)
                 self._session.release_if_unused()
                 self._session = None
                 self.report({"ERROR"}, "Could not start the mark overlay")
@@ -277,7 +278,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
-        if event.type == "MOUSEMOVE" and self._current is not None:
+        if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"} and self._current is not None:
             self._extend_stroke(point)
             return {"RUNNING_MODAL"}
 
@@ -473,10 +474,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     def _finish(self, context):
         global _running, _live_session
-        # A freeze that committed no mark owns a still and a camera nothing
-        # references. Left behind, every arm/disarm cycle adds both to the
-        # .blend.
+        # Restore the drawer even when committed marks retain this freeze.
         if self._session is not None:
+            self._session.restore_drawer(context)
             self._session.release_if_unused()
         if self._timer is not None:
             try:
