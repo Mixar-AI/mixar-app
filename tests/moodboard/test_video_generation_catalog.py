@@ -72,6 +72,8 @@ def test_limits_come_from_the_catalog_service(monkeypatch):
         "max_video_bytes": 80 * 1024 * 1024,
         "max_image_bytes": 30 * 1024 * 1024,
         "video_extensions": (".mp4", ".mov"),
+        # Every model takes references unless its row says otherwise.
+        "supports_references": True,
     }
 
 
@@ -218,3 +220,53 @@ def test_malformed_published_ceilings_are_ignored(monkeypatch):
     assert limits["max_images"] == 7
     assert limits["max_videos"] == 2
     assert limits["max_materials"] == 8
+
+
+def test_a_tier_without_a_reference_endpoint_refuses_before_uploading():
+    """H3 Max Turbo has text-to-video and image-to-video only. Submitting a
+    reference set reaches a URL that does not exist and fal answers a bare
+    404, so the selection has to be refused here — before the client
+    compresses and uploads it, and before the job is charged."""
+    module = _load_module()
+    limits = {
+        "max_images": 9,
+        "max_videos": 3,
+        "max_materials": 12,
+        "supports_references": False,
+    }
+    error = module.video_reference_count_error
+
+    assert "cannot take reference images or videos" in error(
+        limits, image_count=1, video_count=0
+    )
+    assert "cannot take reference images or videos" in error(
+        limits, image_count=0, video_count=1
+    )
+    # Text-to-video is unaffected, and so are the frame modes — those go to
+    # /image-to-video, which this tier does have.
+    assert error(limits, image_count=0, video_count=0) is None
+    assert error(
+        limits, image_count=1, video_count=0, image_mode="first_frame"
+    ) is None
+    assert error(
+        limits, image_count=2, video_count=0, image_mode="first_last_frame"
+    ) is None
+
+
+def test_only_an_explicit_false_blocks_references(monkeypatch):
+    """null/absent means the model takes references — which is every model
+    except the one tier whose provider is missing the endpoint."""
+    module_for = lambda flag: _catalog_module(
+        _service_input_spec(),
+        models={"m": {} if flag is _MISSING else {
+            "supports_reference_to_video": flag
+        }},
+    )
+    for flag, expected in ((_MISSING, True), (None, True), (True, True),
+                           (False, False)):
+        monkeypatch.setitem(sys.modules, CATALOG_MODULE, module_for(flag))
+        limits = _load_module().get_video_generation_limits("video_gen", "m")
+        assert limits["supports_references"] is expected
+
+
+_MISSING = object()
