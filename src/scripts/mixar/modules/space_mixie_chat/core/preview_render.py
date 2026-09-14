@@ -30,7 +30,7 @@ def _publish(key, value):
 
 
 def _restore(job):
-    for owner, name, original, applied in job['settings']:
+    for owner, name, original, applied in reversed(job['settings']):
         # Preserve a user's new setting if it changed while the job was running.
         if getattr(owner, name) == applied:
             setattr(owner, name, original)
@@ -89,6 +89,7 @@ def _finish(key, completed, lost=False):
         _remove_render_handlers()
         result['scene_revision'] = _revision
         result['finished_at'] = time.monotonic()
+        result['render'] = dict(job.get('render', {}), elapsed_seconds=round(result['finished_at'] - job['started_at'], 3))
         _publish(key, result)
     return None
 
@@ -166,6 +167,8 @@ def start(context, key):
            'revision': _revision, 'finishing': False}
     _job = job
     try:
+        from .render_devices import select_device
+        job['render'] = select_device(context, set_value)
         render = scene.render
         scale = min(1.0, 768 / max(render.resolution_x, render.resolution_y))
         set_value(render, 'resolution_x', max(1, round(render.resolution_x * scale)))

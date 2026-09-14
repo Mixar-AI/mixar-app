@@ -14,8 +14,10 @@ CORE = ROOT / 'src/scripts/mixar/modules/space_mixie_chat/core'
 
 @pytest.fixture
 def preview(monkeypatch):
-    spec = importlib.util.spec_from_file_location('preview_test', CORE / 'preview_render.py')
+    spec = importlib.util.spec_from_file_location('mixar.modules.space_mixie_chat.core.preview_test', CORE / 'preview_render.py')
     module = importlib.util.module_from_spec(spec)
+    from mixar.modules.space_mixie_chat.core import render_devices
+    monkeypatch.setattr(render_devices, "select_device", lambda context, set_value: {"device": "CPU"})
     spec.loader.exec_module(module)
     fake = MagicMock()
     fake.app.background = False
