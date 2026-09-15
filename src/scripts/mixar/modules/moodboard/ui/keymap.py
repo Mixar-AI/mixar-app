@@ -60,6 +60,13 @@ def _bind_moodboard_pointer(km):
     kmi = km.keymap_items.new('mixie.moodboard_context_menu', 'RIGHTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
 
+    # Addon items are prepended to the active map. Annotate must claim a drag
+    # before media/graph selection, and its poll releases it when the tool is off.
+    kmi = km.keymap_items.new('mixie.moodboard_annotation_stroke', 'LEFTMOUSE', 'PRESS')
+    addon_keymaps.append((km, kmi))
+    kmi = km.keymap_items.new('mixie.moodboard_annotation_exit', 'ESC', 'PRESS')
+    addon_keymaps.append((km, kmi))
+
 
 def get_user_pie_menu_key():
     """
