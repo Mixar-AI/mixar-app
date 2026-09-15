@@ -9,7 +9,9 @@ Monkey-patches:
                                    Solid / Material Preview / Rendered
                                    strip plus the shading popover in
                                    Zen Mode AND on the Texturing /
-                                   Texture Paint workspaces.
+                                   Texture Paint workspaces. Zen Mode
+                                   also parks a guides chip (grid +
+                                   relationship lines) beside that strip.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -43,6 +45,7 @@ from ...constants import (
     TEXTURING_WORKSPACE_NAMES,
     ZEN_TRANSFORM_TOOL_IDS,
 )
+from ...core import viewport_guides
 from ..operators import zen_tool_toggle
 
 _logger = get_logger(__name__)
@@ -112,11 +115,21 @@ def _patched_header_draw(self, context):
     # Keep native RNA enum buttons: available modes depend on the render
     # engine (Workbench has no Material Preview). The Zen painter supplies
     # one glass pane without replacing RNA selection, tooltips or dispatch.
-    # The popover stays outside the aligned group.
+    # The popover stays outside the aligned group. Zen also parks a guides
+    # chip beside that strip (same cluster wiring as the popover) so floor
+    # grid + relationship lines flip as one view-state toggle.
     cluster = layout.row(align=False)
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
     row.prop(shading, "type", text="", expand=True)
+    if _is_basic_workspace(context):
+        cluster.separator(factor=0.4)
+        cluster.operator(
+            "mixar.zen_toggle_guides",
+            text="",
+            icon="GRID",
+            depress=viewport_guides.guides_shown(view),
+        )
     cluster.separator(factor=0.4)
     cluster.popover(panel="VIEW3D_PT_shading", text="")
 
