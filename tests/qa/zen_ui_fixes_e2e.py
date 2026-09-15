@@ -45,6 +45,9 @@ def mode_center(qa):
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/zen-ui-fixes')) / 'snaps'
     out.mkdir(parents=True, exist_ok=True)
+    qa.step('workflow_header_loaded_at_startup', qa.eval,
+            'assert bpy.types.TOPBAR_HT_upper_bar.draw_left.__name__ == "_patched_draw_left"; '
+            'result=True')
     qa.eval(f'import sys; sys.path.insert(0,{str(Path(__file__).parent)!r}); result=True')
     qa.eval(f'scene={SCENE}; scene.mixie_chat_input=""; scene.mixie_chat_messages.clear(); '
             'scene.mixie_chat_is_busy=False; scene.mixie_chat_state="IDLE"; '
