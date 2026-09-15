@@ -75,7 +75,8 @@ AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
   g.view = {
       20 * u, width - 28 * u, (AGENT_CARD_PAD_BOTTOM + AGENT_CHIP_H + 16) * u, height - 10 * u};
   g.image_size = std::max(32 * u,
-                          std::min(BLI_rctf_size_x(&g.view), BLI_rctf_size_y(&g.view) - 30 * u));
+                          0.88f * std::min(BLI_rctf_size_x(&g.view),
+                                            BLI_rctf_size_y(&g.view) - 30 * u));
   g.row_pitch = g.image_size + 40 * u;
   g.max_scroll = std::max(0.0f, count * g.row_pitch - 12 * u - BLI_rctf_size_y(&g.view));
   g.offset = std::clamp(fraction, 0.0f, 1.0f) * g.max_scroll;
@@ -183,13 +184,13 @@ void agent_bubble_references_draw(const bContext *C,
     const float dim[4] = AGENT_COL_TEXT_DIM;
     const auto caption = ui::mixar_fit_text(
         name.c_str(),
-        BLI_rctf_size_x(&g.view),
+        g.image_size,
         ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
     GPU_blend(GPU_BLEND_ALPHA);
     pane_label_left(
-        caption.c_str(), g.view.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
+        caption.c_str(), image.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
     rctf close = {
-        image.xmax - 34 * u, image.xmax - 6 * u, image.ymax - 34 * u, image.ymax - 6 * u};
+        image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
     if (close.ymin >= g.view.ymin && close.ymax <= g.view.ymax) {
       const float back[4] = {0.055f, 0.065f, 0.06f, 0.90f};
       pane_fill_round(&close, 14 * u, back);

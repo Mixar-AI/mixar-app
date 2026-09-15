@@ -86,7 +86,17 @@ def run(qa):
         assert field['rect'][2] < col['rect'][0], (field,col)
         assert send[0]['rect'][3] < col['rect'][1], (send,col)
         previews = qa.find(surface='reference_preview')['widgets']
-        assert previews[0]['rect'][2]-previews[0]['rect'][0] > 180, previews
+        preview = previews[0]['rect']
+        assert 150 < preview[2] - preview[0] < 180, previews
+        close = max(qa.find(area_type='AGENT_BUBBLE',
+                            op='MIXIE_CHAT_OT_remove_attachment')['widgets'],
+                    key=lambda h: h['rect'][3])['rect']
+        # Native button coordinates also include block rounding/insets.
+        assert 1 <= preview[2] - close[2] <= 5, (preview, close)
+        assert 1 <= preview[3] - close[3] <= 5, (preview, close)
+        assert 27 <= close[2] - close[0] <= 31, close
+        (out/'preview-geometry.json').write_text(json.dumps({
+            'preview_rect':preview, 'remove_rect':close}, indent=2)+'\n')
         assert not qa.find(popup=True, but_type='Image')['total']
         capture(qa, out, 'column-first')
         frame = Image.open(out/'column-first.png').convert('RGB')
@@ -96,7 +106,7 @@ def run(qa):
         colored = [p for p in pixels if max(p)-min(p)>80]
         assert len(colored)>len(pixels)*.20, 'Image did not render'
         assert sum(p[0] for p in colored)>sum(p[2] for p in colored), 'Wrong same-name image'
-    qa.step('large_images_divider_and_send_geometry', inspect_column)
+    qa.step('smaller_images_corner_remove_and_send_geometry', inspect_column)
 
     def fill_and_scroll():
         batch_drop(qa, paths[2:], chat=True)

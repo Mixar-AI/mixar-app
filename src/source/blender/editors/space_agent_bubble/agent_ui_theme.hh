@@ -271,12 +271,10 @@ namespace blender {
 #define AGENT_SEG_THUMB_INSET 2
 #define AGENT_SEG_THUMB_W 125
 
-/** Upload Reference chip: artboard 599,842 150x44 — widened to 200 so the
- *  label reads in full. The artboard truncates it to "Upload Refe…", but that
- *  clipped mid-word in the build and the model chip's slot beside it is free
- *  now, so the chip takes the room rather than the ellipsis. */
+/** Upload Reference chip: widened for the larger default label. The model
+ * chip's retired slot leaves room for the complete text and its icon. */
 #define AGENT_CHIP_UPLOAD_X 332
-#define AGENT_CHIP_UPLOAD_W 200
+#define AGENT_CHIP_UPLOAD_W 240
 
 /* The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") is
  * deliberately NOT reproduced — the model picker was cut from the design.

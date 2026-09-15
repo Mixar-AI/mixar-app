@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Verify rendered glyph sizes across native bubble resizes, without credits.
+"""Verify rendered glyph sizes across font preferences and bubble resizes.
 
 Requires QA_HARNESS, MIXAR_QA_PORT, an isolated Dev app, and Pillow.
 Every capture resolves the native button bounds; no duplicate layout geometry.
@@ -47,7 +47,9 @@ def assert_fixed(samples):
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/zen-bubble-text'))
     out.mkdir(parents=True, exist_ok=True)
+    qa.wait(f"hasattr({SCENE}, 'mixie_chat_messages')", timeout=30)
     saved_scale = qa.eval('result=bpy.context.preferences.view.ui_scale')
+    saved_points = qa.eval('result=bpy.context.preferences.ui_styles[0].widget.points')
     saved_tooltips = qa.eval('result=bpy.context.preferences.view.show_tooltips')
     qa.eval('bpy.context.preferences.view.show_tooltips=False; result=True')
     qa.eval(f'scene={SCENE}; scene.mixie_chat_messages.clear(); '
@@ -60,6 +62,7 @@ def run(qa):
     qa.wait("bool(drv.find(**" + repr(FIELD) + '))', timeout=5)
     metrics = {}
     try:
+        qa.eval('bpy.context.preferences.ui_styles[0].widget.points=12; result=True')
         for scale in (1.0, 1.25):
             qa.eval(f'bpy.context.preferences.view.ui_scale={scale}; result=True')
             time.sleep(.5)
@@ -80,6 +83,10 @@ def run(qa):
         ratio = metrics['1.25']['queue'][1][0] / metrics['1.0']['queue'][1][0]
         assert 1.15 < ratio < 1.4, metrics
         qa.step('interface-scale-still-controls-text', lambda: ratio)
+        # Previous 12-point default captures measured Queue=51 and Send=38 px.
+        for control, old_width in (('queue',51), ('send',38)):
+            assert 1.15 < metrics['1.0'][control][1][0] / old_width < 1.25, metrics
+        qa.step('default-labels-are-twenty-percent-larger', lambda: True)
 
         qa.eval('bpy.context.preferences.view.ui_scale=1.0; result=True')
         qa.click(area_type='AGENT_BUBBLE', text='3D generation')
@@ -95,8 +102,38 @@ def run(qa):
             qa.cmd('snap', path=str(out/f'3d-{width}.png'), target=SETTINGS, margin=4000)
         qa.step('fixed-native-component-text', assert_fixed, settings)
         metrics['settings'] = settings
+
+        # Preference changes must reach custom tabs/actions and native-styled
+        # controls through the same measured text unit, without a window resize.
+        preference_samples = {}
+        for points in (12, 15):
+            qa.eval(f'bpy.context.preferences.ui_styles[0].widget.points={points}; result=True')
+            time.sleep(.4)
+            pref_settings = capture_label(qa, out, f'font-{points}-settings', SETTINGS)
+            qa.click(area_type='AGENT_BUBBLE', text='Agent chat')
+            time.sleep(.3)
+            size_bubble(qa, 678, 370)
+            pref_queue = capture_label(qa, out, f'font-{points}-queue', QUEUE)
+            pref_send = capture_label(qa, out, f'font-{points}-send', SEND)
+            snap(qa, out, f'font-{points}-island')
+            preference_samples[str(points)] = {
+                'queue':pref_queue, 'send':pref_send, 'settings':pref_settings}
+            qa.eval('result=str(bpy.ops.mixar.bubble_minimise())')
+            qa.wait("bool(drv.find(surface='pill_cat'))", timeout=4)
+            qa.cmd('snap', path=str(out/f'font-{points}-pill.png'),
+                   target={'surface':'pill_cat'}, margin=1000)
+            qa.eval('result=str(bpy.ops.mixar.bubble_restore())')
+            time.sleep(.3)
+            qa.click(area_type='AGENT_BUBBLE', text='3D generation')
+            time.sleep(.3)
+        for control in ('queue','send','settings'):
+            ratio = preference_samples['15'][control][0] / preference_samples['12'][control][0]
+            assert 1.15 < ratio < 1.4, (control, preference_samples)
+        qa.step('blender-font-preference-controls-every-label', lambda: preference_samples)
+        metrics['font_preference'] = preference_samples
         return {'glyph_bounds': metrics, 'backend_calls': 0, 'snaps': str(out)}
     finally:
+        qa.eval(f'bpy.context.preferences.ui_styles[0].widget.points={saved_points}; result=True')
         qa.eval(f'bpy.context.preferences.view.ui_scale={saved_scale}; result=True')
         qa.eval(f'bpy.context.preferences.view.show_tooltips={saved_tooltips}; result=True')
 
