@@ -28,6 +28,8 @@
 #include "BKE_context.hh"
 #include "BKE_report.hh"
 
+#include "ED_space_api.hh"
+
 #include "RNA_access.hh"
 #include "RNA_define.hh"
 #include "RNA_prototypes.hh"
@@ -45,6 +47,20 @@ namespace blender {
 
 static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
 {
+  if (ED_agent_bubble_is_resting_pill(C)) {
+    /* A drop on the resting chat capsule explicitly targets the composer,
+     * regardless of the tab that was active when the island was minimised.
+     * Restore only on release, before validation so feedback has a full UI. */
+    PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
+    PropertyRNA *tab = RNA_struct_find_property(&wm, "mixar_bubble_tab");
+    int agent;
+    if (tab && RNA_property_enum_value(C, &wm, tab, "AGENT", &agent)) {
+      RNA_property_enum_set(&wm, tab, agent);
+      RNA_property_update(C, &wm, tab);
+    }
+    WM_operator_name_call(
+        C, "MIXAR_OT_bubble_restore", wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
   if (RNA_struct_property_is_set(op->ptr, "image_name")) {
     char name[MAX_ID_NAME - 2];
     RNA_string_get(op->ptr, "image_name", name);
@@ -133,7 +149,13 @@ static bool mixie_chat_image_drop_poll(bContext *C,
   if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
     return false;
   }
-  if (area->spacetype == SPACE_AGENT_BUBBLE) {
+  if (area->spacetype == SPACE_AGENT_BUBBLE && !ED_agent_bubble_is_resting_pill(C)) {
+    /* The HEADER map belongs only to the resting capsule. The status pill
+     * above an open island and the island's tab strip are not composers. */
+    const ARegion *region = CTX_wm_region(C);
+    if (region && region->regiontype == RGN_TYPE_HEADER) {
+      return false;
+    }
     PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
     PropertyRNA *tab = RNA_struct_find_property(&wm, "mixar_bubble_tab");
     int agent;
@@ -214,6 +236,15 @@ void mixie_chat_dropboxes()
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
 
   WM_dropbox_add(lb_footer,
+                 "MIXIE_CHAT_OT_drop_image",
+                 mixie_chat_image_drop_poll,
+                 mixie_chat_image_drop_copy,
+                 nullptr,
+                 nullptr);
+
+  ListBaseT<wmDropBox> *lb_pill = WM_dropboxmap_find(
+      "Agent Bubble Pill", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);
+  WM_dropbox_add(lb_pill,
                  "MIXIE_CHAT_OT_drop_image",
                  mixie_chat_image_drop_poll,
                  mixie_chat_image_drop_copy,

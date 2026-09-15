@@ -842,6 +842,13 @@ static bool agent_bubble_window_is_pill(const bContext *C)
   return WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH;
 }
 
+bool ED_agent_bubble_is_resting_pill(const bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  return g_bubble_minimised && win && g_pill_ghostwin &&
+         win->runtime->ghostwin == g_pill_ghostwin;
+}
+
 /**
  * Scribble pad unit ratio for `win`: 0 when the island is not padded, else
  * the factor that turns the width-derived island unit into the unit the
@@ -2764,6 +2771,11 @@ void agent_bubble_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
   ED_region_header_init(region);
   mixie_chat_ink_header_handler_register(region);
+  /* The resting capsule consists entirely of HEADER, unlike the open
+   * composer's WINDOW/TOOLS regions. Its drop poll checks native identity. */
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
+      "Agent Bubble Pill", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);
+  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
 }
 
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
