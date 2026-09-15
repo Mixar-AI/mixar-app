@@ -75,6 +75,7 @@
 #include "CLG_log.h"
 
 #include "interface_intern.hh"
+#include "interface_mixar_profile_card.hh"
 
 namespace blender::ui {
 static CLG_LogRef LOG = {"ui"};
@@ -1124,6 +1125,10 @@ static bool but_update_from_old_block(Block *block,
   Button *oldbut = oldbut_uptr->get();
 
   BLI_assert(!matched_old_buttons.contains(oldbut));
+
+  if (oldbut->type == ButtonType::Text) {
+    static_cast<ButtonText *>(but)->multiline = static_cast<ButtonText *>(oldbut)->multiline;
+  }
 
   if (oldbut->type == ButtonType::TextBox) {
     ButtonTextBox *textbox = static_cast<ButtonTextBox *>(but);
@@ -2195,6 +2200,7 @@ void block_end_ex(const bContext *C,
   }
 
   update_flexible_spacing(region, block);
+  mixar_topbar_center_mode_slider(C, region, block);
 
   block->endblock = true;
 }
@@ -6374,6 +6380,13 @@ void button_pushbutton_draw_as_overlay_set(Button *but, const bool value)
   BLI_assert(but->type == ButtonType::But);
 
   but_push->draw_as_overlay = value;
+}
+
+void button_scrollbar_visual_height_set(Button *but, float visual_height)
+{
+  BLI_assert(but->type == ButtonType::Scroll);
+  BLI_assert(visual_height > 0);
+  static_cast<ButtonScrollBar *>(but)->visual_height = visual_height;
 }
 
 void button_number_step_size_set(Button *but, float step_size)

@@ -1,6 +1,8 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 
 #include "BLI_string.h"
@@ -33,30 +35,36 @@ void label_centre(const char *text, float x, float cy, float size, const float c
 {
   ui::mixar_label_center(text, x, cy, {size}, color);
 }
+float group_left(const rctf &rect, const char *label, float size, float leading, float trailing = 0)
+{
+  return BLI_rctf_cent_x(&rect) -
+         (leading + ui::mixar_text_width(label, size) + trailing) * 0.5f;
+}
+void chip_content(const rctf &rect, AgentIcon glyph, const char *label,
+                  float size, float edge, float gap, const float color[4], const float fill[4])
+{
+  const std::string fitted = ui::mixar_fit_text(
+      label, std::max(0.0f, BLI_rctf_size_x(&rect) - edge - gap * 3.0f), size);
+  const float x = group_left(rect, fitted.c_str(), size, edge + gap);
+  const float cy = BLI_rctf_cent_y(&rect);
+  rctf icon{x, x + edge, cy - edge * 0.5f, cy + edge * 0.5f};
+  agent_ui_icon_draw(glyph, &icon, color, fill);
+  label_left(fitted.c_str(), x + edge + gap, cy, size, color);
+}
 }  // namespace
 
 /* -------------------------------------------------------------------- */
 /** \name Tab strip
  * \{ */
 
-struct TabSpec {
-  const char *label;
-  /** #AGENT_ICON_COUNT means the tab carries NO mark. */
-  AgentIcon icon;
-};
-
-/* `generations.svg` marks Agent, Gaussian Splat and My Generations only. 3D
- * and Media take the island's own cube and picture glyphs so the strip does
- * not read as two tabs that failed to load — both pills have room for the
- * 24-unit slot plus their label without widening. Queue keeps its count chip
- * in that slot and centres its label when the queue is empty. */
-const TabSpec g_tabs[AGENT_TAB_COUNT] = {
-    {"Agent", AGENT_ICON_AGENT},
-    {"3D", AGENT_ICON_MESH},
-    {"Media", AGENT_ICON_IMAGE},
-    {"Gaussian Splat", AGENT_ICON_SPLAT},
-    {"My Generations", AGENT_ICON_THUMB},
-    {"Queue", AGENT_ICON_COUNT},
+/** #AGENT_ICON_COUNT means the tab carries NO mark. */
+const AgentIcon g_tab_icons[AGENT_TAB_COUNT] = {
+    AGENT_ICON_AGENT,
+    AGENT_ICON_MESH,
+    AGENT_ICON_MEDIA,
+    AGENT_ICON_SPLAT,
+    AGENT_ICON_THUMB,
+    AGENT_ICON_COUNT,
 };
 
 void agent_ui_draw_tab_strip(ARegion *region,
@@ -78,12 +86,8 @@ void agent_ui_draw_tab_strip(ARegion *region,
     fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
   }
 
-  /* Text is sized in the ISLAND unit, not AGENT_DU(): the two agree only at
-   * the default window width, and the window widens freely (the bubble
-   * constrains its MINIMUM size only). Sizing glyphs off UI_SCALE_FAC while
-   * every rect grows with `u` left labels stranded at their original pixel
-   * size inside grown pills. */
-  const float label_size = AGENT_TAB_FONT * u;
+  /* Resizing changes geometry; typography follows interface scale and DPI. */
+  const float label_size = AGENT_TAB_FONT * agent_ui_text_unit();
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     const AgentTabLayout &tab = layout->tabs[i];
@@ -101,6 +105,26 @@ void agent_ui_draw_tab_strip(ARegion *region,
     fill_round(&tab.pill, AGENT_TAB_RADIUS * u, pill_bg);
     outline_round(&tab.pill, AGENT_TAB_RADIUS * u, tab_outline);
 
+    const bool has_count = queue && state->queue_count > 0;
+    const bool has_icon = g_tab_icons[i] != AGENT_ICON_COUNT;
+    const bool has_badge = i == AGENT_TAB_SPLAT && state->splat_is_new;
+    const float gap = AGENT_TAB_ICON_GAP * u;
+    const float leading = has_count ? BLI_rctf_size_x(&layout->queue_count) + gap :
+                          has_icon ? AGENT_TAB_ICON * u + gap : 0.0f;
+    const float trailing = has_badge ? BLI_rctf_size_x(&layout->new_badge) + gap : 0.0f;
+    const std::string label = ui::mixar_fit_text(
+        agent_ui_tab_label(AgentTabId(i)),
+        std::max(0.0f, BLI_rctf_size_x(&tab.pill) - leading - trailing - gap * 2.0f),
+        label_size);
+    const float start = group_left(tab.pill, label.c_str(), label_size, leading, trailing);
+    rctf icon = tab.icon;
+    BLI_rctf_translate(&icon, start - icon.xmin, cy - BLI_rctf_cent_y(&icon));
+    rctf count_rect = layout->queue_count;
+    BLI_rctf_translate(&count_rect, start - count_rect.xmin, cy - BLI_rctf_cent_y(&count_rect));
+    rctf badge = layout->new_badge;
+    const float badge_x = start + leading + ui::mixar_text_width(label.c_str(), label_size) + gap;
+    BLI_rctf_translate(&badge, badge_x - badge.xmin, cy - BLI_rctf_cent_y(&badge));
+
     if (i == AGENT_TAB_QUEUE) {
       /* Count chip stands in for the icon slot. */
       if (state->queue_count > 0) {
@@ -111,38 +135,38 @@ void agent_ui_draw_tab_strip(ARegion *region,
         else {
           BLI_snprintf(count, sizeof(count), "%d+", state->queue_count);
         }
-        fill_round(&layout->queue_count, AGENT_QUEUE_COUNT_RADIUS * u, queue_count);
+        fill_round(&count_rect, AGENT_QUEUE_COUNT_RADIUS * u, queue_count);
         label_centre(count,
-                     BLI_rctf_cent_x(&layout->queue_count),
-                     BLI_rctf_cent_y(&layout->queue_count),
-                     AGENT_NEW_BADGE_FONT * u,
+                     BLI_rctf_cent_x(&count_rect),
+                     BLI_rctf_cent_y(&count_rect),
+                     AGENT_NEW_BADGE_FONT * agent_ui_text_unit(),
                      text);
       }
     }
-    else if (g_tabs[i].icon != AGENT_ICON_COUNT) {
+    else if (g_tab_icons[i] != AGENT_ICON_COUNT) {
       /* Backdrop is this pill's own fill — the active pill is #183E25, the
        * rest sit directly on the strip. */
-      agent_ui_icon_draw(g_tabs[i].icon, &tab.icon, label_col, pill_bg);
+      agent_ui_icon_draw(g_tab_icons[i], &icon, label_col, pill_bg);
     }
 
     /* A tab with nothing in its icon slot centres its label; leaving it at
      * the icon offset would hang the word off to the right of an empty pill.
      * The Queue pill does the same once its count chip is gone. */
-    const bool centred = (g_tabs[i].icon == AGENT_ICON_COUNT) &&
+    const bool centred = (g_tab_icons[i] == AGENT_ICON_COUNT) &&
                          (i != AGENT_TAB_QUEUE || state->queue_count <= 0);
     if (centred) {
-      label_centre(g_tabs[i].label, BLI_rctf_cent_x(&tab.pill), cy, label_size, label_col);
+      label_centre(label.c_str(), BLI_rctf_cent_x(&tab.pill), cy, label_size, label_col);
     }
     else {
-      label_left(g_tabs[i].label, tab.label_x, cy, label_size, label_col);
+      label_left(label.c_str(), start + leading, cy, label_size, label_col);
     }
 
     if (i == AGENT_TAB_SPLAT && state->splat_is_new) {
-      fill_round(&layout->new_badge, AGENT_NEW_BADGE_RADIUS * u, accent);
+      fill_round(&badge, AGENT_NEW_BADGE_RADIUS * u, accent);
       label_centre("NEW",
-                   BLI_rctf_cent_x(&layout->new_badge),
-                   BLI_rctf_cent_y(&layout->new_badge),
-                   AGENT_NEW_BADGE_FONT * u,
+                   BLI_rctf_cent_x(&badge),
+                   BLI_rctf_cent_y(&badge),
+                   AGENT_NEW_BADGE_FONT * agent_ui_text_unit(),
                    strong);
     }
   }
@@ -163,10 +187,8 @@ void agent_ui_draw_chip_row(ARegion *region,
   const float generate[4] = AGENT_COL_GENERATE;
   const float text[4] = AGENT_COL_TEXT;
 
-  /* Every metric here is in the island unit. Mixing `* u` (radius) with
-   * AGENT_DU() (pad/gap/icon) drifted the icon off-centre and started the
-   * label at the wrong x as soon as the window left its default width. */
-  const float size = AGENT_CHIP_FONT * u;
+  /* Keep text fixed while the measured group stays centered in live geometry. */
+  const float size = AGENT_CHIP_FONT * agent_ui_text_unit();
   const float radius = AGENT_CHIP_RADIUS * u;
   const float pad = AGENT_CHIP_PAD_X * u;
   const float icon_gap = AGENT_CHIP_ICON_GAP * u;
@@ -178,9 +200,7 @@ void agent_ui_draw_chip_row(ARegion *region,
     return;
   }
 
-  /* Upload Reference. The artboard truncates this to "Upload Refe…" inside a
-   * 150-unit chip; the ellipsis is the design, not an accident of the export,
-   * so the chip keeps its width and the label keeps its truncation. */
+  /* Center the full Upload Reference label together with its picture mark. */
   float upload_fill[4];
   agent_ui_motion_color(
       chip,
@@ -188,16 +208,8 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Upload, layout->chip_upload),
       upload_fill);
   fill_round(&layout->chip_upload, radius, upload_fill);
-  {
-    rctf icon = layout->chip_upload;
-    icon.xmin += pad;
-    icon.xmax = icon.xmin + icon_edge;
-    const float cy = BLI_rctf_cent_y(&layout->chip_upload);
-    icon.ymin = cy - icon_edge * 0.5f;
-    icon.ymax = cy + icon_edge * 0.5f;
-    agent_ui_icon_draw(AGENT_ICON_IMAGE, &icon, text, upload_fill);
-    label_left("Upload Reference", icon.xmax + icon_gap, cy, size, text);
-  }
+  chip_content(layout->chip_upload, AGENT_ICON_IMAGE, "Upload Reference",
+               size, icon_edge, icon_gap, text, upload_fill);
 
   /* Scribble. Lit in the accent while either half is up (the viewport freeze
    * or the chat ink canvas) — the same "pressed" the headers show — and
@@ -216,23 +228,15 @@ void agent_ui_draw_chip_row(ARegion *region,
             region, AgentIslandControl::Scribble, layout->chip_scribble, state->scribble_armed),
         scribble_fill);
     fill_round(&layout->chip_scribble, radius, scribble_fill);
-    {
-      rctf icon = layout->chip_scribble;
-      icon.xmin += pad;
-      icon.xmax = icon.xmin + icon_edge;
-      const float cy = BLI_rctf_cent_y(&layout->chip_scribble);
-      icon.ymin = cy - icon_edge * 0.5f;
-      icon.ymax = cy + icon_edge * 0.5f;
-      agent_ui_icon_draw(AGENT_ICON_PEN, &icon, text, scribble_fill);
-      char label[32];
-      if (state->mark_count > 0) {
-        SNPRINTF(label, "Scribble · %d", state->mark_count);
-      }
-      else {
-        BLI_strncpy(label, "Scribble", sizeof(label));
-      }
-      label_left(label, icon.xmax + icon_gap, cy, size, text);
+    char label[32];
+    if (state->mark_count > 0) {
+      SNPRINTF(label, "Scribble · %d", state->mark_count);
     }
+    else {
+      BLI_strncpy(label, "Scribble", sizeof(label));
+    }
+    chip_content(layout->chip_scribble, AGENT_ICON_PEN, label,
+                 size, icon_edge, icon_gap, text, scribble_fill);
 
     if (state->mark_count > 0) {
       float reading_fill[4];
@@ -283,15 +287,9 @@ void agent_ui_draw_chip_row(ARegion *region,
             region, AgentIslandControl::Voice, layout->chip_voice, state->voice_listening),
         voice_fill);
     fill_round(&layout->chip_voice, radius, voice_fill);
-    rctf icon = layout->chip_voice;
-    icon.xmin += pad;
-    icon.xmax = icon.xmin + icon_edge;
-    const float cy = BLI_rctf_cent_y(&layout->chip_voice);
-    icon.ymin = cy - icon_edge * 0.5f;
-    icon.ymax = cy + icon_edge * 0.5f;
-    agent_ui_icon_draw(AGENT_ICON_MIC, &icon, text, voice_fill);
-    label_left(
-        state->voice_listening ? "Listening" : "Voice", icon.xmax + icon_gap, cy, size, text);
+    chip_content(layout->chip_voice, AGENT_ICON_MIC,
+                 state->voice_listening ? "Listening" : "Voice",
+                 size, icon_edge, icon_gap, text, voice_fill);
   }
 
   /* Send. */

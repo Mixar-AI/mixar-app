@@ -19,6 +19,9 @@ set(SRC
   space_agent_bubble.cc
   agent_bubble_glass.cc
   agent_bubble_composer.cc
+  agent_bubble_references.cc
+  agent_bubble_references_navigation.cc
+  agent_bubble_interaction.cc
   agent_ui_draw.cc
   agent_ui_controls_paint.cc
   agent_ui_generations.cc
@@ -27,6 +30,7 @@ set(SRC
   agent_ui_generations_grid.cc
   agent_ui_generations_read.cc
   agent_ui_icons.cc
+  agent_ui_tab_icons.cc
   agent_ui_layout.cc
   agent_ui_motion.cc
   agent_ui_cat_scheduler.cc
@@ -48,6 +52,7 @@ set(SRC
   agent_ui_visible_if.cc
 
   agent_bubble_intern.hh
+  agent_bubble_references.hh
   agent_bubble_glass.hh
   agent_ui_draw.hh
   agent_ui_generations.hh

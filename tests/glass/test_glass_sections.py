@@ -197,7 +197,7 @@ class TestEverySurfaceThatReachesThePainterIsOnTheRegister:
         records which role the design gave it.
         """
         for relpath, roles in PANE_CALLS.items():
-            painted = set(re.findall(r"\bMIXAR_GLASS_[A-Z]+\b", SOURCES[relpath]))
+            painted = set(re.findall(r"\bMIXAR_GLASS_[A-Z_]+\b", SOURCES[relpath]))
             assert painted == set(roles), (
                 f"{relpath} paints {sorted(painted)}, register says {sorted(roles)}"
             )

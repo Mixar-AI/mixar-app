@@ -26,6 +26,8 @@
  * strip space. Settings remains the full schema surface.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -114,7 +116,7 @@ void draw_enum_segmented(ui::Block *block,
                          Flow *f)
 {
   const float u = f->u;
-  const float font = PANE_FONT * u;
+  const float font = PANE_FONT * agent_ui_text_unit();
   const float pad = 30.0f * u;
 
   float seg_w[8];
@@ -144,7 +146,7 @@ void draw_enum_segmented(ui::Block *block,
                            int(seg.xmin), int(seg.ymin),
                            short(seg_w[i]), short(BLI_rctf_size_y(&seg)),
                            nullptr);
-    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(but, active);
     if (but) {
       pane_but_tooltip_owned(but, items[i].name);
@@ -182,7 +184,7 @@ void draw_enum_dropdown(ui::Block *block,
                          blender::wm::OpCallContext::InvokeDefault, label.c_str(),
                          int(rect.xmin), int(rect.ymin),
                          short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)), nullptr);
-  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
+  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u, agent_ui_text_unit());
   if (but) {
     pane_but_tooltip_owned(but, label.c_str());
     char path[256];
@@ -199,7 +201,7 @@ void draw_boolean_chip(ui::Block *block,
                        Flow *f)
 {
   const float u = f->u;
-  const float font = PANE_FONT * u;
+  const float font = PANE_FONT * agent_ui_text_unit();
   char name[64];
   prettify(RNA_property_identifier(prop), name);
   const bool on = RNA_property_boolean_get(group_ptr, prop);
@@ -218,7 +220,7 @@ void draw_boolean_chip(ui::Block *block,
                          blender::wm::OpCallContext::InvokeDefault, name,
                          int(rect.xmin), int(rect.ymin),
                          short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)), nullptr);
-  ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+  ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u, agent_ui_text_unit());
   ui::mixar_button_lit_set(but, on);
   if (but) {
     pane_but_tooltip_owned(but, name);
@@ -235,7 +237,7 @@ void draw_number_chip(ui::Block *slider_block,
                       Flow *f)
 {
   const float u = f->u;
-  const float font = PANE_FONT * u;
+  const float font = PANE_FONT * agent_ui_text_unit();
   char name[64];
   prettify(RNA_property_identifier(prop), name);
 
@@ -262,7 +264,7 @@ void draw_number_chip(ui::Block *slider_block,
             int(sx), int(rect.ymin + 4.0f * u),
             short(slider_w), short(BLI_rctf_size_y(&rect) - 8.0f * u),
             group_ptr, RNA_property_identifier(prop), -1, 0.0f, 0.0f, nullptr);
-  ui::mixar_style_button(number, ui::MixarComponent::Number, ui::MixarVariant::Primary, u);
+  ui::mixar_style_button(number, ui::MixarComponent::Number, ui::MixarVariant::Primary, u, agent_ui_text_unit());
 }
 
 }  // namespace

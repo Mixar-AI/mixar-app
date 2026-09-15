@@ -62,6 +62,7 @@
 #include "ED_markers.hh"
 #include "ED_render.hh"
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 #include "ED_undo.hh"
 #include "ED_util.hh"
 #include "ED_view3d.hh"
@@ -4352,6 +4353,8 @@ void wm_event_do_handlers(bContext *C)
       CTX_wm_area_set(C, area_event_inside(C, event->xy));
       CTX_wm_region_set(C, region_event_inside(C, event->xy));
 
+      ED_agent_bubble_handle_event(C, event);
+
       /* MVC demands to not draw in event handlers...
        * but we need to leave it for GPU selecting etc. */
       wm_window_make_drawable(wm, &win);
@@ -7062,7 +7065,7 @@ bool WM_window_modal_keymap_status_draw(bContext *C, wmWindow *win, ui::Layout &
  * \{ */
 
 void Mixar_qa_simulate_file_drop(
-    bContext *C, wmWindow *win, const int x, const int y, const char *filepath)
+    bContext *C, wmWindow *win, const int x, const int y, const Span<const char *> paths)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
 
@@ -7081,8 +7084,7 @@ void Mixar_qa_simulate_file_drop(
 
   WM_event_add(win, &event);
 
-  const char *paths[1] = {filepath};
-  wmDragPath *path_data = WM_drag_create_path_data(blender::Span<const char *>(paths, 1));
+  wmDragPath *path_data = WM_drag_create_path_data(paths);
   WM_event_start_drag(C, ICON_NONE, WM_DRAG_PATH, path_data, WM_DRAG_NOP);
 
   event.type = EVT_DROP;

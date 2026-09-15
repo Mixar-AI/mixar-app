@@ -61,9 +61,8 @@ def test_hover_tick_applies_and_restores_the_pad_on_scribble_edges():
     edge = body.index("agent_bubble_scribble_active(C);")
     assert "agent_bubble_pad_apply(C);" in body
     assert "agent_bubble_pad_restore(C);" in body
-    # Before the cooldown gate: a pad must not wait on a minimise settling.
-    assert edge < body.index("if (now < g_hover_cooldown_until)")
-    assert body.index("agent_bubble_pad_apply(C);") < body.index("if (now < g_hover_cooldown_until)")
+    assert edge < body.index("agent_ui_cat_scheduler_sync")
+    assert "g_hover_cooldown_until" not in body
 
 
 def test_pad_apply_takes_the_hosts_right_third_and_forces_the_agent_tab():
@@ -231,16 +230,13 @@ def test_translucent_metal_view_cannot_move_the_window():
     assert "return NO;" in glass[glass.index("mouseDownCanMoveWindow") :]
 
 
-def test_restore_resizes_before_snapping_to_the_host():
-    """The centre-bottom snap centres the bubble's CURRENT width. A bubble
-    minimised out of the pad (504 wide) was centred at that width and then
-    widened from its left edge, landing 185 px off-centre — seen in the
-    running app. Both restore paths size first."""
+def test_restore_resizes_before_restoring_the_host_relative_seat():
+    """Placement uses the final fitted size; both show paths share restoration."""
     restore = _body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_restore_exec")
-    assert restore.index("bubble_force_size_and_refresh(") < restore.index(
-        "Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin")
+    assert restore.index("bubble_force_size_and_refresh(") < restore.index("bubble_restore_seat(")
+    assert restore.index("Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);",
+                         restore.index("bubble_force_size_and_refresh(")) < restore.index("bubble_restore_seat(")
     show = _body(BUBBLE_CC, "static wmOperatorStatus agent_bubble_show_window_exec")
-    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {") :]
-    branch = branch[: branch.index("g_bubble_minimised = false;")]
-    assert branch.index("bubble_force_size_and_refresh(") < branch.index(
-        "Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin")
+    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {"):]
+    branch = branch[:branch.index("WM_window_open")]
+    assert '"MIXAR_OT_bubble_restore"' in branch

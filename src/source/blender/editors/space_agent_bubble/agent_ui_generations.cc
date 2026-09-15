@@ -21,6 +21,8 @@
  * board).
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstring>
 
@@ -59,13 +61,7 @@ namespace {
 
 void hairline(const float x, const float y0, const float y1, const float u)
 {
-  const float col[4] = GEN_COL_DIVIDER;
-  rctf r;
-  r.xmin = x;
-  r.xmax = x + std::max(1.0f, u);
-  r.ymin = y0;
-  r.ymax = y1;
-  pane_fill_round(&r, 0.0f, col);
+  pane_column_divider(x, y0, y1, u);
 }
 
 /** \} */
@@ -87,7 +83,7 @@ void agent_ui_generations_draw(const bContext *C,
   const float pill_off[4] = GEN_COL_PILL_OFF;
   const float chip_off[4] = GEN_COL_CHIP_OFF;
 
-  const float font_chip = GEN_CHIP_FONT * u;
+  const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();
 
   GPU_blend(GPU_BLEND_ALPHA);
   pane_wash_paint(panel, u);
@@ -154,11 +150,11 @@ void agent_ui_generations_draw(const bContext *C,
     }
     char name[64];
     BLI_strncpy(name, data.lib_names[i], sizeof(name));
-    pane_fit_text(name, BLI_rctf_size_x(&r) - 24.0f * u, GEN_LIB_FONT * u);
+    pane_fit_text(name, BLI_rctf_size_x(&r) - 24.0f * u, GEN_LIB_FONT * agent_ui_text_unit());
     pane_label_left(name,
                     r.xmin + 12.0f * u,
                     BLI_rctf_cent_y(&r),
-                    GEN_LIB_FONT * u,
+                    GEN_LIB_FONT * agent_ui_text_unit(),
                     active ? text : dim);
   }
   rctf add_lib_rect{};
@@ -172,7 +168,7 @@ void agent_ui_generations_draw(const bContext *C,
       pane_label_left("+  Add Library…",
                       add_lib_rect.xmin + 12.0f * u,
                       BLI_rctf_cent_y(&add_lib_rect),
-                      GEN_LIB_FONT * u,
+                      GEN_LIB_FONT * agent_ui_text_unit(),
                       text);
     }
     else {

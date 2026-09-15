@@ -1939,6 +1939,8 @@ void button_node_link_set(Button *but, bNodeSocket *socket, const float draw_col
  */
 void button_pushbutton_draw_as_overlay_set(Button *but, bool value);
 
+/** Visible content size in the same units as the scrollbar numeric range. */
+void button_scrollbar_visual_height_set(Button *but, float visual_height);
 void button_number_step_size_set(Button *but, float step_size);
 void button_number_precision_set(Button *but, float precision);
 

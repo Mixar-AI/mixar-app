@@ -116,7 +116,8 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   if (style.component == MixarComponent::Surface) {
     return false;
   }
-  const MixarTextStyle text_style = mixar_text_style(MixarTextRole::Body, u);
+  const MixarTextStyle text_style = mixar_text_style(
+      MixarTextRole::Body, style.text_unit > 0.0f ? style.text_unit : u);
   const float cy = BLI_rctf_cent_y(&rect);
   float right = rect.xmax - padding * u;
   if (style.component == MixarComponent::Toggle) {

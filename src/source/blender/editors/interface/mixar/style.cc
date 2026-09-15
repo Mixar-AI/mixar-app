@@ -45,7 +45,8 @@ static bool supports(const Button &button, const MixarComponent component)
 void mixar_style_button(Button *button,
                         const MixarComponent component,
                         const MixarVariant variant,
-                        const float unit)
+                        const float unit,
+                        const float text_unit)
 {
   if (!button || !supports(*button, component)) {
     return;
@@ -55,6 +56,7 @@ void mixar_style_button(Button *button,
   style.variant = variant;
   style.card = MixarCardElement::None;
   style.unit = std::max(0.0f, unit);
+  style.text_unit = std::max(0.0f, text_unit);
   if (!style.explicit_theme) {
     style.theme = unit > 0.0f ? MixarTheme::Zen : MixarTheme::LegacyMixar;
   }

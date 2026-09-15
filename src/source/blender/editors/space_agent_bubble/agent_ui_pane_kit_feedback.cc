@@ -40,6 +40,8 @@
  * feedback surface could not resolve.
  */
 
+#include "agent_ui_text.hh"
+
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -293,7 +295,7 @@ bool pane_report_line_draw(const bContext *C, const rctf &box, const float u)
      * there is nothing to report on and painting over the chips is pure loss. */
     return false;
   }
-  const float font = PANE_MSG_FONT * u;
+  const float font = PANE_MSG_FONT * agent_ui_text_unit();
   pane_fit_text(message, BLI_rctf_size_x(&line), font);
   pane_label_left(message, line.xmin, BLI_rctf_cent_y(&line), font, col);
   return true;

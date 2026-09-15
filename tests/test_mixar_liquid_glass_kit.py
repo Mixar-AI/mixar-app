@@ -24,7 +24,7 @@ DRAW = DRAW_PATH.read_text(encoding="utf-8")
 CMAKE = (ED / "interface" / "CMakeLists.txt").read_text(encoding="utf-8")
 
 #: The roles, in enum order. The enum and the token table are read together.
-ROLES = ["card", "menu", "panel", "island", "pill", "chat", "chip", "moodboard"]
+ROLES = ["card", "menu", "panel", "island", "pill", "chat", "chip", "moodboard", "moodboard_tab"]
 
 #: `MixarGlassTokens` in declaration order. The table is initialised
 #: positionally, so a reordering here silently re-tones a surface.
@@ -68,7 +68,7 @@ def _table() -> str:
 
 def _rows() -> dict[str, str]:
     """Role name -> that role's row body."""
-    parts = re.split(r"/\*\s*(MIXAR_GLASS_[A-Z]+).*?\*/", _table(), flags=re.DOTALL)
+    parts = re.split(r"/\*\s*(MIXAR_GLASS_[A-Z_]+).*?\*/", _table(), flags=re.DOTALL)
     names = (name.removeprefix("MIXAR_GLASS_").lower() for name in parts[1::2])
     return dict(zip(names, parts[2::2]))
 
@@ -118,12 +118,12 @@ class TestEveryRoleHasItsOwnRow:
         enum_body = HEADER[
             HEADER.index("enum eMixarGlassRole {") : HEADER.index("};", HEADER.index("enum"))
         ]
-        names = [n.lower() for n in re.findall(r"^\s*MIXAR_GLASS_([A-Z]+),", enum_body, re.M)]
+        names = [n.lower() for n in re.findall(r"^\s*MIXAR_GLASS_([A-Z_]+),", enum_body, re.M)]
         assert names == ROLES, f"the enum grew or reordered: {names}"
         assert list(_rows()) == ROLES, f"the table grew or reordered: {list(_rows())}"
 
     def test_the_static_assert_covers_every_role(self) -> None:
-        assert "ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u" in TOKENS, (
+        assert "ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD_TAB) + 1u" in TOKENS, (
             "Without the assert a new role compiles and reads past the table."
         )
 

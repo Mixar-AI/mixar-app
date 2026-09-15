@@ -20,6 +20,8 @@
  * AGENT_BUBBLE is in QUEUE_SURFACE_AREA_TYPES.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -116,8 +118,8 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   const float pad = QPANEL_PAD * u;
   const float row_h = QROW_H * u;
   const float row_gap = QROW_GAP * u;
-  const ui::MixarTextStyle title_style = ui::mixar_text_style(ui::MixarTextRole::ListTitle, u);
-  const ui::MixarTextStyle meta_style = ui::mixar_text_style(ui::MixarTextRole::ListMeta, u);
+  const ui::MixarTextStyle title_style = ui::mixar_text_style(ui::MixarTextRole::ListTitle, agent_ui_text_unit());
+  const ui::MixarTextStyle meta_style = ui::mixar_text_style(ui::MixarTextRole::ListMeta, agent_ui_text_unit());
 
   const float list_left = panel.xmin + pad;
   const float list_right = panel.xmax - pad;
@@ -182,7 +184,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                   short(w),
                                   short(ui::mixar_tokens::control_height * u),
                                   "Remove all finished jobs from the queue");
-    ui::mixar_style_button(clear, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+    ui::mixar_style_button(clear, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
   }
 
   for (int i = 0; i < shown; i++) {
@@ -204,7 +206,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                   short(cancel_w),
                                   short(row_h),
                                   "Cancel this job");
-      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Ghost, u);
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Ghost, u, agent_ui_text_unit());
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "feature_key", row.feature_key);
@@ -225,7 +227,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                 short(list_right - cancel_w - list_left),
                                 short(row_h),
                                 "Select this job");
-    ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u);
+    ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(sel, rows[i].mirror_index == active_index);
     ui::mixar_button_tooltip_owned(sel, row.title.c_str());
     if (sel) {
@@ -252,7 +254,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                      short(button_w),
                                      short(ui::mixar_tokens::control_height * u),
                                      "Browse queue jobs");
-      ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
       if (button) {
         PointerRNA *ptr = ui::button_operator_ptr_ensure(button);
         RNA_enum_set(ptr, "action", actions[i]);

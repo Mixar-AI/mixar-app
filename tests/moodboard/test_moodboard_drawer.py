@@ -226,15 +226,16 @@ def test_file_and_image_id_drop_payloads_cannot_contaminate_one_another():
 
 
 def test_the_drawer_tab_is_a_labeled_glass_pane():
-    """The handle is a liquid-glass 'Moodboard' tab, not three dots in a
-    green-bordered bar. Hit geometry stays the shared grip rect."""
+    """The green glass tab retains its label and shared hit geometry."""
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
     assert 'const char *label = "Moodboard";' in draw
-    assert "MIXAR_GLASS_PANEL" in draw
+    assert "MIXAR_GLASS_MOODBOARD_TAB" in draw
     assert "mixar_glass_draw" in draw
     assert "GRIP_DOT" not in draw
     assert "GRIP_BORDER" not in draw
     assert "Drop references here" in draw
+    assert "BLF_size(font, 17.0f * UI_SCALE_FAC)" in draw
+    assert "BLF_size(font, 13.0f * UI_SCALE_FAC)" not in draw
     assert "Click anywhere" not in draw
     assert "EMPTY_PLUS" not in draw
 

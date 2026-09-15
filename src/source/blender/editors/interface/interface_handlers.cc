@@ -3403,70 +3403,18 @@ static int ui_multiline_get_lines(Button *but,
                                   blender::Vector<StringRef> &out_lines,
                                   blender::Vector<int> &out_byte_offsets)
 {
-  uiFontStyle fstyle = style_get()->widget;
-  fontscale(&fstyle.points, but->block->aspect);
-
-  /* Match the 1.2x font scaling used by widget_draw_text_multiline() in
-   * interface_widgets.cc so that line wrapping and cursor positioning agree
-   * with what the user sees on screen. */
-  fstyle.points *= 1.2f;
-
+  const MixarMultilineState &state = static_cast<ButtonText *>(but)->multiline;
+  uiFontStyle fstyle = state.valid ? state.font : style_get_dpi()->widget;
+  if (!state.valid) {
+    fontscale(&fstyle.points, but->block->aspect);
+  }
   fontstyle_set(&fstyle);
-
   const int fontid = fstyle.uifont_id;
-  const char *str = but->editstr;
-  if (!str) {
-    return fontid;
-  }
-
-  /* Calculate rect width accounting for text padding */
-  float startx = but->rect.xmin;
-  if (ELEM(but->type, ButtonType::Text, ButtonType::SearchMenu)) {
-    if (but->flag & UI_HAS_ICON) {
-      startx += UI_ICON_SIZE / but->block->aspect;
-    }
-  }
-  if (!(but->drawflag & BUT_NO_TEXT_PADDING)) {
-    startx += UI_TEXT_MARGIN_X * U.widget_unit / but->block->aspect;
-  }
-  const int rect_width = max_ii(int(but->rect.xmax - startx - 4.0f * U.pixelsize), 10);
-
-  out_lines = BLF_string_wrap(
-      fontid,
-      str,
-      rect_width,
-      BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
-
-  /* Strip trailing \n from each line — matches widget_draw_text_multiline().
-   * BLF_string_wrap clips mid-string \n via its newline path, but a trailing \n
-   * goes through the "end of string" path and stays in the last line. Without
-   * stripping, line sizes are inflated and byte_offsets overshoot strlen. */
-  for (int64_t i = 0; i < out_lines.size(); i++) {
-    if (out_lines[i].size() > 0 && out_lines[i][out_lines[i].size() - 1] == '\n') {
-      out_lines[i] = StringRef(out_lines[i].data(), out_lines[i].size() - 1);
-    }
-  }
-
-  /* If text ends with \n, add a virtual empty line so the cursor can land on the next line */
-  const int str_len = int(strlen(str));
-  if (str_len > 0 && str[str_len - 1] == '\n') {
-    out_lines.append(StringRef(str + str_len, int64_t(0)));
-  }
-
-  /* Calculate byte offsets using pointer arithmetic for non-empty lines.
-   * BLF_string_wrap clips \n bytes from output but StringRefs point into original string. */
-  out_byte_offsets.clear();
-  for (int i = 0; i < int(out_lines.size()); i++) {
-    if (out_lines[i].size() > 0) {
-      out_byte_offsets.append(int(out_lines[i].data() - str));
-    }
-    else if (i > 0) {
-      /* Empty line (from \n\n or trailing \n): previous line end + 1 for the \n */
-      out_byte_offsets.append(out_byte_offsets[i - 1] + int(out_lines[i - 1].size()) + 1);
-    }
-    else {
-      out_byte_offsets.append(0);
-    }
+  if (but->editstr) {
+    const int width = state.valid ? state.wrap_width :
+        max_ii(int(BLI_rctf_size_x(&but->rect) / but->block->aspect) -
+                   button_text_padding(but) - int(4.0f * U.pixelsize), 10);
+    out_lines = mixar_multiline_wrap(fontid, but->editstr, width, out_byte_offsets);
   }
 
   return fontid;
@@ -3609,44 +3557,21 @@ static void textedit_set_cursor_pos(Button *but, const ARegion *region, const fl
     startx += max_ff(0.0f, align_x_ofs);
   }
 
-  /* Multi-line text: use Y coordinate to determine line, then X for position within line */
+  /* Use the painter's final pixel rect, font, wrapping and scroll offset.
+   * Reconstructing them from block units drifts with font size, padding and zoom. */
   if (ui_but_is_multiline_text(but) && str) {
-    blender::Vector<StringRef> lines;
-    blender::Vector<int> byte_offsets;
-    ui_multiline_get_lines(but, lines, byte_offsets);
-
-    const int num_lines = int(lines.size());
-    if (num_lines > 0) {
-      /* Convert screen Y to button-local Y */
-      float btn_top = but->rect.ymax;
-      float btn_top_win = btn_top;
-      float dummy_x = 0.0f;
-      block_to_window_fl(region, but->block, &dummy_x, &btn_top_win);
-
-      const float line_height_f = BLF_height(fstyle.uifont_id, "Wg", 2) + 2.0f * U.pixelsize;
-      const int line_height = max_ii(int(line_height_f), 1);
-      const int visible_lines = max_ii(int(BLI_rctf_size_y(&but->rect)) / line_height, 1);
-
-      /* Determine scroll offset (read from widget state) */
-      /* Use extern scroll offset from widgets side */
-      extern const Button *g_multiline_scroll_but;
-      extern int g_multiline_scroll_offset;
-      const int scroll_offset = (but == g_multiline_scroll_but) ? g_multiline_scroll_offset : 0;
-
-      /* Calculate which visual line was clicked */
-      int clicked_visual_line = int((btn_top_win - xy.y) / (line_height_f / aspect));
-      clicked_visual_line = std::clamp(clicked_visual_line, 0, visible_lines - 1);
-
-      int clicked_line = clicked_visual_line + scroll_offset;
-      clicked_line = std::clamp(clicked_line, 0, num_lines - 1);
-
-      /* Find byte offset within the clicked line */
-      const int line_start = byte_offsets[clicked_line];
-      const int line_len = int(lines[clicked_line].size());
-      const int local_offset = BLF_str_offset_from_cursor_position(
-          fstyle.uifont_id, str + line_start, line_len, int(xy.x - startx));
-      but->pos = line_start + local_offset;
-
+    const MixarMultilineState &state = static_cast<ButtonText *>(but)->multiline;
+    if (state.valid) {
+      Vector<StringRef> lines;
+      Vector<int> byte_offsets;
+      const int fontid = ui_multiline_get_lines(but, lines, byte_offsets);
+      const int visual_line = std::clamp(
+          int((state.text_rect.ymax - (xy.y - region->winrct.ymin)) / state.line_height),
+          0, state.visible_lines - 1);
+      const int line = std::clamp(visual_line + state.scroll_offset, 0, int(lines.size()) - 1);
+      const int x = int(xy.x - region->winrct.xmin - state.text_rect.xmin);
+      but->pos = byte_offsets[line] + BLF_str_offset_from_cursor_position(
+          fontid, lines[line].data(), int(lines[line].size()), x);
       button_text_password_hide(password_str, but, true);
       return;
     }
@@ -4133,7 +4058,7 @@ static void button_edit_unit_hint_refresh(bContext *C, Button *but, HandleButton
  * search (see space_mixie_chat/core/mention_registry.py), bridged through
  * scene RNA properties. Implementations live in
  * editors/space_mixie_chat/mixie_chat_mention.cc — extern-declared here and
- * resolved at final link, same pattern as g_multiline_scroll_offset.
+ * resolved at final link, same pattern as scroll_offset.
  * \{ */
 
 /* Extern-declared just above this namespace (blender::, where the mixie_chat
@@ -4613,17 +4538,18 @@ static int do_but_textedit(
       if (event->type == MOUSEPAN && ui_but_is_multiline_text(but)) {
         const int dy = WM_event_absolute_delta_y(event);
         if (dy != 0) {
-          static int touchpad_scroll_accum = 0;
+          MixarMultilineState &state = static_cast<ButtonText *>(but)->multiline;
+          int &touchpad_scroll_accum = state.touchpad_accum;
           touchpad_scroll_accum += dy;
           const int threshold = int(UI_UNIT_Y / 2);
           if (abs(touchpad_scroll_accum) >= threshold) {
-            extern int g_multiline_scroll_offset;
+            int &scroll_offset = static_cast<ButtonText *>(but)->multiline.scroll_offset;
             if (touchpad_scroll_accum > 0) {
-              g_multiline_scroll_offset++;
+              scroll_offset++;
             }
             else {
-              if (g_multiline_scroll_offset > 0) {
-                g_multiline_scroll_offset--;
+              if (scroll_offset > 0) {
+                scroll_offset--;
               }
             }
             touchpad_scroll_accum = 0;
@@ -4945,9 +4871,9 @@ static int do_but_textedit(
         }
         if (event->type == WHEELDOWNMOUSE) {
           if (ui_but_is_multiline_text(but)) {
-            extern int g_multiline_scroll_offset;
-            if (g_multiline_scroll_offset > 0) {
-              g_multiline_scroll_offset--;
+            int &scroll_offset = static_cast<ButtonText *>(but)->multiline.scroll_offset;
+            if (scroll_offset > 0) {
+              scroll_offset--;
             }
             ED_region_tag_redraw(data->region);
             retval = WM_UI_HANDLER_BREAK;
@@ -4997,8 +4923,8 @@ static int do_but_textedit(
         }
         if (event->type == WHEELUPMOUSE) {
           if (ui_but_is_multiline_text(but)) {
-            extern int g_multiline_scroll_offset;
-            g_multiline_scroll_offset++;
+            int &scroll_offset = static_cast<ButtonText *>(but)->multiline.scroll_offset;
+            scroll_offset++;
             ED_region_tag_redraw(data->region);
             retval = WM_UI_HANDLER_BREAK;
           }
@@ -6256,11 +6182,12 @@ static int do_but_TEX(
             mixie_pen_arm(but, event);
           }
           button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
-          if (event->type == LEFTMOUSE && but->type == ButtonType::TextBox) {
-            /* Text-box buttons allows to scroll its content even when they are not in text-edit
-             * state, let the user to place the text cursor under the mouse and to immediately
-             * start selecting text without requiring to activate the text-box with an extra click.
-             */
+          if (event->type == LEFTMOUSE &&
+              (but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but) != nullptr))
+          {
+            /* Text boxes and the Mixie composer place the caret and begin
+             * selecting on the activating press. Requiring another click
+             * loses the user's first drag after the composer loses focus. */
             textedit_set_cursor_pos(but, data->region, float2(event->xy));
             but->selsta = but->selend = data->text_edit.sel_pos_init = but->pos;
             button_activate_state(C, but, BUTTON_STATE_TEXT_SELECTING);
@@ -13854,6 +13781,40 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
 
   Button *but = region_find_active_but(region);
 
+  /* A file drop is an explicit composer action. Release modal text editing
+   * with the draft committed so the region's dropbox can receive this event. */
+  ScrArea *drop_area = CTX_wm_area(C);
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      event->type == EVT_DROP && but && but->active && ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+#ifdef WITH_INPUT_IME
+    const wmIMEData *ime = CTX_wm_window(C)->runtime->ime_data;
+    if (ime && CTX_wm_window(C)->runtime->ime_data_is_composing && !ime->composite.empty()) {
+      textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                          ime->composite.size());
+    }
+#endif
+    button_activate_exit(C, but, but->active, false, false);
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
+  /* The active multiline editor otherwise consumes scroll events before the
+   * reference region gets them. Keep text focus while its sibling column scrolls. */
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) && but && but->active &&
+      ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+    for (const ARegion &other : drop_area->regionbase) {
+      if (other.regiontype == RGN_TYPE_UI && !(other.flag & RGN_FLAG_HIDDEN) &&
+          BLI_rcti_isect_pt_v(&other.winrct, event->xy))
+      {
+        return WM_UI_HANDLER_CONTINUE;
+      }
+    }
+  }
+
   if (but) {
     /* The Agent composer and its actions can live in DIFFERENT regions
      * (empty-state WINDOW / TOOLS). Commit before allowing this same press
@@ -13870,7 +13831,8 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
           continue;
         }
         Button *target = but_find_mouse_over(&action_region, event);
-        if (target && target != but && target->optype) {
+        if (target && target != but &&
+            (target->optype || target->type == ButtonType::Scroll)) {
 #ifdef WITH_INPUT_IME
           wmWindow *win = CTX_wm_window(C);
           const wmIMEData *ime = win->runtime->ime_data;
@@ -14428,6 +14390,11 @@ bool textbutton_activate_rna(const bContext *C,
       Button *active = region_find_active_but(region);
       if (active != but_text || !button_is_editing(active)) {
         if (active) {
+          /* Moving keyboard focus is not a click on the previously hovered
+           * operator (which may now be Stop after sending a message). */
+          if (active->optype) {
+            active->active->cancel = true;
+          }
           button_activate_exit(const_cast<bContext *>(C), active, active->active, false, false);
         }
         button_activate_event(const_cast<bContext *>(C), region, but_text);

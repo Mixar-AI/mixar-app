@@ -14,6 +14,9 @@
  * the pixel it targets was drawn.
  */
 
+#include "agent_ui_text.hh"
+#include "UI_mixar.hh"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -497,7 +500,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
         *c = ' ';
       }
     }
-    const float text_size = 27.0f * u;
+    const float text_size = agent_ui_body_font_size();
     const float text_x = 28.0f * u;
 
     if (is_working) {
@@ -625,11 +628,11 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
   }
   GPU_blend(GPU_BLEND_ALPHA);
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
-  label_left(state->status_text,
-             w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
-             h * 0.5f,
-             AGENT_PILL_FONT * pill_u,
-             text_dim);
+  const float text_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
+  const float text_size = agent_ui_body_font_size();
+  const std::string status_label = ui::mixar_fit_text(
+      state->status_text, std::max(0.0f, w - text_x - 12.0f * pill_u), text_size);
+  label_left(status_label.c_str(), text_x, h * 0.5f, text_size, text_dim);
   GPU_blend(GPU_BLEND_NONE);
 }
 
@@ -688,7 +691,7 @@ void agent_ui_draw_island(ARegion *region,
                    /*tint=*/!agent_bubble_island_bed_is_transparent(),
                    /*rim=*/false);
 
-  /* Card header row is tab-scoped: the chat's discs / session title / FAQs
+  /* Card header row is tab-scoped: the chat's discs / session title
    * belong to the Agent tab; other tabs title the card after themselves. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
@@ -713,7 +716,7 @@ void agent_ui_draw_island(ARegion *region,
     if (state->ink_visible) {
       /* Scribble text output window over the new chat topbar */
       const float left_limit = layout->hdr_new_chat.xmax + 16.0f * u;
-      const float right_limit = layout->hdr_faq.xmin - 16.0f * u;
+      const float right_limit = layout->card.xmax - 23.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;
       const float cy = layout->hdr_title_y;
@@ -729,7 +732,7 @@ void agent_ui_draw_island(ARegion *region,
         }
       }
 
-      const float font_size = 18.0f * u;
+      const float font_size = 18.0f * agent_ui_text_unit();
       const float text_w = text_width(disp, font_size);
       const float pad_x = 18.0f * u;
       const float win_w = std::clamp(text_w + pad_x * 2.0f, 220.0f * u, max_w);
@@ -768,14 +771,10 @@ void agent_ui_draw_island(ARegion *region,
       label_centre(state->title,
                    layout->hdr_title_cx,
                    layout->hdr_title_y,
-                   AGENT_HDR_TITLE_FONT * u,
+                   AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
                    strong);
     }
-    label_right("FAQs",
-                layout->hdr_faq.xmax,
-                BLI_rctf_cent_y(&layout->hdr_faq),
-                AGENT_HDR_FAQ_FONT * u,
-                strong);
+
   }
   else {
     const char *tab_title = "";
@@ -797,7 +796,7 @@ void agent_ui_draw_island(ARegion *region,
     label_centre(tab_title,
                  layout->hdr_title_cx,
                  layout->hdr_title_y,
-                 AGENT_HDR_TITLE_FONT * u,
+                 AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
                  strong);
   }
 

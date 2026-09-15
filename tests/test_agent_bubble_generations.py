@@ -237,17 +237,24 @@ def test_action_properties_match_the_operator_signatures():
 
 
 def _tab_table():
-    block = re.search(
-        r"const TabSpec g_tabs\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
+    icons = re.search(
+        r"const AgentIcon g_tab_icons\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
     ).group(1)
-    return dict(re.findall(r'\{"([^"]+)",\s*(AGENT_ICON_\w+)\}', block))
+    layout = (CPP / "agent_ui_layout.cc").read_text()
+    metrics = re.search(
+        r"const TabMetric g_tab_metrics\[AGENT_TAB_COUNT\] = \{(.*?)\};", layout, re.S
+    ).group(1)
+    labels = re.findall(r'"([^"]+)"', metrics)
+    marks = re.findall(r"AGENT_ICON_\w+", icons)
+    assert len(labels) == len(marks) == 6
+    return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
     """No two category tabs may share a glyph, and none may go unmarked.
 
     `generations.svg` draws marks for Agent, Gaussian Splat and My
-    Generations only; 3D and Media take the island's own cube and picture
+    Generations only; 3D and Media take the island's own cube and folded-page
     glyphs so the strip cannot read as two tabs that failed to load. The
     build before this stamped the SAME thumbs-up on four tabs, which read as
     four tabs meaning one thing — hence the distinctness assert.
@@ -257,28 +264,27 @@ def test_every_category_tab_carries_its_own_mark():
     assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
     assert tabs["My Generations"] == "AGENT_ICON_THUMB"
     assert tabs["3D"] == "AGENT_ICON_MESH"
-    assert tabs["Media"] == "AGENT_ICON_IMAGE"
+    assert tabs["Media"] == "AGENT_ICON_MEDIA"
 
     marks = [icon for label, icon in tabs.items() if label != "Queue"]
     assert "AGENT_ICON_COUNT" not in marks
     assert len(set(marks)) == len(marks)
 
 
-def test_the_generations_mark_is_traced_not_approximated():
-    """The thumbs-up is `generations.svg`'s own outline, flattened.
-
-    Its predecessor was built from rounded boxes and collapsed into a blob at
-    16 px — indistinguishable from the placeholder mark the strip used to
-    stamp on every tab, which is exactly how it was reported.
-    """
-    assert "stroke_path(outline, 57" in ICONS_CC
-    assert "stroke_path(cuff, 2" in ICONS_CC
+def test_reference_tab_marks_have_dedicated_stroked_artwork():
+    """Media and My Generations use separate vector paths at a shared weight."""
+    artwork = (CPP / "agent_ui_tab_icons.cc").read_text()
+    assert "AGENT_ICON_MEDIA" in artwork
+    assert "stroke_path(page," in artwork
+    assert "stroke_path(hand," in artwork
+    assert "stroke_path(cuff," in artwork
 
 
 def test_a_stroked_glyph_batches_its_segments():
     """One flattened curve is dozens of segments; a draw call each would put
     a shader bind per segment on the tab strip's per-frame cost."""
-    body = ICONS_CC[ICONS_CC.index("void stroke_path(") :]
+    artwork = (CPP / "agent_ui_tab_icons.cc").read_text()
+    body = artwork[artwork.index("void stroke_path(") :]
     body = body[: body.index("\n}\n")]
     assert body.count("immBindBuiltinProgram") == 1
     assert "GPU_PRIM_TRIS, segments * 6" in body
@@ -297,8 +303,8 @@ def test_the_icon_sentinel_stays_last():
 
 def test_an_unmarked_tab_centres_its_label():
     """Left-aligning at the icon offset hangs the word off an empty pill."""
-    assert "g_tabs[i].icon == AGENT_ICON_COUNT" in DRAW_CC
-    assert re.search(r"label_centre\(\s*g_tabs\[i\].label, BLI_rctf_cent_x\(&tab.pill\)", DRAW_CC)
+    assert "g_tab_icons[i] == AGENT_ICON_COUNT" in DRAW_CC
+    assert re.search(r"label_centre\(\s*label.c_str\(\), BLI_rctf_cent_x\(&tab.pill\)", DRAW_CC)
 
 
 # ---------------------------------------------------------------------------

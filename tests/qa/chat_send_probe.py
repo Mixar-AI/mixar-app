@@ -28,6 +28,7 @@ connected = True
 # (module, attribute) pairs the probe replaces — resolved lazily by the
 # production code at call time, so patching the defining module is enough.
 _BOUNDARY = (
+    (agent_rpc, 'get_client'),
     (chat_ops, 'get_connection_manager'),
     (chat_ops, 'get_jsonrpc_client'),
     (message_helpers, 'get_auth_token'),

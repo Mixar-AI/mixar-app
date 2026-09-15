@@ -55,12 +55,11 @@ def test_restore_makes_the_island_key_and_requests_composer_focus():
     )
 
 
-def test_window_menu_restore_also_hands_the_keyboard_to_the_composer():
+def test_window_menu_restore_uses_the_keyboard_focus_restore_path():
     show = _function_body(BUBBLE_CC, "static wmOperatorStatus agent_bubble_show_window_exec")
-    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {") :]
-    branch = branch[: branch.index("WM_window_open")]
-    assert "Mixar_WindowMakeKey(g_bubble_ghostwin)" in branch
-    assert "agent_bubble_composer_focus_request(C, g_bubble_ghostwin)" in branch
+    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {"):]
+    branch = branch[:branch.index("WM_window_open")]
+    assert 'WM_operator_name_call(C, "MIXAR_OT_bubble_restore"' in branch
 
 
 def test_focus_retries_from_the_layout_that_builds_the_field():
@@ -80,15 +79,21 @@ def test_forced_text_activation_survives_a_rebuild():
     force = body[body.index("if (force) {") :]
     assert "button_activate_event(" in force
     assert "button_active_only(" not in force.split("else {")[0]
+    assert "if (active->optype)" in force
+    assert force.index("active->active->cancel = true;") < force.index("button_activate_exit(")
 
 
-def test_hover_tick_retries_focus_and_keeps_a_focused_draft():
+def test_hover_tick_retries_focus_without_dismissing_drafts():
     tick = _function_body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_hover_tick_exec")
-    assert tick.index("agent_bubble_composer_focus_tick(") < tick.index(
-        "agent_bubble_composer_has_focused_draft("
-    )
-    draft = tick.index("agent_bubble_composer_has_focused_draft(")
-    assert draft < tick.index('"MIXAR_OT_bubble_minimise"')
+    assert "agent_bubble_composer_focus_tick(" in tick
+    assert '"MIXAR_OT_bubble_minimise"' not in tick
+
+
+def test_focus_ignores_the_old_composer_region_after_history_changes():
+    body = _function_body(COMPOSER_CC, "static bool focus_composer(")
+    assert '"mixie_chat_messages"' in body
+    assert "has_messages ? RGN_TYPE_TOOLS : RGN_TYPE_WINDOW" in body
+    assert "region.regiontype == composer_region" in body
 
 
 def test_enter_submits_the_whole_draft_from_any_caret():
@@ -145,10 +150,15 @@ def test_agent_action_reads_send_not_generate():
     state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
     assert "r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;" in state_cc
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
-    assert '"mixie_chat.send_message"' in tools
-    assert 'state->stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in tools
-    assert '"Stop the running turn" : "Send"' in tools
-    assert '"Generate"' not in tools[tools.index("btn_generate") :]
+    assert "agent_bubble_send_button" in tools
+    references = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_bubble_references.cc").read_text()
+    assert '"mixie_chat.send_message"' in references
+    send = _function_body(references, "void agent_bubble_send_button(")
+    assert 'state.stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in send
+    assert 'state.stop_visible ? "Stop the running turn" : "Send"' in send
+    column = _function_body(references, "void agent_bubble_references_draw(")
+    assert "agent_bubble_send_button(C, region, block, layout, state)" in column
+    assert '"Generate"' not in send
 
 
 def test_the_qa_probe_only_replaces_the_transport_boundary():
@@ -162,3 +172,13 @@ def test_the_qa_probe_only_replaces_the_transport_boundary():
     assert "enter_from_middle_of_draft" in E2E
     assert "shift_enter_adds_newline" in E2E
     assert "failed_send_preserves_draft" in E2E
+
+
+def test_composer_first_press_begins_selection_without_extra_click():
+    handlers = (ROOT / "src/source/blender/editors/interface/interface_handlers.cc").read_text()
+    start = handlers.index("static int do_but_TEX(")
+    end = handlers.index("static int do_but_TEXTBOX(", start)
+    body = handlers[start:end]
+    gate = body.index("but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but)")
+    assert "textedit_set_cursor_pos" in body[gate:]
+    assert "BUTTON_STATE_TEXT_SELECTING" in body[gate:]
