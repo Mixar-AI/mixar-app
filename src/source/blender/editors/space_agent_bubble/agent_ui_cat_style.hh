@@ -5,8 +5,11 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 namespace blender {
+
+using std::size_t;
 
 /** All cats share the ink silhouette; eyes and ear proportions give each a
  * personality. */
