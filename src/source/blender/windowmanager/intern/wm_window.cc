@@ -72,6 +72,7 @@
 #include "wm_draw.hh"
 #include "wm_event_system.hh"
 #include "wm_files.hh"
+#include "wm_mixar_reference_drag.hh"
 #include "wm_window.hh"
 #include "wm_window_private.hh"
 #ifdef WITH_XR_OPENXR
@@ -2155,6 +2156,16 @@ static bool ghost_event_proc(const GHOST_IEvent *ghost_event, GHOST_TUserDataPtr
       }
       break;
     }
+    case GHOST_kEventDraggingEntered: {
+      const auto *ddd = static_cast<const GHOST_TEventDragnDropData *>(data);
+      if (ddd->dataType == GHOST_kDragnDropTypeFilenames && ddd->data) {
+        const auto *paths = static_cast<const GHOST_TStringArray *>(ddd->data);
+        for (const uint8_t *path : Span(paths->strings, paths->count)) {
+          wm_mixar_reference_drag_enter(C, win, reinterpret_cast<const char *>(path));
+        }
+      }
+      break;
+    }
     case GHOST_kEventDraggingDropDone: {
       const GHOST_TEventDragnDropData *ddd = static_cast<const GHOST_TEventDragnDropData *>(data);
 
@@ -2429,6 +2440,33 @@ const GHOST_CSD_Layout *WM_window_csd_layout_get()
 }
 
 #endif /* WITH_GHOST_CSD */
+
+/** QA-only synchronous GHOST drag-enter. Unlike a completed drop, this has
+ * no WM drag payload or release event. RNA requires event-simulate mode. */
+void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath)
+{
+  class DragEnterEvent : public GHOST_IEvent {
+   public:
+    GHOST_IWindow *window;
+    GHOST_TEventDragnDropData data{};
+
+    GHOST_TEventType getType() const override { return GHOST_kEventDraggingEntered; }
+    uint64_t getTime() const override { return g_system->getMilliSeconds(); }
+    GHOST_IWindow *getWindow() const override { return window; }
+    GHOST_TEventDataPtr getData() const override
+    {
+      return const_cast<GHOST_TEventDragnDropData *>(&data);
+    }
+  } event;
+  auto *path = reinterpret_cast<uint8_t *>(const_cast<char *>(filepath));
+  GHOST_TStringArray paths{};
+  paths.count = 1;
+  paths.strings = &path;
+  event.window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+  event.data.dataType = GHOST_kDragnDropTypeFilenames;
+  event.data.data = &paths;
+  ghost_event_proc(&event, C);
+}
 
 void wm_ghost_init(bContext *C)
 {
