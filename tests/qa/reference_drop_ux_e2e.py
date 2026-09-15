@@ -68,6 +68,8 @@ def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT','/tmp/reference-drop-ux')).resolve()
     out.mkdir(parents=True, exist_ok=True)
     qa.wait(f"hasattr({SCENE},'mixie_chat_pending_attachments')", timeout=30)
+    qa.wait("bpy.types.Operator.bl_rna_get_subclass_py('MIXIE_CHAT_OT_add_image_from_file') "
+            "is not None", timeout=30)
     qa.eval("import os\nassert os.environ.get('MIXAR_QA')=='1'\n"
             f"assert not {SCENE}.mixie_moodboard_images, 'Use a fresh QA app'")
     portrait = png(out/'portrait.png',(100,170,220),width=150,height=600)
@@ -107,7 +109,9 @@ def run(qa):
     qa.click(area_type='AGENT_BUBBLE',text='Agent chat')
     qa.step('redrop_selected_reference', batch_drop, qa, [portrait], chat=True)
     assert len(attachments(qa)) == 1
-    qa.click(op='MIXIE_CHAT_OT_remove_attachment',area_type='AGENT_BUBBLE')
+    qa.click(area_type='AGENT_BUBBLE',text='Preview reference')
+    qa.wait("bool(drv.find(popup=True,op='MIXIE_CHAT_OT_remove_attachment'))",timeout=5)
+    qa.click(op='MIXIE_CHAT_OT_remove_attachment',popup=True)
     qa.wait(f'not {SCENE}.mixie_chat_pending_attachments',timeout=6)
     assert qa.eval(f'result=not any(i.selected for i in {SCENE}.mixie_moodboard_images)')
 

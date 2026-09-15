@@ -102,3 +102,19 @@ def test_webp_reference_is_supported(validate, tmp_path):
     path = tmp_path/'reference.webp'
     Image.new('RGB', (32, 32), '#abcdef').save(path)
     assert validate(str(path)) == (True, '')
+
+
+@pytest.mark.parametrize('target,remaining', [('/tmp/b.obj', ['/tmp/a.obj']),
+                                            ('/tmp/gone.obj', ['/tmp/a.obj', '/tmp/b.obj'])])
+def test_preview_remove_resolves_identity_after_collection_changes(target, remaining):
+    class IndexedAttachments(list):
+        def remove(self, index):
+            del self[index]
+    items = IndexedAttachments(SimpleNamespace(image_path=p, image_source='MODEL_FILE', display_name=p)
+                               for p in ('/tmp/a.obj', '/tmp/b.obj'))
+    namespace = dict(redraw_chat_areas=Mock(), cleanup_loaded_file_image=Mock())
+    fn = function(CHAT/'ui/operators/image_ops.py', 'execute', namespace,
+                  'MIXIE_CHAT_OT_remove_attachment')
+    op = SimpleNamespace(index=0, attachment_path=target, attachment_source='MODEL_FILE', report=Mock())
+    fn(op, SimpleNamespace(scene=SimpleNamespace(mixie_chat_pending_attachments=items)))
+    assert [item.image_path for item in items] == remaining

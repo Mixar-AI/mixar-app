@@ -255,6 +255,8 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
         default=0,
         min=0
     )
+    attachment_path: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
+    attachment_source: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -264,12 +266,21 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
 
     def execute(self, context):
         attachments = context.scene.mixie_chat_pending_attachments
+        index = self.index
+        if self.attachment_path:
+            # A hover popup may outlive a collection reorder. Resolve its
+            # owned identity at click time instead of removing a new neighbor.
+            index = next((i for i, att in enumerate(attachments)
+                          if att.image_path == self.attachment_path and
+                          att.image_source == self.attachment_source), -1)
+            if index < 0:
+                return {'CANCELLED'}
 
-        if self.index < 0 or self.index >= len(attachments):
+        if index < 0 or index >= len(attachments):
             self.report({'ERROR'}, "Invalid attachment index")
             return {'CANCELLED'}
 
-        att = attachments[self.index]
+        att = attachments[index]
         name = att.display_name
         image_path = att.image_path
         image_source = att.image_source
@@ -301,7 +312,7 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
                     "moodboard deselect skipped: %s", e, exc_info=True
                 )
 
-        attachments.remove(self.index)
+        attachments.remove(index)
         if image_source == 'FILE':
             cleanup_loaded_file_image(image_path)
 

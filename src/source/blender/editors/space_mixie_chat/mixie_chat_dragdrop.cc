@@ -47,6 +47,15 @@ namespace blender {
 
 static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
 {
+  const char *attachment_operator = RNA_struct_property_is_set(op->ptr, "image_name") ?
+                                        "MIXIE_CHAT_OT_add_image_from_blend" :
+                                        "MIXIE_CHAT_OT_add_image_from_file";
+  /* The capsule can appear before deferred Python UI registration finishes.
+   * Never write attachment properties into the fallback OperatorProperties. */
+  if (!WM_operatortype_find(attachment_operator, true)) {
+    BKE_report(op->reports, RPT_WARNING, "Chat is still loading. Please drop the reference again.");
+    return OPERATOR_CANCELLED;
+  }
   if (ED_agent_bubble_is_resting_pill(C)) {
     /* A drop on the resting chat capsule explicitly targets the composer,
      * regardless of the tab that was active when the island was minimised.
@@ -82,8 +91,8 @@ static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  /* Forward to the Python operator that handles validation, duplicate
-   * checking, and attachment management. By drop time Python is loaded. */
+  /* Forward to the registered Python operator for validation, duplicate
+   * checking, and attachment management. */
   PointerRNA props = WM_operator_properties_create("MIXIE_CHAT_OT_add_image_from_file");
   RNA_string_set(&props, "filepath", filepath);
   RNA_string_set(&props, "directory", "");

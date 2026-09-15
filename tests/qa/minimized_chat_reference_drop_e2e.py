@@ -43,6 +43,8 @@ def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/minimized-chat-reference-drop')).resolve()
     out.mkdir(parents=True, exist_ok=True)
     qa.wait(f"hasattr({SCENE},'mixie_chat_pending_attachments')", timeout=30)
+    qa.wait("bpy.types.Operator.bl_rna_get_subclass_py('MIXIE_CHAT_OT_add_image_from_file') "
+            "is not None", timeout=30)
     qa.wait("bool(drv.find(surface='pill_cat'))", timeout=15)
     qa.eval("import os\nassert os.environ.get('MIXAR_QA')=='1'\n"
             f"assert not {SCENE}.mixie_chat_pending_attachments\n"

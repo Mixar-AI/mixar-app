@@ -1989,6 +1989,11 @@ void button_func_menu_step_set(Button *but, MenuStepFunc func);
  */
 void button_menu_disable_hover_open(Button *but);
 
+/** Explicit hover delay and mouse-leave dismissal for an interactive preview,
+ * independent of menu preferences.
+ * A negative delay keeps the standard menu policy. */
+void button_menu_hover_delay_set(Button *but, float delay_seconds);
+
 void button_func_tooltip_set(Button *but, ButtonToolTipFunc func, void *arg, FreeArgFunc free_arg);
 /**
  * Enable a tooltip that appears faster than the usual tooltip. If the button has both a quick and

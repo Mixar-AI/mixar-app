@@ -308,6 +308,7 @@ struct Button : NonMovable {
 
   /** See #button_menu_disable_hover_open(). */
   bool menu_no_hover_open = false;
+  float menu_hover_delay = -1.0f;
 
   /** #ButtonType::Block data */
   BlockCreateFunc block_create_func = nullptr;

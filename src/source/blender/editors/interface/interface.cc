@@ -5964,6 +5964,11 @@ void button_menu_disable_hover_open(Button *but)
   but->menu_no_hover_open = true;
 }
 
+void button_menu_hover_delay_set(Button *but, const float delay_seconds)
+{
+  but->menu_hover_delay = delay_seconds;
+}
+
 void button_func_quick_tooltip_set(Button *but, std::function<std::string(const Button *but)> func)
 {
   but->tip_quick_func = std::move(func);

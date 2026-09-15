@@ -19,6 +19,7 @@ set(SRC
   space_agent_bubble.cc
   agent_bubble_glass.cc
   agent_bubble_composer.cc
+  agent_bubble_attachment_preview.cc
   agent_bubble_interaction.cc
   agent_ui_draw.cc
   agent_ui_controls_paint.cc
@@ -50,6 +51,7 @@ set(SRC
   agent_ui_visible_if.cc
 
   agent_bubble_intern.hh
+  agent_bubble_attachment_preview.hh
   agent_bubble_glass.hh
   agent_ui_draw.hh
   agent_ui_generations.hh

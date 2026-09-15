@@ -72,6 +72,7 @@
 
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
+#include "agent_bubble_attachment_preview.hh"
 #include "agent_bubble_size.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
@@ -668,8 +669,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   agent_bubble_rect_to_region(region, thumbs_after, &bx, &by, &bw, &bh);
 
   /* --- Pending-attachment thumbnails, right of the Upload chip ---
-   * Small rounded previews at chip height (the Figma treatment), each one a
-   * click-to-remove button over the existing mixie_chat.remove_attachment.
+   * Small rounded previews at chip height, with a large hover/click popup
+   * whose explicit X runs the shared attachment removal operator.
    * The window does NOT resize for attachments any more (see the sync
    * operator) — this row is the whole presentation. */
   {
@@ -678,7 +679,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     if (att_prop && RNA_property_type(att_prop) == PROP_COLLECTION) {
       Main *bmain = CTX_data_main(C);
       const int att_count = RNA_property_collection_length(&scene_ptr, att_prop);
-      const int max_thumbs = 4;
+      const int max_thumbs = 5;
       const float thumb_size = float(bh);
       const float gap = float(bh) * 0.18f;
       float tx = float(bx + bw) + gap * 2.0f;
@@ -686,10 +687,9 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
 
       GPU_blend(GPU_BLEND_ALPHA);
       int shown = 0;
-      int index = 0;
       CollectionPropertyIterator iter;
       RNA_property_collection_begin(&scene_ptr, att_prop, &iter);
-      for (; iter.valid && shown < max_thumbs; RNA_property_collection_next(&iter), index++) {
+      for (; iter.valid && shown < max_thumbs; RNA_property_collection_next(&iter)) {
         PointerRNA item = iter.ptr;
 
         char path[1024] = "";
@@ -726,15 +726,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         footer_thumbnails_draw_image(
             bmain, path, source, tx + 1.0f, float(by) + 1.0f, thumb_size - 2.0f);
 
-        ui::Button *thumb_but = uiDefButO(block, ui::ButtonType::But,
-                                     "mixie_chat.remove_attachment",
-                                     blender::wm::OpCallContext::ExecDefault, "",
-                                     int(tx), by, short(thumb_size), short(thumb_size),
-                                     "Remove this attachment");
-        if (thumb_but) {
-          PointerRNA *op_ptr = ui::button_operator_ptr_ensure(thumb_but);
-          RNA_int_set(op_ptr, "index", index);
-        }
+        agent_bubble_attachment_preview_button(C, block, &item, int(tx), by, int(thumb_size));
 
         tx += thumb_size + gap;
         shown++;
