@@ -87,6 +87,21 @@ EOF
 # *_LIB_DEPENDS legitimately list several correct SDK paths mid-value, and a
 # prefix test flags every one of them on an already-healthy cache.
 CMAKE_CACHE_FILE="$BUILD_ENV_DIR/CMakeCache.txt"
+
+# Pin Blender's SDK lookup when settings.sh had to reject the default SDK.
+# platform_apple_xcode.cmake honours a pre-defined OSX_SYSTEM and otherwise
+# FORCE-sets CMAKE_OSX_SYSROOT from `xcrun --show-sdk-version`, which would
+# drag the unusable SDK back in at compile/link time even though the SDKROOT
+# we exported made CMake's own compiler checks pass. Empty on a healthy
+# machine, so the configure lines are unchanged there. Passed on the
+# cache-purge configures too: a cache left by a configure that died on the
+# bad SDK has no OSX_SYSTEM yet, and a purge run without the pin re-detects
+# that SDK and aborts the build before the real configure is reached.
+SDK_PIN_ARGS=()
+if [[ "$PLATFORM" == "macOS" && -n "${MIXAR_OSX_SDK_VERSION:-}" ]]; then
+    SDK_PIN_ARGS+=("-DOSX_SYSTEM=$MIXAR_OSX_SDK_VERSION")
+    echo "Pinning Blender's macOS SDK lookup to $MIXAR_OSX_SDK_VERSION"
+fi
 if [[ "$PLATFORM" == "macOS" && -n "${SDKROOT:-}" && -f "$CMAKE_CACHE_FILE" ]]; then
     STALE_SDK_VARS=()
     while read -r cache_var; do
@@ -106,7 +121,7 @@ if [[ "$PLATFORM" == "macOS" && -n "${SDKROOT:-}" && -f "$CMAKE_CACHE_FILE" ]]; 
     )
     if (( ${#STALE_SDK_VARS[@]} > 0 )); then
         echo "Purging ${#STALE_SDK_VARS[@]} CMake cache entries resolved outside $SDKROOT"
-        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${STALE_SDK_VARS[@]}" >/dev/null
+        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${SDK_PIN_ARGS[@]+"${SDK_PIN_ARGS[@]}"}" "${STALE_SDK_VARS[@]}" >/dev/null
     fi
 fi
 
@@ -145,8 +160,21 @@ if [[ -f "$CMAKE_CACHE_FILE" ]]; then
                 | sort -u
         )
         echo "Purging ${#STALE_PYTHON_VARS[@]} CMake cache entries left on Python $CACHED_PYTHON_VERSION (this tree builds against Python $PYTHON_VERSION)"
-        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${STALE_PYTHON_VARS[@]}" >/dev/null
+        cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${SDK_PIN_ARGS[@]+"${SDK_PIN_ARGS[@]}"}" "${STALE_PYTHON_VARS[@]}" >/dev/null
     fi
+fi
+
+# A configure that dies before Blender's CMakeLists.txt reaches its install
+# prefix logic (e.g. on the SDK failure above) still caches CMake's bare
+# default, CMAKE_INSTALL_PREFIX=/usr/local. Blender only replaces that when
+# CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT is set, which CMake does on the
+# FIRST configure only, so every later `make build` compiles fine and then
+# fails installing into /usr/local. Dropping the entry makes the next
+# configure initialize it again and hand it back to Blender's default.
+if [[ -f "$CMAKE_CACHE_FILE" ]] \
+    && grep -q -E '^CMAKE_INSTALL_PREFIX:PATH=(/usr/local|C:/Program Files[^=]*)$' "$CMAKE_CACHE_FILE"; then
+    echo "Dropping CMake's default install prefix left by an aborted configure"
+    cmake -S "$SOURCE_DIR" -B "$BUILD_ENV_DIR" "${SDK_PIN_ARGS[@]+"${SDK_PIN_ARGS[@]}"}" -UCMAKE_INSTALL_PREFIX >/dev/null
 fi
 
 # Configure with CMake (all platform logic handled in settings.sh)
@@ -155,6 +183,7 @@ cmake -C "$CMAKE_DIR/mixar_overrides.cmake" \
     $CMAKE_GENERATOR_ARGS \
     -S "$SOURCE_DIR" \
     -B "$BUILD_ENV_DIR" \
+    "${SDK_PIN_ARGS[@]+"${SDK_PIN_ARGS[@]}"}" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # Build (all platform-specific args handled in settings.sh)
