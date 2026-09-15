@@ -34,6 +34,7 @@
 
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
+#include "ED_moodboard_attachment.hh"
 
 #include "WM_api.hh"
 #include "WM_keymap.hh"
@@ -724,6 +725,12 @@ static bool agent_bubble_window_is_pill(const bContext *C)
     return win->runtime->ghostwin == g_pill_ghostwin;
   }
   return WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH;
+}
+
+bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
+{
+  return window && !g_bubble_minimise_pending &&
+         window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
 }
 
 bool ED_agent_bubble_is_resting_pill(const bContext *C)

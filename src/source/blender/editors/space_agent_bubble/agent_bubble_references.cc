@@ -13,6 +13,7 @@
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_screen.hh"
+#include "ED_moodboard_attachment.hh"
 #include "ED_space_api.hh"
 #include "GPU_state.hh"
 #include "RNA_access.hh"
@@ -180,6 +181,11 @@ void agent_bubble_references_draw(const bContext *C,
                                    image.xmin,
                                    image.ymin,
                                    g.image_size);
+    }
+    rctf visible_image;
+    if (source && STREQ(source, "BLEND_DATA") &&
+        BLI_rctf_isect(&image, &g.view, &visible_image)) {
+      ED_moodboard_attachment_target(C, region, path.c_str(), visible_image);
     }
     const float dim[4] = AGENT_COL_TEXT_DIM;
     const auto caption = ui::mixar_fit_text(
