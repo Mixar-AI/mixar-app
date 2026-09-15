@@ -293,10 +293,6 @@ static void drawer_region_listener(const wmRegionListenerParams *params)
       static_cast<const MoodboardDrawerRuntime *>(params->region->regiondata);
   if (runtime != nullptr && runtime->slide_started_at > 0.0) {
     ED_region_tag_redraw(params->region);
-    /* Keep navigation gizmos in step with display_amount without a 3D rebuild. */
-    if (ARegion *window = BKE_area_find_region_type(params->area, RGN_TYPE_WINDOW)) {
-      ED_region_tag_redraw_editor_overlays(window);
-    }
   }
   const wmNotifier *notifier = params->notifier;
   if ((notifier->category == NC_SPACE && notifier->data == ND_SPACE_MIXIE) ||

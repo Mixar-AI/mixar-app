@@ -93,6 +93,7 @@ def test_painter_calls_the_shipped_sampler():
 def test_elongated_pill_draws_the_cat_not_the_mixar_mark():
     elongated = _elongated()
     assert "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity)" in elongated
+    assert "state->cat_catch" in elongated
     assert "ICON_MIXAR_ICON" not in elongated
 
 
@@ -159,6 +160,11 @@ def test_cmake_compiles_the_cat():
     assert "agent_ui_pill_cat.cc" in CMAKE
     assert "agent_ui_pill_cat.hh" in CMAKE
     assert "agent_ui_pill_cat_pose.hh" in CMAKE
+    assert "agent_ui_cat_catch.hh" in CMAKE
+    catch_hh = (CPP / "agent_ui_cat_catch.hh").read_text(encoding="utf-8")
+    assert "ATTACHMENT_FLIGHT_SECONDS" in catch_hh
+    assert "mixie_cat_catch_pose" in catch_hh
+    assert "mixie_cat_catch_pick" in catch_hh
 
 
 def test_header_documents_the_clip_contract():

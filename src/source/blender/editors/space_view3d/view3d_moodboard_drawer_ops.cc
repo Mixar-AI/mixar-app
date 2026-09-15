@@ -40,18 +40,8 @@ namespace blender {
 
 static void drawer_tag_redraw(bContext *C)
 {
-  ScrArea *area = CTX_wm_area(C);
-  if (area == nullptr) {
-    return;
-  }
-  if (ARegion *region = view3d_moodboard_drawer_region_find(area)) {
+  if (ARegion *region = view3d_moodboard_drawer_region_find(CTX_wm_area(C))) {
     ED_region_tag_redraw(region);
-  }
-  /* Navigation gizmos park left of the open drawer. Refresh the viewport's
-   * editor overlays only — never ED_area_tag_redraw, which re-renders the
-   * 3D scene on every slide tick and hitched the animation. */
-  if (ARegion *window = BKE_area_find_region_type(area, RGN_TYPE_WINDOW)) {
-    ED_region_tag_redraw_editor_overlays(window);
   }
 }
 
@@ -73,9 +63,8 @@ static bool drawer_op_poll(bContext *C)
  *
  * Position is `display_amount` (elapsed / SLIDE_SECONDS, ease-out cubic), not
  * a per-tick fraction: two timer callbacks in one frame write the same time,
- * not 22 % twice. The TOOL_PROPS region is redrawn and the WINDOW region's
- * editor overlays are refreshed so navigation gizmos slide with the board —
- * never ED_area_tag_redraw, which would re-render the 3D view on every step. */
+ * not 22 % twice. Only the TOOL_PROPS region is redrawn — tagging the area
+ * would re-render the 3D view on every step. */
 static wmOperatorStatus drawer_update_exec(bContext *C, wmOperator * /*op*/)
 {
   const MoodboardDrawerRuntime *runtime = drawer_runtime(C);

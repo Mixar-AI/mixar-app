@@ -416,20 +416,6 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   delete_params.type = EVT_BACKSPACEKEY;
   WM_keymap_add_item(keymap, "mixie.moodboard_delete", &delete_params);
 
-  /* Select / deselect all — A / Alt+A (Blender node-editor convention).
-   * Mirrored in moodboard/ui/keymap.py so a GUI keyconfig reload keeps them. */
-  KeyMapItem_Params select_all_params{};
-  select_all_params.type = EVT_AKEY;
-  select_all_params.value = KM_PRESS;
-  select_all_params.modifier = 0;
-  WM_keymap_add_item(keymap, "mixie.moodboard_select_all", &select_all_params);
-
-  KeyMapItem_Params deselect_all_params{};
-  deselect_all_params.type = EVT_AKEY;
-  deselect_all_params.value = KM_PRESS;
-  deselect_all_params.modifier = KM_ALT;
-  WM_keymap_add_item(keymap, "mixie.moodboard_deselect_all", &deselect_all_params);
-
   /* Add Text Box Interactive - Cmd+T (macOS) / Ctrl+T (Windows/Linux) */
   KeyMapItem_Params text_params_mac{};
   text_params_mac.type = EVT_TKEY;

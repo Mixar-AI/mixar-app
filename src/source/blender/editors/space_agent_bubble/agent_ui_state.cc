@@ -18,6 +18,7 @@
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
+ *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
  *
  * Called from the draw callback, so it only ever READS: a draw callback runs
  * on every mouse move, and writing a property from one is how the chat's
@@ -42,6 +43,8 @@
 #include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
+
+#include "ED_moodboard_attachment.hh"
 
 #include "agent_ui_draw.hh"
 #include "agent_ui_cat_activity.hh"
@@ -343,6 +346,22 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
         }
       }
       cat.finishing = STREQ(activity, "RESPONDING");
+    }
+  }
+  if (wmWindow *win = CTX_wm_window(C)) {
+    MixieAttachmentIncoming incoming;
+    if (ED_moodboard_attachment_incoming(win, incoming)) {
+      cat.catching = true;
+      const float native_w = float(WM_window_native_pixel_x(win));
+      const float native_h = float(WM_window_native_pixel_y(win));
+      const float scale = native_w / float(std::max(1, int(win->sizex)));
+      float chip_x = 0.0f, chip_y = 0.0f;
+      mixie_cat_pill_chip_center(native_w, native_h, chip_x, chip_y);
+      r_state->cat_catch = mixie_cat_catch_aim(incoming.progress,
+                                              incoming.position[0],
+                                              incoming.position[1],
+                                              float(win->posx) + chip_x / scale,
+                                              float(win->posy) + chip_y / scale);
     }
   }
   r_state->cat_activity = mixie_cat_activity(cat);

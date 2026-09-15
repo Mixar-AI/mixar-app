@@ -64,6 +64,7 @@ set(SRC
   agent_ui_pill_cat.hh
   agent_ui_cat_style.hh
   agent_ui_cat_activity.hh
+  agent_ui_cat_catch.hh
   agent_ui_cat_cadence.hh
   agent_ui_cat_scheduler.hh
   ../include/ED_agent_bubble_motion.hh

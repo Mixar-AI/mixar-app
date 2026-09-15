@@ -11,13 +11,14 @@
 
 #pragma once
 
+#include "agent_ui_cat_activity.hh"
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
 struct ARegion;
 struct AgentIslandLayout;
 struct bContext;
-enum class MixieCatActivity;
 
 /**
  * Everything the island shows, gathered by the caller before drawing.
@@ -30,6 +31,7 @@ struct AgentIslandState {
   char status_text[64];     /* Status pill label, from the state enum's UI name. */
   bool status_busy;         /* Lights the pill's dot. */
   MixieCatActivity cat_activity;
+  MixieCatCatch cat_catch;  /* Live flight aim; ignored unless activity is Catching. */
   const void *cat_scene;    /* Reset transient expression when the scene changes. */
 
   char title[128];
