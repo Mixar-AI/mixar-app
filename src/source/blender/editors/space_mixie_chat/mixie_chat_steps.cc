@@ -332,16 +332,26 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     row_rect.xmax = row_rect.xmin + steps_row_text_width(step, content_width);
     row_rect.ymin = row_bottom;
     row_rect.ymax = row_top;
-    /* Process history stays flat. Only actionable disclosures brighten on hover. */
+    /* Process history stays flat. Observation rows (read/search, including
+     * "Inspected scene") are labels — same muted ink as the header, never a
+     * hover brighten. Only actionable disclosures (acted rows with detail)
+     * brighten on hover. Never paint the shared button-hover fill. */
+    const bool observe = step.kind == 0 || step.kind == 3;
+    const bool disclose = step.detail[0] != '\0';
     float row_color[4];
     std::copy_n(card.text_color, 4, row_color);
-    row_color[3] *= step.is_hovered && step.detail[0] ? 1.0f : 0.85f;
+    if (observe) {
+      row_color[3] *= 0.65f;
+    }
+    else {
+      row_color[3] *= step.is_hovered && disclose ? 1.0f : 0.85f;
+    }
     chat_ui_draw_text_wrapped(row_text, &row_rect, card.font_size, 0, row_color);
 
-    /* Trailing disclosure chevron — every row with detail (object names) is
-     * independently expandable, pinned to the content's right edge and on
-     * the same text-anchored center as the kind glyph. */
-    if (step.detail[0] != '\0') {
+    /* Trailing disclosure chevron — acted rows with detail (object names)
+     * are independently expandable. Observation labels omit it so they do
+     * not read as a control. */
+    if (disclose && !observe) {
       const float dim_chev[4] = {card.text_color[0], card.text_color[1],
                                  card.text_color[2], card.text_color[3] * 0.6f};
       const float chev_x = x + card.h_padding + content_width -
