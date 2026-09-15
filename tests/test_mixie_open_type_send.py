@@ -55,12 +55,11 @@ def test_restore_makes_the_island_key_and_requests_composer_focus():
     )
 
 
-def test_window_menu_restore_also_hands_the_keyboard_to_the_composer():
+def test_window_menu_restore_uses_the_keyboard_focus_restore_path():
     show = _function_body(BUBBLE_CC, "static wmOperatorStatus agent_bubble_show_window_exec")
-    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {") :]
-    branch = branch[: branch.index("WM_window_open")]
-    assert "Mixar_WindowMakeKey(g_bubble_ghostwin)" in branch
-    assert "agent_bubble_composer_focus_request(C, g_bubble_ghostwin)" in branch
+    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {"):]
+    branch = branch[:branch.index("WM_window_open")]
+    assert 'WM_operator_name_call(C, "MIXAR_OT_bubble_restore"' in branch
 
 
 def test_focus_retries_from_the_layout_that_builds_the_field():

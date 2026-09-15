@@ -68,6 +68,13 @@ inline float view3d_moodboard_drawer_runtime_amount(const ARegion *region)
   return runtime != nullptr ? runtime->amount : 0.0f;
 }
 
+/** The drawer floats above sidebars instead of stacking beside them. */
+inline bool view3d_moodboard_drawer_is_overlay(const ScrArea *area, const ARegion *region)
+{
+  return area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOL_PROPS &&
+         region->overlap;
+}
+
 inline bool view3d_moodboard_drawer_grip_rect_for(const ScrArea *area,
                                                   const ARegion *region,
                                                   const float amount,

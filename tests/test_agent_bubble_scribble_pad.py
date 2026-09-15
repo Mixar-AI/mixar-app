@@ -230,16 +230,13 @@ def test_translucent_metal_view_cannot_move_the_window():
     assert "return NO;" in glass[glass.index("mouseDownCanMoveWindow") :]
 
 
-def test_restore_resizes_before_snapping_to_the_host():
-    """The centre-bottom snap centres the bubble's CURRENT width. A bubble
-    minimised out of the pad (504 wide) was centred at that width and then
-    widened from its left edge, landing 185 px off-centre — seen in the
-    running app. Both restore paths size first."""
+def test_restore_resizes_before_restoring_the_host_relative_seat():
+    """Placement uses the final fitted size; both show paths share restoration."""
     restore = _body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_restore_exec")
-    assert restore.index("bubble_force_size_and_refresh(") < restore.index(
-        "Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin")
+    assert restore.index("bubble_force_size_and_refresh(") < restore.index("bubble_restore_seat(")
+    assert restore.index("Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);",
+                         restore.index("bubble_force_size_and_refresh(")) < restore.index("bubble_restore_seat(")
     show = _body(BUBBLE_CC, "static wmOperatorStatus agent_bubble_show_window_exec")
-    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {") :]
-    branch = branch[: branch.index("g_bubble_minimised = false;")]
-    assert branch.index("bubble_force_size_and_refresh(") < branch.index(
-        "Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin")
+    branch = show[show.index("if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {"):]
+    branch = branch[:branch.index("WM_window_open")]
+    assert '"MIXAR_OT_bubble_restore"' in branch

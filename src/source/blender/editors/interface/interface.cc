@@ -75,6 +75,7 @@
 #include "CLG_log.h"
 
 #include "interface_intern.hh"
+#include "interface_mixar_profile_card.hh"
 
 namespace blender::ui {
 static CLG_LogRef LOG = {"ui"};
@@ -2199,6 +2200,7 @@ void block_end_ex(const bContext *C,
   }
 
   update_flexible_spacing(region, block);
+  mixar_topbar_center_mode_slider(C, region, block);
 
   block->endblock = true;
 }

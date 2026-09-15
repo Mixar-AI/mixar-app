@@ -322,88 +322,22 @@ def test_window_start_clamps_into_range():
 
 
 # -------------------------------------------------------------------------
-# 9. The Zen slider's centring pad can never push it off the topbar.
+# 9. Slider geometry is resolved in native window space in both modes.
 
 
-class _FakeRegion:
-    def __init__(self, width):
-        self.width = width
-
-
-class _FakeSystem:
-    def __init__(self, ui_scale):
-        self.ui_scale = ui_scale
-
-
-class _FakePrefs:
-    def __init__(self, ui_scale):
-        self.system = _FakeSystem(ui_scale)
-
-
-class _FakeContext:
-    def __init__(self, width, ui_scale=1.0):
-        self.region = _FakeRegion(width)
-        self.preferences = _FakePrefs(ui_scale)
-
-
-def _header():
-    from mixar.modules.workflow.ui.headers import mode_filter_header
-
-    return mode_filter_header
-
-
-def _reserved_px(header, ui_scale):
-    units = (
-        header._MENU_STRIP_UNITS
-        + header._SLIDER_HALF_UNITS * 2.0
-        + header._PAD_SAFETY_UNITS
-    )
-    return units * 20.0 * ui_scale
-
-
-@pytest.mark.parametrize(
-    ("left_width", "ui_scale", "right_px"),
-    [
-        (1280, 1.0, 300),  # narrow window
-        (1600, 1.25, 400),  # UI scale
-        (1600, 1.0, 900),  # long account email widening the profile chip
-        (400, 1.0, 300),  # absurdly narrow
-    ],
-)
-def test_centring_pad_never_overruns_the_left_region(left_width, ui_scale, right_px):
-    header = _header()
-    pad = header._centring_pad_px(_FakeContext(left_width, ui_scale), right_px)
-    assert pad >= 0.0
-    assert pad <= right_px
-    # `ui_update_flexible_spacing` bails out entirely once the content is
-    # wider than the region, which left-packs everything and clips the slider.
-    # Below the reserve the pad is simply spent to nothing — the slider stays
-    # visible, just less perfectly centred.
-    assert pad <= max(0.0, left_width - _reserved_px(header, ui_scale))
-
-
-def test_centring_pad_is_the_full_right_region_when_it_fits():
-    header = _header()
-    assert header._centring_pad_px(_FakeContext(1920, 1.0), 300) == 300.0
-
-
-def test_centring_pad_is_zero_without_a_region():
-    header = _header()
-
-    class _NoRegion:
-        region = None
-        preferences = _FakePrefs(1.0)
-
-    assert header._centring_pad_px(_NoRegion(), 300) == 0.0
-
-
-def test_the_pad_is_drawn_through_the_clamp():
-    source = (
-        WORKFLOW / "ui/headers/mode_filter_header.py"
-    ).read_text(encoding="utf-8")
-    assert "pad_px = _centring_pad_px(context, _right_region_width(context))" in source
-    assert "layout.separator(factor=_separator_factor_for_px(context, pad_px))" in source
-    assert "_separator_factor_for_px(context, right_px)" not in source
+def test_mode_slider_uses_final_window_geometry():
+    body = TOPBAR[TOPBAR.index("void mixar_topbar_center_mode_slider("):]
+    body = body[:body.index("\nnamespace {")]
+    assert "WM_window_native_pixel_size" in body
+    assert "button_to_pixelrect" in body
+    assert "view2d_scale_get_x" in body
+    assert "BLI_rctf_translate(&left->rect" in body
+    assert "BLI_rctf_translate(&right->rect" in body
+    assert "UI_HIDDEN" in body  # overflow tabs cannot cover the centered switch
+    source = (WORKFLOW / "ui/headers/mode_filter_header.py").read_text()
+    assert "_centring_pad_px" not in source
+    assert "MIXAR_MT_engine_workspaces" in source
+    assert "MIXAR_PT_scene_controls" in source
 
 
 # -------------------------------------------------------------------------

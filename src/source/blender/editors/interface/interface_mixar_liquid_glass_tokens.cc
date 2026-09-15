@@ -236,9 +236,29 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_period*/ 0.0f,
         /* fallback_alpha */ 0.92f,
     },
+    /* MIXAR_GLASS_MOODBOARD_TAB — a green reveal affordance, readable over
+     * the viewport and the N-panel, with the shared glass light and rim. */
+    {
+        /* tint_top      */ {0.085f, 0.310f, 0.180f, 0.96f},
+        /* tint_bottom   */ {0.025f, 0.105f, 0.060f, 0.96f},
+        /* glaze         */ {0.050f, 0.190f, 0.100f, 0.20f},
+        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.13f},
+        /* rim           */ {0.530f, 0.770f, 0.620f, 0.72f},
+        /* refract       */ {1.000f, 1.000f, 1.000f, 0.10f},
+        /* shadow        */ {0.000f, 0.000f, 0.000f, 0.00f},
+        /* radius        */ 11.0f,
+        /* rim_width     */ 1.0f,
+        /* blur_radius   */ 0.0f,
+        /* shadow_width  */ 0.0f,
+        /* sheen_height  */ 18.0f,
+        /* specular_width*/ 0.0f,
+        /* specular_alpha*/ 0.00f,
+        /* specular_period*/ 0.0f,
+        /* fallback_alpha */ 0.96f,
+    },
 };
 
-static_assert(ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u,
+static_assert(ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD_TAB) + 1u,
               "Every role needs a row: the enum and the table are read together.");
 
 /** \} */
@@ -251,7 +271,7 @@ static_assert(ARRAY_SIZE(g_glass_tokens) == size_t(MIXAR_GLASS_MOODBOARD) + 1u,
 
 MixarGlassTokens mixar_glass_tokens(const eMixarGlassRole role)
 {
-  const int index = std::clamp(int(role), 0, int(MIXAR_GLASS_MOODBOARD));
+  const int index = std::clamp(int(role), 0, int(MIXAR_GLASS_MOODBOARD_TAB));
   MixarGlassTokens tokens = g_glass_tokens[index];
   const float scale = UI_SCALE_FAC;
   tokens.radius *= scale;

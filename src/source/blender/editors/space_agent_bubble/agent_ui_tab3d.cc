@@ -16,6 +16,8 @@
  * behaviour, no hardcoded model slugs or param names.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -217,7 +219,7 @@ float dropdown_chip(const bContext *C,
   UNUSED_VARS(C, region);
   char label[64];
   BLI_strncpy(label, label_in[0] ? label_in : "—", sizeof(label));
-  pane_fit_text(label, 320.0f * u, PANE_FONT * u);
+  pane_fit_text(label, 320.0f * u, PANE_FONT * agent_ui_text_unit());
 
   const float w = pane_dropdown_chip_w(label, u);
   const rctf rect = {x, x + w, y_top - PANE_ROW_H * u, y_top};
@@ -226,7 +228,7 @@ float dropdown_chip(const bContext *C,
                          blender::wm::OpCallContext::InvokeDefault, label,
                          int(rect.xmin), int(rect.ymin), short(w),
                          short(PANE_ROW_H * u), tip);
-  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
+  ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u, agent_ui_text_unit());
   if (but) {
     PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_string_set(op_ptr, "data_path", data_path);
@@ -308,7 +310,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                int(field.xmin), int(field.ymin),
                                short(BLI_rctf_size_x(&field)), short(BLI_rctf_size_y(&field)),
                                &st.tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
-      ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
+      ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       if (input) {
         ui::button_placeholder_set(input, "Describe your scene here...");
         ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
@@ -347,7 +349,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
               int(rect.xmin), int(rect.ymin),
               short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
               "Pick an input image for 3D generation");
-    ui::mixar_style_button(upload, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+    ui::mixar_style_button(upload, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
      * selection while `use_selected_image` is on, otherwise its own upload. */
@@ -392,7 +394,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                              int(rect.xmin), int(rect.ymin),
                              short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
                              "Generate a 3D model with the selected mode and model");
-      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       if (but && !armed) { ui::button_flag_enable(but, ui::BUT_DISABLED); }
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);

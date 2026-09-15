@@ -23,6 +23,8 @@
  * same `wm.context_set_enum` the tab strip itself uses.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstring>
 
@@ -211,7 +213,7 @@ void agent_ui_generations_detail(const bContext *C,
     pane_label_centre(data.count > 0 ? "Select a generation" : "Nothing selected",
                       x0 + col_w * 0.5f,
                       (panel.ymin + panel.ymax) * 0.5f,
-                      GEN_META_FONT * u,
+                      GEN_META_FONT * agent_ui_text_unit(),
                       dim);
     return;
   }
@@ -221,11 +223,11 @@ void agent_ui_generations_detail(const bContext *C,
   {
     char title[96];
     BLI_strncpy(title, item.type_label[0] ? item.type_label : item.name, sizeof(title));
-    pane_fit_text(title, col_w, GEN_TITLE_FONT * u);
+    pane_fit_text(title, col_w, GEN_TITLE_FONT * agent_ui_text_unit());
     pane_label_left(title,
                     x0,
-                    GEN_YTOP(panel, GEN_TITLE_Y, u) - GEN_TITLE_FONT * u * 0.5f,
-                    GEN_TITLE_FONT * u,
+                    GEN_YTOP(panel, GEN_TITLE_Y, u) - GEN_TITLE_FONT * agent_ui_text_unit() * 0.5f,
+                    GEN_TITLE_FONT * agent_ui_text_unit(),
                     strong);
   }
 
@@ -234,7 +236,7 @@ void agent_ui_generations_detail(const bContext *C,
   const float action_ymin = panel.ymin + GEN_DETAIL_FOOT * u;
   const float action_ymax = action_ymin + GEN_ACTION_H * u;
 
-  const float desc_font = GEN_DESC_FONT * u;
+  const float desc_font = GEN_DESC_FONT * agent_ui_text_unit();
   char line_a[160];
   char line_b[160];
   wrap_two_lines(item.detail, col_w, desc_font, line_a, line_b);
@@ -270,7 +272,7 @@ void agent_ui_generations_detail(const bContext *C,
     const char *chips[3] = {nullptr, nullptr, nullptr};
     const int chip_count = build_meta(item, chips);
     float x = x0;
-    const float font = GEN_META_FONT * u;
+    const float font = GEN_META_FONT * agent_ui_text_unit();
     for (int i = 0; i < chip_count; i++) {
       char label[64];
       BLI_strncpy(label, chips[i], sizeof(label));
@@ -345,7 +347,7 @@ void agent_ui_generations_detail(const bContext *C,
     pane_label_centre(actions[i].label,
                       BLI_rctf_cent_x(&r),
                       BLI_rctf_cent_y(&r),
-                      GEN_ACTION_FONT * u,
+                      GEN_ACTION_FONT * agent_ui_text_unit(),
                       label_col);
 
     if (!enabled) {

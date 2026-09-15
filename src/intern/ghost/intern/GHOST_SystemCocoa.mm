@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "GHOST_MixarCocoaModifiers.hh"
+#include "GHOST_MixarReferenceDragCocoa.hh"
 #include "GHOST_SystemCocoa.hh"
 
 #import <QuartzCore/QuartzCore.h> /* CAMediaTimingFunction for the bubble animations. */
@@ -3177,7 +3178,19 @@ GHOST_TSuccess GHOST_SystemCocoa::handleDraggingEvent(GHOST_TEventType eventType
     return GHOST_kFailure;
   }
   switch (eventType) {
-    case GHOST_kEventDraggingEntered:
+    case GHOST_kEventDraggingEntered: {
+      GHOST_TStringArray *paths = mixar_drag_preview_paths();
+      window->clientToScreenIntern(mouseX, mouseY, mouseX, mouseY);
+      pushEvent(std::make_unique<GHOST_EventDragnDrop>(getMilliSeconds(),
+                                                       eventType,
+                                                       paths ? GHOST_kDragnDropTypeFilenames :
+                                                               draggedObjectType,
+                                                       window,
+                                                       mouseX,
+                                                       mouseY,
+                                                       paths));
+      break;
+    }
     case GHOST_kEventDraggingUpdated:
     case GHOST_kEventDraggingExited:
       window->clientToScreenIntern(mouseX, mouseY, mouseX, mouseY);

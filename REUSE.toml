@@ -148,3 +148,10 @@ path = "docs/development/evidence/floating-viewport-chrome/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# Native Zen UI validation reports.
+[[annotations]]
+path = "docs/development/evidence/zen-ui-fixes/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
