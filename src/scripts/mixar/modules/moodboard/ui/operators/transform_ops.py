@@ -352,17 +352,21 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
 
 class MIXIE_OT_moodboard_select_all(Operator):
-    """Select all moodboard images and text boxes"""
+    """Select all moodboard media, text boxes, groups, and graph nodes."""
 
     bl_idname = "mixie.moodboard_select_all"
     bl_label = "Select All"
-    bl_description = "Select all images and text boxes"
+    bl_description = "Select all images, text boxes, groups and graph nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         scene = context.scene
         count = 0
         for img in scene.mixie_moodboard_images:
+            # Node-owned previews are never directly selected — the owning
+            # action/asset card is the selection target (same as box select).
+            if getattr(img, "embedded_node_id", ""):
+                continue
             if not img.selected:
                 img.selected = True
                 count += 1
@@ -370,6 +374,20 @@ class MIXIE_OT_moodboard_select_all(Operator):
             if not tb.selected:
                 tb.selected = True
                 count += 1
+        for grp in scene.mixie_moodboard_groups:
+            if not grp.selected:
+                grp.selected = True
+                count += 1
+        for node in scene.mixie_moodboard_action_nodes:
+            if not node.selected:
+                node.selected = True
+                count += 1
+        for node in scene.mixie_moodboard_asset_nodes:
+            if not node.selected:
+                node.selected = True
+                count += 1
+        # Multi-select has no single active graph node (same as box select).
+        scene.mixie_moodboard_active_node_id = ""
         tag_mixie_redraw(context)
         self.report({'INFO'}, f"Selected {count} item(s)")
         return {'FINISHED'}

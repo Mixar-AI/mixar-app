@@ -179,7 +179,11 @@ def test_canvas_qa_targets_register_on_the_drawer_host():
 
 
 def test_drawer_slide_is_time_based_and_redraws_only_the_region():
-    """A per-tick fraction plus ED_area_tag_redraw is what made the slide hitch."""
+    """A per-tick fraction plus ED_area_tag_redraw is what made the slide hitch.
+
+    Overlay redraw of the WINDOW region is allowed so navigation gizmos can
+    slide with the board without rebuilding the 3D scene.
+    """
     geom = _read(DRAWER_GEOM)
     assert _define_float(geom, "VIEW3D_MOODBOARD_DRAWER_SLIDE_SECONDS") == 0.28
 
@@ -189,17 +193,30 @@ def test_drawer_slide_is_time_based_and_redraws_only_the_region():
     assert "slide_held" in core
     assert "TIMERNOTIFIER" in core
     assert "drawer_region_listener" in core
+    assert "ED_region_tag_redraw_editor_overlays" in core
 
     ops = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
     assert "0.22f" not in ops
-    assert "ED_area_tag_redraw" not in ops
+    # Full-area redraw hitches the slide; overlay-only WINDOW refresh is required
+    # so navigation gizmos can track the board.
+    assert "ED_area_tag_redraw(" not in ops
     assert "ED_area_tag_refresh" not in ops
     assert "ED_region_tag_redraw" in ops
+    assert "ED_region_tag_redraw_editor_overlays" in ops
     assert "view3d_moodboard_drawer_display_amount" in ops
     assert "view3d_moodboard_drawer_slide_begin" in ops
 
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
     assert "view3d_moodboard_drawer_display_amount" in draw
+
+
+def test_navigate_gizmos_slide_with_open_moodboard_drawer():
+    """Open drawer parks navigation left of the grip, like the N-panel clamp."""
+    source = _read(VIEW3D / "view3d_gizmo_navigate.cc")
+    assert "view3d_moodboard_drawer_display_amount" in source
+    assert "view3d_moodboard_drawer_grip_rect_for" in source
+    assert "grip.xmin - region->winrct.xmin" in source
+    assert "sidebar->winrct.xmin - region->winrct.xmin" in source
 
 
 def test_viewport_center_reads_the_open_drawer():
