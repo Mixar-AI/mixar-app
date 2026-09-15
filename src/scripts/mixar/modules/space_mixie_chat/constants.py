@@ -447,7 +447,7 @@ VOICE_TOAST_ID = "voice_input"
 # in the compressor, not by this.
 MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
-SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
+SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif'}
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 5
 

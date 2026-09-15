@@ -70,20 +70,14 @@ def load_media_file_to_board(scene, filepath, anchor=None):
     Returns:
         The newly created moodboard media item, or None on failure.
     """
-    images_before = set(bpy.data.images)
-    img = None
     try:
         img = bpy.data.images.load(filepath, check_existing=True)
-        if img.size[0] <= 0 or img.size[1] <= 0:
-            raise ValueError("Cannot decode media preview")
         img.colorspace_settings.name = 'sRGB'
         if img.source != 'MOVIE':
             img.pack()
-        elif img.frame_duration < 1:
-            raise ValueError("Movie contains no playable frames")
+        elif img.frame_duration < 1 or img.size[0] <= 0 or img.size[1] <= 0:
+            return None
     except Exception:
-        if img is not None and img not in images_before:
-            bpy.data.images.remove(img)
         return None
 
     item = scene.mixie_moodboard_images.add()

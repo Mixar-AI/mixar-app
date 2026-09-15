@@ -6006,7 +6006,14 @@ static bool zen_toolbar_tool(const Button *but)
   return but != nullptr && but_is_tool(but) && but->mixar_style.theme == MixarTheme::Zen;
 }
 
-/** One PILL pane: the toolbar trio, or the header's icon-only shading strip. */
+/**
+ * One PILL pane: the toolbar trio, the header's icon-only shading strip, or
+ * a standalone icon chip parked beside it (the Zen guides toggle). `Row` is
+ * an expanded RNA enum cell; `But` is an icon-only operator chip, which is
+ * the same material one cell wide. A labelled button is not a chip, so the
+ * empty `drawstr` and the explicit `alignnr` scope keep this to controls a
+ * Zen layout deliberately put in an aligned group of their own.
+ */
 static bool zen_glass_cell(const Button *but)
 {
   if (zen_toolbar_tool(but)) {
@@ -6018,7 +6025,8 @@ static bool zen_glass_cell(const Button *but)
   if (but->mixar_style.component != MixarComponent::None) {
     return false;
   }
-  return but->type == ButtonType::Row && but->icon != ICON_NONE && but->drawstr.empty();
+  return ELEM(but->type, ButtonType::Row, ButtonType::But) && but->icon != ICON_NONE &&
+         but->drawstr.empty();
 }
 
 /**
@@ -6031,7 +6039,11 @@ static bool zen_glass_cell(const Button *but)
  * Unselected shading icons desaturate like toolbar tools.
  *
  * The Zen header shading strip uses the same painter on a horizontal
- * `row(align=True)` of native RNA enum buttons.
+ * `row(align=True)` of native RNA enum buttons, and the guides chip beside
+ * it is the single-cell case: its own aligned row, so the union is its own
+ * rect and the pane is one round chip carrying the same wash, sheen and
+ * rim. Pressed and hover paint the shading strip's circular cell wash, so a
+ * depressed chip reads exactly like a selected shading icon.
  *
  * Native frost is a window effect the toolbar cannot request, so the bed
  * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost

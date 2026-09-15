@@ -155,24 +155,3 @@ path = "docs/development/evidence/zen-ui-fixes/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"
-
-# Task-card glass/progress reports and replay verdicts.
-[[annotations]]
-path = "docs/development/evidence/task-card-glass/**"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
-
-# Image/reference drop UX reports and replay verdicts.
-[[annotations]]
-path = "docs/development/evidence/reference-drop-ux/**"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
-
-# Moodboard attachment animation captures, samples and replay verdicts.
-[[annotations]]
-path = "docs/development/evidence/moodboard-attachment-flight/**"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-3.0-or-later"

@@ -71,13 +71,6 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
      * the layout pass wrote and the click handler hit-tests, so a metric
      * change moves the targets with the pixels. */
     push(card.rect, "agent_panel_card", card.expanded ? card.task : card.name, i);
-    /* Same pane bounds and sampled fraction the painter consumes. No second
-     * clock in introspection, so the value describes the last drawn frame. */
-    rcti progress_visible;
-    if (BLI_rcti_isect(&card.rect, &runtime->column_rect, &progress_visible)) {
-      push(progress_visible, "agent_panel_progress", card.task_id, i);
-      r_targets.back().value = std::to_string(card.progress);
-    }
     rcti cat_visible;
     if (BLI_rcti_isect(&card.cat_rect, &runtime->column_rect, &cat_visible)) {
       push(cat_visible, "agent_panel_cat", card.task_id, i);

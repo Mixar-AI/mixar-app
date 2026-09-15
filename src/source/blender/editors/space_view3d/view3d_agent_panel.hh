@@ -179,10 +179,6 @@ struct AgentPanelCard {
    * is when the client learned the agent started, and so what the user saw. */
   double seen_running_at = 0.0;
 
-  /** Simulated visual progress, never mirrored to RNA or reported as backend
-   * completion. Running approaches 90%; only Done reaches 100%. */
-  float progress = 0.0f;
-
   /** Per-task arrival and visual pose survive collection rebuilds and reorders. */
   double reveal_started_at = 0.0;
   ui::MixarMotionValue slide;

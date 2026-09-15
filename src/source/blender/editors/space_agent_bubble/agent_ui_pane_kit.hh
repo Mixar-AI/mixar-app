@@ -86,8 +86,9 @@ struct Block;
 #define PANE_GENERATE_W 114
 #define PANE_SETTINGS_W 150
 
-/* Generation-pane references: chip-height squares with a rounded backplate
- * and overflow count. Agent attachments use their dedicated right column. */
+/* Reference thumbnails in the bottom row. The Agent tab previews its pending
+ * attachments this way, so every pane that takes a reference does too — a
+ * chip-height square with a rounded backplate, then a dim "+N". */
 #define PANE_REF_THUMB_MAX 4
 #define PANE_REF_THUMB_GAP 6
 #define PANE_REF_THUMB_RADIUS 6
@@ -118,8 +119,6 @@ struct Block;
  * \{ */
 
 void pane_fill_round(const rctf *rect, float radius, const float col[4]);
-/** Neutral column separator shared by My Generations and chat references. */
-void pane_column_divider(float x, float y0, float y1, float u);
 float pane_text_width(const char *text, float size);
 void pane_label_left(const char *text, float x, float cy, float size, const float col[4]);
 void pane_label_centre(const char *text, float cx, float cy, float size, const float col[4]);

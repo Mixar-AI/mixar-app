@@ -123,7 +123,7 @@ def test_the_chip_sits_beside_the_zen_shading_strip_only():
         "def _patched_tool_header_draw", 1
     )[0]
     assert "from ...core import viewport_guides" in HEADER
-    assert 'cluster.operator(' in header
+    assert 'chip.operator(' in header
     assert '"mixar.zen_toggle_guides"' in header
     assert 'icon="GRID"' in header
     assert "depress=viewport_guides.guides_shown(view)" in header
@@ -132,9 +132,32 @@ def test_the_chip_sits_beside_the_zen_shading_strip_only():
     assert header.index("mixar.zen_toggle_guides") < header.index(
         'popover(panel="VIEW3D_PT_shading"'
     )
-    # Still outside the glass enum group, same cluster wiring as the popover.
+    # Outside the shading enum capsule — a toggle is not a shading mode — but
+    # inside a Zen surface with its own aligned row, which is what makes the
+    # shared glass painter give it the strip's material as one round chip.
     assert 'row.prop(shading, "type", text="", expand=True)' in header
     assert header.index('row.prop(shading, "type"') < header.index("mixar.zen_toggle_guides")
+    assert 'chip = cluster.mixar_surface(theme="ZEN").row(align=True)' in header
+    assert header.index("chip = cluster.mixar_surface") < header.index("chip.operator(")
+
+
+def test_the_glass_painter_accepts_a_standalone_icon_chip():
+    # The chip is ButtonType::But, not an expanded enum cell: without this
+    # the Zen painter skips it and the native Exec widget draws a square
+    # themed box beside the strip's glass.
+    widgets = (
+        ROOT / "src/source/blender/editors/interface/interface_widgets.cc"
+    ).read_text(encoding="utf-8")
+    # Split on the definition, not the forward declaration above it.
+    cell = widgets.split("static bool zen_glass_cell(const Button *but)\n{", 1)[1].split(
+        "\n}\n", 1
+    )[0]
+    assert "ELEM(but->type, ButtonType::Row, ButtonType::But)" in cell
+    # Still narrow: Zen theme, no Mixar component, icon-only, aligned group.
+    assert "but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0" in cell
+    assert "but->mixar_style.component != MixarComponent::None" in cell
+    assert "but->icon != ICON_NONE" in cell
+    assert "but->drawstr.empty()" in cell
 
 
 def test_guide_flag_list_covers_floor_axes_ortho_and_relationship():

@@ -148,7 +148,7 @@ def _compute_selection_signature(scene) -> tuple:
 # ----------------------------------------------------------------- #
 # Reconciliation (single-pass, atomic-ish)
 # ----------------------------------------------------------------- #
-def _reconcile_attachments(scene, target_names: Iterable[str], *, animate=False) -> None:
+def _reconcile_attachments(scene, target_names: Iterable[str]) -> None:
     """Make the moodboard-origin attachments in ``pending_attachments``
     exactly equal to ``target_names``, subject to the per-message
     attachment cap. Single pass so a mid-iteration RNA failure can't
@@ -204,7 +204,7 @@ def _reconcile_attachments(scene, target_names: Iterable[str], *, animate=False)
         else:
             to_remove.append(i)
 
-    for name in sorted(target_set):
+    for name in target_set:
         if name in keeps:
             continue
         # De-dupe against any pre-existing attachment showing this
@@ -223,7 +223,11 @@ def _reconcile_attachments(scene, target_names: Iterable[str], *, animate=False)
     for i in sorted(to_remove, reverse=True):
         attachments.remove(i)
 
-    # Stable order also gives group attachments a predictable animation stagger.
+    # Cap adds so total pending_attachments never exceeds the per-
+    # message limit. The order in to_add is whatever set() iteration
+    # gives us (insertion order in CPython 3.7+); selected names came
+    # from a sorted list so this is deterministic enough that users
+    # won't see attachments jump around.
     remaining_slots = MAX_ATTACHMENTS_PER_MESSAGE - len(attachments)
     if remaining_slots > 0:
         for name in to_add[:remaining_slots]:
@@ -232,9 +236,6 @@ def _reconcile_attachments(scene, target_names: Iterable[str], *, animate=False)
             att.image_source = 'BLEND_DATA'
             att.display_name = name
             att.is_moodboard = True
-        if animate and to_add:
-            from .attachment_motion import animate_attachments
-            animate_attachments(scene, to_add[:remaining_slots])
 
     # Tag chat + bubble areas for a repaint. No forced bubble resize
     # — earlier we tried a rising-edge force_attachment_height to
@@ -301,10 +302,8 @@ def _poll_tick():
         if _last_signatures.get(key) == signature:
             return _POLL_INTERVAL_S
 
-        previous = _last_signatures.get(key)
         _last_signatures[key] = signature
-        _reconcile_attachments(scene, signature[1],
-                               animate=previous is not None and previous[1] != signature[1])
+        _reconcile_attachments(scene, signature[1])
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)
 

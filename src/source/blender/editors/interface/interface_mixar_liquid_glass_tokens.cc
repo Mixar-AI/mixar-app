@@ -106,14 +106,15 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_period*/ 7.0f,
         /* fallback_alpha */ 0.94f,
     },
-    /* MIXAR_GLASS_PANEL — translucent charcoal with a lit neutral rim.
-     * Working cards add their progress light inside this same material. */
+    /* MIXAR_GLASS_PANEL — the Parallel Agents card. Near-black, barely lifted
+     * at the top, and a neutral glass rim. Status no longer lives in the
+     * border, so running and resting cards share this material. */
     {
-        /* tint_top      */ {0.055f, 0.055f, 0.060f, 0.38f},
-        /* tint_bottom   */ {0.043f, 0.043f, 0.047f, 0.56f},
+        /* tint_top      */ {0.055f, 0.055f, 0.060f, 0.66f},
+        /* tint_bottom   */ {0.043f, 0.043f, 0.047f, 0.78f},
         /* glaze         */ {0.071f, 0.071f, 0.071f, 0.18f},
-        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.10f},
-        /* rim           */ {1.000f, 1.000f, 1.000f, 0.24f},
+        /* sheen         */ {1.000f, 1.000f, 1.000f, 0.06f},
+        /* rim           */ {1.000f, 1.000f, 1.000f, 0.18f},
         /* refract       */ {1.000f, 1.000f, 1.000f, 0.09f},
         /* shadow        */ {0.000f, 0.000f, 0.000f, 0.30f},
         /* radius        */ 10.0f,
@@ -124,7 +125,7 @@ const MixarGlassTokens g_glass_tokens[] = {
         /* specular_width*/ 22.0f,
         /* specular_alpha*/ 0.06f,
         /* specular_period*/ 8.0f,
-        /* fallback_alpha */ 0.46f,
+        /* fallback_alpha */ 0.82f,
     },
     /* MIXAR_GLASS_ISLAND — same dark glass as CARD; this row is the window
      * backdrop when a surface paints the island's own chrome, not the card. */

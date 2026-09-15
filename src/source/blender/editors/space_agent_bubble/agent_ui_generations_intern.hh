@@ -142,6 +142,7 @@ class AssetRepresentation;
 #define GEN_COL_PILL_ON PANE_COL_CHIP                        /* #313131 */
 #define GEN_COL_PILL_OFF {0.192f, 0.192f, 0.192f, 0.36f}     /* #313131 @0.36 */
 #define GEN_COL_CHIP_OFF {0.129f, 0.129f, 0.129f, 1.0f}      /* Recessed chip. */
+#define GEN_COL_DIVIDER {0.169f, 0.169f, 0.169f, 1.0f}       /* #2B2B2B hairline. */
 #define GEN_COL_TILE {0.129f, 0.129f, 0.129f, 1.0f}          /* Empty tile plate. */
 #define GEN_COL_META {0.333f, 0.333f, 0.333f, 0.28f}         /* #555555 @0.28 */
 #define GEN_COL_SECONDARY {0.596f, 0.596f, 0.596f, 1.0f}     /* #989898 */

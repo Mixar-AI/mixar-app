@@ -62,13 +62,6 @@ void pane_fill_round(const rctf *rect, const float radius, const float col[4])
   ui::mixar_fill_round(*rect, radius, col);
 }
 
-void pane_column_divider(float x, float y0, float y1, float u)
-{
-  const float col[4] = {0.169f, 0.169f, 0.169f, 1.0f}; /* #2B2B2B. */
-  const rctf rect{x, x + std::max(1.0f, u), y0, y1};
-  pane_fill_round(&rect, 0, col);
-}
-
 float pane_text_width(const char *text, const float size)
 {
   return ui::mixar_text_width(text, size);
@@ -197,9 +190,7 @@ rctf pane_generate_rect(const rctf &box, const float u)
   const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
-  const float width = std::max(PANE_GENERATE_W * u,
-                               pane_action_chip_w("Generate", false, u) + 2.0f);
-  rect.xmin = rect.xmax - width;
+  rect.xmin = rect.xmax - PANE_GENERATE_W * u;
   rect.ymin = layout.action_bottom;
   rect.ymax = layout.action_top;
   return rect;

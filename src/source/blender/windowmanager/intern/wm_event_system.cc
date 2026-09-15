@@ -7065,7 +7065,7 @@ bool WM_window_modal_keymap_status_draw(bContext *C, wmWindow *win, ui::Layout &
  * \{ */
 
 void Mixar_qa_simulate_file_drop(
-    bContext *C, wmWindow *win, const int x, const int y, const Span<const char *> paths)
+    bContext *C, wmWindow *win, const int x, const int y, const char *filepath)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
 
@@ -7084,7 +7084,8 @@ void Mixar_qa_simulate_file_drop(
 
   WM_event_add(win, &event);
 
-  wmDragPath *path_data = WM_drag_create_path_data(paths);
+  const char *paths[1] = {filepath};
+  wmDragPath *path_data = WM_drag_create_path_data(blender::Span<const char *>(paths, 1));
   WM_event_start_drag(C, ICON_NONE, WM_DRAG_PATH, path_data, WM_DRAG_NOP);
 
   event.type = EVT_DROP;

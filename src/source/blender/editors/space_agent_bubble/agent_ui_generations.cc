@@ -61,7 +61,13 @@ namespace {
 
 void hairline(const float x, const float y0, const float y1, const float u)
 {
-  pane_column_divider(x, y0, y1, u);
+  const float col[4] = GEN_COL_DIVIDER;
+  rctf r;
+  r.xmin = x;
+  r.xmax = x + std::max(1.0f, u);
+  r.ymin = y0;
+  r.ymax = y1;
+  pane_fill_round(&r, 0.0f, col);
 }
 
 /** \} */

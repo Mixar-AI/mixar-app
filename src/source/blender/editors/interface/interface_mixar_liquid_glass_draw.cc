@@ -46,11 +46,9 @@ gpu::Shader *glass_shader_get(const bool backdrop)
   info.fragment_out(0, Type::float4_t, "fragColor");
   info.push_constant(Type::float4x4_t, "ModelViewProjectionMatrix");
   info.push_constant(Type::bool_t, "srgbTarget");
-  for (const char *name :
-       {"pane", "metrics", "tintTop", "tintBottom", "sheen", "rim", "progressLight"}) {
+  for (const char *name : {"pane", "metrics", "tintTop", "tintBottom", "sheen", "rim"}) {
     info.push_constant(Type::float4_t, name);
   }
-  info.push_constant(Type::float_t, "progress");
   if (backdrop) {
     info.define("GLASS_BACKDROP");
     info.sampler(0, ImageType::Float2D, "image");
@@ -119,9 +117,6 @@ void mixar_glass_draw(const rcti &rect,
     immUniform4fv("tintBottom", bottom);
     immUniform4fv("sheen", t.sheen);
     immUniform4fv("rim", t.rim);
-    immUniform4fv("progressLight", style.progress_tint);
-    immUniform1f("progress", std::isfinite(style.progress) ?
-                                std::clamp(style.progress, 0.0f, 1.0f) : 0.0f);
     if (backdrop.valid()) {
       immUniform4f("sourceRect", float(backdrop.rect.xmin), float(backdrop.rect.ymin),
                    float(backdrop.rect.xmax), float(backdrop.rect.ymax));

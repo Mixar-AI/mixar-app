@@ -15,10 +15,6 @@ set(INC_SYS
 )
 
 set(SRC
-  mixie_attachment_flight.cc
-  mixie_attachment_geometry.cc
-  mixie_attachment_geometry.hh
-  mixie_attachment_motion.hh
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
   mixie_draw_moodboard_annotations.cc

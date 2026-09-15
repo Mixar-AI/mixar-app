@@ -142,12 +142,9 @@ def test_send_click_commits_the_composer_and_keeps_the_press():
 def test_agent_action_reads_send_not_generate():
     assert 'label_centre(state->status_busy ? "Stop" : "Send"' in CONTROLS_PAINT_CC
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
-    assert "agent_bubble_send_button" in tools
-    references = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_bubble_references.cc").read_text()
-    assert '"mixie_chat.send_message"' in references
-    send = _function_body(references, "void agent_bubble_send_button(")
-    assert '"Stop the running turn" : "Send"' in send
-    assert '"Generate"' not in send
+    assert '"mixie_chat.send_message"' in tools
+    assert '"Stop the running turn" : "Send"' in tools
+    assert '"Generate"' not in tools[tools.index("btn_generate") :]
 
 
 def test_the_qa_probe_only_replaces_the_transport_boundary():

@@ -117,14 +117,19 @@ def _patched_header_draw(self, context):
     # one glass pane without replacing RNA selection, tooltips or dispatch.
     # The popover stays outside the aligned group. Zen also parks a guides
     # chip beside that strip (same cluster wiring as the popover) so floor
-    # grid + relationship lines flip as one view-state toggle.
+    # grid + relationship lines flip as one view-state toggle. That chip is
+    # a Zen surface with its own aligned row: one cell, so the shared glass
+    # painter gives it a round chip of the strip's material, and `depress`
+    # paints the same circular selected wash a chosen shading icon gets.
+    # A toggle is not a shading mode, so it stays out of the enum capsule.
     cluster = layout.row(align=False)
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
     row.prop(shading, "type", text="", expand=True)
     if _is_basic_workspace(context):
         cluster.separator(factor=0.4)
-        cluster.operator(
+        chip = cluster.mixar_surface(theme="ZEN").row(align=True)
+        chip.operator(
             "mixar.zen_toggle_guides",
             text="",
             icon="GRID",

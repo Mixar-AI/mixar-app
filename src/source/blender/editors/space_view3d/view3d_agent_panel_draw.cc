@@ -128,9 +128,7 @@ void draw_elided(const int font_id,
 void glass_pane(const rctf *rect,
                 const ui::eMixarGlassRole role,
                 const float radius,
-                const float alpha,
-                const float progress = 0.0f,
-                const bool completed = false)
+                const float alpha)
 {
   rcti pane;
   BLI_rcti_rctf_copy(&pane, rect);
@@ -138,11 +136,6 @@ void glass_pane(const rctf *rect,
   style.role = role;
   style.radius = radius;
   style.alpha = alpha;
-  style.progress = progress;
-  style.progress_tint[0] = 0.015f;
-  style.progress_tint[1] = 0.74f;
-  style.progress_tint[2] = 0.19f;
-  style.progress_tint[3] = completed ? 0.16f : 0.42f;
   ui::mixar_glass_draw(pane, style);
 }
 
@@ -153,13 +146,10 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   const rctf rect = to_rctf(card.rect);
   const float radius = AGENT_PANEL_CARD_RADIUS * scale;
 
-  /* The progress light shares the glass mask, under its sheen, rim and text. */
-  glass_pane(&rect,
-             ui::MIXAR_GLASS_PANEL,
-             radius,
-             alpha,
-             card.progress,
-             card.status == AgentCardStatus::Done);
+  /* The pane is the shared glass material. PANEL owns the near-black bed and
+   * a neutral rim; running/pending status lives on the cat and the outcome
+   * glyph, not on a second coloured stroke. */
+  glass_pane(&rect, ui::MIXAR_GLASS_PANEL, radius, alpha);
 
   /* The same silhouette as the island, with per-task identity and phase. */
   const rctf cat = to_rctf(card.cat_rect);
@@ -167,7 +157,7 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   agent_ui_draw_cat(cat, cat_time, running, card.cat_ordinal, alpha);
   const float avatar_cy = BLI_rctf_cent_y(&cat);
 
-  /* Keep the single readable task line above the progress light. */
+  /* Name, then the elapsed clock right after it in muted type. */
   const int font_id = BLF_default();
   BLF_size(font_id, 12.0f * scale);
   const float line_h = BLF_height_max(font_id);

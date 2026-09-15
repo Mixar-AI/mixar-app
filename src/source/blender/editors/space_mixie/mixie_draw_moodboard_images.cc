@@ -40,8 +40,12 @@ struct CachedImageTex {
 static std::unordered_map<Image *, CachedImageTex> s_srgb_tex_cache;
 static uint64_t s_cache_frame = 0;
 
-/* Shared with the attachment ribbon; raw sRGB bytes preserve the board's colors. */
-blender::gpu::Texture *mixie_moodboard_srgb_texture(Image *image, ImageUser *image_user)
+/**
+ * Return (or create) a cached UNORM GPU texture for \a image.
+ * The texture stores the raw byte pixels without any color-space conversion
+ * so that GPU_SHADER_3D_IMAGE displays the original sRGB values.
+ */
+static blender::gpu::Texture *get_cached_srgb_texture(Image *image, ImageUser *image_user)
 {
   auto it = s_srgb_tex_cache.find(image);
   const int requested_frame = image_user ? image_user->framenr : 0;
@@ -115,7 +119,10 @@ void mixie_moodboard_free_texture_cache()
 /** \name GPU Texture Drawing Helper
  * \{ */
 
-/* Draw the shared texture as an image quad. */
+/**
+ * Draw a GPU texture as a quad at the given position and size.
+ * Helper function to avoid code duplication between cached and fallback paths.
+ */
 static void draw_gpu_texture_quad(blender::gpu::Texture *tex,
                                   float pos_x,
                                   float pos_y,
@@ -159,7 +166,7 @@ void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds)
     movie_user.framenr = moodboard_video_playback_frame(image, &is_playing);
     image_user = &movie_user;
   }
-  blender::gpu::Texture *texture = mixie_moodboard_srgb_texture(image, image_user);
+  blender::gpu::Texture *texture = get_cached_srgb_texture(image, image_user);
   if (!texture) return;
   const float source_w = float(GPU_texture_width(texture)), source_h = float(GPU_texture_height(texture));
   const float scale_x = BLI_rctf_size_x(&bounds) / std::max(source_w, 1.0f);
@@ -318,7 +325,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
 
         blender::gpu::Texture *gpu_tex = nullptr;
         if (is_srgb_image || image->source == IMA_SRC_MOVIE) {
-          gpu_tex = mixie_moodboard_srgb_texture(image, image_user);
+          gpu_tex = get_cached_srgb_texture(image, image_user);
         }
         else {
           gpu_tex = BKE_image_get_gpu_texture(image, image_user);

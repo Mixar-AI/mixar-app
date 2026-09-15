@@ -10,7 +10,6 @@
 
 #include "mixie_moodboard_ops_common.hh"
 #include "BLI_math_vector_types.hh"
-#include "RNA_prototypes.hh"
 
 namespace blender::ed::mixie {
 
@@ -74,18 +73,8 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
 
   std::vector<Image *> media_to_process;
 
-  RNA_BEGIN (op->ptr, file, "files") {
-    char *path = RNA_string_get_alloc(&file, "name", nullptr, 0, nullptr);
-    if (Image *image = moodboard_media_load(bmain, path, op->reports)) {
-      media_to_process.push_back(image);
-    }
-    MEM_delete_void(static_cast<void *>(path));
-  }
-  RNA_END;
-
-  /* Keep the legacy scripted payload; native drags use lossless file lists. */
-  if (RNA_collection_length(op->ptr, "files") == 0 &&
-      RNA_struct_property_is_set(op->ptr, "multi_filepaths")) {
+  /* Check for multi-file drop first */
+  if (RNA_struct_property_is_set(op->ptr, "multi_filepaths")) {
     char *multi_paths_cstr = RNA_string_get_alloc(op->ptr, "multi_filepaths", nullptr, 0, nullptr);
     if (multi_paths_cstr) {
       std::string multi_paths(multi_paths_cstr);
@@ -150,7 +139,6 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
 
   int added_count = 0;
   float offset_step = 30.0f; // Offset for stacked images
-  float next_top = pos_y;
   rctf added_bounds;
   BLI_rctf_init_minmax(&added_bounds);
 
@@ -179,27 +167,25 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
       PointerRNA image_ptr = RNA_id_pointer_create(&image->id);
       RNA_property_pointer_set(&item_ptr, image_prop, image_ptr, nullptr);
 
+      // Apply offset for multiple images
+      float current_x = pos_x + (i * offset_step);
+      float current_y = pos_y - (i * offset_step);
       int width, height;
       BKE_image_get_size(image, nullptr, &width, &height);
-      /* Batch thumbnails fit one common longest-edge size. A portrait must
-       * not dominate the entire framed batch or cover the following image. */
-      const float display_scale = media_to_process.size() > 1 && height > width && width > 0 ?
-                                      float(width) / float(height) : 1.0f;
-      const float display_width = MOODBOARD_IMAGE_BASE_SIZE * display_scale;
+      const float display_width = MOODBOARD_IMAGE_BASE_SIZE;
       const float display_height = width > 0 ? display_width * float(height) / float(width) :
                                               display_width;
-      const float current_x = center_on_drop ? pos_x - display_width * 0.5f : pos_x;
-      const float current_y = added_count == 0 ?
-                                  (center_on_drop ? pos_y - display_height * 0.5f : pos_y) :
-                                  next_top - display_height;
-      next_top = current_y - offset_step;
+      if (center_on_drop) {
+        current_x = pos_x - display_width * 0.5f;
+        current_y = pos_y - display_height * 0.5f - i * (display_height + offset_step);
+      }
       BLI_rctf_do_minmax_v(&added_bounds, float2(current_x, current_y));
       BLI_rctf_do_minmax_v(
           &added_bounds, float2(current_x + display_width, current_y + display_height));
 
       RNA_property_float_set(&item_ptr, pos_x_prop, current_x);
       RNA_property_float_set(&item_ptr, pos_y_prop, current_y);
-      RNA_property_float_set(&item_ptr, scale_prop, display_scale);
+      RNA_property_float_set(&item_ptr, scale_prop, 1.0f);
 
       /* Set z-order to be on top */
       int image_count_val = RNA_property_collection_length(&scene_ptr, prop);
@@ -245,13 +231,17 @@ static wmOperatorStatus moodboard_drop_image_exec(bContext *C, wmOperator *op)
     if (added_count == 1) {
        BKE_reportf(op->reports,
                 RPT_INFO,
-                "Added '%s' to moodboard",
-                media_to_process[0]->id.name + 2);
+                "Added '%s' to moodboard at (%.1f, %.1f)",
+                media_to_process[0]->id.name + 2,
+                pos_x,
+                pos_y);
     } else {
        BKE_reportf(op->reports,
                 RPT_INFO,
-                "Added %d references to moodboard",
-                added_count);
+                "Added %d media items to moodboard starting at (%.1f, %.1f)",
+                added_count,
+                pos_x,
+                pos_y);
     }
   }
 
@@ -296,14 +286,13 @@ void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot)
       ot->srna, "filepath", nullptr, FILE_MAX, "File Path", "Path to image or video file");
   RNA_def_string(ot->srna, "image_name", nullptr, MAX_ID_NAME - 2, "Image Name", "Name of existing image datablock");
   RNA_def_string(ot->srna, "multi_filepaths", nullptr, 0, "Multi File Paths", "Pipe-separated list of file paths for multi-file drops");
-  RNA_def_collection_runtime(ot->srna, "files", RNA_OperatorFileListElement, "Files", "Dropped paths");
   RNA_def_float(ot->srna, "position_x", 0.0f, -FLT_MAX, FLT_MAX, "Position X", "X position on the moodboard canvas", -10000.0f, 10000.0f);
   RNA_def_float(ot->srna, "position_y", 0.0f, -FLT_MAX, FLT_MAX, "Position Y", "Y position on the moodboard canvas", -10000.0f, 10000.0f);
   RNA_def_boolean(ot->srna, "from_drop", false, "From Drop", "Whether this was invoked from a drag-drop operation");
   RNA_def_boolean(ot->srna, "center_on_drop", false, "Center", "Center viewport references in the drawer");
   /* Drop payloads are one-shot; REGISTER's last-used values must not leak a
    * previous filepath into a later Image-ID drop or scripted import. */
-  for (const char *name : {"filepath", "files", "image_name", "multi_filepaths", "position_x",
+  for (const char *name : {"filepath", "image_name", "multi_filepaths", "position_x",
                            "position_y", "from_drop", "center_on_drop"})
   {
     RNA_def_property_flag(RNA_struct_type_find_property(ot->srna, name), PROP_SKIP_SAVE);

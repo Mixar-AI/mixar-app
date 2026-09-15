@@ -2,25 +2,14 @@
  * SPDX-License-Identifier: GPL-2.0-or-later */
 #pragma once
 
-#include "DNA_userdef_types.h"
 #include "UI_interface.hh"
-#include "UI_interface_c.hh"
-#include "UI_mixar_text.hh"
 
 namespace blender {
-/** Same pixel size as ordinary Blender widget text, without an island ratio. */
-inline float agent_ui_body_font_size()
-{
-  const uiStyle *style = ui::style_get();
-  const float points = style ? style->widget.points : UI_DEFAULT_TEXT_POINTS;
-  return points * UI_SCALE_FAC;
-}
-
-/** Keep typography fixed across window resizes, following Blender's font
- * preference, interface scale and display DPI instead of responsive geometry.
+/** Preserve the 616-point default's typography at every window size. Unlike
+ * layout scale, this only follows the user's interface scale and display DPI.
  * Measurement, fitting and painting must all receive the same text unit. */
 inline float agent_ui_text_unit()
 {
-  return agent_ui_body_font_size() / ui::mixar_text_role_size(ui::MixarTextRole::Body);
+  return (616.0f / 1310.0f) * UI_SCALE_FAC;
 }
 }  // namespace blender
