@@ -97,6 +97,8 @@ def _is_path_safe(filepath: str) -> tuple[bool, str]:
     # Allow temp directories (on macOS /var/folders resolves to /private/var/folders)
     import tempfile
     allowed_roots = [os.path.realpath(tempfile.gettempdir())]
+    if os.name == 'posix':
+        allowed_roots.append(os.path.realpath('/tmp'))
     try:
         import bpy
         if bpy.app.tempdir:
@@ -236,8 +238,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
     if not is_safe:
         return False, error
 
-    if not os.path.exists(filepath):
-        return False, "File does not exist"
+    if not os.path.isfile(filepath):
+        return False, "File does not exist or is not a regular file"
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
@@ -245,7 +247,10 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
         return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 
     # Check file size
-    file_size = os.path.getsize(filepath)
+    try:
+        file_size = os.path.getsize(filepath)
+    except OSError:
+        return False, "File is no longer accessible"
     if file_size > MAX_IMAGE_SIZE_BYTES:
         size_mb = file_size / (1024 * 1024)
         max_mb = MAX_IMAGE_SIZE_BYTES / (1024 * 1024)
@@ -261,7 +266,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
                         f"Image dimensions too large: {width}x{height} "
                         f"(max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION})"
                     )
-        except (OSError, IOError) as e:
+                img.verify()
+        except (OSError, ValueError, SyntaxError, PILImage.DecompressionBombError) as e:
             return False, f"Could not read image: {e}"
 
     return True, ""

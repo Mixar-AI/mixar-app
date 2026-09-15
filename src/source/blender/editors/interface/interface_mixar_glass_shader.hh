@@ -62,6 +62,26 @@ void main()
 
   material = over(mix(tintBottom, tintTop, y), material);
 
+  /* A soft pool of light, clipped by the pane itself. Feather the advancing
+   * edge instead of drawing a second rectangular bar over the glass. */
+  if (progress > 0.0 && progressLight.a > 0.0) {
+    float edge = pane.x + size.x * progress;
+    float feather = max(size.y * 0.28, 1.0);
+    float filled = 1.0 - smoothstep(edge - feather, edge + feather, localPos.x);
+    float front = 1.0 - smoothstep(0.0, feather, abs(localPos.x - edge));
+    float bodyLight = 0.32 + 0.68 * sin(y * 3.14159265);
+    float along = clamp((localPos.x - pane.x) / max(edge - pane.x, 1.0), 0.0, 1.0);
+    float startFade = smoothstep(0.0, 0.06, progress);
+    float endFade = 1.0 - smoothstep(0.94, 1.0, progress);
+    filled = mix(filled, 1.0, 1.0 - endFade);
+    float pool = mix(0.40 + 0.60 * along, 1.0, 1.0 - endFade);
+    float light = (filled * pool + front * 0.55 * endFade) * bodyLight * startFade;
+    material = over(vec4(progressLight.rgb, progressLight.a * light), material);
+    material = over(vec4(mix(progressLight.rgb, vec3(0.72, 1.0, 0.82), 0.5),
+                         progressLight.a * front * bodyLight * endFade * startFade * 0.16),
+                    material);
+  }
+
   /* Fade the top light inside the SAME silhouette as the body. Drawing a
    * short rounded rectangle with the capsule's full radius leaks at its ends. */
   float topDistance = pane.w - localPos.y;

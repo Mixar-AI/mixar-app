@@ -24,6 +24,7 @@
 
 #include "view3d_agent_panel.hh"
 #include <algorithm>
+#include <cmath>
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -107,6 +108,9 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
   if (generation != runtime->generation) {
     runtime->cat_identities.clear();
     previous_cards.clear();
+    seen_running.clear();
+    seen_exit.clear();
+    expanded.clear();
   }
 
   int arrivals = 0;
@@ -156,6 +160,13 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
       card.reveal_started_at = previous->reveal_started_at;
       card.slide = previous->slide;
       card.row = previous->row;
+      /* A retry is a fresh activity clock, even if the task ID is reused. */
+      if (card.status == AgentCardStatus::Running &&
+          (previous->status != AgentCardStatus::Running ||
+           previous->started_at != card.started_at))
+      {
+        card.seen_running_at = now;
+      }
     }
     else {
       /* Late arrivals animate individually; offscreen tasks never extend the visible stagger. */
@@ -163,6 +174,15 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
                                          AGENT_PANEL_STAGGER_SECONDS;
       card.slide.settle(1.0f);
       card.row.settle(float(runtime->cards.size()));
+    }
+
+    if (card.status == AgentCardStatus::Running) {
+      const double elapsed = std::max(0.0, now - card.seen_running_at);
+      const double pace = 22.0 + double(card.cat_ordinal % 6) * 4.0;
+      card.progress = float(0.08 + 0.82 * (1.0 - std::exp(-elapsed / pace)));
+    }
+    else if (card.status == AgentCardStatus::Done) {
+      card.progress = 1.0f;
     }
 
     runtime->cards.append(card);
