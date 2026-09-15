@@ -177,7 +177,7 @@ void draw_grip(const float x_right, const float y_centre)
   BLF_disable(font, BLF_ROTATION);
 }
 
-/** Host the Python add-media / add-text row on the open drawer.
+/** Host the Python add-media / add-text tools on the open drawer.
  *
  * The Mixie T-panel builds those controls in
  * `moodboard_toolbar.draw_moodboard_add_tools`; this path draws the same
@@ -199,11 +199,9 @@ void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
   if (available <= 0) {
     return;
   }
-  /* Center a bounded toolbar. It must not grow into a pair of full-width
-   * buttons when the user pulls the board wider, or scale with canvas zoom. */
-  const bool compact = view3d_moodboard_drawer_width(CTX_wm_manager(C)) < 240.0f;
-  const int width = std::min(available, int(std::round((compact ? 88.0f : 200.0f) * scale)));
-  const int x = panel_xmin + (region->winx - panel_xmin - width) / 2;
+  /* Keep the icon tools on the left edge at every drawer width and zoom. */
+  const int width = std::min(available, int(std::round(32.0f * scale)));
+  const int x = panel_xmin + pad;
   const int y = region->winy - pad;
 
   ui::Block *block = ui::block_begin(

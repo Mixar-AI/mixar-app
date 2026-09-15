@@ -35,7 +35,7 @@ def snap(qa, name, annotated=False):
     return qa.cmd('snap', **args)
 
 
-def toolbar(qa, compact=False):
+def toolbar(qa):
     controls = [qa.find(**query)['widgets'] for query in (MEDIA, TEXT)]
     assert all(len(w) == 1 for w in controls), controls
     media, text = (w[0] for w in controls)
@@ -46,11 +46,35 @@ def toolbar(qa, compact=False):
         assert w['block'] == 'moodboard_drawer_add_tools', w
         assert panel[0] < x0 < x1 < panel[2], (w, panel)
         assert panel[1] < y0 < y1 < panel[3], (w, panel)
-    assert media['rect'][1::2] == text['rect'][1::2], controls
-    assert media['rect'][2] < text['rect'][0], controls
-    assert abs(media['rect'][0] + text['rect'][2] - panel[0] - panel[2]) <= 4
-    assert [media['text'], text['text']] == (['', ''] if compact else ['Add Media', 'Text'])
+    assert media['rect'][::2] == text['rect'][::2], controls
+    assert text['rect'][3] < media['rect'][1], controls
+    scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
+    assert abs(media['rect'][0] - panel[0] - 12 * scale) <= 2, controls
+    assert [media['text'], text['text']] == ['', ''], controls
+    assert media['tip'].startswith('Open an image or video'), media
+    assert 'Add a text box' in text['tip'], text
     return controls
+
+
+def hover(qa, query, name):
+    qa.eval(f'''
+def show_tooltip():
+    widget=drv.find_one(**{query!r})
+    panel=drv.find_one(surface='moodboard_drawer_panel')
+    px,py=drv.pick_click_point(panel)
+    drv.move_to(widget['_win'], px, py)
+    yield .2
+    x,y=drv.pick_click_point(widget)
+    # Exiting the prior button disables tooltips for its whole UI block.
+    # A second motion inside the target re-arms the native tooltip timer.
+    drv.move_to(widget['_win'], x - 4, y)
+    yield .1
+    drv.move_to(widget['_win'], x, y)
+    yield 1.5
+    return True
+result=show_tooltip()
+''')
+    return qa.cmd('snap', path=str(OUT / f'{name}.png'), area='VIEW_3D')
 
 
 def menu(qa):
@@ -112,10 +136,12 @@ def run(qa):
         toggle(qa, 1)
     qa.wait('bpy.context.window_manager.mixar_moodboard_drawer_amount > .998', timeout=4)
     original = geometry(qa)
-    qa.step('labeled_toolbar', toolbar, qa)
+    qa.step('left_icon_toolbar', toolbar, qa)
     qa.step('empty_default', snap, qa, '01-empty')
+    qa.step('media_hover_tooltip', hover, qa, MEDIA, '09-media-tooltip')
+    qa.step('text_hover_tooltip', hover, qa, TEXT, '10-text-tooltip')
     qa.step('minimum_width_drag', resize, qa, 125)
-    qa.step('minimum_width_toolbar', toolbar, qa, True)
+    qa.step('minimum_width_toolbar', toolbar, qa)
     qa.step('empty_minimum_width', snap, qa, '08-minimum-empty')
     resize(qa, 340)
     qa.step('media_menu', menu, qa)
@@ -142,7 +168,7 @@ def run(qa):
     old_scale = qa.eval('result=bpy.context.preferences.view.ui_scale')
     try:
         qa.step('narrow_drag', resize, qa, 170)
-        qa.step('compact_toolbar', toolbar, qa, True)
+        qa.step('compact_toolbar', toolbar, qa)
         qa.step('compact_menu', menu, qa)
         qa.press('ESC')
         qa.step('compact_text_cancel', text_placement, qa, True)
