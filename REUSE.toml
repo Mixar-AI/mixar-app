@@ -155,3 +155,10 @@ path = "docs/development/evidence/zen-ui-fixes/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# Task-card glass/progress screenshots and replay verdicts.
+[[annotations]]
+path = "docs/development/evidence/task-card-glass/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
