@@ -63,7 +63,7 @@ const AgentIcon g_tab_icons[AGENT_TAB_COUNT] = {
     AGENT_ICON_MESH,
     AGENT_ICON_MEDIA,
     AGENT_ICON_SPLAT,
-    AGENT_ICON_THUMB,
+    AGENT_ICON_COUNT,
     AGENT_ICON_COUNT,
 };
 
