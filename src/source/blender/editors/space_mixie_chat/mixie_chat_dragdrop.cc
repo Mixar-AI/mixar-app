@@ -20,6 +20,7 @@
 
 #include "BLI_utildefines.h"
 
+#include "DNA_ID.h"
 #include "DNA_space_enums.h"
 #include "DNA_space_types.h"
 #include "DNA_image_types.h"
@@ -175,10 +176,16 @@ static bool mixie_chat_image_drop_poll(bContext *C,
     }
   }
 
-  if (WM_drag_is_ID_type(drag, ID_IM)) {
+  /* WM_drag_is_ID_type is also true for WM_DRAG_ASSET, but asset
+   * payloads live outside drag->ids (ids.first is null). Only a
+   * local Image ID can be source-filtered here. */
+  if (drag->type == WM_DRAG_ID) {
     const auto *id = static_cast<const wmDragID *>(drag->ids.first);
-    const auto *image = reinterpret_cast<const Image *>(id->id);
-    return !ELEM(image->source, IMA_SRC_MOVIE, IMA_SRC_SEQUENCE, IMA_SRC_VIEWER);
+    if (id && id->id && GS(id->id->name) == ID_IM) {
+      const auto *image = reinterpret_cast<const Image *>(id->id);
+      return !ELEM(image->source, IMA_SRC_MOVIE, IMA_SRC_SEQUENCE, IMA_SRC_VIEWER);
+    }
+    return false;
   }
 
   if (drag->type == WM_DRAG_PATH) {
@@ -214,9 +221,11 @@ static void mixie_chat_image_drop_copy(bContext * /*C*/,
       RNA_string_set(&file, "name", path.c_str());
     }
   }
-  else if (WM_drag_is_ID_type(drag, ID_IM)) {
+  else if (drag->type == WM_DRAG_ID) {
     const auto *id = static_cast<const wmDragID *>(drag->ids.first);
-    RNA_string_set(drop->ptr, "image_name", id->id->name + 2);
+    if (id && id->id && GS(id->id->name) == ID_IM) {
+      RNA_string_set(drop->ptr, "image_name", id->id->name + 2);
+    }
   }
 }
 

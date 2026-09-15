@@ -267,7 +267,7 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
                         f"(max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION})"
                     )
                 img.verify()
-        except (OSError, ValueError, PILImage.DecompressionBombError) as e:
+        except (OSError, ValueError, SyntaxError, PILImage.DecompressionBombError) as e:
             return False, f"Could not read image: {e}"
 
     return True, ""

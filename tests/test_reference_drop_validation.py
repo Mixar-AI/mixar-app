@@ -98,6 +98,44 @@ def test_truncated_png_is_rejected_after_its_valid_header(validate, tmp_path):
     assert not validate(str(path))[0]
 
 
+def _flip_png_chunk_crc(data: bytearray, chunk: bytes = b'IDAT') -> bytearray:
+    """Corrupt one PNG chunk CRC without truncating the file."""
+    assert data[:8] == b'\x89PNG\r\n\x1a\n'
+    offset = 8
+    while offset + 12 <= len(data):
+        length = int.from_bytes(data[offset:offset + 4], 'big')
+        crc_off = offset + 8 + length
+        if bytes(data[offset + 4:offset + 8]) == chunk:
+            data[crc_off] ^= 0xFF
+            return data
+        offset = crc_off + 4
+    raise AssertionError(f'PNG has no {chunk!r} chunk')
+
+
+def test_validate_image_file_catches_pillow_crc_syntax_error():
+    src = (CHAT / 'core/image_utils.py').read_text()
+    start = src.index('def validate_image_file')
+    body = src[start:src.index('\ndef ', start + 1)]
+    assert 'SyntaxError' in body
+    assert 'img.verify()' in body
+
+
+def test_crc_corrupt_png_is_rejected_without_raising(validate, tmp_path):
+    """Pillow's PNG CRC check raises SyntaxError, not OSError.
+
+    A truncated file is already covered above. Image.open() still reads
+    an IDAT-CRC-corrupt PNG (header is intact); img.verify() then raises
+    SyntaxError. The validator must return (False, message) so a
+    multi-file attach rejects only that file.
+    """
+    path = tmp_path / 'crc_corrupt.png'
+    Image.new('RGB', (32, 32), '#123456').save(path)
+    path.write_bytes(_flip_png_chunk_crc(bytearray(path.read_bytes())))
+    valid, err = validate(str(path))
+    assert valid is False
+    assert 'Could not read image' in err
+
+
 def test_webp_reference_is_supported(validate, tmp_path):
     path = tmp_path/'reference.webp'
     Image.new('RGB', (32, 32), '#abcdef').save(path)
