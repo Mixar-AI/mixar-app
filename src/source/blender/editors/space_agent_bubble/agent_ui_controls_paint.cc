@@ -57,19 +57,14 @@ void chip_content(const rctf &rect, AgentIcon glyph, const char *label,
 /** \name Tab strip
  * \{ */
 
-struct TabSpec {
-  const char *label;
-  /** #AGENT_ICON_COUNT means the tab carries NO mark. */
-  AgentIcon icon;
-};
-
-const TabSpec g_tabs[AGENT_TAB_COUNT] = {
-    {"Agent", AGENT_ICON_AGENT},
-    {"3D", AGENT_ICON_MESH},
-    {"Media", AGENT_ICON_MEDIA},
-    {"Gaussian Splat", AGENT_ICON_SPLAT},
-    {"My Generations", AGENT_ICON_THUMB},
-    {"Queue", AGENT_ICON_COUNT},
+/** #AGENT_ICON_COUNT means the tab carries NO mark. */
+const AgentIcon g_tab_icons[AGENT_TAB_COUNT] = {
+    AGENT_ICON_AGENT,
+    AGENT_ICON_MESH,
+    AGENT_ICON_MEDIA,
+    AGENT_ICON_SPLAT,
+    AGENT_ICON_THUMB,
+    AGENT_ICON_COUNT,
 };
 
 void agent_ui_draw_tab_strip(ARegion *region,
@@ -111,14 +106,14 @@ void agent_ui_draw_tab_strip(ARegion *region,
     outline_round(&tab.pill, AGENT_TAB_RADIUS * u, tab_outline);
 
     const bool has_count = queue && state->queue_count > 0;
-    const bool has_icon = g_tabs[i].icon != AGENT_ICON_COUNT;
+    const bool has_icon = g_tab_icons[i] != AGENT_ICON_COUNT;
     const bool has_badge = i == AGENT_TAB_SPLAT && state->splat_is_new;
     const float gap = AGENT_TAB_ICON_GAP * u;
     const float leading = has_count ? BLI_rctf_size_x(&layout->queue_count) + gap :
                           has_icon ? AGENT_TAB_ICON * u + gap : 0.0f;
-    const float trailing = has_badge ? AGENT_NEW_BADGE_W * u + gap : 0.0f;
+    const float trailing = has_badge ? BLI_rctf_size_x(&layout->new_badge) + gap : 0.0f;
     const std::string label = ui::mixar_fit_text(
-        g_tabs[i].label,
+        agent_ui_tab_label(AgentTabId(i)),
         std::max(0.0f, BLI_rctf_size_x(&tab.pill) - leading - trailing - gap * 2.0f),
         label_size);
     const float start = group_left(tab.pill, label.c_str(), label_size, leading, trailing);
@@ -148,16 +143,16 @@ void agent_ui_draw_tab_strip(ARegion *region,
                      text);
       }
     }
-    else if (g_tabs[i].icon != AGENT_ICON_COUNT) {
+    else if (g_tab_icons[i] != AGENT_ICON_COUNT) {
       /* Backdrop is this pill's own fill — the active pill is #183E25, the
        * rest sit directly on the strip. */
-      agent_ui_icon_draw(g_tabs[i].icon, &icon, label_col, pill_bg);
+      agent_ui_icon_draw(g_tab_icons[i], &icon, label_col, pill_bg);
     }
 
     /* A tab with nothing in its icon slot centres its label; leaving it at
      * the icon offset would hang the word off to the right of an empty pill.
      * The Queue pill does the same once its count chip is gone. */
-    const bool centred = (g_tabs[i].icon == AGENT_ICON_COUNT) &&
+    const bool centred = (g_tab_icons[i] == AGENT_ICON_COUNT) &&
                          (i != AGENT_TAB_QUEUE || state->queue_count <= 0);
     if (centred) {
       label_centre(label.c_str(), BLI_rctf_cent_x(&tab.pill), cy, label_size, label_col);

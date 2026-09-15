@@ -6382,6 +6382,13 @@ void button_pushbutton_draw_as_overlay_set(Button *but, const bool value)
   but_push->draw_as_overlay = value;
 }
 
+void button_scrollbar_visual_height_set(Button *but, float visual_height)
+{
+  BLI_assert(but->type == ButtonType::Scroll);
+  BLI_assert(visual_height > 0);
+  static_cast<ButtonScrollBar *>(but)->visual_height = visual_height;
+}
+
 void button_number_step_size_set(Button *but, float step_size)
 {
   ButtonNumber *but_number = static_cast<ButtonNumber *>(but);

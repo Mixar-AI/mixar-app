@@ -34,6 +34,7 @@
 
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
+#include "ED_moodboard_attachment.hh"
 
 #include "WM_api.hh"
 #include "WM_keymap.hh"
@@ -72,6 +73,7 @@
 
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
+#include "agent_bubble_references.hh"
 #include "agent_bubble_size.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
@@ -304,13 +306,6 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region);
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
 void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
 void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
-/* Attachment thumbnail helpers from mixie_chat_footer_thumbnails.cc
- * (declared in mixie_chat_footer_intern.hh; re-declared here like the other
- * chat imports this file uses). Source: 0 = FILE, 1 = BLEND_DATA. */
-struct Image;
-Image *footer_thumbnails_load_image(Main *bmain, const char *path, int source);
-void footer_thumbnails_draw_image(
-    Main *bmain, const char *path, int source, float x, float y, float size);
 void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
 /* Scribble ink canvas painter (mixie_chat_ink_overlay.cc). Drawn directly by
@@ -614,9 +609,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
    * the toggle arms BOTH halves through scribble_mode, the reading dropdown is
    * a stock wm.context_menu_enum over wm.mixar_mark_intent (the panes' own
-   * dropdown idiom), and Clear is mixar.scribble_mark_clear. The last chip
-   * actually shown is where the attachment thumbnails start. */
-  rctf thumbs_after = layout->chip_upload;
+   * dropdown idiom), and Clear is mixar.scribble_mark_clear. */
   if (state->scribble_available) {
     agent_bubble_rect_to_region(region, layout->chip_scribble, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
@@ -625,7 +618,6 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                   "Stop scribbling (Esc). Queued marks are kept for the next message" :
                   "Scribble: write over the chat to type, draw on the 3D viewport to "
                   "mark what you mean");
-    thumbs_after = layout->chip_scribble;
 
     if (state->mark_count > 0) {
       agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
@@ -638,137 +630,30 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(reading_but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_mark_intent");
       }
-      thumbs_after = layout->chip_reading;
 
       if (!state->scribble_armed) {
         agent_bubble_rect_to_region(region, layout->chip_clear, &bx, &by, &bw, &bh);
         uiDefButO(block, ui::ButtonType::But, "mixar.scribble_mark_clear",
                   blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                   "Discard the queued marks");
-        thumbs_after = layout->chip_clear;
       }
     }
   }
 
   /* --- Voice, right of Scribble ---
    * The one toggle every surface binds (space_mixie_chat/ui/operators/
-   * voice_ops.py); registered only where the platform has a recogniser. The
-   * reading/clear chips sit to its right when marks are queued, so it is the
-   * thumbnails' anchor only when they are not shown. */
+   * voice_ops.py); registered only where the platform has a recogniser. */
   if (state->voice_available) {
     agent_bubble_rect_to_region(region, layout->chip_voice, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.voice_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               state->voice_listening ? "Stop dictating" :
                                        "Dictate into the composer (on-device speech recognition)");
-    if (!(state->scribble_available && state->mark_count > 0)) {
-      thumbs_after = layout->chip_voice;
-    }
-  }
-  agent_bubble_rect_to_region(region, thumbs_after, &bx, &by, &bw, &bh);
-
-  /* --- Pending-attachment thumbnails, right of the Upload chip ---
-   * Small rounded previews at chip height (the Figma treatment), each one a
-   * click-to-remove button over the existing mixie_chat.remove_attachment.
-   * The window does NOT resize for attachments any more (see the sync
-   * operator) — this row is the whole presentation. */
-  {
-    PropertyRNA *att_prop = RNA_struct_find_property(&scene_ptr,
-                                                     "mixie_chat_pending_attachments");
-    if (att_prop && RNA_property_type(att_prop) == PROP_COLLECTION) {
-      Main *bmain = CTX_data_main(C);
-      const int att_count = RNA_property_collection_length(&scene_ptr, att_prop);
-      const int max_thumbs = 4;
-      const float thumb_size = float(bh);
-      const float gap = float(bh) * 0.18f;
-      float tx = float(bx + bw) + gap * 2.0f;
-      const float backplate[4] = {0.24f, 0.24f, 0.24f, 1.0f};
-
-      GPU_blend(GPU_BLEND_ALPHA);
-      int shown = 0;
-      int index = 0;
-      CollectionPropertyIterator iter;
-      RNA_property_collection_begin(&scene_ptr, att_prop, &iter);
-      for (; iter.valid && shown < max_thumbs; RNA_property_collection_next(&iter), index++) {
-        PointerRNA item = iter.ptr;
-
-        char path[1024] = "";
-        if (PropertyRNA *pp = RNA_struct_find_property(&item, "image_path")) {
-          int len = 0;
-          char *val = RNA_property_string_get_alloc(&item, pp, path, sizeof(path), &len);
-          if (val != path) {
-            BLI_strncpy(path, val, sizeof(path));
-            MEM_delete(val);
-          }
-        }
-        int source = 0; /* FILE */
-        if (PropertyRNA *sp = RNA_struct_find_property(&item, "image_source")) {
-          const int value = RNA_property_enum_get(&item, sp);
-          const char *ident = nullptr;
-          if (RNA_property_enum_identifier(
-                  const_cast<bContext *>(C), &item, sp, value, &ident) &&
-              ident && STREQ(ident, "BLEND_DATA"))
-          {
-            source = 1;
-          }
-        }
-        if (path[0] == '\0') {
-          continue;
-        }
-
-        rctf plate;
-        plate.xmin = tx;
-        plate.xmax = tx + thumb_size;
-        plate.ymin = float(by);
-        plate.ymax = float(by) + thumb_size;
-        ui::draw_roundbox_corner_set(ui::CNR_ALL);
-        ui::draw_roundbox_4fv(&plate, true, thumb_size * 0.18f, backplate);
-        footer_thumbnails_draw_image(
-            bmain, path, source, tx + 1.0f, float(by) + 1.0f, thumb_size - 2.0f);
-
-        ui::Button *thumb_but = uiDefButO(block, ui::ButtonType::But,
-                                     "mixie_chat.remove_attachment",
-                                     blender::wm::OpCallContext::ExecDefault, "",
-                                     int(tx), by, short(thumb_size), short(thumb_size),
-                                     "Remove this attachment");
-        if (thumb_but) {
-          PointerRNA *op_ptr = ui::button_operator_ptr_ensure(thumb_but);
-          RNA_int_set(op_ptr, "index", index);
-        }
-
-        tx += thumb_size + gap;
-        shown++;
-      }
-      RNA_property_collection_end(&iter);
-      GPU_blend(GPU_BLEND_NONE);
-
-      if (att_count > shown) {
-        char more[24];
-        SNPRINTF(more, "+%d", att_count - shown);
-        /* Reuse the chip font metrics: dim label, vertically centred. */
-        const float dim_col[4] = AGENT_COL_TEXT_DIM;
-        const int font_id = BLF_default();
-        BLF_size(font_id, AGENT_DU(AGENT_CHIP_FONT));
-        BLF_color4fv(font_id, dim_col);
-        BLF_position(font_id, tx + gap, float(by) + thumb_size * 0.34f, 0.0f);
-        BLF_draw(font_id, more, strlen(more));
-      }
-    }
   }
 
-  /* Send while idle, Stop while a turn is running — the same split the chat
-   * footer makes (abort_session when busy). */
-  agent_bubble_rect_to_region(region, layout->btn_generate, &bx, &by, &bw, &bh);
-  uiDefButO(block,
-            ui::ButtonType::But,
-            state->status_busy ? "mixie_chat.abort_session" : "mixie_chat.send_message",
-            blender::wm::OpCallContext::InvokeDefault,
-            "",
-            bx,
-            by,
-            bw,
-            bh,
-            state->status_busy ? "Stop the running turn" : "Send");
+  if (!agent_bubble_references_visible(C)) {
+    agent_bubble_send_button(C, region, block, *layout, *state);
+  }
 
   ui::block_end(C, field_block);
   ui::block_draw(C, field_block);
@@ -840,6 +725,19 @@ static bool agent_bubble_window_is_pill(const bContext *C)
     return win->runtime->ghostwin == g_pill_ghostwin;
   }
   return WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH;
+}
+
+bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
+{
+  return window && !g_bubble_minimise_pending &&
+         window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
+}
+
+bool ED_agent_bubble_is_resting_pill(const bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  return g_bubble_minimised && win && g_pill_ghostwin &&
+         win->runtime->ghostwin == g_pill_ghostwin;
 }
 
 /**
@@ -985,6 +883,10 @@ bool agent_bubble_island_layout_get(const bContext *C,
     BLI_rctf_translate(&r_layout->chip_reading, dx, 0.0f);
     BLI_rctf_translate(&r_layout->chip_clear, dx, 0.0f);
     r_layout->chip_voice = rctf{};
+  }
+  if (agent_bubble_references_visible(C)) {
+    r_layout->input.xmax = float(px_w) - AGENT_REFERENCE_COLUMN_W * r_layout->scale -
+                           16.0f * r_layout->scale;
   }
   if (!r_layout->valid) {
     return false;
@@ -1315,6 +1217,7 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   if (!win || !area || agent_bubble_window_is_pill(C)) {
     return;
   }
+  agent_bubble_references_sync(C);
   const float scale = UI_SCALE_FAC > 0.0f ? UI_SCALE_FAC : 1.0f;
   /* Same unit rule as agent_ui_layout_build, including the Scribble pad's
    * default-width unit — a slab sized from the pad's own width would leave
@@ -1415,6 +1318,21 @@ static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region
     if (state.ink_visible) {
       mixie_chat_draw_ink_strokes_for_region(C, region);
     }
+  }
+}
+
+static void agent_bubble_references_region_draw(const bContext *C, ARegion *region)
+{
+  if (!agent_bubble_references_visible(C)) {
+    return;
+  }
+  agent_bubble_fill_region_backdrop(region);
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (agent_bubble_island_begin(C, region, &state, &layout)) {
+    agent_ui_draw_island(region, &layout, &state);
+    agent_bubble_island_end();
+    agent_bubble_references_draw(C, region, layout, state);
   }
 }
 
@@ -2682,6 +2600,13 @@ static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*
    * status capsule (its repair path prunes the others). */
   region->sizey = AGENT_BUBBLE_TOP_CHROME_HEIGHT;
 
+  region = BKE_area_region_new();
+  BLI_addtail(&sbubble->regionbase, region);
+  region->regiontype = RGN_TYPE_UI;
+  region->alignment = RGN_ALIGN_RIGHT;
+  region->sizex = 150;
+  region->flag |= RGN_FLAG_HIDDEN;
+
   /* Footer — bottom — input field + send button.
    * Use RGN_TYPE_TOOLS instead of RGN_TYPE_FOOTER because footer regions
    * are size-clamped to ~52 px by Blender's layout system (same fix the
@@ -2764,6 +2689,11 @@ void agent_bubble_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
   ED_region_header_init(region);
   mixie_chat_ink_header_handler_register(region);
+  /* The resting capsule consists entirely of HEADER, unlike the open
+   * composer's WINDOW/TOOLS regions. Its drop poll checks native identity. */
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
+      "Agent Bubble Pill", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);
+  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
 }
 
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
@@ -3187,7 +3117,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
               ARegion *next = region->next;
               if (region->regiontype == RGN_TYPE_WINDOW ||
                   region->regiontype == RGN_TYPE_TOOLS ||
-                  region->regiontype == RGN_TYPE_CHANNELS)
+                  region->regiontype == RGN_TYPE_CHANNELS ||
+                  region->regiontype == RGN_TYPE_UI)
               {
                 ED_region_exit(C, region);
                 BLI_remlink(&pill_area->regionbase, region);
@@ -3517,12 +3448,12 @@ static wmOperatorStatus mixar_bubble_sync_attachment_size_exec(bContext *C, wmOp
 #if defined(__APPLE__) || defined(_WIN32)
   /* ISLAND ARCHITECTURE: attachments no longer drive window sizing. The old
    * footer pre-sized the bubble for a thumbnail strip; the island renders
-   * pending attachments inline in the composer chip row at chip height, so
-   * no extra room is needed. The legacy force-size here was also the
+   * pending attachments in a scrollable column above Send, so no extra
+   * window height is needed. The legacy force-size here was also the
    * "attach an image and the whole chat bugs out" bug: it re-applied the
    * pre-island layout constants (and on retina ended up doubling the window
    * to 1748x896). The operator survives for its Python callers, now only
-   * tagging a redraw so the new thumbnails appear immediately. */
+   * tagging a redraw so the reference column updates immediately. */
   (void)op;
   agent_bubble_force_redraw(C);
   return OPERATOR_FINISHED;
@@ -4229,11 +4160,13 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
   WM_operatortype_append(MIXAR_OT_queue_navigate);
+  WM_operatortype_append(MIXAR_OT_reference_scroll);
 }
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
 {
   WM_keymap_ensure(keyconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_keymap_ensure(keyconf, "Agent Bubble References", SPACE_AGENT_BUBBLE, RGN_TYPE_UI);
   /* Ensure all three region keymap categories exist on the default
    * keyconfig so the Python addon-keyconfig registrations in
    * mixar.bootstrap.agent_bubble_module attach to keymaps Blender's
@@ -4365,6 +4298,16 @@ void ED_spacetype_agent_bubble()
   art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 
+  art = MEM_new_zeroed<ARegionType>("agent reference column");
+  art->regionid = RGN_TYPE_UI;
+  art->keymapflag = 0;
+  art->init = agent_bubble_references_region_init;
+  art->draw = agent_bubble_references_region_draw;
+  art->listener = agent_bubble_footer_region_listener;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
+  BLI_addhead(&st->regiontypes, art);
+
   /* Header region (status pill). */
   art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble header region");
   art->regionid = RGN_TYPE_HEADER;
@@ -4415,6 +4358,7 @@ void ED_spacetype_agent_bubble()
   BKE_spacetype_register(std::move(st));
 
   agent_ui_pill_cat_qa_register();
+  agent_bubble_references_qa_register();
 }
 
 /** \} */

@@ -132,7 +132,7 @@ def test_chip_row_metrics_all_share_one_unit():
 
 def test_tab_strip_and_card_header_text_use_fixed_typography():
     """The labels the bug was reported against: tab strip, queue count, NEW
-    badge, card title and FAQs."""
+    badge and card title."""
     strip = _function_body(CONTROLS_CC, "void agent_ui_draw_tab_strip(")
     assert "AGENT_TAB_FONT * agent_ui_text_unit()" in strip
     assert "AGENT_CHIP_FONT * agent_ui_text_unit()" in CONTROLS_CC
@@ -144,14 +144,12 @@ def test_tab_strip_and_card_header_text_use_fixed_typography():
     assert island.count("AGENT_HDR_TITLE_FONT * agent_ui_text_unit()") == 2, (
         "the Agent tab's session title and the pane tabs' card title"
     )
-    assert "AGENT_HDR_FAQ_FONT * agent_ui_text_unit()" in island
+    assert "AGENT_HDR_FAQ_FONT" not in island
 
 
-def test_status_pill_uses_its_own_window_unit():
-    """The pill is a separate, force-sized window — it carries neither the
-    island's scale nor UI_SCALE_FAC's ratio to it, so it derives its own unit
-    from its height, exactly as its status dot already did."""
+def test_status_pill_geometry_uses_its_window_but_text_uses_native_font():
+    """Status geometry follows the pill; both label forms match native text."""
     body = _function_body(DRAW_CC, "void agent_ui_draw_status_pill(")
     assert "const float pill_u = h / float(AGENT_PILL_H);" in body
     assert "AGENT_PILL_DOT_R * pill_u" in body
-    assert "AGENT_PILL_FONT * pill_u" in body
+    assert body.count("const float text_size = agent_ui_body_font_size();") == 2

@@ -18,6 +18,7 @@
 
 #include "BKE_image.hh"
 #include "BKE_main.hh"
+#include "BKE_lib_id.hh"
 
 #include "DNA_ID.h"
 #include "DNA_image_types.h"
@@ -62,27 +63,17 @@ Image *footer_thumbnails_load_image(Main *bmain, const char *path, int source)
     return static_cast<Image *>(BLI_findstring(&bmain->images, path, offsetof(ID, name) + 2));
   }
   else {
-    /* FILE - load from disk with caching */
-    const char *basename = BLI_path_basename(path);
-
-    /* Check if already loaded to avoid redundant disk I/O */
-    Image *existing = static_cast<Image *>(
-        BLI_findstring(&bmain->images, basename, offsetof(ID, name) + 2));
-    if (existing) {
-      return existing;
-    }
-
-    /* Defensive: verify file exists before attempting to load */
-    if (!BLI_exists(path)) {
-      fprintf(stderr, "Mixie Chat: Image file not found: %s\n", path);
-      return nullptr;
-    }
-
+    /* Match the full source path, not its basename: different references
+     * frequently share names such as image.png. This also reuses packed
+     * images after their temporary source file has disappeared. */
     Image *img = BKE_image_load_exists(bmain, path);
     if (!img) {
       fprintf(stderr, "Mixie Chat: Failed to load image: %s\n", path);
       return nullptr;
     }
+    /* The load helper adds a user even for cache hits. Painting owns no ID
+     * reference, so balance that increment on every lookup. */
+    id_us_min(&img->id);
     /* File-based images (photos, screenshots) are virtually always
      * sRGB-encoded.  Without this tag Blender treats the byte data as
      * scene-linear, producing washed-out / shifted thumbnails. */
