@@ -100,10 +100,8 @@ def _patched_draw_left(self, context):
         # Zen mode: no workspace tab strip — just the centred mode slider.
         _draw_mode_slider(layout, context)
         return
-
-    layout.menu("MIXAR_MT_engine_workspaces", text="", icon='WORKSPACE')
-    layout.template_ID_tabs(
-        window, "workspace",
+    if hasattr(bpy.types, "MIXAR_MT_engine_workspaces"):
+        layout.menu("MIXAR_MT_engine_workspaces", text="", icon='WORKSPACE')
         new="workspace.add",
         menu="TOPBAR_MT_workspace_menu",
     )
