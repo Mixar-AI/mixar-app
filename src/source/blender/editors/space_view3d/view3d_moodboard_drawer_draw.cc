@@ -101,7 +101,7 @@ void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
   }
   PointerRNA ptr = RNA_id_pointer_create(&scene->id);
   for (const char *name : {"mixie_moodboard_images", "mixie_moodboard_action_nodes",
-                           "mixie_moodboard_textboxes"})
+                           "mixie_moodboard_textboxes", "mixie_moodboard_annotations"})
   {
     PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
     if (prop && RNA_property_collection_length(&ptr, prop) > 0) {

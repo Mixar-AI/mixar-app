@@ -13,10 +13,9 @@ Left T-panel toolbar with core moodboard actions:
   • Lasso      — direct Multi-Lasso Mask shortcut
   • Annotate   — draw persistent freehand notes on a selected image
 
-``draw_moodboard_add_tools`` is the ONE construction of the open-media +
-add-text pair. The Mixie T-panel interleaves it with mask/annotate controls;
-the Zen sliding drawer hosts the same pair via
-``VIEW3D_PT_moodboard_drawer_add_tools``.
+The media and text builders are shared by both canvas hosts. The Zen drawer
+adds a persistent canvas Annotate tool in the same glass capsule; the Mixie
+T-panel also exposes image-attached mask/annotation controls.
 """
 
 import bpy
@@ -62,13 +61,18 @@ def draw_moodboard_add_text_tool(layout, *, drawer=False):
         row.mixar_style(component="GLASS_TOOL")
 
 
-def draw_moodboard_add_tools(layout):
+def draw_moodboard_add_tools(layout, context):
     """One left-side glass capsule, with native icons and hover tooltips."""
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
     surface.operator_context = "INVOKE_DEFAULT"
     col = surface.column(align=True)
     draw_moodboard_open_media_tool(col, drawer=True)
     draw_moodboard_add_text_tool(col, drawer=True)
+    col.operator(
+        "mixie.moodboard_annotate_canvas", text="", icon="GREASEPENCIL",
+        depress=context.window_manager.mixie_moodboard_annotating,
+    )
+    col.mixar_style(component="GLASS_TOOL")
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -330,7 +334,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
 
 class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
-    """Same add-media + add-text row as the Mixie moodboard T-panel.
+    """Native glass capsule for media, text, and canvas annotation.
 
     Hosted on the Zen Mode sliding drawer (VIEW_3D TOOL_PROPS) by the
     native drawer draw path via ``UI_paneltype_draw`` — not by
@@ -357,7 +361,7 @@ class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
         return float(amount) >= _DRAWER_ACTIVE_AMOUNT
 
     def draw(self, context):
-        draw_moodboard_add_tools(self.layout)
+        draw_moodboard_add_tools(self.layout, context)
 
 
 # Only include panels if MIXIE space is available

@@ -36,8 +36,10 @@ def test_active_pointer_map_hits_graph_before_media_fallback(modifier):
     for extras in ({}, {'shift': True}, modifier):
         press = [item for item in active if item.event == 'LEFTMOUSE'
                  and item.value == 'PRESS' and item.modifiers == extras]
-        assert [item.idname for item in press] == [
-            'mixie.moodboard_graph_select', 'mixie.moodboard_select_image']
+        expected = ['mixie.moodboard_graph_select', 'mixie.moodboard_select_image']
+        if not extras:
+            expected.insert(0, 'mixie.moodboard_annotation_stroke')
+        assert [item.idname for item in press] == expected
         if extras:
             assert all(item.properties.extend for item in press)
 

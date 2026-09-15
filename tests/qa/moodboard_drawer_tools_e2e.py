@@ -22,6 +22,7 @@ OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/moodboard-drawer-tools'))
 BLOCK = {'region_type': 'TOOL_PROPS'}
 TEXT = {**BLOCK, 'op': 'MIXIE_OT_moodboard_add_textbox'}
 MEDIA = {**BLOCK, 'but_type': 'Menu'}
+ANNOTATE = {**BLOCK, 'op': 'MIXIE_OT_moodboard_annotate_canvas'}
 BOXES = 'drv.main_window().scene.mixie_moodboard_textboxes'
 IMAGES = 'drv.main_window().scene.mixie_moodboard_images'
 
@@ -36,23 +37,25 @@ def snap(qa, name, annotated=False):
 
 
 def toolbar(qa):
-    controls = [qa.find(**query)['widgets'] for query in (MEDIA, TEXT)]
+    controls = [qa.find(**query)['widgets'] for query in (MEDIA, TEXT, ANNOTATE)]
     assert all(len(w) == 1 for w in controls), controls
-    media, text = (w[0] for w in controls)
+    media, text, annotate = (w[0] for w in controls)
     panel = target(qa, 'moodboard_drawer_panel')['rect']
-    for w in (media, text):
+    for w in (media, text, annotate):
         x0, y0, x1, y1 = w['rect']
         assert w['enabled'] and w['mixar_theme'] == 'ZEN', w
         assert w['mixar_component'] == 'glass_tool', w
         assert w['block'] == 'moodboard_drawer_add_tools', w
         assert panel[0] < x0 < x1 < panel[2], (w, panel)
         assert panel[1] < y0 < y1 < panel[3], (w, panel)
-    assert media['rect'][::2] == text['rect'][::2], controls
+    assert media['rect'][::2] == text['rect'][::2] == annotate['rect'][::2], controls
     # Native aligned cells touch: the shared painter owns their capsule/divider.
     assert abs(text['rect'][3] - media['rect'][1]) <= 2, controls
+    assert abs(annotate['rect'][3] - text['rect'][1]) <= 2, controls
     scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
     assert abs(media['rect'][0] - panel[0] - 12 * scale) <= 2, controls
-    assert [media['text'], text['text']] == ['', ''], controls
+    assert [media['text'], text['text'], annotate['text']] == ['', '', ''], controls
+    assert 'saved in the project' in annotate['tip'], annotate
     assert media['tip'].startswith('Open an image or video'), media
     assert 'Add a text box' in text['tip'], text
     return controls
