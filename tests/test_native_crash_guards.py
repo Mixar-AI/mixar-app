@@ -25,8 +25,10 @@ MESSAGES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_messag
 
 
 def _fn(src: str, name: str) -> str:
-    start = src.index(name + "(")
-    start = src.rindex("\n", 0, start)
+    # Match a definition, skipping forward declarations before the first body.
+    match = re.search(re.escape(name) + r"\([^;{}]*\)\s*\{", src)
+    assert match, name
+    start = src.rindex("\n", 0, match.start())
     depth = 0
     i = src.index("{", start)
     for j in range(i, len(src)):

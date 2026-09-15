@@ -179,7 +179,7 @@ def test_connection_manager_wires_deferred_llm_relay():
 
 
 def test_jsonrpc_handler_defers_when_callback_returns_none():
-    source = _read(_CHAT_CORE / "jsonrpc_client.py")
+    source = _read(_CHAT_CORE / "socket_dispatch.py")
     handler = source.split("def _handle_llm_request(", 1)[1]
     handler = handler.split("def _handle_sandbox_control(", 1)[0]
     assert "if result is None:" in handler

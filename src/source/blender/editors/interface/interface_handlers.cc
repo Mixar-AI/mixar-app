@@ -14390,6 +14390,11 @@ bool textbutton_activate_rna(const bContext *C,
       Button *active = region_find_active_but(region);
       if (active != but_text || !button_is_editing(active)) {
         if (active) {
+          /* Moving keyboard focus is not a click on the previously hovered
+           * operator (which may now be Stop after sending a message). */
+          if (active->optype) {
+            active->active->cancel = true;
+          }
           button_activate_exit(const_cast<bContext *>(C), active, active->active, false, false);
         }
         button_activate_event(const_cast<bContext *>(C), region, but_text);

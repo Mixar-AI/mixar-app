@@ -229,7 +229,7 @@ def test_island_voice_chip():
     names = re.findall(r"AGENT_ICON_[A-Z_]+", enum)
     assert "AGENT_ICON_MIC" in names and names[-1] == "AGENT_ICON_COUNT"
     assert "rctf chip_voice;" in LAYOUT_HH
-    assert "r_layout->chip_voice = f.box(voice_x, chip_y, AGENT_CHIP_VOICE_W, AGENT_CHIP_H);" in LAYOUT_CC
+    assert "r_layout->chip_voice = f.box(voice_x, chip_y, voice_w, AGENT_CHIP_H);" in LAYOUT_CC
     assert "bool voice_available;" in DRAW_HH and "bool voice_listening;" in DRAW_HH
     assert "if (state->voice_available) {" in DRAW_CC
     assert "AGENT_ICON_MIC" in DRAW_CC
@@ -237,7 +237,8 @@ def test_island_voice_chip():
     begin = BUBBLE_CC[BUBBLE_CC.index("bool agent_bubble_island_layout_get(") :]
     begin = begin[: begin.index("\n}\n")]
     assert "if (!r_state->voice_available)" in begin
-    assert "thumbs_after = layout->chip_voice;" in BUBBLE_CC
+    assert "const float voice_w = AGENT_CHIP_VOICE_W + voice_extra * row_growth;" in LAYOUT_CC
+    assert "const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;" in LAYOUT_CC
 
 
 def _mm_fn(signature_start: str) -> str:

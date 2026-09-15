@@ -64,71 +64,24 @@ def _enqueue_feedback_post(post) -> None:
 
 
 def _post_feedback_async(scene, payload: dict, on_complete=None) -> bool:
-    """Post agent feedback without blocking Blender's main thread.
-
-    ``on_complete`` is always marshalled back to Blender's main thread and
-    receives a boolean indicating whether the server accepted the request.
-    """
-    try:
-        from ...core import get_session_manager
-
-        session_id = get_session_manager().get_session_id(scene)
-        if not session_id:
-            logger.warning("Feedback send skipped: no session_id")
-            return False
-
-        from mixar.config.config import get_server_url
-        from ...constants import AGENT_FEEDBACK_ENDPOINT
-
-        base_url = get_server_url()
-
-        try:
-            from mixar.modules.auth.core.auth import get_access_token
-
-            token = get_access_token() or ""
-        except Exception:
-            token = ""
-
-        request_payload = {**payload, "session_id": session_id}
-
-        def _notify(success: bool) -> None:
-            if on_complete is None:
-                return
-            from ...core.main_thread_executor import run_on_main_thread
-
-            run_on_main_thread(lambda: on_complete(success))
-
-        def _post() -> None:
-            success = False
-            try:
-                import httpx
-
-                headers = {"Content-Type": "application/json"}
-                if token:
-                    headers["Authorization"] = f"Bearer {token}"
-                response = httpx.post(
-                    f"{base_url}{AGENT_FEEDBACK_ENDPOINT}",
-                    json=request_payload,
-                    headers=headers,
-                    # The backend forwards to Langfuse ingestion synchronously,
-                    # which intermittently takes >10s — outlive its 20s worst
-                    # case so a slow-but-successful push isn't reported as a
-                    # failure. Runs on the FIFO feedback worker thread, so the
-                    # wait never blocks Blender's UI.
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                success = True
-            except Exception as exc:
-                logger.warning(f"Feedback POST failed (non-critical): {exc}")
-            finally:
-                _notify(success)
-
-        _enqueue_feedback_post(_post)
-        return True
-    except Exception as exc:
-        logger.warning(f"Feedback send skipped: {exc}")
+    """Feedback locks only after the backend confirms persistence."""
+    from ...core.session import get_session_manager
+    from mixar.modules.common.agent_rpc.client import request
+    sid = get_session_manager().get_session_id(scene)
+    if not sid:
         return False
+    def post():
+        success = False
+        try:
+            result = request('feedback', {**payload, 'session_id': sid}, mutation=True)
+            success = isinstance(result, dict) and result.get('status') == 'success'
+        except Exception as exc:
+            logger.warning('Feedback could not be saved: %s', exc)
+        if on_complete:
+            from ...core.main_thread_executor import run_on_main_thread
+            run_on_main_thread(lambda: on_complete(success))
+    _enqueue_feedback_post(post)
+    return True
 
 
 def _find_feedback_message(scene, bubble_id: str):
@@ -395,12 +348,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # Dispatch action
         try:
             from ...constants import SessionState
-            from ...core.queue_processor import (
-                queue_sse_event,
-                queue_sse_error,
-                queue_sse_complete,
-            )
-            from ...core.sse_handler import create_sse_handler
+            from ...core.turn_transport import create_turn_handler
             from mixar.config.config import get_server_url
 
             # Handle modify action specially - user needs to type feedback first
@@ -422,12 +370,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
 
                 base_url = get_server_url()
                 target_scene_name = scene.name
-                sse_handler = create_sse_handler(
+                turn_transport = create_turn_handler(
                     scene_name=target_scene_name,
                     host=base_url,
-                    on_event=lambda event: queue_sse_event(event, target_scene_name),
-                    on_error=lambda error: queue_sse_error(error, target_scene_name),
-                    on_complete=lambda: queue_sse_complete(target_scene_name),
                 )
 
                 # Get auth token
@@ -438,9 +383,10 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     auth_token = ""
 
                 from ...core.question_ref import pending_question_ref
-                success = sse_handler.start_input_stream(
+                success = turn_transport.start_input_stream(
                     session_id=session.get_session_id(scene),
                     action=self.action_value,
+                    user_message=user_msg,
                     auth_token=auth_token,
                     question_ref=pending_question_ref(scene),
                 )
@@ -523,8 +469,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # The batch is complete. Submit exactly once, carrying its original
         # interrupt id so parallel pending prompts cannot be resumed by mistake.
         from ...constants import SessionState
-        from ...core.queue_processor import queue_sse_event, queue_sse_error, queue_sse_complete
-        from ...core.sse_handler import create_sse_handler
+        from ...core.turn_transport import create_turn_handler
         from mixar.config.config import get_server_url
         from ...core import get_session_manager
         session = get_session_manager()
@@ -534,12 +479,9 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         except Exception:
             auth_token = ''
         target_scene_name = scene.name
-        handler = create_sse_handler(
+        handler = create_turn_handler(
             scene_name=target_scene_name,
             host=get_server_url(),
-            on_event=lambda event: queue_sse_event(event, target_scene_name),
-            on_error=lambda error: queue_sse_error(error, target_scene_name),
-            on_complete=lambda: queue_sse_complete(target_scene_name),
         )
         from ...core.question_ref import bubble_question_ref
         if handler.start_input_stream(

@@ -40,7 +40,7 @@ from mixar.config.logging_config import get_logger
 from ...core import get_session_manager
 from ...core import chat_history
 from ...core.main_thread_executor import cleanup as flush_executor_queue
-from ...core.sse_handler import cleanup_sse_handler
+from ...core.turn_transport import cleanup_turn_handler
 from ...core.ui_utils import redraw_chat_areas
 from .session_ops import send_cancel_request_async
 
@@ -215,9 +215,9 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
 
         # Tear down any in-flight turn, exactly like New Chat does.
         old_session_id = session.get_session_id(scene)
-        cleanup_sse_handler(scene_name)
-        from ...core.queue_processor import cleanup_sse_queue_for_scene
-        cleanup_sse_queue_for_scene(scene_name)
+        cleanup_turn_handler(scene_name)
+        from ...core.queue_processor import cleanup_event_queue_for_scene
+        cleanup_event_queue_for_scene(scene_name)
         flush_executor_queue()
         if old_session_id:
             send_cancel_request_async(old_session_id)
@@ -233,10 +233,19 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
         count = chat_history.restore_into_scene(scene, record)
 
         # Reset session state (keep connected if connected) — mirrors
-        # MIXIE_CHAT_OT_new_session.
+        # MIXIE_CHAT_OT_new_session. The old run is cancelled above; the
+        # restored chat starts with none.
+        session.set_run(scene, "", False)
         if session.is_connected(scene):
             session.clear_streaming()
             session.set_connected(scene)
+
+        # A prior switch fenced this session and marked its local turns done.
+        # Reopen it explicitly so status discovery can offer server recovery.
+        from ...core.turn_events import reopen
+        from ...core.turn_resume import check_orphaned_turns
+        reopen(scene)
+        check_orphaned_turns()
 
         # Close the overlay (the C++ side also does this on row click;
         # kept here so any other invocation path behaves the same).

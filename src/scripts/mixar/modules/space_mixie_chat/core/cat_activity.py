@@ -25,7 +25,10 @@ def _pulse(scene, activity: str) -> None:
     if scene is None or not hasattr(scene, 'mixie_chat_cat_activity'):
         return
     # A late tool/content event cannot animate a paused or disconnected turn.
-    if getattr(scene, 'mixie_chat_state', '') != 'BUSY':
+    # Background workers of an open run still pulse while the orchestrator
+    # idles between its turns.
+    if (getattr(scene, 'mixie_chat_state', '') != 'BUSY'
+            and getattr(scene, 'mixie_run_open', False) is not True):
         return
     scene.mixie_chat_cat_activity = activity
     scene.mixie_chat_cat_activity_until = repr(time.time() + CAT_ACTIVITY_HOLD_SECONDS)

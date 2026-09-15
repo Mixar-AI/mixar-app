@@ -79,6 +79,8 @@ def test_forced_text_activation_survives_a_rebuild():
     force = body[body.index("if (force) {") :]
     assert "button_activate_event(" in force
     assert "button_active_only(" not in force.split("else {")[0]
+    assert "if (active->optype)" in force
+    assert force.index("active->active->cancel = true;") < force.index("button_activate_exit(")
 
 
 def test_hover_tick_retries_focus_without_dismissing_drafts():
@@ -140,19 +142,28 @@ def test_send_click_commits_the_composer_and_keeps_the_press():
 
 
 def test_agent_action_reads_send_not_generate():
-    assert 'label_centre(state->status_busy ? "Stop" : "Send"' in CONTROLS_PAINT_CC
+    """Send whenever there is text (a message typed mid-run joins the open
+    run); Stop only while busy with an empty composer — `stop_visible` is
+    derived once in agent_ui_state.cc and read by both the paint and the
+    button row."""
+    assert 'label_centre(state->stop_visible ? "Stop" : "Send"' in CONTROLS_PAINT_CC
+    state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
+    assert "r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;" in state_cc
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
     assert "agent_bubble_send_button" in tools
     references = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_bubble_references.cc").read_text()
     assert '"mixie_chat.send_message"' in references
     send = _function_body(references, "void agent_bubble_send_button(")
-    assert '"Stop the running turn" : "Send"' in send
+    assert 'state.stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in send
+    assert 'state.stop_visible ? "Stop the running turn" : "Send"' in send
+    column = _function_body(references, "void agent_bubble_references_draw(")
+    assert "agent_bubble_send_button(C, region, block, layout, state)" in column
     assert '"Generate"' not in send
 
 
 def test_the_qa_probe_only_replaces_the_transport_boundary():
     assert "get_connection_manager" in PROBE
-    assert "create_sse_handler" in PROBE
+    assert "create_turn_handler" in PROBE
     assert "send_message" not in PROBE.split("def install")[1].split("def record")[0]
     assert "mixie_chat_input" not in PROBE
     assert "MIXIE_CHAT_OT_send_message" in E2E

@@ -31,9 +31,9 @@ def test_agent_input_resume_never_contains_local_path():
         "src/scripts/mixar/modules/space_mixie_chat/ui/operators/agent_export_ops.py"
     )).read_text(encoding="utf-8")
     sse_source = (ROOT / (
-        "src/scripts/mixar/modules/space_mixie_chat/core/sse_handler.py"
+        "src/scripts/mixar/modules/space_mixie_chat/core/turn_transport.py"
     )).read_text(encoding="utf-8")
     assert 'action_value="export_destination_selected"' in operator_source
     assert 'text=self.filepath' not in operator_source
-    assert '"action": action' in sse_source
-    assert '"text": text' in sse_source
+    assert "'action': action" in sse_source
+    assert "'text': text" in sse_source

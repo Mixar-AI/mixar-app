@@ -29,12 +29,12 @@ CONSTANTS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/constants.py"
 def test_liveness_method_and_capability_declared():
     constants = CONSTANTS.read_text(encoding="utf-8")
     assert 'BLENDER_LIVENESS = "blender.liveness"' in constants
-    client = CLIENT.read_text(encoding="utf-8")
+    client = "\n".join((CLIENT.parent / name).read_text(encoding="utf-8") for name in ("jsonrpc_client.py", "socket_connection.py", "socket_dispatch.py", "socket_requests.py"))
     assert '"liveness",' in client  # handshake capability
 
 
 def test_liveness_is_dispatched_and_answers_without_bpy_or_main_thread():
-    client = CLIENT.read_text(encoding="utf-8")
+    client = "\n".join((CLIENT.parent / name).read_text(encoding="utf-8") for name in ("jsonrpc_client.py", "socket_connection.py", "socket_dispatch.py", "socket_requests.py"))
     assert "elif method == JSONRPCMethod.BLENDER_LIVENESS:" in client
     assert "self._handle_liveness(request_id)" in client
     offset = client.index("def _handle_liveness")

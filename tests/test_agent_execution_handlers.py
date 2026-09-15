@@ -86,10 +86,10 @@ def test_jsonrpc_client_routes_prefix_to_callback_or_refuses():
     client._outbound = MagicMock()
     client._handle_execution_request("agent.execution.activate", {"run_id": "r"}, "x")
     assert seen == [("agent.execution.activate", {"run_id": "r"}, "x")]
-    client._outbound.put.assert_not_called()  # deferred reply
+    client._outbound.put_nowait.assert_not_called()  # deferred reply
     worker = object.__new__(JSONRPCWebSocketClient)
     worker._on_execution_request = None
     worker._outbound = MagicMock()
     worker._handle_execution_request("agent.execution.commit", {}, "y")
-    payload = json.loads(worker._outbound.put.call_args.args[0])
+    payload = json.loads(worker._outbound.put_nowait.call_args.args[0])
     assert payload["id"] == "y" and payload["result"]["error_type"] == "capability_unavailable"

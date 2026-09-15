@@ -104,7 +104,7 @@ def classify_handshake_response(response: Any) -> str:
     return HANDSHAKE_TRANSIENT
 
 
-def wait_for_handshake(ws: Any, timeout: float = 10.0) -> tuple[str, str]:
+def wait_for_handshake(ws: Any, timeout: float = 10.0, result_sink=None) -> tuple[str, str]:
     """Read frames until the handshake is answered or ``timeout`` elapses.
 
     Returns ``(outcome, detail)`` where ``outcome`` is one of the
@@ -139,6 +139,8 @@ def wait_for_handshake(ws: Any, timeout: float = 10.0) -> tuple[str, str]:
         response = json.loads(frame.text)
         outcome = classify_handshake_response(response)
         if outcome == HANDSHAKE_OK:
+            if result_sink is not None:
+                result_sink(response.get("result") or {})
             return outcome, "handshake successful"
         error = response.get("error") if isinstance(response, dict) else None
         message = error.get("message", "Unknown") if isinstance(error, dict) else "Unknown"

@@ -66,6 +66,9 @@ struct ChatMessageProps {
   PropertyRNA *thinking_active;
   PropertyRNA *thinking_duration_ms;
   PropertyRNA *thinking_collapsed;
+  /* USER bubbles: short delivery note appended to the sender label
+   * ("You (queued)") while an interjection awaits the backend's ack. */
+  PropertyRNA *delivery_hint;
 
   bool initialized;
 };
