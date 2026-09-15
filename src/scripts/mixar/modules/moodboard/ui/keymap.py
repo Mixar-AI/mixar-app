@@ -187,6 +187,17 @@ def register():
             )
             addon_keymaps.append((km, kmi))
 
+        # A / Alt+A — same Blender convention as the node editor. Mirrored in
+        # space_mixie.cc; the addon copy is what survives a keyconfig reload.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_select_all', type='A', value='PRESS'
+        )
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_deselect_all', type='A', value='PRESS', alt=True
+        )
+        addon_keymaps.append((km, kmi))
+
         # Pie menu keymap - follows user's VIEW3D pie menu key preference
         pie_key = get_user_pie_menu_key()
         kmi = km.keymap_items.new(

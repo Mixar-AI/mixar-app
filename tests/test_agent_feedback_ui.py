@@ -55,7 +55,7 @@ def test_feedback_comment_requires_rating_and_deduplicates_submission():
 def test_feedback_post_tracks_server_outcome_and_preserves_retry_text():
     source = (CHAT_ROOT / "ui/operators/chat_special_ops.py").read_text(encoding="utf-8")
 
-    assert "response.raise_for_status()" in source
+    assert "request('feedback', {**payload, 'session_id': sid}, mutation=True)" in source
     assert "feedback_comment_submitting = True" in source
     assert "feedback_comment_submitting = False" in source
     assert "_feedback_post_queue.put(post)" in source

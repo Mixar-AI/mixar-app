@@ -273,6 +273,11 @@ class MixieChatMessage(PropertyGroup):
     # #1251 import picker: comma-separated extensions offered by the native
     # open dialog. Picker configuration only — never a path.
     import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
+    # USER bubbles only: a short delivery note the renderer appends to the
+    # sender label ("You (queued)"). Set when a message is sent as an
+    # interjection into a streaming turn, cleared by the backend's `joined`
+    # ack, replaced by "could not be delivered" when the ack never comes.
+    delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
@@ -434,12 +439,36 @@ def on_chat_input_changed(self, context):
 
 
 def _execute_send_message():
-    """Execute send_message (called from timer to avoid calling bpy.ops in property update)."""
+    """Execute send_message (called from timer to avoid calling bpy.ops in property update).
+
+    Enter is never swallowed silently: when the send predicate refuses (a turn
+    is running and no run is open to join), the draft stays in the composer
+    and the reason is reported.
+    """
     try:
+        from ...core.composer_send import can_send
+        allowed, reason = can_send(bpy.context.scene)
+        if not allowed:
+            _report_send_refused(reason)
+            return
         if hasattr(bpy.ops.mixie_chat, 'send_message'):
             bpy.ops.mixie_chat.send_message()
-    except Exception:
-        pass  # Operator may not be available
+    except Exception as e:  # noqa: BLE001 — operator may not be available
+        logger.warning("send_message from Enter failed: %s", e)
+
+
+def _report_send_refused(reason: str) -> None:
+    """Surface a refused Enter-send (timer context: no operator to report on)."""
+    logger.warning("Message not sent: %s", reason)
+    try:
+        wm = bpy.context.window_manager
+        wm.popup_menu(
+            lambda self, _ctx: self.layout.label(text=reason),
+            title="Message not sent",
+            icon='INFO',
+        )
+    except Exception:  # noqa: BLE001 — a popup needs a window; the log suffices
+        pass
 
 
 def on_quick_prompt_input_changed(self, context):
@@ -822,6 +851,25 @@ def register():
         options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
     )
 
+    # A backend run spans turns: the orchestrator may answer "in progress"
+    # and end its turn while background workers keep building, then the
+    # backend starts later turns itself (wake-ups over the socket). While the
+    # run is open the composer keeps sending (an interjection joins the run),
+    # worker scripts are accepted while the turn is IDLE, and the status
+    # reads "Working in background". Written only by SessionManager.set_run.
+    bpy.types.Scene.mixie_run_open = BoolProperty(
+        name="Agent Run Open",
+        description="True while the backend run behind this chat is still open",
+        default=False,
+        options={'SKIP_SAVE'},  # Never persist — runs don't survive a file load
+    )
+    bpy.types.Scene.mixie_run_id = StringProperty(
+        name="Agent Run ID",
+        description="Identifier of the open backend run (empty when closed)",
+        default="",
+        options={'SKIP_SAVE'},
+    )
+
     # Chat mode captured when the currently running turn started —
     # stamped by SessionManager.set_state on the inactive→active edge,
     # cleared when the turn ends. The agent viewport lock (halo + input
@@ -986,8 +1034,8 @@ def unregister():
     except Exception:
         pass
     try:
-        from ...core.sse_handler import cleanup_all_sse_handlers
-        cleanup_all_sse_handlers()
+        from ...core.turn_transport import cleanup_all_turn_handlers
+        cleanup_all_turn_handlers()
     except Exception:
         pass
     try:
@@ -1007,6 +1055,7 @@ def unregister():
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
         'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
+        'mixie_run_open', 'mixie_run_id',
         'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):

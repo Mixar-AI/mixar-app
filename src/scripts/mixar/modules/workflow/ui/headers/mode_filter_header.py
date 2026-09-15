@@ -87,7 +87,8 @@ def _patched_draw_left(self, context):
     screen = context.screen
 
     bpy.types.TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
-    layout.separator(type='LINE')
+    # Space (not LINE) so Help keeps its trailing gap without a divider.
+    layout.separator()
 
     if screen.show_fullscreen:
         layout.operator(

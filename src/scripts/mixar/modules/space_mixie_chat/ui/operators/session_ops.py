@@ -15,9 +15,8 @@ from mixar.config.logging_config import get_logger
 
 from ...core import get_connection_manager, get_session_manager
 from ...core import populate_dev_session, DevDataProvider
-from ...core.sse_handler import cleanup_sse_handler
+from ...core.turn_transport import cleanup_turn_handler
 from ...core.main_thread_executor import cleanup as flush_executor_queue
-from ...core.message_helpers import get_auth_token
 from ...constants import DEV_MODE, SessionState
 
 logger = get_logger(__name__)
@@ -43,35 +42,19 @@ def send_cancel_request_async(session_id: str) -> None:
 
 
 def _send_cancel_request(session_id: str) -> None:
-    """Send cancel request to backend (runs in background thread)."""
+    """Cancel the backend run through the authenticated agent socket."""
+    from mixar.modules.common.agent_rpc.client import request
     try:
-        import httpx
-        from mixar.config.config import get_server_url
-
-        base_url = get_server_url()
-        auth_token = get_auth_token()
-
-        if not auth_token:
-            logger.warning("No auth token available for cancel request")
-            return
-
-        url = f"{base_url}/api/v1/blender/agent/cancel"
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        payload = {"session_id": session_id}
-
-        with httpx.Client(timeout=5.0) as client:
-            response = client.post(url, json=payload, headers=headers)
-
-            if response.status_code == 200:
-                logger.info(f"Backend session cancelled: {session_id[:8]}")
-            else:
-                logger.warning(
-                    f"Failed to cancel backend session: HTTP {response.status_code}"
-                )
-    except httpx.HTTPError as e:
-        logger.warning(f"HTTP error during cancel request: {e}")
-    except Exception as e:
-        logger.error(f"Failed to send cancel request: {e}")
+        request('cancel', {'session_id': session_id}, mutation=True)
+    except Exception as exc:
+        logger.warning('Agent cancellation could not be confirmed: %s', exc)
+        from ...core.main_thread_executor import run_on_main_thread
+        def show_failure():
+            from ...core.message_helpers import add_agent_message
+            for scene in bpy.data.scenes:
+                if getattr(scene, 'mixie_session_id', '') == session_id:
+                    add_agent_message(scene, 'Stop could not be confirmed. Reconnect and try Stop again.')
+        run_on_main_thread(show_failure)
 
 
 class MIXIE_CHAT_OT_connect(Operator):
@@ -138,7 +121,6 @@ class MIXIE_CHAT_OT_disconnect(Operator):
     def execute(self, context):
         session = get_session_manager()
 
-        # Dev mode: just reset state and clear messages
         if DEV_MODE:
             session.clear(context.scene)
             context.scene.mixie_chat_messages.clear()
@@ -146,7 +128,6 @@ class MIXIE_CHAT_OT_disconnect(Operator):
             self.report({'INFO'}, "Dev Mode: Disconnected")
             return {'FINISHED'}
 
-        # Use ConnectionManager for disconnection
         manager = get_connection_manager()
         manager.disconnect()
 
@@ -178,12 +159,12 @@ class MIXIE_CHAT_OT_new_session(Operator):
             from ...core.export_destination import clear_destination
             clear_destination(old_session_id)
 
-        # 1. Stop any running SSE stream for this scene
-        cleanup_sse_handler(scene_name)
+        # 1. Stop any running agent stream for this scene
+        cleanup_turn_handler(scene_name)
 
-        # 2. Drain queued SSE events
-        from ...core.queue_processor import cleanup_sse_queue_for_scene
-        cleanup_sse_queue_for_scene(scene_name)
+        # 2. Drain queued agent events
+        from ...core.queue_processor import cleanup_event_queue_for_scene
+        cleanup_event_queue_for_scene(scene_name)
 
         # 3. Flush queued tool scripts
         flush_executor_queue()
@@ -281,7 +262,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         if state in (SessionState.BUSY, SessionState.AWAITING_INPUT):
             return True
         # Defence-in-depth: allow abort from IDLE when a session_id exists.
-        # Normally SSE errors keep state=BUSY, but edge cases may leave IDLE
+        # Normally Transport errors keep state=BUSY, but edge cases may leave IDLE
         # while the backend is still running.
         if state == SessionState.IDLE:
             return bool(session.get_session_id(scene))
@@ -295,12 +276,12 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         from ...core.export_destination import clear_destination
         clear_destination(session.get_session_id(scene))
 
-        # 1. Stop SSE stream for this scene only
-        cleanup_sse_handler(scene_name)
+        # 1. Stop agent stream for this scene only
+        cleanup_turn_handler(scene_name)
 
         # 2. Drain queued events for this scene
-        from ...core.queue_processor import cleanup_sse_queue_for_scene
-        cleanup_sse_queue_for_scene(scene_name)
+        from ...core.queue_processor import cleanup_event_queue_for_scene
+        cleanup_event_queue_for_scene(scene_name)
 
         # 3. Flush queued tool scripts (global — scripts aren't scene-tagged)
         flush_executor_queue()
@@ -346,8 +327,10 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 5. Send abort to backend
         self._send_abort_request_async(session.get_session_id(scene))
 
-        # 6. Reset state
+        # 6. Reset state. Stop cancels the WHOLE run (its background
+        # workers included — /agent/cancel closes it server-side).
         session.clear_streaming()
+        session.set_run(scene, "", False)
         session.set_connected(scene)
 
         for window in context.window_manager.windows:
@@ -408,49 +391,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
             logger.debug(f"_clear_interrupt_prompt skipped: {e}")
 
     def _send_abort_request_async(self, session_id: str) -> None:
-        """Send abort request to backend in background thread."""
-        if not session_id:
-            return
-
-        import threading
-        thread = threading.Thread(
-            target=self._send_abort_request,
-            args=(session_id,),
-            daemon=True
-        )
-        thread.start()
-
-    def _send_abort_request(self, session_id: str) -> None:
-        """Send abort request to backend (runs in background thread)."""
-        try:
-            import httpx
-            from mixar.config.config import get_server_url
-
-            base_url = get_server_url()
-            auth_token = get_auth_token()
-
-            if not auth_token:
-                logger.warning("No auth token available for abort request")
-                return
-
-            url = f"{base_url}/api/v1/blender/agent/cancel"
-            headers = {"Authorization": f"Bearer {auth_token}"}
-            payload = {"session_id": session_id}
-
-            # Use timeout to prevent hanging
-            with httpx.Client(timeout=5.0) as client:
-                response = client.post(url, json=payload, headers=headers)
-
-                if response.status_code == 200:
-                    logger.info(f"Backend session aborted: {session_id[:8]}")
-                else:
-                    logger.warning(
-                        f"Failed to abort backend session: HTTP {response.status_code}"
-                    )
-        except httpx.HTTPError as e:
-            logger.warning(f"HTTP error during abort request: {e}")
-        except Exception as e:
-            logger.error(f"Failed to send abort request: {e}")
+        send_cancel_request_async(session_id)
 
 
 class MIXIE_CHAT_OT_resume_previous_task(Operator):
@@ -478,12 +419,7 @@ class MIXIE_CHAT_OT_resume_previous_task(Operator):
         import uuid as _uuid
 
         from ...constants import TEMP_PLACEHOLDER_PREFIX
-        from ...core.queue_processor import (
-            queue_sse_complete,
-            queue_sse_error,
-            queue_sse_event,
-        )
-        from ...core.sse_handler import create_sse_handler
+        from ...core.turn_transport import create_turn_handler
         from mixar.config.config import get_server_url
 
         scene = context.scene
@@ -495,8 +431,8 @@ class MIXIE_CHAT_OT_resume_previous_task(Operator):
 
         # A live handler for this scene means recovery is already owned by
         # its attach loop (or a stream is running) — never double-attach.
-        from ...core.sse_handler import get_sse_handler
-        existing = get_sse_handler(scene.name)
+        from ...core.turn_transport import get_turn_handler
+        existing = get_turn_handler(scene.name)
         if existing is not None and existing.is_running:
             self.report({'WARNING'}, "A task is already streaming")
             return {'CANCELLED'}
@@ -519,39 +455,11 @@ class MIXIE_CHAT_OT_resume_previous_task(Operator):
 
         base_url = get_server_url()
         target_scene_name = scene.name
-        sse_handler = create_sse_handler(
+        turn_transport = create_turn_handler(
             scene_name=target_scene_name,
             host=base_url,
-            on_event=lambda event: queue_sse_event(event, target_scene_name),
-            on_error=lambda error: queue_sse_error(error, target_scene_name),
-            on_complete=lambda: queue_sse_complete(target_scene_name),
         )
-        # Best cursor available, in order:
-        #   1. the cursor this scene's handler carried across the swap
-        #      (create_sse_handler copies it) — exactly what we last rendered;
-        #   2. the ``last_seq`` turn.status reported on reconnect — the server
-        #      side of the same turn, parked by turn_resume.offer_resume_prompt.
-        #      Reached whenever the scene has no carried handler at all (client
-        #      restart, cleanup_sse_handler, a never-streamed scene), which is
-        #      the live path that produced after_seq=-1 in QA;
-        #   3. -1, a full replay.
-        #
-        # -1 is deliberately the LAST resort, not the default: content slots
-        # stream as ``append``, and the bubbles of the dropped turn are still
-        # in scene.mixie_chat_messages, so a whole-turn replay re-appends every
-        # token into bubbles that already hold it (bubble_id lookup is
-        # idempotent, so the message COUNT stays right while each bubble's
-        # prose doubles — the same duplication documented in
-        # create_sse_handler's cursor carry-over).
-        after_seq = None
-        if sse_handler._session_id == target_session and sse_handler._last_seq >= 0:
-            after_seq = sse_handler._last_seq
-        else:
-            from ...core.turn_resume import reported_last_seq
-            reported = reported_last_seq(target_session)
-            if reported >= 0:
-                after_seq = reported
-        started = sse_handler.resume_stream(target_session, after_seq=after_seq)
+        started = turn_transport.resume_stream(target_session)
         if not started:
             session.set_state(scene, SessionState.IDLE)
             self.report({'WARNING'}, "Could not resume the previous task")

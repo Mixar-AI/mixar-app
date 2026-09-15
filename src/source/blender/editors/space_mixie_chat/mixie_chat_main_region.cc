@@ -222,7 +222,12 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         if (was_hovered != step.is_hovered) {
           needs_redraw = true;
         }
-        if (step.is_hovered) {
+        /* Hand cursor only on acted rows that actually toggle. Observation
+         * labels such as "Inspected scene" (kind read/search) are not
+         * controls even when they carry a detail body. */
+        if (step.is_hovered && step.detail[0] != '\0' &&
+            step.kind != 0 && step.kind != 3)
+        {
           any_hovered = true;
         }
       }

@@ -31,7 +31,8 @@ class TOPBAR_HT_upper_bar(Header):
 
         TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
 
-        layout.separator(type='LINE')
+        # Space (not LINE) so Help keeps its trailing gap without a divider.
+        layout.separator()
 
         if not screen.show_fullscreen:
             layout.template_ID_tabs(window, "workspace", new="workspace.add", menu="TOPBAR_MT_workspace_menu")

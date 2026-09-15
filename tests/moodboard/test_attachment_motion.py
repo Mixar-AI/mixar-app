@@ -93,10 +93,10 @@ def test_only_committed_new_attachments_animate(monkeypatch):
 
 
 def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
-    import bpy
     from mixar.modules.moodboard.core import chat_sync
     scene = SimpleNamespace(name='motion scene')
-    monkeypatch.setattr(bpy.context, 'scene', scene)
+    # Patch the module's binding: other suites install independent bpy stubs.
+    monkeypatch.setattr(chat_sync, 'bpy', SimpleNamespace(context=SimpleNamespace(scene=scene)))
     monkeypatch.setattr(chat_sync, '_last_signatures', {})
     monkeypatch.setattr(chat_sync, '_ensure_graph_node_ids', lambda _: None)
     signature = [0, ('a',)]

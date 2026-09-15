@@ -145,12 +145,118 @@ if [[ "$PLATFORM" == "macOS" ]]; then
     # CLT SDK and emits explicit -F paths that demote those headers from
     # system to user headers, turning -Werror=unguarded-availability-new into
     # hard build failures in Cycles' Metal device code.
-    if [[ -z "${SDKROOT:-}" ]]; then
-        SDKROOT="$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)"
+    #
+    # xcrun always reports the HIGHEST-versioned SDK it can find, which is not
+    # always one the installed linker understands: a leftover beta SDK (e.g.
+    # MacOSX27.0.sdk sitting beside a Command Line Tools 26.6 toolchain) ships
+    # .tbd stubs declaring architectures such as `arm64e.x1-macos`, and ld
+    # rejects the whole file ("tapi error: malformed file ... unknown
+    # architecture"). Every compile check fails at the link step, so CMake
+    # reports the C compiler itself as broken. Probe the SDK with a real
+    # compile+link and fall back to the newest one that actually works.
+    mixar_sdk_can_link() {
+        local sdk="$1"
+        [[ -n "$sdk" && -d "$sdk" ]] || return 1
+        local tmp
+        tmp="$(mktemp -d 2>/dev/null)" || return 1
+        printf 'int main(void){return 0;}\n' >"$tmp/probe.c"
+        # Probe with plain cc: this tests the SDK's stub libraries against the
+        # installed ld, and $CC may legitimately be a multi-word launcher
+        # ("ccache clang") that will not run as a single command word.
+        local probe_cc="/usr/bin/cc"
+        [[ -x "$probe_cc" ]] || probe_cc="$(command -v cc 2>/dev/null || true)"
+        [[ -n "$probe_cc" ]] || { rm -rf "$tmp"; return 1; }
+        local ok=1
+        if "$probe_cc" -isysroot "$sdk" "$tmp/probe.c" -o "$tmp/probe" >/dev/null 2>&1; then
+            ok=0
+        fi
+        rm -rf "$tmp"
+        return $ok
+    }
+
+    # Emit the real path: CMake caches SDK-resolved values, and build.sh purges
+    # cached entries whose SDK path differs textually from SDKROOT — a symlink
+    # such as SDKs/MacOSX.sdk would mismatch every resolved SDKs/MacOSX26.5.sdk
+    # entry and re-purge the cache on every single configure.
+    mixar_sdk_realpath() {
+        (cd "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"
+    }
+
+    mixar_pick_sdk() {
+        local dev_dir sdk_dir candidate
+        dev_dir="$(xcode-select -p 2>/dev/null || true)"
+        for candidate in \
+            "$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)" \
+            "${dev_dir:+$dev_dir/SDKs/MacOSX.sdk}" \
+            "${dev_dir:+$dev_dir/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk}"
+        do
+            if mixar_sdk_can_link "$candidate"; then
+                mixar_sdk_realpath "$candidate"
+                return 0
+            fi
+        done
+        for sdk_dir in \
+            "${dev_dir:+$dev_dir/SDKs}" \
+            "${dev_dir:+$dev_dir/Platforms/MacOSX.platform/Developer/SDKs}" \
+            /Library/Developer/CommandLineTools/SDKs
+        do
+            [[ -n "$sdk_dir" && -d "$sdk_dir" ]] || continue
+            while IFS= read -r candidate; do
+                if mixar_sdk_can_link "$candidate"; then
+                    mixar_sdk_realpath "$candidate"
+                    return 0
+                fi
+            done < <(find "$sdk_dir" -maxdepth 1 -name 'MacOSX*.sdk' 2>/dev/null | sort -Vr)
+        done
+        return 1
+    }
+
+    if [[ -n "${SDKROOT:-}" ]]; then
+        # Respect an explicitly pinned SDK, but say so loudly if it can't link.
+        if ! mixar_sdk_can_link "$SDKROOT"; then
+            echo "Warning: SDKROOT=$SDKROOT cannot link a test program; builds will fail." >&2
+        fi
+    else
+        SDKROOT="$(mixar_pick_sdk || true)"
         if [[ -n "$SDKROOT" ]]; then
             export SDKROOT
+            default_sdk="$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)"
+            [[ -n "$default_sdk" ]] && default_sdk="$(mixar_sdk_realpath "$default_sdk")"
+            if [[ "$SDKROOT" != "$default_sdk" ]]; then
+                echo "Note: skipping the default macOS SDK (it fails to link); using $SDKROOT" >&2
+                # SDKROOT alone is NOT enough: Blender's own
+                # platform_apple_xcode.cmake re-derives the SDK from
+                # `xcrun --show-sdk-version` and force-sets CMAKE_OSX_SYSROOT
+                # ("set(... CACHE PATH "" FORCE)"), overriding both the
+                # environment and any -DCMAKE_OSX_SYSROOT we pass. It guards
+                # that lookup with `if(NOT DEFINED OSX_SYSTEM)`, so pinning
+                # OSX_SYSTEM to the version we probed is the supported way in.
+                # Exported only when the default SDK is unusable, so a healthy
+                # machine configures exactly as it always has.
+                mixar_sdk_version="$(basename "$SDKROOT")"
+                mixar_sdk_version="${mixar_sdk_version#MacOSX}"
+                mixar_sdk_version="${mixar_sdk_version%.sdk}"
+                # Xcode.app's SDKs dir keeps MacOSX.sdk as the REAL directory
+                # (the versioned names are symlinks to it), so the real path
+                # carries no version; ask the SDK itself in that case.
+                if [[ ! "$mixar_sdk_version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+                    mixar_sdk_version="$(xcrun --sdk "$SDKROOT" --show-sdk-version 2>/dev/null || true)"
+                fi
+                if [[ "$mixar_sdk_version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+                    export MIXAR_OSX_SDK_VERSION="$mixar_sdk_version"
+                fi
+                unset mixar_sdk_version
+            fi
         else
-            unset SDKROOT
+            # Nothing probed clean (no compiler to probe with, an unusual
+            # toolchain, ...). Keep the historical behaviour rather than
+            # leaving the SDK unpinned, which is its own class of failure.
+            SDKROOT="$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)"
+            if [[ -n "$SDKROOT" ]]; then
+                export SDKROOT
+            else
+                unset SDKROOT
+            fi
         fi
     fi
 elif [[ "$PLATFORM" == "Linux" ]]; then

@@ -31,6 +31,7 @@
 #include "WM_types.hh"
 
 #include "view3d_director_cinema.hh"
+#include "view3d_moodboard_drawer.hh"
 #include "view3d_intern.hh" /* own include */
 
 namespace blender {
@@ -289,17 +290,28 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
    * column's My Cameras card. */
   rcti rect_adjusted = *ED_region_visible_rect(region);
   /* The moodboard is a sliding overlay, not a reserved viewport sidebar.
-   * Keep navigation anchored to the viewport when the drawer is tucked away. */
-  if (const ARegion *drawer = BKE_area_find_region_type(CTX_wm_area(C), RGN_TYPE_TOOL_PROPS)) {
+   * Keep navigation anchored to the viewport when the drawer is tucked away;
+   * once it opens, park the gizmos left of the grip — same mechanism as the
+   * N-panel clamp below. */
+  ScrArea *area = CTX_wm_area(C);
+  if (ARegion *drawer = BKE_area_find_region_type(area, RGN_TYPE_TOOL_PROPS)) {
     if (drawer->overlap &&
         rect_adjusted.xmax == drawer->winrct.xmin - region->winrct.xmin)
     {
       rect_adjusted.xmax = drawer->winrct.xmax - region->winrct.xmin;
     }
+    const float amount = view3d_moodboard_drawer_display_amount(C);
+    rcti grip;
+    if (amount > 0.001f &&
+        view3d_moodboard_drawer_grip_rect_for(area, drawer, amount, &grip))
+    {
+      rect_adjusted.xmax = std::min(rect_adjusted.xmax,
+                                    grip.xmin - region->winrct.xmin);
+    }
     /* The N-panel leaves a Moodboard-tab gutter at the right edge. That gap
      * means the generic edge-touching visible-rect test can miss the sidebar;
      * navigation must still sit to its left, clear of the category tabs. */
-    const ARegion *sidebar = BKE_area_find_region_type(CTX_wm_area(C), RGN_TYPE_UI);
+    const ARegion *sidebar = BKE_area_find_region_type(area, RGN_TYPE_UI);
     if (sidebar && sidebar->overlap && sidebar->winx > 1 &&
         !(sidebar->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)) &&
         RGN_ALIGN_ENUM_FROM_MASK(sidebar->alignment) == RGN_ALIGN_RIGHT)

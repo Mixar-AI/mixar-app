@@ -99,8 +99,8 @@ def test_build_model_items_suffix_rules():
 def _capturing_service():
     captured = {}
     service = AgentService.__new__(AgentService)
-    service.put = lambda endpoint, json=None: captured.update(
-        endpoint=endpoint, payload=json
+    service._request = lambda endpoint, payload=None, mutation=False: captured.update(
+        endpoint=endpoint, payload=payload
     ) or APIResponse(success=True, status_code=200, data={
         "status": "success", "message": "", "data": {"byok_active": True, "items": []},
     })
@@ -110,7 +110,7 @@ def _capturing_service():
 def test_save_credentials_all_omits_extended_fields_by_default():
     service, captured = _capturing_service()
     service.save_credentials_all(provider="openai", model="m", api_key="k")
-    assert captured["endpoint"] == "byok"
+    assert captured["endpoint"] == "byok.set"
     assert "base_url" not in captured["payload"]
     assert "supports_vision" not in captured["payload"]
 

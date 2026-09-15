@@ -2,37 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Reconnect turn recovery — offer "Resume previous task" after a drop (#1258).
+"""Offer recovery for previously saved sessions that have no local live turn.
 
-The backend keeps a turn running after the client's SSE dies (disconnect
-drain) and buffers the missed events, but until now a reconnecting client
-had no idea: the next message silently superseded the in-flight turn.
-
-Flow:
-1. On WS reconnect (``connection_manager.on_connected``), collect the chat
-   session ids of scenes that look idle locally and ask the server
-   ``turn.status`` for them (ownership-scoped Redis liveness).
-2. A hit surfaces a chat bubble with a ``resume_task:<session_id>`` PRIMARY
-   action — the same manual-bubble pattern as the credits notice, so it never
-   flips the session into AWAITING_INPUT.
-
-   A hit is ``status`` RUNNING (a producer still owns the turn) or ABANDONED
-   (the drain gave up with nobody attached, so the turn died and its tail was
-   never seen). ENDED is never a hit. This used to key off ``replayable``,
-   which is the existence of the replay list — and that list deliberately
-   outlives its turn by an hour so a late attach can still collect the tail.
-   Every reconnect within that hour therefore announced "a previous task is
-   still running" about a turn the user had watched finish, and because
-   dismissal is local-only the notice came back on the next reconnect. The
-   backend now stamps the turn's terminal disposition at close, so liveness
-   and "worth announcing" are read from what happened rather than from which
-   Redis keys have not expired yet.
-3. Confirming runs ``bpy.ops.mixie_chat.resume_previous_task`` which adopts
-   the session into a per-scene SSE handler and replays + follows via the
-   existing attach endpoint. Dismiss removes the bubble.
-
-All bpy work happens on the main thread (``run_on_main_thread``); the WS
-thread only sends the status request and marshals the result back.
+The WebSocket journal owns delivery. Its server cursor is never treated as a
+rendered cursor: turn_events restores the cursor saved with the transcript.
 """
 
 import uuid
@@ -48,23 +21,6 @@ logger = get_logger(__name__)
 RESUME_BUBBLE_PREFIX = "turn-resume-"
 RESUME_ACTION_PREFIX = "resume_task:"
 DISMISS_ACTION = "dismiss_resume_task"
-
-# Attach cursors reported by ``turn.status`` (session_id -> last issued seq).
-# The resume prompt is offered on reconnect but confirmed by a human click
-# some seconds later, so the cursor is parked here rather than on the bubble:
-# it never has to survive a .blend reload (a lost entry just degrades to the
-# -1 full replay), and it keeps the ``resume_task:<session_id>`` action value
-# — a frozen client-local contract with chat_special_ops — unchanged.
-_REPORTED_LAST_SEQ: dict[str, int] = {}
-
-
-def reported_last_seq(session_id: str) -> int:
-    """The last seq ``turn.status`` reported for this session, or -1."""
-    try:
-        return int(_REPORTED_LAST_SEQ.get(session_id, -1))
-    except (TypeError, ValueError):
-        return -1
-
 
 # Server-reported turn dispositions (mixar-backend resume_buffer.TURN_*).
 STATUS_RUNNING = "running"
@@ -93,10 +49,10 @@ def check_orphaned_turns() -> None:
 
     MAIN THREAD ONLY: it iterates ``bpy.data.scenes`` and reads scene RNA.
     ``connection_manager.on_connected`` (WebSocket thread) reaches it through
-    ``run_on_main_thread``; the ``turn.status`` reply is handled off-thread
+    ``run_on_main_thread``; the ``agent.status`` reply is handled off-thread
     and only its prompt is marshalled back. Sessions queried: every
     scene's ``mixie_session_id`` whose local state is idle-ish and which has
-    no SSE handler already running (the attach loop owns recovery then).
+    no socket turn already running (the attach loop owns recovery then).
     """
     try:
         from mixar.modules.space_mixie_chat.constants import SessionState
@@ -110,6 +66,9 @@ def check_orphaned_turns() -> None:
         candidates = {}
         for scene in bpy.data.scenes:
             sid = getattr(scene, "mixie_session_id", "") or ""
+            from .turn_events import _turns, _blocked
+            if sid in _blocked or any(turn.session_id == sid for turn in _turns.values()):
+                continue
             if not sid or sid in candidates:
                 continue
             # Scenes actively streaming are self-healing via their own attach
@@ -124,6 +83,10 @@ def check_orphaned_turns() -> None:
             if SessionManager.get_state(scene) not in (
                 SessionState.IDLE, SessionState.OFFLINE,
             ):
+                continue
+            # An open run's next turns arrive over the socket as wake-ups —
+            # nothing is orphaned there.
+            if SessionManager.run_open(scene):
                 continue
             candidates[sid] = scene.name
 
@@ -160,14 +123,14 @@ def check_orphaned_turns() -> None:
             run_on_main_thread(_prompt)
 
         client.send_request(
-            "turn.status", {"session_ids": list(candidates)}, _on_status,
+            "agent.status", {"session_ids": list(candidates)[:32]}, _on_status,
         )
     except Exception:
         logger.exception("check_orphaned_turns failed (non-fatal)")
 
 
 def _status_of(info: dict) -> str:
-    """The turn disposition a ``turn.status`` entry reports.
+    """The turn disposition a ``agent.status`` entry reports.
 
     Falls back to the pre-``status`` ``active`` bit so a new client keeps
     working against a backend that has not shipped the stamp yet; an entry
@@ -181,9 +144,9 @@ def _status_of(info: dict) -> str:
 
 
 def _scene_has_live_stream(scene_name: str) -> bool:
-    from .sse_handler import get_sse_handler
+    from .turn_transport import get_turn_handler
 
-    handler = get_sse_handler(scene_name)
+    handler = get_turn_handler(scene_name)
     return bool(handler and handler.is_running)
 
 
@@ -195,6 +158,9 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
     try:
         if scene is None or not hasattr(scene, "mixie_chat_messages"):
             return
+        from .turn_events import _blocked
+        if getattr(scene, 'mixie_session_id', '') != session_id or session_id in _blocked:
+            return  # The user switched chats while the status request was pending.
         status = _status_of(info)
         if status not in _HIT_STATUSES:
             # Defence in depth: this function is what puts a claim about a
@@ -206,17 +172,6 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
         title = _RUNNING_TITLE if active else _ABANDONED_TITLE
         body = _RUNNING_BODY if active else _ABANDONED_BODY
         content = f"**{title}**\n\n{body}"
-        # Park the server's attach cursor for resume_previous_task: without it
-        # a scene whose SSE handler is gone (client restart, cleanup) attaches
-        # at -1 and replays the WHOLE turn.
-        try:
-            last_seq = int(info.get("last_seq", -1))
-        except (TypeError, ValueError):
-            last_seq = -1
-        if last_seq >= 0:
-            _REPORTED_LAST_SEQ[session_id] = last_seq
-        else:
-            _REPORTED_LAST_SEQ.pop(session_id, None)
         if active:
             content += "\n\nThe task is *still running* — resuming will replay what you missed and follow it live."
 

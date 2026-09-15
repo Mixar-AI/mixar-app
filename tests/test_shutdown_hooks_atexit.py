@@ -16,6 +16,8 @@ exercised end-to-end).
 import ast
 from pathlib import Path
 
+import pytest
+
 SRC = Path(__file__).resolve().parents[1] / "src" / "scripts" / "mixar"
 
 TOAST_TIMER = SRC / "modules" / "common" / "notifications" / "toast_timer.py"
@@ -66,9 +68,10 @@ class TestToastTimerAppExitGuard:
 
 
 class TestShutdownHooksPassReason:
-    def test_atexit_reason_reaches_toast_cleanup(self):
+    @pytest.mark.parametrize('cleanup', ['cleanup_toast_timer', 'cleanup_all_turn_handlers'])
+    def test_atexit_reason_reaches_cleanup(self, cleanup):
         """_run_all_cleanups must forward app_exit=(reason == "atexit") to
-        cleanup_toast_timer via _safe."""
+        UI-sensitive cleanups via _safe."""
         tree = ast.parse(SHUTDOWN_HOOKS.read_text(encoding="utf-8"))
         fn = _function(tree, "_run_all_cleanups")
 
@@ -79,11 +82,11 @@ class TestShutdownHooksPassReason:
                 and node.func.id == "_safe"
                 and node.args
                 and isinstance(node.args[0], ast.Constant)
-                and node.args[0].value == "cleanup_toast_timer"
+                and node.args[0].value == cleanup
             ):
                 kw = {k.arg: k for k in node.keywords}
-                assert "app_exit" in kw, "cleanup_toast_timer must get app_exit"
+                assert "app_exit" in kw, f"{cleanup} must get app_exit"
                 expr = ast.unparse(kw["app_exit"].value)
                 assert "atexit" in expr and "reason" in expr
                 return
-        raise AssertionError("_safe('cleanup_toast_timer', ...) call not found")
+        raise AssertionError(f"_safe({cleanup!r}, ...) call not found")

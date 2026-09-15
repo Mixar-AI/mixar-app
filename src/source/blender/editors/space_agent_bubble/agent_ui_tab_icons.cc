@@ -116,26 +116,18 @@ void stroke_path(const float (*pts)[2],
 
 }  // namespace
 
-/* Reference tab marks: a folded media page and an upright, open thumbs-up.
- * Both use the same inset and thin stroke so they balance at compact sizes. */
+/* Reference tab mark: a folded media page. Thin stroke so it balances the
+ * other tab glyphs at compact sizes. */
 void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4])
 {
+  if (icon != AGENT_ICON_MEDIA) {
+    return;
+  }
   const float weight = std::max(1.0f, size / 14.0f);
-  if (icon == AGENT_ICON_MEDIA) {
-    static const float page[][2] = {{-.30f,-.40f},{.30f,-.40f},{.30f,.15f},
-                                   {.05f,.40f},{-.30f,.40f}};
-    static const float fold[][2] = {{.05f,.40f},{.05f,.15f},{.30f,.15f}};
-    stroke_path(page, 5, cx, cy, size, weight, true, color);
-    stroke_path(fold, 3, cx, cy, size, weight, false, color);
-  }
-  else {
-    static const float hand[][2] = {{-.17f,-.37f},{.28f,-.37f},{.36f,-.31f},
-        {.43f,.07f},{.40f,.16f},{.32f,.20f},{.08f,.20f},{.13f,.40f},
-        {.09f,.48f},{.01f,.48f},{-.06f,.28f},{-.17f,.12f}};
-    static const float cuff[][2] = {{-.38f,.12f},{-.17f,.12f},
-                                   {-.17f,-.37f},{-.38f,-.37f}};
-    stroke_path(hand, 12, cx, cy, size, weight, true, color);
-    stroke_path(cuff, 4, cx, cy, size, weight, true, color);
-  }
+  static const float page[][2] = {{-.30f,-.40f},{.30f,-.40f},{.30f,.15f},
+                                 {.05f,.40f},{-.30f,.40f}};
+  static const float fold[][2] = {{.05f,.40f},{.05f,.15f},{.30f,.15f}};
+  stroke_path(page, 5, cx, cy, size, weight, true, color);
+  stroke_path(fold, 3, cx, cy, size, weight, false, color);
 }
 }  // namespace blender

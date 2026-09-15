@@ -39,6 +39,9 @@ struct AgentIslandState {
   char input_text[512];           /* Current composer input / recognized scribble text. */
   const char *placeholder;  /* Drawn only while the input is empty. */
   bool prompt_empty;
+  /* The primary button reads Stop instead of Send: busy AND nothing typed.
+   * A non-empty composer always sends (an interjection joins the open run). */
+  bool stop_visible;
   /* A conversation exists, so the panel splits: transcript above, input below.
    * Empty, the input takes the whole panel exactly as the artboard draws it. */
   bool has_transcript;

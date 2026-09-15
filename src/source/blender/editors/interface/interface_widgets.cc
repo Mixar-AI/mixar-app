@@ -6009,7 +6009,15 @@ static bool zen_toolbar_tool(const Button *but)
   return but != nullptr && but_is_tool(but) && but->mixar_style.theme == MixarTheme::Zen;
 }
 
-/** One PILL pane: viewport tools, explicit glass actions, or header shading. */
+/**
+ * One PILL pane: viewport tools, explicit glass actions, the header shading
+ * strip, or a standalone icon chip beside it (the Zen guides toggle). `Row` is
+ * an expanded RNA enum cell; `But` is an icon-only operator chip, which is
+ * the same material one cell wide. A labelled button is not a chip, so the
+ * empty `drawstr` and the explicit `alignnr` scope keep this to controls a
+ * Zen layout deliberately put in an aligned group of their own. Explicit
+ * GlassTool components opt in independently of the native button type.
+ */
 static bool zen_glass_cell(const Button *but)
 {
   if (zen_toolbar_tool(but) ||
@@ -6024,7 +6032,8 @@ static bool zen_glass_cell(const Button *but)
   if (but->mixar_style.component != MixarComponent::None) {
     return false;
   }
-  return but->type == ButtonType::Row && but->icon != ICON_NONE && but->drawstr.empty();
+  return ELEM(but->type, ButtonType::Row, ButtonType::But) && but->icon != ICON_NONE &&
+         but->drawstr.empty();
 }
 
 /**
@@ -6037,7 +6046,11 @@ static bool zen_glass_cell(const Button *but)
  * Unselected shading icons desaturate like toolbar tools.
  *
  * The Zen header shading strip uses the same painter on a horizontal
- * `row(align=True)` of native RNA enum buttons.
+ * `row(align=True)` of native RNA enum buttons, and the guides chip beside
+ * it is the single-cell case: its own aligned row, so the union is its own
+ * rect and the pane is one round chip carrying the same wash, sheen and
+ * rim. Pressed and hover paint the shading strip's circular cell wash, so a
+ * depressed chip reads exactly like a selected shading icon.
  *
  * Native frost is a window effect the toolbar cannot request, so the bed
  * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost
@@ -6190,6 +6203,20 @@ static void widget_roundbut_exec(Button *but,
     }
   }
   if (!overlay && zen_glass_cell(but)) {
+    /* A glass chip is the Radio strip's neighbour, so it needs that strip's
+     * icon treatment. `Exec` themes from `wcol_tool`, whose `text_sel` is
+     * near-black — right for a filled accent box, but here `widget_state`
+     * has already moved it into `text` and the inner fill is dropped, so a
+     * pressed chip would paint a black glyph on the selected wash while the
+     * cell beside it paints white. `wcol_radio` is the strip's own theme.
+     * Toolbar tools share this painter but keep their own colours: they are
+     * the transform trio, which resolves its icons through the tool-icon
+     * path and already looks right. */
+    if (!zen_toolbar_tool(but)) {
+      const uiWidgetColors &radio = theme::theme_get()->tui.wcol_radio;
+      const bool chip_selected = (state->but_flag & (UI_SELECT | UI_SELECT_DRAW)) != 0;
+      copy_v4_v4_uchar(wcol->text, chip_selected ? radio.text_sel : radio.text);
+    }
     widget_zen_tool_glass(but, rect, state, roundboxalign);
     wtb.draw_inner = false;
     wtb.draw_outline = false;

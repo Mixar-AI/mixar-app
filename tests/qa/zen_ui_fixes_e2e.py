@@ -65,8 +65,8 @@ def run(qa):
             'm.sender="AGENT"; m.message_type="AGENT"; m.bubble_id="qa-zen-ui"; '
             'm.content="Switched the render engine to Cycles and verified the change. '
             'All other settings are unchanged. Text stays readable while the window wraps it."; '
-            'm.steps_summary="Ran 1 command"; m.steps_collapsed=False; '
-            's=m.step_items.add(); s.item_id="qa-inspected"; s.kind="COMMAND"; '
+            'm.steps_summary="Read 1 file"; m.steps_collapsed=False; '
+            's=m.step_items.add(); s.item_id="qa-inspected"; s.kind="READ"; '
             's.label="Inspected scene"; s.detail="Cube, Camera, Light"; s.status="DONE"; result=True')
     time.sleep(.5)
     dimensions = qa.eval(f'w=drv.find_one(**{FIELD!r})["_win"]; result=[w.width,w.height]')

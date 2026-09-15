@@ -157,7 +157,7 @@ def test_bottom_row_buttons_and_input_bubble_aligned():
     # while Scribble is armed — the margins stay AGENT_SEG_X either way.
     assert "const float input_w = card_w - AGENT_SEG_X * 2.0f;" in LAYOUT_CC
     assert "r_layout->input = f.box(input_x," in LAYOUT_CC
-    assert "r_layout->chip_upload = f.box(\n      AGENT_SEG_X," in LAYOUT_CC
+    assert "r_layout->chip_upload = f.box(AGENT_SEG_X," in LAYOUT_CC
     assert "#define AGENT_BTN_GENERATE_X (AGENT_CARD_W - AGENT_SEG_X - AGENT_BTN_GENERATE_W)" in THEME_HH
     # Generate keeps that same right inset against the live card width.
     assert "card_w - AGENT_SEG_X - AGENT_BTN_GENERATE_W" in LAYOUT_CC

@@ -63,7 +63,7 @@ const AgentIcon g_tab_icons[AGENT_TAB_COUNT] = {
     AGENT_ICON_MESH,
     AGENT_ICON_MEDIA,
     AGENT_ICON_SPLAT,
-    AGENT_ICON_THUMB,
+    AGENT_ICON_COUNT,
     AGENT_ICON_COUNT,
 };
 
@@ -300,7 +300,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->status_busy ? "Stop" : "Send",
+  label_centre(state->stop_visible ? "Stop" : "Send",
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,

@@ -145,7 +145,7 @@ def test_contract_doc_exists_and_is_linked():
     ):
         assert needle in text, needle
     for path in (
-        "CLAUDE.md",
+        ".claude/rules/private-docs-map.md",
         "AGENTS.md",
         "src/scripts/mixar/modules/space_mixie_chat/core/main_thread_executor.py",
         "src/scripts/mixar/modules/space_mixie_chat/ui/operators/agent_final_render_ops.py",
@@ -244,7 +244,8 @@ def test_orphaned_turn_check_is_marshalled_to_the_main_thread():
     start = src.index("def on_connected()")
     end = src.index("def on_disconnected(", start)
     block = src[start:end]
-    assert "run_on_main_thread(check_orphaned_turns)" in block
+    assert "run_on_main_thread(reconnect)" in block
+    assert "check_orphaned_turns()" in (CHAT_ROOT / "core/turn_events.py").read_text()
     assert "\n                    check_orphaned_turns()\n" not in block
 
 

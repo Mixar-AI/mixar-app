@@ -22,12 +22,11 @@ namespace blender {
 struct rctf;
 
 enum AgentIcon {
-  /* Tab strip. `generations.svg` draws marks for Agent, Gaussian Splat and
-   * My Generations only; 3D and Media use the cube and folded-page glyphs
-   * below so no tab reads as the odd one out. */
+  /* Tab strip. `generations.svg` draws marks for Agent and Gaussian Splat;
+   * 3D and Media use the cube and folded-page glyphs below so those tabs
+   * do not read as the odd ones out. My Generations is label-only. */
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
   AGENT_ICON_MEDIA,     /* Folded page — Media. */
-  AGENT_ICON_THUMB,     /* Thumbs-up — My Generations. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */
 
   /* Card header. */
@@ -54,9 +53,8 @@ void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, cons
  *
  * \a backdrop is the colour the glyph sits ON. Monoline glyphs are drawn as a
  * filled silhouette punched out by the same silhouette inset by one stroke
- * width — overlapping outlines cannot express a thumbs-up without drawing a
- * seam where the thumb meets the fist, and at 16 px that seam is the whole
- * icon. Pass the exact fill of the pill or chip underneath.
+ * width — overlapping outlines seam where shapes meet, and at 16 px that
+ * seam is the whole icon. Pass the exact fill of the pill or chip underneath.
  *
  * Expects `GPU_blend` to already be enabled — the island's draw pass sets it
  * once for the whole surface rather than thrashing state per glyph.

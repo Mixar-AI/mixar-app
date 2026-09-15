@@ -1,231 +1,45 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Agent settings facade over WebSocket, preserving the UI response envelope."""
 
-"""
-Agent API Service.
-
-Handles /api/v1/agent endpoints for AI/ML features.
-"""
-
-from typing import Any, Callable, Dict, Optional
-
-from ..constants import APIModule
-from ..request_queue import AsyncResponse
+from ...agent_rpc.client import request, AgentRPCError
 from ..response import APIResponse
-from .base_service import BaseService
 
 
-class AgentService(BaseService):
-    """
-    Agent service for AI/ML operations.
+class AgentService:
+    @staticmethod
+    def _request(method, payload=None, mutation=False):
+        try:
+            result = request(method, payload, mutation=mutation)
+            return APIResponse.from_success(200, data=result)
+        except AgentRPCError as exc:
+            return APIResponse.from_error(exc.status_code, exc.message,
+                                          data={'message': exc.message, 'data': exc.data})
 
-    Endpoints:
-    - GET /context-script - Get context collector script
-    - POST /process - Process agent request
-    - GET /models - List available models
-    """
+    def list_models(self):
+        return self._request('models.list')
 
-    @property
-    def module(self) -> APIModule:
-        return APIModule.AGENT
+    def get_credentials(self):
+        return self._request('credentials.list')
 
-    # ========================================================================
-    # SYNC METHODS
-    # ========================================================================
-
-    def get_context_script(self) -> APIResponse:
-        """
-        Fetch the context collector script from server.
-
-        Returns:
-            APIResponse with script content
-        """
-        return self.get("context-script")
-
-    def process(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None,
-    ) -> APIResponse:
-        """
-        Submit a request to the agent for processing.
-
-        Args:
-            prompt: User prompt/request
-            context: Context data from Blender
-            model: Model to use (optional)
-            options: Additional options
-
-        Returns:
-            APIResponse with processing result
-        """
-        payload = {"prompt": prompt}
-        if context:
-            payload["context"] = context
-        if model:
-            payload["model"] = model
-        if options:
-            payload["options"] = options
-
-        return self.post("process", json=payload)
-
-    def list_models(self) -> APIResponse:
-        """
-        List available agent models.
-
-        Returns:
-            APIResponse with list of models
-        """
-        return self.get("models")
-
-    # ========================================================================
-    # BYOK — Bring-Your-Own-Key credentials
-    # ========================================================================
-
-    def get_credentials(self) -> APIResponse:
-        """GET /agent/credentials — fetch current BYOK state for the user."""
-        return self.get("credentials")
-
-    def save_credentials_all(
-        self,
-        provider: str,
-        model: str,
-        api_key: Optional[str],
-        base_url: Optional[str] = None,
-        supports_vision: Optional[bool] = None,
-    ) -> APIResponse:
-        """PUT /agent/byok — upsert BYOK config across all agent roles.
-
-        Uses the backend's single-value BYOK wrapper, which fans one
-        provider/model/key out to the default + per-agent roles and returns
-        the same {items, byok_active} shape as GET /agent/credentials.
-
-        Server validates the key with the provider (200ms–15s) before storing.
-        Atomic: on any failure, previous state (if any) is preserved.
-
-        ``base_url`` / ``supports_vision`` are only included when provided
-        (used by the "local" provider to register the relay target) —
-        omitting them keeps the payload byte-identical for older backends.
-        """
-        payload = {
-            "provider": provider,
-            "model": model,
-        }
+    def save_credentials_all(self, provider, model, api_key, base_url=None, supports_vision=None):
+        payload = {'provider': provider, 'model': model}
         if api_key is not None:
-            payload["api_key"] = api_key
+            payload['api_key'] = api_key
         if base_url is not None:
-            payload["base_url"] = base_url
+            payload['base_url'] = base_url
         if supports_vision is not None:
-            payload["supports_vision"] = bool(supports_vision)
-        return self.put("byok", json=payload)
+            payload['supports_vision'] = bool(supports_vision)
+        return self._request('byok.set', payload, mutation=True)
 
-    def delete_credentials_all(self) -> APIResponse:
-        """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
-        return self.delete("credentials/all")
-
-    # ========================================================================
-    # ASYNC METHODS
-    # ========================================================================
-
-    def get_context_script_async(
-        self,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """
-        Fetch the context collector script asynchronously.
-
-        Args:
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
-
-        Returns:
-            Request ID for tracking
-        """
-        return self.get_async(
-            "context-script",
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
-
-    def process_async(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """
-        Submit a request to the agent for processing asynchronously.
-
-        Args:
-            prompt: User prompt/request
-            context: Context data from Blender
-            model: Model to use (optional)
-            options: Additional options
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
-
-        Returns:
-            Request ID for tracking
-        """
-        payload = {"prompt": prompt}
-        if context:
-            payload["context"] = context
-        if model:
-            payload["model"] = model
-        if options:
-            payload["options"] = options
-
-        return self.post_async(
-            "process",
-            json=payload,
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
-
-    def list_models_async(
-        self,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """
-        List available agent models asynchronously.
-
-        Args:
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
-
-        Returns:
-            Request ID for tracking
-        """
-        return self.get_async(
-            "models",
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
+    def delete_credentials_all(self):
+        return self._request('credentials.clear', mutation=True)
 
 
-# Singleton instance
-_agent_service: Optional[AgentService] = None
+_agent_service = None
 
 
-def get_agent_service() -> AgentService:
-    """Get the global AgentService instance."""
+def get_agent_service():
     global _agent_service
     if _agent_service is None:
         _agent_service = AgentService()

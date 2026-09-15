@@ -281,9 +281,29 @@ def test_inspected_scene_override_when_objects_change():
     steps_format.begin_step_on_bubble(
         bubble, "r1", "unknown", "for o in bpy.data.objects: pass")
     assert bubble.step_items[0].label == "Inspected scene"
+    assert bubble.step_items[0].kind == "READ"
     steps_format.finish_step_on_bubble(
         bubble, "r1", {"success": True, "created_objects": ["A", "B"]})
     assert bubble.step_items[0].label == "Created 2 objects"
+    assert bubble.step_items[0].kind == "TOOL"
+
+
+def test_inspected_scene_stays_read_kind_for_execute_script():
+    """execute_bpy_script infers COMMAND, but a read-only body is an
+    observation — the native row must use the READ glyph, not the filled
+    act mark that reads as a highlighted button."""
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(
+        bubble, "r1", "execute_bpy_script",
+        "objs=[o.name for o in bpy.data.objects]; print(objs)")
+    assert bubble.step_items[0].label == "Inspected scene"
+    assert bubble.step_items[0].kind == "READ"
+    assert bubble.steps_summary.startswith("Read")
+    steps_format.finish_step_on_bubble(bubble, "r1", {"success": True})
+    assert bubble.step_items[0].kind == "READ"
+    item = steps_format.normalize_step_item(
+        {"kind": "COMMAND", "label": "Inspected scene", "status": "DONE"})
+    assert item["kind"] == "READ"
 
 
 def test_begin_step_uses_script_action_when_tool_name_unknown():

@@ -237,40 +237,46 @@ def test_action_properties_match_the_operator_signatures():
 
 
 def _tab_table():
-    block = re.search(
-        r"const TabSpec g_tabs\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
+    icons = re.search(
+        r"const AgentIcon g_tab_icons\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
     ).group(1)
-    return dict(re.findall(r'\{"([^"]+)",\s*(AGENT_ICON_\w+)\}', block))
+    layout = (CPP / "agent_ui_layout.cc").read_text()
+    metrics = re.search(
+        r"const TabMetric g_tab_metrics\[AGENT_TAB_COUNT\] = \{(.*?)\};", layout, re.S
+    ).group(1)
+    labels = re.findall(r'"([^"]+)"', metrics)
+    marks = re.findall(r"AGENT_ICON_\w+", icons)
+    assert len(labels) == len(marks) == 6
+    return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
-    """No two category tabs may share a glyph, and none may go unmarked.
+    """No two marked category tabs may share a glyph.
 
-    `generations.svg` draws marks for Agent, Gaussian Splat and My
-    Generations only; 3D and Media take the island's own cube and folded-page
-    glyphs so the strip cannot read as two tabs that failed to load. The
-    build before this stamped the SAME thumbs-up on four tabs, which read as
-    four tabs meaning one thing — hence the distinctness assert.
+    `generations.svg` draws marks for Agent and Gaussian Splat; 3D and Media
+    take the island's own cube and folded-page glyphs so those tabs cannot
+    read as failed-to-load. My Generations and Queue are label-only
+    (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
     assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
-    assert tabs["My Generations"] == "AGENT_ICON_THUMB"
+    assert tabs["My Generations"] == "AGENT_ICON_COUNT"
+    assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
     assert tabs["Media"] == "AGENT_ICON_MEDIA"
 
-    marks = [icon for label, icon in tabs.items() if label != "Queue"]
-    assert "AGENT_ICON_COUNT" not in marks
+    marks = [icon for icon in tabs.values() if icon != "AGENT_ICON_COUNT"]
     assert len(set(marks)) == len(marks)
 
 
 def test_reference_tab_marks_have_dedicated_stroked_artwork():
-    """Media and My Generations use separate vector paths at a shared weight."""
+    """Media uses a dedicated stroked page path."""
     artwork = (CPP / "agent_ui_tab_icons.cc").read_text()
     assert "AGENT_ICON_MEDIA" in artwork
     assert "stroke_path(page," in artwork
-    assert "stroke_path(hand," in artwork
-    assert "stroke_path(cuff," in artwork
+    assert "stroke_path(hand," not in artwork
+    assert "stroke_path(cuff," not in artwork
 
 
 def test_a_stroked_glyph_batches_its_segments():
@@ -296,7 +302,7 @@ def test_the_icon_sentinel_stays_last():
 
 def test_an_unmarked_tab_centres_its_label():
     """Left-aligning at the icon offset hangs the word off an empty pill."""
-    assert "g_tabs[i].icon == AGENT_ICON_COUNT" in DRAW_CC
+    assert "g_tab_icons[i] == AGENT_ICON_COUNT" in DRAW_CC
     assert re.search(r"label_centre\(\s*label.c_str\(\), BLI_rctf_cent_x\(&tab.pill\)", DRAW_CC)
 
 

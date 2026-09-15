@@ -160,9 +160,9 @@ void glyph_sort(const float cx, const float cy, const float s, const float col[4
 
 /** Isometric cube — a 3D asset whose preview has not loaded (or does not
  * exist). Drawn as a hexagon silhouette punched by an inset hexagon, plus the
- * three edges meeting at the centre — the same punch idiom as the thumbs-up,
- * so the seams where those edges meet the rim are erased rather than
- * outlined. */
+ * three edges meeting at the centre — the same punch idiom as the other
+ * silhouettes, so the seams where those edges meet the rim are erased rather
+ * than outlined. */
 void glyph_mesh(const float cx,
                 const float cy,
                 const float s,
@@ -381,7 +381,6 @@ void agent_ui_icon_draw(const AgentIcon icon,
     case AGENT_ICON_AGENT:
       glyph_agent(cx, cy, s, color);
       break;
-    case AGENT_ICON_THUMB:
     case AGENT_ICON_MEDIA:
       agent_ui_tab_icon_draw(icon, cx, cy, s, color);
       break;

@@ -53,8 +53,11 @@ for tail in ['scribble_mark.core.freeze_session', 'scribble_mark.core.chat_bridg
     exec(compile(path.read_text(), str(path), 'exec'), module.__dict__)
     for cls in getattr(module, 'classes', ()):
         bpy.utils.register_class(cls)
-chat = importlib.import_module('mixar.modules.space_mixie_chat.ui.operators.chat_ops')
-bpy.app.driver_namespace['scribble_qa_original_send'] = chat.create_sse_handler
+import sys
+sys.path.insert(0, str(root.parents[3] / 'tests/qa'))
+import chat_send_probe
+chat_send_probe.install()
+from mixar.modules.space_mixie_chat.core import turn_transport
 bpy.app.driver_namespace['scribble_qa_sent'] = []
 def capture(**kwargs):
     bpy.app.driver_namespace['scribble_qa_sent'].append({
@@ -63,7 +66,7 @@ def capture(**kwargs):
         'image_count': len(kwargs.get('image_attachments') or []),
     })
     return True
-chat.create_sse_handler = lambda **kwargs: SimpleNamespace(start_stream=capture)
+turn_transport.create_turn_handler = lambda **kwargs: SimpleNamespace(start_stream=capture)
 result = True
 '''.replace('SOURCE_ROOT', repr(str(ROOT / 'src/scripts/mixar/modules')))
        .replace('USE_INSTALLED', repr(os.environ.get('SCRIBBLE_QA_INSTALLED') == '1')))
@@ -114,6 +117,7 @@ def run(qa):
         qa.cmd('press', key='ESC', window=viewport(qa)['window'])
         qa.wait('not bpy.context.window_manager.mixar_mark_armed', timeout=8)
         assert drawer_state(qa) == drawer, 'Esc must restore the original moodboard view'
+        qa.step('reopen_chat_after_escape', qa.eval, "result=str(bpy.ops.mixar.bubble_restore())")
         qa.step('arm_scribble', qa.click, op='MIXAR_OT_scribble_toggle')
         qa.wait('bpy.context.window_manager.mixar_mark_armed', timeout=8)
         vp = viewport(qa)
@@ -177,7 +181,8 @@ from mixar.modules.space_mixie_chat.ui.operators import chat_ops
 from mixar.modules.scribble_mark.ui.operators import mark_draw_ops
 from mixar.modules.scribble_mark.core import scribble_mode
 from mixar.modules.space_mixie_chat.constants import SessionState
-chat_ops.create_sse_handler = bpy.app.driver_namespace.pop('scribble_qa_original_send')
+import chat_send_probe
+chat_send_probe.uninstall()
 mark_draw_ops.MARK_COMMIT_IDLE_S = bpy.app.driver_namespace.pop('scribble_qa_idle', .6)
 scribble_mode.disarm(bpy.context.window_manager)
 chat_ops.get_session_manager().set_state(bpy.context.scene, SessionState.IDLE)
