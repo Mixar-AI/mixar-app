@@ -245,11 +245,11 @@ def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
     toolbar = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/moodboard_toolbar.py")
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
 
-    assert "def draw_moodboard_add_tools(layout):" in toolbar
-    assert "def draw_moodboard_open_media_tool(layout):" in toolbar
-    assert "def draw_moodboard_add_text_tool(layout):" in toolbar
+    assert "def draw_moodboard_add_tools(layout, context):" in toolbar
+    assert "def draw_moodboard_open_media_tool(layout," in toolbar
+    assert "def draw_moodboard_add_text_tool(layout," in toolbar
     assert 'bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"' in toolbar
-    assert "draw_moodboard_add_tools(self.layout)" in toolbar
+    assert "draw_moodboard_add_tools(self.layout, context)" in toolbar
     assert "draw_moodboard_open_media_tool(col)" in toolbar
     assert "draw_moodboard_add_text_tool(col)" in toolbar
     assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar

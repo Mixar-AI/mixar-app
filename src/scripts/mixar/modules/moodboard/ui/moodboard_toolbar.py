@@ -38,36 +38,47 @@ _MASK_ICON_DEFAULT = "MOD_MASK"
 _DRAWER_ACTIVE_AMOUNT = 0.98
 
 
-def draw_moodboard_open_media_tool(layout):
+def draw_moodboard_open_media_tool(layout, *, drawer=False, compact=False):
     """Folder menu that opens image/video or picks existing media."""
     row = layout.row(align=True)
-    row.scale_x = 1.5
-    row.scale_y = 1.5
+    if not drawer:
+        row.scale_x = 1.5
+        row.scale_y = 1.5
+    elif compact:
+        row.scale_x = 2.0
     row.menu(
         "MIXIE_MT_add_image_menu",
-        text="",
-        icon="FILE_FOLDER",
+        text="Add Media" if drawer and not compact else "",
+        icon="IMAGE_DATA" if drawer else "FILE_FOLDER",
     )
+    if drawer:
+        row.mixar_style(component="DROPDOWN")
 
 
-def draw_moodboard_add_text_tool(layout):
+def draw_moodboard_add_text_tool(layout, *, drawer=False, compact=False):
     """Add a text box to the canvas."""
     row = layout.row(align=True)
-    row.scale_x = 1.5
-    row.scale_y = 1.5
-    row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
+    if not drawer:
+        row.scale_x = 1.5
+        row.scale_y = 1.5
+    elif compact:
+        row.scale_x = 2.0
+    row.operator("mixie.moodboard_add_textbox",
+                 text="Text" if drawer and not compact else "", icon="FONT_DATA")
+    if drawer:
+        row.mixar_style(component="ACTION", variant="SECONDARY")
 
 
-def draw_moodboard_add_tools(layout):
-    """Open-media + Add Text — the compact row the Zen drawer hosts.
-
-    The Mixie T-panel interleaves these with mask/annotate controls but
-    still calls the same builders so neither surface forks the actions.
-    """
-    col = layout.column(align=True)
-    draw_moodboard_open_media_tool(col)
-    col.separator(factor=0.6)
-    draw_moodboard_add_text_tool(col)
+def draw_moodboard_add_tools(layout, context):
+    """A quiet horizontal toolbar; narrow drawers keep both actions as icons."""
+    compact = context.window_manager.mixar_moodboard_drawer_width < 240
+    surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
+    surface.operator_context = "INVOKE_DEFAULT"
+    row = surface.row(align=False)
+    row.scale_y = 1.4
+    split = row.split(factor=0.62 if not compact else 0.5, align=False)
+    draw_moodboard_open_media_tool(split, drawer=True, compact=compact)
+    draw_moodboard_add_text_tool(split, drawer=True, compact=compact)
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -77,7 +88,7 @@ def draw_moodboard_add_tools(layout):
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Dropdown menu with media-adding options."""
+    """Open an image or video, or choose media already in this project"""
 
     bl_idname = "MIXIE_MT_add_image_menu"
     bl_label = "Add Media"
@@ -356,7 +367,7 @@ class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
         return float(amount) >= _DRAWER_ACTIVE_AMOUNT
 
     def draw(self, context):
-        draw_moodboard_add_tools(self.layout)
+        draw_moodboard_add_tools(self.layout, context)
 
 
 # Only include panels if MIXIE space is available

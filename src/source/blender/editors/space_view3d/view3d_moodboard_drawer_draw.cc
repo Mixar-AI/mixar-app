@@ -84,9 +84,13 @@ void draw_centered_line(const int font,
                         const float y,
                         const float color[4])
 {
+  /* Native toolbar labels use clipping on this shared font. The canvas hint
+   * owns its bounds, and must not inherit the last button's text rectangle. */
+  BLF_disable(font, BLF_CLIPPING);
   BLF_color4fv(font, color);
   BLF_position(font, cx - 0.5f * BLF_width(font, text, strlen(text)), y, 0.0f);
   BLF_draw(font, text, strlen(text));
+  BLF_batch_draw_flush();
 }
 
 void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
@@ -116,7 +120,14 @@ void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
   /* Graph cards use 17 for the headline and 13 for the secondary hint.
    * The empty board is the headline: 13 read as chrome, not the CTA. */
   BLF_size(font, 17.0f * UI_SCALE_FAC);
-  draw_centered_line(font, "Drop references here", cx, cy, EMPTY_HINT);
+  const float available = float(region->winx - offset) - 24.0f * UI_SCALE_FAC;
+  const char *hint = available < 210.0f * UI_SCALE_FAC ? "Drop media" :
+                                                                  "Drop references here";
+  const float text_width = BLF_width(font, hint, strlen(hint));
+  if (available > 0.0f && text_width > available) {
+    BLF_size(font, 17.0f * UI_SCALE_FAC * available / text_width);
+  }
+  draw_centered_line(font, hint, cx, cy, EMPTY_HINT);
 }
 
 /** Paint the labeled Moodboard tab with its flat inner edge at `x_right`. */
@@ -183,10 +194,17 @@ void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
   }
 
   const float scale = UI_SCALE_FAC;
-  const int pad = int(std::round(6.0f * scale));
-  const int x = panel_xmin + pad;
+  const int pad = int(std::round(12.0f * scale));
+  const int available = region->winx - panel_xmin - 2 * pad;
+  if (available <= 0) {
+    return;
+  }
+  /* Center a bounded toolbar. It must not grow into a pair of full-width
+   * buttons when the user pulls the board wider, or scale with canvas zoom. */
+  const bool compact = view3d_moodboard_drawer_width(CTX_wm_manager(C)) < 240.0f;
+  const int width = std::min(available, int(std::round((compact ? 88.0f : 200.0f) * scale)));
+  const int x = panel_xmin + (region->winx - panel_xmin - width) / 2;
   const int y = region->winy - pad;
-  const int width = int(std::round(40.0f * scale));
 
   ui::Block *block = ui::block_begin(
       C, region, "moodboard_drawer_add_tools", ui::EmbossType::Emboss);
