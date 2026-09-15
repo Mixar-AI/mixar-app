@@ -26,7 +26,7 @@ NAMES = ["Shape the character", "Paint soft textures", "Light the scene",
          "Build the backdrop", "Frame the camera", "Polish the details"]
 ITEMS = [{"id": f"cat-{i}", "text": text, "status": "in_progress"}
          for i, text in enumerate(NAMES)]
-PALETTES = ["Emerald", "Amber", "Lagoon", "Lilac", "Sky", "Lime"]
+PALETTES = ["Emerald", "Amber", "Rose", "Lilac", "Sky", "Coral"]
 
 
 def identities(qa):
@@ -105,7 +105,7 @@ def run(qa):
         qa.step("new_fanout", mirror, qa, list(reversed(ITEMS[:3])), True)
         qa.step("new_generation_resets_palette", qa.wait,
                 "{w['text']: w['value'] for w in drv.find(surface='agent_panel_cat')} == "
-                + repr({"cat-2": "Emerald", "cat-1": "Amber", "cat-0": "Lagoon"}), timeout=10)
+                + repr({"cat-2": "Emerald", "cat-1": "Amber", "cat-0": "Rose"}), timeout=10)
         return {"variations": expected, "identity_stable": True,
                 "pill_motion": pill_motion, "running_motion": running_motion,
                 "animation_preview": str(out / "cat_animation.gif")}

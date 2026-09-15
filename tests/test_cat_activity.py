@@ -139,10 +139,10 @@ int main() {
   assert(mixie_cat_style(-3).name == MIXIE_CAT_STYLES[0].name);
   assert(std::strcmp(mixie_cat_style_for_tier(0).name, "Emerald") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(1).name, "Amber") == 0);
-  assert(std::strcmp(mixie_cat_style_for_tier(2).name, "Lagoon") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(2).name, "Rose") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(3).name, "Lilac") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(4).name, "Sky") == 0);
-  assert(std::strcmp(mixie_cat_style_for_tier(5).name, "Lime") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(5).name, "Coral") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(-1).name, "Emerald") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(6).name, "Emerald") == 0);
   assert(std::strcmp(mixie_cat_style_for_tier(7).name, "Emerald") == 0);

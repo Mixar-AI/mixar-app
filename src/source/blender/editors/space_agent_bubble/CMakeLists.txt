@@ -23,6 +23,7 @@ set(SRC
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
   agent_ui_draw.cc
+  agent_ui_draw_helpers.cc
   agent_ui_controls_paint.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
@@ -55,6 +56,7 @@ set(SRC
   agent_bubble_references.hh
   agent_bubble_glass.hh
   agent_ui_draw.hh
+  agent_ui_draw_helpers.hh
   agent_ui_generations.hh
   agent_ui_generations_intern.hh
   agent_ui_icons.hh

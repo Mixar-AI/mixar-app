@@ -85,7 +85,9 @@ class TestNothingIsPaintedOutsideTheWindow:
 
 @pytest.fixture(scope="module")
 def pill_src() -> str:
-    return PILL_DRAW.read_text(encoding="utf-8")
+    return "\n".join((PILL_DRAW.parent / name).read_text(encoding="utf-8") for name in (
+        "agent_ui_draw.cc", "agent_ui_draw_helpers.cc", "agent_ui_draw_helpers.hh"
+    ))
 
 
 class TestTheCapsuleIsLiquidGlass:
@@ -134,7 +136,7 @@ class TestTheCapsuleIsLiquidGlass:
             )
 
     def test_the_helper_defaults_to_no_shadow(self, pill_src: str) -> None:
-        helper = _fn_body(pill_src, "void glass_fill_round(")
+        helper = (PILL_DRAW.parent / "agent_ui_draw_helpers.hh").read_text()
         assert "const bool shadow = false" in helper, (
             "The shared helper's shadow must default off, so a caller that "
             "forgets the argument cannot grow a pane past its window."

@@ -77,11 +77,13 @@ def test_working_state_does_not_paint_a_green_capsule_highlight():
 
 
 def test_working_state_pulses_logo_chip():
-    """The right-hand logo chip pulses its green gradient when working."""
+    """The right-hand logo chip pulses its tier-matched gradient when working."""
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
-    assert "is_working ? 0.25f * pulse" in elongated
+    assert "mixie_cat_style_for_tier(state->subscription_type)" in elongated
+    assert "mixie_cat_chip_color(cat_style.chip_shadow, pulse)" in elongated
+    assert "mixie_cat_chip_color(cat_style.chip_light, pulse)" in elongated
     assert "fill_round_gradient(&chip, chip_r," in elongated
     assert "chip_rim" not in elongated
 
