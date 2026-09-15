@@ -22,12 +22,15 @@
 
 #include "DNA_space_enums.h"
 #include "DNA_space_types.h"
+#include "DNA_image_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "BKE_context.hh"
 #include "BKE_report.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -42,10 +45,23 @@ namespace blender {
 
 static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
 {
+  if (RNA_struct_property_is_set(op->ptr, "image_name")) {
+    char name[MAX_ID_NAME - 2];
+    RNA_string_get(op->ptr, "image_name", name);
+    PointerRNA props = WM_operator_properties_create("MIXIE_CHAT_OT_add_image_from_blend");
+    RNA_string_set(&props, "dropped_image_name", name);
+    const auto result = WM_operator_name_call(C,
+                                              "MIXIE_CHAT_OT_add_image_from_blend",
+                                              wm::OpCallContext::ExecDefault,
+                                              &props,
+                                              nullptr);
+    WM_operator_properties_free(&props);
+    return wmOperatorStatus(result);
+  }
   char filepath[FILE_MAX];
   RNA_string_get(op->ptr, "filepath", filepath);
 
-  if (filepath[0] == '\0') {
+  if (filepath[0] == '\0' && RNA_collection_length(op->ptr, "files") == 0) {
     BKE_report(op->reports, RPT_ERROR, "No file path provided");
     return OPERATOR_CANCELLED;
   }
@@ -54,6 +70,16 @@ static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
    * checking, and attachment management. By drop time Python is loaded. */
   PointerRNA props = WM_operator_properties_create("MIXIE_CHAT_OT_add_image_from_file");
   RNA_string_set(&props, "filepath", filepath);
+  RNA_string_set(&props, "directory", "");
+  RNA_collection_clear(&props, "files");
+  RNA_BEGIN (op->ptr, item, "files") {
+    char *path = RNA_string_get_alloc(&item, "name", nullptr, 0, nullptr);
+    PointerRNA file;
+    RNA_collection_add(&props, "files", &file);
+    RNA_string_set(&file, "name", path);
+    MEM_delete_void(static_cast<void *>(path));
+  }
+  RNA_END;
 
   int result = WM_operator_name_call(C,
                                      "MIXIE_CHAT_OT_add_image_from_file",
@@ -81,6 +107,11 @@ void MIXIE_CHAT_OT_drop_image(wmOperatorType *ot)
                  FILE_MAX,
                  "File Path",
                  "Path to image file");
+  RNA_def_collection_runtime(ot->srna, "files", RNA_OperatorFileListElement, "Files", "Dropped paths");
+  RNA_def_string(ot->srna, "image_name", nullptr, MAX_ID_NAME - 2, "Image", "Dropped image datablock");
+  for (const char *name : {"filepath", "files", "image_name"}) {
+    RNA_def_property_flag(RNA_struct_type_find_property(ot->srna, name), PROP_HIDDEN | PROP_SKIP_SAVE);
+  }
 }
 
 /** \} */
@@ -101,6 +132,22 @@ static bool mixie_chat_image_drop_poll(bContext *C,
   ScrArea *area = CTX_wm_area(C);
   if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
     return false;
+  }
+  if (area->spacetype == SPACE_AGENT_BUBBLE) {
+    PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
+    PropertyRNA *tab = RNA_struct_find_property(&wm, "mixar_bubble_tab");
+    int agent;
+    if (!tab || !RNA_property_enum_value(C, &wm, tab, "AGENT", &agent) ||
+        RNA_property_enum_get(&wm, tab) != agent)
+    {
+      return false;
+    }
+  }
+
+  if (WM_drag_is_ID_type(drag, ID_IM)) {
+    const auto *id = static_cast<const wmDragID *>(drag->ids.first);
+    const auto *image = reinterpret_cast<const Image *>(id->id);
+    return !ELEM(image->source, IMA_SRC_MOVIE, IMA_SRC_SEQUENCE, IMA_SRC_VIEWER);
   }
 
   if (drag->type == WM_DRAG_PATH) {
@@ -126,11 +173,19 @@ static void mixie_chat_image_drop_copy(bContext * /*C*/,
                                        wmDrag *drag,
                                        wmDropBox *drop)
 {
+  RNA_struct_property_unset(drop->ptr, "filepath");
+  RNA_struct_property_unset(drop->ptr, "image_name");
+  RNA_collection_clear(drop->ptr, "files");
   if (drag->type == WM_DRAG_PATH) {
-    const char *path = WM_drag_get_single_path(drag);
-    if (path) {
-      RNA_string_set(drop->ptr, "filepath", path);
+    for (const std::string &path : WM_drag_get_paths(drag)) {
+      PointerRNA file;
+      RNA_collection_add(drop->ptr, "files", &file);
+      RNA_string_set(&file, "name", path.c_str());
     }
+  }
+  else if (WM_drag_is_ID_type(drag, ID_IM)) {
+    const auto *id = static_cast<const wmDragID *>(drag->ids.first);
+    RNA_string_set(drop->ptr, "image_name", id->id->name + 2);
   }
 }
 

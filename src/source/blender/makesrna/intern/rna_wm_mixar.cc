@@ -54,6 +54,8 @@
 #  include <algorithm>
 #  include <cstring>
 #  include <string>
+#  include <sstream>
+#  include "BLI_serialize.hh"
 
 #  include "BKE_global.hh"
 #  include "BKE_image.hh"
@@ -108,7 +110,7 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 }
 
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
-void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, const char *filepath);
+void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, Span<const char *> paths);
 void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath);
 
 static void rna_Window_mixar_qa_drag_file(
@@ -122,13 +124,41 @@ static void rna_Window_mixar_qa_drag_file(
 }
 
 static void rna_Window_mixar_qa_drop_file(
-    wmWindow *win, bContext *C, ReportList *reports, const char *filepath, int x, int y)
+    wmWindow *win, bContext *C, ReportList *reports, const char *filepath, int x, int y,
+    const char *filepaths_json)
 {
   if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
     BKE_report(reports, RPT_ERROR, "Not running with '--enable-event-simulate' enabled");
     return;
   }
-  Mixar_qa_simulate_file_drop(C, win, x, y, filepath);
+  if (!filepaths_json || filepaths_json[0] == '\0') {
+    if (filepath[0] != '\0') {
+      Mixar_qa_simulate_file_drop(C, win, x, y, Span<const char *>(&filepath, 1));
+    }
+    return;
+  }
+  /* One real WM_DRAG_PATH payload for an OS multi-file drop, rather than
+   * repeated single drops that cannot catch batch truncation/placement bugs. */
+  std::istringstream stream(filepaths_json);
+  io::serialize::JsonFormatter json;
+  const std::unique_ptr<io::serialize::Value> value = json.deserialize(stream);
+  const auto *array = value ? value->as_array_value() : nullptr;
+  Vector<const char *> paths;
+  if (array) {
+    for (const auto &element : array->elements()) {
+      const auto *path = element->as_string_value();
+      if (!path || path->value().empty()) {
+        BKE_report(reports, RPT_ERROR, "Drop paths must be nonempty strings");
+        return;
+      }
+      paths.append(path->value().c_str());
+    }
+  }
+  if (paths.is_empty()) {
+    BKE_report(reports, RPT_ERROR, "Drop paths must be a nonempty JSON array");
+    return;
+  }
+  Mixar_qa_simulate_file_drop(C, win, x, y, paths);
 }
 
 /** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
@@ -237,6 +267,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
     parm = RNA_def_int(func, "y", 0, INT_MIN, INT_MAX, "", "", INT_MIN, INT_MAX);
     RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    RNA_def_string(func, "filepaths_json", nullptr, 0, "", "Optional JSON array of paths for one batch drop");
   }
 
   /* QA harness: JSON dump of every live widget across all windows (rects in
