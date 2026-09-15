@@ -26,6 +26,8 @@
  * worse than no drag. Their action lives in the detail column instead.
  */
 
+#include "agent_ui_text.hh"
+
 #include "UI_mixar_layout.hh"
 
 #include <algorithm>
@@ -190,8 +192,8 @@ void agent_ui_generations_grid(const bContext *C,
   const float tile_bg[4] = GEN_COL_TILE;
   const float accent[4] = AGENT_COL_ACCENT;
   const float live[4] = GEN_COL_LIVE;
-  const float font_chip = GEN_CHIP_FONT * u;
-  const float font_cap = GEN_CAP_FONT * u;
+  const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();
+  const float font_cap = GEN_CAP_FONT * agent_ui_text_unit();
 
   /* ---- Tiles ---- */
   const auto visible = ui::mixar_page_range(data.count, grid.per_page, grid.page);

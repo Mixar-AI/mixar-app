@@ -12,6 +12,8 @@
  * `wm.mixar_genparams_<service>__<model>` — no param names hardcoded.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -76,8 +78,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
   /* Overflow and unavailable copy use the shared secondary text tone. */
   const float *col_dim = ui::mixar_tokens::zen.secondary;
 
-  const float font = PANE_FONT * u;
-  const float font_sub = PANE_FONT_SUB * u;
+  const float font = PANE_FONT * agent_ui_text_unit();
+  const float font_sub = PANE_FONT_SUB * agent_ui_text_unit();
   const float left = band.xmin + PANE_INSET_X * u;
   const float right = band.xmax - PANE_INSET_X * u;
 
@@ -295,7 +297,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                                 short(BLI_rctf_size_x(&seg_rects[i])),
                                 short(BLI_rctf_size_y(&seg_rects[i])),
                                 i == 0 ? "Image generation" : "Video generation");
-    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(but, i == (video ? 1 : 0));
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -333,7 +335,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                              short(BLI_rctf_size_x(&field)),
                              short(BLI_rctf_size_y(&field)),
                              &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
-    ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (input) {
       ui::button_placeholder_set(input, "Describe your scene here...");
       ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
@@ -391,7 +393,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
       video ? "Import selected reference stills for the video" : "Add reference images from disk");
 
   ui::mixar_style_button(
-      upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
 
   /* Capture Viewport -> this tab's reference. */
   ui::Button *capture_button = uiDefButO(block,
@@ -406,7 +408,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                                          "Screenshot the 3D viewport as a reference image");
 
   ui::mixar_style_button(
-      capture_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      capture_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
 
   /* Generate goes through the SAME dispatcher Enter does
    * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
@@ -426,7 +428,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                                 short(BLI_rctf_size_x(&generate)),
                                 short(BLI_rctf_size_y(&generate)),
                                 video ? "Generate a video" : "Generate images");
-    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but && !can_generate) {
       ui::button_flag_enable(but, ui::BUT_DISABLED);
     }

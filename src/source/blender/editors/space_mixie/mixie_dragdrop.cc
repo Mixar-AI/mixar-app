@@ -168,12 +168,24 @@ void mixie_dropboxes()
 {
   ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
 
-  WM_dropbox_add(lb,
-                 "MIXIE_OT_moodboard_drop_image",
-                 moodboard_image_drop_poll,
-                 moodboard_image_drop_copy,
-                 nullptr,  /* cancel */
-                 nullptr); /* tooltip */
+  wmDropBox *drop = WM_dropbox_add(lb,
+                                   "MIXIE_OT_moodboard_drop_image",
+                                   moodboard_image_drop_poll,
+                                   moodboard_image_drop_copy,
+                                   nullptr,  /* cancel */
+                                   nullptr); /* tooltip */
+  /* Internal file-browser / Image-ID drags already have WM drag payloads.
+   * Hover callbacks run in event handling, never in drop polls or drawing. */
+  drop->on_event_while_hover = [](bContext *C, wmDropBox &, const wmEvent *event) {
+    const ScrArea *area = CTX_wm_area(C);
+    if (event->type == MOUSEMOVE && area && area->spacetype == SPACE_VIEW3D) {
+      WM_operator_name_call(C,
+                            "VIEW3D_OT_moodboard_drawer_reveal",
+                            wm::OpCallContext::ExecDefault,
+                            nullptr,
+                            nullptr);
+    }
+  };
 }
 
 /** \} */

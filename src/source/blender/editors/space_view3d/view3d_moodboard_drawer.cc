@@ -446,13 +446,19 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
     return;
   }
 
+  ARegion *window_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
   if (ARegion *existing = BKE_area_find_region_type(area, RGN_TYPE_TOOL_PROPS)) {
+    /* Saved and newly created spaces can have different region orders. Paint
+     * and route the drawer above the N-panel in both, even while it is closed. */
+    if (window_region && existing->next != window_region) {
+      BLI_remlink(&area->regionbase, existing);
+      BLI_insertlinkbefore(&area->regionbase, window_region, existing);
+    }
     view3d_moodboard_drawer_size_sync(wm, area, existing);
     return;
   }
 
   ARegion *region = BKE_area_region_new();
-  ARegion *window_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
   if (window_region) {
     BLI_insertlinkbefore(&area->regionbase, window_region, region);
   }

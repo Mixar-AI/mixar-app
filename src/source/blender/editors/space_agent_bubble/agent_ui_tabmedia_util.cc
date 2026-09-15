@@ -10,6 +10,8 @@
  * chip model. See agent_ui_tabmedia.cc for the pane itself.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -202,8 +204,8 @@ void media_param_chip_control(ui::Block *block,
                               const float u)
 {
   using namespace ui::mixar_tokens;
-  const ui::MixarTextStyle body_style = ui::mixar_text_style(ui::MixarTextRole::Body, u);
-  const ui::MixarTextStyle caption_style = ui::mixar_text_style(ui::MixarTextRole::Caption, u);
+  const ui::MixarTextStyle body_style = ui::mixar_text_style(ui::MixarTextRole::Body, agent_ui_text_unit());
+  const ui::MixarTextStyle caption_style = ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit());
   rctf control = chip.rect;
   ui::Button *button = nullptr;
   if (chip.kind == MediaChipKind::Bool) {
@@ -217,7 +219,7 @@ void media_param_chip_control(ui::Block *block,
                        short(BLI_rctf_size_x(&control)),
                        short(BLI_rctf_size_y(&control)),
                        nullptr);
-    ui::mixar_style_button(button, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(button, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(button, chip.bool_value);
   }
   else {
@@ -246,7 +248,7 @@ void media_param_chip_control(ui::Block *block,
                          short(BLI_rctf_size_x(&control)),
                          short(BLI_rctf_size_y(&control)),
                          nullptr);
-      ui::mixar_style_button(button, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
+      ui::mixar_style_button(button, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     }
     else {
       button = uiDefButR(block,
@@ -262,7 +264,7 @@ void media_param_chip_control(ui::Block *block,
                          0.0f,
                          0.0f,
                          nullptr);
-      ui::mixar_style_button(button, ui::MixarComponent::Number, ui::MixarVariant::Primary, u);
+      ui::mixar_style_button(button, ui::MixarComponent::Number, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     }
   }
   if (button) {

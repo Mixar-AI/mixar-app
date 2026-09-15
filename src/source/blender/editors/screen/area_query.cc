@@ -210,6 +210,20 @@ ARegion *ED_area_find_region_xy_visual(const ScrArea *area,
     return nullptr;
   }
 
+  /* The Zen drawer paints above the N-panel. Its grip and visible canvas must
+   * therefore win over sidebar controls, while the transparent gutter passes
+   * through. Keep the ordinary region order for all other surfaces. */
+  if (area->spacetype == SPACE_VIEW3D && ELEM(regiontype, RGN_TYPE_ANY, RGN_TYPE_TOOL_PROPS)) {
+    for (ARegion &region : area->regionbase) {
+      if (region.regiontype == RGN_TYPE_TOOL_PROPS && region.overlap &&
+          region.runtime->visible &&
+          view3d_moodboard_drawer_contains_xy(area, &region, event_xy))
+      {
+        return &region;
+      }
+    }
+  }
+
   /* Check overlapped regions first. */
   for (ARegion &region : area->regionbase) {
     if (!region.overlap) {

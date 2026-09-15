@@ -32,6 +32,7 @@
 #include "UI_mixar_types.hh"
 namespace blender {
 struct bContext;
+struct ARegion;
 struct rcti;
 struct uiWidgetColors;
 }  // namespace blender
@@ -163,3 +164,8 @@ void UI_mixar_card_button_draw(
 void UI_mixar_profile_card_draw_element(
     Button *but, uiWidgetColors *wcol, rcti *rect, bool is_hover, bool is_active);
 }  // namespace blender::ui
+
+namespace blender::ui {
+struct Block;
+void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block);
+}

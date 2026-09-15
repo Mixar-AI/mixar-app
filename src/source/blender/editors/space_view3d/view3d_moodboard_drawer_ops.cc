@@ -107,6 +107,26 @@ static void VIEW3D_OT_moodboard_drawer_update(wmOperatorType *ot)
   ot->flag = 0;
 }
 
+static wmOperatorStatus drawer_reveal_exec(bContext *C, wmOperator * /*op*/)
+{
+  if (view3d_moodboard_drawer_target(C) == 0) {
+    view3d_moodboard_drawer_slide_begin(C);
+    view3d_moodboard_drawer_target_set(C, 1);
+    drawer_tag_redraw(C);
+  }
+  return OPERATOR_FINISHED;
+}
+
+static void VIEW3D_OT_moodboard_drawer_reveal(wmOperatorType *ot)
+{
+  ot->name = "Reveal Moodboard Drawer";
+  ot->idname = "VIEW3D_OT_moodboard_drawer_reveal";
+  ot->description = "Slide out the reference board without toggling an open drawer";
+  ot->exec = drawer_reveal_exec;
+  ot->poll = drawer_op_poll;
+  ot->flag = 0;
+}
+
 static wmOperatorStatus drawer_toggle_exec(bContext *C, wmOperator * /*op*/)
 {
   /* Capture the pixels on screen, then flip the intent — a click mid-slide
@@ -310,6 +330,7 @@ static void VIEW3D_OT_moodboard_drawer_grip(wmOperatorType *ot)
 void view3d_moodboard_drawer_operatortypes()
 {
   WM_operatortype_append(VIEW3D_OT_moodboard_drawer_update);
+  WM_operatortype_append(VIEW3D_OT_moodboard_drawer_reveal);
   WM_operatortype_append(VIEW3D_OT_moodboard_drawer_toggle);
   WM_operatortype_append(VIEW3D_OT_moodboard_drawer_set);
   WM_operatortype_append(VIEW3D_OT_moodboard_drawer_grip);

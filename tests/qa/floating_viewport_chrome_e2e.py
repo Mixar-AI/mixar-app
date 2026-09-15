@@ -144,6 +144,11 @@ result=True
 
 def drawer(qa):
     workspace(qa, "Zen Mode")
+    # A preceding drawer scenario can leave it open. Start from a settled
+    # closed state, or the first wait may accept its pre-click open amount.
+    if qa.eval("result=bpy.context.window_manager.mixar_moodboard_drawer_target"):
+        qa.click(surface="moodboard_drawer_grip")
+    qa.wait("abs(bpy.context.window_manager.mixar_moodboard_drawer_amount) < .002", timeout=8)
     initial = qa.eval(SETUP + """
 result = {r.type: [r.x, r.y, r.width, r.height] for r in area.regions
           if r.type in ('WINDOW', 'HEADER', 'TOOL_PROPS')}

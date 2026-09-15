@@ -134,7 +134,7 @@ void draw_grip(const float x_right, const float y_centre)
   if (clip_w > 0 && BLI_rcti_size_y(&pane) > 0) {
     GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
     ui::MixarGlassStyle style;
-    style.role = ui::MIXAR_GLASS_PANEL;
+    style.role = ui::MIXAR_GLASS_MOODBOARD_TAB;
     style.radius = radius;
     style.draw_shadow = false;
     style.draw_specular = false;

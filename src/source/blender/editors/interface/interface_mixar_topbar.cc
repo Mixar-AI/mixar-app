@@ -28,9 +28,16 @@
 #include <cstring>
 
 #include "BLF_api.hh"
+#include "BKE_context.hh"
+#include "DNA_screen_types.h"
+#include "DNA_space_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
+#include "UI_view2d.hh"
 
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
+#include "BLI_string.h"
 
 #include "GPU_state.hh"
 
@@ -45,6 +52,52 @@
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
+
+/* Resolve against the whole window after native layout. Paint, hit tests and
+ * QA all receive these final button rectangles. Workspace tabs keep their
+ * natural widths; the Workspaces menu owns access to the ones that overflow. */
+void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block)
+{
+  const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
+  if (!area || area->spacetype != SPACE_TOPBAR || !region ||
+      RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT)
+  {
+    return;
+  }
+  Button *left = nullptr, *right = nullptr;
+  for (Button &but : block->buttons()) {
+    if (!but.optype) {
+      continue;
+    }
+    if (STREQ(but.optype->idname, "MIXAR_OT_set_ui_mode_ai")) {
+      left = &but;
+    }
+    else if (STREQ(but.optype->idname, "MIXAR_OT_set_ui_mode_pro")) {
+      right = &but;
+    }
+  }
+  if (!left || !right) {
+    return;
+  }
+  rcti left_px, right_px;
+  button_to_pixelrect(&left_px, region, block, left);
+  button_to_pixelrect(&right_px, region, block, right);
+  const float center = WM_window_native_pixel_size(CTX_wm_window(C))[0] * 0.5f -
+                       region->winrct.xmin;
+  const float delta = (center - (left_px.xmin + right_px.xmax) * 0.5f) /
+                      view2d_scale_get_x(&region->v2d);
+  BLI_rctf_translate(&left->rect, delta, 0);
+  BLI_rctf_translate(&right->rect, delta, 0);
+  const float limit = left->rect.xmin - 8.0f * UI_SCALE_FAC;
+  for (Button &but : block->buttons()) {
+    const bool workspace = but.type == ButtonType::Tab ||
+                          (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add"));
+    if (workspace && but.rect.xmax > limit) {
+      but.flag |= UI_HIDDEN;
+    }
+  }
+  block_bounds_calc(block);
+}
 
 namespace {
 

@@ -154,7 +154,10 @@ def invalid_drop(qa, where):
     # Give the real queued drop event a full second to produce its report.
     qa.wait(f"__import__('time').monotonic() >= {time.monotonic() + 1.0}", timeout=3)
     require(media(qa) == before, "Failed image decode left a half-created reference")
-    require(geometry(qa)["amount"] < 0.02, "Failed image decode opened the drawer")
+    # The image extension reveals the destination during hover, before the
+    # decoder runs. Failure must keep that empty preview available, not create
+    # a half-imported card or reverse the user's newly revealed drawer.
+    require(geometry(qa)["amount"] > 0.98, "Failed decode closed the reference preview")
 
 
 def verify_viewport(qa, before):
@@ -295,6 +298,7 @@ def run(qa: QA):
     qa.step("dismiss_invalid_drop_report", qa.press, "ESC")
     qa.step("invalid_report_closed", qa.wait,
             "not any(w.get('popup') for w in drv.find())", timeout=4)
+    qa.step("close_preview_after_invalid_drop", toggle, qa, 0)
     first = qa.step("viewport_drop_reveals", drop, qa, red,
                     **viewport_at)
     qa.step("drop_keeps_scene_objects", verify_viewport, qa, initial)

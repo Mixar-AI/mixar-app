@@ -149,7 +149,7 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 /** \name Operators, keymap, QA
  * \{ */
 
-/** `view3d.moodboard_drawer_{update,toggle,set,grip}`. */
+/** `view3d.moodboard_drawer_{update,reveal,toggle,set,grip}`. */
 void view3d_moodboard_drawer_operatortypes();
 void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf);
 

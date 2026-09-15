@@ -6025,9 +6025,10 @@ static bool zen_glass_cell(const Button *but)
  * Move / Rotate / Scale share one PILL pane — the same material as the
  * minimised chat capsule. `column(align=True)` sets `alignnr` and
  * `roundboxalign`; a per-cell fully-rounded pane split them into three
- * pills. The first button in the group paints the union; selected is a
- * circular chip inset in the cell so the active shading icon reads on
- * the dark PILL. Unselected shading icons desaturate like toolbar tools.
+ * pills. The first button in the group paints the union. Transform hover
+ * and selection fill their whole native cell, rounding only the exposed
+ * ends of the shared capsule. Shading icons retain circular chips.
+ * Unselected shading icons desaturate like toolbar tools.
  *
  * The Zen header shading strip uses the same painter on a horizontal
  * `row(align=True)` of native RNA enum buttons.
@@ -6040,7 +6041,7 @@ static bool zen_glass_cell(const Button *but)
 static void widget_zen_tool_glass(Button *but,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
-                                  const int /*roundboxalign*/)
+                                  const int roundboxalign)
 {
   rctf pane;
   BLI_rctf_rcti_copy(&pane, rect);
@@ -6091,8 +6092,14 @@ static void widget_zen_tool_glass(Button *but,
   if (selected || hover) {
     rctf cell;
     BLI_rctf_rcti_copy(&cell, rect);
-    BLI_rctf_pad(&cell, -2.0f * UI_SCALE_FAC, -2.0f * UI_SCALE_FAC);
+    const bool transform = zen_toolbar_tool(but);
+    const float inset = (transform ? 1.0f : 2.0f) * UI_SCALE_FAC;
+    BLI_rctf_pad(&cell, -inset, -inset);
     const float cell_rad = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
+    if (!transform) {
+      const float cx = BLI_rctf_cent_x(&cell), cy = BLI_rctf_cent_y(&cell);
+      cell = {cx - cell_rad, cx + cell_rad, cy - cell_rad, cy + cell_rad};
+    }
     float wash[4];
     if (selected) {
       copy_v4_v4(wash, mixar_tokens::zen.selected);
@@ -6103,7 +6110,7 @@ static void widget_zen_tool_glass(Button *but,
       wash[3] = 0.08f;
     }
     GPU_blend(GPU_BLEND_ALPHA);
-    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_corner_set(transform ? roundboxalign : CNR_ALL);
     draw_roundbox_4fv(&cell, true, cell_rad, wash);
     GPU_blend(GPU_BLEND_NONE);
   }

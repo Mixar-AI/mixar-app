@@ -107,8 +107,19 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
   g_mixar_qa_ui_dump_cache.shrink_to_fit();
 }
 
-/* Defined in windowmanager/intern/wm_event_system.cc (Mixar overlay). */
+/* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
 void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, const char *filepath);
+void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath);
+
+static void rna_Window_mixar_qa_drag_file(
+    wmWindow *win, bContext *C, ReportList *reports, const char *filepath)
+{
+  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
+    BKE_report(reports, RPT_ERROR, "Not running with '--enable-event-simulate' enabled");
+    return;
+  }
+  Mixar_qa_simulate_file_drag(C, win, filepath);
+}
 
 static void rna_Window_mixar_qa_drop_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath, int x, int y)
@@ -201,6 +212,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
 
   /* QA harness: simulated OS file drop at a window coordinate — the one input
    * class ``event_simulate`` cannot express. */
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_qa_drag_file", "rna_Window_mixar_qa_drag_file");
+    RNA_def_function_flag(func, FUNC_USE_CONTEXT | FUNC_USE_REPORTS);
+    RNA_def_function_ui_description(
+        func, "Preview a file entering the window without dropping (QA harness)");
+    PropertyRNA *parm = RNA_def_string_file_path(
+        func, "filepath", nullptr, 1024, "", "File being dragged");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  }
   {
     FunctionRNA *func = RNA_def_function(
         srna, "mixar_qa_drop_file", "rna_Window_mixar_qa_drop_file");

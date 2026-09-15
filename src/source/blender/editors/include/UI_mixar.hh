@@ -29,7 +29,8 @@ void mixar_style_new_buttons(Layout *layout,
 void mixar_style_button(Button *button,
                         MixarComponent component,
                         MixarVariant variant = MixarVariant::Primary,
-                        float unit = 0.0f);
+                        float unit = 0.0f,
+                        float text_unit = 0.0f);
 void mixar_style_card(Button *button, MixarCardElement element, float legacy_payload);
 const char *mixar_component_name(MixarComponent component);
 const char *mixar_theme_name(MixarTheme theme);

@@ -2,17 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The island's chrome has ONE unit, and text is not exempt from it.
-
-Rects are sized in the island unit ``u = window_native_pixel_x / AGENT_ISLAND_W``
-(`agent_ui_layout.cc`), which is self-calibrating: the window IS the island. Text
-was sized with ``AGENT_DU(v) = v / 1.5 * UI_SCALE_FAC``, which does not depend on
-the window width at all. The two are numerically equal only at the 1.5x export
-width (874). The shipped default is 0.7 of the previous compact cut, and
-`bubble_set_min_content_size` constrains the MINIMUM width only — the user can
-widen the bubble freely. Widening it therefore grows every pill, chip, card and
-label together.
-"""
+"""Responsive island geometry and fixed, DPI-aware typography contracts."""
 
 import re
 from pathlib import Path
@@ -38,21 +28,14 @@ def _define(source: str, name: str) -> float:
     return float(match.group(1))
 
 
-def test_the_island_painter_no_longer_sizes_anything_with_agent_du():
-    """`agent_ui_draw.cc` paints the island, whose every metric is `u`.
-
-    AGENT_DU() stays the right tool for surfaces that are NOT the island (the
-    window sizing constants, for one) — it is its use inside this painter that
-    was the bug.
-    """
-    assert "AGENT_DU(" not in _strip_comments(DRAW_CC + CONTROLS_CC), (
-        "an AGENT_DU() call came back into the island painter: it is fixed to "
-        "UI_SCALE_FAC and does not track the window's width"
-    )
+def test_the_island_painter_keeps_export_units_out_of_geometry_and_text():
+    """Geometry and typography each have a resolved unit; neither reapplies
+    the source artboard's export divisor."""
+    assert "AGENT_DU(" not in _strip_comments(DRAW_CC + CONTROLS_CC)
 
 
 def test_the_island_unit_is_still_derived_from_the_window():
-    """`layout->scale` is the unit every painter reads; it must stay
+    """`layout->scale` is the geometry unit; it must stay
     self-calibrating against the window, not against UI_SCALE_FAC."""
     assert "const float u = float(window_w) / float(AGENT_ISLAND_W);" in LAYOUT_CC
     assert "r_layout->scale = u;" in LAYOUT_CC
@@ -62,10 +45,9 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     """The island unit is ``window_w / AGENT_ISLAND_W`` at every size.
 
     The 1.5x export would open at 874 logical px and dominate the viewport.
-    The shipped default is 0.7 of the previous compact cut, short enough
+    The shipped default is 10% larger than the previous compact cut, short enough
     that the empty composer and the first conversation do not cover the
-    3D view. Widening the window still grows every pill, chip and label
-    together.
+    3D view. Widening the window grows the geometry while typography stays fixed.
     """
     island_w = _define(THEME_HH, "AGENT_ISLAND_W")
     default_w = _define(BUBBLE_CC, "AGENT_BUBBLE_DEFAULT_WIDTH")
@@ -74,15 +56,15 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     expanded_h = _define(BUBBLE_CC, "AGENT_BUBBLE_EXPANDED_HEIGHT")
     pill_w = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_WIDTH_LARGE")
     pill_h = _define(BUBBLE_CC, "AGENT_BUBBLE_PILL_HEIGHT_LARGE")
-    assert default_w == 560
-    assert default_h == 190
-    assert default_h + transcript_h == 336
-    assert expanded_h == 392
+    assert default_w == 678
+    assert default_h == 230
+    assert default_h + transcript_h == 407
+    assert expanded_h == 432
     assert pill_w == 304
     assert pill_h == 44
     assert pill_w / pill_h > 4.0
     scale = default_w / island_w
-    assert 0.42 < scale < 0.44
+    assert 0.51 < scale < 0.53
 
 
 def test_compact_height_is_valid_the_card_stretches():
@@ -140,7 +122,6 @@ def test_chip_row_metrics_all_share_one_unit():
     not just as type size: pad and icon box in one unit, radius in another."""
     body = _function_body(CONTROLS_CC, "void agent_ui_draw_chip_row(")
     for token in (
-        "AGENT_CHIP_FONT",
         "AGENT_CHIP_RADIUS",
         "AGENT_CHIP_PAD_X",
         "AGENT_CHIP_ICON_GAP",
@@ -149,20 +130,21 @@ def test_chip_row_metrics_all_share_one_unit():
         assert re.search(rf"{token} \* u;", body), f"{token} is not in the island unit"
 
 
-def test_tab_strip_and_card_header_text_scale_with_the_island():
+def test_tab_strip_and_card_header_text_use_fixed_typography():
     """The labels the bug was reported against: tab strip, queue count, NEW
     badge, card title and FAQs."""
     strip = _function_body(CONTROLS_CC, "void agent_ui_draw_tab_strip(")
-    assert "AGENT_TAB_FONT * u" in strip
-    assert strip.count("AGENT_NEW_BADGE_FONT * u") == 2, (
+    assert "AGENT_TAB_FONT * agent_ui_text_unit()" in strip
+    assert "AGENT_CHIP_FONT * agent_ui_text_unit()" in CONTROLS_CC
+    assert strip.count("AGENT_NEW_BADGE_FONT * agent_ui_text_unit()") == 2, (
         "the queue count chip and the NEW badge both draw at this size"
     )
 
     island = _function_body(DRAW_CC, "void agent_ui_draw_island(")
-    assert island.count("AGENT_HDR_TITLE_FONT * u") == 2, (
+    assert island.count("AGENT_HDR_TITLE_FONT * agent_ui_text_unit()") == 2, (
         "the Agent tab's session title and the pane tabs' card title"
     )
-    assert "AGENT_HDR_FAQ_FONT * u" in island
+    assert "AGENT_HDR_FAQ_FONT * agent_ui_text_unit()" in island
 
 
 def test_status_pill_uses_its_own_window_unit():

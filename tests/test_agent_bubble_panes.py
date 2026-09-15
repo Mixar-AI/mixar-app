@@ -92,8 +92,8 @@ def test_the_queue_sets_its_own_type_scale():
     assert "#define PANE_FONT ui::mixar_tokens::font" in kit
     assert "mixar_text_role_size(MixarTextRole::Body)" in tokens
     assert "mixar_text_role_size(MixarTextRole::Caption)" in tokens
-    assert "mixar_text_style(ui::MixarTextRole::ListTitle, u)" in QUEUE_CC
-    assert "mixar_text_style(ui::MixarTextRole::ListMeta, u)" in QUEUE_CC
+    assert "mixar_text_style(ui::MixarTextRole::ListTitle, agent_ui_text_unit())" in QUEUE_CC
+    assert "mixar_text_style(ui::MixarTextRole::ListMeta, agent_ui_text_unit())" in QUEUE_CC
     # Relative text sizes are compiled from the production role resolver in
     # test_mixar_ui_text_roles; these assertions only pin consumer wiring.
     # Bigger type in a fixed-height row would crowd the two lines together.

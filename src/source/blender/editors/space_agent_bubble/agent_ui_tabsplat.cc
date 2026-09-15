@@ -17,6 +17,8 @@
  * relative to the card panel's top-left in artboard units x `u`.
  */
 
+#include "agent_ui_text.hh"
+
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -77,7 +79,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     pane_label_centre("World Labs catalog settings are unavailable",
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),
-                       PANE_FONT * u,
+                       PANE_FONT * agent_ui_text_unit(),
                        dim);
     GPU_blend(GPU_BLEND_NONE);
     return;
@@ -140,7 +142,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_menu_enum",
                                wm::OpCallContext::InvokeDefault, label.c_str(),
                                bx, by, bw, bh, nullptr);
-    ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but) {
       ui::mixar_button_tooltip_owned(but, label.c_str());
       const std::string path = std::string("window_manager.") + state.group_attr + "." +
@@ -170,7 +172,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                 bw,
                                 bh,
                                 nullptr);
-    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(but, mode_items[i].active);
     if (but) {
       ui::mixar_button_tooltip_owned(but, mode_items[i].label.c_str());
@@ -192,7 +194,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                 bw,
                                 bh,
                                 nullptr);
-    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(but, lod_items[i].active);
     if (but) {
       ui::mixar_button_tooltip_owned(but, lod_items[i].label.c_str());
@@ -216,7 +218,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                 bw,
                                 bh,
                                 nullptr);
-    ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Dropdown, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but) {
       ui::mixar_button_tooltip_owned(but, state.model_label.c_str());
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -244,7 +246,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                           bw,
                                           bh,
                                           "Upload an input image for world generation");
-      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     }
 
     /* Capture Viewport -> tab.reference_image (use_selected_image off). */
@@ -260,7 +262,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                   bw,
                                   bh,
                                   "Screenshot the 3D viewport as the input image");
-      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+      ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     }
 
     /* Moodboard-selection switch. */
@@ -276,7 +278,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                   bw,
                                   bh,
                                   "Use the image selected on the moodboard");
-      ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u);
+      ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       ui::mixar_button_lit_set(but, state.use_selected);
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -303,7 +305,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                 bw,
                                 bh,
                                 "Generate a 3D world from the prompt or input image");
-    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(state.tab.type));
@@ -316,7 +318,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     rect_args(rects.prompt_field, &bx, &by, &bw, &bh);
     ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "", bx, by, bw, bh,
                                  &state.tab, "prompt", -1, 0.0f, 0.0f, nullptr);
-    ui::mixar_style_button(input_but, ui::MixarComponent::Input, ui::MixarVariant::Primary, u);
+    ui::mixar_style_button(input_but, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (input_but) {
       ui::button_placeholder_set(input_but,
                              state.image_mode ? "Describe your scene here... (optional)" :

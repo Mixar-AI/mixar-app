@@ -10,6 +10,8 @@
  * vocabulary, sources and the layout contract.
  */
 
+#include "agent_ui_text.hh"
+
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -201,7 +203,7 @@ void pane_settings_button(ui::Block *block, const float right, const float top,
       wm::OpCallContext::InvokeDefault, "Settings", int(right - PANE_SETTINGS_W * u),
       int(top - PANE_ROW_H * u), short(PANE_SETTINGS_W * u), short(PANE_ROW_H * u),
       "Edit all settings, including parameters that do not fit in the strip");
-  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u);
+  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
   if (button) {
     PointerRNA *props = ui::button_operator_ptr_ensure(button);
     RNA_string_set(props, "service_key", service);
@@ -213,14 +215,14 @@ float pane_action_chip_w(const char *label, const bool with_icon, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;
   const float icon = with_icon ? (AGENT_CHIP_ICON * u + AGENT_CHIP_ICON_GAP * u) : 0.0f;
-  return pad + icon + pane_text_width(label, PANE_FONT * u) + pad;
+  return pad + icon + pane_text_width(label, PANE_FONT * agent_ui_text_unit()) + pad;
 }
 
 float pane_dropdown_chip_w(const char *label, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;
   const float chev = AGENT_CHIP_ICON * u * 0.8f;
-  return pad + pane_text_width(label, PANE_FONT * u) + 10.0f * u + chev + pad * 0.75f;
+  return pad + pane_text_width(label, PANE_FONT * agent_ui_text_unit()) + 10.0f * u + chev + pad * 0.75f;
 }
 
 rctf pane_segmented_layout(const float x,
@@ -233,7 +235,7 @@ rctf pane_segmented_layout(const float x,
   const float pad = 14.0f * u;
   float sx = x;
   for (int i = 0; i < count; i++) {
-    const float w = pane_text_width(labels[i], PANE_FONT * u) + pad * 2.0f;
+    const float w = pane_text_width(labels[i], PANE_FONT * agent_ui_text_unit()) + pad * 2.0f;
     r_segs[i].xmin = sx;
     r_segs[i].xmax = sx + w;
     r_segs[i].ymax = y_top;
@@ -250,7 +252,7 @@ rctf pane_segmented_layout(const float x,
 
 float pane_onoff_chip_w(const char *label, const float u)
 {
-  const float font = PANE_FONT * u;
+  const float font = PANE_FONT * agent_ui_text_unit();
   return PANE_CHIP_PAD_X * u + pane_text_width(label, font) + 12.0f * u +
          pane_text_width("ON", font) + 20.0f * u + pane_text_width("OFF", font) + 20.0f * u +
          PANE_CHIP_PAD_X * u * 0.75f;
