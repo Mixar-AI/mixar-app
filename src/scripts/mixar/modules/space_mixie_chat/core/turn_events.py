@@ -23,7 +23,6 @@ _LOCK = threading.Lock()
 _inbox = deque()
 _inbox_bytes = 0
 _overflow = set()
-_armed = False
 _bindings = {}
 _turns = {}
 _commands = {}
@@ -45,11 +44,9 @@ class Turn:
 
 def arm():
     """Arm during connection setup or a UI send (main thread)."""
-    global _armed
     import bpy
     if not bpy.app.timers.is_registered(_drain):
         bpy.app.timers.register(_drain, first_interval=0.02, persistent=True)
-    _armed = True
 
 
 def _scene_id(scene):
@@ -70,6 +67,27 @@ def expect(scene, command_id, callback=None):
     _blocked.discard(sid)
     _commands[command_id] = (sid, callback)
     return sid
+
+
+def reopen(scene):
+    """Rebind a restored transcript; forget its revoked local delivery state."""
+    global _inbox_bytes
+    sid = bind(scene)
+    if not sid:
+        return
+    with _LOCK:
+        retained = [item for item in _inbox if item[1].get('session_id') != sid]
+        _inbox.clear()
+        _inbox.extend(retained)
+        _inbox_bytes = sum(item[2] for item in retained)
+        _overflow.discard(sid)
+    for tid, turn in list(_turns.items()):
+        if turn.session_id == sid:
+            _turns.pop(tid)
+    for cid, (session_id, _) in list(_commands.items()):
+        if session_id == sid:
+            _commands.pop(cid)
+    _blocked.discard(sid)
 
 
 def handle_turn_notification(method, params):
@@ -351,6 +369,15 @@ def drop_scene(scene_name):
     for key, entry in list(_commands.items()):
         if entry[0] == sid:
             _commands.pop(key, None)
+
+
+def shutdown(app_exit=False):
+    """Stop the consumer on disable/reload; atexit must never call bpy."""
+    if not app_exit:
+        import bpy
+        if bpy.app.timers.is_registered(_drain):
+            bpy.app.timers.unregister(_drain)
+    reset()
 
 
 def reset():

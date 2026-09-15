@@ -158,6 +158,9 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
     try:
         if scene is None or not hasattr(scene, "mixie_chat_messages"):
             return
+        from .turn_events import _blocked
+        if getattr(scene, 'mixie_session_id', '') != session_id or session_id in _blocked:
+            return  # The user switched chats while the status request was pending.
         status = _status_of(info)
         if status not in _HIT_STATUSES:
             # Defence in depth: this function is what puts a claim about a

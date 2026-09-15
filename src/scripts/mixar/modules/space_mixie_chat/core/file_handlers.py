@@ -123,6 +123,11 @@ def _on_load_post(*_args) -> None:
     """
     import bpy as _bpy
 
+    # load_pre stops the old file's event consumer. The socket can stay live,
+    # so resume consumption without requiring another connection or UI send.
+    from .turn_events import arm
+    arm()
+
     for scene in _bpy.data.scenes:
         try:
             if not hasattr(scene, "mixie_chat_mode"):

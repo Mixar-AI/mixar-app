@@ -240,6 +240,7 @@ class _Messages:
 
 def test_prompt_bubble_dedupes_and_carries_session(monkeypatch):
     scene = MagicMock()
+    scene.mixie_session_id = 'sid-7'
     scene.mixie_chat_messages = _Messages()
     redraws = []
     monkeypatch.setattr(turn_resume, "_redraw", lambda: redraws.append(1))
@@ -294,6 +295,7 @@ def test_dismiss_removes_the_resume_bubble(monkeypatch):
     """Both [Resume task] and [Start fresh] route here. It must not raise:
     a failure left the notice on screen for the rest of the session."""
     scene = MagicMock()
+    scene.mixie_session_id = 'sid-3'
     scene.mixie_chat_messages = _Messages()
     monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
 
@@ -422,6 +424,7 @@ def test_offer_refuses_a_status_that_does_not_support_a_claim(monkeypatch):
     """offer_resume_prompt is what puts the claim on screen, so it declines
     an ENDED turn even if a caller stops filtering."""
     scene = MagicMock()
+    scene.mixie_session_id = 'sid-e'
     scene.mixie_chat_messages = _Messages()
     monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
 
@@ -433,6 +436,7 @@ def test_offer_refuses_a_status_that_does_not_support_a_claim(monkeypatch):
 
 def test_abandoned_bubble_does_not_claim_the_task_is_running(monkeypatch):
     scene = MagicMock()
+    scene.mixie_session_id = 'sid-a'
     scene.mixie_chat_messages = _Messages()
     monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
 

@@ -470,8 +470,8 @@ def drain_pending_events() -> int:
 
 
 def cleanup_event_queue():
-    from .turn_events import reset
-    reset()
+    from .turn_events import shutdown
+    shutdown()
 
 
 def cleanup_event_queue_for_scene(scene_name):

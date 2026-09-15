@@ -240,6 +240,13 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
             session.clear_streaming()
             session.set_connected(scene)
 
+        # A prior switch fenced this session and marked its local turns done.
+        # Reopen it explicitly so status discovery can offer server recovery.
+        from ...core.turn_events import reopen
+        from ...core.turn_resume import check_orphaned_turns
+        reopen(scene)
+        check_orphaned_turns()
+
         # Close the overlay (the C++ side also does this on row click;
         # kept here so any other invocation path behaves the same).
         wm = context.window_manager

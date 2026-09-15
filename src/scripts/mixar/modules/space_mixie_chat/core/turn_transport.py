@@ -152,8 +152,9 @@ def cleanup_turn_handler(scene_name):
         handler.stop_stream()
 
 
-def cleanup_all_turn_handlers():
+def cleanup_all_turn_handlers(app_exit=False):
+    """Release all delivery state without resolving scenes during finalization."""
     for handler in list(_handlers.values()):
-        handler.stop_stream()
+        handler._running = False
     _handlers.clear()
-    turn_events.reset()
+    turn_events.shutdown(app_exit=app_exit)
