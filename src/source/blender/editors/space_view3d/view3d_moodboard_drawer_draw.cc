@@ -39,7 +39,10 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_interface_layout.hh"
 #include "UI_resources.hh"
+
+#include "WM_api.hh"
 
 #include "mixie_moodboard_canvas.hh"
 
@@ -160,6 +163,45 @@ void draw_grip(const float x_right, const float y_centre)
   BLF_disable(font, BLF_ROTATION);
 }
 
+/** Host the Python add-media / add-text row on the open drawer.
+ *
+ * The Mixie T-panel builds those controls in
+ * `moodboard_toolbar.draw_moodboard_add_tools`; this path draws the same
+ * `VIEW3D_PT_moodboard_drawer_add_tools` panel into a pixel-space block so the
+ * drawer View2D (canvas pan/zoom) is never rewritten by `ED_region_panels`. */
+void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
+{
+  if (view3d_moodboard_drawer_display_amount(C) < VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT) {
+    return;
+  }
+  PanelType *pt = WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools", false);
+  if (pt == nullptr || (pt->poll && !pt->poll(C, pt))) {
+    return;
+  }
+
+  const float scale = UI_SCALE_FAC;
+  const int pad = int(std::round(6.0f * scale));
+  const int x = panel_xmin + pad;
+  const int y = region->winy - pad;
+  const int width = int(std::round(40.0f * scale));
+
+  ui::Block *block = ui::block_begin(
+      C, region, "moodboard_drawer_add_tools", ui::EmbossType::Emboss);
+  ui::Layout &layout = ui::block_layout(block,
+                                        ui::LayoutDirection::Vertical,
+                                        ui::LayoutType::Panel,
+                                        x,
+                                        y,
+                                        width,
+                                        0,
+                                        0,
+                                        ui::style_get_dpi());
+  ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
+  ui::block_layout_resolve(block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+}
+
 }  // namespace
 
 void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
@@ -276,6 +318,7 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
     ED_region_pixelspace(region);
     GPU_scissor(panel_xmin, 0, winx - panel_xmin, winy);
     draw_empty_hint(C, region, panel_xmin);
+    draw_add_tools(C, region, panel_xmin);
 
     /* View2D scrollers/inline controls can widen the scissor. Keep the
      * gutter transparent above and below the protruding tab. */

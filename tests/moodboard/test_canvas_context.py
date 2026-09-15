@@ -30,6 +30,23 @@ def test_menu_context_matches_the_visible_canvas(space, workspace, region, amoun
     assert canvas_context.is_moodboard_context(context) is expected
 
 
+def test_find_canvas_region_prefers_the_open_drawer():
+    drawer = NS(type="TOOL_PROPS", width=340, view2d=object())
+    mixie_window = NS(type="WINDOW", width=800, view2d=object())
+    view = NS(type="VIEW_3D", regions=[drawer])
+    editor = NS(type="MIXIE", regions=[mixie_window])
+    wm = NS(
+        mixar_moodboard_drawer_amount=1.0,
+        windows=[NS(screen=NS(areas=[view, editor]))],
+    )
+    context = NS(
+        region=None,
+        space_data=None,
+        window_manager=wm,
+    )
+    assert canvas_context.find_moodboard_canvas_region(context) is drawer
+
+
 @pytest.mark.parametrize("amount,expected_drawer_redraws", [(0, 0), (0.5, 1), (1, 1)])
 def test_updates_redraw_only_the_drawer_not_the_3d_scene(monkeypatch, amount, expected_drawer_redraws):
     viewport = NS(type="WINDOW", tag_redraw=Mock())

@@ -9,12 +9,14 @@ Moodboard Toolbar Panel
 Left T-panel toolbar with core moodboard actions:
   • Add Image  — add an existing or new image from disk
   • Add Text   — add a text box to the canvas
-  • Crop       — crop the selected image
   • Mask Tools — popover with Box Mask, Lasso, and Magic Select
   • Lasso      — direct Multi-Lasso Mask shortcut
   • Annotate   — draw persistent freehand notes on a selected image
-  • Rotate     — rotate selected image 90° clockwise
-  • Send to Chat — send selected image(s) to Mixie Chat
+
+``draw_moodboard_add_tools`` is the ONE construction of the open-media +
+add-text pair. The Mixie T-panel interleaves it with mask/annotate controls;
+the Zen sliding drawer hosts the same pair via
+``VIEW3D_PT_moodboard_drawer_add_tools``.
 """
 
 import bpy
@@ -31,6 +33,41 @@ _MASK_TOOL_ICONS = {
     "MAGIC_SELECT": "SNAP_FACE",
 }
 _MASK_ICON_DEFAULT = "MOD_MASK"
+
+# Open-drawer threshold shared with canvas_context / C++ drawer active amount.
+_DRAWER_ACTIVE_AMOUNT = 0.98
+
+
+def draw_moodboard_open_media_tool(layout):
+    """Folder menu that opens image/video or picks existing media."""
+    row = layout.row(align=True)
+    row.scale_x = 1.5
+    row.scale_y = 1.5
+    row.menu(
+        "MIXIE_MT_add_image_menu",
+        text="",
+        icon="FILE_FOLDER",
+    )
+
+
+def draw_moodboard_add_text_tool(layout):
+    """Add a text box to the canvas."""
+    row = layout.row(align=True)
+    row.scale_x = 1.5
+    row.scale_y = 1.5
+    row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
+
+
+def draw_moodboard_add_tools(layout):
+    """Open-media + Add Text — the compact row the Zen drawer hosts.
+
+    The Mixie T-panel interleaves these with mask/annotate controls but
+    still calls the same builders so neither surface forks the actions.
+    """
+    col = layout.column(align=True)
+    draw_moodboard_open_media_tool(col)
+    col.separator(factor=0.6)
+    draw_moodboard_add_text_tool(col)
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -225,14 +262,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         col = layout.column(align=True)
 
         # ── Add Image (menu) ──────────────────────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.menu(
-            "MIXIE_MT_add_image_menu",
-            text="",
-            icon="FILE_FOLDER",
-        )
+        draw_moodboard_open_media_tool(col)
 
         col.separator(factor=0.6)
 
@@ -287,10 +317,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         col.separator(factor=0.6)
 
         # ── Add Text ──────────────────────────────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
+        draw_moodboard_add_text_tool(col)
 
         # "Send to Mixie Chat" toolbar button removed — moodboard
         # selection auto-mirrors into the chat composer's attachments
@@ -301,6 +328,37 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         layout.separator(factor=0.5)
 
 
+class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
+    """Same add-media + add-text row as the Mixie moodboard T-panel.
+
+    Hosted on the Zen Mode sliding drawer (VIEW_3D TOOL_PROPS) by the
+    native drawer draw path via ``UI_paneltype_draw`` — not by
+    ``ED_region_panels``, which would steal the canvas View2D.
+    """
+
+    bl_label = ""
+    bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOL_PROPS"
+    bl_options = {"HIDE_HEADER"}
+
+    @classmethod
+    def poll(cls, context):
+        if getattr(getattr(context, "workspace", None), "name", None) != "Zen Mode":
+            return False
+        if getattr(getattr(context, "region", None), "type", None) != "TOOL_PROPS":
+            return False
+        amount = getattr(
+            getattr(context, "window_manager", None),
+            "mixar_moodboard_drawer_amount",
+            0.0,
+        )
+        return float(amount) >= _DRAWER_ACTIVE_AMOUNT
+
+    def draw(self, context):
+        draw_moodboard_add_tools(self.layout)
+
+
 # Only include panels if MIXIE space is available
 classes = (
     (
@@ -308,6 +366,7 @@ classes = (
         MIXIE_PT_mask_tools_popover,
         MIXIE_PT_annotation_tools_popover,
         MIXIE_PT_moodboard_toolbar,
+        VIEW3D_PT_moodboard_drawer_add_tools,
     )
     if MIXIE_SPACE_AVAILABLE
     else ()
