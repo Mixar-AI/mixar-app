@@ -61,43 +61,24 @@ def test_claims_are_one_shot_per_app_run():
 # --- backend ask fails quiet ------------------------------------------------
 
 def test_fetch_parked_report_parses_success(monkeypatch):
-    sent = {}
-
-    def _post(url, json=None, headers=None, timeout=None):
-        sent["url"] = url
-        sent["json"] = json
-        sent["auth"] = headers["Authorization"]
-        return _Resp(payload={"status": "success", "has_parked": True,
-                              "open_count": 2, "auto_eligible": True})
-
-    monkeypatch.setattr(httpx, "post", _post)
-    report = PR.fetch_parked_report("https://api.test", "tok", "sess-1")
-    assert report["has_parked"] is True
-    assert sent["url"].endswith("/api/v1/blender/agent/parked-turn")
-    assert sent["json"] == {"session_id": "sess-1"}
-    assert sent["auth"] == "Bearer tok"
+    from mixar.modules.common.agent_rpc import client
+    sent = []
+    def request(method, payload, **kwargs):
+        sent.append((method, payload, kwargs))
+        return {'status':'success', 'has_parked':True, 'open_count':2, 'auto_eligible':True}
+    monkeypatch.setattr(client, 'request', request)
+    report = PR.fetch_parked_report('unused', 'unused', 'sess-1')
+    assert report['has_parked']
+    assert sent == [('parked_turn', {'session_id':'sess-1'}, {'mutation':True, 'timeout':15.0})]
 
 
-@pytest.mark.parametrize(
-    "resp",
-    [
-        _Resp(status_code=403),
-        _Resp(status_code=500),
-        _Resp(status_code=200, payload={"status": "failure"}),
-        _Resp(status_code=200, boom=True),
-    ],
-)
-def test_fetch_parked_report_fails_quiet(monkeypatch, resp):
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: resp)
-    assert PR.fetch_parked_report("https://api.test", "tok", "sess-1") is None
-
-
-def test_fetch_parked_report_network_error_is_none(monkeypatch):
-    def _boom(*a, **k):
-        raise httpx.ConnectError("down")
-
-    monkeypatch.setattr(httpx, "post", _boom)
-    assert PR.fetch_parked_report("https://api.test", "tok", "sess-1") is None
+@pytest.mark.parametrize('status', [401, 403, 500, 503])
+def test_fetch_parked_report_fails_quiet(monkeypatch, status):
+    from mixar.modules.common.agent_rpc import client
+    def fail(*args, **kwargs):
+        raise client.AgentRPCError('unavailable', status)
+    monkeypatch.setattr(client, 'request', fail)
+    assert PR.fetch_parked_report('unused', 'unused', 'sess-1') is None
 
 
 # --- continue sender ----------------------------------------------------------

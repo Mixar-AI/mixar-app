@@ -112,7 +112,7 @@ def test_status_asked_for_idle_sessions_only(monkeypatch):
 
     assert len(requests) == 1
     method, params, _ = requests[0]
-    assert method == "turn.status"
+    assert method == "agent.status"
     assert params == {"session_ids": ["sid-1"]}
 
 
@@ -266,55 +266,16 @@ def test_prompt_bubble_dedupes_and_carries_session(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def _httpx(monkeypatch):
-    """httpx is optional at addon runtime (import-guarded); provide a stub so
-    resume_stream's availability check passes."""
-    import mixar.modules.space_mixie_chat.core.sse_handler as sh
-
-    monkeypatch.setattr(sh, "httpx", MagicMock(name="httpx"))
 
 
-def _handler(session_id=None, last_seq=-1):
-    from mixar.modules.space_mixie_chat.core.sse_handler import SSEStreamHandler
-
-    h = SSEStreamHandler(
-        "http://test", on_event=lambda e: None,
-        on_error=lambda m: None, on_complete=lambda: None,
-    )
-    h._session_id = session_id
-    h._last_seq = last_seq
-    return h
 
 
-def test_resume_stream_adopts_matching_cursor(_httpx):
-    h = _handler(session_id="sid-5", last_seq=33)
-    with patch("threading.Thread") as thread:
-        assert h.resume_stream("sid-5") is True
-    assert h._last_seq == 33  # carried cursor, not -1
-    assert h._session_id == "sid-5"
-    assert h._running.is_set()
-    thread.assert_called_once()
 
 
-def test_resume_stream_lost_cursor_follows_from_now(_httpx):
-    h = _handler(session_id=None, last_seq=-1)
-    with patch("threading.Thread"):
-        assert h.resume_stream("sid-6") is True
-    assert h._last_seq == -1  # no session match -> follow from now
 
 
-def test_resume_stream_explicit_cursor_wins(_httpx):
-    h = _handler(session_id="sid-5", last_seq=33)
-    with patch("threading.Thread"):
-        assert h.resume_stream("sid-5", after_seq=50) is True
-    assert h._last_seq == 50
 
 
-def test_resume_stream_refuses_while_running(_httpx):
-    h = _handler()
-    h._running.set()
-    assert h.resume_stream("sid-5") is False
 
 
 # ---------------------------------------------------------------------------
@@ -383,36 +344,8 @@ def test_dismiss_on_a_scene_without_the_notice_is_a_noop(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_offer_parks_the_reported_attach_cursor(monkeypatch):
-    """resume_previous_task attaches with this when the scene has no carried
-    handler — otherwise it falls back to a whole-turn (-1) replay."""
-    scene = MagicMock()
-    scene.mixie_chat_messages = _Messages()
-    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
-    turn_resume._REPORTED_LAST_SEQ.clear()
-
-    turn_resume.offer_resume_prompt(
-        scene, "sid-11", {"status": "running", "active": True, "last_seq": 41},
-    )
-    assert turn_resume.reported_last_seq("sid-11") == 41
-    assert turn_resume.reported_last_seq("sid-other") == -1
 
 
-@pytest.mark.parametrize("info", [
-    {"active": True},                       # key absent
-    {"active": True, "last_seq": -1},       # Redis failed / not owned
-    {"active": True, "last_seq": None},
-    {"active": True, "last_seq": "nope"},
-])
-def test_unusable_reported_cursor_reads_as_minus_one(monkeypatch, info):
-    scene = MagicMock()
-    scene.mixie_chat_messages = _Messages()
-    monkeypatch.setattr(turn_resume, "_redraw", lambda: None)
-    turn_resume._REPORTED_LAST_SEQ.clear()
-    turn_resume._REPORTED_LAST_SEQ["sid-12"] = 7  # a stale entry must not win
-
-    turn_resume.offer_resume_prompt(scene, "sid-12", info)
-    assert turn_resume.reported_last_seq("sid-12") == -1
 
 
 # ---------------------------------------------------------------------------

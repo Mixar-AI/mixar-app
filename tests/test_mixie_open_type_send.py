@@ -153,7 +153,7 @@ def test_agent_action_reads_send_not_generate():
 
 def test_the_qa_probe_only_replaces_the_transport_boundary():
     assert "get_connection_manager" in PROBE
-    assert "create_sse_handler" in PROBE
+    assert "create_turn_handler" in PROBE
     assert "send_message" not in PROBE.split("def install")[1].split("def record")[0]
     assert "mixie_chat_input" not in PROBE
     assert "MIXIE_CHAT_OT_send_message" in E2E

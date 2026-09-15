@@ -7,7 +7,7 @@
 Quick Prompt Operator for Mixie Chat
 
 Global keyboard shortcut operator for quickly sending messages to Mixie Chat.
-Uses HTTP/SSE for chat streaming.
+Uses WebSocket for chat streaming.
 """
 
 import bpy
@@ -25,12 +25,7 @@ from ...core import (
 from ...core.composer_send import can_send
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
-from ...core.queue_processor import (
-    queue_sse_event,
-    queue_sse_error,
-    queue_sse_complete,
-)
-from ...core.sse_handler import create_sse_handler
+from ...core.turn_transport import create_turn_handler
 from ...core.ui_utils import redraw_chat_areas
 
 logger = get_logger(__name__)
@@ -169,7 +164,7 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         # Apply quick prompt mode to scene (so message uses correct mode)
         scene.mixie_chat_mode = wm.mixie_chat_quick_prompt_mode
         if wm.mixie_chat_quick_prompt_mode == 'GENERATE':
-            # Generate mode never reaches the agent SSE path — route through
+            # Generate mode never reaches the agent socket path — route through
             # the same sub-type handlers the footer send uses (they add the
             # user message, consume pending attachments and start the poll).
             # Previously this fell through to the agent stream below, so a
@@ -183,115 +178,16 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
                 wm.mixie_chat_quick_prompt_input = ""
             return result
 
-        project_context = None
-        if scene.mixie_chat_mode == 'ADDON_PROJECT':
-            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
-                from mixar.modules.addon_project.ui.operators import (
-                    ensure_addon_project_ready,
-                )
-                # Zero-question setup: default root + link, then this SAME
-                # send proceeds to build_project_context below.
-                if not ensure_addon_project_ready(self):
-                    return {'CANCELLED'}
-            try:
-                from mixar.modules.addon_project.context import build_project_context
-                project_context = build_project_context(scene)
-            except Exception as exc:
-                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
-                return {'CANCELLED'}
-
-        # Add user message to history WITH attachments from pending
-        user_msg = scene.mixie_chat_messages.add()
-        user_msg.sender = 'USER'
-        user_msg.text = message_text
-
-        # Copy pending attachments to message
-        for pending_att in scene.mixie_chat_pending_attachments:
-            msg_att = user_msg.attachments.add()
-            msg_att.image_path = pending_att.image_path
-            msg_att.image_source = pending_att.image_source
-            msg_att.display_name = pending_att.display_name
-
-        # Deselect moodboard images whose attachments we're about to
-        # drop, so the moodboard sync doesn't re-attach them on the
-        # next poll. See chat_ops.send_message for the rationale.
-        try:
-            from mixar.modules.moodboard.core.chat_sync import (
-                deselect_all_moodboard_origin_attachments,
-            )
-            deselect_all_moodboard_origin_attachments(scene)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(
-                "moodboard deselect on quick-prompt send skipped: %s",
-                e, exc_info=True,
-            )
-
-        # Clear pending attachments after copying
-        scene.mixie_chat_pending_attachments.clear()
-
-        # Compose the wire message BEFORE start_session: project rules
-        # ride along with the send that opens a NEW session, and a
-        # mid-session rules change re-sends the current set under a
-        # supersede header (see core/rules.py:compose_wire_message).
-        from ...core.rules import compose_wire_message, mark_rules_sent
-        wire_message = compose_wire_message(scene, message_text)
-
-        # Start session
-        session_id = session.start_session(scene, message_text)
-
-        # Create SSE handler with queue callbacks
-        # SSE events arrive on background thread - queue them for main thread processing
-        base_url = get_server_url()
-        target_scene_name = scene.name
-        sse_handler = create_sse_handler(
-            scene_name=target_scene_name,
-            host=base_url,
-            on_event=lambda event: queue_sse_event(event, target_scene_name),
-            on_error=lambda error: queue_sse_error(error, target_scene_name),
-            on_complete=lambda: queue_sse_complete(target_scene_name),
-        )
-
-        # Get auth token
-        auth_token = _get_auth_token()
-
-        # Use WebSocket client's connection_id to ensure chat uses the same ID
-        # that was used to establish the WebSocket connection
-        ws_client = get_jsonrpc_client()
-        if not ws_client:
-            self.report({'ERROR'}, "WebSocket not connected")
-            session.set_error(scene)
-            return {'CANCELLED'}
-
-        # Start the SSE stream
-        success = sse_handler.start_stream(
-            message=wire_message,
-            instance_id=ws_client.connection_id,
-            session_id=session_id,
-            auth_token=auth_token,
-            project_context=project_context,
-        )
-
-        if not success:
-            self.report({'ERROR'}, "Failed to start chat stream")
-            session.set_error(scene)
-            return {'CANCELLED'}
-
-        # Stamp the sent-rules fingerprint only after a successful send
-        # (see core/rules.py:mark_rules_sent).
-        mark_rules_sent(scene)
-
-        # Trigger UI redraw for all Mixie Chat spaces
-        redraw_chat_areas()
-
-        # Clear input after successful send
-        wm.mixie_chat_quick_prompt_input = ""
-
-        logger.info(f"Quick prompt message sent (mode={scene.mixie_chat_mode}) for session {session_id[:8]}...")
-        self.report({'INFO'}, "Message sent to Mixie Chat")
-        return {'FINISHED'}
+        # Use the full composer path, including image encoding, project rules,
+        # interrupt answers and interjections. No separate transport owner.
+        scene.mixie_chat_input = message_text
+        result = bpy.ops.mixie_chat.send_message()
+        if result == {'FINISHED'}:
+            wm.mixie_chat_quick_prompt_input = ""
+        return result
 
     def _execute_dev_mode(self, context, message_text):
-        """Execute in development mode without HTTP/SSE"""
+        """Execute in development mode without WebSocket"""
         scene = context.scene
 
         # Add user message

@@ -34,7 +34,7 @@ def _fast_set(bubble, prop_name: str, value) -> None:
     Attribute assignment on Python-registered properties routes through
     ``rna_property_update`` which, for ID-properties, tags the owning
     Scene's depsgraph (TRANSFORM|GEOMETRY|PARAMETERS) and broadcasts
-    ``NC_WINDOW`` + ``NC_ID`` notifiers — i.e. every streamed SSE chunk
+    ``NC_WINDOW`` + ``NC_ID`` notifiers — i.e. every streamed agent chunk
     forced a full-app redraw and a scene re-evaluation. Subscript
     assignment writes the same underlying ID-property storage (the RNA
     reads used by the C++ renderer see it identically) but skips that
@@ -111,7 +111,7 @@ def finalize_turn(scene) -> None:
 
 class SlotEventProcessor:
     """
-    Processes slot-based SSE events for chat bubble rendering.
+    Processes slot-based agent events for chat bubble rendering.
 
     Slot events contain a bubble_id and one or more slot updates:
     - loader: Animated loading indicator with rotating messages
@@ -140,11 +140,6 @@ class SlotEventProcessor:
             event_data: Event dict with bubble_id and slot updates
             scene: The Blender scene to operate on
         """
-        # First slot event - reset drop count
-        if self._session.get_state(scene) == SessionState.BUSY:
-            from .queue_processor import reset_sse_drop_count
-            reset_sse_drop_count()
-
         bubble_id = event_data.get("bubble_id")
         if not bubble_id:
             logger.warning("[SLOT] Event missing bubble_id, skipping")
@@ -409,14 +404,14 @@ class SlotEventProcessor:
         # 'confirm' is the Yes/No/Cancel prompt (request_user_input's fourth
         # input_type). Its omission here is why the actions slot grew a
         # derive-the-state-from-the-buttons fallback: without it a confirm
-        # decayed to Idle on SSE-complete with its buttons still on screen,
+        # decayed to Idle on turn completion with its buttons still on screen,
         # and typed text went to /agent/chat instead of answering the question.
         if input_type in ('text', 'choice', 'confirm', 'approval',
                           'file_save', 'file_open'):
             # Agent has paused for the user — free-form text, a choice
             # button, or an approval button. All three use AWAITING_INPUT:
-            # the state survives SSE stream completion (see
-            # _handle_sse_complete_internal), so the status pill reads
+            # the state survives agent stream completion (see
+            # _handle_agent_complete_internal), so the status pill reads
             # "Awaiting input" instead of decaying BUSY -> IDLE while the
             # question is still on screen. Text typed while a choice /
             # approval prompt is up is routed as an input response
@@ -572,8 +567,8 @@ class SlotEventProcessor:
         # "Retry failed tasks" chip (turn_actions, graph already at END), the
         # credits-upgrade CTA, the turn-resume prompt, and the locally replayed
         # batched-choice cards. Deriving the state here flipped those into
-        # AWAITING_INPUT, which SSE-complete deliberately refuses to reset
-        # (queue_processor._handle_sse_complete_internal), stranding the pill on
+        # AWAITING_INPUT, which turn completion deliberately refuses to reset
+        # (queue_processor._handle_agent_complete_internal), stranding the pill on
         # "Awaiting Input" and making the retry chip's own IDLE-only handler
         # reject the click the chip exists to make.
 

@@ -54,10 +54,10 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
         pass
 
     try:
-        from mixar.modules.space_mixie_chat.core.sse_handler import (
-            cleanup_all_sse_handlers,
+        from mixar.modules.space_mixie_chat.core.turn_transport import (
+            cleanup_all_turn_handlers,
         )
-        _safe("cleanup_all_sse_handlers", cleanup_all_sse_handlers)
+        _safe("cleanup_all_turn_handlers", cleanup_all_turn_handlers)
     except ImportError:
         pass
 

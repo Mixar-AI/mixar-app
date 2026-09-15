@@ -1,216 +1,226 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-"""Socket-delivered turns of an open run (``agent.turn.*`` → the SSE queue).
-
-Pins ``core/turn_events.py``: events are deduped by ``(turn_id, seq)``,
-buffered until the scene is resolved on the main thread and flushed in
-order, ``ended`` reuses the [DONE] finalisation with the run's reported
-status, unknown sessions / turns are dropped, and a scene teardown stops
-delivery. Companion of ``test_open_run.py``.
-"""
-
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Behavioral socket ingress tests: order, replay, teardown and delivery identity."""
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-
 import pytest
-
-from _open_run_support import (  # noqa: F401 — fixtures are collected by name
-    _scene,
-    clean_state,
-    live_bpy,
-)
-from mixar.modules.space_mixie_chat.constants import JSONRPCMethod  # noqa: E402
-from mixar.modules.space_mixie_chat.core import queue_processor  # noqa: E402
-from mixar.modules.space_mixie_chat.core import turn_events  # noqa: E402
+from _open_run_support import _scene, clean_state, live_bpy
+from mixar.modules.space_mixie_chat.core import turn_events as events
 
 
 @pytest.fixture
-def socket_env(monkeypatch, live_bpy):
-    """Capture what turn_events hands to the main thread and to the queue."""
-    import mixar.modules.space_mixie_chat.core.main_thread_executor as mte
-
-    main_thread = []
-    monkeypatch.setattr(mte, "run_on_main_thread", lambda fn: main_thread.append(fn))
-    queued = []
-    monkeypatch.setattr(queue_processor, "queue_sse_event",
-                        lambda ev, name: queued.append((name, ev.data)) or True)
-    monkeypatch.setattr(queue_processor, "queue_sse_complete",
-                        lambda name: queued.append((name, "[DONE]")) or True)
-    begun = []
-    monkeypatch.setattr(turn_events, "_begin_scene_turn",
-                        lambda scene, run_id: begun.append((scene.name, run_id)))
-    scene = _scene(session_id="sid-1")
+def env(monkeypatch, live_bpy):
+    scene = _scene(session_id='sid')
+    scene.mixie_run_open, scene.mixie_run_id = True, 'run'
     live_bpy.data.scenes.append(scene)
-    return SimpleNamespace(main_thread=main_thread, queued=queued, begun=begun, scene=scene)
+    begun, rendered, replay = [], [], []
+    monkeypatch.setattr(events, 'arm', lambda: None)
+    monkeypatch.setattr(events, '_begin_scene_turn', lambda s, r: begun.append((s.name, r)))
+    def apply(scene, turn, payload):
+        rendered.append(payload)
+        if payload.get('type') == 'turn_end':
+            turn.complete = True
+    monkeypatch.setattr(events, '_apply', apply)
+    def recover(turn):
+        turn.recovering = True
+        replay.append(turn.cursor)
+    monkeypatch.setattr(events, '_request_replay', recover)
+    events.bind(scene)
+    return SimpleNamespace(scene=scene, begun=begun, rendered=rendered, replay=replay)
 
 
-def _started(turn="t1", session="sid-1", run="r1"):
-    turn_events.handle_turn_notification(
-        JSONRPCMethod.AGENT_TURN_STARTED,
-        {"session_id": session, "turn_id": turn, "run_id": run, "kind": "wakeup"},
-    )
+def started(tid='turn', sid='sid', run='run', **extra):
+    events.handle_turn_notification('agent.turn.started', {
+        'session_id': sid, 'turn_id': tid, 'run_id': run, **extra,
+    })
 
 
-def _event(seq, turn="t1", payload=None):
-    turn_events.handle_turn_notification(
-        JSONRPCMethod.AGENT_TURN_EVENT,
-        {"session_id": "sid-1", "turn_id": turn, "run_id": "r1", "seq": seq,
-         "event": payload or {"bubble_id": "b1", "seq": seq, "content": {"append": str(seq)}}},
-    )
+def event(seq, payload=None, tid='turn'):
+    events.handle_turn_notification('agent.turn.event', {
+        'session_id': 'sid', 'turn_id': tid, 'seq': seq,
+        'event': payload or {'bubble_id': 'bubble', 'content': {'append': str(seq)}},
+    })
 
 
-def _ended(status, turn="t1"):
-    turn_events.handle_turn_notification(
-        JSONRPCMethod.AGENT_TURN_ENDED,
-        {"session_id": "sid-1", "turn_id": turn, "run_id": "r1", "status": status},
-    )
+def test_all_frames_wait_for_main_thread_and_preserve_order(env):
+    started()
+    event(0)
+    event(1)
+    assert env.begun == env.rendered == []
+    events._drain()
+    assert env.begun == [('Scene', 'run')]
+    assert [p['content']['append'] for p in env.rendered] == ['0', '1']
 
 
-def _drain(env):
-    while env.main_thread:
-        env.main_thread.pop(0)()
+def test_live_frame_arriving_during_drain_cannot_overtake_buffer(env, monkeypatch):
+    original = events._apply
+    def apply(scene, turn, payload):
+        if not env.rendered:
+            event(2)
+        original(scene, turn, payload)
+    monkeypatch.setattr(events, '_apply', apply)
+    started()
+    event(0)
+    event(1)
+    events._drain()
+    assert [p['content']['append'] for p in env.rendered] == ['0', '1', '2']
 
 
-def test_events_before_scene_resolution_are_buffered_in_order(socket_env):
-    env = socket_env
-    _started()
-    _event(0)
-    _event(1)
-    assert env.queued == [], "nothing renders before the scene is known"
-
-    _drain(env)
-    assert env.begun == [("Scene", "r1")]
-    assert [d["seq"] for _, d in env.queued] == [0, 1]
-    assert all(name == "Scene" for name, _ in env.queued)
-
-    _event(2)
-    assert env.queued[-1][1]["seq"] == 2
-
-    _ended("in_progress")
-    assert env.queued[-2][1] == {"type": "run_status", "run_id": "r1", "status": "in_progress"}
-    assert env.queued[-1][1] == "[DONE]"
+def test_abort_before_start_callback_cannot_revive_turn(env):
+    started()
+    event(0)
+    events.drop_scene('Scene')
+    events._drain()
+    assert env.begun == env.rendered == []
 
 
-def test_dedupe_by_turn_id_and_seq(socket_env):
-    env = socket_env
-    _started()
-    _drain(env)
-    _event(0)
-    _event(0)  # replayed delivery
-    _event(1)
-    _event(1)
-    assert [d["seq"] for _, d in env.queued] == [0, 1]
-
-    # seq restarts per turn — the same seq on another turn is a new event.
-    _started(turn="t2")
-    _drain(env)
-    _event(0, turn="t2")
-    assert [d["seq"] for _, d in env.queued] == [0, 1, 0]
+def test_teardown_drops_later_frames(env):
+    started()
+    event(0)
+    events._drain()
+    events.drop_scene('Scene')
+    event(1)
+    events._drain()
+    assert len(env.rendered) == 1
 
 
-def test_ended_completed_closes_run_via_run_status(socket_env):
-    env = socket_env
-    _started()
-    _drain(env)
-    _ended("completed")
-    assert env.queued[0][1]["status"] == "completed"
-    assert env.queued[1][1] == "[DONE]"
+def test_sequence_gap_recovers_from_last_rendered_cursor(env):
+    started()
+    event(0)
+    event(2)
+    events._drain()
+    assert len(env.rendered) == 1
+    assert env.replay == [0]
+    event(0)  # overlapping replay is ignored
+    event(1)
+    event(2)
+    events._drain()
+    assert [p['content']['append'] for p in env.rendered] == ['0', '1', '2']
 
 
-def test_ended_before_resolution_is_flushed_after_open(socket_env):
-    env = socket_env
-    _started()
-    _event(0)
-    _ended("in_progress")
-    assert env.queued == []
-    _drain(env)
-    assert [d if d == "[DONE]" else d.get("seq", d.get("type")) for _, d in env.queued] == [
-        0, "run_status", "[DONE]"
-    ]
+def test_duplicate_started_does_not_reset_cursor(env):
+    started()
+    event(0)
+    events._drain()
+    started(replay=True)
+    event(0)
+    event(1)
+    events._drain()
+    assert len(env.begun) == 1
+    assert len(env.rendered) == 2
 
 
-def test_unknown_session_is_dropped(socket_env):
-    env = socket_env
-    _started(session="nope")
-    _event(0)
-    _drain(env)
-    _event(1)
-    _ended("completed")
+def test_completion_waits_for_missing_tail(env):
+    started()
+    event(0)
+    events.handle_turn_notification('agent.turn.ended', {
+        'session_id': 'sid', 'turn_id': 'turn', 'status': 'completed', 'last_seq': 2,
+    })
+    events._drain()
+    assert not events._turns['turn'].complete
+    assert env.replay == [0]
+    event(2, {'type': 'turn_end', 'status': 'completed'})
+    event(1)
+    events._drain()
+    assert events._turns['turn'].complete
+    assert len(env.rendered) == 3
+
+
+def test_completed_turn_never_reopens_on_duplicate_replay(env):
+    started()
+    event(0, {'type': 'turn_end', 'status': 'completed'})
+    events._drain()
+    started(replay=True)
+    event(0, {'type': 'turn_end', 'status': 'completed'})
+    events._drain()
+    assert len(env.begun) == len(env.rendered) == 1
+
+
+def test_unknown_session_and_turn_dropped(env):
+    started(sid='unknown')
+    event(0, tid='unknown')
+    events._drain()
+    assert env.begun == env.rendered == []
+
+
+def test_unexpected_old_run_start_after_new_send_is_dropped(env):
+    events.drop_scene('Scene')
+    events.expect(env.scene, 'new-command')
+    env.scene.mixie_run_open = False
+    started()
+    started(tid='new-command', run='')
+    events._drain()
+    assert env.begun == [('Scene', '')]
+
+
+def test_replacement_scene_with_same_name_does_not_receive_old_turn(env, live_bpy):
+    live_bpy.data.scenes.clear()
+    live_bpy.data.scenes.append(_scene(session_id='sid'))
+    started()
+    events._drain()
     assert env.begun == []
-    assert env.queued == []
 
 
-def test_event_for_turn_never_started_is_dropped(socket_env):
-    env = socket_env
-    _event(0, turn="ghost")
-    _ended("completed", turn="ghost")
-    assert env.queued == []
+def test_command_results_correlate_by_id_in_any_order(env):
+    result = []
+    for cid in ('first', 'second'):
+        events.expect(env.scene, cid, lambda scene, data: result.append((data['command_id'], data['ok'])))
+    for cid, ok in [('second', False), ('first', True)]:
+        events.handle_turn_notification('agent.command.result', {'command_id': cid, 'ok': ok})
+    events._drain()
+    assert result == [('second', False), ('first', True)]
 
 
-def test_scene_teardown_stops_socket_delivery(socket_env):
-    env = socket_env
-    _started()
-    _drain(env)
-    _event(0)
-    queue_processor.cleanup_sse_queue_for_scene("Scene")  # abort / New Chat / switch
-    _event(1)
-    _ended("in_progress")
-    assert [d["seq"] for _, d in env.queued if d != "[DONE]" and "seq" in d] == [0]
-    assert "[DONE]" not in [d for _, d in env.queued]
+def test_uncertain_ack_keeps_command_identity_for_recovery(env):
+    events.expect(env.scene, 'command', lambda *_: None)
+    events.handle_turn_notification('agent.command.result', {'command_id': 'command', 'ok': False, 'uncertain': True})
+    events._drain()
+    assert 'command' in events._commands
 
 
-def test_begin_scene_turn_opens_run_and_goes_busy(monkeypatch, live_bpy):
-    import mixar.modules.space_mixie_chat.core.executor as executor_mod
-    import mixar.modules.space_mixie_chat.core.message_helpers as helpers
-    import mixar.modules.space_mixie_chat.core.ui_utils as ui_utils
+def test_bounded_ingress_returns_without_waiting(env, monkeypatch):
+    monkeypatch.setattr(events, '_MAX_ITEMS', 2)
+    started()
+    event(0)
+    event(1)
+    assert len(events._inbox) == 2
+    events._drain()
+    assert env.replay == [0]
 
-    executor = MagicMock()
-    monkeypatch.setattr(executor_mod, "get_executor", lambda: executor)
-    monkeypatch.setattr(helpers, "start_loader_animation", lambda: None)
-    monkeypatch.setattr(ui_utils, "redraw_chat_areas", lambda: None)
 
+def test_begin_turn_clears_stale_placeholder(monkeypatch, live_bpy):
+    from mixar.modules.space_mixie_chat.core import executor, message_helpers
+    monkeypatch.setattr(executor, 'get_executor', lambda: MagicMock())
+    monkeypatch.setattr(message_helpers, 'start_loader_animation', lambda: None)
     scene = _scene()
     stale = scene.mixie_chat_messages.add()
-    stale.sender, stale.bubble_id, stale.loader_visible = 'AGENT', "temp_placeholder_old", True
-
-    turn_events._begin_scene_turn(scene, "r9")
-
-    assert scene.mixie_run_open and scene.mixie_run_id == "r9"
-    assert scene.mixie_chat_state == "BUSY"
-    executor.begin_agent_turn.assert_called_once()
-    placeholders = [m for m in scene.mixie_chat_messages if m.bubble_id.startswith("temp_placeholder_")]
+    stale.sender, stale.bubble_id = 'AGENT', 'temp_placeholder_old'
+    events._begin_scene_turn(scene, 'run')
+    assert scene.mixie_run_open and scene.mixie_chat_state == 'BUSY'
+    placeholders = [m for m in scene.mixie_chat_messages if m.bubble_id.startswith('temp_placeholder_')]
     assert len(placeholders) == 1 and placeholders[0] is not stale
-    assert placeholders[0].loader_visible
 
 
-def test_jsonrpc_client_dispatches_turn_notifications():
-    from mixar.modules.space_mixie_chat.core.jsonrpc_client import JSONRPCWebSocketClient
+def test_failed_render_does_not_advance_cursor(env, monkeypatch):
+    started()
+    event(0)
+    events._drain()
+    original = events._apply
+    monkeypatch.setattr(events, '_apply', lambda *args: (_ for _ in ()).throw(RuntimeError('render failed')))
+    event(1)
+    events._drain()
+    assert events._turns['turn'].cursor == 0
+    monkeypatch.setattr(events, '_apply', original)
+    event(1)
+    events._drain()
+    assert events._turns['turn'].cursor == 1
+    assert len(env.rendered) == 2
 
-    seen = []
-    client = JSONRPCWebSocketClient(
-        "http://x", "cid", on_turn_event=lambda m, p: seen.append((m, p))
-    )
-    for method in (JSONRPCMethod.AGENT_TURN_STARTED, JSONRPCMethod.AGENT_TURN_EVENT,
-                   JSONRPCMethod.AGENT_TURN_ENDED):
-        client._handle_message({"jsonrpc": "2.0", "method": method, "params": {"turn_id": "t"}})
-    assert [m for m, _ in seen] == [
-        "agent.turn.started", "agent.turn.event", "agent.turn.ended",
-    ]
 
-
-def test_interjection_started_turn_kind_user_opens_like_a_wakeup(socket_env):
-    """Every backend-started turn reaches the socket — the one an interjection
-    starts arrives as `kind: "user"` and is opened exactly like a wake-up."""
-    env = socket_env
-    turn_events.handle_turn_notification(
-        JSONRPCMethod.AGENT_TURN_STARTED,
-        {"session_id": "sid-1", "turn_id": "t-user", "run_id": "r1", "kind": "user"},
-    )
-    _event(0, turn="t-user")
-    _drain(env)
-    assert env.begun == [("Scene", "r1")]
-    assert [d["seq"] for _, d in env.queued] == [0]
-    _ended("in_progress", turn="t-user")
-    assert env.queued[-1][1] == "[DONE]"
+def test_recovery_status_preserves_pending_command_callback(env):
+    callback = MagicMock()
+    events.expect(env.scene, 'turn', callback)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': {
+        'turn_id': 'turn', 'run_id': 'run', 'replay_available': True}})
+    events._consume('agent.command.result', {'command_id': 'turn', 'ok': True})
+    callback.assert_called_once()

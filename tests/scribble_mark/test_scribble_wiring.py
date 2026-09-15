@@ -36,90 +36,30 @@ def tree(path):
 
 
 # =============================================================================
-# The SSE positional chain
+# The WebSocket payload chain
 # =============================================================================
 
-SSE = "src/scripts/mixar/modules/space_mixie_chat/core/sse_handler.py"
-
-
 class TestStreamArgumentChain:
-    """``_stream_loop`` is called in two places — the thread start and its own
-    reconnect recursion — both POSITIONALLY. Adding a parameter to the
-    signature and one call site but not the other shifts every later argument
-    by one, which type-checks fine and silently sends the user's preferences
-    as the mark payload."""
+    def test_mark_context_and_preferences_survive_payload_building(self):
+        from mixar.modules.space_mixie_chat.core.chat_payloads import build_chat_payload
+        mark = {"view": "qa-view", "marks": [{"point": [1, 2]}]}
+        prefs = {"asset_match_threshold": 0.5}
+        payload = build_chat_payload(message="use this", instance_id="i", session_id="s",
+            plan_required=True, execution_required=True, approval_required=True,
+            mark_context=mark, user_preferences=prefs)
+        assert payload["mark_context"] == mark
+        assert payload["user_preferences"] == prefs
 
-    def _func(self, name):
-        for node in ast.walk(tree(SSE)):
-            if isinstance(node, ast.FunctionDef) and node.name == name:
-                return node
-        raise AssertionError(f"{name} not found in {SSE}")
-
-    def _params(self, name):
-        func = self._func(name)
-        return [a.arg for a in func.args.args if a.arg != "self"]
-
-    def test_stream_loop_declares_mark_context(self):
-        assert "mark_context" in self._params("_stream_loop")
-
-    def test_start_stream_declares_mark_context(self):
-        assert "mark_context" in self._params("start_stream")
-
-    def test_every_positional_call_matches_the_signature_order(self):
-        params = self._params("_stream_loop")
-        text = source(SSE)
-
-        calls = []
-        for node in ast.walk(tree(SSE)):
-            if not isinstance(node, ast.Call):
-                continue
-
-            # The thread hand-off, matched on its TARGET rather than on the
-            # presence of an args= tuple: the input stream is a sibling
-            # Thread(...) call with its own signature, and it must not be
-            # held to this one's.
-            keywords = {kw.arg: kw.value for kw in node.keywords}
-            target = keywords.get("target")
-            targets_stream_loop = (
-                isinstance(target, ast.Attribute) and target.attr == "_stream_loop"
-            )
-            if targets_stream_loop and isinstance(keywords.get("args"), ast.Tuple):
-                calls.append([
-                    e.id for e in keywords["args"].elts if isinstance(e, ast.Name)
-                ])
-
-            # The reconnect recursion: self._stream_loop(a, b, c, ...)
-            if (isinstance(node.func, ast.Attribute)
-                    and node.func.attr == "_stream_loop"):
-                calls.append([
-                    a.id for a in node.args if isinstance(a, ast.Name)
-                ])
-
-        assert calls, "no positional call to _stream_loop found — did it move?"
-        for names in calls:
-            # A name passed positionally that the signature does not declare
-            # is the bug this class exists for, read from the other end: the
-            # httpx.ConnectError handler read `_connect_attempt` and the
-            # recursion passed it, while the signature had no such parameter
-            # — so an unreachable backend raised NameError inside an except
-            # clause (which that try's own `except Exception` cannot catch)
-            # and killed the turn silently. Skipping unknown names, as this
-            # loop used to, is what let it pass here.
-            unknown = [n for n in names if n not in params]
-            assert not unknown, (
-                f"_stream_loop is passed {unknown} positionally but declares "
-                f"no such parameter: {names}"
-            )
-            # Every name passed must appear in the signature, in the same
-            # relative order. A dropped or reordered argument fails here.
-            positions = [params.index(n) for n in names if n in params]
-            assert positions == sorted(positions), (
-                f"positional arguments out of order against the signature: {names}"
-            )
-            assert "mark_context" in names, (
-                f"a _stream_loop call site does not forward mark_context: {names}"
-            )
-        assert "mark_context" in text
+    def test_start_stream_forwards_context_by_keyword(self):
+        path = "src/scripts/mixar/modules/space_mixie_chat/core/turn_transport.py"
+        start = next(n for n in ast.walk(tree(path))
+                     if isinstance(n, ast.FunctionDef) and n.name == "start_stream")
+        assert "mark_context" in [a.arg for a in start.args.args]
+        call = next(n for n in ast.walk(start) if isinstance(n, ast.Call)
+                    and isinstance(n.func, ast.Name) and n.func.id == "build_chat_payload")
+        keywords = {k.arg: k.value for k in call.keywords}
+        assert keywords["mark_context"].id == "mark_context"
+        assert not call.args
 
 
 # =============================================================================

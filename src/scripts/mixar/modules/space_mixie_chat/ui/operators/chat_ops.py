@@ -6,7 +6,7 @@
 """
 Mixie Chat Send Message Operator
 
-Core send-message operator for Agent mode with HTTP/SSE streaming.
+Core send-message operator for Agent mode with WebSocket streaming.
 Generate mode is delegated to generate_ops.py.
 """
 
@@ -84,7 +84,7 @@ def _send_when_handwriting_lands():
 
 
 class MIXIE_CHAT_OT_send_message(Operator):
-    """Send a chat message via HTTP/SSE"""
+    """Send a chat message via WebSocket"""
     bl_idname = "mixie_chat.send_message"
     bl_label = "Send Message"
     bl_options = {'REGISTER'}
@@ -354,10 +354,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 pending_attachments
             )
 
-        metrics.start_timer('sse_start')
+        metrics.start_timer('agent_send')
 
         # ONE choice point (core/composer_send.py): input answer, interjection
-        # into the open run, or a fresh SSE turn. The optimistic user bubble
+        # into the open run, or a fresh socket turn. The optimistic user bubble
         # above keeps the raw message_text; the wire message is composed there.
         success, error = send_user_message(scene, OutgoingMessage(
             text=message_text,
@@ -372,7 +372,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return {'CANCELLED'}
 
-        metrics.stop_timer('sse_start')
+        metrics.stop_timer('agent_send')
 
         # Drop the moodboard selection for any images we just sent.
         # Without this the moodboard's polling sync would re-add them

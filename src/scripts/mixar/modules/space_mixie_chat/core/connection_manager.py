@@ -254,9 +254,9 @@ class ConnectionManager:
                 # while the main thread is adding and removing lane scenes,
                 # and iterating that ListBase concurrently is a segfault.
                 try:
-                    from .turn_resume import check_orphaned_turns
+                    from .turn_events import reconnect
 
-                    run_on_main_thread(check_orphaned_turns)
+                    run_on_main_thread(reconnect)
                 except Exception:
                     logger.exception("orphaned-turn check failed (non-fatal)")
 
@@ -297,7 +297,7 @@ class ConnectionManager:
             # terminal. Anything else is a transient drop the client will
             # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
             # AWAITING_INPUT) must survive it: the turn streams over its own
-            # SSE connection and the backend keeps executing — wiping its
+            # backend task and the backend keeps executing — wiping its
             # state here made the client refuse every post-reconnect script
             # with "Agent session not active" while showing an idle pill.
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED

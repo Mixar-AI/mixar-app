@@ -11,11 +11,11 @@ Pins the client half of the backend's wake-up / interjection contract
   with an OPEN run counts as active, so background worker scripts are
   accepted while the orchestrator's turn is IDLE.
 - ``run_status`` / ``cancelled`` typed payloads drive the run; a turn that
-  ends without a ``run_status`` closes the run on [DONE].
+  ends without a ``run_status`` closes the run on turn_end.
 - Socket turns (``agent.turn.*``) are pinned in ``test_socket_turns.py``.
 - The composer sends while BUSY only when the run is open, as an
   interjection that reads ONLY the ``joined`` ack and never opens a second
-  SSE handler.
+  event producer.
 """
 
 import os
@@ -35,7 +35,7 @@ from mixar.modules.space_mixie_chat.constants import SessionState  # noqa: E402
 from mixar.modules.space_mixie_chat.core import composer_send  # noqa: E402
 from mixar.modules.space_mixie_chat.core import queue_processor  # noqa: E402
 from mixar.modules.space_mixie_chat.core.session import SessionManager  # noqa: E402
-from mixar.modules.space_mixie_chat.core.sse_handler import SSEEvent  # noqa: E402
+from mixar.modules.space_mixie_chat.core.agent_events import AgentEvent  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -126,13 +126,13 @@ def processor(monkeypatch):
 
 def test_run_status_opens_and_closes_run(processor):
     scene = _scene()
-    processor._handle_sse_event_internal(
-        SSEEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "in_progress"}),
+    processor._handle_agent_event_internal(
+        AgentEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "in_progress"}),
         scene,
     )
     assert scene.mixie_run_open and scene.mixie_run_id == "r1"
-    processor._handle_sse_event_internal(
-        SSEEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "completed"}),
+    processor._handle_agent_event_internal(
+        AgentEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "completed"}),
         scene,
     )
     assert not scene.mixie_run_open
@@ -141,8 +141,8 @@ def test_run_status_opens_and_closes_run(processor):
 def test_cancelled_closes_run(processor):
     scene = _scene()
     SessionManager.set_run(scene, "r1", True)
-    processor._handle_sse_event_internal(
-        SSEEvent("cancelled", {"type": "cancelled", "reason": "user"}), scene
+    processor._handle_agent_event_internal(
+        AgentEvent("cancelled", {"type": "cancelled", "reason": "user"}), scene
     )
     assert not scene.mixie_run_open
 
@@ -152,52 +152,31 @@ def test_done_closes_run_unless_turn_reported_run_status(processor):
     SessionManager.set_run(scene, "r1", True)
 
     # No run_status this turn (older backend / chat-only turn) → closed.
-    processor._handle_sse_complete_internal(scene)
+    processor._handle_agent_complete_internal(scene)
     assert scene.mixie_chat_state == "IDLE"
     assert not scene.mixie_run_open
 
     # run_status in_progress arrived → the run stays open across the turn end.
     SessionManager.set_state(scene, SessionState.BUSY)
-    processor._handle_sse_event_internal(
-        SSEEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "in_progress"}),
+    processor._handle_agent_event_internal(
+        AgentEvent("run_status", {"type": "run_status", "run_id": "r1", "status": "in_progress"}),
         scene,
     )
-    processor._handle_sse_complete_internal(scene)
+    processor._handle_agent_complete_internal(scene)
     assert scene.mixie_chat_state == "IDLE"
     assert scene.mixie_run_open
     assert SessionManager.has_active_session()
 
-    # The flag is per turn: the next [DONE] without run_status closes it.
-    processor._handle_sse_complete_internal(scene)
+    # The flag is per turn: the next turn_end without run_status closes it.
+    processor._handle_agent_complete_internal(scene)
     assert not scene.mixie_run_open
-
-
-def test_joined_ack_settles_oldest_queued_user_bubble(processor):
-    scene = _scene()
-    first = scene.mixie_chat_messages.add()
-    first.sender, first.delivery_hint = 'USER', composer_send.HINT_QUEUED
-    second = scene.mixie_chat_messages.add()
-    second.sender, second.delivery_hint = 'USER', composer_send.HINT_QUEUED
-
-    processor._handle_sse_event_internal(
-        SSEEvent("joined", {"type": "joined", "run_id": "r1", "turn_id": "t1", "queued": True}),
-        scene,
-    )
-    assert first.delivery_hint == ""
-    assert second.delivery_hint == composer_send.HINT_QUEUED
-
-    processor._handle_sse_event_internal(
-        SSEEvent("interjection_failed", {"type": "interjection_failed", "reason": "HTTP 500"}),
-        scene,
-    )
-    assert second.delivery_hint == composer_send.HINT_UNDELIVERED
 
 
 def test_unknown_typed_payload_is_still_ignored(processor, monkeypatch):
     scene = _scene()
     applied = []
     monkeypatch.setattr(processor._slot_processor, "apply_event", lambda d, s: applied.append(d))
-    processor._handle_sse_event_internal(SSEEvent("weird", {"type": "weird"}), scene)
+    processor._handle_agent_event_internal(AgentEvent("weird", {"type": "weird"}), scene)
     assert applied == []
     assert not scene.mixie_run_open
 
@@ -226,197 +205,31 @@ def test_can_send_matrix(state, run_open, allowed):
     assert composer_send.is_interjection(scene) is (state == "BUSY" and run_open)
 
 
-def test_busy_send_with_open_run_is_an_interjection_without_sse_handler(monkeypatch):
-    import mixar.modules.space_mixie_chat.core.jsonrpc_client as rpc
-    import mixar.modules.space_mixie_chat.core.rules as rules
-    import mixar.modules.space_mixie_chat.core.sse_handler as sse
-
-    monkeypatch.setattr(rpc, "get_jsonrpc_client", lambda: SimpleNamespace(connection_id="conn-1"))
-    monkeypatch.setattr(rules, "compose_wire_message", lambda scene, text: f"<rules>{text}")
-    stamped = []
-    monkeypatch.setattr(rules, "mark_rules_sent", lambda scene: stamped.append(scene.name))
-    monkeypatch.setattr(sse, "collect_user_preferences", lambda: {"asset_match_threshold": 0.5})
-
-    def _no_handler(*a, **k):
-        raise AssertionError("create_sse_handler would kill the live stream")
-    monkeypatch.setattr(sse, "create_sse_handler", _no_handler)
-
-    threads = []
-
-    class _Thread:
-        def __init__(self, target=None, args=(), daemon=None, name=None):
-            threads.append((target, args))
-
-        def start(self):
-            pass
-    monkeypatch.setattr(composer_send.threading, "Thread", _Thread)
-
-    scene = _scene(state="BUSY", session_id="sid-7")
+def test_busy_send_uses_socket_command_without_replacing_live_turn(monkeypatch):
+    from mixar.modules.common.agent_rpc import client as rpc
+    from mixar.modules.space_mixie_chat.core import turn_transport, rules
+    client = SimpleNamespace(connection_id='conn-1')
+    monkeypatch.setattr(rpc, 'get_client', lambda: client)
+    monkeypatch.setattr(rules, 'compose_wire_message', lambda scene, text: '<rules>'+text)
+    monkeypatch.setattr(rules, 'mark_rules_sent', lambda scene: None)
+    handler = SimpleNamespace(start_stream=MagicMock(return_value=True))
+    monkeypatch.setattr(turn_transport, 'create_turn_handler', lambda **kwargs: handler)
+    scene = _scene(state='BUSY', session_id='sid-7')
     SessionManager.set_state(scene, SessionState.BUSY)
-    SessionManager.set_run(scene, "r1", True)
-
-    ok, err = composer_send.send_user_message(
-        scene, composer_send.OutgoingMessage(text="make it taller", mark_context={"m": 1})
-    )
-    assert (ok, err) == (True, "")
-    assert scene.mixie_chat_state == "BUSY", "state is the streaming turn's, untouched"
-    assert stamped == ["Scene"]
-    (target, args), = threads
-    assert target is composer_send._interjection_body
-    scene_name, url, payload, _token = args
-    assert scene_name == "Scene"
-    assert url.endswith("/api/v1/blender/agent/chat")
-    assert payload["session_id"] == "sid-7"
-    assert payload["instance_id"] == "conn-1"
-    assert payload["message"] == "<rules>make it taller"
-    assert payload["mark_context"] == {"m": 1}
-    assert payload["user_preferences"] == {"asset_match_threshold": 0.5}
+    SessionManager.set_run(scene, 'r1', True)
+    assert composer_send.send_user_message(scene, composer_send.OutgoingMessage(
+        text='make it taller', mark_context={'m':1})) == (True, '')
+    payload = handler.start_stream.call_args.kwargs
+    assert payload['session_id'] == 'sid-7'
+    assert payload['message'] == '<rules>make it taller'
+    assert payload['mark_context'] == {'m':1}
+    assert scene.mixie_chat_state == 'BUSY'
 
 
 def test_busy_send_without_open_run_is_refused():
     scene = _scene(state="BUSY")
     ok, err = composer_send.send_user_message(scene, composer_send.OutgoingMessage(text="x"))
     assert ok is False and err
-
-
-class _FakeResponse:
-    def __init__(self, status, lines):
-        self.status_code = status
-        self._lines = lines
-        self.consumed = 0
-        self.closed = False
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        self.closed = True
-
-    def read(self):
-        return b""
-
-    def iter_lines(self):
-        for line in self._lines:
-            self.consumed += 1
-            yield line
-
-
-class _FakeHttpx:
-    """Just enough of httpx for the interjection worker."""
-
-    def __init__(self, response):
-        self.response = response
-        self.posts = []
-        fake = self
-
-        class Timeout:
-            def __init__(self, **kw):
-                pass
-
-        class Client:
-            def __init__(self, timeout=None):
-                pass
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *exc):
-                pass
-
-            def stream(self, method, url, json=None, headers=None):
-                fake.posts.append((method, url, json, headers))
-                return fake.response
-        self.Timeout, self.Client = Timeout, Client
-
-
-@pytest.fixture
-def interjection_wire(monkeypatch):
-    import mixar.modules.space_mixie_chat.core.sse_handler as sse
-
-    queued = []
-    monkeypatch.setattr(queue_processor, "queue_sse_event",
-                        lambda ev, name: queued.append((name, ev.event_type, ev.data)) or True)
-    monkeypatch.setattr(sse, "_try_refresh_token", lambda: "")
-
-    def _install(response):
-        fake = _FakeHttpx(response)
-        monkeypatch.setattr(sse, "httpx", fake)
-        return fake
-    return SimpleNamespace(queued=queued, install=_install)
-
-
-def test_interjection_reads_only_the_joined_ack_then_closes(interjection_wire):
-    response = _FakeResponse(200, [
-        'data: {"type":"joined","session_id":"sid-1","run_id":"r1","turn_id":"t1","queued":true}',
-        'data: {"bubble_id":"b1","seq":5,"content":{"append":"replayed"}}',
-        'data: [DONE]',
-    ])
-    fake = interjection_wire.install(response)
-    composer_send._interjection_body("Scene", "http://x/chat", {"message": "m"}, "tok")
-
-    assert response.consumed == 1, "the replay after the ack is never read"
-    assert response.closed
-    assert fake.posts[0][3]["Authorization"] == "Bearer tok"
-    assert interjection_wire.queued == [
-        ("Scene", "joined", {"type": "joined", "session_id": "sid-1", "run_id": "r1",
-                             "turn_id": "t1", "queued": True}),
-    ]
-
-
-def test_interjection_without_joined_ack_reports_failure(interjection_wire):
-    interjection_wire.install(_FakeResponse(200, [
-        'data: {"bubble_id":"b1","seq":0,"loader":{"visible":true}}',
-    ]))
-    composer_send._interjection_body("Scene", "http://x/chat", {}, "tok")
-    (name, kind, data), = interjection_wire.queued
-    assert (name, kind) == ("Scene", "interjection_failed")
-    assert "unexpected first payload" in data["reason"]
-
-    interjection_wire.queued.clear()
-    interjection_wire.install(_FakeResponse(503, []))
-    composer_send._interjection_body("Scene", "http://x/chat", {}, "tok")
-    assert interjection_wire.queued[0][1] == "interjection_failed"
-    assert "HTTP 503" in interjection_wire.queued[0][2]["reason"]
-
-
-class _ReplayResponse:
-    def __init__(self, lines):
-        self._lines = lines
-        self.consumed = 0
-
-    def iter_lines(self):
-        for line in self._lines:
-            self.consumed += 1
-            yield line
-
-
-def test_joined_on_a_normal_sse_stream_settles_hint_and_stops_the_stream():
-    """A send while IDLE raced a wake-up: the backend joins the message to
-    the streaming turn and replays that turn's buffer. The socket already
-    delivers those events and the two paths share no dedupe registry, so
-    the stream stops at the ack — no [DONE] finalisation, no state change."""
-    from mixar.modules.space_mixie_chat.core.sse_handler import SSEStreamHandler
-
-    events, completes = [], []
-    handler = SSEStreamHandler(
-        "http://x",
-        on_event=lambda ev: events.append((ev.event_type, ev.data)) or True,
-        on_error=lambda err: (_ for _ in ()).throw(AssertionError(err)),
-        on_complete=lambda: completes.append(True) or True,
-    )
-    handler._running.set()
-    response = _ReplayResponse([
-        'data: {"type":"joined","session_id":"sid-1","run_id":"r1","turn_id":"t1","queued":true}',
-        'data: {"bubble_id":"b1","seq":7,"content":{"append":"replayed"}}',
-        'data: [DONE]',
-    ])
-    assert handler._consume_sse_stream(response, "Chat") == "done"
-    assert response.consumed == 1, "the replay is never read"
-    assert events == [("joined", {"type": "joined", "session_id": "sid-1", "run_id": "r1",
-                                  "turn_id": "t1", "queued": True})]
-    assert completes == [], "no [DONE] finalisation — the socket ends the turn"
-    assert handler.is_running is False
-    assert handler._last_seq == -1, "the replay's seq never moved the resume cursor"
 
 
 # ---------------------------------------------------------------------------

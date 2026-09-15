@@ -60,6 +60,6 @@ def test_teardown_clears_it_on_both_paths():
     but NOT the freed path, and that asymmetry is a live bug. Do not repeat
     it: file load frees the bubble through `_window_freed` only."""
     closed = CC[CC.index("void ED_agent_bubble_windows_closed") :][:400]
-    freed = CC[CC.index("void ED_agent_bubble_window_freed") :][:900]
+    freed = CC[CC.index("void ED_agent_bubble_window_freed") :].split("\nvoid ", 1)[0]
     assert "g_hover_await_enter = false;" in closed
     assert "g_hover_await_enter = false;" in freed

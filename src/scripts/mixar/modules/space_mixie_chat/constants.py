@@ -28,11 +28,6 @@ DEV_MODE = False
 # Delay before agent connection attempts on startup (seconds)
 STARTUP_DELAY_SECONDS = 1.0
 
-# Safe retry schedule for an agent SSE request that could not establish a TCP
-# connection at all.  ConnectError means the backend never accepted the turn,
-# so retrying cannot duplicate agent work.  Mid-stream/read/write failures are
-# deliberately excluded because their acceptance state is ambiguous.
-SSE_CONNECT_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
 
 
 # ============================================================================
@@ -151,8 +146,8 @@ class JSONRPCMethod:
     AGENT_TOOL_EXECUTING = "agent.tool_executing"
     AGENT_TOOL_END = "agent.tool_end"
     # Server -> Client (notifications): a backend-started turn of an open run
-    # (a "wake-up") streamed over the socket instead of an SSE response.
-    # `event` carries exactly one SSE payload dict; `seq` restarts at 0 per
+    # (a "wake-up") streamed over the socket instead of an agent event response.
+    # `event` carries exactly one agent event payload dict; `seq` restarts at 0 per
     # turn, so (turn_id, seq) is the dedupe key. Handled by core/turn_events.
     AGENT_TURN_STARTED = "agent.turn.started"
     AGENT_TURN_EVENT = "agent.turn.event"
@@ -220,14 +215,9 @@ DEFAULT_QUEUE_POLL_INTERVAL = 0.1
 EXECUTION_POLL_INTERVAL = 0.3  # Slower polling during tool execution
 
 # ============================================================================
-# SSE API ENDPOINTS
+# AGENT FEEDBACK
 # ============================================================================
 
-AGENT_CHAT_ENDPOINT = "/api/v1/blender/agent/chat"
-AGENT_INPUT_ENDPOINT = "/api/v1/blender/agent/input"
-AGENT_ATTACH_ENDPOINT = "/api/v1/blender/agent/chat/attach"
-AGENT_FEEDBACK_ENDPOINT = "/api/v1/blender/agent/feedback"
-AGENT_PARKED_TURN_ENDPOINT = "/api/v1/blender/agent/parked-turn"
 
 # Feedback submission lifecycle shown inline on the rated message.
 # Values are mirrored in C++ (mixie_chat_feedback.cc) — keep in sync.
@@ -274,23 +264,6 @@ WS_LIVENESS_PROBE_GRACE = 5.0
 # WS_LIVENESS_TIMEOUT and above DEFAULT_PING_INTERVAL.
 WS_UI_STALE_THRESHOLD = 20.0
 
-# SSE read timeout: maximum seconds between BYTES on the stream before
-# httpx declares it dead. The backend emits ": keepalive" comment lines
-# every ~15s whenever the graph is silent (long LLM calls, long tools), so
-# a healthy stream always carries bytes well within this window — a long
-# silence means the TCP connection died (network drop, sleep/resume, NAT
-# rebind). Was 630s (backend 600s tool timeout + margin) before keepalives
-# existed, which left a dead mid-turn stream undetected for 10+ minutes.
-# A false positive is harmless now: a read timeout mid-turn re-attaches via
-# /agent/chat/attach (idempotent replay) instead of failing the turn.
-SSE_READ_TIMEOUT = 75.0
-
-# Re-attach after a mid-turn stream loss: total budget before giving up and
-# failing the turn client-side. The backend keeps a disconnected turn running
-# and buffers its events for replay, so a long outage is still recoverable.
-ATTACH_RETRY_MAX_SECONDS = 900.0
-# Per-attempt backoff; the last delay repeats while the budget lasts.
-ATTACH_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
 
 # ============================================================================
 # UI CONSTANTS
@@ -486,7 +459,7 @@ CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 # TIMER / EXECUTION CONSTANTS
 # ============================================================================
 
-# Timer interval for SSE queue processing (~60fps for short content)
+# Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
 # Throttled interval when streaming long content (~30fps)
 # Yields more main thread time to Blender's event loop (pinch-to-zoom, etc.)

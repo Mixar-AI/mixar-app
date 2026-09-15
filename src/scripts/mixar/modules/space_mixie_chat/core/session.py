@@ -356,7 +356,7 @@ class SessionManager:
     def has_active_session(cls) -> bool:
         """Check if any scene has an active agent session. Thread-safe.
 
-        Safe to call from any thread (WebSocket, SSE background).
+        Safe to call from any thread (WebSocket, socket background).
         Used by connection_manager.on_script_execute to gate tool execution.
 
         Returns:
@@ -368,7 +368,7 @@ class SessionManager:
 
     # States a transport (WebSocket) drop may downgrade to OFFLINE. The active
     # turn states — BUSY / MODIFYING / AWAITING_INPUT — are deliberately
-    # excluded: the agent turn lives on its own SSE/HTTP connection and keeps
+    # excluded: the agent turn lives on its own backend task and keeps
     # running through a WS blip, so its state must survive the reconnect.
     _DISCONNECT_DOWNGRADABLE = frozenset({SessionState.IDLE, SessionState.CONNECTING})
 
@@ -385,7 +385,7 @@ class SessionManager:
         every backend script was refused with "Agent session not active"
         while the status pill showed Connected/idle — the backend kept
         grinding whole build waves against those refusals (backend trace
-        b0c909ab). The turn's lifecycle is owned by the SSE stream
+        b0c909ab). The turn's lifecycle is owned by the agent stream
         (queue_processor), not by the WS transport.
 
         A TERMINAL disconnect (``terminal=True`` — auth failure, reconnection

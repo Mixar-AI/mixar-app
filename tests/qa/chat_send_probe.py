@@ -6,18 +6,19 @@
 
 Loaded in the isolated QA app. No registered operators or input properties
 are replaced. The production send path builds its payload and optimistic
-transcript; only connection/auth checks and the outgoing SSE transport are
+transcript; only connection/auth checks and the outgoing WebSocket transport are
 replaced — the operator's pre-flight (``chat_ops``) and the choice point's
-handler factory (``core/composer_send`` → ``sse_handler.create_sse_handler``,
+handler factory (``core/composer_send`` → ``turn_transport.create_turn_handler``,
 ``message_helpers.get_auth_token``). Restore in finally. Run the app with
 external networking blocked.
 """
 
 from types import SimpleNamespace
+from mixar.modules.common.agent_rpc import client as agent_rpc
 
 import bpy
 from mixar.modules.space_mixie_chat.constants import TEMP_PLACEHOLDER_PREFIX
-from mixar.modules.space_mixie_chat.core import message_helpers, sse_handler
+from mixar.modules.space_mixie_chat.core import message_helpers, turn_transport
 from mixar.modules.space_mixie_chat.ui.operators import chat_ops
 
 calls = []
@@ -30,7 +31,7 @@ _BOUNDARY = (
     (chat_ops, 'get_connection_manager'),
     (chat_ops, 'get_jsonrpc_client'),
     (message_helpers, 'get_auth_token'),
-    (sse_handler, 'create_sse_handler'),
+    (turn_transport, 'create_turn_handler'),
 )
 
 
@@ -44,7 +45,8 @@ def install():
     chat_ops.get_connection_manager = lambda: SimpleNamespace(is_connected=connected)
     chat_ops.get_jsonrpc_client = lambda: SimpleNamespace(connection_id='qa-local')
     message_helpers.get_auth_token = lambda: 'qa-local-placeholder'
-    sse_handler.create_sse_handler = lambda **kwargs: SimpleNamespace(start_stream=record)
+    agent_rpc.get_client = lambda: SimpleNamespace(connection_id='qa-local')
+    turn_transport.create_turn_handler = lambda **kwargs: SimpleNamespace(start_stream=record)
     calls.clear()
     chat_ops.get_session_manager().set_connected(bpy.context.scene)
     bpy.context.window_manager.mixie_chat_is_logged_in = True

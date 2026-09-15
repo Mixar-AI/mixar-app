@@ -176,7 +176,8 @@ def test_send_paths_proceed_after_ensuring_project():
     assert "def ensure_addon_project_ready(" in link_source
     assert "ensure_workspace_root()" in link_source
     assert "link_workspace_root()" in link_source
-    for source in (chat_source, quick_source):
+    assert "bpy.ops.mixie_chat.send_message()" in quick_source
+    for source in (chat_source,):
         assert "if not ensure_addon_project_ready(self):" in source
         assert source.index("ensure_addon_project_ready(self)") < source.index(
             "build_project_context(scene)"

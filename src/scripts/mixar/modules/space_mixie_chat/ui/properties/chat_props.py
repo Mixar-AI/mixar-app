@@ -1034,8 +1034,8 @@ def unregister():
     except Exception:
         pass
     try:
-        from ...core.sse_handler import cleanup_all_sse_handlers
-        cleanup_all_sse_handlers()
+        from ...core.turn_transport import cleanup_all_turn_handlers
+        cleanup_all_turn_handlers()
     except Exception:
         pass
     try:
