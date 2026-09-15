@@ -68,8 +68,21 @@ def _first_word(value: str) -> str:
     return word
 
 
+def parse_subscription_type(value) -> int:
+    """Integer plan identity from ``/auth/me``, or 0 when absent/unparseable.
+
+    0 is the backend free tier and also the client fallback (signed out,
+    offline before the first ``/me``, unknown payload). The main Mixie
+    cat maps that onto today's Emerald style.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def apply_from_user_info(user_info) -> None:
-    """Write the greeting name to ``wm.mixar_account_name``.
+    """Write greeting name and subscription tier onto WindowManager.
 
     Called from the login apply paths, which already run on the main
     thread. Best-effort: a missing property (partial build) or absent
@@ -85,18 +98,45 @@ def apply_from_user_info(user_info) -> None:
         full_name=str(data.get("name") or ""),
         email=str(data.get("email") or ""),
     )
+    tier = parse_subscription_type(data.get("subscription_type"))
 
     try:
-        bpy.context.window_manager.mixar_account_name = name
+        wm = bpy.context.window_manager
+        wm.mixar_account_name = name
+        wm.mixar_subscription_type = tier
     except Exception:  # noqa: BLE001 — property not registered yet
         pass
+    else:
+        _tag_bubble_redraw()
 
 
 def clear() -> None:
-    """Drop the greeting name on logout."""
+    """Drop the greeting name and tier on logout."""
     import bpy
 
     try:
-        bpy.context.window_manager.mixar_account_name = ""
+        wm = bpy.context.window_manager
+        wm.mixar_account_name = ""
+        wm.mixar_subscription_type = 0
+    except Exception:  # noqa: BLE001
+        pass
+    else:
+        _tag_bubble_redraw()
+
+
+def _tag_bubble_redraw() -> None:
+    """Repaint the island/pill so Mixie's tier colour updates without a
+    pointer move. Best-effort: a missing screen must not break login.
+    """
+    try:
+        import bpy
+
+        for window in bpy.context.window_manager.windows:
+            screen = getattr(window, "screen", None)
+            if screen is None:
+                continue
+            for area in screen.areas:
+                if area.type == "AGENT_BUBBLE":
+                    area.tag_redraw()
     except Exception:  # noqa: BLE001
         pass

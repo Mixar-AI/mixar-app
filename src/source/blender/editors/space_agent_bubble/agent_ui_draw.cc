@@ -486,7 +486,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     const MixieCatPose cat_pose = agent_ui_cat_motion_sample(
         region, state->cat_activity, now, state->cat_scene,
         std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f);
-    agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity);
+    agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity, state->subscription_type);
 
     /* Preview line: newest user prompt, dim, ellipsised into the space left
      * of the chip. */

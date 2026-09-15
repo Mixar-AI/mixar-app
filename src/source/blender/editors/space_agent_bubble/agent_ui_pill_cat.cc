@@ -210,7 +210,8 @@ void agent_ui_draw_cat(
 
 void agent_ui_draw_pill_cat(const rctf *chip,
                             const MixieCatPose &pose,
-                            const MixieCatActivity activity)
+                            const MixieCatActivity activity,
+                            const int subscription_type)
 {
   g_last_cat_valid = false;
   if (chip == nullptr || BLI_rctf_size_x(chip) < 8.0f || BLI_rctf_size_y(chip) < 8.0f) {
@@ -222,7 +223,7 @@ void agent_ui_draw_pill_cat(const rctf *chip,
                      int(std::ceil(chip->ymax))};
   g_last_cat_valid = true;
   g_last_activity = activity;
-  draw_cat_pose(*chip, pose, 0, 1.0f);
+  draw_cat_pose(*chip, pose, mixie_cat_style_index_for_tier(subscription_type), 1.0f);
 }
 
 bool agent_ui_pill_cat_last_rect(rcti *r_rect)

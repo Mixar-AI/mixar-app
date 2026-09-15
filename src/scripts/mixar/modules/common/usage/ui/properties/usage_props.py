@@ -34,6 +34,7 @@ _PROP_NAMES = (
     "mixar_usage_can_top_up",
     "mixar_usage_stale",
     "mixar_account_name",
+    "mixar_subscription_type",
 )
 
 
@@ -90,6 +91,12 @@ def register() -> None:
         description="Display name for the account greeting",
         default="",
         maxlen=128,
+        options={'SKIP_SAVE'},
+    )
+    wm.mixar_subscription_type = IntProperty(
+        name="Subscription Type",
+        description="Integer plan identity from /auth/me (0 = free / unknown)",
+        default=0,
         options={'SKIP_SAVE'},
     )
 

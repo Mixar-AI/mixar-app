@@ -33,4 +33,36 @@ inline const MixieCatStyle &mixie_cat_style(const int ordinal)
   return MIXIE_CAT_STYLES[size_t(ordinal < 0 ? 0 : ordinal) % MIXIE_CAT_STYLES.size()];
 }
 
+/** Map ``users.subscription_type`` onto MIXIE_CAT_STYLES for the MAIN chat cat.
+ *
+ * Reserved backend tiers: 0 is free, 4 is trial (`modules/plans`). Paid
+ * identities are the remaining stable integers. Unmapped, negative, or
+ * unknown values return Emerald — today's default — not a wrap. Parallel
+ * cards keep using #mixie_cat_style, which still wraps by ordinal.
+ */
+inline int mixie_cat_style_index_for_tier(const int tier)
+{
+  switch (tier) {
+    case 0:
+      return 0; /* Free → Emerald */
+    case 1:
+      return 1; /* Amber */
+    case 2:
+      return 2; /* Lagoon */
+    case 3:
+      return 3; /* Lilac */
+    case 4:
+      return 4; /* Trial → Sky */
+    case 5:
+      return 5; /* Lime */
+    default:
+      return 0;
+  }
+}
+
+inline const MixieCatStyle &mixie_cat_style_for_tier(const int tier)
+{
+  return MIXIE_CAT_STYLES[size_t(mixie_cat_style_index_for_tier(tier))];
+}
+
 }  // namespace blender

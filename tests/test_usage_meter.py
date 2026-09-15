@@ -336,10 +336,23 @@ class TestCardRnaContract:
 
         return set(usage_props._PROP_NAMES)
 
+    #: Written from /auth/me for the main Mixie cat, not the profile card.
+    _CAT_ONLY = frozenset({"mixar_subscription_type"})
+
     def test_every_mirrored_property_is_read_by_the_card(self):
         card = CARD_CC.read_text(encoding="utf-8")
-        for name in self._mirrored_property_names():
+        for name in self._mirrored_property_names() - self._CAT_ONLY:
             assert '"%s"' % name in card, name
+
+    def test_subscription_type_is_read_by_the_main_cat(self):
+        """The integer tier is session state on WM, same as the greeting,
+        but the profile card does not paint it — Mixie does."""
+        state = (
+            REPO_ROOT
+            / "src/source/blender/editors/space_agent_bubble/agent_ui_state.cc"
+        ).read_text(encoding="utf-8")
+        assert '"mixar_subscription_type"' in state
+        assert "mixar_subscription_type" in USAGE_PROPS_PY.read_text(encoding="utf-8")
 
     def test_every_property_the_card_reads_is_mirrored(self):
         """A typo'd name in C++ reads as a missing property and silently
@@ -356,8 +369,8 @@ class TestCardRnaContract:
 
         src = inspect.getsource(poller._mirror_to_rna)
         for name in self._mirrored_property_names():
-            if name == "mixar_account_name":
-                continue  # Owned by the login path, not the billing poll.
+            if name in ("mixar_account_name", "mixar_subscription_type"):
+                continue  # Owned by the login /me path, not the billing poll.
             assert name in src, name
 
     def test_properties_live_on_window_manager_not_scene(self):
@@ -538,6 +551,23 @@ class TestGreetingName:
     def test_empty_when_nothing_usable(self):
         assert account.derive_display_name("", "") == ""
         assert account.derive_display_name("", "@mixar.app") == ""
+
+    def test_subscription_type_coerces_and_falls_back_to_free(self):
+        assert account.parse_subscription_type(2) == 2
+        assert account.parse_subscription_type("4") == 4
+        assert account.parse_subscription_type(None) == 0
+        assert account.parse_subscription_type("pro") == 0
+        assert account.parse_subscription_type("") == 0
+
+    def test_me_payload_forwards_subscription_type(self):
+        """``get_user_info`` used to keep only email/name/credits; the
+        integer tier already on ``/auth/me`` must reach apply_from_user_info.
+        """
+        auth = (
+            REPO_ROOT / "src/scripts/mixar/modules/auth/core/auth.py"
+        ).read_text(encoding="utf-8")
+        assert 'user_data.get("subscription_type"' in auth
+        assert 'response_data["data"]["subscription_type"]' in auth
 
     def test_card_greets_without_a_name_rather_than_a_dangling_comma(self):
         card = CARD_CC.read_text(encoding="utf-8")

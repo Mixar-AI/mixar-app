@@ -751,6 +751,15 @@ def get_user_info():
             # the profile card falls back to the email's local part.
             response_data["data"]["name"] = user_data.get("name") or ""
             response_data["data"]["credits"] = user_data.get("credits", 0)
+            # Integer plan identity already on /me — the main Mixie cat
+            # maps it onto MIXIE_CAT_STYLES. Missing/unparseable → 0
+            # (today's Emerald default), never a guessed tier.
+            try:
+                response_data["data"]["subscription_type"] = int(
+                    user_data.get("subscription_type", 0)
+                )
+            except (TypeError, ValueError):
+                response_data["data"]["subscription_type"] = 0
             return response_data
         else:
             logger.warning(f"Error getting user info: {response.status_code}")

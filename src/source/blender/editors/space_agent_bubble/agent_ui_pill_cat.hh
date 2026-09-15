@@ -24,8 +24,13 @@ enum class MixieCatActivity;
  * (see `test_agent_bubble_pill_paint.py`).
  *
  * The region-owned activity controller supplies a smoothly blended pose.
+ * \a subscription_type is users.subscription_type from /auth/me; unknown
+ * values keep today's Emerald style. Parallel cards use agent_ui_draw_cat.
  */
-void agent_ui_draw_pill_cat(const rctf *chip, const MixieCatPose &pose, MixieCatActivity activity);
+void agent_ui_draw_pill_cat(const rctf *chip,
+                            const MixieCatPose &pose,
+                            MixieCatActivity activity,
+                            int subscription_type = 0);
 
 /** Shared painter; does not modify the pill's QA geometry. Alpha follows card
  * transitions. */

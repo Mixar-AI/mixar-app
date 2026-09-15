@@ -120,11 +120,64 @@ int main() {
     subprocess.run([str(binary)], check=True, capture_output=True)
 
 
+def test_tier_maps_onto_named_styles_without_wrapping(tmp_path):
+    """The main chat cat maps users.subscription_type onto MIXIE_CAT_STYLES.
+    Unknown tiers must not wrap the way parallel-card ordinals do."""
+    compiler = shutil.which('c++') or shutil.which('clang++')
+    assert compiler
+    source = tmp_path/'style.cc'
+    source.write_text(r'''
+#include "agent_ui_cat_style.hh"
+#include <cassert>
+#include <cstddef>
+#include <cstring>
+using namespace blender;
+int main() {
+  assert(std::strcmp(mixie_cat_style(0).name, "Emerald") == 0);
+  assert(std::strcmp(mixie_cat_style(6).name, "Emerald") == 0);
+  assert(std::strcmp(mixie_cat_style(7).name, "Amber") == 0);
+  assert(mixie_cat_style(-3).name == MIXIE_CAT_STYLES[0].name);
+  assert(std::strcmp(mixie_cat_style_for_tier(0).name, "Emerald") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(1).name, "Amber") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(2).name, "Lagoon") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(3).name, "Lilac") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(4).name, "Sky") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(5).name, "Lime") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(-1).name, "Emerald") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(6).name, "Emerald") == 0);
+  assert(std::strcmp(mixie_cat_style_for_tier(7).name, "Emerald") == 0);
+  assert(mixie_cat_style_index_for_tier(4) == 4);
+  assert(mixie_cat_style_index_for_tier(99) == 0);
+  for (int n = 0; n < 24; n++) {
+    assert(&mixie_cat_style(n) == &MIXIE_CAT_STYLES[std::size_t(n) % MIXIE_CAT_STYLES.size()]);
+  }
+}
+''')
+    binary = tmp_path/'style'
+    subprocess.run([compiler, '-std=c++17', '-I', str(ROOT/'src/source/blender/editors/space_agent_bubble'),
+                    str(source), '-o', str(binary)], check=True, capture_output=True)
+    subprocess.run([str(binary)], check=True, capture_output=True)
+
+
+def test_style_header_keeps_ordinal_wrap_and_explicit_tier_fallback():
+    """Compiler-free pin of the two lookup contracts in the same header."""
+    header = (ROOT / 'src/source/blender/editors/space_agent_bubble/agent_ui_cat_style.hh').read_text()
+    assert 'MIXIE_CAT_STYLES[size_t(ordinal < 0 ? 0 : ordinal) % MIXIE_CAT_STYLES.size()]' in header
+    assert 'mixie_cat_style_index_for_tier' in header
+    assert 'case 4:' in header and 'Trial → Sky' in header
+    assert 'default:' in header
+    # The tier path must not reuse the ordinal modulo — unknown paid
+    # identities fall back to Emerald, they do not wrap onto Amber.
+    tier_fn = header[header.index('mixie_cat_style_index_for_tier'):]
+    tier_fn = tier_fn[: tier_fn.index('mixie_cat_style_for_tier')]
+    assert '% MIXIE_CAT_STYLES.size()' not in tier_fn
+
+
 def test_activity_reads_live_native_slots_and_region_owns_transition():
     root = ROOT/'src/source/blender/editors/space_agent_bubble'
     state = (root/'agent_ui_state.cc').read_text()
     for prop in ('thinking_active', 'step_items', 'RUNNING', 'mixie_chat_voice_listening',
-                 'AWAITING_INPUT', 'MODIFYING', 'mixie_queue'):
+                 'AWAITING_INPUT', 'MODIFYING', 'mixie_queue', 'mixar_subscription_type'):
         assert prop in state
     assert 'cat.thinking = cat.reading = cat.working = cat.responding = false' in state
     motion = (root/'agent_ui_motion.cc').read_text()

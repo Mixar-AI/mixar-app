@@ -17,7 +17,8 @@
  *                 matches scene.mixie_session_id
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   placeholder   shown while scene.mixie_chat_input is empty
- *   queue count   live rows in wm.mixie_queue.items
+   *   queue count   live rows in wm.mixie_queue.items
+   *   cat style     wm.mixar_subscription_type  (/auth/me integer tier)
  *
  * Called from the draw callback, so it only ever READS: a draw callback runs
  * on every mouse move, and writing a property from one is how the chat's
@@ -76,6 +77,15 @@ bool read_bool_prop(PointerRNA *ptr, const char *name)
   return (prop && RNA_property_type(prop) == PROP_BOOLEAN) ?
              RNA_property_boolean_get(ptr, prop) :
              false;
+}
+
+int read_int_prop(PointerRNA *ptr, const char *name, const int fallback)
+{
+  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
+  if (!prop || RNA_property_type(prop) != PROP_INT) {
+    return fallback;
+  }
+  return RNA_property_int_get(ptr, prop);
 }
 
 /** The enum item's UI name — the label the property itself already carries. */
@@ -371,6 +381,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
    * The backend owns the percentage (grandfathered allocations, trials and
    * clamping all live there); this only ever reads it. */
   r_state->credits_remaining = -1.0f;
+  r_state->subscription_type = 0;
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     if (read_bool_prop(&wm_ptr, "mixar_usage_ready")) {
@@ -380,6 +391,9 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
             std::clamp(RNA_property_float_get(&wm_ptr, pct) / 100.0f, 0.0f, 1.0f);
       }
     }
+    /* Missing/unregistered property (signed out, offline before /me,
+     * partial build) stays 0 — Emerald, today's default. */
+    r_state->subscription_type = read_int_prop(&wm_ptr, "mixar_subscription_type", 0);
   }
 }
 

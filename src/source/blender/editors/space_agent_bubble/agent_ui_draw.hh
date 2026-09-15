@@ -31,6 +31,10 @@ struct AgentIslandState {
   bool status_busy;         /* Lights the pill's dot. */
   MixieCatActivity cat_activity;
   const void *cat_scene;    /* Reset transient expression when the scene changes. */
+  /* users.subscription_type from /auth/me, mirrored on
+   * wm.mixar_subscription_type. 0 (free / signed-out / unknown) keeps
+   * today's Emerald cat; paid/trial map onto MIXIE_CAT_STYLES. */
+  int subscription_type;
 
   char title[128];
   /* Last USER message, for the minimised pill's preview line. Empty when the

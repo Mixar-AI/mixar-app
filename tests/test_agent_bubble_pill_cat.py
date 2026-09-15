@@ -92,8 +92,23 @@ def test_painter_calls_the_shipped_sampler():
 
 def test_elongated_pill_draws_the_cat_not_the_mixar_mark():
     elongated = _elongated()
-    assert "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity)" in elongated
+    assert (
+        "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity, "
+        "state->subscription_type)"
+    ) in elongated
     assert "ICON_MIXAR_ICON" not in elongated
+
+
+def test_main_cat_uses_tier_style_not_a_hardcoded_ordinal():
+    """Parallel cards still pass cat_ordinal into agent_ui_draw_cat;
+    the main chat cat maps /auth/me's subscription_type instead."""
+    assert "mixie_cat_style_index_for_tier(subscription_type)" in CAT_CC
+    start = CAT_CC.index("void agent_ui_draw_pill_cat")
+    body = CAT_CC[start : CAT_CC.index("\n}\n", start)]
+    assert "draw_cat_pose(*chip, pose, 0, 1.0f)" not in body
+    assert "mixie_cat_style_index_for_tier" in body
+    # Shared painter used by parallel cards is unchanged.
+    assert "draw_cat_pose(chip, mixie_cat_eval_pose(now, working), variation, alpha)" in CAT_CC
 
 
 def test_compact_pill_clears_stale_cat_target():
