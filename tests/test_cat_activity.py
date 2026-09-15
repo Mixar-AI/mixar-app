@@ -56,11 +56,14 @@ int main() {
   assert(!mixie_cat_is_working(mixie_cat_activity(s)));
   s.listening=true;
   assert(mixie_cat_activity(s)==MixieCatActivity::Listening);
+  s.offline=false;
   s.catching=true;
   assert(mixie_cat_activity(s)==MixieCatActivity::Catching); // Reflex beats voice and work.
   s.offline=true;
+  s.listening=s.waiting=false;
   assert(mixie_cat_activity(s)==MixieCatActivity::Offline);
   s.offline=s.catching=s.listening=s.waiting=false;
+  s.thinking=true;
   assert(mixie_cat_activity(s)==MixieCatActivity::Thinking);
   MixieCatMotion a,b;
   a.sample(1, MixieCatActivity::Idle); b.sample(1, MixieCatActivity::Idle);

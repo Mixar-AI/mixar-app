@@ -56,6 +56,57 @@ inline void mixie_cat_pill_chip_center(const float native_w, const float native_
   y = native_h * 0.5f;
 }
 
+/** Painter ear-tip extent after the 12° style tilt, breath, bounce and the
+ * -0.025 face offset — the same vertices the chip-containment tests use. */
+inline float mixie_cat_catch_ear_extent(const MixieCatPose &p)
+{
+  constexpr float k_pi = 3.14159265f;
+  const float angle = (12.0f + p.tilt) * k_pi / 180.0f;
+  const float c = std::cos(angle);
+  const float s = std::sin(angle);
+  float extent = 0.0f;
+  for (const float side : {-1.0f, 1.0f}) {
+    const float x = side * 0.285f;
+    const float y = 0.375f * (side < 0.0f ? p.ear_height_l : p.ear_height_r);
+    const float tx = p.breathe * (x * c - y * s);
+    const float ty = p.breathe * (x * s + y * c) + p.bounce - 0.025f;
+    extent = std::max(extent, std::max(std::abs(tx), std::abs(ty)));
+  }
+  return extent;
+}
+
+/** Scale look-driven extras toward the catch lean so a corner reach stays
+ * inside the chip. Direction is kept; only the stacked amplitude shrinks. */
+inline void mixie_cat_catch_keep_in_chip(MixieCatPose &p)
+{
+  constexpr float k_limit = 0.487f;
+  constexpr float k_lean = -8.0f;
+  const float tilt_extra = p.tilt - k_lean;
+  const float el_extra = p.ear_height_l - 1.0f;
+  const float er_extra = p.ear_height_r - 1.0f;
+  const float bounce0 = p.bounce;
+  const float breathe_extra = p.breathe - 1.0f;
+  MixieCatPose rest = p;
+  rest.tilt = k_lean;
+  rest.ear_height_l = rest.ear_height_r = 1.0f;
+  rest.bounce = 0.0f;
+  rest.breathe = 1.0f;
+  const float base = mixie_cat_catch_ear_extent(rest);
+  float scale = 1.0f;
+  for (int i = 0; i < 6; i++) {
+    p.tilt = k_lean + tilt_extra * scale;
+    p.ear_height_l = 1.0f + el_extra * scale;
+    p.ear_height_r = 1.0f + er_extra * scale;
+    p.bounce = bounce0 * scale;
+    p.breathe = 1.0f + breathe_extra * scale;
+    const float extent = mixie_cat_catch_ear_extent(p);
+    if (extent <= k_limit) {
+      return;
+    }
+    scale *= std::clamp((k_limit - base) / std::max(1e-5f, extent - base), 0.0f, 1.0f);
+  }
+}
+
 /** Track, anticipate, then reach. The snap is the reach at progress 1, not a
  * blink; openness still uses the shared blink so the face stays alive. */
 inline MixieCatPose mixie_cat_catch_pose(const double now, const MixieCatCatch &c)
@@ -80,6 +131,7 @@ inline MixieCatPose mixie_cat_catch_pose(const double now, const MixieCatCatch &
   if (reach > 0.2f) {
     p.openness = std::max(p.openness, 0.72f);
   }
+  mixie_cat_catch_keep_in_chip(p);
   return p;
 }
 
