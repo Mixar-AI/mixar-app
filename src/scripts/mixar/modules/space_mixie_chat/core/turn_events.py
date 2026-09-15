@@ -148,10 +148,28 @@ def _consume(method, params):
         tid = info.get('turn_id')
         if scene is None or sid in _blocked:
             return
+        turn = _turns.get(tid)
+        saved = turn_cursor.read(scene, sid, tid)
+        # A rendered turn_end is proof of completion even after the journal
+        # expires. Replay availability is only relevant to missing delivery.
+        if tid and ((turn is not None and turn.complete) or saved.get('complete')):
+            if saved:
+                from .session import get_session_manager
+                session = get_session_manager()
+                session.set_run(scene, saved.get('run_id', ''), bool(saved.get('run_open')))
+                session.set_state(scene, SessionState[saved.get('state', 'IDLE')])
+            return
+        if not tid:
+            from .session import get_session_manager
+            local = [t for t in _turns.values() if t.session_id == sid]
+            pending = any(entry[0] == sid for entry in _commands.values())
+            completed = local[-1].complete if local else saved.get('complete', False)
+            if (get_session_manager().run_open(scene) and completed and not pending
+                    and not any(not t.complete for t in local)):
+                return  # Between wake-ups; no response is missing locally.
         if not tid or not info.get('replay_available'):
             _replay_unavailable(scene, Turn(sid, tid or '', ''))
             return
-        turn = _turns.get(tid)
         if turn is None:
             _commands.setdefault(tid, (sid, None))
             _consume('agent.turn.started', {'session_id': sid, 'turn_id': tid,

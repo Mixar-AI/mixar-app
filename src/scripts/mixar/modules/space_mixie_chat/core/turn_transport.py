@@ -25,7 +25,7 @@ class TurnTransport:
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
-    def _send(self, method, payload):
+    def _send(self, method, payload, user_message=None, interjecting=False):
         import bpy
         from .session import get_session_manager
         scene = bpy.data.scenes.get(self.scene_name)
@@ -34,15 +34,14 @@ class TurnTransport:
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
         previous_state = get_session_manager().get_state(scene)
-        joining = previous_state.value == 'busy' and get_session_manager().run_open(scene)
+        joining = interjecting
         if previous_state.value == 'busy' and not joining:
             from ..constants import SessionState
             previous_state = SessionState.IDLE
         # One ID follows this exact user bubble through out-of-order acknowledgements.
-        message = next((m for m in reversed(scene.mixie_chat_messages) if m.sender == 'USER'), None)
-        if message is not None:
-            message.bubble_id = command_id
-            message.delivery_hint = 'queued'
+        if user_message is not None:
+            user_message.bubble_id = command_id
+            user_message.delivery_hint = 'queued' if joining else ''
 
         def settled(target, result):
             from .queue_processor import get_event_processor
@@ -88,7 +87,8 @@ class TurnTransport:
     def start_stream(self, message, instance_id, session_id, plan_required=True,
                      execution_required=True, approval_required=True, auth_token=None,
                      image_attachments=None, attachment_names=None, imported_object_names=None,
-                     project_context=None, mark_context=None):
+                     project_context=None, mark_context=None, user_message=None,
+                     interjecting=False):
         payload = build_chat_payload(
             message=message, instance_id=instance_id, session_id=session_id,
             plan_required=plan_required, execution_required=execution_required,
@@ -97,10 +97,11 @@ class TurnTransport:
             project_context=project_context, mark_context=mark_context,
             user_preferences=collect_user_preferences(),
         )
-        return self._send('chat', payload)
+        return self._send('chat', payload, user_message, interjecting)
 
     def start_input_stream(self, session_id, action, text='', answers=None,
-                           interrupt_id=None, auth_token=None, question_ref=None, attachments=None):
+                           interrupt_id=None, auth_token=None, question_ref=None, attachments=None,
+                           user_message=None):
         payload = {'session_id': session_id, 'action': action, 'text': text}
         if answers:
             payload['answers'] = answers
@@ -110,7 +111,7 @@ class TurnTransport:
             payload['attachments'] = attachments
         if question_ref:
             payload['question_ref'] = question_ref
-        return self._send('input', payload)
+        return self._send('input', payload, user_message)
 
     def stop_stream(self):
         turn_events.drop_scene(self.scene_name)

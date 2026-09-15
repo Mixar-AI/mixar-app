@@ -515,15 +515,15 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     }
   }
 
-  /* RIGHT SIDE: Send whenever there is text, else Abort when busy, Cancel
-   * when generating, Send when idle.
+  /* RIGHT SIDE: Active generation keeps Cancel available even with a draft.
+   * Otherwise Send with text, Abort when busy, and Send when idle.
    * Intentional asymmetry in draw strategy:
    *   BUSY  → ui::uiDefIconButO(ICON_CANCEL): icon drawn by Blender's widget system.
    *   GENERATING → ui::uiDefIconButO(ICON_CANCEL): cancel active generation.
    *   SEND  → ui::uiDefButO("") + footer_draw_submit_icon() GPU overlay: custom scaled
    *            ICON_SUBMIT_ARROW that cannot be sized correctly via the widget system.
    * Do not unify these branches — the GPU overlay is required for the Send icon. */
-  const bool show_send = has_text || (!is_busy && !is_generating);
+  const bool show_send = !is_generating && (has_text || !is_busy);
   if (show_send) {
     ui::uiDefButO(block,
               ui::ButtonType::But,

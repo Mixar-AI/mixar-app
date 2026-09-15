@@ -171,17 +171,20 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             # GENERATE quick prompt chatted with the agent instead of
             # generating.
             scene.mixie_chat_generate_type = wm.mixie_chat_quick_prompt_generate_type
-            scene.mixie_chat_input = message_text
             from . import generate_ops
-            result = generate_ops.execute_generate_mode(self, context)
+            draft = scene.mixie_chat_input
+            scene.mixie_chat_input = message_text
+            try:
+                result = generate_ops.execute_generate_mode(self, context)
+            finally:
+                scene.mixie_chat_input = draft
             if result == {'FINISHED'}:
                 wm.mixie_chat_quick_prompt_input = ""
             return result
 
         # Use the full composer path, including image encoding, project rules,
         # interrupt answers and interjections. No separate transport owner.
-        scene.mixie_chat_input = message_text
-        result = bpy.ops.mixie_chat.send_message()
+        result = bpy.ops.mixie_chat.send_message(message_override=message_text)
         if result == {'FINISHED'}:
             wm.mixie_chat_quick_prompt_input = ""
         return result

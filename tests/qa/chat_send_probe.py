@@ -54,6 +54,7 @@ def install():
 
 
 def record(**payload):
+    payload.pop('user_message', None)  # Local RNA correlation is not a wire field.
     calls.append(payload)
     return True
 

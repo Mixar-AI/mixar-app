@@ -19,6 +19,7 @@ class OutgoingMessage:
     imported_object_names: Optional[list] = None
     project_context: Optional[dict] = None
     mark_context: Optional[dict] = None
+    user_message: object = None
 
 
 def can_send(scene):
@@ -51,11 +52,13 @@ def send_user_message(scene, msg):
     session = get_session_manager()
     state = session.get_state(scene)
     handler = create_turn_handler(scene_name=scene.name)
+    interjecting = is_interjection(scene)
     if state in (SessionState.MODIFYING, SessionState.AWAITING_INPUT):
         ok = handler.start_input_stream(
             session_id=session.get_session_id(scene),
             action='modify' if state == SessionState.MODIFYING else 'respond',
             text=msg.text, question_ref=pending_question_ref(scene),
+            user_message=msg.user_message,
             interrupt_id=pending_interrupt_id(scene), attachments=[
                 {"type": "image_url", "image_url": {"url":
                  f"data:{img.get('mime_type', 'image/png')};base64,{img.get('base64', '')}"}}
@@ -74,6 +77,7 @@ def send_user_message(scene, msg):
         image_attachments=msg.image_attachments, attachment_names=msg.attachment_names,
         imported_object_names=msg.imported_object_names,
         project_context=msg.project_context, mark_context=msg.mark_context,
+        user_message=msg.user_message, interjecting=interjecting,
     )
     if ok:
         mark_rules_sent(scene)

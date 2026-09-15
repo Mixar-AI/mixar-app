@@ -386,6 +386,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 success = turn_transport.start_input_stream(
                     session_id=session.get_session_id(scene),
                     action=self.action_value,
+                    user_message=user_msg,
                     auth_token=auth_token,
                     question_ref=pending_question_ref(scene),
                 )

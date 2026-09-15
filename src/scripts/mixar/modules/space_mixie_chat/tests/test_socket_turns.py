@@ -224,3 +224,50 @@ def test_recovery_status_preserves_pending_command_callback(env):
         'turn_id': 'turn', 'run_id': 'run', 'replay_available': True}})
     events._consume('agent.command.result', {'command_id': 'turn', 'ok': True})
     callback.assert_called_once()
+
+
+@pytest.mark.parametrize('info', [
+    {'status': 'unavailable'},
+    {'turn_id': 'turn', 'replay_available': False},
+    {'turn_id': 'turn', 'replay_available': True},
+])
+def test_completed_background_delivery_survives_expired_journal(env, monkeypatch, info):
+    started()
+    event(0, {'type': 'turn_end', 'status': 'in_progress'})
+    events._drain()
+    unavailable = MagicMock()
+    monkeypatch.setattr(events, '_replay_unavailable', unavailable)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
+    unavailable.assert_not_called()
+    assert env.scene.mixie_run_open and env.scene.mixie_run_id == 'run'
+    started(tid='wakeup')
+    events._drain()
+    assert not events._turns['wakeup'].complete
+
+
+@pytest.mark.parametrize('pending', ['turn', 'command', 'unknown_turn'])
+def test_missing_delivery_is_not_hidden_by_open_run(env, monkeypatch, pending):
+    started()
+    if pending != 'turn':
+        event(0, {'type': 'turn_end', 'status': 'in_progress'})
+    events._drain()
+    if pending == 'command':
+        events.expect(env.scene, 'new-command')
+    info = {'status': 'unavailable'}
+    if pending == 'unknown_turn':
+        info['turn_id'] = 'missed-wakeup'
+    unavailable = MagicMock()
+    monkeypatch.setattr(events, '_replay_unavailable', unavailable)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': info})
+    unavailable.assert_called_once()
+
+
+def test_saved_completed_turn_does_not_require_retained_journal(env, monkeypatch):
+    monkeypatch.setattr(events.turn_cursor, 'read', lambda *a: {
+        'complete': True, 'run_id': 'run', 'run_open': True, 'state': 'IDLE'})
+    unavailable = MagicMock()
+    monkeypatch.setattr(events, '_replay_unavailable', unavailable)
+    events._consume('agent.recovery.status', {'session_id': 'sid', 'info': {
+        'turn_id': 'saved', 'replay_available': False}})
+    unavailable.assert_not_called()
+    assert env.scene.mixie_run_open and env.scene.mixie_chat_state == 'IDLE'

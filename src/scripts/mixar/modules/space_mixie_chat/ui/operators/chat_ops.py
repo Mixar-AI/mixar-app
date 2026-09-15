@@ -89,6 +89,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
     bl_label = "Send Message"
     bl_options = {'REGISTER'}
 
+    message_override: bpy.props.StringProperty(
+        options={'HIDDEN', 'SKIP_SAVE'},
+        description="Send shortcut text while preserving the main composer draft",
+    )
+
     @classmethod
     def poll(cls, context):
         """Idle, modifying, awaiting input — or busy while the run is open
@@ -135,7 +140,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # This sits ABOVE the empty-message check on purpose: a prompt
         # written entirely by hand is empty until its last batch lands, and
         # bouncing it as "empty" would throw away what the user just wrote.
-        if not (is_modify or is_awaiting_input):
+        if not (is_modify or is_awaiting_input or self.message_override):
             try:
                 from ...core import scribble
                 from ...core import voice as voice_input
@@ -152,7 +157,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 # Never lose a message over its optional handwriting.
                 logger.debug("scribble flush before send skipped: %s", e, exc_info=True)
 
-        message_text = scene.mixie_chat_input.strip()
+        message_text = (self.message_override or scene.mixie_chat_input).strip()
         pending_attachments = scene.mixie_chat_pending_attachments
 
         if not (is_modify or is_awaiting_input):
@@ -273,7 +278,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att.display_name = att.display_name
 
         # Clear input field immediately for better UX
-        scene.mixie_chat_input = ""
+        if not self.message_override:
+            scene.mixie_chat_input = ""
 
         # Temporary "Thinking..." placeholder (clears a stale loader first);
         # replaced when the first backend slot event creates the real bubble.
@@ -366,6 +372,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             imported_object_names=imported_object_names,
             project_context=project_context,
             mark_context=mark_context,
+            user_message=user_msg,
         ))
         if not success:
             self.report({'ERROR'}, error)
