@@ -166,3 +166,23 @@ def test_guide_flag_list_covers_floor_axes_ortho_and_relationship():
     assert '"show_axis_y"' in CORE
     assert '"show_ortho_grid"' in CORE
     assert '"show_relationship_lines"' in CORE
+
+
+def test_a_glass_chip_takes_the_shading_strips_icon_colours():
+    # `Exec` themes from `wcol_tool`, whose `text_sel` is near-black (it is
+    # meant to sit on a filled accent box). `widget_state` moves `text_sel`
+    # into `text` on select and the glass branch drops the inner fill, so
+    # without this the pressed chip painted a black glyph on the selected
+    # wash while the `Row` cell beside it painted white.
+    widgets = (
+        ROOT / "src/source/blender/editors/interface/interface_widgets.cc"
+    ).read_text(encoding="utf-8")
+    exec_fn = widgets.split("static void widget_roundbut_exec", 1)[1].split(
+        "\nstatic ", 1
+    )[0]
+    glass = exec_fn.split("if (!overlay && zen_glass_cell(but))", 1)[1]
+    assert "tui.wcol_radio" in glass
+    assert "chip_selected ? radio.text_sel : radio.text" in glass
+    # The transform trio shares this painter and keeps its own colours.
+    assert "if (!zen_toolbar_tool(but))" in glass
+    assert glass.index("if (!zen_toolbar_tool(but))") < glass.index("tui.wcol_radio")

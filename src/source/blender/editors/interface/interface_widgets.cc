@@ -6195,6 +6195,20 @@ static void widget_roundbut_exec(Button *but,
     }
   }
   if (!overlay && zen_glass_cell(but)) {
+    /* A glass chip is the Radio strip's neighbour, so it needs that strip's
+     * icon treatment. `Exec` themes from `wcol_tool`, whose `text_sel` is
+     * near-black — right for a filled accent box, but here `widget_state`
+     * has already moved it into `text` and the inner fill is dropped, so a
+     * pressed chip would paint a black glyph on the selected wash while the
+     * cell beside it paints white. `wcol_radio` is the strip's own theme.
+     * Toolbar tools share this painter but keep their own colours: they are
+     * the transform trio, which resolves its icons through the tool-icon
+     * path and already looks right. */
+    if (!zen_toolbar_tool(but)) {
+      const uiWidgetColors &radio = theme::theme_get()->tui.wcol_radio;
+      const bool chip_selected = (state->but_flag & (UI_SELECT | UI_SELECT_DRAW)) != 0;
+      copy_v4_v4_uchar(wcol->text, chip_selected ? radio.text_sel : radio.text);
+    }
     widget_zen_tool_glass(but, rect, state, roundboxalign);
     wtb.draw_inner = false;
     wtb.draw_outline = false;
