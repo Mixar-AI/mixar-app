@@ -71,6 +71,89 @@ def _base_headers(auth_token: Optional[str] = None) -> dict:
     return headers
 
 
+def build_chat_payload(
+    *,
+    message: str,
+    instance_id: str,
+    session_id: str,
+    plan_required: bool,
+    execution_required: bool,
+    approval_required: bool,
+    image_attachments: Optional[list] = None,
+    attachment_names: Optional[list] = None,
+    imported_object_names: Optional[list] = None,
+    project_context: Optional[dict] = None,
+    mark_context: Optional[dict] = None,
+    user_preferences: Optional[dict] = None,
+) -> dict:
+    """The ``POST /agent/chat`` body — one shape for a fresh turn and for an
+    interjection into an open run (``core/composer_send.py``)."""
+    payload = {
+        "message": message,
+        "instance_id": instance_id,
+        "session_id": session_id,
+        "plan_required": plan_required,
+        "execution_required": execution_required,
+        "approval_required": approval_required,
+    }
+
+    # Multimodal content when there are image attachments.
+    if image_attachments:
+        content = [{"type": "text", "text": message}]
+        for img in image_attachments:
+            mime = img.get("mime_type", "image/png")
+            b64 = img.get("base64", "")
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{b64}"},
+            })
+        if len(content) > 1:
+            payload["content"] = content
+
+    # Forward resolved bpy.data.images names so the backend can inline
+    # them into the user message; entries are positional and may be
+    # empty strings when an attachment did not resolve to a name.
+    if attachment_names:
+        payload["attachment_names"] = [n for n in attachment_names if n]
+    # #1268: names of objects an attached model file created in the
+    # scene. Names only — the local path never leaves the addon.
+    if imported_object_names:
+        payload["imported_object_names"] = [n for n in imported_object_names if n]
+
+    if project_context:
+        payload["project_context"] = project_context
+
+    # Where the user pointed, resolved against the live scene before
+    # it left the client. The backend uses this instead of asking a
+    # vision model to locate the region on a render.
+    if mark_context:
+        payload["mark_context"] = mark_context
+
+    # Session preferences (e.g. the asset-library match threshold) the
+    # backend merges into the agent scratchpad for this turn.
+    if user_preferences:
+        payload["user_preferences"] = user_preferences
+    return payload
+
+
+def collect_user_preferences() -> Optional[dict]:
+    """Session preferences to forward to the agent (main-thread bpy read).
+
+    Currently the asset-library match threshold set in the Assets workspace —
+    the similarity cutoff the modelling lanes use to reuse a library asset
+    instead of modelling it. Returns None if the setting isn't available.
+    """
+    try:
+        import bpy
+
+        state = getattr(bpy.context.scene, "mixie_asset_training", None)
+        if state is None:
+            return None
+        return {"asset_match_threshold": round(float(state.match_threshold), 4)}
+    except Exception:
+        return None
+
+
 @dataclass
 class SSEEvent:
     """Parsed SSE event."""
@@ -351,21 +434,8 @@ class SSEStreamHandler:
         return True
 
     def _collect_user_preferences(self) -> Optional[dict]:
-        """Session preferences to forward to the agent (main-thread bpy read).
-
-        Currently the asset-library match threshold set in the Assets workspace —
-        the similarity cutoff the modelling lanes use to reuse a library asset
-        instead of modelling it. Returns None if the setting isn't available.
-        """
-        try:
-            import bpy
-
-            state = getattr(bpy.context.scene, "mixie_asset_training", None)
-            if state is None:
-                return None
-            return {"asset_match_threshold": round(float(state.match_threshold), 4)}
-        except Exception:
-            return None
+        """Session preferences to forward to the agent (main-thread bpy read)."""
+        return collect_user_preferences()
 
     def stop_stream(self) -> None:
         """Stop the SSE stream."""
@@ -644,54 +714,20 @@ class SSEStreamHandler:
         """
         try:
             headers = _base_headers(auth_token)
-
-            # Build multimodal content payload
-            content = [{"type": "text", "text": message}]
-            if image_attachments:
-                for img in image_attachments:
-                    mime = img.get("mime_type", "image/png")
-                    b64 = img.get("base64", "")
-                    content.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{mime};base64,{b64}"},
-                    })
-
-            payload = {
-                "message": message,
-                "instance_id": instance_id,
-                "session_id": session_id,
-                "plan_required": plan_required,
-                "execution_required": execution_required,
-                "approval_required": approval_required,
-            }
-
-            # Add multimodal content if there are image attachments
-            if image_attachments and len(content) > 1:
-                payload["content"] = content
-
-            # Forward resolved bpy.data.images names so the backend can inline
-            # them into the user message; entries are positional and may be
-            # empty strings when an attachment did not resolve to a name.
-            if attachment_names:
-                payload["attachment_names"] = [n for n in attachment_names if n]
-            # #1268: names of objects an attached model file created in the
-            # scene. Names only — the local path never leaves the addon.
-            if imported_object_names:
-                payload["imported_object_names"] = [n for n in imported_object_names if n]
-
-            if project_context:
-                payload["project_context"] = project_context
-
-            # Where the user pointed, resolved against the live scene before
-            # it left the client. The backend uses this instead of asking a
-            # vision model to locate the region on a render.
-            if mark_context:
-                payload["mark_context"] = mark_context
-
-            # Session preferences (e.g. the asset-library match threshold) the
-            # backend merges into the agent scratchpad for this turn.
-            if user_preferences:
-                payload["user_preferences"] = user_preferences
+            payload = build_chat_payload(
+                message=message,
+                instance_id=instance_id,
+                session_id=session_id,
+                plan_required=plan_required,
+                execution_required=execution_required,
+                approval_required=approval_required,
+                image_attachments=image_attachments,
+                attachment_names=attachment_names,
+                imported_object_names=imported_object_names,
+                project_context=project_context,
+                mark_context=mark_context,
+                user_preferences=user_preferences,
+            )
 
             logger.debug(f"Starting SSE request to {self.chat_url}")
 
@@ -863,6 +899,19 @@ class SSEStreamHandler:
             if event_data.get("type") == "resume_unavailable":
                 self._resume_unavailable = True
                 return False
+
+            if event_data.get("type") == "joined":
+                # The run's turn is already streaming: a wake-up started
+                # between this send and its arrival, so the backend joined the
+                # message to it and what follows is a REPLAY of that turn's
+                # buffer — duplicates of what the socket delivers, and the SSE
+                # and socket paths share no dedupe registry. Settle the user
+                # bubble's hint, then stop THIS stream right here: no [DONE]
+                # finalisation, no scene-state change — the socket owns the
+                # turn and ends it through agent.turn.ended.
+                self._on_event(SSEEvent(event_type="joined", data=event_data))
+                self._running.clear()
+                return True
 
             # Replay dedup: the backend stamps a per-session monotonic seq on
             # every payload. After a re-attach the replay overlaps what we

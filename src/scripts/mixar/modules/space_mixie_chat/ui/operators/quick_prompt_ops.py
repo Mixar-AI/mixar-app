@@ -22,6 +22,7 @@ from ...core import (
     get_dummy_response,
     get_session_manager,
 )
+from ...core.composer_send import can_send
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
 from ...core.queue_processor import (
@@ -89,10 +90,10 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             row = layout.row()
             row.alert = True
             row.label(text="Not connected to Mixie Chat", icon='ERROR')
-        elif not DEV_MODE and session.get_state(scene) != SessionState.IDLE:
+        elif not DEV_MODE and not can_send(scene)[0]:
             row = layout.row()
             row.alert = True
-            row.label(text="Mixie Chat is busy", icon='ERROR')
+            row.label(text=can_send(scene)[1] or "Mixie Chat is busy", icon='ERROR')
 
         # Mode selector row
         row = layout.row(align=True)
@@ -154,9 +155,11 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
             self.report({'ERROR'}, "Not connected to server. Please connect in Mixie Chat.")
             return {'CANCELLED'}
 
-        # Can only send when in IDLE, MODIFYING, or AWAITING_INPUT state
-        if session.get_state(scene) not in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT):
-            self.report({'ERROR'}, "Mixie Chat is not ready to receive messages")
+        # Same predicate as the chat composer: idle / modifying / awaiting
+        # input, or busy while the run is open (the prompt joins the run).
+        allowed, reason = can_send(scene)
+        if not allowed:
+            self.report({'ERROR'}, reason or "Mixie Chat is not ready to receive messages")
             return {'CANCELLED'}
 
         # Mark the user as engaged so the "Hi I'm Mixie" greeting

@@ -137,9 +137,16 @@ def test_send_click_commits_the_composer_and_keeps_the_press():
 
 
 def test_agent_action_reads_send_not_generate():
-    assert 'label_centre(state->status_busy ? "Stop" : "Send"' in CONTROLS_PAINT_CC
+    """Send whenever there is text (a message typed mid-run joins the open
+    run); Stop only while busy with an empty composer — `stop_visible` is
+    derived once in agent_ui_state.cc and read by both the paint and the
+    button row."""
+    assert 'label_centre(state->stop_visible ? "Stop" : "Send"' in CONTROLS_PAINT_CC
+    state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
+    assert "r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;" in state_cc
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
     assert '"mixie_chat.send_message"' in tools
+    assert 'state->stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in tools
     assert '"Stop the running turn" : "Send"' in tools
     assert '"Generate"' not in tools[tools.index("btn_generate") :]
 

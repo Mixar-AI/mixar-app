@@ -757,19 +757,20 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     }
   }
 
-  /* Send while idle, Stop while a turn is running — the same split the chat
-   * footer makes (abort_session when busy). */
+  /* Send whenever there is text (a message typed mid-run joins it), Stop
+   * only while a turn runs with an empty composer — the same split the chat
+   * footer makes (agent_ui_state.cc: stop_visible). */
   agent_bubble_rect_to_region(region, layout->btn_generate, &bx, &by, &bw, &bh);
   uiDefButO(block,
             ui::ButtonType::But,
-            state->status_busy ? "mixie_chat.abort_session" : "mixie_chat.send_message",
+            state->stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message",
             blender::wm::OpCallContext::InvokeDefault,
             "",
             bx,
             by,
             bw,
             bh,
-            state->status_busy ? "Stop the running turn" : "Send");
+            state->stop_visible ? "Stop the running turn" : "Send");
 
   ui::block_end(C, field_block);
   ui::block_draw(C, field_block);

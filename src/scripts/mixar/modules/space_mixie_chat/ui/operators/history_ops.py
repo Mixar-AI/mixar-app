@@ -233,7 +233,9 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
         count = chat_history.restore_into_scene(scene, record)
 
         # Reset session state (keep connected if connected) — mirrors
-        # MIXIE_CHAT_OT_new_session.
+        # MIXIE_CHAT_OT_new_session. The old run is cancelled above; the
+        # restored chat starts with none.
+        session.set_run(scene, "", False)
         if session.is_connected(scene):
             session.clear_streaming()
             session.set_connected(scene)

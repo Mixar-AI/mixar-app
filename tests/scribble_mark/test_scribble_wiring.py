@@ -149,7 +149,9 @@ class TestSendPath:
 
         text = source(CHAT_OPS)
         prepare = text.index("chat_bridge.prepare_for_send")
-        send = text.index("sse_handler.start_stream")
+        # The one dispatch call (core/composer_send.send_user_message):
+        # input answer, interjection into the open run, or a fresh stream.
+        send = text.index("send_user_message(scene, OutgoingMessage(")
 
         for match in re.finditer(r"return \{'CANCELLED'\}", text):
             if not (prepare < match.start() < send):
@@ -176,7 +178,7 @@ class TestSendPath:
     def test_marks_are_settled_after_the_send(self):
         text = source(CHAT_OPS)
         assert "chat_bridge.finish_send" in text
-        assert text.index("start_stream") < text.index("chat_bridge.finish_send")
+        assert text.index("send_user_message(") < text.index("chat_bridge.finish_send")
 
     def test_the_marks_never_break_a_send(self):
         """The words are a complete request on their own. Every mark call in

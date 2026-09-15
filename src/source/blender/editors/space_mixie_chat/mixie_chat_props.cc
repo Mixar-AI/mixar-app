@@ -77,6 +77,7 @@ void init_message_property_cache(PointerRNA *msg_ptr) {
       RNA_struct_find_property(msg_ptr, "thinking_duration_ms");
   g_msg_props.thinking_collapsed =
       RNA_struct_find_property(msg_ptr, "thinking_collapsed");
+  g_msg_props.delivery_hint = RNA_struct_find_property(msg_ptr, "delivery_hint");
 
   g_msg_props.initialized = true;
 

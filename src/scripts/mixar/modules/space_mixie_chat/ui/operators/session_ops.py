@@ -346,8 +346,10 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         # 5. Send abort to backend
         self._send_abort_request_async(session.get_session_id(scene))
 
-        # 6. Reset state
+        # 6. Reset state. Stop cancels the WHOLE run (its background
+        # workers included — /agent/cancel closes it server-side).
         session.clear_streaming()
+        session.set_run(scene, "", False)
         session.set_connected(scene)
 
         for window in context.window_manager.windows:

@@ -106,9 +106,10 @@ def _scene(state="IDLE"):
     return SimpleNamespace(mixie_chat_input="")
 
 
-def _fake_session(state):
+def _fake_session(state, run_open=False):
     return SimpleNamespace(
-        get_state=lambda sc: getattr(SessionState, state)
+        get_state=lambda sc: getattr(SessionState, state),
+        run_open=lambda sc: run_open,
     )
 
 

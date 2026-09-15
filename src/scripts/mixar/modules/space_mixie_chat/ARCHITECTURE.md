@@ -10,7 +10,9 @@
 The plugin is *both* the agent's UI (a custom in-tree C++ Blender editor + Python message/state shell) *and* the agent's execution arm (it runs the `bpy` scripts the backend emits). Two simultaneous network channels connect plugin and backend:
 
 - **HTTP/SSE** — per-turn, plugin → backend (`POST /agent/chat`), backend → plugin (slot events). Lives only for the turn duration.
-- **JSON-RPC 2.0 over WebSocket** — long-lived, bidirectional, backend → plugin (`blender.execute_script` + tool lifecycle notifications), plugin → backend (responses + `system.handshake` + `system.ping` + `notifications.sync`).
+- **JSON-RPC 2.0 over WebSocket** — long-lived, bidirectional, backend → plugin (`blender.execute_script` + tool lifecycle notifications + `agent.turn.*` wake-up turns of an open run), plugin → backend (responses + `system.handshake` + `system.ping` + `notifications.sync`).
+
+A backend **run spans turns**: the orchestrator may answer "in progress" and end its turn while background workers keep building; later turns are started by the backend and streamed over the socket, and a message typed meanwhile joins the run. See "Runs that span turns" under Session lifecycle.
 
 Both channels share the same JWT auth, refreshed through a single mutex-guarded helper (`refresh_access_token_shared` — K5).
 
@@ -86,7 +88,10 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   ├── sandbox_validator.py     AST validator (mirrors backend, runs again on plugin).
 │   ├── sandbox_modules.py       RESTRICTED_TEMPFILE / RESTRICTED_BASE64 / RESTRICTED_STRING / RESTRICTED_URLLIB wrappers (os/pathlib/runpy/operator not exposed).
 │   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__/vars).
-│   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
+│   ├── session.py               Per-scene SessionManager (turn state + run state + active_sessions registry).
+│   ├── turn_events.py           agent.turn.* socket notifications (wake-up turns) → the SSE inbound queue; (turn_id, seq) dedupe.
+│   ├── composer_send.py         ONE choice point for an outgoing message: /agent/input answer, interjection into the open run, or a fresh SSE turn; the send predicate `can_send`.
+│   ├── attachment_names.py      Pending attachments → bpy.data.images names + imported object names for the payload.
 │   ├── lane_scene_sweep.py      Session-end sweep of leaked agentlane:* workspace scenes (mirrors backend remove_scene semantics; one-shot main-thread timer).
 │   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
 │   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
@@ -102,7 +107,7 @@ src/scripts/mixar/modules/space_mixie_chat/
 │   └── message_helpers.py       Message construction helpers.
 ├── ui/                          Blender Python panels + operators (UI shell).
 │   └── operators/
-│       ├── chat_ops.py             Main "send message" operator.
+│       ├── chat_ops.py             Main "send message" operator (pre-flight + optimistic UI; dispatch is core/composer_send).
 │       ├── auth_ops.py             Login flow.
 │       ├── screenshot_ops.py       Viewport capture.
 │       └── chat_special_ops.py     Approve / abort / modify + async feedback operators.
@@ -285,9 +290,20 @@ main thread through `main_thread_executor.run_on_main_thread` before touching RN
 | `scene.mixie_chat_state` | enum | `OFFLINE` / `CONNECTING` / `IDLE` / `BUSY` / `MODIFYING` / `AWAITING_INPUT` |
 | `scene.mixie_chat_is_busy` | bool | Derived flag for the C++ rendering path (faster than parsing the enum). |
 | `scene.mixie_session_id` | UUID v4 | Conversation identifier. |
+| `scene.mixie_run_open` / `scene.mixie_run_id` | bool / str | The backend run behind the chat is still open (workers may build while the turn is IDLE). Single writer: `SessionManager.set_run` (main thread); reader `run_open`. SKIP_SAVE. |
 | `WindowManager.mixie_instance_id` | UUID v4 | Blender process identifier. |
 
-**Active-scenes registry:** class-level `_active_scenes: set` tracks scene names whose state is `BUSY/MODIFYING/AWAITING_INPUT`. Updated only from the main thread under `_active_scenes_lock`. Background threads read it (e.g. `on_script_execute` checks `has_active_session()` to reject stray scripts after a session ends).
+**Active-scenes registry:** class-level `_active_scenes: set` tracks scene names whose state is `BUSY/MODIFYING/AWAITING_INPUT` **or whose run is open**. Updated only from the main thread under `_active_scenes_lock` (`set_state` and `set_run` both resync). Background threads read it (e.g. `on_script_execute` checks `has_active_session()` to reject stray scripts after a session ends). Counting the run is what lets a background worker's script land while the orchestrator's turn is IDLE — before it, every such script was refused with "Agent session not active".
+
+### Runs that span turns
+
+Backend contract: `mixar-backend/docs/api/frontend/wakeup-turns.md`. Client pins: `tests/test_open_run.py` (run state, typed payloads, composer) and `tests/test_socket_turns.py` (`agent.turn.*`).
+
+- **Run state** — the typed payload `{"type": "run_status", "run_id", "status": "in_progress" | "completed"}` (first payload of every orchestrated turn and again before its final `complete`) is the run's authoritative signal; `queue_processor._handle_typed_payload` feeds `set_run`. `{"type": "cancelled"}` closes the run. `[DONE]` closes the run unless a `run_status` arrived during that turn (older backend / chat-only turn). Typed payloads are settled BEFORE the executor's undo-turn bracket; unknown types are still ignored.
+- **Lifetime** — a transient WS drop preserves the run (the backend defers wake-ups until the next handshake); a terminal disconnect, `ConnectionManager.disconnect`, `load_pre`, Stop (`abort_session`), New Chat and a history switch close it. `load_pre` also aborts a scene whose turn is IDLE but whose run is open.
+- **Wake-up turns over the socket** (`core/turn_events.py`) — `agent.turn.started {session_id, turn_id, run_id, kind}` is marshalled to the main thread: the scene is resolved by `mixie_session_id` (unknown → log and drop), the same optimistic "Thinking..." placeholder the composer adds (`message_helpers.add_turn_placeholder`), `begin_agent_turn()`, state BUSY, `set_run(open)`. `agent.turn.event {turn_id, seq, event}` is deduped by `(turn_id, seq)` and its `event` (exactly one SSE payload dict) is enqueued into the SAME main-thread queue the SSE handler feeds, so slot events render identically; events that arrive before the scene is resolved are buffered per turn and flushed in order. `agent.turn.ended {status}` enqueues a synthetic `run_status` (`in_progress` keeps the run open, anything else closes it) followed by the [DONE] finalisation — `paused` therefore leaves AWAITING_INPUT exactly as the input slot set it. `cleanup_sse_queue_for_scene` (abort / New Chat / switch) also drops the scene's socket turns. A wake-up turn does NOT clear the Parallel Agents cards: `set_state` clears them only on the first turn of a run.
+- **Composer** (`core/composer_send.py`) — `can_send(scene)` is the ONE predicate (operator poll, the Enter handler in `chat_props`, the quick prompt): IDLE / MODIFYING / AWAITING_INPUT always, BUSY only while the run is open; a refusal always carries a reason and the Enter handler reports it instead of swallowing the keystroke. `send_user_message(scene, OutgoingMessage)` is the choice point: `/agent/input` answer, **interjection**, or a fresh SSE turn (with the run open but no turn streaming, the backend continues the same run inline). An interjection is `POST /agent/chat` with the normal body (`sse_handler.build_chat_payload`) on a worker thread; only the FIRST SSE payload is read — the `{"type":"joined", run_id, turn_id, queued}` ack — then the response is closed, because the live stream / socket already delivers the turn's events. It never calls `create_sse_handler` (that would kill the live stream). Every backend-started turn — including the one an interjection starts (`agent.turn.started`, `kind: "user"`) — arrives over the socket and is opened exactly like a wake-up. A `joined` payload read on ANY SSE stream (a send while IDLE that raced a wake-up: the backend joined it and replays the running turn's buffer) settles the hint and then stops that stream in `SSEStreamHandler._process_sse_line` — no `[DONE]` finalisation, no state change — since the socket delivers those same events and the two paths share no dedupe registry. The user bubble carries `delivery_hint = "queued"` (rendered as "You (queued)") until the `joined` ack clears it; a non-`joined` first payload or an HTTP error marks it "could not be delivered". The coming WebSocket-only transport replaces `send_user_message` alone.
+- **Buttons (C++)** — both surfaces show SEND whenever the composer has text and STOP only while busy with an empty composer (`mixie_chat_footer.cc` `show_send`, `agent_ui_state.cc` `stop_visible`); the generation-cancel branch is unchanged. **Status** — BUSY reads "Running"; IDLE with the run open reads "Working in background" (`agent_bubble/ui/header.py`, `status_indicator.py`); the cat pulses while the run is open; the viewport lock stays keyed on BUSY/MODIFYING; the parked auto-resume and the orphaned-turn check skip scenes with an open run.
 
 **Session start (`start_session(scene, user_request)`):** generates a new `session_id` only if none exists; otherwise continues. Sets state to `BUSY`. Returns the session_id.
 
@@ -341,7 +357,7 @@ Either says "rendering" → defer-and-retick: leave the script on the queue, ret
 
 **File:** `core/file_handlers.py`. When the user opens a new `.blend`:
 
-- `load_pre` — flush all SSE handlers (`cleanup_all_sse_handlers`), stop the main-thread executor (`cleanup`), clear pending responses, force-OFFLINE all scenes. **K6 fix** wraps each step in `try/except` so a partial failure (a stale SSE handler that refuses to close, etc.) doesn't strand later cleanup steps.
+- `load_pre` — flush all SSE handlers (`cleanup_all_sse_handlers`), stop the main-thread executor (`cleanup`), clear pending responses, force-OFFLINE all scenes and close their runs (a scene whose turn is IDLE but whose run is open is aborted too). **K6 fix** wraps each step in `try/except` so a partial failure (a stale SSE handler that refuses to close, etc.) doesn't strand later cleanup steps.
 - `load_post` — re-init session state for the newly-loaded scenes (chat messages persisted as scene properties are still there).
 
 ## Cross-channel contracts (the invariants)

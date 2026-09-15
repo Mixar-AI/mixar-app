@@ -180,6 +180,13 @@ def _get_status(scene) -> PillStatus:
         # avoids the visual collision.
         return PillStatus("Awaiting Input", "blue", 'QUESTION')
 
+    # The orchestrator ended its turn but the run is open: workers are still
+    # building and the backend will start the next turn itself. Not "Running"
+    # (nothing to stop, the composer is free) and not "Idle" (work is going
+    # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
+    if getattr(scene, "mixie_run_open", False) is True:
+        return PillStatus("Working in background", "green", 'RECORD_ON')
+
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE
     # while the job runs — at which point every surface claimed nothing was

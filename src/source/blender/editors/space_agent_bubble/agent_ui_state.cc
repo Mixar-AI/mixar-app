@@ -235,6 +235,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
 
     read_string_prop(&scene_ptr, "mixie_chat_input", r_state->input_text, sizeof(r_state->input_text));
     r_state->prompt_empty = (r_state->input_text[0] == '\0');
+    r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;
 
     PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
     r_state->has_transcript =

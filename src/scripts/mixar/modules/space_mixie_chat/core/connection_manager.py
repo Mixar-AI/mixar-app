@@ -368,6 +368,11 @@ class ConnectionManager:
             from mixar.modules.common.agent_execution.handlers import handle_execution_request
             return handle_execution_request(method, params, request_id)
 
+        def on_turn_event(method: str, params: dict) -> None:
+            """agent.turn.* — a backend-started turn streamed over the socket."""
+            from .turn_events import handle_turn_notification
+            handle_turn_notification(method, params)
+
         def on_llm_request(params: dict, request_id) -> None:
             """Relay one backend llm.request to the user's local model server.
 
@@ -502,6 +507,7 @@ class ConnectionManager:
             on_llm_request=on_llm_request,
             on_addon_project_request=on_addon_project_request,
             on_execution_request=on_execution_request,
+            on_turn_event=on_turn_event,
         )
 
         # Connect
@@ -536,6 +542,9 @@ class ConnectionManager:
         # Update session state unless Blender is already in restricted
         # shutdown, where bpy.data.scenes is no longer available.
         if update_session_state:
+            # A deliberate disconnect is terminal for the runs too: no
+            # socket, no wake-ups, and the next connect starts clean.
+            session.clear_all_runs()
             session.set_all_scenes_state(SessionState.OFFLINE)
             self._is_shutting_down = False
 

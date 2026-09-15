@@ -236,6 +236,11 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
    * (shows Send button). RNA_boolean_get would assert/crash; find_property is safe. */
   PropertyRNA *busy_prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_is_busy");
   bool is_busy = busy_prop ? RNA_property_boolean_get(&scene_ptr, busy_prop) : false;
+  /* Codex / Claude Code rule: a non-empty composer always offers Send (the
+   * message joins the open run as an interjection; the operator's poll greys
+   * it out when no run is open). Stop is only for busy + empty. */
+  PropertyRNA *draft_prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_input");
+  const bool has_text = draft_prop && RNA_property_string_length(&scene_ptr, draft_prop) > 0;
 
   /* Get cached attachment data - ELIMINATES per-frame allocations */
   int pending_count = 0;
@@ -510,38 +515,16 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     }
   }
 
-  /* RIGHT SIDE: Abort when busy, Cancel when generating, Send when idle.
+  /* RIGHT SIDE: Send whenever there is text, else Abort when busy, Cancel
+   * when generating, Send when idle.
    * Intentional asymmetry in draw strategy:
    *   BUSY  → ui::uiDefIconButO(ICON_CANCEL): icon drawn by Blender's widget system.
    *   GENERATING → ui::uiDefIconButO(ICON_CANCEL): cancel active generation.
-   *   IDLE  → ui::uiDefButO("") + footer_draw_submit_icon() GPU overlay: custom scaled
+   *   SEND  → ui::uiDefButO("") + footer_draw_submit_icon() GPU overlay: custom scaled
    *            ICON_SUBMIT_ARROW that cannot be sized correctly via the widget system.
    * Do not unify these branches — the GPU overlay is required for the Send icon. */
-  if (is_busy) {
-    ui::uiDefIconButO(block,
-                  ui::ButtonType::But,
-                  "MIXIE_CHAT_OT_abort_session",
-                  blender::wm::OpCallContext::InvokeDefault,
-                  ICON_CANCEL,
-                  pos.send_btn_x,
-                  pos.buttons_y,
-                  pos.btn_size,
-                  pos.btn_size,
-                  std::nullopt);
-  }
-  else if (is_generating) {
-    ui::uiDefIconButO(block,
-                  ui::ButtonType::But,
-                  "MIXIE_CHAT_OT_cancel_generation",
-                  blender::wm::OpCallContext::InvokeDefault,
-                  ICON_CANCEL,
-                  pos.send_btn_x,
-                  pos.buttons_y,
-                  pos.btn_size,
-                  pos.btn_size,
-                  std::nullopt);
-  }
-  else {
+  const bool show_send = has_text || (!is_busy && !is_generating);
+  if (show_send) {
     ui::uiDefButO(block,
               ui::ButtonType::But,
               "MIXIE_CHAT_OT_send_message",
@@ -553,6 +536,30 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
               pos.btn_size,
               std::nullopt);
   }
+  else if (is_busy) {
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
+                  "MIXIE_CHAT_OT_abort_session",
+                  blender::wm::OpCallContext::InvokeDefault,
+                  ICON_CANCEL,
+                  pos.send_btn_x,
+                  pos.buttons_y,
+                  pos.btn_size,
+                  pos.btn_size,
+                  std::nullopt);
+  }
+  else {
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
+                  "MIXIE_CHAT_OT_cancel_generation",
+                  blender::wm::OpCallContext::InvokeDefault,
+                  ICON_CANCEL,
+                  pos.send_btn_x,
+                  pos.buttons_y,
+                  pos.btn_size,
+                  pos.btn_size,
+                  std::nullopt);
+  }
 
   /* Restore emboss for any subsequent UI elements */
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
@@ -563,7 +570,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
 
   /* Custom GPU overlays (delegated to mixie_chat_footer_draw.cc) */
   footer_draw_send_button_glow(region, &scene_ptr, pos, scale);
-  if (!is_busy && !is_generating) {
+  if (show_send) {
     footer_draw_submit_icon(region, pos);
   }
   /* Plan mode toggle overlay removed for now (see the click-target

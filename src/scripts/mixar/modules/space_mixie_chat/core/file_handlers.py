@@ -78,15 +78,18 @@ def _on_load_pre(*_args) -> None:
 
     session = get_session_manager()
 
-    # Collect session IDs from active scenes before cleanup
+    # Collect session IDs from active scenes before cleanup. A scene whose
+    # turn is IDLE but whose run is still open has workers building on the
+    # backend — that run is aborted too.
     active_session_ids = []
     for scene in bpy.data.scenes:
         state = session.get_state(scene)
         if state in (SessionState.BUSY, SessionState.MODIFYING,
-                     SessionState.AWAITING_INPUT):
+                     SessionState.AWAITING_INPUT) or session.run_open(scene):
             sid = session.get_session_id(scene)
             if sid:
                 active_session_ids.append(sid)
+            session.set_run(scene, "", False)
             session.set_state(scene, SessionState.IDLE)
 
     if not active_session_ids:

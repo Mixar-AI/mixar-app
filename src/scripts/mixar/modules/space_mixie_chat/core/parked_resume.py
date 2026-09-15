@@ -105,7 +105,7 @@ def send_continue(scene) -> bool:
     from .session import get_session_manager
 
     session = get_session_manager()
-    if session.get_state(scene) != SessionState.IDLE:
+    if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
         return False
     previous = scene.mixie_chat_input
     scene.mixie_chat_input = CONTINUE_MESSAGE
@@ -133,7 +133,7 @@ def _fire_resume(scene_name: str, open_count: int) -> None:
     if scene is None:
         return
     session = get_session_manager()
-    if session.get_state(scene) != SessionState.IDLE:
+    if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
         return
     notice = scene.mixie_chat_messages.add()
     notice.sender = 'AGENT'
@@ -173,7 +173,8 @@ def schedule_after_connect(base_url: str) -> None:
                 sid = session.get_session_id(sc)
                 if not sid:
                     continue
-                if session.get_state(sc) != SessionState.IDLE:
+                # An open run is live work, not a park.
+                if session.get_state(sc) != SessionState.IDLE or session.run_open(sc):
                     continue
                 if not claim_check(sid):
                     continue

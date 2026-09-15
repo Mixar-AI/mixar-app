@@ -125,6 +125,10 @@ def check_orphaned_turns() -> None:
                 SessionState.IDLE, SessionState.OFFLINE,
             ):
                 continue
+            # An open run's next turns arrive over the socket as wake-ups —
+            # nothing is orphaned there.
+            if SessionManager.run_open(scene):
+                continue
             candidates[sid] = scene.name
 
         if not candidates:

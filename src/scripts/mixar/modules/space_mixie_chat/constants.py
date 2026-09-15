@@ -150,6 +150,13 @@ class JSONRPCMethod:
     AGENT_TOOL_START = "agent.tool_start"
     AGENT_TOOL_EXECUTING = "agent.tool_executing"
     AGENT_TOOL_END = "agent.tool_end"
+    # Server -> Client (notifications): a backend-started turn of an open run
+    # (a "wake-up") streamed over the socket instead of an SSE response.
+    # `event` carries exactly one SSE payload dict; `seq` restarts at 0 per
+    # turn, so (turn_id, seq) is the dedupe key. Handled by core/turn_events.
+    AGENT_TURN_STARTED = "agent.turn.started"
+    AGENT_TURN_EVENT = "agent.turn.event"
+    AGENT_TURN_ENDED = "agent.turn.ended"
 
     # Server -> Client (notifications push)
     NOTIFICATIONS_PUSH = "notifications.push"

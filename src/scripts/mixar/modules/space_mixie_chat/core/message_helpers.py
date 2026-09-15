@@ -95,6 +95,38 @@ def add_slot_loader(scene, text):
     return bubble_id
 
 
+def add_turn_placeholder(scene) -> None:
+    """Optimistic "Thinking..." bubble for a turn that is about to stream.
+
+    Shared by the composer send and socket-started (wake-up) turns. Clears a
+    STALE loader first: a cancelled or client-closed previous turn can leave a
+    "Thinking" loader — and its ghost placeholder — spinning forever because
+    the backend cannot write a loader-off to a closed stream. Starting a new
+    turn is the reliable point to clear it. The placeholder is replaced by the
+    first real bubble the slot processor creates.
+    """
+    import uuid
+
+    from ..constants import TEMP_PLACEHOLDER_PREFIX
+
+    messages = scene.mixie_chat_messages
+    stale = []
+    for i, m in enumerate(messages):
+        if getattr(m, 'loader_visible', False):
+            m.loader_visible = False
+        if getattr(m, 'bubble_id', '').startswith(TEMP_PLACEHOLDER_PREFIX):
+            stale.append(i)
+    for i in reversed(stale):
+        messages.remove(i)
+
+    placeholder = messages.add()
+    placeholder.sender = 'AGENT'
+    placeholder.bubble_id = f"{TEMP_PLACEHOLDER_PREFIX}{uuid.uuid4().hex[:12]}"
+    placeholder.loader_visible = True
+    placeholder.loader_texts = json.dumps(["Thinking..."])
+    start_loader_animation()
+
+
 def get_auth_token() -> str:
     """Get authentication token."""
     try:

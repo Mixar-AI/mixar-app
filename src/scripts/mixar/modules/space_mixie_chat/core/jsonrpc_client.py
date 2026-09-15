@@ -87,6 +87,7 @@ class JSONRPCWebSocketClient:
         on_execution_request: Optional[
             Callable[[str, dict, Optional[str]], Optional[dict]]
         ] = None,
+        on_turn_event: Optional[Callable[[str, dict], None]] = None,
         role: Optional[str] = None,
         parent_instance_id: Optional[str] = None,
         device_id: Optional[str] = None,
@@ -114,6 +115,7 @@ class JSONRPCWebSocketClient:
         self._on_llm_request = on_llm_request
         self._on_addon_project_request = on_addon_project_request
         self._on_execution_request = on_execution_request
+        self._on_turn_event = on_turn_event
         self._role = role
         self._parent_instance_id = parent_instance_id
 
@@ -708,6 +710,19 @@ class JSONRPCWebSocketClient:
                     self._on_job_update(params)
                 except Exception as e:
                     logger.error(f"Error in on_job_update callback: {e}")
+
+        elif method in (
+            JSONRPCMethod.AGENT_TURN_STARTED,
+            JSONRPCMethod.AGENT_TURN_EVENT,
+            JSONRPCMethod.AGENT_TURN_ENDED,
+        ):
+            # Backend-started turns of an open run (wake-ups). Notifications
+            # only; the handler marshals bpy work to the main thread itself.
+            if self._on_turn_event:
+                try:
+                    self._on_turn_event(method, params)
+                except Exception as e:
+                    logger.error(f"Error in on_turn_event callback ({method}): {e}")
 
         else:
             logger.warning(f"Unknown JSON-RPC method: {method}")

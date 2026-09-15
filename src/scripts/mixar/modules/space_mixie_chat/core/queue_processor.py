@@ -410,6 +410,13 @@ def cleanup_sse_queue_for_scene(scene_name: str) -> None:
         _sse_queue_condition.notify_all()
     if drained > 0:
         logger.debug(f"Drained {drained} events for scene '{scene_name}'")
+    # The scene's inbound stream is being torn down (abort / New Chat /
+    # session switch): socket-delivered turns feeding it stop too.
+    try:
+        from .turn_events import drop_scene
+        drop_scene(scene_name)
+    except Exception as e:  # noqa: BLE001 — teardown never fails on this
+        logger.debug(f"turn_events drop for '{scene_name}' skipped: {e}")
 
 
 def reset_sse_drop_count() -> None:
@@ -484,6 +491,45 @@ class EventProcessor:
         """Initialize processor state."""
         self._session = get_session_manager()
         self._slot_processor = get_slot_processor()
+        # Scene names whose current turn carried a `run_status` payload. A
+        # turn that ends without one (older backend, chat-only turn) closes
+        # the run on [DONE]; one that did leaves the run as it reported it.
+        self._run_status_seen: set = set()
+
+    # ========================================================================
+    # Typed (non-slot) payloads: run lifecycle + interjection acks
+    # ========================================================================
+
+    def _handle_typed_payload(self, data: dict, scene) -> bool:
+        """Consume a typed payload; False leaves it to the slot pipeline.
+
+        ``run_status`` (first payload of an orchestrated turn and again before
+        its final ``complete``) is the run's authoritative open/closed signal;
+        ``cancelled`` closes the run; ``joined`` / ``interjection_failed``
+        settle the queued hint on the user bubble of an interjection.
+        """
+        kind = data.get("type")
+        if kind == "run_status":
+            self._run_status_seen.add(scene.name)
+            self._session.set_run(
+                scene, str(data.get("run_id") or ""), data.get("status") == "in_progress"
+            )
+            return True
+        if kind == "cancelled":
+            self._session.set_run(scene, "", False)
+            return True
+        if kind in ("joined", "interjection_failed"):
+            from .composer_send import on_interjection_ack
+            on_interjection_ack(scene, data)
+            return True
+        return False
+
+    def _settle_run_on_complete(self, scene) -> None:
+        """[DONE]: close the run unless this turn reported its status."""
+        if scene.name in self._run_status_seen:
+            self._run_status_seen.discard(scene.name)
+            return
+        self._session.set_run(scene, "", False)
 
     # ========================================================================
     # SSE Event Dispatch (called from timer on main thread)
@@ -496,14 +542,19 @@ class EventProcessor:
         All events use slot-based format with bubble_id.
         Does NOT call _redraw_ui() - the timer handles that after batch.
         """
+        data = event.data
+
+        # Run-lifecycle and interjection acks are bookkeeping, not part of the
+        # undo turn — settle them before the turn bracket below.
+        if isinstance(data, dict) and self._handle_typed_payload(data, scene):
+            return
+
         # Every streamed event belongs to the live agent turn. Mark it so the
         # executor groups/caps its undo checkpoints per turn (idempotent —
         # the turn begins with the first event and ends on stream
         # complete/error below, or on abort / file load).
         from .executor import get_executor
         get_executor().begin_agent_turn()
-
-        data = event.data
 
         # In-band terminal error (backend refused the request before any slot
         # streaming — e.g. a text-only model can't accept an attached image, or
@@ -764,6 +815,7 @@ class EventProcessor:
             self._show_feedback_on_last_agent_message(scene)
         else:
             logger.info(f"SSE stream complete - keeping state {current_state.value} (waiting for user input)")
+        self._settle_run_on_complete(scene)
         self._redraw_ui()
 
     @staticmethod
