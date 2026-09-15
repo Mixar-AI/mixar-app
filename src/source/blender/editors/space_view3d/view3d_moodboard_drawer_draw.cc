@@ -23,6 +23,7 @@
 #include "BLI_rect.h"
 
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 #include "BLF_api.hh"
 
 #include "DNA_scene_types.h"
