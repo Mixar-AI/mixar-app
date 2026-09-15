@@ -29,6 +29,7 @@ def test_engine_tabs_and_mode_switch_draw_before_and_after_menu_registration(
 
     header._patched_draw_left(SimpleNamespace(layout=layout), context)
 
+    layout.separator.assert_called_once_with()
     layout.template_ID_tabs.assert_called_once_with(
         context.window, "workspace", new="workspace.add", menu="TOPBAR_MT_workspace_menu"
     )
