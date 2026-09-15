@@ -500,7 +500,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
         *c = ' ';
       }
     }
-    const float text_size = 27.0f * u * agent_ui_font_preference_scale();
+    const float text_size = agent_ui_body_font_size();
     const float text_x = 28.0f * u;
 
     if (is_working) {
@@ -629,7 +629,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
   GPU_blend(GPU_BLEND_ALPHA);
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
   const float text_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
-  const float text_size = AGENT_PILL_FONT * pill_u * agent_ui_font_preference_scale();
+  const float text_size = agent_ui_body_font_size();
   const std::string status_label = ui::mixar_fit_text(
       state->status_text, std::max(0.0f, w - text_x - 12.0f * pill_u), text_size);
   label_left(status_label.c_str(), text_x, h * 0.5f, text_size, text_dim);

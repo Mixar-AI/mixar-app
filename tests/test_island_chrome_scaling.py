@@ -147,12 +147,9 @@ def test_tab_strip_and_card_header_text_use_fixed_typography():
     assert "AGENT_HDR_FAQ_FONT" not in island
 
 
-def test_status_pill_uses_its_own_window_unit():
-    """The pill is a separate, force-sized window — it carries neither the
-    island's scale nor UI_SCALE_FAC's ratio to it, so it derives its own unit
-    from its height, exactly as its status dot already did."""
+def test_status_pill_geometry_uses_its_window_but_text_uses_native_font():
+    """Status geometry follows the pill; both label forms match native text."""
     body = _function_body(DRAW_CC, "void agent_ui_draw_status_pill(")
     assert "const float pill_u = h / float(AGENT_PILL_H);" in body
     assert "AGENT_PILL_DOT_R * pill_u" in body
-    assert "AGENT_PILL_FONT * pill_u" in body
-    assert "AGENT_PILL_FONT * pill_u * agent_ui_font_preference_scale()" in body
+    assert body.count("const float text_size = agent_ui_body_font_size();") == 2

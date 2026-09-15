@@ -16,8 +16,10 @@
 #include "DNA_screen_types.h"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
 
 #include "agent_ui_layout.hh"
+#include "agent_ui_text.hh"
 #include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -69,18 +71,24 @@ struct Frame {
 struct TabMetric {
   float x;
   float w;
+  const char *label;
 };
 
 const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
-    {AGENT_TAB_X_AGENT, AGENT_TAB_W_AGENT},
-    {AGENT_TAB_X_3D, AGENT_TAB_W_3D},
-    {AGENT_TAB_X_MEDIA, AGENT_TAB_W_MEDIA},
-    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT},
-    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS},
-    {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE},
+    {AGENT_TAB_X_AGENT, AGENT_TAB_W_AGENT, "Agent"},
+    {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
+    {AGENT_TAB_X_MEDIA, AGENT_TAB_W_MEDIA, "Media"},
+    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Gaussian Splat"},
+    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "My Generations"},
+    {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
 };
 
 }  // namespace
+
+const char *agent_ui_tab_label(const AgentTabId tab)
+{
+  return g_tab_metrics[tab].label;
+}
 
 /** \} */
 
@@ -176,9 +184,42 @@ void agent_ui_layout_build(const int window_w,
    * `active` flags are kept, since the card body still switches on them. */
   r_layout->strip = pad ? rctf{} : f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
 
+  /* Spend the strip's center gap on labels before eliding them. Measurement,
+   * paint, native button bounds and QA targets all use this resolved layout. */
+  const float text_size = agent_ui_body_font_size();
+  const float badge_size = AGENT_NEW_BADGE_FONT * agent_ui_text_unit();
+  const float badge_w = std::max(float(AGENT_NEW_BADGE_W),
+                                ui::mixar_text_width("NEW", badge_size) / u +
+                                    2.0f * AGENT_TAB_ICON_GAP);
+  TabMetric tabs[AGENT_TAB_COUNT];
+  float extra = 0.0f;
+  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
+    tabs[i] = g_tab_metrics[i];
+    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
+    const float trailing = i == AGENT_TAB_SPLAT ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
+    const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
+                         trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
+    tabs[i].w = std::max(tabs[i].w, wanted);
+    extra += tabs[i].w - g_tab_metrics[i].w;
+  }
+  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_SPLAT + AGENT_TAB_W_SPLAT) -
+                      6.0f;
+  const float growth = extra > 0.0f ? std::min(1.0f, spare / extra) : 0.0f;
+  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
+    tabs[i].w = g_tab_metrics[i].w + (tabs[i].w - g_tab_metrics[i].w) * growth;
+    if (i > 0 && i <= AGENT_TAB_SPLAT) {
+      const float gap = g_tab_metrics[i].x -
+                        (g_tab_metrics[i - 1].x + g_tab_metrics[i - 1].w);
+      tabs[i].x = tabs[i - 1].x + tabs[i - 1].w + gap;
+    }
+  }
+  tabs[AGENT_TAB_QUEUE].x = AGENT_TAB_X_QUEUE + AGENT_TAB_W_QUEUE - tabs[AGENT_TAB_QUEUE].w;
+  tabs[AGENT_TAB_GENERATIONS].x = tabs[AGENT_TAB_QUEUE].x - 6.0f -
+                                tabs[AGENT_TAB_GENERATIONS].w;
+
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     AgentTabLayout &tab = r_layout->tabs[i];
-    const TabMetric &m = g_tab_metrics[i];
+    const TabMetric &m = tabs[i];
     const bool active = (i == int(active_tab));
     if (pad) {
       tab = {};
@@ -199,8 +240,8 @@ void agent_ui_layout_build(const int window_w,
     /* The Queue pill has a count chip where the others have an icon, and it is
      * wider than one; its label starts clear of that instead. */
     const float label_du = (i == AGENT_TAB_QUEUE) ?
-                               (AGENT_QUEUE_COUNT_X + AGENT_QUEUE_COUNT_W +
-                                AGENT_TAB_ICON_GAP) :
+                               (m.x + AGENT_QUEUE_COUNT_X - AGENT_TAB_X_QUEUE +
+                                AGENT_QUEUE_COUNT_W + AGENT_TAB_ICON_GAP) :
                                (m.x + AGENT_TAB_PAD_X + AGENT_TAB_ICON +
                                 AGENT_TAB_ICON_GAP);
     tab.label_x = f.x(label_du);
@@ -214,7 +255,7 @@ void agent_ui_layout_build(const int window_w,
   r_layout->new_badge = pad ? rctf{} :
                               f.box(AGENT_NEW_BADGE_X,
                                     AGENT_NEW_BADGE_Y,
-                                    AGENT_NEW_BADGE_W,
+                                    badge_w,
                                     AGENT_NEW_BADGE_H);
 
   /* --- Card ---
@@ -275,13 +316,28 @@ void agent_ui_layout_build(const int window_w,
   /* --- Chip row ---
    * The mode toggle is gone (there is only Agent mode), so Upload Reference
    * takes the row's left edge where the toggle sat. */
-  r_layout->chip_upload = f.box(
-      AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
-  const float scribble_x = AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP;
-  r_layout->chip_scribble = f.box(scribble_x, chip_y, AGENT_CHIP_SCRIBBLE_W, AGENT_CHIP_H);
-  const float voice_x = scribble_x + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_GAP;
-  r_layout->chip_voice = f.box(voice_x, chip_y, AGENT_CHIP_VOICE_W, AGENT_CHIP_H);
-  const float reading_x = voice_x + AGENT_CHIP_VOICE_W + AGENT_CHIP_GAP;
+  auto chip_extra = [&](const char *label, const float base_w) {
+    return std::max(0.0f, ui::mixar_text_width(label, text_size) / u + AGENT_CHIP_ICON +
+                             3.0f * AGENT_CHIP_ICON_GAP + 2.0f / u - base_w);
+  };
+  const float upload_extra = chip_extra("Upload Reference", AGENT_CHIP_UPLOAD_W);
+  const float scribble_extra = chip_extra("Scribble", AGENT_CHIP_SCRIBBLE_W);
+  const float voice_extra = chip_extra("Listening", AGENT_CHIP_VOICE_W);
+  const float row_extra = upload_extra + scribble_extra + voice_extra;
+  const float row_base = AGENT_CHIP_UPLOAD_W + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_VOICE_W +
+                         AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W + 5.0f * AGENT_CHIP_GAP;
+  const float row_spare = std::max(
+      0.0f, card_w - 2.0f * AGENT_SEG_X - AGENT_BTN_GENERATE_W - row_base);
+  const float row_growth = row_extra > 0.0f ? std::min(1.0f, row_spare / row_extra) : 0.0f;
+  const float upload_w = AGENT_CHIP_UPLOAD_W + upload_extra * row_growth;
+  const float scribble_w = AGENT_CHIP_SCRIBBLE_W + scribble_extra * row_growth;
+  const float voice_w = AGENT_CHIP_VOICE_W + voice_extra * row_growth;
+  r_layout->chip_upload = f.box(AGENT_SEG_X, chip_y, upload_w, AGENT_CHIP_H);
+  const float scribble_x = AGENT_SEG_X + upload_w + AGENT_CHIP_GAP;
+  r_layout->chip_scribble = f.box(scribble_x, chip_y, scribble_w, AGENT_CHIP_H);
+  const float voice_x = scribble_x + scribble_w + AGENT_CHIP_GAP;
+  r_layout->chip_voice = f.box(voice_x, chip_y, voice_w, AGENT_CHIP_H);
+  const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;
   r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(
       reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);

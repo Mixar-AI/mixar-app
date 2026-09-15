@@ -197,7 +197,9 @@ rctf pane_generate_rect(const rctf &box, const float u)
   const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
-  rect.xmin = rect.xmax - PANE_GENERATE_W * u;
+  const float width = std::max(PANE_GENERATE_W * u,
+                               pane_action_chip_w("Generate", false, u) + 2.0f);
+  rect.xmin = rect.xmax - width;
   rect.ymin = layout.action_bottom;
   rect.ymax = layout.action_top;
   return rect;
