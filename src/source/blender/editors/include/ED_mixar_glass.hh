@@ -162,6 +162,10 @@ struct MixarGlassStyle {
   /** Native frost already supplies the tinted bed; keep the shared light and rim. */
   bool draw_tint = true;
   bool draw_rim = true;
+  /** Optional progress light inside the pane's rounded mask. Presentation only;
+   * the caller owns the fraction and status. Zero tint alpha disables it. */
+  float progress = 0.0f;
+  float progress_tint[4] = {};
 };
 
 /**

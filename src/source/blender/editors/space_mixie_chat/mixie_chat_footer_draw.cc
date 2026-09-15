@@ -23,6 +23,7 @@
 #include "DNA_scene_types.h"
 
 #include "ED_screen.hh"
+#include "ED_moodboard_attachment.hh"
 
 #include "GPU_state.hh"
 
@@ -201,6 +202,11 @@ void footer_draw_thumbnails(const bContext *C,
                                     float(pos.thumb_y) + thumb_padding,
                                     float(pos.thumb_size) - (thumb_padding * 2.0f));
 
+      if (cached.source == 1) {
+        ED_moodboard_attachment_target(C, region, cached.path,
+            {thumb_draw_x, thumb_draw_x + pos.thumb_size,
+             float(pos.thumb_y), float(pos.thumb_y + pos.thumb_size)});
+      }
       thumb_draw_x += float(pos.thumb_size + pos.thumb_spacing);
     }
   }

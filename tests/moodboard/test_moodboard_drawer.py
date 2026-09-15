@@ -234,6 +234,8 @@ def test_the_drawer_tab_is_a_labeled_glass_pane():
     assert "GRIP_DOT" not in draw
     assert "GRIP_BORDER" not in draw
     assert "Drop references here" in draw
+    assert "BLF_size(font, 17.0f * UI_SCALE_FAC)" in draw
+    assert "BLF_size(font, 13.0f * UI_SCALE_FAC)" not in draw
     assert "Click anywhere" not in draw
     assert "EMPTY_PLUS" not in draw
 
