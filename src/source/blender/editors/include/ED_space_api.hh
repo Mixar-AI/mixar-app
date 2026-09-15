@@ -19,6 +19,9 @@ struct wmEvent;
 /* Observe an outside press without consuming the destination window event. */
 void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event);
 
+/* Exact native-window identity; the open island's small status pill is excluded. */
+bool ED_agent_bubble_is_resting_pill(const bContext *C);
+
 /* Only called once on startup. storage is global in BKE kernel listbase. */
 void ED_spacetypes_init();
 void ED_spacemacros_init();

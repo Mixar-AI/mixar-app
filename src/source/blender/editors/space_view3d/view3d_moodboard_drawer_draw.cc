@@ -109,7 +109,9 @@ void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
   const float cx = float(offset) + 0.5f * float(region->winx - offset);
   const float cy = 0.5f * float(region->winy);
   const int font = BLF_default();
-  BLF_size(font, 13.0f * UI_SCALE_FAC);
+  /* Graph cards use 17 for the headline and 13 for the secondary hint.
+   * The empty board is the headline: 13 read as chrome, not the CTA. */
+  BLF_size(font, 17.0f * UI_SCALE_FAC);
   draw_centered_line(font, "Drop references here", cx, cy, EMPTY_HINT);
 }
 

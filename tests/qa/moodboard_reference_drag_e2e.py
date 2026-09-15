@@ -59,6 +59,7 @@ def assert_no_import(qa, before):
 
 
 def run(qa):
+    qa.wait("hasattr(bpy.context.window_manager, 'mixar_moodboard_drawer_amount')", timeout=30)
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/moodboard-reference-drag'))
     out.mkdir(parents=True, exist_ok=True)
     image = png(out / 'reference.PNG', (60, 180, 110), width=240, height=160)

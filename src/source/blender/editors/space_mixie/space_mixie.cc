@@ -42,6 +42,7 @@
 #include "DNA_space_types.h"
 
 #include "mixie_intern.hh"
+#include "ED_moodboard_attachment.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -308,6 +309,7 @@ static void mixie_operatortypes()
   /* Moodboard operators (from mixie_moodboard_ops.cc) */
   WM_operatortype_append(MIXIE_OT_moodboard_drop_image);
   WM_operatortype_append(MIXIE_OT_moodboard_select_image);
+  WM_operatortype_append(MIXIE_OT_moodboard_attachment_flight);
   WM_operatortype_append(MIXIE_OT_moodboard_graph_select);
   WM_operatortype_append(MIXIE_OT_moodboard_context_menu);
   WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
@@ -776,6 +778,7 @@ void ED_spacetype_mixie()
 
   /* QA harness: export moodboard canvas nodes/media/sockets as targets. */
   mixie_moodboard_qa_targets_register();
+  mixie_attachment_qa_register();
 
   BKE_spacetype_register(std::move(st));
 }

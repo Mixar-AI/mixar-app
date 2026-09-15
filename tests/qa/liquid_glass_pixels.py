@@ -30,8 +30,9 @@ def _shader(root, backdrop):
     info.fragment_out(0, 'VEC4', "fragColor")
     info.push_constant('MAT4', "ModelViewProjectionMatrix")
     info.push_constant('BOOL', "srgbTarget")
-    for name in ("pane", "metrics", "tintTop", "tintBottom", "sheen", "rim"):
+    for name in ("pane", "metrics", "tintTop", "tintBottom", "sheen", "rim", "progressLight"):
         info.push_constant('VEC4', name)
+    info.push_constant('FLOAT', 'progress')
     if backdrop:
         info.define("GLASS_BACKDROP")
         info.sampler(0, 'FLOAT_2D', "image")
@@ -42,7 +43,7 @@ def _shader(root, backdrop):
     return gpu.shader.create_from_info(info)
 
 
-def _render(shader, scale, alpha, backdrop=None, translate=0, linear=False):
+def _render(shader, scale, alpha, backdrop=None, translate=0, linear=False, progress=0):
     width, height = 320 * scale, 100 * scale
     off = gpu.types.GPUOffScreen(width, height, format='RGBA32F')
     try:
@@ -72,6 +73,8 @@ def _render(shader, scale, alpha, backdrop=None, translate=0, linear=False):
             shader.uniform_float("tintBottom", (0.04, 0.055, 0.048, 0.24))
             shader.uniform_float("sheen", (1, 1, 1, 0.14))
             shader.uniform_float("rim", (1, 1, 1, 0.14))
+            shader.uniform_float("progressLight", (0.015, 0.74, 0.19, 0.42))
+            shader.uniform_float("progress", progress)
             if backdrop:
                 shader.uniform_float("sourceRect", (translate, 0, width + translate, height))
                 shader.uniform_float("glaze", (0.071, 0.071, 0.071, 0.22))
@@ -133,6 +136,14 @@ def run(root, out):
                 assert np.all(full[:, :, :3] <= full[:, :, 3:4] + 0.001), "RGB is not premultiplied"
                 edge_alpha = full[:, :, 3]
                 assert np.any((edge_alpha > 0.005) & (edge_alpha < 0.15)), "no antialias coverage"
+                active = _render(shader, scale, 1, tex, progress=0.5)
+                faded = _render(shader, scale, 0.5, tex, progress=0.5)
+                assert np.allclose(faded, active * 0.5, atol=0.002), "progress ignores pane fade"
+                assert np.allclose(active[:, :, 3][full[:, :, 3] == 0], 0), "progress leaks outside pane"
+                assert active[50*scale, 90*scale, 1] > full[50*scale, 90*scale, 1] + .03
+                assert np.allclose(active[50*scale, 250*scale], full[50*scale, 250*scale], atol=.002)
+                complete = _render(shader, scale, 1, tex, progress=1)
+                assert complete[50*scale, 250*scale, 1] > full[50*scale, 250*scale, 1] + .03
                 name = f"glass_{'backdrop' if has_backdrop else 'tint'}_{scale}x.png"
                 _save(full, out / name)
                 verdict.append({"backdrop": has_backdrop, "scale": scale, "image": name})
