@@ -109,9 +109,8 @@ def run(qa):
     qa.click(area_type='AGENT_BUBBLE',text='Agent chat')
     qa.step('redrop_selected_reference', batch_drop, qa, [portrait], chat=True)
     assert len(attachments(qa)) == 1
-    qa.click(area_type='AGENT_BUBBLE',text='Preview reference')
-    qa.wait("bool(drv.find(popup=True,op='MIXIE_CHAT_OT_remove_attachment'))",timeout=5)
-    qa.click(op='MIXIE_CHAT_OT_remove_attachment',popup=True)
+    qa.wait("bool(drv.find(area_type='AGENT_BUBBLE',op='MIXIE_CHAT_OT_remove_attachment'))",timeout=5)
+    qa.click(op='MIXIE_CHAT_OT_remove_attachment',area_type='AGENT_BUBBLE')
     qa.wait(f'not {SCENE}.mixie_chat_pending_attachments',timeout=6)
     assert qa.eval(f'result=not any(i.selected for i in {SCENE}.mixie_moodboard_images)')
 

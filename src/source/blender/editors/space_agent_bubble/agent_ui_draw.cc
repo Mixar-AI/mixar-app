@@ -690,7 +690,7 @@ void agent_ui_draw_island(ARegion *region,
                    /*tint=*/!agent_bubble_island_bed_is_transparent(),
                    /*rim=*/false);
 
-  /* Card header row is tab-scoped: the chat's discs / session title / FAQs
+  /* Card header row is tab-scoped: the chat's discs / session title
    * belong to the Agent tab; other tabs title the card after themselves. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
@@ -715,7 +715,7 @@ void agent_ui_draw_island(ARegion *region,
     if (state->ink_visible) {
       /* Scribble text output window over the new chat topbar */
       const float left_limit = layout->hdr_new_chat.xmax + 16.0f * u;
-      const float right_limit = layout->hdr_faq.xmin - 16.0f * u;
+      const float right_limit = layout->card.xmax - 23.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;
       const float cy = layout->hdr_title_y;
@@ -773,11 +773,7 @@ void agent_ui_draw_island(ARegion *region,
                    AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
                    strong);
     }
-    label_right("FAQs",
-                layout->hdr_faq.xmax,
-                BLI_rctf_cent_y(&layout->hdr_faq),
-                AGENT_HDR_FAQ_FONT * agent_ui_text_unit(),
-                strong);
+
   }
   else {
     const char *tab_title = "";

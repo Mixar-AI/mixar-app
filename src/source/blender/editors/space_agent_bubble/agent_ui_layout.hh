@@ -81,7 +81,6 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
-  rctf hdr_faq;
   float hdr_title_cx;
   float hdr_title_y;
 

@@ -62,6 +62,13 @@ void pane_fill_round(const rctf *rect, const float radius, const float col[4])
   ui::mixar_fill_round(*rect, radius, col);
 }
 
+void pane_column_divider(float x, float y0, float y1, float u)
+{
+  const float col[4] = {0.169f, 0.169f, 0.169f, 1.0f}; /* #2B2B2B. */
+  const rctf rect{x, x + std::max(1.0f, u), y0, y1};
+  pane_fill_round(&rect, 0, col);
+}
+
 float pane_text_width(const char *text, const float size)
 {
   return ui::mixar_text_width(text, size);

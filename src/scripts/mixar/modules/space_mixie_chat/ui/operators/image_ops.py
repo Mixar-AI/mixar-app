@@ -268,7 +268,7 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
         attachments = context.scene.mixie_chat_pending_attachments
         index = self.index
         if self.attachment_path:
-            # A hover popup may outlive a collection reorder. Resolve its
+            # A drawn button may outlive a collection reorder. Resolve its
             # owned identity at click time instead of removing a new neighbor.
             index = next((i for i, att in enumerate(attachments)
                           if att.image_path == self.attachment_path and

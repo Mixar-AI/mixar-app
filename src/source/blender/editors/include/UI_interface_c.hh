@@ -1939,6 +1939,8 @@ void button_node_link_set(Button *but, bNodeSocket *socket, const float draw_col
  */
 void button_pushbutton_draw_as_overlay_set(Button *but, bool value);
 
+/** Visible content size in the same units as the scrollbar numeric range. */
+void button_scrollbar_visual_height_set(Button *but, float visual_height);
 void button_number_step_size_set(Button *but, float step_size);
 void button_number_precision_set(Button *but, float precision);
 
@@ -1988,11 +1990,6 @@ void button_func_menu_step_set(Button *but, MenuStepFunc func);
  * button will not spawn its menu on hover and the previously spawned menu will remain open).
  */
 void button_menu_disable_hover_open(Button *but);
-
-/** Explicit hover delay and mouse-leave dismissal for an interactive preview,
- * independent of menu preferences.
- * A negative delay keeps the standard menu policy. */
-void button_menu_hover_delay_set(Button *but, float delay_seconds);
 
 void button_func_tooltip_set(Button *but, ButtonToolTipFunc func, void *arg, FreeArgFunc free_arg);
 /**

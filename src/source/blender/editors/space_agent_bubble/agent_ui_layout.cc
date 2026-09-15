@@ -237,12 +237,6 @@ void agent_ui_layout_build(const int window_w,
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_new_chat = f.disc(AGENT_HDR_BTN2_CX, hdr_cy, AGENT_HDR_BTN_R);
 
-  /* "FAQs" is right-aligned against the card's inner edge; the hit rect is
-   * grown to the header's full height so a near-miss above or below the
-   * 15-unit ink box still lands. */
-  const float faq_right = AGENT_CARD_X + card_w - AGENT_HDR_FAQ_INSET;
-  r_layout->hdr_faq = f.box(faq_right - 60, AGENT_CARD_Y + 20, 60, 34);
-
   r_layout->hdr_title_cx = f.x(AGENT_CARD_X + card_w * 0.5f);
   r_layout->hdr_title_y = f.y(AGENT_CARD_Y + AGENT_CARD_HEADER_H * 0.5f);
 

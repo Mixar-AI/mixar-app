@@ -202,9 +202,6 @@ namespace blender {
 #define AGENT_HDR_GLYPH_R 13
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
-#define AGENT_HDR_FAQ_FONT 17
-/** "FAQs" ink ends at artboard x=1554 -> 23 units of right inset. */
-#define AGENT_HDR_FAQ_INSET 23
 
 /** \} */
 
@@ -330,7 +327,7 @@ namespace blender {
 /* Strokes and text.
  *
  * Two text weights, and the artboard is deliberate about which goes where:
- * the tab strip's ACTIVE label, the Queue pill, the card title and FAQs are
+ * the tab strip's ACTIVE label, the Queue pill, the card title are
  * pure white, while every chip label is #E2E2E2. Flattening the two makes the
  * strip lose its focus and the chip row gain a shout it should not have. */
 #define AGENT_COL_TEXT_STRONG {1.0f, 1.0f, 1.0f, 1.0f}

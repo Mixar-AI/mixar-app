@@ -10211,10 +10211,7 @@ static void button_activate_state(bContext *C, Button *but, HandleButtonState st
       if (data->used_mouse && !data->autoopentimer) {
         int time;
 
-        if (but->menu_hover_delay >= 0.0f) {
-          time = int(but->menu_hover_delay / 0.02f);
-        }
-        else if (but->block->auto_open == true) { /* test for toolbox */
+        if (but->block->auto_open == true) { /* test for toolbox */
           time = 1;
         }
         else if (but->block->flag & BLOCK_LOOP && but->type == ButtonType::Pulldown) {
@@ -10230,9 +10227,8 @@ static void button_activate_state(bContext *C, Button *but, HandleButtonState st
         }
 
         if (time >= 0) {
-          const double delay = but->menu_hover_delay >= 0.0f ? double(but->menu_hover_delay) :
-                                                              0.02 * double(time);
-          data->autoopentimer = WM_event_timer_add(data->wm, data->window, TIMER, delay);
+          data->autoopentimer = WM_event_timer_add(
+              data->wm, data->window, TIMER, 0.02 * double(time));
         }
       }
     }
@@ -12980,16 +12976,6 @@ static int handle_menu_event(bContext *C,
         /* check mouse moving outside of the menu */
         if (inside == false && (block->flag & (BLOCK_MOVEMOUSE_QUIT | BLOCK_POPOVER))) {
           SafetyRect *saferct;
-          const Button *origin = menu->popup_create_vars.but;
-          const bool hover_preview = origin && origin->menu_hover_delay >= 0.0f;
-          rctf preview_margin;
-          if (hover_preview) {
-            /* With Close Menu on Leave off, native safety rectangles span
-             * the window. Explicit previews retain the normal local margin
-             * and parent-button corridor, independently of that preference. */
-            block_to_window_rctf(region, block, &preview_margin, &block->rect);
-            BLI_rctf_pad(&preview_margin, 40 * UI_SCALE_FAC, 40 * UI_SCALE_FAC);
-          }
 
           mouse_motion_towards_check(block, menu, event->xy, is_parent_inside == false);
 
@@ -13006,18 +12992,14 @@ static int handle_menu_event(bContext *C,
               if (BLI_rctf_isect_pt(&saferct->parent, float(event->xy[0]), float(event->xy[1]))) {
                 break;
               }
-              if ((!hover_preview || BLI_rctf_isect_pt(
-                                         &preview_margin, float(event->xy[0]), float(event->xy[1]))) &&
-                  BLI_rctf_isect_pt(&saferct->safety, float(event->xy[0]), float(event->xy[1])))
-              {
+              if (BLI_rctf_isect_pt(&saferct->safety, float(event->xy[0]), float(event->xy[1]))) {
                 break;
               }
             }
           }
 
           /* strict check, and include the parent rect */
-          if (!menu->dotowards && !saferct &&
-              ((U.flag & USER_MENU_CLOSE_LEAVE) || level > 0 || hover_preview) &&
+          if (!menu->dotowards && !saferct && ((U.flag & USER_MENU_CLOSE_LEAVE) || level > 0) &&
               !(menu->mmb_panning || menu->keep_open_timer))
           {
             /* Mixar: skip mouse-leave dismiss for the persistent agent
@@ -13799,16 +13781,48 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
 
   Button *but = region_find_active_but(region);
 
+  /* A file drop is an explicit composer action. Release modal text editing
+   * with the draft committed so the region's dropbox can receive this event. */
+  ScrArea *drop_area = CTX_wm_area(C);
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      event->type == EVT_DROP && but && but->active && ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+#ifdef WITH_INPUT_IME
+    const wmIMEData *ime = CTX_wm_window(C)->runtime->ime_data;
+    if (ime && CTX_wm_window(C)->runtime->ime_data_is_composing && !ime->composite.empty()) {
+      textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                          ime->composite.size());
+    }
+#endif
+    button_activate_exit(C, but, but->active, false, false);
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
+  /* The active multiline editor otherwise consumes scroll events before the
+   * reference region gets them. Keep text focus while its sibling column scrolls. */
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) && but && but->active &&
+      ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+    for (const ARegion &other : drop_area->regionbase) {
+      if (other.regiontype == RGN_TYPE_UI && !(other.flag & RGN_FLAG_HIDDEN) &&
+          BLI_rcti_isect_pt_v(&other.winrct, event->xy))
+      {
+        return WM_UI_HANDLER_CONTINUE;
+      }
+    }
+  }
+
   if (but) {
     /* The Agent composer and its actions can live in DIFFERENT regions
      * (empty-state WINDOW / TOOLS). Commit before allowing this same press
      * through to the native action handler. Otherwise the first Send,
-     * attachment or tab click merely exits modal text editing. Explicit
-     * hover previews also need this handoff before their timer can start. */
+     * attachment or tab click merely exits modal text editing. */
     ScrArea *area = CTX_wm_area(C);
     if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
-        (event->type == MOUSEMOVE || (event->type == LEFTMOUSE && event->val == KM_PRESS)) &&
-        but->active &&
+        event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
         ui_but_mixie_mention_scene(but) &&
         ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
     {
@@ -13817,10 +13831,8 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
           continue;
         }
         Button *target = but_find_mouse_over(&action_region, event);
-        const bool preview = target && target->menu_hover_delay >= 0.0f;
         if (target && target != but &&
-            (preview || (event->type == LEFTMOUSE && target->optype)))
-        {
+            (target->optype || target->type == ButtonType::Scroll)) {
 #ifdef WITH_INPUT_IME
           wmWindow *win = CTX_wm_window(C);
           const wmIMEData *ime = win->runtime->ime_data;

@@ -5964,11 +5964,6 @@ void button_menu_disable_hover_open(Button *but)
   but->menu_no_hover_open = true;
 }
 
-void button_menu_hover_delay_set(Button *but, const float delay_seconds)
-{
-  but->menu_hover_delay = delay_seconds;
-}
-
 void button_func_quick_tooltip_set(Button *but, std::function<std::string(const Button *but)> func)
 {
   but->tip_quick_func = std::move(func);
@@ -6385,6 +6380,13 @@ void button_pushbutton_draw_as_overlay_set(Button *but, const bool value)
   BLI_assert(but->type == ButtonType::But);
 
   but_push->draw_as_overlay = value;
+}
+
+void button_scrollbar_visual_height_set(Button *but, float visual_height)
+{
+  BLI_assert(but->type == ButtonType::Scroll);
+  BLI_assert(visual_height > 0);
+  static_cast<ButtonScrollBar *>(but)->visual_height = visual_height;
 }
 
 void button_number_step_size_set(Button *but, float step_size)
