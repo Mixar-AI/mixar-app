@@ -202,9 +202,6 @@ namespace blender {
 #define AGENT_HDR_GLYPH_R 13
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
-#define AGENT_HDR_FAQ_FONT 17
-/** "FAQs" ink ends at artboard x=1554 -> 23 units of right inset. */
-#define AGENT_HDR_FAQ_INSET 23
 
 /** \} */
 
@@ -274,12 +271,10 @@ namespace blender {
 #define AGENT_SEG_THUMB_INSET 2
 #define AGENT_SEG_THUMB_W 125
 
-/** Upload Reference chip: artboard 599,842 150x44 — widened to 200 so the
- *  label reads in full. The artboard truncates it to "Upload Refe…", but that
- *  clipped mid-word in the build and the model chip's slot beside it is free
- *  now, so the chip takes the room rather than the ellipsis. */
+/** Upload Reference chip: widened for the larger default label. The model
+ * chip's retired slot leaves room for the complete text and its icon. */
 #define AGENT_CHIP_UPLOAD_X 332
-#define AGENT_CHIP_UPLOAD_W 200
+#define AGENT_CHIP_UPLOAD_W 240
 
 /* The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") is
  * deliberately NOT reproduced — the model picker was cut from the design.
@@ -330,7 +325,7 @@ namespace blender {
 /* Strokes and text.
  *
  * Two text weights, and the artboard is deliberate about which goes where:
- * the tab strip's ACTIVE label, the Queue pill, the card title and FAQs are
+ * the tab strip's ACTIVE label, the Queue pill, the card title are
  * pure white, while every chip label is #E2E2E2. Flattening the two makes the
  * strip lose its focus and the chip row gain a shout it should not have. */
 #define AGENT_COL_TEXT_STRONG {1.0f, 1.0f, 1.0f, 1.0f}

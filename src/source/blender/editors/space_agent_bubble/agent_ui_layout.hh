@@ -45,6 +45,9 @@ enum AgentTabId {
   AGENT_TAB_COUNT,
 };
 
+/** Shared by text measurement and tab painting. */
+const char *agent_ui_tab_label(AgentTabId tab);
+
 struct AgentTabLayout {
   rctf pill;      /* Full pill rect, including the active pill's 1-unit bleed. */
   rctf icon;      /* 24-unit icon box. */
@@ -81,7 +84,6 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
-  rctf hdr_faq;
   float hdr_title_cx;
   float hdr_title_y;
 

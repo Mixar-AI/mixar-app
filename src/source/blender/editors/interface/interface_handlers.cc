@@ -13781,6 +13781,40 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
 
   Button *but = region_find_active_but(region);
 
+  /* A file drop is an explicit composer action. Release modal text editing
+   * with the draft committed so the region's dropbox can receive this event. */
+  ScrArea *drop_area = CTX_wm_area(C);
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      event->type == EVT_DROP && but && but->active && ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+#ifdef WITH_INPUT_IME
+    const wmIMEData *ime = CTX_wm_window(C)->runtime->ime_data;
+    if (ime && CTX_wm_window(C)->runtime->ime_data_is_composing && !ime->composite.empty()) {
+      textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                          ime->composite.size());
+    }
+#endif
+    button_activate_exit(C, but, but->active, false, false);
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
+  /* The active multiline editor otherwise consumes scroll events before the
+   * reference region gets them. Keep text focus while its sibling column scrolls. */
+  if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
+      ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) && but && but->active &&
+      ui_but_mixie_mention_scene(but) &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+  {
+    for (const ARegion &other : drop_area->regionbase) {
+      if (other.regiontype == RGN_TYPE_UI && !(other.flag & RGN_FLAG_HIDDEN) &&
+          BLI_rcti_isect_pt_v(&other.winrct, event->xy))
+      {
+        return WM_UI_HANDLER_CONTINUE;
+      }
+    }
+  }
+
   if (but) {
     /* The Agent composer and its actions can live in DIFFERENT regions
      * (empty-state WINDOW / TOOLS). Commit before allowing this same press
@@ -13797,7 +13831,8 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
           continue;
         }
         Button *target = but_find_mouse_over(&action_region, event);
-        if (target && target != but && target->optype) {
+        if (target && target != but &&
+            (target->optype || target->type == ButtonType::Scroll)) {
 #ifdef WITH_INPUT_IME
           wmWindow *win = CTX_wm_window(C);
           const wmIMEData *ime = win->runtime->ime_data;

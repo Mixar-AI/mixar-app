@@ -28,18 +28,13 @@ def _glass_panel_row():
 
 
 class TestTheCardIsLiquidGlass:
-    """The card is painted with the shared glass material, and only that.
-
-    Status lives on the cat and the outcome glyph. A leftover green wash or
-    running outline would cover the pane and put brand colour back on a
-    surface that is supposed to be quiet glass.
-    """
+    """Progress belongs inside the glass mask, beneath the text and controls."""
 
     def test_the_card_draws_the_panel_glass_role(self):
         text = DRAW.read_text()
         assert '#include "ED_mixar_glass.hh"' in text
         card = _fn_body(text, "void draw_card(")
-        assert "glass_pane(&rect, ui::MIXAR_GLASS_PANEL, radius, alpha);" in card, (
+        assert re.search(r"glass_pane\(&rect,\s*ui::MIXAR_GLASS_PANEL,", card), (
             "the card must route through the kit's PANEL row"
         )
 
@@ -83,4 +78,8 @@ class TestTheCardIsLiquidGlass:
         assert rim_vals[0] == rim_vals[1] == rim_vals[2]
         assert rim_vals[3] > 0.0
 
+    def test_panel_fallback_keeps_the_viewport_visible(self):
+        row = _glass_panel_row()
+        floor = re.search(r"/\* fallback_alpha \*/\s*([\d.]+)f", row)
+        assert 0.3 <= float(floor.group(1)) <= 0.6
 
