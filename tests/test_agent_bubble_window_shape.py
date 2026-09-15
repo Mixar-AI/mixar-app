@@ -384,6 +384,7 @@ class TestIslandWindowTranslucency:
         assert "wantsExtendedDynamicRangeContent = NO" in glass
         assert "MTLPixelFormatBGRA8Unorm" in glass
         assert "return (win == nil) ? YES : win.opaque;" in glass
+        assert "- (BOOL)mouseDownCanMoveWindow" in glass
         assert 'NSClassFromString(@"NSGlassEffectView")' in glass
         assert "NSVisualEffectBlendingModeBehindWindow" in glass
 

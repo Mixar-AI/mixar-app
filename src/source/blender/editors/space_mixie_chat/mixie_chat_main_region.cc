@@ -308,16 +308,15 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
 
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
 {
-  if (!mixie_chat_dispatch_is_live(C)) {
-    return WM_UI_HANDLER_CONTINUE;
-  }
-
-  /* 0a. Scribble ink overlay — modal while open: captures pen strokes,
-   * consumes keys/clicks/scroll, runs the idle-commit timer. Checked
-   * before rules/history because it draws on top of both. Cheap no-op
-   * when closed (runtime flag check, no RNA reads). */
+  /* Ink is modal over this WINDOW region even when a non-Agent tab owns
+   * the card. The live-tab gate below would otherwise CONTINUE and the
+   * Agent Bubble's WINDOW-level LEFTMOUSE binding would move the pad. */
   if (mixie_chat_ink_handle_event(C, event)) {
     return WM_UI_HANDLER_BREAK;
+  }
+
+  if (!mixie_chat_dispatch_is_live(C)) {
+    return WM_UI_HANDLER_CONTINUE;
   }
 
   /* 0. Project-rules overlay — modal while open: consumes text-editing

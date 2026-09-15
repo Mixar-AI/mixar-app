@@ -83,3 +83,17 @@ def test_overlay_covers_the_composers_share_of_the_panel():
     assert "agent_ui_draw_scribble_input" not in BUBBLE_CC
     assert "agent_ui_draw_scribble_input" not in DRAW_CC
 
+
+def test_island_header_writes_instead_of_moving_the_pad():
+    """The island HEADER is a slice of the writing surface.
+
+    Docked Mixie Chat still keeps the 115/85 button band. A CONTINUE on the
+    island HEADER is mixar.bubble_header_drag.
+    """
+    events = (CHAT_DIR / "mixie_chat_ink_events.cc").read_text(encoding="utf-8")
+    start = events.index("int mixie_chat_ink_header_ui_handler(")
+    body = events[start : events.index("\n}\n", start)]
+    assert "SPACE_AGENT_BUBBLE" in body
+    assert "island_pad" in body
+    assert "115.0f" in body
+

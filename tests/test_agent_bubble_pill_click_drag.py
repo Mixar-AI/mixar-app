@@ -263,9 +263,16 @@ def test_island_content_press_cannot_start_window_drag():
         context = SimpleNamespace(area=object(), region=region)
         assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
     begin.assert_not_called()
-    context = SimpleNamespace(area=object(), region=SimpleNamespace(type='HEADER'))
+    context = SimpleNamespace(
+        area=object(), region=SimpleNamespace(type='HEADER'), window_manager=SimpleNamespace()
+    )
     assert namespace['invoke'](object(), context, object()) == {'FINISHED'}
     begin.assert_called_once()
+    begin.reset_mock()
+    for flag in ('mixie_chat_ink_visible', 'mixar_mark_armed'):
+        context.window_manager = SimpleNamespace(**{flag: True})
+        assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
+    begin.assert_not_called()
 
 
 def test_native_begin_drag_also_refuses_content():

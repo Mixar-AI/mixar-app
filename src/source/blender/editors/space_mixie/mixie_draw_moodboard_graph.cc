@@ -8,6 +8,7 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include <cmath>
 
@@ -15,6 +16,7 @@
 
 #include "BLI_string.h"
 #include "BLI_time.h"
+#include "DNA_userdef_types.h"
 
 #include "GPU_immediate_util.hh"
 
@@ -139,17 +141,6 @@ static const char *state_label(const int state)
   return labels[std::clamp(state, 0, 5)];
 }
 
-static void draw_text_centered(
-    const char *text, const float center_x, const float y, const float size, const float alpha)
-{
-  const int font_id = BLF_default();
-  BLF_size(font_id, size);
-  const float width = BLF_width(font_id, text, strlen(text));
-  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
-  BLF_position(font_id, center_x - width * 0.5f, y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-}
-
 static void draw_text_centered_clipped_col(const char *text,
                                            const float center_x,
                                            const float y,
@@ -266,9 +257,6 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   float zoom_x, zoom_y;
   ui::view2d_scale_get(v2d, &zoom_x, &zoom_y);
-  /* Canvas-unit labels stop being legible below this; skip the draw cost. */
-  const bool socket_labels_readable = 13.0f * zoom_x >= 7.0f;
-
   PropertyRNA *actions = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_action_nodes");
   if (actions) {
     CollectionPropertyIterator iter{};
@@ -286,10 +274,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         /* One definition of "the floating controls are on screen", shared by
          * every hint below — the toolbar pass uses the same gate, so exactly
          * one of the two draws in any given spot. */
-        const bool controls_visible =
-            selected &&
-            BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
-            BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
+        rcti controls_rect;
+        const bool controls_visible = moodboard_node_controls_rect(C, v2d, &node, &controls_rect);
         draw_card_background(rect, selected);
         if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
           draw_running_glow(rect);
@@ -315,17 +301,19 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           const bool connected =
               cache && cache->occupied_inputs.contains(
                            moodboard_graph_socket_key(node_id, socket_id));
-          moodboard_draw_socket(socket_x,
+          const float radius = moodboard_graph_input_radius_px(&node, socket_index, v2d);
+          moodboard_draw_socket(v2d, socket_x,
                                 socket_y,
                                 moodboard_socket_type_color(accepted),
                                 connected,
-                                RNA_boolean_get(&socket, "required"));
-          if (selected && socket_labels_readable) {
-            moodboard_draw_socket_label(&socket, socket_x, socket_y);
+                                RNA_boolean_get(&socket, "required"), radius);
+          if (selected && radius >= 5 * UI_SCALE_FAC &&
+              BLI_rctf_size_x(&rect) * zoom_x >= 80 * UI_SCALE_FAC) {
+            moodboard_draw_socket_label(v2d, &socket, socket_x, socket_y, radius);
           }
         }
         const int action_type = RNA_enum_get(&node, "action_type");
-        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+        moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_action_output_color(action_type));
 
@@ -421,7 +409,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
               v2d, rect.xmin, rect.ymin, BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect)))
       {
         draw_card_background(rect, RNA_boolean_get(&node, "selected"));
-        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+        moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_mesh_output_color());
         char title[MIXIE_GRAPH_LABEL_BUF];
@@ -484,7 +472,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         {
           PointerRNA image_ptr = RNA_pointer_get(&media, "image");
           Image *image = static_cast<Image *>(image_ptr.data);
-          moodboard_draw_output_handle(media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+          moodboard_draw_output_handle(v2d, media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                        BLI_rctf_cent_y(media_rect),
                                        moodboard_media_output_color(image));
         }

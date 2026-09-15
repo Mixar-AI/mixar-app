@@ -82,7 +82,7 @@ def test_node_preview_resolver_returns_a_media_index_not_a_node_index():
     """``moodboard_toggle_video_playback`` and the hover monitor both key on an
     index into ``mixie_moodboard_images``; a node index would silently
     mismatch."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
 
     resolver = geometry.split("int moodboard_find_node_preview_video_under_mouse(")[1]
     assert "moodboard_find_embedded_media_index" in resolver
@@ -97,7 +97,8 @@ def test_preview_bounds_have_a_single_definition():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     header = _read(SPACE_MIXIE / "mixie_intern.hh")
 
-    assert "void moodboard_graph_node_preview_bounds(" in geometry
+    hit = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
+    assert "void moodboard_graph_node_preview_bounds(" in hit
     assert "MOODBOARD_GRAPH_PREVIEW_INSET" in header
     assert "moodboard_graph_node_preview_bounds(rect, &preview_bounds)" in draw
 
