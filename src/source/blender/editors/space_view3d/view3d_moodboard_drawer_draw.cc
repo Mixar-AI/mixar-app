@@ -200,7 +200,7 @@ void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
     return;
   }
   /* Keep the icon tools on the left edge at every drawer width and zoom. */
-  const int width = std::min(available, int(std::round(32.0f * scale)));
+  const int width = std::min(available, int(std::round(40.0f * scale)));
   const int x = panel_xmin + pad;
   const int y = region->winy - pad;
 

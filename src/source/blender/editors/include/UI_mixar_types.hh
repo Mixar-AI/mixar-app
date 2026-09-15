@@ -35,7 +35,9 @@ enum class MixarComponent : uint8_t {
   Segment,
   Surface,
   Label,
-  LegacyCard
+  LegacyCard,
+  /** Icon-only native actions/menus sharing one aligned viewport glass capsule. */
+  GlassTool
 };
 enum class MixarVariant : uint8_t { Primary, Secondary, Ghost, Danger };
 

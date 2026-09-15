@@ -43,11 +43,13 @@ def toolbar(qa):
     for w in (media, text):
         x0, y0, x1, y1 = w['rect']
         assert w['enabled'] and w['mixar_theme'] == 'ZEN', w
+        assert w['mixar_component'] == 'glass_tool', w
         assert w['block'] == 'moodboard_drawer_add_tools', w
         assert panel[0] < x0 < x1 < panel[2], (w, panel)
         assert panel[1] < y0 < y1 < panel[3], (w, panel)
     assert media['rect'][::2] == text['rect'][::2], controls
-    assert text['rect'][3] < media['rect'][1], controls
+    # Native aligned cells touch: the shared painter owns their capsule/divider.
+    assert abs(text['rect'][3] - media['rect'][1]) <= 2, controls
     scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
     assert abs(media['rect'][0] - panel[0] - 12 * scale) <= 2, controls
     assert [media['text'], text['text']] == ['', ''], controls

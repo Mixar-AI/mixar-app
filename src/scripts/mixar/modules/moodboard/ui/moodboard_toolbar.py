@@ -40,35 +40,34 @@ _DRAWER_ACTIVE_AMOUNT = 0.98
 
 def draw_moodboard_open_media_tool(layout, *, drawer=False):
     """Folder menu that opens image/video or picks existing media."""
-    row = layout.row(align=True)
-    row.scale_x = 1.6 if drawer else 1.5
-    row.scale_y = 1.6 if drawer else 1.5
+    row = layout if drawer else layout.row(align=True)
+    row.scale_x = 2.0 if drawer else 1.5
+    row.scale_y = 2.3 if drawer else 1.5
     row.menu(
         "MIXIE_MT_add_image_menu",
         text="",
         icon="FILE_FOLDER",
     )
     if drawer:
-        row.mixar_style(component="DROPDOWN")
+        row.mixar_style(component="GLASS_TOOL")
 
 
 def draw_moodboard_add_text_tool(layout, *, drawer=False):
     """Add a text box to the canvas."""
-    row = layout.row(align=True)
-    row.scale_x = 1.6 if drawer else 1.5
-    row.scale_y = 1.6 if drawer else 1.5
+    row = layout if drawer else layout.row(align=True)
+    row.scale_x = 2.0 if drawer else 1.5
+    row.scale_y = 2.3 if drawer else 1.5
     row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
     if drawer:
-        row.mixar_style(component="ACTION", variant="SECONDARY")
+        row.mixar_style(component="GLASS_TOOL")
 
 
 def draw_moodboard_add_tools(layout):
-    """Icon-only tools on the left edge, with native hover tooltips."""
+    """One left-side glass capsule, with native icons and hover tooltips."""
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
     surface.operator_context = "INVOKE_DEFAULT"
     col = surface.column(align=True)
     draw_moodboard_open_media_tool(col, drawer=True)
-    col.separator(factor=0.4)
     draw_moodboard_add_text_tool(col, drawer=True)
 
 
