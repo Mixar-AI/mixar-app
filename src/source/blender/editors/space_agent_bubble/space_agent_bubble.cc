@@ -2019,10 +2019,11 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  * (true pill shape, not a small rounded rectangle). */
 /* Pill has TWO sizes that swap based on bubble state:
  *
- *   * SMALL (110×28, radius 14) — when the bubble is OPEN. The pill
- *     is a child window above the bubble's top-left and only shows
- *     the live status; it should be a quiet status indicator, not
- *     compete with the chat for attention.
+ *   * SMALL (100×25, radius 14) — when the bubble is OPEN. The pill
+ *     is a child window above the bubble's top-left and shows the
+ *     live status plus a Mixie preview; it should stay a quiet
+ *     indicator, not compete with the chat for attention. Aspect
+ *     stays at or below 4 so this path is not the elongated rest.
  *   * LARGE (304×44, radius 22) — when the bubble is MINIMISED. The
  *     pill is the only thing the user sees, anchored at the host's
  *     centre-bottom; it doubles as the click target to restore the
@@ -2033,7 +2034,7 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  * minimise / restore transition (including the start_minimised
  * branch of the open op). */
 /* The artboard's status pill: 135 x 38 units at the 1.5x export factor. */
-#define AGENT_BUBBLE_PILL_WIDTH 90
+#define AGENT_BUBBLE_PILL_WIDTH 100
 #define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 

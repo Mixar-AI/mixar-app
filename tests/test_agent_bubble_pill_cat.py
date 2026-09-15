@@ -92,13 +92,15 @@ def test_painter_calls_the_shipped_sampler():
 
 def test_elongated_pill_draws_the_cat_not_the_mixar_mark():
     elongated = _elongated()
-    assert "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity)" in elongated
+    assert "paint_status_pill_cat(region, state, chip, u, is_working, pulse, now)" in elongated
     assert "ICON_MIXAR_ICON" not in elongated
 
 
-def test_compact_pill_clears_stale_cat_target():
+def test_compact_pill_draws_the_cat_preview():
     body = _pill_draw()
-    assert body.index("agent_ui_draw_pill_cat") < body.index("agent_ui_pill_cat_clear();")
+    compact = body[body.index("GPU_blend(GPU_BLEND_NONE);\n    return;") :]
+    assert "paint_status_pill_cat(region, state, chip, cat_u, is_working, pulse, now)" in compact
+    assert "agent_ui_pill_cat_clear();" not in compact
 
 
 def test_blink_is_close_hold_open_not_a_triangle_dip():
@@ -165,3 +167,22 @@ def test_header_documents_the_clip_contract():
     assert "Every vertex stays inside that rect" in CAT_HH
     assert "test_agent_bubble_pill_paint.py" in CAT_HH
     assert "mixie_cat_eval_pose" in POSE_HH
+
+
+def test_both_pill_sizes_reuse_the_shipped_cat_painter():
+    start = DRAW_CC.index("void paint_status_pill_cat")
+    body = DRAW_CC[start : DRAW_CC.index("\n}\n", start)]
+    assert "agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity)" in body
+    assert DRAW_CC.count("paint_status_pill_cat(") == 3
+
+
+def test_open_island_pill_stays_on_the_compact_draw_path():
+    """`w > h * 4` is the elongated rest. The open-island idle bubble must
+    stay on the compact painter so Mixie is a preview beside Idle, not the
+    full resting capsule.
+    """
+    import re
+
+    width = int(re.search(r"#define AGENT_BUBBLE_PILL_WIDTH (\d+)", BUBBLE_CC).group(1))
+    height = int(re.search(r"#define AGENT_BUBBLE_PILL_HEIGHT (\d+)", BUBBLE_CC).group(1))
+    assert width / height <= 4.0

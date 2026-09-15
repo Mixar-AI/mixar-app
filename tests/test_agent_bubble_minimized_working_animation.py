@@ -81,8 +81,8 @@ def test_working_state_pulses_logo_chip():
     body = _pill_draw_function()
     elongated = body[body.index("if (w > h * 4.0f)"):]
 
-    assert "is_working ? 0.25f * pulse" in elongated
-    assert "fill_round_gradient(&chip, chip_r," in elongated
+    assert "is_working ? 0.25f * pulse" in DRAW_CC
+    assert "fill_round_gradient(&chip, chip_r," in DRAW_CC
     assert "chip_rim" not in elongated
 
 
@@ -96,8 +96,8 @@ def test_logo_pill_matches_border_radii_with_minimized_bubble():
     # Outer pill is a capsule with half-height radius, painted as liquid glass
     assert "glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);" in elongated
     # Inner pill behind logo matches with half-height radius
-    assert "chip_r = (chip.ymax - chip.ymin) * 0.5f" in elongated
-    assert "fill_round_gradient(&chip, chip_r," in elongated
+    assert "chip_r = (chip.ymax - chip.ymin) * 0.5f" in DRAW_CC
+    assert "fill_round_gradient(&chip, chip_r," in DRAW_CC
 
 
 def test_working_state_draws_activity_dot_and_animated_dots():

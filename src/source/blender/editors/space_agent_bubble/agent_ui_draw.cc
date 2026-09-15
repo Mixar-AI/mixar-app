@@ -397,6 +397,50 @@ void label_right(const char *text, const float x, const float cy, const float si
   label_left(text, x - text_width(text, size), cy, size, col);
 }
 
+/** Mixie's green chip: same 85×68 artboard cut the elongated rest uses,
+ * scaled by \a u = height / 85 so both pill sizes share one painter. */
+rctf status_pill_cat_chip(const float w, const float h, const float u)
+{
+  rctf chip;
+  chip.xmax = w - 10.5f * u;
+  chip.xmin = chip.xmax - 85.0f * u;
+  chip.ymin = h * 0.5f - 34.0f * u;
+  chip.ymax = h * 0.5f + 34.0f * u;
+  return chip;
+}
+
+void paint_status_pill_cat(ARegion *region,
+                           const AgentIslandState *state,
+                           const rctf &chip,
+                           const float u,
+                           const bool is_working,
+                           const float pulse,
+                           const double now)
+{
+  const float chip_a[4] = {
+      0.125f + (is_working ? 0.05f * pulse : 0.0f),
+      0.345f + (is_working ? 0.25f * pulse : 0.0f),
+      0.212f + (is_working ? 0.15f * pulse : 0.0f),
+      1.0f};
+  const float chip_b[4] = {
+      0.227f + (is_working ? 0.05f * pulse : 0.0f),
+      0.518f + (is_working ? 0.35f * pulse : 0.0f),
+      0.341f + (is_working ? 0.20f * pulse : 0.0f),
+      1.0f};
+  const float chip_r = (chip.ymax - chip.ymin) * 0.5f;
+  const float chip_grad_a[2] = {chip.xmax - 7.0f * u, chip.ymax - 14.0f * u};
+  const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
+  fill_round_gradient(&chip, chip_r, chip_a, chip_b, chip_grad_a, chip_grad_b);
+
+  const MixieCatPose cat_pose = agent_ui_cat_motion_sample(
+      region,
+      state->cat_activity,
+      now,
+      state->cat_scene,
+      std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f);
+  agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity);
+}
+
 /** \} */
 
 }  // namespace
@@ -458,34 +502,11 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
      * the capsule; working state now lives on the logo chip and the
      * activity dot. */
 
-    /* Pill behind the logo, right-inset 10.5 units, 85x68. */
-    rctf chip;
-    chip.xmax = w - 10.5f * u;
-    chip.xmin = chip.xmax - 85.0f * u;
-    chip.ymin = h * 0.5f - 34.0f * u;
-    chip.ymax = h * 0.5f + 34.0f * u;
-    const float chip_a[4] = {
-        0.125f + (is_working ? 0.05f * pulse : 0.0f),
-        0.345f + (is_working ? 0.25f * pulse : 0.0f),
-        0.212f + (is_working ? 0.15f * pulse : 0.0f),
-        1.0f};
-    const float chip_b[4] = {
-        0.227f + (is_working ? 0.05f * pulse : 0.0f),
-        0.518f + (is_working ? 0.35f * pulse : 0.0f),
-        0.341f + (is_working ? 0.20f * pulse : 0.0f),
-        1.0f};
-    /* Pill behind the logo: right-inset 10.5 units, 85x68. Corner radius matches
+    /* Pill behind the logo, right-inset 10.5 units, 85x68. Corner radius matches
      * the minimized bubble capsule (half-height pill radius, concentric with the
      * outer pill). */
-    const float chip_r = (chip.ymax - chip.ymin) * 0.5f;
-    const float chip_grad_a[2] = {chip.xmax - 7.0f * u, chip.ymax - 14.0f * u};
-    const float chip_grad_b[2] = {chip.xmin + 2.0f * u, chip.ymin + 30.0f * u};
-    fill_round_gradient(&chip, chip_r, chip_a, chip_b, chip_grad_a, chip_grad_b);
-
-    const MixieCatPose cat_pose = agent_ui_cat_motion_sample(
-        region, state->cat_activity, now, state->cat_scene,
-        std::min(BLI_rctf_size_x(&chip), BLI_rctf_size_y(&chip)) - 2.0f);
-    agent_ui_draw_pill_cat(&chip, cat_pose, state->cat_activity);
+    const rctf chip = status_pill_cat_chip(w, h, u);
+    paint_status_pill_cat(region, state, chip, u, is_working, pulse, now);
 
     /* Preview line: newest user prompt, dim, ellipsised into the space left
      * of the chip. */
@@ -583,8 +604,6 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     return;
   }
 
-  agent_ui_pill_cat_clear();
-
   const float accent[4] = AGENT_COL_ACCENT;
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};
   const float text_dim[4] = AGENT_COL_TEXT_DIM;
@@ -626,12 +645,38 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   }
   GPU_blend(GPU_BLEND_ALPHA);
+
+  /* Same Mixie chip the elongated rest paints — scaled to this window's
+   * height so the open island's idle bubble is a preview, not a second
+   * mascot. Redraws follow existing status/composite traffic; the native
+   * scheduler stays on the elongated pill. */
+  const bool is_working = mixie_cat_is_working(state->cat_activity) &&
+                          (state->status_busy || state->queue_count > 0);
+  const double now = BLI_time_now_seconds();
+  const float pulse = is_working ? (0.5f + 0.5f * float(std::sin(now * 3.2))) : 0.0f;
+  const float cat_u = h / 85.0f;
+  const rctf chip = status_pill_cat_chip(w, h, cat_u);
+  paint_status_pill_cat(region, state, chip, cat_u, is_working, pulse, now);
+
   fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
-  label_left(state->status_text,
-             w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W)),
-             h * 0.5f,
-             AGENT_PILL_FONT * pill_u,
-             text_dim);
+  char status[64];
+  BLI_strncpy(status, state->status_text, sizeof(status));
+  const float label_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
+  const float label_size = AGENT_PILL_FONT * pill_u;
+  const float text_max_w = chip.xmin - 8.0f * pill_u - label_x;
+  if (text_max_w > 0.0f && text_width(status, label_size) > text_max_w) {
+    size_t len = strlen(status);
+    while (len > 1) {
+      status[--len] = '\0';
+      char probe[68];
+      SNPRINTF(probe, "%s...", status);
+      if (text_width(probe, label_size) <= text_max_w) {
+        BLI_strncpy(status, probe, sizeof(status));
+        break;
+      }
+    }
+  }
+  label_left(status, label_x, h * 0.5f, label_size, text_dim);
   GPU_blend(GPU_BLEND_NONE);
 }
 

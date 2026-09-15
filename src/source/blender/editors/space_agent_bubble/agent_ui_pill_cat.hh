@@ -34,8 +34,8 @@ void agent_ui_draw_cat(const rctf &chip, double now, bool working, int variation
 /** Last painted chip, in the same window-content pixels the painter used. */
 bool agent_ui_pill_cat_last_rect(rcti *r_rect);
 
-/** Drop the last-painted rect. Call from the compact status-pill path so a
- * stale Mixie target is not exported while the island is open. */
+/** Drop the last-painted rect. Both pill sizes paint Mixie; call this only
+ * when a draw path must not export a stale `pill_cat` target. */
 void agent_ui_pill_cat_clear();
 
 /** HEADER-region provider on the pill window; `surface` is `pill_cat`. */
